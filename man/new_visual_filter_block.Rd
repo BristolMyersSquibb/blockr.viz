@@ -4,7 +4,12 @@
 \alias{new_visual_filter_block}
 \title{Visual Filter Block}
 \usage{
-new_visual_filter_block(dimensions = NULL, measure = NULL, ...)
+new_visual_filter_block(
+  dimensions = NULL,
+  measure = NULL,
+  chart_types = "bar",
+  ...
+)
 }
 \arguments{
 \item{dimensions}{Character vector. Which columns to show as dimension charts.
@@ -12,6 +17,9 @@ If NULL, auto-detects non-numeric columns (up to 4).}
 
 \item{measure}{Character. Which numeric column to aggregate in the charts.
 Default is the first numeric column found. User can change via dropdown.}
+
+\item{chart_types}{Named list. Chart type per dimension ("bar", "pie", or "row").
+Default is "bar" for all dimensions.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
 }

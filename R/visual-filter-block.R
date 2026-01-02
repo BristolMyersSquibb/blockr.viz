@@ -12,6 +12,8 @@ NULL
 #'   If NULL, auto-detects non-numeric columns (up to 4).
 #' @param measure Character. Which numeric column to aggregate in the charts.
 #'   Default is the first numeric column found. User can change via dropdown.
+#' @param chart_types Named list. Chart type per dimension ("bar", "pie", or "row").
+#'   Default is "bar" for all dimensions.
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
 #' @return A blockr transform block that returns filtered data
@@ -29,7 +31,7 @@ NULL
 #'     data = list(data = bi_demo_data())
 #'   )
 #' }
-new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
+new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_types = "bar", ...) {
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(
@@ -103,8 +105,8 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
             )
           })
 
-          # State: chart type per dimension (named list)
-          r_chart_types <- shiny::reactiveVal(list())
+          # State: chart type - either "bar"/"pie"/"row" for all, or named list per dimension
+          r_chart_types <- shiny::reactiveVal(chart_types)
 
           # Update state from UI
           shiny::observeEvent(input$dimensions, {
@@ -126,10 +128,14 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
             r_measure()
           })
 
-          # Get chart type for a dimension (default to "bar")
+          # Get chart type for a dimension
           get_chart_type <- function(dim) {
             types <- r_chart_types()
-            if (dim %in% names(types)) types[[dim]] else "bar"
+            # If it's a string, use for all dimensions
+            if (is.character(types) && length(types) == 1) return(types)
+            # If it's a list, look up the dimension
+            if (is.list(types) && dim %in% names(types)) return(types[[dim]])
+            "bar"
           }
 
           # State: active filters per dimension
@@ -192,15 +198,37 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
                 current_type <- get_chart_type(dim)
                 shiny::div(
                   style = "flex: 1; min-width: 200px;",
-                  # Small chart type selector
+                  # Chart type button group with bsicons (small, outlined)
                   shiny::div(
                     style = "display: flex; justify-content: flex-end; margin-bottom: 2px;",
-                    shiny::selectInput(
-                      ns(paste0(dim, "_chart_type")),
-                      label = NULL,
-                      choices = c("\U0001F4CA" = "bar", "\U0001F967" = "pie", "\U0001F4C8" = "row"),
-                      selected = current_type,
-                      width = "60px"
+                    shiny::div(
+                      class = "btn-group",
+                      role = "group",
+                      style = "font-size: 0.7em;",
+                      shiny::tags$button(
+                        type = "button",
+                        id = ns(paste0(dim, "_type_bar")),
+                        class = paste("btn btn-outline-secondary", if (current_type == "bar") "active" else ""),
+                        style = "padding: 2px 6px;",
+                        onclick = sprintf("Shiny.setInputValue('%s', 'bar')", ns(paste0(dim, "_chart_type"))),
+                        bsicons::bs_icon("bar-chart-fill", size = "0.9em")
+                      ),
+                      shiny::tags$button(
+                        type = "button",
+                        id = ns(paste0(dim, "_type_pie")),
+                        class = paste("btn btn-outline-secondary", if (current_type == "pie") "active" else ""),
+                        style = "padding: 2px 6px;",
+                        onclick = sprintf("Shiny.setInputValue('%s', 'pie')", ns(paste0(dim, "_chart_type"))),
+                        bsicons::bs_icon("pie-chart-fill", size = "0.9em")
+                      ),
+                      shiny::tags$button(
+                        type = "button",
+                        id = ns(paste0(dim, "_type_row")),
+                        class = paste("btn btn-outline-secondary", if (current_type == "row") "active" else ""),
+                        style = "padding: 2px 6px;",
+                        onclick = sprintf("Shiny.setInputValue('%s', 'row')", ns(paste0(dim, "_chart_type"))),
+                        bsicons::bs_icon("bar-chart-steps", size = "0.9em")
+                      )
                     )
                   ),
                   echarts4r::echarts4rOutput(ns(paste0(dim, "_chart")), height = "220px")
@@ -230,6 +258,8 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
                     new_type <- input[[type_id]]
                     if (!is.null(new_type)) {
                       current <- r_chart_types()
+                      # Convert string to list if needed
+                      if (!is.list(current)) current <- list()
                       current[[my_dim]] <- new_type
                       r_chart_types(current)
                     }
@@ -461,15 +491,79 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
       ns <- shiny::NS(id)
 
       shiny::tagList(
+        # CSS for advanced toggle
+        shiny::tags$style(shiny::HTML(sprintf(
+          "
+          #%s {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+          }
+          #%s.expanded {
+            max-height: 500px;
+            overflow: visible;
+            transition: max-height 0.5s ease-in;
+          }
+          .visual-filter-advanced-toggle {
+            cursor: pointer;
+            user-select: none;
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #6c757d;
+          }
+          .visual-filter-chevron {
+            transition: transform 0.2s;
+            display: inline-block;
+            font-size: 12px;
+            font-weight: bold;
+          }
+          .visual-filter-chevron.rotated {
+            transform: rotate(90deg);
+          }
+          ",
+          ns("advanced-options"),
+          ns("advanced-options")
+        ))),
+
         shiny::div(
           class = "visual-filter-container",
           style = "padding: 10px;",
 
-          # Header with dimension/measure selectors and clear button
+          # Active filters display (always visible)
           shiny::div(
-            class = "visual-filter-header",
-            style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; flex-wrap: wrap;",
-            shiny::tags$h5("Visual Filter", style = "margin: 0;"),
+            class = "active-filters",
+            style = "background: #f8f9fa; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 12px;",
+            shiny::textOutput(ns("active_filters"))
+          ),
+
+          # Charts grid (always visible)
+          shiny::uiOutput(ns("charts_grid")),
+
+          # Toggle for advanced options
+          shiny::div(
+            class = "visual-filter-advanced-toggle",
+            id = ns("advanced-toggle"),
+            onclick = sprintf(
+              "
+              const section = document.getElementById('%s');
+              const chevron = document.querySelector('#%s .visual-filter-chevron');
+              section.classList.toggle('expanded');
+              chevron.classList.toggle('rotated');
+              ",
+              ns("advanced-options"),
+              ns("advanced-toggle")
+            ),
+            shiny::tags$span(class = "visual-filter-chevron", "\u203A"),
+            "Settings"
+          ),
+
+          # Advanced options (collapsed by default)
+          shiny::div(
+            id = ns("advanced-options"),
+            style = "padding-top: 10px;",
             shiny::div(
               style = "display: flex; align-items: center; gap: 10px; flex-wrap: wrap;",
               shiny::div(
@@ -500,17 +594,7 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
                 class = "btn-sm btn-outline-secondary"
               )
             )
-          ),
-
-          # Active filters display
-          shiny::div(
-            class = "active-filters",
-            style = "background: #f8f9fa; padding: 8px; border-radius: 4px; margin-bottom: 15px; font-size: 12px;",
-            shiny::textOutput(ns("active_filters"))
-          ),
-
-          # Charts grid (populated by server)
-          shiny::uiOutput(ns("charts_grid"))
+          )
         )
       )
     },
