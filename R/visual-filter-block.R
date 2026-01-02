@@ -512,15 +512,15 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
           class = "visual-filter-container",
           style = "padding: 10px;",
 
-          # Active filters display (always visible)
-          shiny::div(
-            class = "text-muted",
-            style = "font-size: 0.8rem; margin-bottom: 10px;",
-            shiny::textOutput(ns("active_filters"))
-          ),
-
           # Charts grid (always visible)
           shiny::uiOutput(ns("charts_grid")),
+
+          # Active filters display (below charts, above settings)
+          shiny::div(
+            class = "text-muted",
+            style = "font-size: 0.8rem; margin: 10px 0;",
+            shiny::textOutput(ns("active_filters"))
+          ),
 
           # Toggle for advanced options
           shiny::div(
