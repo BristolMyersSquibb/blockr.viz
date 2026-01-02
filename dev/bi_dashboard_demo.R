@@ -9,6 +9,7 @@
 
 library(blockr)
 library(blockr.dag)
+library(blockr.io)
 library(blockr.bi)
 
 # ============================================================================
@@ -23,8 +24,10 @@ library(blockr.bi)
 
 run_app(
   blocks = c(
-    # Data source
-    data = new_static_block(bi_demo_data()),
+    # Data source - read from CSV in inst/extdata
+    data = new_read_block(
+      path = system.file("extdata", "bi_demo_data.csv", package = "blockr.bi")
+    ),
 
     # Visual filter - click bars to filter all downstream blocks
     filter = new_visual_filter_block(

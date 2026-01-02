@@ -205,7 +205,13 @@ build_aggregate_expr <- function(drill_down, values, agg_fun) {
       return(quote(dplyr::summarise(data, Count = dplyr::n())))
     }
 
-    agg_fn_sym <- as.name(agg_fun)
+    # Get properly namespaced aggregation function
+    # median is in stats package, others are in base
+    agg_fn_sym <- if (agg_fun == "median") {
+      quote(stats::median)
+    } else {
+      as.name(agg_fun)
+    }
     return(bquote(
       dplyr::summarise(
         data,
@@ -224,7 +230,13 @@ build_aggregate_expr <- function(drill_down, values, agg_fun) {
   group_call <- as.call(c(quote(dplyr::group_by), quote(data), dd_syms))
 
   # Build summarise call wrapping the group_by
-  agg_fn_sym <- as.name(agg_fun)
+  # Get properly namespaced aggregation function
+  # median is in stats package, others are in base
+  agg_fn_sym <- if (agg_fun == "median") {
+    quote(stats::median)
+  } else {
+    as.name(agg_fun)
+  }
   if (agg_fun == "n") {
     bquote(
       dplyr::summarise(

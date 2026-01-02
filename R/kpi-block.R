@@ -225,8 +225,13 @@ build_kpi_expr <- function(measures, agg_fun, digits) {
     return(quote(dplyr::summarise(data, Count = dplyr::n())))
   }
 
-  # Build summarise call for multiple measures
-  agg_sym <- as.name(agg_fun)
+  # Get properly namespaced aggregation function
+  # median is in stats package, others are in base
+  agg_sym <- if (agg_fun == "median") {
+    quote(stats::median)
+  } else {
+    as.name(agg_fun)
+  }
 
   # Create named expressions for each measure
   summarise_args <- lapply(measures, function(m) {
