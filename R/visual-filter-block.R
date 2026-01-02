@@ -62,7 +62,7 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
           # State: selected measure
           r_measure <- shiny::reactiveVal(measure)
 
-          # Update dimension and measure choices when data changes
+          # Update dimension choices when data changes
           shiny::observeEvent(column_info(), {
             info <- column_info()
 
@@ -74,25 +74,37 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
               r_dimensions(current_dims)
             }
 
-            shiny::updateSelectInput(
+            shiny::updateSelectizeInput(
               session, "dimensions",
               choices = info$all_columns,
               selected = current_dims
             )
+          })
 
-            # Update measure
+          # Update measure choices when data or dimensions change
+          # Exclude selected dimensions from measure choices
+          shiny::observe({
+            info <- column_info()
+            dims <- r_dimensions()
+
+            # Available measures = numeric columns minus selected dimensions
+            available_measures <- setdiff(info$measures, dims)
+
             current_meas <- r_measure()
-            if (is.null(current_meas) || !(current_meas %in% info$measures)) {
-              current_meas <- if (length(info$measures) > 0) info$measures[1] else NULL
+            if (is.null(current_meas) || !(current_meas %in% available_measures)) {
+              current_meas <- if (length(available_measures) > 0) available_measures[1] else NULL
               r_measure(current_meas)
             }
 
             shiny::updateSelectInput(
               session, "measure",
-              choices = info$measures,
+              choices = available_measures,
               selected = current_meas
             )
           })
+
+          # State: chart type per dimension (named list)
+          r_chart_types <- shiny::reactiveVal(list())
 
           # Update state from UI
           shiny::observeEvent(input$dimensions, {
@@ -113,6 +125,12 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
           active_measure <- shiny::reactive({
             r_measure()
           })
+
+          # Get chart type for a dimension (default to "bar")
+          get_chart_type <- function(dim) {
+            types <- r_chart_types()
+            if (dim %in% names(types)) types[[dim]] else "bar"
+          }
 
           # State: active filters per dimension
           r_filters <- shiny::reactiveVal(list())
@@ -166,14 +184,26 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
               ))
             }
 
-            # Create a row of charts
+            # Create a row of charts with per-chart type selectors
             shiny::div(
               class = "charts-row",
               style = "display: flex; flex-wrap: wrap; gap: 10px;",
               lapply(dims, function(dim) {
+                current_type <- get_chart_type(dim)
                 shiny::div(
                   style = "flex: 1; min-width: 200px;",
-                  echarts4r::echarts4rOutput(ns(paste0(dim, "_chart")), height = "250px")
+                  # Small chart type selector
+                  shiny::div(
+                    style = "display: flex; justify-content: flex-end; margin-bottom: 2px;",
+                    shiny::selectInput(
+                      ns(paste0(dim, "_chart_type")),
+                      label = NULL,
+                      choices = c("\U0001F4CA" = "bar", "\U0001F967" = "pie", "\U0001F4C8" = "row"),
+                      selected = current_type,
+                      width = "60px"
+                    )
+                  ),
+                  echarts4r::echarts4rOutput(ns(paste0(dim, "_chart")), height = "220px")
                 )
               })
             )
@@ -182,7 +212,7 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
           # Track created observers to avoid duplicates
           created_observers <- shiny::reactiveVal(character())
 
-          # Create click handlers for each dimension (only once per dimension)
+          # Create click handlers and chart type handlers for each dimension
           shiny::observe({
             dims <- active_dimensions()
             existing <- created_observers()
@@ -193,12 +223,29 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
                 local({
                   my_dim <- dim
                   input_id <- paste0(my_dim, "_chart_clicked_data")
+                  type_id <- paste0(my_dim, "_chart_type")
+
+                  # Chart type change handler
+                  shiny::observeEvent(input[[type_id]], {
+                    new_type <- input[[type_id]]
+                    if (!is.null(new_type)) {
+                      current <- r_chart_types()
+                      current[[my_dim]] <- new_type
+                      r_chart_types(current)
+                    }
+                  }, ignoreInit = TRUE)
 
                   shiny::observeEvent(input[[input_id]], {
                     clicked <- input[[input_id]]
 
-                    # echarts4r returns value as c(category_name, numeric_value)
-                    clicked_value <- clicked$value[1]
+                    # echarts4r returns data differently for different chart types:
+                    # - Bar charts: value = c(category_name, numeric_value)
+                    # - Pie charts: name = category_name, value = numeric_value
+                    clicked_value <- if (!is.null(clicked$name)) {
+                      clicked$name  # Pie chart format
+                    } else {
+                      clicked$value[1]  # Bar chart format
+                    }
 
                     if (!is.null(clicked_value) && clicked_value != "") {
                       current <- r_filters()
@@ -224,10 +271,14 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
           shiny::observe({
             dims <- active_dimensions()
             meas <- active_measure()
+            chart_types <- r_chart_types()  # Dependency to trigger re-render
             shiny::req(length(dims) > 0, meas)
 
             lapply(dims, function(dim) {
               output[[paste0(dim, "_chart")]] <- echarts4r::renderEcharts4r({
+                # Get chart type for this dimension
+                chart_type <- get_chart_type(dim)
+
                 # Crossfilter: show all values of this dim, filtered by OTHER dims
                 df <- crossfilter_data(dim)
                 shiny::req(nrow(df) > 0)
@@ -238,6 +289,9 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
                   !!meas := sum(.data[[meas]], na.rm = TRUE),
                   .by = dplyr::all_of(dim)
                 )
+
+                # Convert dimension to character (so numeric dims like Year show as categories)
+                agg <- dplyr::mutate(agg, !!dim := as.character(.data[[dim]]))
 
                 # Sort by measure descending
                 agg <- dplyr::arrange(agg, dplyr::desc(.data[[meas]]))
@@ -253,28 +307,95 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
                   "#5470c6"
                 }
 
-                # Create chart
-                agg |>
-                  echarts4r::e_charts_(dim) |>
-                  echarts4r::e_bar_(meas, name = meas, itemStyle = list(color = htmlwidgets::JS(
-                    sprintf("function(params) { var colors = %s; return colors[params.dataIndex] || colors; }",
-                            jsonlite::toJSON(colors))
-                  ))) |>
+                # Build chart based on type
+                chart <- agg |> echarts4r::e_charts_(dim)
+
+                if (chart_type == "pie") {
+                  # Pie chart - needs colors in data for proper slice coloring
+                  # Use a color palette, with selected items highlighted
+                  palette <- c("#5470c6", "#91cc75", "#fac858", "#ee6666",
+                               "#73c0de", "#3ba272", "#fc8452", "#9a60b4",
+                               "#ea7ccc", "#48b8d0")
+                  if (!is.null(current_filter) && length(current_filter) > 0) {
+                    # Dim unselected slices
+                    pie_colors <- ifelse(
+                      agg[[dim]] %in% current_filter,
+                      palette[seq_len(nrow(agg)) %% length(palette) + 1],
+                      "rgba(200, 200, 200, 0.3)"
+                    )
+                  } else {
+                    pie_colors <- palette[seq_len(nrow(agg)) %% length(palette) + 1]
+                  }
+                  agg$pie_color <- pie_colors
+
+                  # Rebuild chart with pie_color column included
+                  chart <- agg |>
+                    echarts4r::e_charts_(dim) |>
+                    echarts4r::e_pie_(meas, name = dim,
+                      radius = c("20%", "70%"),
+                      label = list(
+                        show = TRUE,
+                        minAngle = 20,  # Only show labels for slices > 20 degrees
+                        formatter = "{b}",
+                        fontSize = 10
+                      ),
+                      labelLine = list(
+                        show = TRUE,
+                        length = 5,
+                        length2 = 5
+                      ),
+                      emphasis = list(label = list(show = TRUE, fontSize = 12))
+                    ) |>
+                    echarts4r::e_add_nested("itemStyle", color = pie_color)
+                } else if (chart_type == "row") {
+                  # Row chart (horizontal bars)
+                  chart <- chart |>
+                    echarts4r::e_bar_(meas, name = meas,
+                      itemStyle = list(color = htmlwidgets::JS(
+                        sprintf("function(params) { var colors = %s; return colors[params.dataIndex] || colors; }",
+                                jsonlite::toJSON(colors))
+                      ))
+                    ) |>
+                    echarts4r::e_flip_coords() |>
+                    echarts4r::e_grid(top = 40, bottom = 20, left = 80, right = 20) |>
+                    echarts4r::e_y_axis(
+                      axisLabel = list(fontSize = 10, interval = 0)
+                    ) |>
+                    echarts4r::e_x_axis(
+                      axisLabel = list(
+                        formatter = htmlwidgets::JS(
+                          "function(value) { return value >= 1e6 ? (value/1e6).toFixed(1) + 'M' : value >= 1e3 ? (value/1e3).toFixed(0) + 'K' : value; }"
+                        )
+                      )
+                    )
+                } else {
+                  # Bar chart (default)
+                  chart <- chart |>
+                    echarts4r::e_bar_(meas, name = meas,
+                      itemStyle = list(color = htmlwidgets::JS(
+                        sprintf("function(params) { var colors = %s; return colors[params.dataIndex] || colors; }",
+                                jsonlite::toJSON(colors))
+                      ))
+                    ) |>
+                    echarts4r::e_grid(top = 40, bottom = 60, left = 60, right = 20) |>
+                    echarts4r::e_x_axis(
+                      axisLabel = list(rotate = 45, fontSize = 10, interval = 0)
+                    ) |>
+                    echarts4r::e_y_axis(
+                      axisLabel = list(
+                        formatter = htmlwidgets::JS(
+                          "function(value) { return value >= 1e6 ? (value/1e6).toFixed(1) + 'M' : value >= 1e3 ? (value/1e3).toFixed(0) + 'K' : value; }"
+                        )
+                      )
+                    )
+                }
+
+                # Common options
+                chart |>
                   echarts4r::e_tooltip(trigger = "item") |>
                   echarts4r::e_title(text = dim, left = "center", top = 5,
                                      textStyle = list(fontSize = 14)) |>
-                  echarts4r::e_legend(show = FALSE) |>
-                  echarts4r::e_grid(top = 40, bottom = 60, left = 60, right = 20) |>
-                  echarts4r::e_x_axis(
-                    axisLabel = list(rotate = 45, fontSize = 10, interval = 0)
-                  ) |>
-                  echarts4r::e_y_axis(
-                    axisLabel = list(
-                      formatter = htmlwidgets::JS(
-                        "function(value) { return value >= 1e6 ? (value/1e6).toFixed(1) + 'M' : value >= 1e3 ? (value/1e3).toFixed(0) + 'K' : value; }"
-                      )
-                    )
-                  )
+                  echarts4r::e_legend(show = FALSE)
               })
             })
           })
@@ -329,7 +450,8 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
             }),
             state = list(
               dimensions = r_dimensions,
-              measure = r_measure
+              measure = r_measure,
+              chart_types = r_chart_types
             )
           )
         }
@@ -353,12 +475,13 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
               shiny::div(
                 style = "display: flex; align-items: center; gap: 5px;",
                 shiny::tags$label("Dimensions:", style = "margin: 0; font-size: 12px;"),
-                shiny::selectInput(
+                shiny::selectizeInput(
                   ns("dimensions"),
                   label = NULL,
                   choices = NULL,
                   multiple = TRUE,
-                  width = "250px"
+                  width = "250px",
+                  options = list(plugins = list("remove_button"))
                 )
               ),
               shiny::div(
