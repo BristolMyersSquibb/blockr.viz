@@ -198,37 +198,17 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
                 current_type <- get_chart_type(dim)
                 shiny::div(
                   style = "flex: 1; min-width: 200px;",
-                  # Chart type button group with bsicons (small, outlined)
+                  # Chart type dropdown (compact)
                   shiny::div(
                     style = "display: flex; justify-content: flex-end; margin-bottom: 2px;",
-                    shiny::div(
-                      class = "btn-group",
-                      role = "group",
-                      style = "font-size: 0.7em;",
-                      shiny::tags$button(
-                        type = "button",
-                        id = ns(paste0(dim, "_type_bar")),
-                        class = paste("btn btn-outline-secondary", if (current_type == "bar") "active" else ""),
-                        style = "padding: 2px 6px;",
-                        onclick = sprintf("Shiny.setInputValue('%s', 'bar')", ns(paste0(dim, "_chart_type"))),
-                        bsicons::bs_icon("bar-chart-fill", size = "0.9em")
-                      ),
-                      shiny::tags$button(
-                        type = "button",
-                        id = ns(paste0(dim, "_type_pie")),
-                        class = paste("btn btn-outline-secondary", if (current_type == "pie") "active" else ""),
-                        style = "padding: 2px 6px;",
-                        onclick = sprintf("Shiny.setInputValue('%s', 'pie')", ns(paste0(dim, "_chart_type"))),
-                        bsicons::bs_icon("pie-chart-fill", size = "0.9em")
-                      ),
-                      shiny::tags$button(
-                        type = "button",
-                        id = ns(paste0(dim, "_type_row")),
-                        class = paste("btn btn-outline-secondary", if (current_type == "row") "active" else ""),
-                        style = "padding: 2px 6px;",
-                        onclick = sprintf("Shiny.setInputValue('%s', 'row')", ns(paste0(dim, "_chart_type"))),
-                        bsicons::bs_icon("bar-chart-steps", size = "0.9em")
-                      )
+                    shiny::tags$select(
+                      id = ns(paste0(dim, "_chart_type")),
+                      class = "form-select form-select-sm",
+                      style = "width: auto; padding: 2px 24px 2px 6px; font-size: 0.75rem;",
+                      onchange = sprintf("Shiny.setInputValue('%s', this.value)", ns(paste0(dim, "_chart_type"))),
+                      shiny::tags$option(value = "bar", selected = if (current_type == "bar") "selected" else NULL, "Bar"),
+                      shiny::tags$option(value = "pie", selected = if (current_type == "pie") "selected" else NULL, "Pie"),
+                      shiny::tags$option(value = "row", selected = if (current_type == "row") "selected" else NULL, "Row")
                     )
                   ),
                   echarts4r::echarts4rOutput(ns(paste0(dim, "_chart")), height = "220px")
