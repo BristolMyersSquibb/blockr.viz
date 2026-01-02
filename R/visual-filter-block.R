@@ -11,7 +11,7 @@ NULL
 #' @param dimensions Character vector. Which columns to show as dimension charts.
 #'   If NULL, auto-detects non-numeric columns (up to 4).
 #' @param measure Character. Which numeric column to aggregate in the charts.
-#'   Default is the first numeric column found.
+#'   Default is the first numeric column found. User can change via dropdown.
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
 #' @return A blockr transform block that returns filtered data
@@ -41,38 +41,77 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
           column_info <- shiny::reactive({
             df <- data()
             if (!is.data.frame(df) || ncol(df) == 0) {
-              return(list(dimensions = character(), measures = character()))
+              return(list(
+                all_columns = character(),
+                suggested_dimensions = character(),
+                measures = character()
+              ))
             }
 
             is_numeric <- vapply(df, is.numeric, logical(1))
             list(
-              dimensions = names(df)[!is_numeric],
+              all_columns = names(df),
+              suggested_dimensions = names(df)[!is_numeric],
               measures = names(df)[is_numeric]
             )
           })
 
-          # Determine which dimensions to show (max 4)
-          active_dimensions <- shiny::reactive({
+          # State: selected dimensions
+          r_dimensions <- shiny::reactiveVal(dimensions)
+
+          # State: selected measure
+          r_measure <- shiny::reactiveVal(measure)
+
+          # Update dimension and measure choices when data changes
+          shiny::observeEvent(column_info(), {
             info <- column_info()
-            dims <- if (!is.null(dimensions)) {
-              intersect(dimensions, info$dimensions)
-            } else {
-              info$dimensions
+
+            # Update dimensions
+            current_dims <- r_dimensions()
+            if (is.null(current_dims) || !all(current_dims %in% info$all_columns)) {
+              # Default to suggested (non-numeric) dimensions, max 4
+              current_dims <- head(info$suggested_dimensions, 4)
+              r_dimensions(current_dims)
             }
-            # Limit to first 4 dimensions
+
+            shiny::updateSelectInput(
+              session, "dimensions",
+              choices = info$all_columns,
+              selected = current_dims
+            )
+
+            # Update measure
+            current_meas <- r_measure()
+            if (is.null(current_meas) || !(current_meas %in% info$measures)) {
+              current_meas <- if (length(info$measures) > 0) info$measures[1] else NULL
+              r_measure(current_meas)
+            }
+
+            shiny::updateSelectInput(
+              session, "measure",
+              choices = info$measures,
+              selected = current_meas
+            )
+          })
+
+          # Update state from UI
+          shiny::observeEvent(input$dimensions, {
+            r_dimensions(input$dimensions)
+          }, ignoreInit = TRUE)
+
+          shiny::observeEvent(input$measure, {
+            r_measure(input$measure)
+          }, ignoreInit = TRUE)
+
+          # Active dimensions (from user selection, max 4)
+          active_dimensions <- shiny::reactive({
+            dims <- r_dimensions()
             head(dims, 4)
           })
 
-          # Determine which measure to use
+          # Active measure (reactive wrapper)
           active_measure <- shiny::reactive({
-            info <- column_info()
-            if (!is.null(measure) && measure %in% info$measures) {
-              measure
-            } else if (length(info$measures) > 0) {
-              info$measures[1]
-            } else {
-              NULL
-            }
+            r_measure()
           })
 
           # State: active filters per dimension
@@ -83,7 +122,7 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
             r_filters(list())
           })
 
-          # Filtered data based on active filters (for chart rendering)
+          # Filtered data based on active filters (for output/downstream)
           # Uses dplyr::filter for database backend compatibility
           filtered_data <- shiny::reactive({
             df <- data()
@@ -92,12 +131,29 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
             filters <- r_filters()
             for (dim in names(filters)) {
               val <- filters[[dim]]
-              if (!is.null(val) && dim %in% names(df)) {
-                df <- dplyr::filter(df, .data[[dim]] == val)
+              if (!is.null(val) && length(val) > 0 && dim %in% names(df)) {
+                df <- dplyr::filter(df, .data[[dim]] %in% val)
               }
             }
             df
           })
+
+          # Crossfilter: data filtered by OTHER dimensions (excluding one)
+          # This allows each chart to show all its values while respecting other filters
+          crossfilter_data <- function(exclude_dim) {
+            df <- data()
+            shiny::req(is.data.frame(df))
+
+            filters <- r_filters()
+            for (dim in names(filters)) {
+              if (dim == exclude_dim) next
+              val <- filters[[dim]]
+              if (!is.null(val) && length(val) > 0 && dim %in% names(df)) {
+                df <- dplyr::filter(df, .data[[dim]] %in% val)
+              }
+            }
+            df
+          }
 
           # Render the charts grid UI
           output$charts_grid <- shiny::renderUI({
@@ -146,12 +202,14 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
 
                     if (!is.null(clicked_value) && clicked_value != "") {
                       current <- r_filters()
+                      current_vals <- current[[my_dim]]
 
-                      # Toggle: if already selected, remove; else set
-                      if (identical(current[[my_dim]], clicked_value)) {
-                        current[[my_dim]] <- NULL
+                      # Toggle: if already in selection, remove; else add
+                      if (clicked_value %in% current_vals) {
+                        current_vals <- setdiff(current_vals, clicked_value)
+                        current[[my_dim]] <- if (length(current_vals) == 0) NULL else current_vals
                       } else {
-                        current[[my_dim]] <- clicked_value
+                        current[[my_dim]] <- c(current_vals, clicked_value)
                       }
                       r_filters(current)
                     }
@@ -170,7 +228,8 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
 
             lapply(dims, function(dim) {
               output[[paste0(dim, "_chart")]] <- echarts4r::renderEcharts4r({
-                df <- filtered_data()
+                # Crossfilter: show all values of this dim, filtered by OTHER dims
+                df <- crossfilter_data(dim)
                 shiny::req(nrow(df) > 0)
 
                 # Aggregate by dimension using dplyr (DB-compatible)
@@ -186,9 +245,10 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
                 # Get current filter for highlighting
                 current_filter <- r_filters()[[dim]]
 
-                # Create colors based on selection
-                colors <- if (!is.null(current_filter)) {
-                  ifelse(agg[[dim]] == current_filter, "#5470c6", "#91cc75")
+                # Create colors based on selection (supports multi-select)
+                # Selected: solid blue, unselected: very light blue with transparency
+                colors <- if (!is.null(current_filter) && length(current_filter) > 0) {
+                  ifelse(agg[[dim]] %in% current_filter, "#5470c6", "rgba(84, 112, 198, 0.2)")
                 } else {
                   "#5470c6"
                 }
@@ -247,10 +307,14 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
                 return(quote(identity(data)))
               }
 
-              # Build filter conditions for each dimension
+              # Build filter conditions for each dimension (supports multi-select)
               conditions <- lapply(names(filters), function(dim) {
                 val <- filters[[dim]]
-                call("==", as.name(dim), val)
+                if (length(val) == 1) {
+                  call("==", as.name(dim), val)
+                } else {
+                  call("%in%", as.name(dim), val)
+                }
               })
 
               # Combine conditions with &
@@ -264,8 +328,8 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
               as.call(list(quote(dplyr::filter), quote(data), combined))
             }),
             state = list(
-              dimensions = active_dimensions,
-              measure = active_measure
+              dimensions = r_dimensions,
+              measure = r_measure
             )
           )
         }
@@ -279,15 +343,39 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
           class = "visual-filter-container",
           style = "padding: 10px;",
 
-          # Header with clear button
+          # Header with dimension/measure selectors and clear button
           shiny::div(
             class = "visual-filter-header",
-            style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;",
+            style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; flex-wrap: wrap;",
             shiny::tags$h5("Visual Filter", style = "margin: 0;"),
-            shiny::actionButton(
-              ns("clear_filters"),
-              "Clear Filters",
-              class = "btn-sm btn-outline-secondary"
+            shiny::div(
+              style = "display: flex; align-items: center; gap: 10px; flex-wrap: wrap;",
+              shiny::div(
+                style = "display: flex; align-items: center; gap: 5px;",
+                shiny::tags$label("Dimensions:", style = "margin: 0; font-size: 12px;"),
+                shiny::selectInput(
+                  ns("dimensions"),
+                  label = NULL,
+                  choices = NULL,
+                  multiple = TRUE,
+                  width = "250px"
+                )
+              ),
+              shiny::div(
+                style = "display: flex; align-items: center; gap: 5px;",
+                shiny::tags$label("Measure:", style = "margin: 0; font-size: 12px;"),
+                shiny::selectInput(
+                  ns("measure"),
+                  label = NULL,
+                  choices = NULL,
+                  width = "150px"
+                )
+              ),
+              shiny::actionButton(
+                ns("clear_filters"),
+                "Clear Filters",
+                class = "btn-sm btn-outline-secondary"
+              )
             )
           ),
 
@@ -311,14 +399,6 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, ...) {
     class = "visual_filter_block",
     ...
   )
-}
-
-
-#' @method block_output visual_filter_block
-#' @export
-block_output.visual_filter_block <- function(x, result, session) {
-  # Output is handled by the server's renderUI for charts_grid
-  NULL
 }
 
 
