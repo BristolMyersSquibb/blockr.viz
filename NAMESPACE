@@ -2,6 +2,7 @@
 
 export(bi_demo_data)
 export(new_aggregate_block)
+export(new_pivot_table_block)
 export(new_visual_filter_block)
 export(register_bi_blocks)
 importFrom(blockr.core,block_output)

@@ -40,6 +40,7 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
           ns <- session$ns
 
           # Detect dimensions and measures from data
+          # Numeric columns with few unique values (<=10) are treated as dimensions
           column_info <- shiny::reactive({
             df <- data()
             if (!is.data.frame(df) || ncol(df) == 0) {
@@ -51,10 +52,19 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
             }
 
             is_numeric <- vapply(df, is.numeric, logical(1))
+
+            # Low-cardinality numeric columns are dimensions (e.g., Year, Quarter)
+            is_low_cardinality <- vapply(df, function(col) {
+              length(unique(col)) <= 10
+            }, logical(1))
+
+            # Dimension: non-numeric OR (numeric AND low-cardinality)
+            is_dimension <- !is_numeric | (is_numeric & is_low_cardinality)
+
             list(
               all_columns = names(df),
-              suggested_dimensions = names(df)[!is_numeric],
-              measures = names(df)[is_numeric]
+              suggested_dimensions = names(df)[is_dimension],
+              measures = names(df)[is_numeric & !is_low_cardinality]
             )
           })
 

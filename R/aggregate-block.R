@@ -41,17 +41,26 @@ new_aggregate_block <- function(
           r_agg_fun <- shiny::reactiveVal(agg_fun)
 
           # Auto-detect column types
+          # Numeric columns with few unique values (<=10) are treated as drill-down
           column_info <- shiny::reactive({
             df <- data()
             if (!is.data.frame(df) || ncol(df) == 0) {
               return(list(drill_down = character(), values = character()))
             }
 
-            # Detect drill down (non-numeric) and value (numeric) columns
             is_numeric <- vapply(df, is.numeric, logical(1))
+
+            # Low-cardinality numeric columns are drill-down (e.g., Year, Quarter)
+            is_low_cardinality <- vapply(df, function(col) {
+              length(unique(col)) <= 10
+            }, logical(1))
+
+            # Drill-down: non-numeric OR (numeric AND low-cardinality)
+            is_drill_down <- !is_numeric | (is_numeric & is_low_cardinality)
+
             list(
-              drill_down = names(df)[!is_numeric],
-              values = names(df)[is_numeric]
+              drill_down = names(df)[is_drill_down],
+              values = names(df)[is_numeric & !is_low_cardinality]
             )
           })
 
