@@ -534,8 +534,8 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
 
           # Active filters display (always visible)
           shiny::div(
-            class = "active-filters",
-            style = "background: #f8f9fa; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 12px;",
+            class = "text-muted",
+            style = "font-size: 0.8rem; margin-bottom: 10px;",
             shiny::textOutput(ns("active_filters"))
           ),
 
@@ -606,21 +606,4 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
     class = "visual_filter_block",
     ...
   )
-}
-
-
-#' @method block_ui visual_filter_block
-#' @export
-block_ui.visual_filter_block <- function(id, x, ...) {
-  ns <- shiny::NS(id)
-  shiny::tagList(
-    shiny::uiOutput(ns("charts_grid"))
-  )
-}
-
-
-#' @method block_render_trigger visual_filter_block
-#' @export
-block_render_trigger.visual_filter_block <- function(x, session = blockr.core::get_session()) {
-  NULL
 }
