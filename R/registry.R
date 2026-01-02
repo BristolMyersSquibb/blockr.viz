@@ -9,19 +9,23 @@ register_bi_blocks <- function() {
     c(
       "new_visual_filter_block",
       "new_aggregate_block",
-      "new_pivot_table_block"
+      "new_pivot_table_block",
+      "new_kpi_block"
     ),
     name = c(
       "Visual Filter",
       "Aggregate",
-      "Pivot Table"
+      "Pivot Table",
+      "KPI"
     ),
     description = c(
       "Interactive visual filter with clickable bar charts",
       "Group by drill down columns and summarize value columns",
-      "Flexible pivot table with row and column dimensions"
+      "Flexible pivot table with row and column dimensions",
+      "Display a single key performance indicator"
     ),
     category = c(
+      "transform",
       "transform",
       "transform",
       "transform"
@@ -29,7 +33,8 @@ register_bi_blocks <- function() {
     icon = c(
       "bar-chart",
       "grid-3x3",
-      "table"
+      "table",
+      "speedometer2"
     ),
     package = utils::packageName(),
     overwrite = TRUE
