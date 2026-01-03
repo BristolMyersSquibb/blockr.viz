@@ -14,6 +14,9 @@ NULL
 #'   Default is the first numeric column found. User can change via dropdown.
 #' @param chart_types Named list. Chart type per dimension ("bar", "pie", or "row").
 #'   Default is "bar" for all dimensions.
+#' @param filters Named list. Active filters per dimension. Each element is a character
+#'   vector of selected values. Default is empty list (no filters). This is saved as
+#'   part of block state and restored when the block is restored.
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
 #' @return A blockr transform block that returns filtered data
@@ -31,7 +34,7 @@ NULL
 #'     data = list(data = bi_demo_data())
 #'   )
 #' }
-new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_types = "bar", ...) {
+new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_types = "bar", filters = list(), ...) {
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(
@@ -148,8 +151,8 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
             "bar"
           }
 
-          # State: active filters per dimension
-          r_filters <- shiny::reactiveVal(list())
+          # State: active filters per dimension (initialized from parameter)
+          r_filters <- shiny::reactiveVal(filters)
 
           # Clear all filters
           shiny::observeEvent(input$clear_filters, {
@@ -374,7 +377,9 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
                       itemStyle = list(color = htmlwidgets::JS(
                         sprintf("function(params) { var colors = %s; return colors[params.dataIndex] || colors; }",
                                 jsonlite::toJSON(colors))
-                      ))
+                      )),
+                      emphasis = list(disabled = TRUE),
+                      select = list(disabled = TRUE)
                     ) |>
                     echarts4r::e_flip_coords() |>
                     echarts4r::e_grid(top = 40, bottom = 20, left = 80, right = 20) |>
@@ -395,7 +400,9 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
                       itemStyle = list(color = htmlwidgets::JS(
                         sprintf("function(params) { var colors = %s; return colors[params.dataIndex] || colors; }",
                                 jsonlite::toJSON(colors))
-                      ))
+                      )),
+                      emphasis = list(disabled = TRUE),
+                      select = list(disabled = TRUE)
                     ) |>
                     echarts4r::e_grid(top = 40, bottom = 60, left = 60, right = 20) |>
                     echarts4r::e_x_axis(
@@ -412,7 +419,20 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
 
                 # Common options
                 chart |>
-                  echarts4r::e_tooltip(trigger = "item") |>
+                  echarts4r::e_tooltip(
+                    trigger = "item",
+                    appendToBody = TRUE,
+                    borderColor = "#ccc",
+                    borderWidth = 1,
+                    formatter = htmlwidgets::JS("
+                      function(params) {
+                        var value = Array.isArray(params.value) ? params.value[1] : params.value;
+                        var formatted = value ? Number(value).toLocaleString() : '';
+                        return '<strong>' + params.seriesName + '</strong><br/>' +
+                               params.name + '&nbsp;&nbsp;&nbsp;&nbsp;' + formatted;
+                      }
+                    ")
+                  ) |>
                   echarts4r::e_title(text = dim, left = "center", top = 5,
                                      textStyle = list(fontSize = 14)) |>
                   echarts4r::e_legend(show = FALSE)
@@ -471,7 +491,8 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
             state = list(
               dimensions = r_dimensions,
               measure = r_measure,
-              chart_types = r_chart_types
+              chart_types = r_chart_types,
+              filters = r_filters
             )
           )
         }
@@ -481,7 +502,7 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
       ns <- shiny::NS(id)
 
       shiny::tagList(
-        # CSS for advanced toggle
+        # CSS for advanced toggle (consistent with blockr.dplyr)
         shiny::tags$style(shiny::HTML(sprintf(
           "
           #%s {
@@ -494,23 +515,23 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
             overflow: visible;
             transition: max-height 0.5s ease-in;
           }
-          .visual-filter-advanced-toggle {
+          .block-advanced-toggle {
             cursor: pointer;
             user-select: none;
-            padding: 4px 0;
+            padding: 8px 0;
+            margin-bottom: 0;
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 0.75rem;
-            color: #6c757d;
+            font-size: 0.8125rem;
           }
-          .visual-filter-chevron {
+          .block-chevron {
             transition: transform 0.2s;
             display: inline-block;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
           }
-          .visual-filter-chevron.rotated {
+          .block-chevron.rotated {
             transform: rotate(90deg);
           }
           ",
@@ -525,32 +546,41 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
           # Charts grid (always visible)
           shiny::uiOutput(ns("charts_grid")),
 
-          # Active filters display (below charts, above settings)
+          # Active filters display with Clear button (always visible)
           shiny::div(
-            class = "text-muted",
-            style = "font-size: 0.8rem; margin: 10px 0;",
-            shiny::textOutput(ns("active_filters"))
+            style = "display: flex; align-items: center; justify-content: space-between; margin: 10px 0;",
+            shiny::div(
+              class = "text-muted",
+              style = "font-size: 0.8rem;",
+              shiny::textOutput(ns("active_filters"))
+            ),
+            shiny::actionButton(
+              ns("clear_filters"),
+              "Clear Filters",
+              class = "btn-sm btn-outline-secondary",
+              style = "font-size: 0.75rem; padding: 2px 8px;"
+            )
           ),
 
-          # Toggle for advanced options
+          # Advanced options toggle (consistent with blockr.dplyr)
           shiny::div(
-            class = "visual-filter-advanced-toggle",
+            class = "block-advanced-toggle text-muted",
             id = ns("advanced-toggle"),
             onclick = sprintf(
               "
               const section = document.getElementById('%s');
-              const chevron = document.querySelector('#%s .visual-filter-chevron');
+              const chevron = document.querySelector('#%s .block-chevron');
               section.classList.toggle('expanded');
               chevron.classList.toggle('rotated');
               ",
               ns("advanced-options"),
               ns("advanced-toggle")
             ),
-            shiny::tags$span(class = "visual-filter-chevron", "\u203A"),
-            "Settings"
+            shiny::tags$span(class = "block-chevron", "\u203A"),
+            "Show advanced options"
           ),
 
-          # Advanced options (collapsed by default)
+          # Advanced options section (collapsed by default)
           shiny::div(
             id = ns("advanced-options"),
             style = "padding-top: 10px;",
@@ -577,11 +607,6 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
                   choices = NULL,
                   width = "150px"
                 )
-              ),
-              shiny::actionButton(
-                ns("clear_filters"),
-                "Clear Filters",
-                class = "btn-sm btn-outline-secondary"
               )
             )
           )
@@ -593,6 +618,7 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
         stop("Input must be a data frame")
       }
     },
+    allow_empty_state = c("dimensions", "measure", "filters"),
     class = "visual_filter_block",
     ...
   )

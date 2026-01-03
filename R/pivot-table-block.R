@@ -205,7 +205,7 @@ new_pivot_table_block <- function(
     ui = function(id) {
       ns <- shiny::NS(id)
       shiny::tagList(
-        # CSS for collapsible settings
+        # CSS for advanced toggle (consistent with blockr.dplyr)
         shiny::tags$style(shiny::HTML(sprintf(
           "
           #%s {
@@ -218,28 +218,28 @@ new_pivot_table_block <- function(
             overflow: visible;
             transition: max-height 0.5s ease-in;
           }
-          .pivot-settings-toggle {
+          .block-advanced-toggle {
             cursor: pointer;
             user-select: none;
-            padding: 4px 0;
+            padding: 8px 0;
+            margin-bottom: 0;
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 0.75rem;
-            color: #6c757d;
+            font-size: 0.8125rem;
           }
-          .pivot-chevron {
+          .block-chevron {
             transition: transform 0.2s;
             display: inline-block;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
           }
-          .pivot-chevron.rotated {
+          .block-chevron.rotated {
             transform: rotate(90deg);
           }
           ",
-          ns("settings-section"),
-          ns("settings-section")
+          ns("advanced-options"),
+          ns("advanced-options")
         ))),
 
         shiny::div(
@@ -337,27 +337,27 @@ new_pivot_table_block <- function(
             shiny::textOutput(ns("aggregating_over"))
           ),
 
-          # Settings toggle
+          # Advanced options toggle (consistent with blockr.dplyr)
           shiny::div(
-            class = "pivot-settings-toggle",
-            id = ns("settings-toggle"),
+            class = "block-advanced-toggle text-muted",
+            id = ns("advanced-toggle"),
             onclick = sprintf(
               "
               const section = document.getElementById('%s');
-              const chevron = document.querySelector('#%s .pivot-chevron');
+              const chevron = document.querySelector('#%s .block-chevron');
               section.classList.toggle('expanded');
               chevron.classList.toggle('rotated');
               ",
-              ns("settings-section"),
-              ns("settings-toggle")
+              ns("advanced-options"),
+              ns("advanced-toggle")
             ),
-            shiny::tags$span(class = "pivot-chevron", "\u203A"),
-            "Settings"
+            shiny::tags$span(class = "block-chevron", "\u203A"),
+            "Show advanced options"
           ),
 
-          # Collapsible settings section
+          # Advanced options section (collapsed by default)
           shiny::div(
-            id = ns("settings-section"),
+            id = ns("advanced-options"),
             style = "padding-top: 10px;",
             shiny::div(
               style = "display: flex; align-items: center; gap: 10px;",
