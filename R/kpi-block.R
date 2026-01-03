@@ -75,7 +75,8 @@ new_kpi_block <- function(
         function(input, output, session) {
           ns <- session$ns
 
-          # State
+          # State - track if measures were specified by user
+          specified_measures <- measures  # Store original specification
           r_measures <- shiny::reactiveVal(measures)
           r_agg_fun <- shiny::reactiveVal(agg_fun)
           r_prefix <- shiny::reactiveVal(prefix)
@@ -99,26 +100,39 @@ new_kpi_block <- function(
           # Update measures dropdown when data changes
           shiny::observeEvent(measure_choices(), {
             choices <- measure_choices()
-            current <- r_measures()
 
-            # Keep valid selections
-            valid <- intersect(current, choices)
-            if (length(valid) == 0 && length(choices) > 0) {
-              # Select first few measures by default
-              valid <- utils::head(choices, min(3, length(choices)))
+            # If measures were specified, check if they now exist
+            if (length(specified_measures) > 0) {
+              valid <- intersect(specified_measures, choices)
+              if (length(valid) > 0) {
+                r_measures(specified_measures)  # Restore full specification
+              }
+              shiny::updateSelectizeInput(
+                session, "measures",
+                choices = choices,
+                selected = valid
+              )
+            } else {
+              # Auto-detect mode
+              current <- r_measures()
+              if (length(current) == 0 && length(choices) > 0) {
+                current <- utils::head(choices, min(3, length(choices)))
+                r_measures(current)
+              }
+              shiny::updateSelectizeInput(
+                session, "measures",
+                choices = choices,
+                selected = intersect(current, choices)
+              )
             }
-            r_measures(valid)
-
-            shiny::updateSelectizeInput(
-              session, "measures",
-              choices = choices,
-              selected = valid
-            )
           })
 
-          # Update state from UI
+          # Update state from UI - only if user manually changes
           shiny::observeEvent(input$measures, {
-            r_measures(input$measures)
+            # Only update if this is a real user change, not our programmatic update
+            if (length(specified_measures) == 0 || length(input$measures) > 0) {
+              r_measures(input$measures)
+            }
           }, ignoreNULL = FALSE, ignoreInit = TRUE)
 
           shiny::observeEvent(input$agg_fun, {
