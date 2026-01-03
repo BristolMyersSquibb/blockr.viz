@@ -49,7 +49,13 @@ If NULL or missing for a measure, auto-assigns from palette.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
 
+\item{id}{Module ID (for S3 methods)}
+
+\item{x}{Block object (for S3 methods)}
+
 \item{session}{Shiny session object}
+
+\item{result}{Evaluation result (for S3 methods)}
 }
 \value{
 A blockr transform block that displays KPIs

@@ -20,9 +20,11 @@ Imports:
     echarts4r,
     htmlwidgets,
     jsonlite,
+    rlang,
     shiny,
     tidyr
 Suggests:
+    blockr.dag,
     blockr.io,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

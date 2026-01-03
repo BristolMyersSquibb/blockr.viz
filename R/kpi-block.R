@@ -21,6 +21,10 @@ NULL
 #'   Names should match measure names. Values should be hex colors.
 #'   If NULL or missing for a measure, auto-assigns from palette.
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
+#' @param id Module ID (for S3 methods)
+#' @param x Block object (for S3 methods)
+#' @param result Evaluation result (for S3 methods)
+#' @param session Shiny session object (for S3 methods)
 #'
 #' @return A blockr transform block that displays KPIs
 #'

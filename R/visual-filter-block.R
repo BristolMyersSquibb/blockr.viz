@@ -1,6 +1,10 @@
 #' @importFrom blockr.core new_transform_block block_output block_ui block_render_trigger
+#' @importFrom rlang .data :=
 #' @importFrom utils head
 NULL
+
+# Declare global variables to avoid R CMD check notes
+utils::globalVariables(c("pie_color"))
 
 #' Visual Filter Block
 #'
