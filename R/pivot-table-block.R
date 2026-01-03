@@ -205,9 +205,14 @@ new_pivot_table_block <- function(
     ui = function(id) {
       ns <- shiny::NS(id)
       shiny::tagList(
-        # CSS for advanced toggle (consistent with blockr.dplyr)
+        # CSS for responsive grid and advanced toggle
         shiny::tags$style(shiny::HTML(sprintf(
           "
+          .pivot-form-grid {
+            display: grid;
+            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          }
           #%s {
             max-height: 0;
             overflow: hidden;
@@ -246,101 +251,71 @@ new_pivot_table_block <- function(
           class = "pivot-table-block",
           style = "padding: 10px;",
 
-          # Instructions
-          shiny::tags$p(
-            class = "text-muted mb-3",
-            style = "font-size: 0.85rem;",
-            "Map dimensions to rows/columns. Unmapped dimensions are aggregated over."
-          ),
-
-          # Layout: two columns for rows and cols selectors
+          # Responsive grid for inputs
           shiny::div(
-            style = "display: flex; gap: 20px; flex-wrap: wrap;",
+            class = "pivot-form-grid",
 
             # Rows selector
-            shiny::div(
-              style = "flex: 1; min-width: 180px;",
-              shiny::selectizeInput(
-                ns("rows"),
-                label = shiny::tagList(
-                  bsicons::bs_icon("layout-three-columns"),
-                  " Rows"
-                ),
-                choices = rows,
-                selected = rows,
-                multiple = TRUE,
-                options = list(
-                  placeholder = "Row dimensions...",
-                  plugins = list("remove_button")
-                )
+            shiny::selectizeInput(
+              ns("rows"),
+              label = "Rows",
+              choices = rows,
+              selected = rows,
+              multiple = TRUE,
+              options = list(
+                placeholder = "Row dimensions...",
+                plugins = list("remove_button")
               )
             ),
 
             # Columns selector
-            shiny::div(
-              style = "flex: 1; min-width: 180px;",
-              shiny::selectizeInput(
-                ns("cols"),
-                label = shiny::tagList(
-                  bsicons::bs_icon("columns"),
-                  " Columns"
-                ),
-                choices = cols,
-                selected = cols,
-                multiple = TRUE,
-                options = list(
-                  placeholder = "Column dimensions...",
-                  plugins = list("remove_button")
-                )
-              )
-            )
-          ),
-
-          # Measures and aggregation on same row
-          shiny::div(
-            style = "display: flex; gap: 20px; flex-wrap: wrap; margin-top: 10px;",
-
-            shiny::div(
-              style = "flex: 2; min-width: 200px;",
-              shiny::selectizeInput(
-                ns("measures"),
-                label = shiny::tagList(
-                  bsicons::bs_icon("calculator"),
-                  " Measures"
-                ),
-                choices = measures,
-                selected = measures,
-                multiple = TRUE,
-                options = list(
-                  placeholder = "Select measures...",
-                  plugins = list("remove_button")
-                )
+            shiny::selectizeInput(
+              ns("cols"),
+              label = "Columns",
+              choices = cols,
+              selected = cols,
+              multiple = TRUE,
+              options = list(
+                placeholder = "Column dimensions...",
+                plugins = list("remove_button")
               )
             ),
 
-            shiny::div(
-              style = "flex: 1; min-width: 120px;",
-              shiny::selectInput(
-                ns("agg_fun"),
-                label = "Aggregation",
-                choices = c("Sum" = "sum", "Mean" = "mean", "Median" = "median",
-                            "Min" = "min", "Max" = "max", "Count" = "n"),
-                selected = agg_fun
+            # Measures selector
+            shiny::selectizeInput(
+              ns("measures"),
+              label = "Measures",
+              choices = measures,
+              selected = measures,
+              multiple = TRUE,
+              options = list(
+                placeholder = "Select measures...",
+                plugins = list("remove_button")
               )
+            ),
+
+            # Aggregation selector
+            shiny::selectInput(
+              ns("agg_fun"),
+              label = "Aggregation",
+              choices = c("Sum" = "sum", "Mean" = "mean", "Median" = "median",
+                          "Min" = "min", "Max" = "max", "Count" = "n"),
+              selected = agg_fun
             )
           ),
 
           # Show what's being aggregated over
           shiny::div(
             class = "text-muted",
-            style = "font-size: 0.8rem; margin-top: 10px;",
+            style = "font-size: 0.8rem; margin-top: 5px;",
             shiny::textOutput(ns("aggregating_over"))
           ),
 
-          # Advanced options toggle (consistent with blockr.dplyr)
+          # Advanced options toggle (with more top spacing)
           shiny::div(
             class = "block-advanced-toggle text-muted",
             id = ns("advanced-toggle"),
+            style = "margin-top: 10px;",
             onclick = sprintf(
               "
               const section = document.getElementById('%s');

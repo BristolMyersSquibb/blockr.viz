@@ -38,8 +38,12 @@ run_app(
     # KPI block showing multiple headline numbers with auto-colors
     kpis = new_kpi_block(
       measures = c("Revenue", "Profit", "Transactions"),
-      prefix = "$",
-      digits = "0"
+      digits = "0",
+      subtitles = c(
+        Revenue = "Total revenue this year",
+        Profit = "Net profit margin",
+        Transactions = "Completed transactions"
+      )
     ),
 
     # Pivot table for detailed breakdown

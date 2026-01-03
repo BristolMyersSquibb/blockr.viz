@@ -13,6 +13,9 @@ new_kpi_block(
   prefix = "",
   suffix = "",
   digits = "0",
+  titles = NULL,
+  subtitles = NULL,
+  colors = NULL,
   ...
 )
 
@@ -32,6 +35,17 @@ new_kpi_block(
 \item{suffix}{Character. Text after each number (e.g., "\%", "M").}
 
 \item{digits}{Integer. Decimal places for rounding. Default 0.}
+
+\item{titles}{Named character vector. Custom titles for the colored pill labels.
+Names should match measure names. If NULL or missing for a measure, uses the
+measure name as title.}
+
+\item{subtitles}{Named character vector. Optional subtitles shown below each value.
+Names should match measure names. If NULL or missing for a measure, no subtitle shown.}
+
+\item{colors}{Named character vector. Custom colors for each measure's pill.
+Names should match measure names. Values should be hex colors.
+If NULL or missing for a measure, auto-assigns from palette.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
 

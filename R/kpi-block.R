@@ -12,6 +12,14 @@ NULL
 #' @param prefix Character. Text before each number (e.g., "$").
 #' @param suffix Character. Text after each number (e.g., "%", "M").
 #' @param digits Integer. Decimal places for rounding. Default 0.
+#' @param titles Named character vector. Custom titles for the colored pill labels.
+#'   Names should match measure names. If NULL or missing for a measure, uses the
+#'   measure name as title.
+#' @param subtitles Named character vector. Optional subtitles shown below each value.
+#'   Names should match measure names. If NULL or missing for a measure, no subtitle shown.
+#' @param colors Named character vector. Custom colors for each measure's pill.
+#'   Names should match measure names. Values should be hex colors.
+#'   If NULL or missing for a measure, auto-assigns from palette.
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
 #' @return A blockr transform block that displays KPIs
@@ -51,6 +59,9 @@ new_kpi_block <- function(
     prefix = "",
     suffix = "",
     digits = "0",
+    titles = NULL,
+    subtitles = NULL,
+    colors = NULL,
     ...
 ) {
   blockr.core::new_transform_block(
@@ -66,6 +77,10 @@ new_kpi_block <- function(
           r_prefix <- shiny::reactiveVal(prefix)
           r_suffix <- shiny::reactiveVal(suffix)
           r_digits <- shiny::reactiveVal(digits)
+          # Convert named vectors to lists for consistent behavior
+          r_titles <- shiny::reactiveVal(if (!is.null(titles)) as.list(titles) else list())
+          r_subtitles <- shiny::reactiveVal(if (!is.null(subtitles)) as.list(subtitles) else list())
+          r_colors <- shiny::reactiveVal(if (!is.null(colors)) as.list(colors) else list())
 
           # Detect numeric columns
           measure_choices <- shiny::reactive({
@@ -118,6 +133,107 @@ new_kpi_block <- function(
             r_digits(input$digits)
           }, ignoreInit = TRUE)
 
+          # Render dynamic title/subtitle inputs for each measure
+          output$measure_labels <- shiny::renderUI({
+            meas <- r_measures()
+            if (length(meas) == 0) return(NULL)
+
+            current_titles <- r_titles()
+            current_subtitles <- r_subtitles()
+
+            # Ensure they're lists for proper indexing
+            if (is.null(current_titles)) current_titles <- list()
+            if (is.null(current_subtitles)) current_subtitles <- list()
+
+            shiny::div(
+              lapply(meas, function(m) {
+                title_val <- current_titles[[m]] %||% ""
+                subtitle_val <- current_subtitles[[m]] %||% ""
+
+                shiny::div(
+                  style = "display: flex; gap: 10px; margin-bottom: 8px; align-items: center;",
+                  shiny::tags$span(
+                    style = "min-width: 100px; font-size: 0.85rem; color: #6b7280;",
+                    m
+                  ),
+                  shiny::textInput(
+                    ns(paste0("title_", m)),
+                    label = NULL,
+                    value = title_val,
+                    placeholder = "Title",
+                    width = "120px"
+                  ),
+                  shiny::textInput(
+                    ns(paste0("subtitle_", m)),
+                    label = NULL,
+                    value = subtitle_val,
+                    placeholder = "Subtitle",
+                    width = "200px"
+                  )
+                )
+              })
+            )
+          })
+
+          # Update titles/subtitles from dynamic inputs when they change
+          # Only update state if inputs actually exist (to preserve constructor values)
+          shiny::observe({
+            meas <- r_measures()
+            if (length(meas) == 0) return()
+
+            # Check if any dynamic input exists
+            any_input_exists <- FALSE
+            for (m in meas) {
+              if (!is.null(input[[paste0("title_", m)]]) ||
+                  !is.null(input[[paste0("subtitle_", m)]])) {
+                any_input_exists <- TRUE
+                break
+              }
+            }
+
+            # Don't update if inputs haven't been rendered yet
+            if (!any_input_exists) return()
+
+            new_titles <- list()
+            new_subtitles <- list()
+
+            for (m in meas) {
+              title_input <- input[[paste0("title_", m)]]
+              subtitle_input <- input[[paste0("subtitle_", m)]]
+
+              if (!is.null(title_input) && nzchar(title_input)) {
+                new_titles[[m]] <- title_input
+              }
+              if (!is.null(subtitle_input) && nzchar(subtitle_input)) {
+                new_subtitles[[m]] <- subtitle_input
+              }
+            }
+
+            # Only update if changed to avoid loops
+            if (!identical(new_titles, r_titles())) {
+              r_titles(new_titles)
+            }
+            if (!identical(new_subtitles, r_subtitles())) {
+              r_subtitles(new_subtitles)
+            }
+          })
+
+          # Store titles/subtitles in session userData for block_output access
+          # Using a unique key based on the module namespace
+          userData_key <- paste0("kpi_", id)
+          shiny::observe({
+            titles_data <- r_titles()
+            subtitles_data <- r_subtitles()
+
+            # Store in parent session's userData
+            parent_session <- session$rootScope()
+            if (is.null(parent_session$userData[[userData_key]])) {
+              parent_session$userData[[userData_key]] <- shiny::reactiveValues()
+            }
+            parent_session$userData[[userData_key]]$titles <- titles_data
+            parent_session$userData[[userData_key]]$subtitles <- subtitles_data
+          })
+
           # Return summarized values for all measures
           list(
             expr = shiny::reactive({
@@ -138,7 +254,10 @@ new_kpi_block <- function(
               agg_fun = r_agg_fun,
               prefix = r_prefix,
               suffix = r_suffix,
-              digits = r_digits
+              digits = r_digits,
+              titles = r_titles,
+              subtitles = r_subtitles,
+              colors = r_colors
             )
           )
         }
@@ -147,61 +266,127 @@ new_kpi_block <- function(
     # Input view: settings only
     ui = function(id) {
       ns <- shiny::NS(id)
-      shiny::div(
-        class = "kpi-block-settings",
-        style = "padding: 10px;",
+      shiny::tagList(
+        # CSS for advanced toggle
+        shiny::tags$style(shiny::HTML(sprintf(
+          "
+          #%s {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+          }
+          #%s.expanded {
+            max-height: 500px;
+            overflow: visible;
+            transition: max-height 0.5s ease-in;
+          }
+          .block-advanced-toggle {
+            cursor: pointer;
+            user-select: none;
+            padding: 8px 0;
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8125rem;
+          }
+          .block-chevron {
+            transition: transform 0.2s;
+            display: inline-block;
+            font-size: 14px;
+            font-weight: bold;
+          }
+          .block-chevron.rotated {
+            transform: rotate(90deg);
+          }
+          ",
+          ns("advanced-options"),
+          ns("advanced-options")
+        ))),
 
-        # Row 1: Measures (multi-select)
-        shiny::selectizeInput(
-          ns("measures"),
-          label = "Measures",
-          choices = measures,
-          selected = measures,
-          multiple = TRUE,
-          options = list(
-            placeholder = "Select measures to display...",
-            plugins = list("remove_button")
-          )
-        ),
-
-        # Row 2: Aggregation, Prefix, Suffix, Digits
         shiny::div(
-          style = "display: flex; gap: 10px; flex-wrap: wrap;",
-          shiny::div(
-            style = "flex: 1; min-width: 100px;",
-            shiny::selectInput(
-              ns("agg_fun"),
-              label = "Aggregation",
-              choices = c("Sum" = "sum", "Mean" = "mean", "Median" = "median",
-                          "Min" = "min", "Max" = "max", "Count" = "n"),
-              selected = agg_fun
+          class = "kpi-block-settings",
+          style = "padding: 10px;",
+
+          # Row 1: Measures (multi-select)
+          shiny::selectizeInput(
+            ns("measures"),
+            label = "Measures",
+            choices = measures,
+            selected = measures,
+            multiple = TRUE,
+            options = list(
+              placeholder = "Select measures to display...",
+              plugins = list("remove_button")
             )
           ),
-          shiny::div(
-            style = "flex: 1; min-width: 70px;",
-            shiny::textInput(
-              ns("prefix"),
-              label = "Prefix",
-              value = prefix,
-              placeholder = "$"
-            )
+
+          # Aggregation selector (always visible)
+          shiny::selectInput(
+            ns("agg_fun"),
+            label = "Aggregation",
+            choices = c("Sum" = "sum", "Mean" = "mean", "Median" = "median",
+                        "Min" = "min", "Max" = "max", "Count" = "n"),
+            selected = agg_fun
           ),
+
+          # Advanced options toggle
           shiny::div(
-            style = "flex: 1; min-width: 70px;",
-            shiny::textInput(
-              ns("suffix"),
-              label = "Suffix",
-              value = suffix,
-              placeholder = "%"
-            )
+            class = "block-advanced-toggle text-muted",
+            id = ns("advanced-toggle"),
+            style = "margin-top: 5px;",
+            onclick = sprintf(
+              "
+              const section = document.getElementById('%s');
+              const chevron = document.querySelector('#%s .block-chevron');
+              section.classList.toggle('expanded');
+              chevron.classList.toggle('rotated');
+              ",
+              ns("advanced-options"),
+              ns("advanced-toggle")
+            ),
+            shiny::tags$span(class = "block-chevron", "\u203A"),
+            "Show advanced options"
           ),
+
+          # Advanced options section (collapsed by default)
           shiny::div(
-            style = "flex: 1; min-width: 60px;",
-            shiny::textInput(
-              ns("digits"),
-              label = "Digits",
-              value = digits
-            )
+            id = ns("advanced-options"),
+            style = "padding-top: 10px;",
+
+            # Prefix, Suffix, Digits row
+            shiny::div(
+              style = "display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;",
+              shiny::div(
+                style = "flex: 1; min-width: 70px;",
+                shiny::textInput(
+                  ns("prefix"),
+                  label = "Prefix",
+                  value = prefix,
+                  placeholder = "$"
+                )
+              ),
+              shiny::div(
+                style = "flex: 1; min-width: 70px;",
+                shiny::textInput(
+                  ns("suffix"),
+                  label = "Suffix",
+                  value = suffix,
+                  placeholder = "%"
+                )
+              ),
+              shiny::div(
+                style = "flex: 1; min-width: 60px;",
+                shiny::textInput(
+                  ns("digits"),
+                  label = "Digits",
+                  value = digits
+                )
+              )
+            ),
+
+            # Dynamic title/subtitle/color inputs per measure
+            shiny::uiOutput(ns("measure_labels"))
           )
         )
       )
@@ -211,8 +396,11 @@ new_kpi_block <- function(
         stop("Input must be a data frame")
       }
     },
-    allow_empty_state = c("measures", "prefix", "suffix", "digits"),
+    allow_empty_state = c("measures", "prefix", "suffix", "digits", "titles", "subtitles", "colors"),
     class = "kpi_block",
+    # Pass titles/subtitles to blockr.core - they become block attributes
+    titles = titles,
+    subtitles = subtitles,
     ...
   )
 }
@@ -261,16 +449,23 @@ block_ui.kpi_block <- function(id, x, ...) {
 #' @export
 block_render_trigger.kpi_block <- function(x, session = shiny::getDefaultReactiveDomain()) {
   # Trigger re-render when display parameters change
+  userData_key <- "kpi_expr"
+  userData <- session$userData[[userData_key]]
+
   list(
     session$input[["expr-prefix"]],
     session$input[["expr-suffix"]],
-    session$input[["expr-digits"]]
+    session$input[["expr-digits"]],
+    # Trigger on userData changes (titles/subtitles)
+    if (!is.null(userData)) userData$titles,
+    if (!is.null(userData)) userData$subtitles
   )
 }
 
-# Color palette for KPI values (auto-cycled)
+# Color palette for KPI pills (Okaidia-inspired, auto-cycled)
+# Blue, Green, Orange, Red, Purple, Teal, Gray
 kpi_color_palette <- function() {
-  c("#0d6efd", "#198754", "#fd7e14", "#dc3545", "#6f42c1", "#20c997", "#6c757d")
+  c("#3b82f6", "#22c55e", "#f97316", "#ef4444", "#8b5cf6", "#14b8a6", "#6b7280")
 }
 
 #' @rdname new_kpi_block
@@ -279,19 +474,38 @@ block_output.kpi_block <- function(x, result, session) {
   # Get display params from expr module inputs
   prefix <- session$input[["expr-prefix"]]
   suffix <- session$input[["expr-suffix"]]
+  titles_json <- session$input[["expr-titles_json"]]
+  subtitles_json <- session$input[["expr-subtitles_json"]]
 
   # Handle NULL values
   if (is.null(prefix)) prefix <- ""
   if (is.null(suffix)) suffix <- ""
 
-  # Get color palette
+  # Get titles/subtitles - first try session userData (for dynamic updates)
+  # then fall back to block attributes (for initial values)
+  userData_key <- "kpi_expr"  # Module ID is typically "expr"
+  userData <- session$userData[[userData_key]]
 
+  if (!is.null(userData)) {
+    titles <- userData$titles
+    subtitles <- userData$subtitles
+  } else {
+    # Fall back to block attributes from constructor
+    titles <- attr(x, "titles")
+    subtitles <- attr(x, "subtitles")
+  }
+
+  # Convert named vectors to lists if needed
+  if (!is.null(titles)) titles <- as.list(titles) else titles <- list()
+  if (!is.null(subtitles)) subtitles <- as.list(subtitles) else subtitles <- list()
+
+  # Get color palette
   colors <- kpi_color_palette()
 
   shiny::renderUI({
     if (!is.data.frame(result) || ncol(result) == 0) {
       return(shiny::div(
-        style = "text-align: center; padding: 30px; color: #6c757d;",
+        style = "text-align: center; padding: 30px; color: #6b7280;",
         "Select measures to display"
       ))
     }
@@ -303,32 +517,62 @@ block_output.kpi_block <- function(x, result, session) {
       val <- result[[name]][1]
       color <- colors[((i - 1) %% length(colors)) + 1]
 
+      # Get custom title or use measure name
+      title <- if (!is.null(titles[[name]])) titles[[name]] else name
+
+      # Get subtitle (may be NULL)
+      subtitle <- subtitles[[name]]
+
       # Format the value
       formatted <- if (!is.na(val)) {
         format(val, big.mark = ",", scientific = FALSE)
       } else {
-        "—"
+        "\u2014"
       }
 
       shiny::div(
         class = "kpi-card",
-        style = "flex: 1; min-width: 120px; text-align: center; padding: 20px 10px;",
-        shiny::tags$div(
-          class = "kpi-title",
-          style = "font-size: 0.9rem; color: #6c757d; margin-bottom: 6px;",
-          name
+        style = paste0(
+          "flex: 1; min-width: 150px; ",
+          "background: white; ",
+          "border: 1px solid #e5e7eb; ",
+          "border-radius: 1rem; ",
+          "padding: 1.5rem; "
         ),
+        # Colored pill label
+        shiny::tags$div(
+          class = "kpi-label",
+          style = sprintf(
+            "display: inline-block; background: %s; color: white; ",
+            color
+          ) |> paste0(
+            "font-size: 0.75rem; ",
+            "padding: 0.25rem 0.75rem; ",
+            "border-radius: 9999px; ",
+            "margin-bottom: 1rem;"
+          ),
+          title
+        ),
+        # Value
         shiny::tags$div(
           class = "kpi-value",
-          style = sprintf("font-size: 2rem; font-weight: bold; color: %s;", color),
+          style = "font-size: 2.25rem; font-weight: 600; color: #111827; margin-bottom: 0.75rem;",
           paste0(prefix, formatted, suffix)
-        )
+        ),
+        # Subtitle (only if provided)
+        if (!is.null(subtitle) && nzchar(subtitle)) {
+          shiny::tags$div(
+            class = "kpi-subtitle",
+            style = "font-size: 0.875rem; color: #6b7280;",
+            subtitle
+          )
+        }
       )
     })
 
     shiny::div(
       class = "kpi-container",
-      style = "display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;",
+      style = "display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem;",
       kpi_cards
     )
   })

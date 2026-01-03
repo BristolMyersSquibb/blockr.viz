@@ -8,6 +8,7 @@ new_visual_filter_block(
   dimensions = NULL,
   measure = NULL,
   chart_types = "bar",
+  filters = list(),
   ...
 )
 }
@@ -20,6 +21,10 @@ Default is the first numeric column found. User can change via dropdown.}
 
 \item{chart_types}{Named list. Chart type per dimension ("bar", "pie", or "row").
 Default is "bar" for all dimensions.}
+
+\item{filters}{Named list. Active filters per dimension. Each element is a character
+vector of selected values. Default is empty list (no filters). This is saved as
+part of block state and restored when the block is restored.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
 }

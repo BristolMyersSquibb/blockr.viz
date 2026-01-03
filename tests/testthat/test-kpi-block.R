@@ -462,7 +462,8 @@ test_that("kpi_block UI contains expected elements", {
 
   ui_output <- blk$expr_ui("test_id")
 
-  expect_s3_class(ui_output, "shiny.tag")
+  # UI returns a tagList which inherits from shiny.tag.list
+  expect_true(inherits(ui_output, "shiny.tag") || inherits(ui_output, "shiny.tag.list"))
   ui_text <- as.character(ui_output)
 
   # Should contain selectize input for measures
@@ -508,6 +509,181 @@ test_that("kpi_block updates when inputs change", {
       result2 <- session$returned$result()
       # Result should now be mean
       expect_equal(result2$Revenue, round(mean(demo_data$Revenue), 0))
+    },
+    args = list(x = block, data = list(data = function() demo_data))
+  )
+})
+
+# ==============================================================================
+# Titles and Subtitles Tests
+# ==============================================================================
+
+test_that("kpi_block constructor accepts titles parameter", {
+  blk <- new_kpi_block(
+    measures = c("Revenue", "Profit"),
+    titles = c(Revenue = "Total Revenue", Profit = "Net Profit")
+  )
+  expect_s3_class(blk, c("kpi_block", "transform_block", "block"))
+})
+
+test_that("kpi_block constructor accepts subtitles parameter", {
+  blk <- new_kpi_block(
+    measures = c("Revenue", "Profit"),
+    subtitles = c(Revenue = "Year to date", Profit = "After taxes")
+  )
+  expect_s3_class(blk, c("kpi_block", "transform_block", "block"))
+})
+
+test_that("kpi_block constructor accepts both titles and subtitles", {
+  blk <- new_kpi_block(
+    measures = c("Revenue", "Profit"),
+    titles = c(Revenue = "Total Revenue"),
+    subtitles = c(Revenue = "Year to date", Profit = "After taxes")
+  )
+  expect_s3_class(blk, c("kpi_block", "transform_block", "block"))
+})
+
+test_that("kpi_block state contains titles and subtitles fields", {
+  block <- new_kpi_block(
+    measures = c("Revenue", "Profit"),
+    titles = c(Revenue = "Total Revenue"),
+    subtitles = c(Revenue = "Year to date")
+  )
+  demo_data <- bi_demo_data()
+
+  testServer(
+    blockr.core:::get_s3_method("block_server", block),
+    {
+      session$flushReact()
+
+      state <- session$returned$state
+      expect_true("titles" %in% names(state))
+      expect_true("subtitles" %in% names(state))
+      expect_true(is.function(state$titles))
+      expect_true(is.function(state$subtitles))
+    },
+    args = list(x = block, data = list(data = function() demo_data))
+  )
+})
+
+test_that("kpi_block state titles match constructor arguments", {
+  block <- new_kpi_block(
+    measures = c("Revenue", "Profit"),
+    titles = c(Revenue = "Total Revenue", Profit = "Net Profit")
+  )
+  demo_data <- bi_demo_data()
+
+  testServer(
+    blockr.core:::get_s3_method("block_server", block),
+    {
+      session$flushReact()
+
+      state <- session$returned$state
+      titles <- state$titles()
+
+      expect_equal(titles[["Revenue"]], "Total Revenue")
+      expect_equal(titles[["Profit"]], "Net Profit")
+    },
+    args = list(x = block, data = list(data = function() demo_data))
+  )
+})
+
+test_that("kpi_block state subtitles match constructor arguments", {
+  block <- new_kpi_block(
+    measures = c("Revenue", "Profit"),
+    subtitles = c(Revenue = "Year to date", Profit = "After taxes")
+  )
+  demo_data <- bi_demo_data()
+
+  testServer(
+    blockr.core:::get_s3_method("block_server", block),
+    {
+      session$flushReact()
+
+      state <- session$returned$state
+      subtitles <- state$subtitles()
+
+      expect_equal(subtitles[["Revenue"]], "Year to date")
+      expect_equal(subtitles[["Profit"]], "After taxes")
+    },
+    args = list(x = block, data = list(data = function() demo_data))
+  )
+})
+
+test_that("kpi_block titles update when dynamic inputs change", {
+  block <- new_kpi_block(
+    measures = c("Revenue"),
+    titles = NULL
+  )
+  demo_data <- bi_demo_data()
+
+  testServer(
+    blockr.core:::get_s3_method("block_server", block),
+    {
+      session$flushReact()
+
+      # Initial state - no titles
+      state <- session$returned$state
+      initial_titles <- state$titles()
+      expect_true(is.null(initial_titles) || length(initial_titles) == 0)
+
+      # Set title via dynamic input
+      session$setInputs(`expr-title_Revenue` = "Custom Title")
+      session$flushReact()
+
+      # Title should be updated
+      updated_titles <- state$titles()
+      expect_equal(updated_titles[["Revenue"]], "Custom Title")
+    },
+    args = list(x = block, data = list(data = function() demo_data))
+  )
+})
+
+test_that("kpi_block subtitles update when dynamic inputs change", {
+  block <- new_kpi_block(
+    measures = c("Revenue"),
+    subtitles = NULL
+  )
+  demo_data <- bi_demo_data()
+
+  testServer(
+    blockr.core:::get_s3_method("block_server", block),
+    {
+      session$flushReact()
+
+      # Initial state - no subtitles
+      state <- session$returned$state
+      initial_subtitles <- state$subtitles()
+      expect_true(is.null(initial_subtitles) || length(initial_subtitles) == 0)
+
+      # Set subtitle via dynamic input
+      session$setInputs(`expr-subtitle_Revenue` = "Custom Subtitle")
+      session$flushReact()
+
+      # Subtitle should be updated
+      updated_subtitles <- state$subtitles()
+      expect_equal(updated_subtitles[["Revenue"]], "Custom Subtitle")
+    },
+    args = list(x = block, data = list(data = function() demo_data))
+  )
+})
+
+test_that("kpi_block hidden JSON inputs are updated with titles", {
+  block <- new_kpi_block(
+    measures = c("Revenue"),
+    titles = c(Revenue = "Total Revenue")
+  )
+  demo_data <- bi_demo_data()
+
+  testServer(
+    blockr.core:::get_s3_method("block_server", block),
+    {
+      session$flushReact()
+
+      # Hidden textInputs are updated via updateTextInput
+      # We verify the state is set correctly (which drives the hidden input updates)
+      state <- session$returned$state
+      expect_equal(state$titles()[["Revenue"]], "Total Revenue")
     },
     args = list(x = block, data = list(data = function() demo_data))
   )
