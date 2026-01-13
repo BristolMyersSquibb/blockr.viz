@@ -4,7 +4,7 @@
 NULL
 
 # Declare global variables to avoid R CMD check notes
-utils::globalVariables(c("pie_color"))
+utils::globalVariables(c("pie_color", ".count"))
 
 #' Visual Filter Block
 #'
@@ -102,16 +102,21 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
 
           # Update measure choices when data or dimensions change
           # Exclude selected dimensions from measure choices
+          # Always include "Count" as an option
           shiny::observe({
             info <- column_info()
             dims <- r_dimensions()
 
             # Available measures = numeric columns minus selected dimensions
-            available_measures <- setdiff(info$measures, dims)
+            numeric_measures <- setdiff(info$measures, dims)
+
+            # Always add Count as first option
+            available_measures <- c("Count" = ".count", stats::setNames(numeric_measures, numeric_measures))
 
             current_meas <- r_measure()
             if (is.null(current_meas) || !(current_meas %in% available_measures)) {
-              current_meas <- if (length(available_measures) > 0) available_measures[1] else NULL
+              # Default to first numeric measure if available, otherwise Count
+              current_meas <- if (length(numeric_measures) > 0) numeric_measures[1] else ".count"
               r_measure(current_meas)
             }
 
@@ -311,11 +316,20 @@ new_visual_filter_block <- function(dimensions = NULL, measure = NULL, chart_typ
                 shiny::req(nrow(df) > 0)
 
                 # Aggregate by dimension using dplyr (DB-compatible)
-                agg <- dplyr::summarise(
-                  df,
-                  !!meas := sum(.data[[meas]], na.rm = TRUE),
-                  .by = dplyr::all_of(dim)
-                )
+                # Use n() for Count, sum() for numeric measures
+                if (meas == ".count") {
+                  agg <- dplyr::summarise(
+                    df,
+                    .count = dplyr::n(),
+                    .by = dplyr::all_of(dim)
+                  )
+                } else {
+                  agg <- dplyr::summarise(
+                    df,
+                    !!meas := sum(.data[[meas]], na.rm = TRUE),
+                    .by = dplyr::all_of(dim)
+                  )
+                }
 
                 # Convert dimension to character (so numeric dims like Year show as categories)
                 agg <- dplyr::mutate(agg, !!dim := as.character(.data[[dim]]))
