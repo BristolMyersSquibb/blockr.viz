@@ -15,7 +15,7 @@ utils::globalVariables(c(".count", ".selected"))
 #' Returns the filtered data frame.
 #'
 #' @param dimensions Character vector. Which columns to show as dimension tables.
-#'   If NULL, auto-detects non-numeric columns (up to 4).
+#'   If NULL, defaults to the first categorical column.
 #' @param measure Character. Which numeric column to aggregate in the tables.
 #'   Default is the first numeric column found. User can change via dropdown.
 #' @param filters Named list. Active filters per dimension. Each element is a character
@@ -88,9 +88,11 @@ new_table_filter_block <- function(dimensions = NULL, measure = NULL, filters = 
             # Update dimensions
             current_dims <- r_dimensions()
             if (is.null(current_dims) || !all(current_dims %in% info$all_columns)) {
-              # Default to suggested (non-numeric) dimensions, max 4
-              current_dims <- head(info$suggested_dimensions, 4)
-              r_dimensions(current_dims)
+              # Default to first categorical dimension only
+              current_dims <- head(info$suggested_dimensions, 1)
+              if (!identical(r_dimensions(), current_dims)) {
+                r_dimensions(current_dims)
+              }
             }
 
             shiny::updateSelectizeInput(
@@ -117,7 +119,9 @@ new_table_filter_block <- function(dimensions = NULL, measure = NULL, filters = 
             if (is.null(current_meas) || !(current_meas %in% available_measures)) {
               # Default to first numeric measure if available, otherwise Count
               current_meas <- if (length(numeric_measures) > 0) numeric_measures[1] else ".count"
-              r_measure(current_meas)
+              if (!identical(r_measure(), current_meas)) {
+                r_measure(current_meas)
+              }
             }
 
             shiny::updateSelectInput(
@@ -129,17 +133,20 @@ new_table_filter_block <- function(dimensions = NULL, measure = NULL, filters = 
 
           # Update state from UI
           shiny::observeEvent(input$dimensions, {
-            r_dimensions(input$dimensions)
+            if (!identical(r_dimensions(), input$dimensions)) {
+              r_dimensions(input$dimensions)
+            }
           }, ignoreInit = TRUE)
 
           shiny::observeEvent(input$measure, {
-            r_measure(input$measure)
+            if (!identical(r_measure(), input$measure)) {
+              r_measure(input$measure)
+            }
           }, ignoreInit = TRUE)
 
-          # Active dimensions (from user selection, max 4)
+          # Active dimensions (from user selection)
           active_dimensions <- shiny::reactive({
-            dims <- r_dimensions()
-            head(dims, 4)
+            r_dimensions()
           })
 
           # Active measure (reactive wrapper)
@@ -211,11 +218,14 @@ new_table_filter_block <- function(dimensions = NULL, measure = NULL, filters = 
             }
           }, ignoreInit = TRUE)
 
-          # Helper to format numbers compactly
+          # Helper to format numbers compactly (supports negative values)
           format_number <- function(x) {
+            sign_str <- ifelse(x < 0, "-", "")
+            abs_x <- abs(x)
             ifelse(
-              x >= 1e6, paste0(round(x / 1e6, 1), "M"),
-              ifelse(x >= 1e3, paste0(round(x / 1e3, 0), "K"), format(round(x), big.mark = ","))
+              abs_x >= 1e6, paste0(sign_str, round(abs_x / 1e6, 1), "M"),
+              ifelse(abs_x >= 1e3, paste0(sign_str, round(abs_x / 1e3, 0), "K"),
+                     paste0(sign_str, format(round(abs_x), big.mark = ",")))
             )
           }
 
@@ -259,9 +269,11 @@ new_table_filter_block <- function(dimensions = NULL, measure = NULL, filters = 
               TRUE  # All selected when no filter
             }
 
-            # Calculate max for bar scaling
-            max_val <- max(agg[[value_col]], na.rm = TRUE)
-            if (is.na(max_val) || max_val == 0) max_val <- 1
+            # Calculate max absolute value for bar scaling (supports negative values)
+            max_abs_val <- max(abs(agg[[value_col]]), na.rm = TRUE)
+            if (is.na(max_abs_val) || max_abs_val == 0) max_abs_val <- 1
+            min_val <- min(agg[[value_col]], na.rm = TRUE)
+            has_negative <- min_val < 0
 
             # Build columns list with dynamic names
             columns_list <- list()
@@ -282,39 +294,98 @@ new_table_filter_block <- function(dimensions = NULL, measure = NULL, filters = 
               }
             )
 
-            # Value column with inline bar
+            # Value column with inline bar (diverging for negative values)
             columns_list[[value_col]] <- reactable::colDef(
               name = if (meas == ".count") "Count" else meas,
-              minWidth = 120,
+              minWidth = 140,
               align = "right",
               cell = function(value, index) {
                 is_selected <- agg$.selected[index]
-                pct <- value / max_val * 100
-                bar_color <- if (has_filter && !is_selected) {
-                  "rgba(84, 112, 198, 0.2)"
-                } else {
-                  "#5470c6"
-                }
-                text_color <- if (has_filter && !is_selected) "#999" else "#333"
+                pct <- abs(value) / max_abs_val * 100
+                is_negative <- value < 0
 
-                # Bar + number, right-aligned
-                shiny::div(
-                  style = "display: flex; align-items: center; justify-content: flex-end; gap: 6px;",
-                  # Bar container
+                # Colors: blue for positive, red for negative
+                if (is_negative) {
+                  bar_color <- if (has_filter && !is_selected) {
+                    "rgba(198, 84, 84, 0.2)"
+                  } else {
+                    "#c65454"
+                  }
+                } else {
+                  bar_color <- if (has_filter && !is_selected) {
+                    "rgba(84, 112, 198, 0.2)"
+                  } else {
+                    "#5470c6"
+                  }
+                }
+                text_color <- if (has_filter && !is_selected) {
+                  "#999"
+                } else if (is_negative) {
+                  "#c65454"
+                } else {
+                  "#333"
+                }
+
+                if (has_negative) {
+                  # Diverging bar: left half for negative, right half for positive
                   shiny::div(
-                    style = "flex: 1; max-width: 80px; height: 14px; background: #f0f0f0; border-radius: 2px; overflow: hidden;",
+                    style = "display: flex; align-items: center; justify-content: flex-end; gap: 6px;",
+                    # Diverging bar container
                     shiny::div(
-                      style = sprintf(
-                        "height: 100%%; width: %.1f%%; background: %s;",
-                        pct, bar_color
+                      style = "flex: 1; max-width: 100px; height: 14px; display: flex; position: relative;",
+                      # Left half (negative)
+                      shiny::div(
+                        style = "width: 50%; height: 100%; background: #f0f0f0; border-radius: 2px 0 0 2px; display: flex; justify-content: flex-end; overflow: hidden;",
+                        if (is_negative) {
+                          shiny::div(
+                            style = sprintf(
+                              "height: 100%%; width: %.1f%%; background: %s;",
+                              pct, bar_color
+                            )
+                          )
+                        }
+                      ),
+                      # Center line
+                      shiny::div(
+                        style = "width: 1px; height: 100%; background: #ccc;"
+                      ),
+                      # Right half (positive)
+                      shiny::div(
+                        style = "width: 50%; height: 100%; background: #f0f0f0; border-radius: 0 2px 2px 0; overflow: hidden;",
+                        if (!is_negative) {
+                          shiny::div(
+                            style = sprintf(
+                              "height: 100%%; width: %.1f%%; background: %s;",
+                              pct, bar_color
+                            )
+                          )
+                        }
                       )
+                    ),
+                    shiny::span(
+                      style = sprintf("color: %s; font-size: 12px; width: 45px; text-align: right;", text_color),
+                      format_number(value)
                     )
-                  ),
-                  shiny::span(
-                    style = sprintf("color: %s; font-size: 12px; width: 38px; text-align: right;", text_color),
-                    format_number(value)
                   )
-                )
+                } else {
+                  # Standard bar (all positive)
+                  shiny::div(
+                    style = "display: flex; align-items: center; justify-content: flex-end; gap: 6px;",
+                    shiny::div(
+                      style = "flex: 1; max-width: 80px; height: 14px; background: #f0f0f0; border-radius: 2px; overflow: hidden;",
+                      shiny::div(
+                        style = sprintf(
+                          "height: 100%%; width: %.1f%%; background: %s;",
+                          pct, bar_color
+                        )
+                      )
+                    ),
+                    shiny::span(
+                      style = sprintf("color: %s; font-size: 12px; width: 38px; text-align: right;", text_color),
+                      format_number(value)
+                    )
+                  )
+                }
               }
             )
 
