@@ -8,21 +8,21 @@ register_bi_blocks <- function() {
   blockr.core::register_blocks(
     c(
       "new_visual_filter_block",
-      "new_aggregate_block",
+      "new_table_filter_block",
       "new_pivot_table_block",
       "new_kpi_block",
       "new_waterfall_block"
     ),
     name = c(
       "Visual Filter",
-      "Aggregate",
+      "Table Filter",
       "Pivot Table",
       "KPI",
       "Waterfall"
     ),
     description = c(
       "Interactive visual filter with clickable bar charts",
-      "Group by drill down columns and summarize value columns",
+      "Interactive table-based crossfilter with sortable, searchable tables",
       "Flexible pivot table with row and column dimensions",
       "Display a single key performance indicator",
       "Waterfall/bridge chart for sequential value progression"
@@ -36,7 +36,7 @@ register_bi_blocks <- function() {
     ),
     icon = c(
       "bar-chart",
-      "grid-3x3",
+      "filter",
       "table",
       "speedometer2",
       "bar-chart-steps"

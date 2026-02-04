@@ -45,18 +45,6 @@ new_pivot_table_block(
 )
 ```
 
-### Aggregate Block
-
-Simple aggregation by dimensions.
-
-```r
-new_aggregate_block(
-  dimensions = c("Region", "Category"),
-  measures = c("Revenue", "Profit"),
-  agg_fun = "sum"
-)
-```
-
 ## Demo
 
 ```r

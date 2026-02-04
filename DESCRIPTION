@@ -20,6 +20,7 @@ Imports:
     echarts4r,
     htmlwidgets,
     jsonlite,
+    reactable,
     rlang,
     shiny,
     tidyr

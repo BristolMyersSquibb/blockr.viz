@@ -1,46 +1,56 @@
-# Visual Filter Demo
+# Filter Block Comparison Demo
 #
-# Demonstrates the interactive visual filter block with the bi_demo_data()
-# dataset. Click on bars to filter, see filtered data flow downstream.
+# Compares the table filter block (new, reactable-based) with
+# the visual filter block (original, echarts4r-based).
 #
-# Features:
-# - Click on bars to filter across all charts
+# Features of table filter:
+# - Sortable, searchable tables for each dimension
+# - Click on rows to filter across all tables (crossfilter)
+# - Inline bar charts show relative values
 # - Clear filters button to reset
-# - Filtered data flows to downstream blocks
-# - Auto-detects dimensions and measures from data
 
 library(blockr)
 library(blockr.dag)
 library(blockr.bi)
 
 # ============================================================================
-# Visual filter with aggregate output
+# Compare: Table Filter vs Visual Filter
 # ============================================================================
 #
 # Uses bi_demo_data() which contains European sales data with:
 # - Dimensions: Region, Country, Category, Channel
 # - Measures: Revenue, Quantity, Profit, Transactions
-#
-# The visual filter returns filtered data, which flows to the aggregate block.
 
 run_app(
   blocks = c(
     # Data source block using the demo dataset
     demo_data = new_static_block(bi_demo_data()),
 
-    # Visual filter - click bars to filter
+    # NEW: Table filter - click rows to filter
+    table_filter = new_table_filter_block(),
+
+    # ORIGINAL: Visual filter - click bars to filter (for comparison)
     visual_filter = new_visual_filter_block(),
 
-    # Aggregate filtered data
-    summary = new_aggregate_block(
-      drill_down = c("Region", "Country"),
-      values = c("Revenue", "Profit", "Transactions"),
+    # Pivot table for table filter output
+    summary1 = new_pivot_table_block(
+      rows = c("Region", "Country"),
+      measures = c("Revenue", "Profit", "Transactions"),
+      agg_fun = "sum"
+    ),
+
+    # Pivot table for visual filter output
+    summary2 = new_pivot_table_block(
+      rows = c("Region", "Country"),
+      measures = c("Revenue", "Profit", "Transactions"),
       agg_fun = "sum"
     )
   ),
   links = c(
+    new_link("demo_data", "table_filter", "data"),
     new_link("demo_data", "visual_filter", "data"),
-    new_link("visual_filter", "summary", "data")
+    new_link("table_filter", "summary1", "data"),
+    new_link("visual_filter", "summary2", "data")
   ),
   extensions = list(new_dag_extension())
 )
