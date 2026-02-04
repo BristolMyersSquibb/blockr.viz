@@ -85,14 +85,18 @@ new_table_filter_block <- function(dimensions = NULL, measure = NULL, filters = 
           shiny::observeEvent(column_info(), {
             info <- column_info()
 
-            # Update dimensions
             current_dims <- r_dimensions()
-            if (is.null(current_dims) || !all(current_dims %in% info$all_columns)) {
+
+            # Only set defaults if dimensions is NULL (first load without constructor value)
+            # If dimensions were provided via constructor and are valid, keep them
+            if (is.null(current_dims)) {
               # Default to first categorical dimension only
               current_dims <- head(info$suggested_dimensions, 1)
-              if (!identical(r_dimensions(), current_dims)) {
-                r_dimensions(current_dims)
-              }
+              r_dimensions(current_dims)
+            } else if (!all(current_dims %in% info$all_columns)) {
+              # Constructor provided dimensions that don't exist in data - fall back to defaults
+              current_dims <- head(info$suggested_dimensions, 1)
+              r_dimensions(current_dims)
             }
 
             shiny::updateSelectizeInput(
@@ -116,12 +120,15 @@ new_table_filter_block <- function(dimensions = NULL, measure = NULL, filters = 
             available_measures <- c("Count" = ".count", stats::setNames(numeric_measures, numeric_measures))
 
             current_meas <- r_measure()
-            if (is.null(current_meas) || !(current_meas %in% available_measures)) {
-              # Default to first numeric measure if available, otherwise Count
+
+            # Only set defaults if measure is NULL (first load without constructor value)
+            if (is.null(current_meas)) {
               current_meas <- if (length(numeric_measures) > 0) numeric_measures[1] else ".count"
-              if (!identical(r_measure(), current_meas)) {
-                r_measure(current_meas)
-              }
+              r_measure(current_meas)
+            } else if (!(current_meas %in% available_measures)) {
+              # Constructor provided measure that doesn't exist - fall back to defaults
+              current_meas <- if (length(numeric_measures) > 0) numeric_measures[1] else ".count"
+              r_measure(current_meas)
             }
 
             shiny::updateSelectInput(

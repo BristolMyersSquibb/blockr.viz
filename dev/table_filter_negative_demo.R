@@ -78,7 +78,8 @@ blocks = c(
     # to see diverging bars for negative values
     filter = new_table_filter_block(
       dimensions = c("Region", "Product", "Channel", "Quarter"),
-      measure = "Profit"
+      measure = "Profit",
+      filters = list(Region = "West")
     ),
 
     # Summary pivot table

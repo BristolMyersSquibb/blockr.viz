@@ -518,3 +518,80 @@ test_that("table_filter_block empty filters constructor works", {
     args = list(x = block, data = list(data = function() demo_data))
   )
 })
+
+# ==============================================================================
+# State Restoration Tests
+# ==============================================================================
+
+test_that("table_filter_block dimensions are restored from constructor", {
+  block <- new_table_filter_block(
+    dimensions = c("Region", "Channel"),
+    measure = "Revenue"
+  )
+  demo_data <- bi_demo_data()
+
+  testServer(
+    blockr.core:::get_s3_method("block_server", block),
+    {
+      session$flushReact()
+
+      state <- session$returned$state
+      dims <- state$dimensions()
+
+      expect_equal(dims, c("Region", "Channel"))
+    },
+    args = list(x = block, data = list(data = function() demo_data))
+  )
+})
+
+test_that("table_filter_block measure is restored from constructor", {
+  block <- new_table_filter_block(
+    dimensions = c("Region"),
+    measure = "Profit"
+  )
+  demo_data <- bi_demo_data()
+
+  testServer(
+    blockr.core:::get_s3_method("block_server", block),
+    {
+      session$flushReact()
+
+      state <- session$returned$state
+      meas <- state$measure()
+
+      expect_equal(meas, "Profit")
+    },
+    args = list(x = block, data = list(data = function() demo_data))
+  )
+})
+
+test_that("table_filter_block full state restoration", {
+  # Test all three state components together
+  block <- new_table_filter_block(
+    dimensions = c("Region", "Category", "Channel"),
+    measure = "Profit",
+    filters = list(Region = "Western Europe", Category = "Electronics")
+  )
+  demo_data <- bi_demo_data()
+
+  testServer(
+    blockr.core:::get_s3_method("block_server", block),
+    {
+      session$flushReact()
+
+      state <- session$returned$state
+
+      # Verify dimensions
+      expect_equal(state$dimensions(), c("Region", "Category", "Channel"))
+
+      # Verify measure
+      expect_equal(state$measure(), "Profit")
+
+      # Verify filters
+      filters <- state$filters()
+      expect_equal(filters$Region, "Western Europe")
+      expect_equal(filters$Category, "Electronics")
+    },
+    args = list(x = block, data = list(data = function() demo_data))
+  )
+})
