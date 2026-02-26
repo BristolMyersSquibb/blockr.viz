@@ -59,10 +59,9 @@ new_waterfall_block <- function(
         function(input, output, session) {
           ns <- session$ns
 
-          # State - track if measures were specified by user
-          specified_measures <- measures  # Store original specification
           r_measures <- shiny::reactiveVal(measures)
           r_colors <- shiny::reactiveVal(colors)
+          r_initialized <- shiny::reactiveVal(FALSE)
 
           # Detect numeric columns for measures
           numeric_cols <- shiny::reactive({
@@ -74,43 +73,37 @@ new_waterfall_block <- function(
             names(df)[is_numeric]
           })
 
-          # Update measures dropdown
-          shiny::observeEvent(numeric_cols(), {
-            choices <- numeric_cols()
-
-            # If measures were specified, check if they now exist
-            if (length(specified_measures) > 0) {
-              valid <- intersect(specified_measures, choices)
-              if (length(valid) > 0) {
-                r_measures(specified_measures)  # Restore full specification
+          # One-time initialization (runs once when data first arrives)
+          shiny::observe({
+            if (!r_initialized() && length(numeric_cols()) > 0) {
+              choices <- numeric_cols()
+              if (length(r_measures()) == 0 && length(choices) >= 2) {
+                r_measures(utils::head(choices, 3))
               }
               shiny::updateSelectizeInput(
                 session, "measures",
                 choices = choices,
-                selected = valid
+                selected = r_measures()
               )
-            } else {
-              # Auto-detect mode: use first N numeric columns
-              current <- r_measures()
-              if (length(current) == 0 && length(choices) >= 2) {
-                current <- utils::head(choices, 3)
-                r_measures(current)
-              }
+              r_initialized(TRUE)
+            }
+          })
+
+          # Data-change handler (preserves current user selection)
+          shiny::observeEvent(numeric_cols(), {
+            if (r_initialized()) {
               shiny::updateSelectizeInput(
                 session, "measures",
-                choices = choices,
-                selected = intersect(current, choices)
+                choices = numeric_cols(),
+                selected = r_measures()
               )
             }
           })
 
-          # Update state from UI - only if user manually changes
+          # Update state from UI
           shiny::observeEvent(input$measures, {
-            # Only update if this is a real user change, not our programmatic update
-            if (length(specified_measures) == 0 || length(input$measures) > 0) {
-              r_measures(input$measures)
-            }
-          }, ignoreNULL = FALSE, ignoreInit = TRUE)
+            r_measures(input$measures)
+          }, ignoreInit = TRUE)
 
           # Return the aggregated data for waterfall
           list(
