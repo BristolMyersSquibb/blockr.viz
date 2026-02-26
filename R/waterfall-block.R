@@ -207,11 +207,6 @@ build_waterfall_data <- function(data, measures) {
       positive[i] <- values[i]
       negative[i] <- 0
       cumsum_val <- values[i]
-    } else if (i == n) {
-      # Last bar: show as total (full bar from 0)
-      helper[i] <- 0
-      positive[i] <- values[i]
-      negative[i] <- 0
     } else {
       # Middle bars: show delta (floating)
       delta <- deltas[i]

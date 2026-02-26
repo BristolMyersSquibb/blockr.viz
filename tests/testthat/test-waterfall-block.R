@@ -348,8 +348,9 @@ test_that("build_waterfall_data handles increasing values", {
 
   # Positive values should be in the positive column for middle bars
   expect_equal(wf$positive[2], 30)
-  # Last bar is a "total" bar, shown as full bar from 0
-  expect_equal(wf$positive[3], 145)
+  # Last bar shows delta, same as middle bars
+  expect_equal(wf$positive[3], 15)
+  expect_equal(wf$helper[3], 130)
 })
 
 test_that("build_waterfall_data handles mixed increases and decreases", {
