@@ -353,14 +353,16 @@ render_waterfall <- function(wf_data, colors) {
     ) |>
     echarts4r::e_x_axis(
       axisLabel = list(
-        rotate = 15,
-        fontSize = 11
+        rotate = 0,
+        fontSize = 11,
+        overflow = "break",
+        width = 100
       )
     ) |>
     echarts4r::e_grid(
       left = "12%",
       right = "5%",
-      bottom = "15%",
+      bottom = "10%",
       top = "10%"
     )
 }
