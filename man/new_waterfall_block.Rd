@@ -8,7 +8,7 @@
 \usage{
 new_waterfall_block(
   measures = character(),
-  colors = list(increase = "#22c55e", decrease = "#ef4444", total = "#3b82f6"),
+  colors = list(increase = "#009E73", decrease = "#dc2626", total = "#bbbbbb"),
   ...
 )
 
@@ -21,7 +21,7 @@ new_waterfall_block(
 the waterfall, in order. Each subsequent measure should include the previous.}
 
 \item{colors}{Named list. Colors for increase/decrease/total bars.
-Default: increase = "#22c55e" (green), decrease = "#ef4444" (red), total = "#3b82f6" (blue).}
+Default: increase = "#009E73" (Okabe-Ito green), decrease = "#dc2626" (red), total = "#bbbbbb" (gray).}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
 

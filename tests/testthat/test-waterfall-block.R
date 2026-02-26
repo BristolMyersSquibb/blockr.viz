@@ -386,9 +386,9 @@ test_that("waterfall_block uses default colors", {
   blk <- new_waterfall_block()
 
   # Default colors should be set
-  expect_equal(attr(blk, "colors")$increase, "#22c55e")
-  expect_equal(attr(blk, "colors")$decrease, "#ef4444")
-  expect_equal(attr(blk, "colors")$total, "#3b82f6")
+  expect_equal(attr(blk, "colors")$increase, "#009E73")
+  expect_equal(attr(blk, "colors")$decrease, "#dc2626")
+  expect_equal(attr(blk, "colors")$total, "#bbbbbb")
 })
 
 test_that("waterfall_block uses custom colors", {

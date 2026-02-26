@@ -16,7 +16,7 @@ utils::globalVariables(c("step", "helper", "positive", "negative", "total"))
 #' @param measures Character vector. The numeric columns representing steps in
 #'   the waterfall, in order. Each subsequent measure should include the previous.
 #' @param colors Named list. Colors for increase/decrease/total bars.
-#'   Default: increase = "#22c55e" (green), decrease = "#ef4444" (red), total = "#3b82f6" (blue).
+#'   Default: increase = "#009E73" (Okabe-Ito green), decrease = "#dc2626" (red), total = "#bbbbbb" (gray).
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #' @param id Module ID (for S3 methods)
 #' @param x Block object (for S3 methods)
@@ -49,7 +49,7 @@ utils::globalVariables(c("step", "helper", "positive", "negative", "total"))
 #' }
 new_waterfall_block <- function(
     measures = character(),
-    colors = list(increase = "#22c55e", decrease = "#ef4444", total = "#3b82f6"),
+    colors = list(increase = "#009E73", decrease = "#dc2626", total = "#bbbbbb"),
     ...
 ) {
   blockr.core::new_transform_block(
@@ -244,7 +244,7 @@ block_output.waterfall_block <- function(x, result, session) {
   # Get colors from block attributes
   colors <- attr(x, "colors")
   if (is.null(colors)) {
-    colors <- list(increase = "#22c55e", decrease = "#ef4444", total = "#3b82f6")
+    colors <- list(increase = "#009E73", decrease = "#dc2626", total = "#bbbbbb")
   }
 
   # Get user-selected measures from session input (preserves order)
@@ -279,6 +279,12 @@ block_output.waterfall_block <- function(x, result, session) {
 #' Render waterfall chart
 #' @noRd
 render_waterfall <- function(wf_data, colors) {
+  # Match Bootstrap 5 system font stack used by the dock UI
+  system_font <- paste(
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,",
+    "'Helvetica Neue', Arial, 'Noto Sans', sans-serif"
+  )
+
   wf_data |>
     echarts4r::e_charts(step) |>
     # Transparent helper for floating effect
@@ -312,13 +318,13 @@ render_waterfall <- function(wf_data, colors) {
         borderRadius = c(4, 4, 0, 0)
       )
     ) |>
-    # Trend line showing totals
+    # Total markers (dots only, no connecting line)
     echarts4r::e_line(
       total,
       name = "Total",
       symbol = "circle",
-      symbolSize = 8,
-      lineStyle = list(color = colors$total, width = 2, type = "dashed"),
+      symbolSize = 7,
+      lineStyle = list(width = 0),
       itemStyle = list(color = colors$total)
     ) |>
     echarts4r::e_tooltip(
@@ -330,7 +336,10 @@ render_waterfall <- function(wf_data, colors) {
       name = "Value",
       nameLocation = "middle",
       nameGap = 50,
+      nameTextStyle = list(fontFamily = system_font),
       axisLabel = list(
+        fontSize = 12,
+        fontFamily = system_font,
         formatter = htmlwidgets::JS("
           function(value) {
             if (value == null || isNaN(value)) return '';
@@ -347,7 +356,8 @@ render_waterfall <- function(wf_data, colors) {
     echarts4r::e_x_axis(
       axisLabel = list(
         rotate = 0,
-        fontSize = 11,
+        fontSize = 13,
+        fontFamily = system_font,
         overflow = "break",
         width = 100
       )
