@@ -18,11 +18,14 @@ Imports:
     blockr.core,
     dplyr,
     echarts4r,
+    gt,
     htmlwidgets,
     jsonlite,
     reactable,
     rlang,
     shiny,
+    stats,
+    tibble,
     tidyr
 Suggests:
     blockr.dag,
