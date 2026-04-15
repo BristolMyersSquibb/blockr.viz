@@ -11,6 +11,7 @@ register_bi_blocks <- function() {
       "new_pivot_table_block",
       "new_summary_table_block",
       "new_gt_table_block",
+      "new_html_table_block",
       "new_kpi_block",
       "new_waterfall_block"
     ),
@@ -19,6 +20,7 @@ register_bi_blocks <- function() {
       "Pivot Table",
       "Summary Table",
       "gt Table",
+      "HTML Table",
       "KPI",
       "Waterfall"
     ),
@@ -27,6 +29,7 @@ register_bi_blocks <- function() {
       "Flexible pivot table with row and column dimensions (X by Y x Z pattern)",
       "Wide, display-shaped multi-variable summary (list of variables by Y pattern). Successor to tidy_summary_block.",
       "Render wide-format tables (from pivot_table or summary_table) as styled gt tables. Also supports legacy long-format input from tidy_summary_block.",
+      "Dashboard-native HTML renderer for wide-format tables: collapsible sections, sticky headers, multi-level column spanners.",
       "Display a single key performance indicator",
       "Waterfall/bridge chart for sequential value progression"
     ),
@@ -35,6 +38,7 @@ register_bi_blocks <- function() {
       "transform",
       "transform",
       "table",
+      "table",
       "transform",
       "transform"
     ),
@@ -42,6 +46,7 @@ register_bi_blocks <- function() {
       "bar-chart",
       "table",
       "calculator",
+      "table",
       "table",
       "speedometer2",
       "bar-chart-steps"

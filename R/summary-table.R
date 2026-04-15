@@ -154,8 +154,13 @@ summary_table <- function(data,
     )
   })
 
-  # Bind with a .var marker if length(vars) > 1
-  if (length(vars) > 1L) {
+  # Bind with a .var marker if length(vars) > 1.
+  # Exception: if all vars are logical (pharma flag tables), skip the
+  # .var section grouping — each flag is already one row with .label
+  # = var name, and adding .var would create redundant double-naming.
+  all_logical <- all(vapply(vars, function(v) is.logical(data[[v]]),
+                            logical(1)))
+  if (length(vars) > 1L && !all_logical) {
     for (i in seq_along(per_var)) {
       per_var[[i]]$.var <- vars[i]
     }
@@ -246,11 +251,21 @@ attach_column_labels <- function(out, data, sections, by, subject_var,
     } else {
       compute_col_n(cn)
     }
+    # When by is length-2, the column name is "outer|inner" — display
+    # only the inner level in the label and let gt::tab_spanner_delim
+    # pick up the outer level automatically. When by is length 0 or 1,
+    # the full column name is the display name.
+    display_name <- if (length(by) == 2L && grepl("|", cn, fixed = TRUE)) {
+      parts <- strsplit(cn, "|", fixed = TRUE)[[1]]
+      parts[length(parts)]
+    } else {
+      cn
+    }
     if (is.na(n_val) || is.null(n_val)) {
-      attr(out[[cn]], "label") <- cn
+      attr(out[[cn]], "label") <- display_name
     } else {
       attr(out[[cn]], "label") <- sprintf("<strong>%s</strong><br>N = %d",
-                                           cn, as.integer(n_val))
+                                           display_name, as.integer(n_val))
     }
   }
 
@@ -471,7 +486,11 @@ compute_logical_var <- function(data, var, sections, by,
                             stats_df$pct)
 
   wide <- pivot_cells(stats_df, id_cols = sections, by = by, value_col = "value")
-  wide$.label <- var  # variable name as the row label
+  # For logical flags, the row stub is blank — the variable name is
+  # carried by the section header (.var) when multiple vars are
+  # present, or by the table title when there's just one. Having both
+  # .var and .label show the same var name would be redundant.
+  wide$.label <- var
 
   if (isTRUE(add_overall)) {
     ov_denom <- compute_denom(data, sections, subject_var)
