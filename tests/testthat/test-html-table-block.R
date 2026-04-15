@@ -9,10 +9,10 @@ test_that("html_table() returns a tagList for a minimal flat input", {
   expect_s3_class(out, "shiny.tag.list")
 
   html <- as.character(htmltools::tagList(out))
-  expect_true(grepl("<table class=\"blockr-html-table\">", html, fixed = TRUE))
+  expect_true(grepl("<table class=\"blockr-table\">", html, fixed = TRUE))
   expect_true(grepl("<thead>", html, fixed = TRUE))
   expect_true(grepl("<tbody>", html, fixed = TRUE))
-  expect_true(grepl("blockr-html-table-wrapper", html, fixed = TRUE))
+  expect_true(grepl("blockr-html-table-container", html, fixed = TRUE))
   expect_false(grepl("class=\"blockr-section-header\"", html, fixed = TRUE))
 })
 
@@ -182,9 +182,9 @@ test_that("leaf data column headers carry data-col-index and sortable class", {
   # Two sortable leaves at indices 1 and 2 (stub is col 0, not sortable)
   expect_true(grepl("data-col-index=\"1\"", html, fixed = TRUE))
   expect_true(grepl("data-col-index=\"2\"", html, fixed = TRUE))
-  expect_true(grepl("class=\"blockr-col-header leaf sortable\"", html, fixed = TRUE))
+  expect_true(grepl("class=\"blockr-col-header leaf blockr-sortable\"", html, fixed = TRUE))
   # Stub header is NOT sortable by default
-  expect_false(grepl("blockr-stub-header sortable", html, fixed = TRUE))
+  expect_false(grepl("blockr-stub-header blockr-sortable", html, fixed = TRUE))
 })
 
 test_that("merged spanners across data columns are not sortable", {
@@ -198,11 +198,11 @@ test_that("merged spanners across data columns are not sortable", {
   html <- as.character(htmltools::tagList(html_table(df)))
   # Each leaf with span=1 should get a sortable class — there are four of them.
   expect_equal(
-    length(gregexpr("blockr-col-header leaf sortable", html, fixed = TRUE)[[1]]),
+    length(gregexpr("blockr-col-header leaf blockr-sortable", html, fixed = TRUE)[[1]]),
     4L
   )
   # The KarXT and Placebo group <th>s (colspan=2) must NOT be sortable.
-  expect_false(grepl("class=\"blockr-col-header group sortable\"", html,
+  expect_false(grepl("class=\"blockr-col-header group blockr-sortable\"", html,
                      fixed = TRUE))
 })
 
@@ -217,6 +217,36 @@ test_that("html_table() renders a search input and toolbar", {
 test_that("html_table() places the table inside a scroll container with max-height", {
   df <- tibble::tibble(.label = "n", Total = "1")
   html <- as.character(htmltools::tagList(html_table(df, max_height = "400px")))
-  expect_true(grepl("class=\"blockr-html-table-scroll\"", html, fixed = TRUE))
+  expect_true(grepl("class=\"blockr-table-wrapper\"", html, fixed = TRUE))
   expect_true(grepl("max-height:400px", html, fixed = TRUE))
+})
+
+test_that("html_table() applies hidden .indent/.bold/.italic styling columns", {
+  df <- tibble::tibble(
+    .label  = c("Row 1", "Row 2", "Row 3"),
+    .indent = c(0L, 1L, 2L),
+    .bold   = c(TRUE, FALSE, FALSE),
+    .italic = c(FALSE, TRUE, FALSE),
+    Total   = c("a", "b", "c")
+  )
+  html <- as.character(htmltools::tagList(html_table(df)))
+  # Indent: level-1 adds 16px, level-2 adds 32px
+  expect_true(grepl("padding-left:32px", html, fixed = TRUE))
+  expect_true(grepl("padding-left:48px", html, fixed = TRUE))
+  # Bold and italic classes on data rows
+  expect_true(grepl("blockr-data-row blockr-bold", html, fixed = TRUE))
+  expect_true(grepl("blockr-data-row blockr-italic", html, fixed = TRUE))
+  # Styling columns are not rendered as data cells
+  expect_false(grepl("<td class=\"blockr-data\">TRUE", html, fixed = TRUE))
+  expect_false(grepl("<td class=\"blockr-data\">FALSE", html, fixed = TRUE))
+  expect_false(grepl("<td class=\"blockr-data\">0", html, fixed = TRUE))
+})
+
+test_that("collapse JS recomputes visibility from ancestor state", {
+  # Structural test: the emitted JS should use a recomputeCollapse function
+  # (state-driven), not a one-shot toggle loop that forgets nested state.
+  df <- tibble::tibble(.label = "n", Total = "1")
+  html <- as.character(htmltools::tagList(html_table(df)))
+  expect_true(grepl("recomputeCollapse", html, fixed = TRUE))
+  expect_true(grepl("anyAncestorCollapsed", html, fixed = TRUE))
 })

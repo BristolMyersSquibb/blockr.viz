@@ -27,17 +27,11 @@
 #' @param borders Logical. If `TRUE` (default) a 2px solid border
 #'   brackets the table top and bottom, and the title area gets a
 #'   2px bottom border.
-#' @param indent_stat Integer pixels of left-indent applied to the
-#'   stub column for stat rows inside numeric sections (rows whose
-#'   `.label` is in `c("N", "Mean", "SD", "Median", "Q1, Q3",
-#'   "Min, Max", "Mean (SD)")`). Default `16`. Set to `0` to disable.
-#'
 #' @return A `gt_tbl` object.
 #'
 #' @export
 gt_table <- function(data, title = NULL, subtitle = NULL,
-                     full_width = TRUE, borders = TRUE,
-                     indent_stat = 16L) {
+                     full_width = TRUE, borders = TRUE) {
   if (is.null(title) || !nzchar(title)) {
     title <- attr(data, "label")
   }
@@ -52,11 +46,10 @@ gt_table <- function(data, title = NULL, subtitle = NULL,
 
   gt_table_wide(
     data,
-    title       = title,
-    subtitle    = subtitle,
-    full_width  = full_width,
-    borders     = borders,
-    indent_stat = indent_stat
+    title      = title,
+    subtitle   = subtitle,
+    full_width = full_width,
+    borders    = borders
   )
 }
 
@@ -66,14 +59,17 @@ gt_table <- function(data, title = NULL, subtitle = NULL,
 
 #' @noRd
 gt_table_wide <- function(data, title = NULL, subtitle = NULL,
-                          full_width = TRUE, borders = TRUE,
-                          indent_stat = 16L) {
+                          full_width = TRUE, borders = TRUE) {
   # Section columns are any dotted `.section_N` or `.var` columns.
   section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
   stub_col <- if (".label" %in% names(data)) ".label" else NULL
 
-  # Data columns = everything that isn't section or stub
-  data_cols <- setdiff(names(data), c(section_cols, stub_col))
+  # Row-level styling columns (hidden from display, drive tab_style).
+  # See blockr.design/open/table-blocks/3-design.md amendment.
+  styling_cols <- intersect(c(".indent", ".bold", ".italic"), names(data))
+
+  # Data columns = everything that isn't section, stub, or styling
+  data_cols <- setdiff(names(data), c(section_cols, stub_col, styling_cols))
 
   # gt::gt() with groupname_col handles section rendering natively.
   # Column labels flow from `attr(col, "label")` — gt reads them
@@ -86,6 +82,12 @@ gt_table_wide <- function(data, title = NULL, subtitle = NULL,
     do.call(gt::gt, args)
   } else {
     gt::gt(data)
+  }
+
+  # Hide the row-styling columns from display — they drive tab_style
+  # below but are not rendered as their own columns.
+  if (length(styling_cols) > 0L) {
+    tbl <- gt::cols_hide(tbl, columns = dplyr::all_of(styling_cols))
   }
 
   # Pipe-delimited column spanners (for length-2 `by`)
@@ -116,18 +118,40 @@ gt_table_wide <- function(data, title = NULL, subtitle = NULL,
     }
   }
 
-  # Indent stat-label rows in the stub column (N / Mean / SD / ...)
-  stat_labels <- c(
-    "N", "Mean", "SD", "Median", "Q1, Q3", "Min, Max",
-    "Mean (SD)", "Median [Q1, Q3]", "Min-Max"
-  )
-  if (!is.null(stub_col) && indent_stat > 0L) {
-    stat_rows <- which(data[[stub_col]] %in% stat_labels)
-    if (length(stat_rows)) {
+  # Row-level styling driven by hidden `.indent` / `.bold` / `.italic`
+  # columns. `INDENT_PX` is hardcoded to 16 for now — no UI control,
+  # no block parameter. See spec amendment in 3-design.md.
+  INDENT_PX <- 16L
+  if (!is.null(stub_col) && ".indent" %in% styling_cols) {
+    lvls <- suppressWarnings(as.integer(data[[".indent"]]))
+    for (lvl in sort(unique(lvls[!is.na(lvls) & lvls > 0L]))) {
+      rows <- which(!is.na(lvls) & lvls == lvl)
       tbl <- gt::tab_style(
         tbl,
-        style = gt::cell_text(indent = gt::px(indent_stat)),
-        locations = gt::cells_stub(rows = stat_rows)
+        style = gt::cell_text(indent = gt::px(lvl * INDENT_PX)),
+        locations = gt::cells_stub(rows = rows)
+      )
+    }
+  }
+  if (!is.null(stub_col) && ".bold" %in% styling_cols) {
+    flag <- as.logical(data[[".bold"]])
+    bold_rows <- which(!is.na(flag) & flag)
+    if (length(bold_rows)) {
+      tbl <- gt::tab_style(
+        tbl,
+        style = gt::cell_text(weight = "bold"),
+        locations = gt::cells_stub(rows = bold_rows)
+      )
+    }
+  }
+  if (!is.null(stub_col) && ".italic" %in% styling_cols) {
+    flag <- as.logical(data[[".italic"]])
+    italic_rows <- which(!is.na(flag) & flag)
+    if (length(italic_rows)) {
+      tbl <- gt::tab_style(
+        tbl,
+        style = gt::cell_text(style = "italic"),
+        locations = gt::cells_stub(rows = italic_rows)
       )
     }
   }
@@ -318,8 +342,6 @@ gt_table_legacy <- function(data, title = NULL) {
 #' @param subtitle Optional subtitle shown under the title.
 #' @param full_width Logical. 100% width table. Default `TRUE`.
 #' @param borders Logical. 2px top/bottom/heading borders. Default `TRUE`.
-#' @param indent_stat Integer pixels of indent for stat-label rows
-#'   inside numeric sections. Default `16`. Set to `0` to disable.
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
 #' @export
@@ -327,22 +349,19 @@ new_gt_table_block <- function(title = "",
                                subtitle = "",
                                full_width = TRUE,
                                borders = TRUE,
-                               indent_stat = 16L,
                                ...) {
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {
-        r_title       <- shiny::reactiveVal(title)
-        r_subtitle    <- shiny::reactiveVal(subtitle)
-        r_full_width  <- shiny::reactiveVal(isTRUE(full_width))
-        r_borders     <- shiny::reactiveVal(isTRUE(borders))
-        r_indent_stat <- shiny::reactiveVal(as.integer(indent_stat))
+        r_title      <- shiny::reactiveVal(title)
+        r_subtitle   <- shiny::reactiveVal(subtitle)
+        r_full_width <- shiny::reactiveVal(isTRUE(full_width))
+        r_borders    <- shiny::reactiveVal(isTRUE(borders))
 
-        shiny::observeEvent(input$title,       r_title(input$title))
-        shiny::observeEvent(input$subtitle,    r_subtitle(input$subtitle))
-        shiny::observeEvent(input$full_width,  r_full_width(isTRUE(input$full_width)))
-        shiny::observeEvent(input$borders,     r_borders(isTRUE(input$borders)))
-        shiny::observeEvent(input$indent_stat, r_indent_stat(as.integer(input$indent_stat)))
+        shiny::observeEvent(input$title,      r_title(input$title))
+        shiny::observeEvent(input$subtitle,   r_subtitle(input$subtitle))
+        shiny::observeEvent(input$full_width, r_full_width(isTRUE(input$full_width)))
+        shiny::observeEvent(input$borders,    r_borders(isTRUE(input$borders)))
 
         list(
           expr = shiny::reactive({
@@ -351,20 +370,18 @@ new_gt_table_block <- function(title = "",
             bquote(
               blockr.bi::gt_table(
                 data,
-                title       = .(ttl),
-                subtitle    = .(sub),
-                full_width  = .(r_full_width()),
-                borders     = .(r_borders()),
-                indent_stat = .(r_indent_stat())
+                title      = .(ttl),
+                subtitle   = .(sub),
+                full_width = .(r_full_width()),
+                borders    = .(r_borders())
               )
             )
           }),
           state = list(
-            title       = r_title,
-            subtitle    = r_subtitle,
-            full_width  = r_full_width,
-            borders     = r_borders,
-            indent_stat = r_indent_stat
+            title      = r_title,
+            subtitle   = r_subtitle,
+            full_width = r_full_width,
+            borders    = r_borders
           )
         )
       })
@@ -383,18 +400,13 @@ new_gt_table_block <- function(title = "",
             )
           ),
           shiny::fluidRow(
-            shiny::column(4,
+            shiny::column(6,
               shiny::checkboxInput(ns("full_width"), "Full width",
                                    value = isTRUE(full_width))
             ),
-            shiny::column(4,
+            shiny::column(6,
               shiny::checkboxInput(ns("borders"), "Borders",
                                    value = isTRUE(borders))
-            ),
-            shiny::column(4,
-              shiny::numericInput(ns("indent_stat"), "Stat indent (px)",
-                                  value = as.integer(indent_stat),
-                                  min = 0, max = 64, step = 2)
             )
           )
         )
@@ -407,7 +419,7 @@ new_gt_table_block <- function(title = "",
       # 1) New wide format: plain tibble with dotted columns
       is_wide <- !any(c("label", "depth", "col_var") %in% names(data)) &&
         (".label" %in% names(data) ||
-         any(grepl("^\\.(section_\\d+|var)$", names(data))))
+         any(grepl("^\\.(section_\\d+|var|indent|bold|italic)$", names(data))))
       if (is_wide) return(invisible(NULL))
 
       # 2) Legacy long format
@@ -425,7 +437,7 @@ new_gt_table_block <- function(title = "",
     },
     class = "gt_table_block",
     external_ctrl = TRUE,
-    allow_empty_state = "title",
+    allow_empty_state = c("title", "subtitle"),
     ...
   )
 }

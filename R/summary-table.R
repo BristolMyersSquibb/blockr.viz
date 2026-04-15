@@ -56,10 +56,20 @@
 #' @param subject_var Optional subject-identifier column for
 #'   distinct-subject counts (for categorical `n_pct`). If NULL,
 #'   rows are counted instead.
-#'
-#' @return A plain `tibble` (NOT a `grouped_df`) with the dotted
-#'   column convention described above. Renderer-agnostic: consumed
-#'   by `gt_table_block` via regex on column names.
+#' @param indent_details Logical, default `TRUE`. When `TRUE`, detail
+#'   rows (stat rows for expanded numerics, category-level rows for
+#'   categoricals) are tagged with `.indent = 1` in the output so
+#'   the renderer indents them under their variable header. Compact
+#'   numeric rows and logical-flag rows stay at `.indent = 0` because
+#'   they are themselves the variable's summary. When `FALSE`, no
+#'   `.indent` column is emitted.
+#' @param nest_hierarchies Logical, default `FALSE`. Advanced option.
+#'   When `TRUE`, adjacent categorical entries in `vars` that form a
+#'   functional dependency in `data` (each value of the inner var
+#'   maps to a single value of the outer var) are rendered as a
+#'   row-side drill-down instead of two flat sequential sections.
+#'   v1 supports 2-level hierarchies only; deeper runs fall back to
+#'   flat sections.
 #'
 #' @examples
 #' if (FALSE) {
@@ -89,7 +99,9 @@ summary_table <- function(data,
                           stats = "compact",
                           add_overall = FALSE,
                           overall_label = "Total",
-                          subject_var = NULL) {
+                          subject_var = NULL,
+                          indent_details = TRUE,
+                          nest_hierarchies = FALSE) {
   stopifnot(is.data.frame(data))
   vars <- as.character(vars)
   sections <- as.character(sections)
@@ -140,29 +152,70 @@ summary_table <- function(data,
     if (is.null(lbl) || !nzchar(lbl)) col else as.character(lbl)
   }, character(1))
 
-  # Compute per-var frame
-  per_var <- lapply(vars, function(v) {
-    compute_one_var(
-      data = data,
-      var = v,
-      stats = stats,
-      sections = sections,
-      by = by,
-      add_overall = add_overall,
-      overall_label = overall_label,
-      subject_var = subject_var
-    )
+  # Group vars into hierarchy runs if nest_hierarchies is enabled.
+  # A run of length 1 is a flat var (existing compute path); a run of
+  # length >= 2 is a drill-down hierarchy (new compute path). v1 only
+  # handles 2-level runs; deeper runs fall back to per-var flat.
+  runs <- if (isTRUE(nest_hierarchies)) {
+    group_vars_into_runs(vars, data)
+  } else {
+    lapply(vars, function(v) v)
+  }
+
+  # Compute per-run frames. Each run becomes one entry in per_run.
+  per_run <- lapply(runs, function(run) {
+    if (length(run) == 2L) {
+      compute_hierarchy_run(
+        data = data, run = run,
+        sections = sections, by = by,
+        add_overall = add_overall,
+        overall_label = overall_label,
+        subject_var = subject_var
+      )
+    } else if (length(run) == 1L) {
+      compute_one_var(
+        data = data, var = run,
+        stats = stats, sections = sections, by = by,
+        add_overall = add_overall,
+        overall_label = overall_label,
+        subject_var = subject_var
+      )
+    } else {
+      # length > 2: fall back to flat per-var (deeper hierarchies not
+      # supported in v1; re-emit each member as a flat section)
+      parts <- lapply(run, function(v) {
+        compute_one_var(
+          data = data, var = v,
+          stats = stats, sections = sections, by = by,
+          add_overall = add_overall,
+          overall_label = overall_label,
+          subject_var = subject_var
+        )
+      })
+      # Attach .var so they appear as separate sections in the output
+      for (i in seq_along(parts)) parts[[i]]$.var <- run[i]
+      bind_per_var_frames(parts, sections = sections, has_var = TRUE)
+    }
   })
 
-  # Bind with a .var marker if length(vars) > 1.
-  # Exception: if all vars are logical (pharma flag tables), skip the
-  # .var section grouping — each flag is already one row with .label
-  # = var name, and adding .var would create redundant double-naming.
+  # Flatten runs → per_var-style list for the binder. A hierarchy run
+  # contributes one frame with no `.var` (the hierarchy replaces the
+  # variable grouping for that run). A 1-var run contributes one
+  # frame with `.var` set when `length(vars) > 1`.
+  per_var <- per_run
+
+  # Attach .var to single-var frames only when there is more than one
+  # entry in `vars` overall — matches the existing "add .var marker
+  # when there are multiple vars" rule.
   all_logical <- all(vapply(vars, function(v) is.logical(data[[v]]),
                             logical(1)))
   if (length(vars) > 1L && !all_logical) {
     for (i in seq_along(per_var)) {
-      per_var[[i]]$.var <- vars[i]
+      # Use the ADaM column label if present, otherwise the raw var
+      # name. For hierarchies, take the outermost var's label so the
+      # section header reads like the single-var case.
+      head_var <- if (length(runs[[i]]) == 1L) runs[[i]] else runs[[i]][1]
+      per_var[[i]]$.var <- var_header_label(data[[head_var]], head_var)
     }
   }
 
@@ -170,6 +223,15 @@ summary_table <- function(data,
   # then data cells in consistent order
   out <- bind_per_var_frames(per_var, sections = sections,
                              has_var = length(vars) > 1L)
+
+  # If indent_details is off, strip the .indent column (the user is
+  # opting out of all detail indentation). Hierarchy indents stay —
+  # those are not "details under a header", they're drill-down
+  # structure that `indent_details` doesn't govern.
+  if (!isTRUE(indent_details) && ".indent" %in% names(out) &&
+      !isTRUE(nest_hierarchies)) {
+    out$.indent <- NULL
+  }
 
   # Rename user `sections` columns to .section_1, .section_2, ...
   if (length(sections) > 0L) {
@@ -181,11 +243,12 @@ summary_table <- function(data,
     }
   }
 
-  # Reorder: .section_*, .var, .label, then data cells
+  # Reorder: .section_*, .var, .label, .indent, then data cells
   front_order <- c(
     if (length(sections) > 0L) paste0(".section_", seq_along(sections)) else character(),
     if (length(vars) > 1L) ".var" else character(),
-    ".label"
+    ".label",
+    ".indent"
   )
   front_order <- intersect(front_order, names(out))
   back <- setdiff(names(out), front_order)
@@ -272,6 +335,18 @@ attach_column_labels <- function(out, data, sections, by, subject_var,
   out
 }
 
+#' Pick the display label for a variable section header.
+#' Uses `attr(col, "label")` if present and non-empty, otherwise
+#' falls back to the raw variable name.
+#' @noRd
+var_header_label <- function(col, fallback) {
+  lbl <- attr(col, "label")
+  if (is.null(lbl) || !is.character(lbl) || !nzchar(lbl)) {
+    return(fallback)
+  }
+  as.character(lbl)
+}
+
 #' @noRd
 n_distinct_in <- function(data, subject_var) {
   if (!is.null(subject_var) && subject_var %in% names(data)) {
@@ -321,6 +396,7 @@ compute_numeric_compact <- function(data, var, sections, by,
 
   wide <- pivot_cells(stats_df, id_cols = sections, by = by, value_col = "value")
   wide$.label <- "Mean (SD)"
+  wide$.indent <- 0L  # compact numeric: single row is the summary
 
   if (isTRUE(add_overall)) {
     ov <- compute_numeric_stats(data, var, group_vars = sections)
@@ -361,6 +437,7 @@ compute_numeric_expanded <- function(data, var, sections, by,
 
     w <- pivot_cells(tmp, id_cols = sections, by = by, value_col = "value")
     w$.label <- s$lbl
+    w$.indent <- 1L  # expanded stat rows sit under the var header
 
     if (isTRUE(add_overall)) {
       ov <- compute_numeric_stats(data, var, group_vars = sections)
@@ -454,6 +531,7 @@ compute_categorical_var <- function(data, var, sections, by,
   # Rename .level → .label after the overall join (which needed .level)
   wide$.label <- wide$.level
   wide$.level <- NULL
+  wide$.indent <- 1L  # category levels sit under the var header
 
   reorder_cols(wide, sections, has_label = TRUE)
 }
@@ -491,6 +569,7 @@ compute_logical_var <- function(data, var, sections, by,
   # present, or by the table title when there's just one. Having both
   # .var and .label show the same var name would be redundant.
   wide$.label <- var
+  wide$.indent <- 0L  # logical flag: one row IS the summary
 
   if (isTRUE(add_overall)) {
     ov_denom <- compute_denom(data, sections, subject_var)
@@ -630,8 +709,8 @@ overall_join_by_level <- function(wide, ov_stats, sections) {
 
 #' @noRd
 reorder_cols <- function(df, sections, has_label = TRUE) {
-  # Put sections first, .label next, then data cells
-  front <- intersect(c(sections, ".label"), names(df))
+  # Put sections first, .label + .indent next, then data cells
+  front <- intersect(c(sections, ".label", ".indent"), names(df))
   back <- setdiff(names(df), front)
   df[, c(front, back), drop = FALSE]
 }
@@ -642,18 +721,172 @@ bind_per_var_frames <- function(per_var, sections, has_var) {
   # column sets when categorical levels differ)
   all_names <- unique(unlist(lapply(per_var, names)))
 
-  # Canonical front order: sections, .var, .label; back stays in first-seen order
-  front <- intersect(c(sections, ".var", ".label"), all_names)
+  # Canonical front order: sections, .var, .label, .indent
+  front <- intersect(c(sections, ".var", ".label", ".indent"), all_names)
   back <- setdiff(all_names, front)
   all_names <- c(front, back)
 
   per_var <- lapply(per_var, function(df) {
     missing <- setdiff(all_names, names(df))
-    for (mc in missing) df[[mc]] <- NA_character_
+    for (mc in missing) {
+      df[[mc]] <- if (identical(mc, ".indent")) 0L else NA_character_
+    }
     df[, all_names, drop = FALSE]
   })
 
   do.call(rbind, per_var)
+}
+
+# =============================================================================
+# Hierarchy auto-nest (nest_hierarchies = TRUE)
+# =============================================================================
+
+#' Check the functional dependency inner -> outer in `data`.
+#' Each value of `inner` must map to at most one value of `outer`.
+#' @noRd
+hierarchy_fd_holds <- function(data, outer, inner) {
+  uniq <- unique(data[, c(outer, inner), drop = FALSE])
+  uniq <- uniq[!is.na(uniq[[outer]]) & !is.na(uniq[[inner]]), , drop = FALSE]
+  if (nrow(uniq) == 0L) return(FALSE)
+  counts <- table(as.character(uniq[[inner]]))
+  all(counts == 1L)
+}
+
+#' Greedy adjacent walk over `vars`, grouping FD-linked runs into
+#' hierarchy groups. Returns a list of character vectors — each
+#' element is a run (length 1 = flat var, length >= 2 = hierarchy).
+#' v1 only groups categorical columns; numeric/logical break the run.
+#' @noRd
+group_vars_into_runs <- function(vars, data) {
+  is_cat <- vapply(vars, function(v) {
+    col <- data[[v]]
+    !is.numeric(col) && !is.logical(col)
+  }, logical(1))
+
+  runs <- list()
+  i <- 1L
+  n <- length(vars)
+  while (i <= n) {
+    current <- vars[i]
+    j <- i + 1L
+    while (j <= n && is_cat[i] && is_cat[j] &&
+           hierarchy_fd_holds(data, vars[j - 1L], vars[j])) {
+      current <- c(current, vars[j])
+      j <- j + 1L
+    }
+    runs[[length(runs) + 1L]] <- current
+    i <- j
+  }
+  runs
+}
+
+#' Compute a 2-level hierarchy run. Returns a wide data.frame with
+#' `.label`, `.indent`, and `by`-expanded cell columns. Deeper runs
+#' (length > 2) fall back to flat sections in v1 — the caller
+#' handles that by treating the run as individual vars.
+#' @noRd
+compute_hierarchy_run <- function(data, run, sections, by,
+                                  add_overall, overall_label, subject_var) {
+  stopifnot(length(run) == 2L)
+  outer <- run[1]
+  inner <- run[2]
+
+  group_vars <- c(sections, by)
+
+  # Denominator per (sections × by) cell — the "arm total" for percentages.
+  denom <- compute_denom(data, group_vars, subject_var)
+
+  # Build parent (.indent = 0) and child (.indent = 1) long frames,
+  # each with: group_vars + outer-value + inner-value + n.
+  outer_long <- compute_denom(
+    data[!is.na(data[[outer]]), , drop = FALSE],
+    c(group_vars, outer),
+    subject_var
+  )
+  names(outer_long)[names(outer_long) == "N"] <- "n"
+  outer_long$.label <- as.character(outer_long[[outer]])
+  outer_long$.indent <- 0L
+  outer_long$.sort_outer <- as.character(outer_long[[outer]])
+  outer_long$.sort_inner <- ""
+  outer_long[[outer]] <- NULL
+
+  inner_long <- compute_denom(
+    data[!is.na(data[[outer]]) & !is.na(data[[inner]]), , drop = FALSE],
+    c(group_vars, outer, inner),
+    subject_var
+  )
+  names(inner_long)[names(inner_long) == "N"] <- "n"
+  inner_long$.label <- as.character(inner_long[[inner]])
+  inner_long$.indent <- 1L
+  inner_long$.sort_outer <- as.character(inner_long[[outer]])
+  inner_long$.sort_inner <- as.character(inner_long[[inner]])
+  inner_long[[outer]] <- NULL
+  inner_long[[inner]] <- NULL
+
+  long <- rbind(outer_long, inner_long)
+
+  # Join denominator, compute pct, format as "n (p%)"
+  if (length(group_vars) == 0L) {
+    long$N <- denom$N[1]
+  } else {
+    long <- dplyr::left_join(long, denom, by = group_vars)
+  }
+  long$N[is.na(long$N)] <- 0L
+  long$pct <- ifelse(long$N > 0, long$n / long$N * 100, 0)
+  long$value <- sprintf("%d (%.1f%%)", as.integer(long$n), long$pct)
+
+  # Pivot wide on `by`, keeping sort keys + .label + .indent as id cols.
+  id_cols <- c(sections, ".label", ".indent", ".sort_outer", ".sort_inner")
+  wide <- pivot_cells(long, id_cols = id_cols, by = by, value_col = "value")
+
+  # Optional overall column: recompute on the unsplit data
+  if (isTRUE(add_overall)) {
+    ov_denom <- compute_denom(data, sections, subject_var)
+    ov_outer <- compute_denom(
+      data[!is.na(data[[outer]]), , drop = FALSE],
+      c(sections, outer),
+      subject_var
+    )
+    names(ov_outer)[names(ov_outer) == "N"] <- "n"
+    ov_outer$.label <- as.character(ov_outer[[outer]])
+    ov_outer$.indent <- 0L
+    ov_outer[[outer]] <- NULL
+
+    ov_inner <- compute_denom(
+      data[!is.na(data[[outer]]) & !is.na(data[[inner]]), , drop = FALSE],
+      c(sections, outer, inner),
+      subject_var
+    )
+    names(ov_inner)[names(ov_inner) == "N"] <- "n"
+    ov_inner$.label <- as.character(ov_inner[[inner]])
+    ov_inner$.indent <- 1L
+    ov_inner[[outer]] <- NULL
+    ov_inner[[inner]] <- NULL
+
+    ov_long <- rbind(ov_outer, ov_inner)
+    if (length(sections) == 0L) {
+      ov_long$N <- ov_denom$N[1]
+    } else {
+      ov_long <- dplyr::left_join(ov_long, ov_denom, by = sections)
+    }
+    ov_long$N[is.na(ov_long$N)] <- 0L
+    ov_long$pct <- ifelse(ov_long$N > 0, ov_long$n / ov_long$N * 100, 0)
+    ov_long$value <- sprintf("%d (%.1f%%)",
+                             as.integer(ov_long$n), ov_long$pct)
+
+    key_cols <- c(sections, ".label", ".indent")
+    key_wide <- do.call(paste, c(wide[intersect(key_cols, names(wide))], sep = "|"))
+    key_ov   <- do.call(paste, c(ov_long[intersect(key_cols, names(ov_long))], sep = "|"))
+    wide[[overall_label]] <- ov_long$value[match(key_wide, key_ov)]
+  }
+
+  # Sort: parents immediately above their children
+  ord <- order(wide$.sort_outer, wide$.sort_inner)
+  wide <- wide[ord, , drop = FALSE]
+  wide$.sort_outer <- NULL
+  wide$.sort_inner <- NULL
+
+  reorder_cols(wide, sections, has_label = TRUE)
 }
 
 # dplyr uses `.data` pronoun; silence R CMD check warnings

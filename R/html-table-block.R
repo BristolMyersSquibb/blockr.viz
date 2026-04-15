@@ -56,17 +56,22 @@ html_table <- function(data,
 
   section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
   stub_col     <- if (".label" %in% names(data)) ".label" else NULL
-  data_cols    <- setdiff(names(data), c(section_cols, stub_col))
+  styling_cols <- intersect(c(".indent", ".bold", ".italic"), names(data))
+  data_cols    <- setdiff(names(data), c(section_cols, stub_col, styling_cols))
 
   wrapper_id <- paste0("blockr-html-table-", sub("^file", "", basename(tempfile(""))))
 
   stub_is_sortable <- FALSE
   thead <- build_html_thead(data, data_cols, stub_col,
                             stub_sortable = stub_is_sortable)
-  tbody <- build_html_tbody(data, section_cols, stub_col, data_cols)
+  tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
+                            styling_cols = styling_cols)
 
+  # Use the same class names blockr.extra's preview uses so the shared
+  # table_preview_css() rules (typography, padding, hover, sort icons)
+  # apply to this table without duplication.
   table_tag <- htmltools::tags$table(
-    class = "blockr-html-table",
+    class = "blockr-table",
     thead,
     tbody
   )
@@ -100,15 +105,26 @@ html_table <- function(data,
     NULL
   }
 
+  # Pull the shared CSS from blockr.extra if available; else fall back to
+  # our local copy of the same rules. Either way, our delta CSS adds the
+  # section row groups / collapse toggle / search input / title bar /
+  # multi-level header rules that aren't in blockr.extra's preview.
+  shared_css <- if (requireNamespace("blockr.extra", quietly = TRUE)) {
+    blockr.extra::table_preview_css()
+  } else {
+    htmltools::tags$style(htmltools::HTML(html_table_shared_css_fallback()))
+  }
+
   htmltools::tagList(
-    htmltools::tags$style(htmltools::HTML(html_table_css())),
+    shared_css,
+    htmltools::tags$style(htmltools::HTML(html_table_delta_css())),
     htmltools::tags$div(
       id = wrapper_id,
-      class = "blockr-html-table-wrapper",
+      class = "blockr-html-table-container",
       `data-initial-expanded` = if (isTRUE(default_expanded)) "1" else "0",
       header_div,
       htmltools::tags$div(
-        class = "blockr-html-table-scroll",
+        class = "blockr-table-wrapper",
         style = scroll_style,
         table_tag
       ),
@@ -145,14 +161,14 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE) {
 
     if (L == 1L && !is.null(stub_col)) {
       stub_class <- "blockr-stub-header"
-      if (isTRUE(stub_sortable)) stub_class <- paste(stub_class, "sortable")
+      if (isTRUE(stub_sortable)) stub_class <- paste(stub_class, "blockr-sortable")
       cells[[length(cells) + 1L]] <- htmltools::tags$th(
         class = stub_class,
         rowspan = max_depth,
         `data-col-index` = if (isTRUE(stub_sortable)) 0L else NULL,
         htmltools::HTML("&nbsp;"),
         if (isTRUE(stub_sortable)) {
-          htmltools::tags$span(class = "blockr-sort-indicator")
+          htmltools::tags$span(class = "blockr-sort-icon")
         }
       )
     }
@@ -187,7 +203,7 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE) {
         rowspan <- max_depth - L + 1L
         sortable <- (span == 1L)
         cls <- "blockr-col-header leaf"
-        if (sortable) cls <- paste(cls, "sortable")
+        if (sortable) cls <- paste(cls, "blockr-sortable")
         th_args <- list(
           content,
           class   = cls,
@@ -197,7 +213,7 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE) {
         if (sortable) {
           th_args$`data-col-index` <- (i - 1L) + stub_offset
           th_args[[length(th_args) + 1L]] <-
-            htmltools::tags$span(class = "blockr-sort-indicator")
+            htmltools::tags$span(class = "blockr-sort-icon")
         }
       } else {
         content <- prefix_i[L]
@@ -239,9 +255,15 @@ leaf_header_content <- function(data, col_name, fallback_text, span) {
 # ---------------------------------------------------------------------------
 
 #' @noRd
-build_html_tbody <- function(data, section_cols, stub_col, data_cols) {
+build_html_tbody <- function(data, section_cols, stub_col, data_cols,
+                             styling_cols = character()) {
   ncol_total <- length(data_cols) + (if (is.null(stub_col)) 0L else 1L)
   if (ncol_total == 0L) ncol_total <- 1L
+
+  has_indent <- ".indent" %in% styling_cols
+  has_bold   <- ".bold"   %in% styling_cols
+  has_italic <- ".italic" %in% styling_cols
+  indent_px  <- 16L
 
   prev_path <- rep(NA_character_, length(section_cols))
   out <- list()
@@ -304,10 +326,31 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols) {
     }
     prev_path <- curr_path
 
+    row_bold <- if (has_bold) {
+      b <- suppressWarnings(as.logical(data[[".bold"]][i]))
+      isTRUE(b)
+    } else FALSE
+    row_italic <- if (has_italic) {
+      b <- suppressWarnings(as.logical(data[[".italic"]][i]))
+      isTRUE(b)
+    } else FALSE
+    row_indent <- if (has_indent) {
+      n <- suppressWarnings(as.integer(data[[".indent"]][i]))
+      if (is.na(n) || n < 0L) 0L else n
+    } else 0L
+
+    row_class <- "blockr-data-row"
+    if (row_bold)   row_class <- paste(row_class, "blockr-bold")
+    if (row_italic) row_class <- paste(row_class, "blockr-italic")
+
     cells <- list()
     if (!is.null(stub_col)) {
+      stub_style <- if (row_indent > 0L) {
+        paste0("padding-left:", 16L + row_indent * indent_px, "px;")
+      } else NULL
       cells[[length(cells) + 1L]] <- htmltools::tags$td(
         class = "blockr-stub",
+        style = stub_style,
         as.character(data[[stub_col]][i])
       )
     }
@@ -320,7 +363,7 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols) {
     }
 
     out[[length(out) + 1L]] <- htmltools::tags$tr(
-      class = "blockr-data-row",
+      class = row_class,
       cells
     )
   }
@@ -333,217 +376,238 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols) {
 # ---------------------------------------------------------------------------
 
 #' @noRd
-html_table_css <- function() {
-  ".blockr-html-table-wrapper {
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
-               'Helvetica Neue', Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.45;
-  color: #1f2937;
+#'
+#' Delta CSS layered on top of `blockr.extra::table_preview_css()`. Only
+#' contains rules for things blockr.extra's preview doesn't have: a title
+#' bar above the table, a search input, multi-level column header
+#' borders, row-side section header rows, the collapse chevron, and the
+#' .indent/.bold/.italic row styling.
+html_table_delta_css <- function() {
+  ".blockr-html-table-container {
   background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
-              0 1px 3px rgba(15, 23, 42, 0.06);
-  overflow: hidden;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  color: var(--blockr-color-text-primary, #111827);
+}
+.blockr-html-table-container .blockr-table-wrapper {
+  max-height: none;
 }
 .blockr-html-table-header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 18px;
-  border-bottom: 1px solid #f1f3f5;
-  background: #ffffff;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
 }
 .blockr-html-table-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #0f172a;
-  letter-spacing: -0.01em;
+  font-size: var(--blockr-font-size-section, 1rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-primary, #111827);
   flex: 1 1 auto;
   min-width: 0;
 }
 .blockr-html-table-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 0 0 auto;
 }
 input.blockr-search {
   appearance: none;
   -webkit-appearance: none;
   box-sizing: border-box;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 6px 10px 6px 30px;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 4px;
+  padding: 4px 8px 4px 26px;
   font: inherit;
-  font-size: 13px;
-  color: #1f2937;
-  background-color: #fff;
-  background-image: url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3-3'/></svg>\");
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-primary, #111827);
+  background-color: var(--blockr-color-bg-input, #f9fafb);
+  background-image: url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3-3'/></svg>\");
   background-repeat: no-repeat;
-  background-position: 9px center;
-  min-width: 220px;
+  background-position: 8px center;
+  width: 180px;
   transition: border-color 0.12s, box-shadow 0.12s;
 }
-input.blockr-search::placeholder { color: #9ca3af; }
+input.blockr-search::placeholder { color: var(--blockr-color-text-subtle, #9ca3af); }
 input.blockr-search:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  border-color: var(--blockr-color-primary, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  background-color: #ffffff;
 }
-.blockr-html-table-scroll {
-  overflow: auto;
-  background: #fff;
-}
-.blockr-html-table {
-  border-collapse: separate;
-  border-spacing: 0;
-  width: 100%;
-  background: #fff;
-}
-.blockr-html-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #f9fafb;
-  color: #4b5563;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.blockr-html-table-container .blockr-table thead th {
   text-align: center;
-  padding: 10px 14px;
-  border-bottom: 1px solid #e5e7eb;
-  white-space: nowrap;
+  vertical-align: bottom;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  padding: 8px 12px;
 }
-.blockr-html-table thead th.blockr-col-header.leaf {
-  border-bottom: 2px solid #d1d5db;
-  color: #111827;
-  text-transform: none;
-  font-size: 12px;
-  letter-spacing: 0;
-  font-weight: 600;
+.blockr-html-table-container .blockr-table thead th.blockr-col-header.group {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
 }
-.blockr-html-table thead th.blockr-col-header.leaf strong {
-  font-weight: 700;
-  font-size: 13px;
-  color: #0f172a;
+.blockr-html-table-container .blockr-table thead th.blockr-col-header.leaf {
+  border-bottom: 2px solid var(--blockr-grey-300, #d1d5db);
 }
-.blockr-html-table thead th.blockr-stub-header {
+.blockr-html-table-container .blockr-table thead th.blockr-col-header.leaf strong {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-size: var(--blockr-font-size-base, 0.875rem);
+}
+.blockr-html-table-container .blockr-table thead th.blockr-stub-header {
   text-align: left;
-  min-width: 200px;
+  border-bottom: 2px solid var(--blockr-grey-300, #d1d5db);
 }
-.blockr-html-table thead th.sortable {
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.1s;
-}
-.blockr-html-table thead th.sortable:hover {
-  background: #f3f4f6;
-}
-.blockr-html-table .blockr-sort-indicator {
-  display: inline-block;
-  width: 10px;
-  margin-left: 6px;
-  color: #cbd5e1;
-  font-size: 10px;
-  vertical-align: baseline;
-}
-.blockr-html-table .blockr-sort-indicator::before { content: '\\2195'; }
-.blockr-html-table thead th.sortable:hover .blockr-sort-indicator { color: #94a3b8; }
-.blockr-html-table thead th.sort-asc .blockr-sort-indicator {
-  color: #1f2937;
-}
-.blockr-html-table thead th.sort-asc .blockr-sort-indicator::before { content: '\\2191'; }
-.blockr-html-table thead th.sort-desc .blockr-sort-indicator {
-  color: #1f2937;
-}
-.blockr-html-table thead th.sort-desc .blockr-sort-indicator::before { content: '\\2193'; }
-.blockr-html-table tbody td {
-  padding: 8px 14px;
-  border-bottom: 1px solid #f1f3f5;
-  white-space: nowrap;
-  background: #fff;
-}
-.blockr-html-table tbody td.blockr-stub {
-  color: #374151;
+.blockr-html-table-container .blockr-table tbody td.blockr-stub {
   text-align: left;
-  padding-left: 28px;
-  font-weight: 500;
+  padding-left: 16px;
+  font-weight: var(--blockr-font-weight-normal, 400);
 }
-.blockr-html-table tbody td.blockr-data {
+.blockr-html-table-container .blockr-table tbody td.blockr-data {
   text-align: right;
   font-variant-numeric: tabular-nums;
-  color: #1f2937;
 }
-.blockr-html-table tbody tr.blockr-data-row { transition: background 0.08s; }
-.blockr-html-table tbody tr.blockr-data-row:hover td { background: #eff6ff; }
-.blockr-html-table tbody tr.blockr-section-header {
+.blockr-html-table-container .blockr-table tbody tr.blockr-bold td {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
+.blockr-html-table-container .blockr-table tbody tr.blockr-italic td {
+  font-style: italic;
+}
+.blockr-html-table-container .blockr-table tbody tr.blockr-section-header {
   cursor: pointer;
-  user-select: none;
 }
-.blockr-html-table tbody tr.blockr-section-header td.blockr-section-cell {
+.blockr-html-table-container .blockr-table tbody tr.blockr-section-header td {
   text-align: left;
-  color: #0f172a;
+  color: var(--blockr-color-text-primary, #111827);
+  padding-top: 12px;
+  padding-bottom: 4px;
+  border-top: 1px solid var(--blockr-color-border, #e5e7eb);
+  font-weight: var(--blockr-font-weight-semibold, 600);
   background: #ffffff;
-  padding: 14px 14px 6px;
-  border-bottom: 1px solid #e5e7eb;
+  transition: background 0.08s;
 }
-.blockr-html-table tbody tr.blockr-section-header[data-level='1'] td {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #4338ca;
+.blockr-html-table-container .blockr-table tbody tr.blockr-section-header:hover td {
+  background: var(--blockr-color-bg-subtle, #f9fafb);
 }
-.blockr-html-table tbody tr.blockr-section-header[data-level='2'] td {
-  font-size: 12px;
-  font-weight: 600;
-  color: #334155;
-  padding-left: 28px;
+.blockr-html-table-container .blockr-table tbody tr.blockr-section-header[data-level='2'] td {
+  padding-left: 32px;
 }
-.blockr-html-table tbody tr.blockr-section-header[data-level='3'] td {
-  font-size: 12px;
-  font-weight: 600;
-  color: #475569;
-  padding-left: 44px;
+.blockr-html-table-container .blockr-table tbody tr.blockr-section-header[data-level='3'] td {
+  padding-left: 48px;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
 }
-.blockr-html-table tbody tr.blockr-section-header[data-level='4'] td {
-  font-size: 12px;
-  color: #64748b;
-  padding-left: 58px;
+.blockr-html-table-container .blockr-table tbody tr.blockr-section-header[data-level='4'] td {
+  padding-left: 64px;
+  font-weight: var(--blockr-font-weight-medium, 500);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
 }
-.blockr-html-table tbody tr.blockr-section-header:hover td { background: #f9fafb; }
-.blockr-html-table .blockr-toggle {
+.blockr-html-table-container .blockr-table tbody tr.blockr-section-header:first-child td {
+  border-top: none;
+}
+.blockr-html-table-container .blockr-table tbody tr:last-child td {
+  border-bottom: 2px solid var(--blockr-grey-300, #d1d5db);
+}
+.blockr-html-table-container .blockr-toggle {
   display: inline-block;
-  width: 12px;
-  color: #9ca3af;
-  font-size: 0.85em;
+  width: 14px;
+  color: var(--blockr-color-text-muted, #6b7280);
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+  margin-right: 4px;
   transition: transform 0.12s ease;
-  margin-right: 2px;
 }
-.blockr-html-table tbody tr.blockr-section-header.collapsed .blockr-toggle {
+.blockr-html-table-container tr.blockr-section-header:hover .blockr-toggle {
+  color: var(--blockr-color-text-primary, #111827);
+}
+.blockr-html-table-container tr.blockr-section-header.collapsed .blockr-toggle {
   transform: rotate(-90deg);
 }
-.blockr-html-table .blockr-section-label {
-  color: #94a3b8;
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: normal;
-  margin-right: 3px;
+.blockr-html-table-container .blockr-section-label {
+  color: var(--blockr-color-text-muted, #6b7280);
+  font-weight: var(--blockr-font-weight-normal, 400);
+  margin-right: 4px;
 }
 .blockr-html-table-caption {
-  padding: 10px 18px 14px;
-  font-size: 12px;
-  color: #6b7280;
-  border-top: 1px solid #f1f3f5;
-  background: #fff;
+  padding: 8px 4px 4px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 .blockr-hidden-collapse,
 .blockr-hidden-search {
   display: none !important;
+}"
+}
+
+#' @noRd
+#'
+#' Subset of `blockr.extra::table_preview_css()` mirrored verbatim for
+#' standalone use when blockr.extra isn't installed. Keeps html_table()
+#' visually consistent without a hard dependency. If blockr.extra is
+#' available, prefer its exported helper instead — same source of truth.
+html_table_shared_css_fallback <- function() {
+  ".blockr-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+}
+.blockr-table thead {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+}
+.blockr-table thead tr {
+  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+}
+.blockr-table th {
+  text-align: left;
+  padding: 10px 16px;
+  font-weight: var(--blockr-font-weight-medium, 500);
+  color: var(--blockr-color-text-primary, #111827);
+  vertical-align: bottom;
+  overflow: hidden;
+}
+.blockr-table tbody tr {
+  border-bottom: 1px solid var(--blockr-grey-100, #f3f4f6);
+  transition: background-color 0.15s ease;
+}
+.blockr-table tbody tr:hover {
+  background-color: var(--blockr-color-bg-subtle, #f9fafb);
+}
+.blockr-table td {
+  padding: 10px 16px;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  color: var(--blockr-color-text-primary, #111827);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.blockr-table th.blockr-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+.blockr-table th.blockr-sortable:hover {
+  background-color: var(--blockr-color-bg-subtle, #f9fafb);
+}
+.blockr-sort-icon {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  font-size: 10px;
+  line-height: 12px;
+  text-align: center;
+}
+.blockr-sort-icon-asc::after {
+  content: '\\2191';
+  color: #374151;
+}
+.blockr-sort-icon-desc::after {
+  content: '\\2193';
+  color: #374151;
 }"
 }
 
@@ -568,27 +632,42 @@ html_table_js_template <- function() {
   });
 
   // ---------- Collapse ----------
-  function toggleCollapse(h){
-    var level = parseInt(h.getAttribute('data-level'), 10);
-    var collapsed = h.classList.toggle('collapsed');
-    var n = h.nextElementSibling;
-    while (n) {
-      if (n.classList && n.classList.contains('blockr-section-header')) {
-        var nLevel = parseInt(n.getAttribute('data-level'), 10);
-        if (nLevel <= level) break;
+  // Recompute visibility of every row from section-header collapsed state.
+  // Nested collapse is respected: a row is hidden iff any ancestor section
+  // header has the .collapsed class.
+  function recomputeCollapse(){
+    var stack = []; // [{ level, collapsed }]
+    var rows = Array.prototype.slice.call(tbody.children);
+    rows.forEach(function(r){
+      if (r.classList.contains('blockr-section-header')) {
+        var lvl = parseInt(r.getAttribute('data-level'), 10);
+        while (stack.length > 0 && stack[stack.length-1].level >= lvl) stack.pop();
+        var anyAncestorCollapsed = stack.some(function(s){ return s.collapsed; });
+        if (anyAncestorCollapsed) r.classList.add('blockr-hidden-collapse');
+        else r.classList.remove('blockr-hidden-collapse');
+        stack.push({ level: lvl, collapsed: r.classList.contains('collapsed') });
+      } else if (r.classList.contains('blockr-data-row')) {
+        var hidden = stack.some(function(s){ return s.collapsed; });
+        if (hidden) r.classList.add('blockr-hidden-collapse');
+        else r.classList.remove('blockr-hidden-collapse');
       }
-      if (collapsed) n.classList.add('blockr-hidden-collapse');
-      else n.classList.remove('blockr-hidden-collapse');
-      n = n.nextElementSibling;
-    }
+    });
+  }
+  function toggleCollapse(h){
+    h.classList.toggle('collapsed');
+    recomputeCollapse();
   }
   root.querySelectorAll('tr.blockr-section-header').forEach(function(h){
-    h.addEventListener('click', function(){ toggleCollapse(h); });
+    h.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      toggleCollapse(h);
+    });
   });
   if (root.getAttribute('data-initial-expanded') === '0') {
-    root.querySelectorAll('tr.blockr-section-header[data-level=\"1\"]').forEach(function(h){
-      if (!h.classList.contains('collapsed')) toggleCollapse(h);
+    root.querySelectorAll('tr.blockr-section-header').forEach(function(h){
+      h.classList.add('collapsed');
     });
+    recomputeCollapse();
   }
 
   // ---------- Sort ----------
@@ -619,16 +698,19 @@ html_table_js_template <- function() {
       sortState.col = colIdx;
       sortState.dir = 1;
     }
-    root.querySelectorAll('th.sortable').forEach(function(th){
-      th.classList.remove('sort-asc', 'sort-desc');
+    root.querySelectorAll('th.blockr-sortable .blockr-sort-icon').forEach(function(ic){
+      ic.classList.remove('blockr-sort-icon-asc', 'blockr-sort-icon-desc');
     });
     if (sortState.dir === 0) {
       sortState.col = null;
       resetOrder();
       return;
     }
-    var th = root.querySelector('th.sortable[data-col-index=\"' + colIdx + '\"]');
-    if (th) th.classList.add(sortState.dir === 1 ? 'sort-asc' : 'sort-desc');
+    var th = root.querySelector('th.blockr-sortable[data-col-index=\"' + colIdx + '\"]');
+    if (th) {
+      var icon = th.querySelector('.blockr-sort-icon');
+      if (icon) icon.classList.add(sortState.dir === 1 ? 'blockr-sort-icon-asc' : 'blockr-sort-icon-desc');
+    }
 
     var rows = Array.prototype.slice.call(tbody.children);
     var groups = [];
@@ -668,7 +750,7 @@ html_table_js_template <- function() {
     tbody.appendChild(frag);
   }
 
-  root.querySelectorAll('th.sortable').forEach(function(th){
+  root.querySelectorAll('th.blockr-sortable').forEach(function(th){
     th.addEventListener('click', function(e){
       e.stopPropagation();
       var idx = parseInt(th.getAttribute('data-col-index'), 10);
@@ -819,7 +901,7 @@ new_html_table_block <- function(title = "",
     },
     class = "html_table_block",
     external_ctrl = TRUE,
-    allow_empty_state = "title",
+    allow_empty_state = c("title", "caption"),
     ...
   )
 }

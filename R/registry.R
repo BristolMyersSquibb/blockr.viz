@@ -51,6 +51,15 @@ register_bi_blocks <- function() {
       "speedometer2",
       "bar-chart-steps"
     ),
+    arguments = list(
+      NULL,                         # visual_filter_block (not in MCP universe)
+      pivot_table_arguments(),
+      summary_table_arguments(),
+      gt_table_arguments(),
+      NULL,                         # html_table_block (not in MCP universe)
+      NULL,                         # kpi_block (not in MCP universe)
+      NULL                          # waterfall_block (not in MCP universe)
+    ),
     package = utils::packageName(),
     overwrite = TRUE
   )

@@ -35,10 +35,16 @@ new_summary_table_block <- function(
     by = character(),
     stats = "compact",
     add_overall = FALSE,
-    overall_label = "Total"
+    overall_label = "Total",
+    indent_details = TRUE,
+    nest_hierarchies = FALSE
   ),
   ...
 ) {
+  # Backfill advanced-option defaults for state lists saved before the
+  # amendment landed.
+  if (is.null(state$indent_details))   state$indent_details   <- TRUE
+  if (is.null(state$nest_hierarchies)) state$nest_hierarchies <- FALSE
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {
@@ -92,6 +98,12 @@ new_summary_table_block <- function(
         shiny::observeEvent(input$overall_label,
           update_state("overall_label", input$overall_label),
           ignoreNULL = FALSE, ignoreInit = TRUE)
+        shiny::observeEvent(input$indent_details,
+          update_state("indent_details", isTRUE(input$indent_details)),
+          ignoreNULL = FALSE, ignoreInit = TRUE)
+        shiny::observeEvent(input$nest_hierarchies,
+          update_state("nest_hierarchies", isTRUE(input$nest_hierarchies)),
+          ignoreNULL = FALSE, ignoreInit = TRUE)
 
         list(
           expr = shiny::reactive({
@@ -100,12 +112,14 @@ new_summary_table_block <- function(
             bquote(
               blockr.bi::summary_table(
                 data,
-                vars          = .(s$vars),
-                sections      = .(s$sections),
-                by            = .(s$by),
-                stats         = .(s$stats),
-                add_overall   = .(s$add_overall),
-                overall_label = .(s$overall_label)
+                vars             = .(s$vars),
+                sections         = .(s$sections),
+                by               = .(s$by),
+                stats            = .(s$stats),
+                add_overall      = .(s$add_overall),
+                overall_label    = .(s$overall_label),
+                indent_details   = .(s$indent_details),
+                nest_hierarchies = .(s$nest_hierarchies)
               )
             )
           }),
@@ -179,6 +193,25 @@ new_summary_table_block <- function(
                 ns("overall_label"),
                 label = "Overall column label",
                 value = state$overall_label
+              )
+            )
+          ),
+          shiny::tags$details(
+            shiny::tags$summary("Advanced options"),
+            shiny::fluidRow(
+              shiny::column(6,
+                shiny::checkboxInput(
+                  ns("indent_details"),
+                  label = "Indent detail rows",
+                  value = isTRUE(state$indent_details)
+                )
+              ),
+              shiny::column(6,
+                shiny::checkboxInput(
+                  ns("nest_hierarchies"),
+                  label = "Nest hierarchies",
+                  value = isTRUE(state$nest_hierarchies)
+                )
               )
             )
           )

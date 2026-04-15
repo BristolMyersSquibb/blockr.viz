@@ -29,6 +29,7 @@ Imports:
     tidyr
 Suggests:
     blockr.dag,
+    blockr.extra,
     blockr.io,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
