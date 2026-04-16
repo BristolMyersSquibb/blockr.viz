@@ -327,7 +327,7 @@ attach_column_labels <- function(out, data, sections, by, subject_var,
     if (is.na(n_val) || is.null(n_val)) {
       attr(out[[cn]], "label") <- display_name
     } else {
-      attr(out[[cn]], "label") <- sprintf("<strong>%s</strong><br>N = %d",
+      attr(out[[cn]], "label") <- sprintf("%s\nN = %d",
                                            display_name, as.integer(n_val))
     }
   }

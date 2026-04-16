@@ -41,10 +41,16 @@ new_summary_table_block <- function(
   ),
   ...
 ) {
-  # Backfill advanced-option defaults for state lists saved before the
-  # amendment landed.
-  if (is.null(state$indent_details))   state$indent_details   <- TRUE
-  if (is.null(state$nest_hierarchies)) state$nest_hierarchies <- FALSE
+  # Backfill defaults for partial state lists (e.g. from cedx-poc.R or
+  # older serialized boards that predate new fields).
+  defaults <- list(
+    vars = character(), sections = character(), by = character(),
+    stats = "compact", add_overall = FALSE, overall_label = "Total",
+    indent_details = TRUE, nest_hierarchies = FALSE
+  )
+  for (nm in names(defaults)) {
+    if (is.null(state[[nm]])) state[[nm]] <- defaults[[nm]]
+  }
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {

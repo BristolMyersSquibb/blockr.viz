@@ -95,18 +95,21 @@ gt_table_wide <- function(data, title = NULL, subtitle = NULL,
     tbl <- gt::tab_spanner_delim(tbl, delim = "|")
   }
 
-  # Honor HTML in column labels — gt reads plain text by default.
-  # If any data column's label contains HTML tags, pre-wrap them with
-  # gt::html so newlines via <br> render correctly.
-  html_labels <- list()
+  # Column labels: render newlines as <br> for clean two-line headers
+  # (e.g. "Placebo\nN = 121" → "Placebo<br>N = 121"). No bold/styling.
+  col_labels <- list()
   for (cn in data_cols) {
     lbl <- attr(data[[cn]], "label")
-    if (!is.null(lbl) && is.character(lbl) && grepl("<", lbl, fixed = TRUE)) {
-      html_labels[[cn]] <- gt::html(lbl)
+    if (!is.null(lbl) && is.character(lbl) && nzchar(lbl)) {
+      if (grepl("\n", lbl, fixed = TRUE)) {
+        col_labels[[cn]] <- gt::html(gsub("\n", "<br>", lbl))
+      } else {
+        col_labels[[cn]] <- lbl
+      }
     }
   }
-  if (length(html_labels) > 0L) {
-    tbl <- gt::cols_label(tbl, .list = html_labels)
+  if (length(col_labels) > 0L) {
+    tbl <- gt::cols_label(tbl, .list = col_labels)
   }
 
   # Title + subtitle
