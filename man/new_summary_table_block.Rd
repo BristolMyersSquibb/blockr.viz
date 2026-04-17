@@ -6,7 +6,8 @@
 \usage{
 new_summary_table_block(
   state = list(vars = character(), sections = character(), by = character(), stats =
-    "compact", add_overall = FALSE, overall_label = "Total"),
+    "compact", add_overall = FALSE, overall_label = "Total", indent_details = TRUE,
+    nest_hierarchies = FALSE),
   ...
 )
 }
@@ -35,10 +36,9 @@ Output is a plain tibble with dotted section columns
 \code{\link[=new_gt_table_block]{new_gt_table_block()}} or any renderer that understands the
 convention.
 
-v1 uses stock Shiny \code{selectizeInput} widgets for the selection
-slots. A JS-widget (\code{blockr-select} / \code{blockr-pill}) rewrite is
-planned for a follow-up release that will bring pivot_table_block
-and summary_table_block onto a shared widget library.
+The UI uses the shared \code{Blockr.Select} widget library (also used by
+\code{blockr.dplyr} blocks) with a gear-icon popover for advanced options
+(stats preset, overall column, indent, nest hierarchies).
 
 Spec: \verb{blockr.design/open/table-blocks/}.
 }

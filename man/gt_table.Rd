@@ -10,7 +10,7 @@ gt_table(
   subtitle = NULL,
   full_width = TRUE,
   borders = TRUE,
-  indent_stat = 16L
+  na_rep = "—"
 )
 }
 \arguments{
@@ -34,9 +34,10 @@ to 100\% width. Set \code{FALSE} for auto-sized.}
 brackets the table top and bottom, and the title area gets a
 2px bottom border.}
 
-\item{indent_stat}{Integer pixels of left-indent applied to the
-stub column for stat rows inside numeric sections (rows whose
-\code{.label} is in \code{c("N", "Mean", "SD", "Median", "Q1, Q3", "Min, Max", "Mean (SD)")}). Default \code{16}. Set to \code{0} to disable.}
+\item{na_rep}{Character. Text to display for missing (\code{NA}) cells.
+Default \code{"\\u2014"} (em dash), the clinical-table convention. Use
+\code{""} for blank, \code{"NA"} for gt's built-in default, or any other
+string.}
 }
 \value{
 A \code{gt_tbl} object.

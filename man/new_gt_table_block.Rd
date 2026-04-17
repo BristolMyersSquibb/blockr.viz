@@ -9,7 +9,7 @@ new_gt_table_block(
   subtitle = "",
   full_width = TRUE,
   borders = TRUE,
-  indent_stat = 16L,
+  na_rep = "—",
   ...
 )
 }
@@ -22,8 +22,8 @@ new_gt_table_block(
 
 \item{borders}{Logical. 2px top/bottom/heading borders. Default \code{TRUE}.}
 
-\item{indent_stat}{Integer pixels of indent for stat-label rows
-inside numeric sections. Default \code{16}. Set to \code{0} to disable.}
+\item{na_rep}{Character. Text shown for missing cells. Default
+\code{"\\u2014"} (em dash).}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
 }

@@ -20,10 +20,9 @@
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #'
 #' @details
-#' v1 uses stock Shiny `selectizeInput` widgets for the selection
-#' slots. A JS-widget (`blockr-select` / `blockr-pill`) rewrite is
-#' planned for a follow-up release that will bring pivot_table_block
-#' and summary_table_block onto a shared widget library.
+#' The UI uses the shared `Blockr.Select` widget library (also used by
+#' `blockr.dplyr` blocks) with a gear-icon popover for advanced options
+#' (stats preset, overall column, indent, nest hierarchies).
 #'
 #' Spec: `blockr.design/open/table-blocks/`.
 #'
@@ -57,59 +56,61 @@ new_summary_table_block <- function(
         ns <- session$ns
         r_state <- shiny::reactiveVal(state)
 
-        # Populate column choices when data changes
-        shiny::observeEvent(data(), {
-          d <- data()
-          shiny::req(d, is.data.frame(d))
+        # Gate to avoid circular JS <-> R updates.
+        self_write <- new.env(parent = emptyenv())
+        self_write$active <- FALSE
+
+        send_columns <- function(d) {
           all_cols <- names(d)
           num_cols <- all_cols[vapply(d, is.numeric, logical(1))]
           log_cols <- all_cols[vapply(d, is.logical, logical(1))]
           cat_cols <- setdiff(all_cols, c(num_cols, log_cols))
-          var_cols <- c(num_cols, log_cols, cat_cols)  # any type valid for vars
+          var_cols <- c(num_cols, log_cols, cat_cols)
+          session$sendCustomMessage("summary-table-columns", list(
+            id = ns("summary_input"),
+            var_cols = as.list(var_cols),
+            cat_cols = as.list(cat_cols)
+          ))
+        }
 
-          s <- shiny::isolate(r_state())
-          shiny::updateSelectizeInput(session, "vars",
-            choices = var_cols,
-            selected = intersect(s$vars, var_cols))
-          shiny::updateSelectizeInput(session, "sections",
-            choices = cat_cols,
-            selected = intersect(s$sections, cat_cols))
-          shiny::updateSelectizeInput(session, "by",
-            choices = cat_cols,
-            selected = intersect(s$by, cat_cols))
+        # Send initial state + column choices once data arrives.
+        shiny::observeEvent(data(), {
+          d <- data()
+          shiny::req(is.data.frame(d))
+          send_columns(d)
+          session$sendCustomMessage("summary-table-update", list(
+            id = ns("summary_input"),
+            state = r_state()
+          ))
         })
 
-        # Sync UI → r_state. Use ignoreInit = TRUE to avoid clobbering
-        # the initial state before the user has touched anything.
-        update_state <- function(field, value) {
-          s <- shiny::isolate(r_state())
-          s[[field]] <- value
-          r_state(s)
-        }
-        shiny::observeEvent(input$vars,
-          update_state("vars", input$vars),
-          ignoreNULL = FALSE, ignoreInit = TRUE)
-        shiny::observeEvent(input$sections,
-          update_state("sections", input$sections),
-          ignoreNULL = FALSE, ignoreInit = TRUE)
-        shiny::observeEvent(input$by,
-          update_state("by", input$by),
-          ignoreNULL = FALSE, ignoreInit = TRUE)
-        shiny::observeEvent(input$stats,
-          update_state("stats", input$stats),
-          ignoreNULL = FALSE, ignoreInit = TRUE)
-        shiny::observeEvent(input$add_overall,
-          update_state("add_overall", isTRUE(input$add_overall)),
-          ignoreNULL = FALSE, ignoreInit = TRUE)
-        shiny::observeEvent(input$overall_label,
-          update_state("overall_label", input$overall_label),
-          ignoreNULL = FALSE, ignoreInit = TRUE)
-        shiny::observeEvent(input$indent_details,
-          update_state("indent_details", isTRUE(input$indent_details)),
-          ignoreNULL = FALSE, ignoreInit = TRUE)
-        shiny::observeEvent(input$nest_hierarchies,
-          update_state("nest_hierarchies", isTRUE(input$nest_hierarchies)),
-          ignoreNULL = FALSE, ignoreInit = TRUE)
+        # JS -> R: user edited the block.
+        shiny::observeEvent(input$summary_input, {
+          self_write$active <- TRUE
+          new_state <- input$summary_input
+          # Coerce nulls to typed empties so downstream bquote is stable.
+          new_state$vars <- as.character(new_state$vars %||% character())
+          new_state$sections <- as.character(new_state$sections %||% character())
+          new_state$by <- as.character(new_state$by %||% character())
+          new_state$stats <- new_state$stats %||% "compact"
+          new_state$add_overall <- isTRUE(new_state$add_overall)
+          new_state$overall_label <- new_state$overall_label %||% "Total"
+          new_state$indent_details <- isTRUE(new_state$indent_details)
+          new_state$nest_hierarchies <- isTRUE(new_state$nest_hierarchies)
+          r_state(new_state)
+        })
+
+        # R -> JS: external state change (e.g. restore from serialized board).
+        shiny::observeEvent(r_state(), {
+          if (self_write$active) {
+            self_write$active <- FALSE
+          } else {
+            session$sendCustomMessage("summary-table-update", list(
+              id = ns("summary_input"),
+              state = r_state()
+            ))
+          }
+        })
 
         list(
           expr = shiny::reactive({
@@ -135,96 +136,39 @@ new_summary_table_block <- function(
     },
     ui = function(id) {
       ns <- shiny::NS(id)
-      shiny::tagList(
+      htmltools::tagList(
+        blockr_core_js_dep(),
+        blockr_blocks_css_dep(),
+        blockr_select_dep(),
+        summary_table_block_dep(),
         shiny::div(
-          class = "summary-table-block-ui",
-          shiny::fluidRow(
-            shiny::column(6,
-              shiny::selectizeInput(
-                ns("vars"),
-                label = "Variables",
-                choices = NULL,
-                selected = state$vars,
-                multiple = TRUE,
-                options = list(placeholder = "Columns to summarise")
-              )
-            ),
-            shiny::column(6,
-              shiny::selectizeInput(
-                ns("sections"),
-                label = "Sections (outer grouping)",
-                choices = NULL,
-                selected = state$sections,
-                multiple = TRUE,
-                options = list(placeholder = "Optional outer section columns")
-              )
-            )
-          ),
-          shiny::fluidRow(
-            shiny::column(6,
-              shiny::selectizeInput(
-                ns("by"),
-                label = "By (column split)",
-                choices = NULL,
-                selected = state$by,
-                multiple = TRUE,
-                options = list(
-                  placeholder = "Up to 2 categorical columns",
-                  maxItems = 2
-                )
-              )
-            ),
-            shiny::column(6,
-              shiny::selectInput(
-                ns("stats"),
-                label = "Stats preset",
-                choices = c(
-                  "Compact (Mean (SD) per row)" = "compact",
-                  "Expanded (N / Mean / SD / Median / Q1,Q3 / Min,Max)" = "expanded"
-                ),
-                selected = state$stats
-              )
-            )
-          ),
-          shiny::fluidRow(
-            shiny::column(6,
-              shiny::checkboxInput(
-                ns("add_overall"),
-                label = "Add overall column",
-                value = state$add_overall
-              )
-            ),
-            shiny::column(6,
-              shiny::textInput(
-                ns("overall_label"),
-                label = "Overall column label",
-                value = state$overall_label
-              )
-            )
-          ),
-          shiny::tags$details(
-            shiny::tags$summary("Advanced options"),
-            shiny::fluidRow(
-              shiny::column(6,
-                shiny::checkboxInput(
-                  ns("indent_details"),
-                  label = "Indent detail rows",
-                  value = isTRUE(state$indent_details)
-                )
-              ),
-              shiny::column(6,
-                shiny::checkboxInput(
-                  ns("nest_hierarchies"),
-                  label = "Nest hierarchies",
-                  value = isTRUE(state$nest_hierarchies)
-                )
-              )
-            )
+          class = "block-container",
+          shiny::div(
+            id = ns("summary_input"),
+            class = "summary-table-block-container"
           )
         )
       )
     },
     class = c("summary_table_block", "transform_block", "block"),
+    allow_empty_state = c("vars", "sections", "by", "overall_label"),
     ...
+  )
+}
+
+summary_table_block_dep <- function() {
+  htmltools::tagList(
+    htmltools::htmlDependency(
+      name = "summary-table-block-js",
+      version = utils::packageVersion("blockr.bi"),
+      src = system.file("js", package = "blockr.bi"),
+      script = "summary-table-block.js"
+    ),
+    htmltools::htmlDependency(
+      name = "summary-table-block-css",
+      version = utils::packageVersion("blockr.bi"),
+      src = system.file("css", package = "blockr.bi"),
+      stylesheet = "summary-table-block.css"
+    )
   )
 }

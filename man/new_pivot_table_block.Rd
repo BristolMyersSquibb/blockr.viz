@@ -55,6 +55,9 @@ Dimensions not placed in rows or columns are automatically aggregated over.
 \item Column dimension + 1 measure: Dimension values become columns
 \item Column dimension + N measures: Nested columns (Dimension_Measure)
 }
+
+The UI uses the shared \code{Blockr.Select} widget library (also used by
+\code{blockr.dplyr} blocks) with a gear-icon popover for rounding precision.
 }
 \examples{
 if (interactive()) {

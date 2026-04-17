@@ -32,6 +32,9 @@
 #' - Column dimension + 1 measure: Dimension values become columns
 #' - Column dimension + N measures: Nested columns (Dimension_Measure)
 #'
+#' The UI uses the shared `Blockr.Select` widget library (also used by
+#' `blockr.dplyr` blocks) with a gear-icon popover for rounding precision.
+#'
 #' @export
 #'
 #' @examples
@@ -66,290 +69,132 @@ new_pivot_table_block <- function(
     digits = "",
     ...
 ) {
+  init_state <- list(
+    rows = as.character(rows),
+    cols = as.character(cols),
+    measures = as.character(measures),
+    agg_fun = agg_fun,
+    digits = if (is.null(digits)) "" else as.character(digits)
+  )
+
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(
         id,
         function(input, output, session) {
-          # State
-          r_rows <- shiny::reactiveVal(rows)
-          r_cols <- shiny::reactiveVal(cols)
-          r_measures <- shiny::reactiveVal(measures)
-          r_agg_fun <- shiny::reactiveVal(agg_fun)
-          r_digits <- shiny::reactiveVal(digits)
+          ns <- session$ns
+          r_state <- shiny::reactiveVal(init_state)
 
-          # Detect column types from data
-          # Numeric columns with few unique values (<=10) are treated as dimensions
+          self_write <- new.env(parent = emptyenv())
+          self_write$active <- FALSE
+
+          # Detect column types. Numeric columns with <= 10 unique values are
+          # dimensions (e.g. Year, Quarter); others follow is.numeric.
           column_info <- shiny::reactive({
             df <- data()
             if (!is.data.frame(df) || ncol(df) == 0) {
               return(list(dimensions = character(), measures = character()))
             }
-
             is_numeric <- vapply(df, is.numeric, logical(1))
-
-            # Low-cardinality numeric columns are dimensions (e.g., Year, Quarter)
             is_low_cardinality <- vapply(df, function(col) {
               length(unique(col)) <= 10
             }, logical(1))
-
-            # Dimension: non-numeric OR (numeric AND low-cardinality)
             is_dimension <- !is_numeric | (is_numeric & is_low_cardinality)
-
             list(
               dimensions = names(df)[is_dimension],
               measures = names(df)[is_numeric & !is_low_cardinality]
             )
           })
 
-          # Update UI choices when data changes
           shiny::observeEvent(column_info(), {
             info <- column_info()
-
-            # Current selections - keep only valid ones
-            current_rows <- intersect(r_rows(), info$dimensions)
-            current_cols <- intersect(r_cols(), info$dimensions)
-            current_meas <- intersect(r_measures(), info$measures)
-
-            # Default to first measure if none selected
-            if (length(current_meas) == 0 && length(info$measures) > 0) {
-              current_meas <- info$measures[1]
-              r_measures(current_meas)
+            session$sendCustomMessage("pivot-table-columns", list(
+              id = ns("pivot_input"),
+              dimensions = as.list(info$dimensions),
+              measures = as.list(info$measures)
+            ))
+            # Re-send state so the JS can reconcile selections against the
+            # new option set (e.g. measures default to first available).
+            s <- r_state()
+            if (length(s$measures) == 0 && length(info$measures) > 0) {
+              s$measures <- info$measures[1]
+              r_state(s)
             }
-
-            # Update dropdowns
-            shiny::updateSelectizeInput(
-              session, "rows",
-              choices = info$dimensions,
-              selected = current_rows
-            )
-
-            shiny::updateSelectizeInput(
-              session, "cols",
-              choices = info$dimensions,
-              selected = current_cols
-            )
-
-            shiny::updateSelectizeInput(
-              session, "measures",
-              choices = info$measures,
-              selected = current_meas
-            )
+            session$sendCustomMessage("pivot-table-update", list(
+              id = ns("pivot_input"),
+              state = r_state()
+            ))
           })
 
-          # Update state from UI
-          shiny::observeEvent(input$rows, {
-            r_rows(input$rows)
-          }, ignoreNULL = FALSE)
+          shiny::observeEvent(input$pivot_input, {
+            self_write$active <- TRUE
+            new_state <- input$pivot_input
+            new_state$rows <- as.character(new_state$rows %||% character())
+            new_state$cols <- as.character(new_state$cols %||% character())
+            new_state$measures <- as.character(new_state$measures %||% character())
+            new_state$agg_fun <- new_state$agg_fun %||% "sum"
+            new_state$digits <- as.character(new_state$digits %||% "")
+            r_state(new_state)
+          })
 
-          shiny::observeEvent(input$cols, {
-            r_cols(input$cols)
-          }, ignoreNULL = FALSE)
+          shiny::observeEvent(r_state(), {
+            if (self_write$active) {
+              self_write$active <- FALSE
+            } else {
+              session$sendCustomMessage("pivot-table-update", list(
+                id = ns("pivot_input"),
+                state = r_state()
+              ))
+            }
 
-          shiny::observeEvent(input$measures, {
-            r_measures(input$measures)
-          }, ignoreNULL = FALSE)
-
-          shiny::observeEvent(input$agg_fun, {
-            r_agg_fun(input$agg_fun)
-          }, ignoreInit = TRUE)
-
-          shiny::observeEvent(input$digits, {
-            r_digits(input$digits)
-          }, ignoreInit = TRUE)
-
-          # Show what's being aggregated over
-          output$aggregating_over <- shiny::renderText({
+            # Push the "Aggregating over: …" hint to JS.
             info <- column_info()
-            used <- c(r_rows(), r_cols())
+            used <- c(r_state()$rows, r_state()$cols)
             unused <- setdiff(info$dimensions, used)
-
-            if (length(unused) == 0) {
+            txt <- if (length(info$dimensions) == 0) {
+              ""
+            } else if (length(unused) == 0) {
               "All dimensions mapped"
             } else {
               paste("Aggregating over:", paste(unused, collapse = ", "))
             }
+            session$sendCustomMessage("pivot-table-aggregating-over", list(
+              id = ns("pivot_input"),
+              text = txt
+            ))
           })
 
           list(
             expr = shiny::reactive({
-              row_cols <- r_rows()
-              col_cols <- r_cols()
-              meas_cols <- r_measures()
-              agg <- r_agg_fun()
-              digs_raw <- r_digits()
+              s <- r_state()
+              shiny::req(length(s$measures) > 0)
 
-              # Convert empty string to NULL, otherwise to integer
+              digs_raw <- s$digits
               digs <- if (is.null(digs_raw) || digs_raw == "") {
                 NULL
               } else {
                 suppressWarnings(as.integer(digs_raw))
               }
 
-              shiny::req(length(meas_cols) > 0)
-
-              # Build pivot table expression
-              build_pivot_expr(row_cols, col_cols, meas_cols, agg, digs)
+              build_pivot_expr(s$rows, s$cols, s$measures, s$agg_fun, digs)
             }),
-            state = list(
-              rows = r_rows,
-              cols = r_cols,
-              measures = r_measures,
-              agg_fun = r_agg_fun,
-              digits = r_digits
-            )
+            state = list(state = r_state)
           )
         }
       )
     },
     ui = function(id) {
       ns <- shiny::NS(id)
-      shiny::tagList(
-        # CSS for responsive grid and advanced toggle
-        shiny::tags$style(shiny::HTML(sprintf(
-          "
-          .pivot-form-grid {
-            display: grid;
-            gap: 15px;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          }
-          #%s {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out;
-          }
-          #%s.expanded {
-            max-height: 200px;
-            overflow: visible;
-            transition: max-height 0.5s ease-in;
-          }
-          .block-advanced-toggle {
-            cursor: pointer;
-            user-select: none;
-            padding: 8px 0;
-            margin-bottom: 0;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.8125rem;
-          }
-          .block-chevron {
-            transition: transform 0.2s;
-            display: inline-block;
-            font-size: 14px;
-            font-weight: bold;
-          }
-          .block-chevron.rotated {
-            transform: rotate(90deg);
-          }
-          ",
-          ns("advanced-options"),
-          ns("advanced-options")
-        ))),
-
+      htmltools::tagList(
+        blockr_core_js_dep(),
+        blockr_blocks_css_dep(),
+        blockr_select_dep(),
+        pivot_table_block_dep(),
         shiny::div(
-          class = "pivot-table-block",
-          style = "padding: 10px;",
-
-          # Responsive grid for inputs
+          class = "block-container",
           shiny::div(
-            class = "pivot-form-grid",
-
-            # Rows selector
-            shiny::selectizeInput(
-              ns("rows"),
-              label = "Rows",
-              choices = rows,
-              selected = rows,
-              multiple = TRUE,
-              options = list(
-                placeholder = "Row dimensions...",
-                plugins = list("remove_button")
-              )
-            ),
-
-            # Columns selector
-            shiny::selectizeInput(
-              ns("cols"),
-              label = "Columns",
-              choices = cols,
-              selected = cols,
-              multiple = TRUE,
-              options = list(
-                placeholder = "Column dimensions...",
-                plugins = list("remove_button")
-              )
-            ),
-
-            # Measures selector
-            shiny::selectizeInput(
-              ns("measures"),
-              label = "Measures",
-              choices = measures,
-              selected = measures,
-              multiple = TRUE,
-              options = list(
-                placeholder = "Select measures...",
-                plugins = list("remove_button")
-              )
-            ),
-
-            # Aggregation selector
-            shiny::selectInput(
-              ns("agg_fun"),
-              label = "Aggregation",
-              choices = c("Sum" = "sum", "Mean" = "mean", "Median" = "median",
-                          "Min" = "min", "Max" = "max", "Count" = "n"),
-              selected = agg_fun
-            )
-          ),
-
-          # Show what's being aggregated over
-          shiny::div(
-            class = "text-muted",
-            style = "font-size: 0.8rem; margin-top: 5px;",
-            shiny::textOutput(ns("aggregating_over"))
-          ),
-
-          # Advanced options toggle (with more top spacing)
-          shiny::div(
-            class = "block-advanced-toggle text-muted",
-            id = ns("advanced-toggle"),
-            style = "margin-top: 10px;",
-            onclick = sprintf(
-              "
-              const section = document.getElementById('%s');
-              const chevron = document.querySelector('#%s .block-chevron');
-              section.classList.toggle('expanded');
-              chevron.classList.toggle('rotated');
-              ",
-              ns("advanced-options"),
-              ns("advanced-toggle")
-            ),
-            shiny::tags$span(class = "block-chevron", "\u203A"),
-            "Show advanced options"
-          ),
-
-          # Advanced options section (collapsed by default)
-          shiny::div(
-            id = ns("advanced-options"),
-            style = "padding-top: 10px;",
-            shiny::div(
-              style = "display: flex; align-items: center; gap: 10px;",
-              shiny::tags$label("Round to", style = "margin: 0; font-size: 12px;"),
-              shiny::textInput(
-                ns("digits"),
-                label = NULL,
-                value = digits,
-                width = "60px",
-                placeholder = ""
-              ),
-              shiny::tags$span(
-                class = "text-muted",
-                style = "font-size: 12px;",
-                "digits (empty = no rounding)"
-              )
-            )
+            id = ns("pivot_input"),
+            class = "pivot-table-block-container"
           )
         )
       )
@@ -362,6 +207,23 @@ new_pivot_table_block <- function(
     allow_empty_state = c("rows", "cols", "measures", "digits"),
     class = "pivot_table_block",
     ...
+  )
+}
+
+pivot_table_block_dep <- function() {
+  htmltools::tagList(
+    htmltools::htmlDependency(
+      name = "pivot-table-block-js",
+      version = utils::packageVersion("blockr.bi"),
+      src = system.file("js", package = "blockr.bi"),
+      script = "pivot-table-block.js"
+    ),
+    htmltools::htmlDependency(
+      name = "pivot-table-block-css",
+      version = utils::packageVersion("blockr.bi"),
+      src = system.file("css", package = "blockr.bi"),
+      stylesheet = "pivot-table-block.css"
+    )
   )
 }
 

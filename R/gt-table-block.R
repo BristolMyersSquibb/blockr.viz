@@ -27,11 +27,16 @@
 #' @param borders Logical. If `TRUE` (default) a 2px solid border
 #'   brackets the table top and bottom, and the title area gets a
 #'   2px bottom border.
+#' @param na_rep Character. Text to display for missing (`NA`) cells.
+#'   Default `"\u2014"` (em dash), the clinical-table convention. Use
+#'   `""` for blank, `"NA"` for gt's built-in default, or any other
+#'   string.
 #' @return A `gt_tbl` object.
 #'
 #' @export
 gt_table <- function(data, title = NULL, subtitle = NULL,
-                     full_width = TRUE, borders = TRUE) {
+                     full_width = TRUE, borders = TRUE,
+                     na_rep = "\u2014") {
   if (is.null(title) || !nzchar(title)) {
     title <- attr(data, "label")
   }
@@ -41,7 +46,7 @@ gt_table <- function(data, title = NULL, subtitle = NULL,
   # new wide-tibble format.
   if (all(c("label", "depth") %in% names(data)) &&
       any(c("col_var", "n", "value") %in% names(data))) {
-    return(gt_table_legacy(data, title = title))
+    return(gt_table_legacy(data, title = title, na_rep = na_rep))
   }
 
   gt_table_wide(
@@ -49,7 +54,8 @@ gt_table <- function(data, title = NULL, subtitle = NULL,
     title      = title,
     subtitle   = subtitle,
     full_width = full_width,
-    borders    = borders
+    borders    = borders,
+    na_rep     = na_rep
   )
 }
 
@@ -59,7 +65,8 @@ gt_table <- function(data, title = NULL, subtitle = NULL,
 
 #' @noRd
 gt_table_wide <- function(data, title = NULL, subtitle = NULL,
-                          full_width = TRUE, borders = TRUE) {
+                          full_width = TRUE, borders = TRUE,
+                          na_rep = "\u2014") {
   # Section columns are any dotted `.section_N` or `.var` columns.
   section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
   stub_col <- if (".label" %in% names(data)) ".label" else NULL
@@ -89,6 +96,8 @@ gt_table_wide <- function(data, title = NULL, subtitle = NULL,
   if (length(styling_cols) > 0L) {
     tbl <- gt::cols_hide(tbl, columns = dplyr::all_of(styling_cols))
   }
+
+  tbl <- gt::sub_missing(tbl, missing_text = na_rep %||% "")
 
   # Pipe-delimited column spanners (for length-2 `by`)
   if (any(grepl("\\|", names(data)))) {
@@ -248,12 +257,13 @@ prepare_table_wide <- function(data) {
 }
 
 #' @noRd
-gt_table_legacy <- function(data, title = NULL) {
+gt_table_legacy <- function(data, title = NULL, na_rep = "\u2014") {
   prep <- prepare_table_wide(data)
   wide <- prep$wide
 
   max_depth <- max(wide$depth)
   tbl <- gt::gt(wide |> dplyr::select(-"depth"))
+  tbl <- gt::sub_missing(tbl, missing_text = na_rep %||% "")
 
   if (!is.null(title)) {
     tbl <- gt::tab_header(tbl, title = title)
@@ -345,6 +355,8 @@ gt_table_legacy <- function(data, title = NULL) {
 #' @param subtitle Optional subtitle shown under the title.
 #' @param full_width Logical. 100% width table. Default `TRUE`.
 #' @param borders Logical. 2px top/bottom/heading borders. Default `TRUE`.
+#' @param na_rep Character. Text shown for missing cells. Default
+#'   `"\u2014"` (em dash).
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
 #' @export
@@ -352,6 +364,7 @@ new_gt_table_block <- function(title = "",
                                subtitle = "",
                                full_width = TRUE,
                                borders = TRUE,
+                               na_rep = "\u2014",
                                ...) {
   blockr.core::new_transform_block(
     server = function(id, data) {
@@ -360,23 +373,27 @@ new_gt_table_block <- function(title = "",
         r_subtitle   <- shiny::reactiveVal(subtitle)
         r_full_width <- shiny::reactiveVal(isTRUE(full_width))
         r_borders    <- shiny::reactiveVal(isTRUE(borders))
+        r_na_rep     <- shiny::reactiveVal(na_rep %||% "")
 
         shiny::observeEvent(input$title,      r_title(input$title))
         shiny::observeEvent(input$subtitle,   r_subtitle(input$subtitle))
         shiny::observeEvent(input$full_width, r_full_width(isTRUE(input$full_width)))
         shiny::observeEvent(input$borders,    r_borders(isTRUE(input$borders)))
+        shiny::observeEvent(input$na_rep,     r_na_rep(input$na_rep), ignoreNULL = FALSE)
 
         list(
           expr = shiny::reactive({
             ttl <- r_title()
             sub <- r_subtitle()
+            nar <- r_na_rep()
             bquote(
               blockr.bi::gt_table(
                 data,
                 title      = .(ttl),
                 subtitle   = .(sub),
                 full_width = .(r_full_width()),
-                borders    = .(r_borders())
+                borders    = .(r_borders()),
+                na_rep     = .(nar)
               )
             )
           }),
@@ -384,7 +401,8 @@ new_gt_table_block <- function(title = "",
             title      = r_title,
             subtitle   = r_subtitle,
             full_width = r_full_width,
-            borders    = r_borders
+            borders    = r_borders,
+            na_rep     = r_na_rep
           )
         )
       })
@@ -403,13 +421,18 @@ new_gt_table_block <- function(title = "",
             )
           ),
           shiny::fluidRow(
-            shiny::column(6,
+            shiny::column(4,
               shiny::checkboxInput(ns("full_width"), "Full width",
                                    value = isTRUE(full_width))
             ),
-            shiny::column(6,
+            shiny::column(4,
               shiny::checkboxInput(ns("borders"), "Borders",
                                    value = isTRUE(borders))
+            ),
+            shiny::column(4,
+              shiny::textInput(ns("na_rep"), "NA display",
+                               value = na_rep, width = "100%",
+                               placeholder = "\u2014")
             )
           )
         )
@@ -440,7 +463,7 @@ new_gt_table_block <- function(title = "",
     },
     class = "gt_table_block",
     external_ctrl = TRUE,
-    allow_empty_state = c("title", "subtitle"),
+    allow_empty_state = c("title", "subtitle", "na_rep"),
     ...
   )
 }

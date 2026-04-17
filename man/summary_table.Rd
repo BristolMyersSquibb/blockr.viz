@@ -12,7 +12,9 @@ summary_table(
   stats = "compact",
   add_overall = FALSE,
   overall_label = "Total",
-  subject_var = NULL
+  subject_var = NULL,
+  indent_details = TRUE,
+  nest_hierarchies = FALSE
 )
 }
 \arguments{
@@ -44,11 +46,22 @@ can set \code{overall_label = "Overall"} to match that convention.}
 \item{subject_var}{Optional subject-identifier column for
 distinct-subject counts (for categorical \code{n_pct}). If NULL,
 rows are counted instead.}
-}
-\value{
-A plain \code{tibble} (NOT a \code{grouped_df}) with the dotted
-column convention described above. Renderer-agnostic: consumed
-by \code{gt_table_block} via regex on column names.
+
+\item{indent_details}{Logical, default \code{TRUE}. When \code{TRUE}, detail
+rows (stat rows for expanded numerics, category-level rows for
+categoricals) are tagged with \code{.indent = 1} in the output so
+the renderer indents them under their variable header. Compact
+numeric rows and logical-flag rows stay at \code{.indent = 0} because
+they are themselves the variable's summary. When \code{FALSE}, no
+\code{.indent} column is emitted.}
+
+\item{nest_hierarchies}{Logical, default \code{FALSE}. Advanced option.
+When \code{TRUE}, adjacent categorical entries in \code{vars} that form a
+functional dependency in \code{data} (each value of the inner var
+maps to a single value of the outer var) are rendered as a
+row-side drill-down instead of two flat sequential sections.
+v1 supports 2-level hierarchies only; deeper runs fall back to
+flat sections.}
 }
 \description{
 Aggregate a flat data.frame into a display-shaped \strong{plain tibble}
