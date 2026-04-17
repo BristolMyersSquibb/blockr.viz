@@ -64,10 +64,9 @@
       grid.className = 'stb-grid';
       this.card.appendChild(grid);
 
-      // Vars (full-width)
+      // Vars (full-width row)
       const varsWrap = document.createElement('div');
-      varsWrap.className = 'stb-field';
-      varsWrap.style.gridColumn = '1 / -1';
+      varsWrap.className = 'stb-field stb-field--full';
       const varsLabel = document.createElement('label');
       varsLabel.className = 'blockr-label';
       varsLabel.textContent = 'Variables';

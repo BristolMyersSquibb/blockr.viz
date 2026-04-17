@@ -1,8 +1,17 @@
 .pivot-table-block-container { width: 100%; }
 .ptb-card { overflow: visible; position: relative; }
+
+/* Responsive input row: flex-wrap idiom (see blockr.dplyr/dev/design-system.md).
+   Wide containers → fields on one row; narrow → fields wrap/stack. */
 .ptb-grid {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
   gap: 6px 12px;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
-.ptb-field { display: flex; flex-direction: column; min-width: 0; }
+.ptb-field {
+  flex: 1 1 160px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
