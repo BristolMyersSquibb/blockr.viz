@@ -73,6 +73,18 @@ new_summary_table_block <- function(
           ))
         }
 
+        # Shiny's sendCustomMessage serializes with auto_unbox = TRUE, which
+        # collapses length-1 character vectors to JSON scalars. The JS side
+        # checks Array.isArray() on vars/sections/by and drops non-arrays,
+        # which then round-trips back to R as empty and breaks the pipeline.
+        # Wrap as.list() to keep them as JSON arrays regardless of length.
+        normalize_state_for_js <- function(state) {
+          for (k in c("vars", "sections", "by")) {
+            state[[k]] <- as.list(state[[k]] %||% character())
+          }
+          state
+        }
+
         # Send initial state + column choices once data arrives.
         shiny::observeEvent(data(), {
           d <- data()
@@ -80,7 +92,7 @@ new_summary_table_block <- function(
           send_columns(d)
           session$sendCustomMessage("summary-table-update", list(
             id = ns("summary_input"),
-            state = r_state()
+            state = normalize_state_for_js(r_state())
           ))
         })
 
@@ -107,7 +119,7 @@ new_summary_table_block <- function(
           } else {
             session$sendCustomMessage("summary-table-update", list(
               id = ns("summary_input"),
-              state = r_state()
+              state = normalize_state_for_js(r_state())
             ))
           }
         })
