@@ -1,0 +1,267 @@
+/* tile-block.css — styling for new_tile_block().
+ *
+ * Reference aesthetic: Tremor / Vercel / shadcn.
+ * Typography: 400 / 500 / 600 weights only.
+ * Numerals: tabular-nums.
+ * Palette: muted; saturated accent only on status pills / sparks.
+ */
+
+:root {
+  --tb-surface-0: #f8fafc;
+  --tb-surface-1: #ffffff;
+  --tb-surface-2: #f9fafb;
+  --tb-border:    #e5e7eb;
+  --tb-border-strong: #d1d5db;
+  --tb-text:      #111827;
+  --tb-muted:     #6b7280;
+  --tb-muted-2:   #9ca3af;
+  --tb-accent:    #2563eb;
+  --tb-green:     #10b981;
+  --tb-amber:     #f59e0b;
+  --tb-red:       #ef4444;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tb-surface-0: #0b0d10;
+    --tb-surface-1: #151821;
+    --tb-surface-2: #1c2030;
+    --tb-border:    #2a2f3c;
+    --tb-border-strong: #3a4152;
+    --tb-text:      #e5e7eb;
+    --tb-muted:     #9ca3af;
+    --tb-muted-2:   #6b7280;
+  }
+}
+
+/* --- input UI --------------------------------------------------------- */
+
+.tile-block-settings {
+  padding: 8px 2px;
+  font-size: 0.875rem;
+  color: var(--tb-text);
+}
+
+.tile-block-settings .tb-pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tile-block-settings .tb-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  height: 26px;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--tb-muted);
+  background: transparent;
+  border: 1px solid var(--tb-border);
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.tile-block-settings .tb-pill:hover {
+  color: var(--tb-text);
+  border-color: var(--tb-border-strong);
+}
+
+.tile-block-settings .tb-pill--active {
+  color: var(--tb-accent);
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.tile-block-settings .tb-pill:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.tile-block-settings .tb-stat-pills .tb-pill {
+  height: 22px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+}
+
+.tile-block-settings .tb-stat-pills .tb-pill--active::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M1.5 5.2 L4 7.5 L8.5 2.5' fill='none' stroke='%232563eb' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.tile-block-settings .tb-aesthetic-row .selectize-input {
+  min-height: 30px;
+  font-size: 0.8125rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+/* --- output grid ------------------------------------------------------ */
+
+.tile-block-output {
+  width: 100%;
+}
+
+.tb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.tb-grid--spark .tb-card {
+  min-height: 140px;
+}
+
+/* --- card shell ------------------------------------------------------- */
+
+.tb-card {
+  background: var(--tb-surface-1);
+  border: 1px solid var(--tb-border);
+  border-radius: 12px;
+  padding: 18px 20px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 96px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  font-variant-numeric: tabular-nums;
+  color: var(--tb-text);
+  box-sizing: border-box;
+}
+
+.tb-card:hover {
+  border-color: var(--tb-border-strong);
+  background: var(--tb-surface-2);
+}
+
+.tb-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 18px;
+}
+
+.tb-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--tb-muted);
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.tb-value-stat {
+  display: inline-block;
+  font-size: 0.6875rem !important;
+  margin-left: 6px;
+  color: var(--tb-muted-2);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tb-card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  flex: 1;
+}
+
+.tb-value {
+  display: inline-block;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--tb-text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.tb-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.75rem;
+  color: var(--tb-muted);
+  padding-top: 2px;
+}
+
+.tb-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tb-unit {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: var(--tb-muted);
+}
+
+.tb-empty {
+  color: var(--tb-muted-2);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 24px;
+}
+
+/* --- status pill ------------------------------------------------------ */
+
+.tb-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.4;
+}
+
+.tb-status--ok {
+  color: var(--tb-green);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.tb-status--warn {
+  color: var(--tb-amber);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.tb-status--bad {
+  color: var(--tb-red);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* --- sparkline -------------------------------------------------------- */
+
+.tb-spark {
+  width: 100%;
+  height: 40px;
+  margin-top: 6px;
+  display: block;
+}
+
+/* --- progress ring ---------------------------------------------------- */
+
+.tb-progress-ring {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.tb-progress-ring .tb-value {
+  font-size: 1.5rem;
+}

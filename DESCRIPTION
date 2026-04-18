@@ -23,12 +23,14 @@ Imports:
     htmltools,
     htmlwidgets,
     jsonlite,
+    lifecycle,
     reactable,
     rlang,
     shiny,
     stats,
     tibble,
-    tidyr
+    tidyr,
+    tools
 Suggests:
     blockr.dag,
     blockr.extra,
