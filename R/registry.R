@@ -14,6 +14,7 @@ register_bi_blocks <- function() {
       "new_gt_table_block",
       "new_html_table_block",
       "new_tile_block",
+      "new_kpi_block",
       "new_waterfall_block"
     ),
     name = c(
@@ -24,6 +25,7 @@ register_bi_blocks <- function() {
       "gt Table",
       "HTML Table",
       "Tile",
+      "KPI",
       "Waterfall"
     ),
     description = c(
@@ -34,6 +36,7 @@ register_bi_blocks <- function() {
       "Render wide-format tables (from pivot_table or summary_table) as styled gt tables. Also supports legacy long-format input from tidy_summary_block.",
       "Dashboard-native HTML renderer for wide-format tables: collapsible sections, sticky headers, multi-level column spanners.",
       "Dashboard tiles: big numbers, sparklines, progress rings. ggplot-style aesthetic mapping. Successor to kpi_block.",
+      "Display one or more key performance indicators as prominent numbers.",
       "Waterfall/bridge chart for sequential value progression"
     ),
     category = c(
@@ -43,6 +46,7 @@ register_bi_blocks <- function() {
       "transform",
       "table",
       "table",
+      "transform",
       "transform",
       "transform"
     ),
@@ -54,6 +58,7 @@ register_bi_blocks <- function() {
       "table",
       "table",
       "speedometer2",
+      "speedometer2",
       "bar-chart-steps"
     ),
     arguments = list(
@@ -64,6 +69,7 @@ register_bi_blocks <- function() {
       gt_table_arguments(),
       NULL,                         # html_table_block (not in MCP universe)
       NULL,                         # tile_block (not in MCP universe)
+      NULL,                         # kpi_block (not in MCP universe)
       NULL                          # waterfall_block (not in MCP universe)
     ),
     package = utils::packageName(),
