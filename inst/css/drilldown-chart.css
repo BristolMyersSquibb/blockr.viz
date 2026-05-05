@@ -1,0 +1,209 @@
+/* Drill-Down Chart */
+
+.drilldown-chart-container {
+  font: inherit;
+  position: relative;
+}
+
+/* ===== Main config bar ===== */
+.dd-config-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+/* Picker wraps (label on top, bordered select below) */
+.dd-picker-wrap {
+  width: 100%;
+}
+
+/* Fallback native select */
+.dd-cfg-select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 8px;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  color: var(--blockr-color-text-primary, #374151);
+  background: var(--blockr-color-bg-input, #f9fafb);
+  cursor: pointer;
+  min-height: 42px;
+}
+.dd-cfg-select:focus {
+  border-color: var(--blockr-color-primary, #2563eb);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Family-based visibility */
+.dd-family-aggregated .dd-cfg-xy,
+.dd-family-aggregated .dd-cfg-individual,
+.dd-family-aggregated .dd-cfg-timeline { display: none !important; }
+.dd-family-individual .dd-cfg-aggregated,
+.dd-family-individual .dd-cfg-timeline { display: none !important; }
+.dd-family-timeline .dd-cfg-aggregated,
+.dd-family-timeline .dd-cfg-individual { display: none !important; }
+
+/* ===== Card wrapper (for popover positioning) ===== */
+.dd-card {
+  position: relative;
+}
+
+/* Popover type rows */
+.dd-popover-types {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* ===== Chart type selector (two groups) ===== */
+.dd-type-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dd-type-group-label {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-400, #9ca3af);
+  font-weight: var(--blockr-font-weight-medium, 500);
+  white-space: nowrap;
+}
+
+.dd-cfg-types {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.dd-type-btn {
+  background: #fff;
+  border: none;
+  border-right: 1px solid var(--blockr-color-border, #e5e7eb);
+  padding: 4px 10px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-500, #6b7280);
+  cursor: pointer;
+  text-transform: capitalize;
+}
+.dd-type-btn:last-child { border-right: none; }
+.dd-type-btn:hover { background: var(--blockr-grey-50, #f9fafb); }
+.dd-type-btn.dd-type-active {
+  background: #eff6ff;
+  color: var(--blockr-color-primary, #2563eb);
+  font-weight: var(--blockr-font-weight-medium, 500);
+}
+
+/* ===== Chart grid (faceting) ===== */
+.dd-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 8px;
+  padding: 0;
+  margin-left: -10px;
+  margin-right: -10px;
+}
+
+.dd-chart-grid.dd-chart-grid-single {
+  display: block;
+  padding: 0;
+  margin-left: -10px;
+  margin-right: -10px;
+}
+
+.dd-facet {
+  border: 1px solid var(--blockr-grey-50, #f3f4f6);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dd-facet-label {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-grey-500, #6b7280);
+  text-align: center;
+  padding: 4px;
+  background: var(--blockr-grey-50, #f9fafb);
+  border-bottom: 1px solid var(--blockr-grey-50, #f3f4f6);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.dd-chart {
+  width: 100%;
+}
+
+/* ===== Status footer ===== */
+.dd-status-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.dd-status-text {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-500, #6b7280);
+  font-variant-numeric: tabular-nums;
+}
+
+.dd-status-cap {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-warning, #b45309);
+  font-style: italic;
+  margin-left: 12px;
+}
+
+.dd-status-reset {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-400, #9ca3af);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+  padding: 0;
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+.dd-status-reset:hover {
+  color: var(--blockr-color-primary, #2563eb);
+  text-decoration-color: currentColor;
+}
+
+/* ===== Multiplier sliders (individual-family popover row) ===== */
+.dd-slider-wrap {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 4px 0;
+  min-width: 200px;
+  flex: 1;
+}
+
+.dd-slider-wrap .blockr-label {
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-secondary, #6b7280);
+  white-space: nowrap;
+}
+
+.dd-slider {
+  width: 100%;
+  accent-color: var(--blockr-color-primary, #0072B2);
+  cursor: pointer;
+}
+
+.dd-slider-value {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-grey-600, #4b5563);
+  min-width: 3ch;
+  text-align: right;
+}
