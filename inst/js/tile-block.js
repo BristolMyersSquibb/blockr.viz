@@ -18,7 +18,7 @@
 
   Object.assign(binding, {
     find(scope) {
-      return scope.querySelectorAll('.tb-pill-group');
+      return $(scope).find('.tb-pill-group');
     },
 
     getId(el) {
@@ -54,6 +54,12 @@
             p.classList.toggle('tb-pill--active', p === pill)
           );
         }
+        // Propagate showcase pill to the settings wrapper so per-showcase
+        // CSS rules can hide/show aesthetic rows.
+        if (el.classList.contains('tb-showcase-picker')) {
+          const settings = el.closest('.tile-block-settings');
+          if (settings) settings.dataset.showcase = pill.dataset.value;
+        }
         callback(true);
       });
     },
@@ -72,4 +78,14 @@
   });
 
   Shiny.inputBindings.register(binding, 'blockr.bi.tbPillGroup');
+
+  // Server signals which tile panels have facet-eligible columns; we
+  // toggle a class so the Facets section can fade when there's nothing
+  // useful to map there.
+  Shiny.addCustomMessageHandler('blockr-bi-tile-flags', function(msg) {
+    if (!msg || !msg.ns_id) return;
+    const settings = document.getElementById(msg.ns_id);
+    if (!settings) return;
+    settings.classList.toggle('tb-no-facets', !msg.has_categoricals);
+  });
 })();

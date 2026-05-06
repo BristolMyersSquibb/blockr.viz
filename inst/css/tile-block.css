@@ -87,6 +87,83 @@
   font-size: 0.75rem;
 }
 
+/* Section headers: small uppercase muted label that groups rows. */
+.tile-block-settings .tb-section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 14px 0 6px 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--tb-border);
+}
+
+.tile-block-settings .tb-section-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tb-muted);
+}
+
+.tile-block-settings .tb-section-hint {
+  font-size: 0.75rem;
+  color: var(--tb-muted-2);
+}
+
+/* Aesthetic row: label on the left, control on the right. */
+.tile-block-settings .tb-aes-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.tile-block-settings .tb-aes-label {
+  min-width: 110px;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--tb-muted);
+  font-weight: 500;
+}
+
+.tile-block-settings .tb-aes-control {
+  flex: 1;
+  min-width: 0;
+}
+
+.tile-block-settings .tb-aes-row .selectize-input {
+  min-height: 30px;
+  font-size: 0.8125rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+/* Per-showcase visibility: hide rows that don't apply to the active
+ * showcase. Rows opt in via data-shows="number spark progress". */
+.tile-block-settings[data-showcase="number"]
+  .tb-aes-row[data-shows]:not([data-shows~="number"]),
+.tile-block-settings[data-showcase="spark"]
+  .tb-aes-row[data-shows]:not([data-shows~="spark"]),
+.tile-block-settings[data-showcase="progress"]
+  .tb-aes-row[data-shows]:not([data-shows~="progress"]) {
+  display: none;
+}
+
+/* Facet section: dim when the input has no usable categorical column. */
+.tile-block-settings.tb-no-facets .tb-facets-section {
+  opacity: 0.55;
+}
+
+.tile-block-settings.tb-no-facets .tb-facets-section .tb-section-hint::after {
+  content: " · no group columns in input";
+  color: var(--tb-muted-2);
+}
+
+/* Stat pills row: tighter than other aesthetic rows. */
+.tile-block-settings .tb-stat-row {
+  margin: -2px 0 8px 0;
+}
+
 .tile-block-settings .tb-stat-pills .tb-pill--active::before {
   content: "";
   display: inline-block;
@@ -96,13 +173,6 @@
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M1.5 5.2 L4 7.5 L8.5 2.5' fill='none' stroke='%232563eb' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
   background-repeat: no-repeat;
   background-position: center;
-}
-
-.tile-block-settings .tb-aesthetic-row .selectize-input {
-  min-height: 30px;
-  font-size: 0.8125rem;
-  padding: 4px 10px;
-  border-radius: 6px;
 }
 
 /* --- output grid ------------------------------------------------------ */

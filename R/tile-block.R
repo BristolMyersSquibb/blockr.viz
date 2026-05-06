@@ -72,6 +72,15 @@ new_tile_block <- function(
           ci <- column_info()
           s <- shiny::isolate(r_state())
 
+          # Tell the panel whether facets are usable for this data.
+          session$sendCustomMessage(
+            "blockr-bi-tile-flags",
+            list(
+              ns_id = ns("settings"),
+              has_categoricals = length(ci$categorical) > 0L
+            )
+          )
+
           # Numeric pickers: value (multi), target, max, spark_value.
           shiny::updateSelectizeInput(session, "aes_value",
             choices = ci$numeric,
@@ -118,7 +127,20 @@ new_tile_block <- function(
         }
 
         shiny::observeEvent(input$showcase, {
-          update_state("showcase", NULL, input$showcase)
+          new_sc <- input$showcase
+          s <- shiny::isolate(r_state())
+          s$showcase <- new_sc
+          # Reset the headline reduction to the showcase's natural default
+          # (the picker is hidden outside Number, so users can't override).
+          new_stat <- switch(new_sc,
+            spark = "last",
+            progress = "first",
+            "mean"
+          )
+          s$stats$value <- new_stat
+          r_state(s)
+          # Sync the pill group so the active pill reflects state.
+          session$sendInputMessage("stats_value", list(value = new_stat))
         }, ignoreInit = TRUE)
 
         # Aesthetic syncs.
@@ -136,11 +158,14 @@ new_tile_block <- function(
           })
         }
 
-        # Value-stat syncs.
+        # Value-stat sync (single-select; only meaningful in Number).
         shiny::observeEvent(input$stats_value, {
           s <- shiny::isolate(r_state())
           v <- input$stats_value
-          if (is.null(v) || length(v) == 0) v <- "mean"
+          if (is.null(v) || length(v) == 0 || !nzchar(v)) {
+            v <- switch(s$showcase %||% "number",
+              spark = "last", progress = "first", "mean")
+          }
           s$stats$value <- v
           r_state(s)
         }, ignoreNULL = FALSE, ignoreInit = TRUE)
@@ -168,10 +193,13 @@ new_tile_block <- function(
     },
     ui = function(id) {
       ns <- shiny::NS(id)
+      all_sc <- c("number", "spark", "progress")
       shiny::tagList(
         tile_block_deps(),
         shiny::div(
+          id = ns("settings"),
           class = "tile-block-settings",
+          `data-showcase` = state$showcase,
           tb_pill_group(
             ns("showcase"),
             choices = c("Number" = "number", "Spark" = "spark",
@@ -180,35 +208,65 @@ new_tile_block <- function(
             multi = FALSE,
             class = "tb-showcase-picker"
           ),
-          shiny::tags$hr(style = "margin: 6px 0 10px 0;"),
-          # Value aesthetic: multi-select + stat pills.
+          tb_section_header("Aesthetics"),
+          # Value aesthetic + headline stat (single-select, Number only).
           aesthetic_row(ns, "value", "Value", multi = TRUE,
-                        selected = state$aesthetics$value),
-          tb_pill_group(
-            ns("stats_value"),
-            choices = c("mean", "sum", "median", "min", "max",
-                        "count", "n_distinct", "first", "last"),
-            selected = state$stats$value,
-            multi = TRUE,
-            class = "tb-stat-pills",
-            style = "margin: -4px 0 10px 0;"
+                        selected = state$aesthetics$value,
+                        shows = all_sc),
+          shiny::div(
+            class = "tb-aes-row tb-stat-row",
+            `data-shows` = "number",
+            shiny::tags$label(
+              "Stat",
+              `for` = ns("stats_value"),
+              class = "tb-aes-label"
+            ),
+            tb_pill_group(
+              ns("stats_value"),
+              choices = c("mean", "sum", "median", "min", "max",
+                          "count", "n_distinct", "first", "last"),
+              selected = state$stats$value,
+              multi = FALSE,
+              class = "tb-stat-pills"
+            )
           ),
-          # Shared aesthetics.
-          aesthetic_row(ns, "rows", "Rows", selected = state$aesthetics$rows),
-          aesthetic_row(ns, "cols", "Cols", selected = state$aesthetics$cols),
-          aesthetic_row(ns, "label", "Label", selected = state$aesthetics$label),
-          aesthetic_row(ns, "unit", "Unit", selected = state$aesthetics$unit),
-          aesthetic_row(ns, "status", "Status", selected = state$aesthetics$status),
-          # Showcase-specific (always present in DOM, but we could
-          # hide via CSS when inactive; for v1 keep all visible).
-          aesthetic_row(ns, "target", "Target (number)",
-                        selected = state$aesthetics$target),
-          aesthetic_row(ns, "spark_value", "Spark value (spark)",
-                        selected = state$aesthetics$spark_value),
-          aesthetic_row(ns, "spark_x", "Spark x (spark)",
-                        selected = state$aesthetics$spark_x),
-          aesthetic_row(ns, "max", "Max (progress)",
-                        selected = state$aesthetics$max)
+          # Showcase-specific numeric aesthetics.
+          aesthetic_row(ns, "spark_value", "Spark value",
+                        selected = state$aesthetics$spark_value,
+                        shows = "spark"),
+          aesthetic_row(ns, "spark_x", "Spark x",
+                        selected = state$aesthetics$spark_x,
+                        shows = "spark"),
+          aesthetic_row(ns, "max", "Max",
+                        selected = state$aesthetics$max,
+                        shows = "progress"),
+          aesthetic_row(ns, "target", "Target",
+                        selected = state$aesthetics$target,
+                        shows = "number"),
+          # Display columns shared across showcases.
+          aesthetic_row(ns, "label", "Label",
+                        selected = state$aesthetics$label,
+                        shows = all_sc),
+          aesthetic_row(ns, "unit", "Unit",
+                        selected = state$aesthetics$unit,
+                        shows = all_sc),
+          aesthetic_row(ns, "status", "Status",
+                        selected = state$aesthetics$status,
+                        shows = all_sc),
+          # Facet section.
+          shiny::div(
+            class = "tb-facets-section",
+            tb_section_header(
+              "Facets",
+              hint = "Split the input into a grid of cards"
+            ),
+            aesthetic_row(ns, "rows", "Rows",
+                          selected = state$aesthetics$rows,
+                          shows = all_sc, facet = TRUE),
+            aesthetic_row(ns, "cols", "Cols",
+                          selected = state$aesthetics$cols,
+                          shows = all_sc, facet = TRUE)
+          )
         )
       )
     },
@@ -219,17 +277,22 @@ new_tile_block <- function(
 }
 
 #' @noRd
-aesthetic_row <- function(ns, name, label, multi = FALSE, selected = NULL) {
+aesthetic_row <- function(ns, name, label, multi = FALSE, selected = NULL,
+                          shows = NULL, facet = FALSE) {
+  classes <- c(
+    "tb-aes-row",
+    if (facet) "tb-facet-row"
+  )
   shiny::div(
-    class = "tb-aesthetic-row",
-    style = "display: flex; gap: 10px; align-items: center; margin-bottom: 6px;",
+    class = paste(classes, collapse = " "),
+    `data-shows` = if (length(shows)) paste(shows, collapse = " "),
     shiny::tags$label(
       label,
       `for` = ns(paste0("aes_", name)),
-      style = "min-width: 120px; margin: 0; font-size: 0.8125rem; color: #6b7280; font-weight: 500;"
+      class = "tb-aes-label"
     ),
     shiny::div(
-      style = "flex: 1; min-width: 0;",
+      class = "tb-aes-control",
       shiny::selectizeInput(
         ns(paste0("aes_", name)),
         label = NULL,
@@ -247,13 +310,24 @@ aesthetic_row <- function(ns, name, label, multi = FALSE, selected = NULL) {
 }
 
 #' @noRd
+tb_section_header <- function(label, hint = NULL) {
+  shiny::div(
+    class = "tb-section-header",
+    shiny::tags$span(label, class = "tb-section-title"),
+    if (!is.null(hint)) shiny::tags$span(hint, class = "tb-section-hint")
+  )
+}
+
+#' @noRd
 fill_tile_state <- function(state, showcase) {
   aes_defaults <- list(
     value = character(), rows = "", cols = "", label = "", unit = "",
     status = "", target = "", spark_value = "", spark_x = "", max = ""
   )
+  value_stat_default <- switch(showcase,
+    spark = "last", progress = "first", "mean")
   stat_defaults <- list(
-    value = "mean", target = "first", max = "first",
+    value = value_stat_default, target = "first", max = "first",
     spark_value = "identity", spark_x = "identity", status = "first"
   )
   fmt_defaults <- list(
