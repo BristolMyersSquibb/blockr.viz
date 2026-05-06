@@ -14,9 +14,36 @@
   margin-bottom: 6px;
 }
 
-/* Picker wraps (label on top, bordered select below) */
+/* Picker wraps — single bordered key/value field. Same shape as
+   .blockr-row in rename/filter blocks: the wrapper carries the border,
+   the inner Blockr.Select sits flush inside with no second border.
+   Label sits inline as the "key", select expands as the "value". */
 .dd-picker-wrap {
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 4px 0 12px;
+  background-color: var(--blockr-color-bg-input, #f9fafb);
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+.dd-picker-wrap:focus-within {
+  border-color: var(--blockr-color-primary, #2563eb);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+.dd-picker-wrap > .blockr-label {
+  flex: 0 0 auto;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  color: var(--blockr-color-text-secondary, #6b7280);
+  margin: 0;
+  white-space: nowrap;
+}
+.dd-picker-wrap > .blockr-select {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* Fallback native select */

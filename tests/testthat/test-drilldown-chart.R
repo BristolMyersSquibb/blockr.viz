@@ -209,3 +209,137 @@ test_that("scatter click-emit drives categorical filter on arbitrary column", {
     args = list(x = blk, data = list(data = function() df))
   )
 })
+
+test_that("scatter+series_by click filter on real engine output returns matching rows", {
+  # Reproduces the SAA workbench bug where clicking a single-policy dot on
+  # the Policy scatter showed "Filtered: policy_id = policy-005" but the
+  # downstream preview rendered "No rows". The click JS sends a structured
+  # action message; this test simulates that exact shape on real
+  # blockr.insurance engine output and verifies the categorical filter
+  # actually subsets the upstream data.
+  skip_if_not_installed("blockr.insurance")
+  inp <- list(
+    locations = blockr.insurance::property_locations,
+    claims    = blockr.insurance::property_claims
+  )
+  loc <- inp$locations
+  loc$policy_id <- rep(c("policy-001", "policy-002", "policy-003",
+                         "policy-004", "policy-005"),
+                       length.out = nrow(loc))
+  inp$locations <- loc
+  inp$claims$policy_id <- rep(c("policy-001", "policy-002", "policy-003",
+                                "policy-004", "policy-005"),
+                              length.out = nrow(inp$claims))
+  premium <- blockr.insurance::engine_property(inp)$premium
+  expected_n <- sum(premium$policy_id == "policy-005")
+  testthat::expect_gt(expected_n, 0L)
+
+  blk <- new_drilldown_chart_block(
+    chart_type = "scatter",
+    x_col      = "tiv",
+    y_col      = "model_price",
+    series_by  = "policy_id"
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+
+      # JS click handler sends this exact shape: action=filter,
+      # filter_type=categorical, column=<series_by>, values=[<seriesName>].
+      expr_scope <- session$makeScope("expr")
+      expr_scope$setInputs(drilldown_block_action = list(
+        action      = "filter",
+        filter_type = "categorical",
+        column      = "policy_id",
+        values      = list("policy-005")
+      ))
+      session$flushReact()
+
+      expect_equal(session$returned$state$filter_column(), "policy_id")
+      expect_equal(unlist(session$returned$state$filter_values()),
+                   "policy-005")
+
+      result <- session$returned$result()
+      expect_s3_class(result, "data.frame")
+      expect_gt(nrow(result), 0L)
+      expect_equal(nrow(result), expected_n)
+      expect_true(all(result$policy_id == "policy-005"))
+    },
+    args = list(x = blk, data = list(data = function() premium))
+  )
+})
+
+test_that("scatter click filter survives a follow-up brush event (race)", {
+  # Reproduces the SAA workbench bug. ECharts scatter has brush mode active
+  # by default. When the user clicks a single dot, two events fire:
+  #  1) the click handler emits a categorical filter on series_by
+  #  2) brushSelected fires with the click point as a 1-pixel brush, which
+  #     emits a range filter on (x_col == click_x & y_col == click_y).
+  # Latest message wins, so the categorical filter gets overwritten by a
+  # range filter that matches at most 1 row (often 0 due to floating point),
+  # while the chart's status bar still shows the click selection from the
+  # JS-side `_selected` state. End result: "No rows" downstream.
+  skip_if_not_installed("blockr.insurance")
+  inp <- list(
+    locations = blockr.insurance::property_locations,
+    claims    = blockr.insurance::property_claims
+  )
+  loc <- inp$locations
+  loc$policy_id <- rep(c("policy-001", "policy-002", "policy-003",
+                         "policy-004", "policy-005"),
+                       length.out = nrow(loc))
+  inp$locations <- loc
+  inp$claims$policy_id <- rep(c("policy-001", "policy-002", "policy-003",
+                                "policy-004", "policy-005"),
+                              length.out = nrow(inp$claims))
+  premium <- blockr.insurance::engine_property(inp)$premium
+  clicked_pid <- "policy-005"
+  expected_n <- sum(premium$policy_id == clicked_pid)
+
+  blk <- new_drilldown_chart_block(
+    chart_type = "scatter",
+    x_col      = "tiv",
+    y_col      = "model_price",
+    series_by  = "policy_id"
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expr_scope <- session$makeScope("expr")
+
+      # 1) click → categorical filter on policy_id
+      expr_scope$setInputs(drilldown_block_action = list(
+        action      = "filter",
+        filter_type = "categorical",
+        column      = "policy_id",
+        values      = list(clicked_pid)
+      ))
+      session$flushReact()
+
+      # 2) brushSelected fires with the click point as a 1-pixel brush.
+      # JS sends a range filter on (x_col == click_x & y_col == click_y).
+      one_loc  <- premium[premium$policy_id == clicked_pid, ][1L, ]
+      click_x  <- one_loc$tiv
+      click_y  <- one_loc$model_price
+      expr_scope$setInputs(drilldown_block_action = list(
+        action      = "filter",
+        filter_type = "range",
+        x_col       = "tiv",
+        y_col       = "model_price",
+        x_range     = c(click_x, click_x),
+        y_range     = c(click_y, click_y)
+      ))
+      session$flushReact()
+
+      result <- session$returned$result()
+      expect_s3_class(result, "data.frame")
+      # The fix should preserve the categorical selection (12 rows for
+      # policy-005), not let the brush point-range filter (1 row max) win.
+      expect_equal(nrow(result), expected_n)
+      expect_true(all(result$policy_id == clicked_pid))
+    },
+    args = list(x = blk, data = list(data = function() premium))
+  )
+})

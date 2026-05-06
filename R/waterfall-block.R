@@ -250,6 +250,9 @@ block_output.waterfall_block <- function(x, result, session) {
   # Get user-selected measures from session input (preserves order)
   selected_measures <- session$input[["expr-measures"]]
 
+  # Board-level echarts theme (reactive — re-renders on change)
+  r_theme <- setup_drilldown_theme_sync()
+
   echarts4r::renderEcharts4r({
     if (!is.data.frame(result) || ncol(result) == 0) {
       return(NULL)
@@ -272,20 +275,20 @@ block_output.waterfall_block <- function(x, result, session) {
     wf_data <- build_waterfall_data(result, measures)
 
     # Render waterfall chart
-    render_waterfall(wf_data, colors)
+    render_waterfall(wf_data, colors, r_theme())
   })
 }
 
 #' Render waterfall chart
+#'
+#' Styling tracks the drill-down design system (see drilldown-chart.js):
+#' Open Sans, `#666` labels, `#ccc` axis line, dashed `#f3f4f6` splitlines.
+#' Increase/decrease/total colors are semantic and override theme palettes.
 #' @noRd
-render_waterfall <- function(wf_data, colors) {
-  # Match Bootstrap 5 system font stack used by the dock UI
-  system_font <- paste(
-    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,",
-    "'Helvetica Neue', Arial, 'Noto Sans', sans-serif"
-  )
+render_waterfall <- function(wf_data, colors, theme = "default") {
+  blockr_font <- "'Open Sans', system-ui, sans-serif"
 
-  wf_data |>
+  e <- wf_data |>
     echarts4r::e_charts(step) |>
     # Transparent helper for floating effect
     echarts4r::e_bar(
@@ -336,10 +339,11 @@ render_waterfall <- function(wf_data, colors) {
       name = "Value",
       nameLocation = "middle",
       nameGap = 50,
-      nameTextStyle = list(fontFamily = system_font),
+      nameTextStyle = list(color = "#666", fontFamily = blockr_font),
       axisLabel = list(
-        fontSize = 12,
-        fontFamily = system_font,
+        color = "#666",
+        fontSize = 11,
+        fontFamily = blockr_font,
         formatter = htmlwidgets::JS("
           function(value) {
             if (value == null || isNaN(value)) return '';
@@ -351,21 +355,43 @@ render_waterfall <- function(wf_data, colors) {
             return value;
           }
         ")
-      )
+      ),
+      axisLine = list(show = FALSE),
+      axisTick = list(show = FALSE),
+      splitLine = list(lineStyle = list(color = "#f3f4f6", type = "dashed"))
     ) |>
     echarts4r::e_x_axis(
       axisLabel = list(
+        color = "#666",
         rotate = 0,
-        fontSize = 13,
-        fontFamily = system_font,
+        fontSize = 11,
+        fontFamily = blockr_font,
         overflow = "break",
         width = 100
-      )
+      ),
+      axisLine = list(lineStyle = list(color = "#ccc")),
+      axisTick = list(show = FALSE),
+      splitLine = list(show = FALSE)
     ) |>
     echarts4r::e_grid(
       left = "12%",
       right = "5%",
       bottom = "10%",
       top = "10%"
+    ) |>
+    echarts4r::e_text_style(fontFamily = "Open Sans") |>
+    echarts4r::e_toolbox(
+      right = 8, top = 4, itemSize = 11,
+      iconStyle = list(borderColor = "#bbb")
+    ) |>
+    echarts4r::e_toolbox_feature(
+      feature = "saveAsImage",
+      title = "Save",
+      pixelRatio = 2
     )
+
+  if (!identical(theme, "default") && nzchar(theme)) {
+    e <- echarts4r::e_theme(e, theme)
+  }
+  e
 }

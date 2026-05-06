@@ -35,6 +35,26 @@
   const AXIS_LINE_COLOR = '#ccc';
   const SPLIT_LINE_COLOR = '#f3f4f6';
 
+  // Always-on, small, muted toolbox shared by every chart family.
+  //
+  // `feature.brush` MUST be registered for the line/scatter family —
+  // `takeGlobalCursor({key:'brush'})` (which activates brush mode by default)
+  // requires the toolbox brush feature to be present, otherwise the cursor
+  // mode silently fails to engage and drag-to-filter doesn't work. The
+  // brush icons only render on charts that actually have a `brush`
+  // component, so this is inert for bar/pie/treemap/boxplot/gantt.
+  const TOOLBOX = {
+    show: true,
+    right: 8,
+    top: 4,
+    itemSize: 11,
+    feature: {
+      saveAsImage: { title: 'Save', pixelRatio: 2 },
+      brush: { type: ['rect', 'lineX', 'clear'] }
+    },
+    iconStyle: { borderColor: '#bbb' }
+  };
+
   const AGG_FNS = [
     { value: 'count', label: 'Count' },
     { value: 'count_distinct', label: 'Count distinct' },
@@ -173,7 +193,11 @@
 
     _addSelect(container, label, key, options, selected, cssClass) {
       const wrapper = document.createElement('div');
-      wrapper.className = 'dd-picker-wrap blockr-select--bordered' +
+      // Single-bordered "key/value field" — same shape as .blockr-row in
+      // rename/filter blocks. The wrapper carries the border; the inner
+      // Blockr.Select stays unbordered (don't add .blockr-select--bordered
+      // here, that would double-border).
+      wrapper.className = 'dd-picker-wrap' +
         (cssClass ? ' ' + cssClass : '');
 
       const lbl = document.createElement('label');
@@ -270,25 +294,6 @@
       this._addSelect(this.configBar, 'Facet', 'facet_by',
         ['(none)', ...cats.filter(x => x.n_unique <= 10).map(colOpt)], cfg.facet_by || '(none)');
 
-      // Timeline-only Sort (by-term rules: onset / alpha / column)
-      this._addSelect(this.configBar, 'Sort', 'sort_by',
-        ['onset', 'alpha', ...allCols.map(colOpt)], cfg.sort_by || 'onset',
-        'dd-cfg-timeline');
-
-      // Aggregated-only Sort (bar/pie/treemap/boxplot rules: value / alpha /
-      // column whose min per group orders the axis)
-      this._addSelect(this.configBar, 'Sort', 'sort_by',
-        ['alpha', 'value', ...nums.map(colOpt)], cfg.sort_by || 'alpha',
-        'dd-cfg-aggregated');
-
-      // Direction applies to both aggregated and timeline sort keys.
-      this._addSelect(this.configBar, 'Dir', 'sort_dir',
-        ['asc', 'desc'], cfg.sort_dir || 'asc',
-        'dd-cfg-aggregated');
-      this._addSelect(this.configBar, 'Dir', 'sort_dir',
-        ['asc', 'desc'], cfg.sort_dir || 'asc',
-        'dd-cfg-timeline');
-
       // ===== POPOVER CONTENT =====
       this.popoverEl.innerHTML = '';
 
@@ -347,6 +352,24 @@
       this._addSelect(metricRow, 'Agg', 'agg_fn',
         AGG_FNS.map(a => a.value), cfg.agg_fn || 'count');
       this.popoverEl.appendChild(metricRow);
+
+      // Sort + Dir (aggregated: value / alpha / column-min ordering)
+      const sortAggRow = document.createElement('div');
+      sortAggRow.className = 'blockr-popover-row dd-cfg-aggregated';
+      this._addSelect(sortAggRow, 'Sort', 'sort_by',
+        ['value', 'alpha', ...nums.map(colOpt)], cfg.sort_by || 'value');
+      this._addSelect(sortAggRow, 'Dir', 'sort_dir',
+        ['asc', 'desc'], cfg.sort_dir || 'desc');
+      this.popoverEl.appendChild(sortAggRow);
+
+      // Sort + Dir (timeline: onset / alpha / column-min ordering)
+      const sortTimeRow = document.createElement('div');
+      sortTimeRow.className = 'blockr-popover-row dd-cfg-timeline';
+      this._addSelect(sortTimeRow, 'Sort', 'sort_by',
+        ['onset', 'alpha', ...allCols.map(colOpt)], cfg.sort_by || 'onset');
+      this._addSelect(sortTimeRow, 'Dir', 'sort_dir',
+        ['asc', 'desc'], cfg.sort_dir || 'asc');
+      this.popoverEl.appendChild(sortTimeRow);
 
       // Line width + dot size multipliers (individual only)
       const themeRow = document.createElement('div');
@@ -440,6 +463,8 @@
         }
         if (!this.config.metric) this.config.metric = '.count';
         if (!this.config.agg_fn) this.config.agg_fn = 'count';
+        if (!this.config.sort_by) this.config.sort_by = 'value';
+        if (!this.config.sort_dir) this.config.sort_dir = 'desc';
       } else if (fam === 'timeline') {
         if (!this.config.x_col && this.columns.length > 0) {
           const num = this.columns.find(c => c.type === 'numeric');
@@ -450,6 +475,7 @@
           this.config.y_col = cat ? cat.name : this.columns[0]?.name;
         }
         if (!this.config.sort_by) this.config.sort_by = 'onset';
+        if (!this.config.sort_dir) this.config.sort_dir = 'asc';
       } else {
         if (!this.config.x_col && this.columns.length > 0) {
           const num = this.columns.find(c => c.type === 'numeric');
@@ -679,9 +705,9 @@
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true },
-        toolbox: { show: true, right: 10, top: 0, feature: { saveAsImage: { title: 'Save', pixelRatio: 2 } }, iconStyle: { borderColor: ax.labelColor } },
+        toolbox: TOOLBOX,
         legend: colors.length > 0 ? { show: true, bottom: 0, textStyle: { fontSize: 11 } } : undefined,
-        grid: { left: 160, right: 5, top: 30, bottom: colors.length > 0 ? 40 : 20 },
+        grid: { left: 160, right: 5, top: 30, bottom: colors.length > 0 ? 55 : 20 },
         xAxis: { type: 'value', axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } } },
         yAxis: { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: 150, width: 145, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false }, axisTick: { show: false } },
         series
@@ -693,7 +719,7 @@
         const total = facetData.filter(a => a.group === g).reduce((s, a) => s + a.value, 0);
         return { name: g, value: total, itemStyle: { color: palette[i % palette.length] } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: { show: true, right: 10, top: 0, feature: { saveAsImage: { title: 'Save', pixelRatio: 2 } }, iconStyle: { borderColor: AXIS_LABEL_COLOR } }, tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: 10, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: 10, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
     }
 
     _buildTreemap(facetData, groups, palette) {
@@ -701,7 +727,7 @@
         const total = facetData.filter(a => a.group === g).reduce((s, a) => s + a.value, 0);
         return { name: g, value: total, itemStyle: { color: palette[i % palette.length] } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: { show: true, right: 10, top: 0, feature: { saveAsImage: { title: 'Save', pixelRatio: 2 } }, iconStyle: { borderColor: AXIS_LABEL_COLOR } }, tooltip: { trigger: 'item', formatter: '{b}: {c}' }, series: [{ type: 'treemap', data: tmData, width: '100%', height: '100%', roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: '{b}\n{c}' }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', formatter: '{b}: {c}' }, series: [{ type: 'treemap', data: tmData, width: '100%', height: '100%', roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: '{b}\n{c}' }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
     }
 
     _buildBoxplot(groups, palette, ax) {
@@ -717,7 +743,7 @@
         const hi = Math.min(vals[vals.length - 1], q3 + 1.5 * iqr);
         return [lo, q1, q(0.5), q3, hi];
       });
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: { show: true, right: 10, top: 0, feature: { saveAsImage: { title: 'Save', pixelRatio: 2 } }, iconStyle: { borderColor: AXIS_LABEL_COLOR } }, tooltip: { trigger: 'item', confine: true }, grid: { left: 160, right: 5, top: 30, bottom: 20 }, xAxis: { type: 'value', axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } }, yAxis: { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: 150, width: 145, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false } }, series: [{ type: 'boxplot', data: boxData, itemStyle: { color: palette[0] + '22', borderColor: palette[0] } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true }, grid: { left: 160, right: 5, top: 30, bottom: 20 }, xAxis: { type: 'value', axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } }, yAxis: { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: 150, width: 145, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false } }, series: [{ type: 'boxplot', data: boxData, itemStyle: { color: palette[0] + '22', borderColor: palette[0] } }] };
     }
 
     // -- Individual rendering -------------------------------------------------
@@ -918,12 +944,11 @@
           }
         }
 
+        // Axis names omitted: the X / Y pickers above the chart already
+        // show the selected column, so echoing it on the axis is redundant
+        // and competes with the legend for the bottom margin.
         const xAxisSpec = {
           type: xAxisType,
-          name: x_col,
-          nameLocation: 'center',
-          nameGap: 25,
-          nameTextStyle: { fontSize: ax.fontSize, color: ax.labelColor },
           axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
           axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
@@ -933,10 +958,6 @@
 
         const yAxisSpec = {
           type: yAxisType,
-          name: y_col,
-          nameLocation: 'center',
-          nameGap: 45,
-          nameTextStyle: { fontSize: ax.fontSize, color: ax.labelColor },
           axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
           axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
@@ -945,12 +966,17 @@
         if (yCats) yAxisSpec.data = yCats;
 
         // Brushing is skipped when the x-axis is categorical (echarts' brush
-        // needs continuous coords) and for line charts — on a per-patient
+        // needs continuous coords), for line charts — on a per-patient
         // trajectory overlay, clicking a line to filter by USUBJID is the
         // expected drill-down, and an active brush cursor would consume
-        // those clicks before they reach the series. Scatter keeps brush
-        // because rect-selection over point clouds is genuinely useful.
-        const brushable = xAxisType !== 'category' && !isLine;
+        // those clicks before they reach the series — and for scatter when
+        // `series_by` is set. With `series_by` the user's intent is "click
+        // a dot to filter to that series" (e.g. one dot per policy → click
+        // → filter to that policy); leaving brush active fires a 1-pixel
+        // brushSelected on the click point that races the click handler
+        // and overwrites the categorical filter with a range filter on
+        // (x == click_x & y == click_y), matching at most one row.
+        const brushable = xAxisType !== 'category' && !isLine && !series_by;
 
         const option = {
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
@@ -965,11 +991,15 @@
             : showLegend
               ? { show: true, bottom: 0, textStyle: { fontSize: 11 } }
               : { show: false },
-          grid: { left: 50, right: 5, top: 30, bottom: showLegend ? 40 : 30 },
+          grid: { left: 50, right: 5, top: 30, bottom: showLegend ? 55 : 30 },
           xAxis: xAxisSpec,
           yAxis: yAxisSpec,
-          toolbox: { show: true, right: 10, top: 0, feature: { saveAsImage: { title: 'Save', pixelRatio: 2 } }, iconStyle: { borderColor: ax.labelColor } },
-          brush: brushable ? { toolbox: [], xAxisIndex: 0, yAxisIndex: isLine ? undefined : 0, brushStyle: { color: 'rgba(0, 114, 178, 0.1)', borderColor: 'rgba(0, 114, 178, 0.5)', borderWidth: 1 }, throttleDelay: 300 } : undefined,
+          toolbox: TOOLBOX,
+          // brush.toolbox lists the brush types REGISTERED for use. Must
+          // include the types we activate (rect for scatter, lineX for line)
+          // and the types referenced by toolbox.feature.brush.type, otherwise
+          // clicking an icon (or takeGlobalCursor) is a no-op.
+          brush: brushable ? { toolbox: ['rect', 'lineX', 'clear'], xAxisIndex: 0, yAxisIndex: isLine ? undefined : 0, brushStyle: { color: 'rgba(0, 114, 178, 0.1)', borderColor: 'rgba(0, 114, 178, 0.5)', borderWidth: 1 }, throttleDelay: 300 } : undefined,
           series
         };
 
@@ -1330,7 +1360,7 @@
           legend: showLegend
             ? { show: true, bottom: 8, type: 'scroll', textStyle: { fontSize: 11 }, data: legendData }
             : { show: false },
-          toolbox: { show: true, right: 10, top: 0, feature: { saveAsImage: { title: 'Save', pixelRatio: 2 } }, iconStyle: { borderColor: ax.labelColor } },
+          toolbox: TOOLBOX,
           grid: { left: 160, right: 10, top: 20, bottom: showLegend ? 60 : 30 },
           xAxis: xAxisSpec,
           yAxis: {

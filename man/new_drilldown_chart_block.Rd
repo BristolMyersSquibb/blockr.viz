@@ -16,7 +16,7 @@ new_drilldown_chart_block(
   series_by = NULL,
   x_end_col = NULL,
   sort_by = NULL,
-  sort_dir = "asc",
+  sort_dir = NULL,
   filter_type = "categorical",
   filter_column = NULL,
   filter_values = NULL,
@@ -59,15 +59,16 @@ dots at \code{x_col})}
 \item{sort_by}{Category ordering on the axis. The allowed values depend
 on the chart family:
 \itemize{
-\item Aggregated: \code{"alpha"} (group name, default), \code{"value"} (computed
-metric), or a column name (ascending min of that column per group).
+\item Aggregated: \code{"value"} (computed metric, default), \code{"alpha"} (group
+name), or a column name (ascending min of that column per group).
 \item Timeline: \code{"onset"} (default — by ascending min of \code{x_col} per term),
 \code{"alpha"}, or a column name.
 \item Individual: ignored (points plotted in raw order).
 }}
 
-\item{sort_dir}{\code{"asc"} (default) or \code{"desc"}. Reverses the ordering
-produced by \code{sort_by}. Ignored by individual charts.}
+\item{sort_dir}{\code{"asc"} or \code{"desc"}. Reverses the ordering produced by
+\code{sort_by}. When unset, defaults to \code{"desc"} for aggregated charts and
+\code{"asc"} for timelines. Ignored by individual charts.}
 
 \item{filter_type}{Filter mode: "categorical" or "range"}
 

@@ -37,13 +37,14 @@
 #'   dots at `x_col`)
 #' @param sort_by Category ordering on the axis. The allowed values depend
 #'   on the chart family:
-#'   * Aggregated: `"alpha"` (group name, default), `"value"` (computed
-#'     metric), or a column name (ascending min of that column per group).
+#'   * Aggregated: `"value"` (computed metric, default), `"alpha"` (group
+#'     name), or a column name (ascending min of that column per group).
 #'   * Timeline: `"onset"` (default — by ascending min of `x_col` per term),
 #'     `"alpha"`, or a column name.
 #'   * Individual: ignored (points plotted in raw order).
-#' @param sort_dir `"asc"` (default) or `"desc"`. Reverses the ordering
-#'   produced by `sort_by`. Ignored by individual charts.
+#' @param sort_dir `"asc"` or `"desc"`. Reverses the ordering produced by
+#'   `sort_by`. When unset, defaults to `"desc"` for aggregated charts and
+#'   `"asc"` for timelines. Ignored by individual charts.
 #' @param filter_type Filter mode: "categorical" or "range"
 #' @param filter_column Currently filtered column (aggregated, set by click)
 #' @param filter_values Currently filtered values (aggregated, set by click)
@@ -70,7 +71,7 @@ new_drilldown_chart_block <- function(
     series_by = NULL,
     x_end_col = NULL,
     sort_by = NULL,
-    sort_dir = "asc",
+    sort_dir = NULL,
     filter_type = "categorical",
     filter_column = NULL,
     filter_values = NULL,
@@ -245,17 +246,32 @@ new_drilldown_chart_block <- function(
                 else "categorical"
               )
             } else if (ft == "range") {
-              r_filter_column(NULL)
-              r_filter_values(NULL)
               if (!is.null(msg$x_col) && !is.null(msg$x_range)) {
-                r_filter_range(list(
-                  x_col = msg$x_col,
-                  y_col = msg$y_col,
-                  x_range = as.numeric(msg$x_range),
-                  y_range = if (!is.null(msg$y_range)) as.numeric(msg$y_range)
-                ))
-                r_filter_type("range")
+                xr <- as.numeric(msg$x_range)
+                yr <- if (!is.null(msg$y_range)) as.numeric(msg$y_range)
+                # Defensive: a 1-pixel range (xlo == xhi and either no
+                # y-range or ylo == yhi) is almost always the click-on-a-dot
+                # race — a click handler sent a categorical filter, and
+                # ECharts' brush mode then fired a brushSelected on the
+                # clicked point. Treat as a no-op so the categorical
+                # filter survives. (JS also disables brush when series_by
+                # is set, but this is the belt-and-braces R-side guard.)
+                is_point <- length(xr) == 2L && xr[1L] == xr[2L] &&
+                  (is.null(yr) || (length(yr) == 2L && yr[1L] == yr[2L]))
+                if (!is_point) {
+                  r_filter_column(NULL)
+                  r_filter_values(NULL)
+                  r_filter_range(list(
+                    x_col = msg$x_col,
+                    y_col = msg$y_col,
+                    x_range = xr,
+                    y_range = yr
+                  ))
+                  r_filter_type("range")
+                }
               } else {
+                r_filter_column(NULL)
+                r_filter_values(NULL)
                 r_filter_range(NULL)
                 r_filter_type("categorical")
               }
@@ -357,8 +373,8 @@ new_drilldown_chart_block <- function(
       if (!is.data.frame(data)) stop("Input must be a data frame")
     },
     allow_empty_state = c("group_by", "color_by", "facet_by", "filter_column",
-      "filter_values", "x_col", "y_col", "x_end_col", "sort_by", "series_by",
-      "filter_range"),
+      "filter_values", "x_col", "y_col", "x_end_col", "sort_by", "sort_dir",
+      "series_by", "filter_range"),
     external_ctrl = c("group_by", "color_by", "facet_by", "metric", "agg_fn",
       "chart_type", "x_col", "y_col", "x_end_col", "sort_by", "sort_dir",
       "series_by", "filter_type", "filter_column", "filter_values",
