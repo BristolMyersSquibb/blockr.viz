@@ -17,6 +17,11 @@
 #'   - `stats` — `"compact"` or `"expanded"`.
 #'   - `add_overall` — logical, append an overall column.
 #'   - `overall_label` — label for the overall column, default `"Total"`.
+#'   - `id_var` — optional column name. When set, column N values and
+#'     percentages are computed over distinct values of this column
+#'     instead of row counts. Useful when each row is an event and
+#'     multiple rows can belong to the same entity (e.g. patient,
+#'     order, session).
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #'
 #' @details
@@ -36,7 +41,8 @@ new_summary_table_block <- function(
     add_overall = FALSE,
     overall_label = "Total",
     indent_details = TRUE,
-    nest_hierarchies = FALSE
+    nest_hierarchies = FALSE,
+    id_var = NULL
   ),
   ...
 ) {
@@ -45,7 +51,8 @@ new_summary_table_block <- function(
   defaults <- list(
     vars = character(), sections = character(), by = character(),
     stats = "compact", add_overall = FALSE, overall_label = "Total",
-    indent_details = TRUE, nest_hierarchies = FALSE
+    indent_details = TRUE, nest_hierarchies = FALSE,
+    id_var = NULL
   )
   for (nm in names(defaults)) {
     if (is.null(state[[nm]])) state[[nm]] <- defaults[[nm]]
@@ -82,6 +89,7 @@ new_summary_table_block <- function(
           for (k in c("vars", "sections", "by")) {
             state[[k]] <- as.list(state[[k]] %||% character())
           }
+          state$id_var <- state$id_var %||% ""
           state
         }
 
@@ -109,6 +117,12 @@ new_summary_table_block <- function(
           new_state$overall_label <- new_state$overall_label %||% "Total"
           new_state$indent_details <- isTRUE(new_state$indent_details)
           new_state$nest_hierarchies <- isTRUE(new_state$nest_hierarchies)
+          id_v <- new_state$id_var
+          new_state$id_var <- if (is.null(id_v) || !nzchar(id_v)) {
+            NULL
+          } else {
+            as.character(id_v)
+          }
           r_state(new_state)
         })
 
@@ -128,19 +142,36 @@ new_summary_table_block <- function(
           expr = shiny::reactive({
             s <- r_state()
             shiny::req(length(s$vars) > 0)
-            bquote(
-              blockr.bi::summary_table(
-                data,
-                vars             = .(s$vars),
-                sections         = .(s$sections),
-                by               = .(s$by),
-                stats            = .(s$stats),
-                add_overall      = .(s$add_overall),
-                overall_label    = .(s$overall_label),
-                indent_details   = .(s$indent_details),
-                nest_hierarchies = .(s$nest_hierarchies)
+            if (!is.null(s$id_var) && nzchar(s$id_var)) {
+              bquote(
+                blockr.bi::summary_table(
+                  data,
+                  vars             = .(s$vars),
+                  sections         = .(s$sections),
+                  by               = .(s$by),
+                  stats            = .(s$stats),
+                  add_overall      = .(s$add_overall),
+                  overall_label    = .(s$overall_label),
+                  indent_details   = .(s$indent_details),
+                  nest_hierarchies = .(s$nest_hierarchies),
+                  subject_var      = .(s$id_var)
+                )
               )
-            )
+            } else {
+              bquote(
+                blockr.bi::summary_table(
+                  data,
+                  vars             = .(s$vars),
+                  sections         = .(s$sections),
+                  by               = .(s$by),
+                  stats            = .(s$stats),
+                  add_overall      = .(s$add_overall),
+                  overall_label    = .(s$overall_label),
+                  indent_details   = .(s$indent_details),
+                  nest_hierarchies = .(s$nest_hierarchies)
+                )
+              )
+            }
           }),
           state = list(state = r_state)
         )
@@ -163,7 +194,7 @@ new_summary_table_block <- function(
       )
     },
     class = c("summary_table_block", "transform_block", "block"),
-    allow_empty_state = c("vars", "sections", "by", "overall_label"),
+    allow_empty_state = c("vars", "sections", "by", "overall_label", "id_var"),
     ...
   )
 }

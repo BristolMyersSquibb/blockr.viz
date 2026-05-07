@@ -26,7 +26,8 @@
         add_overall: false,
         overall_label: 'Total',
         indent_details: true,
-        nest_hierarchies: false
+        nest_hierarchies: false,
+        id_var: ''
       };
 
       this._selects = {};
@@ -148,6 +149,7 @@
       this._addBooleanRow('nest_hierarchies',
         { on: 'Nested', off: 'Independent' },
         'Nest hierarchy columns (sections) visually');
+      this._addIdVarRow();
 
       this.card.appendChild(this.popover);
 
@@ -275,6 +277,49 @@
       this._overallLabelInput = input;
     }
 
+    _addIdVarRow() {
+      const select = document.createElement('select');
+      select.className = 'blockr-popover-input';
+      select.style.flex = '1';
+
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = '— row count —';
+      select.appendChild(empty);
+
+      select.addEventListener('change', () => {
+        this._state.id_var = select.value;
+        this._autoSubmit();
+      });
+      select.addEventListener('click', (e) => e.stopPropagation());
+
+      const label = document.createElement('span');
+      label.className = 'blockr-popover-label';
+      label.textContent = 'Count distinct by:';
+      label.style.marginBottom = '0';
+      label.style.flexShrink = '0';
+
+      this._addPopoverRow([label, select],
+        'Compute N values and percentages over distinct values of this column.');
+      this._idVarSelect = select;
+    }
+
+    _refreshIdVarOptions() {
+      const sel = this._idVarSelect;
+      if (!sel) return;
+      while (sel.options.length > 1) sel.remove(1);
+      for (const col of this._varCols) {
+        const opt = document.createElement('option');
+        opt.value = col;
+        opt.textContent = col;
+        sel.appendChild(opt);
+      }
+      const want = this._state.id_var || '';
+      sel.value = want;
+      // If the desired column is no longer present, fall back to row count.
+      if (sel.value !== want) this._state.id_var = '';
+    }
+
     _togglePopover() {
       const showing = this.popover.style.display === 'none';
       this.popover.style.display = showing ? 'block' : 'none';
@@ -296,7 +341,8 @@
         add_overall: this._state.add_overall,
         overall_label: this._state.overall_label,
         indent_details: this._state.indent_details,
-        nest_hierarchies: this._state.nest_hierarchies
+        nest_hierarchies: this._state.nest_hierarchies,
+        id_var: this._state.id_var || ''
       };
     }
 
@@ -314,6 +360,10 @@
       }
       if (typeof state.indent_details === 'boolean') this._state.indent_details = state.indent_details;
       if (typeof state.nest_hierarchies === 'boolean') this._state.nest_hierarchies = state.nest_hierarchies;
+      if (typeof state.id_var === 'string') {
+        this._state.id_var = state.id_var;
+        this._refreshIdVarOptions();
+      }
 
       for (const key of ['stats', 'add_overall', 'indent_details', 'nest_hierarchies']) {
         const btn = this['_toggle_' + key];
@@ -346,6 +396,7 @@
         this._selects.by.setOptions(this._catCols, this._state.by);
         this._state.by = this._selects.by.getValue();
       }
+      this._refreshIdVarOptions();
       this._autoSubmit();
     }
   }
