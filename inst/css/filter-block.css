@@ -1,9 +1,5 @@
 /* blockr.bi filter block — thin layout on top of blockr.dplyr's shared styles. */
 
-.bi-filter-card {
-  padding: 8px 10px;
-}
-
 .bi-filter-body {
   display: flex;
   flex-direction: column;
