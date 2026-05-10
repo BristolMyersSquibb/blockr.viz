@@ -69,11 +69,39 @@ board <- new_dock_board(
           label = "metric", status = "status"
         )
       )
+    ),
+
+    # --- Pipeline E: list-in-card (multiple metrics in one tile) ----
+    # Same KPI frame, number showcase + label aesthetic, no row/col
+    # facet → one card with one row per metric (label · value / target
+    # · status pill). Color the rows by status (tint).
+    kpi_list_tiles = new_tile_block(
+      showcase = "number",
+      state = list(
+        aesthetics = list(
+          value = "value", label = "metric",
+          target = "target", status = "status"
+        ),
+        color = list(by = "status", intensity = "tint")
+      )
+    ),
+
+    # --- Pipeline F: solid scorecard tiles colored by region --------
+    tx_colored = new_tile_block(
+      showcase = "number",
+      state = list(
+        aesthetics = list(
+          value = c("revenue", "orders"),
+          rows = "region"
+        ),
+        stats = list(value = "sum"),
+        color = list(by = "region", intensity = "solid")
+      )
     )
   ),
   links = links(
-    from = c("tx_data", "tx_data",  "ts_data",  "kpi_data"),
-    to   = c("tx_tiles", "tx_scorecard", "ts_tiles", "kpi_tiles")
+    from = c("tx_data", "tx_data",  "ts_data",  "kpi_data",  "kpi_data",        "tx_data"),
+    to   = c("tx_tiles", "tx_scorecard", "ts_tiles", "kpi_tiles", "kpi_list_tiles", "tx_colored")
   ),
   extensions = new_dock_extensions(list(
     new_dag_extension()

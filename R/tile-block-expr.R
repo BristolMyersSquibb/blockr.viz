@@ -20,13 +20,15 @@ tile_shape <- function(
   showcase = "number",
   aesthetics = list(),
   stats = list(),
-  formats = list()
+  formats = list(),
+  color = list()
 ) {
   if (!is.data.frame(data)) stop("tile_shape: `data` must be a data frame.")
   data <- tibble::as_tibble(data)
 
   aes <- normalize_aesthetics(aesthetics)
   st  <- normalize_stats(stats)
+  col <- normalize_color(color)
 
   value_cols <- aes$value
   value_stats <- st$value
@@ -46,12 +48,16 @@ tile_shape <- function(
 
   # Label-as-implicit-facet: if `label` is mapped to a column and
   # that column is not already a facet, treat it as rows. Handles
-  # the "one-row-per-metric" shape (the kpis_with_goals case).
+  # the "one-row-per-metric" shape (the kpis_with_goals case). The
+  # renderer collapses these rows back into a single card-with-list
+  # for showcase = "number" (see card_layout attr below).
+  label_as_facet <- FALSE
   if (length(facet_cols) == 0 &&
       nzchar(aes$label) && aes$label %in% names(data) &&
       !is.numeric(data[[aes$label]])) {
     facet_cols <- aes$label
     aes$rows <- aes$label
+    label_as_facet <- TRUE
   }
 
   # Build one long frame: one row per (facet cell × measure × stat).
@@ -75,9 +81,19 @@ tile_shape <- function(
     as.character(out[[aes$cols]])
   } else ""
 
-  # .label: use `label` aesthetic column if mapped, otherwise measure name.
+  # .label: prefer the `label` aesthetic column when mapped, otherwise
+  # check the formats$measure_labels constructor-time overlay (named
+  # vector / list mapping column → display string), otherwise fall back
+  # to a title-cased measure name.
   out$.label <- if (length(aes$label) > 0 && aes$label %in% names(out)) {
     as.character(out[[aes$label]])
+  } else if (length(formats$measure_labels) > 0) {
+    ml <- as.list(formats$measure_labels)
+    vapply(out$.measure, function(m) {
+      lbl <- ml[[m]]
+      if (is.null(lbl) || !nzchar(as.character(lbl))) pretty_label(m)
+      else as.character(lbl)
+    }, character(1))
   } else {
     pretty_label(out$.measure)
   }
@@ -126,8 +142,22 @@ tile_shape <- function(
     }
   }
 
+  # Per-row color key — the renderer turns this into a CSS variable.
+  # Sentinels "status" / "measure" map to those output columns;
+  # any other non-empty value is a column name in `data`.
+  out$.color_key <- compute_color_key(data, out, col$by, facet_cols)
+
   # Attach showcase + any facet columns that aren't already in output.
+  # card_layout = "list" collapses rows into a single card with stacked
+  # label/value rows (only for the number showcase, when label drove the
+  # implicit row split). Other cases get the existing card grid.
   attr(out, "showcase") <- showcase
+  attr(out, "card_layout") <- if (showcase == "number" && label_as_facet) {
+    "list"
+  } else {
+    "grid"
+  }
+  attr(out, "color_intensity") <- col$intensity
   tibble::as_tibble(out)
 }
 
@@ -149,6 +179,46 @@ normalize_aesthetics <- function(aes) {
     aes[[nm]] <- if (length(aes[[nm]]) == 0) "" else as.character(aes[[nm]])[1]
   }
   aes
+}
+
+normalize_color <- function(color) {
+  defaults <- list(by = "", intensity = "tint")
+  for (nm in names(defaults)) {
+    if (is.null(color[[nm]])) color[[nm]] <- defaults[[nm]]
+    if (is.list(color[[nm]])) color[[nm]] <- unlist(color[[nm]])
+  }
+  color$by <- as.character(color$by)[1]
+  color$intensity <- as.character(color$intensity)[1]
+  if (!color$intensity %in% c("tint", "solid", "border")) {
+    color$intensity <- "tint"
+  }
+  color
+}
+
+#' Compute a per-row color key.
+#'
+#' Returns a character vector that the renderer hashes into one of the
+#' palette slots. "" means "no color" (renderer uses neutral surface).
+#' @noRd
+compute_color_key <- function(data, out, color_by, facet_cols) {
+  n <- nrow(out)
+  if (!nzchar(color_by) || n == 0) return(rep("", n))
+  if (color_by == "status") return(as.character(out$.status %||% rep(NA_character_, n)))
+  if (color_by == "measure") return(as.character(out$.measure))
+  # Otherwise: a column in `data`. Pull the per-group first value
+  # (categorical), or NA if the column is missing.
+  if (!color_by %in% names(data)) return(rep("", n))
+  if (length(facet_cols) == 0) {
+    return(rep(as.character(data[[color_by]][1]), n))
+  }
+  grouped <- dplyr::group_by(data, dplyr::across(dplyr::all_of(facet_cols)))
+  groups_df <- dplyr::group_keys(grouped)
+  vals <- dplyr::group_split(grouped) |> vapply(function(d) {
+    as.character(d[[color_by]][1])
+  }, character(1))
+  key <- do.call(paste, c(groups_df[facet_cols], sep = ""))
+  out_key <- do.call(paste, c(out[facet_cols], sep = ""))
+  vals[match(out_key, key)]
 }
 
 normalize_stats <- function(st) {
@@ -294,6 +364,6 @@ empty_tile_frame <- function() {
     .stat = character(), .value = numeric(), .label = character(),
     .unit = character(), .target = numeric(), .max = numeric(),
     .status = character(), .spark = list(), .format = character(),
-    .digits = integer()
+    .digits = integer(), .color_key = character()
   )
 }

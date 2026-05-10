@@ -82,40 +82,61 @@ new_tile_block <- function(
           )
 
           # Numeric pickers: value (multi), target, max, spark_value.
+          # Single-select aesthetics: prepend "(none)" so the user can
+          # explicitly clear an assignment after picking one (matches the
+          # blockr.ggplot pattern). Multi-select Value uses the X chip
+          # control to remove individual measures.
           shiny::updateSelectizeInput(session, "aes_value",
             choices = ci$numeric,
             selected = intersect(s$aesthetics$value, ci$numeric))
           shiny::updateSelectizeInput(session, "aes_target",
-            choices = c(setNames("", "\u2014"), ci$numeric),
-            selected = if (s$aesthetics$target %in% ci$numeric) s$aesthetics$target else "")
+            choices = c("(none)", ci$numeric),
+            selected = if (s$aesthetics$target %in% ci$numeric) s$aesthetics$target else "(none)")
           shiny::updateSelectizeInput(session, "aes_max",
-            choices = c(setNames("", "\u2014"), ci$numeric),
-            selected = if (s$aesthetics$max %in% ci$numeric) s$aesthetics$max else "")
+            choices = c("(none)", ci$numeric),
+            selected = if (s$aesthetics$max %in% ci$numeric) s$aesthetics$max else "(none)")
           shiny::updateSelectizeInput(session, "aes_spark_value",
-            choices = c(setNames("", "\u2014"), ci$numeric),
-            selected = if (s$aesthetics$spark_value %in% ci$numeric) s$aesthetics$spark_value else "")
+            choices = c("(none)", ci$numeric),
+            selected = if (s$aesthetics$spark_value %in% ci$numeric) s$aesthetics$spark_value else "(none)")
 
           # Categorical / facet pickers.
           shiny::updateSelectizeInput(session, "aes_rows",
-            choices = c(setNames("", "\u2014"), ci$categorical),
-            selected = if (s$aesthetics$rows %in% ci$categorical) s$aesthetics$rows else "")
+            choices = c("(none)", ci$categorical),
+            selected = if (s$aesthetics$rows %in% ci$categorical) s$aesthetics$rows else "(none)")
           shiny::updateSelectizeInput(session, "aes_cols",
-            choices = c(setNames("", "\u2014"), ci$categorical),
-            selected = if (s$aesthetics$cols %in% ci$categorical) s$aesthetics$cols else "")
+            choices = c("(none)", ci$categorical),
+            selected = if (s$aesthetics$cols %in% ci$categorical) s$aesthetics$cols else "(none)")
           shiny::updateSelectizeInput(session, "aes_label",
-            choices = c(setNames("", "\u2014"), ci$all),
-            selected = if (s$aesthetics$label %in% ci$all) s$aesthetics$label else "")
+            choices = c("(none)", ci$all),
+            selected = if (s$aesthetics$label %in% ci$all) s$aesthetics$label else "(none)")
           shiny::updateSelectizeInput(session, "aes_unit",
-            choices = c(setNames("", "\u2014"), ci$all),
-            selected = if (s$aesthetics$unit %in% ci$all) s$aesthetics$unit else "")
+            choices = c("(none)", ci$all),
+            selected = if (s$aesthetics$unit %in% ci$all) s$aesthetics$unit else "(none)")
           shiny::updateSelectizeInput(session, "aes_status",
-            choices = c(setNames("", "\u2014"), ci$all),
-            selected = if (s$aesthetics$status %in% ci$all) s$aesthetics$status else "")
+            choices = c("(none)", ci$all),
+            selected = if (s$aesthetics$status %in% ci$all) s$aesthetics$status else "(none)")
 
           # Ordering picker for spark_x.
           shiny::updateSelectizeInput(session, "aes_spark_x",
-            choices = c(setNames("", "\u2014"), ci$ordering),
-            selected = if (s$aesthetics$spark_x %in% ci$ordering) s$aesthetics$spark_x else "")
+            choices = c("(none)", ci$ordering),
+            selected = if (s$aesthetics$spark_x %in% ci$ordering) s$aesthetics$spark_x else "(none)")
+
+          # Color-by picker: special sentinels "status" / "measure"
+          # alongside actual columns. We label the sentinels for clarity
+          # but keep their values as bare strings.
+          color_choices <- c(
+            "(none)" = "(none)",
+            "Status (uses Status aesthetic)" = "status",
+            "Measure (one slot per measure)" = "measure",
+            stats::setNames(ci$all, ci$all)
+          )
+          color_sel <- s$color$by
+          if (!color_sel %in% c("status", "measure", ci$all)) {
+            color_sel <- "(none)"
+          }
+          shiny::updateSelectizeInput(session, "aes_color_by",
+            choices = color_choices,
+            selected = color_sel)
         })
 
         # Sync UI → state.
@@ -152,11 +173,32 @@ new_tile_block <- function(
               s <- shiny::isolate(r_state())
               v <- input[[paste0("aes_", an)]]
               if (is.null(v)) v <- if (an == "value") character() else ""
+              # Translate the literal "(none)" sentinel back to "" so
+              # downstream shaping treats it as unmapped.
+              if (an != "value" && identical(v, "(none)")) v <- ""
               s$aesthetics[[an]] <- v
               r_state(s)
             }, ignoreNULL = FALSE, ignoreInit = TRUE)
           })
         }
+
+        # Color-by sync.
+        shiny::observeEvent(input$aes_color_by, {
+          s <- shiny::isolate(r_state())
+          v <- input$aes_color_by
+          if (is.null(v) || identical(v, "(none)")) v <- ""
+          s$color$by <- v
+          r_state(s)
+        }, ignoreNULL = FALSE, ignoreInit = TRUE)
+
+        # Color intensity sync.
+        shiny::observeEvent(input$color_intensity, {
+          s <- shiny::isolate(r_state())
+          v <- input$color_intensity
+          if (is.null(v) || !nzchar(v)) v <- "tint"
+          s$color$intensity <- v
+          r_state(s)
+        }, ignoreNULL = FALSE, ignoreInit = TRUE)
 
         # Value-stat sync (single-select; only meaningful in Number).
         shiny::observeEvent(input$stats_value, {
@@ -180,7 +222,8 @@ new_tile_block <- function(
                 showcase   = .(sc),
                 aesthetics = .(s$aesthetics),
                 stats      = .(s$stats),
-                formats    = .(s$formats)
+                formats    = .(s$formats),
+                color      = .(s$color)
               )
             )
           }),
@@ -208,8 +251,10 @@ new_tile_block <- function(
             multi = FALSE,
             class = "tb-showcase-picker"
           ),
+          # --- Basic aesthetics (always visible) -------------------------
+          # Value + headline stat (Number only), showcase-specific numeric
+          # aesthetics, and Label (drives the list-in-card layout).
           tb_section_header("Aesthetics"),
-          # Value aesthetic + headline stat (single-select, Number only).
           aesthetic_row(ns, "value", "Value", multi = TRUE,
                         selected = state$aesthetics$value,
                         shows = all_sc),
@@ -230,7 +275,6 @@ new_tile_block <- function(
               class = "tb-stat-pills"
             )
           ),
-          # Showcase-specific numeric aesthetics.
           aesthetic_row(ns, "spark_value", "Spark value",
                         selected = state$aesthetics$spark_value,
                         shows = "spark"),
@@ -240,32 +284,63 @@ new_tile_block <- function(
           aesthetic_row(ns, "max", "Max",
                         selected = state$aesthetics$max,
                         shows = "progress"),
-          aesthetic_row(ns, "target", "Target",
-                        selected = state$aesthetics$target,
-                        shows = "number"),
-          # Display columns shared across showcases.
           aesthetic_row(ns, "label", "Label",
                         selected = state$aesthetics$label,
                         shows = all_sc),
-          aesthetic_row(ns, "unit", "Unit",
-                        selected = state$aesthetics$unit,
-                        shows = all_sc),
-          aesthetic_row(ns, "status", "Status",
-                        selected = state$aesthetics$status,
-                        shows = all_sc),
-          # Facet section.
-          shiny::div(
-            class = "tb-facets-section",
-            tb_section_header(
-              "Facets",
-              hint = "Split the input into a grid of cards"
+
+          # --- Advanced aesthetics (collapsed by default) ----------------
+          # Decoration aesthetics + color + facets. Facets change the output
+          # shape (one card → grid) but most tiles don't use them, so they
+          # live behind the disclosure to keep the basic panel breathable.
+          shiny::tags$details(
+            class = "tb-advanced",
+            shiny::tags$summary(
+              class = "tb-section-header tb-section-toggle",
+              shiny::tags$span("Advanced", class = "tb-section-title"),
+              shiny::tags$span("Color · decoration · facets",
+                               class = "tb-section-hint")
             ),
-            aesthetic_row(ns, "rows", "Rows",
-                          selected = state$aesthetics$rows,
-                          shows = all_sc, facet = TRUE),
-            aesthetic_row(ns, "cols", "Cols",
-                          selected = state$aesthetics$cols,
-                          shows = all_sc, facet = TRUE)
+            # Color: ggplot-style "color by" + intensity pills. The
+            # "by" picker accepts the sentinels "status" / "measure"
+            # alongside data columns; intensity controls the visual
+            # treatment (light tint, saturated bg, or just a left bar).
+            aesthetic_row(ns, "color_by", "Color by",
+                          selected = state$color$by,
+                          shows = all_sc),
+            shiny::div(
+              class = "tb-aes-row tb-stat-row",
+              `data-shows` = paste(all_sc, collapse = " "),
+              shiny::tags$label(
+                "Intensity",
+                `for` = ns("color_intensity"),
+                class = "tb-aes-label"
+              ),
+              tb_pill_group(
+                ns("color_intensity"),
+                choices = c("tint", "solid", "border"),
+                selected = state$color$intensity,
+                multi = FALSE,
+                class = "tb-stat-pills"
+              )
+            ),
+            aesthetic_row(ns, "target", "Target",
+                          selected = state$aesthetics$target,
+                          shows = "number"),
+            aesthetic_row(ns, "unit", "Unit",
+                          selected = state$aesthetics$unit,
+                          shows = all_sc),
+            aesthetic_row(ns, "status", "Status",
+                          selected = state$aesthetics$status,
+                          shows = all_sc),
+            shiny::div(
+              class = "tb-facets-section",
+              aesthetic_row(ns, "rows", "Rows",
+                            selected = state$aesthetics$rows,
+                            shows = all_sc, facet = TRUE),
+              aesthetic_row(ns, "cols", "Cols",
+                            selected = state$aesthetics$cols,
+                            shows = all_sc, facet = TRUE)
+            )
           )
         )
       )
@@ -331,12 +406,18 @@ fill_tile_state <- function(state, showcase) {
     spark_value = "identity", spark_x = "identity", status = "first"
   )
   fmt_defaults <- list(
-    value = list(kind = NULL, digits = NULL)
+    value = list(kind = NULL, digits = NULL),
+    measure_labels = list()
   )
+  # color$by may be "" (none), "status", "measure", or a column name.
+  # color$intensity is one of "tint", "solid", "border".
+  color_defaults <- list(by = "", intensity = "tint")
+
   state$showcase   <- state$showcase %||% showcase
   state$aesthetics <- utils::modifyList(aes_defaults, state$aesthetics %||% list())
   state$stats      <- utils::modifyList(stat_defaults, state$stats %||% list())
   state$formats    <- utils::modifyList(fmt_defaults, state$formats %||% list())
+  state$color      <- utils::modifyList(color_defaults, state$color %||% list())
   state
 }
 
@@ -419,7 +500,13 @@ render_tiles <- function(df) {
       "No data"
     ))
   }
-  showcase <- attr(df, "showcase") %||% "number"
+  showcase    <- attr(df, "showcase") %||% "number"
+  card_layout <- attr(df, "card_layout") %||% "grid"
+  intensity   <- attr(df, "color_intensity") %||% "tint"
+
+  if (card_layout == "list") {
+    return(render_tile_list(df, intensity))
+  }
 
   # Distinct row/col facet levels.
   rows <- unique(df$.row)
@@ -433,7 +520,7 @@ render_tiles <- function(df) {
   # visually conveyed via the label / ordering.
   cards <- lapply(seq_len(nrow(df)), function(i) {
     row <- df[i, ]
-    make_card(row, showcase, has_rows || has_cols)
+    make_card(row, showcase, has_rows || has_cols, intensity)
   })
 
   shiny::div(
@@ -443,8 +530,97 @@ render_tiles <- function(df) {
   )
 }
 
+#' Render a long tile frame as a single card with stacked rows.
+#' Triggered when `label` is mapped without explicit row/col facets
+#' and the showcase is `"number"`.
 #' @noRd
-make_card <- function(row, showcase, show_facet_hint) {
+render_tile_list <- function(df, intensity = "tint") {
+  rows <- lapply(seq_len(nrow(df)), function(i) {
+    tile_row_inline(df[i, ], intensity)
+  })
+  shiny::div(
+    class = "tb-grid tb-grid--list",
+    shiny::div(
+      class = "tb-card tb-card--list",
+      shiny::div(class = "tb-card-rows", rows)
+    )
+  )
+}
+
+#' One row inside a list-layout card.
+#' @noRd
+tile_row_inline <- function(row, intensity = "tint") {
+  label_txt <- if (nzchar(row$.label)) row$.label else row$.measure
+  val_text  <- format_value(row$.value, row$.format, row$.digits)
+
+  target_span <- if (!is.na(row$.target)) {
+    shiny::tags$span(
+      class = "tb-card-row-target",
+      "/ ", format_value(row$.target, row$.format, row$.digits)
+    )
+  }
+
+  status_pill <- if (!is.na(row$.status) && nzchar(row$.status)) {
+    shiny::tags$span(
+      class = paste0("tb-status-pill tb-status--", tolower(row$.status)),
+      row$.status
+    )
+  }
+
+  unit_span <- if (nzchar(row$.unit) && !is.na(row$.unit)) {
+    shiny::tags$span(class = "tb-card-row-unit", row$.unit)
+  }
+
+  attrs <- color_attrs(row$.color_key, intensity)
+  shiny::div(
+    class = paste("tb-card-row", attrs$class),
+    style = attrs$style,
+    shiny::span(class = "tb-card-row-label", label_txt),
+    shiny::div(
+      class = "tb-card-row-values",
+      shiny::span(class = "tb-card-row-value", val_text),
+      target_span,
+      unit_span
+    ),
+    status_pill
+  )
+}
+
+#' Resolve a per-row .color_key + intensity into card class + style.
+#'
+#' Returns NULL/no-op when the key is empty (color is unmapped).
+#' Otherwise produces a CSS variable so the same class set works for any
+#' palette slot (status, measure, or arbitrary categorical column).
+#' @noRd
+color_attrs <- function(key, intensity) {
+  empty <- list(class = NULL, style = NULL)
+  if (is.null(key) || is.na(key) || !nzchar(key)) return(empty)
+  if (!intensity %in% c("tint", "solid", "border")) intensity <- "tint"
+  hue <- hue_for(key)
+  list(
+    class = paste0("tb-color tb-color--", intensity, " tb-color-hue--", hue),
+    style = NULL
+  )
+}
+
+#' Map a color key to one of the named palette slots.
+#'
+#' Status keys ("ok"/"warn"/"bad") map to the existing semantic colors;
+#' anything else hashes deterministically to one of 6 categorical hues so
+#' the same value always lands on the same color across re-renders.
+#' @noRd
+hue_for <- function(key) {
+  k <- tolower(as.character(key))
+  if (k %in% c("ok", "good", "success", "pass")) return("ok")
+  if (k %in% c("warn", "warning", "caution"))    return("warn")
+  if (k %in% c("bad", "error", "fail", "danger")) return("bad")
+  # Deterministic hash → cat-1 .. cat-6.
+  h <- sum(utf8ToInt(as.character(key))) %% 6L + 1L
+  paste0("cat-", h)
+}
+
+#' @noRd
+make_card <- function(row, showcase, show_facet_hint, intensity = "tint") {
   label_txt <- row$.label
   if (show_facet_hint && (nzchar(row$.row) || nzchar(row$.col))) {
     facet_bits <- c(row$.row, row$.col)
@@ -478,8 +654,10 @@ make_card <- function(row, showcase, show_facet_hint) {
     )
   }
 
+  attrs <- color_attrs(row$.color_key, intensity)
   shiny::div(
-    class = "tb-card",
+    class = paste("tb-card", attrs$class),
+    style = attrs$style,
     shiny::div(
       class = "tb-card-header",
       shiny::span(class = "tb-label", label_txt, stat_suffix),
