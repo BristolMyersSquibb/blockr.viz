@@ -7,7 +7,7 @@
 new_summary_table_block(
   state = list(vars = character(), sections = character(), by = character(), stats =
     "compact", add_overall = FALSE, overall_label = "Total", indent_details = TRUE,
-    nest_hierarchies = FALSE),
+    nest_hierarchies = FALSE, id_var = NULL),
   ...
 )
 }
@@ -20,6 +20,11 @@ new_summary_table_block(
 \item \code{stats} — \code{"compact"} or \code{"expanded"}.
 \item \code{add_overall} — logical, append an overall column.
 \item \code{overall_label} — label for the overall column, default \code{"Total"}.
+\item \code{id_var} — optional column name. When set, column N values and
+percentages are computed over distinct values of this column
+instead of row counts. Useful when each row is an event and
+multiple rows can belong to the same entity (e.g. patient,
+order, session).
 }}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}

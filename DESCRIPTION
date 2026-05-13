@@ -35,5 +35,6 @@ Suggests:
     blockr.dag,
     blockr.extra,
     blockr.io,
+    dm,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

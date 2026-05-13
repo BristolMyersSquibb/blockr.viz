@@ -9,7 +9,8 @@ tile_shape(
   showcase = "number",
   aesthetics = list(),
   stats = list(),
-  formats = list()
+  formats = list(),
+  color = list()
 )
 }
 \arguments{

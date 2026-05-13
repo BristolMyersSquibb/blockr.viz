@@ -85,7 +85,7 @@ summary_table_arguments <- function() {
       state = list(
         vars = list("AGE", "SEX", "RACE"),
         sections = list(),
-        by = list("ARM"),
+        by = list("TRT01A"),
         stats = "compact",
         add_overall = TRUE,
         overall_label = "Total"
@@ -99,12 +99,12 @@ summary_table_arguments <- function() {
       "level for categoricals, one row per flag for logicals.",
       "\n\nMap common user requests:",
       "\n- \"demographics by arm\" ->",
-      "vars=[\"AGE\",\"SEX\",\"RACE\"], by=[\"ARM\"], add_overall=TRUE",
+      "vars=[\"AGE\",\"SEX\",\"RACE\"], by=[\"TRT01A\"], add_overall=TRUE",
       "\n- \"table 1 with full stats\" -> stats=\"expanded\"",
       "\n- \"baseline characteristics by treatment\" ->",
       "vars=[\"AGE\",\"SEX\",\"BMIBL\"], by=[\"TRT01A\"]",
       "\n- \"AE counts by SOC and term\" ->",
-      "sections=[\"AESOC\"], vars=[\"AEDECOD\"], by=[\"ARM\"]",
+      "sections=[\"AEBODSYS\"], vars=[\"AEDECOD\"], by=[\"TRT01A\"]",
       "\n\nPrefer summary_table_block for \"Table 1\" style summaries.",
       "Prefer pivot_table_block for \"one measure by two dimensions\".",
       "\n\nPass this block's output to gt_table_block for styled rendering."

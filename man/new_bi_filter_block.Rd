@@ -4,25 +4,30 @@
 \alias{new_bi_filter_block}
 \title{Filter block}
 \usage{
-new_bi_filter_block(
-  state = list(columns = character(), modes = list(), values = list()),
-  ...
-)
+new_bi_filter_block(state = list(columns = list()), ...)
 }
 \arguments{
-\item{state}{List with \code{columns} (character vector of active columns),
-\code{modes} (named list: column -> "single" | "multi"), and \code{values} (named
-list: column -> character vector of selected values).}
+\item{state}{List with \code{columns} — a list of column-object entries. Each
+entry has \code{name} (column name), \code{table} (source table; only when input
+is a \code{dm}), \code{mode} (\code{"single"} or \code{"multi"}), and \code{values} (character
+vector of selected values). Old-style state
+(\code{list(columns=character, modes=list, values=list)}) is auto-migrated
+via \code{\link[=migrate_bi_filter_state]{migrate_bi_filter_state()}} for backward compatibility.}
 
 \item{...}{Additional arguments forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }
 \description{
-Minimal value filter for data frames. The columns to filter on are chosen
-behind the gear icon (top-right of the block). Each column can be toggled
-between single-select (always constrains — auto-picks first value) and
-multi-select (empty selection passes through).
+Minimal value filter for data frames or \code{dm} objects. The columns to filter
+on are chosen behind the gear icon (top-right of the block). Each column
+can be toggled between single-select (always constrains — auto-picks first
+value) and multi-select (empty selection passes through).
 }
 \details{
+When the upstream input is a \code{dm}, the gear popover gains a table selector
+so columns can be picked from any of the dm's tables. The emitted filter
+goes through \code{dm::dm_filter()}, so the restriction cascades through foreign
+keys to related tables.
+
 Gear/popover UX, select widget, and click-through pill styling are reused
 from \code{blockr.dplyr} to match the look-and-feel of the crossfilter and dplyr
 transform blocks.
@@ -34,9 +39,9 @@ if (interactive()) {
   serve(
     new_bi_filter_block(
       state = list(
-        columns = "Species",
-        modes = list(Species = "single"),
-        values = list(Species = "setosa")
+        columns = list(
+          list(name = "Species", mode = "single", values = "setosa")
+        )
       )
     ),
     data = list(data = iris)

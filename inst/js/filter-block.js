@@ -1,11 +1,16 @@
 /**
- * FilterBlock — minimal value filter for data frames.
+ * FilterBlock — minimal value filter for a data frame or a dm.
  *
- * Main UI (card body): one row per active column, each with a Blockr.Select
- *   (single or multi depending on the column's mode).
+ * Body (card body): one row per active entry, each with a Blockr.Select
+ *   (single or multi depending on the entry's mode).
  * Gear popover:
- *   - "Fields" multi-select: which columns are active.
- *   - Per-column mode toggle: click-through pill Single <-> Multi.
+ *   - df input: "Fields" multi-select picks columns; per-column mode pill.
+ *   - dm input: "Table" single-select scopes the "Fields" multi-select to one
+ *     table at a time. Active entries from other tables persist; the mode
+ *     toggles row shows every active entry across all tables.
+ *
+ * State emitted (and received) matches the R-side column-object shape:
+ *   { columns: [{ name, table?, mode, values }, ...] }
  *
  * Depends on: blockr-core.js, blockr-select.js (from blockr.dplyr).
  */
@@ -14,15 +19,22 @@
 
   const optValueOf = (o) => (typeof o === 'object' && o !== null ? o.value : o);
 
+  // Qualified key uniquely identifies a column. For df input the column name
+  // alone is unique. For dm input we need table+name because two tables can
+  // share a column name (e.g. policy_id on both locations and claims).
+  const qualKey = (name, table) =>
+    (table != null && table !== '') ? (table + '.' + name) : name;
+
   class FilterBlock {
     constructor(el) {
       this.el = el;
-      this.columns = [];     // [{value, label}]  (all columns of incoming df)
-      this.colLabels = {};   // value -> label
-      this.colValues = {};   // col -> options array ([string] or [{value,label}])
-      this.active = [];      // active column names, ordered
-      this.modes = {};       // col -> "single" | "multi"
-      this.values = {};      // col -> array of selected string values
+      this.isDm = false;
+      this.columns = [];     // [{value, label, table?, column?}] all columns
+      this.colLabels = {};   // qualKey -> label
+      this.colValues = {};   // qualKey -> options array
+      this.tables = [];      // [string] only for dm — ordered table names
+      this.currentTable = ''; // dm: which table the Fields picker is scoped to
+      this.entries = [];     // [{name, table?, mode, values}] active filters
 
       this._callback = null;
       this._submitted = false;
@@ -30,6 +42,7 @@
       this._popoverOpen = false;
 
       this._fieldSelect = null;
+      this._tableSelect = null;
       this._modePills = {};
       this._bodySelects = {};
 
@@ -48,7 +61,7 @@
       this.card.style.position = 'relative';
       this.el.appendChild(this.card);
 
-      // Gear header (top-right) — identical markup to blockr.dplyr blocks.
+      // Gear header (top-right) — same markup as blockr.dplyr blocks.
       const gearHeader = document.createElement('div');
       gearHeader.className = 'blockr-gear-header';
       this.gearBtn = document.createElement('button');
@@ -69,7 +82,6 @@
       this.bodyEl.className = 'bi-filter-body';
       this.card.appendChild(this.bodyEl);
 
-      // Click-outside closes popover.
       document.addEventListener('click', (e) => {
         if (this._popoverOpen && this.popoverEl &&
             !this.popoverEl.contains(e.target) &&
@@ -84,7 +96,23 @@
       this.popoverEl.className = 'blockr-popover';
       this.popoverEl.style.display = 'none';
 
-      // Fields multi-select
+      // Table row (dm only — hidden in df mode).
+      this.tableRow = document.createElement('div');
+      this.tableRow.className = 'blockr-popover-row bi-filter-table-row';
+      this.tableRow.style.display = 'none';
+
+      const tableLabel = document.createElement('label');
+      tableLabel.className = 'blockr-popover-label';
+      tableLabel.textContent = 'Table';
+      this.tableRow.appendChild(tableLabel);
+
+      this.tableSelectWrap = document.createElement('div');
+      this.tableSelectWrap.className = 'blockr-popover-select-wrap';
+      this.tableRow.appendChild(this.tableSelectWrap);
+
+      this.popoverEl.appendChild(this.tableRow);
+
+      // Fields multi-select.
       const fieldsRow = document.createElement('div');
       fieldsRow.className = 'blockr-popover-row';
       const fieldsLabel = document.createElement('label');
@@ -92,24 +120,13 @@
       fieldsLabel.textContent = 'Fields';
       fieldsRow.appendChild(fieldsLabel);
 
-      const fieldsWrap = document.createElement('div');
-      fieldsWrap.className = 'blockr-popover-select-wrap';
-      fieldsRow.appendChild(fieldsWrap);
-
-      this._fieldSelect = Blockr.Select.multi(fieldsWrap, {
-        options: this.columns,
-        selected: this.active.slice(),
-        placeholder: 'Select columns\u2026',
-        reorderable: false,
-        onChange: (selected) => {
-          this._setActive(selected);
-          this._autoSubmit();
-        }
-      });
+      this.fieldsWrap = document.createElement('div');
+      this.fieldsWrap.className = 'blockr-popover-select-wrap';
+      fieldsRow.appendChild(this.fieldsWrap);
 
       this.popoverEl.appendChild(fieldsRow);
 
-      // Per-column mode toggles
+      // Per-entry mode toggles (one per active entry across all tables).
       this.modesContainer = document.createElement('div');
       this.modesContainer.className = 'bi-filter-modes';
       this.popoverEl.appendChild(this.modesContainer);
@@ -117,42 +134,133 @@
       this.card.appendChild(this.popoverEl);
     }
 
+    _columnsForCurrentTable() {
+      if (!this.isDm) return this.columns;
+      const tbl = this.currentTable;
+      if (!tbl) return [];
+      return this.columns.filter((c) => c.table === tbl);
+    }
+
+    _selectedColumnNamesForCurrentTable() {
+      if (!this.isDm) {
+        return this.entries.map((e) => e.name);
+      }
+      const tbl = this.currentTable;
+      return this.entries.filter((e) => e.table === tbl).map((e) => e.name);
+    }
+
+    _rebuildFieldsSelect() {
+      // Re-create the Fields multi-select with options scoped to the current
+      // table (dm mode) or all columns (df mode).
+      this.fieldsWrap.innerHTML = '';
+      const cols = this._columnsForCurrentTable();
+      // For dm mode, the option's `value` is the bare column name (entries
+      // in this picker are within the current table); label is the column
+      // name plus its label if any.
+      const opts = this.isDm
+        ? cols.map((c) => ({ value: c.column, label: c.label || '' }))
+        : cols;
+      const selected = this._selectedColumnNamesForCurrentTable();
+      this._fieldSelect = Blockr.Select.multi(this.fieldsWrap, {
+        options: opts,
+        selected: selected.slice(),
+        placeholder: 'Select columns…',
+        reorderable: false,
+        onChange: (newNames) => {
+          this._onFieldsChanged(newNames);
+          this._autoSubmit();
+        }
+      });
+    }
+
+    _rebuildTableSelect() {
+      if (!this.isDm) {
+        this.tableRow.style.display = 'none';
+        return;
+      }
+      this.tableRow.style.display = '';
+      this.tableSelectWrap.innerHTML = '';
+      const tblOpts = this.tables.map((t) => ({ value: t, label: t }));
+      const cur = this.currentTable && this.tables.indexOf(this.currentTable) >= 0
+        ? this.currentTable
+        : (this.tables[0] || '');
+      this.currentTable = cur;
+      this._tableSelect = Blockr.Select.single(this.tableSelectWrap, {
+        options: tblOpts,
+        selected: cur,
+        placeholder: 'Select table…',
+        onChange: (t) => {
+          this.currentTable = t || '';
+          this._rebuildFieldsSelect();
+        }
+      });
+    }
+
+    _onFieldsChanged(newNamesInCurrentTable) {
+      const newSet = new Set(newNamesInCurrentTable);
+      const tbl = this.isDm ? this.currentTable : null;
+
+      // Drop entries that belong to the current table but are no longer
+      // selected. Keep entries from other tables intact.
+      this.entries = this.entries.filter((e) => {
+        const sameTable = this.isDm ? (e.table === tbl) : true;
+        if (!sameTable) return true;
+        return newSet.has(e.name);
+      });
+
+      // Add new entries for newly-selected names that weren't present yet.
+      newNamesInCurrentTable.forEach((nm) => {
+        const exists = this.entries.some((e) =>
+          (this.isDm ? (e.table === tbl) : true) && e.name === nm);
+        if (exists) return;
+        const entry = { name: nm, mode: 'single', values: [] };
+        if (this.isDm) entry.table = tbl;
+        const first = this._firstValueOf(entry);
+        if (first != null) entry.values = [String(first)];
+        this.entries.push(entry);
+      });
+
+      this._rebuildModes();
+      this._renderBody();
+    }
+
     _rebuildModes() {
       this.modesContainer.innerHTML = '';
       this._modePills = {};
 
-      this.active.forEach((col) => {
+      this.entries.forEach((entry, idx) => {
         const row = document.createElement('div');
         row.className = 'blockr-popover-row bi-filter-mode-row';
 
         const label = document.createElement('label');
         label.className = 'blockr-popover-label';
-        label.textContent = this.colLabels[col] || col;
+        const display = this.isDm
+          ? entry.table + '.' + entry.name
+          : entry.name;
+        label.textContent = this.colLabels[qualKey(entry.name, entry.table)] || display;
         row.appendChild(label);
 
-        const mode = this.modes[col] || 'single';
         const pill = document.createElement('button');
         pill.type = 'button';
         pill.className = 'blockr-pill blockr-popover-toggle';
-        this._stylePill(pill, mode);
+        this._stylePill(pill, entry.mode || 'single');
         pill.title = 'Toggle between single- and multi-select';
         pill.addEventListener('click', () => {
-          const newMode = (this.modes[col] === 'multi') ? 'single' : 'multi';
-          this.modes[col] = newMode;
+          const cur = this.entries[idx];
+          const newMode = (cur.mode === 'multi') ? 'single' : 'multi';
+          cur.mode = newMode;
           this._stylePill(pill, newMode);
-          if (newMode === 'single') {
-            const v = this.values[col] || [];
-            if (v.length !== 1) {
-              const first = this._firstValueOf(col);
-              this.values[col] = first != null ? [String(first)] : [];
-            }
+          if (newMode === 'single' &&
+              (!Array.isArray(cur.values) || cur.values.length !== 1)) {
+            const first = this._firstValueOf(cur);
+            cur.values = first != null ? [String(first)] : [];
           }
           this._renderBody();
           this._autoSubmit();
         });
 
         row.appendChild(pill);
-        this._modePills[col] = pill;
+        this._modePills[qualKey(entry.name, entry.table)] = pill;
         this.modesContainer.appendChild(row);
       });
     }
@@ -162,34 +270,10 @@
       pill.classList.toggle('blockr-popover-toggle-active', mode === 'multi');
     }
 
-    _firstValueOf(col) {
-      const opts = this.colValues[col] || [];
+    _firstValueOf(entry) {
+      const opts = this.colValues[qualKey(entry.name, entry.table)] || [];
       if (opts.length === 0) return null;
       return optValueOf(opts[0]);
-    }
-
-    _setActive(newActive) {
-      const newSet = new Set(newActive);
-      Object.keys(this.modes).forEach((c) => {
-        if (!newSet.has(c)) delete this.modes[c];
-      });
-      Object.keys(this.values).forEach((c) => {
-        if (!newSet.has(c)) delete this.values[c];
-      });
-      newActive.forEach((col) => {
-        if (!this.modes[col]) this.modes[col] = 'single';
-        if (!this.values[col] || this.values[col].length === 0) {
-          if (this.modes[col] === 'single') {
-            const first = this._firstValueOf(col);
-            this.values[col] = first != null ? [String(first)] : [];
-          } else {
-            this.values[col] = [];
-          }
-        }
-      });
-      this.active = newActive.slice();
-      this._rebuildModes();
-      this._renderBody();
     }
 
     _renderBody() {
@@ -197,7 +281,7 @@
       this._bodySelects = {};
       this.bodyEl.innerHTML = '';
 
-      if (this.active.length === 0) {
+      if (this.entries.length === 0) {
         const empty = document.createElement('div');
         empty.className = 'bi-filter-empty';
         empty.textContent = 'No filters. Click the gear to add fields.';
@@ -205,7 +289,7 @@
         return;
       }
 
-      this.active.forEach((col) => {
+      this.entries.forEach((entry, idx) => {
         const row = document.createElement('div');
         row.className = 'blockr-row bi-filter-row';
 
@@ -213,8 +297,11 @@
         labelWrap.className = 'bi-filter-label-wrap';
         const label = document.createElement('label');
         label.className = 'blockr-label';
-        label.appendChild(document.createTextNode(col));
-        const sub = this.colLabels[col];
+        const display = this.isDm
+          ? entry.table + '.' + entry.name
+          : entry.name;
+        label.appendChild(document.createTextNode(display));
+        const sub = this.colLabels[qualKey(entry.name, entry.table)];
         if (sub) {
           const subEl = document.createElement('span');
           subEl.className = 'bi-filter-label-sublabel';
@@ -228,33 +315,35 @@
         wrap.className = 'bi-filter-select-wrap';
         row.appendChild(wrap);
 
-        const mode = this.modes[col] || 'single';
-        const opts = this.colValues[col] || [];
-        const sel = this.values[col] || [];
+        const mode = entry.mode || 'single';
+        const opts = this.colValues[qualKey(entry.name, entry.table)] || [];
+        const sel = Array.isArray(entry.values) ? entry.values : [];
 
+        const key = qualKey(entry.name, entry.table);
         if (mode === 'single') {
-          this._bodySelects[col] = Blockr.Select.single(wrap, {
+          this._bodySelects[key] = Blockr.Select.single(wrap, {
             options: opts,
             selected: sel[0] != null ? sel[0] : null,
-            placeholder: 'Select value\u2026',
+            placeholder: 'Select value…',
             onChange: (v) => {
+              const cur = this.entries[idx];
               if (v == null || v === '') {
-                const first = this._firstValueOf(col);
-                this.values[col] = first != null ? [String(first)] : [];
+                const first = this._firstValueOf(cur);
+                cur.values = first != null ? [String(first)] : [];
               } else {
-                this.values[col] = [String(v)];
+                cur.values = [String(v)];
               }
               this._autoSubmit();
             }
           });
         } else {
-          this._bodySelects[col] = Blockr.Select.multi(wrap, {
+          this._bodySelects[key] = Blockr.Select.multi(wrap, {
             options: opts,
             selected: sel.slice(),
-            placeholder: 'Select values\u2026',
+            placeholder: 'Select values…',
             reorderable: false,
             onChange: (vals) => {
-              this.values[col] = vals.map(String);
+              this.entries[idx].values = vals.map(String);
               this._autoSubmit();
             }
           });
@@ -281,15 +370,15 @@
     }
 
     _compose() {
-      const valuesOut = {};
-      Object.keys(this.values).forEach((k) => {
-        valuesOut[k] = this.values[k].slice();
+      // Emit the column-object state shape. Each entry carries name + table?
+      // + mode + values.
+      const cols = this.entries.map((e) => {
+        const out = { name: e.name, mode: e.mode || 'single',
+                      values: (Array.isArray(e.values) ? e.values : []).slice() };
+        if (this.isDm && e.table != null && e.table !== '') out.table = e.table;
+        return out;
       });
-      return {
-        columns: this.active.slice(),
-        modes: Object.assign({}, this.modes),
-        values: valuesOut
-      };
+      return { columns: cols };
     }
 
     _submit() {
@@ -303,26 +392,23 @@
     }
 
     setState(state) {
-      const colsRaw = (state && state.columns) || [];
-      const cols = Array.isArray(colsRaw)
-        ? colsRaw
-        : (colsRaw != null && colsRaw !== '' ? [colsRaw] : []);
-      const modes = (state && state.modes) || {};
-      const vals = (state && state.values) || {};
-      this.active = cols.slice();
-      this.modes = Object.assign({}, modes);
-      this.values = {};
-      Object.keys(vals).forEach((k) => {
-        const v = vals[k];
-        this.values[k] = Array.isArray(v) ? v.map(String) : (v != null ? [String(v)] : []);
+      const colsIn = (state && state.columns) || [];
+      // Accept the column-object list shape only — R-side auto-migration
+      // ensures we never see the old parallel-list shape.
+      this.entries = colsIn.map((e) => {
+        const vals = (e && e.values != null)
+          ? (Array.isArray(e.values) ? e.values.map(String) : [String(e.values)])
+          : [];
+        const entry = {
+          name:   (e && e.name) || '',
+          mode:   (e && e.mode) || 'single',
+          values: vals
+        };
+        if (e && e.table != null && e.table !== '') entry.table = e.table;
+        return entry;
       });
-      this.active.forEach((col) => {
-        if (!this.modes[col]) this.modes[col] = 'single';
-        if (!this.values[col]) this.values[col] = [];
-      });
-      if (this._fieldSelect) {
-        this._fieldSelect.setOptions(this.columns, this.active);
-      }
+      this._rebuildTableSelect();
+      this._rebuildFieldsSelect();
       this._rebuildModes();
       this._renderBody();
     }
@@ -330,39 +416,51 @@
     updateColumns(payload) {
       this.columns = (payload && payload.columns) || [];
       this.colValues = (payload && payload.values) || {};
-      this.colLabels = {};
-      this.columns.forEach((c) => {
-        const v = optValueOf(c);
-        const l = (typeof c === 'object' && c !== null && c.label) ? c.label : '';
-        this.colLabels[v] = l;
-      });
+      this.isDm = !!(payload && payload.is_dm);
 
-      const valid = new Set(this.columns.map(optValueOf));
-      const activeArr = Array.isArray(this.active)
-        ? this.active
-        : (this.active != null && this.active !== '' ? [this.active] : []);
-      this.active = activeArr.filter((c) => valid.has(c));
-      Object.keys(this.modes).forEach((c) => {
-        if (!valid.has(c)) delete this.modes[c];
+      this.colLabels = {};
+      const tableSet = new Set();
+      this.columns.forEach((c) => {
+        const key = this.isDm
+          ? qualKey(c.column, c.table)
+          : (c.value || c);
+        const lab = (typeof c === 'object' && c !== null && c.label) ? c.label : '';
+        this.colLabels[key] = lab;
+        if (this.isDm && c.table) tableSet.add(c.table);
       });
-      Object.keys(this.values).forEach((c) => {
-        if (!valid.has(c)) delete this.values[c];
+      this.tables = Array.from(tableSet);
+
+      // Drop entries whose column or table is no longer present.
+      const validKeys = new Set();
+      this.columns.forEach((c) => {
+        const key = this.isDm ? qualKey(c.column, c.table) : c.value;
+        validKeys.add(key);
       });
+      this.entries = this.entries.filter((e) =>
+        validKeys.has(qualKey(e.name, e.table)));
 
       // Drop stale values not present in column's options.
-      this.active.forEach((col) => {
-        const validVals = new Set((this.colValues[col] || []).map(optValueOf).map(String));
-        this.values[col] = (this.values[col] || []).filter((v) => validVals.has(String(v)));
-        const mode = this.modes[col] || 'single';
-        if (mode === 'single' && this.values[col].length === 0) {
-          const first = this._firstValueOf(col);
-          if (first != null) this.values[col] = [String(first)];
+      this.entries.forEach((entry) => {
+        const opts = this.colValues[qualKey(entry.name, entry.table)] || [];
+        const validVals = new Set(opts.map(optValueOf).map(String));
+        entry.values = (entry.values || []).filter((v) => validVals.has(String(v)));
+        if ((entry.mode || 'single') === 'single' && entry.values.length === 0) {
+          const first = this._firstValueOf(entry);
+          if (first != null) entry.values = [String(first)];
         }
       });
 
-      if (this._fieldSelect) {
-        this._fieldSelect.setOptions(this.columns, this.active);
+      // For dm mode, pick a default current table if not already set.
+      if (this.isDm) {
+        if (!this.currentTable || this.tables.indexOf(this.currentTable) < 0) {
+          this.currentTable = this.tables[0] || '';
+        }
+      } else {
+        this.currentTable = '';
       }
+
+      this._rebuildTableSelect();
+      this._rebuildFieldsSelect();
       this._rebuildModes();
       this._renderBody();
     }
@@ -420,7 +518,11 @@
   };
 
   Shiny.addCustomMessageHandler('bi-filter-columns', (msg) => {
-    pumpColumns(msg.id, { columns: msg.columns, values: msg.values });
+    pumpColumns(msg.id, {
+      columns: msg.columns,
+      values: msg.values,
+      is_dm: msg.is_dm
+    });
   });
 
   Shiny.addCustomMessageHandler('bi-filter-update', (msg) => {
