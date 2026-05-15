@@ -78,6 +78,12 @@ new_drilldown_chart_block <- function(
     filter_range = NULL,
     line_width_mult = 1.0,
     dot_size_mult = 1.0,
+    step = NULL,
+    ref_x = NULL,
+    ref_y = NULL,
+    smoother = "none",
+    lo_col = NULL,
+    hi_col = NULL,
     ...) {
 
   blockr.core::new_transform_block(
@@ -108,6 +114,13 @@ new_drilldown_chart_block <- function(
         # Theming state
         r_line_width_mult <- shiny::reactiveVal(line_width_mult)
         r_dot_size_mult <- shiny::reactiveVal(dot_size_mult)
+        # Overlay options
+        r_step <- shiny::reactiveVal(step)
+        r_ref_x <- shiny::reactiveVal(ref_x)
+        r_ref_y <- shiny::reactiveVal(ref_y)
+        r_smoother <- shiny::reactiveVal(smoother)
+        r_lo_col <- shiny::reactiveVal(lo_col)
+        r_hi_col <- shiny::reactiveVal(hi_col)
         r_board_theme <- setup_drilldown_theme_sync(session)
 
         # Column metadata (computed once when data changes)
@@ -131,7 +144,8 @@ new_drilldown_chart_block <- function(
         r_needed_cols <- shiny::reactive({
           needed <- c(
             r_group_by(), r_color_by(), r_facet_by(), r_metric(),
-            r_x_col(), r_y_col(), r_x_end_col(), r_series_by()
+            r_x_col(), r_y_col(), r_x_end_col(), r_series_by(),
+            r_lo_col(), r_hi_col()
           )
           # Include the column named by sort_by (keywords are ignored)
           sb <- r_sort_by()
@@ -184,7 +198,17 @@ new_drilldown_chart_block <- function(
               sort_dir = r_sort_dir(),
               series_by = r_series_by(),
               line_width_mult = r_line_width_mult(),
-              dot_size_mult = r_dot_size_mult()
+              dot_size_mult = r_dot_size_mult(),
+              step = r_step(),
+              ref_x = as.list(r_ref_x()),
+              ref_y = as.list(r_ref_y()),
+              smoother = r_smoother(),
+              smoother_series = tryCatch(compute_smoother_series(
+                d, r_smoother(), r_x_col(), r_y_col(),
+                r_color_by(), r_series_by()
+              ), error = function(e) NULL),
+              lo_col = r_lo_col(),
+              hi_col = r_hi_col()
             )
           ))
         })
@@ -226,6 +250,13 @@ new_drilldown_chart_block <- function(
             if (!is.null(msg$sort_dir)) r_sort_dir(msg$sort_dir)
             if (!is.null(msg$series_by)) {
               r_series_by(if (msg$series_by == "") NULL else msg$series_by)
+            }
+            if (!is.null(msg$smoother)) r_smoother(msg$smoother)
+            if (!is.null(msg$lo_col)) {
+              r_lo_col(if (msg$lo_col == "") NULL else msg$lo_col)
+            }
+            if (!is.null(msg$hi_col)) {
+              r_hi_col(if (msg$hi_col == "") NULL else msg$hi_col)
             }
           } else if (action == "set_mults") {
             if (!is.null(msg$line_width_mult)) {
@@ -355,7 +386,13 @@ new_drilldown_chart_block <- function(
             filter_values = r_filter_values,
             filter_range = r_filter_range,
             line_width_mult = r_line_width_mult,
-            dot_size_mult = r_dot_size_mult
+            dot_size_mult = r_dot_size_mult,
+            step = r_step,
+            ref_x = r_ref_x,
+            ref_y = r_ref_y,
+            smoother = r_smoother,
+            lo_col = r_lo_col,
+            hi_col = r_hi_col
           )
         )
       })
@@ -374,13 +411,72 @@ new_drilldown_chart_block <- function(
     },
     allow_empty_state = c("group_by", "color_by", "facet_by", "filter_column",
       "filter_values", "x_col", "y_col", "x_end_col", "sort_by", "sort_dir",
-      "series_by", "filter_range"),
+      "series_by", "filter_range",
+      "step", "ref_x", "ref_y", "smoother", "lo_col", "hi_col"),
     external_ctrl = c("group_by", "color_by", "facet_by", "metric", "agg_fn",
       "chart_type", "x_col", "y_col", "x_end_col", "sort_by", "sort_dir",
       "series_by", "filter_type", "filter_column", "filter_values",
-      "filter_range", "line_width_mult", "dot_size_mult"),
+      "filter_range", "line_width_mult", "dot_size_mult",
+      "step", "ref_x", "ref_y", "smoother", "lo_col", "hi_col"),
     expr_type = "bquoted",
     class = "drilldown_chart_block",
     ...
   )
 }
+
+#' Compute smoother line points per group for a scatter chart
+#'
+#' Returns a named list keyed by group level. Each entry is a list with
+#' numeric vectors `x` and `y` covering a 100-point line across the group's
+#' x range. Used by the chart's JS-side renderer to draw a regression
+#' overlay without doing the math in the browser.
+#'
+#' @param data Data frame.
+#' @param smoother One of `"none"`, `"lm"`, `"loess"`.
+#' @param x_col,y_col Numeric column names.
+#' @param color_by,series_by Grouping column names; smoother is fit per
+#'   `series_by` if non-NULL else `color_by` else no grouping.
+#' @return A named list or `NULL`.
+#' @keywords internal
+#' @export
+compute_smoother_series <- function(data, smoother, x_col, y_col,
+                                     color_by, series_by) {
+  if (is.null(smoother) || identical(smoother, "none")) return(NULL)
+  if (is.null(data) || nrow(data) == 0) return(NULL)
+  if (is.null(x_col) || is.null(y_col)) return(NULL)
+  if (!all(c(x_col, y_col) %in% names(data))) return(NULL)
+  if (!is.numeric(data[[x_col]]) || !is.numeric(data[[y_col]])) return(NULL)
+
+  split_col <- series_by %||% color_by
+  if (!is.null(split_col) && split_col %in% names(data)) {
+    groups <- split(data, as.character(data[[split_col]]))
+  } else {
+    groups <- list(`__all__` = data)
+  }
+
+  fit_one <- function(d) {
+    d <- d[!is.na(d[[x_col]]) & !is.na(d[[y_col]]), , drop = FALSE]
+    if (nrow(d) < 3L) return(NULL)
+    xv <- d[[x_col]]; yv <- d[[y_col]]
+    if (length(unique(xv)) < 2L) return(NULL)
+    rng <- range(xv, na.rm = TRUE)
+    xs <- seq(rng[1L], rng[2L], length.out = 100L)
+    ys <- tryCatch({
+      if (identical(smoother, "lm")) {
+        coefs <- stats::coef(stats::lm(yv ~ xv))
+        coefs[1L] + coefs[2L] * xs
+      } else if (identical(smoother, "loess")) {
+        fit <- stats::loess(yv ~ xv, span = 0.75,
+                            control = stats::loess.control(surface = "direct"))
+        as.numeric(stats::predict(fit, newdata = data.frame(xv = xs)))
+      } else NULL
+    }, error = function(e) NULL)
+    if (is.null(ys) || all(is.na(ys))) return(NULL)
+    list(x = as.list(xs), y = as.list(unname(ys)))
+  }
+  res <- lapply(groups, fit_one)
+  res <- res[!vapply(res, is.null, logical(1L))]
+  if (length(res) == 0L) NULL else res
+}
+
+`%||%` <- function(a, b) if (is.null(a)) b else a

@@ -294,6 +294,19 @@
       this._addSelect(this.configBar, 'Facet', 'facet_by',
         ['(none)', ...cats.filter(x => x.n_unique <= 10).map(colOpt)], cfg.facet_by || '(none)');
 
+      // Individual scatter only: smoother overlay (none / lm / loess)
+      this._addSelect(this.configBar, 'Smoother', 'smoother',
+        ['none', 'lm', 'loess'], cfg.smoother || 'none', 'dd-cfg-xy');
+
+      // Individual line: optional error-band columns. Presence of both is
+      // the on/off — same pattern as X end for timelines. Numeric only.
+      this._addSelect(this.configBar, 'Lo', 'lo_col',
+        ['(none)', ...nums.map(colOpt)], cfg.lo_col || '(none)',
+        'dd-cfg-xy');
+      this._addSelect(this.configBar, 'Hi', 'hi_col',
+        ['(none)', ...nums.map(colOpt)], cfg.hi_col || '(none)',
+        'dd-cfg-xy');
+
       // ===== POPOVER CONTENT =====
       this.popoverEl.innerHTML = '';
 
@@ -858,10 +871,19 @@
         const lineHoverW = BASE_LINE_WIDTH * 1.7 * lm;
         const scatterPx  = BASE_SCATTER_SIZE * dm;
 
+        const stepMode = this.config.step;  // null | 'start' | 'end' | 'middle'
+        const smoother = this.config.smoother || 'none';
+        const smootherSeries = this.config.smoother_series || null;
+        const loCol = this.config.lo_col;
+        const hiCol = this.config.hi_col;
+        const refX = Array.isArray(this.config.ref_x) ? this.config.ref_x : [];
+        const refY = Array.isArray(this.config.ref_y) ? this.config.ref_y : [];
+
         const mkSeries = (name, data, color) => ({
           type: isLine ? 'line' : 'scatter',
           name: name,
           data: data,
+          step: isLine && stepMode ? stepMode : undefined,
           // `triggerLineEvent: true` makes click/hover fire when the
           // cursor is on the line itself, not only on symbols. Without
           // it, click on a symbol-less thin line never registers.
@@ -874,18 +896,101 @@
           blur: isLine ? { lineStyle: { opacity: 0.05 } } : undefined
         });
 
+        // R precomputes the smoother (lm or loess) per group and sends the
+        // line points via config.smoother_series. JS just renders.
+        const smootherLine = (groupName) => {
+          if (smoother === 'none' || !smootherSeries) return null;
+          const key = groupName != null ? String(groupName) : '__all__';
+          const s = smootherSeries[key];
+          if (!s || !s.x || !s.y) return null;
+          const out = [];
+          for (let i = 0; i < s.x.length; i++) {
+            if (Number.isFinite(s.x[i]) && Number.isFinite(s.y[i])) {
+              out.push([s.x[i], s.y[i]]);
+            }
+          }
+          return out.length >= 2 ? out : null;
+        };
+
+        // Helper: error-bar custom series builder. Renders vertical segments
+        // (loCol, hiCol) at each x for one group.
+        const mkErrBarSeries = (name, errPts, color) => ({
+          type: 'custom',
+          name: name + ' (CI)',
+          silent: true,
+          z: 1,
+          data: errPts,  // [[x, lo, hi], ...]
+          renderItem: (params, api) => {
+            const x = api.value(0), lo = api.value(1), hi = api.value(2);
+            const pLo = api.coord([x, lo]);
+            const pHi = api.coord([x, hi]);
+            const w = 4;
+            return {
+              type: 'group',
+              children: [
+                { type: 'line', shape: { x1: pLo[0], y1: pLo[1], x2: pHi[0], y2: pHi[1] }, style: { stroke: color, lineWidth: 1 } },
+                { type: 'line', shape: { x1: pLo[0]-w, y1: pLo[1], x2: pLo[0]+w, y2: pLo[1] }, style: { stroke: color, lineWidth: 1 } },
+                { type: 'line', shape: { x1: pHi[0]-w, y1: pHi[1], x2: pHi[0]+w, y2: pHi[1] }, style: { stroke: color, lineWidth: 1 } }
+              ]
+            };
+          }
+        });
+
         const series = [];
+        const pushOverlays = (name, pts, color, rawRows) => {
+          // Smoother overlay (scatter charts only) — uses R-precomputed
+          // points from config.smoother_series.
+          if (smoother !== 'none' && !isLine) {
+            const ln = smootherLine(name);
+            if (ln) series.push({
+              type: 'line',
+              name: (name || 'fit') + ' (' + smoother + ')',
+              data: ln,
+              silent: true,
+              showSymbol: false,
+              lineStyle: { color: color, width: 2, type: 'solid', opacity: 0.9 },
+              z: 2
+            });
+          }
+          // Error-bar overlay (line charts with lo_col/hi_col)
+          if (isLine && loCol && hiCol && rawRows && rawRows.length) {
+            const errPts = rawRows
+              .filter(r => r[x_col] != null && r[loCol] != null && r[hiCol] != null)
+              .map(r => [encodeX(r[x_col]), Number(r[loCol]), Number(r[hiCol])]);
+            if (errPts.length) series.push(mkErrBarSeries(name || 'errbar', errPts, color));
+          }
+        };
+
         if (seriesLevels.length === 0) {
-          const pts = rows.filter(r => r[x_col] != null && r[y_col] != null).map(r => [encodeX(r[x_col]), encodeY(r[y_col])]);
+          const grpRows = rows.filter(r => r[x_col] != null && r[y_col] != null);
+          const pts = grpRows.map(r => [encodeX(r[x_col]), encodeY(r[y_col])]);
           if (isLine && xAxisType !== 'category') pts.sort((a, b) => a[0] - b[0]);
           series.push(mkSeries(undefined, pts, palette[0]));
+          pushOverlays(undefined, pts, palette[0], grpRows);
         } else {
           for (let ci = 0; ci < seriesLevels.length; ci++) {
             const cl = seriesLevels[ci];
-            const pts = rows.filter(r => String(r[splitCol]) === cl && r[x_col] != null && r[y_col] != null).map(r => [encodeX(r[x_col]), encodeY(r[y_col])]);
+            const grpRows = rows.filter(r => String(r[splitCol]) === cl && r[x_col] != null && r[y_col] != null);
+            const pts = grpRows.map(r => [encodeX(r[x_col]), encodeY(r[y_col])]);
             if (isLine && xAxisType !== 'category') pts.sort((a, b) => a[0] - b[0]);
-            series.push(mkSeries(cl, pts, colorForLevel(cl, ci)));
+            const color = colorForLevel(cl, ci);
+            series.push(mkSeries(cl, pts, color));
+            pushOverlays(cl, pts, color, grpRows);
           }
+        }
+
+        // Reference-line overlays (ref_x vertical, ref_y horizontal)
+        if (series.length > 0 && (refX.length || refY.length)) {
+          const refData = [];
+          for (const v of refX) refData.push({ xAxis: Number(v) });
+          for (const v of refY) refData.push({ yAxis: Number(v) });
+          series[0].markLine = {
+            silent: true,
+            symbol: 'none',
+            lineStyle: { color: '#dc2626', type: 'dashed', width: 1.5 },
+            label: { show: false },
+            data: refData
+          };
         }
 
         // Brush config: lineX for line charts, rect for scatter
@@ -1553,7 +1658,10 @@
         x_end_col: this.config.x_end_col || '',
         sort_by: this.config.sort_by || '',
         sort_dir: this.config.sort_dir || 'asc',
-        series_by: this.config.series_by || ''
+        series_by: this.config.series_by || '',
+        smoother: this.config.smoother || 'none',
+        lo_col: this.config.lo_col || '',
+        hi_col: this.config.hi_col || ''
       }, { priority: 'event' });
     }
 
