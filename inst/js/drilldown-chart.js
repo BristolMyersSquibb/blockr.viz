@@ -1519,10 +1519,10 @@
         const cats = option.xAxis?.[0]?.data || option.yAxis?.[0]?.data || [];
         const newSeries = option.series.map((s) => {
           if (s.type === 'pie') {
-            return { data: (s.data || []).map(d => ({ ...d, itemStyle: { ...d.itemStyle, opacity: sel && d.name !== sel ? 0.2 : 1 } })) };
+            return { data: (s.data || []).map(d => d == null ? d : ({ ...d, itemStyle: { ...d.itemStyle, opacity: sel && d.name !== sel ? 0.2 : 1 } })) };
           }
           if (s.type === 'treemap') {
-            return { data: (s.data || []).map(d => ({ ...d, itemStyle: { ...d.itemStyle, opacity: sel && d.name !== sel ? 0.3 : 1 } })) };
+            return { data: (s.data || []).map(d => d == null ? d : ({ ...d, itemStyle: { ...d.itemStyle, opacity: sel && d.name !== sel ? 0.3 : 1 } })) };
           }
           // Individual/timeline families use echarts emphasis/blur states
           // for highlighting, driven natively by hover. Skip the manual
@@ -1533,7 +1533,11 @@
           }
           if (cats.length === 0) return {};
           const newData = (s.data || []).map((v, i) => {
-            const val = (typeof v === 'object' && !Array.isArray(v)) ? v.value : v;
+            // typeof null === 'object', so guard v before reading v.value;
+            // this series data legitimately contains null gap values for
+            // missing groups (see _renderAggregated). Without the `v &&`
+            // check, null.value throws and aborts the whole render.
+            const val = (v && typeof v === 'object' && !Array.isArray(v)) ? v.value : v;
             return { value: val, itemStyle: { opacity: sel ? (cats[i] === sel ? 1 : 0.15) : 1 } };
           });
           return { data: newData };

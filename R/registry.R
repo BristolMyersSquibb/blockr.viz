@@ -16,7 +16,8 @@ register_bi_blocks <- function() {
       "new_tile_block",
       "new_kpi_block",
       "new_waterfall_block",
-      "new_drilldown_chart_block"
+      "new_drilldown_chart_block",
+      "new_drilldown_table_block"
     ),
     name = c(
       "Filter",
@@ -28,7 +29,8 @@ register_bi_blocks <- function() {
       "Tile",
       "KPI",
       "Waterfall",
-      "Drill-Down Chart"
+      "Drill-Down Chart",
+      "Drill-Down Table"
     ),
     description = c(
       "Minimal value filter for a data frame. Columns hidden behind the gear; per-column single vs multi select.",
@@ -40,7 +42,8 @@ register_bi_blocks <- function() {
       "Dashboard tiles: big numbers, sparklines, progress rings. ggplot-style aesthetic mapping. Successor to kpi_block.",
       "Display one or more key performance indicators as prominent numbers.",
       "Waterfall/bridge chart for sequential value progression",
-      "Configurable chart with click-to-filter drill-down"
+      "Configurable chart with click-to-filter drill-down",
+      "Interactive table (sticky header, sort, search) with optional cell coloring and click-to-filter drill-down"
     ),
     category = c(
       "transform",
@@ -52,7 +55,8 @@ register_bi_blocks <- function() {
       "transform",
       "transform",
       "transform",
-      "plot"
+      "plot",
+      "table"
     ),
     icon = c(
       "filter",
@@ -64,7 +68,8 @@ register_bi_blocks <- function() {
       "speedometer2",
       "speedometer2",
       "bar-chart-steps",
-      "funnel"
+      "funnel",
+      "table"
     ),
     arguments = list(
       NULL,                         # filter_block (not in MCP universe)
@@ -76,7 +81,8 @@ register_bi_blocks <- function() {
       NULL,                         # tile_block (not in MCP universe)
       NULL,                         # kpi_block (not in MCP universe)
       NULL,                         # waterfall_block (not in MCP universe)
-      drilldown_chart_arguments()
+      drilldown_chart_arguments(),
+      NULL                          # drilldown_table_block (not in MCP universe)
     ),
     package = utils::packageName(),
     overwrite = TRUE

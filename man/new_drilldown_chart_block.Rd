@@ -23,6 +23,12 @@ new_drilldown_chart_block(
   filter_range = NULL,
   line_width_mult = 1,
   dot_size_mult = 1,
+  step = NULL,
+  ref_x = NULL,
+  ref_y = NULL,
+  smoother = "none",
+  lo_col = NULL,
+  hi_col = NULL,
   ...
 )
 }

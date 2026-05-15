@@ -1,0 +1,168 @@
+# Tests for drilldown_table() renderer + new_drilldown_table_block.
+
+df <- data.frame(
+  parameter = c("ALT", "AST", "BILI"),
+  ALT  = c(1.00, 0.80, 0.10),
+  AST  = c(0.80, 1.00, 0.20),
+  BILI = c(0.10, 0.20, 1.00),
+  stringsAsFactors = FALSE
+)
+
+test_that("drilldown_table returns a tagList with a table", {
+  h <- as.character(htmltools::renderTags(drilldown_table(df))$html)
+  expect_true(grepl("blockr-table", h))
+  expect_true(grepl("blockr-sortable", h))
+  expect_true(grepl("drilldown-table-container", h))
+})
+
+test_that("color = NULL produces no cell backgrounds", {
+  h <- as.character(htmltools::renderTags(drilldown_table(df))$html)
+  expect_false(grepl("background:#", h))
+})
+
+test_that("diverging color produces cell backgrounds and a dependency", {
+  tl <- drilldown_table(
+    df, color = drilldown_table_color("diverging", domain = c(-1, 1))
+  )
+  h <- as.character(htmltools::renderTags(tl)$html)
+  expect_true(grepl("background:#", h))
+  expect_true(grepl("drilldown-table", h))
+})
+
+test_that("NA cells render as a dash and uncolored", {
+  d <- df
+  d$ALT[2] <- NA
+  h <- as.character(htmltools::renderTags(
+    drilldown_table(d, color = drilldown_table_color("sequential"))
+  )$html)
+  expect_true(grepl("&mdash;|—", h))
+})
+
+test_that("on_click without elem_id emits no action attributes", {
+  h <- as.character(htmltools::renderTags(
+    drilldown_table(df, on_click = "parameter")
+  )$html)
+  expect_false(grepl("data-dt-elem-id", h))
+})
+
+test_that("on_click with elem_id wires the action attributes", {
+  h <- as.character(htmltools::renderTags(
+    drilldown_table(df, on_click = "parameter",
+                    elem_id = "blk-drilldown_table_block")
+  )$html)
+  expect_true(grepl("data-dt-elem-id", h))
+  expect_true(grepl("data-dt-onclick-col", h))
+})
+
+test_that("column labels render as muted text in headers", {
+  d <- data.frame(USUBJID = c("S1", "S2"), AVAL = c(1, 2),
+                   stringsAsFactors = FALSE)
+  attr(d$AVAL, "label") <- "Analysis Value"
+  h <- as.character(htmltools::renderTags(drilldown_table(d))$html)
+  expect_true(grepl("blockr-col-label", h))
+  expect_true(grepl("Analysis Value", h))
+  # a label equal to the column name is not repeated
+  expect_false(grepl("blockr-col-label[^>]*>USUBJID<", h))
+})
+
+test_that("empty data renders a No data table", {
+  h <- as.character(htmltools::renderTags(
+    drilldown_table(df[0, ])
+  )$html)
+  expect_true(grepl("No data", h))
+})
+
+test_that("degenerate color domain falls back to plain render", {
+  flat <- data.frame(g = "x", a = 5, b = 5, stringsAsFactors = FALSE)
+  h <- as.character(htmltools::renderTags(
+    drilldown_table(flat, color = drilldown_table_color("sequential"))
+  )$html)
+  expect_false(grepl("background:#", h))
+})
+
+test_that("digits controls numeric formatting", {
+  d <- data.frame(g = "r", v = 0.12345, stringsAsFactors = FALSE)
+  h <- as.character(htmltools::renderTags(
+    drilldown_table(d, digits = 1L)
+  )$html)
+  expect_true(grepl(">0.1<", h))
+  expect_false(grepl("0.12345", h))
+})
+
+test_that("block state round-trips constructor args", {
+  blk <- new_drilldown_table_block(
+    color = drilldown_table_color("diverging", domain = c(-1, 1)),
+    on_click = "USUBJID"
+  )
+  expect_s3_class(blk, "drilldown_table_block")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expect_equal(session$returned$state$on_click(), "USUBJID")
+      expect_equal(session$returned$state$digits(), 2L)
+      expect_equal(session$returned$state$filter_type(), "categorical")
+    },
+    args = list(x = blk, data = list(data = function() df))
+  )
+})
+
+test_that("cogwheel config actions update color, on_click, digits", {
+  blk <- new_drilldown_table_block(
+    color = drilldown_table_color("diverging", domain = c(-1, 1))
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expect_equal(session$returned$state$color()$type, "diverging")
+
+      es <- session$makeScope("expr")
+      es$setInputs(drilldown_table_block_action = list(
+        action = "config", param = "color_mode", value = "off"
+      ))
+      session$flushReact()
+      expect_null(session$returned$state$color())
+
+      es$setInputs(drilldown_table_block_action = list(
+        action = "config", param = "color_mode", value = "diverging"
+      ))
+      session$flushReact()
+      # constructor domain is preserved when toggling back to same type
+      expect_equal(session$returned$state$color()$domain, c(-1, 1))
+
+      es$setInputs(drilldown_table_block_action = list(
+        action = "config", param = "on_click", value = "parameter"
+      ))
+      es$setInputs(drilldown_table_block_action = list(
+        action = "config", param = "digits", value = "0"
+      ))
+      session$flushReact()
+      expect_equal(session$returned$state$on_click(), "parameter")
+      expect_equal(session$returned$state$digits(), 0L)
+    },
+    args = list(x = blk, data = list(data = function() df))
+  )
+})
+
+test_that("no click = pass-through, click filters the data", {
+  blk <- new_drilldown_table_block(on_click = "parameter")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expect_equal(nrow(session$returned$result()), 3L)
+
+      expr_scope <- session$makeScope("expr")
+      expr_scope$setInputs(drilldown_table_block_action = list(
+        action = "filter", column = "parameter",
+        values = list("AST"), filter_type = "categorical"
+      ))
+      session$flushReact()
+      res <- session$returned$result()
+      expect_equal(nrow(res), 1L)
+      expect_equal(res$parameter, "AST")
+    },
+    args = list(x = blk, data = list(data = function() df))
+  )
+})
