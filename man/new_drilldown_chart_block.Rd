@@ -21,6 +21,7 @@ new_drilldown_chart_block(
   filter_column = NULL,
   filter_values = NULL,
   filter_range = NULL,
+  filter_point = NULL,
   line_width_mult = 1,
   dot_size_mult = 1,
   step = NULL,
@@ -85,6 +86,10 @@ name), or a column name (ascending min of that column per group).
 \item{filter_range}{Range filter list with x_col, y_col, x_range, y_range
 (individual, set by brush)}
 
+\item{filter_point}{Point filter list with x_col, y_col, x_val, y_val
+(individual scatter/line, set by clicking a single dot when no
+entity/id column resolves — drills to the row(s) at that point)}
+
 \item{line_width_mult}{Multiplier on the default line width for line charts.
 Defaults to \code{1.0}. Range \code{0.5}–\code{3.0}. Applies to the individual family only.}
 
@@ -106,12 +111,15 @@ group to filter the raw rows behind it.
 
 \strong{Individual} (scatter, line): x/y columns, brush-drag a region to filter
 rows within that range. Clicking a line or a scatter dot emits a
-categorical filter on its series (the \code{series_by} column when set,
-otherwise \code{color_by}). Useful for "one dot per entity → click to drill
-to that entity" patterns (e.g. one dot per policy in a property
+categorical filter on its series (\code{series_by} when set, otherwise
+\code{color_by}). When neither is set, a click instead drills to the
+clicked observation itself — filtering the row(s) at that exact
+(x, y) point. Useful for "one dot per entity → click to drill to
+that entity" patterns (e.g. one dot per policy in a property
 workbench, click → filter downstream blocks to that single policy).
 
 \strong{Timeline} (gantt): interval rows with start / optional end and a
-categorical y axis (e.g. AE term). Clicking a bar emits a \code{USUBJID}
-filter. \code{sort_by} controls y-axis category ordering.
+categorical y axis (e.g. AE term). Clicking a bar emits a categorical
+filter on \code{series_by} (else \code{color_by}); with neither set the click is
+a no-op. \code{sort_by} controls y-axis category ordering.
 }

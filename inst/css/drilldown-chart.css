@@ -5,26 +5,63 @@
   position: relative;
 }
 
-/* ===== Main config bar ===== */
-.dd-config-bar {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 8px;
-  padding: 0;
-  margin-bottom: 6px;
+/* ===== Settings popover form =====
+   All configuration lives in the gear popover. Each field is a vertical
+   unit (label on top, full-width control, muted help below). Fields flow
+   in a responsive wrapping grid: ~3 across on a wide screen, collapsing
+   to 1 on a narrow one. flex-wrap + min(), no media/container queries
+   (see blockr.docs design-system/design-system-prompt.md). Spec:
+   blockr.docs design-system/components/blockr-popover.md. */
+.drilldown-chart-container .blockr-popover {
+  width: min(680px, 92vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0 14px;
 }
 
-/* Picker wraps — single bordered key/value field. Same shape as
-   .blockr-row in rename/filter blocks: the wrapper carries the border,
-   the inner Blockr.Select sits flush inside with no second border.
-   Label sits inline as the "key", select expands as the "value". */
+/* Title and the chart-type selector always own a full row. */
+.drilldown-chart-container .blockr-popover > .dd-popover-title,
+.drilldown-chart-container .blockr-popover > .dd-popover-types {
+  flex: 1 1 100%;
+}
+
+.dd-popover-title {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  margin-bottom: 10px;
+}
+
+.dd-form-row {
+  flex: 1 1 190px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.dd-form-row > .blockr-popover-label {
+  margin-bottom: 0;
+}
+
+.dd-form-help {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-400, #9ca3af);
+  line-height: 1.3;
+}
+
+/* Picker wrap — the bordered control box that holds the Blockr.Select
+   full width. The form row owns the label (on top) and help (below);
+   this element is just the flush-bordered control container. */
 .dd-picker-wrap {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
   min-height: 42px;
-  padding: 0 4px 0 12px;
+  padding: 0 4px;
   background-color: var(--blockr-color-bg-input, #f9fafb);
   border: 1px solid var(--blockr-color-border, #e5e7eb);
   border-radius: 8px;
@@ -33,13 +70,6 @@
 .dd-picker-wrap:focus-within {
   border-color: var(--blockr-color-primary, #2563eb);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-}
-.dd-picker-wrap > .blockr-label {
-  flex: 0 0 auto;
-  font-size: var(--blockr-font-size-base, 0.875rem);
-  color: var(--blockr-color-text-secondary, #6b7280);
-  margin: 0;
-  white-space: nowrap;
 }
 .dd-picker-wrap > .blockr-select {
   flex: 1 1 auto;
@@ -207,18 +237,9 @@
 /* ===== Multiplier sliders (individual-family popover row) ===== */
 .dd-slider-wrap {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto;
   column-gap: 10px;
   align-items: center;
-  padding: 4px 0;
-  min-width: 200px;
-  flex: 1;
-}
-
-.dd-slider-wrap .blockr-label {
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  color: var(--blockr-color-text-secondary, #6b7280);
-  white-space: nowrap;
 }
 
 .dd-slider {

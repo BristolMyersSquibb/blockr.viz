@@ -7,14 +7,17 @@
 #'
 #' **Individual** (scatter, line): x/y columns, brush-drag a region to filter
 #' rows within that range. Clicking a line or a scatter dot emits a
-#' categorical filter on its series (the `series_by` column when set,
-#' otherwise `color_by`). Useful for "one dot per entity → click to drill
-#' to that entity" patterns (e.g. one dot per policy in a property
+#' categorical filter on its series (`series_by` when set, otherwise
+#' `color_by`). When neither is set, a click instead drills to the
+#' clicked observation itself — filtering the row(s) at that exact
+#' (x, y) point. Useful for "one dot per entity → click to drill to
+#' that entity" patterns (e.g. one dot per policy in a property
 #' workbench, click → filter downstream blocks to that single policy).
 #'
 #' **Timeline** (gantt): interval rows with start / optional end and a
-#' categorical y axis (e.g. AE term). Clicking a bar emits a `USUBJID`
-#' filter. `sort_by` controls y-axis category ordering.
+#' categorical y axis (e.g. AE term). Clicking a bar emits a categorical
+#' filter on `series_by` (else `color_by`); with neither set the click is
+#' a no-op. `sort_by` controls y-axis category ordering.
 #'
 #' @param group_by Column to group by (aggregated charts)
 #' @param color_by Column to color/stack by (optional, both families)
@@ -50,6 +53,9 @@
 #' @param filter_values Currently filtered values (aggregated, set by click)
 #' @param filter_range Range filter list with x_col, y_col, x_range, y_range
 #'   (individual, set by brush)
+#' @param filter_point Point filter list with x_col, y_col, x_val, y_val
+#'   (individual scatter/line, set by clicking a single dot when no
+#'   entity/id column resolves — drills to the row(s) at that point)
 #' @param line_width_mult Multiplier on the default line width for line charts.
 #'   Defaults to `1.0`. Range `0.5`–`3.0`. Applies to the individual family only.
 #' @param dot_size_mult Multiplier on the default marker size (scatter points
@@ -76,6 +82,7 @@ new_drilldown_chart_block <- function(
     filter_column = NULL,
     filter_values = NULL,
     filter_range = NULL,
+    filter_point = NULL,
     line_width_mult = 1.0,
     dot_size_mult = 1.0,
     step = NULL,
@@ -110,6 +117,7 @@ new_drilldown_chart_block <- function(
         r_filter_column <- shiny::reactiveVal(filter_column)
         r_filter_values <- shiny::reactiveVal(filter_values)
         r_filter_range <- shiny::reactiveVal(filter_range)
+        r_filter_point <- shiny::reactiveVal(filter_point)
 
         # Theming state
         r_line_width_mult <- shiny::reactiveVal(line_width_mult)
@@ -154,9 +162,6 @@ new_drilldown_chart_block <- function(
           }
           d <- data()
           shiny::req(is.data.frame(d))
-          # Auto-include USUBJID so click-to-filter on trajectory / gantt
-          # always has the subject id column present.
-          if ("USUBJID" %in% names(d)) needed <- c(needed, "USUBJID")
           # When visiting AVISIT, pull AVISITN so JS can order categories.
           if (identical(r_x_col(), "AVISIT") && "AVISITN" %in% names(d)) {
             needed <- c(needed, "AVISITN")
@@ -176,8 +181,14 @@ new_drilldown_chart_block <- function(
           needed <- r_needed_cols()
           df_send <- d[, needed, drop = FALSE]
 
-          # Pre-encode as columnar JSON (fast, no double-encoding by Shiny)
-          data_json <- jsonlite::toJSON(df_send, dataframe = "columns")
+          # Pre-encode as columnar JSON (fast, no double-encoding by Shiny).
+          # digits = NA keeps full double precision: click-to-filter sends
+          # a point's value back and we match it server-side, so the
+          # transmitted value must round-trip exactly. The default
+          # digits = 4 rounded it and the equality matched zero rows.
+          data_json <- jsonlite::toJSON(
+            df_send, dataframe = "columns", digits = NA
+          )
 
           # Read config (not filter state) for initial chart setup
           session$sendCustomMessage("drilldown-data", list(
@@ -209,6 +220,16 @@ new_drilldown_chart_block <- function(
               ), error = function(e) NULL),
               lo_col = r_lo_col(),
               hi_col = r_hi_col()
+            ),
+            # Per-argument help text for the settings popover. Single
+            # source of truth with the LLM-facing API metadata; see
+            # drilldown_chart_arguments(). as.list() keeps each string a
+            # JSON scalar (avoids the auto_unbox collapse trap).
+            arguments = as.list(
+              stats::setNames(
+                as.character(drilldown_chart_arguments()),
+                names(drilldown_chart_arguments())
+              )
             )
           ))
         })
@@ -272,10 +293,26 @@ new_drilldown_chart_block <- function(
               r_filter_column(msg$column)
               r_filter_values(msg$values)
               r_filter_range(NULL)
+              r_filter_point(NULL)
               r_filter_type(
                 if (!is.null(msg$column) && !is.null(msg$values)) "categorical"
                 else "categorical"
               )
+            } else if (ft == "point") {
+              # Click on a single dot with no entity/id column: drill to
+              # the observation(s) at that exact x/y coordinate.
+              if (!is.null(msg$x_col) && !is.null(msg$y_col)) {
+                r_filter_column(NULL)
+                r_filter_values(NULL)
+                r_filter_range(NULL)
+                r_filter_point(list(
+                  x_col = msg$x_col,
+                  y_col = msg$y_col,
+                  x_val = msg$x_val,
+                  y_val = msg$y_val
+                ))
+                r_filter_type("point")
+              }
             } else if (ft == "range") {
               if (!is.null(msg$x_col) && !is.null(msg$x_range)) {
                 xr <- as.numeric(msg$x_range)
@@ -292,6 +329,7 @@ new_drilldown_chart_block <- function(
                 if (!is_point) {
                   r_filter_column(NULL)
                   r_filter_values(NULL)
+                  r_filter_point(NULL)
                   r_filter_range(list(
                     x_col = msg$x_col,
                     y_col = msg$y_col,
@@ -304,6 +342,7 @@ new_drilldown_chart_block <- function(
                 r_filter_column(NULL)
                 r_filter_values(NULL)
                 r_filter_range(NULL)
+                r_filter_point(NULL)
                 r_filter_type("categorical")
               }
             }
@@ -335,6 +374,18 @@ new_drilldown_chart_block <- function(
                   list(col = col, vals = vals)
                 )
               }
+            } else if (ft == "point") {
+              pt <- r_filter_point()
+              if (is.null(pt) || is.null(pt$x_col) || is.null(pt$y_col)) {
+                return(blockr.core::bbquote(dplyr::filter(.(data), TRUE)))
+              }
+              blockr.core::bbquote(
+                dplyr::filter(.(data),
+                  .data[[.(xc)]] == .(xv) & .data[[.(yc)]] == .(yv)
+                ),
+                list(xc = pt$x_col, yc = pt$y_col,
+                  xv = pt$x_val, yv = pt$y_val)
+              )
             } else if (ft == "range") {
               rng <- r_filter_range()
               if (is.null(rng) || is.null(rng$x_range)) {
@@ -385,6 +436,7 @@ new_drilldown_chart_block <- function(
             filter_column = r_filter_column,
             filter_values = r_filter_values,
             filter_range = r_filter_range,
+            filter_point = r_filter_point,
             line_width_mult = r_line_width_mult,
             dot_size_mult = r_dot_size_mult,
             step = r_step,
@@ -411,12 +463,12 @@ new_drilldown_chart_block <- function(
     },
     allow_empty_state = c("group_by", "color_by", "facet_by", "filter_column",
       "filter_values", "x_col", "y_col", "x_end_col", "sort_by", "sort_dir",
-      "series_by", "filter_range",
+      "series_by", "filter_range", "filter_point",
       "step", "ref_x", "ref_y", "smoother", "lo_col", "hi_col"),
     external_ctrl = c("group_by", "color_by", "facet_by", "metric", "agg_fn",
       "chart_type", "x_col", "y_col", "x_end_col", "sort_by", "sort_dir",
       "series_by", "filter_type", "filter_column", "filter_values",
-      "filter_range", "line_width_mult", "dot_size_mult",
+      "filter_range", "filter_point", "line_width_mult", "dot_size_mult",
       "step", "ref_x", "ref_y", "smoother", "lo_col", "hi_col"),
     expr_type = "bquoted",
     class = "drilldown_chart_block",

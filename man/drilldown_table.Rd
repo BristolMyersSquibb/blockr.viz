@@ -11,10 +11,10 @@ drilldown_table(
   color = NULL,
   on_click = NULL,
   elem_id = NULL,
-  title = NULL,
-  caption = NULL,
   digits = 2L,
-  max_height = "600px"
+  max_height = "600px",
+  transform = "none",
+  cor_method = "pearson"
 )
 }
 \arguments{
@@ -34,11 +34,11 @@ row emits a categorical filter on that column's value.}
 \item{elem_id}{Shiny namespaced id used to build the \verb{_action}
 input name. Required for \code{on_click} to do anything.}
 
-\item{title, caption}{Optional strings.}
-
 \item{digits}{Rounding for numeric display. Default \code{2}.}
 
 \item{max_height}{CSS max-height of the scroll container.}
+
+\item{title, caption}{Optional strings.}
 }
 \value{
 An \code{\link[htmltools:tagList]{htmltools::tagList()}}.

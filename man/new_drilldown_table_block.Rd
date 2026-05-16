@@ -9,10 +9,10 @@ new_drilldown_table_block(
   value_cols = NULL,
   color = NULL,
   on_click = NULL,
-  title = "",
-  caption = "",
   digits = 2L,
   max_height = "600px",
+  transform = "none",
+  cor_method = "pearson",
   filter_type = "categorical",
   filter_column = NULL,
   filter_values = NULL,
@@ -21,7 +21,10 @@ new_drilldown_table_block(
 )
 }
 \arguments{
-\item{label_col, value_cols, color, on_click, title, caption, digits, max_height}{Forwarded to \code{\link[=drilldown_table]{drilldown_table()}}.}
+\item{label_col, value_cols, color, on_click, digits, max_height, transform, cor_method}{Forwarded to \code{\link[=drilldown_table]{drilldown_table()}}. The block has no in-table title:
+the block's own name (card header) serves that role. \code{transform = "correlation"} renders the pairwise correlation matrix of the
+input's numeric columns (the one dplyr-hard reshape folded in as
+an option, mirroring how the drilldown chart aggregates).}
 
 \item{filter_type, filter_column, filter_values, filter_range}{Click
 filter state (kept for contract parity with the drilldown chart;

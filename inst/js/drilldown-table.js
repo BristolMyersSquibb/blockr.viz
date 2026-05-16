@@ -181,6 +181,7 @@
     var colorMode = root.getAttribute("data-dt-color-mode") || "off";
     var onClick = root.getAttribute("data-dt-onclick-col") || "(none)";
     var digits = root.getAttribute("data-dt-digits") || "2";
+    var transform = root.getAttribute("data-dt-transform") || "none";
 
     var header = document.createElement("div");
     header.className = "blockr-gear-header";
@@ -201,6 +202,12 @@
     title.style.marginBottom = "10px";
     title.textContent = "Advanced";
     pop.appendChild(title);
+
+    popRow(pop, "Transform",
+      mkSelect("blockr-popover-input",
+        ["none", "correlation"], transform,
+        function (v) { sendConfig(elemId, "transform", v); }),
+      "Render a pairwise correlation matrix of numeric columns");
 
     popRow(pop, "Coloring",
       mkSelect("blockr-popover-input",

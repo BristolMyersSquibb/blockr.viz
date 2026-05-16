@@ -35,8 +35,15 @@ drilldown_table <- function(data,
                             on_click = NULL,
                             elem_id = NULL,
                             digits = 2L,
-                            max_height = "600px") {
+                            max_height = "600px",
+                            transform = "none",
+                            cor_method = "pearson") {
   stopifnot(is.data.frame(data))
+
+  if (identical(transform, "correlation")) {
+    data <- dt_correlation(data, cor_method)
+    if (is.null(label_col)) label_col <- "parameter"
+  }
 
   if (is.null(label_col)) label_col <- names(data)[1L]
   if (is.null(value_cols)) value_cols <- setdiff(names(data), label_col)
@@ -48,7 +55,7 @@ drilldown_table <- function(data,
       length(value_cols) == 0L) {
     return(dt_render(dt_message_table(), max_height,
                      elem_id, on_click, label_col, value_cols,
-                     color_mode, digits))
+                     color_mode, digits, transform))
   }
 
   # ---- color scale ----------------------------------------------------
@@ -113,7 +120,31 @@ drilldown_table <- function(data,
 
   table_tag <- htmltools::tags$table(class = "blockr-table", thead, tbody)
   dt_render(table_tag, max_height, elem_id, on_click,
-            label_col, value_cols, color_mode, digits)
+            label_col, value_cols, color_mode, digits, transform)
+}
+
+#' Pairwise correlation matrix of a frame's numeric columns
+#'
+#' The one transform folded into the table because it is common and
+#' has no dplyr verb (`stats::cor()` returns a matrix). Operates on
+#' whatever numeric columns the (already-reshaped) input carries, so
+#' it stays generic — upstream stock blocks do any pivoting.
+#' @noRd
+dt_correlation <- function(data, method = "pearson") {
+  num <- vapply(data, is.numeric, logical(1L))
+  cols <- names(data)[num]
+  if (length(cols) < 2L) {
+    return(data.frame(message = "Need >= 2 numeric columns",
+                      stringsAsFactors = FALSE))
+  }
+  if (length(cols) > 20L) cols <- cols[seq_len(20L)]
+  m <- stats::cor(data[, cols, drop = FALSE],
+                  use = "pairwise.complete.obs", method = method)
+  m <- round(m, 2L)
+  out <- data.frame(parameter = cols, stringsAsFactors = FALSE,
+                    check.names = FALSE)
+  for (p in cols) out[[p]] <- as.numeric(m[, p])
+  out
 }
 
 #' Color spec for [drilldown_table()]
@@ -174,7 +205,8 @@ dt_message_table <- function(msg = "No data") {
 #' @noRd
 dt_render <- function(table_tag, max_height, elem_id,
                       on_click, label_col, value_cols,
-                      color_mode = "off", digits = 2L) {
+                      color_mode = "off", digits = 2L,
+                      transform = "none") {
   wrapper_id <- paste0(
     "blockr-dt-", sub("^file", "", basename(tempfile("")))
   )
@@ -218,6 +250,7 @@ dt_render <- function(table_tag, max_height, elem_id,
       `data-dt-onclick-col` = if (!is.null(onclick_idx)) on_click else NULL,
       `data-dt-onclick-idx` = if (!is.null(onclick_idx)) onclick_idx else NULL,
       `data-dt-color-mode` = color_mode,
+      `data-dt-transform` = transform,
       `data-dt-digits` = as.character(digits),
       header_div,
       htmltools::tags$div(
@@ -293,9 +326,12 @@ drilldown_table_dep <- function() {
 #' the last click, using the exact same contract as
 #' [new_drilldown_chart_block()] (so existing filter links compose).
 #'
-#' @param label_col,value_cols,color,on_click,digits,max_height
+#' @param label_col,value_cols,color,on_click,digits,max_height,transform,cor_method
 #'   Forwarded to [drilldown_table()]. The block has no in-table title:
-#'   the block's own name (card header) serves that role.
+#'   the block's own name (card header) serves that role. `transform =
+#'   "correlation"` renders the pairwise correlation matrix of the
+#'   input's numeric columns (the one dplyr-hard reshape folded in as
+#'   an option, mirroring how the drilldown chart aggregates).
 #' @param filter_type,filter_column,filter_values,filter_range Click
 #'   filter state (kept for contract parity with the drilldown chart;
 #'   `filter_range` is unused by the table).
@@ -308,6 +344,8 @@ new_drilldown_table_block <- function(label_col = NULL,
                                       on_click = NULL,
                                       digits = 2L,
                                       max_height = "600px",
+                                      transform = "none",
+                                      cor_method = "pearson",
                                       filter_type = "categorical",
                                       filter_column = NULL,
                                       filter_values = NULL,
@@ -324,6 +362,8 @@ new_drilldown_table_block <- function(label_col = NULL,
         r_on_click      <- shiny::reactiveVal(on_click)
         r_digits        <- shiny::reactiveVal(digits)
         r_max_height    <- shiny::reactiveVal(max_height)
+        r_transform     <- shiny::reactiveVal(transform)
+        r_cor_method    <- shiny::reactiveVal(cor_method)
         r_filter_type   <- shiny::reactiveVal(filter_type)
         r_filter_column <- shiny::reactiveVal(filter_column)
         r_filter_values <- shiny::reactiveVal(filter_values)
@@ -354,6 +394,10 @@ new_drilldown_table_block <- function(label_col = NULL,
               r_on_click(if (identical(v, "(none)") || !nzchar(v)) NULL else v)
             } else if (identical(p, "digits")) {
               r_digits(as.integer(v))
+            } else if (identical(p, "transform")) {
+              r_transform(v)
+            } else if (identical(p, "cor_method")) {
+              r_cor_method(v)
             }
           }
         })
@@ -369,7 +413,9 @@ new_drilldown_table_block <- function(label_col = NULL,
             on_click   = r_on_click(),
             elem_id    = ns("drilldown_table_block"),
             digits     = r_digits(),
-            max_height = r_max_height()
+            max_height = r_max_height(),
+            transform  = r_transform(),
+            cor_method = r_cor_method()
           )
         })
 
@@ -398,6 +444,8 @@ new_drilldown_table_block <- function(label_col = NULL,
             on_click      = r_on_click,
             digits        = r_digits,
             max_height    = r_max_height,
+            transform     = r_transform,
+            cor_method    = r_cor_method,
             filter_type   = r_filter_type,
             filter_column = r_filter_column,
             filter_values = r_filter_values,
@@ -416,7 +464,7 @@ new_drilldown_table_block <- function(label_col = NULL,
     allow_empty_state = c("label_col", "value_cols", "color", "on_click",
       "filter_column", "filter_values", "filter_range"),
     external_ctrl = c("label_col", "value_cols", "color", "on_click",
-      "digits", "max_height", "filter_type",
+      "digits", "max_height", "transform", "cor_method", "filter_type",
       "filter_column", "filter_values", "filter_range"),
     expr_type = "bquoted",
     class = "drilldown_table_block",

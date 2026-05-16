@@ -36,6 +36,35 @@ drilldown_chart_arguments <- function() {
         "Y-axis column (individual chart types: scatter, line). Required for ",
         "scatter and line."
       ),
+      series_by = paste0(
+        "Column whose distinct values split rows into separate series ",
+        "(individual: one line/scatter group per value; timeline: per-bar ",
+        "label). High cardinality is fine. Independent of Color."
+      ),
+      x_end_col = paste0(
+        "Interval end column (timeline only). Rows with no end render as a ",
+        "dot at X."
+      ),
+      smoother = paste0(
+        "Trend overlay for scatter charts. One of \"none\" (default), ",
+        "\"lm\" (linear fit) or \"loess\" (local regression)."
+      ),
+      lo_col = paste0(
+        "Lower error-band column (individual line only). Set together with ",
+        "Hi to draw a band; numeric only."
+      ),
+      hi_col = paste0(
+        "Upper error-band column (individual line only). Set together with ",
+        "Lo to draw a band; numeric only."
+      ),
+      line_width_mult = paste0(
+        "Line width multiplier for line charts (individual only). 1.0× ",
+        "is the default look; range 0.5×–3.0×."
+      ),
+      dot_size_mult = paste0(
+        "Marker size multiplier for scatter points and line markers ",
+        "(individual only). 1.0× is the default; range 0.5×–3.0×."
+      ),
       filter_type = paste0(
         "Filter mode for click/brush interaction. \"categorical\" (aggregated ",
         "charts, click to filter) or \"range\" (individual charts, brush to ",

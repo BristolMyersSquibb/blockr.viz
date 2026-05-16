@@ -230,11 +230,24 @@
       const wrapper = document.createElement('div');
       wrapper.className = 'dd-picker-wrap';
 
+      // Muted help below the control. For a column picker this shows the
+      // selected variable in the usual `name (label)` convention so it is
+      // clear which column is mapped; otherwise the static role text.
+      const helpEl = document.createElement('span');
+      helpEl.className = 'dd-form-help';
+      const setHelp = (v) => {
+        const txt = this._fieldHelp(key, v);
+        helpEl.textContent = txt;
+        helpEl.style.display = txt ? '' : 'none';
+      };
+      setHelp(selected);
+
       const useBlockrSelect = typeof Blockr !== 'undefined' && Blockr.Select;
 
       const onSelect = (val) => {
         this.config[key] = (val === '(none)') ? '' : val;
         this._selected = null;
+        setHelp(val);
         this._render();
         this._sendConfig();
         this._sendClearFilter();
@@ -264,16 +277,23 @@
       }
 
       row.appendChild(wrapper);
-
-      const help = this.argHelp && this.argHelp[key];
-      if (help) {
-        const h = document.createElement('span');
-        h.className = 'dd-form-help';
-        h.textContent = help;
-        row.appendChild(h);
-      }
+      row.appendChild(helpEl);
 
       container.appendChild(row);
+    }
+
+    // Help text under a field. For a column picker: the selected
+    // variable's name and label in the usual `name (label)` convention,
+    // so it is clear which column is mapped. Falls back to the static
+    // _arguments() role description when the value is not a column
+    // (e.g. "(none)", ".count", an aggregation function) or the column
+    // carries no label.
+    _fieldHelp(key, value) {
+      const col = (this.columns || []).find(c => c.name === value);
+      if (col && col.label && col.label !== col.name) {
+        return col.name + ' (' + col.label + ')';
+      }
+      return (this.argHelp && this.argHelp[key]) || '';
     }
 
     _renderConfig() {
@@ -375,15 +395,6 @@
         'dd-cfg-individual');
       this._addSelect(pop, 'Series', 'series_by',
         ['(none)', ...allCols.map(colOpt)], cfg.series_by || '(none)',
-        'dd-cfg-timeline');
-
-      // ID: per-entity identity column a click drills to. Left unset,
-      // falls back to Series, then Color, then a present USUBJID.
-      this._addSelect(pop, 'ID', 'id_col',
-        ['(none)', ...allCols.map(colOpt)], cfg.id_col || '(none)',
-        'dd-cfg-individual');
-      this._addSelect(pop, 'ID', 'id_col',
-        ['(none)', ...allCols.map(colOpt)], cfg.id_col || '(none)',
         'dd-cfg-timeline');
 
       // Timeline only: X end (interval end column)
@@ -1215,14 +1226,12 @@
         }
 
         // Click → categorical filter on the series. Filter column is
-        // series_by when set, otherwise color_by, otherwise the resolved
-        // id column (configured `id_col`, or `USUBJID` if present). On a
-        // plain scatter with no series split and no id column, a point
-        // click is a no-op — emitting a filter on an absent column would
-        // blow up downstream with "Column not found".
+        // series_by when set, otherwise color_by. With neither set the
+        // click drills to the clicked observation itself (point filter
+        // below) — no hidden identity-column behavior.
         chart.on('click', (params) => {
           if (params.componentType !== 'series') return;
-          const col = series_by || color_by || this._resolveIdCol();
+          const col = series_by || color_by;
           if (col) {
             const val = params.seriesName;
             if (!val) return;
@@ -1232,9 +1241,8 @@
             this._updateStatus();
             return;
           }
-          // No entity/id column resolves: drill to the clicked
-          // observation by its coordinates — filter the row(s) at this
-          // exact (x, y) point. Works on any scatter/line.
+          // No Series/Color set: drill to the clicked observation by its
+          // coordinates — filter the row(s) at this exact (x, y) point.
           const v = params.value;
           if (!Array.isArray(v) || v.length < 2 || !x_col || !y_col) return;
           this._selectedColumn = `${x_col}, ${y_col}`;
@@ -1334,9 +1342,9 @@
 
     _renderTimeline() {
       const { x_col, x_end_col, y_col, color_by, facet_by, sort_by, series_by } = this.config;
-      // Identity column for click-to-drill on a bar (configured id_col, or
-      // USUBJID if present, else none → bar click won't filter).
-      const idCol = this._resolveIdCol();
+      // Click-to-drill column for a bar: Series, else Color, else none
+      // (no-op). No hidden identity-column behavior.
+      const drillCol = series_by || color_by || null;
       const sortDir = this.config.sort_dir === 'desc' ? -1 : 1;
       if (!x_col || !y_col) {
         this.chartGrid.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">Select X (start) and Y (term) columns</p></div>';
@@ -1447,8 +1455,9 @@
             e = s;
           }
           barData.push({
-            value: [s, e, lane, term, r[color_by] ?? '',
-                    idCol ? (r[idCol] ?? '') : '',
+            // Slot 5 retained as '' (was the old identity column) to keep
+            // renderItem's api.value() indices stable.
+            value: [s, e, lane, term, r[color_by] ?? '', '',
                     r[series_by] ?? '']
           });
         }
@@ -1553,7 +1562,6 @@
               const v = p.value;
               const term = v[3] || '';
               const colorVal = v[4] || '';
-              const subj = v[5] || '';
               const detail = v[6] || '';
               // Headline is the most specific label available: series_by
               // (per-bar detail) wins, else fall back to y_col (lane).
@@ -1563,7 +1571,6 @@
                 html += `<div style="font-size:11px;color:#666">${term}</div>`;
               }
               if (colorVal) html += `<div style="font-size:11px;color:#666">${colorVal}</div>`;
-              if (subj) html += `<div style="font-size:11px;color:#666">${subj}</div>`;
               html += '</div>';
               return html;
             }
@@ -1594,13 +1601,15 @@
 
         chart.on('click', (params) => {
           if (params.componentType !== 'series') return;
+          if (!drillCol) return;  // no Series/Color → no-op
           const v = params.value;
           if (!v) return;
-          const subj = v[5];
-          if (!subj || !idCol) return;
-          this._selectedColumn = idCol;
-          this._selected = String(subj);
-          this._sendCategoricalFilter(idCol, [String(subj)]);
+          // Drill value: series_by is packed at slot 6, color_by at 4.
+          const val = series_by ? v[6] : v[4];
+          if (val == null || val === '') return;
+          this._selectedColumn = drillCol;
+          this._selected = String(val);
+          this._sendCategoricalFilter(drillCol, [String(val)]);
           this._updateStatus();
         });
       }
@@ -1716,27 +1725,12 @@
       }
     }
 
-    // Resolve the per-entity identity column used by click-to-drill on
-    // trajectory series and gantt bars. Priority: an explicitly configured
-    // `id_col`, else `USUBJID` if that column happens to be present
-    // (clinical SDTM/ADaM data — preserves legacy auto-detect), else null.
-    // Returning null makes click-to-drill a no-op rather than emitting a
-    // filter on a column the data doesn't have.
-    _resolveIdCol() {
-      const have = (n) =>
-        n && (this.columns || []).some((c) => c.name === n);
-      const cfg = this.config && this.config.id_col;
-      if (have(cfg)) return cfg;
-      if (have('USUBJID')) return 'USUBJID';
-      return null;
-    }
-
     // -- Communication --------------------------------------------------------
 
     // Emits a categorical filter. If `col` and `values` are provided, they
     // override the default (group_by + current _selected) — used by
     // click-to-filter on trajectory series and gantt bars, where the column
-    // is the resolved id column rather than group_by.
+    // is series_by/color_by rather than group_by.
     _sendCategoricalFilter(col, values) {
       if (!this.el.id) return;
       const column = col !== undefined ? col : this.config.group_by;

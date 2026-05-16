@@ -18,7 +18,7 @@ drilldown_chart_dep <- function() {
     drilldown_echarts_themes_dep(),
     htmltools::htmlDependency(
       name = "drilldown-chart-js",
-      version = paste0(utils::packageVersion("blockr.bi"), ".25"),
+      version = paste0(utils::packageVersion("blockr.bi"), ".30"),
       src = system.file("js", package = "blockr.bi"),
       script = c("drilldown-theme-register.js", "drilldown-chart.js")
     ),
