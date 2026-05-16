@@ -31,6 +31,16 @@
   // colorblind-safe and well-tested for general categorical encoding.
   const BLOCKR_PALETTE = ['#0072B2', '#D55E00', '#F0E442', '#009E73', '#56B4E9', '#E69F00', '#CC79A7'];
   const BLOCKR_FONT = "'Open Sans', system-ui, sans-serif";
+  // Display-only number formatting. Data is now sent at full precision
+  // (so click-to-filter equality round-trips), so trim noisy decimals
+  // for tooltips / status text without touching the underlying value.
+  const ddNum = (v) => {
+    if (typeof v !== 'number' || !isFinite(v)) return v;
+    if (Number.isInteger(v)) return v.toLocaleString();
+    return Number(v.toPrecision(6)).toLocaleString(undefined, {
+      maximumFractionDigits: 4
+    });
+  };
   const AXIS_LABEL_COLOR = '#666';
   const AXIS_LINE_COLOR = '#ccc';
   const SPLIT_LINE_COLOR = '#f3f4f6';
@@ -43,17 +53,29 @@
   // mode silently fails to engage and drag-to-filter doesn't work. The
   // brush icons only render on charts that actually have a `brush`
   // component, so this is inert for bar/pie/treemap/boxplot/gantt.
+  // Base toolbox WITHOUT brush — bar/pie/treemap/boxplot/gantt and any
+  // non-brushable scatter/line (categorical x, or series_by set) get no
+  // brush icon, so the button is never a dead control.
   const TOOLBOX = {
     show: true,
     right: 8,
     top: 4,
     itemSize: 11,
     feature: {
-      saveAsImage: { title: 'Save', pixelRatio: 2 },
-      brush: { type: ['rect', 'lineX', 'clear'] }
+      saveAsImage: { title: 'Save', pixelRatio: 2 }
     },
     iconStyle: { borderColor: '#bbb' }
   };
+
+  // Toolbox WITH the brush feature — only used when the chart actually
+  // wires a `brush` component + brushSelected handler (brushable).
+  const mkToolbox = (withBrush) => withBrush
+    ? {
+        ...TOOLBOX,
+        feature: { ...TOOLBOX.feature,
+          brush: { type: ['rect', 'lineX', 'clear'] } }
+      }
+    : TOOLBOX;
 
   const AGG_FNS = [
     { value: 'count', label: 'Count' },
@@ -71,6 +93,7 @@
       this.data = [];
       this.columns = [];
       this.config = {};
+      this.argHelp = {};
       this.charts = [];
       this._selected = null;
       this._selects = {};
@@ -157,10 +180,9 @@
       gearHeader.appendChild(this.gearBtn);
       this.card.appendChild(gearHeader);
 
-      // Main config bar (always visible)
-      this.configBar = document.createElement('div');
-      this.configBar.className = 'dd-config-bar';
-      this.card.appendChild(this.configBar);
+      // All configuration (mapping + presentation) lives behind the gear.
+      // The card itself shows only the result + its direct interactions.
+      // See blockr.docs design-system/components/blockr-popover.md.
 
       // Popover (right-anchored, same as blockr.dplyr)
       this.popoverEl = document.createElement('div');
@@ -191,19 +213,22 @@
 
     // -- Config UI ------------------------------------------------------------
 
+    // One settings row: label on top, full-width control, muted help text
+    // below (sourced from the block's _arguments() metadata). See
+    // blockr.docs design-system/components/blockr-popover.md.
     _addSelect(container, label, key, options, selected, cssClass) {
-      const wrapper = document.createElement('div');
-      // Single-bordered "key/value field" — same shape as .blockr-row in
-      // rename/filter blocks. The wrapper carries the border; the inner
-      // Blockr.Select stays unbordered (don't add .blockr-select--bordered
-      // here, that would double-border).
-      wrapper.className = 'dd-picker-wrap' +
+      const row = document.createElement('div');
+      row.className = 'blockr-popover-row dd-form-row' +
         (cssClass ? ' ' + cssClass : '');
 
-      const lbl = document.createElement('label');
-      lbl.className = 'blockr-label';
+      const lbl = document.createElement('span');
+      lbl.className = 'blockr-popover-label';
       lbl.textContent = label;
-      wrapper.appendChild(lbl);
+      row.appendChild(lbl);
+
+      // The bordered control box (no inline label now — label is on top).
+      const wrapper = document.createElement('div');
+      wrapper.className = 'dd-picker-wrap';
 
       const useBlockrSelect = typeof Blockr !== 'undefined' && Blockr.Select;
 
@@ -238,7 +263,17 @@
         wrapper.appendChild(sel);
       }
 
-      container.appendChild(wrapper);
+      row.appendChild(wrapper);
+
+      const help = this.argHelp && this.argHelp[key];
+      if (help) {
+        const h = document.createElement('span');
+        h.className = 'dd-form-help';
+        h.textContent = help;
+        row.appendChild(h);
+      }
+
+      container.appendChild(row);
     }
 
     _renderConfig() {
@@ -256,59 +291,17 @@
       // Helper: column metadata to option (with label if available)
       const colOpt = (c) => c.label ? { value: c.name, label: c.label } : c.name;
 
-      // ===== MAIN BAR =====
-      this.configBar.innerHTML = '';
-
-      // Aggregated: Group by
-      this._addSelect(this.configBar, 'Group', 'group_by',
-        ['(none)', ...allCols.map(colOpt)], cfg.group_by || '(none)', 'dd-cfg-aggregated');
-
-      // Individual + Timeline: X
-      // For timeline, y_col may be categorical (AE term); the filter below
-      // allows that.
-      this._addSelect(this.configBar, 'X', 'x_col',
-        allCols.map(colOpt), cfg.x_col, 'dd-cfg-xy');
-      const yOpts = this._family() === 'timeline' ? allCols : nums;
-      this._addSelect(this.configBar, 'Y', 'y_col',
-        yOpts.map(colOpt), cfg.y_col, 'dd-cfg-xy');
-
-      // Individual + Timeline: Series. On individual it splits rows into
-      // separate lines/scatter series. On timeline it labels individual
-      // bars (tooltip + on-bar text), letting color_by stay low-cardinality
-      // for a clean legend. High cardinality is fine in both families.
-      this._addSelect(this.configBar, 'Series', 'series_by',
-        ['(none)', ...allCols.map(colOpt)], cfg.series_by || '(none)',
-        'dd-cfg-individual');
-      this._addSelect(this.configBar, 'Series', 'series_by',
-        ['(none)', ...allCols.map(colOpt)], cfg.series_by || '(none)',
-        'dd-cfg-timeline');
-
-      // Timeline only: X end (interval end column)
-      this._addSelect(this.configBar, 'X end', 'x_end_col',
-        ['(none)', ...allCols.map(colOpt)], cfg.x_end_col || '(none)',
-        'dd-cfg-timeline');
-
-      // Shared: Color, Facet
-      this._addSelect(this.configBar, 'Color', 'color_by',
-        ['(none)', ...allCols.map(colOpt)], cfg.color_by || '(none)');
-      this._addSelect(this.configBar, 'Facet', 'facet_by',
-        ['(none)', ...cats.filter(x => x.n_unique <= 10).map(colOpt)], cfg.facet_by || '(none)');
-
-      // Individual scatter only: smoother overlay (none / lm / loess)
-      this._addSelect(this.configBar, 'Smoother', 'smoother',
-        ['none', 'lm', 'loess'], cfg.smoother || 'none', 'dd-cfg-xy');
-
-      // Individual line: optional error-band columns. Presence of both is
-      // the on/off — same pattern as X end for timelines. Numeric only.
-      this._addSelect(this.configBar, 'Lo', 'lo_col',
-        ['(none)', ...nums.map(colOpt)], cfg.lo_col || '(none)',
-        'dd-cfg-xy');
-      this._addSelect(this.configBar, 'Hi', 'hi_col',
-        ['(none)', ...nums.map(colOpt)], cfg.hi_col || '(none)',
-        'dd-cfg-xy');
-
       // ===== POPOVER CONTENT =====
+      // All configuration lives here, ordered by causality: type first
+      // (it gates everything), then mapping, then encoding, then
+      // presentation. One control per row. See blockr.docs
+      // design-system/components/blockr-popover.md.
       this.popoverEl.innerHTML = '';
+
+      const title = document.createElement('div');
+      title.className = 'blockr-popover-label dd-popover-title';
+      title.textContent = 'Advanced';
+      this.popoverEl.appendChild(title);
 
       // Chart type selector (two groups)
       const typesRow = document.createElement('div');
@@ -357,55 +350,113 @@
       typesRow.appendChild(buildTypeGroup('Timeline', TIMELINE_TYPES));
       this.popoverEl.appendChild(typesRow);
 
-      // Metric + Agg (aggregated only)
-      const metricRow = document.createElement('div');
-      metricRow.className = 'blockr-popover-row dd-cfg-aggregated';
-      this._addSelect(metricRow, 'Metric', 'metric',
-        ['.count', ...nums.map(colOpt)], cfg.metric || '.count');
-      this._addSelect(metricRow, 'Agg', 'agg_fn',
-        AGG_FNS.map(a => a.value), cfg.agg_fn || 'count');
-      this.popoverEl.appendChild(metricRow);
+      const pop = this.popoverEl;
+
+      // ----- Mapping (which columns the chart reads) -----
+
+      // Aggregated: Group by
+      this._addSelect(pop, 'Group', 'group_by',
+        ['(none)', ...allCols.map(colOpt)], cfg.group_by || '(none)',
+        'dd-cfg-aggregated');
+
+      // Individual + Timeline: X / Y. For timeline, Y may be categorical
+      // (e.g. an AE term), so it is offered all columns.
+      this._addSelect(pop, 'X', 'x_col',
+        allCols.map(colOpt), cfg.x_col, 'dd-cfg-xy');
+      const yOpts = this._family() === 'timeline' ? allCols : nums;
+      this._addSelect(pop, 'Y', 'y_col',
+        yOpts.map(colOpt), cfg.y_col, 'dd-cfg-xy');
+
+      // Series: splits rows into separate lines/scatter groups
+      // (individual) or labels individual bars (timeline). Independent
+      // of Color. High cardinality is fine.
+      this._addSelect(pop, 'Series', 'series_by',
+        ['(none)', ...allCols.map(colOpt)], cfg.series_by || '(none)',
+        'dd-cfg-individual');
+      this._addSelect(pop, 'Series', 'series_by',
+        ['(none)', ...allCols.map(colOpt)], cfg.series_by || '(none)',
+        'dd-cfg-timeline');
+
+      // ID: per-entity identity column a click drills to. Left unset,
+      // falls back to Series, then Color, then a present USUBJID.
+      this._addSelect(pop, 'ID', 'id_col',
+        ['(none)', ...allCols.map(colOpt)], cfg.id_col || '(none)',
+        'dd-cfg-individual');
+      this._addSelect(pop, 'ID', 'id_col',
+        ['(none)', ...allCols.map(colOpt)], cfg.id_col || '(none)',
+        'dd-cfg-timeline');
+
+      // Timeline only: X end (interval end column)
+      this._addSelect(pop, 'X end', 'x_end_col',
+        ['(none)', ...allCols.map(colOpt)], cfg.x_end_col || '(none)',
+        'dd-cfg-timeline');
+
+      // Shared: Color, Facet
+      this._addSelect(pop, 'Color', 'color_by',
+        ['(none)', ...allCols.map(colOpt)], cfg.color_by || '(none)');
+      this._addSelect(pop, 'Facet', 'facet_by',
+        ['(none)', ...cats.filter(x => x.n_unique <= 10).map(colOpt)],
+        cfg.facet_by || '(none)');
+
+      // ----- Encoding (aggregated only) -----
+      this._addSelect(pop, 'Metric', 'metric',
+        ['.count', ...nums.map(colOpt)], cfg.metric || '.count',
+        'dd-cfg-aggregated');
+      this._addSelect(pop, 'Agg', 'agg_fn',
+        AGG_FNS.map(a => a.value), cfg.agg_fn || 'count',
+        'dd-cfg-aggregated');
+
+      // ----- Presentation -----
 
       // Sort + Dir (aggregated: value / alpha / column-min ordering)
-      const sortAggRow = document.createElement('div');
-      sortAggRow.className = 'blockr-popover-row dd-cfg-aggregated';
-      this._addSelect(sortAggRow, 'Sort', 'sort_by',
-        ['value', 'alpha', ...nums.map(colOpt)], cfg.sort_by || 'value');
-      this._addSelect(sortAggRow, 'Dir', 'sort_dir',
-        ['asc', 'desc'], cfg.sort_dir || 'desc');
-      this.popoverEl.appendChild(sortAggRow);
+      this._addSelect(pop, 'Sort', 'sort_by',
+        ['value', 'alpha', ...nums.map(colOpt)], cfg.sort_by || 'value',
+        'dd-cfg-aggregated');
+      this._addSelect(pop, 'Dir', 'sort_dir',
+        ['asc', 'desc'], cfg.sort_dir || 'desc', 'dd-cfg-aggregated');
 
       // Sort + Dir (timeline: onset / alpha / column-min ordering)
-      const sortTimeRow = document.createElement('div');
-      sortTimeRow.className = 'blockr-popover-row dd-cfg-timeline';
-      this._addSelect(sortTimeRow, 'Sort', 'sort_by',
-        ['onset', 'alpha', ...allCols.map(colOpt)], cfg.sort_by || 'onset');
-      this._addSelect(sortTimeRow, 'Dir', 'sort_dir',
-        ['asc', 'desc'], cfg.sort_dir || 'asc');
-      this.popoverEl.appendChild(sortTimeRow);
+      this._addSelect(pop, 'Sort', 'sort_by',
+        ['onset', 'alpha', ...allCols.map(colOpt)], cfg.sort_by || 'onset',
+        'dd-cfg-timeline');
+      this._addSelect(pop, 'Dir', 'sort_dir',
+        ['asc', 'desc'], cfg.sort_dir || 'asc', 'dd-cfg-timeline');
+
+      // Individual scatter: smoother overlay (none / lm / loess)
+      this._addSelect(pop, 'Smoother', 'smoother',
+        ['none', 'lm', 'loess'], cfg.smoother || 'none', 'dd-cfg-xy');
+
+      // Individual line: optional error-band columns (numeric; set both)
+      this._addSelect(pop, 'Lo', 'lo_col',
+        ['(none)', ...nums.map(colOpt)], cfg.lo_col || '(none)',
+        'dd-cfg-xy');
+      this._addSelect(pop, 'Hi', 'hi_col',
+        ['(none)', ...nums.map(colOpt)], cfg.hi_col || '(none)',
+        'dd-cfg-xy');
 
       // Line width + dot size multipliers (individual only)
-      const themeRow = document.createElement('div');
-      themeRow.className = 'blockr-popover-row dd-cfg-individual';
-      this._addMultSlider(themeRow, 'Line width', 'line_width_mult',
-        cfg.line_width_mult);
-      this._addMultSlider(themeRow, 'Dot size', 'dot_size_mult',
-        cfg.dot_size_mult);
-      this.popoverEl.appendChild(themeRow);
+      this._addMultSlider(pop, 'Line width', 'line_width_mult',
+        cfg.line_width_mult, 'dd-cfg-individual');
+      this._addMultSlider(pop, 'Dot size', 'dot_size_mult',
+        cfg.dot_size_mult, 'dd-cfg-individual');
 
       this._updateFamilyClass();
     }
 
-    _addMultSlider(container, label, key, initial) {
+    _addMultSlider(container, label, key, initial, cssClass) {
       const v0 = (typeof initial === 'number' && isFinite(initial)) ? initial : 1.0;
+
+      const row = document.createElement('div');
+      row.className = 'blockr-popover-row dd-form-row' +
+        (cssClass ? ' ' + cssClass : '');
+
+      const lbl = document.createElement('span');
+      lbl.className = 'blockr-popover-label';
+      lbl.textContent = label;
+      row.appendChild(lbl);
 
       const wrap = document.createElement('div');
       wrap.className = 'dd-slider-wrap';
-
-      const lbl = document.createElement('label');
-      lbl.className = 'blockr-label';
-      lbl.textContent = label;
-      wrap.appendChild(lbl);
 
       const input = document.createElement('input');
       input.type = 'range';
@@ -431,7 +482,17 @@
         debounce = setTimeout(() => this._sendMults(), 150);
       });
 
-      container.appendChild(wrap);
+      row.appendChild(wrap);
+
+      const help = this.argHelp && this.argHelp[key];
+      if (help) {
+        const h = document.createElement('span');
+        h.className = 'dd-form-help';
+        h.textContent = help;
+        row.appendChild(h);
+      }
+
+      container.appendChild(row);
     }
 
     _updateFamilyClass() {
@@ -444,9 +505,10 @@
 
     // -- Data + rendering entry point -----------------------------------------
 
-    setData(columns, data, config) {
+    setData(columns, data, config, args) {
       this.columns = columns || [];
       this.config = config || {};
+      if (args) this.argHelp = args;
 
       // Convert column-oriented data to row-oriented array
       // Data may arrive as: JSON string (pre-encoded), column object, or row array
@@ -770,6 +832,7 @@
 
       const ct = this.config.chart_type;
       const isLine = ct === 'line';
+      const isScatter = ct === 'scatter';
       const palette = BLOCKR_PALETTE;
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
 
@@ -830,6 +893,21 @@
       const yAxisType = this._axisTypeFor(y_col);
       const xCats = xAxisType === 'category' ? this._orderedCategories(x_col) : null;
       const yCats = yAxisType === 'category' ? this._orderedCategories(y_col) : null;
+      // Axis-position index for a categorical x. Line series must be drawn
+      // in axis order, not raw row order, or the polyline zig-zags back
+      // and forth between visits (e.g. AVISIT ordered by AVISITN).
+      const xOrder = xCats
+        ? new Map(xCats.map((c, i) => [String(c), i]))
+        : null;
+      const sortLinePts = (pts) => {
+        if (!isLine) return;
+        if (xOrder) {
+          pts.sort((a, b) =>
+            (xOrder.get(String(a[0])) ?? 0) - (xOrder.get(String(b[0])) ?? 0));
+        } else if (xAxisType !== 'category') {
+          pts.sort((a, b) => a[0] - b[0]);
+        }
+      };
 
       const encodeX = (v) => xAxisType === 'category' ? String(v ?? '') : Number(v);
       const encodeY = (v) => yAxisType === 'category' ? String(v ?? '') : Number(v);
@@ -914,9 +992,15 @@
 
         // Helper: error-bar custom series builder. Renders vertical segments
         // (loCol, hiCol) at each x for one group.
+        // CI and smoother overlays share their parent line's `name` (not
+        // "<name> (CI)" / "<name> (lm)") so ECharts collapses them into a
+        // single legend entry per series — one click toggles line +
+        // whiskers + fit together. legendHoverLink off so legend hover
+        // doesn't try to emphasize these (silent) overlay series.
         const mkErrBarSeries = (name, errPts, color) => ({
           type: 'custom',
-          name: name + ' (CI)',
+          name: name,
+          legendHoverLink: false,
           silent: true,
           z: 1,
           data: errPts,  // [[x, lo, hi], ...]
@@ -944,7 +1028,8 @@
             const ln = smootherLine(name);
             if (ln) series.push({
               type: 'line',
-              name: (name || 'fit') + ' (' + smoother + ')',
+              name: name || 'fit',
+              legendHoverLink: false,
               data: ln,
               silent: true,
               showSymbol: false,
@@ -952,8 +1037,10 @@
               z: 2
             });
           }
-          // Error-bar overlay (line charts with lo_col/hi_col)
-          if (isLine && loCol && hiCol && rawRows && rawRows.length) {
+          // Error-bar overlay: CI whiskers for line charts AND scatter
+          // (a coefficient / forest plot is a scatter with lo/hi whiskers).
+          if ((isLine || isScatter) && loCol && hiCol &&
+              rawRows && rawRows.length) {
             const errPts = rawRows
               .filter(r => r[x_col] != null && r[loCol] != null && r[hiCol] != null)
               .map(r => [encodeX(r[x_col]), Number(r[loCol]), Number(r[hiCol])]);
@@ -964,7 +1051,7 @@
         if (seriesLevels.length === 0) {
           const grpRows = rows.filter(r => r[x_col] != null && r[y_col] != null);
           const pts = grpRows.map(r => [encodeX(r[x_col]), encodeY(r[y_col])]);
-          if (isLine && xAxisType !== 'category') pts.sort((a, b) => a[0] - b[0]);
+          sortLinePts(pts);
           series.push(mkSeries(undefined, pts, palette[0]));
           pushOverlays(undefined, pts, palette[0], grpRows);
         } else {
@@ -972,7 +1059,7 @@
             const cl = seriesLevels[ci];
             const grpRows = rows.filter(r => String(r[splitCol]) === cl && r[x_col] != null && r[y_col] != null);
             const pts = grpRows.map(r => [encodeX(r[x_col]), encodeY(r[y_col])]);
-            if (isLine && xAxisType !== 'category') pts.sort((a, b) => a[0] - b[0]);
+            sortLinePts(pts);
             const color = colorForLevel(cl, ci);
             series.push(mkSeries(cl, pts, color));
             pushOverlays(cl, pts, color, grpRows);
@@ -1086,7 +1173,7 @@
         const option = {
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
           textStyle: { fontFamily: BLOCKR_FONT },
-          tooltip: { trigger: 'item', formatter: (p) => `${x_col}: ${p.value[0]}<br>${y_col}: ${p.value[1]}` + (p.seriesName ? `<br>${color_by || 'series'}: ${p.seriesName}` : ''), confine: true },
+          tooltip: { trigger: 'item', formatter: (p) => `${x_col}: ${ddNum(p.value[0])}<br>${y_col}: ${ddNum(p.value[1])}` + (p.seriesName ? `<br>${color_by || 'series'}: ${p.seriesName}` : ''), confine: true },
           // Always set explicitly; leaving legend undefined lets echarts
           // auto-render one per series, which eats the plot area when
           // series_by is high-cardinality (e.g. USUBJID).
@@ -1099,7 +1186,7 @@
           grid: { left: 50, right: 5, top: 30, bottom: showLegend ? 55 : 30 },
           xAxis: xAxisSpec,
           yAxis: yAxisSpec,
-          toolbox: TOOLBOX,
+          toolbox: mkToolbox(brushable),
           // brush.toolbox lists the brush types REGISTERED for use. Must
           // include the types we activate (rect for scatter, lineX for line)
           // and the types referenced by toolbox.feature.brush.type, otherwise
@@ -1128,16 +1215,31 @@
         }
 
         // Click → categorical filter on the series. Filter column is
-        // series_by when set (e.g. USUBJID), otherwise color_by, otherwise
-        // USUBJID as a sensible default.
+        // series_by when set, otherwise color_by, otherwise the resolved
+        // id column (configured `id_col`, or `USUBJID` if present). On a
+        // plain scatter with no series split and no id column, a point
+        // click is a no-op — emitting a filter on an absent column would
+        // blow up downstream with "Column not found".
         chart.on('click', (params) => {
           if (params.componentType !== 'series') return;
-          const col = series_by || color_by || 'USUBJID';
-          const val = params.seriesName;
-          if (!val) return;
-          this._selectedColumn = col;
-          this._selected = val;
-          this._sendCategoricalFilter(col, [val]);
+          const col = series_by || color_by || this._resolveIdCol();
+          if (col) {
+            const val = params.seriesName;
+            if (!val) return;
+            this._selectedColumn = col;
+            this._selected = val;
+            this._sendCategoricalFilter(col, [val]);
+            this._updateStatus();
+            return;
+          }
+          // No entity/id column resolves: drill to the clicked
+          // observation by its coordinates — filter the row(s) at this
+          // exact (x, y) point. Works on any scatter/line.
+          const v = params.value;
+          if (!Array.isArray(v) || v.length < 2 || !x_col || !y_col) return;
+          this._selectedColumn = `${x_col}, ${y_col}`;
+          this._selected = `${ddNum(v[0])}, ${ddNum(v[1])}`;
+          this._sendPointFilter(x_col, y_col, v[0], v[1]);
           this._updateStatus();
         });
 
@@ -1232,6 +1334,9 @@
 
     _renderTimeline() {
       const { x_col, x_end_col, y_col, color_by, facet_by, sort_by, series_by } = this.config;
+      // Identity column for click-to-drill on a bar (configured id_col, or
+      // USUBJID if present, else none → bar click won't filter).
+      const idCol = this._resolveIdCol();
       const sortDir = this.config.sort_dir === 'desc' ? -1 : 1;
       if (!x_col || !y_col) {
         this.chartGrid.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">Select X (start) and Y (term) columns</p></div>';
@@ -1342,7 +1447,8 @@
             e = s;
           }
           barData.push({
-            value: [s, e, lane, term, r[color_by] ?? '', r['USUBJID'] ?? '',
+            value: [s, e, lane, term, r[color_by] ?? '',
+                    idCol ? (r[idCol] ?? '') : '',
                     r[series_by] ?? '']
           });
         }
@@ -1491,10 +1597,10 @@
           const v = params.value;
           if (!v) return;
           const subj = v[5];
-          if (!subj) return;
-          this._selectedColumn = 'USUBJID';
+          if (!subj || !idCol) return;
+          this._selectedColumn = idCol;
           this._selected = String(subj);
-          this._sendCategoricalFilter('USUBJID', [String(subj)]);
+          this._sendCategoricalFilter(idCol, [String(subj)]);
           this._updateStatus();
         });
       }
@@ -1610,12 +1716,27 @@
       }
     }
 
+    // Resolve the per-entity identity column used by click-to-drill on
+    // trajectory series and gantt bars. Priority: an explicitly configured
+    // `id_col`, else `USUBJID` if that column happens to be present
+    // (clinical SDTM/ADaM data — preserves legacy auto-detect), else null.
+    // Returning null makes click-to-drill a no-op rather than emitting a
+    // filter on a column the data doesn't have.
+    _resolveIdCol() {
+      const have = (n) =>
+        n && (this.columns || []).some((c) => c.name === n);
+      const cfg = this.config && this.config.id_col;
+      if (have(cfg)) return cfg;
+      if (have('USUBJID')) return 'USUBJID';
+      return null;
+    }
+
     // -- Communication --------------------------------------------------------
 
     // Emits a categorical filter. If `col` and `values` are provided, they
     // override the default (group_by + current _selected) — used by
     // click-to-filter on trajectory series and gantt bars, where the column
-    // is USUBJID rather than group_by.
+    // is the resolved id column rather than group_by.
     _sendCategoricalFilter(col, values) {
       if (!this.el.id) return;
       const column = col !== undefined ? col : this.config.group_by;
@@ -1625,6 +1746,17 @@
         action: 'filter', filter_type: 'categorical',
         column: column,
         values: vals
+      }, { priority: 'event' });
+    }
+
+    // Emits a point filter: the single observation(s) at an exact (x, y).
+    // Used by click-to-drill on a scatter/line dot when no entity/id
+    // column resolves.
+    _sendPointFilter(xCol, yCol, xVal, yVal) {
+      if (!this.el.id) return;
+      Shiny.setInputValue(this.el.id + '_action', {
+        action: 'filter', filter_type: 'point',
+        x_col: xCol, y_col: yCol, x_val: xVal, y_val: yVal
       }, { priority: 'event' });
     }
 
@@ -1711,7 +1843,7 @@
       }
       if (el._pendingData) {
         const p = el._pendingData;
-        el._block.setData(p.columns, p.data, p.config);
+        el._block.setData(p.columns, p.data, p.config, p.arguments);
         delete el._pendingData;
       }
     }
@@ -1721,7 +1853,7 @@
   Shiny.addCustomMessageHandler('drilldown-data', (msg) => {
     const el = document.getElementById(msg.id);
     if (el?._block) {
-      el._block.setData(msg.columns, msg.data, msg.config);
+      el._block.setData(msg.columns, msg.data, msg.config, msg.arguments);
     } else if (el) {
       el._pendingData = msg;
     } else {
@@ -1729,7 +1861,7 @@
       const t = setInterval(() => {
         n++;
         const el2 = document.getElementById(msg.id);
-        if (el2?._block) { el2._block.setData(msg.columns, msg.data, msg.config); clearInterval(t); }
+        if (el2?._block) { el2._block.setData(msg.columns, msg.data, msg.config, msg.arguments); clearInterval(t); }
         else if (el2) { el2._pendingData = msg; clearInterval(t); }
         if (n > 50) clearInterval(t);
       }, 100);
