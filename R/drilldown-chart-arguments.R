@@ -5,19 +5,20 @@ drilldown_chart_arguments <- function() {
     c(
       chart_type = paste0(
         "Chart type. One of \"bar\", \"pie\", \"treemap\", \"boxplot\" ",
-        "(aggregated — use group_by + metric + agg_fn) or \"scatter\", ",
-        "\"line\" (individual — use x_col + y_col). Default \"bar\"."
+        "(aggregated — use group + metric + agg_fn), \"scatter\", ",
+        "\"line\" (individual — use x + y), or \"gantt\" (timeline — use ",
+        "x + xend + y). Default \"bar\"."
       ),
-      group_by = paste0(
-        "Column to group rows by (aggregated chart types only). ",
-        "Click a group in the chart to filter downstream rows to that value."
+      group = paste0(
+        "Column for the categorical axis (aggregated charts). Names a ",
+        "data column, never a literal."
       ),
-      color_by = paste0(
-        "Column for color/stack encoding. Works with both chart families. ",
-        "null for no color mapping."
+      color = paste0(
+        "Column mapped to colour. All families. Names a data column, ",
+        "never a literal colour. null for no colour mapping."
       ),
-      facet_by = paste0(
-        "Column to facet by — one small panel per level. Optional, both families."
+      facet = paste0(
+        "Column to facet by — one small panel per level. Optional."
       ),
       metric = paste0(
         "Column to aggregate (aggregated charts only). Use \".count\" for ",
@@ -28,34 +29,49 @@ drilldown_chart_arguments <- function() {
         "One of \"count\", \"count_distinct\", \"mean\", \"median\", \"sum\". ",
         "Default \"count\"."
       ),
-      x_col = paste0(
-        "X-axis column (individual chart types: scatter, line). Required for ",
-        "scatter and line."
+      x = paste0(
+        "X-axis column (individual: scatter/line; timeline: interval ",
+        "start). Names a data column."
       ),
-      y_col = paste0(
-        "Y-axis column (individual chart types: scatter, line). Required for ",
-        "scatter and line."
+      y = paste0(
+        "Y-axis column (individual: scatter/line; timeline: the lane, ",
+        "e.g. USUBJID). Names a data column."
       ),
-      series_by = paste0(
+      series = paste0(
         "Column whose distinct values split rows into separate series ",
         "(individual: one line/scatter group per value; timeline: per-bar ",
-        "label). High cardinality is fine. Independent of Color."
+        "label). Splits only — not a colour, not a drill target. ",
+        "Independent of color. High cardinality is fine."
       ),
-      x_end_col = paste0(
-        "Interval end column (timeline only). Rows with no end render as a ",
-        "dot at X."
+      xend = paste0(
+        "Interval end column (timeline only). Rows with no end render as ",
+        "a dot at x."
+      ),
+      label = paste0(
+        "Column written as on-mark text. Optional; default null = no ",
+        "on-mark text. For pie/treemap, null falls back to `group` ",
+        "(a label-less pie is unusable). Label only — does not affect ",
+        "colour, series, or drill."
+      ),
+      drill = paste0(
+        "Column a click filters downstream on. Optional; default null = ",
+        "a click is inert (no filter). When set, clicking a mark emits a ",
+        "categorical filter on this column's value(s) for that mark. For ",
+        "an aggregated chart use a column constant within a group (often ",
+        "`group` itself). This is the only click-to-filter knob; color ",
+        "and series never drive drill."
       ),
       smoother = paste0(
         "Trend overlay for scatter charts. One of \"none\" (default), ",
         "\"lm\" (linear fit) or \"loess\" (local regression)."
       ),
-      lo_col = paste0(
-        "Lower error-band column (individual line only). Set together with ",
-        "Hi to draw a band; numeric only."
+      lo = paste0(
+        "Lower error-band column (individual line only). Set together ",
+        "with hi to draw a band; numeric only."
       ),
-      hi_col = paste0(
-        "Upper error-band column (individual line only). Set together with ",
-        "Lo to draw a band; numeric only."
+      hi = paste0(
+        "Upper error-band column (individual line only). Set together ",
+        "with lo to draw a band; numeric only."
       ),
       line_width_mult = paste0(
         "Line width multiplier for line charts (individual only). 1.0× ",
@@ -66,98 +82,90 @@ drilldown_chart_arguments <- function() {
         "(individual only). 1.0× is the default; range 0.5×–3.0×."
       ),
       filter_type = paste0(
-        "Filter mode for click/brush interaction. \"categorical\" (aggregated ",
-        "charts, click to filter) or \"range\" (individual charts, brush to ",
-        "filter). Default \"categorical\"."
+        "Runtime filter-transport state. Normally left at default ",
+        "\"categorical\"; set by interaction, not at creation."
       ),
       filter_column = paste0(
-        "Currently filtered column (aggregated charts). Usually left null at ",
-        "creation — set at runtime when the user clicks a group."
+        "Runtime filter-transport state. The column the last click ",
+        "filtered on. Usually null at creation."
       ),
       filter_values = paste0(
-        "Currently filtered values (aggregated charts). Array of values kept ",
-        "after the user's click. Usually null at creation."
+        "Runtime filter-transport state. Values kept after the last ",
+        "click. Usually null at creation."
       ),
       filter_range = paste0(
-        "Currently brushed range (individual charts). Object with x_col, ",
-        "y_col, x_range, y_range. Usually null at creation."
+        "Runtime filter-transport state for brush/drag on scatter/line ",
+        "(x_col, y_col, x_range, y_range). Usually null at creation."
       ),
       sort_by = paste0(
-        "Category-axis ordering for aggregated charts (bar/pie/treemap/ ",
-        "boxplot). One of \"alpha\" (default — group name, alphabetical), ",
-        "\"value\" (the computed metric across stacks), or a column name ",
-        "(sorts groups by ascending min of that column). For timeline ",
-        "charts: \"onset\" (default, by min of x_col per term), \"alpha\", ",
-        "or a column name. Ignored for individual (scatter/line) charts."
+        "Category-axis ordering for aggregated charts. \"value\" ",
+        "(default), \"alpha\", or a column name. For timeline: ",
+        "\"onset\" (default), \"alpha\", or a column name. Ignored for ",
+        "individual (scatter/line) charts."
       ),
       sort_dir = paste0(
-        "Direction for `sort_by`. One of \"asc\" (default) or \"desc\". ",
-        "Ignored for individual (scatter/line) charts."
+        "Direction for `sort_by`. One of \"asc\" or \"desc\". Ignored ",
+        "for individual (scatter/line) charts."
       )
     ),
     examples = list(
       chart_type = "scatter",
-      group_by = "Species",
-      color_by = "Species",
-      facet_by = NULL,
+      group = "Species",
+      color = "Species",
+      facet = NULL,
       metric = ".count",
       agg_fn = "count",
-      x_col = "Sepal.Length",
-      y_col = "Sepal.Width",
-      filter_type = "categorical",
-      filter_column = "Species",
-      filter_values = list("setosa"),
-      filter_range = NULL,
+      x = "Sepal.Length",
+      y = "Sepal.Width",
+      series = NULL,
+      label = NULL,
+      drill = "Species",
       sort_by = "value",
       sort_dir = "desc"
     ),
     prompt = paste(
-      "This block renders an interactive chart and also acts as a filter.",
-      "Two chart families share the same block:",
-      "\n\n**Aggregated** (chart_type bar / pie / treemap / boxplot):",
-      "set group_by to the categorical column, agg_fn to the aggregation,",
-      "and metric to the column being aggregated (\".count\" for row counts).",
-      "Clicking a group filters downstream rows to that value.",
-      "\n\n**Individual** (chart_type scatter / line): set x_col and y_col",
-      "to the numeric columns. Brush-dragging a region filters to rows in",
-      "that x/y range.",
-      "\n\nMap common user requests:",
-      "\n- \"scatter plot of X vs Y\" -> chart_type=\"scatter\",",
-      "x_col=\"X\", y_col=\"Y\"",
-      "\n- \"colored by Z\" -> color_by=\"Z\"",
-      "\n- \"faceted by Z\" -> facet_by=\"Z\"",
-      "\n- \"bar chart of counts by X\" -> chart_type=\"bar\",",
-      "group_by=\"X\", metric=\".count\", agg_fn=\"count\"",
-      "\n- \"mean Y by X\" -> chart_type=\"bar\", group_by=\"X\",",
+      "This block renders an interactive chart that can also act as a",
+      "filter. Every aesthetic argument names a DATA COLUMN, never a",
+      "literal value (`color=\"ARM\"` maps the ARM column, it is not the",
+      "colour red). Roles are orthogonal: `color` only colours, `series`",
+      "only splits into series, `label` only writes on-mark text,",
+      "position is `x`/`y`/`xend` or `group`.",
+      "\n\nInteractivity is explicit and opt-in via `drill`. With `drill`",
+      "unset a click does nothing. Set `drill` to the column a click",
+      "should filter downstream on: clicking a mark emits a categorical",
+      "filter on that column's value(s) for the clicked mark. `color`",
+      "and `series` never drive drill.",
+      "\n\nThree chart families share the block (an internal detail that",
+      "never changes what an argument means):",
+      "\n- Aggregated (bar/pie/treemap/boxplot): set `group`, `agg_fn`,",
+      "and `metric` (\".count\" for row counts). To make clicking a bar",
+      "filter to that group, set `drill=\"<the group column>\"`.",
+      "\n- Individual (scatter/line): set `x` and `y`. `series` splits",
+      "into one line/group per value (e.g. `series=\"USUBJID\"`).",
+      "Brush-drag filters to the x/y range (separate from `drill`).",
+      "\n- Timeline (gantt): set `x` (start), `xend` (end), `y` (the",
+      "lane, e.g. USUBJID). To drill to the clicked entity set `drill`",
+      "(e.g. `drill=\"USUBJID\"` to drill the patient lane, or",
+      "`drill=\"AEDECOD\"` to drill the term).",
+      "\n\nMap common requests:",
+      "\n- \"scatter of X vs Y\" -> chart_type=\"scatter\", x=\"X\", y=\"Y\"",
+      "\n- \"coloured by Z\" -> color=\"Z\"",
+      "\n- \"faceted by Z\" -> facet=\"Z\"",
+      "\n- \"bar of counts by X, click filters X\" -> chart_type=\"bar\",",
+      "group=\"X\", metric=\".count\", agg_fn=\"count\", drill=\"X\"",
+      "\n- \"mean Y by X\" -> chart_type=\"bar\", group=\"X\",",
       "metric=\"Y\", agg_fn=\"mean\"",
-      "\n- \"pie of X\" -> chart_type=\"pie\", group_by=\"X\"",
-      "\n- \"boxplot of Y by X\" -> chart_type=\"boxplot\",",
-      "group_by=\"X\", metric=\"Y\"",
-      "\n\nPrefer this block over ggplot_block for tabular data when the",
-      "user will want click/hover/drill-down interaction.",
-      "\n\nLeave filter_column, filter_values, and filter_range at their",
-      "defaults (null) at creation — they're set at runtime by user clicks",
-      "or brushes and cascade to downstream blocks.",
-      "\n\nIMPORTANT — when picking color_by, check the data first:",
-      "if all rows would share the same value (e.g. coloring by `net`",
-      "or `magType` on filtered top-N earthquakes where everything",
-      "uses USGS global standard), the chart degenerates to a single",
-      "color and the encoding wastes a channel. Drop color_by in that",
-      "case, or pick a column with real variation across the rows",
-      "the chart will see (preview the upstream block first if",
-      "unsure).",
-      "\n\n**IMPORTANT — bar/pie/treemap/boxplot ordering is controlled by",
-      "this block's `sort_by` + `sort_dir` params, NOT by an upstream",
-      "arrange_block.** Defaults are sort_by=\"alpha\" + sort_dir=\"asc\",",
-      "i.e. alphabetical by group name. For a 'top N by value' chart,",
-      "set sort_by=\"value\", sort_dir=\"desc\" on this block — and DO NOT",
-      "add an arrange_block upstream just to order the bars (it has no",
-      "effect on the rendered chart). Other allowed sort_by values: a",
-      "column name (sorts groups by ascending min of that column), or",
-      "\"onset\" for timeline charts.",
-      "\n\nFor 'top N by value' workflows, also prefer slice_block with",
-      "type=\"max\", order_by=COL, n=N over the arrange + slice(\"head\")",
-      "pattern — saves a block."
+      "\n- \"label bars with W\" -> label=\"W\"",
+      "\n\nLeave filter_type/filter_column/filter_values/filter_range at",
+      "defaults — they are runtime transport for the emitted filter, not",
+      "creation-time config.",
+      "\n\nWhen picking `color`, check the data: if all visible rows",
+      "share one value the colour channel is wasted — drop `color` or",
+      "pick a column with real variation.",
+      "\n\nBar/pie/treemap/boxplot ordering is `sort_by` + `sort_dir` on",
+      "THIS block, not an upstream arrange_block. \"value\"+\"desc\" for",
+      "top-N by value. For 'top N by value' workflows prefer slice_block",
+      "(type=\"max\", order_by=COL, n=N)."
     )
   )
 }

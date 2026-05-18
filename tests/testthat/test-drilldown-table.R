@@ -38,16 +38,16 @@ test_that("NA cells render as a dash and uncolored", {
   expect_true(grepl("&mdash;|—", h))
 })
 
-test_that("on_click without elem_id emits no action attributes", {
+test_that("drill without elem_id emits no action attributes", {
   h <- as.character(htmltools::renderTags(
-    drilldown_table(df, on_click = "parameter")
+    drilldown_table(df, drill = "parameter")
   )$html)
   expect_false(grepl("data-dt-elem-id", h))
 })
 
-test_that("on_click with elem_id wires the action attributes", {
+test_that("drill with elem_id wires the action attributes", {
   h <- as.character(htmltools::renderTags(
-    drilldown_table(df, on_click = "parameter",
+    drilldown_table(df, drill = "parameter",
                     elem_id = "blk-drilldown_table_block")
   )$html)
   expect_true(grepl("data-dt-elem-id", h))
@@ -92,14 +92,14 @@ test_that("digits controls numeric formatting", {
 test_that("block state round-trips constructor args", {
   blk <- new_drilldown_table_block(
     color = drilldown_table_color("diverging", domain = c(-1, 1)),
-    on_click = "USUBJID"
+    drill = "USUBJID"
   )
   expect_s3_class(blk, "drilldown_table_block")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
       session$flushReact()
-      expect_equal(session$returned$state$on_click(), "USUBJID")
+      expect_equal(session$returned$state$drill(), "USUBJID")
       expect_equal(session$returned$state$digits(), 2L)
       expect_equal(session$returned$state$filter_type(), "categorical")
     },
@@ -107,7 +107,7 @@ test_that("block state round-trips constructor args", {
   )
 })
 
-test_that("cogwheel config actions update color, on_click, digits", {
+test_that("cogwheel config actions update color, drill, digits", {
   blk <- new_drilldown_table_block(
     color = drilldown_table_color("diverging", domain = c(-1, 1))
   )
@@ -132,13 +132,13 @@ test_that("cogwheel config actions update color, on_click, digits", {
       expect_equal(session$returned$state$color()$domain, c(-1, 1))
 
       es$setInputs(drilldown_table_block_action = list(
-        action = "config", param = "on_click", value = "parameter"
+        action = "config", param = "drill", value = "parameter"
       ))
       es$setInputs(drilldown_table_block_action = list(
         action = "config", param = "digits", value = "0"
       ))
       session$flushReact()
-      expect_equal(session$returned$state$on_click(), "parameter")
+      expect_equal(session$returned$state$drill(), "parameter")
       expect_equal(session$returned$state$digits(), 0L)
     },
     args = list(x = blk, data = list(data = function() df))
@@ -146,7 +146,7 @@ test_that("cogwheel config actions update color, on_click, digits", {
 })
 
 test_that("no click = pass-through, click filters the data", {
-  blk <- new_drilldown_table_block(on_click = "parameter")
+  blk <- new_drilldown_table_block(drill = "parameter")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {

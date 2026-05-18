@@ -1,81 +1,75 @@
 #' Drill-Down Chart Block
 #'
-#' A configurable chart block that also acts as a filter. Three chart families:
+#' A configurable chart that can also act as a filter. Arguments are
+#' grammar-of-graphics aesthetics: each one names a **data column**, never
+#' a literal value. Roles are orthogonal — `color` only colours, `series`
+#' only splits into series, `label` only writes on-mark text, position is
+#' `x`/`y`/`xend` or `group`.
 #'
-#' **Aggregated** (bar, pie, treemap, boxplot): group-by + metric, click a
-#' group to filter the raw rows behind it.
+#' Interactivity is explicit and opt-in via `drill`. A click identifies a
+#' mark; the mark maps to one or more source rows; the downstream filter
+#' is `drill %in% (distinct values of drill over those rows)`. When
+#' `drill` is unset the click is inert (no filter emitted). Brush / drag
+#' range selection on scatter/line is a separate gesture and is unchanged.
 #'
-#' **Individual** (scatter, line): x/y columns, brush-drag a region to filter
-#' rows within that range. Clicking a line or a scatter dot emits a
-#' categorical filter on its series (`series_by` when set, otherwise
-#' `color_by`). When neither is set, a click instead drills to the
-#' clicked observation itself — filtering the row(s) at that exact
-#' (x, y) point. Useful for "one dot per entity → click to drill to
-#' that entity" patterns (e.g. one dot per policy in a property
-#' workbench, click → filter downstream blocks to that single policy).
+#' Three chart families share this block (an internal render-dispatch
+#' detail that never changes what an argument means):
+#' aggregated (bar, pie, treemap, boxplot), individual (scatter, line),
+#' timeline (gantt).
 #'
-#' **Timeline** (gantt): interval rows with start / optional end and a
-#' categorical y axis (e.g. AE term). Clicking a bar emits a categorical
-#' filter on `series_by` (else `color_by`); with neither set the click is
-#' a no-op. `sort_by` controls y-axis category ordering.
-#'
-#' @param group_by Column to group by (aggregated charts)
-#' @param color_by Column to color/stack by (optional, both families)
-#' @param facet_by Column to facet by (optional, both families)
-#' @param metric Column for metric (".count" for row count, aggregated only)
+#' @param group Column for the categorical axis (aggregated charts)
+#' @param color Column mapped to colour (optional, all families)
+#' @param facet Column to facet by — one small panel per level (optional)
+#' @param metric Column for the metric (".count" for row count,
+#'   aggregated only)
 #' @param agg_fn Aggregation: `"count"`, `"count_distinct"`, `"mean"`,
 #'   `"median"`, `"sum"`, `"min"`, `"max"`
-#' @param chart_type Chart type: "bar", "scatter", "line", "pie", "treemap",
-#'   "boxplot", "gantt"
-#' @param x_col X-axis column (individual / timeline charts)
-#' @param y_col Y-axis column (individual / timeline charts)
-#' @param series_by Column whose distinct values define separate series in
-#'   the individual family (e.g. `"USUBJID"` for one line per patient).
-#'   Independent from `color_by`: `series_by` controls how rows are split
-#'   into series; `color_by` controls how those series are colored. High
-#'   cardinality (hundreds of patients) is expected — lines degrade to low
-#'   opacity automatically. When `series_by` is unset, the chart falls
-#'   back to splitting by `color_by` (legacy behavior).
-#' @param x_end_col Interval end column (timeline only; NA rows render as
-#'   dots at `x_col`)
-#' @param sort_by Category ordering on the axis. The allowed values depend
-#'   on the chart family:
-#'   * Aggregated: `"value"` (computed metric, default), `"alpha"` (group
-#'     name), or a column name (ascending min of that column per group).
-#'   * Timeline: `"onset"` (default — by ascending min of `x_col` per term),
-#'     `"alpha"`, or a column name.
-#'   * Individual: ignored (points plotted in raw order).
-#' @param sort_dir `"asc"` or `"desc"`. Reverses the ordering produced by
-#'   `sort_by`. When unset, defaults to `"desc"` for aggregated charts and
-#'   `"asc"` for timelines. Ignored by individual charts.
-#' @param filter_type Filter mode: "categorical" or "range"
-#' @param filter_column Currently filtered column (aggregated, set by click)
-#' @param filter_values Currently filtered values (aggregated, set by click)
-#' @param filter_range Range filter list with x_col, y_col, x_range, y_range
-#'   (individual, set by brush)
-#' @param filter_point Point filter list with x_col, y_col, x_val, y_val
-#'   (individual scatter/line, set by clicking a single dot when no
-#'   entity/id column resolves — drills to the row(s) at that point)
-#' @param line_width_mult Multiplier on the default line width for line charts.
-#'   Defaults to `1.0`. Range `0.5`–`3.0`. Applies to the individual family only.
-#' @param dot_size_mult Multiplier on the default marker size (scatter points
-#'   and line markers). Defaults to `1.0`. Range `0.5`–`3.0`. Applies to the
-#'   individual family only.
+#' @param chart_type Chart type: "bar", "scatter", "line", "pie",
+#'   "treemap", "boxplot", "gantt"
+#' @param x X-axis column (individual / timeline charts)
+#' @param y Y-axis column (individual / timeline charts)
+#' @param series Column whose distinct values split rows into separate
+#'   series (individual: one line/scatter group per value; timeline:
+#'   per-bar label). Independent of `color`. High cardinality is fine.
+#' @param xend Interval end column (timeline only; NA rows render as
+#'   dots at `x`)
+#' @param label Column whose value is written on each mark. Default unset
+#'   (no on-mark text). For `pie`/`treemap`, when unset the label falls
+#'   back to `group` (a label-less pie is unusable).
+#' @param drill Column a click filters downstream on. Default unset (a
+#'   click is inert). When set, clicking a mark emits a categorical
+#'   filter on this column's value(s) for the clicked mark. For an
+#'   aggregated chart this should be a column constant within a group.
+#' @param sort_by Category ordering on the axis. Allowed values depend on
+#'   the chart family:
+#'   * Aggregated: `"value"` (default), `"alpha"`, or a column name.
+#'   * Timeline: `"onset"` (default), `"alpha"`, or a column name.
+#'   * Individual: ignored.
+#' @param sort_dir `"asc"` or `"desc"`. Reverses the `sort_by` ordering.
+#' @param filter_type,filter_column,filter_values,filter_range,filter_point
+#'   Runtime click/brush filter state (transport for the emitted filter;
+#'   normally left at defaults at creation).
+#' @param line_width_mult Multiplier on the default line width for line
+#'   charts. Default `1.0`. Range `0.5`–`3.0`. Individual family only.
+#' @param dot_size_mult Multiplier on the default marker size. Default
+#'   `1.0`. Range `0.5`–`3.0`. Individual family only.
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
 #' @return A transform block of class `drilldown_chart_block`
 #' @export
 new_drilldown_chart_block <- function(
-    group_by = NULL,
-    color_by = NULL,
-    facet_by = NULL,
+    group = NULL,
+    color = NULL,
+    facet = NULL,
     metric = ".count",
     agg_fn = "count",
     chart_type = "bar",
-    x_col = NULL,
-    y_col = NULL,
-    series_by = NULL,
-    x_end_col = NULL,
+    x = NULL,
+    y = NULL,
+    series = NULL,
+    xend = NULL,
+    label = NULL,
+    drill = NULL,
     sort_by = NULL,
     sort_dir = NULL,
     filter_type = "categorical",
@@ -89,8 +83,8 @@ new_drilldown_chart_block <- function(
     ref_x = NULL,
     ref_y = NULL,
     smoother = "none",
-    lo_col = NULL,
-    hi_col = NULL,
+    lo = NULL,
+    hi = NULL,
     ...) {
 
   blockr.core::new_transform_block(
@@ -98,21 +92,23 @@ new_drilldown_chart_block <- function(
       shiny::moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
-        # Config state
-        r_group_by <- shiny::reactiveVal(group_by)
-        r_color_by <- shiny::reactiveVal(color_by)
-        r_facet_by <- shiny::reactiveVal(facet_by)
+        # Config state (orthogonal aesthetics)
+        r_group <- shiny::reactiveVal(group)
+        r_color <- shiny::reactiveVal(color)
+        r_facet <- shiny::reactiveVal(facet)
         r_metric <- shiny::reactiveVal(metric)
         r_agg_fn <- shiny::reactiveVal(agg_fn)
         r_chart_type <- shiny::reactiveVal(chart_type)
-        r_x_col <- shiny::reactiveVal(x_col)
-        r_y_col <- shiny::reactiveVal(y_col)
-        r_x_end_col <- shiny::reactiveVal(x_end_col)
+        r_x <- shiny::reactiveVal(x)
+        r_y <- shiny::reactiveVal(y)
+        r_xend <- shiny::reactiveVal(xend)
+        r_series <- shiny::reactiveVal(series)
+        r_label <- shiny::reactiveVal(label)
+        r_drill <- shiny::reactiveVal(drill)
         r_sort_by <- shiny::reactiveVal(sort_by)
         r_sort_dir <- shiny::reactiveVal(sort_dir)
-        r_series_by <- shiny::reactiveVal(series_by)
 
-        # Filter state
+        # Filter state (transport for the emitted downstream filter)
         r_filter_type <- shiny::reactiveVal(filter_type)
         r_filter_column <- shiny::reactiveVal(filter_column)
         r_filter_values <- shiny::reactiveVal(filter_values)
@@ -127,8 +123,8 @@ new_drilldown_chart_block <- function(
         r_ref_x <- shiny::reactiveVal(ref_x)
         r_ref_y <- shiny::reactiveVal(ref_y)
         r_smoother <- shiny::reactiveVal(smoother)
-        r_lo_col <- shiny::reactiveVal(lo_col)
-        r_hi_col <- shiny::reactiveVal(hi_col)
+        r_lo <- shiny::reactiveVal(lo)
+        r_hi <- shiny::reactiveVal(hi)
         r_board_theme <- setup_drilldown_theme_sync(session)
 
         # Column metadata (computed once when data changes)
@@ -148,83 +144,80 @@ new_drilldown_chart_block <- function(
           })
         })
 
-        # Columns needed by the chart (reactive — changes when config changes)
-        r_needed_cols <- shiny::reactive({
+        # Columns needed by the chart (reactive — changes when config
+        # changes). drill and label are included so the browser has the
+        # columns a click filters on / a mark is labelled by.
+        # Columns the current mapping needs (so the whole wide flatten is
+        # never shipped). Reads the config reactiveVals, so the enclosing
+        # observe re-runs when the mapping changes — same as before the
+        # roles refactor.
+        needed_cols <- function(d) {
           needed <- c(
-            r_group_by(), r_color_by(), r_facet_by(), r_metric(),
-            r_x_col(), r_y_col(), r_x_end_col(), r_series_by(),
-            r_lo_col(), r_hi_col()
+            r_group(), r_color(), r_facet(), r_metric(),
+            r_x(), r_y(), r_xend(), r_series(),
+            r_label(), r_drill(), r_lo(), r_hi()
           )
-          # Include the column named by sort_by (keywords are ignored)
           sb <- r_sort_by()
           if (!is.null(sb) && !sb %in% c("onset", "alpha")) {
             needed <- c(needed, sb)
           }
-          d <- data()
-          shiny::req(is.data.frame(d))
-          # When visiting AVISIT, pull AVISITN so JS can order categories.
-          if (identical(r_x_col(), "AVISIT") && "AVISITN" %in% names(d)) {
+          if (!is.data.frame(d)) return(character())
+          if (identical(r_x(), "AVISIT") && "AVISITN" %in% names(d)) {
             needed <- c(needed, "AVISITN")
           }
           needed <- unique(needed)
           needed[!is.null(needed) & needed != "" &
             needed != ".count" & needed %in% names(d)]
-        })
+        }
 
-        # Send data to JS whenever upstream data or needed columns change
-        # NOTE: do NOT read filter reactives here — that would cause
-        # re-sends on every brush/click, destroying the chart state.
+        # Push data + config to JS. Single observe, exactly as before the
+        # roles refactor: this shape is what the blockr.dock lazy-eval
+        # card-probe pairing correctly suspends for hidden panels, so
+        # off-view charts do not render. (The earlier observeEvent +
+        # separate config channel rewrite escaped that gating and was the
+        # AE-tab freeze.) Only the columns the current mapping needs are
+        # shipped, never the whole wide flatten.
         shiny::observe({
           d <- data()
           shiny::req(is.data.frame(d), nrow(d) > 0)
-          col_meta <- r_col_meta()
-          needed <- r_needed_cols()
-          df_send <- d[, needed, drop = FALSE]
-
-          # Pre-encode as columnar JSON (fast, no double-encoding by Shiny).
-          # digits = NA keeps full double precision: click-to-filter sends
-          # a point's value back and we match it server-side, so the
-          # transmitted value must round-trip exactly. The default
-          # digits = 4 rounded it and the equality matched zero rows.
-          data_json <- jsonlite::toJSON(
-            df_send, dataframe = "columns", digits = NA
-          )
-
-          # Read config (not filter state) for initial chart setup
+          needed <- needed_cols(d)
+          df_send <- if (length(needed)) {
+            d[, needed, drop = FALSE]
+          } else {
+            d[0]
+          }
+          col_meta <- lapply(names(d), function(col) {
+            vals <- d[[col]]
+            lbl <- attr(vals, "label")
+            res <- list(
+              name = col,
+              type = if (is.numeric(vals)) "numeric" else "categorical",
+              n_unique = length(unique(vals))
+            )
+            if (!is.null(lbl) && nzchar(lbl)) res$label <- lbl
+            res
+          })
           session$sendCustomMessage("drilldown-data", list(
             id = ns("drilldown_block"),
             columns = col_meta,
-            data = data_json,
+            data = jsonlite::toJSON(df_send, dataframe = "columns",
+                                    digits = NA),
             config = list(
-              group_by = r_group_by(),
-              color_by = r_color_by(),
-              facet_by = r_facet_by(),
-              metric = r_metric(),
-              agg_fn = r_agg_fn(),
-              chart_type = r_chart_type(),
-              x_col = r_x_col(),
-              y_col = r_y_col(),
-              x_end_col = r_x_end_col(),
-              sort_by = r_sort_by(),
+              group = r_group(), color = r_color(), facet = r_facet(),
+              metric = r_metric(), agg_fn = r_agg_fn(),
+              chart_type = r_chart_type(), x = r_x(), y = r_y(),
+              xend = r_xend(), series = r_series(), label = r_label(),
+              drill = r_drill(), sort_by = r_sort_by(),
               sort_dir = r_sort_dir(),
-              series_by = r_series_by(),
               line_width_mult = r_line_width_mult(),
-              dot_size_mult = r_dot_size_mult(),
-              step = r_step(),
-              ref_x = as.list(r_ref_x()),
-              ref_y = as.list(r_ref_y()),
+              dot_size_mult = r_dot_size_mult(), step = r_step(),
+              ref_x = as.list(r_ref_x()), ref_y = as.list(r_ref_y()),
               smoother = r_smoother(),
               smoother_series = tryCatch(compute_smoother_series(
-                d, r_smoother(), r_x_col(), r_y_col(),
-                r_color_by(), r_series_by()
+                d, r_smoother(), r_x(), r_y(), r_color(), r_series()
               ), error = function(e) NULL),
-              lo_col = r_lo_col(),
-              hi_col = r_hi_col()
+              lo = r_lo(), hi = r_hi()
             ),
-            # Per-argument help text for the settings popover. Single
-            # source of truth with the LLM-facing API metadata; see
-            # drilldown_chart_arguments(). as.list() keeps each string a
-            # JSON scalar (avoids the auto_unbox collapse trap).
             arguments = as.list(
               stats::setNames(
                 as.character(drilldown_chart_arguments()),
@@ -243,48 +236,52 @@ new_drilldown_chart_block <- function(
           ))
         })
 
-        # JS -> R: config or filter changes
+        # JS -> R: config or filter changes.
+        #
+        # `_sendConfig()` echoes the FULL config on any popover change,
+        # so most fields arrive unchanged every time. A reactiveVal
+        # invalidates even when set to an identical value; since the
+        # data-send observer transitively depends on these (via
+        # r_needed_cols / the config list), a blind set would re-pump the
+        # whole (potentially large) data frame and re-render every chart
+        # on each echo — a render storm that hangs heavy views. Only
+        # write when the value actually changes. This is the
+        # "prevent R->JS->R loops" guard from
+        # blockr.docs/patterns/js-driven-blocks.md.
+        upd <- function(rv, v) {
+          if (!identical(shiny::isolate(rv()), v)) rv(v)
+        }
+        nn <- function(v) if (is.null(v) || identical(v, "")) NULL else v
+
         shiny::observeEvent(input$drilldown_block_action, {
           msg <- input$drilldown_block_action
           if (is.null(msg)) return()
 
           action <- msg$action
           if (action == "config") {
-            if (!is.null(msg$group_by)) r_group_by(msg$group_by)
-            if (!is.null(msg$color_by)) {
-              r_color_by(if (msg$color_by == "") NULL else msg$color_by)
-            }
-            if (!is.null(msg$facet_by)) {
-              r_facet_by(if (msg$facet_by == "") NULL else msg$facet_by)
-            }
-            if (!is.null(msg$metric)) r_metric(msg$metric)
-            if (!is.null(msg$agg_fn)) r_agg_fn(msg$agg_fn)
-            if (!is.null(msg$chart_type)) r_chart_type(msg$chart_type)
-            if (!is.null(msg$x_col)) r_x_col(msg$x_col)
-            if (!is.null(msg$y_col)) r_y_col(msg$y_col)
-            if (!is.null(msg$x_end_col)) {
-              r_x_end_col(if (msg$x_end_col == "") NULL else msg$x_end_col)
-            }
-            if (!is.null(msg$sort_by)) {
-              r_sort_by(if (msg$sort_by == "") NULL else msg$sort_by)
-            }
-            if (!is.null(msg$sort_dir)) r_sort_dir(msg$sort_dir)
-            if (!is.null(msg$series_by)) {
-              r_series_by(if (msg$series_by == "") NULL else msg$series_by)
-            }
-            if (!is.null(msg$smoother)) r_smoother(msg$smoother)
-            if (!is.null(msg$lo_col)) {
-              r_lo_col(if (msg$lo_col == "") NULL else msg$lo_col)
-            }
-            if (!is.null(msg$hi_col)) {
-              r_hi_col(if (msg$hi_col == "") NULL else msg$hi_col)
-            }
+            if (!is.null(msg$group))      upd(r_group, nn(msg$group))
+            if (!is.null(msg$color))      upd(r_color, nn(msg$color))
+            if (!is.null(msg$facet))      upd(r_facet, nn(msg$facet))
+            if (!is.null(msg$metric))     upd(r_metric, msg$metric)
+            if (!is.null(msg$agg_fn))     upd(r_agg_fn, msg$agg_fn)
+            if (!is.null(msg$chart_type)) upd(r_chart_type, msg$chart_type)
+            if (!is.null(msg$x))          upd(r_x, msg$x)
+            if (!is.null(msg$y))          upd(r_y, msg$y)
+            if (!is.null(msg$xend))       upd(r_xend, nn(msg$xend))
+            if (!is.null(msg$series))     upd(r_series, nn(msg$series))
+            if (!is.null(msg$label))      upd(r_label, nn(msg$label))
+            if (!is.null(msg$drill))      upd(r_drill, nn(msg$drill))
+            if (!is.null(msg$sort_by))    upd(r_sort_by, nn(msg$sort_by))
+            if (!is.null(msg$sort_dir))   upd(r_sort_dir, msg$sort_dir)
+            if (!is.null(msg$smoother))   upd(r_smoother, msg$smoother)
+            if (!is.null(msg$lo))         upd(r_lo, nn(msg$lo))
+            if (!is.null(msg$hi))         upd(r_hi, nn(msg$hi))
           } else if (action == "set_mults") {
             if (!is.null(msg$line_width_mult)) {
-              r_line_width_mult(as.numeric(msg$line_width_mult))
+              upd(r_line_width_mult, as.numeric(msg$line_width_mult))
             }
             if (!is.null(msg$dot_size_mult)) {
-              r_dot_size_mult(as.numeric(msg$dot_size_mult))
+              upd(r_dot_size_mult, as.numeric(msg$dot_size_mult))
             }
           } else if (action == "filter") {
             ft <- msg$filter_type %||% "categorical"
@@ -294,13 +291,10 @@ new_drilldown_chart_block <- function(
               r_filter_values(msg$values)
               r_filter_range(NULL)
               r_filter_point(NULL)
-              r_filter_type(
-                if (!is.null(msg$column) && !is.null(msg$values)) "categorical"
-                else "categorical"
-              )
+              r_filter_type("categorical")
             } else if (ft == "point") {
-              # Click on a single dot with no entity/id column: drill to
-              # the observation(s) at that exact x/y coordinate.
+              # Click on a single dot with no drill column: drill to the
+              # observation(s) at that exact x/y coordinate.
               if (!is.null(msg$x_col) && !is.null(msg$y_col)) {
                 r_filter_column(NULL)
                 r_filter_values(NULL)
@@ -322,8 +316,7 @@ new_drilldown_chart_block <- function(
                 # race — a click handler sent a categorical filter, and
                 # ECharts' brush mode then fired a brushSelected on the
                 # clicked point. Treat as a no-op so the categorical
-                # filter survives. (JS also disables brush when series_by
-                # is set, but this is the belt-and-braces R-side guard.)
+                # filter survives.
                 is_point <- length(xr) == 2L && xr[1L] == xr[2L] &&
                   (is.null(yr) || (length(yr) == 2L && yr[1L] == yr[2L]))
                 if (!is_point) {
@@ -420,18 +413,20 @@ new_drilldown_chart_block <- function(
             }
           }),
           state = list(
-            group_by = r_group_by,
-            color_by = r_color_by,
-            facet_by = r_facet_by,
+            group = r_group,
+            color = r_color,
+            facet = r_facet,
             metric = r_metric,
             agg_fn = r_agg_fn,
             chart_type = r_chart_type,
-            x_col = r_x_col,
-            y_col = r_y_col,
-            x_end_col = r_x_end_col,
+            x = r_x,
+            y = r_y,
+            xend = r_xend,
+            series = r_series,
+            label = r_label,
+            drill = r_drill,
             sort_by = r_sort_by,
             sort_dir = r_sort_dir,
-            series_by = r_series_by,
             filter_type = r_filter_type,
             filter_column = r_filter_column,
             filter_values = r_filter_values,
@@ -443,8 +438,8 @@ new_drilldown_chart_block <- function(
             ref_x = r_ref_x,
             ref_y = r_ref_y,
             smoother = r_smoother,
-            lo_col = r_lo_col,
-            hi_col = r_hi_col
+            lo = r_lo,
+            hi = r_hi
           )
         )
       })
@@ -461,15 +456,15 @@ new_drilldown_chart_block <- function(
     dat_valid = function(data) {
       if (!is.data.frame(data)) stop("Input must be a data frame")
     },
-    allow_empty_state = c("group_by", "color_by", "facet_by", "filter_column",
-      "filter_values", "x_col", "y_col", "x_end_col", "sort_by", "sort_dir",
-      "series_by", "filter_range", "filter_point",
-      "step", "ref_x", "ref_y", "smoother", "lo_col", "hi_col"),
-    external_ctrl = c("group_by", "color_by", "facet_by", "metric", "agg_fn",
-      "chart_type", "x_col", "y_col", "x_end_col", "sort_by", "sort_dir",
-      "series_by", "filter_type", "filter_column", "filter_values",
-      "filter_range", "filter_point", "line_width_mult", "dot_size_mult",
-      "step", "ref_x", "ref_y", "smoother", "lo_col", "hi_col"),
+    allow_empty_state = c("group", "color", "facet", "filter_column",
+      "filter_values", "x", "y", "xend", "series", "label", "drill",
+      "sort_by", "sort_dir", "filter_range", "filter_point",
+      "step", "ref_x", "ref_y", "smoother", "lo", "hi"),
+    external_ctrl = c("group", "color", "facet", "metric", "agg_fn",
+      "chart_type", "x", "y", "xend", "series", "label", "drill",
+      "sort_by", "sort_dir", "filter_type", "filter_column",
+      "filter_values", "filter_range", "filter_point", "line_width_mult",
+      "dot_size_mult", "step", "ref_x", "ref_y", "smoother", "lo", "hi"),
     expr_type = "bquoted",
     class = "drilldown_chart_block",
     ...

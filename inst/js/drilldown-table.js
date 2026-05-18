@@ -193,8 +193,16 @@
       ? Blockr.icons.gear : "⚙";
     header.appendChild(btn);
 
+    // Remove a stale popover orphaned on <body> by a previous render of
+    // this element (the popover is portaled to <body>, see below).
+    var staleP = document.querySelector(
+      '.dd-popover[data-dd-pop-for="' + (window.CSS && CSS.escape
+        ? CSS.escape(elemId) : elemId) + '"]');
+    if (staleP && staleP.parentNode) staleP.parentNode.removeChild(staleP);
+
     var pop = document.createElement("div");
-    pop.className = "blockr-popover";
+    pop.className = "blockr-popover dd-popover";
+    pop.setAttribute("data-dd-pop-for", elemId);
     pop.style.display = "none";
     var title = document.createElement("div");
     title.className = "blockr-popover-label";
@@ -218,7 +226,7 @@
     popRow(pop, "Drill-down",
       mkSelect("blockr-popover-input",
         ["(none)"].concat(cols), onClick,
-        function (v) { sendConfig(elemId, "on_click", v); }),
+        function (v) { sendConfig(elemId, "drill", v); }),
       "Column whose value a row click filters on");
 
     popRow(pop, "Decimals",
@@ -227,20 +235,57 @@
         function (v) { sendConfig(elemId, "digits", v); }),
       "Numeric rounding");
 
+    // Anchor the popover to the gear in viewport coords. The shared CSS
+    // anchors .blockr-popover absolute/right:0 to its offset parent, so
+    // inside a table card it lands below the table, not the gear, and a
+    // Dockview panel's overflow:auto / transform clips or traps it.
+    // Portaling to <body> + position:fixed (same as the drilldown chart
+    // and blockr-select) escapes both.
+    function positionPop() {
+      var g = btn.getBoundingClientRect();
+      var vw = window.innerWidth, vh = window.innerHeight;
+      pop.style.position = "fixed";
+      pop.style.right = "auto";
+      pop.style.maxHeight = (vh - 16) + "px";
+      var pw = pop.offsetWidth, ph = pop.offsetHeight;
+      var left = Math.min(g.right, vw - 8) - pw;
+      left = Math.max(8, Math.min(left, vw - pw - 8));
+      var top = g.bottom + 6;
+      if (top + ph > vh - 8) top = Math.max(8, vh - 8 - ph);
+      pop.style.left = left + "px";
+      pop.style.top = top + "px";
+      pop.style.maxHeight = (vh - top - 8) + "px";
+    }
+    var reposition = function () {
+      if (pop.style.display === "block") positionPop();
+    };
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
       var open = pop.style.display === "block";
-      pop.style.display = open ? "none" : "block";
-      btn.classList.toggle("blockr-gear-active", !open);
-    });
-    document.addEventListener("click", function (e) {
-      if (!root.contains(e.target)) {
+      if (open) {
         pop.style.display = "none";
         btn.classList.remove("blockr-gear-active");
+        window.removeEventListener("scroll", reposition, true);
+        window.removeEventListener("resize", reposition);
+      } else {
+        pop.style.display = "block";
+        btn.classList.add("blockr-gear-active");
+        positionPop();
+        requestAnimationFrame(positionPop);
+        window.addEventListener("scroll", reposition, true);
+        window.addEventListener("resize", reposition);
+      }
+    });
+    document.addEventListener("click", function (e) {
+      if (!pop.contains(e.target) && !btn.contains(e.target)) {
+        pop.style.display = "none";
+        btn.classList.remove("blockr-gear-active");
+        window.removeEventListener("scroll", reposition, true);
+        window.removeEventListener("resize", reposition);
       }
     });
 
-    root.insertBefore(pop, root.firstChild);
+    document.body.appendChild(pop);
     root.insertBefore(header, root.firstChild);
   }
 

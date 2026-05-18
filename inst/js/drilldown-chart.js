@@ -54,7 +54,7 @@
   // brush icons only render on charts that actually have a `brush`
   // component, so this is inert for bar/pie/treemap/boxplot/gantt.
   // Base toolbox WITHOUT brush — bar/pie/treemap/boxplot/gantt and any
-  // non-brushable scatter/line (categorical x, or series_by set) get no
+  // non-brushable scatter/line (categorical x, or series set) get no
   // brush icon, so the button is never a dead control.
   const TOOLBOX = {
     show: true,
@@ -157,6 +157,11 @@
     }
 
     _buildDOM() {
+      // The popover is portaled to <body> (see below); a re-render of the
+      // widget would otherwise orphan the old one. Remove it first.
+      if (this.popoverEl && this.popoverEl.parentNode) {
+        this.popoverEl.parentNode.removeChild(this.popoverEl);
+      }
       this.el.innerHTML = '';
 
       // Card wrapper (for popover positioning)
@@ -184,11 +189,15 @@
       // The card itself shows only the result + its direct interactions.
       // See blockr.docs design-system/components/blockr-popover.md.
 
-      // Popover (right-anchored, same as blockr.dplyr)
+      // Popover. Portaled to <body> so it escapes Dockview's transformed
+      // panels (a transformed ancestor traps position:fixed, and the
+      // panel's overflow:auto clips an absolute popover). Same pattern as
+      // blockr-select's dropdown. The `dd-popover` class carries all the
+      // styling that used to be scoped under .drilldown-chart-container.
       this.popoverEl = document.createElement('div');
-      this.popoverEl.className = 'blockr-popover';
+      this.popoverEl.className = 'blockr-popover dd-popover';
       this.popoverEl.style.display = 'none';
-      this.card.appendChild(this.popoverEl);
+      document.body.appendChild(this.popoverEl);
 
       // Close popover on outside click
       document.addEventListener('click', (e) => {
@@ -385,39 +394,47 @@
       // ----- Mapping (which columns the chart reads) -----
 
       // Aggregated: Group by
-      this._addSelect(pop, 'Group', 'group_by',
-        ['(none)', ...allCols.map(colOpt)], cfg.group_by || '(none)',
+      this._addSelect(pop, 'Group', 'group',
+        ['(none)', ...allCols.map(colOpt)], cfg.group || '(none)',
         'dd-cfg-aggregated');
 
       // Individual + Timeline: X / Y. For timeline, Y may be categorical
       // (e.g. an AE term), so it is offered all columns.
-      this._addSelect(pop, 'X', 'x_col',
-        allCols.map(colOpt), cfg.x_col, 'dd-cfg-xy');
+      this._addSelect(pop, 'X', 'x',
+        allCols.map(colOpt), cfg.x, 'dd-cfg-xy');
       const yOpts = this._family() === 'timeline' ? allCols : nums;
-      this._addSelect(pop, 'Y', 'y_col',
-        yOpts.map(colOpt), cfg.y_col, 'dd-cfg-xy');
+      this._addSelect(pop, 'Y', 'y',
+        yOpts.map(colOpt), cfg.y, 'dd-cfg-xy');
 
       // Series: splits rows into separate lines/scatter groups
       // (individual) or labels individual bars (timeline). Independent
       // of Color. High cardinality is fine.
-      this._addSelect(pop, 'Series', 'series_by',
-        ['(none)', ...allCols.map(colOpt)], cfg.series_by || '(none)',
+      this._addSelect(pop, 'Series', 'series',
+        ['(none)', ...allCols.map(colOpt)], cfg.series || '(none)',
         'dd-cfg-individual');
-      this._addSelect(pop, 'Series', 'series_by',
-        ['(none)', ...allCols.map(colOpt)], cfg.series_by || '(none)',
+      this._addSelect(pop, 'Series', 'series',
+        ['(none)', ...allCols.map(colOpt)], cfg.series || '(none)',
         'dd-cfg-timeline');
 
       // Timeline only: X end (interval end column)
-      this._addSelect(pop, 'X end', 'x_end_col',
-        ['(none)', ...allCols.map(colOpt)], cfg.x_end_col || '(none)',
+      this._addSelect(pop, 'X end', 'xend',
+        ['(none)', ...allCols.map(colOpt)], cfg.xend || '(none)',
         'dd-cfg-timeline');
 
       // Shared: Color, Facet
-      this._addSelect(pop, 'Color', 'color_by',
-        ['(none)', ...allCols.map(colOpt)], cfg.color_by || '(none)');
-      this._addSelect(pop, 'Facet', 'facet_by',
+      this._addSelect(pop, 'Color', 'color',
+        ['(none)', ...allCols.map(colOpt)], cfg.color || '(none)');
+      this._addSelect(pop, 'Facet', 'facet',
         ['(none)', ...cats.filter(x => x.n_unique <= 10).map(colOpt)],
-        cfg.facet_by || '(none)');
+        cfg.facet || '(none)');
+
+      // Shared: Label (on-mark text) and Drill (click-to-filter). Both
+      // optional; default (none). Orthogonal — neither affects colour or
+      // series, and only Drill makes a click filter downstream.
+      this._addSelect(pop, 'Label', 'label',
+        ['(none)', ...allCols.map(colOpt)], cfg.label || '(none)');
+      this._addSelect(pop, 'Drill', 'drill',
+        ['(none)', ...allCols.map(colOpt)], cfg.drill || '(none)');
 
       // ----- Encoding (aggregated only) -----
       this._addSelect(pop, 'Metric', 'metric',
@@ -448,11 +465,11 @@
         ['none', 'lm', 'loess'], cfg.smoother || 'none', 'dd-cfg-xy');
 
       // Individual line: optional error-band columns (numeric; set both)
-      this._addSelect(pop, 'Lo', 'lo_col',
-        ['(none)', ...nums.map(colOpt)], cfg.lo_col || '(none)',
+      this._addSelect(pop, 'Lo', 'lo',
+        ['(none)', ...nums.map(colOpt)], cfg.lo || '(none)',
         'dd-cfg-xy');
-      this._addSelect(pop, 'Hi', 'hi_col',
-        ['(none)', ...nums.map(colOpt)], cfg.hi_col || '(none)',
+      this._addSelect(pop, 'Hi', 'hi',
+        ['(none)', ...nums.map(colOpt)], cfg.hi || '(none)',
         'dd-cfg-xy');
 
       // Line width + dot size multipliers (individual only)
@@ -518,10 +535,16 @@
 
     _updateFamilyClass() {
       const family = this._family();
-      this.el.classList.remove(
-        'dd-family-aggregated', 'dd-family-individual', 'dd-family-timeline'
-      );
+      const fams = ['dd-family-aggregated', 'dd-family-individual',
+        'dd-family-timeline'];
+      this.el.classList.remove(...fams);
       this.el.classList.add('dd-family-' + family);
+      // The popover lives on <body> (portaled), so the family-visibility
+      // rules must key off a class on the popover itself, not an ancestor.
+      if (this.popoverEl) {
+        this.popoverEl.classList.remove(...fams);
+        this.popoverEl.classList.add('dd-family-' + family);
+      }
     }
 
     // -- Data + rendering entry point -----------------------------------------
@@ -553,34 +576,34 @@
 
       const fam = this._family();
       if (fam === 'aggregated') {
-        if (!this.config.group_by && this.columns.length > 0) {
+        if (!this.config.group && this.columns.length > 0) {
           const cat = this.columns.find(c => c.type === 'categorical' && c.n_unique <= 30);
-          this.config.group_by = cat ? cat.name : this.columns[0].name;
+          this.config.group = cat ? cat.name : this.columns[0].name;
         }
         if (!this.config.metric) this.config.metric = '.count';
         if (!this.config.agg_fn) this.config.agg_fn = 'count';
         if (!this.config.sort_by) this.config.sort_by = 'value';
         if (!this.config.sort_dir) this.config.sort_dir = 'desc';
       } else if (fam === 'timeline') {
-        if (!this.config.x_col && this.columns.length > 0) {
+        if (!this.config.x && this.columns.length > 0) {
           const num = this.columns.find(c => c.type === 'numeric');
-          this.config.x_col = num ? num.name : this.columns[0].name;
+          this.config.x = num ? num.name : this.columns[0].name;
         }
-        if (!this.config.y_col) {
+        if (!this.config.y) {
           const cat = this.columns.find(c => c.type === 'categorical' && c.n_unique > 1);
-          this.config.y_col = cat ? cat.name : this.columns[0]?.name;
+          this.config.y = cat ? cat.name : this.columns[0]?.name;
         }
         if (!this.config.sort_by) this.config.sort_by = 'onset';
         if (!this.config.sort_dir) this.config.sort_dir = 'asc';
       } else {
-        if (!this.config.x_col && this.columns.length > 0) {
+        if (!this.config.x && this.columns.length > 0) {
           const num = this.columns.find(c => c.type === 'numeric');
-          this.config.x_col = num ? num.name : this.columns[0].name;
+          this.config.x = num ? num.name : this.columns[0].name;
         }
-        if (!this.config.y_col) {
+        if (!this.config.y) {
           const nums = this.columns.filter(c => c.type === 'numeric');
-          const other = nums.find(c => c.name !== this.config.x_col);
-          this.config.y_col = other ? other.name : (nums[0] ? nums[0].name : this.columns[0]?.name);
+          const other = nums.find(c => c.name !== this.config.x);
+          this.config.y = other ? other.name : (nums[0] ? nums[0].name : this.columns[0]?.name);
         }
       }
 
@@ -597,14 +620,14 @@
     // -- Aggregation ----------------------------------------------------------
 
     _aggregate() {
-      const { group_by, color_by, facet_by, metric, agg_fn } = this.config;
+      const { group, color, facet, metric, agg_fn } = this.config;
       if (this.data.length === 0) return [];
 
       const groups = {};
       for (const row of this.data) {
-        const gv = group_by ? String(row[group_by] ?? '') : 'Total';
-        const cv = color_by ? String(row[color_by] ?? '') : '__all__';
-        const fv = facet_by ? String(row[facet_by] ?? '') : '__all__';
+        const gv = group ? String(row[group] ?? '') : 'Total';
+        const cv = color ? String(row[color] ?? '') : '__all__';
+        const fv = facet ? String(row[facet] ?? '') : '__all__';
         const key = fv + '|||' + gv + '|||' + cv;
         if (!groups[key]) groups[key] = { facet: fv, group: gv, color: cv, values: [], rows: [] };
         groups[key].rows.push(row);
@@ -640,34 +663,34 @@
 
       const fam = this._family();
 
-      // Guard: color_by with too many distinct levels renders an unreadable
-      // legend. color_by means "map column values to colors" — a small
+      // Guard: color with too many distinct levels renders an unreadable
+      // legend. color means "map column values to colors" — a small
       // palette has ~7 readable colors, 15 is a hard ceiling. For splitting
-      // data into many series (one per patient), use `series_by` instead.
+      // data into many series (one per patient), use `series` instead.
       const MAX_COLOR_LEVELS = 15;
-      if (this.config.color_by) {
-        const nColors = new Set(this.data.map(r => r[this.config.color_by])).size;
+      if (this.config.color) {
+        const nColors = new Set(this.data.map(r => r[this.config.color])).size;
         if (nColors > MAX_COLOR_LEVELS) {
-          // Aggregated: no series_by escape hatch, hard stop.
-          // Individual/timeline: nudge the user toward series_by (or a
+          // Aggregated: no series escape hatch, hard stop.
+          // Individual/timeline: nudge the user toward series (or a
           // lower-cardinality grouping column like arm).
           const hint = fam === 'aggregated'
             ? `Pick a column with \u2264${MAX_COLOR_LEVELS} categories.`
-            : `Use <code>series_by</code> to split into series (e.g. USUBJID); keep <code>color_by</code> for low-cardinality grouping (e.g. ARM).`;
+            : `Use <code>series</code> to split into series (e.g. USUBJID); keep <code>color</code> for low-cardinality grouping (e.g. ARM).`;
           this.chartGrid.innerHTML = `<div class="vd-empty-state"><p class="vd-empty-text">Too many color levels (${nColors}). ${hint}</p></div>`;
           return;
         }
       }
-      // Guard: a mapped column that isn't in the data produces a silently
-      // empty chart (e.g. group_by present but Metric absent -> every bar
-      // aggregates to 0). Say so instead of drawing nothing — an upstream
-      // rename/flatten/pivot is the usual cause.
+
+      // Guard (restored — present pre-refactor): a mapped column not in
+      // the data means nothing to draw; bail cheaply instead of running
+      // the full (expensive) render.
       const cfg = this.config;
       const colSet = new Set((this.columns || []).map(c => c.name));
       const req = fam === 'aggregated'
-        ? [['Group', cfg.group_by],
+        ? [['Group', cfg.group],
            ['Metric', cfg.metric !== '.count' ? cfg.metric : null]]
-        : [['X', cfg.x_col], ['Y', cfg.y_col]];
+        : [['X', cfg.x], ['Y', cfg.y]];
       const missing = req
         .filter(([, v]) => v && !colSet.has(v))
         .map(([lbl, v]) => `${lbl} = "${v}"`);
@@ -723,7 +746,7 @@
           return groups.sort((a, b) => (totals[a] - totals[b]) * sortDir);
         }
         // Column name: look up each group's min over the raw data.
-        const groupCol = this.config.group_by;
+        const groupCol = this.config.group;
         if (!groupCol) return groups.sort((a, b) => a.localeCompare(b) * sortDir);
         const mins = {};
         for (const r of this.data) {
@@ -781,7 +804,14 @@
           if (!clickedGroup) return;
           this._selected = this._selected === clickedGroup ? null : clickedGroup;
           this._updateHighlight();
-          this._sendCategoricalFilter();
+          if (this._selected == null) { this._sendClearFilter(); return; }
+          // The clicked group's source rows -> _emitDrill (inert unless
+          // `drill` is set; the family no longer auto-drills by group).
+          const g = this.config.group, fc = this.config.facet;
+          const rows = (this.data || []).filter(r =>
+            String(r[g]) === String(clickedGroup) &&
+            (facet === '__all__' || !fc || String(r[fc]) === String(facet)));
+          this._emitDrill(rows);
         });
       }
       this._updateHighlight();
@@ -856,7 +886,7 @@
     }
 
     _buildBoxplot(groups, palette, ax) {
-      const groupBy = this.config.group_by;
+      const groupBy = this.config.group;
       const metric = this.config.metric;
       if (metric === '.count') return null;
       const boxData = groups.map(g => {
@@ -874,8 +904,13 @@
     // -- Individual rendering -------------------------------------------------
 
     _renderIndividual() {
-      const { x_col, y_col, color_by, facet_by, series_by } = this.config;
-      if (!x_col || !y_col) {
+      // `series` (the config column) is aliased to `seriesCol` so it cannot
+      // be shadowed by the local ECharts `const series = []` array built
+      // below. The collision previously turned `r[series]` into
+      // `r[<echarts-array-stringified>]` (always undefined) in the
+      // useColorByLegend loop, forcing a full data scan per series level.
+      const { x, y, color, facet, series: seriesCol } = this.config;
+      if (!x || !y) {
         this.chartGrid.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">Select X and Y columns</p></div>';
         return;
       }
@@ -886,15 +921,15 @@
       const palette = BLOCKR_PALETTE;
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
 
-      const facets = facet_by
-        ? [...new Set(this.data.map(r => String(r[facet_by] ?? '')))].sort()
+      const facets = facet
+        ? [...new Set(this.data.map(r => String(r[facet] ?? '')))].sort()
         : ['__all__'];
 
-      // series_by is the primary per-entity splitter. If not set, fall back
-      // to the legacy behaviour: one series per distinct color_by value.
+      // series is the primary per-entity splitter. If not set, fall back
+      // to the legacy behaviour: one series per distinct color value.
       // This keeps existing configs (e.g. aggregated charts that rely on
-      // color_by stacking) working without change.
-      const splitCol = series_by || color_by;
+      // color stacking) working without change.
+      const splitCol = seriesCol || color;
       let seriesLevels = splitCol
         ? [...new Set(this.data.map(r => String(r[splitCol] ?? '')))].sort()
         : [];
@@ -910,16 +945,16 @@
         seriesLevels = seriesLevels.slice(0, TRAJ_HARD_CAP);
       }
 
-      // Color resolver: when series_by is set separately from color_by, look
-      // up each series' color_by value to share a palette color across
+      // Color resolver: when series is set separately from color, look
+      // up each series' color value to share a palette color across
       // series that belong to the same color group (e.g. all patients on
-      // ARM A share one color). When series_by equals color_by or only
-      // color_by is set, index by series level.
+      // ARM A share one color). When series equals color or only
+      // color is set, index by series level.
       const colorForLevel = (level, index) => {
-        if (!color_by) return palette[0];
-        if (series_by && series_by !== color_by) {
-          const rep = this.data.find(r => String(r[series_by]) === level);
-          const cv = rep ? String(rep[color_by] ?? '') : '';
+        if (!color) return palette[0];
+        if (seriesCol && seriesCol !== color) {
+          const rep = this.data.find(r => String(r[seriesCol]) === level);
+          const cv = rep ? String(rep[color] ?? '') : '';
           if (!this._colorLookup) this._colorLookup = {};
           if (!(cv in this._colorLookup)) {
             this._colorLookup[cv] = palette[Object.keys(this._colorLookup).length % palette.length];
@@ -939,10 +974,10 @@
       }
 
       // Axis types from column metadata
-      const xAxisType = this._axisTypeFor(x_col);
-      const yAxisType = this._axisTypeFor(y_col);
-      const xCats = xAxisType === 'category' ? this._orderedCategories(x_col) : null;
-      const yCats = yAxisType === 'category' ? this._orderedCategories(y_col) : null;
+      const xAxisType = this._axisTypeFor(x);
+      const yAxisType = this._axisTypeFor(y);
+      const xCats = xAxisType === 'category' ? this._orderedCategories(x) : null;
+      const yCats = yAxisType === 'category' ? this._orderedCategories(y) : null;
       // Axis-position index for a categorical x. Line series must be drawn
       // in axis order, not raw row order, or the polyline zig-zags back
       // and forth between visits (e.g. AVISIT ordered by AVISITN).
@@ -965,7 +1000,7 @@
       this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
 
       for (const facet of facets) {
-        const rows = facet === '__all__' ? this.data : this.data.filter(r => String(r[facet_by]) === facet);
+        const rows = facet === '__all__' ? this.data : this.data.filter(r => String(r[facet]) === facet);
 
         let container;
         if (singleFacet) {
@@ -1002,8 +1037,8 @@
         const stepMode = this.config.step;  // null | 'start' | 'end' | 'middle'
         const smoother = this.config.smoother || 'none';
         const smootherSeries = this.config.smoother_series || null;
-        const loCol = this.config.lo_col;
-        const hiCol = this.config.hi_col;
+        const loCol = this.config.lo;
+        const hiCol = this.config.hi;
         const refX = Array.isArray(this.config.ref_x) ? this.config.ref_x : [];
         const refY = Array.isArray(this.config.ref_y) ? this.config.ref_y : [];
 
@@ -1092,23 +1127,23 @@
           if ((isLine || isScatter) && loCol && hiCol &&
               rawRows && rawRows.length) {
             const errPts = rawRows
-              .filter(r => r[x_col] != null && r[loCol] != null && r[hiCol] != null)
-              .map(r => [encodeX(r[x_col]), Number(r[loCol]), Number(r[hiCol])]);
+              .filter(r => r[x] != null && r[loCol] != null && r[hiCol] != null)
+              .map(r => [encodeX(r[x]), Number(r[loCol]), Number(r[hiCol])]);
             if (errPts.length) series.push(mkErrBarSeries(name || 'errbar', errPts, color));
           }
         };
 
         if (seriesLevels.length === 0) {
-          const grpRows = rows.filter(r => r[x_col] != null && r[y_col] != null);
-          const pts = grpRows.map(r => [encodeX(r[x_col]), encodeY(r[y_col])]);
+          const grpRows = rows.filter(r => r[x] != null && r[y] != null);
+          const pts = grpRows.map(r => [encodeX(r[x]), encodeY(r[y])]);
           sortLinePts(pts);
           series.push(mkSeries(undefined, pts, palette[0]));
           pushOverlays(undefined, pts, palette[0], grpRows);
         } else {
           for (let ci = 0; ci < seriesLevels.length; ci++) {
             const cl = seriesLevels[ci];
-            const grpRows = rows.filter(r => String(r[splitCol]) === cl && r[x_col] != null && r[y_col] != null);
-            const pts = grpRows.map(r => [encodeX(r[x_col]), encodeY(r[y_col])]);
+            const grpRows = rows.filter(r => String(r[splitCol]) === cl && r[x] != null && r[y] != null);
+            const pts = grpRows.map(r => [encodeX(r[x]), encodeY(r[y])]);
             sortLinePts(pts);
             const color = colorForLevel(cl, ci);
             series.push(mkSeries(cl, pts, color));
@@ -1134,39 +1169,39 @@
         const brushType = isLine ? ['lineX'] : ['rect'];
 
         // Legend only when distinct *colors* are few enough to read. With
-        // series_by ≠ color_by, legend reflects color_by cardinality, not
-        // series_by. If color_by is unset, no legend at all.
-        const legendCardinality = color_by
-          ? new Set(this.data.map(r => String(r[color_by] ?? ''))).size
+        // series ≠ color, legend reflects color cardinality, not
+        // series. If color is unset, no legend at all.
+        const legendCardinality = color
+          ? new Set(this.data.map(r => String(r[color] ?? ''))).size
           : 0;
-        const showLegend = color_by && legendCardinality > 0 && legendCardinality <= 15;
+        const showLegend = color && legendCardinality > 0 && legendCardinality <= 15;
 
-        // When series_by ≠ color_by, build an explicit legend over the
-        // color_by levels (e.g. "F", "M") rather than letting echarts
+        // When series ≠ color, build an explicit legend over the
+        // color levels (e.g. "F", "M") rather than letting echarts
         // enumerate series names (e.g. every USUBJID). The legend item
         // colors come from this._colorLookup populated inside
         // colorForLevel above. We still map clicks to toggle every series
-        // that shares that color_by value.
-        const useColorByLegend = showLegend && color_by && series_by &&
-          series_by !== color_by;
+        // that shares that color value.
+        const useColorByLegend = showLegend && color && seriesCol &&
+          seriesCol !== color;
         let colorByLegendData = null;
         let seriesByColorByVal = null;
         if (useColorByLegend) {
           const lookup = this._colorLookup || {};
           const cbLevels = [...new Set(this.data.map(
-            r => String(r[color_by] ?? '')
+            r => String(r[color] ?? '')
           ))].sort();
           colorByLegendData = cbLevels.map((lvl, i) => ({
             name: lvl,
             itemStyle: { color: lookup[lvl] || palette[i % palette.length] }
           }));
-          // Precompute series-name → color_by-value map used by the
+          // Precompute series-name → color-value map used by the
           // legend click handler to toggle all series in a color group.
           seriesByColorByVal = {};
           for (const lvl of cbLevels) seriesByColorByVal[lvl] = [];
           for (const sl of seriesLevels) {
-            const rep = this.data.find(r => String(r[series_by]) === sl);
-            const cv = rep ? String(rep[color_by] ?? '') : '';
+            const rep = this.data.find(r => String(r[seriesCol]) === sl);
+            const cv = rep ? String(rep[color] ?? '') : '';
             if (cv in seriesByColorByVal) seriesByColorByVal[cv].push(sl);
           }
           // Echarts only renders legend items whose `name` matches a
@@ -1192,7 +1227,7 @@
         // name); the grid margins below leave room for them.
         const xAxisSpec = {
           type: xAxisType,
-          name: this._axisTitle(x_col),
+          name: this._axisTitle(x),
           nameLocation: 'middle',
           nameGap: 28,
           nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
@@ -1205,7 +1240,7 @@
 
         const yAxisSpec = {
           type: yAxisType,
-          name: this._axisTitle(y_col),
+          name: this._axisTitle(y),
           nameLocation: 'middle',
           nameGap: 46,
           nameRotate: 90,
@@ -1222,21 +1257,22 @@
         // trajectory overlay, clicking a line to filter by USUBJID is the
         // expected drill-down, and an active brush cursor would consume
         // those clicks before they reach the series — and for scatter when
-        // `series_by` is set. With `series_by` the user's intent is "click
+        // `series` is set. With `series` the user's intent is "click
         // a dot to filter to that series" (e.g. one dot per policy → click
         // → filter to that policy); leaving brush active fires a 1-pixel
         // brushSelected on the click point that races the click handler
         // and overwrites the categorical filter with a range filter on
         // (x == click_x & y == click_y), matching at most one row.
-        const brushable = xAxisType !== 'category' && !isLine && !series_by;
+        const brushable = xAxisType !== 'category' && !isLine && !seriesCol;
+
 
         const option = {
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
           textStyle: { fontFamily: BLOCKR_FONT },
-          tooltip: { trigger: 'item', formatter: (p) => `${x_col}: ${ddNum(p.value[0])}<br>${y_col}: ${ddNum(p.value[1])}` + (p.seriesName ? `<br>${color_by || 'series'}: ${p.seriesName}` : ''), confine: true },
+          tooltip: { trigger: 'item', formatter: (p) => `${x}: ${ddNum(p.value[0])}<br>${y}: ${ddNum(p.value[1])}` + (p.seriesName ? `<br>${color || 'series'}: ${p.seriesName}` : ''), confine: true },
           // Always set explicitly; leaving legend undefined lets echarts
           // auto-render one per series, which eats the plot area when
-          // series_by is high-cardinality (e.g. USUBJID).
+          // series is high-cardinality (e.g. USUBJID).
           legend: useColorByLegend
             ? { show: true, bottom: 0, textStyle: { fontSize: 11 },
                 data: colorByLegendData }
@@ -1259,7 +1295,7 @@
 
         chart.setOption(option, true);
 
-        // When the legend shows color_by levels (not series), intercept
+        // When the legend shows color levels (not series), intercept
         // legend clicks and fan them out to every series that belongs to
         // the clicked color group. Otherwise a click on "F" would do
         // nothing (no series is named "F") and the user couldn't toggle.
@@ -1276,30 +1312,28 @@
           });
         }
 
-        // Click → categorical filter on the series. Filter column is
-        // series_by when set, otherwise color_by. With neither set the
-        // click drills to the clicked observation itself (point filter
-        // below) — no hidden identity-column behavior.
+        // Click identifies a mark -> its source rows -> _emitDrill.
+        // A clicked series (split by series/color) maps to that series'
+        // rows; a clicked point maps to the row(s) at that (x, y).
+        // Inert unless `drill` is set. Brush/drag range is separate.
         chart.on('click', (params) => {
           if (params.componentType !== 'series') return;
-          const col = series_by || color_by;
-          if (col) {
-            const val = params.seriesName;
-            if (!val) return;
-            this._selectedColumn = col;
-            this._selected = val;
-            this._sendCategoricalFilter(col, [val]);
-            this._updateStatus();
-            return;
+          const splitCol = seriesCol || color;
+          let rows;
+          if (splitCol && params.seriesName) {
+            rows = (this.data || []).filter(
+              r => String(r[splitCol]) === String(params.seriesName));
+            this._selected = params.seriesName;
+          } else {
+            const v = params.value;
+            if (!Array.isArray(v) || v.length < 2 || !x || !y) return;
+            rows = (this.data || []).filter(
+              r => String(r[x]) === String(v[0]) &&
+                   String(r[y]) === String(v[1]));
+            this._selected = `${ddNum(v[0])}, ${ddNum(v[1])}`;
           }
-          // No Series/Color set: drill to the clicked observation by its
-          // coordinates — filter the row(s) at this exact (x, y) point.
-          const v = params.value;
-          if (!Array.isArray(v) || v.length < 2 || !x_col || !y_col) return;
-          this._selectedColumn = `${x_col}, ${y_col}`;
-          this._selected = `${ddNum(v[0])}, ${ddNum(v[1])}`;
-          this._sendPointFilter(x_col, y_col, v[0], v[1]);
           this._updateStatus();
+          this._emitDrill(rows);
         });
 
         // Activate brush mode by default (no need to click toolbox first)
@@ -1392,23 +1426,20 @@
     // -- Timeline (gantt) rendering ------------------------------------------
 
     _renderTimeline() {
-      const { x_col, x_end_col, y_col, color_by, facet_by, sort_by, series_by } = this.config;
-      // Click-to-drill column for a bar: Series, else Color, else none
-      // (no-op). No hidden identity-column behavior.
-      const drillCol = series_by || color_by || null;
+      const { x, xend, y, color, facet, sort_by, series, label, drill } = this.config;
       const sortDir = this.config.sort_dir === 'desc' ? -1 : 1;
-      if (!x_col || !y_col) {
+      if (!x || !y) {
         this.chartGrid.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">Select X (start) and Y (term) columns</p></div>';
         return;
       }
 
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
       const palette = BLOCKR_PALETTE;
-      const xAxisType = this._axisTypeFor(x_col);
-      const xCats = xAxisType === 'category' ? this._orderedCategories(x_col) : null;
+      const xAxisType = this._axisTypeFor(x);
+      const xCats = xAxisType === 'category' ? this._orderedCategories(x) : null;
 
-      const facets = facet_by
-        ? [...new Set(this.data.map(r => String(r[facet_by] ?? '')))].sort()
+      const facets = facet
+        ? [...new Set(this.data.map(r => String(r[facet] ?? '')))].sort()
         : ['__all__'];
       const singleFacet = facets.length === 1;
       this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
@@ -1416,8 +1447,8 @@
       // Distinct color levels (sorted). With one named series per level
       // below, echarts assigns a color to each series from option.color
       // (BLOCKR_PALETTE) — no manual lookup needed.
-      const colorLevels = color_by
-        ? [...new Set(this.data.map(r => String(r[color_by] ?? '')))].sort()
+      const colorLevels = color
+        ? [...new Set(this.data.map(r => String(r[color] ?? '')))].sort()
         : [];
 
       // Convert an x-axis value to a numeric/time coord, or to a category
@@ -1434,15 +1465,15 @@
       const sortTerms = (rows) => {
         const sb = sort_by || 'onset';
         if (sb === 'alpha') {
-          return [...new Set(rows.map(r => String(r[y_col] ?? '')))]
+          return [...new Set(rows.map(r => String(r[y] ?? '')))]
             .sort((a, b) => a.localeCompare(b) * sortDir);
         }
-        const sortCol = (sb === 'onset') ? x_col : sb;
+        const sortCol = (sb === 'onset') ? x : sb;
         const mins = {};
         for (const r of rows) {
-          const k = String(r[y_col] ?? '');
+          const k = String(r[y] ?? '');
           let v = r[sortCol];
-          if (xAxisType === 'category' && sortCol === x_col) {
+          if (xAxisType === 'category' && sortCol === x) {
             v = xCoord(v, xCats);
           } else {
             v = Number(v);
@@ -1460,7 +1491,7 @@
 
       for (const facet of facets) {
         const rows = facet === '__all__' ? this.data
-          : this.data.filter(r => String(r[facet_by]) === facet);
+          : this.data.filter(r => String(r[facet]) === facet);
         if (rows.length === 0) continue;
 
         let container;
@@ -1484,7 +1515,7 @@
         chartDiv.className = 'dd-chart';
         // Extra 20px when the legend is on, to keep the legend visually
         // separated from the x-axis labels.
-        const heightExtra = (color_by && colorLevels.length > 0) ? 100 : 80;
+        const heightExtra = (color && colorLevels.length > 0) ? 100 : 80;
         chartDiv.style.height = Math.max(200, terms.length * 28 + heightExtra) + 'px';
         container.appendChild(chartDiv);
 
@@ -1493,29 +1524,34 @@
 
         const barData = [];
         for (const r of rows) {
-          if (r[x_col] == null) continue;
-          const term = String(r[y_col] ?? '');
+          if (r[x] == null) continue;
+          const term = String(r[y] ?? '');
           const lane = terms.indexOf(term);
           if (lane < 0) continue;
-          const s = xCoord(r[x_col], xCats);
+          const s = xCoord(r[x], xCats);
           let e;
-          if (x_end_col && r[x_end_col] != null && !Number.isNaN(Number(r[x_end_col]))) {
-            e = xCoord(r[x_end_col], xCats);
+          if (xend && r[xend] != null && !Number.isNaN(Number(r[xend]))) {
+            e = xCoord(r[xend], xCats);
           } else {
             // Single-day event — render a narrow dot.
             e = s;
           }
           barData.push({
-            // Slot 5 retained as '' (was the old identity column) to keep
-            // renderItem's api.value() indices stable.
-            value: [s, e, lane, term, r[color_by] ?? '', '',
-                    r[series_by] ?? '']
+            // Slot 5: `label` column value (on-bar text). Slot 7: the
+            // `drill` column value for this row (a click filters on it).
+            // Scalars only — never pack the whole row object: the AE
+            // swim-lane has thousands of bars and retaining full rows in
+            // the echarts series froze the AE tab.
+            value: [s, e, lane, term, r[color] ?? '',
+                    (label != null ? (r[label] ?? '') : ''),
+                    r[series] ?? '',
+                    (drill != null ? (r[drill] ?? '') : '')]
           });
         }
 
         const xAxisSpec = {
           type: xAxisType,
-          name: this._axisTitle(x_col),
+          name: this._axisTitle(x),
           nameLocation: 'middle',
           nameGap: 28,
           nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
@@ -1526,12 +1562,12 @@
         };
         if (xCats) xAxisSpec.data = xCats;
 
-        // Auto-legend: show whenever color_by is set. The legend is
+        // Auto-legend: show whenever color is set. The legend is
         // scroll-type, so high cardinality (AETERM with 200+ values)
         // scrolls instead of being suppressed. Series below are split
         // per color level so echarts has a real series to bind each
         // legend chip to — without that, legend items never paint.
-        const showLegend = !!color_by && colorLevels.length > 0;
+        const showLegend = !!color && colorLevels.length > 0;
         // Names only — echarts derives each chip's color from the matching
         // series via option.color cycling.
         const legendData = showLegend ? colorLevels.slice() : null;
@@ -1547,24 +1583,20 @@
               width: params.coordSys.width, height: params.coordSys.height }
           );
           if (!rect) return;
-          // On-bar text picks the most specific label available so the
-          // bar isn't redundant with the y-axis: series_by (per-bar
-          // detail, e.g. AETERM) > color_by (e.g. AEBODSYS) > y_col.
-          const label = series_by
-            ? String(api.value(6) ?? '')
-            : color_by
-              ? String(api.value(4) ?? '')
-              : String(api.value(3) ?? '');
+          // On-bar text is the `label` column's value (slot 5) only.
+          // Unset -> no text. label is its own role, never series/color.
+          const barLabel = this.config.label
+            ? String(api.value(5) ?? '') : '';
           const children = [{
             type: 'rect',
             shape: Object.assign({}, rect, { r: 3 }),
             style: api.style()
           }];
-          if (barW > 50 && label) {
+          if (barW > 50 && barLabel) {
             children.push({
               type: 'text',
               style: {
-                text: label,
+                text: barLabel,
                 x: rect.x + 6,
                 y: rect.y + rect.height / 2,
                 fill: '#fff',
@@ -1579,7 +1611,7 @@
           return { type: 'group', children: children };
         };
 
-        // Build series. When color_by is set, split barData by level so
+        // Build series. When color is set, split barData by level so
         // each color group is its own named series — that's what makes
         // legend chips render and click-to-toggle work. Otherwise fall
         // back to a single anonymous series.
@@ -1618,8 +1650,8 @@
               const term = v[3] || '';
               const colorVal = v[4] || '';
               const detail = v[6] || '';
-              // Headline is the most specific label available: series_by
-              // (per-bar detail) wins, else fall back to y_col (lane).
+              // Headline is the most specific label available: series
+              // (per-bar detail) wins, else fall back to y (lane).
               const headline = detail || term;
               let html = `<div style="min-width:180px"><div style="font-weight:700;margin-bottom:4px">${headline}</div>`;
               if (detail && term && term !== detail) {
@@ -1656,16 +1688,17 @@
 
         chart.on('click', (params) => {
           if (params.componentType !== 'series') return;
-          if (!drillCol) return;  // no Series/Color → no-op
+          // The clicked bar's `drill` value is packed at slot 7.
+          // Inert unless `drill` is set; lane/series/color do not
+          // implicitly drive the drill.
           const v = params.value;
           if (!v) return;
-          // Drill value: series_by is packed at slot 6, color_by at 4.
-          const val = series_by ? v[6] : v[4];
-          if (val == null || val === '') return;
-          this._selectedColumn = drillCol;
-          this._selected = String(val);
-          this._sendCategoricalFilter(drillCol, [String(val)]);
+          this._selected = String(v[3] || '');
           this._updateStatus();
+          const dv = v[7];
+          if (drill && dv != null && dv !== '') {
+            this._emitDrill([{ [drill]: dv }]);
+          }
         });
       }
 
@@ -1729,11 +1762,60 @@
       this.popoverEl.style.display = 'block';
       this._popoverOpen = true;
       this.gearBtn.classList.add('blockr-gear-active');
+      // Anchor in viewport coords with position:fixed. The shared CSS
+      // anchors the popover absolute/right:0 to the card; in a narrow
+      // dock tile a 680px popover then overflows ~500px off-screen left
+      // and the panel's overflow:auto clips it. position:fixed is NOT
+      // clipped by overflow ancestors and (unlike portaling to body)
+      // keeps the element inside .drilldown-chart-container so the
+      // scoped popover/family-visibility CSS still applies.
+      this._positionPopover();
+      // Blockr.Select components reflow after the first paint and grow the
+      // popover; reposition on the next frame so the clamp uses the final
+      // height.
+      requestAnimationFrame(() => {
+        if (this._popoverOpen) this._positionPopover();
+      });
+      this._popReposition = () => {
+        if (this._popoverOpen) this._positionPopover();
+      };
+      window.addEventListener('scroll', this._popReposition, true);
+      window.addEventListener('resize', this._popReposition);
+    }
+    _positionPopover() {
+      const g = this.gearBtn.getBoundingClientRect();
+      const pop = this.popoverEl;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      pop.style.position = 'fixed';
+      pop.style.right = 'auto';
+      // Never let the popover exceed the viewport; it scrolls internally
+      // (overflow-y:auto in the stylesheet) when content is taller.
+      pop.style.maxHeight = (vh - 16) + 'px';
+      const pw = pop.offsetWidth;
+      const ph = pop.offsetHeight;
+      // Right edge aligns under the gear; clamp within the viewport.
+      let left = Math.min(g.right, vw - 8) - pw;
+      left = Math.max(8, Math.min(left, vw - pw - 8));
+      // Prefer just below the gear; if it would overflow the bottom,
+      // lift it up so the whole popover stays on screen.
+      let top = g.bottom + 6;
+      if (top + ph > vh - 8) top = Math.max(8, vh - 8 - ph);
+      pop.style.left = left + 'px';
+      pop.style.top = top + 'px';
+      // Final guard: tighten max-height to the space actually available
+      // from the chosen top, so the bottom edge never leaves the screen.
+      pop.style.maxHeight = (vh - top - 8) + 'px';
     }
     _closePopover() {
       this.popoverEl.style.display = 'none';
       this._popoverOpen = false;
       this.gearBtn.classList.remove('blockr-gear-active');
+      if (this._popReposition) {
+        window.removeEventListener('scroll', this._popReposition, true);
+        window.removeEventListener('resize', this._popReposition);
+        this._popReposition = null;
+      }
     }
 
     // -- Status footer --------------------------------------------------------
@@ -1783,12 +1865,12 @@
     // -- Communication --------------------------------------------------------
 
     // Emits a categorical filter. If `col` and `values` are provided, they
-    // override the default (group_by + current _selected) — used by
+    // override the default (group + current _selected) — used by
     // click-to-filter on trajectory series and gantt bars, where the column
-    // is series_by/color_by rather than group_by.
+    // is series/color rather than group.
     _sendCategoricalFilter(col, values) {
       if (!this.el.id) return;
-      const column = col !== undefined ? col : this.config.group_by;
+      const column = col !== undefined ? col : this.config.group;
       const vals = values !== undefined ? values
         : (this._selected ? [this._selected] : null);
       Shiny.setInputValue(this.el.id + '_action', {
@@ -1798,9 +1880,21 @@
       }, { priority: 'event' });
     }
 
+    // The one drill rule (see blockr.design/open/drilldown-chart-roles).
+    // A click identifies a mark; the mark maps to one or more source
+    // rows; if `drill` is set, filter downstream on
+    // `drill %in% distinct(drill over those rows)`. Unset drill -> inert.
+    _emitDrill(rows) {
+      const c = this.config.drill;
+      if (!c || !rows || !rows.length) return;
+      const vals = [...new Set(
+        rows.map(r => (r ? r[c] : null)).filter(v => v != null)
+      )].map(String);
+      if (vals.length) this._sendCategoricalFilter(c, vals);
+    }
+
     // Emits a point filter: the single observation(s) at an exact (x, y).
-    // Used by click-to-drill on a scatter/line dot when no entity/id
-    // column resolves.
+    // Retained for the brush-race guard path; not used by click drill.
     _sendPointFilter(xCol, yCol, xVal, yVal) {
       if (!this.el.id) return;
       Shiny.setInputValue(this.el.id + '_action', {
@@ -1813,7 +1907,7 @@
       if (!this.el.id) return;
       Shiny.setInputValue(this.el.id + '_action', {
         action: 'filter', filter_type: 'range',
-        x_col: this.config.x_col, y_col: yRange ? this.config.y_col : null,
+        x_col: this.config.x, y_col: yRange ? this.config.y : null,
         x_range: xRange, y_range: yRange
       }, { priority: 'event' });
     }
@@ -1832,21 +1926,23 @@
       if (!this.el.id) return;
       Shiny.setInputValue(this.el.id + '_action', {
         action: 'config',
-        group_by: this.config.group_by,
-        color_by: this.config.color_by || '',
-        facet_by: this.config.facet_by || '',
+        group: this.config.group,
+        color: this.config.color || '',
+        facet: this.config.facet || '',
         metric: this.config.metric,
         agg_fn: this.config.agg_fn,
         chart_type: this.config.chart_type,
-        x_col: this.config.x_col || '',
-        y_col: this.config.y_col || '',
-        x_end_col: this.config.x_end_col || '',
+        x: this.config.x || '',
+        y: this.config.y || '',
+        xend: this.config.xend || '',
         sort_by: this.config.sort_by || '',
         sort_dir: this.config.sort_dir || 'asc',
-        series_by: this.config.series_by || '',
+        series: this.config.series || '',
+        label: this.config.label || '',
+        drill: this.config.drill || '',
         smoother: this.config.smoother || 'none',
-        lo_col: this.config.lo_col || '',
-        hi_col: this.config.hi_col || ''
+        lo: this.config.lo || '',
+        hi: this.config.hi || ''
       }, { priority: 'event' });
     }
 
@@ -1916,6 +2012,7 @@
       }, 100);
     }
   });
+
 
   Shiny.addCustomMessageHandler('drilldown-theme', (msg) => {
     const el = document.getElementById(msg.id);

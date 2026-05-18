@@ -12,9 +12,11 @@
    to 1 on a narrow one. flex-wrap + min(), no media/container queries
    (see blockr.docs design-system/design-system-prompt.md). Spec:
    blockr.docs design-system/components/blockr-popover.md. */
-.drilldown-chart-container .blockr-popover {
+/* Portaled to <body>, so styled by its own class, not by a
+   .drilldown-chart-container ancestor. max-height/top/left are set
+   inline by _positionPopover (viewport-clamped). */
+.blockr-popover.dd-popover {
   width: min(680px, 92vw);
-  max-height: 70vh;
   overflow-y: auto;
   display: flex;
   flex-wrap: wrap;
@@ -23,8 +25,8 @@
 }
 
 /* Title and the chart-type selector always own a full row. */
-.drilldown-chart-container .blockr-popover > .dd-popover-title,
-.drilldown-chart-container .blockr-popover > .dd-popover-types {
+.dd-popover > .dd-popover-title,
+.dd-popover > .dd-popover-types {
   flex: 1 1 100%;
 }
 
@@ -96,13 +98,13 @@
 }
 
 /* Family-based visibility */
-.dd-family-aggregated .dd-cfg-xy,
-.dd-family-aggregated .dd-cfg-individual,
-.dd-family-aggregated .dd-cfg-timeline { display: none !important; }
-.dd-family-individual .dd-cfg-aggregated,
-.dd-family-individual .dd-cfg-timeline { display: none !important; }
-.dd-family-timeline .dd-cfg-aggregated,
-.dd-family-timeline .dd-cfg-individual { display: none !important; }
+.dd-popover.dd-family-aggregated .dd-cfg-xy,
+.dd-popover.dd-family-aggregated .dd-cfg-individual,
+.dd-popover.dd-family-aggregated .dd-cfg-timeline { display: none !important; }
+.dd-popover.dd-family-individual .dd-cfg-aggregated,
+.dd-popover.dd-family-individual .dd-cfg-timeline { display: none !important; }
+.dd-popover.dd-family-timeline .dd-cfg-aggregated,
+.dd-popover.dd-family-timeline .dd-cfg-individual { display: none !important; }
 
 /* ===== Card wrapper (for popover positioning) ===== */
 .dd-card {
