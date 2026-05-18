@@ -296,6 +296,16 @@
       return (this.argHelp && this.argHelp[key]) || '';
     }
 
+    // Axis title for a mapped column: its variable label when present,
+    // else the column name. The popover help shows `name (label)`; an
+    // axis is tighter, so just the human label (or the name).
+    _axisTitle(col) {
+      if (!col) return '';
+      const c = (this.columns || []).find(x => x.name === col);
+      if (c && c.label && c.label !== c.name) return c.label;
+      return col;
+    }
+
     _renderConfig() {
       const cats = this.columns.filter(c => c.type === 'categorical' || c.n_unique <= 50);
       const nums = this.columns.filter(c => c.type === 'numeric');
@@ -648,6 +658,28 @@
           return;
         }
       }
+      // Guard: a mapped column that isn't in the data produces a silently
+      // empty chart (e.g. group_by present but Metric absent -> every bar
+      // aggregates to 0). Say so instead of drawing nothing — an upstream
+      // rename/flatten/pivot is the usual cause.
+      const cfg = this.config;
+      const colSet = new Set((this.columns || []).map(c => c.name));
+      const req = fam === 'aggregated'
+        ? [['Group', cfg.group_by],
+           ['Metric', cfg.metric !== '.count' ? cfg.metric : null]]
+        : [['X', cfg.x_col], ['Y', cfg.y_col]];
+      const missing = req
+        .filter(([, v]) => v && !colSet.has(v))
+        .map(([lbl, v]) => `${lbl} = "${v}"`);
+      if (missing.length) {
+        this.chartGrid.innerHTML =
+          '<div class="vd-empty-state"><p class="vd-empty-text">' +
+          'Mapped column not in data: ' + missing.join(', ') +
+          '. Check the block feeding this chart (a rename, flatten or ' +
+          'pivot upstream may have changed the column name).</p></div>';
+        return;
+      }
+
       if (fam === 'aggregated') this._renderAggregated();
       else if (fam === 'timeline') this._renderTimeline();
       else this._renderIndividual();
@@ -759,6 +791,13 @@
       const ct = this.config.chart_type;
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
 
+      // Value-axis title (the numeric axis on bar / boxplot): the metric's
+      // variable label, or "Count" for a row count. Same rationale as the
+      // line/scatter axis titles — the mapping moved into the gear, so the
+      // chart must say what it shows.
+      const valueTitle = this.config.metric === '.count'
+        ? 'Count' : this._axisTitle(this.config.metric);
+
       if (ct === 'pie') return this._buildPie(facetData, groups, palette);
       if (ct === 'boxplot') return this._buildBoxplot(groups, palette, ax);
       if (ct === 'treemap') return this._buildTreemap(facetData, groups, palette);
@@ -793,8 +832,8 @@
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true },
         toolbox: TOOLBOX,
         legend: colors.length > 0 ? { show: true, bottom: 0, textStyle: { fontSize: 11 } } : undefined,
-        grid: { left: 160, right: 5, top: 30, bottom: colors.length > 0 ? 55 : 20 },
-        xAxis: { type: 'value', axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } } },
+        grid: { left: 160, right: 5, top: 30, bottom: (colors.length > 0 ? 55 : 20) + 26 },
+        xAxis: { type: 'value', name: valueTitle, nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } } },
         yAxis: { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: 150, width: 145, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false }, axisTick: { show: false } },
         series
       };
@@ -829,7 +868,7 @@
         const hi = Math.min(vals[vals.length - 1], q3 + 1.5 * iqr);
         return [lo, q1, q(0.5), q3, hi];
       });
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true }, grid: { left: 160, right: 5, top: 30, bottom: 20 }, xAxis: { type: 'value', axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } }, yAxis: { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: 150, width: 145, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false } }, series: [{ type: 'boxplot', data: boxData, itemStyle: { color: palette[0] + '22', borderColor: palette[0] } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true }, grid: { left: 160, right: 5, top: 30, bottom: 46 }, xAxis: { type: 'value', name: this._axisTitle(this.config.metric), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } }, yAxis: { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: 150, width: 145, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false } }, series: [{ type: 'boxplot', data: boxData, itemStyle: { color: palette[0] + '22', borderColor: palette[0] } }] };
     }
 
     // -- Individual rendering -------------------------------------------------
@@ -1147,11 +1186,16 @@
           }
         }
 
-        // Axis names omitted: the X / Y pickers above the chart already
-        // show the selected column, so echoing it on the axis is redundant
-        // and competes with the legend for the bottom margin.
+        // Axis titles: the X / Y mapping moved into the gear popover, so
+        // the chart itself is now the only place the reader can see what
+        // the axes stand for. Use the variable label (else the column
+        // name); the grid margins below leave room for them.
         const xAxisSpec = {
           type: xAxisType,
+          name: this._axisTitle(x_col),
+          nameLocation: 'middle',
+          nameGap: 28,
+          nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
           axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
           axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
@@ -1161,6 +1205,11 @@
 
         const yAxisSpec = {
           type: yAxisType,
+          name: this._axisTitle(y_col),
+          nameLocation: 'middle',
+          nameGap: 46,
+          nameRotate: 90,
+          nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
           axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
           axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
@@ -1194,7 +1243,9 @@
             : showLegend
               ? { show: true, bottom: 0, textStyle: { fontSize: 11 } }
               : { show: false },
-          grid: { left: 50, right: 5, top: 30, bottom: showLegend ? 55 : 30 },
+          // left / bottom widened so the rotated Y title and the X title
+          // (nameGap above) clear the tick labels and the legend.
+          grid: { left: 66, right: 5, top: 30, bottom: showLegend ? 78 : 52 },
           xAxis: xAxisSpec,
           yAxis: yAxisSpec,
           toolbox: mkToolbox(brushable),
@@ -1464,6 +1515,10 @@
 
         const xAxisSpec = {
           type: xAxisType,
+          name: this._axisTitle(x_col),
+          nameLocation: 'middle',
+          nameGap: 28,
+          nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
           axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
           axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
@@ -1579,7 +1634,7 @@
             ? { show: true, bottom: 8, type: 'scroll', textStyle: { fontSize: 11 }, data: legendData }
             : { show: false },
           toolbox: TOOLBOX,
-          grid: { left: 160, right: 10, top: 20, bottom: showLegend ? 60 : 30 },
+          grid: { left: 160, right: 10, top: 20, bottom: showLegend ? 78 : 48 },
           xAxis: xAxisSpec,
           yAxis: {
             type: 'category',

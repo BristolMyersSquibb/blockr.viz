@@ -7,7 +7,6 @@
 register_bi_blocks <- function() {
   blockr.core::register_blocks(
     c(
-      "new_bi_filter_block",
       "new_visual_filter_block",
       "new_pivot_table_block",
       "new_summary_table_block",
@@ -20,7 +19,6 @@ register_bi_blocks <- function() {
       "new_drilldown_table_block"
     ),
     name = c(
-      "Filter",
       "Visual Filter",
       "Pivot Table",
       "Summary Table",
@@ -33,7 +31,6 @@ register_bi_blocks <- function() {
       "Drill-Down Table"
     ),
     description = c(
-      "Minimal value filter for a data frame. Columns hidden behind the gear; per-column single vs multi select.",
       "Interactive visual filter with clickable bar charts",
       "Flexible pivot table with row and column dimensions (X by Y x Z pattern)",
       "Wide, display-shaped multi-variable summary (list of variables by Y pattern). Successor to tidy_summary_block.",
@@ -49,7 +46,6 @@ register_bi_blocks <- function() {
       "transform",
       "transform",
       "transform",
-      "transform",
       "table",
       "table",
       "transform",
@@ -59,7 +55,6 @@ register_bi_blocks <- function() {
       "table"
     ),
     icon = c(
-      "filter",
       "bar-chart",
       "table",
       "calculator",
@@ -72,7 +67,6 @@ register_bi_blocks <- function() {
       "table"
     ),
     arguments = list(
-      NULL,                         # filter_block (not in MCP universe)
       NULL,                         # visual_filter_block (not in MCP universe)
       pivot_table_arguments(),
       summary_table_arguments(),

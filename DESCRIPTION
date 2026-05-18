@@ -1,6 +1,6 @@
 Package: blockr.bi
 Title: Business Intelligence Blocks for Blockr
-Version: 0.0.10
+Version: 0.0.13
 Authors@R:
     person(given = "Christoph",
            family = "Sax",
@@ -35,6 +35,5 @@ Suggests:
     blockr.dag,
     blockr.extra,
     blockr.io,
-    dm,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
