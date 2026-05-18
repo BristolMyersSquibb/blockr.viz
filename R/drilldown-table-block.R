@@ -8,7 +8,7 @@
 #'   numeric cells get a value-to-background scale (diverging for
 #'   correlation matrices, sequential for heatmaps). Purely
 #'   presentational; never changes the data.
-#' - **Drill-down.** When `on_click` names a column, clicking a row
+#' - **Drill-down.** When `drill` names a column, clicking a row
 #'   emits the same categorical filter message the drilldown chart
 #'   emits, so existing filter links keep working.
 #'
@@ -18,10 +18,10 @@
 #'   every column except `label_col`.
 #' @param color `NULL` (plain table) or a [drilldown_table_color()]
 #'   list.
-#' @param on_click `NULL` (no drill-down) or a column name; clicking a
+#' @param drill `NULL` (no drill-down) or a column name; clicking a
 #'   row emits a categorical filter on that column's value.
 #' @param elem_id Shiny namespaced id used to build the `_action`
-#'   input name. Required for `on_click` to do anything.
+#'   input name. Required for `drill` to do anything.
 #' @param title,caption Optional strings.
 #' @param digits Rounding for numeric display. Default `2`.
 #' @param max_height CSS max-height of the scroll container.
@@ -32,7 +32,7 @@ drilldown_table <- function(data,
                             label_col = NULL,
                             value_cols = NULL,
                             color = NULL,
-                            on_click = NULL,
+                            drill = NULL,
                             elem_id = NULL,
                             digits = 2L,
                             max_height = "600px",
@@ -54,7 +54,7 @@ drilldown_table <- function(data,
   if (nrow(data) == 0L || !label_col %in% names(data) ||
       length(value_cols) == 0L) {
     return(dt_render(dt_message_table(), max_height,
-                     elem_id, on_click, label_col, value_cols,
+                     elem_id, drill, label_col, value_cols,
                      color_mode, digits, transform))
   }
 
@@ -119,7 +119,7 @@ drilldown_table <- function(data,
   tbody <- htmltools::tags$tbody(body_rows)
 
   table_tag <- htmltools::tags$table(class = "blockr-table", thead, tbody)
-  dt_render(table_tag, max_height, elem_id, on_click,
+  dt_render(table_tag, max_height, elem_id, drill,
             label_col, value_cols, color_mode, digits, transform)
 }
 
@@ -204,7 +204,7 @@ dt_message_table <- function(msg = "No data") {
 
 #' @noRd
 dt_render <- function(table_tag, max_height, elem_id,
-                      on_click, label_col, value_cols,
+                      drill, label_col, value_cols,
                       color_mode = "off", digits = 2L,
                       transform = "none") {
   wrapper_id <- paste0(
@@ -212,9 +212,9 @@ dt_render <- function(table_tag, max_height, elem_id,
   )
 
   onclick_idx <- NULL
-  if (!is.null(on_click)) {
+  if (!is.null(drill)) {
     all_cols <- c(label_col, value_cols)
-    m <- match(on_click, all_cols)
+    m <- match(drill, all_cols)
     if (!is.na(m)) onclick_idx <- m - 1L
   }
 
@@ -247,7 +247,7 @@ dt_render <- function(table_tag, max_height, elem_id,
       id = wrapper_id,
       class = "blockr-html-table-container drilldown-table-container",
       `data-dt-elem-id` = if (!is.null(elem_id)) elem_id else NULL,
-      `data-dt-onclick-col` = if (!is.null(onclick_idx)) on_click else NULL,
+      `data-dt-onclick-col` = if (!is.null(onclick_idx)) drill else NULL,
       `data-dt-onclick-idx` = if (!is.null(onclick_idx)) onclick_idx else NULL,
       `data-dt-color-mode` = color_mode,
       `data-dt-transform` = transform,
@@ -326,7 +326,7 @@ drilldown_table_dep <- function() {
 #' the last click, using the exact same contract as
 #' [new_drilldown_chart_block()] (so existing filter links compose).
 #'
-#' @param label_col,value_cols,color,on_click,digits,max_height,transform,cor_method
+#' @param label_col,value_cols,color,drill,digits,max_height,transform,cor_method
 #'   Forwarded to [drilldown_table()]. The block has no in-table title:
 #'   the block's own name (card header) serves that role. `transform =
 #'   "correlation"` renders the pairwise correlation matrix of the
@@ -341,7 +341,7 @@ drilldown_table_dep <- function() {
 new_drilldown_table_block <- function(label_col = NULL,
                                       value_cols = NULL,
                                       color = NULL,
-                                      on_click = NULL,
+                                      drill = NULL,
                                       digits = 2L,
                                       max_height = "600px",
                                       transform = "none",
@@ -359,7 +359,7 @@ new_drilldown_table_block <- function(label_col = NULL,
         r_label_col     <- shiny::reactiveVal(label_col)
         r_value_cols    <- shiny::reactiveVal(value_cols)
         r_color         <- shiny::reactiveVal(color)
-        r_on_click      <- shiny::reactiveVal(on_click)
+        r_drill      <- shiny::reactiveVal(drill)
         r_digits        <- shiny::reactiveVal(digits)
         r_max_height    <- shiny::reactiveVal(max_height)
         r_transform     <- shiny::reactiveVal(transform)
@@ -390,8 +390,8 @@ new_drilldown_table_block <- function(label_col = NULL,
               } else {
                 r_color(drilldown_table_color(v))
               }
-            } else if (identical(p, "on_click")) {
-              r_on_click(if (identical(v, "(none)") || !nzchar(v)) NULL else v)
+            } else if (identical(p, "drill")) {
+              r_drill(if (identical(v, "(none)") || !nzchar(v)) NULL else v)
             } else if (identical(p, "digits")) {
               r_digits(as.integer(v))
             } else if (identical(p, "transform")) {
@@ -410,7 +410,7 @@ new_drilldown_table_block <- function(label_col = NULL,
             label_col  = r_label_col(),
             value_cols = r_value_cols(),
             color      = r_color(),
-            on_click   = r_on_click(),
+            drill   = r_drill(),
             elem_id    = ns("drilldown_table_block"),
             digits     = r_digits(),
             max_height = r_max_height(),
@@ -441,7 +441,7 @@ new_drilldown_table_block <- function(label_col = NULL,
             label_col     = r_label_col,
             value_cols    = r_value_cols,
             color         = r_color,
-            on_click      = r_on_click,
+            drill      = r_drill,
             digits        = r_digits,
             max_height    = r_max_height,
             transform     = r_transform,
@@ -461,9 +461,9 @@ new_drilldown_table_block <- function(label_col = NULL,
     dat_valid = function(data) {
       if (!is.data.frame(data)) stop("Input must be a data frame")
     },
-    allow_empty_state = c("label_col", "value_cols", "color", "on_click",
+    allow_empty_state = c("label_col", "value_cols", "color", "drill",
       "filter_column", "filter_values", "filter_range"),
-    external_ctrl = c("label_col", "value_cols", "color", "on_click",
+    external_ctrl = c("label_col", "value_cols", "color", "drill",
       "digits", "max_height", "transform", "cor_method", "filter_type",
       "filter_column", "filter_values", "filter_range"),
     expr_type = "bquoted",

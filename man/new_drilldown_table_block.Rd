@@ -8,7 +8,7 @@ new_drilldown_table_block(
   label_col = NULL,
   value_cols = NULL,
   color = NULL,
-  on_click = NULL,
+  drill = NULL,
   digits = 2L,
   max_height = "600px",
   transform = "none",
@@ -21,7 +21,7 @@ new_drilldown_table_block(
 )
 }
 \arguments{
-\item{label_col, value_cols, color, on_click, digits, max_height, transform, cor_method}{Forwarded to \code{\link[=drilldown_table]{drilldown_table()}}. The block has no in-table title:
+\item{label_col, value_cols, color, drill, digits, max_height, transform, cor_method}{Forwarded to \code{\link[=drilldown_table]{drilldown_table()}}. The block has no in-table title:
 the block's own name (card header) serves that role. \code{transform = "correlation"} renders the pairwise correlation matrix of the
 input's numeric columns (the one dplyr-hard reshape folded in as
 an option, mirroring how the drilldown chart aggregates).}

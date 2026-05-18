@@ -9,7 +9,7 @@ drilldown_table(
   label_col = NULL,
   value_cols = NULL,
   color = NULL,
-  on_click = NULL,
+  drill = NULL,
   elem_id = NULL,
   digits = 2L,
   max_height = "600px",
@@ -28,11 +28,11 @@ every column except \code{label_col}.}
 \item{color}{\code{NULL} (plain table) or a \code{\link[=drilldown_table_color]{drilldown_table_color()}}
 list.}
 
-\item{on_click}{\code{NULL} (no drill-down) or a column name; clicking a
+\item{drill}{\code{NULL} (no drill-down) or a column name; clicking a
 row emits a categorical filter on that column's value.}
 
 \item{elem_id}{Shiny namespaced id used to build the \verb{_action}
-input name. Required for \code{on_click} to do anything.}
+input name. Required for \code{drill} to do anything.}
 
 \item{digits}{Rounding for numeric display. Default \code{2}.}
 
@@ -54,7 +54,7 @@ sort and search). Two optional capabilities, both off by default:
 numeric cells get a value-to-background scale (diverging for
 correlation matrices, sequential for heatmaps). Purely
 presentational; never changes the data.
-\item \strong{Drill-down.} When \code{on_click} names a column, clicking a row
+\item \strong{Drill-down.} When \code{drill} names a column, clicking a row
 emits the same categorical filter message the drilldown chart
 emits, so existing filter links keep working.
 }

@@ -218,7 +218,7 @@
     popRow(pop, "Drill-down",
       mkSelect("blockr-popover-input",
         ["(none)"].concat(cols), onClick,
-        function (v) { sendConfig(elemId, "on_click", v); }),
+        function (v) { sendConfig(elemId, "drill", v); }),
       "Column whose value a row click filters on");
 
     popRow(pop, "Decimals",

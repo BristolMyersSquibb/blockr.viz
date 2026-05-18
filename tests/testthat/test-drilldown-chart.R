@@ -1,19 +1,19 @@
 # Tests for new_drilldown_chart_block — focus on the patient-timelines
-# additions (x_end_col, sort_by, click-to-filter with USUBJID).
+# additions (xend, sort_by, click-to-filter with USUBJID).
 
-test_that("constructor accepts x_end_col and sort_by", {
+test_that("constructor accepts xend and sort_by", {
   blk <- new_drilldown_chart_block(
     chart_type = "gantt",
-    x_col = "ASTDY",
-    x_end_col = "AENDY",
-    y_col = "AEDECOD",
-    color_by = "AESEV",
+    x = "ASTDY",
+    xend = "AENDY",
+    y = "AEDECOD",
+    color = "AESEV",
     sort_by = "onset"
   )
   expect_s3_class(blk, "drilldown_chart_block")
 })
 
-test_that("gantt state round-trips x_end_col and sort_by", {
+test_that("gantt state round-trips xend and sort_by", {
   df <- data.frame(
     USUBJID = c("A", "A", "B"),
     AEDECOD = c("Headache", "Nausea", "Headache"),
@@ -24,14 +24,14 @@ test_that("gantt state round-trips x_end_col and sort_by", {
   )
   blk <- new_drilldown_chart_block(
     chart_type = "gantt",
-    x_col = "ASTDY", x_end_col = "AENDY", y_col = "AEDECOD",
-    color_by = "AESEV", sort_by = "onset"
+    x = "ASTDY", xend = "AENDY", y = "AEDECOD",
+    color = "AESEV", sort_by = "onset"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
       session$flushReact()
-      expect_equal(session$returned$state$x_end_col(), "AENDY")
+      expect_equal(session$returned$state$xend(), "AENDY")
       expect_equal(session$returned$state$sort_by(), "onset")
       expect_equal(session$returned$state$chart_type(), "gantt")
     },
@@ -39,7 +39,7 @@ test_that("gantt state round-trips x_end_col and sort_by", {
   )
 })
 
-test_that("config message updates x_end_col and sort_by", {
+test_that("config message updates xend and sort_by", {
   df <- data.frame(
     USUBJID = "A", AEDECOD = "Headache",
     ASTDY = 1, AENDY = 2, AESEV = "MILD",
@@ -52,11 +52,11 @@ test_that("config message updates x_end_col and sort_by", {
       expr_scope <- session$makeScope("expr")
       expr_scope$setInputs(drilldown_block_action = list(
         action = "config",
-        x_end_col = "AENDY",
+        xend = "AENDY",
         sort_by = "alpha"
       ))
       session$flushReact()
-      expect_equal(session$returned$state$x_end_col(), "AENDY")
+      expect_equal(session$returned$state$xend(), "AENDY")
       expect_equal(session$returned$state$sort_by(), "alpha")
     },
     args = list(x = blk, data = list(data = function() df))
@@ -72,7 +72,7 @@ test_that("click-to-filter on USUBJID produces a filter expression", {
   )
   blk <- new_drilldown_chart_block(
     chart_type = "line",
-    x_col = "ADY", y_col = "AVAL", color_by = "USUBJID"
+    x = "ADY", y = "AVAL", color = "USUBJID"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -97,7 +97,7 @@ test_that("click-to-filter on USUBJID produces a filter expression", {
 
 test_that("empty categorical filter is a no-op", {
   df <- data.frame(a = 1:3, b = letters[1:3], stringsAsFactors = FALSE)
-  blk <- new_drilldown_chart_block(chart_type = "bar", group_by = "b")
+  blk <- new_drilldown_chart_block(chart_type = "bar", group = "b")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
@@ -108,7 +108,7 @@ test_that("empty categorical filter is a no-op", {
   )
 })
 
-test_that("series_by round-trips through state", {
+test_that("series round-trips through state", {
   df <- data.frame(
     USUBJID = rep(c("A", "B"), each = 2),
     ADY = c(1, 10, 1, 10),
@@ -117,28 +117,28 @@ test_that("series_by round-trips through state", {
     stringsAsFactors = FALSE
   )
   blk <- new_drilldown_chart_block(
-    chart_type = "line", x_col = "ADY", y_col = "AVAL",
-    series_by = "USUBJID", color_by = "TRT01A"
+    chart_type = "line", x = "ADY", y = "AVAL",
+    series = "USUBJID", color = "TRT01A"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
       session$flushReact()
-      expect_equal(session$returned$state$series_by(), "USUBJID")
-      expect_equal(session$returned$state$color_by(), "TRT01A")
-      # Config message can update series_by at runtime.
+      expect_equal(session$returned$state$series(), "USUBJID")
+      expect_equal(session$returned$state$color(), "TRT01A")
+      # Config message can update series at runtime.
       expr_scope <- session$makeScope("expr")
       expr_scope$setInputs(drilldown_block_action = list(
-        action = "config", series_by = "TRT01A"
+        action = "config", series = "TRT01A"
       ))
       session$flushReact()
-      expect_equal(session$returned$state$series_by(), "TRT01A")
+      expect_equal(session$returned$state$series(), "TRT01A")
     },
     args = list(x = blk, data = list(data = function() df))
   )
 })
 
-test_that("r_needed_cols includes AVISITN when x_col is AVISIT", {
+test_that("r_needed_cols includes AVISITN when x is AVISIT", {
   df <- data.frame(
     USUBJID = c("A", "A", "B"),
     AVISIT = c("Visit 1", "Visit 2", "Visit 1"),
@@ -147,17 +147,17 @@ test_that("r_needed_cols includes AVISITN when x_col is AVISIT", {
     stringsAsFactors = FALSE
   )
   blk <- new_drilldown_chart_block(
-    chart_type = "line", x_col = "AVISIT", y_col = "AVAL",
-    color_by = "USUBJID"
+    chart_type = "line", x = "AVISIT", y = "AVAL",
+    color = "USUBJID"
   )
-  # Indirectly verify by checking the block state exposes x_col correctly;
+  # Indirectly verify by checking the block state exposes x correctly;
   # the AVISITN inclusion is a JS-input concern, but we confirm the block
   # accepts the configuration without error on evaluation.
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
       session$flushReact()
-      expect_equal(session$returned$state$x_col(), "AVISIT")
+      expect_equal(session$returned$state$x(), "AVISIT")
     },
     args = list(x = blk, data = list(data = function() df))
   )
@@ -166,7 +166,7 @@ test_that("r_needed_cols includes AVISITN when x_col is AVISIT", {
 test_that("scatter click-emit drives categorical filter on arbitrary column", {
   # Property-workbench shape: one dot per policy on a scatter, click a dot,
   # downstream filters to that single policy. The JS handler emits
-  # {action: "filter", filter_type: "categorical", column: <series_by>,
+  # {action: "filter", filter_type: "categorical", column: <series>,
   #  values: [<seriesName>]} which the R server side already handles
   # generically. This test confirms the R machinery accepts arbitrary
   # column names (not only USUBJID).
@@ -178,16 +178,16 @@ test_that("scatter click-emit drives categorical filter on arbitrary column", {
   )
   blk <- new_drilldown_chart_block(
     chart_type = "scatter",
-    x_col      = "exposure_premium",
-    y_col      = "model_price",
-    series_by  = "policy_id"
+    x      = "exposure_premium",
+    y      = "model_price",
+    series  = "policy_id"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
       session$flushReact()
       expect_equal(session$returned$state$chart_type(), "scatter")
-      expect_equal(session$returned$state$series_by(), "policy_id")
+      expect_equal(session$returned$state$series(), "policy_id")
 
       # Simulate a scatter-dot click: JS would send this exact message.
       expr_scope <- session$makeScope("expr")
@@ -210,7 +210,7 @@ test_that("scatter click-emit drives categorical filter on arbitrary column", {
   )
 })
 
-test_that("scatter+series_by click filter on real engine output returns matching rows", {
+test_that("scatter+series click filter on real engine output returns matching rows", {
   # Reproduces the SAA workbench bug where clicking a single-policy dot on
   # the Policy scatter showed "Filtered: policy_id = policy-005" but the
   # downstream preview rendered "No rows". The click JS sends a structured
@@ -236,9 +236,9 @@ test_that("scatter+series_by click filter on real engine output returns matching
 
   blk <- new_drilldown_chart_block(
     chart_type = "scatter",
-    x_col      = "tiv",
-    y_col      = "model_price",
-    series_by  = "policy_id"
+    x      = "tiv",
+    y      = "model_price",
+    series  = "policy_id"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -246,7 +246,7 @@ test_that("scatter+series_by click filter on real engine output returns matching
       session$flushReact()
 
       # JS click handler sends this exact shape: action=filter,
-      # filter_type=categorical, column=<series_by>, values=[<seriesName>].
+      # filter_type=categorical, column=<series>, values=[<seriesName>].
       expr_scope <- session$makeScope("expr")
       expr_scope$setInputs(drilldown_block_action = list(
         action      = "filter",
@@ -273,9 +273,9 @@ test_that("scatter+series_by click filter on real engine output returns matching
 test_that("scatter click filter survives a follow-up brush event (race)", {
   # Reproduces the SAA workbench bug. ECharts scatter has brush mode active
   # by default. When the user clicks a single dot, two events fire:
-  #  1) the click handler emits a categorical filter on series_by
+  #  1) the click handler emits a categorical filter on series
   #  2) brushSelected fires with the click point as a 1-pixel brush, which
-  #     emits a range filter on (x_col == click_x & y_col == click_y).
+  #     emits a range filter on (x == click_x & y == click_y).
   # Latest message wins, so the categorical filter gets overwritten by a
   # range filter that matches at most 1 row (often 0 due to floating point),
   # while the chart's status bar still shows the click selection from the
@@ -299,9 +299,9 @@ test_that("scatter click filter survives a follow-up brush event (race)", {
 
   blk <- new_drilldown_chart_block(
     chart_type = "scatter",
-    x_col      = "tiv",
-    y_col      = "model_price",
-    series_by  = "policy_id"
+    x      = "tiv",
+    y      = "model_price",
+    series  = "policy_id"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -319,7 +319,7 @@ test_that("scatter click filter survives a follow-up brush event (race)", {
       session$flushReact()
 
       # 2) brushSelected fires with the click point as a 1-pixel brush.
-      # JS sends a range filter on (x_col == click_x & y_col == click_y).
+      # JS sends a range filter on (x == click_x & y == click_y).
       one_loc  <- premium[premium$policy_id == clicked_pid, ][1L, ]
       click_x  <- one_loc$tiv
       click_y  <- one_loc$model_price
@@ -341,5 +341,54 @@ test_that("scatter click filter survives a follow-up brush event (race)", {
       expect_true(all(result$policy_id == clicked_pid))
     },
     args = list(x = blk, data = list(data = function() premium))
+  )
+})
+
+test_that("drill and label round-trip through state and config", {
+  blk <- new_drilldown_chart_block(
+    chart_type = "bar", group = "g", drill = "USUBJID", label = "AEDECOD"
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expect_equal(session$returned$state$drill(), "USUBJID")
+      expect_equal(session$returned$state$label(), "AEDECOD")
+      # Config message updates both at runtime; "" clears to NULL.
+      expr_scope <- session$makeScope("expr")
+      expr_scope$setInputs(drilldown_block_action = list(
+        action = "config", drill = "ARM", label = "PARAMCD"
+      ))
+      session$flushReact()
+      expect_equal(session$returned$state$drill(), "ARM")
+      expect_equal(session$returned$state$label(), "PARAMCD")
+      expr_scope$setInputs(drilldown_block_action = list(
+        action = "config", drill = ""
+      ))
+      session$flushReact()
+      expect_null(session$returned$state$drill())
+    },
+    args = list(x = blk, data = list(data = function() {
+      data.frame(g = c("a", "b"), ARM = c("x", "y"),
+                 USUBJID = c("s1", "s2"), AEDECOD = c("h", "j"),
+                 PARAMCD = c("p", "q"), stringsAsFactors = FALSE)
+    }))
+  )
+})
+
+test_that("unset drill emits no downstream filter (inert)", {
+  blk <- new_drilldown_chart_block(chart_type = "bar", group = "g")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      d <- data.frame(g = c("a", "a", "b"), stringsAsFactors = FALSE)
+      result <- session$returned$result()
+      # No click/filter action sent: passthrough, all rows.
+      expect_equal(nrow(result), 3L)
+    },
+    args = list(x = blk, data = list(data = function() {
+      data.frame(g = c("a", "a", "b"), stringsAsFactors = FALSE)
+    }))
   )
 })

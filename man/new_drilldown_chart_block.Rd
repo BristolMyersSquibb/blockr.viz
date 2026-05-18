@@ -5,16 +5,18 @@
 \title{Drill-Down Chart Block}
 \usage{
 new_drilldown_chart_block(
-  group_by = NULL,
-  color_by = NULL,
-  facet_by = NULL,
+  group = NULL,
+  color = NULL,
+  facet = NULL,
   metric = ".count",
   agg_fn = "count",
   chart_type = "bar",
-  x_col = NULL,
-  y_col = NULL,
-  series_by = NULL,
-  x_end_col = NULL,
+  x = NULL,
+  y = NULL,
+  series = NULL,
+  xend = NULL,
+  label = NULL,
+  drill = NULL,
   sort_by = NULL,
   sort_dir = NULL,
   filter_type = "categorical",
@@ -28,74 +30,65 @@ new_drilldown_chart_block(
   ref_x = NULL,
   ref_y = NULL,
   smoother = "none",
-  lo_col = NULL,
-  hi_col = NULL,
+  lo = NULL,
+  hi = NULL,
   ...
 )
 }
 \arguments{
-\item{group_by}{Column to group by (aggregated charts)}
+\item{group}{Column for the categorical axis (aggregated charts)}
 
-\item{color_by}{Column to color/stack by (optional, both families)}
+\item{color}{Column mapped to colour (optional, all families)}
 
-\item{facet_by}{Column to facet by (optional, both families)}
+\item{facet}{Column to facet by — one small panel per level (optional)}
 
-\item{metric}{Column for metric (".count" for row count, aggregated only)}
+\item{metric}{Column for the metric (".count" for row count,
+aggregated only)}
 
 \item{agg_fn}{Aggregation: \code{"count"}, \code{"count_distinct"}, \code{"mean"},
 \code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"}}
 
-\item{chart_type}{Chart type: "bar", "scatter", "line", "pie", "treemap",
-"boxplot", "gantt"}
+\item{chart_type}{Chart type: "bar", "scatter", "line", "pie",
+"treemap", "boxplot", "gantt"}
 
-\item{x_col}{X-axis column (individual / timeline charts)}
+\item{x}{X-axis column (individual / timeline charts)}
 
-\item{y_col}{Y-axis column (individual / timeline charts)}
+\item{y}{Y-axis column (individual / timeline charts)}
 
-\item{series_by}{Column whose distinct values define separate series in
-the individual family (e.g. \code{"USUBJID"} for one line per patient).
-Independent from \code{color_by}: \code{series_by} controls how rows are split
-into series; \code{color_by} controls how those series are colored. High
-cardinality (hundreds of patients) is expected — lines degrade to low
-opacity automatically. When \code{series_by} is unset, the chart falls
-back to splitting by \code{color_by} (legacy behavior).}
+\item{series}{Column whose distinct values split rows into separate
+series (individual: one line/scatter group per value; timeline:
+per-bar label). Independent of \code{color}. High cardinality is fine.}
 
-\item{x_end_col}{Interval end column (timeline only; NA rows render as
-dots at \code{x_col})}
+\item{xend}{Interval end column (timeline only; NA rows render as
+dots at \code{x})}
 
-\item{sort_by}{Category ordering on the axis. The allowed values depend
-on the chart family:
+\item{label}{Column whose value is written on each mark. Default unset
+(no on-mark text). For \code{pie}/\code{treemap}, when unset the label falls
+back to \code{group} (a label-less pie is unusable).}
+
+\item{drill}{Column a click filters downstream on. Default unset (a
+click is inert). When set, clicking a mark emits a categorical
+filter on this column's value(s) for the clicked mark. For an
+aggregated chart this should be a column constant within a group.}
+
+\item{sort_by}{Category ordering on the axis. Allowed values depend on
+the chart family:
 \itemize{
-\item Aggregated: \code{"value"} (computed metric, default), \code{"alpha"} (group
-name), or a column name (ascending min of that column per group).
-\item Timeline: \code{"onset"} (default — by ascending min of \code{x_col} per term),
-\code{"alpha"}, or a column name.
-\item Individual: ignored (points plotted in raw order).
+\item Aggregated: \code{"value"} (default), \code{"alpha"}, or a column name.
+\item Timeline: \code{"onset"} (default), \code{"alpha"}, or a column name.
+\item Individual: ignored.
 }}
 
-\item{sort_dir}{\code{"asc"} or \code{"desc"}. Reverses the ordering produced by
-\code{sort_by}. When unset, defaults to \code{"desc"} for aggregated charts and
-\code{"asc"} for timelines. Ignored by individual charts.}
+\item{sort_dir}{\code{"asc"} or \code{"desc"}. Reverses the \code{sort_by} ordering.}
 
-\item{filter_type}{Filter mode: "categorical" or "range"}
+\item{filter_type, filter_column, filter_values, filter_range, filter_point}{Runtime click/brush filter state (transport for the emitted filter;
+normally left at defaults at creation).}
 
-\item{filter_column}{Currently filtered column (aggregated, set by click)}
+\item{line_width_mult}{Multiplier on the default line width for line
+charts. Default \code{1.0}. Range \code{0.5}–\code{3.0}. Individual family only.}
 
-\item{filter_values}{Currently filtered values (aggregated, set by click)}
-
-\item{filter_range}{Range filter list with x_col, y_col, x_range, y_range
-(individual, set by brush)}
-
-\item{filter_point}{Point filter list with x_col, y_col, x_val, y_val
-(individual scatter/line, set by clicking a single dot when no
-entity/id column resolves — drills to the row(s) at that point)}
-
-\item{line_width_mult}{Multiplier on the default line width for line charts.
-Defaults to \code{1.0}. Range \code{0.5}–\code{3.0}. Applies to the individual family only.}
-
-\item{dot_size_mult}{Multiplier on the default marker size (scatter points
-and line markers). Defaults to \code{1.0}. Range \code{0.5}–\code{3.0}. Applies to the
-individual family only.}
+\item{dot_size_mult}{Multiplier on the default marker size. Default
+\code{1.0}. Range \code{0.5}–\code{3.0}. Individual family only.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
 }
@@ -103,23 +96,21 @@ individual family only.}
 A transform block of class \code{drilldown_chart_block}
 }
 \description{
-A configurable chart block that also acts as a filter. Three chart families:
+A configurable chart that can also act as a filter. Arguments are
+grammar-of-graphics aesthetics: each one names a \strong{data column}, never
+a literal value. Roles are orthogonal — \code{color} only colours, \code{series}
+only splits into series, \code{label} only writes on-mark text, position is
+\code{x}/\code{y}/\code{xend} or \code{group}.
 }
 \details{
-\strong{Aggregated} (bar, pie, treemap, boxplot): group-by + metric, click a
-group to filter the raw rows behind it.
+Interactivity is explicit and opt-in via \code{drill}. A click identifies a
+mark; the mark maps to one or more source rows; the downstream filter
+is \verb{drill \%in\% (distinct values of drill over those rows)}. When
+\code{drill} is unset the click is inert (no filter emitted). Brush / drag
+range selection on scatter/line is a separate gesture and is unchanged.
 
-\strong{Individual} (scatter, line): x/y columns, brush-drag a region to filter
-rows within that range. Clicking a line or a scatter dot emits a
-categorical filter on its series (\code{series_by} when set, otherwise
-\code{color_by}). When neither is set, a click instead drills to the
-clicked observation itself — filtering the row(s) at that exact
-(x, y) point. Useful for "one dot per entity → click to drill to
-that entity" patterns (e.g. one dot per policy in a property
-workbench, click → filter downstream blocks to that single policy).
-
-\strong{Timeline} (gantt): interval rows with start / optional end and a
-categorical y axis (e.g. AE term). Clicking a bar emits a categorical
-filter on \code{series_by} (else \code{color_by}); with neither set the click is
-a no-op. \code{sort_by} controls y-axis category ordering.
+Three chart families share this block (an internal render-dispatch
+detail that never changes what an argument means):
+aggregated (bar, pie, treemap, boxplot), individual (scatter, line),
+timeline (gantt).
 }
