@@ -157,6 +157,11 @@
     }
 
     _buildDOM() {
+      // The popover is portaled to <body> (see below); a re-render of the
+      // widget would otherwise orphan the old one. Remove it first.
+      if (this.popoverEl && this.popoverEl.parentNode) {
+        this.popoverEl.parentNode.removeChild(this.popoverEl);
+      }
       this.el.innerHTML = '';
 
       // Card wrapper (for popover positioning)
@@ -184,11 +189,15 @@
       // The card itself shows only the result + its direct interactions.
       // See blockr.docs design-system/components/blockr-popover.md.
 
-      // Popover (right-anchored, same as blockr.dplyr)
+      // Popover. Portaled to <body> so it escapes Dockview's transformed
+      // panels (a transformed ancestor traps position:fixed, and the
+      // panel's overflow:auto clips an absolute popover). Same pattern as
+      // blockr-select's dropdown. The `dd-popover` class carries all the
+      // styling that used to be scoped under .drilldown-chart-container.
       this.popoverEl = document.createElement('div');
-      this.popoverEl.className = 'blockr-popover';
+      this.popoverEl.className = 'blockr-popover dd-popover';
       this.popoverEl.style.display = 'none';
-      this.card.appendChild(this.popoverEl);
+      document.body.appendChild(this.popoverEl);
 
       // Close popover on outside click
       document.addEventListener('click', (e) => {
@@ -526,10 +535,16 @@
 
     _updateFamilyClass() {
       const family = this._family();
-      this.el.classList.remove(
-        'dd-family-aggregated', 'dd-family-individual', 'dd-family-timeline'
-      );
+      const fams = ['dd-family-aggregated', 'dd-family-individual',
+        'dd-family-timeline'];
+      this.el.classList.remove(...fams);
       this.el.classList.add('dd-family-' + family);
+      // The popover lives on <body> (portaled), so the family-visibility
+      // rules must key off a class on the popover itself, not an ancestor.
+      if (this.popoverEl) {
+        this.popoverEl.classList.remove(...fams);
+        this.popoverEl.classList.add('dd-family-' + family);
+      }
     }
 
     // -- Data + rendering entry point -----------------------------------------
@@ -1747,11 +1762,60 @@
       this.popoverEl.style.display = 'block';
       this._popoverOpen = true;
       this.gearBtn.classList.add('blockr-gear-active');
+      // Anchor in viewport coords with position:fixed. The shared CSS
+      // anchors the popover absolute/right:0 to the card; in a narrow
+      // dock tile a 680px popover then overflows ~500px off-screen left
+      // and the panel's overflow:auto clips it. position:fixed is NOT
+      // clipped by overflow ancestors and (unlike portaling to body)
+      // keeps the element inside .drilldown-chart-container so the
+      // scoped popover/family-visibility CSS still applies.
+      this._positionPopover();
+      // Blockr.Select components reflow after the first paint and grow the
+      // popover; reposition on the next frame so the clamp uses the final
+      // height.
+      requestAnimationFrame(() => {
+        if (this._popoverOpen) this._positionPopover();
+      });
+      this._popReposition = () => {
+        if (this._popoverOpen) this._positionPopover();
+      };
+      window.addEventListener('scroll', this._popReposition, true);
+      window.addEventListener('resize', this._popReposition);
+    }
+    _positionPopover() {
+      const g = this.gearBtn.getBoundingClientRect();
+      const pop = this.popoverEl;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      pop.style.position = 'fixed';
+      pop.style.right = 'auto';
+      // Never let the popover exceed the viewport; it scrolls internally
+      // (overflow-y:auto in the stylesheet) when content is taller.
+      pop.style.maxHeight = (vh - 16) + 'px';
+      const pw = pop.offsetWidth;
+      const ph = pop.offsetHeight;
+      // Right edge aligns under the gear; clamp within the viewport.
+      let left = Math.min(g.right, vw - 8) - pw;
+      left = Math.max(8, Math.min(left, vw - pw - 8));
+      // Prefer just below the gear; if it would overflow the bottom,
+      // lift it up so the whole popover stays on screen.
+      let top = g.bottom + 6;
+      if (top + ph > vh - 8) top = Math.max(8, vh - 8 - ph);
+      pop.style.left = left + 'px';
+      pop.style.top = top + 'px';
+      // Final guard: tighten max-height to the space actually available
+      // from the chosen top, so the bottom edge never leaves the screen.
+      pop.style.maxHeight = (vh - top - 8) + 'px';
     }
     _closePopover() {
       this.popoverEl.style.display = 'none';
       this._popoverOpen = false;
       this.gearBtn.classList.remove('blockr-gear-active');
+      if (this._popReposition) {
+        window.removeEventListener('scroll', this._popReposition, true);
+        window.removeEventListener('resize', this._popReposition);
+        this._popReposition = null;
+      }
     }
 
     // -- Status footer --------------------------------------------------------
