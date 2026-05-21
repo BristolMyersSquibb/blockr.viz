@@ -63,35 +63,3 @@ if (FALSE) {
 }
 
 
-# ============================================================================
-# Example 3: Combined with Visual Filter
-# ============================================================================
-#
-# Use visual filter to select data, then pivot the filtered results
-
-if (FALSE) {
-  run_app(
-    blocks = c(
-      demo_data = new_static_block(bi_demo_data()),
-
-      # Visual filter for interactive selection
-      filter = new_visual_filter_block(
-        dimensions = c("Region", "Channel", "Year"),
-        measure = "Revenue"
-      ),
-
-      # Pivot filtered data
-      pivot = new_pivot_table_block(
-        rows = "Country",
-        cols = "Category",
-        measure = "Revenue",
-        agg_fun = "sum"
-      )
-    ),
-    links = c(
-      new_link("demo_data", "filter", "data"),
-      new_link("filter", "pivot", "data")
-    ),
-    extensions = list(new_dag_extension())
-  )
-}

@@ -8,8 +8,9 @@ Authors@R:
            email = "christoph@cynkra.com",
            comment = c(ORCID = "0000-0002-7192-7044"))
 Description: Provides business intelligence and dashboard blocks for blockr,
-    including visual filters, aggregation blocks, and KPI displays. Designed
-    for interactive data exploration with support for database backends.
+    including pivot/summary tables, KPI/tile displays, waterfall charts, and
+    drill-down chart/table blocks. Designed for interactive data exploration
+    with support for database backends.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

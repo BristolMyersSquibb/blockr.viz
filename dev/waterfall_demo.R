@@ -71,32 +71,3 @@ if (FALSE) {
 }
 
 
-# ============================================================================
-# Example 3: Waterfall with Visual Filter
-# ============================================================================
-#
-# Use demo data aggregated across all rows. The visual filter lets you
-# slice by Region/Channel, and the waterfall updates to show the
-# Revenue-to-Profit bridge for the filtered subset.
-
-if (FALSE) {
-  run_app(
-    blocks = c(
-      demo_data = new_static_block(bi_demo_data()),
-
-      filter = new_visual_filter_block(
-        dimensions = c("Region", "Channel", "Year"),
-        measure = "Revenue"
-      ),
-
-      waterfall = new_waterfall_block(
-        measures = c("Revenue", "Profit")
-      )
-    ),
-    links = c(
-      new_link("demo_data", "filter", "data"),
-      new_link("filter", "waterfall", "data")
-    ),
-    extensions = list(new_dag_extension())
-  )
-}

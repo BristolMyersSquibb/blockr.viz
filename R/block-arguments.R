@@ -105,8 +105,6 @@ summary_table_arguments <- function() {
       "vars=[\"AGE\",\"SEX\",\"BMIBL\"], by=[\"TRT01A\"]",
       "\n- \"AE counts by SOC and term\" ->",
       "sections=[\"AEBODSYS\"], vars=[\"AEDECOD\"], by=[\"TRT01A\"]",
-      "\n\nPrefer summary_table_block for \"Table 1\" style summaries.",
-      "Prefer pivot_table_block for \"one measure by two dimensions\".",
       "\n\nPass this block's output to gt_table_block for styled rendering."
     )
   )
@@ -137,8 +135,8 @@ gt_table_arguments <- function() {
       indent_stat = 16L
     ),
     prompt = paste(
-      "Render the output of pivot_table_block or summary_table_block as a",
-      "styled gt table. This block is a pure renderer — it does not",
+      "Render the output of summary_table_block as a styled gt table.",
+      "This block is a pure renderer — it does not",
       "reshape or aggregate. Place it downstream of a table-shape block.",
       "\n\nUse `title` / `subtitle` for table captions. Use `full_width`,",
       "`borders`, and `indent_stat` for layout polish."

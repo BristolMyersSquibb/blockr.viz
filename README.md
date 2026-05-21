@@ -11,17 +11,6 @@ pak::pak("cynkra/blockr.bi")
 
 ## Blocks
 
-### Visual Filter Block
-
-Interactive crossfilter-style charts for filtering data. Click on bars to filter.
-
-```r
-new_visual_filter_block(
-  dimensions = c("Region", "Category", "Channel"),
-  measure = "Revenue"
-)
-```
-
 ### KPI Block
 
 Display key performance indicators as prominent numbers with colored labels.
@@ -58,10 +47,6 @@ run_app(
     data = new_read_block(
       path = system.file("extdata", "bi_demo_data.csv", package = "blockr.bi")
     ),
-    filter = new_visual_filter_block(
-      dimensions = c("Region", "Category", "Channel", "Year"),
-      measure = "Revenue"
-    ),
     kpis = new_kpi_block(
       measures = c("Revenue", "Profit", "Transactions"),
       subtitles = c(
@@ -77,9 +62,8 @@ run_app(
     )
   ),
   links = c(
-    new_link("data", "filter", "data"),
-    new_link("filter", "kpis", "data"),
-    new_link("filter", "pivot", "data")
+    new_link("data", "kpis", "data"),
+    new_link("data", "pivot", "data")
   ),
   extensions = list(new_dag_extension())
 )

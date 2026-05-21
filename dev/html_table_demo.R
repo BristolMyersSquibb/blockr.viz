@@ -4,10 +4,8 @@
 # run_app() context, alongside gt_table_block for visual comparison.
 #
 # Layout:
-#   [Data] --> [Visual Filter] --> [Summary Table] --> [HTML Table]
-#                                                   \-> [gt Table]
-#
-# Click the visual filter bars to filter everything.
+#   [Data] --> [Summary Table] --> [HTML Table]
+#                              \-> [gt Table]
 
 library(blockr)
 library(blockr.dag)
@@ -18,11 +16,6 @@ app <- run_app(
   blocks = c(
     data = new_read_block(
       path = system.file("extdata", "bi_demo_data.csv", package = "blockr.bi")
-    ),
-
-    filter = new_visual_filter_block(
-      dimensions = c("Region", "Category", "Channel", "Year"),
-      measure = "Revenue"
     ),
 
     summary = new_summary_table_block(
@@ -46,8 +39,7 @@ app <- run_app(
     )
   ),
   links = c(
-    new_link("data", "filter", "data"),
-    new_link("filter", "summary", "data"),
+    new_link("data", "summary", "data"),
     new_link("summary", "html", "data"),
     new_link("summary", "gt", "data")
   ),

@@ -178,7 +178,13 @@ new_pivot_table_block <- function(
 
               build_pivot_expr(s$rows, s$cols, s$measures, s$agg_fun, digs)
             }),
-            state = list(state = r_state)
+            state = list(
+              rows     = shiny::reactive(r_state()$rows),
+              cols     = shiny::reactive(r_state()$cols),
+              measures = shiny::reactive(r_state()$measures),
+              agg_fun  = shiny::reactive(r_state()$agg_fun),
+              digits   = shiny::reactive(r_state()$digits)
+            )
           )
         }
       )

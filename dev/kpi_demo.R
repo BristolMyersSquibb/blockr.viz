@@ -2,7 +2,7 @@
 #
 # Demonstrates the restored new_kpi_block() with several configurations:
 # single and multi-measure display, prefix/suffix glyphs, custom titles,
-# subtitles, colors, and an upstream visual filter.
+# subtitles, and colors.
 
 library(blockr)
 library(blockr.dag)
@@ -66,39 +66,7 @@ if (FALSE) {
 
 
 # ============================================================================
-# Example 3: KPIs reactive to an upstream visual filter
-# ============================================================================
-#
-# Click on a Region/Channel bar and watch the KPI values update to the
-# filtered subset.
-
-if (FALSE) {
-  run_app(
-    blocks = c(
-      data = new_static_block(bi_demo_data()),
-
-      filter = new_visual_filter_block(
-        dimensions = c("Region", "Channel", "Year"),
-        measure = "Revenue"
-      ),
-
-      kpis = new_kpi_block(
-        measures = c("Revenue", "Profit"),
-        prefix = "$",
-        digits = 0
-      )
-    ),
-    links = c(
-      new_link("data", "filter", "data"),
-      new_link("filter", "kpis", "data")
-    ),
-    extensions = list(new_dag_extension())
-  )
-}
-
-
-# ============================================================================
-# Example 4: Different aggregations (mean instead of sum, count)
+# Example 3: Different aggregations (mean instead of sum, count)
 # ============================================================================
 
 if (FALSE) {
