@@ -155,6 +155,13 @@ drilldown_chart_arguments <- function() {
       "group=\"X\", metric=\".count\", agg_fn=\"count\", drill=\"X\"",
       "\n- \"mean Y by X\" -> chart_type=\"bar\", group=\"X\",",
       "metric=\"Y\", agg_fn=\"mean\"",
+      "\n- \"mean Y trend over time T by group G\" (e.g. mean",
+      "ADAS-Cog over visits by treatment arm) -> requires an",
+      "UPSTREAM summarize_block first (group_by=[T,G], compute",
+      "mean_Y = mean(Y)). Then on THIS block: chart_type=\"line\",",
+      "x=T, y=\"mean_Y\", series=G. There is no aggregated-line",
+      "family; raw rows would be drawn in row order and produce",
+      "tangles or empty plots.",
       "\n- \"distribution / spread / boxplot of Y by X\" ->",
       "chart_type=\"boxplot\", group=\"X\", metric=\"Y\". A boxplot",
       "shows the SPREAD of `metric` within each `group` — do NOT set",
@@ -171,7 +178,22 @@ drilldown_chart_arguments <- function() {
       "\n\nBar/pie/treemap/boxplot ordering is `sort_by` + `sort_dir` on",
       "THIS block, not an upstream arrange_block. \"value\"+\"desc\" for",
       "top-N by value. For 'top N by value' workflows prefer slice_block",
-      "(type=\"max\", order_by=COL, n=N)."
+      "(type=\"max\", order_by=COL, n=N).",
+      "\n\nEmpty-plot gotchas (data flows in, no marks drawn):",
+      "\n- chart_type=\"line\" with raw (non-summarized) rows: lines",
+      "connect rows IN ROW ORDER, often producing tangles or invisible",
+      "plots when you actually wanted a mean trajectory. Summarize",
+      "upstream first (see the 'mean Y trend over time' pattern above).",
+      "\n- color/series pointing at a column missing from this block's",
+      "upstream data. ADaM tables vary on treatment columns (adsl has",
+      "TRT01A/TRT01P; many other tables have TRTA/TRTP only). Run",
+      "describe_block or query_data on the upstream to confirm the",
+      "column exists here before referencing it.",
+      "\n- Mixing chart families: setting BOTH `group`/`metric` AND",
+      "`x`/`y` confuses the renderer. Pick one family per chart_type.",
+      "\n- agg_fn=\"mean\"/\"sum\" with a metric column that's all-NA or",
+      "non-numeric in scope -> NA bars (invisible). Pre-filter to rows",
+      "where the metric is populated, or pick a different metric."
     )
   )
 }
