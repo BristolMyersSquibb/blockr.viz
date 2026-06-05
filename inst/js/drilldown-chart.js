@@ -111,8 +111,8 @@
     facet:  { label: 'Facet',  kind: 'column', colType: 'cat', maxUnique: 10 },
     drill:  { label: 'Drill',  kind: 'column', colType: 'any' },
     label:  { label: 'Label',  kind: 'column', colType: 'any' },
-    metric: { label: 'Metric', kind: 'column', colType: 'num', allowCount: true },
-    agg_fn: { label: 'Agg',    kind: 'select', options: AGG_FNS, pairedWith: 'metric' },
+    metric: { label: 'Metric', kind: 'column', colType: 'num', allowCount: true, pairedWith: 'agg_fn' },
+    agg_fn: { label: 'Agg',    kind: 'select', options: AGG_FNS },
     sort_by:  { label: 'Sort', kind: 'select', pairedWith: 'sort_dir',
                 optionsBy: { aggregated: ['value', 'alpha', '#num'],
                              timeline: ['onset', 'alpha', '#num'] } },
@@ -251,7 +251,7 @@
       this.gearBtn.className = 'blockr-gear-btn';
       this.gearBtn.innerHTML = (typeof Blockr !== 'undefined' && Blockr.icons)
         ? Blockr.icons.gear : '\u2699';
-      this.gearBtn.title = 'Advanced settings';
+      this.gearBtn.title = 'Chart settings';
       this.gearBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this._togglePopover();
@@ -2297,6 +2297,7 @@
         xend: this.config.xend || '',
         sort_by: this.config.sort_by || '',
         sort_dir: this.config.sort_dir || 'asc',
+        orientation: this.config.orientation || 'horizontal',
         series: this.config.series || '',
         label: this.config.label || '',
         drill: this.config.drill || '',
