@@ -72,11 +72,20 @@ new_drilldown_chart_block <- function(
     drill = NULL,
     sort_by = NULL,
     sort_dir = NULL,
+    # --- Runtime filter transport (NOT creation-time config) -------------
+    # These five hold the emitted click/brush filter state. They are set by
+    # interaction at runtime, normally left at defaults at creation. They
+    # MUST stay in the constructor signature: blockr.core serializes a block
+    # from its constructor formals (`block_ctor_inputs`) and restores by
+    # re-calling the constructor with those saved values, so dropping them
+    # from the signature would break filter-state save/restore. See the
+    # `state = list(...)` block below.
     filter_type = "categorical",
     filter_column = NULL,
     filter_values = NULL,
     filter_range = NULL,
     filter_point = NULL,
+    # ---------------------------------------------------------------------
     line_width_mult = 1.0,
     dot_size_mult = 1.0,
     step = NULL,
@@ -118,7 +127,10 @@ new_drilldown_chart_block <- function(
         # Theming state
         r_line_width_mult <- shiny::reactiveVal(line_width_mult)
         r_dot_size_mult <- shiny::reactiveVal(dot_size_mult)
-        # Overlay options
+        # Overlay options. `step`, `ref_x`, `ref_y` have no gear-popover
+        # control but ARE consumed by the JS renderer (step-mode line, and
+        # vertical/horizontal reference-line overlays). They flow through the
+        # config payload below and via external_ctrl, so leave them wired.
         r_step <- shiny::reactiveVal(step)
         r_ref_x <- shiny::reactiveVal(ref_x)
         r_ref_y <- shiny::reactiveVal(ref_y)
@@ -186,17 +198,10 @@ new_drilldown_chart_block <- function(
           } else {
             d[0]
           }
-          col_meta <- lapply(names(d), function(col) {
-            vals <- d[[col]]
-            lbl <- attr(vals, "label")
-            res <- list(
-              name = col,
-              type = if (is.numeric(vals)) "numeric" else "categorical",
-              n_unique = length(unique(vals))
-            )
-            if (!is.null(lbl) && nzchar(lbl)) res$label <- lbl
-            res
-          })
+          # Reuse the column metadata reactive (same name/type/n_unique/label
+          # shape) instead of recomputing it inline — it is derived from the
+          # same data() and was duplicated here.
+          col_meta <- r_col_meta()
           session$sendCustomMessage("drilldown-data", list(
             id = ns("drilldown_block"),
             columns = col_meta,
@@ -215,7 +220,13 @@ new_drilldown_chart_block <- function(
               smoother = r_smoother(),
               smoother_series = tryCatch(compute_smoother_series(
                 d, r_smoother(), r_x(), r_y(), r_color(), r_series()
-              ), error = function(e) NULL),
+              ), error = function(e) {
+                # Keep the NULL fallback (no overlay) but surface the failure
+                # so a broken smoother fit is diagnosable instead of silent.
+                warning("drilldown_chart smoother computation failed: ",
+                        conditionMessage(e), call. = FALSE)
+                NULL
+              }),
               lo = r_lo(), hi = r_hi()
             ),
             arguments = as.list(
@@ -284,28 +295,35 @@ new_drilldown_chart_block <- function(
               upd(r_dot_size_mult, as.numeric(msg$dot_size_mult))
             }
           } else if (action == "filter") {
+            # Filter-state writes use the same identical()-guard (`upd`) as
+            # the config writes above: the data-send observer transitively
+            # depends on the filter reactiveVals via the expr reactive, so a
+            # blind set to an unchanged value would invalidate (and re-pump)
+            # needlessly on an echoed filter. The click-vs-brush race logic
+            # (the `is_point` no-op below, the `!is.null` gating) is
+            # unchanged — only the actual writes are now guarded.
             ft <- msg$filter_type %||% "categorical"
 
             if (ft == "categorical") {
-              r_filter_column(msg$column)
-              r_filter_values(msg$values)
-              r_filter_range(NULL)
-              r_filter_point(NULL)
-              r_filter_type("categorical")
+              upd(r_filter_column, msg$column)
+              upd(r_filter_values, msg$values)
+              upd(r_filter_range, NULL)
+              upd(r_filter_point, NULL)
+              upd(r_filter_type, "categorical")
             } else if (ft == "point") {
               # Click on a single dot with no drill column: drill to the
               # observation(s) at that exact x/y coordinate.
               if (!is.null(msg$x_col) && !is.null(msg$y_col)) {
-                r_filter_column(NULL)
-                r_filter_values(NULL)
-                r_filter_range(NULL)
-                r_filter_point(list(
+                upd(r_filter_column, NULL)
+                upd(r_filter_values, NULL)
+                upd(r_filter_range, NULL)
+                upd(r_filter_point, list(
                   x_col = msg$x_col,
                   y_col = msg$y_col,
                   x_val = msg$x_val,
                   y_val = msg$y_val
                 ))
-                r_filter_type("point")
+                upd(r_filter_type, "point")
               }
             } else if (ft == "range") {
               if (!is.null(msg$x_col) && !is.null(msg$x_range)) {
@@ -320,23 +338,23 @@ new_drilldown_chart_block <- function(
                 is_point <- length(xr) == 2L && xr[1L] == xr[2L] &&
                   (is.null(yr) || (length(yr) == 2L && yr[1L] == yr[2L]))
                 if (!is_point) {
-                  r_filter_column(NULL)
-                  r_filter_values(NULL)
-                  r_filter_point(NULL)
-                  r_filter_range(list(
+                  upd(r_filter_column, NULL)
+                  upd(r_filter_values, NULL)
+                  upd(r_filter_point, NULL)
+                  upd(r_filter_range, list(
                     x_col = msg$x_col,
                     y_col = msg$y_col,
                     x_range = xr,
                     y_range = yr
                   ))
-                  r_filter_type("range")
+                  upd(r_filter_type, "range")
                 }
               } else {
-                r_filter_column(NULL)
-                r_filter_values(NULL)
-                r_filter_range(NULL)
-                r_filter_point(NULL)
-                r_filter_type("categorical")
+                upd(r_filter_column, NULL)
+                upd(r_filter_values, NULL)
+                upd(r_filter_range, NULL)
+                upd(r_filter_point, NULL)
+                upd(r_filter_type, "categorical")
               }
             }
           }

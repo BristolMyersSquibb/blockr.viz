@@ -199,14 +199,22 @@
       this.popoverEl.style.display = 'none';
       document.body.appendChild(this.popoverEl);
 
-      // Close popover on outside click
-      document.addEventListener('click', (e) => {
+      // Close popover on outside click. The handler is stored so dispose()
+      // (and a re-_buildDOM()) can remove it — otherwise each widget
+      // instance leaks one document-level listener that closes over a stale
+      // popoverEl. Remove any previously registered handler first so only
+      // one is ever active per instance.
+      if (this._outsideClick) {
+        document.removeEventListener('click', this._outsideClick);
+      }
+      this._outsideClick = (e) => {
         if (this._popoverOpen && this.popoverEl &&
             !this.popoverEl.contains(e.target) &&
             !this.gearBtn.contains(e.target)) {
           this._closePopover();
         }
-      });
+      };
+      document.addEventListener('click', this._outsideClick);
 
       // Chart area
       this.chartGrid = document.createElement('div');
@@ -631,14 +639,20 @@
         const key = fv + '|||' + gv + '|||' + cv;
         if (!groups[key]) groups[key] = { facet: fv, group: gv, color: cv, values: [], rows: [] };
         groups[key].rows.push(row);
-        if (metric !== '.count' && row[metric] != null) groups[key].values.push(Number(row[metric]));
+        // Collect numeric metric values for mean/median/sum/min/max. Skip
+        // entries that coerce to NaN (non-numeric text, empty strings) so a
+        // single bad cell can't poison a mean/sum into NaN.
+        if (metric !== '.count' && row[metric] != null) {
+          const n = Number(row[metric]);
+          if (!Number.isNaN(n)) groups[key].values.push(n);
+        }
       }
 
       const result = [];
       for (const g of Object.values(groups)) {
         let value;
         if (agg_fn === 'count') value = g.rows.length;
-        else if (agg_fn === 'count_distinct') { const s = new Set(); for (const r of g.rows) s.add(r[metric]); value = s.size; }
+        else if (agg_fn === 'count_distinct') { const s = new Set(); for (const r of g.rows) { const v = r[metric]; if (v != null && !(typeof v === 'number' && Number.isNaN(v))) s.add(v); } value = s.size; }
         else if (agg_fn === 'mean') value = g.values.length ? g.values.reduce((a, b) => a + b, 0) / g.values.length : 0;
         else if (agg_fn === 'median') { const s = g.values.slice().sort((a, b) => a - b); const m = Math.floor(s.length / 2); value = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; }
         else if (agg_fn === 'sum') value = g.values.reduce((a, b) => a + b, 0);
@@ -890,8 +904,12 @@
       const metric = this.config.metric;
       if (metric === '.count') return null;
       const boxData = groups.map(g => {
-        const vals = this.data.filter(r => String(r[groupBy]) === g && r[metric] != null).map(r => Number(r[metric])).sort((a, b) => a - b);
-        if (vals.length === 0) return [0, 0, 0, 0, 0];
+        const vals = this.data.filter(r => String(r[groupBy]) === g && r[metric] != null).map(r => Number(r[metric])).filter(v => !Number.isNaN(v)).sort((a, b) => a - b);
+        // Empty / all-NA group: return null so ECharts draws nothing for
+        // this category slot (index alignment with `groups` / yAxis.data is
+        // preserved). A fake [0,0,0,0,0] summary would render a misleading
+        // flat box at zero.
+        if (vals.length === 0) return null;
         const q = (p) => { const i = p * (vals.length - 1); const lo = Math.floor(i); return lo === i ? vals[lo] : vals[lo] + (vals[lo + 1] - vals[lo]) * (i - lo); };
         const q1 = q(0.25), q3 = q(0.75), iqr = q3 - q1;
         const lo = Math.max(vals[0], q1 - 1.5 * iqr);
@@ -1357,16 +1375,20 @@
             return;
           }
 
-          // Gather all selected indices from all series
-          let allIndices = [];
+          // Gather selected (seriesIndex, dataIndex) pairs. A brushSelected
+          // dataIndex is RELATIVE TO ITS OWN SERIES, so it must be looked up
+          // in that series' data array — not in a flattened concatenation of
+          // all series (which mis-maps once there is more than one series).
+          const selected = [];
           for (const s of batch.selected) {
             if (s.dataIndex && s.dataIndex.length > 0) {
-              allIndices = allIndices.concat(s.dataIndex);
+              for (const di of s.dataIndex) {
+                selected.push({ seriesIndex: s.seriesIndex, dataIndex: di });
+              }
             }
           }
-          allIndices = [...new Set(allIndices)]; // dedupe
 
-          if (allIndices.length === 0) {
+          if (selected.length === 0) {
             this._hasBrushFilter = false;
             this._updateStatus();
             this._sendClearFilter();
@@ -1378,16 +1400,17 @@
             if (other !== chart) other.dispatchAction({ type: 'brush', areas: [] });
           }
 
-          // Compute x/y range from selected points' actual values
+          // Compute x/y range from selected points' actual values. Index
+          // into each point's own series array and bounds-check so an
+          // out-of-range index can neither throw nor pull the wrong point.
           const opt = chart.getOption();
-          const seriesData = [];
-          for (const s of (opt.series || [])) {
-            if (s.data) seriesData.push(...s.data);
-          }
+          const allSeries = opt.series || [];
 
           let xVals = [], yVals = [];
-          for (const idx of allIndices) {
-            const pt = seriesData[idx];
+          for (const sel of selected) {
+            const sData = allSeries[sel.seriesIndex]?.data;
+            if (!sData || sel.dataIndex < 0 || sel.dataIndex >= sData.length) continue;
+            const pt = sData[sel.dataIndex];
             if (pt) {
               const x = Array.isArray(pt) ? pt[0] : pt.value?.[0];
               const y = Array.isArray(pt) ? pt[1] : pt.value?.[1];
@@ -1968,6 +1991,18 @@
       if (this._resizeObserver) this._resizeObserver.disconnect();
       for (const c of this.charts) c.dispose();
       this.charts = [];
+      // Remove the document-level outside-click listener (otherwise it
+      // accumulates one stale closure per widget instance).
+      if (this._outsideClick) {
+        document.removeEventListener('click', this._outsideClick);
+        this._outsideClick = null;
+      }
+      // Remove the popover that was portaled to <body> — if the widget
+      // element is torn down without dispose() reaching here it would
+      // orphan the popover in the DOM.
+      if (this.popoverEl && this.popoverEl.parentNode) {
+        this.popoverEl.parentNode.removeChild(this.popoverEl);
+      }
     }
   }
 
