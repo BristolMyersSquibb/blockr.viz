@@ -833,18 +833,48 @@
       }
     }
 
+    // Establish sensible defaults for the active family. Crucially this also
+    // picks the default MAPPING columns (group / x / y) when unset — and it
+    // runs in the family-switch path (_onChartType) BEFORE _sendConfig, so R
+    // learns the new mapping and ships those columns. Without this, switching
+    // family clears the positional roles, R ships no columns, and the chart
+    // renders empty (the data-pump only sends columns the current mapping
+    // names). Mirrors the column-picking in setData.
     _ensureFamilyDefaults() {
       const cfg = this.config;
       const fam = this._family();
+      const cols = this.columns || [];
       if (fam === 'aggregated') {
+        if (!this._hasVal(cfg.group) && cols.length) {
+          const cat = cols.find(c => c.type === 'categorical' && c.n_unique <= 30);
+          cfg.group = cat ? cat.name : cols[0].name;
+        }
         if (!cfg.metric) cfg.metric = '.count';
         if (!cfg.agg_fn) cfg.agg_fn = 'count';
         if (!this._hasVal(cfg.sort_by)) cfg.sort_by = 'value';
         if (!this._hasVal(cfg.sort_dir)) cfg.sort_dir = 'desc';
         if (!this._hasVal(cfg.orientation)) cfg.orientation = 'horizontal';
       } else if (fam === 'timeline') {
+        if (!this._hasVal(cfg.x) && cols.length) {
+          const num = cols.find(c => c.type === 'numeric');
+          cfg.x = num ? num.name : cols[0].name;
+        }
+        if (!this._hasVal(cfg.y) && cols.length) {
+          const cat = cols.find(c => c.type === 'categorical' && c.n_unique > 1);
+          cfg.y = cat ? cat.name : cols[0].name;
+        }
         if (!this._hasVal(cfg.sort_by)) cfg.sort_by = 'onset';
         if (!this._hasVal(cfg.sort_dir)) cfg.sort_dir = 'asc';
+      } else {
+        if (!this._hasVal(cfg.x) && cols.length) {
+          const num = cols.find(c => c.type === 'numeric');
+          cfg.x = num ? num.name : cols[0].name;
+        }
+        if (!this._hasVal(cfg.y) && cols.length) {
+          const nums = cols.filter(c => c.type === 'numeric');
+          const other = nums.find(c => c.name !== cfg.x);
+          cfg.y = other ? other.name : (nums[0] ? nums[0].name : cols[0].name);
+        }
       }
     }
 
