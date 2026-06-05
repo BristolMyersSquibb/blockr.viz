@@ -1743,23 +1743,46 @@
           const opt = chart.getOption();
           const allSeries = opt.series || [];
 
-          let xVals = [], yVals = [];
+          // When `drill` is set, the brush filters downstream on the drill
+          // column's values for the brushed points (categorical) — the same
+          // rule as click-drill, so `drill` is the single "what to filter on"
+          // knob for BOTH gestures. Build a (x|y) -> rows index once so the
+          // brushed points can be mapped back to source rows. Without `drill`,
+          // the brush does a geometric x/y range filter (unchanged).
+          const drillCol = this.config.drill;
+          let rowIndex = null;
+          if (drillCol) {
+            rowIndex = new Map();
+            const xc = this.config.x, yc = this.config.y;
+            for (const r of (this.data || [])) {
+              const k = String(r[xc]) + '|||' + String(r[yc]);
+              if (!rowIndex.has(k)) rowIndex.set(k, []);
+              rowIndex.get(k).push(r);
+            }
+          }
+
+          let xVals = [], yVals = [], brushedRows = [];
           for (const sel of selected) {
             const sData = allSeries[sel.seriesIndex]?.data;
             if (!sData || sel.dataIndex < 0 || sel.dataIndex >= sData.length) continue;
             const pt = sData[sel.dataIndex];
-            if (pt) {
-              const x = Array.isArray(pt) ? pt[0] : pt.value?.[0];
-              const y = Array.isArray(pt) ? pt[1] : pt.value?.[1];
-              if (x != null) xVals.push(x);
-              if (y != null) yVals.push(y);
+            if (!pt) continue;
+            const x = Array.isArray(pt) ? pt[0] : pt.value?.[0];
+            const y = Array.isArray(pt) ? pt[1] : pt.value?.[1];
+            if (x != null) xVals.push(x);
+            if (y != null) yVals.push(y);
+            if (rowIndex) {
+              const hit = rowIndex.get(String(x) + '|||' + String(y));
+              if (hit) brushedRows.push(...hit);
             }
           }
 
           this._hasBrushFilter = true;
           this._updateStatus();
 
-          if (xVals.length > 0) {
+          if (drillCol && brushedRows.length) {
+            this._emitDrill(brushedRows);
+          } else if (xVals.length > 0) {
             const xRange = [Math.min(...xVals), Math.max(...xVals)];
             if (isLine) {
               this._sendRangeFilter(xRange, null);

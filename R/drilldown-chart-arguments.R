@@ -54,12 +54,15 @@ drilldown_chart_arguments <- function() {
         "colour, series, or drill."
       ),
       drill = paste0(
-        "Column a click filters downstream on. Optional; default null = ",
-        "a click is inert (no filter). When set, clicking a mark emits a ",
-        "categorical filter on this column's value(s) for that mark. For ",
-        "an aggregated chart use a column constant within a group (often ",
-        "`group` itself). This is the only click-to-filter knob; color ",
-        "and series never drive drill."
+        "Column a SELECTION filters downstream on. Optional; default null = ",
+        "a selection is inert (no filter). When set, selecting marks emits a ",
+        "categorical filter on this column's value(s) for the selected marks ",
+        "— this covers BOTH a click (one mark) and a brush-drag on ",
+        "scatter/line (all points in the box). For an aggregated chart use a ",
+        "column constant within a group (often `group` itself). This is the ",
+        "single what-to-filter-on knob; color and series never drive drill. ",
+        "On scatter/line, brush-drag with `drill` UNSET still does a geometric ",
+        "x/y range filter."
       ),
       smoother = paste0(
         "Trend overlay for scatter charts. One of \"none\" (default), ",
@@ -142,7 +145,8 @@ drilldown_chart_arguments <- function() {
       "filter to that group, set `drill=\"<the group column>\"`.",
       "\n- Individual (scatter/line): set `x` and `y`. `series` splits",
       "into one line/group per value (e.g. `series=\"USUBJID\"`).",
-      "Brush-drag filters to the x/y range (separate from `drill`).",
+      "Brush-drag filters the brushed points: on `drill` if set (categorical",
+      "on the drill column's values), else the x/y range.",
       "ALSO set `metric` (e.g. metric=\".count\") even though the",
       "individual family doesn't render it -- the block's state",
       "requires the metric slot to initialize, and omitting it",
