@@ -125,9 +125,16 @@
 
       pop.innerHTML = '';
 
+      // a11y: the gear popover is a configuration dialog. Label it so screen
+      // readers announce it; the title element is its accessible name.
+      pop.setAttribute('role', 'dialog');
+      pop.setAttribute('aria-label', (this.h.title || 'Settings'));
+
       const title = document.createElement('div');
       title.className = 'blockr-popover-label dd-popover-title';
+      title.id = (pop.id || 'dd-pop') + '-title';
       title.textContent = this.h.title || 'Settings';
+      pop.setAttribute('aria-labelledby', title.id);
       pop.appendChild(title);
 
       // Type picker (optional — chart only)

@@ -167,6 +167,9 @@
     btn.type = "button";
     btn.className = "blockr-gear-btn";
     btn.title = "Table settings";
+    btn.setAttribute("aria-label", "Table settings");
+    btn.setAttribute("aria-haspopup", "dialog");
+    btn.setAttribute("aria-expanded", "false");
     btn.innerHTML = (typeof Blockr !== "undefined" && Blockr.icons)
       ? Blockr.icons.gear : "⚙";
     header.appendChild(btn);
@@ -242,11 +245,13 @@
       if (open) {
         pop.style.display = "none";
         btn.classList.remove("blockr-gear-active");
+        btn.setAttribute("aria-expanded", "false");
         window.removeEventListener("scroll", reposition, true);
         window.removeEventListener("resize", reposition);
       } else {
         pop.style.display = "block";
         btn.classList.add("blockr-gear-active");
+        btn.setAttribute("aria-expanded", "true");
         positionPop();
         requestAnimationFrame(positionPop);
         window.addEventListener("scroll", reposition, true);
@@ -257,6 +262,7 @@
       if (!pop.contains(e.target) && !btn.contains(e.target)) {
         pop.style.display = "none";
         btn.classList.remove("blockr-gear-active");
+        btn.setAttribute("aria-expanded", "false");
         window.removeEventListener("scroll", reposition, true);
         window.removeEventListener("resize", reposition);
       }

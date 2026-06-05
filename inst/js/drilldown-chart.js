@@ -309,6 +309,9 @@
       this.gearBtn.innerHTML = (typeof Blockr !== 'undefined' && Blockr.icons)
         ? Blockr.icons.gear : '\u2699';
       this.gearBtn.title = 'Chart settings';
+      this.gearBtn.setAttribute('aria-label', 'Chart settings');
+      this.gearBtn.setAttribute('aria-haspopup', 'dialog');
+      this.gearBtn.setAttribute('aria-expanded', 'false');
       this.gearBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this._togglePopover();
@@ -595,11 +598,16 @@
         .filter(([, v]) => v && !colSet.has(v))
         .map(([lbl, v]) => `${lbl} = "${v}"`);
       if (missing.length) {
+        const avail = (this.columns || []).map(c => c.name);
+        const availTxt = avail.length
+          ? ' Columns available here: ' + avail.slice(0, 30).join(', ') +
+            (avail.length > 30 ? ', …' : '') + '.'
+          : '';
         this.chartGrid.innerHTML =
           '<div class="vd-empty-state"><p class="vd-empty-text">' +
-          'Mapped column not in data: ' + missing.join(', ') +
-          '. Check the block feeding this chart (a rename, flatten or ' +
-          'pivot upstream may have changed the column name).</p></div>';
+          'Mapped column not in data: ' + missing.join(', ') + '.' + availTxt +
+          ' A rename, flatten or pivot upstream may have changed the column ' +
+          'name — re-pick it in the gear.</p></div>';
         return;
       }
 
@@ -1737,6 +1745,7 @@
       this.popoverEl.style.display = 'block';
       this._popoverOpen = true;
       this.gearBtn.classList.add('blockr-gear-active');
+      this.gearBtn.setAttribute('aria-expanded', 'true');
       // Anchor in viewport coords with position:fixed. The shared CSS
       // anchors the popover absolute/right:0 to the card; in a narrow
       // dock tile a 680px popover then overflows ~500px off-screen left
@@ -1786,6 +1795,7 @@
       this.popoverEl.style.display = 'none';
       this._popoverOpen = false;
       this.gearBtn.classList.remove('blockr-gear-active');
+      this.gearBtn.setAttribute('aria-expanded', 'false');
       if (this._popReposition) {
         window.removeEventListener('scroll', this._popReposition, true);
         window.removeEventListener('resize', this._popReposition);

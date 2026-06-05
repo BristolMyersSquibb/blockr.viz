@@ -372,3 +372,25 @@
   min-width: 3ch;
   text-align: right;
 }
+
+/* ===== Keyboard accessibility: visible focus on every popover control =====
+   Tab navigation through the gear popover gets a clear 3px focus ring (the
+   bare :focus rings on individual controls were thin/inconsistent). Shared by
+   the chart and table popovers (both render via DrilldownConfig). */
+.dd-popover .dd-type-btn:focus-visible,
+.dd-popover .dd-seg-btn:focus-visible,
+.dd-popover .dd-add-trigger:focus-visible,
+.dd-popover .dd-add-item:focus-visible,
+.dd-popover .dd-role-remove:focus-visible,
+.dd-popover .dd-cfg-select:focus-visible,
+.dd-popover .blockr-gear-btn:focus-visible,
+.dd-picker-wrap:focus-within {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--blockr-color-focus, rgba(37, 99, 235, 0.45));
+  border-radius: 6px;
+}
+.blockr-gear-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--blockr-color-focus, rgba(37, 99, 235, 0.45));
+  border-radius: 6px;
+}
