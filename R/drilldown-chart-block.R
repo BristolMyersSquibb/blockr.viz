@@ -46,6 +46,9 @@
 #'   * Timeline: `"onset"` (default), `"alpha"`, or a column name.
 #'   * Individual: ignored.
 #' @param sort_dir `"asc"` or `"desc"`. Reverses the `sort_by` ordering.
+#' @param orientation Bar orientation: `"horizontal"` (default; category on the
+#'   y-axis, best for long labels) or `"vertical"`. Presentation property — the
+#'   mapping (Group/Metric) is unchanged. Bar charts only.
 #' @param filter_type,filter_column,filter_values,filter_range,filter_point
 #'   Runtime click/brush filter state (transport for the emitted filter;
 #'   normally left at defaults at creation).
@@ -72,6 +75,7 @@ new_drilldown_chart_block <- function(
     drill = NULL,
     sort_by = NULL,
     sort_dir = NULL,
+    orientation = "horizontal",
     # --- Runtime filter transport (NOT creation-time config) -------------
     # These five hold the emitted click/brush filter state. They are set by
     # interaction at runtime, normally left at defaults at creation. They
@@ -116,6 +120,7 @@ new_drilldown_chart_block <- function(
         r_drill <- shiny::reactiveVal(drill)
         r_sort_by <- shiny::reactiveVal(sort_by)
         r_sort_dir <- shiny::reactiveVal(sort_dir)
+        r_orientation <- shiny::reactiveVal(orientation)
 
         # Filter state (transport for the emitted downstream filter)
         r_filter_type <- shiny::reactiveVal(filter_type)
@@ -213,7 +218,7 @@ new_drilldown_chart_block <- function(
               chart_type = r_chart_type(), x = r_x(), y = r_y(),
               xend = r_xend(), series = r_series(), label = r_label(),
               drill = r_drill(), sort_by = r_sort_by(),
-              sort_dir = r_sort_dir(),
+              sort_dir = r_sort_dir(), orientation = r_orientation(),
               line_width_mult = r_line_width_mult(),
               dot_size_mult = r_dot_size_mult(), step = r_step(),
               ref_x = as.list(r_ref_x()), ref_y = as.list(r_ref_y()),
@@ -228,13 +233,11 @@ new_drilldown_chart_block <- function(
                 NULL
               }),
               lo = r_lo(), hi = r_hi()
-            ),
-            arguments = as.list(
-              stats::setNames(
-                as.character(drilldown_chart_arguments()),
-                names(drilldown_chart_arguments())
-              )
             )
+            # NB: the registry _arguments() prose is intentionally NOT sent to
+            # the browser. LLM prompts live in the registry only; popover help
+            # is a UI-layer concern (terse labels + the live `name (label)`
+            # convention). See blockr.design/open/block-config-ui.
           ))
         })
 
@@ -284,6 +287,7 @@ new_drilldown_chart_block <- function(
             if (!is.null(msg$drill))      upd(r_drill, nn(msg$drill))
             if (!is.null(msg$sort_by))    upd(r_sort_by, nn(msg$sort_by))
             if (!is.null(msg$sort_dir))   upd(r_sort_dir, msg$sort_dir)
+            if (!is.null(msg$orientation)) upd(r_orientation, msg$orientation)
             if (!is.null(msg$smoother))   upd(r_smoother, msg$smoother)
             if (!is.null(msg$lo))         upd(r_lo, nn(msg$lo))
             if (!is.null(msg$hi))         upd(r_hi, nn(msg$hi))
@@ -445,6 +449,7 @@ new_drilldown_chart_block <- function(
             drill = r_drill,
             sort_by = r_sort_by,
             sort_dir = r_sort_dir,
+            orientation = r_orientation,
             filter_type = r_filter_type,
             filter_column = r_filter_column,
             filter_values = r_filter_values,
@@ -480,7 +485,7 @@ new_drilldown_chart_block <- function(
       "step", "ref_x", "ref_y", "smoother", "lo", "hi"),
     external_ctrl = c("group", "color", "facet", "metric", "agg_fn",
       "chart_type", "x", "y", "xend", "series", "label", "drill",
-      "sort_by", "sort_dir", "filter_type", "filter_column",
+      "sort_by", "sort_dir", "orientation", "filter_type", "filter_column",
       "filter_values", "filter_range", "filter_point", "line_width_mult",
       "dot_size_mult", "step", "ref_x", "ref_y", "smoother", "lo", "hi"),
     expr_type = "bquoted",

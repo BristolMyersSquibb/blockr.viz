@@ -97,14 +97,123 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-/* Family-based visibility */
-.dd-popover.dd-family-aggregated .dd-cfg-xy,
-.dd-popover.dd-family-aggregated .dd-cfg-individual,
-.dd-popover.dd-family-aggregated .dd-cfg-timeline { display: none !important; }
-.dd-popover.dd-family-individual .dd-cfg-aggregated,
-.dd-popover.dd-family-individual .dd-cfg-timeline { display: none !important; }
-.dd-popover.dd-family-timeline .dd-cfg-aggregated,
-.dd-popover.dd-family-timeline .dd-cfg-individual { display: none !important; }
+/* ===== Sections (Mapping / Encoding / Presentation) =====
+   Each section owns a full popover row and holds its own wrapping grid of
+   form rows. Rows are generated per active role (no display:none family
+   hack). */
+.dd-section {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0 14px;
+}
+.dd-section-title {
+  flex: 1 1 100%;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--blockr-grey-400, #9ca3af);
+  margin: 10px 0 6px;
+  border-top: 1px solid var(--blockr-color-border, #e5e7eb);
+  padding-top: 10px;
+}
+
+/* Row head: label + remove button on one line above the control. */
+.dd-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.dd-role-remove {
+  border: none;
+  background: none;
+  color: var(--blockr-grey-400, #9ca3af);
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.dd-role-remove:hover {
+  color: var(--blockr-color-danger, #dc3545);
+  background: var(--blockr-grey-50, #f9fafb);
+}
+
+/* Control area — holds one picker, or a paired primary+secondary
+   (metric+agg, sort+dir) side by side. */
+.dd-row-controls {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.dd-row-controls > .dd-picker-wrap,
+.dd-row-controls > .dd-segmented,
+.dd-row-controls > .dd-slider-wrap { flex: 1 1 0; min-width: 0; }
+
+/* Required mapping with no value: soft attention, not a hard error. */
+.dd-role-required-empty .dd-picker-wrap {
+  border-color: var(--blockr-color-warning, #f59e0b);
+  background: var(--blockr-color-warning-bg, #fffbeb);
+}
+
+/* Add-mapping menu */
+.dd-add-wrap { flex: 1 1 100%; position: relative; margin-bottom: 12px; }
+.dd-add-trigger {
+  border: 1px dashed var(--blockr-color-border, #d1d5db);
+  background: none;
+  color: var(--blockr-color-primary, #2563eb);
+  cursor: pointer;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+.dd-add-trigger:hover { background: var(--blockr-grey-50, #f9fafb); }
+.dd-add-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.dd-add-item {
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  background: #fff;
+  cursor: pointer;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+.dd-add-item:hover {
+  border-color: var(--blockr-color-primary, #2563eb);
+  color: var(--blockr-color-primary, #2563eb);
+}
+
+/* Segmented toggle (Orientation) */
+.dd-segmented {
+  display: flex;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 42px;
+}
+.dd-seg-btn {
+  flex: 1 1 0;
+  border: none;
+  border-right: 1px solid var(--blockr-color-border, #e5e7eb);
+  background: #fff;
+  color: var(--blockr-grey-500, #6b7280);
+  cursor: pointer;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+.dd-seg-btn:last-child { border-right: none; }
+.dd-seg-btn:hover { background: var(--blockr-grey-50, #f9fafb); }
+.dd-seg-btn.dd-seg-active {
+  background: #eff6ff;
+  color: var(--blockr-color-primary, #2563eb);
+  font-weight: var(--blockr-font-weight-medium, 500);
+}
 
 /* ===== Card wrapper (for popover positioning) ===== */
 .dd-card {
