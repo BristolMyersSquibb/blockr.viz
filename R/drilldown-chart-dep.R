@@ -20,7 +20,10 @@ drilldown_chart_dep <- function() {
       name = "drilldown-chart-js",
       version = paste0(utils::packageVersion("blockr.bi"), ".30"),
       src = system.file("js", package = "blockr.bi"),
-      script = c("drilldown-theme-register.js", "drilldown-chart.js")
+      # drilldown-config.js (the shared gear-popover engine) must load BEFORE
+      # drilldown-chart.js, which references Blockr.DrilldownConfig.
+      script = c("drilldown-theme-register.js", "drilldown-config.js",
+                 "drilldown-chart.js")
     ),
     htmltools::htmlDependency(
       name = "drilldown-chart-css",

@@ -159,6 +159,11 @@
     }
   };
 
+  // Roles whose control renders inside its primary's row (the paired tail), so
+  // a section loop skips them. Passed to the shared config engine.
+  const DD_SECONDARY = new Set(
+    Object.values(ROLES).map(r => r.pairedWith).filter(Boolean));
+
   class DrilldownChart {
     constructor(el) {
       this.el = el;
@@ -168,12 +173,64 @@
       this.argHelp = {};
       this.charts = [];
       this._selected = null;
-      this._selects = {};
-      this._added = new Set();      // optional roles the user added this session
-      this._roleMemory = {};        // role key -> last chosen column (sticky)
       this.theme = null;  // null -> echarts default theme
       this._buildDOM();
+      // The gear-popover config engine (shared with the table block). It owns
+      // the popover rendering, role rows, add-as-needed, sticky memory and the
+      // family/type switch; this chart supplies the block-specific hooks.
+      this._cfg = this._makeConfig();
     }
+
+    _makeConfig() {
+      const DCfg = (typeof Blockr !== 'undefined' && Blockr.DrilldownConfig) || window.DrilldownConfig;
+      return new DCfg({
+        popoverEl: () => this.popoverEl,
+        roles: ROLES,
+        config: () => this.config,
+        columns: () => this.columns,
+        context: () => this._family(),
+        currentType: () => this.config.chart_type,
+        sections: () => FAMILY_ROLES[this._family()],
+        sectionsForFamily: (fam) => FAMILY_ROLES[fam],
+        secondary: DD_SECONDARY,
+        typeKey: 'chart_type',
+        typeGroups: [
+          { label: 'Aggregated', types: AGGREGATED_TYPES },
+          { label: 'Individual', types: INDIVIDUAL_TYPES },
+          { label: 'Timeline', types: TIMELINE_TYPES }
+        ],
+        familyFor: (t) => AGGREGATED_TYPES.includes(t) ? 'aggregated'
+          : TIMELINE_TYPES.includes(t) ? 'timeline' : 'individual',
+        // `drill` and `metric` must persist across a family switch — drill is a
+        // capability; metric is a required-for-init slot (clearing it wedges the
+        // block, the family-switch freeze bug).
+        carryKeep: ['drill', 'metric'],
+        entryRequired: (role) => role === 'metric' && this._family() === 'aggregated',
+        drillAutoLabel: () => {
+          const fam = this._family();
+          return fam === 'aggregated' ? 'Auto — the clicked group'
+            : fam === 'timeline' ? 'Auto — the clicked lane'
+            : this.config.chart_type === 'line' ? 'Auto — the clicked series'
+            : 'Auto — the selected point';
+        },
+        title: 'Chart settings',
+        onChange: () => { this._render(); this._sendConfig(); },
+        onMults: () => this._sendMults(),
+        onClearFilter: () => { this._selected = null; this._sendClearFilter(); },
+        ensureDefaults: () => this._ensureFamilyDefaults(),
+        afterTypeChange: () => this._updateFamilyClass(),
+        isOpen: () => this._popoverOpen,
+        reopen: () => this._openPopover()
+      });
+    }
+
+    // Thin delegators so external callers (tests / harness) and setData keep
+    // working after the engine moved into DrilldownConfig.
+    _renderConfig() { this._cfg.render(); }
+    _onChartType(t) { this._cfg._onType(t); }
+    _addRole(key) { this._cfg._addRole(key); }
+    _removeRole(key) { this._cfg._removeRole(key); }
+    _rememberRole(key, val) { this._cfg._rememberRole(key, val); }
 
     setTheme(theme) {
       const normalized = (theme && theme !== 'default') ? theme : null;
@@ -302,98 +359,6 @@
       this._updateStatus();
     }
 
-    // -- Config UI ------------------------------------------------------------
-
-    // One settings row: label on top, full-width control, muted help text
-    // below (sourced from the block's _arguments() metadata). See
-    // blockr.docs design-system/components/blockr-popover.md.
-    _addSelect(container, label, key, options, selected, cssClass) {
-      const row = document.createElement('div');
-      row.className = 'blockr-popover-row dd-form-row' +
-        (cssClass ? ' ' + cssClass : '');
-
-      const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
-      lbl.textContent = label;
-      row.appendChild(lbl);
-
-      // The bordered control box (no inline label now — label is on top).
-      const wrapper = document.createElement('div');
-      wrapper.className = 'dd-picker-wrap';
-
-      // Muted help below the control. For a column picker this shows the
-      // selected variable in the usual `name (label)` convention so it is
-      // clear which column is mapped; otherwise the static role text.
-      const helpEl = document.createElement('span');
-      helpEl.className = 'dd-form-help';
-      const setHelp = (v) => {
-        const txt = this._fieldHelp(key, v);
-        helpEl.textContent = txt;
-        helpEl.style.display = txt ? '' : 'none';
-      };
-      setHelp(selected);
-
-      const useBlockrSelect = typeof Blockr !== 'undefined' && Blockr.Select;
-
-      const onSelect = (val) => {
-        this.config[key] = (val === '(none)') ? '' : val;
-        this._selected = null;
-        setHelp(val);
-        this._render();
-        this._sendConfig();
-        this._sendClearFilter();
-      };
-
-      if (useBlockrSelect) {
-        const sel = Blockr.Select.single(wrapper, {
-          options: options,
-          selected: selected || (typeof options[0] === 'object' && options[0] !== null ? options[0].value : options[0]) || '',
-          onChange: onSelect
-        });
-        this._selects[key] = sel;
-      } else {
-        const sel = document.createElement('select');
-        sel.className = 'dd-cfg-select';
-        for (const o of options) {
-          const val = typeof o === 'object' && o !== null ? o.value : o;
-          const txt = typeof o === 'object' && o !== null && o.label ? `${o.value} (${o.label})` : val;
-          const opt = document.createElement('option');
-          opt.value = val;
-          opt.textContent = txt;
-          if (val === selected) opt.selected = true;
-          sel.appendChild(opt);
-        }
-        sel.addEventListener('change', () => onSelect(sel.value));
-        wrapper.appendChild(sel);
-      }
-
-      row.appendChild(wrapper);
-      row.appendChild(helpEl);
-
-      container.appendChild(row);
-    }
-
-    // Help text under a field. For a column picker: the selected
-    // variable's name and label in the usual `name (label)` convention,
-    // so it is clear which column is mapped. Falls back to the static
-    // _arguments() role description when the value is not a column
-    // (e.g. "(none)", ".count", an aggregation function) or the column
-    // carries no label.
-    // Help under a column row: the selected column's `name (label)` when a
-    // column is chosen, else the role's placeholder/hint. No longer sourced
-    // from the registry _arguments() prose — UI help is a UI-layer concern
-    // (see blockr.design/open/block-config-ui).
-    _fieldHelp(key, value) {
-      const col = (this.columns || []).find(c => c.name === value);
-      if (col && col.label && col.label !== col.name) {
-        return col.name + ' (' + col.label + ')';
-      }
-      if (this._hasVal(value)) return '';
-      const role = ROLES[key];
-      if (!role) return '';
-      return (role.hintBy && role.hintBy[this._family()]) || role.ph || '';
-    }
-
     // Axis title for a mapped column: its variable label when present,
     // else the column name. The popover help shows `name (label)`; an
     // axis is tighter, so just the human label (or the name).
@@ -404,531 +369,7 @@
       return col;
     }
 
-    // Roles whose control renders inside its primary's row (the pair tail),
-    // so they are skipped when a section iterates its entries.
-    static get _SECONDARY() {
-      return new Set(Object.values(ROLES).map(r => r.pairedWith).filter(Boolean));
-    }
-
     _hasVal(v) { return v !== null && v !== undefined && v !== '' && v !== '(none)'; }
-    _colExists(name) { return (this.columns || []).some(c => c.name === name); }
-
-    // Does column `name` satisfy role `key`'s column-type filter for the
-    // active family? Used by identity-carry and sticky-memory restore.
-    _colFits(key, name) {
-      const role = ROLES[key];
-      const c = (this.columns || []).find(x => x.name === name);
-      if (!c) return false;
-      const ct = role.colTypeBy ? role.colTypeBy[this._family()] : role.colType;
-      if (ct === 'num') return c.type === 'numeric';
-      if (ct === 'cat') return c.type === 'categorical' || c.n_unique <= 50;
-      return true;
-    }
-
-    _rememberRole(key, val) {
-      if (ROLES[key] && ROLES[key].kind === 'column' && this._hasVal(val)) {
-        this._roleMemory[key] = val;
-      }
-    }
-
-    // Column-picker options for a role: type-filtered, label-decorated,
-    // with '.count' / '(none)' sentinels as the role allows.
-    _colOptionsFor(key, { required }) {
-      const role = ROLES[key];
-      const ct = role.colTypeBy ? role.colTypeBy[this._family()] : role.colType;
-      let cols = this.columns || [];
-      if (ct === 'num') cols = cols.filter(c => c.type === 'numeric');
-      else if (ct === 'cat') cols = cols.filter(c => c.type === 'categorical' || c.n_unique <= 50);
-      if (role.maxUnique) cols = cols.filter(c => c.n_unique <= role.maxUnique);
-      const opts = cols.map(c => c.label ? { value: c.name, label: c.label } : c.name);
-      if (role.allowCount) opts.unshift('.count');
-      else if (!required) opts.unshift('(none)');
-      return opts;
-    }
-
-    // Resolve a select role's options for the active family; '#num' expands
-    // to the numeric column names.
-    _selectOptionsFor(key) {
-      const role = ROLES[key];
-      const raw = role.optionsBy ? (role.optionsBy[this._family()] || []) : (role.options || []);
-      const out = [];
-      for (const o of raw) {
-        if (o === '#num') {
-          for (const c of this.columns.filter(c => c.type === 'numeric')) {
-            out.push(c.label ? { value: c.name, label: c.label } : c.name);
-          }
-        } else { out.push(o); }
-      }
-      return out;
-    }
-
-    // Is `key`'s section entry applicable to the current chart type? Used to
-    // decide whether a paired tail (agg_fn for boxplot) should render.
-    _entryApplicable(key) {
-      const fam = FAMILY_ROLES[this._family()];
-      const all = [...fam.encoding, ...fam.presentation];
-      const e = all.find(x => (typeof x === 'string' ? x : x.role) === key);
-      if (!e) return false;
-      return typeof e === 'string' || !e.types || e.types.includes(this.config.chart_type);
-    }
-
-    _renderConfig() {
-      const cfg = this.config;
-      const fam = this._family();
-      const spec = FAMILY_ROLES[fam];
-
-      for (const s of Object.values(this._selects)) {
-        if (s && typeof s.destroy === 'function') s.destroy();
-      }
-      this._selects = {};
-      if (!this._added) this._added = new Set();
-      if (!this._roleMemory) this._roleMemory = {};
-
-      this.popoverEl.innerHTML = '';
-
-      const title = document.createElement('div');
-      title.className = 'blockr-popover-label dd-popover-title';
-      title.textContent = 'Chart settings';
-      this.popoverEl.appendChild(title);
-
-      // Chart-type picker (gates everything below)
-      const typesRow = document.createElement('div');
-      typesRow.className = 'blockr-popover-row dd-popover-types';
-      const buildTypeGroup = (label, types) => {
-        const group = document.createElement('div');
-        group.className = 'dd-type-group';
-        const glabel = document.createElement('span');
-        glabel.className = 'dd-type-group-label';
-        glabel.textContent = label;
-        group.appendChild(glabel);
-        const btns = document.createElement('div');
-        btns.className = 'dd-cfg-types';
-        for (const t of types) {
-          const btn = document.createElement('button');
-          btn.className = 'dd-type-btn' + (t === cfg.chart_type ? ' dd-type-active' : '');
-          btn.textContent = t;
-          btn.addEventListener('click', () => this._onChartType(t));
-          btns.appendChild(btn);
-        }
-        group.appendChild(btns);
-        return group;
-      };
-      typesRow.appendChild(buildTypeGroup('Aggregated', AGGREGATED_TYPES));
-      typesRow.appendChild(buildTypeGroup('Individual', INDIVIDUAL_TYPES));
-      typesRow.appendChild(buildTypeGroup('Timeline', TIMELINE_TYPES));
-      this.popoverEl.appendChild(typesRow);
-
-      // ----- Mapping: required rows, shown-optional rows, add menu -----
-      const mapSec = this._sectionEl('Mapping');
-      for (const key of spec.requiredMap) {
-        this._renderRole(mapSec, key, { required: true });
-      }
-      const shownOpt = spec.optionalMap.filter(
-        k => this._hasVal(cfg[k]) || this._added.has(k));
-      for (const key of shownOpt) this._renderRole(mapSec, key, { removable: true });
-      const remaining = spec.optionalMap.filter(k => !shownOpt.includes(k));
-      if (remaining.length) this._addMappingMenu(mapSec, remaining);
-
-      // ----- Encoding / Presentation: always-shown applicable rows -----
-      this._renderSection('Encoding', spec.encoding);
-      this._renderSection('Presentation', spec.presentation);
-
-      // ----- Drill-down: capability toggle + optional target override -----
-      this._renderDrillSection();
-
-      this._updateFamilyClass();
-    }
-
-    _sectionEl(titleText) {
-      const sec = document.createElement('div');
-      sec.className = 'dd-section';
-      const h = document.createElement('div');
-      h.className = 'dd-section-title';
-      h.textContent = titleText;
-      sec.appendChild(h);
-      this.popoverEl.appendChild(sec);
-      return sec;
-    }
-
-    _renderSection(titleText, entries) {
-      const ct = this.config.chart_type;
-      const list = entries
-        .map(e => (typeof e === 'string' ? { role: e } : e))
-        .filter(e => !e.types || e.types.includes(ct))
-        .filter(e => !DrilldownChart._SECONDARY.has(e.role));
-      if (!list.length) return;
-      const sec = this._sectionEl(titleText);
-      for (const e of list) {
-        const required = e.role === 'metric' && this._family() === 'aggregated';
-        this._renderRole(sec, e.role, { required });
-      }
-    }
-
-    // One labelled row for a role; dispatches the control(s) by kind and
-    // draws a paired secondary (agg beside metric, dir beside sort) inline.
-    _renderRole(container, key, opts = {}) {
-      const role = ROLES[key];
-      const paired = !!(role.pairedWith && this._entryApplicable(role.pairedWith));
-      const row = document.createElement('div');
-      row.className = 'blockr-popover-row dd-form-row dd-role-' + key +
-        (paired ? ' dd-role-paired' : '');
-
-      const head = document.createElement('div');
-      head.className = 'dd-row-head';
-      const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
-      lbl.textContent = role.label + (opts.required ? ' *' : '');
-      head.appendChild(lbl);
-      if (opts.removable) {
-        const rm = document.createElement('button');
-        rm.type = 'button';
-        rm.className = 'dd-role-remove';
-        rm.title = 'Remove ' + role.label;
-        rm.innerHTML = '✕';
-        rm.addEventListener('click', (e) => { e.stopPropagation(); this._removeRole(key); });
-        head.appendChild(rm);
-      }
-      row.appendChild(head);
-
-      const controls = document.createElement('div');
-      controls.className = 'dd-row-controls';
-      const helpEl = document.createElement('span');
-      helpEl.className = 'dd-form-help';
-
-      const markRequired = () => {
-        row.classList.toggle('dd-role-required-empty',
-          !!opts.required && !this._hasVal(this.config[key]));
-      };
-      const setHelp = () => {
-        if (role.kind !== 'column') { helpEl.style.display = 'none'; return; }
-        const txt = this._fieldHelp(key, this.config[key]);
-        helpEl.textContent = txt;
-        helpEl.style.display = txt ? '' : 'none';
-      };
-
-      this._buildControl(controls, key, { required: opts.required, onChange: () => { setHelp(); markRequired(); } });
-      if (paired) {
-        this._buildControl(controls, role.pairedWith, { onChange: () => {} });
-      }
-      row.appendChild(controls);
-      row.appendChild(helpEl);
-      setHelp();
-      markRequired();
-      container.appendChild(row);
-    }
-
-    // Drill-down is a capability, not an aesthetic: its own section with an
-    // on/off toggle (off by default). On -> a "Filter on" picker whose first
-    // option is the family's natural target ("auto"); pick a column to
-    // override. Tri-state `drill`: ''=off, 'auto'=on-natural, column=override.
-    _renderDrillSection() {
-      const cfg = this.config;
-      const on = this._drillState() !== 'off';
-      const sec = this._sectionEl('Drill-down');
-
-      // Toggle row
-      const tRow = document.createElement('div');
-      tRow.className = 'blockr-popover-row dd-form-row';
-      const tHead = document.createElement('div');
-      tHead.className = 'dd-row-head';
-      const tLbl = document.createElement('span');
-      tLbl.className = 'blockr-popover-label';
-      tLbl.textContent = 'Filter on selection';
-      tHead.appendChild(tLbl);
-      tRow.appendChild(tHead);
-      const seg = document.createElement('div');
-      seg.className = 'dd-segmented';
-      for (const o of [{ v: 'off', l: 'Off' }, { v: 'on', l: 'On' }]) {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'dd-seg-btn' + (((o.v === 'on') === on) ? ' dd-seg-active' : '');
-        b.textContent = o.l;
-        b.addEventListener('click', () => {
-          if (o.v === 'off') cfg.drill = '';
-          else if (!this._hasVal(cfg.drill)) cfg.drill = 'auto';
-          const wasOpen = this._popoverOpen;
-          this._renderConfig();
-          if (wasOpen) setTimeout(() => this._openPopover(), 0);
-          this._render(); this._sendConfig(); this._sendClearFilter();
-        });
-        seg.appendChild(b);
-      }
-      tRow.appendChild(seg);
-      sec.appendChild(tRow);
-
-      // When on: "Filter on" picker — Auto (natural target) + columns
-      if (on) {
-        const fam = this._family();
-        const autoLabel = fam === 'aggregated' ? 'Auto — the clicked group'
-          : fam === 'timeline' ? 'Auto — the clicked lane'
-          : cfg.chart_type === 'line' ? 'Auto — the clicked series'
-          : 'Auto — the selected point';
-        const row = document.createElement('div');
-        row.className = 'blockr-popover-row dd-form-row';
-        const head = document.createElement('div');
-        head.className = 'dd-row-head';
-        const lbl = document.createElement('span');
-        lbl.className = 'blockr-popover-label';
-        lbl.textContent = 'Filter on';
-        head.appendChild(lbl);
-        row.appendChild(head);
-        const controls = document.createElement('div');
-        controls.className = 'dd-row-controls';
-        const wrap = document.createElement('div');
-        wrap.className = 'dd-picker-wrap';
-        const colOpt = (c) => c.label ? { value: c.name, label: c.label } : c.name;
-        const opts = [{ value: 'auto', label: autoLabel }, ...(this.columns || []).map(colOpt)];
-        const sel = (this._hasVal(cfg.drill) && cfg.drill !== 'auto') ? cfg.drill : 'auto';
-        const onSel = (val) => {
-          cfg.drill = val; this._render(); this._sendConfig(); this._sendClearFilter();
-        };
-        if (typeof Blockr !== 'undefined' && Blockr.Select) {
-          this._selects['drill'] = Blockr.Select.single(wrap, { options: opts, selected: sel, onChange: onSel });
-        } else {
-          const s = document.createElement('select');
-          s.className = 'dd-cfg-select';
-          for (const o of opts) {
-            const val = (typeof o === 'object' && o) ? o.value : o;
-            const txt = (typeof o === 'object' && o && o.label) ? o.label : val;
-            const op = document.createElement('option');
-            op.value = val; op.textContent = txt;
-            if (val === sel) op.selected = true;
-            s.appendChild(op);
-          }
-          s.addEventListener('change', () => onSel(s.value));
-          wrap.appendChild(s);
-        }
-        controls.appendChild(wrap);
-        row.appendChild(controls);
-        sec.appendChild(row);
-      }
-    }
-
-    // Build a single control (no label/row chrome — that's _renderRole's job).
-    _buildControl(parent, key, { required, onChange } = {}) {
-      const role = ROLES[key];
-      const cb = onChange || (() => {});
-      if (role.kind === 'column') {
-        const opts = this._colOptionsFor(key, { required });
-        const wrap = document.createElement('div');
-        wrap.className = 'dd-picker-wrap';
-        const sel = (this.config[key] && this.config[key] !== '(none)') ? this.config[key] : (required ? '' : '(none)');
-        const onSel = (val) => {
-          this.config[key] = (val === '(none)') ? '' : val;
-          this._rememberRole(key, this.config[key]);
-          this._selected = null;
-          cb();
-          this._render();
-          this._sendConfig();
-          this._sendClearFilter();
-        };
-        if (typeof Blockr !== 'undefined' && Blockr.Select) {
-          this._selects[key] = Blockr.Select.single(wrap, { options: opts, selected: sel, onChange: onSel });
-        } else {
-          const s = document.createElement('select');
-          s.className = 'dd-cfg-select';
-          for (const o of opts) {
-            const val = (typeof o === 'object' && o) ? o.value : o;
-            const txt = (typeof o === 'object' && o && o.label) ? `${o.value} (${o.label})` : val;
-            const op = document.createElement('option');
-            op.value = val; op.textContent = txt;
-            if (val === sel) op.selected = true;
-            s.appendChild(op);
-          }
-          s.addEventListener('change', () => onSel(s.value));
-          wrap.appendChild(s);
-        }
-        parent.appendChild(wrap);
-      } else if (role.kind === 'select') {
-        const opts = this._selectOptionsFor(key);
-        const wrap = document.createElement('div');
-        wrap.className = 'dd-picker-wrap';
-        const cur = this.config[key];
-        const sel = this._hasVal(cur) ? cur : ((typeof opts[0] === 'object' && opts[0]) ? opts[0].value : opts[0]);
-        const onSel = (val) => { this.config[key] = val; cb(); this._render(); this._sendConfig(); };
-        if (typeof Blockr !== 'undefined' && Blockr.Select) {
-          this._selects[key] = Blockr.Select.single(wrap, { options: opts, selected: sel, onChange: onSel });
-        } else {
-          const s = document.createElement('select');
-          s.className = 'dd-cfg-select';
-          for (const o of opts) {
-            const val = (typeof o === 'object' && o) ? o.value : o;
-            const txt = (typeof o === 'object' && o && o.label) ? `${o.value} (${o.label})` : val;
-            const op = document.createElement('option');
-            op.value = val; op.textContent = txt;
-            if (val === sel) op.selected = true;
-            s.appendChild(op);
-          }
-          s.addEventListener('change', () => onSel(s.value));
-          wrap.appendChild(s);
-        }
-        parent.appendChild(wrap);
-      } else if (role.kind === 'segmented') {
-        const seg = document.createElement('div');
-        seg.className = 'dd-segmented';
-        const cur = this._hasVal(this.config[key]) ? this.config[key] : role.options[0].value;
-        for (const o of role.options) {
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.className = 'dd-seg-btn' + (o.value === cur ? ' dd-seg-active' : '');
-          b.textContent = o.label;
-          b.addEventListener('click', () => {
-            this.config[key] = o.value;
-            seg.querySelectorAll('.dd-seg-btn').forEach(x => x.classList.remove('dd-seg-active'));
-            b.classList.add('dd-seg-active');
-            cb(); this._render(); this._sendConfig();
-          });
-          seg.appendChild(b);
-        }
-        parent.appendChild(seg);
-      } else if (role.kind === 'slider') {
-        this._buildSlider(parent, key);
-      }
-    }
-
-    _buildSlider(parent, key) {
-      const init = this.config[key];
-      const v0 = (typeof init === 'number' && isFinite(init)) ? init : 1.0;
-      const wrap = document.createElement('div');
-      wrap.className = 'dd-slider-wrap';
-      const input = document.createElement('input');
-      input.type = 'range';
-      input.min = '0.5'; input.max = '3.0'; input.step = '0.1';
-      input.value = String(v0);
-      input.className = 'dd-slider';
-      wrap.appendChild(input);
-      const value = document.createElement('span');
-      value.className = 'dd-slider-value';
-      value.textContent = v0.toFixed(1) + '×';
-      wrap.appendChild(value);
-      let debounce;
-      input.addEventListener('input', () => {
-        const v = parseFloat(input.value);
-        value.textContent = v.toFixed(1) + '×';
-        this.config[key] = v;
-        this._render();
-        clearTimeout(debounce);
-        debounce = setTimeout(() => this._sendMults(), 150);
-      });
-      parent.appendChild(wrap);
-    }
-
-    // "+ Add mapping" — a trigger that reveals the optional roles not yet
-    // shown; picking one adds its row (restoring a remembered column if any).
-    _addMappingMenu(container, remaining) {
-      const wrap = document.createElement('div');
-      wrap.className = 'dd-add-wrap';
-      // Match blockr.dplyr's add affordance: a subtle grey text link with a
-      // plus icon (blockr-add-row / blockr-add-link / blockr-add-icon, from
-      // the shared blockr-blocks.css + Blockr.icons this block already loads).
-      const bar = document.createElement('div');
-      bar.className = 'blockr-add-row';
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'blockr-add-link dd-add-trigger';
-      const plus = (typeof Blockr !== 'undefined' && Blockr.icons) ? Blockr.icons.plus : '+';
-      btn.innerHTML = `<span class="blockr-add-icon">${plus}</span> Add mapping`;
-      const menu = document.createElement('div');
-      menu.className = 'dd-add-menu';
-      menu.style.display = 'none';
-      for (const key of remaining) {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'dd-add-item';
-        item.textContent = ROLES[key].label;
-        item.addEventListener('click', (e) => {
-          e.stopPropagation();
-          menu.style.display = 'none';
-          this._addRole(key);
-        });
-        menu.appendChild(item);
-      }
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        menu.style.display = (menu.style.display === 'none') ? '' : 'none';
-      });
-      bar.appendChild(btn);
-      wrap.appendChild(bar);
-      wrap.appendChild(menu);
-      container.appendChild(wrap);
-    }
-
-    _addRole(key) {
-      this._added.add(key);
-      if (!this._hasVal(this.config[key]) && this._roleMemory[key] &&
-          this._colExists(this._roleMemory[key]) && this._colFits(key, this._roleMemory[key])) {
-        this.config[key] = this._roleMemory[key];
-        this._render();
-        this._sendConfig();
-      }
-      const wasOpen = this._popoverOpen;
-      this._renderConfig();
-      if (wasOpen) setTimeout(() => this._openPopover(), 0);
-    }
-
-    // Explicit removal forgets the role's remembered column (vs a family
-    // switch, which keeps it for switch-back).
-    _removeRole(key) {
-      this.config[key] = '';
-      this._added.delete(key);
-      delete this._roleMemory[key];
-      const wasOpen = this._popoverOpen;
-      this._renderConfig();
-      if (wasOpen) setTimeout(() => this._openPopover(), 0);
-      this._render();
-      this._sendConfig();
-      this._sendClearFilter();
-    }
-
-    _onChartType(t) {
-      const oldFam = this._family();
-      this.config.chart_type = t;
-      const newFam = this._family();
-      if (oldFam !== newFam) {
-        this._carryRoles(newFam);
-        this._selected = null;
-        this._sendClearFilter();
-      }
-      this._ensureFamilyDefaults();
-      this._updateFamilyClass();
-      const wasOpen = this._popoverOpen;
-      this._renderConfig();
-      if (wasOpen) setTimeout(() => this._openPopover(), 0);
-      this._render();
-      this._sendConfig();
-    }
-
-    // Identity-carry + sticky memory across a family switch. A column role
-    // keeps its value only if the role exists in the new family and the
-    // column still fits its type; otherwise the column is remembered (for
-    // switch-back) and cleared. Then required roles are restored from memory
-    // when a fitting column is remembered.
-    _carryRoles(newFam) {
-      const spec = FAMILY_ROLES[newFam];
-      const keep = new Set([...spec.requiredMap, ...spec.optionalMap]);
-      for (const key of Object.keys(ROLES)) {
-        if (ROLES[key].kind !== 'column') continue;
-        if (key === 'drill') continue;  // capability, not a mapping — persists
-        // `metric` is a column-kind role but is NOT in the block's
-        // allow_empty_state: clearing it to '' violates that constraint and
-        // WEDGES the block's reactive evaluation — downstream filtering then
-        // freezes after a family switch. It is a required-for-init slot, not a
-        // positional mapping; never clear it here.
-        if (key === 'metric') continue;
-        const v = this.config[key];
-        if (!this._hasVal(v)) continue;
-        if (!(keep.has(key) && this._colFits(key, v))) {
-          this._roleMemory[key] = v;
-          this.config[key] = '';
-        }
-      }
-      for (const key of spec.requiredMap) {
-        const mem = this._roleMemory[key];
-        if (!this._hasVal(this.config[key]) && mem && this._colExists(mem) && this._colFits(key, mem)) {
-          this.config[key] = mem;
-        }
-      }
-    }
 
     // Establish sensible defaults for the active family. Crucially this also
     // picks the default MAPPING columns (group / x / y) when unset — and it

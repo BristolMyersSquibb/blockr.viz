@@ -69,11 +69,17 @@ const sandbox = {
 sandbox.globalThis = sandbox;
 sandbox.self = sandbox;
 
-let code = fs.readFileSync(require('path').join(__dirname, '..', 'inst', 'js', 'drilldown-chart.js'), 'utf8');
+const jsdir = require('path').join(__dirname, '..', 'inst', 'js');
+vm.createContext(sandbox);
+// The shared config engine must load first (drilldown-chart.js references
+// Blockr.DrilldownConfig).
+vm.runInContext(fs.readFileSync(require('path').join(jsdir, 'drilldown-config.js'), 'utf8'),
+  sandbox, { filename: 'drilldown-config.js' });
+
+let code = fs.readFileSync(require('path').join(jsdir, 'drilldown-chart.js'), 'utf8');
 // Expose the class for introspection: inject before the final IIFE close.
 code = code.replace(/\}\)\(\);\s*$/, 'globalThis.__DrilldownChart = DrilldownChart;\n})();');
 
-vm.createContext(sandbox);
 vm.runInContext(code, sandbox, { filename: 'drilldown-chart.js' });
 const DrilldownChart = sandbox.__DrilldownChart;
 if (!DrilldownChart) { console.error('FAIL: class not exposed'); process.exit(1); }
