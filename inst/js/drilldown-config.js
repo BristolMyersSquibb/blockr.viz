@@ -156,13 +156,16 @@
         pop.appendChild(typesRow);
       }
 
-      // Mapping: required rows, shown-optional rows, add menu
-      const mapSec = this._sectionEl('Mapping');
-      for (const key of spec.requiredMap) this._renderRole(mapSec, key, { required: true });
+      // Mapping: required rows, shown-optional rows, add menu (skipped whole
+      // if the block has no mapping roles — e.g. the table).
       const shownOpt = spec.optionalMap.filter(k => this._hasVal(cfg[k]) || this._added.has(k));
-      for (const key of shownOpt) this._renderRole(mapSec, key, { removable: true });
       const remaining = spec.optionalMap.filter(k => !shownOpt.includes(k));
-      if (remaining.length) this._addMappingMenu(mapSec, remaining);
+      if (spec.requiredMap.length || shownOpt.length || remaining.length) {
+        const mapSec = this._sectionEl('Mapping');
+        for (const key of spec.requiredMap) this._renderRole(mapSec, key, { required: true });
+        for (const key of shownOpt) this._renderRole(mapSec, key, { removable: true });
+        if (remaining.length) this._addMappingMenu(mapSec, remaining);
+      }
 
       // Encoding / Presentation
       this._renderSection('Encoding', spec.encoding);
@@ -276,7 +279,7 @@
           const wasOpen = this.h.isOpen();
           this.render();
           if (wasOpen) setTimeout(() => this.h.reopen(), 0);
-          this.h.onChange(); this.h.onClearFilter();
+          this.h.onChange('drill'); this.h.onClearFilter();
         });
         seg.appendChild(b);
       }
@@ -301,7 +304,7 @@
         const colOpt = (c) => c.label ? { value: c.name, label: c.label } : c.name;
         const opts = [{ value: 'auto', label: autoLabel }, ...this._cols().map(colOpt)];
         const sel = (this._hasVal(cfg.drill) && cfg.drill !== 'auto') ? cfg.drill : 'auto';
-        const onSel = (val) => { cfg.drill = val; this.h.onChange(); this.h.onClearFilter(); };
+        const onSel = (val) => { cfg.drill = val; this.h.onChange('drill'); this.h.onClearFilter(); };
         if (typeof Blockr !== 'undefined' && Blockr.Select) {
           this._selects['drill'] = Blockr.Select.single(wrap, { options: opts, selected: sel, onChange: onSel });
         } else {
@@ -337,7 +340,7 @@
           cfg[key] = (val === '(none)') ? '' : val;
           this._rememberRole(key, cfg[key]);
           cb();
-          this.h.onChange();
+          this.h.onChange(key);
           this.h.onClearFilter();
         };
         this._mkSelect(wrap, opts, sel, onSel, key, true);
@@ -348,7 +351,7 @@
         wrap.className = 'dd-picker-wrap';
         const cur = cfg[key];
         const selv = this._hasVal(cur) ? cur : ((typeof opts[0] === 'object' && opts[0]) ? opts[0].value : opts[0]);
-        const onSel = (val) => { cfg[key] = val; cb(); this.h.onChange(); };
+        const onSel = (val) => { cfg[key] = val; cb(); this.h.onChange(key); };
         this._mkSelect(wrap, opts, selv, onSel, key, false);
         parent.appendChild(wrap);
       } else if (role.kind === 'segmented') {
@@ -364,7 +367,7 @@
             cfg[key] = o.value;
             seg.querySelectorAll('.dd-seg-btn').forEach(x => x.classList.remove('dd-seg-active'));
             b.classList.add('dd-seg-active');
-            cb(); this.h.onChange();
+            cb(); this.h.onChange(key);
           });
           seg.appendChild(b);
         }
@@ -464,7 +467,7 @@
       if (!this._hasVal(cfg[key]) && this._roleMemory[key] &&
           this._colExists(this._roleMemory[key]) && this._colFits(key, this._roleMemory[key])) {
         cfg[key] = this._roleMemory[key];
-        this.h.onChange();
+        this.h.onChange(key);
       }
       const wasOpen = this.h.isOpen();
       this.render();
@@ -479,7 +482,7 @@
       const wasOpen = this.h.isOpen();
       this.render();
       if (wasOpen) setTimeout(() => this.h.reopen(), 0);
-      this.h.onChange();
+      this.h.onChange(key);
       this.h.onClearFilter();
     }
 
@@ -497,7 +500,7 @@
       const wasOpen = this.h.isOpen();
       this.render();
       if (wasOpen) setTimeout(() => this.h.reopen(), 0);
-      this.h.onChange();
+      this.h.onChange(this.h.typeKey);
     }
 
     // Identity-carry + sticky memory across a family switch.

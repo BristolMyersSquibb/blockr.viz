@@ -122,53 +122,27 @@
     );
   }
 
-  function mkSelect(cls, options, selected, onChange) {
-    var sel = document.createElement("select");
-    sel.className = cls;
-    options.forEach(function (o) {
-      var op = document.createElement("option");
-      op.value = o;
-      op.textContent = o;
-      if (o === selected) op.selected = true;
-      sel.appendChild(op);
-    });
-    sel.addEventListener("click", function (e) { e.stopPropagation(); });
-    sel.addEventListener("change", function () { onChange(sel.value); });
-    return sel;
-  }
-
-  function popRow(popover, labelText, control, desc) {
-    // Vertical stack: label, full-width control, muted help text below.
-    // (A right-side description column gets squished — keep it under
-    // the control like a normal settings form.)
-    var row = document.createElement("div");
-    row.className = "blockr-popover-row";
-    row.style.display = "flex";
-    row.style.flexDirection = "column";
-    row.style.alignItems = "stretch";
-    row.style.gap = "4px";
-    row.style.marginBottom = "12px";
-
-    var lbl = document.createElement("span");
-    lbl.className = "blockr-popover-label";
-    lbl.textContent = labelText;
-    lbl.style.marginBottom = "0";
-    row.appendChild(lbl);
-
-    control.style.width = "100%";
-    control.style.boxSizing = "border-box";
-    row.appendChild(control);
-
-    if (desc) {
-      var m = document.createElement("span");
-      m.textContent = desc;
-      m.style.fontSize = "0.75rem";
-      m.style.color = "#9ca3af";
-      m.style.lineHeight = "1.3";
-      row.appendChild(m);
-    }
-    popover.appendChild(row);
-  }
+  // Table role-spec for the shared DrilldownConfig engine. The table has no
+  // chart families and no add-as-needed mapping, so a single Presentation
+  // section holds everything; `cor_method` shows only for a correlation
+  // transform (currentType() == cfg.transform); `drill` is a plain column
+  // picker (the column a row-click filters on). Keys match the R config
+  // params, so onChange(key) -> sendConfig(key, value) round-trips directly.
+  var TABLE_ROLES = {
+    drill:      { label: "Drill-down", kind: "column", colType: "any" },
+    transform:  { label: "Transform",  kind: "select", options: ["none", "correlation"] },
+    cor_method: { label: "Correlation method", kind: "select", options: ["pearson", "spearman", "kendall"] },
+    color_mode: { label: "Coloring",   kind: "select", options: ["off", "diverging", "sequential"] },
+    digits:     { label: "Decimals",   kind: "select", options: ["0", "1", "2", "3", "4"] }
+  };
+  var TABLE_SECTIONS = {
+    requiredMap: [], optionalMap: [], encoding: [],
+    presentation: [
+      "drill", "transform",
+      { role: "cor_method", types: ["correlation"] },
+      "color_mode", "digits"
+    ]
+  };
 
   function buildCogwheel(root, table) {
     var elemId = root.getAttribute("data-dt-elem-id");
@@ -176,19 +150,23 @@
 
     var cols = [];
     table.querySelectorAll("thead th .blockr-col-name")
-      .forEach(function (s) { cols.push(s.textContent.trim()); });
+      .forEach(function (s) { cols.push({ name: s.textContent.trim(), type: "any" }); });
 
-    var colorMode = root.getAttribute("data-dt-color-mode") || "off";
-    var onClick = root.getAttribute("data-dt-onclick-col") || "(none)";
-    var digits = root.getAttribute("data-dt-digits") || "2";
-    var transform = root.getAttribute("data-dt-transform") || "none";
+    var onClick = root.getAttribute("data-dt-onclick-col");
+    var cfg = {
+      drill:      (onClick && onClick !== "(none)") ? onClick : "",
+      transform:  root.getAttribute("data-dt-transform") || "none",
+      cor_method: root.getAttribute("data-dt-cor-method") || "pearson",
+      color_mode: root.getAttribute("data-dt-color-mode") || "off",
+      digits:     root.getAttribute("data-dt-digits") || "2"
+    };
 
     var header = document.createElement("div");
     header.className = "blockr-gear-header";
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "blockr-gear-btn";
-    btn.title = "Advanced settings";
+    btn.title = "Table settings";
     btn.innerHTML = (typeof Blockr !== "undefined" && Blockr.icons)
       ? Blockr.icons.gear : "⚙";
     header.appendChild(btn);
@@ -204,36 +182,35 @@
     pop.className = "blockr-popover dd-popover";
     pop.setAttribute("data-dd-pop-for", elemId);
     pop.style.display = "none";
-    var title = document.createElement("div");
-    title.className = "blockr-popover-label";
-    title.style.fontWeight = "600";
-    title.style.marginBottom = "10px";
-    title.textContent = "Advanced";
-    pop.appendChild(title);
 
-    popRow(pop, "Transform",
-      mkSelect("blockr-popover-input",
-        ["none", "correlation"], transform,
-        function (v) { sendConfig(elemId, "transform", v); }),
-      "Render a pairwise correlation matrix of numeric columns");
-
-    popRow(pop, "Coloring",
-      mkSelect("blockr-popover-input",
-        ["off", "diverging", "sequential"], colorMode,
-        function (v) { sendConfig(elemId, "color_mode", v); }),
-      "Cell background color scale");
-
-    popRow(pop, "Drill-down",
-      mkSelect("blockr-popover-input",
-        ["(none)"].concat(cols), onClick,
-        function (v) { sendConfig(elemId, "drill", v); }),
-      "Column whose value a row click filters on");
-
-    popRow(pop, "Decimals",
-      mkSelect("blockr-popover-input",
-        ["0", "1", "2", "3", "4"], digits,
-        function (v) { sendConfig(elemId, "digits", v); }),
-      "Numeric rounding");
+    // Populate the popover with the shared config engine — the same
+    // DrilldownConfig the chart uses. cfg keys are the R config params, so a
+    // change round-trips via sendConfig(key, value).
+    var DDC = (typeof Blockr !== "undefined" && Blockr.DrilldownConfig) || window.DrilldownConfig;
+    new DDC({
+      popoverEl: function () { return pop; },
+      roles: TABLE_ROLES,
+      config: function () { return cfg; },
+      columns: function () { return cols; },
+      context: function () { return "all"; },
+      currentType: function () { return cfg.transform; },
+      sections: function () { return TABLE_SECTIONS; },
+      sectionsForFamily: function () { return TABLE_SECTIONS; },
+      secondary: new Set(),
+      typeKey: null,
+      typeGroups: null,
+      familyFor: null,
+      entryRequired: function () { return false; },
+      drillAutoLabel: null,
+      title: "Table settings",
+      onChange: function (key) { sendConfig(elemId, key, cfg[key]); },
+      onMults: function () {},
+      onClearFilter: function () {},
+      ensureDefaults: function () {},
+      afterTypeChange: function () {},
+      isOpen: function () { return pop.style.display === "block"; },
+      reopen: function () {}
+    }).render();
 
     // Anchor the popover to the gear in viewport coords. The shared CSS
     // anchors .blockr-popover absolute/right:0 to its offset parent, so

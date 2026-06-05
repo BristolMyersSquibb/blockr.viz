@@ -120,7 +120,7 @@ drilldown_table <- function(data,
 
   table_tag <- htmltools::tags$table(class = "blockr-table", thead, tbody)
   dt_render(table_tag, max_height, elem_id, drill,
-            label_col, value_cols, color_mode, digits, transform)
+            label_col, value_cols, color_mode, digits, transform, cor_method)
 }
 
 #' Pairwise correlation matrix of a frame's numeric columns
@@ -206,7 +206,7 @@ dt_message_table <- function(msg = "No data") {
 dt_render <- function(table_tag, max_height, elem_id,
                       drill, label_col, value_cols,
                       color_mode = "off", digits = 2L,
-                      transform = "none") {
+                      transform = "none", cor_method = "pearson") {
   wrapper_id <- paste0(
     "blockr-dt-", sub("^file", "", basename(tempfile("")))
   )
@@ -251,6 +251,7 @@ dt_render <- function(table_tag, max_height, elem_id,
       `data-dt-onclick-idx` = if (!is.null(onclick_idx)) onclick_idx else NULL,
       `data-dt-color-mode` = color_mode,
       `data-dt-transform` = transform,
+      `data-dt-cor-method` = cor_method,
       `data-dt-digits` = as.character(digits),
       header_div,
       htmltools::tags$div(
@@ -307,12 +308,37 @@ dt_color_fun <- function(type, domain, palette) {
 
 #' @noRd
 drilldown_table_dep <- function() {
-  htmltools::htmlDependency(
-    name = "drilldown-table",
-    version = utils::packageVersion("blockr.bi"),
-    src = system.file(package = "blockr.bi"),
-    script = "js/drilldown-table.js",
-    stylesheet = "css/drilldown-table.css"
+  htmltools::tagList(
+    # Shared blockr.dplyr CSS/JS (gear, popover, rows, Blockr.Select, icons) —
+    # same dep names as the chart so they de-dupe on a page with both blocks.
+    htmltools::htmlDependency(
+      name = "blockr-blocks-css",
+      version = paste0(utils::packageVersion("blockr.dplyr"), ".2"),
+      src = system.file("css", package = "blockr.dplyr"),
+      stylesheet = c("blockr-blocks.css", "blockr-select.css")
+    ),
+    htmltools::htmlDependency(
+      name = "blockr-select-js",
+      version = paste0(utils::packageVersion("blockr.dplyr"), ".2"),
+      src = system.file("js", package = "blockr.dplyr"),
+      script = c("blockr-core.js", "blockr-select.js")
+    ),
+    # Shared popover CSS (the dd-* section/row/segmented/add classes) lives in
+    # drilldown-chart.css; the table's gear popover now reuses it.
+    htmltools::htmlDependency(
+      name = "drilldown-chart-css",
+      version = paste0(utils::packageVersion("blockr.bi"), ".24"),
+      src = system.file("css", package = "blockr.bi"),
+      stylesheet = "drilldown-chart.css"
+    ),
+    htmltools::htmlDependency(
+      name = "drilldown-table",
+      version = utils::packageVersion("blockr.bi"),
+      src = system.file(package = "blockr.bi"),
+      # drilldown-config.js (the shared engine) must load before the table JS.
+      script = c("js/drilldown-config.js", "js/drilldown-table.js"),
+      stylesheet = "css/drilldown-table.css"
+    )
   )
 }
 
