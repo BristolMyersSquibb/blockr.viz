@@ -565,8 +565,10 @@
     // draws a paired secondary (agg beside metric, dir beside sort) inline.
     _renderRole(container, key, opts = {}) {
       const role = ROLES[key];
+      const paired = !!(role.pairedWith && this._entryApplicable(role.pairedWith));
       const row = document.createElement('div');
-      row.className = 'blockr-popover-row dd-form-row dd-role-' + key;
+      row.className = 'blockr-popover-row dd-form-row dd-role-' + key +
+        (paired ? ' dd-role-paired' : '');
 
       const head = document.createElement('div');
       head.className = 'dd-row-head';
@@ -602,7 +604,7 @@
       };
 
       this._buildControl(controls, key, { required: opts.required, onChange: () => { setHelp(); markRequired(); } });
-      if (role.pairedWith && this._entryApplicable(role.pairedWith)) {
+      if (paired) {
         this._buildControl(controls, role.pairedWith, { onChange: () => {} });
       }
       row.appendChild(controls);

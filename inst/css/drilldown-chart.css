@@ -101,15 +101,22 @@
    Each section owns a full popover row and holds its own wrapping grid of
    form rows. Rows are generated per active role (no display:none family
    hack). */
+/* A uniform auto-fill grid (not flex-grow): every cell is the same width and
+   a lone item on the last row stays one cell wide instead of stretching to
+   full width. auto-fill (vs auto-fit) keeps the implicit tracks so the lone
+   item does not expand. Same intrinsic-responsive approach as blockr.ggplot's
+   block grid — no media queries. */
 .dd-section {
   flex: 1 1 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  align-items: start;
   gap: 0 14px;
 }
+/* Paired rows (metric+agg, sort+dir) hold two controls, so span two cells. */
+.dd-section > .dd-role-paired { grid-column: span 2; }
 .dd-section-title {
-  flex: 1 1 100%;
+  grid-column: 1 / -1;
   font-size: var(--blockr-font-size-xs, 0.75rem);
   font-weight: var(--blockr-font-weight-semibold, 600);
   text-transform: uppercase;
@@ -162,7 +169,7 @@
 /* Add-mapping menu. The trigger reuses blockr.dplyr's .blockr-add-link
    (subtle grey text link + plus icon, blue on hover) from the shared
    blockr-blocks.css; .dd-add-trigger just resets the <button> chrome. */
-.dd-add-wrap { flex: 1 1 100%; position: relative; margin-bottom: 12px; }
+.dd-add-wrap { grid-column: 1 / -1; position: relative; margin-bottom: 12px; }
 .dd-add-trigger {
   border: none;
   background: none;
