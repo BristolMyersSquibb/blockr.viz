@@ -338,6 +338,65 @@ drilldown_table_dep <- function() {
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #' @return A transform block of class `drilldown_table_block`.
 #' @export
+#' Build arguments metadata for the drill-down table block
+#'
+#' Registry/LLM metadata so the assistant and MCP can introspect the table
+#' block (the chart block has this; the table was previously invisible).
+#' @noRd
+drilldown_table_arguments <- function() {
+  structure(
+    c(
+      label_col = paste0(
+        "Row-stub column (the left-hand label). Names a data column; ",
+        "defaults to the first column."
+      ),
+      value_cols = paste0(
+        "Columns rendered as the table body (the data cells). Defaults to ",
+        "every column except `label_col`."
+      ),
+      color = paste0(
+        "Cell-colouring spec (a `drilldown_table_color()` list) or null for a ",
+        "plain table. Diverging scale for correlation matrices, sequential for ",
+        "heatmaps. Presentational only; never changes the data."
+      ),
+      drill = paste0(
+        "Column a row click filters downstream on. Optional; default null = a ",
+        "click is inert. When set, clicking a row emits a categorical filter ",
+        "on that column's value for the row — the same filter contract as the ",
+        "drill-down chart."
+      ),
+      digits = "Decimal places for numeric display. Default 2.",
+      transform = paste0(
+        "Table transform. \"none\" (default) shows the data as-is; ",
+        "\"correlation\" replaces it with a correlation matrix of the numeric ",
+        "columns."
+      ),
+      cor_method = paste0(
+        "Correlation method when `transform=\"correlation\"`. One of ",
+        "\"pearson\" (default), \"spearman\", \"kendall\"."
+      )
+    ),
+    examples = list(
+      label_col = NULL, value_cols = NULL, color = NULL, drill = NULL,
+      digits = 2L, transform = "none", cor_method = "pearson"
+    ),
+    prompt = paste(
+      "Interactive table (sticky header, client-side sort and search) that can",
+      "also act as a click-to-filter control — the tabular sibling of the",
+      "drill-down chart. Two optional capabilities, both off by default:",
+      "\n- Coloring: set `color` to a `drilldown_table_color()` spec to give",
+      "numeric cells a value-to-background scale (diverging for correlation,",
+      "sequential for heatmaps). Presentational only.",
+      "\n- Drill-down: set `drill` to a column; clicking a row emits a",
+      "categorical filter on that column's value, so downstream blocks filter",
+      "— the same filter contract as the drill-down chart.",
+      "\nFor a correlation matrix set `transform=\"correlation\"` (optionally",
+      "`cor_method`). `label_col`/`value_cols` pick the row-stub and body",
+      "columns; leave null to default to the first column plus the rest."
+    )
+  )
+}
+
 new_drilldown_table_block <- function(label_col = NULL,
                                       value_cols = NULL,
                                       color = NULL,
@@ -369,35 +428,44 @@ new_drilldown_table_block <- function(label_col = NULL,
         r_filter_values <- shiny::reactiveVal(filter_values)
         r_filter_range  <- shiny::reactiveVal(filter_range)
 
+        # Only write a reactiveVal when the value actually changes. JS echoes
+        # the full config/filter on any popover change, so a blind set would
+        # invalidate (and re-render the table) on every echo — the
+        # "prevent R->JS->R loops" guard the chart block uses. (Mirrors
+        # drilldown-chart-block.R.)
+        upd <- function(rv, v) {
+          if (!identical(shiny::isolate(rv()), v)) rv(v)
+        }
+
         shiny::observeEvent(input$drilldown_table_block_action, {
           msg <- input$drilldown_table_block_action
           if (is.null(msg)) return()
           act <- msg$action %||% "config"
           if (identical(act, "filter")) {
-            r_filter_column(msg$column)
-            r_filter_values(msg$values)
-            r_filter_type("categorical")
-            r_filter_range(NULL)
+            upd(r_filter_column, msg$column)
+            upd(r_filter_values, msg$values)
+            upd(r_filter_type, "categorical")
+            upd(r_filter_range, NULL)
           } else if (identical(act, "config")) {
             p <- msg$param
             v <- msg$value
             if (identical(p, "color_mode")) {
               if (identical(v, "off")) {
-                r_color(NULL)
+                upd(r_color, NULL)
               } else if (!is.null(color) && identical(color$type, v)) {
                 # preserve the constructor's domain / palette
-                r_color(color)
+                upd(r_color, color)
               } else {
-                r_color(drilldown_table_color(v))
+                upd(r_color, drilldown_table_color(v))
               }
             } else if (identical(p, "drill")) {
-              r_drill(if (identical(v, "(none)") || !nzchar(v)) NULL else v)
+              upd(r_drill, if (identical(v, "(none)") || !nzchar(v)) NULL else v)
             } else if (identical(p, "digits")) {
-              r_digits(as.integer(v))
+              upd(r_digits, as.integer(v))
             } else if (identical(p, "transform")) {
-              r_transform(v)
+              upd(r_transform, v)
             } else if (identical(p, "cor_method")) {
-              r_cor_method(v)
+              upd(r_cor_method, v)
             }
           }
         })

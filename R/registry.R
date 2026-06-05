@@ -70,7 +70,7 @@ register_bi_blocks <- function() {
       NULL,                         # kpi_block (not in MCP universe)
       NULL,                         # waterfall_block (not in MCP universe)
       drilldown_chart_arguments(),
-      NULL                          # drilldown_table_block (not in MCP universe)
+      drilldown_table_arguments()
     ),
     package = utils::packageName(),
     overwrite = TRUE
