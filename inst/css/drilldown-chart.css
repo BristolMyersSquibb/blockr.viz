@@ -159,18 +159,17 @@
   background: var(--blockr-color-warning-bg, #fffbeb);
 }
 
-/* Add-mapping menu */
+/* Add-mapping menu. The trigger reuses blockr.dplyr's .blockr-add-link
+   (subtle grey text link + plus icon, blue on hover) from the shared
+   blockr-blocks.css; .dd-add-trigger just resets the <button> chrome. */
 .dd-add-wrap { flex: 1 1 100%; position: relative; margin-bottom: 12px; }
 .dd-add-trigger {
-  border: 1px dashed var(--blockr-color-border, #d1d5db);
+  border: none;
   background: none;
-  color: var(--blockr-color-primary, #2563eb);
-  cursor: pointer;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 0;
+  font: inherit;
+  color: inherit;
 }
-.dd-add-trigger:hover { background: var(--blockr-grey-50, #f9fafb); }
 .dd-add-menu {
   display: flex;
   flex-wrap: wrap;

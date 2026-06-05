@@ -726,10 +726,16 @@
     _addMappingMenu(container, remaining) {
       const wrap = document.createElement('div');
       wrap.className = 'dd-add-wrap';
+      // Match blockr.dplyr's add affordance: a subtle grey text link with a
+      // plus icon (blockr-add-row / blockr-add-link / blockr-add-icon, from
+      // the shared blockr-blocks.css + Blockr.icons this block already loads).
+      const bar = document.createElement('div');
+      bar.className = 'blockr-add-row';
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'dd-add-trigger';
-      btn.textContent = '+ Add mapping';
+      btn.className = 'blockr-add-link dd-add-trigger';
+      const plus = (typeof Blockr !== 'undefined' && Blockr.icons) ? Blockr.icons.plus : '+';
+      btn.innerHTML = `<span class="blockr-add-icon">${plus}</span> Add mapping`;
       const menu = document.createElement('div');
       menu.className = 'dd-add-menu';
       menu.style.display = 'none';
@@ -749,7 +755,8 @@
         e.stopPropagation();
         menu.style.display = (menu.style.display === 'none') ? '' : 'none';
       });
-      wrap.appendChild(btn);
+      bar.appendChild(btn);
+      wrap.appendChild(bar);
       wrap.appendChild(menu);
       container.appendChild(wrap);
     }
