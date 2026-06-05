@@ -908,7 +908,13 @@
       const keep = new Set([...spec.requiredMap, ...spec.optionalMap]);
       for (const key of Object.keys(ROLES)) {
         if (ROLES[key].kind !== 'column') continue;
-        if (key === 'drill') continue; // capability, not a mapping — persists
+        if (key === 'drill') continue;  // capability, not a mapping — persists
+        // `metric` is a column-kind role but is NOT in the block's
+        // allow_empty_state: clearing it to '' violates that constraint and
+        // WEDGES the block's reactive evaluation — downstream filtering then
+        // freezes after a family switch. It is a required-for-init slot, not a
+        // positional mapping; never clear it here.
+        if (key === 'metric') continue;
         const v = this.config[key];
         if (!this._hasVal(v)) continue;
         if (!(keep.has(key) && this._colFits(key, v))) {
