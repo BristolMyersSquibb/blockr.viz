@@ -135,14 +135,14 @@
   const FAMILY_ROLES = {
     aggregated: {
       requiredMap: ['group'],
-      optionalMap: ['color', 'facet', 'drill', 'label'],
+      optionalMap: ['color', 'facet', 'label'],
       encoding: ['metric', { role: 'agg_fn', types: ['bar', 'pie', 'treemap'] }],
       // orientation: bar only for v1 (boxplot swap is a follow-up)
       presentation: ['sort_by', 'sort_dir', { role: 'orientation', types: ['bar'] }]
     },
     individual: {
       requiredMap: ['x', 'y'],
-      optionalMap: ['series', 'color', 'facet', 'drill', 'label'],
+      optionalMap: ['series', 'color', 'facet', 'label'],
       encoding: [],
       presentation: [
         { role: 'smoother', types: ['scatter'] },
@@ -153,7 +153,7 @@
     },
     timeline: {
       requiredMap: ['x', 'xend', 'y'],
-      optionalMap: ['series', 'color', 'facet', 'drill', 'label'],
+      optionalMap: ['series', 'color', 'facet', 'label'],
       encoding: [],
       presentation: ['sort_by', 'sort_dir']
     }
@@ -533,6 +533,9 @@
       this._renderSection('Encoding', spec.encoding);
       this._renderSection('Presentation', spec.presentation);
 
+      // ----- Drill-down: capability toggle + optional target override -----
+      this._renderDrillSection();
+
       this._updateFamilyClass();
     }
 
@@ -612,6 +615,93 @@
       setHelp();
       markRequired();
       container.appendChild(row);
+    }
+
+    // Drill-down is a capability, not an aesthetic: its own section with an
+    // on/off toggle (off by default). On -> a "Filter on" picker whose first
+    // option is the family's natural target ("auto"); pick a column to
+    // override. Tri-state `drill`: ''=off, 'auto'=on-natural, column=override.
+    _renderDrillSection() {
+      const cfg = this.config;
+      const on = this._drillState() !== 'off';
+      const sec = this._sectionEl('Drill-down');
+
+      // Toggle row
+      const tRow = document.createElement('div');
+      tRow.className = 'blockr-popover-row dd-form-row';
+      const tHead = document.createElement('div');
+      tHead.className = 'dd-row-head';
+      const tLbl = document.createElement('span');
+      tLbl.className = 'blockr-popover-label';
+      tLbl.textContent = 'Filter on selection';
+      tHead.appendChild(tLbl);
+      tRow.appendChild(tHead);
+      const seg = document.createElement('div');
+      seg.className = 'dd-segmented';
+      for (const o of [{ v: 'off', l: 'Off' }, { v: 'on', l: 'On' }]) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'dd-seg-btn' + (((o.v === 'on') === on) ? ' dd-seg-active' : '');
+        b.textContent = o.l;
+        b.addEventListener('click', () => {
+          if (o.v === 'off') cfg.drill = '';
+          else if (!this._hasVal(cfg.drill)) cfg.drill = 'auto';
+          const wasOpen = this._popoverOpen;
+          this._renderConfig();
+          if (wasOpen) setTimeout(() => this._openPopover(), 0);
+          this._render(); this._sendConfig(); this._sendClearFilter();
+        });
+        seg.appendChild(b);
+      }
+      tRow.appendChild(seg);
+      sec.appendChild(tRow);
+
+      // When on: "Filter on" picker — Auto (natural target) + columns
+      if (on) {
+        const fam = this._family();
+        const autoLabel = fam === 'aggregated' ? 'Auto — the clicked group'
+          : fam === 'timeline' ? 'Auto — the clicked lane'
+          : cfg.chart_type === 'line' ? 'Auto — the clicked series'
+          : 'Auto — the selected point';
+        const row = document.createElement('div');
+        row.className = 'blockr-popover-row dd-form-row';
+        const head = document.createElement('div');
+        head.className = 'dd-row-head';
+        const lbl = document.createElement('span');
+        lbl.className = 'blockr-popover-label';
+        lbl.textContent = 'Filter on';
+        head.appendChild(lbl);
+        row.appendChild(head);
+        const controls = document.createElement('div');
+        controls.className = 'dd-row-controls';
+        const wrap = document.createElement('div');
+        wrap.className = 'dd-picker-wrap';
+        const colOpt = (c) => c.label ? { value: c.name, label: c.label } : c.name;
+        const opts = [{ value: 'auto', label: autoLabel }, ...(this.columns || []).map(colOpt)];
+        const sel = (this._hasVal(cfg.drill) && cfg.drill !== 'auto') ? cfg.drill : 'auto';
+        const onSel = (val) => {
+          cfg.drill = val; this._render(); this._sendConfig(); this._sendClearFilter();
+        };
+        if (typeof Blockr !== 'undefined' && Blockr.Select) {
+          this._selects['drill'] = Blockr.Select.single(wrap, { options: opts, selected: sel, onChange: onSel });
+        } else {
+          const s = document.createElement('select');
+          s.className = 'dd-cfg-select';
+          for (const o of opts) {
+            const val = (typeof o === 'object' && o) ? o.value : o;
+            const txt = (typeof o === 'object' && o && o.label) ? o.label : val;
+            const op = document.createElement('option');
+            op.value = val; op.textContent = txt;
+            if (val === sel) op.selected = true;
+            s.appendChild(op);
+          }
+          s.addEventListener('change', () => onSel(s.value));
+          wrap.appendChild(s);
+        }
+        controls.appendChild(wrap);
+        row.appendChild(controls);
+        sec.appendChild(row);
+      }
     }
 
     // Build a single control (no label/row chrome — that's _renderRole's job).
@@ -818,6 +908,7 @@
       const keep = new Set([...spec.requiredMap, ...spec.optionalMap]);
       for (const key of Object.keys(ROLES)) {
         if (ROLES[key].kind !== 'column') continue;
+        if (key === 'drill') continue; // capability, not a mapping — persists
         const v = this.config[key];
         if (!this._hasVal(v)) continue;
         if (!(keep.has(key) && this._colFits(key, v))) {
@@ -1159,16 +1250,17 @@
         }
         const chart = echarts.init(chartDiv, this.theme || undefined);
         this.charts.push(chart);
-        chart.setOption(option, true);
+        chart.setOption(this._applyDrillEmphasis(option), true);
 
         chart.on('click', (params) => {
+          if (this._drillState() === 'off') return;
           const clickedGroup = params.name || (params.value && params.value[0]);
           if (!clickedGroup) return;
           this._selected = this._selected === clickedGroup ? null : clickedGroup;
           this._updateHighlight();
           if (this._selected == null) { this._sendClearFilter(); return; }
-          // The clicked group's source rows -> _emitDrill (inert unless
-          // `drill` is set; the family no longer auto-drills by group).
+          // The clicked group's source rows -> _emitDrill. With drill 'auto'
+          // the target is the group column; with an override, that column.
           const g = this.config.group, fc = this.config.facet;
           const rows = (this.data || []).filter(r =>
             String(r[g]) === String(clickedGroup) &&
@@ -1678,7 +1770,7 @@
           series
         };
 
-        chart.setOption(option, true);
+        chart.setOption(this._applyDrillEmphasis(option), true);
 
         // When the legend shows color levels (not series), intercept
         // legend clicks and fan them out to every series that belongs to
@@ -1697,14 +1789,21 @@
           });
         }
 
-        // Click identifies a mark -> its source rows -> _emitDrill.
-        // A clicked series (split by series/color) maps to that series'
-        // rows; a clicked point maps to the row(s) at that (x, y).
-        // Inert unless `drill` is set. Brush/drag range is separate.
+        // Click identifies a mark -> a selection (a click is a one-point
+        // selection). With drill 'off' it's inert. With a drill column (auto
+        // for line = series, or an override) it emits a categorical filter;
+        // for a scatter under 'auto' (no categorical key) it filters the exact
+        // observation (point filter on x&y). Brush is the same rule at range.
         chart.on('click', (params) => {
+          if (this._drillState() === 'off') return;
           if (params.componentType !== 'series') return;
+          // Clicking a point in brush mode also fires brushSelected/brush
+          // "cleared" events that would call _sendClearFilter and wipe this
+          // click's filter. Suppress those for a short window after a click.
+          this._suppressBrushClear = true;
+          setTimeout(() => { this._suppressBrushClear = false; }, 150);
           const splitCol = seriesCol || color;
-          let rows;
+          let rows, pointVal = null;
           if (splitCol && params.seriesName) {
             rows = (this.data || []).filter(
               r => String(r[splitCol]) === String(params.seriesName));
@@ -1716,9 +1815,17 @@
               r => String(r[x]) === String(v[0]) &&
                    String(r[y]) === String(v[1]));
             this._selected = `${ddNum(v[0])}, ${ddNum(v[1])}`;
+            pointVal = v;
           }
           this._updateStatus();
-          this._emitDrill(rows);
+          if (this._drillColumn()) {
+            this._emitDrill(rows);
+          } else if (pointVal) {
+            // scatter auto: a click is a one-point selection -> a zero-width
+            // x/y range (between(x,v,v) & between(y,v,v) = the observation).
+            this._hasBrushFilter = true;
+            this._sendRangeFilter([pointVal[0], pointVal[0]], [pointVal[1], pointVal[1]]);
+          }
         });
 
         // Activate brush mode by default (no need to click toolbox first)
@@ -1731,11 +1838,13 @@
         }
 
         chart.on('brushSelected', (params) => {
+          if (this._drillState() === 'off') return;
           if (!params.batch || params.batch.length === 0) return;
 
           // Collect all selected data indices across all areas/series
           const batch = params.batch[0];
           if (!batch?.selected) {
+            if (this._suppressBrushClear) return;
             this._hasBrushFilter = false;
             this._updateStatus();
             this._sendClearFilter();
@@ -1756,6 +1865,7 @@
           }
 
           if (selected.length === 0) {
+            if (this._suppressBrushClear) return;
             this._hasBrushFilter = false;
             this._updateStatus();
             this._sendClearFilter();
@@ -1773,13 +1883,14 @@
           const opt = chart.getOption();
           const allSeries = opt.series || [];
 
-          // When `drill` is set, the brush filters downstream on the drill
-          // column's values for the brushed points (categorical) — the same
-          // rule as click-drill, so `drill` is the single "what to filter on"
-          // knob for BOTH gestures. Build a (x|y) -> rows index once so the
-          // brushed points can be mapped back to source rows. Without `drill`,
-          // the brush does a geometric x/y range filter (unchanged).
-          const drillCol = this.config.drill;
+          // With a drill column (an override, or 'auto' resolving to a
+          // categorical key), the brush filters downstream on that column's
+          // values for the brushed points — the same rule as click-drill, so a
+          // selection filters consistently whether click or brush. Build a
+          // (x|y) -> rows index once to map brushed points back to source rows.
+          // With no drill column (scatter 'auto'), the brush does a geometric
+          // x/y range filter.
+          const drillCol = this._drillColumn();
           let rowIndex = null;
           if (drillCol) {
             rowIndex = new Map();
@@ -1825,6 +1936,7 @@
 
         chart.on('brush', (params) => {
           if (!params.areas || params.areas.length === 0) {
+            if (this._suppressBrushClear) return;
             this._hasBrushFilter = false;
             this._updateStatus();
             this._sendClearFilter();
@@ -1839,7 +1951,10 @@
     // -- Timeline (gantt) rendering ------------------------------------------
 
     _renderTimeline() {
-      const { x, xend, y, color, facet, sort_by, series, label, drill } = this.config;
+      const { x, xend, y, color, facet, sort_by, series, label } = this.config;
+      // Effective drill column (tri-state): null when off, the lane (y) for
+      // 'auto', or an override column. Packed at tuple slot 7 for the click.
+      const drill = this._drillColumn();
       const sortDir = this.config.sort_dir === 'desc' ? -1 : 1;
       if (!x || !y) {
         this.chartGrid.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">Select X (start) and Y (term) columns</p></div>';
@@ -2097,13 +2212,13 @@
           series: seriesArray
         };
 
-        chart.setOption(option, true);
+        chart.setOption(this._applyDrillEmphasis(option), true);
 
         chart.on('click', (params) => {
+          if (this._drillState() === 'off') return;
           if (params.componentType !== 'series') return;
-          // The clicked bar's `drill` value is packed at slot 7.
-          // Inert unless `drill` is set; lane/series/color do not
-          // implicitly drive the drill.
+          // The clicked bar's drill value is packed at slot 7 (the effective
+          // drill column: lane for 'auto', or an override).
           const v = params.value;
           if (!v) return;
           this._selected = String(v[3] || '');
@@ -2297,8 +2412,44 @@
     // A click identifies a mark; the mark maps to one or more source
     // rows; if `drill` is set, filter downstream on
     // `drill %in% distinct(drill over those rows)`. Unset drill -> inert.
+    // Drill-down capability state from the tri-state `drill` config:
+    //   ''/null -> 'off'   "auto" -> 'auto' (natural target)   column -> that col
+    _drillState() {
+      const d = this.config.drill;
+      if (!d || d === '') return 'off';
+      return d === 'auto' ? 'auto' : 'column';
+    }
+
+    // The effective categorical column a selection filters on, or null when the
+    // selection should filter geometrically (a scatter point's x&y / brush box).
+    //   explicit override -> that column
+    //   auto -> the family's natural key: aggregated=group, timeline=lane(y),
+    //           line=series/color, scatter=null (point/range)
+    _drillColumn() {
+      const d = this.config.drill;
+      if (!d || d === '') return null;
+      if (d !== 'auto') return d;
+      const fam = this._family();
+      if (fam === 'aggregated') return this.config.group || null;
+      if (fam === 'timeline') return this.config.y || null;
+      // individual: a series/color split is the natural categorical key (line
+      // always; scatter when split). Without one, a scatter filters
+      // geometrically (the selected point's x&y).
+      return this.config.series || this.config.color || null;
+    }
+
+    // When drill is off the chart is a pure display — disable ECharts hover
+    // emphasis on marks so there is no interactive-looking effect. Mutates and
+    // returns the option for use inline at setOption.
+    _applyDrillEmphasis(option) {
+      if (this._drillState() === 'off' && option && Array.isArray(option.series)) {
+        for (const s of option.series) { if (s) s.emphasis = { disabled: true }; }
+      }
+      return option;
+    }
+
     _emitDrill(rows) {
-      const c = this.config.drill;
+      const c = this._drillColumn();
       if (!c || !rows || !rows.length) return;
       const vals = [...new Set(
         rows.map(r => (r ? r[c] : null)).filter(v => v != null)

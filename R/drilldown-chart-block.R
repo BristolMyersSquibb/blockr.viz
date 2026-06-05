@@ -333,26 +333,22 @@ new_drilldown_chart_block <- function(
               if (!is.null(msg$x_col) && !is.null(msg$x_range)) {
                 xr <- as.numeric(msg$x_range)
                 yr <- if (!is.null(msg$y_range)) as.numeric(msg$y_range)
-                # Defensive: a 1-pixel range (xlo == xhi and either no
-                # y-range or ylo == yhi) is almost always the click-on-a-dot
-                # race — a click handler sent a categorical filter, and
-                # ECharts' brush mode then fired a brushSelected on the
-                # clicked point. Treat as a no-op so the categorical
-                # filter survives.
-                is_point <- length(xr) == 2L && xr[1L] == xr[2L] &&
-                  (is.null(yr) || (length(yr) == 2L && yr[1L] == yr[2L]))
-                if (!is_point) {
-                  upd(r_filter_column, NULL)
-                  upd(r_filter_values, NULL)
-                  upd(r_filter_point, NULL)
-                  upd(r_filter_range, list(
-                    x_col = msg$x_col,
-                    y_col = msg$y_col,
-                    x_range = xr,
-                    y_range = yr
-                  ))
-                  upd(r_filter_type, "range")
-                }
+                # A degenerate range (xlo == xhi) is now legitimate: it is a
+                # scatter-auto CLICK (a one-point selection -> the observation
+                # via between(x, v, v)). The old click-vs-brush race that this
+                # guarded against is gone — within each drill mode click and
+                # brush emit the SAME filter type (override -> categorical,
+                # auto -> range), so there is nothing to clobber.
+                upd(r_filter_column, NULL)
+                upd(r_filter_values, NULL)
+                upd(r_filter_point, NULL)
+                upd(r_filter_range, list(
+                  x_col = msg$x_col,
+                  y_col = msg$y_col,
+                  x_range = xr,
+                  y_range = yr
+                ))
+                upd(r_filter_type, "range")
               } else {
                 upd(r_filter_column, NULL)
                 upd(r_filter_values, NULL)

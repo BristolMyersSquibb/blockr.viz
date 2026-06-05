@@ -309,20 +309,15 @@ test_that("scatter click filter survives a follow-up brush event (race)", {
       session$flushReact()
       expr_scope <- session$makeScope("expr")
 
-      # 1) click → categorical filter on policy_id
-      expr_scope$setInputs(drilldown_block_action = list(
-        action      = "filter",
-        filter_type = "categorical",
-        column      = "policy_id",
-        values      = list(clicked_pid)
-      ))
-      session$flushReact()
-
-      # 2) brushSelected fires with the click point as a 1-pixel brush.
-      # JS sends a range filter on (x == click_x & y == click_y).
+      # New drill model: click and brush emit the SAME filter type within a
+      # mode, so the old categorical-vs-range race is gone and a degenerate
+      # range (a scatter-auto click on one point) is a legitimate filter — it
+      # selects the observation via between(x, v, v) & between(y, v, v), no
+      # longer dropped as a no-op.
       one_loc  <- premium[premium$policy_id == clicked_pid, ][1L, ]
       click_x  <- one_loc$tiv
       click_y  <- one_loc$model_price
+      expect_n  <- sum(premium$tiv == click_x & premium$model_price == click_y)
       expr_scope$setInputs(drilldown_block_action = list(
         action      = "filter",
         filter_type = "range",
@@ -335,10 +330,9 @@ test_that("scatter click filter survives a follow-up brush event (race)", {
 
       result <- session$returned$result()
       expect_s3_class(result, "data.frame")
-      # The fix should preserve the categorical selection (12 rows for
-      # policy-005), not let the brush point-range filter (1 row max) win.
-      expect_equal(nrow(result), expected_n)
-      expect_true(all(result$policy_id == clicked_pid))
+      # The degenerate range now filters to the clicked observation(s).
+      expect_equal(nrow(result), expect_n)
+      expect_true(all(result$tiv == click_x & result$model_price == click_y))
     },
     args = list(x = blk, data = list(data = function() premium))
   )

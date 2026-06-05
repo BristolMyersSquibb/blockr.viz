@@ -54,15 +54,15 @@ drilldown_chart_arguments <- function() {
         "colour, series, or drill."
       ),
       drill = paste0(
-        "Column a SELECTION filters downstream on. Optional; default null = ",
-        "a selection is inert (no filter). When set, selecting marks emits a ",
-        "categorical filter on this column's value(s) for the selected marks ",
-        "— this covers BOTH a click (one mark) and a brush-drag on ",
-        "scatter/line (all points in the box). For an aggregated chart use a ",
-        "column constant within a group (often `group` itself). This is the ",
-        "single what-to-filter-on knob; color and series never drive drill. ",
-        "On scatter/line, brush-drag with `drill` UNSET still does a geometric ",
-        "x/y range filter."
+        "Drill-down: what a SELECTION (click or brush) filters downstream on. ",
+        "Tri-state: null/\"\" = OFF (the chart is a static display — no filter, ",
+        "no hover effect; the default); \"auto\" = ON with the family's natural ",
+        "target (aggregated -> the clicked group; scatter -> the selected ",
+        "point's x&y; line -> the clicked series; timeline -> the clicked ",
+        "lane); a COLUMN NAME = ON, overriding the natural target to filter on ",
+        "that column's value(s) for the selected marks. Click and brush follow ",
+        "the same rule (a click is a one-point selection). With \"auto\" on a ",
+        "scatter, a brush filters the geometric x/y box."
       ),
       smoother = paste0(
         "Trend overlay for scatter charts. One of \"none\" (default), ",
