@@ -9,9 +9,33 @@
 .drilldown-table-container.dt-clickable .blockr-table tbody tr.blockr-data-row {
   cursor: pointer;
 }
+/* Drill selection — a soft primary tint across the row plus a left accent
+   bar, instead of a hard per-cell outline (which boxed every cell). */
 .drilldown-table-container .blockr-table tbody tr.dt-row-active td {
-  outline: 2px solid var(--blockr-color-primary, #2563eb);
-  outline-offset: -2px;
+  background-color: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
+}
+.drilldown-table-container .blockr-table tbody tr.dt-row-active td:first-child {
+  box-shadow: inset 3px 0 0 0 var(--blockr-color-primary, #2563eb);
+}
+/* Header alignment: match the blockr.extra HTML preview — left-aligned column
+   name and label (the shared html-table CSS centres them). */
+.drilldown-table-container .blockr-table thead th.blockr-col-header {
+  text-align: left;
+}
+/* Sort indicator: on the same row as the column name (name left, arrow
+   right), like the HTML preview — rather than stacked below the label. */
+.drilldown-table-container .blockr-table thead th .dt-th-namerow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.drilldown-table-container .blockr-table thead th .dt-th-namerow .blockr-col-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.drilldown-table-container .blockr-table thead th .dt-th-namerow .blockr-sort-icon {
+  flex: 0 0 auto;
 }
 .drilldown-table-container .blockr-table thead th .blockr-col-name {
   display: block;

@@ -172,11 +172,16 @@ dt_th <- function(name, idx, stub = FALSE, label = NULL) {
   htmltools::tags$th(
     class = cls,
     `data-col-index` = idx,
-    htmltools::tags$span(class = "blockr-col-name", name),
+    # Name + sort indicator share one row (name left, arrow right, same
+    # baseline); the variable label sits on its own line below.
+    htmltools::tags$div(
+      class = "dt-th-namerow",
+      htmltools::tags$span(class = "blockr-col-name", name),
+      htmltools::tags$span(class = "blockr-sort-icon")
+    ),
     if (!is.null(label)) {
       htmltools::tags$span(class = "blockr-col-label", label)
-    },
-    htmltools::tags$span(class = "blockr-sort-icon")
+    }
   )
 }
 
@@ -344,26 +349,6 @@ drilldown_table_dep <- function() {
 
 # --- block -------------------------------------------------------------
 
-#' Drilldown Table Block
-#'
-#' Transform block wrapping [drilldown_table()]. The visible table is
-#' rendered from the upstream (pre-filter) data so every row stays
-#' clickable; the block's data output is the upstream data filtered by
-#' the last click, using the exact same contract as
-#' [new_drilldown_chart_block()] (so existing filter links compose).
-#'
-#' @param label_col,value_cols,color,drill,digits,max_height,transform,cor_method
-#'   Forwarded to [drilldown_table()]. The block has no in-table title:
-#'   the block's own name (card header) serves that role. `transform =
-#'   "correlation"` renders the pairwise correlation matrix of the
-#'   input's numeric columns (the one dplyr-hard reshape folded in as
-#'   an option, mirroring how the drilldown chart aggregates).
-#' @param filter_type,filter_column,filter_values,filter_range Click
-#'   filter state (kept for contract parity with the drilldown chart;
-#'   `filter_range` is unused by the table).
-#' @param ... Forwarded to [blockr.core::new_transform_block()].
-#' @return A transform block of class `drilldown_table_block`.
-#' @export
 #' Build arguments metadata for the drill-down table block
 #'
 #' Registry/LLM metadata so the assistant and MCP can introspect the table
@@ -423,6 +408,26 @@ drilldown_table_arguments <- function() {
   )
 }
 
+#' Drilldown Table Block
+#'
+#' Transform block wrapping [drilldown_table()]. The visible table is
+#' rendered from the upstream (pre-filter) data so every row stays
+#' clickable; the block's data output is the upstream data filtered by
+#' the last click, using the exact same contract as
+#' [new_drilldown_chart_block()] (so existing filter links compose).
+#'
+#' @param label_col,value_cols,color,drill,digits,max_height,transform,cor_method
+#'   Forwarded to [drilldown_table()]. The block has no in-table title:
+#'   the block's own name (card header) serves that role. `transform =
+#'   "correlation"` renders the pairwise correlation matrix of the
+#'   input's numeric columns (the one dplyr-hard reshape folded in as
+#'   an option, mirroring how the drilldown chart aggregates).
+#' @param filter_type,filter_column,filter_values,filter_range Click
+#'   filter state (kept for contract parity with the drilldown chart;
+#'   `filter_range` is unused by the table).
+#' @param ... Forwarded to [blockr.core::new_transform_block()].
+#' @return A transform block of class `drilldown_table_block`.
+#' @export
 new_drilldown_table_block <- function(label_col = NULL,
                                       value_cols = NULL,
                                       color = NULL,
@@ -566,14 +571,9 @@ new_drilldown_table_block <- function(label_col = NULL,
   )
 }
 
-#' @importFrom blockr.core block_ui
-#' @method block_ui drilldown_table_block
-#' @export
-block_ui.drilldown_table_block <- function(id, x, ...) shiny::tagList()
-
-#' @importFrom blockr.core block_output
-#' @method block_output drilldown_table_block
-#' @export
-block_output.drilldown_table_block <- function(x, result, session) {
-  shiny::renderUI(NULL)
-}
+# NB: no block_ui / block_output overrides. The styled drill-down table renders
+# in the Controls pane (the `ui =` function above, via uiOutput("dt_result")),
+# and the block falls back to the transform_block defaults for the output pane —
+# so the Preview pane shows the filtered passthrough data frame as a DT, exactly
+# like new_drilldown_chart_block(). (They were previously nulled out, which left
+# the Preview pane blank.)

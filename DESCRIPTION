@@ -1,6 +1,6 @@
 Package: blockr.bi
 Title: Business Intelligence Blocks for Blockr
-Version: 0.0.45
+Version: 0.0.48
 Authors@R:
     person(given = "Christoph",
            family = "Sax",
