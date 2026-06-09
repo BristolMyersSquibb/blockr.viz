@@ -505,17 +505,12 @@ test_that("pivot_table_block UI contains expected elements", {
   expect_s3_class(ui_output, "shiny.tag.list")
   ui_text <- as.character(ui_output)
 
-  # Should contain selectize inputs
-  expect_true(grepl("selectize", ui_text, ignore.case = TRUE))
-
-  # Should have rows, cols, measures inputs
-  expect_true(grepl("rows", ui_text))
-  expect_true(grepl("cols", ui_text))
-  expect_true(grepl("measures", ui_text))
-
-  # Should have aggregation selector
-  expect_true(grepl("agg_fun", ui_text))
-
-  # Should have digits input
-  expect_true(grepl("digits", ui_text))
+  # The UI is now a JS-widget mount point: a container div the client-side
+  # pivot-table-block.js populates with the rows/cols/measures/agg controls.
+  # Those controls are no longer server-rendered, so assert the scaffold that
+  # IS rendered (the container, the input mount id, and the JS dependency)
+  # rather than the old selectize/rows/cols/... DOM strings.
+  expect_true(grepl("pivot-table-block-container", ui_text))
+  expect_true(grepl("pivot_input", ui_text))
+  expect_true(grepl("pivot-table-block", ui_text))
 })
