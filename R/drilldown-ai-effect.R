@@ -1,0 +1,99 @@
+# Make the drilldown blocks legible to the blockr.ai assistant. Their result is a
+# passthrough data.frame (a filter that only narrows on click), so the data
+# effect is blind and even reads as a no-op. The meaningful artifact is the CHART
+# CONFIG -- the column-to-role bindings. These `config_effect()` methods describe
+# that config and flag bindings that reference columns absent from the input, so
+# the model gets real feedback instead of "no rows or columns changed".
+#
+# Registered onto blockr.ai's generic at load (defensive: no hard dependency on
+# blockr.ai, no-op when it is absent or too old to export config_effect).
+
+`%||%` <- function(a, b) if (is.null(a)) b else a
+
+# Column-valued roles, in display order, for the chart block.
+dd_chart_roles <- c("group", "x", "y", "xend", "metric", "color", "facet",
+                    "series", "label", "drill", "lo", "hi", "ref_x", "ref_y")
+
+#' @noRd
+config_effect.drilldown_chart_block <- function(block, args, data = NULL, ...) {
+  cols <- if (is.data.frame(data)) names(data) else NULL
+  ct <- as.character(args$chart_type %||% "bar")[1]
+
+  parts <- character()
+  bad <- character()
+  for (r in dd_chart_roles) {
+    v <- args[[r]]
+    if (is.null(v) || !nzchar(as.character(v)[1])) next
+    v <- as.character(v)[1]
+    parts <- c(parts, paste0(r, "=", v))
+    # `.count`/`auto` are sentinels, not columns; everything else must exist.
+    if (!is.null(cols) && !(v %in% c(".count", "auto")) && !(v %in% cols)) {
+      bad <- c(bad, paste0(r, " references '", v, "'"))
+    }
+  }
+  agg <- args$agg_fn
+  agg_txt <- if (!is.null(agg) && nzchar(as.character(agg)[1])) {
+    paste0(" agg=", as.character(agg)[1])
+  } else {
+    ""
+  }
+  drill_off <- is.null(args$drill) || !nzchar(as.character(args$drill %||% "")[1])
+
+  desc <- paste0(
+    ct, " chart configured: ",
+    if (length(parts)) paste(parts, collapse = ", ") else "(no column bindings)",
+    agg_txt,
+    if (drill_off) " -- drill OFF (set `drill` to enable click-to-filter)" else ""
+  )
+  if (length(bad)) {
+    desc <- paste0(
+      desc, " -- INVALID column binding(s): ", paste(bad, collapse = "; "),
+      ". Available columns: ", paste(cols, collapse = ", ")
+    )
+  }
+  desc
+}
+
+#' @noRd
+config_effect.drilldown_table_block <- function(block, args, data = NULL, ...) {
+  cols <- if (is.data.frame(data)) names(data) else NULL
+  parts <- character()
+  bad <- character()
+  for (r in c("rowname", "drill")) {
+    v <- args[[r]]
+    if (is.null(v) || !nzchar(as.character(v)[1])) next
+    v <- as.character(v)[1]
+    parts <- c(parts, paste0(r, "=", v))
+    if (!is.null(cols) && !(v %in% cols)) bad <- c(bad, paste0(r, " references '", v, "'"))
+  }
+  vc <- unlist(args$values)
+  if (length(vc)) {
+    parts <- c(parts, paste0("values=", paste(vc, collapse = "/")))
+    miss <- setdiff(vc, cols %||% vc)
+    if (length(miss)) bad <- c(bad, paste0("values ", paste(miss, collapse = ",")))
+  }
+  desc <- paste0("drilldown table configured: ",
+                 if (length(parts)) paste(parts, collapse = ", ") else "(defaults)")
+  if (length(bad)) {
+    desc <- paste0(desc, " -- INVALID: ", paste(bad, collapse = "; "),
+                   ". Available columns: ", paste(cols, collapse = ", "))
+  }
+  desc
+}
+
+#' Register the drilldown config_effect methods on blockr.ai's generic.
+#' @noRd
+register_drilldown_ai_effect <- function() {
+  if (!requireNamespace("blockr.ai", quietly = TRUE)) {
+    return(invisible(FALSE))
+  }
+  ns <- asNamespace("blockr.ai")
+  if (!exists("config_effect", envir = ns, inherits = FALSE)) {
+    return(invisible(FALSE))
+  }
+  registerS3method("config_effect", "drilldown_chart_block",
+                   config_effect.drilldown_chart_block, envir = ns)
+  registerS3method("config_effect", "drilldown_table_block",
+                   config_effect.drilldown_table_block, envir = ns)
+  invisible(TRUE)
+}

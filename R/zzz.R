@@ -12,6 +12,7 @@
 
   register_bi_blocks()
   echart_theme_blockr_bi()
+  register_drilldown_ai_effect()
 
   invisible(NULL)
 } # nocov end
