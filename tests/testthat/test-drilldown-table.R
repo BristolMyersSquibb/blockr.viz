@@ -91,7 +91,7 @@ test_that("digits controls numeric formatting", {
 
 test_that("block state round-trips constructor args", {
   blk <- new_drilldown_table_block(
-    color = drilldown_table_color("diverging", domain = c(-1, 1)),
+    cell_color = drilldown_table_color("diverging", domain = c(-1, 1)),
     drill = "USUBJID"
   )
   expect_s3_class(blk, "drilldown_table_block")
@@ -109,27 +109,27 @@ test_that("block state round-trips constructor args", {
 
 test_that("cogwheel config actions update color, drill, digits", {
   blk <- new_drilldown_table_block(
-    color = drilldown_table_color("diverging", domain = c(-1, 1))
+    cell_color = drilldown_table_color("diverging", domain = c(-1, 1))
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
       session$flushReact()
-      expect_equal(session$returned$state$color()$type, "diverging")
+      expect_equal(session$returned$state$cell_color()$type, "diverging")
 
       es <- session$makeScope("expr")
       es$setInputs(drilldown_table_block_action = list(
         action = "config", param = "color_mode", value = "off"
       ))
       session$flushReact()
-      expect_null(session$returned$state$color())
+      expect_null(session$returned$state$cell_color())
 
       es$setInputs(drilldown_table_block_action = list(
         action = "config", param = "color_mode", value = "diverging"
       ))
       session$flushReact()
       # constructor domain is preserved when toggling back to same type
-      expect_equal(session$returned$state$color()$domain, c(-1, 1))
+      expect_equal(session$returned$state$cell_color()$domain, c(-1, 1))
 
       es$setInputs(drilldown_table_block_action = list(
         action = "config", param = "drill", value = "parameter"
