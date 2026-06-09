@@ -357,18 +357,21 @@ drilldown_table_dep <- function() {
 drilldown_table_arguments <- function() {
   structure(
     c(
-      label_col = paste0(
-        "Row-stub column (the left-hand label). Names a data column; ",
-        "defaults to the first column."
+      rowname = paste0(
+        "The single column shown as the row labels (the left-hand stub). Names ",
+        "a data column; defaults to the first column."
       ),
-      value_cols = paste0(
-        "Columns rendered as the table body (the data cells). Defaults to ",
-        "every column except `label_col`."
+      values = paste0(
+        "The columns rendered as the table body (the data cells). When the user ",
+        "names specific value/measure columns, set this to EXACTLY those ",
+        "columns -- do not leave it null. Leave null only to mean 'all columns ",
+        "except `rowname`'."
       ),
-      color = paste0(
-        "Cell-colouring spec (a `drilldown_table_color()` list) or null for a ",
-        "plain table. Diverging scale for correlation matrices, sequential for ",
-        "heatmaps. Presentational only; never changes the data."
+      cell_color = paste0(
+        "Cell shading: a `drilldown_table_color()` spec, or null for a plain ",
+        "table. NOTE this is a colour SPEC object, not a column name (unlike the ",
+        "drill-down chart's `color`). Diverging scale for correlation matrices, ",
+        "sequential for heatmaps. Presentational only; never changes the data."
       ),
       drill = paste0(
         "Column a row click filters downstream on. Optional; default null = a ",
@@ -388,22 +391,28 @@ drilldown_table_arguments <- function() {
       )
     ),
     examples = list(
-      label_col = NULL, value_cols = NULL, color = NULL, drill = NULL,
+      # Populated (label_col + explicit value_cols array + drill) so the model
+      # anchors on setting these to named columns, not leaving them null.
+      rowname = "Region", values = list("Revenue", "Profit"),
+      cell_color = NULL, drill = "Region",
       digits = 2L, transform = "none", cor_method = "pearson"
     ),
     prompt = paste(
       "Interactive table (sticky header, client-side sort and search) that can",
       "also act as a click-to-filter control — the tabular sibling of the",
       "drill-down chart. Two optional capabilities, both off by default:",
-      "\n- Coloring: set `color` to a `drilldown_table_color()` spec to give",
+      "\n- Coloring: set `cell_color` to a `drilldown_table_color()` spec to give",
       "numeric cells a value-to-background scale (diverging for correlation,",
       "sequential for heatmaps). Presentational only.",
       "\n- Drill-down: set `drill` to a column; clicking a row emits a",
       "categorical filter on that column's value, so downstream blocks filter",
       "— the same filter contract as the drill-down chart.",
       "\nFor a correlation matrix set `transform=\"correlation\"` (optionally",
-      "`cor_method`). `label_col`/`value_cols` pick the row-stub and body",
-      "columns; leave null to default to the first column plus the rest."
+      "`cor_method`). `rowname`/`values` pick the row-stub and body",
+      "columns: set `values` to EXACTLY the columns the user names (e.g.",
+      "\"Revenue and Profit\" -> values = [\"Revenue\", \"Profit\"]); leave",
+      "them null only when the user does not name specific columns (defaults to",
+      "the first column plus the rest)."
     )
   )
 }
@@ -416,7 +425,7 @@ drilldown_table_arguments <- function() {
 #' the last click, using the exact same contract as
 #' [new_drilldown_chart_block()] (so existing filter links compose).
 #'
-#' @param label_col,value_cols,color,drill,digits,max_height,transform,cor_method
+#' @param rowname,values,cell_color,drill,digits,max_height,transform,cor_method
 #'   Forwarded to [drilldown_table()]. The block has no in-table title:
 #'   the block's own name (card header) serves that role. `transform =
 #'   "correlation"` renders the pairwise correlation matrix of the
@@ -428,9 +437,9 @@ drilldown_table_arguments <- function() {
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #' @return A transform block of class `drilldown_table_block`.
 #' @export
-new_drilldown_table_block <- function(label_col = NULL,
-                                      value_cols = NULL,
-                                      color = NULL,
+new_drilldown_table_block <- function(rowname = NULL,
+                                      values = NULL,
+                                      cell_color = NULL,
                                       drill = NULL,
                                       digits = 2L,
                                       max_height = "600px",
@@ -446,9 +455,9 @@ new_drilldown_table_block <- function(label_col = NULL,
       shiny::moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
-        r_label_col     <- shiny::reactiveVal(label_col)
-        r_value_cols    <- shiny::reactiveVal(value_cols)
-        r_color         <- shiny::reactiveVal(color)
+        r_rowname    <- shiny::reactiveVal(rowname)
+        r_values     <- shiny::reactiveVal(values)
+        r_cell_color    <- shiny::reactiveVal(cell_color)
         r_drill      <- shiny::reactiveVal(drill)
         r_digits        <- shiny::reactiveVal(digits)
         r_max_height    <- shiny::reactiveVal(max_height)
@@ -482,12 +491,12 @@ new_drilldown_table_block <- function(label_col = NULL,
             v <- msg$value
             if (identical(p, "color_mode")) {
               if (identical(v, "off")) {
-                upd(r_color, NULL)
-              } else if (!is.null(color) && identical(color$type, v)) {
+                upd(r_cell_color, NULL)
+              } else if (!is.null(cell_color) && identical(cell_color$type, v)) {
                 # preserve the constructor's domain / palette
-                upd(r_color, color)
+                upd(r_cell_color, cell_color)
               } else {
-                upd(r_color, drilldown_table_color(v))
+                upd(r_cell_color, drilldown_table_color(v))
               }
             } else if (identical(p, "drill")) {
               upd(r_drill, if (identical(v, "(none)") || !nzchar(v)) NULL else v)
@@ -506,9 +515,9 @@ new_drilldown_table_block <- function(label_col = NULL,
           shiny::req(is.data.frame(d))
           drilldown_table(
             d,
-            label_col  = r_label_col(),
-            value_cols = r_value_cols(),
-            color      = r_color(),
+            label_col  = r_rowname(),
+            value_cols = r_values(),
+            color      = r_cell_color(),
             drill   = r_drill(),
             elem_id    = ns("drilldown_table_block"),
             digits     = r_digits(),
@@ -537,9 +546,9 @@ new_drilldown_table_block <- function(label_col = NULL,
             }
           }),
           state = list(
-            label_col     = r_label_col,
-            value_cols    = r_value_cols,
-            color         = r_color,
+            rowname       = r_rowname,
+            values        = r_values,
+            cell_color    = r_cell_color,
             drill      = r_drill,
             digits        = r_digits,
             max_height    = r_max_height,
@@ -560,9 +569,9 @@ new_drilldown_table_block <- function(label_col = NULL,
     dat_valid = function(data) {
       if (!is.data.frame(data)) stop("Input must be a data frame")
     },
-    allow_empty_state = c("label_col", "value_cols", "color", "drill",
+    allow_empty_state = c("rowname", "values", "cell_color", "drill",
       "filter_column", "filter_values", "filter_range"),
-    external_ctrl = c("label_col", "value_cols", "color", "drill",
+    external_ctrl = c("rowname", "values", "cell_color", "drill",
       "digits", "max_height", "transform", "cor_method", "filter_type",
       "filter_column", "filter_values", "filter_range"),
     expr_type = "bquoted",
