@@ -386,3 +386,42 @@ test_that("unset drill emits no downstream filter (inert)", {
     }))
   )
 })
+
+test_that("radar round-trips through state and filters on the color column", {
+  # Radar is an aggregated chart: group levels = spokes, one shape per
+  # color level. The JS click handler emits a categorical filter on the
+  # COLOR column (the shape's identity), not the group — confirm the R
+  # machinery round-trips the config and applies that filter.
+  df <- data.frame(
+    AVISIT = rep(c("Week 1", "Week 2", "Week 4"), 2),
+    AVAL = c(10, 12, 14, 9, 11, 13),
+    TRT01A = rep(c("ARM A", "ARM B"), each = 3),
+    stringsAsFactors = FALSE
+  )
+  blk <- new_drilldown_chart_block(
+    chart_type = "radar", group = "AVISIT", color = "TRT01A",
+    metric = "AVAL", agg_fn = "mean", drill = "auto"
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expect_equal(session$returned$state$chart_type(), "radar")
+      expect_equal(session$returned$state$group(), "AVISIT")
+      expect_equal(session$returned$state$color(), "TRT01A")
+      expect_equal(session$returned$state$agg_fn(), "mean")
+      # Click on the "ARM A" shape: JS emits a categorical filter on the
+      # color column with that level.
+      expr_scope <- session$makeScope("expr")
+      expr_scope$setInputs(drilldown_block_action = list(
+        action = "filter", filter_type = "categorical",
+        column = "TRT01A", values = list("ARM A")
+      ))
+      session$flushReact()
+      result <- session$returned$result()
+      expect_equal(nrow(result), 3L)
+      expect_true(all(result$TRT01A == "ARM A"))
+    },
+    args = list(x = blk, data = list(data = function() df))
+  )
+})

@@ -14,8 +14,12 @@
 #'
 #' Three chart families share this block (an internal render-dispatch
 #' detail that never changes what an argument means):
-#' aggregated (bar, pie, treemap, boxplot), individual (scatter, line),
-#' timeline (gantt).
+#' aggregated (bar, pie, treemap, boxplot, radar), individual (scatter,
+#' line), timeline (gantt). A radar puts the `group` levels on the spokes,
+#' draws one shape per `color` level, and each vertex is
+#' `agg_fn(metric)` for that cell; clicking a shape drills on its `color`
+#' value. For spokes from several numeric columns, pivot longer upstream
+#' and map the name column to `group`.
 #'
 #' @param group Column for the categorical axis (aggregated charts)
 #' @param color Column mapped to colour (optional, all families)
@@ -25,7 +29,7 @@
 #' @param agg_fn Aggregation: `"count"`, `"count_distinct"`, `"mean"`,
 #'   `"median"`, `"sum"`, `"min"`, `"max"`
 #' @param chart_type Chart type: "bar", "scatter", "line", "pie",
-#'   "treemap", "boxplot", "gantt"
+#'   "treemap", "boxplot", "radar", "gantt"
 #' @param x X-axis column (individual / timeline charts)
 #' @param y Y-axis column (individual / timeline charts)
 #' @param series Column whose distinct values split rows into separate

@@ -4,10 +4,11 @@ drilldown_chart_arguments <- function() {
   structure(
     c(
       chart_type = paste0(
-        "Chart type. One of \"bar\", \"pie\", \"treemap\", \"boxplot\" ",
-        "(aggregated — use group + metric + agg_fn), \"scatter\", ",
+        "Chart type. One of \"bar\", \"pie\", \"treemap\", \"boxplot\", ",
+        "\"radar\" (aggregated — use group + metric + agg_fn), \"scatter\", ",
         "\"line\" (individual — use x + y), or \"gantt\" (timeline — use ",
-        "x + xend + y). Default \"bar\"."
+        "x + xend + y). Default \"bar\". Radar: group levels are the ",
+        "spokes, one shape per color level."
       ),
       group = paste0(
         "Column for the categorical axis (aggregated charts). Names a ",
@@ -57,7 +58,8 @@ drilldown_chart_arguments <- function() {
         "Drill-down: what a SELECTION (click or brush) filters downstream on. ",
         "Tri-state: null/\"\" = OFF (the chart is a static display — no filter, ",
         "no hover effect; the default); \"auto\" = ON with the family's natural ",
-        "target (aggregated -> the clicked group; scatter -> the selected ",
+        "target (aggregated -> the clicked group; radar -> the clicked ",
+        "shape's color value; scatter -> the selected ",
         "point's x&y; line -> the clicked series; timeline -> the clicked ",
         "lane); a COLUMN NAME = ON, overriding the natural target to filter on ",
         "that column's value(s) for the selected marks. Click and brush follow ",
@@ -140,9 +142,14 @@ drilldown_chart_arguments <- function() {
       "and `series` never drive drill.",
       "\n\nThree chart families share the block (an internal detail that",
       "never changes what an argument means):",
-      "\n- Aggregated (bar/pie/treemap/boxplot): set `group`, `agg_fn`,",
-      "and `metric` (\".count\" for row counts). To make clicking a bar",
-      "filter to that group, set `drill=\"<the group column>\"`.",
+      "\n- Aggregated (bar/pie/treemap/boxplot/radar): set `group`,",
+      "`agg_fn`, and `metric` (\".count\" for row counts). To make clicking",
+      "a bar filter to that group, set `drill=\"<the group column>\"`.",
+      "A radar puts the `group` levels on the spokes and draws one shape",
+      "per `color` level (each vertex = agg_fn(metric) for that cell);",
+      "clicking a shape drills on its `color` value. To compare several",
+      "numeric columns as spokes, pivot longer upstream and map the name",
+      "column to `group`.",
       "\n- Individual (scatter/line): set `x` and `y`. `series` splits",
       "into one line/group per value (e.g. `series=\"USUBJID\"`).",
       "Brush-drag filters the brushed points: on `drill` if set (categorical",
@@ -164,6 +171,9 @@ drilldown_chart_arguments <- function() {
       "group=\"X\", metric=\".count\", agg_fn=\"count\", drill=\"X\"",
       "\n- \"mean Y by X\" -> chart_type=\"bar\", group=\"X\",",
       "metric=\"Y\", agg_fn=\"mean\"",
+      "\n- \"radar / spider of mean Y across X, one shape per Z\" ->",
+      "chart_type=\"radar\", group=\"X\", metric=\"Y\", agg_fn=\"mean\",",
+      "color=\"Z\". Works best with 3+ group levels and few color levels.",
       "\n- \"mean Y trend over time T by group G\" (e.g. mean",
       "ADAS-Cog over visits by treatment arm) -> requires an",
       "UPSTREAM summarize_block first (group_by=[T,G], compute",

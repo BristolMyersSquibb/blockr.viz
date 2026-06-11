@@ -2,7 +2,9 @@
  * Drill-Down Chart — configurable chart that acts as a filter.
  *
  * Three families:
- *   Aggregated (bar, pie, treemap, boxplot): group-by + metric, click to filter.
+ *   Aggregated (bar, pie, treemap, boxplot, radar): group-by + metric, click
+ *     to filter. Radar puts the group levels on the spokes and draws one
+ *     shape per color level; a click on a shape filters on its color value.
  *   Individual (scatter, line): x/y columns, brush-drag to filter. Clicking a
  *     line emits a categorical filter on its series (typically USUBJID).
  *   Timeline (gantt): interval rows with start + optional end, categorical y
@@ -11,7 +13,7 @@
 (() => {
   'use strict';
 
-  const AGGREGATED_TYPES = ['bar', 'pie', 'treemap', 'boxplot'];
+  const AGGREGATED_TYPES = ['bar', 'pie', 'treemap', 'boxplot', 'radar'];
   const INDIVIDUAL_TYPES = ['scatter', 'line'];
   const TIMELINE_TYPES = ['gantt'];
 
@@ -136,7 +138,7 @@
     aggregated: {
       requiredMap: ['group'],
       optionalMap: ['color', 'facet', 'label'],
-      encoding: ['metric', { role: 'agg_fn', types: ['bar', 'pie', 'treemap'] }],
+      encoding: ['metric', { role: 'agg_fn', types: ['bar', 'pie', 'treemap', 'radar'] }],
       // orientation: bar only for v1 (boxplot swap is a follow-up)
       presentation: ['sort_by', 'sort_dir', { role: 'orientation', types: ['bar'] }]
     },
@@ -208,6 +210,7 @@
         entryRequired: (role) => role === 'metric' && this._family() === 'aggregated',
         drillAutoLabel: () => {
           const fam = this._family();
+          if (this.config.chart_type === 'radar') return 'Auto — the clicked shape';
           return fam === 'aggregated' ? 'Auto — the clicked group'
             : fam === 'timeline' ? 'Auto — the clicked lane'
             : this.config.chart_type === 'line' ? 'Auto — the clicked series'
@@ -742,7 +745,7 @@
         const chartDiv = document.createElement('div');
         chartDiv.className = 'dd-chart';
         const ct = this.config.chart_type;
-        chartDiv.style.height = (ct === 'pie' || ct === 'treemap')
+        chartDiv.style.height = (ct === 'pie' || ct === 'treemap' || ct === 'radar')
           ? '350px'
           : Math.max(350, groups.length * 28 + 60) + 'px';
         container.appendChild(chartDiv);
@@ -758,14 +761,22 @@
 
         chart.on('click', (params) => {
           if (this._drillState() === 'off') return;
+          // Radar: the clickable mark is the shape (one per color level), so
+          // the selection identifies a color value, not a group. Without a
+          // color mapping there is a single all-rows shape — nothing to
+          // select, the click is inert.
+          const isRadar = ct === 'radar';
+          if (isRadar && !this.config.color) return;
           const clickedGroup = params.name || (params.value && params.value[0]);
           if (!clickedGroup) return;
           this._selected = this._selected === clickedGroup ? null : clickedGroup;
           this._updateHighlight();
           if (this._selected == null) { this._sendClearFilter(); return; }
-          // The clicked group's source rows -> _emitDrill. With drill 'auto'
-          // the target is the group column; with an override, that column.
-          const g = this.config.group, fc = this.config.facet;
+          // The clicked mark's source rows -> _emitDrill. With drill 'auto'
+          // the target is the group column (radar: the color column); with
+          // an override, that column.
+          const g = isRadar ? this.config.color : this.config.group;
+          const fc = this.config.facet;
           const rows = (this.data || []).filter(r =>
             String(r[g]) === String(clickedGroup) &&
             (facet === '__all__' || !fc || String(r[fc]) === String(facet)));
@@ -789,6 +800,7 @@
       if (ct === 'pie') return this._buildPie(facetData, groups, palette);
       if (ct === 'boxplot') return this._buildBoxplot(groups, palette, ax);
       if (ct === 'treemap') return this._buildTreemap(facetData, groups, palette);
+      if (ct === 'radar') return this._buildRadar(facetData, groups, colors, palette, valueTitle);
 
       const series = [];
       if (colors.length === 0) {
@@ -866,6 +878,82 @@
         return { name: g, value: total, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
       }).filter(d => d.value > 0);
       return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', formatter: '{b}: {c}' }, series: [{ type: 'treemap', data: tmData, width: '100%', height: '100%', roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: '{b}\n{c}' }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
+    }
+
+    // Radar = an aggregated chart in polar coords: the group levels are the
+    // spokes (indicators), each color level draws one shape, and each vertex
+    // is agg_fn(metric) for that (group, color) cell — the same _aggregate()
+    // output the bar chart stacks. Multi-column spokes (the blockr.echarts
+    // radar's `metrics`) are expressed by pivoting longer upstream and
+    // mapping the name column to `group`.
+    _buildRadar(facetData, groups, colors, palette, valueTitle) {
+      const colorScale = this._scaleFor(this.config.color);
+      // One shared max across spokes keeps shapes comparable (same contract
+      // as the blockr.echarts radar). Guard 0/negative-only data with 1.
+      const maxVal = Math.max(...facetData.map(a => a.value), 0) || 1;
+      const indicator = groups.map(g => ({ name: g, max: maxVal }));
+      // A missing (group, color) cell is a true zero for counting
+      // aggregations; for mean/median/min/max there is no value — null
+      // leaves a gap instead of faking a 0.
+      const zeroWhenMissing = ['count', 'count_distinct', 'sum']
+        .includes(this.config.agg_fn);
+      const gapVal = zeroWhenMissing ? 0 : null;
+      const cellVal = (g, c) => {
+        const d = c == null
+          ? facetData.find(a => a.group === g)
+          : facetData.find(a => a.group === g && a.color === c);
+        return d ? d.value : gapVal;
+      };
+      const mkShape = (name, vals, col) => ({
+        name: name,
+        value: vals,
+        itemStyle: { color: col },
+        lineStyle: { color: col, width: 2 },
+        areaStyle: { color: col, opacity: 0.15 }
+      });
+      const data = colors.length === 0
+        ? [mkShape(valueTitle, groups.map(g => cellVal(g, null)), palette[0])]
+        : colors.map((c, ci) => mkShape(
+            c, groups.map(g => cellVal(g, c)),
+            (colorScale && colorScale.color && colorScale.color[c])
+              || palette[ci % palette.length]));
+      const showLegend = colors.length > 0;
+      return {
+        ...(this.theme ? {} : { backgroundColor: 'transparent' }),
+        textStyle: { fontFamily: BLOCKR_FONT },
+        toolbox: TOOLBOX,
+        tooltip: {
+          trigger: 'item',
+          confine: true,
+          formatter: (p) => '<b>' + p.name + '</b><br>' +
+            groups.map((g, i) => {
+              const v = p.value ? p.value[i] : null;
+              return g + ': ' + (v == null ? '–' : ddNum(v));
+            }).join('<br>')
+        },
+        legend: showLegend
+          ? { show: true, bottom: 0, textStyle: { fontSize: 11 } }
+          : { show: false },
+        radar: {
+          indicator,
+          radius: '62%',
+          center: ['50%', showLegend ? '46%' : '50%'],
+          axisName: {
+            color: AXIS_LABEL_COLOR, fontSize: 11,
+            overflow: 'truncate', width: 90
+          },
+          axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+          splitLine: { lineStyle: { color: SPLIT_LINE_COLOR } },
+          splitArea: { show: false }
+        },
+        series: [{
+          type: 'radar',
+          data,
+          symbol: 'circle',
+          symbolSize: 4,
+          emphasis: { focus: 'self' }
+        }]
+      };
     }
 
     _buildBoxplot(groups, palette, ax) {
@@ -1781,6 +1869,15 @@
           if (s.type === 'treemap') {
             return { data: (s.data || []).map(d => d == null ? d : ({ ...d, itemStyle: { ...d.itemStyle, opacity: sel && d.name !== sel ? 0.3 : 1 } })) };
           }
+          if (s.type === 'radar') {
+            // Dim the non-selected shapes (one data item per color level).
+            return { data: (s.data || []).map(d => d == null ? d : ({
+              ...d,
+              lineStyle: { ...d.lineStyle, opacity: sel && d.name !== sel ? 0.15 : 1 },
+              itemStyle: { ...d.itemStyle, opacity: sel && d.name !== sel ? 0.15 : 1 },
+              areaStyle: { ...d.areaStyle, opacity: sel && d.name !== sel ? 0.04 : 0.15 }
+            })) };
+          }
           // Individual/timeline families use echarts emphasis/blur states
           // for highlighting, driven natively by hover. Skip the manual
           // category-mask path — it would mis-apply to non-category data
@@ -1958,6 +2055,9 @@
       if (!d || d === '') return null;
       if (d !== 'auto') return d;
       const fam = this._family();
+      // radar's clickable mark is the per-color shape, so its natural key is
+      // the color column (no color mapping -> nothing to drill on).
+      if (this.config.chart_type === 'radar') return this.config.color || null;
       if (fam === 'aggregated') return this.config.group || null;
       if (fam === 'timeline') return this.config.y || null;
       // individual: a series/color split is the natural categorical key (line

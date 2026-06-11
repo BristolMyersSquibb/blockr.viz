@@ -50,7 +50,7 @@ aggregated only)}
 \code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"}}
 
 \item{chart_type}{Chart type: "bar", "scatter", "line", "pie",
-"treemap", "boxplot", "gantt"}
+"treemap", "boxplot", "radar", "gantt"}
 
 \item{x}{X-axis column (individual / timeline charts)}
 
@@ -116,6 +116,10 @@ range selection on scatter/line is a separate gesture and is unchanged.
 
 Three chart families share this block (an internal render-dispatch
 detail that never changes what an argument means):
-aggregated (bar, pie, treemap, boxplot), individual (scatter, line),
-timeline (gantt).
+aggregated (bar, pie, treemap, boxplot, radar), individual (scatter,
+line), timeline (gantt). A radar puts the \code{group} levels on the spokes,
+draws one shape per \code{color} level, and each vertex is
+\code{agg_fn(metric)} for that cell; clicking a shape drills on its \code{color}
+value. For spokes from several numeric columns, pivot longer upstream
+and map the name column to \code{group}.
 }
