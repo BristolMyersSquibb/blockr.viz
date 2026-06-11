@@ -88,4 +88,42 @@
     if (!settings) return;
     settings.classList.toggle('tb-no-facets', !msg.has_categoricals);
   });
+
+  // Server tells us the active template changed; sync the data-template
+  // attr on the settings wrapper (CSS uses it to show/hide rows).
+  Shiny.addCustomMessageHandler('blockr-bi-tile-template', function(msg) {
+    if (!msg || !msg.ns_id || !msg.template) return;
+    const settings = document.getElementById(msg.ns_id);
+    if (!settings) return;
+    settings.dataset.template = msg.template;
+  });
+
+  // Gear button → toggle popover. Plain DOM listener attached on first
+  // pointerdown anywhere in document (event-delegation style) so we
+  // don't have to find every freshly-bound block individually.
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.tb-gear-btn');
+    if (btn) {
+      // Find the matching popover within the same .tile-block-settings.
+      const settings = btn.closest('.tile-block-settings');
+      if (!settings) return;
+      const popover = settings.querySelector('.tb-popover');
+      if (!popover) return;
+      const open = popover.style.display !== 'none';
+      popover.style.display = open ? 'none' : 'block';
+      btn.classList.toggle('blockr-gear-active', !open);
+      e.stopPropagation();
+      return;
+    }
+    // Click outside any popover closes all open ones.
+    if (!e.target.closest('.tb-popover')) {
+      document.querySelectorAll('.tile-block-settings .tb-popover').forEach((pop) => {
+        if (pop.style.display !== 'none') {
+          pop.style.display = 'none';
+          const owner = pop.closest('.tile-block-settings');
+          owner?.querySelector('.tb-gear-btn')?.classList.remove('blockr-gear-active');
+        }
+      });
+    }
+  });
 })();

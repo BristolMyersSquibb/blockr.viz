@@ -164,6 +164,50 @@ new_tile_block <- function(
           session$sendInputMessage("stats_value", list(value = new_stat))
         }, ignoreInit = TRUE)
 
+        # Template sync. Picking a recipe sets the implicit showcase
+        # and a sensible default stat (the stat-pill row is hidden in
+        # Trends/Progress/KPI list, so the user can't override it
+        # there). Custom keeps whatever the showcase pill currently
+        # says. The settings wrapper's data-template attribute drives
+        # per-row visibility, so we ping the client to update that.
+        shiny::observeEvent(input$template, {
+          tmpl <- input$template
+          if (is.null(tmpl) || !nzchar(tmpl)) return()
+          s <- shiny::isolate(r_state())
+          s$template <- tmpl
+          implicit <- list(
+            numbers   = list(showcase = "number",   stat = "mean"),
+            kpi_list  = list(showcase = "number",   stat = "mean"),
+            trends    = list(showcase = "spark",    stat = "last"),
+            progress  = list(showcase = "progress", stat = "first"),
+            scorecard = list(showcase = "number",   stat = "sum")
+          )[[tmpl]]
+          if (!is.null(implicit)) {
+            s$showcase   <- implicit$showcase
+            s$stats$value <- implicit$stat
+            session$sendInputMessage("stats_value",
+                                     list(value = implicit$stat))
+          }
+          r_state(s)
+          session$sendCustomMessage(
+            "blockr-bi-tile-template",
+            list(ns_id = ns("settings"), template = tmpl)
+          )
+        }, ignoreInit = TRUE)
+
+        # Trends template: the user picks one "Value column" via the
+        # spark_value picker, but tile_shape needs both `value` (for
+        # the headline number) and `spark_value` (for the line). Mirror
+        # the picked column into `value` whenever we're in Trends.
+        shiny::observeEvent(input$aes_spark_value, {
+          s <- shiny::isolate(r_state())
+          if (!identical(s$template, "trends")) return()
+          v <- input$aes_spark_value
+          if (is.null(v) || identical(v, "(none)") || !nzchar(v)) return()
+          s$aesthetics$value <- v
+          r_state(s)
+        }, ignoreNULL = FALSE, ignoreInit = TRUE)
+
         # Aesthetic syncs.
         for (aes_name in c("value", "rows", "cols", "label", "unit", "status",
                            "target", "spark_value", "spark_x", "max")) {
@@ -236,36 +280,69 @@ new_tile_block <- function(
     },
     ui = function(id) {
       ns <- shiny::NS(id)
-      all_sc <- c("number", "spark", "progress")
       shiny::tagList(
         tile_block_deps(),
         shiny::div(
           id = ns("settings"),
           class = "tile-block-settings",
+          `data-template` = state$template,
           `data-showcase` = state$showcase,
-          tb_pill_group(
-            ns("showcase"),
-            choices = c("Number" = "number", "Spark" = "spark",
-                        "Progress" = "progress"),
-            selected = state$showcase,
-            multi = FALSE,
-            class = "tb-showcase-picker"
+          # --- Gear button (top-right) — toggles popover ----------------
+          shiny::tags$button(
+            id = ns("gear_btn"),
+            type = "button",
+            class = "blockr-gear-btn tb-gear-btn",
+            `aria-label` = "Advanced options",
+            title = "Advanced options",
+            shiny::HTML(tb_gear_svg())
           ),
-          # --- Basic aesthetics (always visible) -------------------------
-          # Value + headline stat (Number only), showcase-specific numeric
-          # aesthetics, and Label (drives the list-in-card layout).
-          tb_section_header("Aesthetics"),
-          aesthetic_row(ns, "value", "Value", multi = TRUE,
+          # --- Template picker (recipe-led UI) --------------------------
+          tb_pill_group(
+            ns("template"),
+            choices = c("Numbers"   = "numbers",
+                        "KPI list"  = "kpi_list",
+                        "Trends"    = "trends",
+                        "Progress"  = "progress",
+                        "Scorecard" = "scorecard",
+                        "Custom"    = "custom"),
+            selected = state$template,
+            multi = FALSE,
+            class = "tb-template-picker"
+          ),
+          # --- Custom-only: showcase picker ----------------------------
+          shiny::div(
+            class = "tb-aes-row tb-showcase-row",
+            `data-template-shows` = "custom",
+            shiny::tags$label("Showcase", class = "tb-aes-label"),
+            tb_pill_group(
+              ns("showcase"),
+              choices = c("Number" = "number", "Spark" = "spark",
+                          "Progress" = "progress"),
+              selected = state$showcase,
+              multi = FALSE,
+              class = "tb-showcase-picker"
+            )
+          ),
+          # --- Value / Columns / Measures ------------------------------
+          # Same input drives every template; only the label changes.
+          # Hidden in Trends (the time-series Value lives in spark_value).
+          aesthetic_row(ns, "value", "Columns", multi = TRUE,
                         selected = state$aesthetics$value,
-                        shows = all_sc),
+                        template_shows = c("numbers", "kpi_list",
+                                           "progress", "scorecard",
+                                           "custom"),
+                        labels = c(numbers   = "Columns",
+                                   kpi_list  = "Value column",
+                                   progress  = "Value column",
+                                   scorecard = "Measures",
+                                   custom    = "Value")),
+          # --- Aggregation / Stat (Numbers + Scorecard + Custom) -------
           shiny::div(
             class = "tb-aes-row tb-stat-row",
-            `data-shows` = "number",
-            shiny::tags$label(
-              "Stat",
-              `for` = ns("stats_value"),
-              class = "tb-aes-label"
-            ),
+            `data-template-shows` = "numbers scorecard custom",
+            tb_template_label(c(numbers   = "Aggregation",
+                                scorecard = "Aggregation",
+                                custom    = "Stat")),
             tb_pill_group(
               ns("stats_value"),
               choices = c("mean", "sum", "median", "min", "max",
@@ -275,46 +352,73 @@ new_tile_block <- function(
               class = "tb-stat-pills"
             )
           ),
-          aesthetic_row(ns, "spark_value", "Spark value",
-                        selected = state$aesthetics$spark_value,
-                        shows = "spark"),
-          aesthetic_row(ns, "spark_x", "Spark x",
-                        selected = state$aesthetics$spark_x,
-                        shows = "spark"),
-          aesthetic_row(ns, "max", "Max",
-                        selected = state$aesthetics$max,
-                        shows = "progress"),
+          # --- Label (KPI list + Progress + Custom) --------------------
           aesthetic_row(ns, "label", "Label",
                         selected = state$aesthetics$label,
-                        shows = all_sc),
-
-          # --- Advanced aesthetics (collapsed by default) ----------------
-          # Decoration aesthetics + color + facets. Facets change the output
-          # shape (one card → grid) but most tiles don't use them, so they
-          # live behind the disclosure to keep the basic panel breathable.
-          shiny::tags$details(
-            class = "tb-advanced",
-            shiny::tags$summary(
-              class = "tb-section-header tb-section-toggle",
-              shiny::tags$span("Advanced", class = "tb-section-title"),
-              shiny::tags$span("Color · decoration · facets",
-                               class = "tb-section-hint")
-            ),
-            # Color: ggplot-style "color by" + intensity pills. The
-            # "by" picker accepts the sentinels "status" / "measure"
-            # alongside data columns; intensity controls the visual
-            # treatment (light tint, saturated bg, or just a left bar).
-            aesthetic_row(ns, "color_by", "Color by",
-                          selected = state$color$by,
-                          shows = all_sc),
+                        template_shows = c("kpi_list", "progress",
+                                           "custom"),
+                        labels = c(kpi_list = "Metric column",
+                                   progress = "Metric column",
+                                   custom   = "Label")),
+          # --- Target (KPI list + Custom) ------------------------------
+          aesthetic_row(ns, "target", "Target",
+                        selected = state$aesthetics$target,
+                        template_shows = c("kpi_list", "custom")),
+          # --- Status (KPI list + Progress + Custom) -------------------
+          aesthetic_row(ns, "status", "Status",
+                        selected = state$aesthetics$status,
+                        template_shows = c("kpi_list", "progress",
+                                           "custom")),
+          # --- Trends: time + value time-series columns ----------------
+          aesthetic_row(ns, "spark_x", "Time column",
+                        selected = state$aesthetics$spark_x,
+                        template_shows = c("trends", "custom"),
+                        labels = c(trends = "Time column",
+                                   custom = "Spark x")),
+          aesthetic_row(ns, "spark_value", "Value column",
+                        selected = state$aesthetics$spark_value,
+                        template_shows = c("trends", "custom"),
+                        labels = c(trends = "Value column",
+                                   custom = "Spark value")),
+          # --- Progress: max / target column ---------------------------
+          aesthetic_row(ns, "max", "Target / max",
+                        selected = state$aesthetics$max,
+                        template_shows = c("progress", "custom"),
+                        labels = c(progress = "Target / max",
+                                   custom   = "Max")),
+          # --- Facets: Rows (Scorecard + Custom) -----------------------
+          aesthetic_row(ns, "rows", "Rows",
+                        selected = state$aesthetics$rows,
+                        template_shows = c("scorecard", "custom"),
+                        facet = TRUE),
+          # --- Facets: Cols (Trends + Scorecard + Custom) --------------
+          aesthetic_row(ns, "cols", "Cols",
+                        selected = state$aesthetics$cols,
+                        template_shows = c("trends", "scorecard",
+                                           "custom"),
+                        labels = c(trends    = "One card per",
+                                   scorecard = "Cols",
+                                   custom    = "Cols"),
+                        facet = TRUE),
+          # --- Popover panel (advanced; hidden by default) -------------
+          # Color, intensity, and decoration aesthetics that are
+          # orthogonal to the template choice live here so the main
+          # panel stays focused on the recipe-relevant inputs.
+          shiny::div(
+            id = ns("popover"),
+            class = "blockr-popover tb-popover",
+            style = "display: none;",
             shiny::div(
-              class = "tb-aes-row tb-stat-row",
-              `data-shows` = paste(all_sc, collapse = " "),
-              shiny::tags$label(
-                "Intensity",
-                `for` = ns("color_intensity"),
-                class = "tb-aes-label"
-              ),
+              class = "blockr-popover-row",
+              shiny::tags$label("Color by", class = "blockr-popover-label"),
+              shiny::selectizeInput(
+                ns("aes_color_by"), label = NULL, choices = NULL,
+                width = "100%"
+              )
+            ),
+            shiny::div(
+              class = "blockr-popover-row",
+              shiny::tags$label("Intensity", class = "blockr-popover-label"),
               tb_pill_group(
                 ns("color_intensity"),
                 choices = c("tint", "solid", "border"),
@@ -323,23 +427,13 @@ new_tile_block <- function(
                 class = "tb-stat-pills"
               )
             ),
-            aesthetic_row(ns, "target", "Target",
-                          selected = state$aesthetics$target,
-                          shows = "number"),
-            aesthetic_row(ns, "unit", "Unit",
-                          selected = state$aesthetics$unit,
-                          shows = all_sc),
-            aesthetic_row(ns, "status", "Status",
-                          selected = state$aesthetics$status,
-                          shows = all_sc),
             shiny::div(
-              class = "tb-facets-section",
-              aesthetic_row(ns, "rows", "Rows",
-                            selected = state$aesthetics$rows,
-                            shows = all_sc, facet = TRUE),
-              aesthetic_row(ns, "cols", "Cols",
-                            selected = state$aesthetics$cols,
-                            shows = all_sc, facet = TRUE)
+              class = "blockr-popover-row",
+              shiny::tags$label("Unit", class = "blockr-popover-label"),
+              shiny::selectizeInput(
+                ns("aes_unit"), label = NULL, choices = NULL,
+                width = "100%"
+              )
             )
           )
         )
@@ -352,20 +446,33 @@ new_tile_block <- function(
 }
 
 #' @noRd
+#'
+#' @param template_shows Character vector of template names where this row
+#'   should render. CSS hides the row when none match the active template.
+#' @param labels Optional named character: `c(<template> = "Display label")`.
+#'   When the active template's name is a key, that label replaces the
+#'   default \u2014 the alternates are emitted as hidden spans toggled by CSS.
 aesthetic_row <- function(ns, name, label, multi = FALSE, selected = NULL,
-                          shows = NULL, facet = FALSE) {
+                          template_shows = NULL, facet = FALSE,
+                          labels = NULL) {
   classes <- c(
     "tb-aes-row",
     if (facet) "tb-facet-row"
   )
-  shiny::div(
-    class = paste(classes, collapse = " "),
-    `data-shows` = if (length(shows)) paste(shows, collapse = " "),
+  label_node <- if (length(labels) > 0) {
+    tb_template_label(labels)
+  } else {
     shiny::tags$label(
       label,
       `for` = ns(paste0("aes_", name)),
       class = "tb-aes-label"
-    ),
+    )
+  }
+  shiny::div(
+    class = paste(classes, collapse = " "),
+    `data-template-shows` = if (length(template_shows))
+      paste(template_shows, collapse = " "),
+    label_node,
     shiny::div(
       class = "tb-aes-control",
       shiny::selectizeInput(
@@ -381,6 +488,48 @@ aesthetic_row <- function(ns, name, label, multi = FALSE, selected = NULL,
         width = "100%"
       )
     )
+  )
+}
+
+#' Per-template aesthetic label.
+#'
+#' Renders one `<span data-label-for="<template>">` per template-key and
+#' relies on CSS to show only the span matching the active template.
+#' Used so a row can read "Aggregation" in the Numbers template and
+#' "Stat" in Custom without a re-render.
+#' @noRd
+tb_template_label <- function(labels) {
+  spans <- lapply(seq_along(labels), function(i) {
+    shiny::tags$span(
+      class = "tb-aes-label-text",
+      `data-label-for` = names(labels)[i],
+      labels[[i]]
+    )
+  })
+  shiny::tags$label(
+    class = "tb-aes-label tb-aes-label-multi",
+    spans
+  )
+}
+
+#' Inline gear-icon SVG (single Lucide-style sprocket).
+#' @noRd
+tb_gear_svg <- function() {
+  paste0(
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" ',
+    'stroke="currentColor" stroke-width="2" stroke-linecap="round" ',
+    'stroke-linejoin="round" aria-hidden="true">',
+    '<circle cx="12" cy="12" r="3"/>',
+    '<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 ',
+    '2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 ',
+    '2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06',
+    'a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 ',
+    '0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33',
+    '-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a',
+    '1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 ',
+    '1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 ',
+    '1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a',
+    '1.65 1.65 0 0 0-1.51 1z"/></svg>'
   )
 }
 
@@ -409,8 +558,6 @@ fill_tile_state <- function(state, showcase) {
     value = list(kind = NULL, digits = NULL),
     measure_labels = list()
   )
-  # color$by may be "" (none), "status", "measure", or a column name.
-  # color$intensity is one of "tint", "solid", "border".
   color_defaults <- list(by = "", intensity = "tint")
 
   state$showcase   <- state$showcase %||% showcase
@@ -418,7 +565,26 @@ fill_tile_state <- function(state, showcase) {
   state$stats      <- utils::modifyList(stat_defaults, state$stats %||% list())
   state$formats    <- utils::modifyList(fmt_defaults, state$formats %||% list())
   state$color      <- utils::modifyList(color_defaults, state$color %||% list())
+  # Template is the user-facing recipe. If the caller didn't specify
+  # one, infer it from the aesthetics they did populate so existing
+  # state (e.g. the kpi_block substitutions in blockr.insurance) opens
+  # in the simplest matching template instead of falling back to Custom.
+  if (is.null(state$template)) {
+    state$template <- infer_template(state)
+  }
   state
+}
+
+#' @noRd
+infer_template <- function(state) {
+  sc  <- state$showcase %||% "number"
+  aes <- state$aesthetics %||% list()
+  has <- function(x) length(x) > 0 && nzchar(as.character(x)[1])
+  if (sc == "spark" || has(aes$spark_value)) return("trends")
+  if (sc == "progress" || has(aes$max))      return("progress")
+  if (has(aes$rows) || has(aes$cols))        return("scorecard")
+  if (has(aes$label))                        return("kpi_list")
+  "numbers"
 }
 
 #' @noRd

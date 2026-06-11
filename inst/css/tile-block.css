@@ -48,6 +48,7 @@
   padding: 8px 2px;
   font-size: 0.875rem;
   color: var(--tb-text);
+  position: relative;  /* anchors absolute popover */
 }
 
 .tile-block-settings .tb-pill-group {
@@ -146,15 +147,52 @@
   border-radius: 6px;
 }
 
-/* Per-showcase visibility: hide rows that don't apply to the active
- * showcase. Rows opt in via data-shows="number spark progress". */
-.tile-block-settings[data-showcase="number"]
-  .tb-aes-row[data-shows]:not([data-shows~="number"]),
-.tile-block-settings[data-showcase="spark"]
-  .tb-aes-row[data-shows]:not([data-shows~="spark"]),
-.tile-block-settings[data-showcase="progress"]
-  .tb-aes-row[data-shows]:not([data-shows~="progress"]) {
+/* Per-template visibility: hide rows that don't opt-in to the active
+ * template via data-template-shows="numbers kpi_list trends progress
+ * scorecard custom". */
+.tile-block-settings[data-template="numbers"]
+  [data-template-shows]:not([data-template-shows~="numbers"]),
+.tile-block-settings[data-template="kpi_list"]
+  [data-template-shows]:not([data-template-shows~="kpi_list"]),
+.tile-block-settings[data-template="trends"]
+  [data-template-shows]:not([data-template-shows~="trends"]),
+.tile-block-settings[data-template="progress"]
+  [data-template-shows]:not([data-template-shows~="progress"]),
+.tile-block-settings[data-template="scorecard"]
+  [data-template-shows]:not([data-template-shows~="scorecard"]),
+.tile-block-settings[data-template="custom"]
+  [data-template-shows]:not([data-template-shows~="custom"]) {
   display: none;
+}
+
+/* Per-template label text: each .tb-aes-label-text declares which
+ * template it belongs to via data-label-for; CSS hides the others. */
+.tb-aes-label-multi .tb-aes-label-text { display: none; }
+.tile-block-settings[data-template="numbers"]
+  .tb-aes-label-text[data-label-for="numbers"],
+.tile-block-settings[data-template="kpi_list"]
+  .tb-aes-label-text[data-label-for="kpi_list"],
+.tile-block-settings[data-template="trends"]
+  .tb-aes-label-text[data-label-for="trends"],
+.tile-block-settings[data-template="progress"]
+  .tb-aes-label-text[data-label-for="progress"],
+.tile-block-settings[data-template="scorecard"]
+  .tb-aes-label-text[data-label-for="scorecard"],
+.tile-block-settings[data-template="custom"]
+  .tb-aes-label-text[data-label-for="custom"] {
+  display: inline;
+}
+
+/* Template picker pills sit at the top, slightly more prominent than
+ * the row-level pill groups. */
+.tile-block-settings .tb-template-picker {
+  margin-bottom: 14px;
+}
+
+.tile-block-settings .tb-template-picker .tb-pill {
+  height: 28px;
+  padding: 4px 14px;
+  font-size: 0.8125rem;
 }
 
 /* Facet section: dim when the input has no usable categorical column. */
@@ -167,46 +205,66 @@
   color: var(--tb-muted-2);
 }
 
-/* Advanced section: collapsible <details> wrapping decoration + facet rows. */
-.tile-block-settings .tb-advanced {
-  margin-top: 4px;
-}
-
-.tile-block-settings .tb-advanced > summary {
-  list-style: none;
-  cursor: pointer;
-  user-select: none;
-}
-
-.tile-block-settings .tb-advanced > summary::-webkit-details-marker {
-  display: none;
-}
-
-/* Disclosure caret on the right of the section header. */
-.tile-block-settings .tb-section-toggle {
-  position: relative;
-  padding-right: 18px;
-}
-
-.tile-block-settings .tb-section-toggle::after {
-  content: "";
+/* Gear button (top-right of the panel). Toggles the .tb-popover. Mirrors
+ * the .blockr-gear-btn pattern from blockr.dplyr/blockr-blocks.css so the
+ * tile block visually fits with the rest of the ecosystem. */
+.tile-block-settings .tb-gear-btn {
   position: absolute;
-  right: 2px;
-  top: 50%;
-  width: 8px;
-  height: 8px;
-  border-right: 1.5px solid var(--tb-muted);
-  border-bottom: 1.5px solid var(--tb-muted);
-  transform: translateY(-75%) rotate(-45deg);
-  transition: transform 0.15s ease;
+  top: 4px;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  color: var(--tb-muted-2);
+  background: transparent;
+  border: 1px solid var(--tb-border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  z-index: 2;
 }
 
-.tile-block-settings .tb-advanced[open] > .tb-section-toggle::after {
-  transform: translateY(-25%) rotate(45deg);
+.tile-block-settings .tb-gear-btn:hover {
+  color: var(--tb-accent);
+  border-color: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.04);
 }
 
-.tile-block-settings .tb-advanced > summary:hover .tb-section-title {
-  color: var(--tb-text);
+.tile-block-settings .tb-gear-btn.blockr-gear-active {
+  color: var(--tb-accent);
+  border-color: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+/* Popover panel — anchored to the settings wrapper, opens below the gear. */
+.tile-block-settings .tb-popover {
+  position: absolute;
+  right: 4px;
+  top: 36px;
+  z-index: 1000;
+  background: var(--tb-surface-1);
+  border: 1px solid var(--tb-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  padding: 12px 14px;
+  min-width: 280px;
+}
+
+.tile-block-settings .blockr-popover-row {
+  margin-bottom: 10px;
+}
+.tile-block-settings .blockr-popover-row:last-child {
+  margin-bottom: 0;
+}
+
+.tile-block-settings .blockr-popover-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--tb-muted);
+  margin-bottom: 4px;
 }
 
 /* Stat pills row: tighter than other aesthetic rows. */
