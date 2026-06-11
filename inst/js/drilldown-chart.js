@@ -248,6 +248,34 @@
     // Pick an echarts axis type from column metadata. Returns 'category',
     // 'value', or 'time'. Date columns are detected by name ending in "DT"
     // plus numeric ms values (the convention used by the AE gantt R code).
+    // Board scale map (config.scales = { var, color: {level: hex},
+    // order: [...] }, resolved in R). Returns it when it targets `varName`,
+    // else null — unregistered variables keep palette cycling.
+    _scaleFor(varName) {
+      const sc = this.config && this.config.scales;
+      return (sc && varName && sc.var === varName) ? sc : null;
+    }
+
+    // Order a set of levels: by the scale's order when one applies, else by
+    // the column's factor levels (column metadata), else alphabetically —
+    // the pre-scale-map behavior.
+    _orderLevels(levels, scale, colName) {
+      const by = (ref) => {
+        const idx = new Map(ref.map((l, i) => [String(l), i]));
+        return levels.slice().sort((a, b) =>
+          ((idx.has(a) ? idx.get(a) : 1e9) - (idx.has(b) ? idx.get(b) : 1e9))
+          || a.localeCompare(b));
+      };
+      if (scale && Array.isArray(scale.order) && scale.order.length) {
+        return by(scale.order);
+      }
+      const meta = (this.columns || []).find(c => c.name === colName);
+      if (meta && Array.isArray(meta.levels) && meta.levels.length) {
+        return by(meta.levels);
+      }
+      return levels.slice().sort();
+    }
+
     _axisTypeFor(colName) {
       if (!colName) return 'value';
       const meta = (this.columns || []).find(c => c.name === colName);
@@ -266,6 +294,16 @@
     // column on an axis.
     _orderedCategories(colName, rows) {
       const src = rows || this.data || [];
+      // Factor level order from column metadata wins (the data-level order
+      // contract); values outside the declared levels append in
+      // first-occurrence order.
+      const meta = (this.columns || []).find(c => c.name === colName);
+      if (meta && Array.isArray(meta.levels) && meta.levels.length) {
+        const present = new Set(src.map(r => String(r[colName] ?? '')));
+        const out = meta.levels.map(String).filter(l => present.has(l));
+        for (const k of present) if (!out.includes(k)) out.push(k);
+        return out;
+      }
       const companions = { AVISIT: 'AVISITN' };
       const companion = companions[colName];
       if (companion && src.length && src[0][companion] !== undefined) {
@@ -630,7 +668,10 @@
       }
 
       const facets = [...new Set(agg.map(a => a.facet))].sort();
-      const colors = [...new Set(agg.map(a => a.color))].filter(c => c !== '__all__').sort();
+      const colorScale = this._scaleFor(this.config.color);
+      const colors = this._orderLevels(
+        [...new Set(agg.map(a => a.color))].filter(c => c !== '__all__'),
+        colorScale, this.config.color);
       const palette = BLOCKR_PALETTE;
       const singleFacet = facets.length === 1;
 
@@ -646,6 +687,14 @@
       const orderGroups = (facetData) => {
         const groups = [...new Set(facetData.map(a => a.group))];
         if (sortBy === 'alpha') {
+          // Factor columns: "alpha" means level order (data-level contract).
+          const meta = (this.columns || []).find(c => c.name === this.config.group);
+          if (meta && Array.isArray(meta.levels) && meta.levels.length) {
+            const idx = new Map(meta.levels.map((l, i) => [String(l), i]));
+            return groups.sort((a, b) =>
+              (((idx.has(a) ? idx.get(a) : 1e9) - (idx.has(b) ? idx.get(b) : 1e9))
+                || a.localeCompare(b)) * sortDir);
+          }
           return groups.sort((a, b) => a.localeCompare(b) * sortDir);
         }
         if (sortBy === 'value') {
@@ -745,6 +794,7 @@
       if (colors.length === 0) {
         series.push({ type: 'bar', data: groups.map(g => { const d = facetData.find(a => a.group === g); return d ? d.value : 0; }), itemStyle: { color: palette[0] }, barWidth: '60%', emphasis: { focus: 'self' } });
       } else {
+        const colorScale = this._scaleFor(this.config.color);
         for (let ci = 0; ci < colors.length; ci++) {
           const color = colors[ci];
           series.push({
@@ -758,7 +808,10 @@
               return d ? d.value : null;
             }),
             stack: 'stack',
-            itemStyle: { color: palette[ci % palette.length] },
+            itemStyle: {
+              color: (colorScale && colorScale.color && colorScale.color[color])
+                || palette[ci % palette.length]
+            },
             barWidth: '60%',
             emphasis: { focus: 'self' }
           });
@@ -798,17 +851,19 @@
     }
 
     _buildPie(facetData, groups, palette) {
+      const gScale = this._scaleFor(this.config.group);
       const pieData = groups.map((g, i) => {
         const total = facetData.filter(a => a.group === g).reduce((s, a) => s + a.value, 0);
-        return { name: g, value: total, itemStyle: { color: palette[i % palette.length] } };
+        return { name: g, value: total, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
       }).filter(d => d.value > 0);
       return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: 10, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
     }
 
     _buildTreemap(facetData, groups, palette) {
+      const gScale = this._scaleFor(this.config.group);
       const tmData = groups.map((g, i) => {
         const total = facetData.filter(a => a.group === g).reduce((s, a) => s + a.value, 0);
-        return { name: g, value: total, itemStyle: { color: palette[i % palette.length] } };
+        return { name: g, value: total, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
       }).filter(d => d.value > 0);
       return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', formatter: '{b}: {c}' }, series: [{ type: 'treemap', data: tmData, width: '100%', height: '100%', roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: '{b}\n{c}' }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
     }
@@ -862,8 +917,11 @@
       // This keeps existing configs (e.g. aggregated charts that rely on
       // color stacking) working without change.
       const splitCol = seriesCol || color;
+      const colorScale = this._scaleFor(color);
       let seriesLevels = splitCol
-        ? [...new Set(this.data.map(r => String(r[splitCol] ?? '')))].sort()
+        ? this._orderLevels(
+            [...new Set(this.data.map(r => String(r[splitCol] ?? '')))],
+            this._scaleFor(splitCol), splitCol)
         : [];
       const singleFacet = facets.length === 1;
 
@@ -887,11 +945,17 @@
         if (seriesCol && seriesCol !== color) {
           const rep = this.data.find(r => String(r[seriesCol]) === level);
           const cv = rep ? String(rep[color] ?? '') : '';
+          if (colorScale && colorScale.color && colorScale.color[cv] != null) {
+            return colorScale.color[cv];
+          }
           if (!this._colorLookup) this._colorLookup = {};
           if (!(cv in this._colorLookup)) {
             this._colorLookup[cv] = palette[Object.keys(this._colorLookup).length % palette.length];
           }
           return this._colorLookup[cv];
+        }
+        if (colorScale && colorScale.color && colorScale.color[level] != null) {
+          return colorScale.color[level];
         }
         return palette[index % palette.length];
       };
@@ -1427,11 +1491,15 @@
       const singleFacet = facets.length === 1;
       this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
 
-      // Distinct color levels (sorted). With one named series per level
-      // below, echarts assigns a color to each series from option.color
-      // (BLOCKR_PALETTE) — no manual lookup needed.
+      // Distinct color levels (scale/factor/alpha order). With one named
+      // series per level below, echarts assigns a color to each series from
+      // option.color — built per level when a board scale applies, palette
+      // cycling otherwise.
+      const colorScale = this._scaleFor(color);
       const colorLevels = color
-        ? [...new Set(this.data.map(r => String(r[color] ?? '')))].sort()
+        ? this._orderLevels(
+            [...new Set(this.data.map(r => String(r[color] ?? '')))],
+            colorScale, color)
         : [];
 
       // Convert an x-axis value to a numeric/time coord, or to a category
@@ -1623,7 +1691,10 @@
 
         const option = {
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
-          color: palette,
+          color: (colorScale && colorScale.color && colorLevels.length)
+            ? colorLevels.map((lvl, i) =>
+                colorScale.color[lvl] || palette[i % palette.length])
+            : palette,
           textStyle: { fontFamily: BLOCKR_FONT },
           tooltip: {
             trigger: 'item',

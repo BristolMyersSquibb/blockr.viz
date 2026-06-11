@@ -143,6 +143,9 @@ new_drilldown_chart_block <- function(
         r_lo <- shiny::reactiveVal(lo)
         r_hi <- shiny::reactiveVal(hi)
         r_board_theme <- setup_drilldown_theme_sync(session)
+        # Board scale map (NULL when the board has no "scale_map" option);
+        # resolved per data push, never stored in block state.
+        r_scale_map <- dd_board_scale_map()
 
         # Column metadata (computed once when data changes)
         r_col_meta <- shiny::reactive({
@@ -157,6 +160,9 @@ new_drilldown_chart_block <- function(
               n_unique = length(unique(vals))
             )
             if (!is.null(lbl) && nzchar(lbl)) res$label <- lbl
+            # Factor level order travels to JS as the category/legend order
+            # (the data-level "order lives in factors" contract).
+            if (is.factor(vals)) res$levels <- as.list(levels(vals))
             res
           })
         })
@@ -232,7 +238,14 @@ new_drilldown_chart_block <- function(
                         conditionMessage(e), call. = FALSE)
                 NULL
               }),
-              lo = r_lo(), hi = r_hi()
+              lo = r_lo(), hi = r_hi(),
+              # Board scale map, resolved for the chart type's colored role
+              # (NULL when no map / no binding / no colored role — JS then
+              # keeps palette cycling).
+              scales = dd_scales_config(
+                r_scale_map(), r_chart_type(),
+                color = r_color(), group = r_group(), data = d
+              )
             )
             # NB: the registry _arguments() prose is intentionally NOT sent to
             # the browser. LLM prompts live in the registry only; popover help
