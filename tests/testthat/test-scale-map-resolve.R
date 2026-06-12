@@ -1,36 +1,6 @@
-# Vendored scale-map resolver (consumer side of the convention in
-# blockr.design/open/cdex-attribute-map). The agreement fixture at the bottom
-# is byte-identical across packages vendoring the resolver — a drifted copy
-# fails its own tests.
-
-test_that("dd_resolve_scales: fixed values, palette fallback, order", {
-  map <- list(
-    BOR = list(color = list(CR = "#006400", PR = "#FFD700", PD = "#8b0000"))
-  )
-  pal <- c("#aaaaaa", "#bbbbbb", "#cccccc")
-
-  r <- dd_resolve_scales(map, "BOR", levels = c("PD", "CR", "NEW"),
-                         palette = pal)
-
-  expect_identical(r$color[["PD"]], "#8b0000")
-  expect_true(r$color[["NEW"]] %in% pal)
-  expect_identical(r$order, c("CR", "PD", "NEW"))
-
-  expect_null(dd_resolve_scales(map, "NOPE", levels = "a"))
-  expect_null(dd_resolve_scales(NULL, "BOR", levels = "CR"))
-  expect_null(dd_resolve_scales(map, "BOR", levels = character()))
-})
-
-test_that("dd_resolve_scales: hash stable across level subsets", {
-  map <- list(TRT = list())
-  pal <- c("#0072B2", "#D55E00", "#F0E442")
-
-  all_lv <- dd_resolve_scales(map, "TRT", levels = c("A", "B", "C"),
-                              palette = pal)
-  one_lv <- dd_resolve_scales(map, "TRT", levels = "B", palette = pal)
-
-  expect_identical(all_lv$color[["B"]], one_lv$color[["B"]])
-})
+# Drilldown glue for the board scale map. The resolver and its pinned hash
+# live in blockr.theme (Suggests); these tests cover bi's own role table,
+# level extraction and JS payload assembly.
 
 test_that("dd_colored_var follows the per-chart-type table", {
   expect_identical(dd_colored_var("bar", "AESEV", "AEDECOD"), "AESEV")
@@ -54,6 +24,8 @@ test_that("dd_levels prefers factor levels", {
 })
 
 test_that("dd_scales_config builds the JS payload", {
+  skip_if_not_installed("blockr.theme")
+
   map <- list(
     BOR = list(color = list(CR = "#006400", PD = "#8b0000"))
   )
@@ -74,6 +46,21 @@ test_that("dd_scales_config builds the JS payload", {
                                data = d))
   expect_null(dd_scales_config(NULL, "bar", color = "BOR", group = NULL,
                                data = d))
+})
+
+test_that("dd_scales_config honors a board palette carried by the map", {
+  skip_if_not_installed("blockr.theme")
+
+  # Plain-list map with the reserved .palette entry, as it arrives from a
+  # deserialized board option.
+  map <- list(
+    TRT = list(),
+    .palette = list("#101010", "#202020")
+  )
+  d <- data.frame(TRT = c("A", "B"), N = 1:2)
+
+  cfg <- dd_scales_config(map, "bar", color = "TRT", group = NULL, data = d)
+  expect_true(all(unlist(cfg$color) %in% c("#101010", "#202020")))
 })
 
 test_that("block server runs with a scale_map option and factor column", {
@@ -97,27 +84,4 @@ test_that("block server runs with a scale_map option and factor column", {
     },
     args = list(x = blk, data = list(data = function() df))
   )
-})
-
-# --- scale-map convention agreement fixture ---------------------------------
-# Identical in every package that vendors the resolver. Do not edit without
-# updating the convention (blockr.docs) and all copies.
-
-test_that("AGREEMENT FIXTURE: hash assignment matches the convention", {
-  pal <- c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9",
-           "#E69F00", "#CC79A7")
-  r <- dd_resolve_scales(
-    list(X = list()), "X",
-    levels = c("CR", "PR", "Drug A", "Placebo", "WEEK 4", "01-701-1015"),
-    palette = pal
-  )
-
-  expect_identical(r$color, c(
-    "CR" = "#D55E00",
-    "PR" = "#CC79A7",
-    "Drug A" = "#56B4E9",
-    "Placebo" = "#CC79A7",
-    "WEEK 4" = "#56B4E9",
-    "01-701-1015" = "#009E73"
-  ))
 })
