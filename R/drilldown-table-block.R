@@ -26,6 +26,20 @@
 #' @param digits Rounding for numeric display. Default `2`.
 #' @param max_height CSS max-height of the scroll container.
 #'
+#' @details
+#' **Structured "Table 1" input.** When `data` follows the dotted-column
+#' convention that [summary_table()] emits — a tidy `.fmt` frame (numeric
+#' columns + a per-row `.fmt` template + `.group`), or the already-wide
+#' display grid with `.section_*` / `.var` / `.label` / `.indent` columns —
+#' the renderer switches to the *structured* layout: row-side section
+#' headers with collapse/expand toggles, `.indent` row stubs, and
+#' multi-level column spanners parsed from `|`-delimited column names (each
+#' leaf carries its header text in `attr(col, "label")`). This is the same
+#' structure [html_table()] renders, folded into the interactive table so
+#' one renderer covers flat *and* structured tables (drill / cell colour
+#' still apply to the flat path). A plain rectangular frame renders exactly
+#' as before.
+#'
 #' @return An [htmltools::tagList()].
 #' @export
 drilldown_table <- function(data,
@@ -37,6 +51,16 @@ drilldown_table <- function(data,
                             digits = 2L,
                             max_height = "600px") {
   stopifnot(is.data.frame(data))
+
+  # Tidy `.fmt` form (numbers + per-row template + `.group`) -> wide display
+  # grid (format-then-spread), and detect the structured / sectioned form.
+  # No-op on a plain flat frame.
+  data <- fmt_to_wide(data)
+  if (dt_is_structured(data)) {
+    return(
+      dt_render_structured(data, elem_id, drill, color, digits, max_height)
+    )
+  }
 
   if (is.null(label_col)) label_col <- names(data)[1L]
   if (is.null(value_cols)) value_cols <- setdiff(names(data), label_col)
@@ -116,6 +140,68 @@ drilldown_table <- function(data,
             label_col, value_cols, color_mode, digits)
 }
 
+# ---------------------------------------------------------------------------
+# Structured ("Table 1") rendering — section nesting, indents, spanners.
+# Reuses html_table()'s thead / tbody builders so the structure matches the
+# static html_table renderer exactly; only the surrounding chrome (the
+# table-block wrapper, gear, drill/colour attributes) differs.
+# ---------------------------------------------------------------------------
+
+#' Does this (already wide) frame carry the dotted-column structure?
+#'
+#' True when it has any row-side section column (`.section_*` / `.var`) OR a
+#' `.label` stub OR an `.indent` column — the signals [summary_table()] emits
+#' and [html_table()] renders. A plain flat frame has none of these.
+#' @noRd
+dt_is_structured <- function(data) {
+  any(grepl("^\\.(section_\\d+|var|label|indent)$", names(data)))
+}
+
+#' Render the structured form as the interactive table-block.
+#'
+#' Builds the section-aware `<tbody>` and multi-level `<thead>` with
+#' [build_html_tbody()] / [build_html_thead()] (the very builders
+#' [html_table()] uses), then wraps them in the table-block chrome via
+#' [dt_render()] so the existing JS (gear, sort, search, collapse) attaches.
+#' Cell colouring and drill are wired for completeness; the structured stub
+#' column is the drill target when `drill` names it.
+#' @noRd
+dt_render_structured <- function(data, elem_id, drill, color, digits,
+                                 max_height) {
+  section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
+  stub_col     <- if (".label" %in% names(data)) ".label" else NULL
+  styling_cols <- intersect(c(".indent", ".bold", ".italic"), names(data))
+  data_cols    <- setdiff(names(data),
+                          c(section_cols, stub_col, styling_cols))
+
+  if (length(data_cols) == 0L || nrow(data) == 0L) {
+    return(dt_render(dt_message_table(), max_height, elem_id, NULL,
+                     NULL, character(), "off", digits))
+  }
+
+  thead <- build_html_thead(data, data_cols, stub_col, stub_sortable = FALSE)
+  tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
+                            styling_cols = styling_cols)
+
+  table_tag <- htmltools::tags$table(class = "blockr-table", thead, tbody)
+
+  # The stub is column 0 in a structured table; only honour drill when it
+  # names the stub (the only categorical row identity that survives the
+  # section layout). Cell colour over `.fmt` strings is not meaningful, so
+  # structured tables render uncoloured.
+  drill_use <- if (!is.null(drill) && !is.null(stub_col) &&
+                   identical(drill, stub_col)) {
+    stub_col
+  } else {
+    NULL
+  }
+
+  dt_render(table_tag, max_height, elem_id, drill_use,
+            stub_col %||% character(),
+            data_cols, "off", digits,
+            structured = TRUE)
+}
+
 #' Color spec for [drilldown_table()]
 #'
 #' @param type `"diverging"` (e.g. correlations around 0) or
@@ -179,7 +265,8 @@ dt_message_table <- function(msg = "No data") {
 #' @noRd
 dt_render <- function(table_tag, max_height, elem_id,
                       drill, label_col, value_cols,
-                      color_mode = "off", digits = 2L) {
+                      color_mode = "off", digits = 2L,
+                      structured = FALSE) {
   wrapper_id <- paste0(
     "blockr-dt-", sub("^file", "", basename(tempfile("")))
   )
@@ -218,12 +305,17 @@ dt_render <- function(table_tag, max_height, elem_id,
     drilldown_table_dep(),
     htmltools::tags$div(
       id = wrapper_id,
-      class = "blockr-html-table-container drilldown-table-container",
+      class = paste(
+        "blockr-html-table-container drilldown-table-container",
+        if (isTRUE(structured)) "drilldown-table-structured" else NULL
+      ),
       `data-dt-elem-id` = if (!is.null(elem_id)) elem_id else NULL,
       `data-dt-onclick-col` = if (!is.null(onclick_idx)) drill else NULL,
       `data-dt-onclick-idx` = if (!is.null(onclick_idx)) onclick_idx else NULL,
       `data-dt-color-mode` = color_mode,
       `data-dt-digits` = as.character(digits),
+      `data-dt-structured` = if (isTRUE(structured)) "1" else NULL,
+      `data-initial-expanded` = if (isTRUE(structured)) "1" else NULL,
       header_div,
       htmltools::tags$div(
         class = "blockr-table-wrapper",

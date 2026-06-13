@@ -7,6 +7,7 @@
   }
 
   function wireSort(root, table, tbody) {
+    var structured = root.getAttribute("data-dt-structured") === "1";
     var state = { col: null, dir: 0 };
     var origin = Array.prototype.slice.call(tbody.children);
     origin.forEach(function (r, i) { r.setAttribute("data-dt-o", i); });
@@ -18,6 +19,50 @@
       });
       var f = document.createDocumentFragment();
       all.forEach(function (r) { f.appendChild(r); });
+      tbody.appendChild(f);
+    }
+
+    function cmpRows(a, b, idx, dir) {
+      var av = a.children[idx] ? a.children[idx].textContent.trim() : "";
+      var bv = b.children[idx] ? b.children[idx].textContent.trim() : "";
+      var an = parseNum(av), bn = parseNum(bv), cmp;
+      if (an !== null && bn !== null) cmp = an - bn;
+      else cmp = av.localeCompare(bv);
+      return dir * cmp;
+    }
+
+    // Structured tables keep their section grouping: sort the data rows
+    // *within* each section block, leaving the section-header rows (and the
+    // grouping order) in place — same contract as html_table().
+    function sortStructured(idx, dir) {
+      var rows = Array.prototype.slice.call(tbody.children);
+      var groups = [];
+      var cur = { headers: [], rows: [] };
+      rows.forEach(function (r) {
+        if (r.classList.contains("blockr-section-header")) {
+          if (cur.rows.length > 0) { groups.push(cur); cur = { headers: [], rows: [] }; }
+          cur.headers.push(r);
+        } else if (r.classList.contains("blockr-data-row")) {
+          cur.rows.push(r);
+        }
+      });
+      if (cur.headers.length > 0 || cur.rows.length > 0) groups.push(cur);
+      groups.forEach(function (g) {
+        g.rows.sort(function (a, b) { return cmpRows(a, b, idx, dir); });
+      });
+      var f = document.createDocumentFragment();
+      groups.forEach(function (g) {
+        g.headers.forEach(function (h) { f.appendChild(h); });
+        g.rows.forEach(function (r) { f.appendChild(r); });
+      });
+      tbody.appendChild(f);
+    }
+
+    function sortFlat(idx, dir) {
+      var rows = Array.prototype.slice.call(tbody.children);
+      rows.sort(function (a, b) { return cmpRows(a, b, idx, dir); });
+      var f = document.createDocumentFragment();
+      rows.forEach(function (r) { f.appendChild(r); });
       tbody.appendChild(f);
     }
 
@@ -43,19 +88,8 @@
           );
         }
       }
-      var rows = Array.prototype.slice.call(tbody.children);
-      var dir = state.dir;
-      rows.sort(function (a, b) {
-        var av = a.children[idx] ? a.children[idx].textContent.trim() : "";
-        var bv = b.children[idx] ? b.children[idx].textContent.trim() : "";
-        var an = parseNum(av), bn = parseNum(bv), cmp;
-        if (an !== null && bn !== null) cmp = an - bn;
-        else cmp = av.localeCompare(bv);
-        return dir * cmp;
-      });
-      var f = document.createDocumentFragment();
-      rows.forEach(function (r) { f.appendChild(r); });
-      tbody.appendChild(f);
+      if (structured) sortStructured(idx, state.dir);
+      else sortFlat(idx, state.dir);
     }
 
     root.querySelectorAll("th.blockr-sortable").forEach(function (th) {
@@ -67,12 +101,54 @@
     });
   }
 
+  // Row-side section collapse/expand for structured ("Table 1") tables.
+  // Ported from html_table()'s inline script: each section header toggles a
+  // `.collapsed` class; visibility of every row is recomputed from the
+  // section-header stack so nested collapse is honoured.
+  function wireCollapse(root, tbody) {
+    if (root.getAttribute("data-dt-structured") !== "1") return;
+    function recompute() {
+      var stack = [];
+      Array.prototype.slice.call(tbody.children).forEach(function (r) {
+        if (r.classList.contains("blockr-section-header")) {
+          var lvl = parseInt(r.getAttribute("data-level"), 10);
+          while (stack.length > 0 && stack[stack.length - 1].level >= lvl) stack.pop();
+          var hidden = stack.some(function (s) { return s.collapsed; });
+          if (hidden) r.classList.add("blockr-hidden-collapse");
+          else r.classList.remove("blockr-hidden-collapse");
+          stack.push({ level: lvl, collapsed: r.classList.contains("collapsed") });
+        } else if (r.classList.contains("blockr-data-row")) {
+          if (stack.some(function (s) { return s.collapsed; })) {
+            r.classList.add("blockr-hidden-collapse");
+          } else {
+            r.classList.remove("blockr-hidden-collapse");
+          }
+        }
+      });
+    }
+    root.querySelectorAll("tr.blockr-section-header").forEach(function (h) {
+      h.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        h.classList.toggle("collapsed");
+        recompute();
+      });
+    });
+    if (root.getAttribute("data-initial-expanded") === "0") {
+      root.querySelectorAll("tr.blockr-section-header").forEach(function (h) {
+        h.classList.add("collapsed");
+      });
+      recompute();
+    }
+  }
+
   function wireSearch(root, tbody) {
     var inp = root.querySelector("input.blockr-search");
     if (!inp) return;
+    var structured = root.getAttribute("data-dt-structured") === "1";
     inp.addEventListener("input", function () {
       var q = inp.value.trim().toLowerCase();
-      Array.prototype.slice.call(tbody.children).forEach(function (r) {
+      var rows = Array.prototype.slice.call(tbody.children);
+      rows.forEach(function (r) {
         if (!r.classList.contains("blockr-data-row")) return;
         if (!q || r.textContent.toLowerCase().indexOf(q) !== -1) {
           r.classList.remove("blockr-hidden-search");
@@ -80,6 +156,26 @@
           r.classList.add("blockr-hidden-search");
         }
       });
+      if (!structured) return;
+      // A section header stays visible iff any descendant row (up to the next
+      // header of equal/shallower level) is still visible — same as
+      // html_table()'s search.
+      for (var i = rows.length - 1; i >= 0; i--) {
+        var r = rows[i];
+        if (!r.classList.contains("blockr-section-header")) continue;
+        if (!q) { r.classList.remove("blockr-hidden-search"); continue; }
+        var level = parseInt(r.getAttribute("data-level"), 10);
+        var anyVisible = false;
+        for (var j = i + 1; j < rows.length; j++) {
+          var n = rows[j];
+          if (n.classList.contains("blockr-section-header")) {
+            if (parseInt(n.getAttribute("data-level"), 10) <= level) break;
+          }
+          if (!n.classList.contains("blockr-hidden-search")) { anyVisible = true; break; }
+        }
+        if (anyVisible) r.classList.remove("blockr-hidden-search");
+        else r.classList.add("blockr-hidden-search");
+      }
     });
   }
 
@@ -277,6 +373,7 @@
     wireSort(root, table, tbody);
     wireSearch(root, tbody);
     wireClick(root, tbody);
+    wireCollapse(root, tbody);
   }
 
   function scan(ctx) {

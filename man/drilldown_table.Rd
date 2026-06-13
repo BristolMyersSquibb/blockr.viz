@@ -56,4 +56,17 @@ presentational; never changes the data.
 emits the same categorical filter message the drilldown chart
 emits, so existing filter links keep working.
 }
+
+\strong{Structured "Table 1" input.} When \code{data} follows the dotted-column
+convention that \code{\link[=summary_table]{summary_table()}} emits — a tidy \code{.fmt} frame (numeric
+columns + a per-row \code{.fmt} template + \code{.group}), or the already-wide
+display grid with \verb{.section_*} / \code{.var} / \code{.label} / \code{.indent} columns —
+the renderer switches to the \emph{structured} layout: row-side section
+headers with collapse/expand toggles, \code{.indent} row stubs, and
+multi-level column spanners parsed from \code{|}-delimited column names (each
+leaf carries its header text in \code{attr(col, "label")}). This is the same
+structure \code{\link[=html_table]{html_table()}} renders, folded into the interactive table so
+one renderer covers flat \emph{and} structured tables (drill / cell colour
+still apply to the flat path). A plain rectangular frame renders exactly
+as before.
 }
