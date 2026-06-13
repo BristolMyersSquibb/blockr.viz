@@ -344,6 +344,38 @@ gt_table_legacy <- function(data, title = NULL, na_rep = "\u2014") {
 # Block: gt Table
 # ---------------------------------------------------------------------------
 
+# Scoped CSS for the gt block's gear settings form. Same config-form treatment
+# as the design system (stacked full-width fields, a 12px/600 label, a 36px
+# control on a soft grey fill with an 8px radius and a blue focus ring) so the
+# gear matches the renderer / the other blocks' popovers instead of reading as
+# default Bootstrap. Tokens map to blockr CSS vars with design-hex fallbacks.
+#' @noRd
+gt_gear_css <- function() {
+  paste(
+    ".gt-gear{display:flex;flex-direction:column;gap:11px;padding-top:2px;}",
+    ".gt-gear .shiny-input-container,.gt-gear .form-group{width:100%!important;margin:0!important;}",
+    ".gt-gear .control-label{display:block;font-size:12px;font-weight:600;",
+    "color:var(--blockr-color-text-secondary,#5b6573);margin-bottom:5px;}",
+    ".gt-gear .form-control{height:36px;padding:0 11px;font-size:13px;",
+    "color:var(--blockr-color-text-primary,#111827);",
+    "background:var(--blockr-color-bg-subtle,#f6f8fa);",
+    "border:1px solid var(--blockr-color-border,#e8ebef);",
+    "border-radius:8px;box-shadow:none;width:100%;",
+    "transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;}",
+    ".gt-gear .form-control::placeholder{color:var(--blockr-color-text-muted,#9aa3b0);}",
+    ".gt-gear .form-control:focus{background:#fff;",
+    "border-color:var(--blockr-color-primary,#2563eb);",
+    "box-shadow:0 0 0 3px rgba(37,99,235,.12);outline:none;}",
+    ".gt-gear__toggles{display:flex;gap:22px;align-items:center;margin-top:2px;}",
+    ".gt-gear__toggles .checkbox{margin:0;}",
+    ".gt-gear__toggles .checkbox label{font-size:13px;font-weight:500;",
+    "color:var(--blockr-color-text-primary,#111827);",
+    "display:inline-flex;align-items:center;gap:7px;}",
+    ".gt-gear__toggles .checkbox input[type=checkbox]{margin:0;}",
+    collapse = ""
+  )
+}
+
 #' gt Table Block
 #'
 #' Blockr transform block wrapping [gt_table()]. Accepts the output of
@@ -414,30 +446,29 @@ new_gt_table_block <- function(title = "",
     ui = function(id) {
       ns <- shiny::NS(id)
       shiny::tagList(
+        shiny::tags$style(htmltools::HTML(gt_gear_css())),
         shiny::div(
-          class = "block-container",
-          shiny::fluidRow(
-            shiny::column(6,
-              shiny::textInput(ns("title"), "Title", value = title, width = "100%")
-            ),
-            shiny::column(6,
-              shiny::textInput(ns("subtitle"), "Subtitle", value = subtitle, width = "100%")
-            )
+          class = "block-container gt-gear",
+          shiny::div(
+            class = "gt-gear__field",
+            shiny::textInput(ns("title"), "Title", value = title, width = "100%")
           ),
-          shiny::fluidRow(
-            shiny::column(4,
-              shiny::checkboxInput(ns("full_width"), "Full width",
-                                   value = isTRUE(full_width))
-            ),
-            shiny::column(4,
-              shiny::checkboxInput(ns("borders"), "Borders",
-                                   value = isTRUE(borders))
-            ),
-            shiny::column(4,
-              shiny::textInput(ns("na_rep"), "NA display",
-                               value = na_rep, width = "100%",
-                               placeholder = "\u2014")
-            )
+          shiny::div(
+            class = "gt-gear__field",
+            shiny::textInput(ns("subtitle"), "Subtitle", value = subtitle, width = "100%")
+          ),
+          shiny::div(
+            class = "gt-gear__field",
+            shiny::textInput(ns("na_rep"), "NA display",
+                             value = na_rep, width = "100%",
+                             placeholder = "\u2014")
+          ),
+          shiny::div(
+            class = "gt-gear__toggles",
+            shiny::checkboxInput(ns("full_width"), "Full width",
+                                 value = isTRUE(full_width)),
+            shiny::checkboxInput(ns("borders"), "Borders",
+                                 value = isTRUE(borders))
           )
         )
       )
