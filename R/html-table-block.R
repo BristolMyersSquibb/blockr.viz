@@ -317,7 +317,7 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
             colspan = ncol_total,
             htmltools::tags$span(
               class = "blockr-toggle",
-              htmltools::HTML("&#9662;")
+              htmltools::HTML("&#8250;")
             ),
             " ",
             prefix_tag,
@@ -483,6 +483,7 @@ input.blockr-search:focus {
   cursor: pointer;
 }
 .blockr-html-table-container .blockr-table tbody tr.blockr-section-header td {
+  position: relative;
   text-align: left;
   color: var(--blockr-color-text-primary, #111827);
   padding-top: 12px;
@@ -514,20 +515,26 @@ input.blockr-search:focus {
   border-bottom: 2px solid var(--blockr-grey-300, #d1d5db);
 }
 .blockr-html-table-container .blockr-toggle {
-  display: inline-block;
-  width: 14px;
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  margin-top: -0.55em;
+  width: 0.9em;
   color: var(--blockr-color-text-muted, #6b7280);
-  font-size: 11px;
+  font-weight: var(--blockr-font-weight-normal, 400);
+  font-size: 1em;
   line-height: 1;
   text-align: center;
-  margin-right: 4px;
+  /* glyph points right; rotate to point DOWN when expanded, 0deg when collapsed */
+  transform: rotate(90deg);
+  transform-origin: center;
   transition: transform 0.12s ease;
 }
 .blockr-html-table-container tr.blockr-section-header:hover .blockr-toggle {
   color: var(--blockr-color-text-primary, #111827);
 }
 .blockr-html-table-container tr.blockr-section-header.collapsed .blockr-toggle {
-  transform: rotate(-90deg);
+  transform: rotate(0deg);
 }
 .blockr-html-table-container .blockr-section-label {
   color: var(--blockr-color-text-muted, #6b7280);
