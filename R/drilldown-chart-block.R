@@ -14,8 +14,10 @@
 #'
 #' Three chart families share this block (an internal render-dispatch
 #' detail that never changes what an argument means):
-#' aggregated (bar, pie, treemap, boxplot, radar), individual (scatter,
-#' line), timeline (gantt). A radar puts the `group` levels on the spokes,
+#' aggregated (bar, waterfall, pie, treemap, boxplot, radar), individual
+#' (scatter, line), timeline (gantt). A waterfall is a bar with a cumulative
+#' baseline (each bar floats from the running total). A radar puts the `group`
+#' levels on the spokes,
 #' draws one shape per `color` level, and each vertex is
 #' `agg_fn(metric)` for that cell; clicking a shape drills on its `color`
 #' value. For spokes from several numeric columns, pivot longer upstream
@@ -28,8 +30,9 @@
 #'   aggregated only)
 #' @param agg_fn Aggregation: `"count"`, `"count_distinct"`, `"mean"`,
 #'   `"median"`, `"sum"`, `"min"`, `"max"`
-#' @param chart_type Chart type: "bar", "scatter", "line", "pie",
-#'   "treemap", "boxplot", "radar", "gantt"
+#' @param chart_type Chart type: "bar", "waterfall", "scatter", "line",
+#'   "pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with
+#'   a cumulative baseline (sugar for `bar` + `baseline = "cumulative"`).
 #' @param x X-axis column (individual / timeline charts)
 #' @param y Y-axis column (individual / timeline charts)
 #' @param series Column whose distinct values split rows into separate
@@ -56,6 +59,15 @@
 #' @param filter_type,filter_column,filter_values,filter_range,filter_point
 #'   Runtime click/brush filter state (transport for the emitted filter;
 #'   normally left at defaults at creation).
+#' @param baseline Bar baseline mode: `"zero"` (default — every bar starts at
+#'   0) or `"cumulative"` (a waterfall/bridge — each bar floats from the
+#'   running cumulative of the bars before it; the step axis honors data order,
+#'   each `metric` value is a delta). `chart_type = "waterfall"` implies
+#'   `"cumulative"`. Bar family only.
+#' @param waterfall_totals Character vector of `group` (step) values rendered
+#'   as total/subtotal bars in a cumulative-baseline bar: their baseline resets
+#'   to 0 and they draw the absolute running cumulative. Default `NULL` (every
+#'   bar is a relative delta).
 #' @param line_width_mult Multiplier on the default line width for line
 #'   charts. Default `1.0`. Range `0.5`–`3.0`. Individual family only.
 #' @param dot_size_mult Multiplier on the default marker size. Default
@@ -102,6 +114,13 @@ new_chart_block <- function(
     smoother = "none",
     lo = NULL,
     hi = NULL,
+    # Bar baseline mode. "zero" (default) = a normal bar (every bar starts at
+    # 0); "cumulative" = a waterfall/bridge (each bar floats from the running
+    # cumulative). `chart_type = "waterfall"` is sugar for bar + cumulative.
+    # `waterfall_totals` names the steps rendered as total/subtotal bars
+    # (baseline reset to 0, drawn as the absolute running cumulative).
+    baseline = "zero",
+    waterfall_totals = NULL,
     ...) {
 
   blockr.core::new_transform_block(
@@ -146,6 +165,9 @@ new_chart_block <- function(
         r_smoother <- shiny::reactiveVal(smoother)
         r_lo <- shiny::reactiveVal(lo)
         r_hi <- shiny::reactiveVal(hi)
+        # Bar baseline mode + waterfall total-bar steps (see constructor args).
+        r_baseline <- shiny::reactiveVal(baseline)
+        r_waterfall_totals <- shiny::reactiveVal(waterfall_totals)
         r_board_theme <- setup_drilldown_theme_sync(session)
         # Board scale map (NULL when the board has no "scale_map" option);
         # resolved per data push, never stored in block state.
@@ -233,6 +255,13 @@ new_chart_block <- function(
               dot_size_mult = r_dot_size_mult(), step = r_step(),
               ref_x = as.list(r_ref_x()), ref_y = as.list(r_ref_y()),
               smoother = r_smoother(),
+              # Bar baseline mode. chart_type "waterfall" implies "cumulative"
+              # on the JS side (sugar); also send the flag explicitly so a plain
+              # bar can opt into the cumulative bridge, and pass the optional
+              # total-bar step names. as.list() so a length-1 char vector still
+              # serializes as a JSON array.
+              baseline = r_baseline(),
+              waterfall_totals = as.list(r_waterfall_totals()),
               smoother_series = tryCatch(compute_smoother_series(
                 d, r_smoother(), r_x(), r_y(), r_color(), r_series()
               ), error = function(e) {
@@ -475,7 +504,9 @@ new_chart_block <- function(
             ref_y = r_ref_y,
             smoother = r_smoother,
             lo = r_lo,
-            hi = r_hi
+            hi = r_hi,
+            baseline = r_baseline,
+            waterfall_totals = r_waterfall_totals
           )
         )
       })
@@ -495,12 +526,13 @@ new_chart_block <- function(
     allow_empty_state = c("group", "color", "facet", "filter_column",
       "filter_values", "x", "y", "xend", "series", "label", "drill",
       "sort_by", "sort_dir", "filter_range", "filter_point",
-      "step", "ref_x", "ref_y", "smoother", "lo", "hi"),
+      "step", "ref_x", "ref_y", "smoother", "lo", "hi", "waterfall_totals"),
     external_ctrl = c("group", "color", "facet", "metric", "agg_fn",
       "chart_type", "x", "y", "xend", "series", "label", "drill",
       "sort_by", "sort_dir", "orientation", "filter_type", "filter_column",
       "filter_values", "filter_range", "filter_point", "line_width_mult",
-      "dot_size_mult", "step", "ref_x", "ref_y", "smoother", "lo", "hi"),
+      "dot_size_mult", "step", "ref_x", "ref_y", "smoother", "lo", "hi",
+      "baseline", "waterfall_totals"),
     expr_type = "bquoted",
     class = "chart_block",
     ...

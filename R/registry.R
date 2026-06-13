@@ -11,6 +11,8 @@ register_bi_blocks <- function() {
   # offering them. Currently deprecated & unregistered:
   #   - new_kpi_block      -> superseded by new_tile_block (showcase = "number")
   #   - new_pivot_table_block -> = summarize + pivot_wider; no production caller
+  #   - new_waterfall_block -> folded into new_chart_block as chart_type =
+  #       "waterfall" (bar + baseline = "cumulative")
   # See dev/table-and-chart-architecture.md.
   blockr.core::register_blocks(
     c(
@@ -18,7 +20,6 @@ register_bi_blocks <- function() {
       "new_gt_table_block",
       "new_html_table_block",
       "new_tile_block",
-      "new_waterfall_block",
       "new_chart_block",
       "new_table_block"
     ),
@@ -27,7 +28,6 @@ register_bi_blocks <- function() {
       "gt Table",
       "HTML Table",
       "Tile",
-      "Waterfall",
       "Chart",
       "Table"
     ),
@@ -36,7 +36,6 @@ register_bi_blocks <- function() {
       "Render wide-format tables (from summary_table) as styled gt tables. Also supports legacy long-format input from tidy_summary_block.",
       "Dashboard-native HTML renderer for wide-format tables: collapsible sections, sticky headers, multi-level column spanners.",
       "Dashboard tiles: big numbers, sparklines, progress rings. ggplot-style aesthetic mapping. Successor to kpi_block.",
-      "Waterfall/bridge chart for sequential value progression",
       "Configurable chart with click-to-filter drill-down",
       "Interactive table (sticky header, sort, search) with optional cell coloring and click-to-filter drill-down"
     ),
@@ -44,7 +43,6 @@ register_bi_blocks <- function() {
       "transform",
       "table",
       "table",
-      "transform",
       "transform",
       "plot",
       "table"
@@ -54,7 +52,6 @@ register_bi_blocks <- function() {
       "table",
       "table",
       "speedometer2",
-      "bar-chart-steps",
       "funnel",
       "table"
     ),
@@ -63,7 +60,6 @@ register_bi_blocks <- function() {
       gt_table_arguments(),
       NULL,                         # html_table_block (not in MCP universe)
       NULL,                         # tile_block (not in MCP universe)
-      NULL,                         # waterfall_block (not in MCP universe)
       chart_arguments(),
       table_arguments()
     ),

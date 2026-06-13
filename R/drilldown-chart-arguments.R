@@ -4,11 +4,15 @@ chart_arguments <- function() {
   structure(
     c(
       chart_type = paste0(
-        "Chart type. One of \"bar\", \"pie\", \"treemap\", \"boxplot\", ",
-        "\"radar\" (aggregated — use group + metric + agg_fn), \"scatter\", ",
-        "\"line\" (individual — use x + y), or \"gantt\" (timeline — use ",
-        "x + xend + y). Default \"bar\". Radar: group levels are the ",
-        "spokes, one shape per color level."
+        "Chart type. One of \"bar\", \"waterfall\", \"pie\", \"treemap\", ",
+        "\"boxplot\", \"radar\" (aggregated — use group + metric + agg_fn), ",
+        "\"scatter\", \"line\" (individual — use x + y), or \"gantt\" ",
+        "(timeline — use x + xend + y). Default \"bar\". Radar: group levels ",
+        "are the spokes, one shape per color level. Waterfall: a bar with a ",
+        "cumulative baseline — each step's metric value is a DELTA and bars ",
+        "float from the running total (group = step axis, honored in data ",
+        "order). Use for P&L / bridge charts; reshape wide measures with ",
+        "pivot_longer to (step, value) upstream first."
       ),
       group = paste0(
         "Column for the categorical axis (aggregated charts). Names a ",
@@ -174,6 +178,12 @@ chart_arguments <- function() {
       "\n- \"radar / spider of mean Y across X, one shape per Z\" ->",
       "chart_type=\"radar\", group=\"X\", metric=\"Y\", agg_fn=\"mean\",",
       "color=\"Z\". Works best with 3+ group levels and few color levels.",
+      "\n- \"waterfall / bridge of value V across steps S\" (e.g. a P&L:",
+      "Revenue -> Costs -> Profit) -> chart_type=\"waterfall\", group=\"S\",",
+      "metric=\"V\", agg_fn=\"sum\". Each step's value is a DELTA; bars float",
+      "from the running cumulative and the step axis is shown in DATA ORDER",
+      "(make S an ordered factor, or arrange upstream). Wide measures-as-",
+      "columns data must be pivot_longer'd to (step, value) first.",
       "\n- \"mean Y trend over time T by group G\" (e.g. mean",
       "ADAS-Cog over visits by treatment arm) -> requires an",
       "UPSTREAM summarize_block first (group_by=[T,G], compute",

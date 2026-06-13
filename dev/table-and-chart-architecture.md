@@ -1,9 +1,10 @@
 # Table & chart blocks: the shaper / renderer architecture
 
 Captured 2026-06-13 from a design session. This is the **reference model** for the
-table/chart block cleanup; the action items at the bottom feed
-[`REVIEW_TODO.md`](REVIEW_TODO.md). Companion AI-tuning notes live in
-`blockr.ai/dev/harness-prompting-lessons.md`.
+table/chart block cleanup, and the single concept doc for blockr.bi's block
+roles — the concrete bug / file-level cleanup queue (folded from the old
+`REVIEW_TODO.md`, 2026-05-21) lives at the bottom. Companion AI-tuning notes live
+in `blockr.ai/dev/harness-prompting-lessons.md`.
 
 The motivating realization: blockr.bi had grown several overlapping "table" blocks
 (`pivot_table`, `summary_table`, `gt_table`, `html_table`, `drilldown_table`) and a
@@ -218,7 +219,7 @@ unbounded transforms — *not* a substitute for a real block when the config is 
   categorical counts); or keep as the dedicated 1-/2-way count shaper. Low priority.
 - **`pivot_table`** (blockr.bi) — **demote/drop.** = `summarize` + `pivot_wider`,
   both clean dplyr verbs; adds no unique capability, only an Excel-pivot UX.
-  `REVIEW_TODO.md` already flags it as having no production caller. A crosstab is
+  It had no production caller (only its own demo). A crosstab is
   `summarize → pivot_wider → table`; the AI can compose that from one prompt.
 - **`correlate`** — **new block** (the one genuine gap). df → tidy correlation matrix
   (`var` column + numeric columns; `method` arg). Rendered by `table(cell_color)` for
@@ -306,6 +307,76 @@ table"), `correlate → table` (heatmap), `model → broom → table` (coefficie
       `bar + baseline="cumulative"`. Keep `new_waterfall_block` registered until then.
 - [ ] Move/clarify `gt` ownership (blockr.gt vs bi adapter).
 - [ ] Unify `rowname`/`values` naming across block + internal renderer.
+
+## Concrete bugs & file-level cleanup
+
+Folded from `REVIEW_TODO.md` (2026-05-07 / 05-21) when that doc was retired. These
+are the *implementation* items the architecture above doesn't cover — strategy items
+that REVIEW_TODO also held (kpi/pivot deprecation, html_table fold, lifecycle policy)
+are resolved in the sections above and dropped. **Line numbers predate the 2026-06-13
+chart/table rename and may have drifted** — confirm before editing.
+
+### Concrete bugs
+- [ ] **`gt_table_arguments()` out of sync with its constructor** — advertises
+  `indent_stat` (doesn't exist on `new_gt_table_block()`) and omits `na_rep` (which
+  does). The MCP server mislead­s the AI. `R/block-arguments.R:117-147` vs
+  `R/gt-table-block.R:363-368`.
+- [ ] **`n_distinct` missing `na.rm = TRUE`** at `R/tile-block-expr.R:187` —
+  inconsistent with neighbouring stats; silently mis-counts under NAs.
+- [ ] **Dead parameter `stub_is_sortable <- FALSE`** in `R/html-table-block.R:64`.
+- [ ] **Unchecked column access** — `data[[measures[i]]]` returns NA silently if an
+  upstream block renames the column (`R/waterfall-block.R:184-185`,
+  `R/drilldown-chart-block.R:117-128`). Validate in `dat_valid()` instead.
+
+### Shape contract (shaper ↔ renderer)
+- [ ] Replace the column-name **sniff** (`R/gt-table-block.R:47-48`,
+  `R/html-table-block.R:50`) with an explicit attribute / `.blockr_table_format` S3
+  class that `summary_table` tags and renderers validate. (Ties into the `.fmt` /
+  dotted-column convention above — make the contract explicit, not inferred.)
+
+### Migration leftovers
+- [ ] **`gt_table()` legacy long-format branch** (`R/gt-table-block.R:195-337`): the
+  "deprecation window" comment has no timeline and no test — commit to the deprecation
+  or test/document the path.
+- [ ] **Filter story** — `bi_filter` (defunct stub → `blockr.dm::new_value_filter_block`)
+  + drill-on-`table`/`chart`. Document when to use which, or fold into one guide.
+- [ ] **`bi_demo_data` is stale** — predates the wide-tibble contract; several demos
+  still seed it. Regenerate against current shaper output or replace with
+  `tile_demo_data` / `safetyData::adam_*` and delete it. Document which block consumes
+  which dataset.
+- [ ] **Rename `blockr.bi` → `blockr.dashboard`?** Open: "bi" reads as business
+  intelligence, but the scope is dashboard primitives. Decide before wide release;
+  blast radius = pkg name, NAMESPACE, demos, MCP `block_universe` `package` fields,
+  blockr.docs cross-refs, install instructions.
+
+### Heavy files / copy-paste
+- [ ] **`html-table-block.R` (~923 lines)** inlines a ~620-line JS template + ~175
+  lines of CSS as R strings — move to `inst/js/` and `inst/css/`. (Also the right
+  moment to fold its section/spanner rendering into `table`, per above.)
+- [ ] **`summary-table.R` (~893)** — `summary_table()` and `compute_hierarchy_run()`
+  duplicate stat logic; share helpers. (Overlaps with making it emit tidy numbers.)
+- [ ] **`kpi-block.R` (~609)** + **`waterfall-block.R` (~397)** share ~100 lines of
+  state-mgmt boilerplate. (Both deprecated/folding — may resolve by deletion.)
+
+### Shiny / JS coupling
+- [ ] **Custom-message handlers aren't namespaced by instance** — `drilldown-chart-block.R`
+  registers a global handler; a second instance overwrites the first. Put `ns()` in the
+  payload so each instance only reacts to its own messages.
+- [ ] **Theme registry is process-global** (`R/drilldown-theme.R:5-6`) — collisions if
+  two boards register different themes under one name, or if `blockr.echarts` +
+  `blockr.bi` both load.
+- [ ] **State re-init on rebind** — `kpi`, `waterfall`, `drilldown_chart` overwrite
+  restored state with constructor defaults when re-bound in a DAG. (Cf. the memory note
+  on constructor-based state restore.)
+- [ ] A few `observeEvent`s lack `bindEvent` / `ignoreInit` — minor, inconsistent.
+
+### Tests
+- [ ] No snapshot tests for `gt_table` / `html_table` output.
+- [ ] No end-to-end "click bar → downstream filter applies" test.
+- [ ] `dat_valid()` error paths aren't exercised anywhere.
+- [ ] Two `drilldown-chart` tests `skip_if_not_installed("blockr.insurance")` — the
+  click-to-filter path is effectively untested in CI. Move to a tagged integration
+  suite or stub the dep.
 
 ## Related
 

@@ -52,6 +52,13 @@ new_waterfall_block <- function(
     colors = list(increase = "#009E73", decrease = "#dc2626", total = "#bbbbbb"),
     ...
 ) {
+  lifecycle::deprecate_soft(
+    "0.0.0", "new_waterfall_block()", "new_chart_block()",
+    details = paste0(
+      "Unregistered; constructor kept so existing boards still load. ",
+      "Use chart_type='waterfall'."
+    )
+  )
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(

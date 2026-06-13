@@ -33,6 +33,8 @@ new_chart_block(
   smoother = "none",
   lo = NULL,
   hi = NULL,
+  baseline = "zero",
+  waterfall_totals = NULL,
   ...
 )
 }
@@ -49,8 +51,9 @@ aggregated only)}
 \item{agg_fn}{Aggregation: \code{"count"}, \code{"count_distinct"}, \code{"mean"},
 \code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"}}
 
-\item{chart_type}{Chart type: "bar", "scatter", "line", "pie",
-"treemap", "boxplot", "radar", "gantt"}
+\item{chart_type}{Chart type: "bar", "waterfall", "scatter", "line",
+"pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with
+a cumulative baseline (sugar for \code{bar} + \code{baseline = "cumulative"}).}
 
 \item{x}{X-axis column (individual / timeline charts)}
 
@@ -95,6 +98,17 @@ charts. Default \code{1.0}. Range \code{0.5}–\code{3.0}. Individual family onl
 \item{dot_size_mult}{Multiplier on the default marker size. Default
 \code{1.0}. Range \code{0.5}–\code{3.0}. Individual family only.}
 
+\item{baseline}{Bar baseline mode: \code{"zero"} (default — every bar starts at
+0) or \code{"cumulative"} (a waterfall/bridge — each bar floats from the
+running cumulative of the bars before it; the step axis honors data order,
+each \code{metric} value is a delta). \code{chart_type = "waterfall"} implies
+\code{"cumulative"}. Bar family only.}
+
+\item{waterfall_totals}{Character vector of \code{group} (step) values rendered
+as total/subtotal bars in a cumulative-baseline bar: their baseline resets
+to 0 and they draw the absolute running cumulative. Default \code{NULL} (every
+bar is a relative delta).}
+
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
 }
 \value{
@@ -116,8 +130,10 @@ range selection on scatter/line is a separate gesture and is unchanged.
 
 Three chart families share this block (an internal render-dispatch
 detail that never changes what an argument means):
-aggregated (bar, pie, treemap, boxplot, radar), individual (scatter,
-line), timeline (gantt). A radar puts the \code{group} levels on the spokes,
+aggregated (bar, waterfall, pie, treemap, boxplot, radar), individual
+(scatter, line), timeline (gantt). A waterfall is a bar with a cumulative
+baseline (each bar floats from the running total). A radar puts the \code{group}
+levels on the spokes,
 draws one shape per \code{color} level, and each vertex is
 \code{agg_fn(metric)} for that cell; clicking a shape drills on its \code{color}
 value. For spokes from several numeric columns, pivot longer upstream

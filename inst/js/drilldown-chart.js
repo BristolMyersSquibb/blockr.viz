@@ -13,7 +13,7 @@
 (() => {
   'use strict';
 
-  const AGGREGATED_TYPES = ['bar', 'pie', 'treemap', 'boxplot', 'radar'];
+  const AGGREGATED_TYPES = ['bar', 'waterfall', 'pie', 'treemap', 'boxplot', 'radar'];
   const INDIVIDUAL_TYPES = ['scatter', 'line'];
   const TIMELINE_TYPES = ['gantt'];
 
@@ -46,6 +46,11 @@
   const AXIS_LABEL_COLOR = '#666';
   const AXIS_LINE_COLOR = '#ccc';
   const SPLIT_LINE_COLOR = '#f3f4f6';
+
+  // Waterfall sign colors (mirrors new_waterfall_block's defaults): increase =
+  // Okabe-Ito green, decrease = red, total/subtotal = grey. Semantic, so they
+  // override palette cycling for this mode.
+  const WATERFALL_COLORS = { increase: '#009E73', decrease: '#dc2626', total: '#bbbbbb' };
 
   // Always-on, small, muted toolbox shared by every chart family.
   //
@@ -138,8 +143,10 @@
     aggregated: {
       requiredMap: ['group'],
       optionalMap: ['color', 'facet', 'label'],
-      encoding: ['metric', { role: 'agg_fn', types: ['bar', 'pie', 'treemap', 'radar'] }],
-      // orientation: bar only for v1 (boxplot swap is a follow-up)
+      encoding: ['metric', { role: 'agg_fn', types: ['bar', 'waterfall', 'pie', 'treemap', 'radar'] }],
+      // orientation: bar only for v1 (boxplot swap is a follow-up). Waterfall
+      // is vertical-only (a bridge reads left-to-right along the value axis), so
+      // it does not expose orientation.
       presentation: ['sort_by', 'sort_dir', { role: 'orientation', types: ['bar'] }]
     },
     individual: {
@@ -246,6 +253,18 @@
       if (AGGREGATED_TYPES.includes(this.config.chart_type)) return 'aggregated';
       if (TIMELINE_TYPES.includes(this.config.chart_type)) return 'timeline';
       return 'individual';
+    }
+
+    // The bar baseline mode: "zero" (a plain bar, every bar starts at 0) or
+    // "cumulative" (a waterfall/bridge — each bar floats from the running
+    // cumulative of the bars before it). chart_type "waterfall" is sugar for
+    // bar + baseline="cumulative"; an explicit config.baseline on a bar also
+    // works (the general model). Anything else is "zero".
+    _baselineMode() {
+      if (this.config.chart_type === 'waterfall') return 'cumulative';
+      if (this.config.chart_type === 'bar' &&
+          this.config.baseline === 'cumulative') return 'cumulative';
+      return 'zero';
     }
 
     // Pick an echarts axis type from column metadata. Returns 'category',
@@ -684,11 +703,38 @@
       const sortBy = this.config.sort_by || 'alpha';
       const sortDir = this.config.sort_dir === 'desc' ? -1 : 1;
 
+      // Waterfall (baseline=cumulative) is a running bridge — the step order
+      // IS the data order (or the factor levels of the step column), NEVER a
+      // value sort, which would scramble the cumulative path. Honor data order:
+      // factor levels if the step column is a factor, else first-seen order in
+      // the raw data. This overrides sort_by for this mode.
+      const cumulative = this._baselineMode() === 'cumulative';
+
       // Ordering for the category axis. "alpha" = group name;
       // "value" = total of the computed metric across color stacks;
       // otherwise, a raw-data column whose minimum per group orders the axis.
       const orderGroups = (facetData) => {
         const groups = [...new Set(facetData.map(a => a.group))];
+        if (cumulative) {
+          const meta = (this.columns || []).find(c => c.name === this.config.group);
+          if (meta && Array.isArray(meta.levels) && meta.levels.length) {
+            const idx = new Map(meta.levels.map((l, i) => [String(l), i]));
+            const present = new Set(groups);
+            return meta.levels.map(String).filter(l => present.has(l))
+              .concat(groups.filter(g => !idx.has(g)));
+          }
+          // First-seen order in the raw data (stable bridge ordering).
+          const seen = [];
+          const seenSet = new Set();
+          const groupCol = this.config.group;
+          for (const r of this.data) {
+            const g = groupCol ? String(r[groupCol] ?? '') : 'Total';
+            if (!seenSet.has(g)) { seenSet.add(g); seen.push(g); }
+          }
+          const present = new Set(groups);
+          return seen.filter(g => present.has(g))
+            .concat(groups.filter(g => !seenSet.has(g)));
+        }
         if (sortBy === 'alpha') {
           // Factor columns: "alpha" means level order (data-level contract).
           const meta = (this.columns || []).find(c => c.name === this.config.group);
@@ -745,7 +791,10 @@
         const chartDiv = document.createElement('div');
         chartDiv.className = 'dd-chart';
         const ct = this.config.chart_type;
-        chartDiv.style.height = (ct === 'pie' || ct === 'treemap' || ct === 'radar')
+        // Waterfall is vertical (category on the x-axis), so it takes the fixed
+        // height like pie/radar — not the per-row horizontal-bar height.
+        chartDiv.style.height = (ct === 'pie' || ct === 'treemap' ||
+            ct === 'radar' || this._baselineMode() === 'cumulative')
           ? '350px'
           : Math.max(350, groups.length * 28 + 60) + 'px';
         container.appendChild(chartDiv);
@@ -801,6 +850,14 @@
       if (ct === 'boxplot') return this._buildBoxplot(groups, palette, ax);
       if (ct === 'treemap') return this._buildTreemap(facetData, groups, palette);
       if (ct === 'radar') return this._buildRadar(facetData, groups, colors, palette, valueTitle);
+      // Waterfall = a bar with baseline "cumulative": each bar floats from the
+      // running cumulative of the bars before it. Sugar for bar +
+      // baseline="cumulative" (see _baselineMode). It reuses the same aggregated
+      // contract (group=step axis, metric+agg_fn=value) and the same bar option
+      // shell — only the bars' baseline is shifted.
+      if (this._baselineMode() === 'cumulative') {
+        return this._buildWaterfall(facetData, groups, valueTitle, ax);
+      }
 
       const series = [];
       if (colors.length === 0) {
@@ -859,6 +916,96 @@
         xAxis: vertical ? catAxis : valAxis,
         yAxis: vertical ? valAxis : catAxis,
         series
+      };
+    }
+
+    // Waterfall / bridge: a bar chart with baseline="cumulative". Each step's
+    // aggregated value is its DELTA; the bar floats from the running cumulative
+    // before it to running cumulative + delta. A "total" step resets the
+    // baseline to 0 and draws the absolute running cumulative (a subtotal /
+    // grand total marker). Sign-colored (green up, red down, grey total).
+    //
+    // Implementation mirrors waterfall-block.R::build_waterfall_data but in two
+    // ECharts stacked bar series: a transparent "base" series carrying the
+    // floating offset, and a visible "delta" series carrying the bar height,
+    // each datum colored per sign. (vertical orientation only — a bridge reads
+    // left-to-right.)
+    _buildWaterfall(facetData, groups, valueTitle, ax) {
+      // One value per step (sum across any color split — waterfall is a single
+      // series along the step axis, color does not stack here).
+      const valOf = (g) => facetData.filter(a => a.group === g)
+        .reduce((s, a) => s + a.value, 0);
+
+      // Which steps are "total" bars (baseline reset to 0). Optional; threaded
+      // from R as config.waterfall_totals (array of step/group names). Default
+      // none -> every bar is relative.
+      const totals = new Set((this.config.waterfall_totals || []).map(String));
+
+      const base = [];     // transparent offset (the floating baseline)
+      const delta = [];    // visible bar height, sign-colored per datum
+      let cum = 0;
+      for (let i = 0; i < groups.length; i++) {
+        const g = groups[i];
+        const v = valOf(g);
+        const isTotal = totals.has(g);
+        if (isTotal) {
+          // Total / subtotal bar: from 0 up to the running cumulative.
+          base.push(0);
+          delta.push({ value: cum, itemStyle: { color: WATERFALL_COLORS.total } });
+          // A total bar does not advance the cumulative (it restates it).
+        } else if (v >= 0) {
+          base.push(cum);
+          delta.push({ value: v, itemStyle: { color: WATERFALL_COLORS.increase } });
+          cum += v;
+        } else {
+          // Negative delta: the bar hangs down from the prior cumulative.
+          base.push(cum + v);
+          delta.push({ value: -v, itemStyle: { color: WATERFALL_COLORS.decrease } });
+          cum += v;
+        }
+      }
+
+      const catAxis = {
+        type: 'category', data: groups,
+        axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, rotate: 0,
+          overflow: 'break', width: 100 },
+        axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+        axisTick: { show: false }, splitLine: { show: false }
+      };
+      const valAxis = {
+        type: 'value', name: valueTitle, nameLocation: 'middle', nameGap: 45,
+        nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
+        axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
+        axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+        splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } }
+      };
+      return {
+        ...(this.theme ? {} : { backgroundColor: 'transparent' }),
+        textStyle: { fontFamily: BLOCKR_FONT },
+        tooltip: {
+          trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true,
+          // Only report the visible delta series (the transparent base is an
+          // implementation detail).
+          formatter: (params) => {
+            const p = (params || []).find(x => x.seriesName === 'delta');
+            if (!p) return '';
+            return '<b>' + p.name + '</b><br>' + ddNum(p.value);
+          }
+        },
+        toolbox: TOOLBOX,
+        legend: { show: false },
+        grid: { left: 55, right: 10, top: 30, bottom: 40 + 26 },
+        xAxis: catAxis,
+        yAxis: valAxis,
+        series: [
+          { name: 'base', type: 'bar', stack: 'waterfall', barWidth: '60%',
+            itemStyle: { color: 'transparent', borderColor: 'transparent' },
+            emphasis: { disabled: true }, silent: true,
+            tooltip: { show: false }, data: base },
+          { name: 'delta', type: 'bar', stack: 'waterfall', barWidth: '60%',
+            itemStyle: { borderRadius: [3, 3, 0, 0] },
+            emphasis: { focus: 'self' }, data: delta }
+        ]
       };
     }
 
