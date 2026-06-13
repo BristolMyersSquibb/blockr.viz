@@ -370,13 +370,6 @@ new_gt_table_block <- function(title = "",
                                borders = TRUE,
                                na_rep = "\u2014",
                                ...) {
-  lifecycle::deprecate_soft(
-    "0.0.0", "new_gt_table_block()", "new_table_block()",
-    details = paste(
-      "Unregistered; table_block now renders structured summaries",
-      "interactively. Constructor kept for board compat / static-gt use."
-    )
-  )
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {
