@@ -2038,8 +2038,12 @@
             // this series data legitimately contains null gap values for
             // missing groups (see _renderAggregated). Without the `v &&`
             // check, null.value throws and aborts the whole render.
-            const val = (v && typeof v === 'object' && !Array.isArray(v)) ? v.value : v;
-            return { value: val, itemStyle: { opacity: sel ? (cats[i] === sel ? 1 : 0.15) : 1 } };
+            const isObj = (v && typeof v === 'object' && !Array.isArray(v));
+            const val = isObj ? v.value : v;
+            // Preserve any per-datum itemStyle (e.g. the waterfall delta's
+            // sign color) and only layer the selection opacity on top.
+            const baseStyle = isObj ? v.itemStyle : undefined;
+            return { value: val, itemStyle: { ...baseStyle, opacity: sel ? (cats[i] === sel ? 1 : 0.15) : 1 } };
           });
           return { data: newData };
         });
