@@ -124,22 +124,18 @@
 
   // Table role-spec for the shared DrilldownConfig engine. The table has no
   // chart families and no add-as-needed mapping, so a single Presentation
-  // section holds everything; `cor_method` shows only for a correlation
-  // transform (currentType() == cfg.transform); `drill` is a plain column
-  // picker (the column a row-click filters on). Keys match the R config
-  // params, so onChange(key) -> sendConfig(key, value) round-trips directly.
+  // section holds everything; `drill` is a plain column picker (the column a
+  // row-click filters on). Keys match the R config params, so onChange(key) ->
+  // sendConfig(key, value) round-trips directly.
   var TABLE_ROLES = {
     drill:      { label: "Drill-down", kind: "column", colType: "any" },
-    transform:  { label: "Transform",  kind: "select", options: ["none", "correlation"] },
-    cor_method: { label: "Correlation method", kind: "select", options: ["pearson", "spearman", "kendall"] },
     color_mode: { label: "Coloring",   kind: "select", options: ["off", "diverging", "sequential"] },
     digits:     { label: "Decimals",   kind: "select", options: ["0", "1", "2", "3", "4"] }
   };
   var TABLE_SECTIONS = {
     requiredMap: [], optionalMap: [], encoding: [],
     presentation: [
-      "drill", "transform",
-      { role: "cor_method", types: ["correlation"] },
+      "drill",
       "color_mode", "digits"
     ]
   };
@@ -155,8 +151,6 @@
     var onClick = root.getAttribute("data-dt-onclick-col");
     var cfg = {
       drill:      (onClick && onClick !== "(none)") ? onClick : "",
-      transform:  root.getAttribute("data-dt-transform") || "none",
-      cor_method: root.getAttribute("data-dt-cor-method") || "pearson",
       color_mode: root.getAttribute("data-dt-color-mode") || "off",
       digits:     root.getAttribute("data-dt-digits") || "2"
     };

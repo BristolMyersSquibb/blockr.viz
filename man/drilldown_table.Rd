@@ -12,9 +12,7 @@ drilldown_table(
   drill = NULL,
   elem_id = NULL,
   digits = 2L,
-  max_height = "600px",
-  transform = "none",
-  cor_method = "pearson"
+  max_height = "600px"
 )
 }
 \arguments{
