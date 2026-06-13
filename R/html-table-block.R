@@ -46,6 +46,10 @@ html_table <- function(data,
                        max_height = "600px") {
   stopifnot(is.data.frame(data))
 
+  # Tidy `.fmt` form (numbers + per-row template + `.group`) → wide
+  # display grid (format-then-spread). No-op on already-wide input.
+  data <- fmt_to_wide(data)
+
   if (all(c("label", "depth") %in% names(data)) &&
       any(c("col_var", "n", "value") %in% names(data))) {
     stop(
@@ -109,7 +113,9 @@ html_table <- function(data,
   # our local copy of the same rules. Either way, our delta CSS adds the
   # section row groups / collapse toggle / search input / title bar /
   # multi-level header rules that aren't in blockr.extra's preview.
-  shared_css <- if (requireNamespace("blockr.extra", quietly = TRUE)) {
+  shared_css <- if (requireNamespace("blockr.extra", quietly = TRUE) &&
+                    exists("table_preview_css",
+                           envir = asNamespace("blockr.extra"))) {
     blockr.extra::table_preview_css()
   } else {
     htmltools::tags$style(htmltools::HTML(html_table_shared_css_fallback()))

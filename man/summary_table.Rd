@@ -2,7 +2,7 @@
 % Please edit documentation in R/summary-table.R
 \name{summary_table}
 \alias{summary_table}
-\title{Summary Table — Wide, Display-Shaped Multi-Variable Summary}
+\title{Summary Table — Tidy, Long-Format Multi-Variable Summary}
 \usage{
 summary_table(
   data,
@@ -27,21 +27,21 @@ becomes a section in the output.}
 columns from \code{data}. Used for nested row-side hierarchy (e.g.
 \verb{sections = "AESOC", vars = "AEDECOD"}).}
 
-\item{by}{Character vector of length 0–2. Values become column
-headers. Length-2 produces pipe-delimited nested headers
-consumable by \code{gt::tab_spanner_delim("|")}.}
+\item{by}{Character vector of length 0–2. Values become the \code{.group}
+dimension. Length-2 produces pipe-delimited nested group keys
+consumable by \code{gt::tab_spanner_delim("|")} after the renderer
+spreads \code{.group} to columns.}
 
 \item{stats}{One of \code{"compact"} (default) or \code{"expanded"}.
-See Details.}
+See Details. Changes only which rows / templates are emitted; the
+underlying numbers are identical.}
 
-\item{add_overall}{Logical. If TRUE, append a final column
-computed on the unsplit data (ignoring \code{by}). Matches
+\item{add_overall}{Logical. If TRUE, append an extra \code{.group} whose
+rows are computed on the unsplit data (ignoring \code{by}). Matches
 \code{gtsummary::add_overall()}.}
 
-\item{overall_label}{Character. Column label for the overall
-column when \code{add_overall = TRUE}. Default \code{"Total"} — matches
-all in-scope CSR numeric-summary workflows. gtsummary users
-can set \code{overall_label = "Overall"} to match that convention.}
+\item{overall_label}{Character. \code{.group} value for the overall rows
+when \code{add_overall = TRUE}. Default \code{"Total"}.}
 
 \item{subject_var}{Optional subject-identifier column for
 distinct-subject counts (for categorical \code{n_pct}). If NULL,
@@ -49,40 +49,44 @@ rows are counted instead.}
 
 \item{indent_details}{Logical, default \code{TRUE}. When \code{TRUE}, detail
 rows (stat rows for expanded numerics, category-level rows for
-categoricals) are tagged with \code{.indent = 1} in the output so
-the renderer indents them under their variable header. Compact
-numeric rows and logical-flag rows stay at \code{.indent = 0} because
-they are themselves the variable's summary. When \code{FALSE}, no
+categoricals) are tagged with \code{.indent = 1}. When \code{FALSE}, no
 \code{.indent} column is emitted.}
 
 \item{nest_hierarchies}{Logical, default \code{FALSE}. Advanced option.
 When \code{TRUE}, adjacent categorical entries in \code{vars} that form a
-functional dependency in \code{data} (each value of the inner var
-maps to a single value of the outer var) are rendered as a
-row-side drill-down instead of two flat sequential sections.
-v1 supports 2-level hierarchies only; deeper runs fall back to
-flat sections.}
+functional dependency in \code{data} are rendered as a row-side
+drill-down. v1 supports 2-level hierarchies only.}
 }
 \description{
-Aggregate a flat data.frame into a display-shaped \strong{plain tibble}
-with section structure encoded via well-known dotted columns
-(\verb{.section_1, ..., .section_k, .var, .label}). Designed as a
-wide-first sibling to \code{\link[=pivot_table]{pivot_table()}}, covering the
-"list of variables by Y" pattern rather than the
+Aggregate a flat data.frame into a \strong{tidy, long} summary frame: raw
+numeric statistic columns plus a hidden per-row \code{.fmt} template that
+names how to combine them into a display cell. Section structure is
+encoded via well-known dotted columns (\verb{.section_1, ..., .section_k, .var, .label, .indent}), and the by-group dimension lives in a single
+\code{.group} column. Designed as a wide-first sibling to \code{\link[=pivot_table]{pivot_table()}},
+covering the "list of variables by Y" pattern rather than the
 "one measurement across two dimensions" pattern.
 }
 \details{
-Unlike a pivot table, each \code{vars} entry contributes rows shaped
-by the variable's type and the chosen \code{stats} preset:
+The output stays \code{dplyr}-able (every number is a plain numeric column)
+and re-renderable: a renderer turns it into the familiar wide display
+grid by formatting each row's \code{.fmt} template, then spreading \code{.group}
+to columns (see \code{\link[=fmt_assemble]{fmt_assemble()}}). The shaper no longer bakes display
+strings — it emits numbers + templates and leaves formatting to the
+renderer.
+
+Each \code{vars} entry contributes rows shaped by the variable's type and
+the chosen \code{stats} preset:
 \itemize{
 \item \strong{numeric} under \code{stats = "compact"} → one row per variable,
-cell value \code{"Mean (SD)"}.
-\item \strong{numeric} under \code{stats = "expanded"} → six rows per variable,
-one per stat (N, Mean, SD, Median, Q1 Q3, Min Max).
-\item \strong{categorical} → one row per level, cell value \code{"n (p\%)"}.
-\item \strong{logical} → one row per variable, cell value \code{"n (p\%)"} for
-the TRUE count. The FALSE row is suppressed — this matches
-pharma flag-variable conventions (TEAE, SAE, etc.).
+\code{.fmt = "{mean:1} ({sd:2})"}.
+\item \strong{numeric} under \code{stats = "expanded"} → six rows per variable, one
+per stat (N, Mean, SD, Median, Q1 Q3, Min Max), each carrying the
+matching template (\code{"{n:0}"}, \code{"{mean:1}"}, \code{"{sd:2}"},
+\code{"{median:1}"}, \code{"{q1:1}, {q3:1}"}, \code{"{min:1}, {max:1}"}).
+\item \strong{categorical} → one row per level, \code{.fmt = "{n:0} ({pct:1}\%)"}.
+\item \strong{logical} → one row per variable, \code{.fmt = "{n:0} ({pct:1}\%)"} for
+the TRUE count. The FALSE row is suppressed — this matches pharma
+flag-variable conventions (TEAE, SAE, etc.).
 }
 
 Output columns:
@@ -90,17 +94,25 @@ Output columns:
 \item \verb{.section_1, ..., .section_k} — section columns (dotted,
 block-internal) holding values from user-provided \code{sections}.
 Present iff \code{length(sections) > 0}. Each carries a \code{label}
-attribute pulled from the original column (ADaM label if
-present, else the original column name) for renderer display.
+attribute pulled from the original column for renderer display.
 \item \code{.var} — synthetic variable-name column. Present iff
-\code{length(vars) > 1}. Holds strings from \code{vars}.
+\code{length(vars) > 1}.
 \item \code{.label} — innermost row label. Stat name for numeric vars
-("N", "Mean", "SD", ...), level name for categoricals,
-variable name for logicals.
-\item Data columns named from \code{by} cell-keys (pipe-delimited for
-length-2 \code{by}). Plus an overall column (\code{"Total"} by default)
-when \code{add_overall = TRUE}.
+("N", "Mean", "SD", ...), level name for categoricals, variable
+name for logicals.
+\item \code{.indent} — detail-row indentation level (see \code{indent_details}).
+\item \code{.group} — by-group value (one row per var/level × group).
+Pipe-delimited (\code{"outer|inner"}) for length-2 \code{by}; the constant
+\code{"Overall"} when \code{by} is empty; the \code{overall_label} value for the
+appended overall column when \code{add_overall = TRUE}.
+\item \code{.fmt} — per-row display template (the \code{.fmt} convention).
+\item Raw numeric stat columns: \verb{n, pct} (categorical/logical), \verb{mean, sd, median, q1, q3, min, max} (numeric). \code{NA} where not applicable.
 }
+
+The per-group denominators (for \code{"<group>\\\\nN = <n>"} column headers)
+ride along as a \strong{named numeric vector} in \code{attr(out, "group_n")}
+(group key → N). A renderer assembling the wide display reattaches
+these as column labels.
 }
 \examples{
 if (FALSE) {
@@ -120,6 +132,10 @@ if (FALSE) {
     stats = "expanded",
     add_overall = TRUE
   )
+
+  # Reconstruct the wide display grid:
+  out <- summary_table(iris, vars = "Sepal.Length", by = "Species")
+  fmt_assemble(out, group_col = ".group")
 }
 
 }

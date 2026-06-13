@@ -41,6 +41,10 @@ gt_table <- function(data, title = NULL, subtitle = NULL,
     title <- attr(data, "label")
   }
 
+  # Tidy `.fmt` form (numbers + per-row template + `.group`) → wide
+  # display grid (format-then-spread). No-op on already-wide input.
+  data <- fmt_to_wide(data)
+
   # Dual-path detection: if the input has the legacy long-format
   # columns, route to the legacy renderer. Otherwise treat it as the
   # new wide-tibble format.
