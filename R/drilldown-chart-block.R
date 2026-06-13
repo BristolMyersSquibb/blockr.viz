@@ -410,8 +410,33 @@ new_chart_block <- function(
         # substituted by blockr.core with the upstream block's id at eval
         # time — so the no-filter branch passes the upstream data frame
         # straight through, keeping the lazy eval chain intact.
+        # Configured aesthetic columns that must exist in the upstream data.
+        # If an upstream block renames/drops a mapped column, the chart would
+        # otherwise read NA silently and mis-render — surface a clear invalid
+        # state instead. `.count` is the synthetic count metric (no column),
+        # and the runtime sort_by sentinels are not data columns. The data
+        # passes through unchanged, so this only guards the JS-side mapping.
+        mapped_cols <- function(d) {
+          cols <- c(r_group(), r_color(), r_facet(), r_metric(),
+            r_x(), r_y(), r_xend(), r_series(), r_label(), r_drill())
+          cols <- unique(cols[!is.null(cols) & nzchar(cols) & cols != ".count"])
+          cols[!cols %in% names(d)]
+        }
+
         list(
           expr = shiny::reactive({
+            d <- data()
+            if (is.data.frame(d)) {
+              missing_cols <- mapped_cols(d)
+              shiny::validate(shiny::need(
+                length(missing_cols) == 0,
+                paste0(
+                  "Column", if (length(missing_cols) > 1) "s" else "", " not found: ",
+                  paste(missing_cols, collapse = ", "),
+                  " (renamed or dropped upstream?)"
+                )
+              ))
+            }
             ft <- r_filter_type()
 
             if (ft == "categorical") {

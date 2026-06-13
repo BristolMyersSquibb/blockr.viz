@@ -65,9 +65,8 @@ html_table <- function(data,
 
   wrapper_id <- paste0("blockr-html-table-", sub("^file", "", basename(tempfile(""))))
 
-  stub_is_sortable <- FALSE
   thead <- build_html_thead(data, data_cols, stub_col,
-                            stub_sortable = stub_is_sortable)
+                            stub_sortable = FALSE)
   tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
                             styling_cols = styling_cols)
 
@@ -828,6 +827,14 @@ new_html_table_block <- function(title = "",
                                  default_expanded = TRUE,
                                  max_height = "600px",
                                  ...) {
+  lifecycle::deprecate_soft(
+    "0.0.0", "new_html_table_block()", "new_table_block()",
+    details = paste(
+      "Unregistered; table_block now renders structured summaries",
+      "interactively (it reuses the html builders). Constructor kept",
+      "for board compat."
+    )
+  )
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {

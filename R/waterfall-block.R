@@ -117,6 +117,21 @@ new_waterfall_block <- function(
             expr = shiny::reactive({
               meas <- r_measures()
               shiny::req(length(meas) >= 2)
+              # Guard against an upstream rename/drop: the summarise expr
+              # references each measure by name, so a missing column would
+              # error opaquely at eval time. Surface a clear invalid state.
+              d <- data()
+              if (is.data.frame(d)) {
+                missing_cols <- meas[!meas %in% names(d)]
+                shiny::validate(shiny::need(
+                  length(missing_cols) == 0,
+                  paste0(
+                    "Column", if (length(missing_cols) > 1) "s" else "",
+                    " not found: ", paste(missing_cols, collapse = ", "),
+                    " (renamed or dropped upstream?)"
+                  )
+                ))
+              }
               build_waterfall_expr(meas)
             }),
             state = list(
