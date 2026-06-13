@@ -354,7 +354,7 @@ drilldown_table_dep <- function() {
 #' Registry/LLM metadata so the assistant and MCP can introspect the table
 #' block (the chart block has this; the table was previously invisible).
 #' @noRd
-drilldown_table_arguments <- function() {
+table_arguments <- function() {
   structure(
     c(
       rowname = paste0(
@@ -435,9 +435,9 @@ drilldown_table_arguments <- function() {
 #'   filter state (kept for contract parity with the drilldown chart;
 #'   `filter_range` is unused by the table).
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
-#' @return A transform block of class `drilldown_table_block`.
+#' @return A transform block of class `table_block`.
 #' @export
-new_drilldown_table_block <- function(rowname = NULL,
+new_table_block <- function(rowname = NULL,
                                       values = NULL,
                                       cell_color = NULL,
                                       drill = NULL,
@@ -575,9 +575,23 @@ new_drilldown_table_block <- function(rowname = NULL,
       "digits", "max_height", "transform", "cor_method", "filter_type",
       "filter_column", "filter_values", "filter_range"),
     expr_type = "bquoted",
-    class = "drilldown_table_block",
+    class = "table_block",
     ...
   )
+}
+
+#' Drilldown Table Block (deprecated alias)
+#'
+#' Deprecated alias for [new_table_block()]. The block was renamed from
+#' "Drill-Down Table" to "Table" (the drill-down behaviour is an opt-in
+#' `drill` feature, not the block's identity). Kept so existing serialized
+#' boards that reference `new_drilldown_table_block` still deserialize.
+#'
+#' @param ... Forwarded to [new_table_block()].
+#' @return A transform block of class `table_block`.
+#' @export
+new_drilldown_table_block <- function(...) {
+  new_table_block(...)
 }
 
 # NB: no block_ui / block_output overrides. The styled drill-down table renders

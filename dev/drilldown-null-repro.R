@@ -26,7 +26,7 @@ adsl <- safetyData::adam_adsl
 board <- new_dock_board(
   blocks = c(
     data = new_static_block(data = adsl),
-    chart = new_drilldown_chart_block(
+    chart = new_chart_block(
       group_by   = "SITEID",
       color_by   = "TRT01P",
       chart_type = "bar",

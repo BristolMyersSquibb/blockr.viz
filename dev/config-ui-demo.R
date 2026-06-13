@@ -12,7 +12,7 @@ attr(df$mpg, "label") <- "Miles per gallon"
 attr(df$hp,  "label") <- "Horsepower"
 attr(df$wt,  "label") <- "Weight (1000 lbs)"
 
-blk <- new_drilldown_chart_block(
+blk <- new_chart_block(
   chart_type = "bar",
   group      = "cyl",
   metric     = ".count",

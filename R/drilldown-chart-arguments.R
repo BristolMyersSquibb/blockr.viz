@@ -1,6 +1,6 @@
-#' Build arguments metadata for the drill-down chart block
+#' Build arguments metadata for the chart block
 #' @noRd
-drilldown_chart_arguments <- function() {
+chart_arguments <- function() {
   structure(
     c(
       chart_type = paste0(

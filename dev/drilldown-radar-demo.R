@@ -22,7 +22,7 @@ adsl <- safetyData::adam_adsl
 board <- new_dock_board(
   blocks = c(
     data = new_static_block(data = adsl),
-    radar = new_drilldown_chart_block(
+    radar = new_chart_block(
       chart_type = "radar",
       group      = "RACE",
       color      = "TRT01P",
@@ -30,7 +30,7 @@ board <- new_dock_board(
       agg_fn     = "mean",
       drill      = "auto"
     ),
-    table = new_drilldown_table_block()
+    table = new_table_block()
   ),
   links = links(
     from = c("data", "radar"),

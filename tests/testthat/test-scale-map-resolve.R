@@ -68,7 +68,7 @@ test_that("block server runs with a scale_map option and factor column", {
     BOR = factor(c("CR", "PD", "PR"), levels = c("CR", "PR", "PD")),
     TRT = c("A", "A", "B")
   )
-  blk <- new_drilldown_chart_block(chart_type = "bar", group = "TRT",
+  blk <- new_chart_block(chart_type = "bar", group = "TRT",
                                    color = "BOR")
 
   shiny::testServer(

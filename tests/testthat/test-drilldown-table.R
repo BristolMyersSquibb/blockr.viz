@@ -1,4 +1,4 @@
-# Tests for drilldown_table() renderer + new_drilldown_table_block.
+# Tests for drilldown_table() renderer + new_table_block.
 
 df <- data.frame(
   parameter = c("ALT", "AST", "BILI"),
@@ -90,11 +90,11 @@ test_that("digits controls numeric formatting", {
 })
 
 test_that("block state round-trips constructor args", {
-  blk <- new_drilldown_table_block(
+  blk <- new_table_block(
     cell_color = drilldown_table_color("diverging", domain = c(-1, 1)),
     drill = "USUBJID"
   )
-  expect_s3_class(blk, "drilldown_table_block")
+  expect_s3_class(blk, "table_block")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
@@ -108,7 +108,7 @@ test_that("block state round-trips constructor args", {
 })
 
 test_that("cogwheel config actions update color, drill, digits", {
-  blk <- new_drilldown_table_block(
+  blk <- new_table_block(
     cell_color = drilldown_table_color("diverging", domain = c(-1, 1))
   )
   shiny::testServer(
@@ -146,7 +146,7 @@ test_that("cogwheel config actions update color, drill, digits", {
 })
 
 test_that("no click = pass-through, click filters the data", {
-  blk <- new_drilldown_table_block(drill = "parameter")
+  blk <- new_table_block(drill = "parameter")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {

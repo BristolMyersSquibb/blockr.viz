@@ -2,43 +2,19 @@
 % Please edit documentation in R/drilldown-table-block.R
 \name{new_drilldown_table_block}
 \alias{new_drilldown_table_block}
-\title{Drilldown Table Block}
+\title{Drilldown Table Block (deprecated alias)}
 \usage{
-new_drilldown_table_block(
-  rowname = NULL,
-  values = NULL,
-  cell_color = NULL,
-  drill = NULL,
-  digits = 2L,
-  max_height = "600px",
-  transform = "none",
-  cor_method = "pearson",
-  filter_type = "categorical",
-  filter_column = NULL,
-  filter_values = NULL,
-  filter_range = NULL,
-  ...
-)
+new_drilldown_table_block(...)
 }
 \arguments{
-\item{rowname, values, cell_color, drill, digits, max_height, transform, cor_method}{Forwarded to \code{\link[=drilldown_table]{drilldown_table()}}. The block has no in-table title:
-the block's own name (card header) serves that role. \code{transform = "correlation"} renders the pairwise correlation matrix of the
-input's numeric columns (the one dplyr-hard reshape folded in as
-an option, mirroring how the drilldown chart aggregates).}
-
-\item{filter_type, filter_column, filter_values, filter_range}{Click
-filter state (kept for contract parity with the drilldown chart;
-\code{filter_range} is unused by the table).}
-
-\item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
+\item{...}{Forwarded to \code{\link[=new_table_block]{new_table_block()}}.}
 }
 \value{
-A transform block of class \code{drilldown_table_block}.
+A transform block of class \code{table_block}.
 }
 \description{
-Transform block wrapping \code{\link[=drilldown_table]{drilldown_table()}}. The visible table is
-rendered from the upstream (pre-filter) data so every row stays
-clickable; the block's data output is the upstream data filtered by
-the last click, using the exact same contract as
-\code{\link[=new_drilldown_chart_block]{new_drilldown_chart_block()}} (so existing filter links compose).
+Deprecated alias for \code{\link[=new_table_block]{new_table_block()}}. The block was renamed from
+"Drill-Down Table" to "Table" (the drill-down behaviour is an opt-in
+\code{drill} feature, not the block's identity). Kept so existing serialized
+boards that reference \code{new_drilldown_table_block} still deserialize.
 }

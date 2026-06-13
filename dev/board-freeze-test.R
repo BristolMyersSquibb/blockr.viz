@@ -13,8 +13,8 @@ df$gear <- factor(df$gear)
 board <- new_board(
   blocks = c(
     data  = new_static_block(df),
-    chart = new_drilldown_chart_block(chart_type = "bar", group = "cyl", drill = "cyl"),
-    tbl   = new_drilldown_table_block()
+    chart = new_chart_block(chart_type = "bar", group = "cyl", drill = "cyl"),
+    tbl   = new_table_block()
   ),
   links = links(
     new_link(from = "data",  to = "chart"),

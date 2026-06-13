@@ -69,6 +69,10 @@ new_pivot_table_block <- function(
     digits = "",
     ...
 ) {
+  lifecycle::deprecate_soft(
+    "0.0.0", "new_pivot_table_block()",
+    details = "Unregistered: a crosstab is summarize() + pivot_wider(). Constructor kept so existing boards still load."
+  )
   init_state <- list(
     rows = as.character(rows),
     cols = as.character(cols),

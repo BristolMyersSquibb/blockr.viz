@@ -15,7 +15,7 @@ dd_chart_roles <- c("group", "x", "y", "xend", "metric", "color", "facet",
                     "series", "label", "drill", "lo", "hi", "ref_x", "ref_y")
 
 #' @noRd
-config_effect.drilldown_chart_block <- function(block, args, data = NULL, ...) {
+config_effect.chart_block <- function(block, args, data = NULL, ...) {
   cols <- if (is.data.frame(data)) names(data) else NULL
   ct <- as.character(args$chart_type %||% "bar")[1]
 
@@ -55,7 +55,7 @@ config_effect.drilldown_chart_block <- function(block, args, data = NULL, ...) {
 }
 
 #' @noRd
-config_effect.drilldown_table_block <- function(block, args, data = NULL, ...) {
+config_effect.table_block <- function(block, args, data = NULL, ...) {
   cols <- if (is.data.frame(data)) names(data) else NULL
   parts <- character()
   bad <- character()
@@ -91,9 +91,9 @@ register_drilldown_ai_effect <- function() {
   if (!exists("config_effect", envir = ns, inherits = FALSE)) {
     return(invisible(FALSE))
   }
-  registerS3method("config_effect", "drilldown_chart_block",
-                   config_effect.drilldown_chart_block, envir = ns)
-  registerS3method("config_effect", "drilldown_table_block",
-                   config_effect.drilldown_table_block, envir = ns)
+  registerS3method("config_effect", "chart_block",
+                   config_effect.chart_block, envir = ns)
+  registerS3method("config_effect", "table_block",
+                   config_effect.table_block, envir = ns)
   invisible(TRUE)
 }

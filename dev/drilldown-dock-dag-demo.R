@@ -29,7 +29,7 @@ board <- new_dock_board(
   blocks = c(
     data = new_static_block(adsl),
 
-    chart = new_drilldown_chart_block(
+    chart = new_chart_block(
       group      = "SITEID",
       color      = "TRT01P",
       chart_type = "bar",
@@ -37,7 +37,7 @@ board <- new_dock_board(
       drill      = "SITEID"
     ),
 
-    tbl = new_drilldown_table_block(
+    tbl = new_table_block(
       label_col  = "USUBJID",
       value_cols = c("AGE", "BMIBL", "WEIGHTBL"),
       drill      = "USUBJID"

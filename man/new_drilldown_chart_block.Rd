@@ -2,124 +2,19 @@
 % Please edit documentation in R/drilldown-chart-block.R
 \name{new_drilldown_chart_block}
 \alias{new_drilldown_chart_block}
-\title{Drill-Down Chart Block}
+\title{Drill-Down Chart Block (deprecated alias)}
 \usage{
-new_drilldown_chart_block(
-  group = NULL,
-  color = NULL,
-  facet = NULL,
-  metric = ".count",
-  agg_fn = "count",
-  chart_type = "bar",
-  x = NULL,
-  y = NULL,
-  series = NULL,
-  xend = NULL,
-  label = NULL,
-  drill = NULL,
-  sort_by = NULL,
-  sort_dir = NULL,
-  orientation = "horizontal",
-  filter_type = "categorical",
-  filter_column = NULL,
-  filter_values = NULL,
-  filter_range = NULL,
-  filter_point = NULL,
-  line_width_mult = 1,
-  dot_size_mult = 1,
-  step = NULL,
-  ref_x = NULL,
-  ref_y = NULL,
-  smoother = "none",
-  lo = NULL,
-  hi = NULL,
-  ...
-)
+new_drilldown_chart_block(...)
 }
 \arguments{
-\item{group}{Column for the categorical axis (aggregated charts)}
-
-\item{color}{Column mapped to colour (optional, all families)}
-
-\item{facet}{Column to facet by — one small panel per level (optional)}
-
-\item{metric}{Column for the metric (".count" for row count,
-aggregated only)}
-
-\item{agg_fn}{Aggregation: \code{"count"}, \code{"count_distinct"}, \code{"mean"},
-\code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"}}
-
-\item{chart_type}{Chart type: "bar", "scatter", "line", "pie",
-"treemap", "boxplot", "radar", "gantt"}
-
-\item{x}{X-axis column (individual / timeline charts)}
-
-\item{y}{Y-axis column (individual / timeline charts)}
-
-\item{series}{Column whose distinct values split rows into separate
-series (individual: one line/scatter group per value; timeline:
-per-bar label). Independent of \code{color}. High cardinality is fine.}
-
-\item{xend}{Interval end column (timeline only; NA rows render as
-dots at \code{x})}
-
-\item{label}{Column whose value is written on each mark. Default unset
-(no on-mark text). For \code{pie}/\code{treemap}, when unset the label falls
-back to \code{group} (a label-less pie is unusable).}
-
-\item{drill}{Column a click filters downstream on. Default unset (a
-click is inert). When set, clicking a mark emits a categorical
-filter on this column's value(s) for the clicked mark. For an
-aggregated chart this should be a column constant within a group.}
-
-\item{sort_by}{Category ordering on the axis. Allowed values depend on
-the chart family:
-\itemize{
-\item Aggregated: \code{"value"} (default), \code{"alpha"}, or a column name.
-\item Timeline: \code{"onset"} (default), \code{"alpha"}, or a column name.
-\item Individual: ignored.
-}}
-
-\item{sort_dir}{\code{"asc"} or \code{"desc"}. Reverses the \code{sort_by} ordering.}
-
-\item{orientation}{Bar orientation: \code{"horizontal"} (default; category on the
-y-axis, best for long labels) or \code{"vertical"}. Presentation property — the
-mapping (Group/Metric) is unchanged. Bar charts only.}
-
-\item{filter_type, filter_column, filter_values, filter_range, filter_point}{Runtime click/brush filter state (transport for the emitted filter;
-normally left at defaults at creation).}
-
-\item{line_width_mult}{Multiplier on the default line width for line
-charts. Default \code{1.0}. Range \code{0.5}–\code{3.0}. Individual family only.}
-
-\item{dot_size_mult}{Multiplier on the default marker size. Default
-\code{1.0}. Range \code{0.5}–\code{3.0}. Individual family only.}
-
-\item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
+\item{...}{Forwarded to \code{\link[=new_chart_block]{new_chart_block()}}.}
 }
 \value{
-A transform block of class \code{drilldown_chart_block}
+A transform block of class \code{chart_block}.
 }
 \description{
-A configurable chart that can also act as a filter. Arguments are
-grammar-of-graphics aesthetics: each one names a \strong{data column}, never
-a literal value. Roles are orthogonal — \code{color} only colours, \code{series}
-only splits into series, \code{label} only writes on-mark text, position is
-\code{x}/\code{y}/\code{xend} or \code{group}.
-}
-\details{
-Interactivity is explicit and opt-in via \code{drill}. A click identifies a
-mark; the mark maps to one or more source rows; the downstream filter
-is \verb{drill \%in\% (distinct values of drill over those rows)}. When
-\code{drill} is unset the click is inert (no filter emitted). Brush / drag
-range selection on scatter/line is a separate gesture and is unchanged.
-
-Three chart families share this block (an internal render-dispatch
-detail that never changes what an argument means):
-aggregated (bar, pie, treemap, boxplot, radar), individual (scatter,
-line), timeline (gantt). A radar puts the \code{group} levels on the spokes,
-draws one shape per \code{color} level, and each vertex is
-\code{agg_fn(metric)} for that cell; clicking a shape drills on its \code{color}
-value. For spokes from several numeric columns, pivot longer upstream
-and map the name column to \code{group}.
+Deprecated alias for \code{\link[=new_chart_block]{new_chart_block()}}. The block was renamed from
+"Drill-Down Chart" to "Chart" (the drill-down behaviour is an opt-in
+\code{drill} feature, not the block's identity). Kept so existing serialized
+boards that reference \code{new_drilldown_chart_block} still deserialize.
 }

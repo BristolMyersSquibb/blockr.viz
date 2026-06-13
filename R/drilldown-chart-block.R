@@ -62,9 +62,9 @@
 #'   `1.0`. Range `0.5`–`3.0`. Individual family only.
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
-#' @return A transform block of class `drilldown_chart_block`
+#' @return A transform block of class `chart_block`
 #' @export
-new_drilldown_chart_block <- function(
+new_chart_block <- function(
     group = NULL,
     color = NULL,
     facet = NULL,
@@ -502,9 +502,23 @@ new_drilldown_chart_block <- function(
       "filter_values", "filter_range", "filter_point", "line_width_mult",
       "dot_size_mult", "step", "ref_x", "ref_y", "smoother", "lo", "hi"),
     expr_type = "bquoted",
-    class = "drilldown_chart_block",
+    class = "chart_block",
     ...
   )
+}
+
+#' Drill-Down Chart Block (deprecated alias)
+#'
+#' Deprecated alias for [new_chart_block()]. The block was renamed from
+#' "Drill-Down Chart" to "Chart" (the drill-down behaviour is an opt-in
+#' `drill` feature, not the block's identity). Kept so existing serialized
+#' boards that reference `new_drilldown_chart_block` still deserialize.
+#'
+#' @param ... Forwarded to [new_chart_block()].
+#' @return A transform block of class `chart_block`.
+#' @export
+new_drilldown_chart_block <- function(...) {
+  new_chart_block(...)
 }
 
 #' Compute smoother line points per group for a scatter chart

@@ -1,8 +1,8 @@
-# Tests for new_drilldown_chart_block — focus on the patient-timelines
+# Tests for new_chart_block — focus on the patient-timelines
 # additions (xend, sort_by, click-to-filter with USUBJID).
 
 test_that("constructor accepts xend and sort_by", {
-  blk <- new_drilldown_chart_block(
+  blk <- new_chart_block(
     chart_type = "gantt",
     x = "ASTDY",
     xend = "AENDY",
@@ -10,7 +10,7 @@ test_that("constructor accepts xend and sort_by", {
     color = "AESEV",
     sort_by = "onset"
   )
-  expect_s3_class(blk, "drilldown_chart_block")
+  expect_s3_class(blk, "chart_block")
 })
 
 test_that("gantt state round-trips xend and sort_by", {
@@ -22,7 +22,7 @@ test_that("gantt state round-trips xend and sort_by", {
     AESEV = c("MILD", "SEVERE", "MODERATE"),
     stringsAsFactors = FALSE
   )
-  blk <- new_drilldown_chart_block(
+  blk <- new_chart_block(
     chart_type = "gantt",
     x = "ASTDY", xend = "AENDY", y = "AEDECOD",
     color = "AESEV", sort_by = "onset"
@@ -45,7 +45,7 @@ test_that("config message updates xend and sort_by", {
     ASTDY = 1, AENDY = 2, AESEV = "MILD",
     stringsAsFactors = FALSE
   )
-  blk <- new_drilldown_chart_block(chart_type = "gantt")
+  blk <- new_chart_block(chart_type = "gantt")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
@@ -70,7 +70,7 @@ test_that("click-to-filter on USUBJID produces a filter expression", {
     AVAL = c(100, 110, 95, 105),
     stringsAsFactors = FALSE
   )
-  blk <- new_drilldown_chart_block(
+  blk <- new_chart_block(
     chart_type = "line",
     x = "ADY", y = "AVAL", color = "USUBJID"
   )
@@ -97,7 +97,7 @@ test_that("click-to-filter on USUBJID produces a filter expression", {
 
 test_that("empty categorical filter is a no-op", {
   df <- data.frame(a = 1:3, b = letters[1:3], stringsAsFactors = FALSE)
-  blk <- new_drilldown_chart_block(chart_type = "bar", group = "b")
+  blk <- new_chart_block(chart_type = "bar", group = "b")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
@@ -116,7 +116,7 @@ test_that("series round-trips through state", {
     TRT01A = rep(c("ARM A", "ARM B"), each = 2),
     stringsAsFactors = FALSE
   )
-  blk <- new_drilldown_chart_block(
+  blk <- new_chart_block(
     chart_type = "line", x = "ADY", y = "AVAL",
     series = "USUBJID", color = "TRT01A"
   )
@@ -146,7 +146,7 @@ test_that("r_needed_cols includes AVISITN when x is AVISIT", {
     AVAL = c(10, 11, 12),
     stringsAsFactors = FALSE
   )
-  blk <- new_drilldown_chart_block(
+  blk <- new_chart_block(
     chart_type = "line", x = "AVISIT", y = "AVAL",
     color = "USUBJID"
   )
@@ -176,7 +176,7 @@ test_that("scatter click-emit drives categorical filter on arbitrary column", {
     model_price      = c(150, 250, 350),
     stringsAsFactors = FALSE
   )
-  blk <- new_drilldown_chart_block(
+  blk <- new_chart_block(
     chart_type = "scatter",
     x      = "exposure_premium",
     y      = "model_price",
@@ -234,7 +234,7 @@ test_that("scatter+series click filter on real engine output returns matching ro
   expected_n <- sum(premium$policy_id == "policy-005")
   testthat::expect_gt(expected_n, 0L)
 
-  blk <- new_drilldown_chart_block(
+  blk <- new_chart_block(
     chart_type = "scatter",
     x      = "tiv",
     y      = "model_price",
@@ -297,7 +297,7 @@ test_that("scatter click filter survives a follow-up brush event (race)", {
   clicked_pid <- "policy-005"
   expected_n <- sum(premium$policy_id == clicked_pid)
 
-  blk <- new_drilldown_chart_block(
+  blk <- new_chart_block(
     chart_type = "scatter",
     x      = "tiv",
     y      = "model_price",
@@ -339,7 +339,7 @@ test_that("scatter click filter survives a follow-up brush event (race)", {
 })
 
 test_that("drill and label round-trip through state and config", {
-  blk <- new_drilldown_chart_block(
+  blk <- new_chart_block(
     chart_type = "bar", group = "g", drill = "USUBJID", label = "AEDECOD"
   )
   shiny::testServer(
@@ -371,7 +371,7 @@ test_that("drill and label round-trip through state and config", {
 })
 
 test_that("unset drill emits no downstream filter (inert)", {
-  blk <- new_drilldown_chart_block(chart_type = "bar", group = "g")
+  blk <- new_chart_block(chart_type = "bar", group = "g")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
@@ -398,7 +398,7 @@ test_that("radar round-trips through state and filters on the color column", {
     TRT01A = rep(c("ARM A", "ARM B"), each = 3),
     stringsAsFactors = FALSE
   )
-  blk <- new_drilldown_chart_block(
+  blk <- new_chart_block(
     chart_type = "radar", group = "AVISIT", color = "TRT01A",
     metric = "AVAL", agg_fn = "mean", drill = "auto"
   )

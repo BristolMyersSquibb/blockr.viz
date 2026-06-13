@@ -68,6 +68,10 @@ new_kpi_block <- function(
     colors = NULL,
     ...
 ) {
+  lifecycle::deprecate_soft(
+    "0.0.0", "new_kpi_block()", "new_tile_block()",
+    details = "Unregistered from the block picker; constructor kept so existing boards still load."
+  )
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(
