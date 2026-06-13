@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>blockr.bi renderers — what we're building</title>
+<style>
+  :root{
+    --surface-0:#f7f8fa; --surface-1:#ffffff; --surface-2:#f1f3f6;
+    --ink-1:#1c2024; --ink-2:#5b6470; --ink-3:#8b95a1;
+    --hair:#e6e9ee; --hair-strong:#d8dde4;
+    --accent:#3a6df0; --accent-soft:#eaf0fe;
+    --green:#1f9d63; --green-soft:#e6f5ec;
+    --red:#d6453d; --red-soft:#fbeceb;
+    --amber:#c98a16; --amber-soft:#fbf3e2;
+    --mono:"SFMono-Regular",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+    --num:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface-0);color:var(--ink-1);font-family:var(--sans);
+       font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
+       font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 120px;}
+  h1{font-size:26px;font-weight:600;letter-spacing:-.01em;margin:0 0 6px;}
+  .lede{color:var(--ink-2);font-size:16px;max-width:680px;margin:0 0 8px;}
+  .meta{color:var(--ink-3);font-size:13px;margin:0 0 40px;}
+  h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;
+     color:var(--ink-3);margin:56px 0 4px;}
+  h2 .n{color:var(--accent);margin-right:8px;}
+  .sectlede{color:var(--ink-2);margin:0 0 22px;max-width:720px;}
+  code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);
+       padding:1px 5px;border-radius:4px;color:var(--ink-1);}
+
+  /* principle banner */
+  .principle{background:var(--ink-1);color:#fff;border-radius:14px;padding:24px 26px;
+             margin:8px 0 12px;display:flex;gap:18px;align-items:flex-start;}
+  .principle .big{font-size:19px;font-weight:500;line-height:1.4;margin:0;}
+  .principle .big b{font-weight:600;color:#9ec1ff;}
+  .principle .sub{color:#aeb6c2;font-size:14px;margin:8px 0 0;}
+
+  /* pipeline strip */
+  .pipes{display:flex;flex-direction:column;gap:12px;margin:18px 0 0;}
+  .pipe{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+        background:var(--surface-1);border:1px solid var(--hair);border-radius:12px;
+        padding:13px 16px;}
+  .node{font-family:var(--mono);font-size:13px;padding:5px 11px;border-radius:7px;
+        white-space:nowrap;}
+  .node.up{background:var(--surface-2);color:var(--ink-2);}
+  .node.dataset{background:var(--surface-2);color:var(--ink-3);}
+  .node.render{background:var(--ink-1);color:#fff;font-weight:500;}
+  .arrow{color:var(--ink-3);font-size:15px;}
+  .pipe .tag{margin-left:auto;font-size:12px;color:var(--ink-3);}
+
+  /* example: frame -> render pairing */
+  .pair{display:grid;grid-template-columns:minmax(0,360px) 28px minmax(0,1fr);
+        gap:0;align-items:center;margin:14px 0;background:var(--surface-1);
+        border:1px solid var(--hair);border-radius:14px;overflow:hidden;}
+  .pair .col{padding:20px 22px;min-width:0;}
+  .pair .col.frame{background:var(--surface-2);border-right:1px solid var(--hair);}
+  .pair .flow{display:flex;align-items:center;justify-content:center;
+              color:var(--ink-3);font-size:20px;background:var(--surface-2);
+              height:100%;border-right:1px solid var(--hair);}
+  .collabel{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;
+            color:var(--ink-3);margin:0 0 12px;}
+
+  /* tidy df mini-table */
+  table.df{border-collapse:collapse;font-family:var(--mono);font-size:12px;width:100%;}
+  table.df th{font-weight:600;color:var(--ink-2);text-align:left;padding:4px 10px 4px 0;
+              border-bottom:1px solid var(--hair-strong);white-space:nowrap;}
+  table.df td{padding:3px 10px 3px 0;color:var(--ink-1);white-space:nowrap;}
+  table.df td.num{text-align:right;}
+  table.df .dot{color:var(--ink-3);}
+
+  /* ---- TILES ---- */
+  .tilerow{display:flex;gap:14px;flex-wrap:wrap;}
+  .card{background:var(--surface-1);border:1px solid var(--hair);border-radius:14px;
+        padding:20px 22px;min-width:150px;flex:1;display:flex;flex-direction:column;gap:0;}
+  .card .lbl{font-size:13px;font-weight:500;color:var(--ink-2);margin:0 0 12px;}
+  .card .val{font-size:30px;font-weight:600;letter-spacing:-.02em;font-family:var(--num);
+             line-height:1;color:var(--ink-1);}
+  .card .foot{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;}
+  .delta{display:inline-flex;align-items:center;gap:3px;font-weight:500;
+         padding:2px 7px;border-radius:6px;font-family:var(--num);}
+  .delta.up{color:var(--green);background:var(--green-soft);}
+  .delta.dn{color:var(--red);background:var(--red-soft);}
+  .target{color:var(--ink-3);font-size:12px;}
+  .pill{font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;}
+  .pill.ok{color:var(--green);background:var(--green-soft);}
+  .pill.warn{color:var(--amber);background:var(--amber-soft);}
+  .pill.bad{color:var(--red);background:var(--red-soft);}
+
+  /* progress ring + bar */
+  .prog{display:flex;align-items:center;gap:16px;margin-top:6px;}
+  .bar{height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden;margin-top:14px;}
+  .bar>i{display:block;height:100%;border-radius:999px;background:var(--accent);}
+
+  /* scorecard grid */
+  .score{display:grid;gap:1px;background:var(--hair);border:1px solid var(--hair);
+         border-radius:14px;overflow:hidden;}
+  .score .cell{background:var(--surface-1);padding:16px 18px;}
+  .score .cell.head{background:var(--surface-2);font-size:12px;font-weight:600;
+                    color:var(--ink-2);display:flex;align-items:center;}
+  .score .cell.rowhead{background:var(--surface-2);font-size:13px;font-weight:500;
+                       color:var(--ink-1);display:flex;align-items:center;}
+  .score .cell .v{font-size:21px;font-weight:600;font-family:var(--num);letter-spacing:-.01em;}
+  .score .cell .s{font-size:12px;color:var(--ink-3);margin-top:3px;}
+
+  /* ---- TABLE renderer ---- */
+  table.render{border-collapse:collapse;width:100%;background:var(--surface-1);
+               border:1px solid var(--hair);border-radius:14px;overflow:hidden;font-size:14px;}
+  table.render th{background:var(--surface-2);font-weight:600;color:var(--ink-2);
+                  text-align:left;padding:11px 16px;font-size:12px;text-transform:uppercase;
+                  letter-spacing:.05em;border-bottom:1px solid var(--hair-strong);}
+  table.render th.num,table.render td.num{text-align:right;font-family:var(--num);}
+  table.render td{padding:9px 16px;border-bottom:1px solid var(--hair);}
+  table.render tr:last-child td{border-bottom:none;}
+  table.render .section td{background:var(--surface-2);font-weight:600;font-size:12px;
+                           text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);}
+  table.render .indent{padding-left:30px;color:var(--ink-1);}
+  .heat{font-family:var(--num);text-align:right;}
+
+  .note{border-left:3px solid var(--accent);background:var(--accent-soft);
+        padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0;font-size:14px;
+        color:var(--ink-1);}
+  .note b{font-weight:600;}
+  .descoped{background:var(--surface-2);border:1px dashed var(--hair-strong);
+            border-radius:14px;padding:18px 22px;margin:14px 0;color:var(--ink-2);}
+  .descoped .dh{font-family:var(--mono);font-size:13px;color:var(--ink-3);margin:0 0 10px;}
+  .descoped p{margin:8px 0;font-size:14px;}
+  .descoped s{color:var(--ink-3);}
+  .descoped b{color:var(--ink-1);font-weight:600;}
+  /* tile layout comparison */
+  .layouts{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;margin:14px 0;}
+  .layouts>div{min-width:0;}
+  .laylabel{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;
+            color:var(--ink-3);margin:0 0 12px;}
+  /* tile-table: bold numbers, lightly structured, static */
+  table.kpi{border-collapse:separate;border-spacing:0;width:100%;background:var(--surface-1);
+            border:1px solid var(--hair);border-radius:14px;overflow:hidden;}
+  table.kpi td{padding:13px 18px;border-bottom:1px solid var(--hair);vertical-align:middle;}
+  table.kpi tr:last-child td{border-bottom:none;}
+  table.kpi .m{font-size:13px;font-weight:500;color:var(--ink-2);white-space:nowrap;}
+  table.kpi .v{font-size:23px;font-weight:600;font-family:var(--num);letter-spacing:-.02em;
+               text-align:right;color:var(--ink-1);}
+  table.kpi .d{text-align:right;width:1%;white-space:nowrap;}
+  table.kpi .st{text-align:right;width:1%;}
+  /* colored scorecard: tinted cells, big numbers */
+  table.scoretbl{border-collapse:collapse;background:var(--surface-1);border:1px solid var(--hair);
+                 border-radius:14px;overflow:hidden;}
+  table.scoretbl th{font-size:11.5px;font-weight:600;color:var(--ink-2);text-align:right;
+                    padding:11px 18px;background:var(--surface-2);border-bottom:1px solid var(--hair-strong);}
+  table.scoretbl th.rh{text-align:left;}
+  table.scoretbl td.rh{font-size:13px;font-weight:500;color:var(--ink-1);text-align:left;
+                       padding:12px 18px;white-space:nowrap;border-bottom:1px solid var(--hair);}
+  table.scoretbl tr:last-child td{border-bottom:none;}
+  table.scoretbl td.c{text-align:right;padding:12px 18px;color:var(--ink-1);border-bottom:1px solid var(--hair);
+                      font-family:var(--num);font-size:20px;font-weight:600;letter-spacing:-.01em;}
+  /* element anatomy + legend */
+  .anatomy{display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start;margin:16px 0 6px;}
+  .circ{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;
+        border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:600;
+        vertical-align:middle;margin:0 1px;font-family:var(--sans);line-height:1;}
+  .leg{display:flex;flex-direction:column;gap:9px;font-size:13px;color:var(--ink-2);}
+  .leg span{white-space:nowrap;}
+  .cellbar{height:6px;border-radius:999px;background:rgba(0,0,0,.06);overflow:hidden;margin-top:8px;}
+  .cellbar>i{display:block;height:100%;border-radius:999px;background:var(--accent);}
+  /* multi-column matrix */
+  table.matrix{border-collapse:collapse;width:100%;max-width:680px;background:var(--surface-1);
+               border:1px solid var(--hair);border-radius:14px;overflow:hidden;}
+  table.matrix th{font-size:11.5px;font-weight:600;color:var(--ink-2);padding:11px 18px;text-align:right;
+                  background:var(--surface-2);border-bottom:1px solid var(--hair-strong);}
+  table.matrix th.rh{text-align:left;}
+  table.matrix th .u{font-weight:400;color:var(--ink-3);}
+  table.matrix td{padding:11px 18px;border-bottom:1px solid var(--hair);vertical-align:middle;}
+  table.matrix tr:last-child td{border-bottom:none;}
+  table.matrix td.rh{font-size:13px;font-weight:500;color:var(--ink-1);text-align:left;white-space:nowrap;}
+  table.matrix td.c{text-align:right;}
+  table.matrix td.c .v{display:block;font-family:var(--num);font-size:19px;font-weight:600;
+                       letter-spacing:-.01em;color:var(--ink-1);}
+  table.matrix td.c .dl{display:block;margin-top:4px;}
+  table.matrix td.c .sub{font-size:11px;color:var(--ink-3);margin-top:4px;}
+  .caption{font-size:13px;color:var(--ink-2);margin:10px 2px 0;}
+  .caption .k{font-family:var(--mono);color:var(--ink-1);}
+  .col-comment{font-size:12.5px;color:var(--ink-3);margin-top:14px;line-height:1.5;}
+  .swatch{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:4px;}
+
+  .divider{height:1px;background:var(--hair);margin:60px 0 0;border:none;}
+  .foot-note{color:var(--ink-3);font-size:13px;margin-top:40px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>blockr.bi renderers — what we're building</h1>
+  <p class="lede">Tables, charts and tiles are <b>pure renderers</b>. They draw a
+  <b>rectangular data&nbsp;frame</b> — usually tidy/long, sometimes deliberately wide (a
+  pivot grid, a correlation matrix) — and nothing more. Every <code>summarize</code>,
+  <code>pivot_wider</code>, <code>correlate</code> happens <b>upstream</b>, as ordinary
+  composable blocks.</p>
+  <p class="meta">Design mockup · 2026-06-13 · static, throwaway — for deciding the target before any code</p>
+
+  <div class="principle">
+    <div>
+      <p class="big">A renderer maps <b>columns&nbsp;→&nbsp;roles</b>. It never aggregates,
+      reshapes, or computes.</p>
+      <p class="sub">If you can see a number in the output, that number was already in the
+      frame the renderer received. The block UI is just a short list of column pickers.</p>
+    </div>
+  </div>
+
+  <!-- ============ 1. THE PIPELINE ============ -->
+  <h2><span class="n">01</span>The pipeline is the product</h2>
+  <p class="sectlede">The same three or four upstream verbs feed every renderer. Reading a
+  dashboard pipeline tells you exactly what it does — no hidden compute inside the renderer.</p>
+
+  <div class="pipes">
+    <div class="pipe">
+      <span class="node dataset">dataset</span><span class="arrow">→</span>
+      <span class="node up">summarize</span><span class="arrow">→</span>
+      <span class="node render">◰ tile</span>
+      <span class="tag">KPI cards — one number per measure</span>
+    </div>
+    <div class="pipe">
+      <span class="node dataset">dataset</span><span class="arrow">→</span>
+      <span class="node up">group_by + summarize</span><span class="arrow">→</span>
+      <span class="node up">pivot_wider</span><span class="arrow">→</span>
+      <span class="node render">▦ table</span>
+      <span class="tag">crosstab — rows × arms</span>
+    </div>
+    <div class="pipe">
+      <span class="node dataset">dataset</span><span class="arrow">→</span>
+      <span class="node up">correlate</span><span class="arrow">→</span>
+      <span class="node render">▦ table</span>
+      <span class="tag">heatmap = table with cell_color</span>
+    </div>
+    <div class="pipe">
+      <span class="node dataset">dataset</span><span class="arrow">→</span>
+      <span class="node up">summarize</span><span class="arrow">→</span>
+      <span class="node render">▦ chart</span>
+      <span class="tag">bar — group + metric + agg</span>
+    </div>
+  </div>
+  <div class="note"><b>The one allowed exception:</b> a chart self-aggregates, because the
+  visual encoding <i>is</i> the aggregation (a bar = sum-of-group). Tables and tiles take an
+  already-shaped frame.</div>
+
+  <!-- ============ 2. TILES ============ -->
+  <h2><span class="n">02</span>Tile — one value renderer; the body follows what you map</h2>
+  <p class="sectlede">A tile shows a <b>value</b>. Map a <code>target</code> → it grows a delta;
+  map a <code>max</code> → it grows a progress fill; map a <code>by</code> column → one tile
+  per category. No "showcase zoo" and no recipe templates — the body is a function of the
+  roles you map. (Spark descoped — see below.)</p>
+
+  <!-- number showcase -->
+  <div class="pair">
+    <div class="col frame">
+      <p class="collabel">data frame in</p>
+      <table class="df">
+        <tr><th>metric</th><th>value</th><th>target</th><th>delta</th></tr>
+        <tr><td>Revenue</td><td class="num">1.24M</td><td class="num">1.10M</td><td class="num">+12.7%</td></tr>
+        <tr><td>Active users</td><td class="num">38.4k</td><td class="num">40.0k</td><td class="num">−3.1%</td></tr>
+        <tr><td>Avg order</td><td class="num">64.20</td><td class="num">60.00</td><td class="num">+7.0%</td></tr>
+      </table>
+      <p class="col-comment">From <code>summarize()</code> upstream. Renderer maps
+      <code>value</code>=value, <code>label</code>=metric, <code>target</code>=target.</p>
+    </div>
+    <div class="flow">→</div>
+    <div class="col">
+      <p class="collabel">value &nbsp;·&nbsp; map target → delta</p>
+      <div class="tilerow">
+        <div class="card">
+          <p class="lbl">Revenue</p>
+          <div class="val">$1.24M</div>
+          <div class="foot"><span class="delta up">▲ 12.7%</span><span class="target">vs $1.10M target</span></div>
+        </div>
+        <div class="card">
+          <p class="lbl">Active users</p>
+          <div class="val">38,400</div>
+          <div class="foot"><span class="delta dn">▼ 3.1%</span><span class="target">vs 40k target</span></div>
+        </div>
+        <div class="card">
+          <p class="lbl">Avg order</p>
+          <div class="val">$64.20</div>
+          <div class="foot"><span class="delta up">▲ 7.0%</span><span class="target">vs $60 target</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- spark showcase — DESCOPED -->
+  <div class="descoped">
+    <p class="dh"><s>showcase = "spark"</s> &nbsp;→&nbsp; descoped to v2</p>
+    <p>A sparkline tile pays a tax nothing else in the tile does: it needs a
+    <code>spark_x</code> ordering role <i>and</i> a raw-row passthrough (<code>stat =
+    identity</code> → a list-column of vectors per cell) <i>and</i> a charting dependency
+    (echarts) just to draw a line. Three kinds of complexity for one body style — and it's
+    the reason the shaping pipeline grows list-columns at all.</p>
+    <p><b>A sparkline is a tiny chart — that's the <code>chart</code> renderer's job, not the
+    tile's.</b> Want a trend in a card? Drop a compact line <code>chart</code> in. That keeps
+    the tile a pure <i>scalar</i> renderer. Revisit later as "chart-in-a-card" only if it
+    earns its keep.</p>
+  </div>
+
+  <!-- progress showcase -->
+  <div class="pair">
+    <div class="col frame">
+      <p class="collabel">data frame in</p>
+      <table class="df">
+        <tr><th>metric</th><th>value</th><th>max</th></tr>
+        <tr><td>Enrollment</td><td class="num">847</td><td class="num">1000</td></tr>
+        <tr><td>Budget used</td><td class="num">62</td><td class="num">100</td></tr>
+      </table>
+      <p class="col-comment"><code>value</code>=value, <code>max</code>=max.
+      Ring when square, bar when wide.</p>
+    </div>
+    <div class="flow">→</div>
+    <div class="col">
+      <p class="collabel">map max → fill (bar <i>or</i> ring — cosmetic)</p>
+      <div class="tilerow">
+        <div class="card">
+          <p class="lbl">Enrollment</p>
+          <div class="prog">
+            <svg width="68" height="68" viewBox="0 0 68 68">
+              <circle cx="34" cy="34" r="28" fill="none" stroke="#f1f3f6" stroke-width="8"/>
+              <circle cx="34" cy="34" r="28" fill="none" stroke="#3a6df0" stroke-width="8"
+                stroke-linecap="round" stroke-dasharray="175.9" stroke-dashoffset="26.9"
+                transform="rotate(-90 34 34)"/>
+            </svg>
+            <div>
+              <div class="val" style="font-size:24px">84.7%</div>
+              <div class="target">847 / 1000</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <p class="lbl">Budget used</p>
+          <div class="val" style="font-size:24px">62%</div>
+          <div class="bar"><i style="width:62%"></i></div>
+          <div class="target" style="margin-top:8px">$62k of $100k</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- by-facet: one measure per category (the user's case) -->
+  <div class="pair">
+    <div class="col frame">
+      <p class="collabel">data frame in</p>
+      <table class="df">
+        <tr><th>category</th><th>price</th></tr>
+        <tr><td>Produce</td><td class="num">3.20</td></tr>
+        <tr><td>Bakery</td><td class="num">4.80</td></tr>
+        <tr><td>Dairy</td><td class="num">2.95</td></tr>
+        <tr><td>Meat</td><td class="num">9.40</td></tr>
+      </table>
+      <p class="col-comment">One measure across a category — the "price per category" case.
+      Renderer: <code>value</code>=price (stat mean), <code>by</code>=category.
+      <b>One tile per level.</b></p>
+    </div>
+    <div class="flow">→</div>
+    <div class="col">
+      <p class="collabel">value + by(category) → one tile each</p>
+      <div class="tilerow">
+        <div class="card"><p class="lbl">Produce</p><div class="val">$3.20</div></div>
+        <div class="card"><p class="lbl">Bakery</p><div class="val">$4.80</div></div>
+        <div class="card"><p class="lbl">Dairy</p><div class="val">$2.95</div></div>
+        <div class="card"><p class="lbl">Meat</p><div class="val">$9.40</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- by-facet + 2nd measure = grid, same mechanism -->
+  <div class="pair">
+    <div class="col frame">
+      <p class="collabel">data frame in (+ a 2nd measure)</p>
+      <table class="df">
+        <tr><th>Species</th><th>Sepal.L</th><th>Petal.L</th></tr>
+        <tr><td>setosa</td><td class="num">5.01</td><td class="num">1.46</td></tr>
+        <tr><td>versicolor</td><td class="num">5.94</td><td class="num">4.26</td></tr>
+        <tr><td>virginica</td><td class="num">6.59</td><td class="num">5.55</td></tr>
+      </table>
+      <p class="col-comment"><code>value</code>=[Sepal.L, Petal.L], <code>by</code>=Species.
+      A 2nd measure nests into a <b>grid</b> — <i>same</i> <code>by</code> role; the grid
+      <b>shape</b> follows the data (no separate rows/cols to hand-place). How it's
+      <i>presented</i> — cards vs a colored scorecard — is the <code>layout</code> toggle
+      below. (Full rows×cols → v2.)</p>
+    </div>
+    <div class="flow">→</div>
+    <div class="col">
+      <p class="collabel">by + 2 measures → grid</p>
+      <div class="score" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="cell head"></div>
+        <div class="cell head">Sepal length</div>
+        <div class="cell head">Petal length</div>
+        <div class="cell rowhead">setosa</div>
+        <div class="cell"><div class="v">5.01</div><div class="s">cm</div></div>
+        <div class="cell"><div class="v">1.46</div><div class="s">cm</div></div>
+        <div class="cell rowhead">versicolor</div>
+        <div class="cell"><div class="v">5.94</div><div class="s">cm</div></div>
+        <div class="cell"><div class="v">4.26</div><div class="s">cm</div></div>
+        <div class="cell rowhead">virginica</div>
+        <div class="cell"><div class="v">6.59</div><div class="s">cm</div></div>
+        <div class="cell"><div class="v">5.55</div><div class="s">cm</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 02b: tile layout — cards vs colored scorecard ===== -->
+  <h2 style="margin-top:48px"><span class="n">02b</span>Same numbers, two layouts — cards or a colored scorecard</h2>
+  <p class="sectlede">A tile's job is to show a few important numbers <b>boldly</b>. Sometimes
+  that's free-floating cards; sometimes a compact, <b>colored, structured</b> grid — a
+  scorecard. Both are the <i>tile</i> (static, bold, a handful of numbers) — the opposite of a
+  chart, and distinct from the data <code>table</code> in §03 (dense, scrollable, sortable,
+  drillable). <code>layout</code> is one small toggle: <code>cards · table</code>.</p>
+
+  <!-- KPI set: cards vs kpi-table -->
+  <div class="layouts">
+    <div>
+      <p class="laylabel">layout = cards</p>
+      <div class="tilerow" style="flex-direction:column">
+        <div class="card"><p class="lbl">Revenue</p><div class="val">$1.24M</div>
+          <div class="foot"><span class="delta up">▲ 12.7%</span></div></div>
+        <div class="card"><p class="lbl">Active users</p><div class="val">38,400</div>
+          <div class="foot"><span class="delta dn">▼ 3.1%</span></div></div>
+        <div class="card"><p class="lbl">Avg order</p><div class="val">$64.20</div>
+          <div class="foot"><span class="delta up">▲ 7.0%</span></div></div>
+      </div>
+    </div>
+    <div>
+      <p class="laylabel">layout = table — same data, same elements, structured</p>
+      <table class="kpi">
+        <tr><td class="m">Revenue</td><td class="v">$1.24M</td>
+            <td class="d"><span class="delta up">▲ 12.7%</span></td></tr>
+        <tr><td class="m">Active users</td><td class="v">38,400</td>
+            <td class="d"><span class="delta dn">▼ 3.1%</span></td></tr>
+        <tr><td class="m">Avg order</td><td class="v">$64.20</td>
+            <td class="d"><span class="delta up">▲ 7.0%</span></td></tr>
+      </table>
+    </div>
+  </div>
+  <p class="caption">Same frame (<span class="k">metric · value · delta</span>), same renderer,
+  <b>identical elements</b> — only <span class="k">layout</span> differs. No status pill: it
+  lived only in the table, so it's gone (everything in one mode must exist in the other). The
+  table lines the numbers up and packs more rows into less height; cards give each number more
+  presence.</p>
+
+  <!-- price/category: cards vs tinted table -->
+  <div class="layouts" style="margin-top:28px">
+    <div>
+      <p class="laylabel">price / category — cards</p>
+      <div class="tilerow">
+        <div class="card"><p class="lbl">Produce</p><div class="val">$3.20</div></div>
+        <div class="card"><p class="lbl">Bakery</p><div class="val">$4.80</div></div>
+        <div class="card"><p class="lbl">Dairy</p><div class="val">$2.95</div></div>
+        <div class="card"><p class="lbl">Meat</p><div class="val">$9.40</div></div>
+      </div>
+    </div>
+    <div>
+      <p class="laylabel">price / category — table, tinted by value</p>
+      <table class="kpi">
+        <tr><td class="m">Produce</td><td class="v" style="background:#f2f6ff">$3.20</td></tr>
+        <tr><td class="m">Bakery</td><td class="v" style="background:#dfeafe">$4.80</td></tr>
+        <tr><td class="m">Dairy</td><td class="v" style="background:#f6f9ff">$2.95</td></tr>
+        <tr><td class="m">Meat</td><td class="v" style="background:#bcd4fb">$9.40</td></tr>
+      </table>
+    </div>
+  </div>
+  <p class="caption">Your "price per category" case — even one measure reads well as a compact
+  tinted table when there are many categories. <b>You may want the table layout here too.</b></p>
+
+  <!-- species x measures colored scorecard -->
+  <p class="laylabel" style="margin-top:28px">by + measures, layout = table — a colored scorecard</p>
+  <table class="scoretbl">
+    <tr><th class="rh">Species</th><th>Sepal length</th><th>Petal length</th></tr>
+    <tr><td class="rh">setosa</td>
+        <td class="c" style="background:#eef4fe">5.01</td>
+        <td class="c" style="background:#fbeceb;color:#b5302a">1.46</td></tr>
+    <tr><td class="rh">versicolor</td>
+        <td class="c" style="background:#cfe0fc">5.94</td>
+        <td class="c" style="background:#f7d6d3">4.26</td></tr>
+    <tr><td class="rh">virginica</td>
+        <td class="c" style="background:#bcd4fb">6.59</td>
+        <td class="c" style="background:#f2bdb9">5.55</td></tr>
+  </table>
+  <p class="caption">The grid from your screenshot, now <b>as a tile-table</b>: bold numbers,
+  per-cell tint by value. Same purpose as a card wall — show a few important numbers — just
+  structured. Contrast the data <code>table</code> in §03, which is for dense, browsable,
+  interactive data.</p>
+
+  <div class="note">The whole tile UI: <b>a value picker + a stat</b>, a few optional roles
+  (<code>label</code>, <code>target</code>→delta, <code>max</code>→fill, <code>by</code>→
+  per-category), and <b>one layout toggle</b> (<code>cards · table</code>). The body follows
+  what you map. One renderer — bold numbers, free <i>or</i> structured. Color (value/status
+  tint) is automatic &amp; purposeful; the old recipe templates, spark, and the elaborate
+  color-by/intensity config are gone.</div>
+
+  <div class="note" style="border-left-color:var(--amber);background:var(--amber-soft)">
+  <b>The line vs the data <code>table</code> (§03):</b> tile-table = <i>static, bold, a handful
+  of numbers, decorative color</i> (a scorecard). Data table = <i>dense rows, scan/sort/search,
+  drill, sections, composite <code>.fmt</code> cells</i>. Same HTML-table shape, different job.
+  If that line blurs in practice, the tile-table is the thing at risk of overlapping — worth
+  watching.</div>
+
+  <!-- ===== 02c: shared elements + multi-col table ===== -->
+  <h2 style="margin-top:48px"><span class="n">02c</span>One element set — cards and tables draw the same parts</h2>
+  <p class="sectlede">Cards and the table layout are <b>not two feature sets</b>. They render the
+  same elements; the layout only decides <i>placement</i>. A card stacks them; a table hoists
+  the shared ones (title, unit) into headers and packs value + delta + fill + color into cells.</p>
+
+  <div class="anatomy">
+    <div>
+      <p class="laylabel">as a card</p>
+      <div class="card" style="max-width:220px;background:#eef4fe">
+        <p class="lbl">Budget used <span class="circ">1</span></p>
+        <div class="val">62<span style="font-size:17px;color:var(--ink-3)">%<span class="circ">3</span></span> <span class="circ">2</span></div>
+        <div class="foot" style="margin-top:8px"><span class="delta up">▲ 4 pts <span class="circ">6</span></span></div>
+        <div class="cellbar"><i style="width:62%"></i></div>
+        <div class="target" style="margin-top:8px">of $100k plan <span class="circ">4</span> <span class="circ">5</span></div>
+      </div>
+    </div>
+    <div>
+      <p class="laylabel">as one table cell</p>
+      <table class="matrix" style="max-width:320px">
+        <tr><th class="rh">Region</th><th>Budget <span class="u">% of plan</span> <span class="circ">1</span><span class="circ">3</span></th></tr>
+        <tr><td class="rh">West</td>
+          <td class="c" style="background:#f4f8ff">
+            <span class="v">62% <span class="circ">2</span></span>
+            <span class="dl"><span class="delta up">▲ 4 pts <span class="circ">6</span></span></span>
+            <div class="cellbar"><i style="width:62%"></i></div>
+            <div class="sub">/ $100k <span class="circ">4</span> <span class="circ">5</span></div>
+          </td></tr>
+      </table>
+    </div>
+    <div>
+      <p class="laylabel">the elements</p>
+      <div class="leg">
+        <span><span class="circ">1</span> &nbsp;<b>title</b> — what the number is</span>
+        <span><span class="circ">2</span> &nbsp;<b>value</b> — the number</span>
+        <span><span class="circ">3</span> &nbsp;<b>unit</b> — %, $, cm …</span>
+        <span><span class="circ">4</span> &nbsp;<b>max</b> — reference → a fill</span>
+        <span><span class="circ">5</span> &nbsp;<b>color</b> — tint by value / status</span>
+        <span><span class="circ">6</span> &nbsp;<b>delta</b> — trend vs a reference (▲/▼)</span>
+      </div>
+    </div>
+  </div>
+  <p class="caption"><b>Everything is present in both modes</b> — nothing lives in one that
+  can't in the other. The card stacks the parts; the table puts <b>title + unit</b> in the
+  column header and <b>group</b> in the row header, leaving <b>value + delta + fill + color</b>
+  in the cell.</p>
+
+  <p class="sectlede" style="margin-top:34px"><b>Multi-column table — measures across, groups
+  down.</b> Each column is one <code>value</code> measure; each row is a <code>by</code> level.
+  Every cell is still a mini-tile with the same elements; the shared ones are hoisted —
+  <span class="k">unit</span> &amp; <span class="k">measure title</span> → column header,
+  <span class="k">group</span> → row header. It reads as a <b>table</b> (aligned rows, hairline
+  rules), not a card grid.</p>
+
+  <div class="note"><b>“More than one value — do we lose the trend?” No.</b> The <b>delta</b>
+  (▲/▼ vs a reference) is a <i>per-cell</i> element — every cell keeps its own, however many
+  measures. Revenue &amp; Conversion below each carry value + delta. The only thing descoped is
+  the literal <i>sparkline</i> (a line over time) — that's the <code>chart</code>'s job.
+  <code>max</code> is per-cell too — and it <b>stacks</b> with delta: a column with a max
+  (Budget) shows a <b>fill and keeps its delta</b>, since the two answer different questions
+  (delta = vs last period; fill = vs target).</div>
+
+  <table class="matrix" style="margin-top:8px">
+    <tr>
+      <th class="rh">Region</th>
+      <th>Revenue <span class="u">$M</span></th>
+      <th>Conversion <span class="u">%</span></th>
+      <th>Budget <span class="u">% of plan</span></th>
+    </tr>
+    <tr>
+      <td class="rh">North</td>
+      <td class="c"><span class="v">1.24</span><span class="dl"><span class="delta up">▲ 12.7%</span></span></td>
+      <td class="c"><span class="v">3.8</span><span class="dl"><span class="delta dn">▼ 0.2pp</span></span></td>
+      <td class="c"><span class="v">62%</span><span class="dl"><span class="delta up">▲ 4 pts</span></span><div class="cellbar"><i style="width:62%"></i></div></td>
+    </tr>
+    <tr>
+      <td class="rh">South</td>
+      <td class="c"><span class="v">0.98</span><span class="dl"><span class="delta up">▲ 4.0%</span></span></td>
+      <td class="c"><span class="v">4.1</span><span class="dl"><span class="delta up">▲ 0.3pp</span></span></td>
+      <td class="c"><span class="v">88%</span><span class="dl"><span class="delta up">▲ 9 pts</span></span><div class="cellbar"><i style="width:88%"></i></div></td>
+    </tr>
+    <tr>
+      <td class="rh">East</td>
+      <td class="c"><span class="v">1.51</span><span class="dl"><span class="delta up">▲ 9.0%</span></span></td>
+      <td class="c"><span class="v">2.9</span><span class="dl"><span class="delta dn">▼ 0.5pp</span></span></td>
+      <td class="c"><span class="v">45%</span><span class="dl"><span class="delta dn">▼ 6 pts</span></span><div class="cellbar"><i style="width:45%"></i></div></td>
+    </tr>
+    <tr>
+      <td class="rh">West</td>
+      <td class="c"><span class="v">0.76</span><span class="dl"><span class="delta dn">▼ 3.0%</span></span></td>
+      <td class="c"><span class="v">3.3</span><span class="dl"><span class="delta up">▲ 0.1pp</span></span></td>
+      <td class="c"><span class="v">95%</span><span class="dl"><span class="delta up">▲ 2 pts</span></span><div class="cellbar"><i style="width:95%"></i></div></td>
+    </tr>
+  </table>
+  <p class="caption">Units &amp; measure names appear <b>once</b> in the header, never repeated
+  per cell. Revenue &amp; Conversion keep a <b>delta</b> — the trend survives the extra measures;
+  Budget carries a <b>max</b> → a <b>fill</b> <i>and</i> keeps its <b>delta</b> (both — they
+  answer different questions). Same elements, a different mix per column, and it reads as a
+  <b>table</b>, not a card grid. The <i>cards</i> view of this same frame is one card
+  per cell (Region × measure), with the identical elements.</p>
+
+  <div class="note"><b>The data contract is unchanged:</b> still long/tidy
+  <span class="k">group · measure · value</span> (+ optional <span class="k">max</span>),
+  exactly like everything upstream. The matrix is produced by the renderer hoisting
+  <code>measure</code> into columns at draw time — a <i>presentation</i> of the tidy frame, not
+  a <code>pivot_wider</code> baked into the data.</div>
+
+  <!-- ============ 3. TABLE ============ -->
+  <h2><span class="n">03</span>Table — one renderer for every table</h2>
+  <p class="sectlede">Table 1, a regression table, a survival table, a crosstab — all the
+  <i>same</i> display: rows × an optional spread dimension × composite cells. Fed by tidy
+  shapers; structure rides in hidden dotted columns (<code>.section</code>, <code>.indent</code>,
+  <code>.fmt</code>).</p>
+
+  <div class="pair" style="grid-template-columns:minmax(0,420px) 28px minmax(0,1fr)">
+    <div class="col frame">
+      <p class="collabel">tidy frame in (numbers stay numeric)</p>
+      <table class="df">
+        <tr><th>.section</th><th>.label</th><th>arm</th><th>n</th><th>pct</th></tr>
+        <tr><td>Sex</td><td>Female</td><td>Placebo</td><td class="num">31</td><td class="num">44.3</td></tr>
+        <tr><td>Sex</td><td>Female</td><td>Drug</td><td class="num">28</td><td class="num">40.0</td></tr>
+        <tr><td>Sex</td><td>Male</td><td>Placebo</td><td class="num">39</td><td class="num">55.7</td></tr>
+        <tr><td><span class="dot">⋮</span></td><td class="dot">⋮</td><td class="dot">⋮</td><td class="num dot">⋮</td><td class="num dot">⋮</td></tr>
+      </table>
+      <p class="col-comment">The shaper (<code>describe</code>) emits <b>tidy numbers</b> —
+      never the string <code>"31 (44.3%)"</code>. The renderer composes the cell at draw time
+      via <code>.fmt = "{n} ({pct}%)"</code>, then spreads by <code>arm</code>. Same frame can
+      render as combined cells <i>or</i> separate columns — a render choice.</p>
+    </div>
+    <div class="flow">→</div>
+    <div class="col">
+      <p class="collabel">rendered</p>
+      <table class="render">
+        <tr><th>Characteristic</th><th class="num">Placebo<br><span style="font-weight:400;text-transform:none;letter-spacing:0">n=70</span></th><th class="num">Drug<br><span style="font-weight:400;text-transform:none;letter-spacing:0">n=70</span></th></tr>
+        <tr class="section"><td colspan="3">Sex — n (%)</td></tr>
+        <tr><td class="indent">Female</td><td class="num">31 (44.3%)</td><td class="num">28 (40.0%)</td></tr>
+        <tr><td class="indent">Male</td><td class="num">39 (55.7%)</td><td class="num">42 (60.0%)</td></tr>
+        <tr class="section"><td colspan="3">Age — mean (SD)</td></tr>
+        <tr><td class="indent">Years</td><td class="num">64.2 (8.1)</td><td class="num">62.9 (7.6)</td></tr>
+      </table>
+      <p class="caption">Composite cells from <span class="k">.fmt</span>; sections &amp;
+      indent from <span class="k">.section</span> / <span class="k">.label</span>.</p>
+    </div>
+  </div>
+
+  <!-- heatmap via cell_color -->
+  <div class="pair" style="grid-template-columns:minmax(0,420px) 28px minmax(0,1fr)">
+    <div class="col frame">
+      <p class="collabel">data frame in — wide matrix, <i>not</i> tidy</p>
+      <table class="df">
+        <tr><th>var</th><th>Sepal.L</th><th>Sepal.W</th><th>Petal.L</th><th>Petal.W</th></tr>
+        <tr><td>Sepal.L</td><td class="num">1.00</td><td class="num">−.12</td><td class="num">.87</td><td class="num">.82</td></tr>
+        <tr><td>Sepal.W</td><td class="num">−.12</td><td class="num">1.00</td><td class="num">−.43</td><td class="num">−.37</td></tr>
+        <tr><td>Petal.L</td><td class="num">.87</td><td class="num">−.43</td><td class="num">1.00</td><td class="num">.96</td></tr>
+      </table>
+      <p class="col-comment"><code>correlate()</code> upstream → a <b>wide matrix</b> (a df, not tidy — the
+      column names are <i>values</i>). Renderer maps
+      <code>rowname</code>=var, <code>cell_color</code> = numeric scale. The heatmap is just
+      <b>table + cell_color</b>, no special block.</p>
+    </div>
+    <div class="flow">→</div>
+    <div class="col">
+      <p class="collabel">table with cell_color</p>
+      <table class="render">
+        <tr><th></th><th class="num">Sep.L</th><th class="num">Sep.W</th><th class="num">Pet.L</th><th class="num">Pet.W</th></tr>
+        <tr><td>Sepal.L</td>
+          <td class="heat" style="background:#1f6feb;color:#fff">1.00</td>
+          <td class="heat" style="background:#fbeceb">−.12</td>
+          <td class="heat" style="background:#5a91f2;color:#fff">.87</td>
+          <td class="heat" style="background:#6f9ff4;color:#fff">.82</td></tr>
+        <tr><td>Sepal.W</td>
+          <td class="heat" style="background:#fbeceb">−.12</td>
+          <td class="heat" style="background:#1f6feb;color:#fff">1.00</td>
+          <td class="heat" style="background:#f6c9c6">−.43</td>
+          <td class="heat" style="background:#f8d3d0">−.37</td></tr>
+        <tr><td>Petal.L</td>
+          <td class="heat" style="background:#5a91f2;color:#fff">.87</td>
+          <td class="heat" style="background:#f6c9c6">−.43</td>
+          <td class="heat" style="background:#1f6feb;color:#fff">1.00</td>
+          <td class="heat" style="background:#3f7df0;color:#fff">.96</td></tr>
+      </table>
+      <p class="caption"><span class="swatch" style="background:#1f6feb"></span>+1
+        &nbsp;<span class="swatch" style="background:#eef1f6"></span>0
+        &nbsp;<span class="swatch" style="background:#d6453d"></span>−1 — numeric value→background.</p>
+    </div>
+  </div>
+
+  <hr class="divider">
+  <p class="foot-note">Throwaway mockup to align on the target. Nothing here is generated from
+  real blocks — the point is to agree on <i>what we draw</i> and <i>what stays upstream</i>
+  before touching <code>tile-block.R</code>. Companion: <code>dev/table-and-chart-architecture.md</code>.</p>
+
+</div>
+</body>
+</html>

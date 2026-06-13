@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>blockr.bi renderers — the model</title>
+<style>
+  :root{
+    --surface-0:#f7f8fa; --surface-1:#ffffff; --surface-2:#f1f3f6;
+    --ink-1:#1c2024; --ink-2:#5b6470; --ink-3:#8b95a1;
+    --hair:#e6e9ee; --hair-strong:#d8dde4;
+    --accent:#3a6df0; --accent-soft:#eaf0fe;
+    --green:#1f9d63; --green-soft:#e6f5ec;
+    --red:#d6453d; --red-soft:#fbeceb;
+    --amber:#c98a16; --amber-soft:#fbf3e2;
+    --mono:"SFMono-Regular",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+    --num:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface-0);color:var(--ink-1);font-family:var(--sans);
+       font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 28px 120px;}
+  h1{font-size:27px;font-weight:600;letter-spacing:-.01em;margin:0 0 6px;}
+  .lede{color:var(--ink-2);font-size:16px;max-width:720px;margin:0 0 8px;}
+  .meta{color:var(--ink-3);font-size:13px;margin:0 0 40px;}
+  h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin:58px 0 6px;}
+  h2 .n{color:var(--accent);margin-right:8px;}
+  .sectlede{color:var(--ink-2);margin:0 0 22px;max-width:740px;}
+  code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);padding:1px 5px;border-radius:4px;color:var(--ink-1);}
+  a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+
+  .principle{background:var(--ink-1);color:#fff;border-radius:14px;padding:24px 26px;margin:8px 0 14px;}
+  .principle .big{font-size:19px;font-weight:500;line-height:1.45;margin:0;}
+  .principle .big b{color:#9ec1ff;font-weight:600;}
+  .principle .sub{color:#aeb6c2;font-size:14px;margin:9px 0 0;}
+
+  /* pipeline */
+  .pipe{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface-1);
+        border:1px solid var(--hair);border-radius:12px;padding:13px 16px;margin:10px 0;}
+  .node{font-family:var(--mono);font-size:13px;padding:5px 11px;border-radius:7px;white-space:nowrap;}
+  .node.up{background:var(--surface-2);color:var(--ink-2);} .node.ds{background:var(--surface-2);color:var(--ink-3);}
+  .node.render{background:var(--ink-1);color:#fff;font-weight:500;}
+  .arrow{color:var(--ink-3);} .pipe .tag{margin-left:auto;font-size:12px;color:var(--ink-3);}
+
+  /* one frame, three renderers */
+  .framerow{display:grid;grid-template-columns:230px 1fr;gap:18px;align-items:start;margin:14px 0;}
+  .framebox{background:var(--surface-2);border:1px solid var(--hair);border-radius:14px;padding:18px 20px;}
+  .collabel{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin:0 0 12px;}
+  table.df{border-collapse:collapse;font-family:var(--mono);font-size:12px;width:100%;}
+  table.df th{font-weight:600;color:var(--ink-2);text-align:left;padding:4px 10px 4px 0;border-bottom:1px solid var(--hair-strong);}
+  table.df td{padding:3px 10px 3px 0;} table.df td.num{text-align:right;}
+  .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  .rbox{background:var(--surface-1);border:1px solid var(--hair);border-radius:14px;padding:16px 18px;}
+  .rbox .rh{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin:0 0 14px;}
+
+  /* mini table render */
+  table.mini{border-collapse:collapse;width:100%;font-size:13px;}
+  table.mini td{padding:7px 4px;border-bottom:1px solid var(--hair);}
+  table.mini tr:last-child td{border-bottom:none;}
+  table.mini td.v{text-align:right;font-family:var(--num);font-weight:600;}
+  /* bar chart render */
+  .bars{display:flex;flex-direction:column;gap:9px;}
+  .barrow{display:grid;grid-template-columns:46px 1fr;align-items:center;gap:8px;font-size:12px;color:var(--ink-2);}
+  .bartrack{background:var(--surface-2);border-radius:5px;height:20px;overflow:hidden;}
+  .bartrack>i{display:block;height:100%;background:var(--accent);border-radius:5px;}
+  /* tile cards render */
+  .tilewrap{display:flex;flex-direction:column;gap:10px;}
+  .minicard{border:1px solid var(--hair);border-radius:10px;padding:10px 12px;}
+  .minicard .l{font-size:11px;color:var(--ink-2);} .minicard .v{font-size:19px;font-weight:600;font-family:var(--num);letter-spacing:-.01em;}
+
+  /* tile anatomy */
+  .anat{display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:start;margin:14px 0;}
+  .card{background:var(--surface-1);border:1px solid var(--hair);border-radius:14px;padding:20px 22px;}
+  .ov{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px;}
+  .bignum{font-size:30px;font-weight:600;letter-spacing:-.02em;font-family:var(--num);line-height:1;}
+  .delta{display:inline-flex;align-items:center;gap:3px;font-weight:500;padding:2px 7px;border-radius:6px;font-family:var(--num);font-size:13px;}
+  .delta.up{color:var(--green);background:var(--green-soft);} .delta.dn{color:var(--red);background:var(--red-soft);}
+  .bar{height:7px;border-radius:999px;background:var(--surface-2);overflow:hidden;margin-top:11px;}
+  .bar>i{display:block;height:100%;border-radius:999px;background:var(--accent);}
+  .cap{font-size:12.5px;color:var(--ink-3);margin-top:9px;}
+  .circ{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;
+        background:var(--accent);color:#fff;font-size:10px;font-weight:600;vertical-align:middle;margin:0 1px;}
+  .leg{display:flex;flex-direction:column;gap:11px;font-size:13.5px;}
+  .leg b{font-weight:600;} .leg .sub{color:var(--ink-3);font-size:12.5px;}
+  .styles{display:inline-flex;gap:5px;flex-wrap:wrap;margin-top:3px;}
+  .chip{font-size:11px;font-family:var(--mono);background:var(--surface-2);border:1px solid var(--hair);border-radius:6px;padding:1px 7px;color:var(--ink-2);}
+
+  /* layouts */
+  .layouts{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;margin:14px 0;}
+  .laylabel{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin:0 0 12px;}
+  table.kpi{border-collapse:collapse;width:100%;background:var(--surface-1);border:1px solid var(--hair);border-radius:14px;overflow:hidden;}
+  table.kpi td{padding:13px 18px;border-bottom:1px solid var(--hair);vertical-align:middle;}
+  table.kpi tr:last-child td{border-bottom:none;}
+  table.kpi .m{font-size:13px;font-weight:500;color:var(--ink-2);}
+  table.kpi .vv{font-size:21px;font-weight:600;font-family:var(--num);letter-spacing:-.02em;text-align:right;}
+  table.kpi .dd{text-align:right;width:1%;white-space:nowrap;}
+
+  /* table renderer */
+  table.render{border-collapse:collapse;width:100%;background:var(--surface-1);border:1px solid var(--hair);border-radius:14px;overflow:hidden;font-size:14px;}
+  table.render th{background:var(--surface-2);font-weight:600;color:var(--ink-2);text-align:left;padding:11px 16px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--hair-strong);}
+  table.render th.num,table.render td.num{text-align:right;font-family:var(--num);}
+  table.render td{padding:9px 16px;border-bottom:1px solid var(--hair);} table.render tr:last-child td{border-bottom:none;}
+  table.render .section td{background:var(--surface-2);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);}
+  table.render .indent{padding-left:30px;}
+
+  .note{border-left:3px solid var(--accent);background:var(--accent-soft);padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0;font-size:14px;}
+  .note b{font-weight:600;} .note.amber{border-left-color:var(--amber);background:var(--amber-soft);}
+  .caption{font-size:13px;color:var(--ink-2);margin:10px 2px 0;} .caption .k{font-family:var(--mono);color:var(--ink-1);}
+  .divider{height:1px;background:var(--hair);margin:58px 0 0;border:none;}
+  .foot-note{color:var(--ink-3);font-size:13px;margin-top:38px;}
+  @media(max-width:860px){.framerow,.three,.anat,.layouts{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>blockr.bi renderers — the model</h1>
+  <p class="lede">The converged concept. Tables, charts and tiles are <b>renderers</b> over a
+  rectangular data frame; all shaping (<code>summarize</code>, <code>pivot_wider</code>,
+  <code>correlate</code>) happens <b>upstream</b>. Switching how you see the data is switching the
+  <i>renderer</i>, not rebuilding the pipeline.</p>
+  <p class="meta">Final concept · 2026-06-13 · clean rebuild · companions: <a href="/">exploration mockup</a> ·
+  <a href="/research.html">what-others-do research</a> · <code>dev/table-and-chart-architecture.md</code></p>
+
+  <div class="principle">
+    <p class="big">A renderer maps <b>columns → roles</b> and <b>draws</b>. It never aggregates,
+    reshapes, or computes.</p>
+    <p class="sub">One tidy frame can be drawn as a table, a chart, or a tile — interchangeable views.
+    Pick the renderer by what you want to show; the data is the same.</p>
+  </div>
+
+  <!-- 1. pipeline -->
+  <h2><span class="n">01</span>Shaping upstream, drawing downstream</h2>
+  <p class="sectlede">The upstream verbs are the product. The renderer is the last node and the only
+  one that touches pixels.</p>
+  <div class="pipe"><span class="node ds">dataset</span><span class="arrow">→</span>
+    <span class="node up">group_by + summarize</span><span class="arrow">→</span>
+    <span class="node render">▦ table</span><span class="node render">▭ chart</span><span class="node render">◳ tile</span>
+    <span class="tag">same frame, pick a renderer</span></div>
+  <div class="pipe"><span class="node ds">dataset</span><span class="arrow">→</span>
+    <span class="node up">correlate</span><span class="arrow">→</span>
+    <span class="node render">▦ table (cell_color)</span><span class="tag">heatmap = table + color</span></div>
+
+  <!-- 2. one frame, three renderers -->
+  <h2><span class="n">02</span>One frame → table · chart · tile</h2>
+  <p class="sectlede">The conversion is free because there's nothing to convert: the same tidy
+  <span class="k">region · revenue</span> frame feeds all three. The renderer is the only thing that
+  changes.</p>
+
+  <div class="framerow">
+    <div class="framebox">
+      <p class="collabel">tidy frame in</p>
+      <table class="df">
+        <tr><th>region</th><th>revenue</th></tr>
+        <tr><td>North</td><td class="num">1.24</td></tr>
+        <tr><td>South</td><td class="num">0.98</td></tr>
+        <tr><td>East</td><td class="num">1.51</td></tr>
+        <tr><td>West</td><td class="num">0.76</td></tr>
+      </table>
+      <p class="caption" style="margin-top:14px">From <code>summarize()</code>. Long, tidy, one row
+      per group.</p>
+    </div>
+    <div class="three">
+      <div class="rbox">
+        <p class="rh">▦ table</p>
+        <table class="mini">
+          <tr><td>North</td><td class="v">$1.24M</td></tr>
+          <tr><td>South</td><td class="v">$0.98M</td></tr>
+          <tr><td>East</td><td class="v">$1.51M</td></tr>
+          <tr><td>West</td><td class="v">$0.76M</td></tr>
+        </table>
+        <p class="caption">scan / sort / compare exact values</p>
+      </div>
+      <div class="rbox">
+        <p class="rh">▭ chart</p>
+        <div class="bars">
+          <div class="barrow"><span>North</span><div class="bartrack"><i style="width:82%"></i></div></div>
+          <div class="barrow"><span>South</span><div class="bartrack"><i style="width:65%"></i></div></div>
+          <div class="barrow"><span>East</span><div class="bartrack"><i style="width:100%"></i></div></div>
+          <div class="barrow"><span>West</span><div class="bartrack"><i style="width:50%"></i></div></div>
+        </div>
+        <p class="caption">see the shape / ranking at a glance</p>
+      </div>
+      <div class="rbox">
+        <p class="rh">◳ tile</p>
+        <div class="tilewrap">
+          <div class="minicard"><div class="l">East</div><div class="v">$1.51M</div></div>
+          <div class="minicard"><div class="l">North</div><div class="v">$1.24M</div></div>
+          <div class="minicard"><div class="l">South · West</div><div class="v">$0.98M…</div></div>
+        </div>
+        <p class="caption">show a few numbers boldly</p>
+      </div>
+    </div>
+  </div>
+  <div class="note">A <b>chart self-aggregates</b> (a bar = sum-of-group) — the one place the visual
+  encoding <i>is</i> the aggregation. Table and tile take the frame already shaped.</div>
+
+  <!-- 3. the tile -->
+  <h2><span class="n">03</span>The tile — slots, not a fixed schema</h2>
+  <p class="sectlede">A tile shows a <b>main value</b> surrounded by <b>slots you map to columns</b>.
+  Crucially, there is <b>no <code>delta</code>/<code>target</code>/<code>max</code> element</b> — those
+  were arbitrary. There's a generic <b>secondary value</b> (any reference column: last-month mean, a
+  target, prior year, a benchmark) and a <b>display style</b> that says how to draw it.</p>
+
+  <div class="anat">
+    <div class="card">
+      <p class="ov">Revenue · Q3 <span class="circ">1</span></p>
+      <div class="bignum">$1.24M <span class="circ">2</span></div>
+      <div style="margin-top:9px"><span class="delta up">▲ 12.7%</span> <span class="circ">3</span></div>
+      <div class="bar"><i style="width:84%"></i></div>
+      <p class="cap">84% of $1.10M target <span class="circ">3</span></p>
+      <p class="cap">strongest quarter since 2024 <span class="circ">5</span></p>
+    </div>
+    <div class="leg">
+      <div><span class="circ">1</span> <b>overline</b> — supertext; free text or a column<br>
+        <span class="sub">period, category, source — your “fill with whatever”</span></div>
+      <div><span class="circ">2</span> <b>value</b> — the main number, with <span class="sub">format (%, $, compact) + unit</span></div>
+      <div><span class="circ">3</span> <b>secondary</b> ×N — <i>any</i> reference column, each with a <b>display style</b>:
+        <div class="styles"><span class="chip">plain</span><span class="chip">Δ% vs value</span><span class="chip">fill / progress</span><span class="chip">pill</span></div>
+        <span class="sub">“delta”, “target”, “max” all collapse into here — they were just secondary + a style</span></div>
+      <div><span class="circ">4</span> <b>color</b> — tint or sign-coloring, auto from a column’s value/sign</div>
+      <div><span class="circ">5</span> <b>caption</b> — subtext; free text or a column</div>
+    </div>
+  </div>
+  <div class="note amber"><b>Why no fixed <code>delta</code>:</b> a ▲% vs last month is just <i>one</i>
+  comparison — last-year, a target, a peer average are equally interesting. Forcing them through a
+  “delta” field is the rigidity that makes fixed schemas bolt arrows onto <code>prefix</code>. The
+  number stays <b>generic</b> (any column); only the <b>rendering</b> is typed (the display style gives
+  you the auto % and the green/red).</div>
+
+  <p class="sectlede" style="margin-top:30px"><b>Two layouts, identical slots.</b> Cards stack the
+  slots; the table lines them up. Nothing exists in one layout that can’t in the other.</p>
+  <div class="layouts">
+    <div>
+      <p class="laylabel">layout = cards</p>
+      <div class="card" style="padding:16px 18px;margin-bottom:10px"><p class="ov" style="margin-bottom:4px">Revenue</p><div class="bignum" style="font-size:24px">$1.24M <span class="delta up" style="font-size:12px">▲ 12.7%</span></div></div>
+      <div class="card" style="padding:16px 18px"><p class="ov" style="margin-bottom:4px">Active users</p><div class="bignum" style="font-size:24px">38,400 <span class="delta dn" style="font-size:12px">▼ 3.1%</span></div></div>
+    </div>
+    <div>
+      <p class="laylabel">layout = table — same slots</p>
+      <table class="kpi">
+        <tr><td class="m">Revenue</td><td class="vv">$1.24M</td><td class="dd"><span class="delta up">▲ 12.7%</span></td></tr>
+        <tr><td class="m">Active users</td><td class="vv">38,400</td><td class="dd"><span class="delta dn">▼ 3.1%</span></td></tr>
+        <tr><td class="m">Avg order</td><td class="vv">$64.20</td><td class="dd"><span class="delta up">▲ 7.0%</span></td></tr>
+      </table>
+    </div>
+  </div>
+  <p class="caption">Many measures or a <code>by</code> facet → the table grows columns (measures across,
+  groups down); unit &amp; title hoist into the header. It reads as a <b>table</b>, not a card grid.</p>
+
+  <!-- 4. the table -->
+  <h2><span class="n">04</span>The table — one renderer for every table</h2>
+  <p class="sectlede">Table 1, a regression table, a crosstab, a heatmap — the same display: rows × an
+  optional spread dimension × cells. Structure rides in hidden dotted columns
+  (<code>.section</code>, <code>.indent</code>, <code>.fmt</code>); numbers stay numeric and compose at
+  draw time.</p>
+  <table class="render" style="max-width:560px">
+    <tr><th>Characteristic</th><th class="num">Placebo</th><th class="num">Drug</th></tr>
+    <tr class="section"><td colspan="3">Sex — n (%)</td></tr>
+    <tr><td class="indent">Female</td><td class="num">31 (44.3%)</td><td class="num">28 (40.0%)</td></tr>
+    <tr><td class="indent">Male</td><td class="num">39 (55.7%)</td><td class="num">42 (60.0%)</td></tr>
+    <tr class="section"><td colspan="3">Age — mean (SD)</td></tr>
+    <tr><td class="indent">Years</td><td class="num">64.2 (8.1)</td><td class="num">62.9 (7.6)</td></tr>
+  </table>
+  <p class="caption">Cells composed from <span class="k">.fmt = "{n} ({pct}%)"</span> at render time —
+  the shaper emits tidy numbers, the renderer formats. The heatmap is the same renderer with
+  <span class="k">cell_color</span>.</p>
+
+  <hr class="divider">
+  <p class="foot-note">The vocabulary: <b>shape</b> upstream (summarize / correlate / pivot_wider) →
+  <b>render</b> with one of a few deep, composable renderers (<code>table</code>, <code>chart</code>,
+  <code>tile</code>). The tile is slots (overline · value · secondary×N+style · color · caption), two
+  layouts (cards · table). One frame, many views.</p>
+
+</div>
+</body>
+</html>

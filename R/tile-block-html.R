@@ -1,0 +1,319 @@
+# Layout builders + top-level tile_html() for new_tile_block().
+# Card grids cluster by group; the table renders measure-down (ungrouped) or
+# as a group x measure matrix (grouped). Both render the identical cells from
+# tile_long_frame() (see tile-block-render.R).
+
+#' Resolve the per-measure render spec, falling back from a per-measure
+#' `measures` override to the flat defaults. v1: `measures[[m]]` may override
+#' style / good_when / format / unit (presentation); the secondary column is
+#' the single flat `secondary` role.
+#' @noRd
+tk_measure_spec <- function(measure, measures, flat) {
+  ov <- if (is.list(measures)) measures[[measure]] else NULL
+  list(
+    style     = ov$style     %||% flat$style,
+    good_when = ov$good_when %||% flat$good_when,
+    format    = ov$format    %||% flat$format,
+    unit      = ov$unit      %||% flat$unit
+  )
+}
+
+#' Per-measure format specs, resolved from ALL of a measure's values (so every
+#' card / cell of one measure formats identically — not per single value).
+#' @noRd
+tile_fspecs <- function(cells, flat, measures) {
+  ms_names <- unique(cells$measure)
+  out <- list()
+  for (m in ms_names) {
+    spec <- tk_measure_spec(m, measures, flat)
+    out[[m]] <- tk_resolve_format(spec$format, m, cells$value[cells$measure == m])
+  }
+  out
+}
+
+#' Unit shown in a matrix column header: the explicit unit, else a glyph
+#' derived from the value format.
+#' @noRd
+tk_header_unit <- function(unit, fspec) {
+  if (!is.null(unit) && nzchar(unit)) return(unit)
+  switch(fspec$kind, percent = "%", currency = fspec$sym, "")
+}
+
+# ---------------------------------------------------------------------------
+# CARD layout
+# ---------------------------------------------------------------------------
+
+#' One card for a (group, measure) cell.
+#' @noRd
+tk_card <- function(cell, flat, measures, fspecs) {
+  ms <- tk_measure_spec(cell$measure, measures, flat)
+  fspec <- fspecs[[cell$measure]] %||%
+    tk_resolve_format(ms$format, cell$measure, cell$value)
+
+  over <- cell$overline
+  unit_node <- if (nzchar(ms$unit %||% "")) {
+    htmltools::tags$span(class = "tk-unit", ms$unit)
+  }
+  valrow <- htmltools::tags$div(
+    class = "tk-valrow",
+    tk_value_span(cell$value, fspec),
+    unit_node,
+    if (identical(ms$style, "delta")) {
+      tk_secondary_node("delta", cell$secondary[[1]], ms$good_when, fspec)
+    }
+  )
+
+  sec <- if (!identical(ms$style, "delta")) {
+    node <- tk_secondary_node(ms$style, cell$secondary[[1]], ms$good_when, fspec)
+    if (!is.null(node)) htmltools::tags$div(class = "tk-secondaries", node)
+  }
+  cap <- if (!is.na(cell$caption) && nzchar(cell$caption)) {
+    htmltools::tags$div(class = "tk-caption", cell$caption)
+  }
+
+  htmltools::tags$article(
+    class = "tk-card",
+    `data-group` = if (nzchar(cell$group)) cell$group else NULL,
+    htmltools::tags$div(class = "tk-overline tk-clamp", over),
+    valrow, sec, cap
+  )
+}
+
+#' Cards layout: ungrouped -> a single auto-fit grid (card per measure);
+#' grouped -> one labeled sub-grid per group level (card per measure).
+#' @noRd
+tk_cards_layout <- function(cells, flat, measures, grouped, fspecs) {
+  if (!grouped) {
+    cards <- lapply(seq_len(nrow(cells)), function(i) {
+      tk_card(cells[i, ], flat, measures, fspecs)
+    })
+    return(htmltools::tags$div(class = "tk-grid", cards))
+  }
+  groups <- unique(cells$group)
+  blocks <- lapply(groups, function(g) {
+    sub <- cells[cells$group == g, , drop = FALSE]
+    cards <- lapply(seq_len(nrow(sub)),
+                    function(i) tk_card(sub[i, ], flat, measures, fspecs))
+    htmltools::tagList(
+      htmltools::tags$p(class = "tk-overline",
+                        style = "margin:18px 0 11px;", g),
+      htmltools::tags$div(class = "tk-grid", cards)
+    )
+  })
+  htmltools::tags$div(class = "tk-stack", blocks)
+}
+
+# ---------------------------------------------------------------------------
+# TABLE layout
+# ---------------------------------------------------------------------------
+
+#' Ungrouped table: one row per measure, columns Metric / Value / (Secondary).
+#' @noRd
+tk_table_flat <- function(cells, flat, measures, fspecs = list()) {
+  has_sec_col <- !identical(flat$style, "plain") &&
+    any(vapply(cells$secondary, function(s) !all(is.na(s)), logical(1)))
+
+  head_cells <- list(htmltools::tags$th("Metric"),
+                     htmltools::tags$th(class = "r", "Value"))
+  if (has_sec_col) {
+    head_cells[[3]] <- htmltools::tags$th(class = "r", tk_sec_header(flat$style))
+  }
+  thead <- htmltools::tags$thead(htmltools::tags$tr(head_cells))
+
+  rows <- lapply(seq_len(nrow(cells)), function(i) {
+    cell <- cells[i, ]
+    ms <- tk_measure_spec(cell$measure, measures, flat)
+    fspec <- fspecs[[cell$measure]] %||%
+      tk_resolve_format(ms$format, cell$measure, cell$value)
+    tds <- list(
+      htmltools::tags$td(class = "lbl", cell$overline),
+      htmltools::tags$td(class = tk_val_td_class(cell$value),
+                         tk_format(cell$value, fspec))
+    )
+    if (has_sec_col) {
+      node <- tk_secondary_node(ms$style, cell$secondary[[1]], ms$good_when,
+                                fspec, context = "cell")
+      tds[[3]] <- htmltools::tags$td(class = "r", node)
+    }
+    htmltools::tags$tr(class = "tk-data-row",
+                       `data-group` = if (nzchar(cell$group)) cell$group else NULL,
+                       tds)
+  })
+  tk_table_wrap(thead, htmltools::tags$tbody(rows))
+}
+
+#' Grouped matrix: rows = group levels, columns = measures (value + secondary).
+#' @noRd
+tk_table_matrix <- function(cells, flat, measures, groups, meas) {
+  # header: group stub + one column per measure (with unit)
+  ths <- list(htmltools::tags$th("Group"))
+  fspecs <- list()
+  for (m in meas) {
+    vals <- cells$value[cells$measure == m]
+    ms <- tk_measure_spec(m, measures, flat)
+    fspec <- tk_resolve_format(ms$format, m, vals)
+    fspecs[[m]] <- fspec
+    unit <- tk_header_unit(ms$unit, fspec)
+    ths[[length(ths) + 1L]] <- htmltools::tags$th(
+      class = "r", tk_pretty(m),
+      if (nzchar(unit)) htmltools::tags$span(class = "th-unit", unit)
+    )
+  }
+  thead <- htmltools::tags$thead(htmltools::tags$tr(ths))
+
+  rows <- lapply(groups, function(g) {
+    tds <- list(htmltools::tags$td(class = "lbl", g))
+    for (m in meas) {
+      idx <- which(cells$group == g & cells$measure == m)
+      if (length(idx) == 0L) {
+        tds[[length(tds) + 1L]] <- htmltools::tags$td(class = "r", "—")
+        next
+      }
+      cell <- cells[idx[1], ]
+      ms <- tk_measure_spec(m, measures, flat)
+      fspec <- fspecs[[m]]
+      td <- if (identical(ms$style, "fill")) {
+        htmltools::tags$td(class = "r",
+          tk_secondary_node("fill", cell$secondary[[1]], ms$good_when, fspec,
+                            context = "cell"))
+      } else if (identical(ms$style, "delta")) {
+        htmltools::tags$td(class = "r", htmltools::tags$span(
+          class = "tk-cell",
+          htmltools::tags$span(class = "val num", tk_format(cell$value, fspec)),
+          tk_secondary_node("delta", cell$secondary[[1]], ms$good_when, fspec)
+        ))
+      } else {
+        htmltools::tags$td(class = tk_val_td_class(cell$value),
+                           tk_format(cell$value, fspec))
+      }
+      tds[[length(tds) + 1L]] <- td
+    }
+    htmltools::tags$tr(class = "tk-data-row", `data-group` = g, tds)
+  })
+  tk_table_wrap(thead, htmltools::tags$tbody(rows))
+}
+
+#' Value cell class, with is-neg coloring for negatives.
+#' @noRd
+tk_val_td_class <- function(x) {
+  paste(c("r val num", if (is.finite(x) && x < 0) "is-neg"), collapse = " ")
+}
+
+#' @noRd
+tk_sec_header <- function(style) {
+  switch(style, delta = "Δ", fill = "Progress", pill = "Status", "Reference")
+}
+
+#' @noRd
+tk_table_wrap <- function(thead, tbody) {
+  htmltools::tags$div(
+    class = "tk-tablewrap",
+    htmltools::tags$div(
+      class = "tk-scroll",
+      htmltools::tags$table(class = "tk-table", thead, tbody)
+    )
+  )
+}
+
+# ---------------------------------------------------------------------------
+# Top-level
+# ---------------------------------------------------------------------------
+
+#' Build the tile renderer HTML.
+#'
+#' @param data Input data frame (upstream, pre-filter).
+#' @param value,by,measure,secondary,overline,caption Role mappings.
+#' @param layout "cards" or "table".
+#' @param style,good_when,format,unit Flat render spec defaults.
+#' @param measures Optional per-measure override list.
+#' @param drill Logical; when TRUE cards / rows are clickable filters.
+#' @param elem_id ns()-based id used to build the `_action` input name.
+#' @return An [htmltools::tagList()].
+#' @noRd
+tile_html <- function(data, value = character(), by = "", measure = "",
+                      layout = "cards", overline = "", caption = "",
+                      secondary = "", style = "plain", good_when = "up",
+                      format = "auto", unit = "", measures = list(),
+                      drill = FALSE, elem_id = NULL) {
+  flat <- list(style = style %||% "plain", good_when = good_when %||% "up",
+               format = format %||% "auto", unit = unit %||% "")
+
+  cells <- tile_long_frame(data, value = value, by = by, measure = measure,
+                           secondary = secondary, overline = overline,
+                           caption = caption)
+
+  grouped <- nrow(cells) > 0L && any(nzchar(cells$group)) &&
+    tk_is_col(by, data)
+
+  fspecs <- if (nrow(cells) > 0L) tile_fspecs(cells, flat, measures) else list()
+
+  body <- if (nrow(cells) == 0L) {
+    tk_empty_card()
+  } else if (identical(layout, "table")) {
+    if (grouped) {
+      tk_table_matrix(cells, flat, measures,
+                      groups = unique(cells$group),
+                      meas = unique(cells$measure))
+    } else {
+      tk_table_flat(cells, flat, measures, fspecs)
+    }
+  } else {
+    tk_cards_layout(cells, flat, measures, grouped, fspecs)
+  }
+
+  drill_on <- isTRUE(drill) && grouped && !is.null(elem_id)
+  wrapper <- htmltools::tags$div(
+    class = paste("tk-block", if (drill_on) "tk-clickable"),
+    `data-tk-elem-id` = if (!is.null(elem_id)) elem_id else NULL,
+    `data-tk-drill`   = if (drill_on) "1" else NULL,
+    `data-tk-group`   = if (drill_on) by else NULL,
+    `data-tk-layout`  = layout,
+    `data-tk-cols`    = tile_cols_json(data),
+    `data-tk-config`  = tile_config_json(value, by, measure, secondary, style,
+                                         good_when, format, unit, overline,
+                                         caption, layout, drill),
+    body
+  )
+
+  htmltools::tagList(tile_block_dep(), wrapper)
+}
+
+#' Column metadata JSON for the config engine's `columns()`:
+#' [{name, type, n_unique}], type in numeric / categorical.
+#' @noRd
+tile_cols_json <- function(data) {
+  cols <- lapply(names(data), function(nm) {
+    x <- data[[nm]]
+    list(
+      name = nm,
+      type = if (is.numeric(x)) "numeric" else "categorical",
+      n_unique = length(unique(x))
+    )
+  })
+  as.character(jsonlite::toJSON(cols, auto_unbox = TRUE))
+}
+
+#' Serialize the current role config as JSON for the gear popover engine.
+#' The popover's column pickers are single-select, so `value` is emitted as a
+#' scalar (the first measure column); multi-column wide `value` is author / AI
+#' set, not popover-editable in v1.
+#' @noRd
+tile_config_json <- function(value, by, measure, secondary, style, good_when,
+                             format, unit, overline, caption, layout, drill) {
+  value <- as.character(value)
+  cfg <- list(
+    value     = if (length(value)) value[1] else "",
+    by        = by %||% "",
+    measure   = measure %||% "",
+    secondary = secondary %||% "",
+    style     = style %||% "plain",
+    good_when = good_when %||% "up",
+    format    = format %||% "auto",
+    unit      = unit %||% "",
+    overline  = overline %||% "",
+    caption   = caption %||% "",
+    layout    = layout %||% "cards",
+    drill     = isTRUE(drill)
+  )
+  as.character(jsonlite::toJSON(cfg, auto_unbox = TRUE, null = "null"))
+}

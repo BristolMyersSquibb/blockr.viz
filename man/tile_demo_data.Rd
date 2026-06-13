@@ -7,12 +7,18 @@
 tile_demo_data()
 }
 \value{
-A list with three tibbles: \code{transactions}, \code{time_series},
-\code{kpis_with_goals}.
+A list of tibbles:
+\itemize{
+\item \code{scorecard} — one row per metric with precomputed \code{delta} / \code{progress}
+/ \code{status} columns (long tile frame; for the card styles).
+\item \code{regions} — wide, one row per region with several measure columns (for
+the grouped matrix / \code{by}-clustered cards and drill).
+\item \code{transactions} — raw rows, to demo the upstream \code{summarize} -> tile flow.
+}
 }
 \description{
-Returns three data frames used by the tile-block demo app. Small,
-deterministic, covers the shapes the tile block needs to handle:
-transactions (facets + multiple measures), time_series (sparklines),
-kpis_with_goals (target + status).
+Small, deterministic frames covering the shapes the tile renderer handles.
+Because the tile does no arithmetic, the \code{scorecard} frame ships the
+secondaries already computed (a signed \code{delta}, a \code{progress} fraction, a
+\code{status}) so each display style can be demoed directly.
 }

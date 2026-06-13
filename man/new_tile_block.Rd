@@ -2,62 +2,100 @@
 % Please edit documentation in R/tile-block.R
 \name{new_tile_block}
 \alias{new_tile_block}
-\alias{block_ui.tile_block}
-\alias{block_output.tile_block}
-\alias{block_render_trigger.tile_block}
-\title{Tile Block}
+\title{Tile Block (KPI renderer)}
 \usage{
 new_tile_block(
-  showcase = c("number", "spark", "progress"),
-  state = list(),
+  value = character(),
+  by = "",
+  measure = "",
+  layout = "cards",
+  overline = "",
+  caption = "",
+  secondary = "",
+  style = "plain",
+  good_when = "up",
+  format = "auto",
+  unit = "",
+  measures = list(),
+  drill = FALSE,
+  filter_col = NULL,
+  filter_value = NULL,
   ...
 )
-
-\method{block_ui}{tile_block}(id, x, ...)
-
-\method{block_output}{tile_block}(x, result, session)
-
-\method{block_render_trigger}{tile_block}(x, session = shiny::getDefaultReactiveDomain())
 }
 \arguments{
-\item{showcase}{One of \code{"number"}, \code{"spark"}, \code{"progress"}.}
+\item{value}{Character vector of numeric column name(s). Multiple columns
+=> wide input (each becomes a measure).}
 
-\item{state}{Named list of initial block state. See design spec
-\verb{blockr.design/open/kpi-block-v2/} for the full schema. Fields:
-\code{aesthetics} (list of column-name mappings), \code{stats}
-(aesthetic → stat function), \code{formats} (aesthetic → format
-override).}
+\item{by}{Group/facet column (matrix rows / card clusters). \code{""} = none.}
+
+\item{measure}{Measure-label column for long input. \code{""} = use the \code{value}
+column names as measure names.}
+
+\item{layout}{\code{"cards"} or \code{"table"}. Same slots either way.}
+
+\item{overline, caption}{Supertext / subtext. A column name reads per-cell;
+any other non-empty string is a literal. \code{overline} defaults to the
+measure label.}
+
+\item{secondary}{Precomputed reference column drawn as the secondary.
+\code{""} = none.}
+
+\item{style}{Secondary display style: \code{plain} / \code{delta} / \code{fill} / \code{pill}.}
+
+\item{good_when}{Polarity for delta / fill / pill coloring: \code{"up"} (an
+increase is good) or \code{"down"} (a decrease is good — e.g. churn).}
+
+\item{format}{Value format: \code{"auto"} (inferred) / \code{"int"} / \code{"pct"} /
+\code{"usd"} / \code{"compact"}.}
+
+\item{unit}{Unit suffix shown next to the value / in the matrix header.}
+
+\item{measures}{Optional per-measure override list, keyed by measure name,
+each \code{list(style, good_when, format, unit)}. Lets a matrix draw Revenue
+as \code{delta} and Budget as \code{fill}. Falls back to the flat defaults.}
+
+\item{drill}{Logical; when \code{TRUE} a card / matrix-row click emits a
+categorical filter on the \code{by} column downstream. Off by default; only
+active when \code{by} is mapped.}
+
+\item{filter_col, filter_value}{Click-filter state. Kept as constructor
+params so the filter round-trips through save/restore (blockr.core
+deserializes a block via its constructor formals).}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
-
-\item{id}{Module ID.}
-
-\item{x}{Block object.}
-
-\item{result}{Evaluation result (the shaped long frame).}
-
-\item{session}{Shiny session.}
 }
 \value{
-A blockr transform block whose \code{result} is a long tidy
-tibble shaped for tile rendering. \code{\link[=block_output.tile_block]{block_output.tile_block()}}
-renders it as a grid of cards.
+A transform block of class \code{tile_block}. Its \code{result} is the
+upstream data filtered by the last click (passthrough when no drill),
+exactly like \code{\link[=new_table_block]{new_table_block()}}.
 }
 \description{
-Visually rich dashboard tiles driven by a ggplot-style aesthetic
-mapping. One block, three showcases in v1: \code{"number"} (big number
-with optional target / unit / status), \code{"spark"} (big number plus
-inline sparkline), \code{"progress"} (value vs. max as a ring or bar).
+A pure renderer for the bold display of a handful of important numbers —
+the KPI-card / scorecard family. Parallel to the \code{chart} and \code{table}
+interactive renderers: all shaping (\code{summarize} / \code{describe} / a lag-join
+for comparisons) happens upstream; the tile does no arithmetic. It maps
+columns to slots and draws them, in one of two layouts of identical
+content (\code{cards} or \code{table}), and is opt-in clickable as a filter (\code{drill})
+using the same transport as the chart / table.
 }
-\details{
-Input is any data frame. The block reduces as needed via per-
-aesthetic stat selectors — \code{mean} for \code{value} by default, \code{first}
-for \code{target} / \code{max}, \code{identity} for \code{spark_value}. Multiple stats
-checked on \code{value} produce multiple cards per measure.
+\section{Input contract}{
+The canonical input is a long "tile frame": one row per (group, measure)
+cell. Wide input is also accepted — when \code{value} names multiple numeric
+columns each becomes a measure (measure name = column name) and the
+renderer pivots to long internally (covers the one-row
+\code{summarize(across())} case).
+}
 
-Layout auto-adapts: map \code{rows} / \code{cols} for scorecard grids; leave
-them unmapped for a single row of cards.
+\section{Slots}{
+\code{overline} (supertext) · \code{value} (the main number, + \code{format} + \code{unit}) ·
+one \code{secondary} (a precomputed reference column drawn with a \code{style}) ·
+\code{caption} (subtext). The secondary \code{style} is one of \code{plain} (show the
+reference), \code{delta} (▲▼ \% colored by sign × \code{good_when}), \code{fill} (a
+progress bar to a fraction), \code{pill} (a status chip). \code{delta} / \code{target} /
+\code{max} are not distinct elements — they are one \code{secondary} + a style.
 }
+
 \seealso{
-\code{\link[=tile_shape]{tile_shape()}}, \code{\link[=tile_demo_data]{tile_demo_data()}}.
+\code{\link[=tile_demo_data]{tile_demo_data()}}.
 }

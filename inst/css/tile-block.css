@@ -1,600 +1,227 @@
-/* tile-block.css — styling for new_tile_block().
- *
- * Reference aesthetic: Tremor / Vercel / shadcn.
- * Typography: 400 / 500 / 600 weights only.
- * Numerals: tabular-nums.
- * Palette: muted; saturated accent only on status pills / sparks.
- */
+/* ============================================================
+   Tile (KPI renderer) — blockr.bi
+   Ported from dev/mockup/tile.html (Tile KPI Renderer v2).
+   Tokens build on blockr.dock greyscale + the #2563eb primary;
+   dark mode = surface-elevation tokens, not inverted colors.
+   Green is an added "up/good" semantic (blockr ships danger red
+   but no positive green). All classes are tk-* prefixed and the
+   tokens are scoped to .tk-block so nothing leaks to the host.
+   ============================================================ */
+.tk-block{
+  --tk-surface-0:#f8f9fb;   /* page / wrapper  */
+  --tk-surface-1:#ffffff;   /* card            */
+  --tk-surface-2:#f1f3f6;   /* track / subtle  */
+  --tk-ink-1:#111827;       /* primary text    */
+  --tk-ink-2:#6b7280;       /* secondary       */
+  --tk-ink-3:#9aa3b0;       /* tertiary / meta */
+  --tk-hair:#e8ebef;        /* hairline border */
+  --tk-hair-strong:#dde1e7;
+  --tk-accent:#2563eb;
+  --tk-accent-soft:rgba(37,99,235,.10);
+  --tk-green:#1f9d63;  --tk-green-soft:#e6f5ec;
+  --tk-red:#d6453d;    --tk-red-soft:#fbeceb;
+  --tk-amber:#b97c00;  --tk-amber-soft:#fbf1dd;
+  --tk-card-shadow:none;
+  --tk-hover-tint:rgba(37,99,235,.025);
 
-:root {
-  --tb-surface-0: #f8fafc;
-  --tb-surface-1: #ffffff;
-  --tb-surface-2: #f9fafb;
-  --tb-border:    #e5e7eb;
-  --tb-border-strong: #d1d5db;
-  --tb-text:      #111827;
-  --tb-muted:     #6b7280;
-  --tb-muted-2:   #9ca3af;
-  --tb-accent:    #2563eb;
-  --tb-green:     #10b981;
-  --tb-amber:     #f59e0b;
-  --tb-red:       #ef4444;
-  /* Categorical palette for "color by measure / column" — picked to be
-     pleasant in both tint and solid intensities and reasonably distinct. */
-  --tb-cat-1:     #2563eb;  /* blue   */
-  --tb-cat-2:     #14b8a6;  /* teal   */
-  --tb-cat-3:     #8b5cf6;  /* violet */
-  --tb-cat-4:     #f97316;  /* orange */
-  --tb-cat-5:     #ec4899;  /* pink   */
-  --tb-cat-6:     #0ea5e9;  /* sky    */
+  color:var(--tk-ink-1);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --tb-surface-0: #0b0d10;
-    --tb-surface-1: #151821;
-    --tb-surface-2: #1c2030;
-    --tb-border:    #2a2f3c;
-    --tb-border-strong: #3a4152;
-    --tb-text:      #e5e7eb;
-    --tb-muted:     #9ca3af;
-    --tb-muted-2:   #6b7280;
+/* Dark mode — driven by an ancestor [data-theme="dark"] (blockr.dock
+   sets this) with a prefers-color-scheme fallback for standalone use. */
+[data-theme="dark"] .tk-block,
+.tk-block[data-theme="dark"]{
+  --tk-surface-0:#0b0d12;
+  --tk-surface-1:#14171e;
+  --tk-surface-2:#1c2029;
+  --tk-ink-1:#e9ecf1;
+  --tk-ink-2:#9aa3b1;
+  --tk-ink-3:#69707d;
+  --tk-hair:rgba(255,255,255,.07);
+  --tk-hair-strong:rgba(255,255,255,.12);
+  --tk-accent:#5b8cf0;
+  --tk-accent-soft:rgba(91,140,240,.16);
+  --tk-green:#3ec487;  --tk-green-soft:rgba(62,196,135,.14);
+  --tk-red:#e8736b;    --tk-red-soft:rgba(232,115,107,.15);
+  --tk-amber:#d9a441;  --tk-amber-soft:rgba(217,164,65,.15);
+  --tk-card-shadow:0 1px 2px rgba(0,0,0,.4);
+  --tk-hover-tint:rgba(255,255,255,.022);
+}
+@media (prefers-color-scheme: dark){
+  .tk-block:not([data-theme="light"]):not(.tk-theme-light){
+    --tk-surface-0:#0b0d12;
+    --tk-surface-1:#14171e;
+    --tk-surface-2:#1c2029;
+    --tk-ink-1:#e9ecf1;
+    --tk-ink-2:#9aa3b1;
+    --tk-ink-3:#69707d;
+    --tk-hair:rgba(255,255,255,.07);
+    --tk-hair-strong:rgba(255,255,255,.12);
+    --tk-accent:#5b8cf0;
+    --tk-accent-soft:rgba(91,140,240,.16);
+    --tk-green:#3ec487;  --tk-green-soft:rgba(62,196,135,.14);
+    --tk-red:#e8736b;    --tk-red-soft:rgba(232,115,107,.15);
+    --tk-amber:#d9a441;  --tk-amber-soft:rgba(217,164,65,.15);
+    --tk-card-shadow:0 1px 2px rgba(0,0,0,.4);
+    --tk-hover-tint:rgba(255,255,255,.022);
   }
 }
 
-/* --- input UI --------------------------------------------------------- */
-
-.tile-block-settings {
-  padding: 8px 2px;
-  font-size: 0.875rem;
-  color: var(--tb-text);
-  position: relative;  /* anchors absolute popover */
-}
-
-.tile-block-settings .tb-pill-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.tile-block-settings .tb-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 12px;
-  height: 26px;
-  font: inherit;
-  font-size: 0.8125rem;
-  color: var(--tb-muted);
-  background: transparent;
-  border: 1px solid var(--tb-border);
-  border-radius: 999px;
-  cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-
-.tile-block-settings .tb-pill:hover {
-  color: var(--tb-text);
-  border-color: var(--tb-border-strong);
-}
-
-.tile-block-settings .tb-pill--active {
-  color: var(--tb-accent);
-  background: rgba(37, 99, 235, 0.08);
-  border-color: rgba(37, 99, 235, 0.3);
-}
-
-.tile-block-settings .tb-pill:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-}
-
-.tile-block-settings .tb-stat-pills .tb-pill {
-  height: 22px;
-  padding: 2px 10px;
-  font-size: 0.75rem;
-}
-
-/* Section headers: small uppercase muted label that groups rows. */
-.tile-block-settings .tb-section-header {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 14px 0 6px 0;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--tb-border);
-}
-
-.tile-block-settings .tb-section-title {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--tb-muted);
-}
-
-.tile-block-settings .tb-section-hint {
-  font-size: 0.75rem;
-  color: var(--tb-muted-2);
-}
-
-/* Aesthetic row: label on the left, control on the right. */
-.tile-block-settings .tb-aes-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.tile-block-settings .tb-aes-label {
-  min-width: 110px;
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--tb-muted);
-  font-weight: 500;
-}
-
-.tile-block-settings .tb-aes-control {
-  flex: 1;
-  min-width: 0;
-}
-
-.tile-block-settings .tb-aes-row .selectize-input {
-  min-height: 30px;
-  font-size: 0.8125rem;
-  padding: 4px 10px;
-  border-radius: 6px;
-}
-
-/* Per-template visibility: hide rows that don't opt-in to the active
- * template via data-template-shows="numbers kpi_list trends progress
- * scorecard custom". */
-.tile-block-settings[data-template="numbers"]
-  [data-template-shows]:not([data-template-shows~="numbers"]),
-.tile-block-settings[data-template="kpi_list"]
-  [data-template-shows]:not([data-template-shows~="kpi_list"]),
-.tile-block-settings[data-template="trends"]
-  [data-template-shows]:not([data-template-shows~="trends"]),
-.tile-block-settings[data-template="progress"]
-  [data-template-shows]:not([data-template-shows~="progress"]),
-.tile-block-settings[data-template="scorecard"]
-  [data-template-shows]:not([data-template-shows~="scorecard"]),
-.tile-block-settings[data-template="custom"]
-  [data-template-shows]:not([data-template-shows~="custom"]) {
-  display: none;
-}
-
-/* Per-template label text: each .tb-aes-label-text declares which
- * template it belongs to via data-label-for; CSS hides the others. */
-.tb-aes-label-multi .tb-aes-label-text { display: none; }
-.tile-block-settings[data-template="numbers"]
-  .tb-aes-label-text[data-label-for="numbers"],
-.tile-block-settings[data-template="kpi_list"]
-  .tb-aes-label-text[data-label-for="kpi_list"],
-.tile-block-settings[data-template="trends"]
-  .tb-aes-label-text[data-label-for="trends"],
-.tile-block-settings[data-template="progress"]
-  .tb-aes-label-text[data-label-for="progress"],
-.tile-block-settings[data-template="scorecard"]
-  .tb-aes-label-text[data-label-for="scorecard"],
-.tile-block-settings[data-template="custom"]
-  .tb-aes-label-text[data-label-for="custom"] {
-  display: inline;
-}
-
-/* Template picker pills sit at the top, slightly more prominent than
- * the row-level pill groups. */
-.tile-block-settings .tb-template-picker {
-  margin-bottom: 14px;
-}
-
-.tile-block-settings .tb-template-picker .tb-pill {
-  height: 28px;
-  padding: 4px 14px;
-  font-size: 0.8125rem;
-}
-
-/* Facet section: dim when the input has no usable categorical column. */
-.tile-block-settings.tb-no-facets .tb-facets-section {
-  opacity: 0.55;
-}
-
-.tile-block-settings.tb-no-facets .tb-facets-section .tb-section-hint::after {
-  content: " · no group columns in input";
-  color: var(--tb-muted-2);
-}
-
-/* Gear button (top-right of the panel). Toggles the .tb-popover. Mirrors
- * the .blockr-gear-btn pattern from blockr.dplyr/blockr-blocks.css so the
- * tile block visually fits with the rest of the ecosystem. */
-.tile-block-settings .tb-gear-btn {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  color: var(--tb-muted-2);
-  background: transparent;
-  border: 1px solid var(--tb-border);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-  z-index: 2;
-}
-
-.tile-block-settings .tb-gear-btn:hover {
-  color: var(--tb-accent);
-  border-color: rgba(37, 99, 235, 0.3);
-  background: rgba(37, 99, 235, 0.04);
-}
-
-.tile-block-settings .tb-gear-btn.blockr-gear-active {
-  color: var(--tb-accent);
-  border-color: rgba(37, 99, 235, 0.3);
-  background: rgba(37, 99, 235, 0.08);
-}
-
-/* Popover panel — anchored to the settings wrapper, opens below the gear. */
-.tile-block-settings .tb-popover {
-  position: absolute;
-  right: 4px;
-  top: 36px;
-  z-index: 1000;
-  background: var(--tb-surface-1);
-  border: 1px solid var(--tb-border);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  padding: 12px 14px;
-  min-width: 280px;
-}
-
-.tile-block-settings .blockr-popover-row {
-  margin-bottom: 10px;
-}
-.tile-block-settings .blockr-popover-row:last-child {
-  margin-bottom: 0;
-}
-
-.tile-block-settings .blockr-popover-label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--tb-muted);
-  margin-bottom: 4px;
-}
-
-/* Stat pills row: tighter than other aesthetic rows. */
-.tile-block-settings .tb-stat-row {
-  margin: -2px 0 8px 0;
-}
-
-.tile-block-settings .tb-stat-pills .tb-pill--active::before {
-  content: "";
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 5px;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M1.5 5.2 L4 7.5 L8.5 2.5' fill='none' stroke='%232563eb' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
-/* --- output grid ------------------------------------------------------ */
-
-.tile-block-output {
-  width: 100%;
-}
-
-.tb-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-}
-
-.tb-grid--spark .tb-card {
-  min-height: 140px;
-}
-
-/* List layout: one wide card; let it fill the available width. */
-.tb-grid--list {
-  grid-template-columns: 1fr;
-}
-
-/* --- card shell ------------------------------------------------------- */
-
-.tb-card {
-  background: var(--tb-surface-1);
-  border: 1px solid var(--tb-border);
-  border-radius: 12px;
-  padding: 18px 20px 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-height: 96px;
-  transition: border-color 0.15s ease, background 0.15s ease;
-  font-variant-numeric: tabular-nums;
-  color: var(--tb-text);
-  box-sizing: border-box;
-}
-
-.tb-card:hover {
-  border-color: var(--tb-border-strong);
-  background: var(--tb-surface-2);
-}
-
-.tb-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 18px;
-}
-
-.tb-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--tb-muted);
-  letter-spacing: 0.01em;
-  line-height: 1.3;
-  word-break: break-word;
-}
-
-.tb-value-stat {
-  display: inline-block;
-  font-size: 0.6875rem !important;
-  margin-left: 6px;
-  color: var(--tb-muted-2);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.tb-card-body {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  flex: 1;
-}
-
-.tb-value {
-  display: inline-block;
-  font-size: 1.75rem;
-  font-weight: 600;
-  line-height: 1.1;
-  color: var(--tb-text);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-}
-
-.tb-card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.75rem;
-  color: var(--tb-muted);
-  padding-top: 2px;
-}
-
-.tb-target {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.tb-unit {
-  display: inline-block;
-  font-size: 0.75rem;
-  color: var(--tb-muted);
-}
-
-.tb-empty {
-  color: var(--tb-muted-2);
-  font-size: 0.875rem;
-  text-align: center;
-  padding: 24px;
-}
-
-/* --- list layout (card-with-rows) ------------------------------------- */
-
-.tb-card--list {
-  padding: 8px 16px;
-  gap: 0;
-}
-
-.tb-card--list .tb-card-rows {
-  display: flex;
-  flex-direction: column;
-}
-
-.tb-card-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 14px;
-  align-items: baseline;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--tb-border);
-}
-
-.tb-card-row:last-child {
-  border-bottom: none;
-}
-
-.tb-card-row-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--tb-text);
-  word-break: break-word;
-}
-
-.tb-card-row-values {
-  font-variant-numeric: tabular-nums;
-  font-size: 0.9375rem;
-  color: var(--tb-text);
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.tb-card-row-value {
-  font-weight: 600;
-}
-
-.tb-card-row-target {
-  color: var(--tb-muted);
-  font-weight: 400;
-  font-size: 0.8125rem;
-}
-
-.tb-card-row-unit {
-  color: var(--tb-muted);
-  font-weight: 400;
-  font-size: 0.75rem;
-}
-
-/* --- card color (tint / solid / border) ------------------------------- */
-/* Each colored card sets --card-color via a hue class; the intensity
- * class picks how the variable is consumed (bg tint, solid bg, or just
- * a left border bar). Same model works for cards in grid layout and
- * rows in the list-in-card layout. */
-
-.tb-color-hue--ok    { --card-color: var(--tb-green); }
-.tb-color-hue--warn  { --card-color: var(--tb-amber); }
-.tb-color-hue--bad   { --card-color: var(--tb-red); }
-.tb-color-hue--cat-1 { --card-color: var(--tb-cat-1); }
-.tb-color-hue--cat-2 { --card-color: var(--tb-cat-2); }
-.tb-color-hue--cat-3 { --card-color: var(--tb-cat-3); }
-.tb-color-hue--cat-4 { --card-color: var(--tb-cat-4); }
-.tb-color-hue--cat-5 { --card-color: var(--tb-cat-5); }
-.tb-color-hue--cat-6 { --card-color: var(--tb-cat-6); }
-
-/* Tint: light pastel bg, darker accent border, regular text. */
-.tb-card.tb-color--tint {
-  background: color-mix(in srgb, var(--card-color) 10%, transparent);
-  border-color: color-mix(in srgb, var(--card-color) 25%, var(--tb-border));
-}
-.tb-card.tb-color--tint:hover {
-  background: color-mix(in srgb, var(--card-color) 14%, transparent);
-}
-
-/* Solid: saturated bg, white text, white-tinted muted bits. */
-.tb-card.tb-color--solid {
-  background: var(--card-color);
-  border-color: var(--card-color);
-  color: #fff;
-}
-.tb-card.tb-color--solid .tb-label,
-.tb-card.tb-color--solid .tb-value,
-.tb-card.tb-color--solid .tb-card-footer,
-.tb-card.tb-color--solid .tb-target,
-.tb-card.tb-color--solid .tb-unit {
-  color: #fff;
-}
-.tb-card.tb-color--solid .tb-label,
-.tb-card.tb-color--solid .tb-card-footer,
-.tb-card.tb-color--solid .tb-target,
-.tb-card.tb-color--solid .tb-unit {
-  color: rgba(255, 255, 255, 0.78);
-}
-.tb-card.tb-color--solid .tb-status-pill {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-}
-.tb-card.tb-color--solid .tb-value-stat {
-  color: rgba(255, 255, 255, 0.65) !important;
-}
-
-/* Border: neutral card with colored left bar. Quiet enough to use in
- * the list-in-card layout (per-row indicators) without shouting. */
-.tb-card.tb-color--border {
-  border-left: 4px solid var(--card-color);
-}
-
-/* List-row variants — same three intensities, but applied to one row
- * inside the list card rather than the whole card. */
-.tb-card-row.tb-color--tint {
-  background: color-mix(in srgb, var(--card-color) 10%, transparent);
-  margin: 0 -8px;
-  padding-left: 8px;
-  padding-right: 8px;
-  border-radius: 6px;
-}
-.tb-card-row.tb-color--solid {
-  background: var(--card-color);
-  color: #fff;
-  margin: 0 -8px;
-  padding-left: 8px;
-  padding-right: 8px;
-  border-radius: 6px;
-  border-bottom-color: transparent;
-}
-.tb-card-row.tb-color--solid .tb-card-row-label,
-.tb-card-row.tb-color--solid .tb-card-row-value,
-.tb-card-row.tb-color--solid .tb-card-row-target,
-.tb-card-row.tb-color--solid .tb-card-row-unit {
-  color: #fff;
-}
-.tb-card-row.tb-color--solid .tb-card-row-target,
-.tb-card-row.tb-color--solid .tb-card-row-unit {
-  color: rgba(255, 255, 255, 0.78);
-}
-.tb-card-row.tb-color--border {
-  border-left: 3px solid var(--card-color);
-  padding-left: 10px;
-  margin-left: -2px;
-}
-
-/* --- status pill ------------------------------------------------------ */
-
-.tb-status-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  font-size: 0.6875rem;
-  font-weight: 500;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  line-height: 1.4;
-}
-
-.tb-status--ok {
-  color: var(--tb-green);
-  background: rgba(16, 185, 129, 0.1);
-}
-
-.tb-status--warn {
-  color: var(--tb-amber);
-  background: rgba(245, 158, 11, 0.1);
-}
-
-.tb-status--bad {
-  color: var(--tb-red);
-  background: rgba(239, 68, 68, 0.1);
-}
-
-/* --- sparkline -------------------------------------------------------- */
-
-.tb-spark {
-  width: 100%;
-  height: 40px;
-  margin-top: 6px;
-  display: block;
-}
-
-/* --- progress ring ---------------------------------------------------- */
-
-.tb-progress-ring {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.tb-progress-ring .tb-value {
-  font-size: 1.5rem;
+.tk-block .num,
+.tk-block .tk-value,
+.tk-block .tk-table .val{
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1,"ss03" 1;
+}
+
+/* gear header (mirrors the table block's .blockr-gear-header) */
+.tk-block .blockr-gear-header{display:flex;justify-content:flex-end;margin-bottom:8px;}
+
+/* ============================================================
+   CARD layout
+   ============================================================ */
+.tk-stack{display:flex;flex-direction:column;gap:14px;}
+.tk-grid{
+  display:grid;gap:14px;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+}
+.tk-card{
+  position:relative;
+  background:var(--tk-surface-1);
+  border:1px solid var(--tk-hair);
+  border-radius:13px;
+  padding:21px 22px 22px;
+  box-shadow:var(--tk-card-shadow);
+  transition:border-color .15s ease,background .15s ease,transform .15s ease;
+  min-width:0;
+}
+.tk-card:hover{border-color:var(--tk-hair-strong);background:linear-gradient(var(--tk-hover-tint),var(--tk-hover-tint)),var(--tk-surface-1);}
+
+.tk-overline{
+  font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--tk-ink-3);margin-bottom:14px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.tk-valrow{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;}
+.tk-value{
+  font-size:31px;font-weight:600;letter-spacing:-.026em;line-height:1;
+  color:var(--tk-ink-1);
+}
+.tk-value.is-neg{color:var(--tk-red);}
+.tk-unit{font-size:14px;font-weight:500;color:var(--tk-ink-2);letter-spacing:-.01em;}
+
+/* delta (Δ%) — colored text + directional caret. Color follows
+   good/bad polarity, NOT the raw arrow direction. */
+.tk-delta{
+  display:inline-flex;align-items:center;gap:3px;
+  font-size:13px;font-weight:500;letter-spacing:-.005em;
+  line-height:1;
+}
+.tk-delta.good{color:var(--tk-green);}
+.tk-delta.bad{color:var(--tk-red);}
+.tk-delta.flat{color:var(--tk-ink-3);}
+.tk-delta svg{width:9px;height:9px;}
+.tk-delta.flat svg{display:none;}
+
+.tk-secondaries{margin-top:13px;display:flex;flex-direction:column;gap:9px;}
+.tk-caption{margin-top:11px;font-size:12.5px;color:var(--tk-ink-2);line-height:1.4;}
+
+/* pill — status chip */
+.tk-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  align-self:flex-start;
+  font-size:12px;font-weight:500;letter-spacing:.005em;
+  padding:3px 9px;border-radius:999px;line-height:1.35;
+}
+.tk-pill.good{background:var(--tk-green-soft);color:var(--tk-green);}
+.tk-pill.bad{background:var(--tk-red-soft);color:var(--tk-red);}
+.tk-pill.neutral{background:var(--tk-surface-2);color:var(--tk-ink-2);}
+.tk-pill .dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+/* fill — progress bar (value ÷ reference) */
+.tk-fill{display:flex;flex-direction:column;gap:7px;}
+.tk-fill__track{
+  height:6px;border-radius:999px;background:var(--tk-surface-2);overflow:hidden;
+}
+.tk-fill__bar{
+  height:100%;border-radius:999px;background:var(--tk-accent);
+  width:0;transition:width .55s cubic-bezier(.22,.61,.36,1);
+}
+.tk-fill__bar.good{background:var(--tk-green);}
+.tk-fill__meta{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font-size:12px;color:var(--tk-ink-2);
+}
+.tk-fill__meta b{color:var(--tk-ink-1);font-weight:600;}
+
+/* plain reference line */
+.tk-ref{font-size:13px;color:var(--tk-ink-2);}
+.tk-ref b{color:var(--tk-ink-1);font-weight:500;}
+
+/* ============================================================
+   TABLE layout (a real table: aligned cols, hairline rules)
+   ============================================================ */
+.tk-tablewrap{
+  background:var(--tk-surface-1);
+  border:1px solid var(--tk-hair);
+  border-radius:13px;
+  box-shadow:var(--tk-card-shadow);
+  overflow:hidden;
+}
+.tk-scroll{overflow-x:auto;}
+table.tk-table{
+  width:100%;border-collapse:collapse;
+  font-size:14px;
+}
+.tk-table th,.tk-table td{padding:13px 18px;text-align:left;vertical-align:middle;}
+.tk-table thead th{
+  font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--tk-ink-3);padding-top:14px;padding-bottom:11px;
+  border-bottom:1px solid var(--tk-hair);white-space:nowrap;
+}
+.tk-table th.r,.tk-table td.r{text-align:right;}
+.tk-table tbody tr{transition:background .12s ease;}
+.tk-table tbody tr:not(:last-child) td{border-bottom:1px solid var(--tk-hair);}
+.tk-table tbody tr:hover{background:linear-gradient(var(--tk-hover-tint),var(--tk-hover-tint));}
+.tk-table .lbl{color:var(--tk-ink-1);font-weight:500;}
+.tk-table .lbl .sub{display:block;font-size:11.5px;font-weight:400;color:var(--tk-ink-3);letter-spacing:0;text-transform:none;margin-top:1px;}
+.tk-table .val{font-weight:600;color:var(--tk-ink-1);letter-spacing:-.01em;}
+.tk-table .val.is-neg{color:var(--tk-red);}
+.tk-table .unit{color:var(--tk-ink-3);font-weight:500;margin-left:2px;}
+.th-unit{display:block;font-size:9.5px;font-weight:500;color:var(--tk-ink-3);letter-spacing:.04em;margin-top:2px;text-transform:none;}
+
+/* a number + its secondary, stacked tight & right-aligned, in a cell */
+.tk-cell{display:inline-flex;flex-direction:column;align-items:flex-end;gap:3px;}
+.tk-cell .tk-delta{font-size:11.5px;}
+
+/* matrix budget cell: compact inline fill */
+.tk-cellfill{display:inline-flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:104px;}
+.tk-cellfill .tk-fill__track{width:100%;height:5px;}
+.tk-cellfill .pct{font-weight:600;color:var(--tk-ink-1);font-size:13px;}
+
+/* drill: clickable rows / cards */
+.tk-block.tk-clickable .tk-card{cursor:pointer;}
+.tk-block.tk-clickable .tk-table tbody tr{cursor:pointer;}
+.tk-card.tk-active{border-color:var(--tk-accent);box-shadow:0 0 0 1px var(--tk-accent);}
+.tk-table tbody tr.tk-active{background:var(--tk-accent-soft);}
+
+/* ---------------- edge states ---------------- */
+.tk-card.is-empty{
+  display:grid;place-items:center;text-align:center;
+  min-height:128px;border-style:dashed;border-color:var(--tk-hair-strong);
+  background:var(--tk-surface-1);
+}
+.tk-empty__inner{color:var(--tk-ink-3);display:flex;flex-direction:column;align-items:center;gap:9px;}
+.tk-empty__inner svg{width:22px;height:22px;opacity:.7;}
+.tk-empty__inner span{font-size:13px;}
+.tk-clamp{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;white-space:normal;
+}
+
+@media (prefers-reduced-motion:reduce){
+  .tk-block *{transition:none!important;}
+  .tk-fill__bar{transition:none!important;}
 }
