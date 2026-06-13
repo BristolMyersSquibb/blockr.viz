@@ -249,10 +249,21 @@ leaf_header_content <- function(data, col_name, fallback_text, span) {
     return(fallback_text)
   }
   if (grepl("<", lbl, fixed = TRUE)) {
-    htmltools::HTML(lbl)
-  } else {
-    lbl
+    # Pre-baked HTML label (legacy / spanner path) — pass through untouched.
+    return(htmltools::HTML(lbl))
   }
+  # Direction-01 two-tier arm header: "<arm>\nN = <n>" splits into a strong
+  # arm name line + a quiet "N = k" sub-line. A label without a newline
+  # renders as the arm name alone.
+  parts <- strsplit(lbl, "\n", fixed = TRUE)[[1]]
+  name_line <- parts[1L]
+  n_line <- if (length(parts) > 1L) paste(parts[-1L], collapse = " ") else NULL
+  htmltools::tagList(
+    htmltools::tags$span(class = "arm__name", name_line),
+    if (!is.null(n_line) && nzchar(n_line)) {
+      htmltools::tags$span(class = "arm__n num", n_line)
+    }
+  )
 }
 
 # ---------------------------------------------------------------------------
@@ -272,6 +283,17 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
 
   prev_path <- rep(NA_character_, length(section_cols))
   out <- list()
+  # Index into `out` of the most-recent data row; used to apply the
+  # Direction-01 `blockr-group-last` hairline to the LAST stat row of each
+  # group (a rule only at the group boundary, not between every row).
+  last_data_idx <- NA_integer_
+  mark_group_last <- function() {
+    if (!is.na(last_data_idx)) {
+      r <- out[[last_data_idx]]
+      r$attribs$class <- paste(r$attribs$class, "blockr-group-last")
+      out[[last_data_idx]] <<- r
+    }
+  }
 
   n_rows <- nrow(data)
   for (i in seq_len(n_rows)) {
@@ -290,6 +312,14 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
         diff_from <- L
         break
       }
+    }
+
+    # A change at the outermost section level closes the previous group:
+    # tag its final data row with the group-end hairline before the new
+    # group header is emitted.
+    if (!is.na(diff_from) && diff_from == 1L) {
+      mark_group_last()
+      last_data_idx <- NA_integer_
     }
 
     if (!is.na(diff_from)) {
@@ -315,15 +345,22 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
           htmltools::tags$td(
             class = paste0("blockr-section-cell level-", L),
             colspan = ncol_total,
-            htmltools::tags$span(
-              class = "blockr-toggle",
-              htmltools::HTML("&#8250;")
-            ),
-            " ",
-            prefix_tag,
-            htmltools::tags$span(
-              class = "blockr-section-value",
-              curr_path[L]
+            # Direction-01: the whole group label is one full-width button
+            # (bigger hit target) carrying an SVG caret that rotates to encode
+            # collapsed state. The td gets padding:0; the button carries the
+            # padding (see html_table_delta_css). The collapse JS toggles
+            # `.collapsed` on the enclosing tr; the button is inside the row so
+            # its click bubbles up to that handler.
+            htmltools::tags$button(
+              class = "blockr-section-btn",
+              type = "button",
+              `aria-expanded` = "true",
+              section_chevron_svg(),
+              prefix_tag,
+              htmltools::tags$span(
+                class = "blockr-section-value",
+                curr_path[L]
+              )
             )
           )
         )
@@ -361,9 +398,12 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
     }
     for (cn in data_cols) {
       v <- data[[cn]][i]
+      is_missing <- is.na(v)
       cells[[length(cells) + 1L]] <- htmltools::tags$td(
-        class = "blockr-data",
-        if (is.na(v)) htmltools::HTML("&mdash;") else as.character(v)
+        # Direction-01: missing values get a muted em-dash so they read as
+        # 'no data' rather than as a real figure.
+        class = if (is_missing) "blockr-data blockr-dash" else "blockr-data",
+        if (is_missing) htmltools::HTML("&mdash;") else as.character(v)
       )
     }
 
@@ -371,9 +411,28 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
       class = row_class,
       cells
     )
+    last_data_idx <- length(out)
   }
 
+  # Close the final group.
+  mark_group_last()
+
   htmltools::tags$tbody(out)
+}
+
+#' Direction-01 group-header caret (SVG, not a text glyph). Rotates to encode
+#' collapsed state via CSS. Kept as a helper so both the section-header
+#' builder and any future reuse share one source of truth.
+#' @noRd
+section_chevron_svg <- function() {
+  htmltools::HTML(
+    paste0(
+      "<svg class=\"blockr-chev\" viewBox=\"0 0 24 24\" fill=\"none\" ",
+      "stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" ",
+      "stroke-linejoin=\"round\" aria-hidden=\"true\">",
+      "<path d=\"M6 9l6 6 6-6\"/></svg>"
+    )
+  )
 }
 
 # ---------------------------------------------------------------------------
@@ -441,37 +500,110 @@ input.blockr-search:focus {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   background-color: #ffffff;
 }
+/* ----------------------------------------------------------------
+   Direction-01 'Clean clinical' tokens. Mapped onto blockr theme
+   custom properties with the design HEX as the fallback, so the
+   renderer looks right with or without a blockr theme loaded. Scoped
+   to the container so they cannot leak.
+   ---------------------------------------------------------------- */
+.blockr-html-table-container {
+  --stbl-ink-1: var(--blockr-color-text-primary, #111827);
+  --stbl-ink-2: var(--blockr-color-text-secondary, #5b6573);
+  --stbl-ink-3: var(--blockr-color-text-muted, #9aa3b0);
+  --stbl-hair: var(--blockr-color-border, #e8ebef);
+  --stbl-hair-strong: var(--blockr-color-border-strong, #dde1e7);
+  --stbl-accent: var(--blockr-color-primary, #2563eb);
+  --stbl-surface-1: var(--blockr-color-bg, #ffffff);
+}
+/* Column headers — quiet uppercase-ish meta on the stat column, and the
+   two-tier arm treatment (strong name + soft N sub-line). */
 .blockr-html-table-container .blockr-table thead th {
-  text-align: center;
   vertical-align: bottom;
   white-space: normal;
   word-break: normal;
   overflow-wrap: break-word;
-  padding: 8px 12px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  font-weight: var(--blockr-font-weight-medium, 500);
+  color: var(--stbl-ink-2);
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--stbl-hair-strong);
+}
+.blockr-html-table-container .blockr-table thead th.blockr-col-header {
+  text-align: right;
 }
 .blockr-html-table-container .blockr-table thead th.blockr-col-header.group {
+  text-align: center;
   font-weight: var(--blockr-font-weight-semibold, 600);
-  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+  color: var(--stbl-ink-1);
 }
 .blockr-html-table-container .blockr-table thead th.blockr-col-header.leaf {
-  border-bottom: 2px solid var(--blockr-grey-300, #d1d5db);
+  font-size: 13.5px;
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--stbl-ink-1);
+  letter-spacing: -0.01em;
+}
+.blockr-html-table-container .blockr-table thead th .arm__name {
+  display: block;
+}
+.blockr-html-table-container .blockr-table thead th .arm__n {
+  display: block;
+  font-size: 11px;
+  font-weight: 450;
+  color: var(--stbl-ink-3);
+  letter-spacing: 0.01em;
+  margin-top: 3px;
 }
 .blockr-html-table-container .blockr-table thead th.blockr-col-header.leaf strong {
   font-weight: var(--blockr-font-weight-semibold, 600);
-  font-size: var(--blockr-font-size-base, 0.875rem);
+  font-size: 13.5px;
 }
 .blockr-html-table-container .blockr-table thead th.blockr-stub-header {
   text-align: left;
-  border-bottom: 2px solid var(--blockr-grey-300, #d1d5db);
+  border-bottom: 1px solid var(--stbl-hair-strong);
 }
+/* Stat-label (row-stub) cells — wrap to 2 lines (never truncate), aligned
+   to the top so a wrapped label stays level with its numbers. */
 .blockr-html-table-container .blockr-table tbody td.blockr-stub {
   text-align: left;
-  padding-left: 16px;
-  font-weight: var(--blockr-font-weight-normal, 400);
+  vertical-align: top;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: none;
+  padding: 9px 18px 9px 40px;
+  font-size: 13.5px;
+  font-weight: 450;
+  color: var(--stbl-ink-2);
 }
+/* Value cells — right-aligned, tabular figures, top-aligned to match the
+   wrapping stub. */
 .blockr-html-table-container .blockr-table tbody td.blockr-data {
   text-align: right;
+  vertical-align: top;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: none;
+  padding: 9px 18px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--stbl-ink-1);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+/* Em-dash for missing values reads as 'no data', not as a real figure. */
+.blockr-html-table-container .blockr-table tbody td.blockr-data.blockr-dash {
+  color: var(--stbl-ink-3);
+}
+/* Subtle accent-tinted hover on stat rows. */
+.blockr-html-table-container .blockr-table tbody tr.blockr-data-row:hover td {
+  background: rgba(37, 99, 235, 0.035);
+}
+/* A hairline ONLY at the end of each group, not between every row. */
+.blockr-html-table-container .blockr-table tbody tr.blockr-group-last td {
+  border-bottom: 1px solid var(--stbl-hair);
+  padding-bottom: 11px;
 }
 .blockr-html-table-container .blockr-table tbody tr.blockr-bold td {
   font-weight: var(--blockr-font-weight-semibold, 600);
@@ -479,67 +611,82 @@ input.blockr-search:focus {
 .blockr-html-table-container .blockr-table tbody tr.blockr-italic td {
   font-style: italic;
 }
+/* Group header row + full-width clickable button. The td carries no
+   padding (so the bigger hit target reaches the row edges); the button
+   carries it per dir-1. */
 .blockr-html-table-container .blockr-table tbody tr.blockr-section-header {
   cursor: pointer;
 }
-.blockr-html-table-container .blockr-table tbody tr.blockr-section-header td {
-  position: relative;
+.blockr-html-table-container .blockr-table tbody tr.blockr-section-header td.blockr-section-cell {
+  padding: 0;
   text-align: left;
-  color: var(--blockr-color-text-primary, #111827);
-  padding-top: 12px;
-  padding-bottom: 4px;
-  border-top: 1px solid var(--blockr-color-border, #e5e7eb);
-  font-weight: var(--blockr-font-weight-semibold, 600);
-  background: #ffffff;
-  transition: background 0.08s;
-}
-.blockr-html-table-container .blockr-table tbody tr.blockr-section-header:hover td {
-  background: var(--blockr-color-bg-subtle, #f9fafb);
-}
-.blockr-html-table-container .blockr-table tbody tr.blockr-section-header[data-level='2'] td {
-  padding-left: 32px;
-}
-.blockr-html-table-container .blockr-table tbody tr.blockr-section-header[data-level='3'] td {
-  padding-left: 48px;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-}
-.blockr-html-table-container .blockr-table tbody tr.blockr-section-header[data-level='4'] td {
-  padding-left: 64px;
-  font-weight: var(--blockr-font-weight-medium, 500);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-}
-.blockr-html-table-container .blockr-table tbody tr.blockr-section-header:first-child td {
   border-top: none;
 }
+.blockr-html-table-container .blockr-section-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  color: var(--stbl-ink-1);
+  padding: 15px 18px 8px;
+}
+.blockr-html-table-container .blockr-section-cell.level-2 .blockr-section-btn {
+  padding-left: 36px;
+}
+.blockr-html-table-container .blockr-section-cell.level-3 .blockr-section-btn {
+  padding-left: 54px;
+}
+.blockr-html-table-container .blockr-section-cell.level-4 .blockr-section-btn {
+  padding-left: 72px;
+}
+.blockr-html-table-container .blockr-section-value {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  letter-spacing: -0.005em;
+  font-size: 14px;
+}
+.blockr-html-table-container .blockr-section-cell.level-3 .blockr-section-value,
+.blockr-html-table-container .blockr-section-cell.level-4 .blockr-section-value {
+  font-size: 13px;
+}
+/* SVG caret — muted at rest, darkens on hover, rotates to encode state.
+   Path is a down-caret (expanded); collapsed rotates it -90deg. */
+.blockr-html-table-container .blockr-chev {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  color: var(--stbl-ink-3);
+  transition: transform 0.2s ease, color 0.15s ease;
+}
+.blockr-html-table-container .blockr-section-btn:hover .blockr-chev {
+  color: var(--stbl-ink-1);
+}
+.blockr-html-table-container tr.blockr-section-header.collapsed .blockr-chev {
+  transform: rotate(-90deg);
+}
 .blockr-html-table-container .blockr-table tbody tr:last-child td {
-  border-bottom: 2px solid var(--blockr-grey-300, #d1d5db);
-}
-.blockr-html-table-container .blockr-toggle {
-  position: absolute;
-  left: 2px;
-  top: 50%;
-  margin-top: -0.55em;
-  width: 0.9em;
-  color: var(--blockr-color-text-muted, #6b7280);
-  font-weight: var(--blockr-font-weight-normal, 400);
-  font-size: 1em;
-  line-height: 1;
-  text-align: center;
-  /* glyph points right; rotate to point DOWN when expanded, 0deg when collapsed */
-  transform: rotate(90deg);
-  transform-origin: center;
-  transition: transform 0.12s ease;
-}
-.blockr-html-table-container tr.blockr-section-header:hover .blockr-toggle {
-  color: var(--blockr-color-text-primary, #111827);
-}
-.blockr-html-table-container tr.blockr-section-header.collapsed .blockr-toggle {
-  transform: rotate(0deg);
+  border-bottom: none;
 }
 .blockr-html-table-container .blockr-section-label {
-  color: var(--blockr-color-text-muted, #6b7280);
+  color: var(--stbl-ink-3);
   font-weight: var(--blockr-font-weight-normal, 400);
   margin-right: 4px;
+}
+/* Sticky header + scroll shadow. The header stays put while the body
+   scrolls; a soft shadow fades in once the scroll container is scrolled
+   (the JS toggles `.scrolled` on .blockr-table-wrapper). */
+.blockr-html-table-container .blockr-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--stbl-surface-1);
+}
+.blockr-html-table-container .blockr-table-wrapper.scrolled thead th {
+  box-shadow: 0 10px 16px -14px rgba(16, 24, 40, 0.4);
 }
 .blockr-html-table-caption {
   padding: 8px 4px 4px;
@@ -633,7 +780,7 @@ html_table_js_template <- function() {
   var root = document.getElementById('__WRAPPER_ID__');
   if (!root || root.getAttribute('data-blockr-initialized') === '1') return;
   root.setAttribute('data-blockr-initialized', '1');
-  var table = root.querySelector('table.blockr-html-table');
+  var table = root.querySelector('table.blockr-table');
   if (!table) return;
   var tbody = table.querySelector('tbody');
   if (!tbody) return;
@@ -665,10 +812,17 @@ html_table_js_template <- function() {
       }
     });
   }
+  function syncAria(h){
+    var btn = h.querySelector('.blockr-section-btn');
+    if (btn) btn.setAttribute('aria-expanded', h.classList.contains('collapsed') ? 'false' : 'true');
+  }
   function toggleCollapse(h){
     h.classList.toggle('collapsed');
+    syncAria(h);
     recomputeCollapse();
   }
+  // The group label is a <button> inside the header row; its click bubbles
+  // up to this row-level handler, so one listener covers both.
   root.querySelectorAll('tr.blockr-section-header').forEach(function(h){
     h.addEventListener('click', function(ev){
       ev.stopPropagation();
@@ -678,8 +832,20 @@ html_table_js_template <- function() {
   if (root.getAttribute('data-initial-expanded') === '0') {
     root.querySelectorAll('tr.blockr-section-header').forEach(function(h){
       h.classList.add('collapsed');
+      syncAria(h);
     });
     recomputeCollapse();
+  }
+
+  // ---------- Sticky-header scroll shadow ----------
+  var scrollWrap = root.querySelector('.blockr-table-wrapper');
+  if (scrollWrap) {
+    var onScroll = function(){
+      if (scrollWrap.scrollTop > 2) scrollWrap.classList.add('scrolled');
+      else scrollWrap.classList.remove('scrolled');
+    };
+    scrollWrap.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
   }
 
   // ---------- Sort ----------

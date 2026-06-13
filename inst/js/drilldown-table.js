@@ -126,19 +126,49 @@
         }
       });
     }
+    // Keep the group-button's aria-expanded in sync with the row's collapsed
+    // state (the chevron rotation is purely CSS off `.collapsed`).
+    function syncAria(h) {
+      var btn = h.querySelector(".blockr-section-btn");
+      if (btn) {
+        btn.setAttribute(
+          "aria-expanded",
+          h.classList.contains("collapsed") ? "false" : "true"
+        );
+      }
+    }
     root.querySelectorAll("tr.blockr-section-header").forEach(function (h) {
+      // The Direction-01 group label is a <button> inside the row; its click
+      // bubbles to this row-level handler, so a single listener covers both
+      // the button and any bare-cell click.
       h.addEventListener("click", function (ev) {
         ev.stopPropagation();
         h.classList.toggle("collapsed");
+        syncAria(h);
         recompute();
       });
     });
     if (root.getAttribute("data-initial-expanded") === "0") {
       root.querySelectorAll("tr.blockr-section-header").forEach(function (h) {
         h.classList.add("collapsed");
+        syncAria(h);
       });
       recompute();
     }
+  }
+
+  // Sticky-header scroll shadow: toggle `.scrolled` on the scroll container
+  // once it's scrolled away from the top, so the sticky header detaches with
+  // a soft shadow rather than a hard line (Direction-01).
+  function wireScrollShadow(root) {
+    var sc = root.querySelector(".blockr-table-wrapper");
+    if (!sc) return;
+    function onScroll() {
+      if (sc.scrollTop > 2) sc.classList.add("scrolled");
+      else sc.classList.remove("scrolled");
+    }
+    sc.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
   }
 
   function wireSearch(root, tbody) {
@@ -374,6 +404,7 @@
     wireSearch(root, tbody);
     wireClick(root, tbody);
     wireCollapse(root, tbody);
+    wireScrollShadow(root);
   }
 
   function scan(ctx) {
