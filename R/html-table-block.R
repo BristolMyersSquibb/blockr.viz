@@ -387,8 +387,11 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
 
     cells <- list()
     if (!is.null(stub_col)) {
+      # Align the first stat level with the section-header label (40px = the
+      # group button's caret+gap offset), per the design. Deeper indents add
+      # one unit each. indent-0 uses the 40px base from td.blockr-stub.
       stub_style <- if (row_indent > 0L) {
-        paste0("padding-left:", 16L + row_indent * indent_px, "px;")
+        paste0("padding-left:", 24L + row_indent * indent_px, "px;")
       } else NULL
       cells[[length(cells) + 1L]] <- htmltools::tags$td(
         class = "blockr-stub",
