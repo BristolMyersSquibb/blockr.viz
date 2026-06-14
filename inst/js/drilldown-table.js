@@ -107,6 +107,25 @@
   // section-header stack so nested collapse is honoured.
   function wireCollapse(root, tbody) {
     if (root.getAttribute("data-dt-structured") !== "1") return;
+    var table = tbody.closest("table");
+    // Freeze the content-fit column widths so collapsing a section never reflows
+    // the columns (an auto-layout table re-sizes the stub to whatever rows are
+    // visible). Called on the first toggle, when the table is visible and still
+    // at its full default width, so the measured widths are the max-content ones.
+    // Pin every column except the last; the last (a value column) keeps flexing
+    // so the table still fills the panel. No-op if already locked or hidden.
+    function lockWidths() {
+      if (!table || table.dataset.widthsLocked === "1" || table.offsetWidth === 0) return;
+      var ths = table.querySelectorAll("thead th");
+      if (ths.length < 2) return;
+      var widths = Array.prototype.map.call(ths, function (th) { return th.offsetWidth; });
+      table.style.tableLayout = "fixed";
+      table.style.width = "100%";
+      Array.prototype.forEach.call(ths, function (th, i) {
+        if (i < ths.length - 1) th.style.width = widths[i] + "px";
+      });
+      table.dataset.widthsLocked = "1";
+    }
     function recompute() {
       var stack = [];
       Array.prototype.slice.call(tbody.children).forEach(function (r) {
@@ -143,6 +162,7 @@
       // the button and any bare-cell click.
       h.addEventListener("click", function (ev) {
         ev.stopPropagation();
+        lockWidths();              // pin widths before the first reflow
         h.classList.toggle("collapsed");
         syncAria(h);
         recompute();
