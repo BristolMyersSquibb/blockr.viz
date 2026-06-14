@@ -6,19 +6,24 @@
 #   - columns = ...       restrict the effect to named columns (empty = all)
 #
 # Run:  Rscript blockr.viz-cellvis/dev/cell-visuals-demo.R
-# (Uses an ISOLATED install of this worktree's blockr.bi from /tmp/cellvis-lib
-#  so it never touches the shared library.)
+# Loads THIS worktree's package from source (pkgload::load_all) — works on any
+# machine, no install needed, and picks up the R + inst/js changes.
 
-.libPaths(c("/tmp/cellvis-lib", .libPaths()))
 # 3838 is the forwarded port for the user; CELLVIS_PORT overrides it for
-# automated in-container checks that must not collide with another app.
+# automated checks that must not collide with another app.
 options(shiny.port = as.integer(Sys.getenv("CELLVIS_PORT", "3838")),
         shiny.host = "0.0.0.0")
 options(blockr.html_table_preview = TRUE)
 
 suppressMessages({
   library(blockr.core)
-  library(blockr.bi)
+  # The package is still named blockr.bi on this branch (the .bi->.viz rename
+  # lives on another branch). Once that merges, this load_all target becomes the
+  # renamed package.
+  args <- commandArgs(trailingOnly = FALSE)
+  this <- sub("^--file=", "", args[grep("^--file=", args)])
+  pkg_root <- dirname(dirname(normalizePath(this)))   # dev/ -> package root
+  pkgload::load_all(pkg_root, quiet = TRUE)
 })
 
 # AE-count style data — the data-bar use case (sortable/searchable "patients
