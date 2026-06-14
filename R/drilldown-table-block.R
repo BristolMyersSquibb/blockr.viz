@@ -224,20 +224,34 @@ drilldown_table_color <- function(type = c("diverging", "sequential"),
 dt_th <- function(name, idx, stub = FALSE, label = NULL) {
   cls <- if (stub) "blockr-stub-header blockr-sortable" else
     "blockr-col-header leaf blockr-sortable"
-  htmltools::tags$th(
-    class = cls,
-    `data-col-index` = idx,
-    # Name + sort indicator share one row (name left, arrow right, same
-    # baseline); the variable label sits on its own line below.
-    htmltools::tags$div(
-      class = "dt-th-namerow",
-      htmltools::tags$span(class = "blockr-col-name", name),
-      htmltools::tags$span(class = "blockr-sort-icon")
-    ),
-    if (!is.null(label)) {
-      htmltools::tags$span(class = "blockr-col-label", label)
-    }
-  )
+  name_span <- htmltools::tags$span(class = "blockr-col-name", name)
+  sort_span <- htmltools::tags$span(class = "blockr-sort-icon")
+  if (!is.null(label)) {
+    # Labelled column: name on top, then the subtext and the sort arrow
+    # share the lower row (label left, arrow right) — like the html
+    # preview, so the arrow doesn't add a row of its own.
+    htmltools::tags$th(
+      class = cls,
+      `data-col-index` = idx,
+      name_span,
+      htmltools::tags$div(
+        class = "dt-th-subrow",
+        htmltools::tags$span(class = "blockr-col-label", label),
+        sort_span
+      )
+    )
+  } else {
+    # Unlabelled column: name and sort arrow share the single row.
+    htmltools::tags$th(
+      class = cls,
+      `data-col-index` = idx,
+      htmltools::tags$div(
+        class = "dt-th-namerow",
+        name_span,
+        sort_span
+      )
+    )
+  }
 }
 
 #' Variable label for a column header, consistent with how the

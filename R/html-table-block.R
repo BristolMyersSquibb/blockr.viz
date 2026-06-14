@@ -770,6 +770,48 @@ html_table_shared_css_fallback <- function() {
 .blockr-sort-icon-desc::after {
   content: '\\2193';
   color: #374151;
+}
+/* Toolbar + search chrome. Generic table chrome (not the structured Table-1
+   treatment), so it lives here in the always-injected shared CSS — the
+   drilldown table block injects the structured delta CSS only for Table-1
+   output, and the styled search box must survive on flat tables too. */
+.blockr-html-table-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+}
+.blockr-html-table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+input.blockr-search {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 4px;
+  padding: 4px 8px 4px 26px;
+  font: inherit;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-primary, #111827);
+  background-color: var(--blockr-color-bg-input, #f9fafb);
+  background-image: url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3-3'/></svg>\");
+  background-repeat: no-repeat;
+  background-position: 8px center;
+  width: 180px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+input.blockr-search::placeholder { color: var(--blockr-color-text-subtle, #9ca3af); }
+input.blockr-search:focus {
+  outline: none;
+  border-color: var(--blockr-color-primary, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  background-color: #ffffff;
 }"
 }
 
