@@ -142,13 +142,16 @@
   // FAMILY_ROLES — per family, ordered. A section entry is either a role key
   // (always shown for the family) or { role, types:[...] } (shown only for
   // those chart types). requiredMap rows render immediately; optionalMap rows
-  // are added on demand from the "+ Add mapping" menu. `metric` is required
-  // for aggregated but lives in the Encoding section (carries its own marker).
+  // are added on demand from the "+ Add mapping" menu. `mapping` holds always-on
+  // controls shown under the Mapping header after the role rows — for the chart
+  // that is `metric` (required, carries its own marker) + the `agg_fn`: a bar IS
+  // a sum-of-group, so the aggregation is part of the mapping, not a separate
+  // "encoding" step.
   const FAMILY_ROLES = {
     aggregated: {
       requiredMap: ['group'],
       optionalMap: ['color', 'facet', 'label'],
-      encoding: ['metric', { role: 'agg_fn', types: ['bar', 'waterfall', 'pie', 'treemap', 'radar'] }],
+      mapping: ['metric', { role: 'agg_fn', types: ['bar', 'waterfall', 'pie', 'treemap', 'radar'] }],
       // orientation: bar only for v1 (boxplot swap is a follow-up). Waterfall
       // is vertical-only (a bridge reads left-to-right along the value axis), so
       // it does not expose orientation.
@@ -158,7 +161,7 @@
     individual: {
       requiredMap: ['x', 'y'],
       optionalMap: ['series', 'color', 'facet', 'label'],
-      encoding: [],
+      mapping: [],
       presentation: [
         { role: 'smoother', types: ['scatter'] },
         { role: 'lo', types: ['line'] },
@@ -169,7 +172,7 @@
     timeline: {
       requiredMap: ['x', 'xend', 'y'],
       optionalMap: ['series', 'color', 'facet', 'label'],
-      encoding: [],
+      mapping: [],
       presentation: ['sort_by', 'sort_dir']
     }
   };

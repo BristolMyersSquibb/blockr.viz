@@ -1,8 +1,8 @@
 /**
  * DrilldownConfig — the shared gear-popover config engine for blockr drilldown
  * blocks (chart, table, …). Host-agnostic: it renders a grouped, role-spec
- * driven popover (Mapping / Encoding / Presentation + a Drill-down section)
- * and calls back into a host for everything block-specific.
+ * driven popover (Mapping / Presentation + a Drill-down section) and calls
+ * back into a host for everything block-specific.
  *
  * A host provides (see DrilldownChart for the chart implementation):
  *   popoverEl()      -> the <body>-portaled popover element
@@ -11,7 +11,9 @@
  *   columns()        -> column metadata array [{name,type,n_unique,label?}]
  *   context()        -> string key for colTypeBy/optionsBy/hintBy (chart=family)
  *   currentType()    -> the chart-type value (for type-conditional rows) or null
- *   sections()       -> {requiredMap,optionalMap,encoding,presentation} (current)
+ *   sections()       -> {requiredMap,optionalMap,mapping,presentation} (current)
+ *                       (`mapping` = always-on controls shown under the Mapping
+ *                        header after the role-picker rows, e.g. metric + agg)
  *   sectionsForFamily(fam) -> the same for a specific family (carry-over)
  *   secondary        -> Set of paired-tail role keys (skipped in section loops)
  *   typeKey          -> the config key the type picker writes (e.g. 'chart_type')
@@ -95,7 +97,7 @@
 
     _entryApplicable(key) {
       const spec = this.h.sections();
-      const all = [...spec.encoding, ...spec.presentation];
+      const all = [...(spec.mapping || []), ...spec.presentation];
       const e = all.find(x => (typeof x === 'string' ? x : x.role) === key);
       if (!e) return false;
       return typeof e === 'string' || !e.types || e.types.includes(this.h.currentType());
@@ -163,19 +165,23 @@
         pop.appendChild(typesRow);
       }
 
-      // Mapping: required rows, shown-optional rows, add menu (skipped whole
-      // if the block has no mapping roles — e.g. the table).
+      // Mapping: required rows, then any always-on mapping controls (the
+      // chart's metric + aggregation), shown-optional rows, add menu. Skipped
+      // whole if the block has no mapping roles at all (e.g. the table).
       const shownOpt = spec.optionalMap.filter(k => this._hasVal(cfg[k]) || this._added.has(k));
       const remaining = spec.optionalMap.filter(k => !shownOpt.includes(k));
-      if (spec.requiredMap.length || shownOpt.length || remaining.length) {
+      const mapExtra = this._filterEntries(spec.mapping || []);
+      if (spec.requiredMap.length || mapExtra.length || shownOpt.length || remaining.length) {
         const mapSec = this._sectionEl('Mapping');
         for (const key of spec.requiredMap) this._renderRole(mapSec, key, { required: true });
+        this._renderEntries(mapSec, mapExtra);
         for (const key of shownOpt) this._renderRole(mapSec, key, { removable: true });
         if (remaining.length) this._addMappingMenu(mapSec, remaining);
       }
 
-      // Encoding / Presentation
-      this._renderSection('Encoding', spec.encoding);
+      // Presentation — formatting, sorting, layout: everything past the data
+      // mapping. (The former "Encoding" section was folded away: chart metric +
+      // aggregation moved up into Mapping; tile value-formatting moved here.)
       this._renderSection('Presentation', spec.presentation);
 
       // Drill-down (optional — host opts out by returning null from drillAutoLabel)
@@ -195,18 +201,28 @@
       return sec;
     }
 
-    _renderSection(titleText, entries) {
+    // Normalise a section's entry list and drop the ones not applicable to the
+    // current type / handled as a paired tail. Shared by the Mapping extras and
+    // the Presentation section so both filter identically.
+    _filterEntries(entries) {
       const ct = this.h.currentType();
-      const list = entries
+      return entries
         .map(e => (typeof e === 'string' ? { role: e } : e))
         .filter(e => !e.types || e.types.includes(ct))
         .filter(e => !this._SECONDARY.has(e.role));
-      if (!list.length) return;
-      const sec = this._sectionEl(titleText);
+    }
+
+    _renderEntries(container, list) {
       for (const e of list) {
         const required = this.h.entryRequired ? this.h.entryRequired(e.role) : false;
-        this._renderRole(sec, e.role, { required });
+        this._renderRole(container, e.role, { required });
       }
+    }
+
+    _renderSection(titleText, entries) {
+      const list = this._filterEntries(entries);
+      if (!list.length) return;
+      this._renderEntries(this._sectionEl(titleText), list);
     }
 
     _renderRole(container, key, opts = {}) {
@@ -540,7 +556,8 @@
     _carryRoles(newFam) {
       const spec = this.h.sectionsForFamily(newFam);
       const cfg = this._cfg();
-      const keep = new Set([...spec.requiredMap, ...spec.optionalMap]);
+      const mapKeys = (spec.mapping || []).map(e => (typeof e === 'string' ? e : e.role));
+      const keep = new Set([...spec.requiredMap, ...spec.optionalMap, ...mapKeys]);
       for (const key of Object.keys(this.h.roles)) {
         if (this.h.roles[key].kind !== 'column') continue;
         if (this.h.carryKeep && this.h.carryKeep.includes(key)) continue;

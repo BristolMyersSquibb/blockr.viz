@@ -54,8 +54,10 @@
   var TILE_SECTIONS = {
     requiredMap: ['value'],
     optionalMap: ['by', 'measure', 'secondary', 'overline', 'caption'],
-    encoding: ['style', 'good_when', 'format', 'unit'],
-    presentation: ['layout']
+    mapping: [],
+    // Value formatting (style / good-when / number format / unit) is presentation,
+    // not data mapping — it lives alongside layout under the Presentation header.
+    presentation: ['style', 'good_when', 'format', 'unit', 'layout']
   };
 
   function sendConfig(elemId, param, value) {

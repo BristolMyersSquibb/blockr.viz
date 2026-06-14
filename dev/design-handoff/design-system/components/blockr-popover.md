@@ -115,9 +115,18 @@ Controls in the popover read in the order one would set them, not the order
 they appear in `external_ctrl`:
 
 1. Type / mode selector first (it gates everything below it).
-2. Mapping (group/x/y/series/color/facet).
-3. Encoding (metric, aggregation).
-4. Presentation (sort, rounding, theme, coloring).
+2. Mapping (group/x/y/series/color/facet — and, for a chart, the metric +
+   aggregation: a bar *is* a sum-of-group, so the aggregation is part of the
+   mapping, not a step beside it).
+3. Presentation (value formatting, sort, rounding, theme, coloring, layout).
+
+There are only **two** field sections, Mapping and Presentation (plus the
+type picker above and the Drill-down section below). An earlier draft carried a
+third "Encoding" section between them; it was dropped because "encoding" is the
+grammar-of-graphics name for the field→channel binding — i.e. a synonym for
+*Mapping* — so the two headers read as duplicates. What had been "Encoding"
+split cleanly anyway: the chart's metric/aggregation are mapping; the tile's
+style/good-when/number-format/unit are presentation.
 
 Conditional field sets (the chart's aggregated / individual / timeline
 families, toggled via `dd-cfg-*` classes) stay conditional, but the
