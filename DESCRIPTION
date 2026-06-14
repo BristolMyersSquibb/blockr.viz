@@ -11,8 +11,7 @@ Description: The render layer for blockr dashboards: interactive 'chart',
     'table', and 'tile' blocks (built on ECharts and HTML widgets) plus a
     'summary_table' shaper and a static 'gt' table renderer. Renderers take
     tidy, rectangular data and draw it, with optional cell coloring and
-    click-to-filter drill-down. Pairs with 'blockr.dock', which arranges the
-    blocks into a dashboard.
+    click-to-filter drill-down.
 URL: https://github.com/BristolMyersSquibb/blockr.viz
 BugReports: https://github.com/BristolMyersSquibb/blockr.viz/issues
 License: GPL (>= 3)

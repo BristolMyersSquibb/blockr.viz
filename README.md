@@ -32,18 +32,13 @@ column name to enable it.
 Call `register_viz_blocks()` once to register all five with the block-adder and
 the assistant block universe.
 
-## How it fits together
-
-blockr.viz pairs with [blockr.dock](https://github.com/BristolMyersSquibb/blockr.dock):
-**blockr.dock arranges** the blocks into a dashboard layout, **blockr.viz draws**
-the data inside them. See `vignette("blockr-viz")` for the shaper / renderer
-model and the five-layer pipeline.
+See `vignette("blockr-viz")` for the shaper / renderer model and the five-layer
+pipeline.
 
 ## Demo
 
 A bar chart aggregates rows per category and, on click, filters the table
-below it. blockr.dock provides the dashboard layout; `new_dag_extension()` adds
-the workflow editor.
+below it; `new_dag_extension()` adds the workflow editor.
 
 ```r
 library(blockr.core)

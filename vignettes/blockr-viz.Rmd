@@ -24,9 +24,11 @@ obvious place in a pipeline.
 
 The organizing principle is a split between two kinds of blocks:
 
-- **Verbs compute** and return a tidy data frame you can keep transforming
-  (`describe`, `correlate`, `frequencies`, plus dplyr verbs like `summarize`
-  and `filter`).
+- **Verbs compute** and return a tidy data frame you can keep transforming. The
+  one verb blockr.viz ships is `summary_table`; you compose it with dplyr verbs
+  (`summarize`, `filter`, `pivot_wider`) from blockr.dplyr. (Other stat shapers,
+  e.g. `frequencies` or a `model`/`broom` pair, live in sibling packages such as
+  blockr.stats.)
 - **Nouns render**: they take an already-shaped data frame and draw it
   (`chart`, `table`, `tile`, `gt`).
 
@@ -46,7 +48,7 @@ right, and a renderer only ever sees a tidy/rectangular data frame.
 
 | Layer | Job | Output | Blocks |
 |---|---|---|---|
-| **Shape** | compute / summarise | tidy df | `describe`, `correlate`, `frequencies`, + dplyr verbs (`summarize`, `filter`, …) |
+| **Shape** | compute / summarise | tidy df | `summary_table` (blockr.viz) + dplyr verbs (`summarize`, `filter`, …); other stat shapers (`frequencies`, …) live in blockr.stats |
 | **Reshape** | tidy → display grid (wide, *on purpose*) | wide df | dplyr `pivot_wider` |
 | **Fit** | fit a statistical model | model object | `model` |
 | **Adapt** | model → tidy | tidy df | `broom` (tidy / glance / augment) |
@@ -54,10 +56,11 @@ right, and a renderer only ever sees a tidy/rectangular data frame.
 
 So a pipeline reads as a sequence of roles:
 
-- `describe → table` — "describe these variables, show them as a table"
-- `correlate → table` — a correlation heatmap (`table` with cell coloring)
-- `model → broom → table` — a coefficient table
+- `summary_table → table` — summarise variables by a group, shown as a Table 1
+- `summary_table → gt` — the same, rendered for print
+- a correlation matrix `→ table` — a diverging, cell-colored heatmap
 - `summarize → pivot_wider → chart` — a crosstab plotted
+- `model → broom → table` — a coefficient table (`model`/`broom` from blockr.stats)
 
 `blockr.viz` owns the **render** layer, plus the `summary_table` shaper that
 feeds it.
@@ -164,7 +167,9 @@ that lives in blockr.viz. It aggregates a flat data frame into a tidy, long
 summary frame — raw numeric statistic columns plus the dotted structure columns
 and a `.fmt` template — covering the "list of variables by Y" pattern:
 
-```{r}
+```{r, eval = TRUE}
+library(blockr.viz)
+
 summary_table(
   iris,
   vars = c("Sepal.Length", "Species"),
@@ -173,7 +178,9 @@ summary_table(
 )
 ```
 
-Its output is tidy (every number is a plain numeric column) and re-renderable by
+Note the output: one `Mean (SD)` row for the numeric variable and one row per
+level for the categorical, every statistic in a plain numeric column, with the
+`.fmt` template carrying the display recipe. Its output is tidy and re-renderable by
 any of the renderers above. The complementary "one measurement across two
 dimensions" pivot is not a bespoke block — it is composed upstream from
 `summarize` and `tidyr::pivot_wider`.
@@ -181,6 +188,5 @@ dimensions" pivot is not a bespoke block — it is composed upstream from
 ## Putting it together
 
 Call `register_viz_blocks()` once to register the five blocks with the
-block-adder and the assistant. blockr.viz pairs with **blockr.dock**:
-blockr.dock arranges the blocks into a dashboard layout, and blockr.viz draws
-the data inside them. See the package README for a runnable end-to-end board.
+block-adder and the assistant. See the package README for a runnable end-to-end
+board.
