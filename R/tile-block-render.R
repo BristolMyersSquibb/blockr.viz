@@ -294,7 +294,6 @@ tk_secondary_node <- function(style, value, good_when, spec, context = "card") {
     tone <- tk_pill_tone(value)
     return(htmltools::tags$span(
       class = paste("tk-pill", tone),
-      htmltools::tags$span(class = "dot"),
       as.character(value)
     ))
   }
