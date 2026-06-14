@@ -408,16 +408,22 @@
       // popoverEl. Remove any previously registered handler first so only
       // one is ever active per instance.
       if (this._outsideClick) {
-        document.removeEventListener('click', this._outsideClick);
+        document.removeEventListener('mousedown', this._outsideClick);
       }
+      // Decide on mousedown, not click: a Blockr.Select dropdown is portaled to
+      // <body> (outside the popover) and tears itself down on the option click,
+      // so by click time its ancestor is gone and the exclusion below would
+      // miss — picking a value would dismiss the settings form. At mousedown the
+      // dropdown is still attached.
       this._outsideClick = (e) => {
         if (this._popoverOpen && this.popoverEl &&
             !this.popoverEl.contains(e.target) &&
-            !this.gearBtn.contains(e.target)) {
+            !this.gearBtn.contains(e.target) &&
+            !(e.target.closest && e.target.closest('.blockr-select__dropdown'))) {
           this._closePopover();
         }
       };
-      document.addEventListener('click', this._outsideClick);
+      document.addEventListener('mousedown', this._outsideClick);
 
       // Chart area
       this.chartGrid = document.createElement('div');
@@ -2356,7 +2362,7 @@
       // Remove the document-level outside-click listener (otherwise it
       // accumulates one stale closure per widget instance).
       if (this._outsideClick) {
-        document.removeEventListener('click', this._outsideClick);
+        document.removeEventListener('mousedown', this._outsideClick);
         this._outsideClick = null;
       }
       // Remove the popover that was portaled to <body> — if the widget

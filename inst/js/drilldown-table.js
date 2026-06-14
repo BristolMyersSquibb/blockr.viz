@@ -319,6 +319,9 @@
     var staleP = document.querySelector(
       '.dd-popover[data-dd-pop-for="' + (window.CSS && CSS.escape
         ? CSS.escape(elemId) : elemId) + '"]');
+    // The table re-renders on every config edit and rebuilds this popover;
+    // remember whether the prior instance was open so we can restore it.
+    var wasOpen = !!(staleP && staleP.style.display === "block");
     if (staleP && staleP.parentNode) staleP.parentNode.removeChild(staleP);
 
     var pop = document.createElement("div");
@@ -352,7 +355,7 @@
       ensureDefaults: function () {},
       afterTypeChange: function () {},
       isOpen: function () { return pop.style.display === "block"; },
-      reopen: function () {}
+      reopen: function () { openPop(); }
     }).render();
 
     // Anchor the popover to the gear in viewport coords. The shared CSS
@@ -379,37 +382,44 @@
     var reposition = function () {
       if (pop.style.display === "block") positionPop();
     };
+    function openPop() {
+      pop.style.display = "block";
+      btn.classList.add("blockr-gear-active");
+      btn.setAttribute("aria-expanded", "true");
+      positionPop();
+      requestAnimationFrame(positionPop);
+      window.addEventListener("scroll", reposition, true);
+      window.addEventListener("resize", reposition);
+    }
+    function closePop() {
+      pop.style.display = "none";
+      btn.classList.remove("blockr-gear-active");
+      btn.setAttribute("aria-expanded", "false");
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+    }
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
-      var open = pop.style.display === "block";
-      if (open) {
-        pop.style.display = "none";
-        btn.classList.remove("blockr-gear-active");
-        btn.setAttribute("aria-expanded", "false");
-        window.removeEventListener("scroll", reposition, true);
-        window.removeEventListener("resize", reposition);
-      } else {
-        pop.style.display = "block";
-        btn.classList.add("blockr-gear-active");
-        btn.setAttribute("aria-expanded", "true");
-        positionPop();
-        requestAnimationFrame(positionPop);
-        window.addEventListener("scroll", reposition, true);
-        window.addEventListener("resize", reposition);
-      }
+      if (pop.style.display === "block") closePop(); else openPop();
     });
-    document.addEventListener("click", function (e) {
-      if (!pop.contains(e.target) && !btn.contains(e.target)) {
-        pop.style.display = "none";
-        btn.classList.remove("blockr-gear-active");
-        btn.setAttribute("aria-expanded", "false");
-        window.removeEventListener("scroll", reposition, true);
-        window.removeEventListener("resize", reposition);
-      }
+    // Decide on mousedown, not click: a Blockr.Select dropdown is portaled to
+    // <body> (outside the popover) and tears itself down on the option click,
+    // so at click time the exclusion below would miss and picking a value would
+    // dismiss the settings form. At mousedown the dropdown is still attached.
+    document.addEventListener("mousedown", function (e) {
+      if (pop.style.display !== "block") return;
+      var t = e.target;
+      if (pop.contains(t) || btn.contains(t)) return;
+      if (t.closest && t.closest(".blockr-select__dropdown")) return;
+      closePop();
     });
 
     document.body.appendChild(pop);
     root.insertBefore(header, root.firstChild);
+    // Keep the form open until the user clicks away: each config edit
+    // re-renders the table and rebuilds this popover closed, so restore the
+    // open state captured from the prior instance above.
+    if (wasOpen) openPop();
   }
 
   function init(root) {
