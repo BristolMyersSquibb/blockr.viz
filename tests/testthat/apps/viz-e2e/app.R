@@ -67,6 +67,15 @@ serve(
         y          = "profit",
         drill      = "auto"
       ),
+      # Dedicated chart for the gear-popover engine test (mutating its
+      # chart_type must not disturb the other charts' drill tests).
+      chart_cfg = new_chart_block(
+        chart_type = "bar",
+        group      = "region",
+        metric     = "revenue",
+        agg_fn     = "sum",
+        drill      = "region"
+      ),
       # KPI tile matrix, click-to-filter drill on the group.
       tile = new_tile_block(
         value = "revenue",
@@ -87,6 +96,7 @@ serve(
       new_link("data", "chart_pie", "data"),
       new_link("data", "chart_scatter", "data"),
       new_link("data", "chart_brush", "data"),
+      new_link("data", "chart_cfg", "data"),
       new_link("data", "tile", "data"),
       new_link("data", "summary", "data"),
       new_link("data", "gt", "data")

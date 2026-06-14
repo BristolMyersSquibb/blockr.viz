@@ -124,6 +124,40 @@ cdp_click <- function(x, y) {
   app$wait_for_idle()
 }
 
+# --- Gear popover (drilldown-config.js) -----------------------------------
+# Popovers are portaled to <body>, one per chart; the OPEN one has
+# display:block. These helpers scope to that open popover.
+POPOVER_OPEN_JS <- "Array.from(document.querySelectorAll('.blockr-popover')).find(function(p){return p.style.display!=='none';})"
+
+gear_open <- function(block_id) {
+  app$run_js(sprintf(
+    "document.querySelector('#board-block_%s-expr-drilldown_block .blockr-gear-btn').click();",
+    block_id
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.3)
+}
+
+popover_is_open <- function() {
+  isTRUE(app$get_js(sprintf("!!(%s)", POPOVER_OPEN_JS)))
+}
+
+popover_active_type <- function() {
+  app$get_js(sprintf(
+    "(function(){var p=%s; if(!p) return null; var a=p.querySelector('.dd-type-btn.dd-type-active'); return a?a.textContent:null;})()",
+    POPOVER_OPEN_JS
+  ))
+}
+
+popover_click_type <- function(type) {
+  app$run_js(sprintf(
+    "(function(){var p=%s; Array.from(p.querySelectorAll('.dd-type-btn')).filter(function(b){return b.textContent==='%s';})[0].click();})()",
+    POPOVER_OPEN_JS, type
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.5)
+}
+
 # Click an ECharts grid data point (bar / scatter / line). `at` is the
 # [value, category-or-value] pair the chart's convertToPixel() maps to a pixel,
 # read right before the click so the (settled) layout is current.
@@ -432,6 +466,40 @@ test_that("chart: a rectangular brush filters to the selected x/y range", {
   res <- get_block_result("chart_brush")
   expect_equal(nrow(res), 1L)
   expect_equal(res$revenue, 100)
+})
+
+# ===========================================================================
+# GEAR POPOVER ENGINE (drilldown-config.js) — real DOM, not the action input
+# ===========================================================================
+
+test_that("gear popover: a chart-type switch keeps it open and the block live", {
+  skip_if_no_app()
+
+  cfg <- "#board-block_chart_cfg-expr-drilldown_block"
+  app$run_js(sprintf("document.querySelector('%s').scrollIntoView({block:'center'});", cfg))
+  app$wait_for_js(sprintf("!!document.querySelector('%s canvas')", cfg), timeout = 15000)
+  app$wait_for_idle()
+
+  gear_open("chart_cfg")
+  expect_true(popover_is_open())
+  expect_equal(popover_active_type(), "bar")
+
+  # Switch bar -> pie through the real type picker. This is where the historic
+  # family-switch freeze lived: the popover must stay open (wasOpen -> reopen)
+  # and the chart must re-render rather than wedge.
+  popover_click_type("pie")
+  expect_true(popover_is_open())
+  expect_equal(popover_active_type(), "pie")
+  expect_true(app$get_js(sprintf("!!document.querySelector('%s canvas')", cfg)))
+
+  # Not wedged: a drill still flows through to the (re-filtered) output.
+  send_action(chart_action("chart_cfg"), list(
+    action = "filter", filter_type = "categorical",
+    column = "region", values = list("South")
+  ))
+  res <- get_block_result("chart_cfg")
+  expect_setequal(unique(res$region), "South")
+  expect_equal(nrow(res), 2L)
 })
 
 # ===========================================================================
