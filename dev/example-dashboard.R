@@ -1,19 +1,16 @@
 # blockr.viz — everything at once.
 #
-# A dense union of the three per-renderer tours (example-chart / -table /
-# -tile): every chart type, every table mode, every tile style, packed into a
-# few multi-panel dock views so the full surface of chart / table / tile is
-# visible at a glance. No narrative — just the capabilities. blockr.dock packs
-# the panels; switch views with the tabs top-right.
+# A union of the three per-renderer tours (example-chart / -table / -tile):
+# every chart type, every table mode, every tile style. Each view holds about
+# three panels, and each panel is a TAB STRIP — click through the variants in
+# place instead of squinting at a dense grid. Switch views with the tabs
+# top-right. No narrative — just the capabilities.
 #
-# Views
-#   Charts        bar, scatter(+lm trend), line, pie, treemap, radar, boxplot,
-#                 facetted bar, waterfall — a 3x3 grid
-#   Tables        flat listing, structured Table 1, crosstab heatmap,
-#                 correlation (diverging), and the gt publication table
-#   Tiles         delta / fill / pill cards, the measures x group matrix, and
-#                 compact / percent / unit number formats
-#   Interactions  drill: click a chart bar or a tile card to filter a table
+# Views (panel = tab strip)
+#   Charts        [bar|pie|treemap] [scatter+lm|line|boxplot] [radar|facet|waterfall]
+#   Tables        [flat|Table 1] [crosstab heatmap|correlation] [gt publication]
+#   Tiles         [delta|fill|pill] [matrix] [compact|percent|unit]
+#   Interactions  drill: chart->table and tile->table (shown side by side)
 #
 # Run from the workspace root (inside or outside the dev container):
 #   Rscript blockr.viz/dev/example-dashboard.R
@@ -173,21 +170,26 @@ board <- new_dock_board(
       "ix_chart", "ix_tbl", "ix_tile", "ix_tiletbl"
     )
   ),
+  # ~3 panels per view; each panel is a TABBED leaf (panels()) so a user clicks
+  # through the variants in place rather than squinting at a dense grid.
   layouts = list(
     charts = dock_layout(
-      group("c_bar", "c_scatter", "c_line"),
-      group("c_pie", "c_treemap", "c_radar"),
-      group("c_box", "c_facet", "c_wf"),
-      orientation = "vertical", name = "Charts"),
+      panels("c_bar", "c_pie", "c_treemap"),
+      panels("c_scatter", "c_line", "c_box"),
+      panels("c_radar", "c_facet", "c_wf"),
+      orientation = "horizontal", name = "Charts"),
     tables = dock_layout(
-      group("t_flat", "t_summtbl"),
-      group("t_xt", "t_cor"),
-      "t_gt",
+      panels("t_flat", "t_summtbl"),
+      panels("t_xt", "t_cor"),
+      panels("t_gt"),
       orientation = "vertical", name = "Tables (+ gt)"),
     tiles = dock_layout(
-      group("ti_delta", "ti_fill", "ti_pill"),
-      group("ti_matrix", "ti_compact", "ti_percent", "ti_unit"),
-      orientation = "vertical", name = "Tiles"),
+      panels("ti_delta", "ti_fill", "ti_pill"),
+      panels("ti_matrix"),
+      panels("ti_compact", "ti_percent", "ti_unit"),
+      orientation = "horizontal", name = "Tiles"),
+    # Drill needs the chart and its table visible together, so keep these as
+    # side-by-side pairs rather than tabs.
     interactions = dock_layout(
       group("ix_chart", "ix_tbl"),
       group("ix_tile", "ix_tiletbl"),
