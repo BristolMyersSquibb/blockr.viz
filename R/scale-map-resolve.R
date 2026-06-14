@@ -88,3 +88,35 @@ dd_scales_config <- function(map, chart_type, color, group, data) {
     lapply(res, as.list)
   )
 }
+
+# Resolve `col`'s scale-map colors to a PER-ROW hex vector (one entry per row
+# of `data`, NA where the row's value is unmapped) for the CATEGORICAL row
+# swatch (e.g. SEX: F = teal, M = orange) — the same colors the chart uses, via
+# the same resolver. This is orthogonal to the numeric `cell_color` heatmap
+# (sequential / diverging over the body cells): the swatch rides the categorical
+# column, the heatmap owns the numeric body, so both coexist. Returns NULL when
+# there is no map, `col` is not bound in it (resolve_scales returns NULL), or
+# blockr.theme is not installed.
+dd_row_hex <- function(map, col, data) {
+  if (is.null(map) || is.null(col) || !is.data.frame(data) ||
+        !col %in% names(data)) {
+    return(NULL)
+  }
+
+  if (!requireNamespace("blockr.theme", quietly = TRUE)) {
+    return(NULL)
+  }
+
+  res <- blockr.theme::resolve_scales(
+    map, col,
+    levels = dd_levels(data[[col]]),
+    palette = DD_BLOCKR_PALETTE
+  )
+
+  pal <- res$color
+  if (is.null(pal)) {
+    return(NULL)
+  }
+
+  unname(pal[as.character(data[[col]])])
+}
