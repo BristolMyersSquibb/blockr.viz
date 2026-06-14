@@ -7,7 +7,7 @@
 #
 # The two layouts (cards / table) render the identical cells. Multi-instance
 # safety comes from the per-render wrapper id + the ns()-based elem_id (same
-# model as drilldown-table-block.R), so no custom-message namespacing needed.
+# model as table-block.R), so no custom-message namespacing needed.
 
 # ---------------------------------------------------------------------------
 # Normalization: input frame + roles -> long cell frame

@@ -167,11 +167,6 @@ test_that("html_table() round-trips a summary_table() output", {
   expect_true(grepl("blockr-html-table", html, fixed = TRUE))
 })
 
-test_that("new_html_table_block() constructs a valid block", {
-  blk <- new_html_table_block(title = "X")
-  expect_s3_class(blk, "html_table_block")
-})
-
 test_that("leaf data column headers carry data-col-index and sortable class", {
   df <- tibble::tibble(
     .label  = c("n", "Mean"),

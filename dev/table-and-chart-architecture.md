@@ -269,9 +269,17 @@ table"), `correlate → table` (heatmap), `model → broom → table` (coefficie
 - **Renderer rename**: `new_drilldown_chart_block → new_chart_block` (class
   `chart_block`, "Chart"); `new_drilldown_table_block → new_table_block` (class
   `table_block`, "Table"); `*_arguments()` and `config_effect.*` methods follow the
-  class. Deprecated forwarding aliases keep old serialized boards loading (blockr.core
-  resolves a saved block by **constructor name** via `get0()`, verified against
-  `blockr_deser.block`). blockr.mcp `block-universe` keys updated.
+  class. The chart keeps a deprecated forwarding alias so old serialized boards load
+  (blockr.core resolves a saved block by **constructor name** via `get0()`, verified
+  against `blockr_deser.block`). blockr.mcp `block-universe` keys updated.
+- **Table aliases removed (2026-06-14)**: `new_drilldown_table_block` and the
+  standalone `new_html_table_block` (class `html_table_block`, + its `block_ui`/
+  `block_output` methods) were deleted outright — `new_table_block` is the single
+  table block, rendering flat + structured input by reusing the `html_table()`
+  builders. Files renamed: `drilldown-table-block.R → table-block.R`,
+  `html-table-block.R → html-table.R`, `inst/js/drilldown-table.js → table.js`,
+  `inst/css/drilldown-table.css → table.css`. Old boards referencing the removed
+  constructors will not deserialize (accepted: blockr.bi is being renamed anyway).
 - **blockr.input** `new_table_block` (CRUD) → `new_table_crud_block` to free the name.
 - **`summary_table` AI args** tuned to 5/5 (all 9 `state` fields exposed,
   sections-nesting + `id_var` gating). See `blockr.ai/dev/summary-table-eval-live.R`.

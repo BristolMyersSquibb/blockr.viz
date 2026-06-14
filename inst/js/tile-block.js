@@ -6,7 +6,7 @@
  *   - builds the gear popover via the shared Blockr.DrilldownConfig engine,
  *   - wires a card / matrix-row click to a categorical filter on the group.
  *
- * Mirrors drilldown-table.js (scan + MutationObserver init, body-portaled
+ * Mirrors table.js (scan + MutationObserver init, body-portaled
  * popover keyed by the ns()-based elem id, so two tiles never collide).
  */
 (function () {

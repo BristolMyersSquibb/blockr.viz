@@ -496,12 +496,12 @@ drilldown_table_dep <- function() {
       stylesheet = "drilldown-chart.css"
     ),
     htmltools::htmlDependency(
-      name = "drilldown-table",
+      name = "blockr-bi-table",
       version = utils::packageVersion("blockr.bi"),
       src = system.file(package = "blockr.bi"),
       # drilldown-config.js (the shared engine) must load before the table JS.
-      script = c("js/drilldown-config.js", "js/drilldown-table.js"),
-      stylesheet = "css/drilldown-table.css"
+      script = c("js/drilldown-config.js", "js/table.js"),
+      stylesheet = "css/table.css"
     )
   )
 }
@@ -766,23 +766,9 @@ new_table_block <- function(rowname = NULL,
   )
 }
 
-#' Drilldown Table Block (deprecated alias)
-#'
-#' Deprecated alias for [new_table_block()]. The block was renamed from
-#' "Drill-Down Table" to "Table" (the drill-down behaviour is an opt-in
-#' `drill` feature, not the block's identity). Kept so existing serialized
-#' boards that reference `new_drilldown_table_block` still deserialize.
-#'
-#' @param ... Forwarded to [new_table_block()].
-#' @return A transform block of class `table_block`.
-#' @export
-new_drilldown_table_block <- function(...) {
-  new_table_block(...)
-}
-
-# NB: no block_ui / block_output overrides. The styled drill-down table renders
-# in the Controls pane (the `ui =` function above, via uiOutput("dt_result")),
-# and the block falls back to the transform_block defaults for the output pane —
-# so the Preview pane shows the filtered passthrough data frame as a DT, exactly
-# like new_drilldown_chart_block(). (They were previously nulled out, which left
-# the Preview pane blank.)
+# NB: no block_ui / block_output overrides. The styled table renders in the
+# Controls pane (the `ui =` function above, via uiOutput("dt_result")), and the
+# block falls back to the transform_block defaults for the output pane — so the
+# Preview pane shows the filtered passthrough data frame as a DT, exactly like
+# new_drilldown_chart_block(). (They were previously nulled out, which left the
+# Preview pane blank.)

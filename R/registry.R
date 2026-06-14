@@ -13,9 +13,9 @@ register_bi_blocks <- function() {
   #   - new_pivot_table_block -> = summarize + pivot_wider; no production caller
   #   - new_waterfall_block -> folded into new_chart_block as chart_type =
   #       "waterfall" (bar + baseline = "cumulative")
-  #   - new_html_table_block -> folded into new_table_block (table_block reuses
-  #       the html builders for flat + structured input). Constructor kept for
-  #       board compat.
+  # new_html_table_block / new_drilldown_table_block were removed outright (not
+  # just unregistered): table_block now renders flat + structured input by
+  # reusing the html builders, and the standalone html_table() renderer remains.
   # See dev/table-and-chart-architecture.md.
   blockr.core::register_blocks(
     c(
