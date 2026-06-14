@@ -43,6 +43,30 @@ serve(
         agg_fn     = "sum",
         drill      = "region"
       ),
+      # Aggregated pie: clicking a slice drills on the group.
+      chart_pie = new_chart_block(
+        chart_type = "pie",
+        group      = "region",
+        metric     = "revenue",
+        agg_fn     = "sum",
+        drill      = "region"
+      ),
+      # Individual scatter split by region: clicking a point drills its region.
+      chart_scatter = new_chart_block(
+        chart_type = "scatter",
+        x          = "revenue",
+        y          = "profit",
+        color      = "region",
+        drill      = "region"
+      ),
+      # Brushable scatter (numeric x, no series): a rect brush is a geometric
+      # x/y range filter.
+      chart_brush = new_chart_block(
+        chart_type = "scatter",
+        x          = "revenue",
+        y          = "profit",
+        drill      = "auto"
+      ),
       # KPI tile matrix, click-to-filter drill on the group.
       tile = new_tile_block(
         value = "revenue",
@@ -60,6 +84,9 @@ serve(
       new_link("data", "bars", "data"),
       new_link("data", "heat", "data"),
       new_link("data", "chart", "data"),
+      new_link("data", "chart_pie", "data"),
+      new_link("data", "chart_scatter", "data"),
+      new_link("data", "chart_brush", "data"),
       new_link("data", "tile", "data"),
       new_link("data", "summary", "data"),
       new_link("data", "gt", "data")

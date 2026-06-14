@@ -1,7 +1,0 @@
-{
-  "name": "blockr-viz-e2e",
-  "private": true,
-  "type": "module",
-  "description": "Standalone Playwright canvas-drill test (manual, not part of R CMD check)",
-  "devDependencies": { "@playwright/test": "^1.58.0" }
-}

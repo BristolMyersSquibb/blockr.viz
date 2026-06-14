@@ -68,7 +68,8 @@ skip_if_no_app <- function() {
 # Each renderer builds a root element with id `ns("<root>")` and its JS listens
 # on `<that id>_action`; on a board the id resolves deterministically. We send
 # that message directly — the same contract the row/bar/card-click and gear
-# popover JS use (real canvas hit-testing is left to the Playwright test).
+# popover JS use. (The chart's *real canvas click* is driven separately by
+# echarts_canvas_click(), which exercises the chart.js click handler too.)
 send_action <- function(input_id, payload) {
   json <- jsonlite::toJSON(payload, auto_unbox = TRUE, null = "null")
   app$run_js(sprintf(
@@ -84,6 +85,105 @@ tile_action  <- function(id) sprintf("board-block_%s-expr-tile_block_action", id
 
 send_table_action <- function(block_id, payload) {
   send_action(table_action(block_id), payload)
+}
+
+# Fire a GENUINE click on an ECharts chart at a data point's pixel, driving the
+# real chart.js `chart.on('click')` handler in headless chromium. ECharts paints
+# to <canvas> and its high-level click is synthesized from native press/release
+# (a bare DOM event or zrender handler.dispatch doesn't trigger it), so we use a
+# true CDP Input.dispatchMouseEvent through shinytest2's own chromote session —
+# no Playwright. `at` is the [value, category] data point passed to the chart's
+# convertToPixel(); computed right before the click so the layout is current.
+#
+# NB: chart.js schedules a delayed resize() ~300ms after each (re)render, so we
+# settle past it before reading coordinates, otherwise convertToPixel reads a
+# stale layout and the click lands on the wrong bar.
+# Scroll a chart block into view, wait for its canvas, and settle past chart.js's
+# deferred resize(); returns the chart-container selector.
+chart_settle <- function(block_id) {
+  sel <- sprintf("#board-block_%s-expr-drilldown_block", block_id)
+  app$run_js(sprintf(
+    "document.querySelector('%s').scrollIntoView({block: 'center'});", sel
+  ))
+  app$wait_for_js(sprintf("!!document.querySelector('%s canvas')", sel),
+                  timeout = 15000)
+  app$wait_for_idle()
+  Sys.sleep(0.8) # past chart.js's deferred resize()
+  sel
+}
+
+# A true left click at viewport (x, y) via CDP, then settle.
+cdp_click <- function(x, y) {
+  s <- app$get_chromote_session()
+  s$Input$dispatchMouseEvent(type = "mousePressed", x = x, y = y,
+                             button = "left", buttons = 1, clickCount = 1)
+  s$Input$dispatchMouseEvent(type = "mouseReleased", x = x, y = y,
+                             button = "left", buttons = 1, clickCount = 1)
+  app$wait_for_idle()
+  Sys.sleep(0.4)
+  app$wait_for_idle()
+}
+
+# Click an ECharts grid data point (bar / scatter / line). `at` is the
+# [value, category-or-value] pair the chart's convertToPixel() maps to a pixel,
+# read right before the click so the (settled) layout is current.
+echarts_canvas_click <- function(block_id, at) {
+  sel <- chart_settle(block_id)
+  cat_or_val <- if (is.character(at[[2]])) sprintf("'%s'", at[[2]]) else at[[2]]
+  pt <- jsonlite::fromJSON(app$get_js(sprintf(
+    "(function(){
+       var div  = document.querySelector('%s .dd-chart-grid').querySelector('div');
+       var inst = window.echarts.getInstanceByDom(div);
+       var px   = inst.convertToPixel({gridIndex: 0}, [%s, %s]);
+       var r    = div.getBoundingClientRect();
+       return JSON.stringify({x: r.left + px[0], y: r.top + px[1]});
+     })()",
+    sel, at[[1]], cat_or_val
+  )))
+  cdp_click(pt$x, pt$y)
+}
+
+# Click a pie slice by name. Pie has no convertToPixel, so we read the slice's
+# laid-out geometry (center + mid-angle + radius) and click its mid-ring point
+# (ECharts: cx + cos(mid)*rMid, cy + sin(mid)*rMid).
+echarts_pie_click <- function(block_id, slice_name) {
+  sel <- chart_settle(block_id)
+  pt <- jsonlite::fromJSON(app$get_js(sprintf(
+    "(function(){
+       var div  = document.querySelector('%s .dd-chart-grid').querySelector('div');
+       var inst = window.echarts.getInstanceByDom(div);
+       var dt   = inst.getModel().getSeriesByIndex(0).getData();
+       var idx = -1; for (var k = 0; k < dt.count(); k++) if (dt.getName(k) === '%s') idx = k;
+       var L = dt.getItemLayout(idx);
+       var mid = (L.startAngle + L.endAngle) / 2, rMid = (L.r0 + L.r) / 2;
+       var r = div.getBoundingClientRect();
+       return JSON.stringify({x: r.left + L.cx + Math.cos(mid)*rMid,
+                              y: r.top  + L.cy + Math.sin(mid)*rMid});
+     })()",
+    sel, slice_name
+  )))
+  cdp_click(pt$x, pt$y)
+}
+
+# Programmatic rectangular brush over a data-coordinate range (no mouse drag
+# needed): drives ECharts' brush component, whose brushSelected handler emits
+# the chart's range filter.
+echarts_brush <- function(block_id, xrange, yrange) {
+  sel <- chart_settle(block_id)
+  app$run_js(sprintf(
+    "(function(){
+       var div  = document.querySelector('%s .dd-chart-grid').querySelector('div');
+       var inst = window.echarts.getInstanceByDom(div);
+       inst.dispatchAction({type: 'brush', areas: [{
+         brushType: 'rect', xAxisIndex: 0, yAxisIndex: 0,
+         coordRange: [[%s, %s], [%s, %s]]
+       }]});
+     })()",
+    sel, xrange[[1]], xrange[[2]], yrange[[1]], yrange[[2]]
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.8)
+  app$wait_for_idle()
 }
 
 # CSS-escaped id selector for a block's rendered table chrome (search box +
@@ -280,6 +380,58 @@ test_that("chart: a filter action filters the chart block's output", {
     column = "region", values = list()
   ))
   expect_equal(nrow(get_block_result("chart")), 6L)
+})
+
+test_that("chart: a real ECharts canvas click drills the bar (no Playwright)", {
+  skip_if_no_app()
+
+  # Reset any prior filter so the baseline is the full frame.
+  send_action(chart_action("chart"), list(
+    action = "filter", filter_type = "categorical",
+    column = "region", values = list()
+  ))
+  expect_equal(nrow(get_block_result("chart")), 6L)
+
+  # Click the middle of the "North" bar (sum revenue 150; value 75 is mid-bar).
+  # This runs chart.js's chart.on('click') -> _sendCategoricalFilter path for real.
+  echarts_canvas_click("chart", at = list(75, "North"))
+
+  res <- get_block_result("chart")
+  expect_setequal(unique(res$region), "North")
+  expect_equal(nrow(res), 2L)
+})
+
+test_that("chart: a real pie-slice click drills the group", {
+  skip_if_no_app()
+
+  echarts_pie_click("chart_pie", "North")
+
+  res <- get_block_result("chart_pie")
+  expect_setequal(unique(res$region), "North")
+  expect_equal(nrow(res), 2L)
+})
+
+test_that("chart: a real scatter-point click drills the point's region", {
+  skip_if_no_app()
+
+  # Click North's (revenue=100, profit=10) point; the series is split by
+  # region, so the click filters to that region.
+  echarts_canvas_click("chart_scatter", at = list(100, 10))
+
+  res <- get_block_result("chart_scatter")
+  expect_setequal(unique(res$region), "North")
+  expect_equal(nrow(res), 2L)
+})
+
+test_that("chart: a rectangular brush filters to the selected x/y range", {
+  skip_if_no_app()
+
+  # Brush a tight rect around the single point (revenue=100, profit=10).
+  echarts_brush("chart_brush", xrange = list(90, 110), yrange = list(8, 12))
+
+  res <- get_block_result("chart_brush")
+  expect_equal(nrow(res), 1L)
+  expect_equal(res$revenue, 100)
 })
 
 # ===========================================================================
