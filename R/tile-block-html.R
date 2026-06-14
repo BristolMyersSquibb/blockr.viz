@@ -171,7 +171,7 @@ tk_table_matrix <- function(cells, flat, measures, groups, meas) {
     for (m in meas) {
       idx <- which(cells$group == g & cells$measure == m)
       if (length(idx) == 0L) {
-        tds[[length(tds) + 1L]] <- htmltools::tags$td(class = "r", "—")
+        tds[[length(tds) + 1L]] <- htmltools::tags$td(class = "r", "\u2014")
         next
       }
       cell <- cells[idx[1], ]
@@ -206,7 +206,7 @@ tk_val_td_class <- function(x) {
 
 #' @noRd
 tk_sec_header <- function(style) {
-  switch(style, delta = "Δ", fill = "Progress", pill = "Status", "Reference")
+  switch(style, delta = "\u0394", fill = "Progress", pill = "Status", "Reference")
 }
 
 #' @noRd
@@ -284,7 +284,7 @@ tile_html <- function(data, value = character(), by = "", measure = "",
 }
 
 #' Column metadata JSON for the config engine's `columns()`:
-#' [{name, type, n_unique}], type in numeric / categorical.
+#' `[{name, type, n_unique}]`, type in numeric / categorical.
 #' @noRd
 tile_cols_json <- function(data) {
   cols <- lapply(names(data), function(nm) {

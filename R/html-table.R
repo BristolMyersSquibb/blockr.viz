@@ -1,7 +1,8 @@
 #' HTML Table Renderer for the Table-Blocks Quartet
 #'
-#' Renders the output of [summary_table()] or [pivot_table()] as a
-#' hand-rolled HTML table with nested row-side section headers,
+#' Renders the output of [summary_table()] (pivoted display grids are
+#' produced upstream by composing `summarize` with `tidyr::pivot_wider`)
+#' as a hand-rolled HTML table with nested row-side section headers,
 #' multi-level column spanners, and client-side collapse/expand of
 #' sections. Designed as a dashboard-native alternative to
 #' [gt_table()] — static gt is ideal for print / CSR output, while
@@ -38,6 +39,9 @@
 #'   `<table>` element, and the initialisation script. Drop into any
 #'   `shiny::renderUI()` / `shiny::htmlOutput()` slot.
 #'
+#' @examples
+#' tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
+#' html_table(tbl)
 #' @export
 html_table <- function(data,
                        title = NULL,
@@ -115,7 +119,9 @@ html_table <- function(data,
   shared_css <- if (requireNamespace("blockr.extra", quietly = TRUE) &&
                     exists("table_preview_css",
                            envir = asNamespace("blockr.extra"))) {
-    blockr.extra::table_preview_css()
+    # Dynamic lookup: table_preview_css is an internal of blockr.extra (not
+    # exported), so reference it via its namespace rather than `::`.
+    get("table_preview_css", envir = asNamespace("blockr.extra"))()
   } else {
     htmltools::tags$style(htmltools::HTML(html_table_shared_css_fallback()))
   }
@@ -444,13 +450,12 @@ section_chevron_svg <- function() {
 # Inline CSS
 # ---------------------------------------------------------------------------
 
-#' @noRd
-#'
 #' Delta CSS layered on top of `blockr.extra::table_preview_css()`. Only
 #' contains rules for things blockr.extra's preview doesn't have: a title
 #' bar above the table, a search input, multi-level column header
 #' borders, row-side section header rows, the collapse chevron, and the
 #' .indent/.bold/.italic row styling.
+#' @noRd
 html_table_delta_css <- function() {
   ".blockr-html-table-container {
   background: #ffffff;
@@ -520,7 +525,7 @@ input.blockr-search:focus {
   --stbl-accent: var(--blockr-color-primary, #2563eb);
   --stbl-surface-1: var(--blockr-color-bg, #ffffff);
 }
-/* Column headers — quiet uppercase-ish meta on the stat column, and the
+/* Column headers \u2014 quiet uppercase-ish meta on the stat column, and the
    two-tier arm treatment (strong name + soft N sub-line). */
 .blockr-html-table-container .blockr-table thead th {
   vertical-align: bottom;
@@ -567,7 +572,7 @@ input.blockr-search:focus {
   text-align: left;
   border-bottom: 1px solid var(--stbl-hair-strong);
 }
-/* Stat-label (row-stub) cells — wrap to 2 lines (never truncate), aligned
+/* Stat-label (row-stub) cells \u2014 wrap to 2 lines (never truncate), aligned
    to the top so a wrapped label stays level with its numbers. */
 .blockr-html-table-container .blockr-table tbody td.blockr-stub {
   text-align: left;
@@ -581,7 +586,7 @@ input.blockr-search:focus {
   font-weight: 450;
   color: var(--stbl-ink-2);
 }
-/* Value cells — right-aligned, tabular figures, top-aligned to match the
+/* Value cells \u2014 right-aligned, tabular figures, top-aligned to match the
    wrapping stub. */
 .blockr-html-table-container .blockr-table tbody td.blockr-data {
   text-align: right;
@@ -658,7 +663,7 @@ input.blockr-search:focus {
 .blockr-html-table-container .blockr-section-cell.level-4 .blockr-section-value {
   font-size: 13px;
 }
-/* SVG caret — muted at rest, darkens on hover, rotates to encode state.
+/* SVG caret \u2014 muted at rest, darkens on hover, rotates to encode state.
    Path is a down-caret (expanded); collapsed rotates it -90deg. */
 .blockr-html-table-container .blockr-chev {
   width: 13px;
@@ -704,12 +709,11 @@ input.blockr-search:focus {
 }"
 }
 
-#' @noRd
-#'
 #' Subset of `blockr.extra::table_preview_css()` mirrored verbatim for
 #' standalone use when blockr.extra isn't installed. Keeps html_table()
 #' visually consistent without a hard dependency. If blockr.extra is
 #' available, prefer its exported helper instead — same source of truth.
+#' @noRd
 html_table_shared_css_fallback <- function() {
   "/* Suppress Shiny's `.recalculating` dim (opacity 0.3) on the drilldown
    table. The table now re-renders in single-digit ms on a filter, so the
@@ -790,7 +794,7 @@ html_table_shared_css_fallback <- function() {
   color: #374151;
 }
 /* Toolbar + search chrome. Generic table chrome (not the structured Table-1
-   treatment), so it lives here in the always-injected shared CSS — the
+   treatment), so it lives here in the always-injected shared CSS \u2014 the
    drilldown table block injects the structured delta CSS only for Table-1
    output, and the styled search box must survive on flat tables too. */
 .blockr-html-table-header {

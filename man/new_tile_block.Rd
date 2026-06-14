@@ -99,6 +99,11 @@ progress bar to a fraction), \code{pill} (a status chip). \code{delta} / \code{t
 \code{max} are not distinct elements — they are one \code{secondary} + a style.
 }
 
+\examples{
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
+new_tile_block()
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=tile_demo_data]{tile_demo_data()}}.
 }

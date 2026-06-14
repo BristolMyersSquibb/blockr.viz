@@ -61,6 +61,8 @@
 #'   exactly like [new_table_block()].
 #'
 #' @seealso [tile_demo_data()].
+#' @examplesIf interactive()
+#' new_tile_block()
 #' @export
 new_tile_block <- function(value = character(),
                            by = "",
@@ -210,7 +212,7 @@ tk_blank <- function(v) {
 
 #' HTML dependency for the tile renderer.
 #'
-#' Mirrors [drilldown_table_dep()]: the shared blockr.dplyr CSS/JS (gear,
+#' Mirrors the table block dependency: the shared blockr.dplyr CSS/JS (gear,
 #' popover, Blockr.Select, icons), the drilldown-chart popover CSS (the dd-*
 #' classes the config engine emits), then the shared config engine
 #' (drilldown-config.js) which must load before the tile JS.
@@ -231,14 +233,14 @@ tile_block_dep <- function() {
     ),
     htmltools::htmlDependency(
       name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.bi"), ".24"),
-      src = system.file("css", package = "blockr.bi"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".24"),
+      src = system.file("css", package = "blockr.viz"),
       stylesheet = "chart.css"
     ),
     htmltools::htmlDependency(
       name = "tile-block",
-      version = utils::packageVersion("blockr.bi"),
-      src = system.file(package = "blockr.bi"),
+      version = utils::packageVersion("blockr.viz"),
+      src = system.file(package = "blockr.viz"),
       # drilldown-config.js (the shared engine) must load before tile-block.js.
       script = c("js/drilldown-config.js", "js/tile-block.js"),
       stylesheet = "css/tile-block.css"
@@ -267,13 +269,13 @@ tile_arguments <- function() {
       ),
       measure = paste0(
         "Measure-label column, for LONG input (one row per group x measure). ",
-        "Leave \"\" for wide input — then the `value` column names are the ",
+        "Leave \"\" for wide input \u2014 then the `value` column names are the ",
         "measure names."
       ),
       layout = "Layout: \"cards\" (grid of cards) or \"table\" (aligned matrix).",
       secondary = paste0(
         "A PRECOMPUTED reference column drawn beside the value (a delta, a ",
-        "fraction, a status). The renderer does no arithmetic — compute the ",
+        "fraction, a status). The renderer does no arithmetic \u2014 compute the ",
         "comparison upstream. Optional; \"\" = no secondary."
       ),
       style = paste0(
@@ -293,7 +295,7 @@ tile_arguments <- function() {
       unit = paste0(
         "Free-text unit label shown next to the value / in the matrix header ",
         "(e.g. \"USD\", \"CHF\", \"apples\", \"kg\"). This is how you label a ",
-        "currency — the renderer never infers \"$\"."
+        "currency \u2014 the renderer never infers \"$\"."
       ),
       overline = paste0(
         "Supertext above the value. A column name reads per-cell; any other ",
@@ -313,16 +315,16 @@ tile_arguments <- function() {
       caption = "", drill = TRUE
     ),
     prompt = paste(
-      "Bold display of a handful of important numbers — the KPI-card /",
+      "Bold display of a handful of important numbers \u2014 the KPI-card /",
       "scorecard renderer. A PURE renderer: do all shaping upstream",
       "(summarize / describe / a lag-join for comparisons); the tile does no",
-      "arithmetic. Map `value` to the number(s) — one column for a long",
+      "arithmetic. Map `value` to the number(s) \u2014 one column for a long",
       "frame, or several columns for wide input (each becomes a card). Add a",
       "precomputed `secondary` column and a `style` (delta / fill / pill /",
       "plain) for a comparison; set `good_when` for the polarity. Use `by`",
       "to cluster by a group and to drive the matrix rows in the table",
       "layout. Set `drill = TRUE` to make a card / row click filter",
-      "downstream on `by`. Not a chart (no trends — that is the chart",
+      "downstream on `by`. Not a chart (no trends \u2014 that is the chart",
       "renderer) and not a dense data table."
     )
   )

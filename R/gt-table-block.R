@@ -1,8 +1,10 @@
 #' gt Table Renderer for the Table-Blocks Quartet
 #'
-#' Renders the output of [summary_table()] or [pivot_table()] (or any
-#' block following the "wide tibble with dotted section columns"
-#' convention) as a styled gt table. Also supports the legacy
+#' Renders the output of [summary_table()] (or any block following the
+#' "wide tibble with dotted section columns" convention) as a styled gt
+#' table. Pivoted display grids are produced upstream by composing
+#' `summarize` with `tidyr::pivot_wider`, not by a dedicated block.
+#' Also supports the legacy
 #' long-format input from `blockr.sandbox`'s `tidy_summary_block` and
 #' `occurrence_summary_block` via a separate code path.
 #'
@@ -33,6 +35,9 @@
 #'   string.
 #' @return A `gt_tbl` object.
 #'
+#' @examples
+#' tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
+#' gt_table(tbl, title = "Sepal length by species")
 #' @export
 gt_table <- function(data, title = NULL, subtitle = NULL,
                      full_width = TRUE, borders = TRUE,
@@ -395,6 +400,9 @@ gt_gear_css <- function() {
 #'   `"\u2014"` (em dash).
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
+#' @return A blockr transform block of class `gt_table_block`.
+#' @examplesIf interactive()
+#' new_gt_table_block()
 #' @export
 new_gt_table_block <- function(title = "",
                                subtitle = "",
@@ -423,7 +431,7 @@ new_gt_table_block <- function(title = "",
             sub <- r_subtitle()
             nar <- r_na_rep()
             bquote(
-              blockr.bi::gt_table(
+              blockr.viz::gt_table(
                 data,
                 title      = .(ttl),
                 subtitle   = .(sub),

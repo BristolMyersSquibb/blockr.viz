@@ -98,6 +98,20 @@ charts. Default \code{1.0}. Range \code{0.5}–\code{3.0}. Individual family onl
 \item{dot_size_mult}{Multiplier on the default marker size. Default
 \code{1.0}. Range \code{0.5}–\code{3.0}. Individual family only.}
 
+\item{step}{Step-line mode for line charts. \code{NULL} (default) draws a
+straight line; a step mode (e.g. \code{"start"}/\code{"middle"}/\code{"end"}) draws a
+stepped line. Consumed by the JS renderer.}
+
+\item{ref_x, ref_y}{Optional reference-line overlays at a fixed x or y
+value (vertical / horizontal guide line). Default \code{NULL} (no overlay).}
+
+\item{smoother}{Trend overlay for scatter charts: one of \code{"none"}
+(default), \code{"lm"}, or \code{"loess"}. Fit per \code{color}/\code{series} group via
+\code{\link[=compute_smoother_series]{compute_smoother_series()}}.}
+
+\item{lo, hi}{Optional lower / upper value bounds used by the renderer to
+clamp or annotate the value axis. Default \code{NULL} (auto).}
+
 \item{baseline}{Bar baseline mode: \code{"zero"} (default — every bar starts at
 0) or \code{"cumulative"} (a waterfall/bridge — each bar floats from the
 running cumulative of the bars before it; the step axis honors data order,
@@ -138,4 +152,9 @@ draws one shape per \code{color} level, and each vertex is
 \code{agg_fn(metric)} for that cell; clicking a shape drills on its \code{color}
 value. For spokes from several numeric columns, pivot longer upstream
 and map the name column to \code{group}.
+}
+\examples{
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
+new_chart_block()
+\dontshow{\}) # examplesIf}
 }

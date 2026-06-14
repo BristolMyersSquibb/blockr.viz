@@ -23,6 +23,9 @@ new_table_block(
 \item{rowname, values, cell_color, drill, digits, max_height}{Forwarded to \code{\link[=drilldown_table]{drilldown_table()}}. The block has no in-table title:
 the block's own name (card header) serves that role.}
 
+\item{row_color}{Optional per-row colouring spec applied to the whole
+row rather than individual cells. Default \code{NULL} (off).}
+
 \item{filter_type, filter_column, filter_values, filter_range}{Click
 filter state (kept for contract parity with the drilldown chart;
 \code{filter_range} is unused by the table).}
@@ -38,4 +41,9 @@ rendered from the upstream (pre-filter) data so every row stays
 clickable; the block's data output is the upstream data filtered by
 the last click, using the exact same contract as
 \code{\link[=new_chart_block]{new_chart_block()}} (so existing filter links compose).
+}
+\examples{
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
+new_table_block()
+\dontshow{\}) # examplesIf}
 }

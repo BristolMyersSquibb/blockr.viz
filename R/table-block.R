@@ -22,9 +22,11 @@
 #'   row emits a categorical filter on that column's value.
 #' @param elem_id Shiny namespaced id used to build the `_action`
 #'   input name. Required for `drill` to do anything.
-#' @param title,caption Optional strings.
 #' @param digits Rounding for numeric display. Default `2`.
 #' @param max_height CSS max-height of the scroll container.
+#' @param row_hex,row_color Optional per-row colouring. `row_color` names a
+#'   column whose values drive a row background scale; `row_hex` supplies
+#'   explicit per-row hex colours. Both default `NULL` (no row colouring).
 #'
 #' @details
 #' **Structured "Table 1" input.** When `data` follows the dotted-column
@@ -41,6 +43,8 @@
 #' as before.
 #'
 #' @return An [htmltools::tagList()].
+#' @examples
+#' drilldown_table(head(mtcars), label_col = "mpg")
 #' @export
 drilldown_table <- function(data,
                             label_col = NULL,
@@ -69,7 +73,7 @@ drilldown_table <- function(data,
 #' Build just the `<table>` (thead + tbody) plus the data-attributes the table
 #' JS reads off it (drill onclick col/idx, colour mode, digits).
 #'
-#' Split from the chrome ([dt_chrome()]: search bar, gear, scroll container) so
+#' Split from the chrome (`dt_chrome()`: search bar, gear, scroll container) so
 #' a data or config change re-renders ONLY the table — the chrome renders once
 #' and is never rebuilt, so there is no whole-panel blank-out and the search
 #' text / scroll position survive a filter. See the block server's
@@ -221,11 +225,11 @@ dt_is_structured <- function(data) {
 #' Build the structured ("Table 1") `<table>` for the interactive table-block.
 #'
 #' Builds the section-aware `<tbody>` and multi-level `<thead>` with
-#' [build_html_tbody()] / [build_html_thead()] (the very builders
+#' `build_html_tbody()` / `build_html_thead()` (the very builders
 #' [html_table()] uses) and tags it with the drill onclick attributes. The
 #' surrounding chrome (search bar, gear, scroll container, the
 #' `drilldown-table-structured` class that gates the Table-1 CSS) is added once
-#' by [dt_chrome()]. Cell colour over `.fmt` strings is not meaningful, so
+#' by `dt_chrome()`. Cell colour over `.fmt` strings is not meaningful, so
 #' structured tables render uncoloured; the stub column is the drill target
 #' when `drill` names it.
 #' @noRd
@@ -268,6 +272,8 @@ dt_table_tag_structured <- function(data, drill, color, digits) {
 #'   hex colors (length 3 for diverging low/mid/high, length 2 for
 #'   sequential low/high).
 #' @return A list consumed by [drilldown_table()].
+#' @examples
+#' drilldown_table_color("sequential", domain = c(0, 100))
 #' @export
 drilldown_table_color <- function(type = c("diverging", "sequential"),
                                    domain = NULL, palette = NULL) {
@@ -387,7 +393,7 @@ dt_chrome <- function(elem_id, structured, max_height, inner) {
       class = "blockr-html-table-toolbar",
       htmltools::tags$input(
         type = "search", class = "blockr-search",
-        placeholder = "Search…", `aria-label` = "Search table"
+        placeholder = "Search\u2026", `aria-label` = "Search table"
       )
     )
   )
@@ -491,14 +497,14 @@ drilldown_table_dep <- function() {
     # chart.css; the table's gear popover reuses it (de-dups by dep name).
     htmltools::htmlDependency(
       name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.bi"), ".24"),
-      src = system.file("css", package = "blockr.bi"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".24"),
+      src = system.file("css", package = "blockr.viz"),
       stylesheet = "chart.css"
     ),
     htmltools::htmlDependency(
-      name = "blockr-bi-table",
-      version = utils::packageVersion("blockr.bi"),
-      src = system.file(package = "blockr.bi"),
+      name = "blockr-viz-table",
+      version = utils::packageVersion("blockr.viz"),
+      src = system.file(package = "blockr.viz"),
       # drilldown-config.js (the shared engine) must load before the table JS.
       script = c("js/drilldown-config.js", "js/table.js"),
       stylesheet = "css/table.css"
@@ -535,7 +541,7 @@ table_arguments <- function() {
       drill = paste0(
         "Column a row click filters downstream on. Optional; default null = a ",
         "click is inert. When set, clicking a row emits a categorical filter ",
-        "on that column's value for the row — the same filter contract as the ",
+        "on that column's value for the row \u2014 the same filter contract as the ",
         "drill-down chart."
       ),
       digits = "Decimal places for numeric display. Default 2."
@@ -549,14 +555,14 @@ table_arguments <- function() {
     ),
     prompt = paste(
       "Interactive table (sticky header, client-side sort and search) that can",
-      "also act as a click-to-filter control — the tabular sibling of the",
+      "also act as a click-to-filter control \u2014 the tabular sibling of the",
       "drill-down chart. Two optional capabilities, both off by default:",
       "\n- Coloring: set `cell_color` to a `drilldown_table_color()` spec to give",
       "numeric cells a value-to-background scale (diverging for correlation,",
       "sequential for heatmaps). Presentational only.",
       "\n- Drill-down: set `drill` to a column; clicking a row emits a",
       "categorical filter on that column's value, so downstream blocks filter",
-      "— the same filter contract as the drill-down chart.",
+      "\u2014 the same filter contract as the drill-down chart.",
       "\n`rowname`/`values` pick the row-stub and body",
       "columns: set `values` to EXACTLY the columns the user names (e.g.",
       "\"Revenue and Profit\" -> values = [\"Revenue\", \"Profit\"]); leave",
@@ -577,11 +583,15 @@ table_arguments <- function() {
 #' @param rowname,values,cell_color,drill,digits,max_height
 #'   Forwarded to [drilldown_table()]. The block has no in-table title:
 #'   the block's own name (card header) serves that role.
+#' @param row_color Optional per-row colouring spec applied to the whole
+#'   row rather than individual cells. Default `NULL` (off).
 #' @param filter_type,filter_column,filter_values,filter_range Click
 #'   filter state (kept for contract parity with the drilldown chart;
 #'   `filter_range` is unused by the table).
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #' @return A transform block of class `table_block`.
+#' @examplesIf interactive()
+#' new_table_block()
 #' @export
 new_table_block <- function(rowname = NULL,
                                       values = NULL,
