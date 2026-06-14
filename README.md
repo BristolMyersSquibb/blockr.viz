@@ -2,7 +2,7 @@
 
 The render layer for blockr dashboards.
 
-blockr.viz draws tidy, rectangular data: interactive `chart`, `table`, and
+blockr.viz draws rectangular data: interactive `chart`, `table`, and
 `tile` blocks (built on ECharts and HTML widgets), a static `gt` table
 renderer, and a `summary_table` shaper. Renderers never compute or reshape —
 they take an already-shaped data frame and turn it into pixels, with optional

@@ -15,8 +15,8 @@ knitr::opts_chunk$set(
 )
 ```
 
-blockr.viz is the **render layer** for blockr dashboards. It draws tidy,
-rectangular data; it does not compute or reshape it. This vignette explains the
+blockr.viz is the **render layer** for blockr dashboards. It draws rectangular
+data frames; it does not compute or reshape them. This vignette explains the
 small set of roles the package is built around, so that every block has one
 obvious place in a pipeline.
 
@@ -24,19 +24,19 @@ obvious place in a pipeline.
 
 The organizing principle is a split between two kinds of blocks:
 
-- **Verbs compute** and return a tidy data frame you can keep transforming. The
+- **Verbs compute** and return a data frame you can keep transforming. The
   one verb blockr.viz ships is `summary_table`; you compose it with dplyr verbs
-  (`summarize`, `filter`, `pivot_wider`) from blockr.dplyr. (Other stat shapers,
-  e.g. `frequencies` or a `model`/`broom` pair, live in sibling packages such as
-  blockr.stats.)
+  (`summarize`, `filter`, `pivot_wider`) from blockr.dplyr. (Statistical shapers
+  — model fitting, `broom` adapters, and the like — live in sibling packages
+  such as blockr.stats.)
 - **Nouns render**: they take an already-shaped data frame and draw it
   (`chart`, `table`, `tile`, `gt`).
 
 Two invariants make the system predictable:
 
-1. If a block's name is a *verb* it returns a tidy data frame. If it's a bare
+1. If a block's name is a *verb* it returns a data frame. If it's a bare
    *noun* it draws.
-2. **Renderers only ever see tidy, rectangular data.** The only non-data-frame
+2. **Renderers only ever see a rectangular data frame** (tidy or wide). The only non-data-frame
    intermediate in the whole system is a fitted statistical model, and it is
    fenced off — it exists solely between a `model` block and a `broom` adapter.
    No renderer ever touches a fit.
@@ -44,11 +44,11 @@ Two invariants make the system predictable:
 ## The five layers
 
 Every block in a dashboard pipeline is one of five kinds. Data flows left to
-right, and a renderer only ever sees a tidy/rectangular data frame.
+right, and a renderer only ever sees a rectangular data frame.
 
 | Layer | Job | Output | Blocks |
 |---|---|---|---|
-| **Shape** | compute / summarise | tidy df | `summary_table` (blockr.viz) + dplyr verbs (`summarize`, `filter`, …); other stat shapers (`frequencies`, …) live in blockr.stats |
+| **Shape** | compute / summarise | tidy df | `summary_table` (blockr.viz) + dplyr verbs (`summarize`, `filter`, …); statistical shapers live in blockr.stats |
 | **Reshape** | tidy → display grid (wide, *on purpose*) | wide df | dplyr `pivot_wider` |
 | **Fit** | fit a statistical model | model object | `model` |
 | **Adapt** | model → tidy | tidy df | `broom` (tidy / glance / augment) |
@@ -83,15 +83,14 @@ output use `gt`. The static renderers conceptually belong with their toolkit
 packages; blockr.viz owns the interactive ones (and ships a convention-aware
 `gt` adapter).
 
-### Drill-down is a feature, not an identity
+### Drill-down
 
-`table` and `chart` used to be called `drilldown_table` and `drilldown_chart`.
-But drill-down — click a mark or row to emit a downstream filter — is one
-**opt-in** capability that is **off by default**. Naming the whole block after
-it overweighted a single feature. These are simply *the* table and chart
-blocks; you reach for them for almost every table or chart in a dashboard.
+Both `chart` and `table` can **drill**: clicking a mark or a row emits a filter
+to downstream blocks. It is **opt-in and off by default** — one capability of the
+general renderers, not a separate kind of block, so you reach for the same
+`chart` and `table` for almost every chart or table in a dashboard.
 
-To enable drill-down, set the `drill` argument to a column name:
+To enable it, set the `drill` argument to a column name:
 
 ```{r}
 library(blockr.viz)
