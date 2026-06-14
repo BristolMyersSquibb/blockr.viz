@@ -5,11 +5,11 @@ chart_arguments <- function() {
     c(
       chart_type = paste0(
         "Chart type. One of \"bar\", \"waterfall\", \"pie\", \"treemap\", ",
-        "\"boxplot\", \"radar\" (aggregated — use group + metric + agg_fn), ",
-        "\"scatter\", \"line\" (individual — use x + y), or \"gantt\" ",
-        "(timeline — use x + xend + y). Default \"bar\". Radar: group levels ",
+        "\"boxplot\", \"radar\" (aggregated \u2014 use group + metric + agg_fn), ",
+        "\"scatter\", \"line\" (individual \u2014 use x + y), or \"gantt\" ",
+        "(timeline \u2014 use x + xend + y). Default \"bar\". Radar: group levels ",
         "are the spokes, one shape per color level. Waterfall: a bar with a ",
-        "cumulative baseline — each step's metric value is a DELTA and bars ",
+        "cumulative baseline \u2014 each step's metric value is a DELTA and bars ",
         "float from the running total (group = step axis, honored in data ",
         "order). Use for P&L / bridge charts; reshape wide measures with ",
         "pivot_longer to (step, value) upstream first."
@@ -23,7 +23,7 @@ chart_arguments <- function() {
         "never a literal colour. null for no colour mapping."
       ),
       facet = paste0(
-        "Column to facet by — one small panel per level. Optional."
+        "Column to facet by \u2014 one small panel per level. Optional."
       ),
       metric = paste0(
         "Column to aggregate (aggregated charts only). Use \".count\" for ",
@@ -45,7 +45,7 @@ chart_arguments <- function() {
       series = paste0(
         "Column whose distinct values split rows into separate series ",
         "(individual: one line/scatter group per value; timeline: per-bar ",
-        "label). Splits only — not a colour, not a drill target. ",
+        "label). Splits only \u2014 not a colour, not a drill target. ",
         "Independent of color. High cardinality is fine."
       ),
       xend = paste0(
@@ -55,12 +55,12 @@ chart_arguments <- function() {
       label = paste0(
         "Column written as on-mark text. Optional; default null = no ",
         "on-mark text. For pie/treemap, null falls back to `group` ",
-        "(a label-less pie is unusable). Label only — does not affect ",
+        "(a label-less pie is unusable). Label only \u2014 does not affect ",
         "colour, series, or drill."
       ),
       drill = paste0(
         "Drill-down: what a SELECTION (click or brush) filters downstream on. ",
-        "Tri-state: null/\"\" = OFF (the chart is a static display — no filter, ",
+        "Tri-state: null/\"\" = OFF (the chart is a static display \u2014 no filter, ",
         "no hover effect; the default); \"auto\" = ON with the family's natural ",
         "target (aggregated -> the clicked group; radar -> the clicked ",
         "shape's color value; scatter -> the selected ",
@@ -83,12 +83,12 @@ chart_arguments <- function() {
         "with lo to draw a band; numeric only."
       ),
       line_width_mult = paste0(
-        "Line width multiplier for line charts (individual only). 1.0× ",
-        "is the default look; range 0.5×–3.0×."
+        "Line width multiplier for line charts (individual only). 1.0\u00d7 ",
+        "is the default look; range 0.5\u00d7\u20133.0\u00d7."
       ),
       dot_size_mult = paste0(
         "Marker size multiplier for scatter points and line markers ",
-        "(individual only). 1.0× is the default; range 0.5×–3.0×."
+        "(individual only). 1.0\u00d7 is the default; range 0.5\u00d7\u20133.0\u00d7."
       ),
       filter_type = paste0(
         "Runtime filter-transport state. Normally left at default ",
@@ -193,16 +193,16 @@ chart_arguments <- function() {
       "tangles or empty plots.",
       "\n- \"distribution / spread / boxplot of Y by X\" ->",
       "chart_type=\"boxplot\", group=\"X\", metric=\"Y\". A boxplot",
-      "shows the SPREAD of `metric` within each `group` — do NOT set",
+      "shows the SPREAD of `metric` within each `group` \u2014 do NOT set",
       "an aggregating `agg_fn` (mean/median/sum/count); that collapses",
       "each group to one value and the plot renders EMPTY. Use `color`",
       "or `facet` to split the boxes (e.g. by treatment arm).",
       "\n- \"label bars with W\" -> label=\"W\"",
       "\n\nLeave filter_type/filter_column/filter_values/filter_range at",
-      "defaults — they are runtime transport for the emitted filter, not",
+      "defaults \u2014 they are runtime transport for the emitted filter, not",
       "creation-time config.",
       "\n\nWhen picking `color`, check the data: if all visible rows",
-      "share one value the colour channel is wasted — drop `color` or",
+      "share one value the colour channel is wasted \u2014 drop `color` or",
       "pick a column with real variation.",
       "\n\nBar/pie/treemap/boxplot ordering is `sort_by` + `sort_dir` on",
       "THIS block, not an upstream arrange_block. \"value\"+\"desc\" for",

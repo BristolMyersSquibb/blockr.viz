@@ -1,17 +1,23 @@
-Package: blockr.bi
-Title: Business Intelligence Blocks for Blockr
-Version: 0.0.82
+Package: blockr.viz
+Title: Visualization and Render Blocks for Blockr
+Version: 0.1.1
 Authors@R:
     person(given = "Christoph",
            family = "Sax",
            role = c("aut", "cre"),
            email = "christoph@cynkra.com",
            comment = c(ORCID = "0000-0002-7192-7044"))
-Description: Provides business intelligence and dashboard blocks for blockr,
-    including pivot/summary tables, KPI/tile displays, waterfall charts, and
-    drill-down chart/table blocks. Designed for interactive data exploration
-    with support for database backends.
+Description: The render layer for blockr dashboards: interactive 'chart',
+    'table', and 'tile' blocks (built on ECharts and HTML widgets) plus a
+    'summary_table' shaper and a static 'gt' table renderer. Renderers take
+    tidy, rectangular data and draw it, with optional cell coloring and
+    click-to-filter drill-down. Pairs with 'blockr.dock', which arranges the
+    blocks into a dashboard.
+URL: https://github.com/BristolMyersSquibb/blockr.viz
+BugReports: https://github.com/BristolMyersSquibb/blockr.viz/issues
 License: GPL (>= 3)
+Depends:
+    R (>= 4.1.0)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
@@ -22,10 +28,7 @@ Imports:
     echarts4r,
     gt,
     htmltools,
-    htmlwidgets,
     jsonlite,
-    lifecycle,
-    reactable,
     rlang,
     shiny,
     stats,
@@ -33,9 +36,16 @@ Imports:
     tidyr,
     tools
 Suggests:
+    blockr.ai,
     blockr.dag,
     blockr.extra,
     blockr.io,
     blockr.theme,
-    testthat (>= 3.0.0)
+    chromote,
+    knitr,
+    rmarkdown,
+    shinytest2,
+    testthat (>= 3.0.0),
+    withr
+VignetteBuilder: knitr
 Config/testthat/edition: 3

@@ -28,7 +28,7 @@
 # back to standard rendering.
 #
 # Run from workspace root:
-#   Rscript blockr.bi/dev/scale-map-table-tile-demo.R
+#   Rscript blockr.viz/dev/scale-map-table-tile-demo.R
 # open the local URL serve() prints (or uncomment the options line to pin 3838).
 
 options(blockr.html_table_preview = TRUE)
@@ -41,7 +41,7 @@ pkgload::load_all("blockr.dock")
 pkgload::load_all("blockr.dm")
 pkgload::load_all("blockr.dplyr")
 pkgload::load_all("blockr.theme")
-pkgload::load_all("blockr.bi")
+pkgload::load_all("blockr.viz")
 
 # Fixed colors for SEX (deliberately non-standard so it's obvious the table
 # and tile take their color from the MAP, not from any built-in default).

@@ -29,6 +29,9 @@ order, session).
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }
+\value{
+A blockr transform block of class \code{summary_table_block}.
+}
 \description{
 Blockr transform block wrapping \code{\link[=summary_table]{summary_table()}}. Multi-variable
 descriptive summary where each \code{vars} entry becomes a row-section
@@ -46,4 +49,9 @@ The UI uses the shared \code{Blockr.Select} widget library (also used by
 (stats preset, overall column, indent, nest hierarchies).
 
 Spec: \verb{blockr.design/open/table-blocks/}.
+}
+\examples{
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
+new_summary_table_block()
+\dontshow{\}) # examplesIf}
 }

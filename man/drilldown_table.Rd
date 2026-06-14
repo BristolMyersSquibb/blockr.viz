@@ -38,7 +38,9 @@ input name. Required for \code{drill} to do anything.}
 
 \item{max_height}{CSS max-height of the scroll container.}
 
-\item{title, caption}{Optional strings.}
+\item{row_hex, row_color}{Optional per-row colouring. \code{row_color} names a
+column whose values drive a row background scale; \code{row_hex} supplies
+explicit per-row hex colours. Both default \code{NULL} (no row colouring).}
 }
 \value{
 An \code{\link[htmltools:tagList]{htmltools::tagList()}}.
@@ -71,4 +73,7 @@ structure \code{\link[=html_table]{html_table()}} renders, folded into the inter
 one renderer covers flat \emph{and} structured tables (drill / cell colour
 still apply to the flat path). A plain rectangular frame renders exactly
 as before.
+}
+\examples{
+drilldown_table(head(mtcars), label_col = "mpg")
 }

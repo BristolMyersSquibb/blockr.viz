@@ -43,9 +43,11 @@ string.}
 A \code{gt_tbl} object.
 }
 \description{
-Renders the output of \code{\link[=summary_table]{summary_table()}} or \code{\link[=pivot_table]{pivot_table()}} (or any
-block following the "wide tibble with dotted section columns"
-convention) as a styled gt table. Also supports the legacy
+Renders the output of \code{\link[=summary_table]{summary_table()}} (or any block following the
+"wide tibble with dotted section columns" convention) as a styled gt
+table. Pivoted display grids are produced upstream by composing
+\code{summarize} with \code{tidyr::pivot_wider}, not by a dedicated block.
+Also supports the legacy
 long-format input from \code{blockr.sandbox}'s \code{tidy_summary_block} and
 \code{occurrence_summary_block} via a separate code path.
 }
@@ -57,4 +59,8 @@ has no label attribute, the column name is used. Upstream blocks
 produce, and the renderer picks them up automatically. Users who
 want custom labels can use a \code{mutate_block} upstream to overwrite
 \code{attr(col, "label")}.
+}
+\examples{
+tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
+gt_table(tbl, title = "Sepal length by species")
 }

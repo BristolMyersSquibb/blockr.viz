@@ -27,6 +27,9 @@ new_gt_table_block(
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
 }
+\value{
+A blockr transform block of class \code{gt_table_block}.
+}
 \description{
 Blockr transform block wrapping \code{\link[=gt_table]{gt_table()}}. Accepts the output of
 \code{\link[=summary_table]{summary_table()}} (or any block following the wide-dotted-column
@@ -37,4 +40,9 @@ Column headers come from \code{attr(col, "label")} on the data columns,
 which gt reads natively. Upstream blocks set these labels (for
 instance, \code{\link[=summary_table]{summary_table()}} writes the per-column subject count
 as the label). The renderer does not compute column labels itself.
+}
+\examples{
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
+new_gt_table_block()
+\dontshow{\}) # examplesIf}
 }

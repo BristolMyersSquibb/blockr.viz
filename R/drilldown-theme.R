@@ -1,5 +1,5 @@
 # Vendored from blockr.echarts/R/echart-theme.R. Kept local so the drill-down
-# block doesn't depend on blockr.echarts. If blockr.echarts and blockr.bi are
+# block doesn't depend on blockr.echarts. If blockr.echarts and blockr.viz are
 # both loaded, the theme name is identical and registration is idempotent.
 
 .drilldown_theme_env <- new.env(parent = emptyenv())
@@ -13,7 +13,7 @@
 #'
 #' @return NULL, invisibly.
 #' @keywords internal
-echart_theme_blockr_bi <- function() {
+echart_theme_blockr_viz <- function() {
   if (.drilldown_theme_env$registered) {
     return(invisible(NULL))
   }
@@ -58,6 +58,8 @@ setup_drilldown_theme_sync <- function(session = NULL) {
 #' @param ... Forwarded to [blockr.core::new_board_option()].
 #'
 #' @return A `board_option` object.
+#' @examplesIf interactive()
+#' new_drilldown_theme_option()
 #' @export
 new_drilldown_theme_option <- function(value = "default",
                                        category = "Chart options", ...) {

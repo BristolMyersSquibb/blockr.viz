@@ -155,7 +155,7 @@ tk_digits <- function(values) {
 #' percent, where "%" is intrinsic.
 #' @noRd
 tk_format <- function(x, spec) {
-  if (is.null(x) || length(x) == 0L || !is.finite(x)) return("—")
+  if (is.null(x) || length(x) == 0L || !is.finite(x)) return("\u2014")
   if (identical(spec$kind, "percent")) {
     return(sprintf(paste0("%.", spec$digits, "f%%"), x * spec$scale))
   }
@@ -180,7 +180,7 @@ tk_compact <- function(x) {
     formatC(a, format = "f", digits = 0)
   }
   s <- sub("\\.0([MBK])$", "\\1", s)
-  paste0(if (neg) "−" else "", s)
+  paste0(if (neg) "\u2212" else "", s)
 }
 
 # ---------------------------------------------------------------------------
@@ -218,7 +218,7 @@ tk_delta_class <- function(value, good_when) {
 }
 
 #' Draw a delta span: caret + formatted percent, colored by polarity.
-#' A delta in [-1, 1] is read as a fraction and scaled to a percent.
+#' A delta in `[-1, 1]` is read as a fraction and scaled to a percent.
 #' @noRd
 tk_delta_node <- function(value, good_when) {
   v <- suppressWarnings(as.numeric(value))
@@ -245,7 +245,7 @@ tk_pill_tone <- function(status) {
   "neutral"
 }
 
-#' Fill fraction as a 0-100 percent. A value in [0,1] is a fraction; a value
+#' Fill fraction as a 0-100 percent. A value in `[0,1]` is a fraction; a value
 #' in (1,100] is already a percent (§ "a percent value defaults ref to 100").
 #' @noRd
 tk_fill_pct <- function(value) {

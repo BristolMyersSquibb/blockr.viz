@@ -11,6 +11,8 @@
 #'   - `regions` — wide, one row per region with several measure columns (for
 #'     the grouped matrix / `by`-clustered cards and drill).
 #'   - `transactions` — raw rows, to demo the upstream `summarize` -> tile flow.
+#' @examples
+#' names(tile_demo_data())
 #' @export
 tile_demo_data <- function() {
   set.seed(20260417L)

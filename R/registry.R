@@ -1,12 +1,16 @@
-#' Register BI Blocks
+#' Register blockr.viz blocks
 #'
-#' Registers the BI blocks with blockr.
+#' Registers the blockr.viz render and shaper blocks with blockr so they
+#' appear in the block-adder and the assistant block universe.
 #'
+#' @return Invisibly, the result of [blockr.core::register_blocks()].
+#' @examplesIf interactive()
+#' register_viz_blocks()
 #' @export
 #' @importFrom blockr.core register_blocks
-register_bi_blocks <- function() {
+register_viz_blocks <- function() {
   # Removed outright (2026-06-14) — superseded, with no compat shim kept since
-  # blockr.bi is being retired in favour of blockr.viz (a conscious upgrade):
+  # blockr.bi was renamed to blockr.viz (a conscious upgrade):
   #   - new_kpi_block          -> new_tile_block
   #   - new_pivot_table_block  -> summarize + tidyr::pivot_wider (a composed
   #                               reshape, not a bespoke block)
@@ -32,8 +36,8 @@ register_bi_blocks <- function() {
     ),
     description = c(
       "Wide, display-shaped multi-variable summary (list of variables by Y pattern). Successor to tidy_summary_block.",
-      "Render wide-format tables (from summary_table) as styled gt tables — static / print / CSR output.",
-      "Scorecard of bold KPI numbers — cards or an aligned matrix, with deltas / fills / status pills and click-to-filter drill. A pure renderer (shape upstream).",
+      "Render wide-format tables (from summary_table) as styled gt tables \u2014 static / print / CSR output.",
+      "Scorecard of bold KPI numbers \u2014 cards or an aligned matrix, with deltas / fills / status pills and click-to-filter drill. A pure renderer (shape upstream).",
       "Configurable chart with click-to-filter drill-down",
       "Interactive table (sticky header, sort, search) with optional cell coloring and click-to-filter drill-down"
     ),

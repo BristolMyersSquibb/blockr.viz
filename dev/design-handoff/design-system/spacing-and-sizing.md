@@ -44,4 +44,4 @@ Rules:
 - `align-items: flex-end` keeps inputs bottom-aligned when labels span two lines on one field but not another.
 - For a field that should always occupy its own row (e.g. a multi-select with many tags), add a `--full` modifier: `.xxb-field--full { flex: 1 1 100%; }`.
 
-Canonical examples: `blockr.dplyr/inst/css/pivot-longer-block.css` (`.plb-input-row` / `.plb-field`), `blockr.bi/inst/css/summary-table-block.css` (`.stb-grid` / `.stb-field` / `.stb-field--full`).
+Canonical examples: `blockr.dplyr/inst/css/pivot-longer-block.css` (`.plb-input-row` / `.plb-field`), `blockr.viz/inst/css/summary-table-block.css` (`.stb-grid` / `.stb-field` / `.stb-field--full`).

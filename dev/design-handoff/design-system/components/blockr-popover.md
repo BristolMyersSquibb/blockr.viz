@@ -5,9 +5,9 @@ the block's settings form. This doc is the spec for **what goes in it** and
 **how its rows are laid out**. For the bare class list see
 [blockr-row.md](./blockr-row.md#gear--popover).
 
-Reference implementation: `blockr.bi/inst/js/drilldown-table.js:140`
+Reference implementation: `blockr.viz/inst/js/drilldown-table.js:140`
 (`popRow`) and `:173` (`buildCogwheel`). The drilldown table block is the
-pattern; the drilldown chart block (`blockr.bi/inst/js/drilldown-chart.js:259`)
+pattern; the drilldown chart block (`blockr.viz/inst/js/drilldown-chart.js:259`)
 is the anti-pattern this doc exists to correct.
 
 ## Principle 1 — the card shows the result, the gear configures it
@@ -94,7 +94,7 @@ lowest-priority element in the stack.
 ## Principle 3 — help text comes from `_arguments()`, terse and muted
 
 Block argument descriptions already exist in the block's `_arguments()`
-metadata (e.g. `blockr.bi/R/drilldown-chart-arguments.R`). The popover row's
+metadata (e.g. `blockr.viz/R/drilldown-chart-arguments.R`). The popover row's
 help text is sourced from there, so one string serves both the LLM-facing API
 and the human-facing settings form. Keep it to one line. The popover is a
 settings form, not documentation; link out if more is needed.

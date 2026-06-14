@@ -4,7 +4,7 @@
 # progress rings). The dock UI gives you the block sidebar, gear
 # offcanvas, DAG panel, etc.
 #
-#   Rscript /workspace/blockr.bi/inst/examples/tile-dock-dag/app.R
+#   Rscript /workspace/blockr.viz/inst/examples/tile-dock-dag/app.R
 #
 # then open http://localhost:3840 .
 
@@ -13,11 +13,11 @@ pkgload::load_all("blockr.dock")
 pkgload::load_all("blockr.dag")
 pkgload::load_all("blockr.react")
 pkgload::load_all("blockr.dm")
-pkgload::load_all("blockr.bi")
+pkgload::load_all("blockr.viz")
 pkgload::load_all("blockr.dplyr")
 pkgload::load_all("blockr.extra")
 
-register_bi_blocks()  # makes new_tile_block appear in the block-adder
+register_viz_blocks()  # makes new_tile_block appear in the block-adder
 
 dd <- tile_demo_data()
 

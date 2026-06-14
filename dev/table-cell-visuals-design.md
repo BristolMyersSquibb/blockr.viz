@@ -1,10 +1,11 @@
 # Table cell visuals: heatmap shading + data bars (design note)
 
-Captured 2026-06-14 from a design session (Christoph). **Design only — not
-implemented.** Scope it AFTER the in-flight table-block refactor lands, because it
-touches the same files (`table-block.R`, `js/table.js`, the gear popover). Companion
-docs: `table-and-chart-architecture.md` (block roles) and the value-coloring code
-that already exists in the table block.
+Package: **blockr.viz** (renamed from blockr.viz). Captured 2026-06-14 from a design
+session (Christoph). **Planned feature — design only, not implemented.** Scope it
+AFTER the in-flight table-block / `.bi`→`.viz` cleanup lands, because it touches the
+same files (`R/table-block.R`, `inst/js/table.js`, the gear popover). Companion docs:
+`table-and-chart-architecture.md` (block roles) and the value-coloring code that
+already exists in the table block.
 
 ---
 
@@ -142,7 +143,7 @@ These are the difference between "self-healing under upstream data changes" and
   needed for this — the empty-=-all default makes the common case skip the picker
   entirely. If we ever want a one-click "fill all" within picked mode, that belongs
   in the shared primitive (blockr.dplyr, loaded via `blockr_select_dep()`), promoted
-  after proving the UX in bi. Note: the primitive currently exposes
+  after proving the UX in blockr.viz. Note: the primitive currently exposes
   `getValue/setOptions/updateOptions` but no obvious selection setter — confirm
   before relying on programmatic select-all.
 

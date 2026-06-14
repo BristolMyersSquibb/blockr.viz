@@ -98,7 +98,7 @@ fmt_cells <- function(df, fmt_col = ".fmt", digits = 2L, na = "NA") {
 #'   referenced numeric columns are dropped.
 #' @param id_cols Row-identity columns to keep (default: the dotted columns
 #'   `.section_*`/`.var`/`.label`/`.indent` present in `df`).
-#' @param digits,na Passed to [fmt_cells()].
+#' @param digits,na Passed to `fmt_cells()`.
 #' @return A data frame: row-identity columns + either a `.cell` column (no
 #'   spread) or one formatted column per `group_col` level (spread).
 #' @noRd
@@ -128,7 +128,7 @@ fmt_assemble <- function(df, group_col = NULL, id_cols = NULL,
 #'
 #' Detects the long tidy form by the presence of a `.fmt` column. When
 #' present, formats each row's template, spreads `.group` to columns
-#' ([fmt_assemble()]), and reattaches the `"<group>\\nN = <n>"` column
+#' (`fmt_assemble()`), and reattaches the `"<group>\\nN = <n>"` column
 #' labels from `attr(df, "group_n")`. When absent (legacy / already-wide
 #' input) the frame is returned unchanged. Idempotent on wide input, so
 #' renderers can call it unconditionally at the start of rendering.

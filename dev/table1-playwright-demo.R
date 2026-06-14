@@ -3,7 +3,7 @@
 # indents, spanners).
 #
 # Run from the workspace root (works inside or outside the dev container):
-#   Rscript blockr.bi/dev/table1-playwright-demo.R
+#   Rscript blockr.viz/dev/table1-playwright-demo.R
 # open the local URL serve() prints (or uncomment the options line to pin 3838).
 
 options(blockr.html_table_preview = TRUE)
@@ -14,7 +14,7 @@ pkgload::load_all("blockr.dplyr")
 pkgload::load_all("blockr.dock")
 pkgload::load_all("blockr.dag")
 pkgload::load_all("blockr.extra")
-pkgload::load_all("blockr.bi")
+pkgload::load_all("blockr.viz")
 
 board <- new_dock_board(
   blocks = c(

@@ -32,8 +32,9 @@ A \code{\link[htmltools:tagList]{htmltools::tagList()}} containing the scoped st
 \code{shiny::renderUI()} / \code{shiny::htmlOutput()} slot.
 }
 \description{
-Renders the output of \code{\link[=summary_table]{summary_table()}} or \code{\link[=pivot_table]{pivot_table()}} as a
-hand-rolled HTML table with nested row-side section headers,
+Renders the output of \code{\link[=summary_table]{summary_table()}} (pivoted display grids are
+produced upstream by composing \code{summarize} with \code{tidyr::pivot_wider})
+as a hand-rolled HTML table with nested row-side section headers,
 multi-level column spanners, and client-side collapse/expand of
 sections. Designed as a dashboard-native alternative to
 \code{\link[=gt_table]{gt_table()}} — static gt is ideal for print / CSR output, while
@@ -58,4 +59,8 @@ carry HTML-wrapped display text for the leaf column header.
 v1 deliberately supports only the new wide format. Legacy
 long-format input from \code{tidy_summary_block} is routed through
 \code{\link[=gt_table]{gt_table()}} instead.
+}
+\examples{
+tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
+html_table(tbl)
 }

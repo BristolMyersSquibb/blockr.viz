@@ -25,4 +25,10 @@ numeric vectors \code{x} and \code{y} covering a 100-point line across the group
 x range. Used by the chart's JS-side renderer to draw a regression
 overlay without doing the math in the browser.
 }
+\examples{
+compute_smoother_series(
+  mtcars, "lm", "wt", "mpg",
+  color_by = NULL, series_by = NULL
+)
+}
 \keyword{internal}

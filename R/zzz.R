@@ -2,16 +2,16 @@
   # nocov start
 
   shiny::addResourcePath(
-    "blockr-bi-js",
+    "blockr-viz-js",
     system.file("js", package = pkgname)
   )
   shiny::addResourcePath(
-    "blockr-bi-css",
+    "blockr-viz-css",
     system.file("css", package = pkgname)
   )
 
-  register_bi_blocks()
-  echart_theme_blockr_bi()
+  register_viz_blocks()
+  echart_theme_blockr_viz()
   register_drilldown_ai_effect()
 
   invisible(NULL)

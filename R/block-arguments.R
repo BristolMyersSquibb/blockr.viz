@@ -1,4 +1,4 @@
-# Argument metadata helpers for blockr.bi blocks.
+# Argument metadata helpers for blockr.viz blocks.
 #
 # Each helper returns a named character vector (one description per
 # constructor param) with `examples` and `prompt` attributes attached via
@@ -42,7 +42,7 @@ pivot_table_arguments <- function() {
     ),
     prompt = paste(
       "This block produces a pivot (crosstab) table from a long-format data",
-      "frame. Mental model: Excel pivot table — rows (y-axis), cols (x-axis,",
+      "frame. Mental model: Excel pivot table \u2014 rows (y-axis), cols (x-axis,",
       "1-2 nested), measures (numeric values to aggregate), agg_fun (how to",
       "combine them). Dimensions not in rows or cols are aggregated away.",
       "\n\nMap common user requests:",
@@ -70,9 +70,9 @@ summary_table_arguments <- function() {
     c(
       state = paste0(
         "Object with fields: ",
-        "`vars` (character, variables to summarise — each becomes a row-section), ",
+        "`vars` (character, variables to summarise \u2014 each becomes a row-section), ",
         "`sections` (character, OUTER grouping columns that CONTAIN the `vars`, ",
-        "0..N — use ONLY for a true nesting hierarchy such as SOC containing PT; ",
+        "0..N \u2014 use ONLY for a true nesting hierarchy such as SOC containing PT; ",
         "leave empty for a flat list of variables), ",
         "`by` (character, column-split dimensions, 0..2), ",
         "`stats` (\"compact\" for one-row Mean (SD) per numeric, or \"expanded\" ",
@@ -81,11 +81,11 @@ summary_table_arguments <- function() {
         "`overall_label` (label for the overall column, default \"Total\"), ",
         "`id_var` (OPTIONAL subject-identifier column name, e.g. \"USUBJID\": when set, ",
         "counts and percentages are over DISTINCT values of this column instead of row ",
-        "counts — set it whenever the data is event-level/long, i.e. multiple rows can ",
+        "counts \u2014 set it whenever the data is event-level/long, i.e. multiple rows can ",
         "belong to one subject and the user wants per-subject counts; leave \"\" otherwise), ",
-        "`indent_details` (logical, default TRUE — indent detail rows under their ",
+        "`indent_details` (logical, default TRUE \u2014 indent detail rows under their ",
         "variable header; rarely changed), ",
-        "`nest_hierarchies` (logical, default FALSE — advanced row-side drill-down for ",
+        "`nest_hierarchies` (logical, default FALSE \u2014 advanced row-side drill-down for ",
         "adjacent functionally-dependent categorical vars; leave FALSE unless asked). ",
         "Handles numeric, categorical, and logical columns; logicals are rendered ",
         "as a one-row TRUE count for pharma flag variables."
@@ -105,7 +105,7 @@ summary_table_arguments <- function() {
       )
     ),
     prompt = paste(
-      "This block produces a multi-variable descriptive summary — the",
+      "This block produces a multi-variable descriptive summary \u2014 the",
       "\"list of variables by Y\" (Table 1 / demographics, AE counts) pattern.",
       "Each variable in `vars` becomes a row-section in the output: one row",
       "for compact numerics, six rows for expanded numerics, one row per",
@@ -116,14 +116,14 @@ summary_table_arguments <- function() {
       "(SOC contains PT). Only set it for genuine nesting; for a plain list",
       "of variables leave `sections` empty and put everything in `vars`.",
       "RULE: when two categoricals are named where one NESTS INSIDE the other",
-      "— SOC inside which PTs fall, Region inside which Countries fall — put",
+      "\u2014 SOC inside which PTs fall, Region inside which Countries fall \u2014 put",
       "the OUTER/containing one in `sections` and the INNER/detail one in",
       "`vars`. Do NOT put both in `vars`. So \"AEs by SOC and preferred term\"",
       "= sections=[\"AEBODSYS\"], vars=[\"AEDECOD\"] (NOT vars=[both]).",
       "\n- `by` = the column split (treatment arm).",
       "\n- `id_var` = subject id for DISTINCT-subject counts. Default \"\"",
       "(count rows). Set it ONLY when the user EXPLICITLY asks for distinct",
-      "patients/subjects — phrases like \"each subject counted once\", \"number",
+      "patients/subjects \u2014 phrases like \"each subject counted once\", \"number",
       "of patients with ...\", \"unique subjects\". Do NOT set it merely because",
       "a subject-id column (USUBJID) exists in the data, and never for one-row-",
       "per-subject data like demographics.",
@@ -154,9 +154,8 @@ gt_table_arguments <- function() {
         "Logical. TRUE (default) draws 2px top/bottom/heading borders in the ",
         "pharma SAP style."
       ),
-      indent_stat = paste0(
-        "Integer pixels of indentation for stat-label rows inside numeric ",
-        "sections. Default 16. Set to 0 to disable."
+      na_rep = paste0(
+        "String used to render missing (NA) cells. Default is an em dash."
       )
     ),
     examples = list(
@@ -164,14 +163,14 @@ gt_table_arguments <- function() {
       subtitle = "ITT population",
       full_width = TRUE,
       borders = TRUE,
-      indent_stat = 16L
+      na_rep = "\u2014"
     ),
     prompt = paste(
       "Render the output of summary_table_block as a styled gt table.",
-      "This block is a pure renderer — it does not",
+      "This block is a pure renderer \u2014 it does not",
       "reshape or aggregate. Place it downstream of a table-shape block.",
       "\n\nUse `title` / `subtitle` for table captions. Use `full_width`,",
-      "`borders`, and `indent_stat` for layout polish."
+      "`borders`, and `na_rep` for layout polish."
     )
   )
 }
