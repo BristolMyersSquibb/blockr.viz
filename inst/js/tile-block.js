@@ -1,7 +1,8 @@
 /**
- * tile-block.js — render-layer enhancements + gear-popover config + drill for
- * new_tile_block(). The R side (tile_html) emits the tk-* markup; this script:
- *   - animates values (count-up to data-final) and fills (grow-in) on entry,
+ * tile-block.js — gear-popover config + drill for new_tile_block(). The R side
+ * (tile_html) emits the tk-* markup with values and fill widths already at
+ * their final state (no animation — numbers should read instantly). This
+ * script only:
  *   - builds the gear popover via the shared Blockr.DrilldownConfig engine,
  *   - wires a card / matrix-row click to a categorical filter on the group.
  *
@@ -9,71 +10,6 @@
  * popover keyed by the ns()-based elem id, so two tiles never collide).
  */
 (function () {
-  var reduce = window.matchMedia &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  // ---- formatting (intermediate count-up frames; final settles to R's string)
-  function fmtNum(v, dec, pre, suf, compact) {
-    var neg = v < 0, a = Math.abs(v), s;
-    if (compact) {
-      if (a >= 1e9) s = (a / 1e9).toFixed(a >= 1e10 ? 0 : 1).replace(/\.0$/, '') + 'B';
-      else if (a >= 1e6) s = (a / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M';
-      else if (a >= 1e3) s = (a / 1e3).toFixed(0) + 'K';
-      else s = a.toFixed(dec);
-    } else {
-      s = a.toLocaleString('en-US',
-        { minimumFractionDigits: dec, maximumFractionDigits: dec });
-    }
-    return (neg ? '−' : '') + pre + s + suf;
-  }
-
-  function countUp(el) {
-    var target = parseFloat(el.getAttribute('data-count'));
-    var finalTxt = el.getAttribute('data-final');
-    if (isNaN(target)) return;
-    if (reduce) { if (finalTxt != null) el.textContent = finalTxt; return; }
-    var dec = parseInt(el.getAttribute('data-decimals') || '0', 10);
-    var pre = el.getAttribute('data-prefix') || '';
-    var suf = el.getAttribute('data-suffix') || '';
-    var scale = parseFloat(el.getAttribute('data-scale') || '1') || 1;
-    var compact = el.getAttribute('data-compact') === '1';
-    var dur = 620, start = null;
-    function step(ts) {
-      if (start === null) start = ts;
-      var p = Math.min((ts - start) / dur, 1);
-      var eased = 1 - Math.pow(1 - p, 3); // ease-out cubic
-      el.textContent = fmtNum(target * eased * scale, dec, pre, suf, compact);
-      if (p < 1) requestAnimationFrame(step);
-      else el.textContent = (finalTxt != null)
-        ? finalTxt : fmtNum(target * scale, dec, pre, suf, compact);
-    }
-    requestAnimationFrame(step);
-  }
-
-  function growBar(el) {
-    var pct = parseFloat(el.getAttribute('data-fill')) || 0;
-    if (reduce) { el.style.width = pct + '%'; return; }
-    el.style.width = '0%';
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () { el.style.width = pct + '%'; });
-    });
-  }
-
-  function animate(root) {
-    root.querySelectorAll('[data-count]').forEach(countUp);
-    root.querySelectorAll('[data-fill]').forEach(growBar);
-  }
-
-  function observeEntry(root) {
-    if (!('IntersectionObserver' in window)) { animate(root); return; }
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (e.isIntersecting) { animate(e.target); io.unobserve(e.target); }
-      });
-    }, { threshold: 0.2 });
-    io.observe(root);
-  }
-
   // ---- drill: card / row click -> categorical filter on the group ----------
   function wireDrill(root) {
     if (root.getAttribute('data-tk-drill') !== '1') return;
@@ -252,7 +188,6 @@
     root.setAttribute('data-tk-initialized', '1');
     buildCogwheel(root);
     wireDrill(root);
-    observeEntry(root);
   }
 
   function scan(ctx) {

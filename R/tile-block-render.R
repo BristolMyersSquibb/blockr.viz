@@ -183,37 +183,19 @@ tk_compact <- function(x) {
   paste0(if (neg) "−" else "", s)
 }
 
-#' Count-up data attributes for a value span. JS sweeps `data-count` 0->target
-#' and settles to `data-final` (R's exact string), so intermediate frames use
-#' the suffix/compact/decimals hints and the final frame is pixel-exact.
-#' @noRd
-tk_count_attrs <- function(x, spec, final) {
-  if (is.null(x) || length(x) == 0L || !is.finite(x)) return(list())
-  list(
-    `data-count`    = formatC(x, format = "f", digits = 6, drop0trailing = TRUE),
-    `data-final`    = final,
-    `data-decimals` = as.character(spec$digits),
-    `data-prefix`   = "",
-    `data-suffix`   = if (spec$kind == "percent") "%" else "",
-    `data-compact`  = if (spec$kind == "compact") "1" else "0",
-    `data-scale`    = as.character(spec$scale)
-  )
-}
-
 # ---------------------------------------------------------------------------
 # Cell pieces (value span, secondary by style)
 # ---------------------------------------------------------------------------
 
-#' The big value span with count-up attrs + is-neg coloring.
+#' The big value span with is-neg coloring. Rendered at its final value (no
+#' count-up animation — the number should read instantly).
 #' @noRd
 tk_value_span <- function(x, spec, extra_class = NULL) {
   txt <- tk_format(x, spec)
   cls <- paste(c("tk-value", "num",
                  if (is.finite(x) && x < 0) "is-neg", extra_class),
                collapse = " ")
-  do.call(htmltools::tags$span, c(
-    list(class = cls), tk_count_attrs(x, spec, txt), list(txt)
-  ))
+  htmltools::tags$span(class = cls, txt)
 }
 
 #' Up / down caret svg for a delta.
@@ -284,28 +266,25 @@ tk_secondary_node <- function(style, value, good_when, spec, context = "card") {
   if (identical(style, "fill")) {
     pct <- tk_fill_pct(value)
     if (!is.finite(pct)) return(NULL)
-    good <- identical(good_when, "down") == FALSE
-    bar <- htmltools::tags$div(
-      class = paste("tk-fill__bar", if (good) "good"),
-      `data-fill` = formatC(pct, format = "f", digits = 1),
-      style = if (identical(context, "cell")) "display:block" else NULL
-    )
-    track <- htmltools::tags$div(class = "tk-fill__track", bar)
+    good <- !identical(good_when, "down")
+    w <- formatC(pct, format = "f", digits = 1)
     if (identical(context, "cell")) {
       return(htmltools::tags$span(
         class = "tk-cellfill",
         htmltools::tags$span(class = "pct num", paste0(round(pct), "%")),
         htmltools::tags$span(class = "tk-fill__track",
-                             htmltools::tags$span(
-                               class = paste("tk-fill__bar", if (good) "good"),
-                               style = "display:block",
-                               `data-fill` = formatC(pct, format = "f",
-                                                     digits = 1)))
+          htmltools::tags$span(
+            class = paste("tk-fill__bar", if (good) "good"),
+            style = sprintf("display:block;width:%s%%", w)))
       ))
     }
+    bar <- htmltools::tags$div(
+      class = paste("tk-fill__bar", if (good) "good"),
+      style = sprintf("width:%s%%", w)
+    )
     return(htmltools::tags$div(
       class = "tk-fill",
-      track,
+      htmltools::tags$div(class = "tk-fill__track", bar),
       htmltools::tags$div(class = "tk-fill__meta",
                           htmltools::tags$b(class = "num", paste0(round(pct), "%")))
     ))

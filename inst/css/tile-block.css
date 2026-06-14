@@ -108,7 +108,7 @@
 }
 .tk-fill__bar{
   height:100%;border-radius:999px;background:var(--tk-accent);
-  width:0;transition:width .55s cubic-bezier(.22,.61,.36,1);
+  /* width is set inline at render — no grow-in animation */
 }
 .tk-fill__bar.good{background:var(--tk-green);}
 .tk-fill__meta{
@@ -182,7 +182,3 @@ table.tk-table{
   overflow:hidden;white-space:normal;
 }
 
-@media (prefers-reduced-motion:reduce){
-  .tk-block *{transition:none!important;}
-  .tk-fill__bar{transition:none!important;}
-}
