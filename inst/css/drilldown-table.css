@@ -43,31 +43,37 @@
   z-index: 2;
   background: var(--blockr-color-bg, #ffffff);
 }
-/* Sort indicator placement, matching the html preview: it rides the lower
-   row, to the right of the subtext, so it never adds a row of its own.
-   - labelled column:   name on top, [label .......... arrow] below
-   - unlabelled column: [name ................. arrow] on the single row */
+/* Sort indicator placement, matching the html preview: the arrow flows on
+   the lower row immediately to the right of the subtext (small gap, like the
+   preview's type-row) rather than on its own line.
+   - labelled column:   name on top, [label arrow] below
+   - unlabelled column: [name arrow] on the single row */
 .drilldown-table-container .blockr-table thead th .dt-th-namerow,
 .drilldown-table-container .blockr-table thead th .dt-th-subrow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  gap: 4px;
 }
 .drilldown-table-container .blockr-table thead th .dt-th-subrow {
-  align-items: baseline;
   margin-top: 1px;
 }
-.drilldown-table-container .blockr-table thead th .dt-th-namerow .blockr-col-name,
-.drilldown-table-container .blockr-table thead th .dt-th-subrow .blockr-col-label {
-  flex: 1 1 auto;
-  min-width: 0;
+/* Right-aligned (structured Table-1) arm headers anchor the subtext + arrow
+   to the right edge, level with the numeric columns below. */
+.drilldown-table-structured .blockr-table thead th.blockr-col-header .dt-th-namerow,
+.drilldown-table-structured .blockr-table thead th.blockr-col-header .dt-th-subrow {
+  justify-content: flex-end;
+}
+/* The structured arm sub-line carries its own top margin for the stacked
+   layout; inside the flex subrow the subrow owns the spacing. */
+.drilldown-table-container .blockr-table thead th .dt-th-subrow .arm__n {
+  margin-top: 0;
 }
 .drilldown-table-container .blockr-table thead th .dt-th-namerow .blockr-sort-icon,
 .drilldown-table-container .blockr-table thead th .dt-th-subrow .blockr-sort-icon {
   flex: 0 0 auto;
 }
-.drilldown-table-container .blockr-table thead th .blockr-col-name {
+.drilldown-table-container .blockr-table thead th .blockr-col-name,
+.drilldown-table-container .blockr-table thead th .arm__name {
   display: block;
 }
 .drilldown-table-container .blockr-table thead th .blockr-col-label {

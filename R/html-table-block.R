@@ -203,10 +203,16 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE) {
       if (all_leaf) {
         # At the leaf row, honour attr(col, "label") so that
         # summary_table_block's pre-baked "<strong>...</strong><br>N = ..."
-        # HTML headers render correctly.
-        content <- leaf_header_content(data, data_cols[i], parts[[i]][L], span)
+        # HTML headers render correctly. The sort arrow rides the sub-line
+        # (N = k) rather than stacking below it — see leaf_header_content().
         rowspan <- max_depth - L + 1L
         sortable <- (span == 1L)
+        sort_icon <- if (sortable) {
+          htmltools::tags$span(class = "blockr-sort-icon")
+        }
+        content <- leaf_header_content(
+          data, data_cols[i], parts[[i]][L], span, sort_icon = sort_icon
+        )
         cls <- "blockr-col-header leaf"
         if (sortable) cls <- paste(cls, "blockr-sortable")
         th_args <- list(
@@ -217,8 +223,6 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE) {
         if (rowspan > 1L) th_args$rowspan <- rowspan
         if (sortable) {
           th_args$`data-col-index` <- (i - 1L) + stub_offset
-          th_args[[length(th_args) + 1L]] <-
-            htmltools::tags$span(class = "blockr-sort-icon")
         }
       } else {
         content <- prefix_i[L]
@@ -240,17 +244,26 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE) {
 }
 
 #' @noRd
-leaf_header_content <- function(data, col_name, fallback_text, span) {
+leaf_header_content <- function(data, col_name, fallback_text, span,
+                                sort_icon = NULL) {
   if (span > 1L) {
+    # Group spanner — never sortable, so the icon (if any) is dropped.
     return(fallback_text)
   }
   lbl <- attr(data[[col_name]], "label")
   if (is.null(lbl) || !is.character(lbl) || !nzchar(lbl)) {
-    return(fallback_text)
+    # No label: name and sort arrow share the single row.
+    if (is.null(sort_icon)) return(fallback_text)
+    return(htmltools::tags$div(
+      class = "dt-th-namerow",
+      htmltools::tags$span(class = "arm__name", fallback_text),
+      sort_icon
+    ))
   }
   if (grepl("<", lbl, fixed = TRUE)) {
-    # Pre-baked HTML label (legacy / spanner path) — pass through untouched.
-    return(htmltools::HTML(lbl))
+    # Pre-baked HTML label (legacy / spanner path) — pass through untouched,
+    # with the sort arrow trailing.
+    return(htmltools::tagList(htmltools::HTML(lbl), sort_icon))
   }
   # Direction-01 two-tier arm header: "<arm>\nN = <n>" splits into a strong
   # arm name line + a quiet "N = k" sub-line. A label without a newline
@@ -258,12 +271,25 @@ leaf_header_content <- function(data, col_name, fallback_text, span) {
   parts <- strsplit(lbl, "\n", fixed = TRUE)[[1]]
   name_line <- parts[1L]
   n_line <- if (length(parts) > 1L) paste(parts[-1L], collapse = " ") else NULL
-  htmltools::tagList(
-    htmltools::tags$span(class = "arm__name", name_line),
-    if (!is.null(n_line) && nzchar(n_line)) {
-      htmltools::tags$span(class = "arm__n num", n_line)
-    }
-  )
+  if (!is.null(n_line) && nzchar(n_line)) {
+    # Two-tier: arm name on top; the "N = k" sub-line and the sort arrow
+    # share the lower row, so the arrow never adds a row of its own.
+    htmltools::tagList(
+      htmltools::tags$span(class = "arm__name", name_line),
+      htmltools::tags$div(
+        class = "dt-th-subrow",
+        htmltools::tags$span(class = "arm__n num", n_line),
+        sort_icon
+      )
+    )
+  } else {
+    # Single-line label: name and sort arrow share the one row.
+    htmltools::tags$div(
+      class = "dt-th-namerow",
+      htmltools::tags$span(class = "arm__name", name_line),
+      sort_icon
+    )
+  }
 }
 
 # ---------------------------------------------------------------------------
