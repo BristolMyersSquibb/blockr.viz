@@ -1,22 +1,19 @@
-# Putting it together — how to use blockr.viz (chart, table, tile).
+# blockr.viz — everything at once.
 #
-# The three per-renderer tours (example-chart / example-table / example-tile)
-# show every option of one block. THIS board is the opposite: the idiomatic
-# workflow a blockr.viz user follows — shape the data, pick the right renderer,
-# wire them together. blockr.dock arranges; blockr.viz draws. One clinical
-# dataset (safetyData ADSL subjects + ADAE adverse events) runs throughout.
+# A dense union of the three per-renderer tours (example-chart / -table /
+# -tile): every chart type, every table mode, every tile style, packed into a
+# few multi-panel dock views so the full surface of chart / table / tile is
+# visible at a glance. No narrative — just the capabilities. blockr.dock packs
+# the panels; switch views with the tabs top-right.
 #
-# Each dock VIEW teaches one habit:
-#   1. Tiles    AGGREGATE UPSTREAM, then tile. A tile renders a tidy frame, so
-#               summarize() first and feed the result as KPI cards.
-#   2. Charts   LET THE CHART AGGREGATE. Hand it raw rows + group/metric/agg_fn
-#               and it does the counting/averaging itself (the one renderer that
-#               self-aggregates, because a bar IS the sum of a group).
-#   3. Tables   RENDER TIDY DATA. A raw frame is a listing; a summary_table()
-#               shapes a "Table 1". The SAME shaped frame renders interactively
-#               (table) or for print (gt) — one shaper, two renderers.
-#   4. Drill    COMBINE THEM. Turn on `drill` and a click on the chart filters
-#               the linked table downstream — the signature dashboard pattern.
+# Views
+#   Charts        bar, scatter(+lm trend), line, pie, treemap, radar, boxplot,
+#                 facetted bar, waterfall — a 3x3 grid
+#   Tables        flat listing, structured Table 1, crosstab heatmap,
+#                 correlation (diverging), and the gt publication table
+#   Tiles         delta / fill / pill cards, the measures x group matrix, and
+#                 compact / percent / unit number formats
+#   Interactions  drill: click a chart bar or a tile card to filter a table
 #
 # Run from the workspace root (inside or outside the dev container):
 #   Rscript blockr.viz/dev/example-dashboard.R
@@ -34,82 +31,170 @@ pkgload::load_all("blockr.dag")
 pkgload::load_all("blockr.viz")
 
 stopifnot(requireNamespace("safetyData", quietly = TRUE))
-adsl <- safetyData::adam_adsl   # one row per subject
-adae <- safetyData::adam_adae   # one row per adverse event
+adsl <- safetyData::adam_adsl   # subjects (ARM, AGE, SEX, RACE, BMIBL, ...)
+adae <- safetyData::adam_adae   # adverse events (TRTA, AEBODSYS, AEDECOD, ...)
+
+# Small frames the renderers need: a bridge for the waterfall, the Orange growth
+# series for individual lines, and a correlation matrix for the diverging table.
+bridge <- data.frame(
+  step  = c("Opening", "New", "Upsell", "Churn", "Contraction"),
+  value = c(1200, 480, 260, -210, -90)
+)
+orange <- datasets::Orange
+num_vars <- c("AGE", "BMIBL", "WEIGHTBL", "HEIGHTBL")
+cmat <- round(stats::cor(adsl[num_vars], use = "pairwise.complete.obs"), 2)
+cor_df <- data.frame(Variable = rownames(cmat), cmat,
+                     check.names = FALSE, row.names = NULL)
+d <- tile_demo_data()           # $scorecard, $regions
 
 board <- new_dock_board(
   blocks = c(
-    subjects = new_static_block(adsl, block_name = "ADSL (subjects)"),
-    events   = new_static_block(adae, block_name = "ADAE (adverse events)"),
+    # --- data ---------------------------------------------------------------
+    adsl_d   = new_static_block(adsl, block_name = "ADSL (subjects)"),
+    adae_d   = new_static_block(adae, block_name = "ADAE (adverse events)"),
+    bridge_d = new_static_block(bridge, block_name = "Revenue bridge"),
+    orange_d = new_static_block(orange, block_name = "Orange trees"),
+    cor_d    = new_static_block(cor_df, block_name = "Correlation matrix"),
+    sc       = new_static_block(d$scorecard, block_name = "Scorecard"),
+    rg       = new_static_block(d$regions, block_name = "Regions"),
 
-    # 1. TILES — aggregate upstream with a dplyr summarize, then render the
-    #    one-row result as KPI cards. The tile never aggregates; it draws.
-    kpi = new_summarize_block(
-      state = list(
-        summaries = list(
-          list(type = "simple", name = "subjects", func = "n",    col = "USUBJID"),
-          list(type = "simple", name = "mean_age", func = "mean", col = "AGE"),
-          list(type = "simple", name = "mean_bmi", func = "mean", col = "BMIBL")
-        )
-      ),
-      block_name = "Summarize to one KPI row"),
-    kpi_tiles = new_tile_block(
-      value = c("subjects", "mean_age", "mean_bmi"),
-      format = "compact", layout = "cards",
-      block_name = "Headline numbers (tiles)"),
+    # --- CHARTS (every type) -----------------------------------------------
+    c_bar     = new_chart_block(chart_type = "bar", group = "ARM", color = "SEX",
+                                metric = ".count", agg_fn = "count",
+                                block_name = "Bar (counts by arm)"),
+    c_scatter = new_chart_block(chart_type = "scatter", x = "AGE", y = "WEIGHTBL",
+                                color = "SEX", smoother = "lm",
+                                block_name = "Scatter + lm trend"),
+    c_line    = new_chart_block(chart_type = "line", x = "age",
+                                y = "circumference", series = "Tree",
+                                block_name = "Line (per series)"),
+    c_pie     = new_chart_block(chart_type = "pie", group = "ARM",
+                                metric = ".count", agg_fn = "count",
+                                block_name = "Pie (arm share)"),
+    c_treemap = new_chart_block(chart_type = "treemap", group = "RACE",
+                                metric = ".count", agg_fn = "count",
+                                block_name = "Treemap (race share)"),
+    c_radar   = new_chart_block(chart_type = "radar", group = "RACE",
+                                color = "ARM", metric = "AGE", agg_fn = "mean",
+                                block_name = "Radar (mean age)"),
+    c_box     = new_chart_block(chart_type = "boxplot", group = "ARM",
+                                metric = "AGE", agg_fn = "mean",
+                                block_name = "Boxplot (age by arm)"),
+    c_facet   = new_chart_block(chart_type = "bar", group = "AGEGR1",
+                                facet = "SEX", metric = ".count",
+                                agg_fn = "count",
+                                block_name = "Facetted bar (by sex)"),
+    c_wf      = new_chart_block(chart_type = "waterfall", group = "step",
+                                metric = "value", agg_fn = "sum",
+                                block_name = "Waterfall (bridge)"),
 
-    # 2. CHARTS — raw rows in, the chart aggregates. Subjects per arm from ADSL;
-    #    AE counts per system-organ-class from raw ADAE (sorted, biggest first).
-    arm_chart = new_chart_block(
-      chart_type = "bar", group = "TRT01A",
-      metric = ".count", agg_fn = "count",
-      block_name = "Subjects by treatment (chart counts for you)"),
-    soc_chart = new_chart_block(
-      chart_type = "bar", group = "AEBODSYS",
-      metric = ".count", agg_fn = "count",
-      sort_by = "value", sort_dir = "desc",
-      block_name = "AE count by system organ class"),
+    # --- TABLES (every mode) -----------------------------------------------
+    t_flat    = new_table_block(rowname = "USUBJID",
+                                values = c("SEX", "ARM", "AGE", "BMIBL"),
+                                block_name = "Flat listing"),
+    t_summ    = new_summary_table_block(
+                  state = list(vars = list("AGE", "SEX", "RACE"),
+                               by = list("ARM"), add_overall = TRUE),
+                  block_name = "summary_table (Table 1)"),
+    t_summtbl = new_table_block(block_name = "Structured Table 1"),
+    xt_summ   = new_summarize_block(
+                  state = list(
+                    summaries = list(
+                      list(type = "simple", name = "n", func = "n", col = "AGE")),
+                    by = list("AGEGR1", "ARM")),
+                  block_name = "Count by age-group x arm"),
+    xt_wide   = new_pivot_wider_block(
+                  state = list(id_cols = list("AGEGR1"),
+                               names_from = list("ARM"),
+                               values_from = list("n")),
+                  block_name = "Pivot to crosstab"),
+    t_xt      = new_table_block(rowname = "AGEGR1",
+                                cell_color = drilldown_table_color(type = "sequential"),
+                                block_name = "Crosstab heatmap"),
+    t_cor     = new_table_block(rowname = "Variable",
+                                cell_color = drilldown_table_color(type = "diverging",
+                                                                   domain = c(-1, 1)),
+                                block_name = "Correlation (diverging)"),
+    t_gt      = new_gt_table_block(title = "Table 1. Demographics",
+                                   subtitle = "Safety population",
+                                   block_name = "Publication (gt)"),
 
-    # 3. TABLES — shape once, render twice. summary_table() emits a tidy "Table
-    #    1"; the interactive table and the static gt both render it.
-    summ = new_summary_table_block(
-      state = list(
-        vars = list("AGE", "SEX", "RACE"),
-        by = list("TRT01A"),
-        add_overall = TRUE
-      ),
-      block_name = "summary_table (Table 1 shaper)"),
-    summ_tbl = new_table_block(block_name = "Table 1 — interactive (table)"),
-    gt_pub = new_gt_table_block(
-      title = "Table 1. Demographics",
-      subtitle = "Safety population",
-      block_name = "Table 1 — publication (gt)"),
+    # --- TILES (every style) -----------------------------------------------
+    ti_delta   = new_tile_block(value = "value", measure = "metric",
+                                secondary = "delta", style = "delta",
+                                good_when = "up", format = "compact",
+                                block_name = "Delta cards"),
+    ti_fill    = new_tile_block(value = "value", measure = "metric",
+                                secondary = "progress", style = "fill",
+                                format = "compact", block_name = "Progress fill"),
+    ti_pill    = new_tile_block(value = "value", measure = "metric",
+                                secondary = "status", style = "pill",
+                                format = "compact", block_name = "Status pills"),
+    ti_matrix  = new_tile_block(value = c("revenue", "conversion", "orders"),
+                                by = "region", layout = "table",
+                                block_name = "Matrix (measures x region)"),
+    ti_compact = new_tile_block(value = "value", measure = "metric",
+                                format = "compact", block_name = "Compact format"),
+    ti_percent = new_tile_block(value = "progress", measure = "metric",
+                                format = "percent", block_name = "Percent format"),
+    ti_unit    = new_tile_block(value = "orders", by = "region",
+                                format = "number", unit = "orders",
+                                block_name = "Number + unit"),
 
-    # 4. DRILL — the chart filters the table. Clicking a SOC bar emits a filter
-    #    that flows down the link; the table shows only those adverse events.
-    drill_chart = new_chart_block(
-      chart_type = "bar", group = "AEBODSYS", color = "TRT01A",
-      metric = ".count", agg_fn = "count", drill = "AEBODSYS",
-      sort_by = "value", sort_dir = "desc",
-      block_name = "AEs by SOC — click a bar to filter"),
-    drill_tbl = new_table_block(
-      rowname = "USUBJID", values = c("AEDECOD", "AEBODSYS", "TRT01A"),
-      block_name = "Adverse events (drilled)")
+    # --- INTERACTIONS (drill) ----------------------------------------------
+    ix_chart   = new_chart_block(chart_type = "bar", group = "AEBODSYS",
+                                 color = "TRTA", metric = ".count",
+                                 agg_fn = "count", drill = "AEBODSYS",
+                                 sort_by = "value", sort_dir = "desc",
+                                 block_name = "AEs by SOC (click to filter)"),
+    ix_tbl     = new_table_block(rowname = "USUBJID",
+                                 values = c("AEDECOD", "AEBODSYS", "TRTA"),
+                                 block_name = "Adverse events (drilled)"),
+    ix_tile    = new_tile_block(value = "orders", by = "region", unit = "orders",
+                                drill = TRUE, block_name = "Orders by region (drill)"),
+    ix_tiletbl = new_table_block(block_name = "Region (drilled)")
   ),
   links = links(
-    from = c("subjects", "kpi", "subjects", "events", "subjects", "summ",
-             "summ", "events", "drill_chart"),
-    to   = c("kpi", "kpi_tiles", "arm_chart", "soc_chart", "summ", "summ_tbl",
-             "gt_pub", "drill_chart", "drill_tbl")
+    from = c(
+      "adsl_d", "adsl_d", "orange_d", "adsl_d", "adsl_d", "adsl_d", "adsl_d",
+      "adsl_d", "bridge_d",
+      "adsl_d", "adsl_d", "t_summ", "t_summ", "adsl_d", "xt_summ", "xt_wide",
+      "cor_d",
+      "sc", "sc", "sc", "rg", "sc", "sc", "rg",
+      "adae_d", "ix_chart", "rg", "ix_tile"
+    ),
+    to = c(
+      "c_bar", "c_scatter", "c_line", "c_pie", "c_treemap", "c_radar", "c_box",
+      "c_facet", "c_wf",
+      "t_flat", "t_summ", "t_summtbl", "t_gt", "xt_summ", "xt_wide", "t_xt",
+      "t_cor",
+      "ti_delta", "ti_fill", "ti_pill", "ti_matrix", "ti_compact", "ti_percent",
+      "ti_unit",
+      "ix_chart", "ix_tbl", "ix_tile", "ix_tiletbl"
+    )
   ),
   layouts = list(
-    tiles  = dock_layout("kpi_tiles", name = "1. Tiles"),
-    charts = dock_layout("arm_chart", "soc_chart", name = "2. Charts"),
-    tables = dock_layout("summ_tbl", "gt_pub", name = "3. Tables (+ gt)"),
-    drill  = dock_layout("drill_chart", "drill_tbl", name = "4. Drill")
+    charts = dock_layout(
+      group("c_bar", "c_scatter", "c_line"),
+      group("c_pie", "c_treemap", "c_radar"),
+      group("c_box", "c_facet", "c_wf"),
+      orientation = "vertical", name = "Charts"),
+    tables = dock_layout(
+      group("t_flat", "t_summtbl"),
+      group("t_xt", "t_cor"),
+      "t_gt",
+      orientation = "vertical", name = "Tables (+ gt)"),
+    tiles = dock_layout(
+      group("ti_delta", "ti_fill", "ti_pill"),
+      group("ti_matrix", "ti_compact", "ti_percent", "ti_unit"),
+      orientation = "vertical", name = "Tiles"),
+    interactions = dock_layout(
+      group("ix_chart", "ix_tbl"),
+      group("ix_tile", "ix_tiletbl"),
+      orientation = "vertical", name = "Interactions (drill)")
   ),
   options = dock_board_options(),
-  active = "tiles",
+  active = "charts",
   extensions = list(blockr.dag::new_dag_extension())
 )
 
