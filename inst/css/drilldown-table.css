@@ -12,6 +12,14 @@
 .drilldown-table-container.dt-clickable .blockr-table tbody tr.blockr-data-row {
   cursor: pointer;
 }
+/* No drill: the row is inert. The html-table base paints an accent-blue hover
+   (which reads as "clickable"), and the drilldown container inherits it because
+   it also carries .blockr-html-table-container. When drill is off, swap that for
+   a neutral grey reading-aid tint so hover signals "readable", not "actionable".
+   The accent-blue hover + cursor:pointer above stay for the .dt-clickable case. */
+.drilldown-table-container:not(.dt-clickable) .blockr-table tbody tr.blockr-data-row:hover td {
+  background: var(--blockr-color-bg-subtle, #f9fafb);
+}
 /* Drill selection — a soft primary tint across the row plus a left accent
    bar, instead of a hard per-cell outline (which boxed every cell). */
 .drilldown-table-container .blockr-table tbody tr.dt-row-active td {

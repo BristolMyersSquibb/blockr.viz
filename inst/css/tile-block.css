@@ -24,6 +24,7 @@
   --tk-amber:#b97c00;  --tk-amber-soft:#fbf1dd;
   --tk-card-shadow:none;
   --tk-hover-tint:rgba(37,99,235,.025);
+  --tk-hover-neutral:rgba(17,24,39,.022);  /* inert hover: grey, not accent */
 
   color:var(--tk-ink-1);
   font-size:14px;
@@ -173,6 +174,17 @@ table.tk-table{
 /* drill: clickable rows / cards */
 .tk-block.tk-clickable .tk-card{cursor:pointer;}
 .tk-block.tk-clickable .tk-table tbody tr{cursor:pointer;}
+/* No drill: tiles are inert. The default hover paints an accent-blue tint (and
+   the card strengthens its border like a lift), which reads as a button. When
+   drill is off, swap for a neutral grey reading-aid and drop the border lift so
+   hover signals "readable", not "clickable". Accent hover + cursor stay above. */
+.tk-block:not(.tk-clickable) .tk-card:hover{
+  border-color:var(--tk-hair);
+  background:linear-gradient(var(--tk-hover-neutral),var(--tk-hover-neutral)),var(--tk-surface-1);
+}
+.tk-block:not(.tk-clickable) .tk-table tbody tr:hover{
+  background:linear-gradient(var(--tk-hover-neutral),var(--tk-hover-neutral));
+}
 .tk-card.tk-active{border-color:var(--tk-accent);box-shadow:0 0 0 1px var(--tk-accent);}
 .tk-table tbody tr.tk-active{background:var(--tk-accent-soft);}
 
