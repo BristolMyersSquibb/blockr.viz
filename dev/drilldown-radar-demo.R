@@ -20,7 +20,7 @@ board <- new_dock_board(
     data = new_static_block(adsl),
     radar = new_chart_block(chart_type = "radar", group = "RACE",
                             color = "TRT01P", metric = "AGE", agg_fn = "mean",
-                            drill = "auto"),
+                            drill = "TRT01P"),
     table = new_table_block()
   ),
   links = links(
