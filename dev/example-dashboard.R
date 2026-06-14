@@ -8,7 +8,7 @@
 #
 # Views (panel = tab strip)
 #   Charts        [bar|pie|treemap] [scatter+lm|line|boxplot] [radar|facet|waterfall]
-#   Tables        [flat|Table 1] [crosstab heatmap|correlation] [gt publication]
+#   Tables        [flat|Table 1|gt publication] [crosstab heatmap|correlation]
 #   Tiles         [delta|fill|pill] [matrix] [compact|percent|unit]
 #   Interactions  drill: chart->table and tile->table (shown side by side)
 #
@@ -179,10 +179,9 @@ board <- new_dock_board(
       panels("c_radar", "c_facet", "c_wf"),
       orientation = "horizontal", name = "Charts"),
     tables = dock_layout(
-      panels("t_flat", "t_summtbl"),
+      panels("t_flat", "t_summtbl", "t_gt"),
       panels("t_xt", "t_cor"),
-      panels("t_gt"),
-      orientation = "vertical", name = "Tables (+ gt)"),
+      orientation = "horizontal", name = "Tables (+ gt)"),
     tiles = dock_layout(
       panels("ti_delta", "ti_fill", "ti_pill"),
       panels("ti_matrix"),
