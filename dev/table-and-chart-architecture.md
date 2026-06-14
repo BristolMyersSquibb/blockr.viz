@@ -314,15 +314,14 @@ table"), `correlate → table` (heatmap), `model → broom → table` (coefficie
       `table`; remove dead `new_correlation_matrix_block` references.
 - [ ] Retire `descriptives` (blockr.stats); point users at `describe`/`summary_table`.
 - [ ] Fold `html_table` section/spanner rendering into `table`; retire `html_table`.
-- [x] Deprecate `kpi` — unregistered + `lifecycle::deprecate_soft → new_tile_block`,
-      removed from MCP universe, constructor kept. *(2026-06-13)* Still TODO: migrate
-      live boards (unibas, insurance, deploy apps) from kpi to tile.
-- [x] Deprecate `pivot_table` — unregistered + `lifecycle::deprecate_soft`, constructor
-      kept (already out of MCP universe). *(2026-06-13)*
-- [ ] Fold `waterfall` into `chart` as a **bar baseline mode** (`baseline =
-      "cumulative"` + per-bar `total` override + sign colors) in `drilldown-chart.js`,
-      *not* a new chart_type. "Waterfall" stays a named UI choice = sugar for
-      `bar + baseline="cumulative"`. Keep `new_waterfall_block` registered until then.
+- [x] **Remove `kpi`** — deleted outright *(2026-06-14)*, no compat shim (blockr.bi
+      is being retired for blockr.viz, a conscious upgrade). Successor `new_tile_block`.
+      Downstream boards (unibas, insurance, deploy apps) migrate to tile as part of the
+      blockr.viz cutover.
+- [x] **Remove `pivot_table`** — deleted outright *(2026-06-14)*. Successor is a
+      composed `summarize → tidyr::pivot_wider → table`, not a bespoke block.
+- [x] **Remove `waterfall`** — deleted outright *(2026-06-14)*. Successor
+      `new_chart_block(chart_type = "waterfall")` (bar + `baseline = "cumulative"`).
 - [ ] Move/clarify `gt` ownership (blockr.gt vs bi adapter).
 - [ ] Unify `rowname`/`values` naming across block + internal renderer.
 

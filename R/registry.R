@@ -5,17 +5,15 @@
 #' @export
 #' @importFrom blockr.core register_blocks
 register_bi_blocks <- function() {
-  # NOTE: deprecated blocks are UNREGISTERED, not tagged — their constructors
-  # stay exported (so serialized boards still deserialize via get0()), but they
-  # are removed from this list so the picker and the MCP/AI universe stop
-  # offering them. Currently deprecated & unregistered:
-  #   - new_kpi_block      -> superseded by new_tile_block (showcase = "number")
-  #   - new_pivot_table_block -> = summarize + pivot_wider; no production caller
-  #   - new_waterfall_block -> folded into new_chart_block as chart_type =
-  #       "waterfall" (bar + baseline = "cumulative")
-  # new_html_table_block / new_drilldown_table_block were removed outright (not
-  # just unregistered): table_block now renders flat + structured input by
-  # reusing the html builders, and the standalone html_table() renderer remains.
+  # Removed outright (2026-06-14) — superseded, with no compat shim kept since
+  # blockr.bi is being retired in favour of blockr.viz (a conscious upgrade):
+  #   - new_kpi_block          -> new_tile_block
+  #   - new_pivot_table_block  -> summarize + tidyr::pivot_wider (a composed
+  #                               reshape, not a bespoke block)
+  #   - new_waterfall_block    -> new_chart_block(chart_type = "waterfall")
+  #   - new_html_table_block / new_drilldown_table_block -> new_table_block
+  #     (renders flat + structured input via the html_table() builders)
+  #   - new_drilldown_chart_block -> new_chart_block
   # See dev/table-and-chart-architecture.md.
   blockr.core::register_blocks(
     c(
@@ -35,7 +33,7 @@ register_bi_blocks <- function() {
     description = c(
       "Wide, display-shaped multi-variable summary (list of variables by Y pattern). Successor to tidy_summary_block.",
       "Render wide-format tables (from summary_table) as styled gt tables — static / print / CSR output.",
-      "Scorecard of bold KPI numbers — cards or an aligned matrix, with deltas / fills / status pills and click-to-filter drill. A pure renderer (shape upstream). Successor to kpi_block.",
+      "Scorecard of bold KPI numbers — cards or an aligned matrix, with deltas / fills / status pills and click-to-filter drill. A pure renderer (shape upstream).",
       "Configurable chart with click-to-filter drill-down",
       "Interactive table (sticky header, sort, search) with optional cell coloring and click-to-filter drill-down"
     ),
