@@ -9,10 +9,13 @@
 # Loads THIS worktree's package from source (pkgload::load_all) — works on any
 # machine, no install needed, and picks up the R + inst/js changes.
 
-# 3838 is the forwarded port for the user; CELLVIS_PORT overrides it for
-# automated checks that must not collide with another app.
-options(shiny.port = as.integer(Sys.getenv("CELLVIS_PORT", "3838")),
-        shiny.host = "0.0.0.0")
+# No fixed port: let Shiny pick a free one and print the URL. Set CELLVIS_PORT
+# to pin a specific port if you need a stable address.
+local({
+  p <- Sys.getenv("CELLVIS_PORT", "")
+  if (nzchar(p)) options(shiny.port = as.integer(p))
+})
+options(shiny.host = "127.0.0.1")
 options(blockr.html_table_preview = TRUE)
 
 suppressMessages({
