@@ -8,6 +8,7 @@ viz_data <- data.frame(
   product = c("A", "B", "A", "B", "A", "A"),
   revenue = c(100, 50, 80, 40, 60, 30),
   profit  = c(10, 5, 8, 4, 6, 3),
+  growth  = c(0.12, -0.04, 0.20, -0.10, 0.08, 0.00), # deltas for the tile
   stringsAsFactors = FALSE
 )
 
@@ -82,6 +83,16 @@ serve(
         by    = "region",
         drill = TRUE
       ),
+      # Tile in table (matrix) layout with a delta-styled secondary: covers
+      # the cell-coloring render and a real matrix-row drill click.
+      tile_x = new_tile_block(
+        value     = "revenue",
+        by        = "region",
+        secondary = "growth",
+        style     = "delta",
+        layout    = "table",
+        drill     = TRUE
+      ),
       # Display-shaped summary + a gt render of a plain frame.
       summary = new_summary_table_block(
         state = list(vars = c("revenue", "profit"), by = "region")
@@ -98,6 +109,7 @@ serve(
       new_link("data", "chart_brush", "data"),
       new_link("data", "chart_cfg", "data"),
       new_link("data", "tile", "data"),
+      new_link("data", "tile_x", "data"),
       new_link("data", "summary", "data"),
       new_link("data", "gt", "data")
     )

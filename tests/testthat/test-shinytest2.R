@@ -527,6 +527,52 @@ test_that("tile: a filter action filters the tile block's output", {
 # SUMMARY TABLE / GT TABLE: render smoke
 # ===========================================================================
 
+test_that("summary_table gear: toggling 'overall' adds a Total row to the output", {
+  skip_if_no_app()
+
+  scope <- "#board-block_summary-expr-summary_input"
+  before <- get_block_result("summary")
+  expect_false("Total" %in% before$.group)
+
+  # Open the gear and click the overall pill (label "No overall" -> on). This
+  # drives summary-table-block.js's real gear -> state -> R -> recomputed output.
+  app$run_js(sprintf("document.querySelector('%s .blockr-gear-btn').scrollIntoView({block:'center'});", scope))
+  app$run_js(sprintf("document.querySelector('%s .blockr-gear-btn').click();", scope))
+  app$wait_for_idle(); Sys.sleep(0.3)
+  app$run_js(sprintf(
+    "(function(){var b=Array.from(document.querySelectorAll('%s .blockr-pill')).filter(function(x){return /overall/i.test(x.textContent);})[0]; if(b) b.click();})()",
+    scope
+  ))
+  app$wait_for_idle(); Sys.sleep(0.5); app$wait_for_idle()
+
+  after <- get_block_result("summary")
+  expect_true("Total" %in% after$.group)
+  expect_gt(nrow(after), nrow(before))
+})
+
+test_that("tile: delta secondary renders and a matrix-row click drills", {
+  skip_if_no_app()
+
+  scope <- "#board-block_tile_x-expr-tile_result"
+  app$run_js(sprintf("document.querySelector('%s').scrollIntoView({block:'center'});", scope))
+  app$wait_for_idle()
+
+  # Delta-styled secondaries render as colored .tk-delta spans (one per group).
+  n_delta <- app$get_js(sprintf("document.querySelectorAll('%s .tk-delta').length", scope))
+  expect_gt(n_delta, 0)
+
+  # A real click on a matrix row (table layout) drills on its group.
+  app$run_js(sprintf(
+    "(function(){var r=Array.from(document.querySelectorAll('%s [data-group]')).filter(function(x){return x.getAttribute('data-group')==='South';})[0]; if(r) r.click();})()",
+    scope
+  ))
+  app$wait_for_idle(); Sys.sleep(0.4); app$wait_for_idle()
+
+  res <- get_block_result("tile_x")
+  expect_setequal(unique(res$region), "South")
+  expect_equal(nrow(res), 2L)
+})
+
 test_that("summary_table: produces a tidy summary frame", {
   skip_if_no_app()
 
