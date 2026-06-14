@@ -443,6 +443,35 @@
 
     _hasVal(v) { return v !== null && v !== undefined && v !== '' && v !== '(none)'; }
 
+    // Size the horizontal category-label gutter to the actual labels rather
+    // than a fixed 150px column. ECharts' grid doesn't auto-fit to category
+    // label width, so the family used a fixed wide gutter to give long terms
+    // (AETERM) a stable truncating column. The cost: short codes (701, arm
+    // names) and narrow dock panels got a giant empty left margin. This
+    // measures the widest label and caps it at LABEL_CAP — content-fitting for
+    // short labels, still truncating for long ones. Returns the three coupled
+    // numbers the axis/grid need (axisLabel.width + .margin and grid.left),
+    // preserving the original 5px label->axis gap and 10px container inset.
+    _yGutter(labels) {
+      const LABEL_CAP = 145; // matches the historical truncate width
+      // Slack added to the measured width: the canvas may measure with the
+      // fallback font before 'Open Sans' loads (ECharts then paints the wider
+      // real font), and an exactly-fitting box truncates on sub-pixel rounding.
+      // Without it short labels like "701" render as "7…".
+      const PAD = 10;
+      const ctx = DrilldownChart._measureCtx ||
+        (DrilldownChart._measureCtx = document.createElement('canvas').getContext('2d'));
+      ctx.font = `11px ${BLOCKR_FONT}`;
+      let w = 0;
+      for (const l of labels) {
+        const tw = ctx.measureText(String(l ?? '')).width;
+        if (tw > w) w = tw;
+        if (w >= LABEL_CAP) break;
+      }
+      w = Math.min(Math.ceil(w) + PAD, LABEL_CAP);
+      return { width: w, margin: w + 5, gridLeft: w + 15 };
+    }
+
     // Establish sensible defaults for the active family. Crucially this also
     // picks the default MAPPING columns (group / x / y) when unset — and it
     // runs in the family-switch path (_onChartType) BEFORE _sendConfig, so R
@@ -901,9 +930,10 @@
       // labels (AE terms, arms); vertical puts it on the x-axis. The mapping
       // is unchanged (Group=category, Metric=value) \u2014 flipping re-maps nothing.
       const vertical = this.config.orientation === 'vertical';
+      const gut = this._yGutter(groups);
       const catAxis = vertical
         ? { type: 'category', data: groups, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, rotate: 30, overflow: 'truncate', width: 90, ellipsis: '\u2026' }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
-        : { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: 150, width: 145, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false }, axisTick: { show: false } };
+        : { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false }, axisTick: { show: false } };
       const valAxis = {
         type: 'value', name: valueTitle, nameLocation: 'middle',
         nameGap: vertical ? 45 : 30,
@@ -921,7 +951,7 @@
         legend: legendOn ? { show: true, bottom: 0, textStyle: { fontSize: 11 } } : undefined,
         grid: vertical
           ? { left: 55, right: 10, top: 30, bottom: (legendOn ? 55 : 40) + 26 }
-          : { left: 160, right: 5, top: 30, bottom: (legendOn ? 55 : 20) + 26 },
+          : { left: gut.gridLeft, right: 5, top: 30, bottom: (legendOn ? 55 : 20) + 26 },
         xAxis: vertical ? catAxis : valAxis,
         yAxis: vertical ? valAxis : catAxis,
         series
@@ -1129,7 +1159,8 @@
         const hi = Math.min(vals[vals.length - 1], q3 + 1.5 * iqr);
         return [lo, q1, q(0.5), q3, hi];
       });
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true }, grid: { left: 160, right: 5, top: 30, bottom: 46 }, xAxis: { type: 'value', name: this._axisTitle(this.config.metric), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } }, yAxis: { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: 150, width: 145, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false } }, series: [{ type: 'boxplot', data: boxData, itemStyle: { color: palette[0] + '22', borderColor: palette[0] } }] };
+      const gut = this._yGutter(groups);
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true }, grid: { left: gut.gridLeft, right: 5, top: 30, bottom: 46 }, xAxis: { type: 'value', name: this._axisTitle(this.config.metric), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } }, yAxis: { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false } }, series: [{ type: 'boxplot', data: boxData, itemStyle: { color: palette[0] + '22', borderColor: palette[0] } }] };
     }
 
     // -- Individual rendering -------------------------------------------------
@@ -1933,6 +1964,7 @@
           }];
         }
 
+        const gut = this._yGutter(terms);
         const option = {
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
           color: (colorScale && colorScale.color && colorLevels.length)
@@ -1964,7 +1996,7 @@
             ? { show: true, bottom: 8, type: 'scroll', textStyle: { fontSize: 11 }, data: legendData }
             : { show: false },
           toolbox: TOOLBOX,
-          grid: { left: 160, right: 10, top: 20, bottom: showLegend ? 78 : 48 },
+          grid: { left: gut.gridLeft, right: 10, top: 20, bottom: showLegend ? 78 : 48 },
           xAxis: xAxisSpec,
           yAxis: {
             type: 'category',
@@ -1972,7 +2004,7 @@
             inverse: true,
             axisLabel: {
               color: ax.labelColor, fontSize: ax.fontSize,
-              align: 'left', margin: 150, width: 145,
+              align: 'left', margin: gut.margin, width: gut.width,
               overflow: 'truncate', ellipsis: '\u2026'
             },
             axisLine: { show: false },
