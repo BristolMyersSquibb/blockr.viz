@@ -89,9 +89,12 @@ test_that("html_table() handles mixed-depth columns via rowspan", {
   html <- as.character(htmltools::tagList(html_table(df)))
 
   # "Total" is depth 1 while KarXT cells are depth 2 → max_depth = 2 →
-  # Total should get rowspan=2 so it sits against both header rows.
-  # The <th> with rowspan=2 should wrap the "Total" text.
-  expect_true(grepl("rowspan=\"2\"[^<]*[\r\n[:space:]]*Total", html))
+  # Total should get rowspan=2 so it sits against both header rows. The
+  # <th rowspan="2"> wraps the name in a dt-th-namerow div / arm__name span,
+  # so allow intervening open tags between the attribute and the text.
+  expect_true(grepl(
+    "rowspan=\"2\"[^>]*>([[:space:]]*<[^>]*>)*[[:space:]]*Total", html
+  ))
 })
 
 test_that("html_table() renders leaf-level attr(col, 'label') as HTML", {
@@ -225,9 +228,10 @@ test_that("html_table() applies hidden .indent/.bold/.italic styling columns", {
     Total   = c("a", "b", "c")
   )
   html <- as.character(htmltools::tagList(html_table(df)))
-  # Indent: level-1 adds 16px, level-2 adds 32px
-  expect_true(grepl("padding-left:32px", html, fixed = TRUE))
-  expect_true(grepl("padding-left:48px", html, fixed = TRUE))
+  # Stub padding is a 24px base (aligns indented rows with the section-header
+  # label) + 16px per indent level: level-1 -> 40px, level-2 -> 56px.
+  expect_true(grepl("padding-left:40px", html, fixed = TRUE))
+  expect_true(grepl("padding-left:56px", html, fixed = TRUE))
   # Bold and italic classes on data rows
   expect_true(grepl("blockr-data-row blockr-bold", html, fixed = TRUE))
   expect_true(grepl("blockr-data-row blockr-italic", html, fixed = TRUE))

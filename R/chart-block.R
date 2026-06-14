@@ -414,11 +414,15 @@ new_chart_block <- function(
         # If an upstream block renames/drops a mapped column, the chart would
         # otherwise read NA silently and mis-render — surface a clear invalid
         # state instead. `.count` is the synthetic count metric (no column),
-        # and the runtime sort_by sentinels are not data columns. The data
-        # passes through unchanged, so this only guards the JS-side mapping.
+        # `drill = "auto"` is a sentinel resolved at click time from the clicked
+        # shape (not a literal column), and the runtime sort_by sentinels are
+        # not data columns either. The data passes through unchanged, so this
+        # only guards the JS-side mapping.
         mapped_cols <- function(d) {
+          drill <- r_drill()
+          if (identical(drill, "auto")) drill <- NULL
           cols <- c(r_group(), r_color(), r_facet(), r_metric(),
-            r_x(), r_y(), r_xend(), r_series(), r_label(), r_drill())
+            r_x(), r_y(), r_xend(), r_series(), r_label(), drill)
           cols <- unique(cols[!is.null(cols) & nzchar(cols) & cols != ".count"])
           cols[!cols %in% names(d)]
         }
