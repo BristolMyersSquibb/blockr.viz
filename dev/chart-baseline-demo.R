@@ -1,19 +1,30 @@
-# Verify: waterfall is now a BAR option (the `baseline` toggle), not a separate
-# chart_type. Starts as a plain bar; open the chart's gear -> the type picker
-# should show Bar | Pie | Treemap (no Waterfall), and with Bar selected a
-# "Bars: Standard | Waterfall" toggle. Picking Waterfall -> cumulative bridge.
-#   cd /workspace && Rscript blockr.bi/dev/chart-baseline-demo.R > /tmp/cb.log 2>&1 &
-.libPaths("/workspace/blockr.dev/.devcontainer/.library")
-suppressMessages({ library(blockr.core); pkgload::load_all("blockr.bi", quiet = TRUE) })
-register_bi_blocks()
+# Chart waterfall demo — waterfall is a BAR option (the `baseline` toggle), not
+# a separate chart_type. Open the chart's gear: the type picker shows
+# Bar | Pie | Treemap, and with Bar selected a "Bars: Standard | Waterfall"
+# toggle. Picking Waterfall draws the cumulative bridge.
+#
+# Run from the workspace root (works inside or outside the dev container):
+#   Rscript blockr.bi/dev/chart-baseline-demo.R
+# open the local URL serve() prints (or uncomment the options line to pin 3838).
 
-board <- new_board(
+pkgload::load_all("blockr.core")
+pkgload::load_all("blockr.dplyr")
+pkgload::load_all("blockr.dock")
+pkgload::load_all("blockr.dag")
+pkgload::load_all("blockr.bi")
+
+board <- new_dock_board(
   blocks = c(
     data = new_dataset_block("BOD"),
     bar = new_chart_block(chart_type = "bar", group = "Time",
                           metric = "demand", agg_fn = "sum")
   ),
-  links = c(new_link("data", "bar", "data"))
+  links = links(
+    from = "data",
+    to   = "bar"
+  ),
+  extensions = list(blockr.dag::new_dag_extension())
 )
-options(shiny.port = 3838, shiny.host = "0.0.0.0", shiny.launch.browser = FALSE)
-shiny::runApp(serve(board))
+
+# options(shiny.port = 3838L, shiny.host = "0.0.0.0")  # uncomment to pin
+serve(board)

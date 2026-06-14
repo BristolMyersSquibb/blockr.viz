@@ -1,18 +1,33 @@
-# gt block gear-settings styling check: dataset -> summary_table -> gt_table.
-# The gt block's panel shows its config form (Title/Subtitle/NA/toggles).
-#   cd /workspace && Rscript blockr.bi/dev/gt-gear-demo.R > /tmp/gt.log 2>&1 &
-.libPaths("/workspace/blockr.dev/.devcontainer/.library")
-suppressMessages({ library(blockr.core); pkgload::load_all("/workspace/blockr.bi", quiet = TRUE) })
-register_bi_blocks()
+# Summary table -> gt table demo — the same "Table 1" summary rendered as a
+# static / publication-style gt table. The gt block's panel carries its config
+# form (Title / Subtitle / NA / toggles).
+#
+# Run from the workspace root (works inside or outside the dev container):
+#   Rscript blockr.bi/dev/gt-gear-demo.R
+# open the local URL serve() prints (or uncomment the options line to pin 3838).
 
-board <- new_board(
+pkgload::load_all("blockr.core")
+pkgload::load_all("blockr.dplyr")
+pkgload::load_all("blockr.dock")
+pkgload::load_all("blockr.dag")
+pkgload::load_all("blockr.bi")
+
+board <- new_dock_board(
   blocks = c(
     data = new_dataset_block("CO2"),
     summ = new_summary_table_block(state = list(
-      vars = list("uptake", "Type"), by = list("Treatment"), add_overall = TRUE)),
+      vars = list("uptake", "Type"),
+      by   = list("Treatment"),
+      add_overall = TRUE
+    )),
     gt = new_gt_table_block(title = "Demographics")
   ),
-  links = c(new_link("data", "summ", "data"), new_link("summ", "gt", "data"))
+  links = links(
+    from = c("data", "summ"),
+    to   = c("summ", "gt")
+  ),
+  extensions = list(blockr.dag::new_dag_extension())
 )
-options(shiny.port = 3838, shiny.host = "0.0.0.0", shiny.launch.browser = FALSE)
-shiny::runApp(serve(board))
+
+# options(shiny.port = 3838L, shiny.host = "0.0.0.0")  # uncomment to pin
+serve(board)

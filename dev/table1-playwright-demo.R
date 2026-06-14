@@ -1,29 +1,33 @@
-# Table-1 structured-render check: dataset -> summary_table -> table.
-# Verifies table_block now renders section nesting / indents / spanners
-# (Phase 1 fold). Serve on 3838:
-#   cd /workspace && Rscript blockr.bi/dev/table1-playwright-demo.R > /tmp/t1.log 2>&1 &
-.libPaths("/workspace/blockr.dev/.devcontainer/.library")
-suppressMessages({
-  library(blockr.core)
-  pkgload::load_all("/workspace/blockr.bi", quiet = TRUE)
-})
-register_bi_blocks()
+# Summary table -> table demo — a "Table 1" summary (variables by Treatment,
+# + overall) rendered interactively by the table block (section nesting,
+# indents, spanners).
+#
+# Run from the workspace root (works inside or outside the dev container):
+#   Rscript blockr.bi/dev/table1-playwright-demo.R
+# open the local URL serve() prints (or uncomment the options line to pin 3838).
 
-board <- new_board(
+pkgload::load_all("blockr.core")
+pkgload::load_all("blockr.dplyr")
+pkgload::load_all("blockr.dock")
+pkgload::load_all("blockr.dag")
+pkgload::load_all("blockr.bi")
+
+board <- new_dock_board(
   blocks = c(
-    data = new_dataset_block("CO2"),  # Type/Treatment factors + uptake numeric
+    data = new_dataset_block("CO2"),
     summ = new_summary_table_block(state = list(
       vars = list("uptake", "Type"),
       by   = list("Treatment"),
       add_overall = TRUE
     )),
-    tbl  = new_table_block()
+    tbl = new_table_block()
   ),
-  links = c(
-    new_link("data", "summ", "data"),
-    new_link("summ", "tbl",  "data")
-  )
+  links = links(
+    from = c("data", "summ"),
+    to   = c("summ", "tbl")
+  ),
+  extensions = list(blockr.dag::new_dag_extension())
 )
 
-options(shiny.port = 3838, shiny.host = "0.0.0.0", shiny.launch.browser = FALSE)
-shiny::runApp(serve(board))
+# options(shiny.port = 3838L, shiny.host = "0.0.0.0")  # uncomment to pin
+serve(board)

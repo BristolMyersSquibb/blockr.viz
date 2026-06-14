@@ -1,54 +1,47 @@
-# Tile (KPI renderer) visual + drill check. Serve on 3838:
-#   cd /workspace && Rscript blockr.bi/dev/tile-playwright-demo.R > /tmp/tile.log 2>&1 &
+# Tile (KPI renderer) demo — cards (delta / fill / pill), a grouped matrix, and
+# a drill tile whose click filters a downstream table.
 #
-# Covers: cards with delta / fill / pill, the grouped matrix (table layout),
-# and a drill=TRUE tile whose click filters a downstream table.
-.libPaths("/workspace/blockr.dev/.devcontainer/.library")
-suppressMessages({
-  library(blockr.core)
-  pkgload::load_all("/workspace/blockr.bi", quiet = TRUE)
-})
-register_bi_blocks()
+# Run from the workspace root (works inside or outside the dev container):
+#   Rscript blockr.bi/dev/tile-playwright-demo.R
+# open the local URL serve() prints (or uncomment the options line to pin 3838).
+
+pkgload::load_all("blockr.core")
+pkgload::load_all("blockr.dplyr")
+pkgload::load_all("blockr.dock")
+pkgload::load_all("blockr.dag")
+pkgload::load_all("blockr.bi")
 
 d <- tile_demo_data()
 
-board <- new_board(
+board <- new_dock_board(
   blocks = c(
-    # --- card styles on the scorecard frame -------------------------------
-    sc1  = new_static_block(d$scorecard),
+    sc1 = new_static_block(d$scorecard),
     t_delta = new_tile_block(value = "value", measure = "metric",
                              secondary = "delta", style = "delta",
-                             good_when = "up", format = "compact",
+                             good_when = "up", format = "number",
                              layout = "cards"),
-    sc2  = new_static_block(d$scorecard),
+    sc2 = new_static_block(d$scorecard),
     t_fill = new_tile_block(value = "value", measure = "metric",
                             secondary = "progress", style = "fill",
                             layout = "cards"),
-    sc3  = new_static_block(d$scorecard),
+    sc3 = new_static_block(d$scorecard),
     t_pill = new_tile_block(value = "value", measure = "metric",
                             secondary = "status", style = "pill",
                             layout = "cards"),
-
-    # --- grouped matrix (table layout) ------------------------------------
-    rg1  = new_static_block(d$regions),
+    rg1 = new_static_block(d$regions),
     t_mtx = new_tile_block(value = c("revenue", "conversion", "orders"),
                            by = "region", layout = "table"),
-
-    # --- drill: clicking a region card filters the downstream table -------
-    rg2   = new_static_block(d$regions),
-    t_drill = new_tile_block(value = "revenue", by = "region",
+    rg2 = new_static_block(d$regions),
+    t_drill = new_tile_block(value = "orders", by = "region", unit = "orders",
                              layout = "cards", drill = TRUE),
     downstream = new_table_block()
   ),
-  links = c(
-    new_link("sc1", "t_delta", "data"),
-    new_link("sc2", "t_fill",  "data"),
-    new_link("sc3", "t_pill",  "data"),
-    new_link("rg1", "t_mtx",   "data"),
-    new_link("rg2", "t_drill", "data"),
-    new_link("t_drill", "downstream", "data")
-  )
+  links = links(
+    from = c("sc1", "sc2", "sc3", "rg1", "rg2", "t_drill"),
+    to   = c("t_delta", "t_fill", "t_pill", "t_mtx", "t_drill", "downstream")
+  ),
+  extensions = list(blockr.dag::new_dag_extension())
 )
 
-options(shiny.port = 3838, shiny.host = "0.0.0.0", shiny.launch.browser = FALSE)
-shiny::runApp(serve(board))
+# options(shiny.port = 3838L, shiny.host = "0.0.0.0")  # uncomment to pin
+serve(board)
