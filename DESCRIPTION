@@ -46,5 +46,9 @@ Suggests:
     shinytest2,
     testthat (>= 3.0.0),
     withr
+Remotes:
+    BristolMyersSquibb/blockr.ai,
+    cynkra/blockr.extra,
+    BristolMyersSquibb/blockr.theme
 VignetteBuilder: knitr
 Config/testthat/edition: 3
