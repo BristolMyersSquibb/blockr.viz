@@ -47,6 +47,8 @@ Suggests:
     testthat (>= 3.0.0),
     withr
 Remotes:
+    BristolMyersSquibb/blockr.core,
+    BristolMyersSquibb/blockr.dplyr,
     BristolMyersSquibb/blockr.ai,
     cynkra/blockr.extra,
     BristolMyersSquibb/blockr.theme
