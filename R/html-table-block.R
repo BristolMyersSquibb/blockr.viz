@@ -307,146 +307,122 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   has_italic <- ".italic" %in% styling_cols
   indent_px  <- 16L
 
-  prev_path <- rep(NA_character_, length(section_cols))
-  out <- list()
-  # Index into `out` of the most-recent data row; used to apply the
-  # Direction-01 `blockr-group-last` hairline to the LAST stat row of each
-  # group (a rule only at the group boundary, not between every row).
-  last_data_idx <- NA_integer_
-  mark_group_last <- function() {
-    if (!is.na(last_data_idx)) {
-      r <- out[[last_data_idx]]
-      r$attribs$class <- paste(r$attribs$class, "blockr-group-last")
-      out[[last_data_idx]] <<- r
-    }
-  }
-
+  # Vectorized assembly: build the body as a single HTML string instead of
+  # one htmltools tag object per cell. The per-cell `tags$td()` construction
+  # plus the `renderTags()` tree walk was the render bottleneck (see the flat
+  # `drilldown_table()` path). This is the same structured builder kept in
+  # lock-step: section-header rows are still interleaved at section restarts,
+  # the group-end hairline still tags each group's last data row, and indent /
+  # bold / italic / missing handling is preserved byte-for-byte. Summary /
+  # pivot "Table 1" output is small today, but this keeps it scaling like the
+  # flat table if a large structured frame ever arrives.
   n_rows <- nrow(data)
-  for (i in seq_len(n_rows)) {
-    curr_path <- if (length(section_cols)) {
-      vapply(section_cols, function(sc) {
-        v <- data[[sc]][i]
-        if (is.na(v)) "(missing)" else as.character(v)
-      }, character(1))
-    } else {
-      character(0)
-    }
+  if (n_rows == 0L) return(htmltools::tags$tbody())
 
-    diff_from <- NA_integer_
-    for (L in seq_along(section_cols)) {
-      if (is.na(prev_path[L]) || !identical(curr_path[L], prev_path[L])) {
-        diff_from <- L
-        break
-      }
-    }
+  esc <- function(x) htmltools::htmlEscape(as.character(x), attribute = FALSE)
+  k <- length(section_cols)
 
-    # A change at the outermost section level closes the previous group:
-    # tag its final data row with the group-end hairline before the new
-    # group header is emitted.
-    if (!is.na(diff_from) && diff_from == 1L) {
-      mark_group_last()
-      last_data_idx <- NA_integer_
-    }
-
-    if (!is.na(diff_from)) {
-      for (L in diff_from:length(section_cols)) {
-        sc <- section_cols[L]
-        sec_label <- attr(data[[sc]], "label")
-        prefix_tag <- if (!identical(sc, ".var") &&
-                          !is.null(sec_label) &&
-                          is.character(sec_label) &&
-                          nzchar(sec_label) &&
-                          sec_label != sc) {
-          htmltools::tags$span(
-            class = "blockr-section-label",
-            paste0(sec_label, ": ")
-          )
-        } else {
-          NULL
-        }
-
-        out[[length(out) + 1L]] <- htmltools::tags$tr(
-          class = "blockr-section-header",
-          `data-level` = L,
-          htmltools::tags$td(
-            class = paste0("blockr-section-cell level-", L),
-            colspan = ncol_total,
-            # Direction-01: the whole group label is one full-width button
-            # (bigger hit target) carrying an SVG caret that rotates to encode
-            # collapsed state. The td gets padding:0; the button carries the
-            # padding (see html_table_delta_css). The collapse JS toggles
-            # `.collapsed` on the enclosing tr; the button is inside the row so
-            # its click bubbles up to that handler.
-            htmltools::tags$button(
-              class = "blockr-section-btn",
-              type = "button",
-              `aria-expanded` = "true",
-              section_chevron_svg(),
-              prefix_tag,
-              htmltools::tags$span(
-                class = "blockr-section-value",
-                curr_path[L]
-              )
-            )
-          )
-        )
-      }
-    }
-    prev_path <- curr_path
-
-    row_bold <- if (has_bold) {
-      b <- suppressWarnings(as.logical(data[[".bold"]][i]))
-      isTRUE(b)
-    } else FALSE
-    row_italic <- if (has_italic) {
-      b <- suppressWarnings(as.logical(data[[".italic"]][i]))
-      isTRUE(b)
-    } else FALSE
-    row_indent <- if (has_indent) {
-      n <- suppressWarnings(as.integer(data[[".indent"]][i]))
-      if (is.na(n) || n < 0L) 0L else n
-    } else 0L
-
-    row_class <- "blockr-data-row"
-    if (row_bold)   row_class <- paste(row_class, "blockr-bold")
-    if (row_italic) row_class <- paste(row_class, "blockr-italic")
-
-    cells <- list()
-    if (!is.null(stub_col)) {
-      # Align the first stat level with the section-header label (40px = the
-      # group button's caret+gap offset), per the design. Deeper indents add
-      # one unit each. indent-0 uses the 40px base from td.blockr-stub.
-      stub_style <- if (row_indent > 0L) {
-        paste0("padding-left:", 24L + row_indent * indent_px, "px;")
-      } else NULL
-      cells[[length(cells) + 1L]] <- htmltools::tags$td(
-        class = "blockr-stub",
-        style = stub_style,
-        as.character(data[[stub_col]][i])
-      )
-    }
-    for (cn in data_cols) {
-      v <- data[[cn]][i]
-      is_missing <- is.na(v)
-      cells[[length(cells) + 1L]] <- htmltools::tags$td(
-        # Direction-01: missing values get a muted em-dash so they read as
-        # 'no data' rather than as a real figure.
-        class = if (is_missing) "blockr-data blockr-dash" else "blockr-data",
-        if (is_missing) htmltools::HTML("&mdash;") else as.character(v)
-      )
-    }
-
-    out[[length(out) + 1L]] <- htmltools::tags$tr(
-      class = row_class,
-      cells
-    )
-    last_data_idx <- length(out)
+  # Per-row section path (rows x levels); NA renders as "(missing)".
+  if (k > 0L) {
+    path_mat <- vapply(section_cols, function(sc) {
+      v <- as.character(data[[sc]])
+      v[is.na(data[[sc]])] <- "(missing)"
+      v
+    }, character(n_rows))
+    if (is.null(dim(path_mat))) path_mat <- matrix(path_mat, nrow = n_rows)
+  } else {
+    path_mat <- matrix(character(), nrow = n_rows, ncol = 0L)
   }
 
-  # Close the final group.
-  mark_group_last()
+  # diff_from[i]: outermost section level that changed vs the previous row
+  # (row 1 changes at level 1); NA when nothing changed -> no header emitted.
+  diff_from <- rep(NA_integer_, n_rows)
+  if (k > 0L) {
+    changed <- matrix(FALSE, n_rows, k)
+    for (L in seq_len(k)) {
+      col <- path_mat[, L]
+      changed[, L] <- c(TRUE, col[-1L] != col[-n_rows])
+    }
+    for (L in k:1L) diff_from[changed[, L]] <- L
+  }
 
-  htmltools::tags$tbody(out)
+  # A data row is its group's last when the NEXT row restarts the outermost
+  # level, or it is the final row (matches the old mark_group_last()).
+  next_diff <- c(diff_from[-1L], NA_integer_)
+  group_last <- (seq_len(n_rows) == n_rows) |
+    (!is.na(next_diff) & next_diff == 1L)
+
+  # Section-header rows: one HTML string per (row, level), blanked on rows
+  # where level L does not restart (L < diff_from, or no change at all).
+  chev <- as.character(section_chevron_svg())
+  header_cols <- vector("list", k)
+  for (L in seq_len(k)) {
+    sc <- section_cols[L]
+    sec_label <- attr(data[[sc]], "label")
+    prefix <- if (!identical(sc, ".var") && !is.null(sec_label) &&
+                  is.character(sec_label) && nzchar(sec_label) &&
+                  sec_label != sc) {
+      paste0("<span class=\"blockr-section-label\">",
+             esc(paste0(sec_label, ": ")), "</span>")
+    } else {
+      ""
+    }
+    hdr <- paste0(
+      "<tr class=\"blockr-section-header\" data-level=\"", L, "\">",
+      "<td class=\"blockr-section-cell level-", L,
+      "\" colspan=\"", ncol_total, "\">",
+      "<button class=\"blockr-section-btn\" type=\"button\" ",
+      "aria-expanded=\"true\">", chev, prefix,
+      "<span class=\"blockr-section-value\">", esc(path_mat[, L]),
+      "</span></button></td></tr>"
+    )
+    hdr[is.na(diff_from) | L < diff_from] <- ""
+    header_cols[[L]] <- hdr
+  }
+  header_prefix <- if (k > 0L) do.call(paste0, header_cols) else rep("", n_rows)
+
+  # Per-row styling vectors.
+  row_indent <- if (has_indent) {
+    n <- suppressWarnings(as.integer(data[[".indent"]]))
+    n[is.na(n) | n < 0L] <- 0L
+    n
+  } else rep(0L, n_rows)
+  row_bold <- if (has_bold) {
+    b <- suppressWarnings(as.logical(data[[".bold"]])); !is.na(b) & b
+  } else rep(FALSE, n_rows)
+  row_italic <- if (has_italic) {
+    b <- suppressWarnings(as.logical(data[[".italic"]])); !is.na(b) & b
+  } else rep(FALSE, n_rows)
+
+  row_class <- rep("blockr-data-row", n_rows)
+  row_class[row_bold]   <- paste(row_class[row_bold], "blockr-bold")
+  row_class[row_italic] <- paste(row_class[row_italic], "blockr-italic")
+  row_class[group_last] <- paste(row_class[group_last], "blockr-group-last")
+
+  # Stub + data cells, column-vectorized.
+  if (!is.null(stub_col)) {
+    stub_style <- ifelse(row_indent > 0L,
+      paste0(" style=\"padding-left:", 24L + row_indent * indent_px, "px;\""),
+      "")
+    stub_html <- paste0("<td class=\"blockr-stub\"", stub_style, ">",
+                        esc(data[[stub_col]]), "</td>")
+  } else {
+    stub_html <- rep("", n_rows)
+  }
+
+  data_cell_cols <- lapply(data_cols, function(cn) {
+    col <- data[[cn]]
+    out <- paste0("<td class=\"blockr-data\">", esc(col), "</td>")
+    # Missing values get a muted em-dash so they read as 'no data'.
+    out[is.na(col)] <- "<td class=\"blockr-data blockr-dash\">&mdash;</td>"
+    out
+  })
+
+  row_inner <- do.call(paste0, c(list(stub_html), data_cell_cols))
+  data_rows <- paste0("<tr class=\"", row_class, "\">", row_inner, "</tr>")
+
+  body_html <- paste0(header_prefix, data_rows, collapse = "")
+  htmltools::tags$tbody(htmltools::HTML(body_html))
 }
 
 #' Direction-01 group-header caret (SVG, not a text glyph). Rotates to encode
@@ -735,7 +711,23 @@ input.blockr-search:focus {
 #' visually consistent without a hard dependency. If blockr.extra is
 #' available, prefer its exported helper instead — same source of truth.
 html_table_shared_css_fallback <- function() {
-  ".blockr-table {
+  "/* Suppress Shiny's `.recalculating` dim (opacity 0.3) on the drilldown
+   table. The table now re-renders in single-digit ms on a filter, so the
+   'computing' fade is pure flicker, not useful feedback. blockr.ui already
+   disables it for the canonical preview (`:has(.blockr-table-container)`,
+   blockr-table-preview.css); the drilldown table uses a different container
+   class, so it needs its own rule here. TODO: unify the two preview renderers
+   onto one no-fade rule (drop this once the container classes are shared).
+   Two selectors: the FIRST matches the inner `dt_table` output that actually
+   recalculates on a filter (it lives INSIDE the container); the second matches
+   the case where the recalculating output wraps/contains the container (the
+   standalone drilldown_table() in a renderUI). */
+.drilldown-table-container .shiny-html-output.recalculating,
+.shiny-html-output.recalculating:has(.drilldown-table-container) {
+  --_shiny-fade-opacity: 1;
+  opacity: 1 !important;
+}
+.blockr-table {
   border-collapse: collapse;
   width: 100%;
   font-size: var(--blockr-font-size-base, 0.875rem);

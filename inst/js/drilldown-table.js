@@ -191,11 +191,17 @@
     onScroll();
   }
 
-  function wireSearch(root, tbody) {
+  function wireSearch(root) {
     var inp = root.querySelector("input.blockr-search");
-    if (!inp) return;
-    var structured = root.getAttribute("data-dt-structured") === "1";
+    if (!inp || inp.getAttribute("data-dt-search-wired") === "1") return;
+    inp.setAttribute("data-dt-search-wired", "1");
     inp.addEventListener("input", function () {
+      // The <table>/<tbody> re-renders on each filter while this input (in the
+      // chrome) persists, so query it live rather than closing over it.
+      var table = root.querySelector("table.blockr-table");
+      var tbody = table && table.querySelector("tbody");
+      if (!tbody) return;
+      var structured = root.getAttribute("data-dt-structured") === "1";
       var q = inp.value.trim().toLowerCase();
       var rows = Array.prototype.slice.call(tbody.children);
       rows.forEach(function (r) {
@@ -229,10 +235,10 @@
     });
   }
 
-  function wireClick(root, tbody) {
+  function wireClick(root, table, tbody) {
     var elemId = root.getAttribute("data-dt-elem-id");
-    var col = root.getAttribute("data-dt-onclick-col");
-    var idx = root.getAttribute("data-dt-onclick-idx");
+    var col = table.getAttribute("data-dt-onclick-col");
+    var idx = table.getAttribute("data-dt-onclick-idx");
     if (!elemId || !col || idx == null) return;
     idx = parseInt(idx, 10);
     root.classList.add("dt-clickable");
@@ -275,13 +281,14 @@
   // sendConfig(key, value) round-trips directly.
   var TABLE_ROLES = {
     drill:      { label: "Drill-down", kind: "column", colType: "any" },
+    row_color:  { label: "Row color",  kind: "column", colType: "any" },
     color_mode: { label: "Coloring",   kind: "select", options: ["off", "diverging", "sequential"] },
     digits:     { label: "Decimals",   kind: "select", options: ["0", "1", "2", "3", "4"] }
   };
   var TABLE_SECTIONS = {
-    requiredMap: [], optionalMap: [], encoding: [],
+    requiredMap: [], optionalMap: [], mapping: [],
     presentation: [
-      "drill",
+      "drill", "row_color",
       "color_mode", "digits"
     ]
   };
@@ -294,11 +301,12 @@
     table.querySelectorAll("thead th .blockr-col-name")
       .forEach(function (s) { cols.push({ name: s.textContent.trim(), type: "any" }); });
 
-    var onClick = root.getAttribute("data-dt-onclick-col");
+    var onClick = table.getAttribute("data-dt-onclick-col");
     var cfg = {
       drill:      (onClick && onClick !== "(none)") ? onClick : "",
-      color_mode: root.getAttribute("data-dt-color-mode") || "off",
-      digits:     root.getAttribute("data-dt-digits") || "2"
+      row_color:  table.getAttribute("data-dt-row-color") || "",
+      color_mode: table.getAttribute("data-dt-color-mode") || "off",
+      digits:     table.getAttribute("data-dt-digits") || "2"
     };
 
     var header = document.createElement("div");
@@ -314,14 +322,13 @@
       ? Blockr.icons.gear : "⚙";
     header.appendChild(btn);
 
-    // Remove a stale popover orphaned on <body> by a previous render of
-    // this element (the popover is portaled to <body>, see below).
+    // Remove a stale popover orphaned on <body> by a previous MOUNT of this
+    // element (the popover is portaled to <body>). The gear is built once per
+    // container now — the chrome never re-renders on a filter or config edit —
+    // so there is no per-edit rebuild to restore (the old wasOpen hack is gone).
     var staleP = document.querySelector(
       '.dd-popover[data-dd-pop-for="' + (window.CSS && CSS.escape
         ? CSS.escape(elemId) : elemId) + '"]');
-    // The table re-renders on every config edit and rebuilds this popover;
-    // remember whether the prior instance was open so we can restore it.
-    var wasOpen = !!(staleP && staleP.style.display === "block");
     if (staleP && staleP.parentNode) staleP.parentNode.removeChild(staleP);
 
     var pop = document.createElement("div");
@@ -416,31 +423,46 @@
 
     document.body.appendChild(pop);
     root.insertBefore(header, root.firstChild);
-    // Keep the form open until the user clicks away: each config edit
-    // re-renders the table and rebuilds this popover closed, so restore the
-    // open state captured from the prior instance above.
-    if (wasOpen) openPop();
   }
 
-  function init(root) {
-    if (!root || root.getAttribute("data-dt-initialized") === "1") return;
-    var table = root.querySelector("table.blockr-table");
-    if (!table) return;
-    var tbody = table.querySelector("tbody");
-    if (!tbody) return;
+  // Chrome wiring — once per container. The gear, search input and scroll
+  // container live in the chrome, which is rendered once and never rebuilt, so
+  // these never need re-wiring.
+  function initContainer(root, table) {
+    if (root.getAttribute("data-dt-initialized") === "1") return;
     root.setAttribute("data-dt-initialized", "1");
     buildCogwheel(root, table);
-    wireSort(root, table, tbody);
-    wireSearch(root, tbody);
-    wireClick(root, tbody);
-    wireCollapse(root, tbody);
+    wireSearch(root);
     wireScrollShadow(root);
+  }
+
+  // Table wiring — for each freshly-rendered <table> (sort, row-click drill,
+  // section collapse, all bound to elements inside the table). Only the table
+  // re-renders on a filter / config edit, so this re-runs against the new
+  // table; the per-table flag keeps re-scans idempotent.
+  function wireTable(root, table) {
+    if (table.getAttribute("data-dt-table-wired") === "1") return;
+    var tbody = table.querySelector("tbody");
+    if (!tbody) return;
+    table.setAttribute("data-dt-table-wired", "1");
+    wireSort(root, table, tbody);
+    wireClick(root, table, tbody);
+    wireCollapse(root, tbody);
+    // Re-apply any active search filter to the freshly rendered rows (the
+    // input persists in the chrome but the new rows start unfiltered).
+    var inp = root.querySelector("input.blockr-search");
+    if (inp && inp.value.trim()) inp.dispatchEvent(new Event("input"));
   }
 
   function scan(ctx) {
     var nodes = (ctx || document)
-      .querySelectorAll(".drilldown-table-container:not([data-dt-initialized])");
-    Array.prototype.forEach.call(nodes, init);
+      .querySelectorAll(".drilldown-table-container");
+    Array.prototype.forEach.call(nodes, function (root) {
+      var table = root.querySelector("table.blockr-table");
+      if (!table) return;
+      initContainer(root, table);
+      wireTable(root, table);
+    });
   }
 
   if (document.readyState === "loading") {
