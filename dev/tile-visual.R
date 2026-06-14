@@ -2,10 +2,10 @@
 # page (no dock), so a screenshot shows them all. Exercises the real CSS + JS
 # (count-up, fill grow-in, gear popover). Serve on 3838:
 #   cd /workspace && Rscript blockr.bi/dev/tile-visual.R > /tmp/tilev.log 2>&1 &
-.libPaths("/workspace/blockr.dev/.devcontainer/.library")
+# .libPaths("/workspace/blockr.dev/.devcontainer/.library")
 suppressMessages({
   library(shiny)
-  pkgload::load_all("/workspace/blockr.bi", quiet = TRUE)
+  pkgload::load_all("blockr.bi", quiet = TRUE)
 })
 
 d <- tile_demo_data()
@@ -29,7 +29,7 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   output$delta <- renderUI(H(d$scorecard, value = "value", measure = "metric",
-    secondary = "delta", style = "delta", good_when = "up", format = "auto",
+    secondary = "delta", style = "delta", good_when = "up", format = "number",
     elem_id = "v-delta"))
   output$fill <- renderUI(H(d$scorecard, value = "value", measure = "metric",
     secondary = "progress", style = "fill", elem_id = "v-fill"))
@@ -39,8 +39,9 @@ server <- function(input, output, session) {
     secondary = "delta", style = "delta", layout = "table", elem_id = "v-tflat"))
   output$tmtx <- renderUI(H(d$regions, value = c("revenue", "conversion", "orders"),
     by = "region", layout = "table", elem_id = "v-tmtx"))
-  output$gcards <- renderUI(H(d$regions, value = c("revenue", "orders"),
-    by = "region", layout = "cards", elem_id = "v-gcards"))
+  # Free-text unit: "USD" (compact) and "orders" — no inferred currency symbol.
+  output$gcards <- renderUI(H(d$regions, value = "orders", by = "region",
+    unit = "orders", format = "number", elem_id = "v-gcards"))
 }
 
 port <- as.integer(Sys.getenv("TILE_PORT", "3838"))

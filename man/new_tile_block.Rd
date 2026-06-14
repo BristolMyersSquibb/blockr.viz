@@ -14,7 +14,7 @@ new_tile_block(
   secondary = "",
   style = "plain",
   good_when = "up",
-  format = "auto",
+  format = "number",
   unit = "",
   measures = list(),
   drill = FALSE,
@@ -46,10 +46,13 @@ measure label.}
 \item{good_when}{Polarity for delta / fill / pill coloring: \code{"up"} (an
 increase is good) or \code{"down"} (a decrease is good — e.g. churn).}
 
-\item{format}{Value format: \code{"auto"} (inferred) / \code{"int"} / \code{"pct"} /
-\code{"usd"} / \code{"compact"}.}
+\item{format}{How the number is formatted (never a currency guess):
+\code{"number"} (separators + smart decimals), \code{"compact"} (1.2M / 38.4K), or
+\code{"percent"} (a fraction ×100 + \%).}
 
-\item{unit}{Unit suffix shown next to the value / in the matrix header.}
+\item{unit}{Free-text unit label shown next to the value / in the matrix
+header (e.g. \code{"USD"}, \code{"CHF"}, \code{"apples"}). This is how you label a
+currency — the renderer never infers \code{$}.}
 
 \item{measures}{Optional per-measure override list, keyed by measure name,
 each \code{list(style, good_when, format, unit)}. Lets a matrix draw Revenue

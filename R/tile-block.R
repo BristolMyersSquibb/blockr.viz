@@ -39,9 +39,12 @@
 #' @param style Secondary display style: `plain` / `delta` / `fill` / `pill`.
 #' @param good_when Polarity for delta / fill / pill coloring: `"up"` (an
 #'   increase is good) or `"down"` (a decrease is good — e.g. churn).
-#' @param format Value format: `"auto"` (inferred) / `"int"` / `"pct"` /
-#'   `"usd"` / `"compact"`.
-#' @param unit Unit suffix shown next to the value / in the matrix header.
+#' @param format How the number is formatted (never a currency guess):
+#'   `"number"` (separators + smart decimals), `"compact"` (1.2M / 38.4K), or
+#'   `"percent"` (a fraction ×100 + %).
+#' @param unit Free-text unit label shown next to the value / in the matrix
+#'   header (e.g. `"USD"`, `"CHF"`, `"apples"`). This is how you label a
+#'   currency — the renderer never infers `$`.
 #' @param measures Optional per-measure override list, keyed by measure name,
 #'   each `list(style, good_when, format, unit)`. Lets a matrix draw Revenue
 #'   as `delta` and Budget as `fill`. Falls back to the flat defaults.
@@ -68,7 +71,7 @@ new_tile_block <- function(value = character(),
                            secondary = "",
                            style = "plain",
                            good_when = "up",
-                           format = "auto",
+                           format = "number",
                            unit = "",
                            measures = list(),
                            drill = FALSE,
@@ -122,7 +125,7 @@ new_tile_block <- function(value = character(),
               secondary = upd(r_secondary, tk_blank(v)),
               style     = upd(r_style, v %||% "plain"),
               good_when = upd(r_good_when, v %||% "up"),
-              format    = upd(r_format, v %||% "auto"),
+              format    = upd(r_format, v %||% "number"),
               unit      = upd(r_unit, as.character(v %||% "")),
               overline  = upd(r_overline, tk_blank(v)),
               caption   = upd(r_caption, tk_blank(v)),
@@ -283,10 +286,15 @@ tile_arguments <- function() {
         "\"down\" (a decrease is good, e.g. churn / cost)."
       ),
       format = paste0(
-        "Value format: \"auto\" (inferred from name + range), \"int\", ",
-        "\"pct\", \"usd\", or \"compact\" (1.2M)."
+        "How the NUMBER is formatted (never a currency guess): \"number\" ",
+        "(separators + smart decimals, default), \"compact\" (1.2M / 38.4K), ",
+        "or \"percent\" (a fraction x100 + %)."
       ),
-      unit = "Unit suffix shown next to the value / in the matrix header.",
+      unit = paste0(
+        "Free-text unit label shown next to the value / in the matrix header ",
+        "(e.g. \"USD\", \"CHF\", \"apples\", \"kg\"). This is how you label a ",
+        "currency — the renderer never infers \"$\"."
+      ),
       overline = paste0(
         "Supertext above the value. A column name reads per-cell; any other ",
         "string is a literal label. Defaults to the measure name."
@@ -301,7 +309,7 @@ tile_arguments <- function() {
     examples = list(
       value = list("revenue"), by = "region", measure = "",
       layout = "cards", secondary = "rev_delta", style = "delta",
-      good_when = "up", format = "auto", unit = "", overline = "",
+      good_when = "up", format = "compact", unit = "USD", overline = "",
       caption = "", drill = TRUE
     ),
     prompt = paste(

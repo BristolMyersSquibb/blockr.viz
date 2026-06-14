@@ -24,15 +24,27 @@ test_that("empty / missing input yields an empty cell frame", {
   expect_equal(nrow(blockr.bi:::tile_long_frame(df, value = "nope")), 0L)
 })
 
-test_that("format inference and explicit formats", {
-  pct <- blockr.bi:::tk_resolve_format("auto", "conversion", reg$conversion)
-  expect_equal(pct$kind, "percent")
-  usd <- blockr.bi:::tk_resolve_format("usd", "revenue", c(1240000))
-  expect_equal(usd$kind, "currency")
-  expect_match(blockr.bi:::tk_format(1240000, usd), "^\\$1,240,000")
-  expect_match(blockr.bi:::tk_format(-128000, usd), "^−\\$")  # minus sign
-  cmp <- blockr.bi:::tk_resolve_format("compact", "x", 1240000)
+test_that("format is predictable — no currency inference from names", {
+  # plain number: separators, no $ ever (even for a column named "revenue")
+  num <- blockr.bi:::tk_resolve_format("number", c(1240000))
+  expect_equal(num$kind, "number")
+  expect_equal(blockr.bi:::tk_format(1240000, num), "1,240,000")
+  expect_equal(blockr.bi:::tk_format(-128000, num), "-128,000")
+  # compact: no symbol
+  cmp <- blockr.bi:::tk_resolve_format("compact", 1240000)
   expect_equal(blockr.bi:::tk_format(1240000, cmp), "1.2M")
+  # percent: a fraction is scaled x100 + %
+  pct <- blockr.bi:::tk_resolve_format("percent", c(0.038, 0.041))
+  expect_equal(pct$kind, "percent")
+  expect_equal(pct$scale, 100)
+  expect_equal(blockr.bi:::tk_format(0.038, pct), "3.8%")
+})
+
+test_that("unit is a free-text label rendered next to the value", {
+  ren <- function(...) paste(as.character(blockr.bi:::tile_html(...)), collapse = "")
+  out <- ren(reg, value = "revenue", measure = "region", unit = "USD")
+  expect_true(grepl("tk-unit", out) && grepl("USD", out))
+  expect_false(grepl("\\$", out))  # never an inferred currency symbol
 })
 
 test_that("delta polarity respects good_when", {
@@ -53,10 +65,13 @@ test_that("each style x layout renders a valid payload", {
                                         secondary = "progress", style = "fill")))
   expect_true(grepl("tk-pill", ren(df, value = "value", measure = "metric",
                                    secondary = "status", style = "pill")))
-  # table matrix (grouped wide)
+  # table matrix (grouped wide) — a real matrix with per-group rows
   mx <- ren(reg, value = c("revenue", "conversion", "orders"), by = "region",
             layout = "table")
-  expect_true(grepl("tk-table", mx) && grepl("th-unit", mx))
+  expect_true(grepl("tk-table", mx) && grepl("data-group", mx))
+  # an explicit unit shows in the matrix header (no inference)
+  mxu <- ren(reg, value = "revenue", by = "region", unit = "USD", layout = "table")
+  expect_true(grepl("th-unit", mxu) && grepl("USD", mxu))
   # empty
   expect_true(grepl("is-empty", ren(data.frame(), value = "value")))
 })

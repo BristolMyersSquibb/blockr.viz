@@ -121,45 +121,25 @@ tk_pretty <- function(x) {
 
 #' Resolve a format spec for a measure's values.
 #'
-#' Returns list(kind, digits, sym, pct_scale) where kind is one of
-#' "number"/"percent"/"currency"/"compact". `format` "auto" defers to
-#' [infer_format()]; explicit values map directly.
+#' Predictable and NOT name-based — the renderer never guesses currency from a
+#' column name (that produced absurd `$` results). The unit / currency label is
+#' the free-text `unit` field's job. `format` is one of:
+#'   - "number" (default / "auto") — thousands separators + smart decimals,
+#'   - "compact" — 1.2K / 38.4M / 1.2B,
+#'   - "percent" — value x100 (when it looks like a fraction) + "%".
+#' Returns list(kind, digits, scale).
 #' @noRd
-tk_resolve_format <- function(format, measure, values) {
-  format <- format %||% "auto"
-  if (!identical(format, "auto")) {
-    return(switch(
-      format,
-      int     = list(kind = "number",   digits = 0L, sym = "", pct_scale = 1),
-      pct     = tk_pct_spec(values),
-      usd     = list(kind = "currency", digits = tk_digits(values), sym = "$",
-                     pct_scale = 1),
-      compact = list(kind = "compact",  digits = 1L, sym = "", pct_scale = 1),
-      list(kind = "number", digits = tk_digits(values), sym = "", pct_scale = 1)
-    ))
+tk_resolve_format <- function(format, values) {
+  format <- format %||% "number"
+  if (identical(format, "compact")) {
+    return(list(kind = "compact", digits = 1L, scale = 1))
   }
-  inf <- infer_format(measure, values)
-  switch(
-    inf$kind,
-    percent       = list(kind = "percent", digits = inf$digits, sym = "",
-                         pct_scale = 1),
-    percent_unit  = list(kind = "percent", digits = max(inf$digits, 1L),
-                         sym = "", pct_scale = 100),
-    currency_usd  = list(kind = "currency", digits = inf$digits, sym = "$",
-                         pct_scale = 1),
-    currency_eur  = list(kind = "currency", digits = inf$digits,
-                         sym = "€", pct_scale = 1),
-    currency_gbp  = list(kind = "currency", digits = inf$digits,
-                         sym = "£", pct_scale = 1),
-    list(kind = "number", digits = inf$digits, sym = "", pct_scale = 1)
-  )
-}
-
-#' @noRd
-tk_pct_spec <- function(values) {
-  v <- values[is.finite(values)]
-  scale <- if (length(v) && all(v >= 0 & v <= 1) && any(v > 0)) 100 else 1
-  list(kind = "percent", digits = 1L, sym = "", pct_scale = scale)
+  if (identical(format, "percent")) {
+    v <- values[is.finite(values)]
+    scale <- if (length(v) && all(abs(v) <= 1) && any(v != 0)) 100 else 1
+    return(list(kind = "percent", digits = 1L, scale = scale))
+  }
+  list(kind = "number", digits = tk_digits(values), scale = 1)
 }
 
 #' @noRd
@@ -169,27 +149,23 @@ tk_digits <- function(values) {
   if (max(v) >= 1000) 0L else if (max(v) >= 1) 1L else 2L
 }
 
-#' Format one value to its display string per a resolved format spec.
+#' Format one value to its display string per a resolved format spec. The
+#' `unit` (a free-text label like "USD" / "CHF" / "apples") is rendered as a
+#' SEPARATE `.tk-unit` span by the cell builders, not baked in here — except
+#' percent, where "%" is intrinsic.
 #' @noRd
 tk_format <- function(x, spec) {
   if (is.null(x) || length(x) == 0L || !is.finite(x)) return("—")
   if (identical(spec$kind, "percent")) {
-    return(sprintf(paste0("%.", spec$digits, "f%%"), x * spec$pct_scale))
+    return(sprintf(paste0("%.", spec$digits, "f%%"), x * spec$scale))
   }
-  if (identical(spec$kind, "currency")) {
-    neg <- x < 0
-    body <- formatC(abs(x), format = "f", digits = spec$digits, big.mark = ",")
-    return(paste0(if (neg) "−" else "", spec$sym, body))
-  }
-  if (identical(spec$kind, "compact")) {
-    return(tk_compact(x, spec$sym))
-  }
+  if (identical(spec$kind, "compact")) return(tk_compact(x))
   formatC(x, format = "f", digits = spec$digits, big.mark = ",")
 }
 
-#' Compact K/M/B formatting (mirrors the JS usd-c formatter shape).
+#' Compact K/M/B formatting (no currency symbol — the unit field labels it).
 #' @noRd
-tk_compact <- function(x, sym = "") {
+tk_compact <- function(x) {
   neg <- x < 0
   a <- abs(x)
   s <- if (a >= 1e9) {
@@ -204,26 +180,23 @@ tk_compact <- function(x, sym = "") {
     formatC(a, format = "f", digits = 0)
   }
   s <- sub("\\.0([MBK])$", "\\1", s)
-  paste0(if (neg) "−" else "", sym, s)
+  paste0(if (neg) "−" else "", s)
 }
 
 #' Count-up data attributes for a value span. JS sweeps `data-count` 0->target
 #' and settles to `data-final` (R's exact string), so intermediate frames use
-#' the prefix/suffix/compact/decimals hints and the final frame is pixel-exact.
+#' the suffix/compact/decimals hints and the final frame is pixel-exact.
 #' @noRd
 tk_count_attrs <- function(x, spec, final) {
   if (is.null(x) || length(x) == 0L || !is.finite(x)) return(list())
-  compact <- if (spec$kind == "compact") "1" else "0"
-  suffix <- if (spec$kind == "percent") "%" else ""
-  prefix <- if (spec$kind == "currency") spec$sym else ""
   list(
     `data-count`    = formatC(x, format = "f", digits = 6, drop0trailing = TRUE),
     `data-final`    = final,
     `data-decimals` = as.character(spec$digits),
-    `data-prefix`   = prefix,
-    `data-suffix`   = suffix,
-    `data-compact`  = compact,
-    `data-scale`    = as.character(spec$pct_scale)
+    `data-prefix`   = "",
+    `data-suffix`   = if (spec$kind == "percent") "%" else "",
+    `data-compact`  = if (spec$kind == "compact") "1" else "0",
+    `data-scale`    = as.character(spec$scale)
   )
 }
 

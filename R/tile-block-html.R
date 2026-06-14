@@ -26,17 +26,17 @@ tile_fspecs <- function(cells, flat, measures) {
   out <- list()
   for (m in ms_names) {
     spec <- tk_measure_spec(m, measures, flat)
-    out[[m]] <- tk_resolve_format(spec$format, m, cells$value[cells$measure == m])
+    out[[m]] <- tk_resolve_format(spec$format, cells$value[cells$measure == m])
   }
   out
 }
 
-#' Unit shown in a matrix column header: the explicit unit, else a glyph
-#' derived from the value format.
+#' Unit shown in a matrix column header: the free-text unit, else "%" for a
+#' percent format, else nothing.
 #' @noRd
 tk_header_unit <- function(unit, fspec) {
   if (!is.null(unit) && nzchar(unit)) return(unit)
-  switch(fspec$kind, percent = "%", currency = fspec$sym, "")
+  if (identical(fspec$kind, "percent")) "%" else ""
 }
 
 # ---------------------------------------------------------------------------
@@ -48,10 +48,12 @@ tk_header_unit <- function(unit, fspec) {
 tk_card <- function(cell, flat, measures, fspecs) {
   ms <- tk_measure_spec(cell$measure, measures, flat)
   fspec <- fspecs[[cell$measure]] %||%
-    tk_resolve_format(ms$format, cell$measure, cell$value)
+    tk_resolve_format(ms$format, cell$value)
 
   over <- cell$overline
-  unit_node <- if (nzchar(ms$unit %||% "")) {
+  # The unit is a separate span next to the number ("847 apples", "1.2M USD").
+  # Skipped for percent, where "%" is already part of the formatted value.
+  unit_node <- if (nzchar(ms$unit %||% "") && !identical(fspec$kind, "percent")) {
     htmltools::tags$span(class = "tk-unit", ms$unit)
   }
   valrow <- htmltools::tags$div(
@@ -124,11 +126,14 @@ tk_table_flat <- function(cells, flat, measures, fspecs = list()) {
     cell <- cells[i, ]
     ms <- tk_measure_spec(cell$measure, measures, flat)
     fspec <- fspecs[[cell$measure]] %||%
-      tk_resolve_format(ms$format, cell$measure, cell$value)
+      tk_resolve_format(ms$format, cell$value)
+    unit_sfx <- if (nzchar(ms$unit %||% "") && !identical(fspec$kind, "percent")) {
+      htmltools::tags$span(class = "unit", ms$unit)
+    }
     tds <- list(
       htmltools::tags$td(class = "lbl", cell$overline),
       htmltools::tags$td(class = tk_val_td_class(cell$value),
-                         tk_format(cell$value, fspec))
+                         tk_format(cell$value, fspec), unit_sfx)
     )
     if (has_sec_col) {
       node <- tk_secondary_node(ms$style, cell$secondary[[1]], ms$good_when,
@@ -151,7 +156,7 @@ tk_table_matrix <- function(cells, flat, measures, groups, meas) {
   for (m in meas) {
     vals <- cells$value[cells$measure == m]
     ms <- tk_measure_spec(m, measures, flat)
-    fspec <- tk_resolve_format(ms$format, m, vals)
+    fspec <- tk_resolve_format(ms$format, vals)
     fspecs[[m]] <- fspec
     unit <- tk_header_unit(ms$unit, fspec)
     ths[[length(ths) + 1L]] <- htmltools::tags$th(
@@ -233,10 +238,10 @@ tk_table_wrap <- function(thead, tbody) {
 tile_html <- function(data, value = character(), by = "", measure = "",
                       layout = "cards", overline = "", caption = "",
                       secondary = "", style = "plain", good_when = "up",
-                      format = "auto", unit = "", measures = list(),
+                      format = "number", unit = "", measures = list(),
                       drill = FALSE, elem_id = NULL) {
   flat <- list(style = style %||% "plain", good_when = good_when %||% "up",
-               format = format %||% "auto", unit = unit %||% "")
+               format = format %||% "number", unit = unit %||% "")
 
   cells <- tile_long_frame(data, value = value, by = by, measure = measure,
                            secondary = secondary, overline = overline,
@@ -308,7 +313,7 @@ tile_config_json <- function(value, by, measure, secondary, style, good_when,
     secondary = secondary %||% "",
     style     = style %||% "plain",
     good_when = good_when %||% "up",
-    format    = format %||% "auto",
+    format    = format %||% "number",
     unit      = unit %||% "",
     overline  = overline %||% "",
     caption   = caption %||% "",

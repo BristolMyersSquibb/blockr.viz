@@ -109,15 +109,16 @@
                  options: ['plain', 'delta', 'fill', 'pill'] },
     good_when: { label: 'Good when', kind: 'segmented',
                  options: [{ value: 'up', label: 'Up' }, { value: 'down', label: 'Down' }] },
-    format:    { label: 'Format', kind: 'select',
-                 options: ['auto', 'int', 'pct', 'usd', 'compact'] },
+    format:    { label: 'Number format', kind: 'select',
+                 options: ['number', 'compact', 'percent'] },
+    unit:      { label: 'Unit', kind: 'text', ph: 'e.g. USD, CHF, apples' },
     layout:    { label: 'Layout', kind: 'segmented',
                  options: [{ value: 'cards', label: 'Cards' }, { value: 'table', label: 'Table' }] }
   };
   var TILE_SECTIONS = {
     requiredMap: ['value'],
     optionalMap: ['by', 'measure', 'secondary', 'overline', 'caption'],
-    encoding: ['style', 'good_when', 'format'],
+    encoding: ['style', 'good_when', 'format', 'unit'],
     presentation: ['layout']
   };
 

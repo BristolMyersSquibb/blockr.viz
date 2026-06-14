@@ -91,6 +91,21 @@
   cursor: pointer;
   min-height: 42px;
 }
+.dd-cfg-text {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 8px;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  color: var(--blockr-color-text-primary, #374151);
+  background: var(--blockr-color-bg-input, #f9fafb);
+  min-height: 42px;
+}
+.dd-cfg-text:focus {
+  border-color: var(--blockr-color-primary, #2563eb);
+  outline: none;
+}
 .dd-cfg-select:focus {
   border-color: var(--blockr-color-primary, #2563eb);
   outline: none;

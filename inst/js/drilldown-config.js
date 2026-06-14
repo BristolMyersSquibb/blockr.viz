@@ -379,6 +379,22 @@
           seg.appendChild(b);
         }
         parent.appendChild(seg);
+      } else if (role.kind === 'text') {
+        const wrap = document.createElement('div');
+        wrap.className = 'dd-picker-wrap';
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'dd-cfg-text';
+        inp.value = (cfg[key] == null) ? '' : String(cfg[key]);
+        if (role.ph) inp.placeholder = role.ph;
+        let deb;
+        inp.addEventListener('input', () => {
+          cfg[key] = inp.value;
+          clearTimeout(deb);
+          deb = setTimeout(() => { cb(); this.h.onChange(key); }, 300);
+        });
+        wrap.appendChild(inp);
+        parent.appendChild(wrap);
       } else if (role.kind === 'slider') {
         this._buildSlider(parent, key);
       }

@@ -1,11 +1,12 @@
 /* ============================================================
    Tile (KPI renderer) — blockr.bi
    Ported from dev/mockup/tile.html (Tile KPI Renderer v2).
-   Tokens build on blockr.dock greyscale + the #2563eb primary;
-   dark mode = surface-elevation tokens, not inverted colors.
-   Green is an added "up/good" semantic (blockr ships danger red
-   but no positive green). All classes are tk-* prefixed and the
-   tokens are scoped to .tk-block so nothing leaks to the host.
+   Tokens build on blockr.dock greyscale + the #2563eb primary.
+   Light only — the rest of the blockr UI has no dark mode, so the
+   tile doesn't introduce one. Green is an added "up/good" semantic
+   (blockr ships danger red but no positive green). All classes are
+   tk-* prefixed and the tokens are scoped to .tk-block so nothing
+   leaks to the host.
    ============================================================ */
 .tk-block{
   --tk-surface-0:#f8f9fb;   /* page / wrapper  */
@@ -28,46 +29,6 @@
   font-size:14px;
   line-height:1.5;
   -webkit-font-smoothing:antialiased;
-}
-
-/* Dark mode — driven by an ancestor [data-theme="dark"] (blockr.dock
-   sets this) with a prefers-color-scheme fallback for standalone use. */
-[data-theme="dark"] .tk-block,
-.tk-block[data-theme="dark"]{
-  --tk-surface-0:#0b0d12;
-  --tk-surface-1:#14171e;
-  --tk-surface-2:#1c2029;
-  --tk-ink-1:#e9ecf1;
-  --tk-ink-2:#9aa3b1;
-  --tk-ink-3:#69707d;
-  --tk-hair:rgba(255,255,255,.07);
-  --tk-hair-strong:rgba(255,255,255,.12);
-  --tk-accent:#5b8cf0;
-  --tk-accent-soft:rgba(91,140,240,.16);
-  --tk-green:#3ec487;  --tk-green-soft:rgba(62,196,135,.14);
-  --tk-red:#e8736b;    --tk-red-soft:rgba(232,115,107,.15);
-  --tk-amber:#d9a441;  --tk-amber-soft:rgba(217,164,65,.15);
-  --tk-card-shadow:0 1px 2px rgba(0,0,0,.4);
-  --tk-hover-tint:rgba(255,255,255,.022);
-}
-@media (prefers-color-scheme: dark){
-  .tk-block:not([data-theme="light"]):not(.tk-theme-light){
-    --tk-surface-0:#0b0d12;
-    --tk-surface-1:#14171e;
-    --tk-surface-2:#1c2029;
-    --tk-ink-1:#e9ecf1;
-    --tk-ink-2:#9aa3b1;
-    --tk-ink-3:#69707d;
-    --tk-hair:rgba(255,255,255,.07);
-    --tk-hair-strong:rgba(255,255,255,.12);
-    --tk-accent:#5b8cf0;
-    --tk-accent-soft:rgba(91,140,240,.16);
-    --tk-green:#3ec487;  --tk-green-soft:rgba(62,196,135,.14);
-    --tk-red:#e8736b;    --tk-red-soft:rgba(232,115,107,.15);
-    --tk-amber:#d9a441;  --tk-amber-soft:rgba(217,164,65,.15);
-    --tk-card-shadow:0 1px 2px rgba(0,0,0,.4);
-    --tk-hover-tint:rgba(255,255,255,.022);
-  }
 }
 
 .tk-block .num,
