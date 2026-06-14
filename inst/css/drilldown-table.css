@@ -72,6 +72,17 @@
 .drilldown-table-container .blockr-table thead th .dt-th-subrow .blockr-sort-icon {
   flex: 0 0 auto;
 }
+/* The unsorted arrow reserves no space, so a right-aligned header stays
+   flush-right; the arrow only appears — and nudges the subtext left — once a
+   sort direction is set. (The shared base rule gives it a fixed 12px box,
+   which would otherwise push the subtext off the right edge.) */
+.drilldown-table-container .blockr-table thead th .blockr-sort-icon {
+  display: none;
+}
+.drilldown-table-container .blockr-table thead th .blockr-sort-icon-asc,
+.drilldown-table-container .blockr-table thead th .blockr-sort-icon-desc {
+  display: inline-block;
+}
 .drilldown-table-container .blockr-table thead th .blockr-col-name,
 .drilldown-table-container .blockr-table thead th .arm__name {
   display: block;
