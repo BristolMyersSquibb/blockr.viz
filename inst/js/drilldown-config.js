@@ -273,24 +273,19 @@
       tLbl.textContent = 'Filter on selection';
       tHead.appendChild(tLbl);
       tRow.appendChild(tHead);
-      const seg = document.createElement('div');
-      seg.className = 'dd-segmented';
-      for (const o of [{ v: 'off', l: 'Off' }, { v: 'on', l: 'On' }]) {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'dd-seg-btn' + (((o.v === 'on') === on) ? ' dd-seg-active' : '');
-        b.textContent = o.l;
-        b.addEventListener('click', () => {
-          if (o.v === 'off') cfg.drill = '';
+      this._buildPill(
+        tRow,
+        [{ value: 'off', label: 'No filter' }, { value: 'on', label: 'Filters downstream' }],
+        on ? 'on' : 'off',
+        (val) => {
+          if (val === 'off') cfg.drill = '';
           else if (!this._hasVal(cfg.drill)) cfg.drill = 'auto';
           const wasOpen = this.h.isOpen();
           this.render();
           if (wasOpen) setTimeout(() => this.h.reopen(), 0);
           this.h.onChange('drill'); this.h.onClearFilter();
-        });
-        seg.appendChild(b);
-      }
-      tRow.appendChild(seg);
+        }
+      );
       sec.appendChild(tRow);
 
       if (on) {
@@ -307,7 +302,7 @@
         const controls = document.createElement('div');
         controls.className = 'dd-row-controls';
         const wrap = document.createElement('div');
-        wrap.className = 'dd-picker-wrap';
+        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
         const colOpt = (c) => c.label ? { value: c.name, label: c.label } : c.name;
         const opts = [{ value: 'auto', label: autoLabel }, ...this._cols().map(colOpt)];
         const sel = (this._hasVal(cfg.drill) && cfg.drill !== 'auto') ? cfg.drill : 'auto';
@@ -341,7 +336,7 @@
       if (role.kind === 'column') {
         const opts = this._colOptionsFor(key, { required });
         const wrap = document.createElement('div');
-        wrap.className = 'dd-picker-wrap';
+        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
         const sel = (cfg[key] && cfg[key] !== '(none)') ? cfg[key] : (required ? '' : '(none)');
         const onSel = (val) => {
           cfg[key] = (val === '(none)') ? '' : val;
@@ -355,36 +350,24 @@
       } else if (role.kind === 'select') {
         const opts = this._selectOptionsFor(key);
         const wrap = document.createElement('div');
-        wrap.className = 'dd-picker-wrap';
+        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
         const cur = cfg[key];
         const selv = this._hasVal(cur) ? cur : ((typeof opts[0] === 'object' && opts[0]) ? opts[0].value : opts[0]);
         const onSel = (val) => { cfg[key] = val; cb(); this.h.onChange(key); };
         this._mkSelect(wrap, opts, selv, onSel, key, false);
         parent.appendChild(wrap);
       } else if (role.kind === 'segmented') {
-        const seg = document.createElement('div');
-        seg.className = 'dd-segmented';
         const cur = this._hasVal(cfg[key]) ? cfg[key] : role.options[0].value;
-        for (const o of role.options) {
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.className = 'dd-seg-btn' + (o.value === cur ? ' dd-seg-active' : '');
-          b.textContent = o.label;
-          b.addEventListener('click', () => {
-            cfg[key] = o.value;
-            seg.querySelectorAll('.dd-seg-btn').forEach(x => x.classList.remove('dd-seg-active'));
-            b.classList.add('dd-seg-active');
-            cb(); this.h.onChange(key);
-          });
-          seg.appendChild(b);
-        }
-        parent.appendChild(seg);
+        this._buildPill(parent, role.options, cur, (val) => {
+          cfg[key] = val; cb(); this.h.onChange(key);
+        });
       } else if (role.kind === 'text') {
-        const wrap = document.createElement('div');
-        wrap.className = 'dd-picker-wrap';
+        // Canonical popover text input (blockr.dplyr blockr-blocks.css). Note:
+        // no .dd-picker-wrap here — that wrapper carries its own border for the
+        // borderless Blockr.Select; a bordered input inside it double-borders.
         const inp = document.createElement('input');
         inp.type = 'text';
-        inp.className = 'dd-cfg-text';
+        inp.className = 'blockr-popover-input';
         inp.value = (cfg[key] == null) ? '' : String(cfg[key]);
         if (role.ph) inp.placeholder = role.ph;
         let deb;
@@ -393,8 +376,7 @@
           clearTimeout(deb);
           deb = setTimeout(() => { cb(); this.h.onChange(key); }, 300);
         });
-        wrap.appendChild(inp);
-        parent.appendChild(wrap);
+        parent.appendChild(inp);
       } else if (role.kind === 'slider') {
         this._buildSlider(parent, key);
       }
@@ -447,6 +429,34 @@
         debounce = setTimeout(() => this.h.onMults(), 150);
       });
       parent.appendChild(wrap);
+    }
+
+    // Click-through pill (blockr.dplyr idiom: arrange dir-btn, filter op-toggle,
+    // pivot drop-na). One self-labeling .blockr-pill that cycles through
+    // `options` ([{value,label}]) on click; highlighted (blockr-popover-toggle-
+    // active) whenever the value is off its first/default option. Replaces the
+    // old two-button .dd-segmented control.
+    _buildPill(parent, options, current, onPick) {
+      const wrap = document.createElement('div');
+      wrap.className = 'dd-pill-wrap';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'blockr-pill blockr-popover-toggle';
+      let idx = options.findIndex((o) => o.value === current);
+      if (idx < 0) idx = 0;
+      const paint = () => {
+        btn.textContent = options[idx].label;
+        btn.classList.toggle('blockr-popover-toggle-active', idx !== 0);
+      };
+      paint();
+      btn.addEventListener('click', () => {
+        idx = (idx + 1) % options.length;
+        paint();
+        onPick(options[idx].value);
+      });
+      wrap.appendChild(btn);
+      parent.appendChild(wrap);
+      return btn;
     }
 
     _addMappingMenu(container, remaining) {

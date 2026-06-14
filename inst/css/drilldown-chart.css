@@ -55,30 +55,18 @@
   line-height: 1.3;
 }
 
-/* Picker wrap — the bordered control box that holds the Blockr.Select
-   full width. The form row owns the label (on top) and help (below);
-   this element is just the flush-bordered control container. */
+/* Picker wrap — layout-only hook for the canonical select. The visual chrome
+   (bordered control, focus ring) comes from blockr.dplyr's
+   .blockr-popover-select-wrap (blockr-blocks.css), applied alongside this
+   class; here we only own width so the select fills its form row. Text inputs
+   use .blockr-popover-input directly (no wrap — see drilldown-config.js). */
 .dd-picker-wrap {
   width: 100%;
-  display: flex;
-  align-items: center;
-  min-height: 42px;
-  padding: 0 4px;
-  background-color: var(--blockr-color-bg-input, #f9fafb);
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 8px;
   box-sizing: border-box;
 }
-.dd-picker-wrap:focus-within {
-  border-color: var(--blockr-color-primary, #2563eb);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-}
-.dd-picker-wrap > .blockr-select {
-  flex: 1 1 auto;
-  min-width: 0;
-}
 
-/* Fallback native select */
+/* Fallback native select (only when Blockr.Select is unavailable) — mirror the
+   canonical popover input look. */
 .dd-cfg-select {
   width: 100%;
   box-sizing: border-box;
@@ -89,22 +77,7 @@
   color: var(--blockr-color-text-primary, #374151);
   background: var(--blockr-color-bg-input, #f9fafb);
   cursor: pointer;
-  min-height: 42px;
-}
-.dd-cfg-text {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 8px 12px;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 8px;
-  font-size: var(--blockr-font-size-base, 0.875rem);
-  color: var(--blockr-color-text-primary, #374151);
-  background: var(--blockr-color-bg-input, #f9fafb);
-  min-height: 42px;
-}
-.dd-cfg-text:focus {
-  border-color: var(--blockr-color-primary, #2563eb);
-  outline: none;
+  min-height: 38px;
 }
 .dd-cfg-select:focus {
   border-color: var(--blockr-color-primary, #2563eb);
@@ -172,11 +145,13 @@
   align-items: stretch;
 }
 .dd-row-controls > .dd-picker-wrap,
-.dd-row-controls > .dd-segmented,
+.dd-row-controls > .dd-pill-wrap,
 .dd-row-controls > .dd-slider-wrap { flex: 1 1 0; min-width: 0; }
 
-/* Required mapping with no value: soft attention, not a hard error. */
-.dd-role-required-empty .dd-picker-wrap {
+/* Required mapping with no value: soft attention, not a hard error. The border
+   now lives on the select control (.blockr-popover-select-wrap), so tint it
+   there. */
+.dd-role-required-empty .blockr-popover-select-wrap .blockr-select__control {
   border-color: var(--blockr-color-warning, #f59e0b);
   background: var(--blockr-color-warning-bg, #fffbeb);
 }
@@ -211,29 +186,13 @@
   color: var(--blockr-color-primary, #2563eb);
 }
 
-/* Segmented toggle (Orientation) */
-.dd-segmented {
+/* Click-through toggle (Good when, Layout, Orientation, drill on/off). Renders
+   a single self-labeling .blockr-pill (blockr.dplyr blockr-blocks.css); this
+   wrapper just left-aligns it under the label so it keeps its natural width
+   instead of stretching to the form-row's full width. */
+.dd-pill-wrap {
   display: flex;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 8px;
-  overflow: hidden;
-  min-height: 42px;
-}
-.dd-seg-btn {
-  flex: 1 1 0;
-  border: none;
-  border-right: 1px solid var(--blockr-color-border, #e5e7eb);
-  background: #fff;
-  color: var(--blockr-grey-500, #6b7280);
-  cursor: pointer;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-}
-.dd-seg-btn:last-child { border-right: none; }
-.dd-seg-btn:hover { background: var(--blockr-grey-50, #f9fafb); }
-.dd-seg-btn.dd-seg-active {
-  background: #eff6ff;
-  color: var(--blockr-color-primary, #2563eb);
-  font-weight: var(--blockr-font-weight-medium, 500);
+  align-items: center;
 }
 
 /* ===== Card wrapper (for popover positioning) ===== */
@@ -393,13 +352,12 @@
    bare :focus rings on individual controls were thin/inconsistent). Shared by
    the chart and table popovers (both render via DrilldownConfig). */
 .dd-popover .dd-type-btn:focus-visible,
-.dd-popover .dd-seg-btn:focus-visible,
+.dd-popover .blockr-pill:focus-visible,
 .dd-popover .dd-add-trigger:focus-visible,
 .dd-popover .dd-add-item:focus-visible,
 .dd-popover .dd-role-remove:focus-visible,
 .dd-popover .dd-cfg-select:focus-visible,
-.dd-popover .blockr-gear-btn:focus-visible,
-.dd-picker-wrap:focus-within {
+.dd-popover .blockr-gear-btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--blockr-color-focus, rgba(37, 99, 235, 0.45));
   border-radius: 6px;
