@@ -301,7 +301,13 @@ dt_render <- function(table_tag, max_height, elem_id,
 
   htmltools::tagList(
     shared_css,
-    htmltools::tags$style(htmltools::HTML(html_table_delta_css())),
+    # The delta CSS is the STRUCTURED Table-1 design treatment (section headers,
+    # two-tier arm headers, the stub indent + medium stat/value weights). Inject
+    # it only for structured tables — a flat data table should match the canonical
+    # html preview (normal-weight cells, plain stub), not carry the Table-1 styling.
+    if (isTRUE(structured)) {
+      htmltools::tags$style(htmltools::HTML(html_table_delta_css()))
+    },
     drilldown_table_dep(),
     htmltools::tags$div(
       id = wrapper_id,

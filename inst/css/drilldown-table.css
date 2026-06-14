@@ -4,7 +4,10 @@
 }
 .drilldown-table-container .blockr-table tbody td.blockr-stub {
   text-align: left;
-  font-weight: var(--blockr-font-weight-medium, 500);
+  /* Match the canonical html preview: flat data cells are normal weight, not
+     medium — the medium stub read slightly bolder than the preview. (Structured
+     Table-1 stat labels keep their design weight via the delta CSS.) */
+  font-weight: var(--blockr-font-weight-normal, 400);
 }
 .drilldown-table-container.dt-clickable .blockr-table tbody tr.blockr-data-row {
   cursor: pointer;
@@ -21,6 +24,16 @@
    name and label (the shared html-table CSS centres them). */
 .drilldown-table-container .blockr-table thead th.blockr-col-header {
   text-align: left;
+}
+/* Sticky header for the scrollable table. The structured-Table-1 delta CSS
+   provides its own sticky + scroll-shadow, but that delta is injected only for
+   structured tables — so cover the flat path here (the flat table scrolls,
+   unlike the paginated preview, and benefits from a pinned header). */
+.drilldown-table-container .blockr-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--blockr-color-bg, #ffffff);
 }
 /* Sort indicator: on the same row as the column name (name left, arrow
    right), like the HTML preview — rather than stacked below the label. */
@@ -44,7 +57,7 @@
   display: block;
   margin-top: 1px;
   font-weight: var(--blockr-font-weight-normal, 400);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-size: 11px;   /* match the canonical html preview's column sub-label */
   color: var(--blockr-color-text-muted, #6b7280);
 }
 .drilldown-table-container {
