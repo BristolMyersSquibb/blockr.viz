@@ -5,10 +5,14 @@
 #   Rscript blockr.bi/dev/tile-playwright-demo.R
 # open the local URL serve() prints (or uncomment the options line to pin 3838).
 
+options(blockr.html_table_preview = TRUE)
+
 pkgload::load_all("blockr.core")
+pkgload::load_all("blockr.ui")
 pkgload::load_all("blockr.dplyr")
 pkgload::load_all("blockr.dock")
 pkgload::load_all("blockr.dag")
+pkgload::load_all("blockr.extra")
 pkgload::load_all("blockr.bi")
 
 d <- tile_demo_data()
