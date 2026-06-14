@@ -19,13 +19,16 @@
 #                    colour language. The chart honours it today; the table
 #                    shows the same SEX split (the stub swatch is the pending
 #                    extension, see scale-map-table-tile-demo.R).
+#   6. Data bars     in-cell bars proportional to the value (per-column,
+#                    absolute magnitude) — the sortable/searchable alternative
+#                    to an ECharts bar chart. Scoped to one column via `columns`.
 #
 # The two colour channels are deliberately different things: `cell_color` is a
-# NUMERIC value->background scale on the body (heatmap / correlation), while the
-# scale map is a CATEGORICAL hue tied to a variable's levels. They never collide.
+# NUMERIC value->background scale (or data bar) on the body, while the scale map
+# is a CATEGORICAL hue tied to a variable's levels. They never collide.
 #
 # Run from the workspace root (inside or outside the dev container):
-#   Rscript blockr.viz/dev/table-capabilities-demo.R
+#   Rscript blockr.viz/dev/example-table.R
 # open the local URL serve() prints (or uncomment the options line to pin 3838).
 
 options(blockr.html_table_preview = TRUE)
@@ -50,6 +53,20 @@ num_vars <- c("AGE", "BMIBL", "WEIGHTBL", "HEIGHTBL")
 cmat <- round(stats::cor(adsl[num_vars], use = "pairwise.complete.obs"), 2)
 cor_df <- data.frame(Variable = rownames(cmat), cmat,
                      check.names = FALSE, row.names = NULL)
+
+# Adverse-event counts per subject — the "data bar" use case. A sortable,
+# searchable table with an in-cell bar beats an ECharts bar chart here. Top 15
+# subjects by total AEs; `Types` (distinct AE terms, a different scale) rides
+# along to show the column scope + per-column normalisation.
+adae <- safetyData::adam_adae
+ae_df <- adae |>
+  dplyr::group_by(USUBJID) |>
+  dplyr::summarise(AEs = dplyr::n(),
+                   Types = dplyr::n_distinct(AEDECOD),
+                   .groups = "drop") |>
+  dplyr::slice_max(AEs, n = 15, with_ties = FALSE) |>
+  dplyr::rename(Subject = USUBJID) |>
+  as.data.frame()
 
 # Categorical colour language: F is always teal, M always orange — wherever SEX
 # appears. The chart's `color` role honours it today.
@@ -132,20 +149,32 @@ board <- new_dock_board(
       block_name = "Summaries by sex"),
     sex_tbl = new_table_block(
       rowname = "SEX", values = c("n", "mean_age"),
-      block_name = "By sex (simple table — SEX row stub)")
+      block_name = "By sex (simple table — SEX row stub)"),
+
+    # 6. DATA BARS — in-cell bars proportional to the value, per-column
+    #    normalised on absolute magnitude. Scoped to AEs via `columns`, so the
+    #    bar reads as "most adverse events"; `Types` stays a plain column
+    #    (open the gear -> Coloring = bar, Columns to add it). Leaving `columns`
+    #    empty would bar every numeric column.
+    ae_data = new_static_block(ae_df, block_name = "AE counts per subject"),
+    ae_tbl = new_table_block(
+      rowname = "Subject",
+      cell_color = drilldown_table_color(type = "bar", columns = "AEs"),
+      block_name = "Patients with most adverse events (data bars)")
   ),
   links = links(
     from = c("data", "data", "summ", "data", "xt_summ", "xt_wide",
-             "cor_data", "data", "data", "by_sex"),
+             "cor_data", "data", "data", "by_sex", "ae_data"),
     to   = c("flat", "summ", "summ_tbl", "xt_summ", "xt_wide", "xt_tbl",
-             "cor_tbl", "sex_chart", "by_sex", "sex_tbl")
+             "cor_tbl", "sex_chart", "by_sex", "sex_tbl", "ae_tbl")
   ),
   layouts = list(
     simple      = dock_layout("flat", name = "1. Simple"),
     structured  = dock_layout("summ_tbl", name = "2. Structured"),
     crosstab    = dock_layout("xt_tbl", name = "3. Crosstab + heatmap"),
     correlation = dock_layout("cor_tbl", name = "4. Correlation"),
-    colour_sex  = dock_layout("sex_chart", "sex_tbl", name = "5. Colour by SEX")
+    colour_sex  = dock_layout("sex_chart", "sex_tbl", name = "5. Colour by SEX"),
+    data_bars   = dock_layout("ae_tbl", name = "6. Data bars")
   ),
   options = c(
     dock_board_options(),
