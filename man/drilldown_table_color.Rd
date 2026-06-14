@@ -2,29 +2,47 @@
 % Please edit documentation in R/table-block.R
 \name{drilldown_table_color}
 \alias{drilldown_table_color}
-\title{Color spec for \code{\link[=drilldown_table]{drilldown_table()}}}
+\title{Cell-visual spec for \code{\link[=drilldown_table]{drilldown_table()}}}
 \usage{
 drilldown_table_color(
-  type = c("diverging", "sequential"),
+  type = c("diverging", "sequential", "bar"),
   domain = NULL,
-  palette = NULL
+  palette = NULL,
+  columns = NULL
 )
 }
 \arguments{
-\item{type}{\code{"diverging"} (e.g. correlations around 0) or
-\code{"sequential"} (e.g. grade heatmaps).}
+\item{type}{\code{"diverging"}, \code{"sequential"}, or \code{"bar"}.}
 
-\item{domain}{\code{NULL} to infer from the data, or \code{c(min, max)}.}
+\item{domain}{\code{NULL} to infer from the data, or \code{c(min, max)}.
+Ignored for \code{"bar"} (always per-column). For \code{"diverging"} the
+inferred domain is symmetric around 0.}
 
 \item{palette}{\code{NULL} for type defaults, or a character vector of
-hex colors (length 3 for diverging low/mid/high, length 2 for
-sequential low/high).}
+colors — length 3 for diverging (low/mid/high), length 2 for
+sequential (low/high), length 1 for the bar fill.}
+
+\item{columns}{\code{NULL}/empty to apply to \strong{all} numeric columns (a
+rule, re-resolved against whatever data arrives — survives upstream
+schema changes), or a character vector to restrict to those columns.
+A picked column that no longer exists is silently skipped.}
 }
 \value{
 A list consumed by \code{\link[=drilldown_table]{drilldown_table()}}.
 }
 \description{
-Color spec for \code{\link[=drilldown_table]{drilldown_table()}}
+Describes how numeric cells are decorated. Three modes, all purely
+presentational (the data is never changed):
+}
+\details{
+\itemize{
+\item \code{"diverging"} — a value-to-background scale centred on 0 with a
+symmetric domain (correlation matrices: -1 white-at-0 +1).
+\item \code{"sequential"} — a low-to-high background ramp (heatmaps).
+\item \code{"bar"} — an in-cell horizontal data bar proportional to the value
+(e.g. "patients with most adverse events"), normalised per column on
+absolute magnitude and left-anchored.
+}
 }
 \examples{
 drilldown_table_color("sequential", domain = c(0, 100))
