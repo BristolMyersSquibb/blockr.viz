@@ -1,5 +1,5 @@
 /**
- * SummaryTableBlock — JS-driven input binding for blockr.bi::summary_table_block.
+ * SummaryTableBlock — JS-driven input binding for blockr.viz::summary_table_block.
  *
  * Main: three Blockr.Select widgets (vars multi / sections multi / by multi, max 2).
  * Gear: stats preset, overall toggle + label, indent_details, nest_hierarchies.

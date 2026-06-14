@@ -1,0 +1,186 @@
+---
+title: "Shapers and renderers: how blockr.viz is organized"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Shapers and renderers: how blockr.viz is organized}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+blockr.viz is the **render layer** for blockr dashboards. It draws tidy,
+rectangular data; it does not compute or reshape it. This vignette explains the
+small set of roles the package is built around, so that every block has one
+obvious place in a pipeline.
+
+## Verbs compute, nouns render
+
+The organizing principle is a split between two kinds of blocks:
+
+- **Verbs compute** and return a tidy data frame you can keep transforming
+  (`describe`, `correlate`, `frequencies`, plus dplyr verbs like `summarize`
+  and `filter`).
+- **Nouns render**: they take an already-shaped data frame and draw it
+  (`chart`, `table`, `tile`, `gt`).
+
+Two invariants make the system predictable:
+
+1. If a block's name is a *verb* it returns a tidy data frame. If it's a bare
+   *noun* it draws.
+2. **Renderers only ever see tidy, rectangular data.** The only non-data-frame
+   intermediate in the whole system is a fitted statistical model, and it is
+   fenced off — it exists solely between a `model` block and a `broom` adapter.
+   No renderer ever touches a fit.
+
+## The five layers
+
+Every block in a dashboard pipeline is one of five kinds. Data flows left to
+right, and a renderer only ever sees a tidy/rectangular data frame.
+
+| Layer | Job | Output | Blocks |
+|---|---|---|---|
+| **Shape** | compute / summarise | tidy df | `describe`, `correlate`, `frequencies`, + dplyr verbs (`summarize`, `filter`, …) |
+| **Reshape** | tidy → display grid (wide, *on purpose*) | wide df | dplyr `pivot_wider` |
+| **Fit** | fit a statistical model | model object | `model` |
+| **Adapt** | model → tidy | tidy df | `broom` (tidy / glance / augment) |
+| **Render** | df → pixels | UI | `table`, `chart`, `tile`, `gt` |
+
+So a pipeline reads as a sequence of roles:
+
+- `describe → table` — "describe these variables, show them as a table"
+- `correlate → table` — a correlation heatmap (`table` with cell coloring)
+- `model → broom → table` — a coefficient table
+- `summarize → pivot_wider → chart` — a crosstab plotted
+
+`blockr.viz` owns the **render** layer, plus the `summary_table` shaper that
+feeds it.
+
+## The render layer
+
+### Interactive | static pairs
+
+Each output medium has an **interactive** renderer (dashboard-native) and,
+where it makes sense, a **static** renderer (print / report / CSR):
+
+| Medium | Interactive | Static |
+|---|---|---|
+| table | `new_table_block()` | `new_gt_table_block()` |
+| chart | `new_chart_block()` (ECharts) | `ggplot` (separate package) |
+| number / spark / ring | `new_tile_block()` | — |
+
+Pick by destination: dashboards use `table` / `chart` / `tile`; print and CSR
+output use `gt`. The static renderers conceptually belong with their toolkit
+packages; blockr.viz owns the interactive ones (and ships a convention-aware
+`gt` adapter).
+
+### Drill-down is a feature, not an identity
+
+`table` and `chart` used to be called `drilldown_table` and `drilldown_chart`.
+But drill-down — click a mark or row to emit a downstream filter — is one
+**opt-in** capability that is **off by default**. Naming the whole block after
+it overweighted a single feature. These are simply *the* table and chart
+blocks; you reach for them for almost every table or chart in a dashboard.
+
+To enable drill-down, set the `drill` argument to a column name:
+
+```{r}
+library(blockr.viz)
+
+# A bar chart; clicking a bar filters downstream on SITEID
+new_chart_block(
+  group = "SITEID", color = "TRT01P",
+  chart_type = "bar", agg_fn = "count",
+  drill = "SITEID"
+)
+
+# A table whose row click filters downstream on USUBJID
+new_table_block(
+  rowname = "USUBJID",
+  values = c("AGE", "BMIBL", "WEIGHTBL"),
+  drill = "USUBJID"
+)
+```
+
+When `drill` is unset, a click is inert and no filter is emitted.
+
+### `table` is the universal interactive renderer
+
+`new_table_block()` handles both **flat** rectangular frames (with optional
+cell coloring and drill) and **structured** "Table 1" input — nested row-side
+section headers, multi-level column spanners, and collapse/expand — using the
+same builders as the static `html_table()` path. One renderer covers flat and
+structured tables alike. This reflects the package's strategy: deepen a few
+general renderers rather than adding many specialized blocks.
+
+### Renderers draw and format; they do not compute
+
+A renderer **draws** structure (sections, spanners, indents), **formats**
+numbers (decimals), and offers color, drill, and sort/search. It does **not**
+aggregate, reshape, or run statistics.
+
+The one bounded exception is a chart, which self-aggregates because the visual
+encoding *is* the aggregation (a bar is a sum-over-group). Charts take raw data
+plus an aesthetic mapping; tables take an already-shaped table.
+
+## The `.fmt` cell convention
+
+Composite cells like the clinical `"38 (54%)"` (count and percent) sit right on
+the compute/draw boundary. blockr.viz resolves this with a hidden dotted column
+called `.fmt`, a sibling of `.indent` / `.label` / `.section_*`. The raw numbers
+stay in plain numeric columns (so the frame remains `dplyr`-able), and `.fmt`
+carries a per-row **template** that names which columns to combine:
+
+```
+ .fmt = "{n} ({pct}%)"                  ->  "38 (54%)"
+ .fmt = "{estimate} ({std.error})"      ->  "0.05 (0.01)"
+ .fmt = "{median} ({q1}, {q3})"         ->  "12 (8, 19)"
+```
+
+The renderer is **pure interpolation**: it glues the named columns into the
+literal template. There is no codebook of named formats and no domain
+knowledge. Rounding stays out of the template — a `digits` hint owns it.
+
+Because the numbers stay tidy, the *same* frame can render as combined cells
+**or** as separate columns — a render-time choice, not something baked in by the
+shaper. For grouped tables the cells are formatted **per row first**, then a
+plain `pivot_wider()` spreads the grouping dimension to columns.
+
+This is why one `table` renderer plus the `.fmt` convention covers Table 1,
+regression (`broom`) output, survival tables, and frequency tables: they are all
+the same display — rows by an optional spread dimension by composite cells — fed
+by tidy shapers.
+
+## The shaper: `summary_table()`
+
+`summary_table()` (and its block `new_summary_table_block()`) is the one shaper
+that lives in blockr.viz. It aggregates a flat data frame into a tidy, long
+summary frame — raw numeric statistic columns plus the dotted structure columns
+and a `.fmt` template — covering the "list of variables by Y" pattern:
+
+```{r}
+summary_table(
+  iris,
+  vars = c("Sepal.Length", "Species"),
+  by = character(),
+  stats = "compact"
+)
+```
+
+Its output is tidy (every number is a plain numeric column) and re-renderable by
+any of the renderers above. The complementary "one measurement across two
+dimensions" pivot is not a bespoke block — it is composed upstream from
+`summarize` and `tidyr::pivot_wider`.
+
+## Putting it together
+
+Call `register_viz_blocks()` once to register the five blocks with the
+block-adder and the assistant. blockr.viz pairs with **blockr.dock**:
+blockr.dock arranges the blocks into a dashboard layout, and blockr.viz draws
+the data inside them. See the package README for a runnable end-to-end board.

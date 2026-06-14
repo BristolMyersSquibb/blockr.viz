@@ -31,6 +31,9 @@
 #'
 #' Spec: `blockr.design/open/table-blocks/`.
 #'
+#' @return A blockr transform block of class `summary_table_block`.
+#' @examplesIf interactive()
+#' new_summary_table_block()
 #' @export
 new_summary_table_block <- function(
   state = list(
@@ -144,7 +147,7 @@ new_summary_table_block <- function(
             shiny::req(length(s$vars) > 0)
             if (!is.null(s$id_var) && nzchar(s$id_var)) {
               bquote(
-                blockr.bi::summary_table(
+                blockr.viz::summary_table(
                   data,
                   vars             = .(s$vars),
                   sections         = .(s$sections),
@@ -159,7 +162,7 @@ new_summary_table_block <- function(
               )
             } else {
               bquote(
-                blockr.bi::summary_table(
+                blockr.viz::summary_table(
                   data,
                   vars             = .(s$vars),
                   sections         = .(s$sections),
@@ -203,14 +206,14 @@ summary_table_block_dep <- function() {
   htmltools::tagList(
     htmltools::htmlDependency(
       name = "summary-table-block-js",
-      version = utils::packageVersion("blockr.bi"),
-      src = system.file("js", package = "blockr.bi"),
+      version = utils::packageVersion("blockr.viz"),
+      src = system.file("js", package = "blockr.viz"),
       script = "summary-table-block.js"
     ),
     htmltools::htmlDependency(
       name = "summary-table-block-css",
-      version = utils::packageVersion("blockr.bi"),
-      src = system.file("css", package = "blockr.bi"),
+      version = utils::packageVersion("blockr.viz"),
+      src = system.file("css", package = "blockr.viz"),
       stylesheet = "summary-table-block.css"
     )
   )

@@ -1,4 +1,4 @@
 library(testthat)
-library(blockr.bi)
+library(blockr.viz)
 
-test_check("blockr.bi")
+test_check("blockr.viz")

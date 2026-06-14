@@ -26,3 +26,6 @@ A list consumed by \code{\link[=drilldown_table]{drilldown_table()}}.
 \description{
 Color spec for \code{\link[=drilldown_table]{drilldown_table()}}
 }
+\examples{
+drilldown_table_color("sequential", domain = c(0, 100))
+}

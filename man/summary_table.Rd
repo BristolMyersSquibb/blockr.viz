@@ -57,20 +57,26 @@ When \code{TRUE}, adjacent categorical entries in \code{vars} that form a
 functional dependency in \code{data} are rendered as a row-side
 drill-down. v1 supports 2-level hierarchies only.}
 }
+\value{
+A tidy, long-format tibble: raw numeric statistic columns plus
+dotted structure columns (\verb{.section_*}, \code{.var}, \code{.label}, \code{.indent}),
+a \code{.group} dimension column, and a per-row \code{.fmt} template column that
+a renderer interpolates into display cells.
+}
 \description{
 Aggregate a flat data.frame into a \strong{tidy, long} summary frame: raw
 numeric statistic columns plus a hidden per-row \code{.fmt} template that
 names how to combine them into a display cell. Section structure is
 encoded via well-known dotted columns (\verb{.section_1, ..., .section_k, .var, .label, .indent}), and the by-group dimension lives in a single
-\code{.group} column. Designed as a wide-first sibling to \code{\link[=pivot_table]{pivot_table()}},
-covering the "list of variables by Y" pattern rather than the
-"one measurement across two dimensions" pattern.
+\code{.group} column. Designed for the "list of variables by Y" pattern;
+the complementary "one measurement across two dimensions" pivot is
+produced upstream by composing \code{summarize} with \code{tidyr::pivot_wider}.
 }
 \details{
 The output stays \code{dplyr}-able (every number is a plain numeric column)
 and re-renderable: a renderer turns it into the familiar wide display
 grid by formatting each row's \code{.fmt} template, then spreading \code{.group}
-to columns (see \code{\link[=fmt_assemble]{fmt_assemble()}}). The shaper no longer bakes display
+to columns (see \code{fmt_assemble()}). The shaper no longer bakes display
 strings — it emits numbers + templates and leaves formatting to the
 renderer.
 
@@ -115,27 +121,21 @@ ride along as a \strong{named numeric vector} in \code{attr(out, "group_n")}
 these as column labels.
 }
 \examples{
-if (FALSE) {
-  # Simple demographics
-  summary_table(
-    iris,
-    vars = c("Sepal.Length", "Species"),
-    by = character(),
-    stats = "compact"
-  )
+# Simple demographics
+summary_table(
+  iris,
+  vars = c("Sepal.Length", "Species"),
+  by = character(),
+  stats = "compact"
+)
 
-  # Expanded numeric layout
-  summary_table(
-    mtcars,
-    vars = c("mpg", "hp"),
-    by = "cyl",
-    stats = "expanded",
-    add_overall = TRUE
-  )
-
-  # Reconstruct the wide display grid:
-  out <- summary_table(iris, vars = "Sepal.Length", by = "Species")
-  fmt_assemble(out, group_col = ".group")
-}
+# Expanded numeric layout, split by a grouping column
+summary_table(
+  mtcars,
+  vars = c("mpg", "hp"),
+  by = "cyl",
+  stats = "expanded",
+  add_overall = TRUE
+)
 
 }

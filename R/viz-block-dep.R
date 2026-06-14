@@ -2,8 +2,8 @@
 viz_block_css_dep <- function() {
   htmltools::htmlDependency(
     name = "viz-block-css",
-    version = utils::packageVersion("blockr.bi"),
-    src = system.file("css", package = "blockr.bi"),
+    version = utils::packageVersion("blockr.viz"),
+    src = system.file("css", package = "blockr.viz"),
     stylesheet = "viz-block.css"
   )
 }

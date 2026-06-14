@@ -1,7 +1,7 @@
 // Standalone Playwright screenshotter for the tile demo board. Uses the system
 // chromium with its own user-data-dir so it doesn't collide with the MCP
 // browser lock. Run:
-//   node blockr.bi/dev/tile-shot.mjs
+//   node blockr.viz/dev/tile-shot.mjs
 import { chromium } from 'playwright-core';
 
 const OUT = '/tmp/tile-shots';

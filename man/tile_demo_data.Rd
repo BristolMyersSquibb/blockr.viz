@@ -22,3 +22,6 @@ Because the tile does no arithmetic, the \code{scorecard} frame ships the
 secondaries already computed (a signed \code{delta}, a \code{progress} fraction, a
 \code{status}) so each display style can be demoed directly.
 }
+\examples{
+names(tile_demo_data())
+}

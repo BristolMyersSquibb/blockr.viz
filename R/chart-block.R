@@ -72,9 +72,21 @@
 #'   charts. Default `1.0`. Range `0.5`–`3.0`. Individual family only.
 #' @param dot_size_mult Multiplier on the default marker size. Default
 #'   `1.0`. Range `0.5`–`3.0`. Individual family only.
+#' @param step Step-line mode for line charts. `NULL` (default) draws a
+#'   straight line; a step mode (e.g. `"start"`/`"middle"`/`"end"`) draws a
+#'   stepped line. Consumed by the JS renderer.
+#' @param ref_x,ref_y Optional reference-line overlays at a fixed x or y
+#'   value (vertical / horizontal guide line). Default `NULL` (no overlay).
+#' @param smoother Trend overlay for scatter charts: one of `"none"`
+#'   (default), `"lm"`, or `"loess"`. Fit per `color`/`series` group via
+#'   [compute_smoother_series()].
+#' @param lo,hi Optional lower / upper value bounds used by the renderer to
+#'   clamp or annotate the value axis. Default `NULL` (auto).
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
 #' @return A transform block of class `chart_block`
+#' @examplesIf interactive()
+#' new_chart_block()
 #' @export
 new_chart_block <- function(
     group = NULL,
@@ -581,6 +593,11 @@ new_chart_block <- function(
 #' @param color_by,series_by Grouping column names; smoother is fit per
 #'   `series_by` if non-NULL else `color_by` else no grouping.
 #' @return A named list or `NULL`.
+#' @examples
+#' compute_smoother_series(
+#'   mtcars, "lm", "wt", "mpg",
+#'   color_by = NULL, series_by = NULL
+#' )
 #' @keywords internal
 #' @export
 compute_smoother_series <- function(data, smoother, x_col, y_col,

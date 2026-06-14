@@ -5,14 +5,14 @@
 #' names how to combine them into a display cell. Section structure is
 #' encoded via well-known dotted columns (`.section_1, ..., .section_k,
 #' .var, .label, .indent`), and the by-group dimension lives in a single
-#' `.group` column. Designed as a wide-first sibling to [pivot_table()],
-#' covering the "list of variables by Y" pattern rather than the
-#' "one measurement across two dimensions" pattern.
+#' `.group` column. Designed for the "list of variables by Y" pattern;
+#' the complementary "one measurement across two dimensions" pivot is
+#' produced upstream by composing `summarize` with `tidyr::pivot_wider`.
 #'
 #' The output stays `dplyr`-able (every number is a plain numeric column)
 #' and re-renderable: a renderer turns it into the familiar wide display
 #' grid by formatting each row's `.fmt` template, then spreading `.group`
-#' to columns (see [fmt_assemble()]). The shaper no longer bakes display
+#' to columns (see `fmt_assemble()`). The shaper no longer bakes display
 #' strings — it emits numbers + templates and leaves formatting to the
 #' renderer.
 #'
@@ -85,29 +85,27 @@
 #'   functional dependency in `data` are rendered as a row-side
 #'   drill-down. v1 supports 2-level hierarchies only.
 #'
+#' @return A tidy, long-format tibble: raw numeric statistic columns plus
+#'   dotted structure columns (`.section_*`, `.var`, `.label`, `.indent`),
+#'   a `.group` dimension column, and a per-row `.fmt` template column that
+#'   a renderer interpolates into display cells.
 #' @examples
-#' if (FALSE) {
-#'   # Simple demographics
-#'   summary_table(
-#'     iris,
-#'     vars = c("Sepal.Length", "Species"),
-#'     by = character(),
-#'     stats = "compact"
-#'   )
+#' # Simple demographics
+#' summary_table(
+#'   iris,
+#'   vars = c("Sepal.Length", "Species"),
+#'   by = character(),
+#'   stats = "compact"
+#' )
 #'
-#'   # Expanded numeric layout
-#'   summary_table(
-#'     mtcars,
-#'     vars = c("mpg", "hp"),
-#'     by = "cyl",
-#'     stats = "expanded",
-#'     add_overall = TRUE
-#'   )
-#'
-#'   # Reconstruct the wide display grid:
-#'   out <- summary_table(iris, vars = "Sepal.Length", by = "Species")
-#'   fmt_assemble(out, group_col = ".group")
-#' }
+#' # Expanded numeric layout, split by a grouping column
+#' summary_table(
+#'   mtcars,
+#'   vars = c("mpg", "hp"),
+#'   by = "cyl",
+#'   stats = "expanded",
+#'   add_overall = TRUE
+#' )
 #'
 #' @export
 summary_table <- function(data,
@@ -315,7 +313,7 @@ var_header_label <- function(col, fallback) {
 #' @noRd
 n_distinct_in <- function(data, subject_var) {
   if (!is.null(subject_var) && subject_var %in% names(data)) {
-    dplyr::n_distinct(data[[subject_var]])
+    dplyr::n_distinct(data[[subject_var]], na.rm = TRUE)
   } else {
     nrow(data)
   }
@@ -616,7 +614,7 @@ compute_numeric_stats <- function(data, var, group_vars) {
 compute_denom <- function(data, group_vars, subject_var) {
   if (length(group_vars) == 0L) {
     N <- if (!is.null(subject_var)) {
-      dplyr::n_distinct(data[[subject_var]])
+      dplyr::n_distinct(data[[subject_var]], na.rm = TRUE)
     } else {
       nrow(data)
     }
