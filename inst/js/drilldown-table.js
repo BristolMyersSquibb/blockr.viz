@@ -308,6 +308,16 @@
     table.querySelectorAll("thead th .blockr-col-name")
       .forEach(function (s) { cols.push({ name: s.textContent.trim(), type: "any" }); });
 
+    // Structured ("Table 1") tables expose no pickable columns (the header is
+    // section spanners, the cells are pre-formatted strings). With no columns
+    // every gear control is a no-op: nothing to drill on, nothing to color rows
+    // by, the numeric heatmap is forced off by the structured renderer, and even
+    // Decimals does nothing (the cells are pre-formatted, build_html_tbody never
+    // re-rounds). So skip the gear entirely rather than show a menu that can't do
+    // anything. Keyed on "no columns" (not a hard-coded "structured" flag) so it
+    // covers any future no-column case too.
+    if (cols.length === 0) return;
+
     var onClick = table.getAttribute("data-dt-onclick-col");
     var cfg = {
       drill:      (onClick && onClick !== "(none)") ? onClick : "",
