@@ -16,7 +16,7 @@ dd_board_scale_map <- function() {
 }
 
 # Which drilldown role drives coloring, per chart type (pinned against the
-# JS render paths in inst/js/drilldown-chart.js): stacked bar, radar and the
+# JS render paths in inst/js/chart.js): stacked bar, radar and the
 # individual/timeline families color by the `color` role; pie and treemap
 # color their `group` slices; boxplot draws single-color boxes (no colored
 # role). The x-axis/category role never auto-colors — coloring by a variable
@@ -50,7 +50,7 @@ dd_levels <- function(col) {
   }
 }
 
-# Mirrors the JS BLOCKR_PALETTE (inst/js/drilldown-chart.js) — the pool the
+# Mirrors the JS BLOCKR_PALETTE (inst/js/chart.js) — the pool the
 # chart cycles when no scale applies, so hash assignment draws from the same
 # colors.
 DD_BLOCKR_PALETTE <- c(

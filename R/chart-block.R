@@ -564,20 +564,6 @@ new_chart_block <- function(
   )
 }
 
-#' Drill-Down Chart Block (deprecated alias)
-#'
-#' Deprecated alias for [new_chart_block()]. The block was renamed from
-#' "Drill-Down Chart" to "Chart" (the drill-down behaviour is an opt-in
-#' `drill` feature, not the block's identity). Kept so existing serialized
-#' boards that reference `new_drilldown_chart_block` still deserialize.
-#'
-#' @param ... Forwarded to [new_chart_block()].
-#' @return A transform block of class `chart_block`.
-#' @export
-new_drilldown_chart_block <- function(...) {
-  new_chart_block(...)
-}
-
 #' Compute smoother line points per group for a scatter chart
 #'
 #' Returns a named list keyed by group level. Each entry is a list with

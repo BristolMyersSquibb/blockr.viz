@@ -303,7 +303,7 @@ block_output.waterfall_block <- function(x, result, session) {
 
 #' Render waterfall chart
 #'
-#' Styling tracks the drill-down design system (see drilldown-chart.js):
+#' Styling tracks the drill-down design system (see chart.js):
 #' Open Sans, `#666` labels, `#ccc` axis line, dashed `#f3f4f6` splitlines.
 #' Increase/decrease/total colors are semantic and override theme palettes.
 #' @noRd

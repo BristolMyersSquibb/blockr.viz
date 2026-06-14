@@ -1,4 +1,4 @@
-#' HTML dependencies for the drilldown chart block
+#' HTML dependencies for the chart block
 #' @noRd
 drilldown_chart_dep <- function() {
   htmltools::tagList(
@@ -17,19 +17,19 @@ drilldown_chart_dep <- function() {
     ),
     drilldown_echarts_themes_dep(),
     htmltools::htmlDependency(
-      name = "drilldown-chart-js",
+      name = "chart-js",
       version = paste0(utils::packageVersion("blockr.bi"), ".31"),
       src = system.file("js", package = "blockr.bi"),
       # drilldown-config.js (the shared gear-popover engine) must load BEFORE
-      # drilldown-chart.js, which references Blockr.DrilldownConfig.
+      # chart.js, which references Blockr.DrilldownConfig.
       script = c("drilldown-theme-register.js", "drilldown-config.js",
-                 "drilldown-chart.js")
+                 "chart.js")
     ),
     htmltools::htmlDependency(
-      name = "drilldown-chart-css",
+      name = "chart-css",
       version = paste0(utils::packageVersion("blockr.bi"), ".24"),
       src = system.file("css", package = "blockr.bi"),
-      stylesheet = "drilldown-chart.css"
+      stylesheet = "chart.css"
     )
   )
 }

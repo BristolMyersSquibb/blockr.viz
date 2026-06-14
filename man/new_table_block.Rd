@@ -37,5 +37,5 @@ Transform block wrapping \code{\link[=drilldown_table]{drilldown_table()}}. The 
 rendered from the upstream (pre-filter) data so every row stays
 clickable; the block's data output is the upstream data filtered by
 the last click, using the exact same contract as
-\code{\link[=new_drilldown_chart_block]{new_drilldown_chart_block()}} (so existing filter links compose).
+\code{\link[=new_chart_block]{new_chart_block()}} (so existing filter links compose).
 }

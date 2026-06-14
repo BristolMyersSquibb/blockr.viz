@@ -488,12 +488,12 @@ drilldown_table_dep <- function() {
       script = c("blockr-core.js", "blockr-select.js")
     ),
     # Shared popover CSS (the dd-* section/row/segmented/add classes) lives in
-    # drilldown-chart.css; the table's gear popover now reuses it.
+    # chart.css; the table's gear popover reuses it (de-dups by dep name).
     htmltools::htmlDependency(
-      name = "drilldown-chart-css",
+      name = "chart-css",
       version = paste0(utils::packageVersion("blockr.bi"), ".24"),
       src = system.file("css", package = "blockr.bi"),
-      stylesheet = "drilldown-chart.css"
+      stylesheet = "chart.css"
     ),
     htmltools::htmlDependency(
       name = "blockr-bi-table",
@@ -572,7 +572,7 @@ table_arguments <- function() {
 #' rendered from the upstream (pre-filter) data so every row stays
 #' clickable; the block's data output is the upstream data filtered by
 #' the last click, using the exact same contract as
-#' [new_drilldown_chart_block()] (so existing filter links compose).
+#' [new_chart_block()] (so existing filter links compose).
 #'
 #' @param rowname,values,cell_color,drill,digits,max_height
 #'   Forwarded to [drilldown_table()]. The block has no in-table title:
@@ -616,7 +616,7 @@ new_table_block <- function(rowname = NULL,
         # the full config/filter on any popover change, so a blind set would
         # invalidate (and re-render the table) on every echo — the
         # "prevent R->JS->R loops" guard the chart block uses. (Mirrors
-        # drilldown-chart-block.R.)
+        # chart-block.R.)
         upd <- function(rv, v) {
           if (!identical(shiny::isolate(rv()), v)) rv(v)
         }
@@ -770,5 +770,5 @@ new_table_block <- function(rowname = NULL,
 # Controls pane (the `ui =` function above, via uiOutput("dt_result")), and the
 # block falls back to the transform_block defaults for the output pane — so the
 # Preview pane shows the filtered passthrough data frame as a DT, exactly like
-# new_drilldown_chart_block(). (They were previously nulled out, which left the
+# new_chart_block(). (They were previously nulled out, which left the
 # Preview pane blank.)

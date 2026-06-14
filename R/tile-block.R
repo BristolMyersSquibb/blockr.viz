@@ -230,10 +230,10 @@ tile_block_dep <- function() {
       script = c("blockr-core.js", "blockr-select.js")
     ),
     htmltools::htmlDependency(
-      name = "drilldown-chart-css",
+      name = "chart-css",
       version = paste0(utils::packageVersion("blockr.bi"), ".24"),
       src = system.file("css", package = "blockr.bi"),
-      stylesheet = "drilldown-chart.css"
+      stylesheet = "chart.css"
     ),
     htmltools::htmlDependency(
       name = "tile-block",
