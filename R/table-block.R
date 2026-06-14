@@ -95,17 +95,46 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                           row_color = row_color))
   }
 
-  # ---- color scale ----------------------------------------------------
-  cell_bg <- NULL
+  # ---- cell visuals: heatmap shading OR data bars ---------------------
+  # `color` is a drilldown_table_color() spec. `color$columns` names which
+  # numeric columns get the treatment; empty/NULL = ALL numeric columns
+  # (a rule re-resolved here, so it survives upstream schema changes). A
+  # picked column that no longer exists is dropped (fail-soft: that column
+  # just renders plain). Normalization follows the mode: `bar` is
+  # per-column on absolute magnitude; diverging/sequential share one pooled
+  # domain across the target columns (so a correlation matrix reads on one
+  # scale).
+  bar_mode  <- FALSE
+  bar_fill  <- NULL
+  bar_max   <- NULL    # named per-column abs-max for bars
+  cell_bg   <- NULL    # shared value->color closure for diverging/sequential
+  targets   <- character()
   if (!is.null(color)) {
     num_cols <- value_cols[vapply(data[value_cols], is.numeric, logical(1L))]
-    if (length(num_cols)) {
-      vals <- unlist(data[num_cols], use.names = FALSE)
-      vals <- vals[is.finite(vals)]
-      dom <- color$domain
-      if (is.null(dom) && length(vals)) dom <- range(vals)
-      if (!is.null(dom) && length(vals) && diff(range(dom)) > 0) {
-        cell_bg <- dt_color_fun(color$type, dom, color$palette)
+    picked   <- color$columns
+    targets  <- if (length(picked)) intersect(picked, num_cols) else num_cols
+    if (length(targets)) {
+      if (identical(color$type, "bar")) {
+        bar_mode <- TRUE
+        bar_fill <- (color$palette %||% "rgba(37, 99, 235, 0.22)")[1L]
+        bar_max  <- vapply(targets, function(cn) {
+          v <- data[[cn]][is.finite(data[[cn]])]
+          if (length(v)) max(abs(v)) else 0
+        }, numeric(1L))
+      } else {
+        vals <- unlist(data[targets], use.names = FALSE)
+        vals <- vals[is.finite(vals)]
+        dom  <- color$domain
+        if (is.null(dom) && length(vals)) {
+          dom <- if (identical(color$type, "diverging")) {
+            m <- max(abs(vals)); c(-m, m)   # symmetric around 0 (white at 0)
+          } else {
+            range(vals)
+          }
+        }
+        if (!is.null(dom) && length(vals) && diff(range(dom)) > 0) {
+          cell_bg <- dt_color_fun(color$type, dom, color$palette)
+        }
       }
     }
   }
@@ -158,11 +187,18 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
         as.character(vk)
       }
       style <- ""
-      if (!is.null(cell_bg) && num_flag[j]) {
-        style <- vapply(as.numeric(vk), function(v) {
-          bg <- cell_bg(v)
-          paste0(" style=\"background:", bg$bg, ";color:", bg$fg, ";\"")
-        }, character(1L))
+      if (num_flag[j] && value_cols[j] %in% targets) {
+        if (bar_mode) {
+          # Data bar: left-anchored gradient, width = |v| / column-abs-max.
+          # A CSS gradient string keeps the vectorized single-HTML() render
+          # (no per-cell DOM node). Text reads on top of the fill.
+          style <- dt_bar_style(as.numeric(vk), bar_max[[value_cols[j]]], bar_fill)
+        } else if (!is.null(cell_bg)) {
+          style <- vapply(as.numeric(vk), function(v) {
+            bg <- cell_bg(v)
+            paste0(" style=\"background:", bg$bg, ";color:", bg$fg, ";\"")
+          }, character(1L))
+        }
       }
       out_j[keep] <- paste0("<td class=\"", td_cls, "\"", style, ">",
                             esc(disp), "</td>")
@@ -198,7 +234,9 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   table_tag <- htmltools::tags$table(class = "blockr-table", thead, tbody)
   onclick <- dt_onclick(drill, c(label_col, value_cols))
   dt_table_attrs(table_tag, onclick$col, onclick$idx, color_mode, digits,
-                 row_color = row_color)
+                 row_color = row_color,
+                 num_cols = value_cols[num_flag],
+                 color_cols = if (!is.null(color)) color$columns else NULL)
 }
 
 # ---------------------------------------------------------------------------
@@ -259,20 +297,36 @@ dt_table_tag_structured <- function(data, drill, color, digits) {
   dt_table_attrs(table_tag, onclick$col, onclick$idx, "off", digits)
 }
 
-#' Color spec for [drilldown_table()]
+#' Cell-visual spec for [drilldown_table()]
 #'
-#' @param type `"diverging"` (e.g. correlations around 0) or
-#'   `"sequential"` (e.g. grade heatmaps).
+#' Describes how numeric cells are decorated. Three modes, all purely
+#' presentational (the data is never changed):
+#'
+#' - `"diverging"` — a value-to-background scale centred on 0 with a
+#'   symmetric domain (correlation matrices: -1 white-at-0 +1).
+#' - `"sequential"` — a low-to-high background ramp (heatmaps).
+#' - `"bar"` — an in-cell horizontal data bar proportional to the value
+#'   (e.g. "patients with most adverse events"), normalised per column on
+#'   absolute magnitude and left-anchored.
+#'
+#' @param type `"diverging"`, `"sequential"`, or `"bar"`.
 #' @param domain `NULL` to infer from the data, or `c(min, max)`.
+#'   Ignored for `"bar"` (always per-column). For `"diverging"` the
+#'   inferred domain is symmetric around 0.
 #' @param palette `NULL` for type defaults, or a character vector of
-#'   hex colors (length 3 for diverging low/mid/high, length 2 for
-#'   sequential low/high).
+#'   colors — length 3 for diverging (low/mid/high), length 2 for
+#'   sequential (low/high), length 1 for the bar fill.
+#' @param columns `NULL`/empty to apply to **all** numeric columns (a
+#'   rule, re-resolved against whatever data arrives — survives upstream
+#'   schema changes), or a character vector to restrict to those columns.
+#'   A picked column that no longer exists is silently skipped.
 #' @return A list consumed by [drilldown_table()].
 #' @export
-drilldown_table_color <- function(type = c("diverging", "sequential"),
-                                   domain = NULL, palette = NULL) {
+drilldown_table_color <- function(type = c("diverging", "sequential", "bar"),
+                                   domain = NULL, palette = NULL,
+                                   columns = NULL) {
   type <- match.arg(type)
-  list(type = type, domain = domain, palette = palette)
+  list(type = type, domain = domain, palette = palette, columns = columns)
 }
 
 # --- internal helpers --------------------------------------------------
@@ -353,14 +407,19 @@ dt_onclick <- function(drill, all_cols) {
 #' the JS, while the chrome stays put.
 #' @noRd
 dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
-                           color_mode, digits, row_color = NULL) {
+                           color_mode, digits, row_color = NULL,
+                           num_cols = NULL, color_cols = NULL) {
   htmltools::tagAppendAttributes(
     table_tag,
     `data-dt-onclick-col` = onclick_col,
     `data-dt-onclick-idx` = if (!is.null(onclick_idx)) onclick_idx else NULL,
     `data-dt-color-mode` = color_mode,
     `data-dt-digits` = as.character(digits),
-    `data-dt-row-color` = row_color %||% ""
+    `data-dt-row-color` = row_color %||% "",
+    # Numeric columns the gear may offer for the colour/bar scope picker, and
+    # the currently-scoped subset ("" = all numeric). Comma-joined.
+    `data-dt-num-cols` = paste(num_cols %||% character(), collapse = ","),
+    `data-dt-color-cols` = paste(color_cols %||% character(), collapse = ",")
   )
 }
 
@@ -427,6 +486,21 @@ dt_chrome <- function(elem_id, structured, max_height, inner) {
   )
 }
 
+#' Per-cell inline style for a data bar: a left-anchored CSS gradient whose
+#' width is `|v| / mx * 100%` (absolute-magnitude normalisation, no center
+#' baseline — matches the crossfilter block). Vectorised over the column so the
+#' table stays on the single-`HTML()` fast path. Returns `""` for a degenerate
+#' column (all-zero / non-finite max), i.e. no bar.
+#' @noRd
+dt_bar_style <- function(v, mx, fill) {
+  if (!is.finite(mx) || mx <= 0) return(rep("", length(v)))
+  # as.character on the rounded value formats each width independently (no
+  # vectorized decimal-alignment, so 100 stays "100", not "100.0").
+  pct <- as.character(round(pmax(0, pmin(100, abs(v) / mx * 100)), 2L))
+  paste0(" style=\"background:linear-gradient(90deg,", fill, " 0 ", pct,
+         "%,transparent ", pct, "%);\"")
+}
+
 #' @noRd
 dt_color_fun <- function(type, domain, palette) {
   lo <- domain[1L]
@@ -443,7 +517,10 @@ dt_color_fun <- function(type, domain, palette) {
   if (identical(type, "diverging")) {
     pal <- palette %||% c("#99000d", "#ffffff", "#08306b")
     c1 <- hex2rgb(pal[1L]); c2 <- hex2rgb(pal[2L]); c3 <- hex2rgb(pal[3L])
-    mid <- if (lo < 0 && hi > 0) 0 else (lo + hi) / 2
+    # Diverging is centred on 0 (white-at-zero); the domain is symmetric around
+    # 0 (set at inference). A meaningful zero is what "diverging" means — for a
+    # correlation matrix this puts white at r = 0 and gives +/- equal saturation.
+    mid <- 0
     function(v) {
       v <- max(min(v, hi), lo)
       if (v <= mid) {
@@ -527,10 +604,13 @@ table_arguments <- function() {
         "except `rowname`'."
       ),
       cell_color = paste0(
-        "Cell shading: a `drilldown_table_color()` spec, or null for a plain ",
-        "table. NOTE this is a colour SPEC object, not a column name (unlike the ",
-        "drill-down chart's `color`). Diverging scale for correlation matrices, ",
-        "sequential for heatmaps. Presentational only; never changes the data."
+        "Cell visuals: a `drilldown_table_color()` spec, or null for a plain ",
+        "table. NOTE this is a SPEC object, not a column name (unlike the ",
+        "drill-down chart's `color`). `type` is \"diverging\" (correlation ",
+        "matrices, centred on 0), \"sequential\" (heatmaps), or \"bar\" (an ",
+        "in-cell data bar proportional to the value, e.g. counts of adverse ",
+        "events). `columns` restricts the effect to named columns; omit it to ",
+        "apply to all numeric columns. Presentational only; never changes data."
       ),
       drill = paste0(
         "Column a row click filters downstream on. Optional; default null = a ",
@@ -634,13 +714,36 @@ new_table_block <- function(rowname = NULL,
             p <- msg$param
             v <- msg$value
             if (identical(p, "color_mode")) {
+              cur <- shiny::isolate(r_cell_color()) %||% cell_color
               if (identical(v, "off")) {
                 upd(r_cell_color, NULL)
-              } else if (!is.null(cell_color) && identical(cell_color$type, v)) {
-                # preserve the constructor's domain / palette
-                upd(r_cell_color, cell_color)
               } else {
-                upd(r_cell_color, drilldown_table_color(v))
+                # Switching mode keeps the current column scope; domain/palette
+                # only carry over when the type is unchanged (they are
+                # type-specific). columns = NULL/empty means "all numeric".
+                same <- !is.null(cur) && identical(cur$type, v)
+                upd(r_cell_color, drilldown_table_color(
+                  v,
+                  domain  = if (same) cur$domain  else NULL,
+                  palette = if (same) cur$palette else NULL,
+                  columns = if (!is.null(cur)) cur$columns else NULL
+                ))
+              }
+            } else if (identical(p, "color_columns")) {
+              # The column-scope multi-select. Empty selection = NULL = "all
+              # numeric" (a rule, not a snapshot — self-heals on schema change).
+              # Ignored when no colour mode is active.
+              cur <- shiny::isolate(r_cell_color())
+              if (!is.null(cur)) {
+                cols <- as.character(unlist(v))
+                if (length(cols) == 0L ||
+                    (length(cols) == 1L && !nzchar(cols))) {
+                  cols <- NULL
+                }
+                upd(r_cell_color, drilldown_table_color(
+                  cur$type, domain = cur$domain, palette = cur$palette,
+                  columns = cols
+                ))
               }
             } else if (identical(p, "drill")) {
               upd(r_drill, if (identical(v, "(none)") || !nzchar(v)) NULL else v)

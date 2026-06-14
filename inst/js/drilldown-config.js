@@ -369,8 +369,48 @@
         wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
         const cur = cfg[key];
         const selv = this._hasVal(cur) ? cur : ((typeof opts[0] === 'object' && opts[0]) ? opts[0].value : opts[0]);
-        const onSel = (val) => { cfg[key] = val; cb(); this.h.onChange(key); };
+        const onSel = (val) => {
+          cfg[key] = val; cb(); this.h.onChange(key);
+          // Some selects gate which other rows are shown (e.g. the table's
+          // Coloring mode reveals the column-scope picker). Re-render so the
+          // section list updates live, preserving open state.
+          if (role.rerender) {
+            const wasOpen = this.h.isOpen();
+            this.render();
+            if (wasOpen) setTimeout(() => this.h.reopen(), 0);
+          }
+        };
         this._mkSelect(wrap, opts, selv, onSel, key, false);
+        parent.appendChild(wrap);
+      } else if (role.kind === 'columns') {
+        // Multi-column scope picker. Wires the existing Blockr.Select.multi
+        // primitive; empty selection is meaningful (= "all", per the host's
+        // placeholder), so there is no '(none)' option. Value is an array.
+        const opts = this._colOptionsFor(key, { required: true });
+        const sel = Array.isArray(cfg[key]) ? cfg[key].slice() : [];
+        const wrap = document.createElement('div');
+        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+        const onSel = (vals) => { cfg[key] = vals; cb(); this.h.onChange(key); };
+        if (typeof Blockr !== 'undefined' && Blockr.Select && Blockr.Select.multi) {
+          this._selects[key] = Blockr.Select.multi(wrap, {
+            options: opts, selected: sel, reorderable: false,
+            placeholder: role.placeholder || 'All', onChange: onSel
+          });
+        } else {
+          const s = document.createElement('select');
+          s.className = 'dd-cfg-select'; s.multiple = true;
+          for (const o of opts) {
+            const val = (typeof o === 'object' && o) ? o.value : o;
+            const txt = (typeof o === 'object' && o && o.label) ? o.label : val;
+            const op = document.createElement('option');
+            op.value = val; op.textContent = txt;
+            if (sel.indexOf(val) >= 0) op.selected = true;
+            s.appendChild(op);
+          }
+          s.addEventListener('change', () => onSel(
+            Array.prototype.slice.call(s.selectedOptions).map(o => o.value)));
+          wrap.appendChild(s);
+        }
         parent.appendChild(wrap);
       } else if (role.kind === 'segmented') {
         const cur = this._hasVal(cfg[key]) ? cfg[key] : role.options[0].value;

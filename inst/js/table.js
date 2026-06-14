@@ -289,24 +289,40 @@
   var TABLE_ROLES = {
     drill:      { label: "Drill-down", kind: "column", colType: "any" },
     row_color:  { label: "Row color",  kind: "column", colType: "any" },
-    color_mode: { label: "Coloring",   kind: "select", options: ["off", "diverging", "sequential"] },
+    color_mode: { label: "Coloring",   kind: "select", rerender: true,
+                  options: ["off", "diverging", "sequential", "bar"] },
+    // Column-scope multi-select: empty = ALL numeric columns (the common case,
+    // e.g. a correlation heatmap), so the placeholder spells that out. Picking
+    // restricts to those columns (e.g. a single count column for data bars).
+    color_columns: { label: "Columns", kind: "columns", colType: "num",
+                     placeholder: "All numeric columns" },
     digits:     { label: "Decimals",   kind: "select", options: ["0", "1", "2", "3", "4"] }
   };
-  var TABLE_SECTIONS = {
-    requiredMap: [], optionalMap: [], mapping: [],
-    presentation: [
-      "drill", "row_color",
-      "color_mode", "digits"
-    ]
-  };
+  // Dynamic: the column-scope picker only appears once a coloring mode is on
+  // (it is meaningless for a plain table). color_mode has rerender:true so
+  // toggling it rebuilds the section list live.
+  function tableSections(cfg) {
+    var pres = ["drill", "row_color", "color_mode"];
+    if (cfg && cfg.color_mode && cfg.color_mode !== "off") pres.push("color_columns");
+    pres.push("digits");
+    return { requiredMap: [], optionalMap: [], mapping: [], presentation: pres };
+  }
 
   function buildCogwheel(root, table) {
     var elemId = root.getAttribute("data-dt-elem-id");
     if (!elemId) return;
 
+    // Numeric columns (from R) drive the colType:"num" filter on the colour /
+    // bar scope picker, so it only offers shadeable columns.
+    var numSet = {};
+    (table.getAttribute("data-dt-num-cols") || "").split(",")
+      .forEach(function (n) { if (n) numSet[n] = true; });
     var cols = [];
     table.querySelectorAll("thead th .blockr-col-name")
-      .forEach(function (s) { cols.push({ name: s.textContent.trim(), type: "any" }); });
+      .forEach(function (s) {
+        var nm = s.textContent.trim();
+        cols.push({ name: nm, type: numSet[nm] ? "numeric" : "any" });
+      });
 
     // Structured ("Table 1") tables expose no pickable columns (the header is
     // section spanners, the cells are pre-formatted strings). With no columns
@@ -319,10 +335,13 @@
     if (cols.length === 0) return;
 
     var onClick = table.getAttribute("data-dt-onclick-col");
+    var colorCols = (table.getAttribute("data-dt-color-cols") || "")
+      .split(",").filter(function (n) { return !!n; });
     var cfg = {
       drill:      (onClick && onClick !== "(none)") ? onClick : "",
       row_color:  table.getAttribute("data-dt-row-color") || "",
       color_mode: table.getAttribute("data-dt-color-mode") || "off",
+      color_columns: colorCols,            // [] = all numeric
       digits:     table.getAttribute("data-dt-digits") || "2"
     };
 
@@ -364,8 +383,8 @@
       columns: function () { return cols; },
       context: function () { return "all"; },
       currentType: function () { return cfg.transform; },
-      sections: function () { return TABLE_SECTIONS; },
-      sectionsForFamily: function () { return TABLE_SECTIONS; },
+      sections: function () { return tableSections(cfg); },
+      sectionsForFamily: function () { return tableSections(cfg); },
       secondary: new Set(),
       typeKey: null,
       typeGroups: null,
