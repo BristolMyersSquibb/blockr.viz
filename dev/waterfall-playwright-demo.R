@@ -3,10 +3,10 @@
 # columns (Time -> step axis, demand -> value). Proves the bar+cumulative
 # baseline rendering; not a semantic P&L.
 #   cd /workspace/blockr.bi && Rscript dev/waterfall-playwright-demo.R > /tmp/wf.log 2>&1 &
-.libPaths("/workspace/blockr.dev/.devcontainer/.library")
+
 suppressMessages({
   library(blockr.core)
-  pkgload::load_all("/workspace/blockr.bi", quiet = TRUE)
+  pkgload::load_all("blockr.bi", quiet = TRUE)
 })
 register_bi_blocks()
 
@@ -23,5 +23,5 @@ board <- new_board(
   links = c(new_link("data", "wf", "data"))
 )
 
-options(shiny.port = 3838, shiny.host = "0.0.0.0", shiny.launch.browser = FALSE)
+options(shiny.launch.browser = FALSE)
 shiny::runApp(serve(board))
