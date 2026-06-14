@@ -1,6 +1,5 @@
 /* ============================================================
    Tile (KPI renderer) — blockr.viz
-   Ported from dev/mockup/tile.html (Tile KPI Renderer v2).
    Tokens build on blockr.dock greyscale + the #2563eb primary.
    Light only — the rest of the blockr UI has no dark mode, so the
    tile doesn't introduce one. Green is an added "up/good" semantic

@@ -1,6 +1,6 @@
 # Render layer for new_tile_block(): reshape the input to a normalized long
-# "tile frame" (one row per group x measure cell) and emit the tk-* markup
-# from dev/mockup/tile.html. A pure presentation of the tidy frame — the
+# "tile frame" (one row per group x measure cell) and emit the tk-* markup.
+# A pure presentation of the tidy frame — the
 # renderer does NO arithmetic; secondaries (delta / fill fraction / pill
 # status) are precomputed columns. Render-time concerns only: number
 # formatting, sign x good_when coloring, and bar / chip / arrow drawing.
