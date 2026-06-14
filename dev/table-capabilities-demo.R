@@ -113,22 +113,32 @@ board <- new_dock_board(
       block_name = "Correlation (diverging colour)"),
 
     # 5. COLOUR BY SEX — the categorical scale map. The chart colours its bars
-    #    by SEX straight from the map (F teal / M orange); the table next to it
-    #    splits the same demographics by SEX.
+    #    by SEX straight from the map (F teal / M orange). The table is a SIMPLE
+    #    table with SEX as the row stub (not a structured Table-1): the scale-map
+    #    swatch / row colour can only ride the stub levels of a flat table, so
+    #    this is the shape that lets F/M pick up the same teal/orange.
     sex_chart = new_chart_block(
       chart_type = "bar", group = "ARM", color = "SEX",
       metric = ".count", agg_fn = "count",
       block_name = "Patients by arm x sex (chart — colour role)"),
-    sex_summ = new_summary_table_block(
-      state = list(vars = list("AGE", "RACE"), by = list("SEX")),
-      block_name = "Demographics by sex"),
-    sex_tbl = new_table_block(block_name = "By sex (structured)")
+    by_sex = new_summarize_block(
+      state = list(
+        summaries = list(
+          list(type = "simple", name = "n",        func = "n",    col = "AGE"),
+          list(type = "simple", name = "mean_age", func = "mean", col = "AGE")
+        ),
+        by = list("SEX")
+      ),
+      block_name = "Summaries by sex"),
+    sex_tbl = new_table_block(
+      rowname = "SEX", values = c("n", "mean_age"),
+      block_name = "By sex (simple table — SEX row stub)")
   ),
   links = links(
     from = c("data", "data", "summ", "data", "xt_summ", "xt_wide",
-             "cor_data", "data", "data", "sex_summ"),
+             "cor_data", "data", "data", "by_sex"),
     to   = c("flat", "summ", "summ_tbl", "xt_summ", "xt_wide", "xt_tbl",
-             "cor_tbl", "sex_chart", "sex_summ", "sex_tbl")
+             "cor_tbl", "sex_chart", "by_sex", "sex_tbl")
   ),
   layouts = list(
     simple      = dock_layout("flat", name = "1. Simple"),

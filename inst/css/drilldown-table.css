@@ -1,6 +1,18 @@
+/* Type-based body alignment: numeric cells right (tabular figures), text
+   cells left — matching the header, like the structured table and the
+   canonical html preview. */
 .drilldown-table-container .blockr-table tbody td.blockr-data {
-  text-align: right;
   font-variant-numeric: tabular-nums;
+}
+/* Carry `blockr-data` in the selector so these beat the structured delta's
+   `td.blockr-data { text-align: right }`, which leaks onto the flat table via
+   the shared `.blockr-html-table-container` class when a structured table is
+   also on the page. */
+.drilldown-table-container .blockr-table tbody td.blockr-data.dt-num {
+  text-align: right;
+}
+.drilldown-table-container .blockr-table tbody td.blockr-data.dt-txt {
+  text-align: left;
 }
 .drilldown-table-container .blockr-table tbody td.blockr-stub {
   text-align: left;
@@ -28,10 +40,23 @@
 .drilldown-table-container .blockr-table tbody tr.dt-row-active td:first-child {
   box-shadow: inset 3px 0 0 0 var(--blockr-color-primary, #2563eb);
 }
-/* Header alignment: match the blockr.extra HTML preview — left-aligned column
-   name and label (the shared html-table CSS centres them). */
-.drilldown-table-container .blockr-table thead th.blockr-col-header {
+/* Flat-table header alignment, driven by the column's data type so the name,
+   sub-label and sort arrow all agree with the body cells: numeric right, text
+   left (the structured table does the same for its arm columns). The type
+   class beats the inherited html-table delta, which right-aligns every header. */
+.drilldown-table-container .blockr-table thead th.blockr-col-header.dt-col-num {
+  text-align: right;
+}
+.drilldown-table-container .blockr-table thead th.blockr-col-header.dt-col-txt {
   text-align: left;
+}
+.drilldown-table-container .blockr-table thead th.dt-col-num .dt-th-namerow,
+.drilldown-table-container .blockr-table thead th.dt-col-num .dt-th-subrow {
+  justify-content: flex-end;
+}
+.drilldown-table-container .blockr-table thead th.dt-col-txt .dt-th-namerow,
+.drilldown-table-container .blockr-table thead th.dt-col-txt .dt-th-subrow {
+  justify-content: flex-start;
 }
 /* Sticky header for the scrollable table. The structured-Table-1 delta CSS
    provides its own sticky + scroll-shadow, but that delta is injected only for
@@ -91,6 +116,13 @@
   font-weight: var(--blockr-font-weight-normal, 400);
   font-size: 11px;   /* match the canonical html preview's column sub-label */
   color: var(--blockr-color-text-muted, #6b7280);
+  /* Shrink (ellipsis) rather than reflow when the sort arrow appears under a
+     pinned column width — the arrow nudges the sub-label, never the column. */
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .drilldown-table-container {
   position: relative;

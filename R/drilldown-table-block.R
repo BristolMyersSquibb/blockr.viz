@@ -111,12 +111,16 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   }
 
   # ---- thead ----------------------------------------------------------
+  # Per-column numeric flag drives type-based alignment for both the header
+  # and the body cells (numeric right, text left).
+  num_flag <- vapply(data[value_cols], is.numeric, logical(1L))
   th_cells <- list(dt_th(label_col, 0L, stub = TRUE,
                          label = dt_col_label(data[[label_col]], label_col)))
   for (i in seq_along(value_cols)) {
     th_cells[[length(th_cells) + 1L]] <- dt_th(
       value_cols[i], i,
-      label = dt_col_label(data[[value_cols[i]]], value_cols[i])
+      label = dt_col_label(data[[value_cols[i]]], value_cols[i]),
+      numeric = num_flag[i]
     )
   }
   thead <- htmltools::tags$thead(htmltools::tags$tr(th_cells))
@@ -132,18 +136,19 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   # is kept (not a single vectorized call) because vectorized `format()`
   # aligns decimals across the column (1.5 -> "1.50"), which would change
   # the displayed values.
-  num_flag <- vapply(data[value_cols], is.numeric, logical(1L))
   # Text content uses htmltools' own escaper (the same one `tags$td()`
   # applies to a text child), so escaping is byte-identical: & < > are
   # escaped, quotes are not.
   esc <- function(x) htmltools::htmlEscape(as.character(x), attribute = FALSE)
 
-  na_cell <- "<td class=\"blockr-data\">&mdash;</td>"
   col_cells <- vector("list", length(value_cols))
   for (j in seq_along(value_cols)) {
     col   <- data[[value_cols[j]]]
     keep  <- !is.na(col)
-    out_j <- rep(na_cell, length(col))
+    # Type-based cell alignment matches the header (numeric right, text left).
+    td_cls  <- if (num_flag[j]) "blockr-data dt-num" else "blockr-data dt-txt"
+    na_cell <- paste0("<td class=\"", td_cls, "\">&mdash;</td>")
+    out_j   <- rep(na_cell, length(col))
     if (any(keep)) {
       vk <- col[keep]
       disp <- if (num_flag[j]) {
@@ -159,7 +164,7 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
           paste0(" style=\"background:", bg$bg, ";color:", bg$fg, ";\"")
         }, character(1L))
       }
-      out_j[keep] <- paste0("<td class=\"blockr-data\"", style, ">",
+      out_j[keep] <- paste0("<td class=\"", td_cls, "\"", style, ">",
                             esc(disp), "</td>")
     }
     col_cells[[j]] <- out_j
@@ -273,9 +278,13 @@ drilldown_table_color <- function(type = c("diverging", "sequential"),
 # --- internal helpers --------------------------------------------------
 
 #' @noRd
-dt_th <- function(name, idx, stub = FALSE, label = NULL) {
+dt_th <- function(name, idx, stub = FALSE, label = NULL, numeric = FALSE) {
   cls <- if (stub) "blockr-stub-header blockr-sortable" else
     "blockr-col-header leaf blockr-sortable"
+  # Align the whole header (name + sub-label + sort arrow) to the column's
+  # data type, so a flat table reads like the structured one: numeric right,
+  # text left. The explicit class wins over the inherited html-table delta.
+  cls <- paste(cls, if (isTRUE(numeric)) "dt-col-num" else "dt-col-txt")
   name_span <- htmltools::tags$span(class = "blockr-col-name", name)
   sort_span <- htmltools::tags$span(class = "blockr-sort-icon")
   if (!is.null(label)) {
