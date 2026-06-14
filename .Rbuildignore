@@ -2,6 +2,7 @@
 ^\.Rproj\.user$
 ^dev$
 ^\.github$
+^tsconfig\.json$
 ^README\.Rmd$
 ^LICENSE\.md$
 ^\.claude$
