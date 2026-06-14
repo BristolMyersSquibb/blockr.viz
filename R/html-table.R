@@ -455,9 +455,20 @@ section_chevron_svg <- function() {
 #' bar above the table, a search input, multi-level column header
 #' borders, row-side section header rows, the collapse chevron, and the
 #' .indent/.bold/.italic row styling.
+#'
+#' `scope` is the container class the table-body / header-cell rules hang off.
+#' It defaults to `.blockr-html-table-container` (used by standalone
+#' [html_table()], whose container carries that class). The drilldown table
+#' block passes the narrower `.drilldown-table-structured` so the Table-1
+#' typography (medium 500 stat values, the 450 stub, the 13.5px size) is gated
+#' to STRUCTURED output only — a `<style>` tag is page-global, and a flat table
+#' shares the `.blockr-html-table-container` class, so an unscoped delta would
+#' leak the bold cells onto a sibling flat table. The bare chrome rules (title
+#' bar, toolbar, search input) carry no container prefix and stay global on
+#' purpose — they are generic table chrome a flat table needs too.
 #' @noRd
-html_table_delta_css <- function() {
-  ".blockr-html-table-container {
+html_table_delta_css <- function(scope = ".blockr-html-table-container") {
+  css <- ".blockr-html-table-container {
   background: #ffffff;
   font-size: var(--blockr-font-size-base, 0.875rem);
   color: var(--blockr-color-text-primary, #111827);
@@ -573,7 +584,10 @@ input.blockr-search:focus {
   border-bottom: 1px solid var(--stbl-hair-strong);
 }
 /* Stat-label (row-stub) cells \u2014 wrap to 2 lines (never truncate), aligned
-   to the top so a wrapped label stays level with its numbers. */
+   to the top so a wrapped label stays level with its numbers. Typography
+   matches the canonical preview (normal weight, base size); the Table-1
+   character comes from STRUCTURE (sections, the 40px indent, bold rows), not
+   from a heavier default font. */
 .blockr-html-table-container .blockr-table tbody td.blockr-stub {
   text-align: left;
   vertical-align: top;
@@ -582,12 +596,13 @@ input.blockr-search:focus {
   text-overflow: clip;
   max-width: none;
   padding: 9px 18px 9px 40px;
-  font-size: 13.5px;
-  font-weight: 450;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  font-weight: var(--blockr-font-weight-normal, 400);
   color: var(--stbl-ink-2);
 }
 /* Value cells \u2014 right-aligned, tabular figures, top-aligned to match the
-   wrapping stub. */
+   wrapping stub. Normal weight like the preview; emphasis (totals, key rows)
+   comes from the data via `.bold` rows, not a blanket medium weight. */
 .blockr-html-table-container .blockr-table tbody td.blockr-data {
   text-align: right;
   vertical-align: top;
@@ -596,8 +611,8 @@ input.blockr-search:focus {
   text-overflow: clip;
   max-width: none;
   padding: 9px 18px;
-  font-size: 13.5px;
-  font-weight: 500;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  font-weight: var(--blockr-font-weight-normal, 400);
   color: var(--stbl-ink-1);
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
@@ -707,6 +722,10 @@ input.blockr-search:focus {
 .blockr-hidden-search {
   display: none !important;
 }"
+  if (!identical(scope, ".blockr-html-table-container")) {
+    css <- gsub(".blockr-html-table-container", scope, css, fixed = TRUE)
+  }
+  css
 }
 
 #' Subset of `blockr.extra::table_preview_css()` mirrored verbatim for

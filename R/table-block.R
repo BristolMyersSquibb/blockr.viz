@@ -470,7 +470,13 @@ dt_chrome <- function(elem_id, structured, max_height, inner) {
     # it only for structured tables — a flat data table should match the canonical
     # html preview (normal-weight cells, plain stub), not carry the Table-1 styling.
     if (isTRUE(structured)) {
-      htmltools::tags$style(htmltools::HTML(html_table_delta_css()))
+      # Scope the Table-1 typography to `.drilldown-table-structured` (this
+      # container carries it). A `<style>` is page-global, and a flat table
+      # block shares `.blockr-html-table-container`, so an unscoped delta would
+      # leak the medium-weight cells onto a sibling flat table.
+      htmltools::tags$style(htmltools::HTML(
+        html_table_delta_css(scope = ".drilldown-table-structured")
+      ))
     },
     drilldown_table_dep(),
     htmltools::tags$div(

@@ -16,6 +16,53 @@ test_that("html_table() returns a tagList for a minimal flat input", {
   expect_false(grepl("class=\"blockr-section-header\"", html, fixed = TRUE))
 })
 
+test_that("html_table_delta_css() scope gates Table-1 typography to structured", {
+  # The default scope keeps the body-cell rules on the generic container (used
+  # by standalone html_table()).
+  default_css <- html_table_delta_css()
+  expect_true(grepl(
+    ".blockr-html-table-container .blockr-table tbody td.blockr-data",
+    default_css, fixed = TRUE
+  ))
+
+  # The drilldown block passes the structured-only scope so the medium-weight
+  # cells cannot leak onto a sibling flat table (both share
+  # `.blockr-html-table-container`, but only the structured one carries
+  # `.drilldown-table-structured`).
+  scoped_css <- html_table_delta_css(scope = ".drilldown-table-structured")
+  expect_true(grepl(
+    ".drilldown-table-structured .blockr-table tbody td.blockr-data",
+    scoped_css, fixed = TRUE
+  ))
+  expect_false(grepl(
+    ".blockr-html-table-container .blockr-table tbody td.blockr-data",
+    scoped_css, fixed = TRUE
+  ))
+  # The generic table-body scope is gone, but the bare chrome rules (search
+  # input) stay global so a flat table still gets a styled toolbar.
+  expect_true(grepl("input.blockr-search", scoped_css, fixed = TRUE))
+})
+
+test_that("structured dt_chrome scopes the delta; flat dt_chrome omits it", {
+  tbl <- htmltools::tags$table(class = "blockr-table")
+
+  struct <- as.character(htmltools::tagList(
+    dt_chrome("e", structured = TRUE, max_height = NULL, inner = tbl)
+  ))
+  expect_true(grepl("drilldown-table-structured", struct, fixed = TRUE))
+  expect_true(grepl(
+    ".drilldown-table-structured .blockr-table tbody td.blockr-data",
+    struct, fixed = TRUE
+  ))
+
+  flat <- as.character(htmltools::tagList(
+    dt_chrome("e", structured = FALSE, max_height = NULL, inner = tbl)
+  ))
+  expect_false(grepl("drilldown-table-structured", flat, fixed = TRUE))
+  # The flat table never injects the Table-1 weight rule at all.
+  expect_false(grepl("td.blockr-data", flat, fixed = TRUE))
+})
+
 test_that("html_table() emits section header rows for .section_1 boundaries", {
   df <- tibble::tibble(
     .section_1 = c("GI Disorders", "GI Disorders", "Nervous System", "Nervous System"),

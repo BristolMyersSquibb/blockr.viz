@@ -4,10 +4,11 @@
 .drilldown-table-container .blockr-table tbody td.blockr-data {
   font-variant-numeric: tabular-nums;
 }
-/* Carry `blockr-data` in the selector so these beat the structured delta's
-   `td.blockr-data { text-align: right }`, which leaks onto the flat table via
-   the shared `.blockr-html-table-container` class when a structured table is
-   also on the page. */
+/* Type-based body alignment for the flat table: numeric cells right, text
+   cells left. The structured Table-1 delta CSS is now gated to
+   `.drilldown-table-structured` (see html_table_delta_css()), so it no longer
+   leaks its `td.blockr-data` weight/size/alignment onto the flat table — these
+   rules stand on their own as the flat table's intended alignment. */
 .drilldown-table-container .blockr-table tbody td.blockr-data.dt-num {
   text-align: right;
 }
@@ -16,10 +17,6 @@
 }
 .drilldown-table-container .blockr-table tbody td.blockr-stub {
   text-align: left;
-  /* Match the canonical html preview: flat data cells are normal weight, not
-     medium — the medium stub read slightly bolder than the preview. (Structured
-     Table-1 stat labels keep their design weight via the delta CSS.) */
-  font-weight: var(--blockr-font-weight-normal, 400);
 }
 .drilldown-table-container.dt-clickable .blockr-table tbody tr.blockr-data-row {
   cursor: pointer;
