@@ -127,6 +127,11 @@
     orientation: { label: 'Orientation', kind: 'segmented',
                    options: [{ value: 'horizontal', label: 'Horizontal' },
                              { value: 'vertical', label: 'Vertical' }] },
+    // A waterfall is a bar with a cumulative baseline — exposed here as a bar
+    // option, not its own chart_type. "Waterfall" sets baseline='cumulative'.
+    baseline: { label: 'Bars', kind: 'segmented',
+                options: [{ value: 'zero', label: 'Standard' },
+                          { value: 'cumulative', label: 'Waterfall' }] },
     smoother: { label: 'Smoother', kind: 'select', options: ['none', 'lm', 'loess'] },
     lo:       { label: 'Lo', kind: 'column', colType: 'num' },
     hi:       { label: 'Hi', kind: 'column', colType: 'num' },
@@ -147,7 +152,8 @@
       // orientation: bar only for v1 (boxplot swap is a follow-up). Waterfall
       // is vertical-only (a bridge reads left-to-right along the value axis), so
       // it does not expose orientation.
-      presentation: ['sort_by', 'sort_dir', { role: 'orientation', types: ['bar'] }]
+      presentation: ['sort_by', 'sort_dir', { role: 'orientation', types: ['bar'] },
+        { role: 'baseline', types: ['bar'] }]
     },
     individual: {
       requiredMap: ['x', 'y'],
@@ -204,7 +210,10 @@
         secondary: DD_SECONDARY,
         typeKey: 'chart_type',
         typeGroups: [
-          { label: 'Aggregated', types: AGGREGATED_TYPES },
+          // Waterfall is intentionally NOT a picker button — it is a bar option
+          // (the `baseline` toggle). It stays in AGGREGATED_TYPES so saved boards
+          // with chart_type="waterfall" still classify/render as aggregated bars.
+          { label: 'Aggregated', types: AGGREGATED_TYPES.filter(function (t) { return t !== 'waterfall'; }) },
           { label: 'Individual', types: INDIVIDUAL_TYPES },
           { label: 'Timeline', types: TIMELINE_TYPES }
         ],
