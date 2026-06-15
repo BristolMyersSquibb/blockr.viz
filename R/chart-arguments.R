@@ -117,6 +117,13 @@ chart_arguments <- function() {
         "for individual (scatter/line) charts."
       )
     ),
+    # Mirror the FULL configurable arg set (every name in the descriptions
+    # above) so the model copies the real shape instead of inventing names
+    # for the styling / filter-transport slots it can't see here. Omitting
+    # them made gpt-class models guess plausible-but-wrong names
+    # (trend/line_size/marker_size/filter_mode/brush) -> a rejected add_block
+    # and a wasted retry on every chart. Runtime-transport slots show their
+    # creation-time defaults.
     examples = list(
       chart_type = "scatter",
       group = "Species",
@@ -127,8 +134,18 @@ chart_arguments <- function() {
       x = "Sepal.Length",
       y = "Sepal.Width",
       series = NULL,
+      xend = NULL,
       label = NULL,
       drill = "Species",
+      smoother = "none",
+      lo = NULL,
+      hi = NULL,
+      line_width_mult = 1,
+      dot_size_mult = 1,
+      filter_type = "categorical",
+      filter_column = NULL,
+      filter_values = NULL,
+      filter_range = NULL,
       sort_by = "value",
       sort_dir = "desc"
     ),
