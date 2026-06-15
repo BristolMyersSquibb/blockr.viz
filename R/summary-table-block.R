@@ -10,18 +10,21 @@
 #' [new_gt_table_block()] or any renderer that understands the
 #' convention.
 #'
-#' @param state Initial state list. Fields:
-#'   - `vars` — character, variables to summarise.
-#'   - `sections` — character, outer section columns (0..N).
-#'   - `by` — character, column-split dimensions (0..2).
-#'   - `stats` — `"compact"` or `"expanded"`.
-#'   - `add_overall` — logical, append an overall column.
-#'   - `overall_label` — label for the overall column, default `"Total"`.
-#'   - `id_var` — optional column name. When set, column N values and
-#'     percentages are computed over distinct values of this column
-#'     instead of row counts. Useful when each row is an event and
-#'     multiple rows can belong to the same entity (e.g. patient,
-#'     order, session).
+#' @param vars Character, variables to summarise (each becomes a row-section).
+#' @param sections Character, outer section columns that contain `vars` (0..N).
+#' @param by Character, column-split dimensions (0..2).
+#' @param stats `"compact"` (one-row Mean (SD) per numeric) or `"expanded"`
+#'   (six-row N / Mean / SD / Median / Q1,Q3 / Min,Max).
+#' @param add_overall Logical, append an overall column across all `by` levels.
+#' @param overall_label Label for the overall column, default `"Total"`.
+#' @param indent_details Logical, indent detail rows under their variable
+#'   header. Default `TRUE`.
+#' @param nest_hierarchies Logical, advanced row-side drill-down for adjacent
+#'   functionally-dependent categorical vars. Default `FALSE`.
+#' @param id_var Optional subject-identifier column name. When set, column N
+#'   values and percentages are computed over distinct values of this column
+#'   instead of row counts. Useful when each row is an event and multiple rows
+#'   can belong to the same entity (e.g. patient, order, session).
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #'
 #' @details
@@ -36,35 +39,55 @@
 #' new_summary_table_block()
 #' @export
 new_summary_table_block <- function(
-  state = list(
-    vars = character(),
-    sections = character(),
-    by = character(),
-    stats = "compact",
-    add_overall = FALSE,
-    overall_label = "Total",
-    indent_details = TRUE,
-    nest_hierarchies = FALSE,
-    id_var = NULL
-  ),
+  vars = character(),
+  sections = character(),
+  by = character(),
+  stats = "compact",
+  add_overall = FALSE,
+  overall_label = "Total",
+  indent_details = TRUE,
+  nest_hierarchies = FALSE,
+  id_var = NULL,
   ...
 ) {
-  # Backfill defaults for partial state lists (e.g. from cedx-poc.R or
-  # older serialized boards that predate new fields).
-  defaults <- list(
-    vars = character(), sections = character(), by = character(),
-    stats = "compact", add_overall = FALSE, overall_label = "Total",
-    indent_details = TRUE, nest_hierarchies = FALSE,
-    id_var = NULL
-  )
-  for (nm in names(defaults)) {
-    if (is.null(state[[nm]])) state[[nm]] <- defaults[[nm]]
-  }
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {
         ns <- session$ns
-        r_state <- shiny::reactiveVal(state)
+
+        # One reactiveVal per field is the source of truth. Required because
+        # the flat constructor formals are externally controllable:
+        # blockr.core resolves external_ctrl_vars() to block_ctor_inputs()
+        # (the flat formals) and every such variable must be a reactiveVal.
+        # The JS widget still emits/consumes a single state blob, decomposed
+        # into these on the way in and recombined on the way out.
+        r_vars             <- shiny::reactiveVal(as.character(vars))
+        r_sections         <- shiny::reactiveVal(as.character(sections))
+        r_by               <- shiny::reactiveVal(as.character(by))
+        r_stats            <- shiny::reactiveVal(stats %||% "compact")
+        r_add_overall      <- shiny::reactiveVal(isTRUE(add_overall))
+        r_overall_label    <- shiny::reactiveVal(overall_label %||% "Total")
+        r_indent_details   <- shiny::reactiveVal(isTRUE(indent_details))
+        r_nest_hierarchies <- shiny::reactiveVal(isTRUE(nest_hierarchies))
+        r_id_var           <- shiny::reactiveVal(
+          if (is.null(id_var) || !nzchar(id_var)) NULL else as.character(id_var)
+        )
+
+        # Recombine the per-field reactiveVals into the single blob the JS
+        # widget and the expr consume.
+        cur_state <- shiny::reactive(
+          list(
+            vars             = r_vars(),
+            sections         = r_sections(),
+            by               = r_by(),
+            stats            = r_stats(),
+            add_overall      = r_add_overall(),
+            overall_label    = r_overall_label(),
+            indent_details   = r_indent_details(),
+            nest_hierarchies = r_nest_hierarchies(),
+            id_var           = r_id_var()
+          )
+        )
 
         # Gate to avoid circular JS <-> R updates.
         self_write <- new.env(parent = emptyenv())
@@ -103,47 +126,45 @@ new_summary_table_block <- function(
           send_columns(d)
           session$sendCustomMessage("summary-table-update", list(
             id = ns("summary_input"),
-            state = normalize_state_for_js(r_state())
+            state = normalize_state_for_js(cur_state())
           ))
         })
 
-        # JS -> R: user edited the block.
+        # JS -> R: user edited the block. Fan the single blob out to the
+        # per-field reactiveVals (coercing nulls to typed empties so the
+        # downstream bquote is stable).
         shiny::observeEvent(input$summary_input, {
           self_write$active <- TRUE
           new_state <- input$summary_input
-          # Coerce nulls to typed empties so downstream bquote is stable.
-          new_state$vars <- as.character(new_state$vars %||% character())
-          new_state$sections <- as.character(new_state$sections %||% character())
-          new_state$by <- as.character(new_state$by %||% character())
-          new_state$stats <- new_state$stats %||% "compact"
-          new_state$add_overall <- isTRUE(new_state$add_overall)
-          new_state$overall_label <- new_state$overall_label %||% "Total"
-          new_state$indent_details <- isTRUE(new_state$indent_details)
-          new_state$nest_hierarchies <- isTRUE(new_state$nest_hierarchies)
+          r_vars(as.character(new_state$vars %||% character()))
+          r_sections(as.character(new_state$sections %||% character()))
+          r_by(as.character(new_state$by %||% character()))
+          r_stats(new_state$stats %||% "compact")
+          r_add_overall(isTRUE(new_state$add_overall))
+          r_overall_label(new_state$overall_label %||% "Total")
+          r_indent_details(isTRUE(new_state$indent_details))
+          r_nest_hierarchies(isTRUE(new_state$nest_hierarchies))
           id_v <- new_state$id_var
-          new_state$id_var <- if (is.null(id_v) || !nzchar(id_v)) {
-            NULL
-          } else {
-            as.character(id_v)
-          }
-          r_state(new_state)
+          r_id_var(if (is.null(id_v) || !nzchar(id_v)) NULL else as.character(id_v))
         })
 
-        # R -> JS: external state change (e.g. restore from serialized board).
-        shiny::observeEvent(r_state(), {
+        # R -> JS: external/field state change (e.g. restore from a serialized
+        # board or external_ctrl). The per-field writes above land in one
+        # flush, so cur_state() invalidates once per user edit.
+        shiny::observeEvent(cur_state(), {
           if (self_write$active) {
             self_write$active <- FALSE
           } else {
             session$sendCustomMessage("summary-table-update", list(
               id = ns("summary_input"),
-              state = normalize_state_for_js(r_state())
+              state = normalize_state_for_js(cur_state())
             ))
           }
         })
 
         list(
           expr = shiny::reactive({
-            s <- r_state()
+            s <- cur_state()
             shiny::req(length(s$vars) > 0)
             if (!is.null(s$id_var) && nzchar(s$id_var)) {
               bquote(
@@ -176,7 +197,17 @@ new_summary_table_block <- function(
               )
             }
           }),
-          state = list(state = r_state)
+          state = list(
+            vars             = r_vars,
+            sections         = r_sections,
+            by               = r_by,
+            stats            = r_stats,
+            add_overall      = r_add_overall,
+            overall_label    = r_overall_label,
+            indent_details   = r_indent_details,
+            nest_hierarchies = r_nest_hierarchies,
+            id_var           = r_id_var
+          )
         )
       })
     },
@@ -198,6 +229,10 @@ new_summary_table_block <- function(
     },
     class = c("summary_table_block", "transform_block", "block"),
     allow_empty_state = c("vars", "sections", "by", "overall_label", "id_var"),
+    external_ctrl = c(
+      "vars", "sections", "by", "stats", "add_overall", "overall_label",
+      "indent_details", "nest_hierarchies", "id_var"
+    ),
     ...
   )
 }

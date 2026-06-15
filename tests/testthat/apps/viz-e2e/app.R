@@ -95,7 +95,7 @@ serve(
       ),
       # Display-shaped summary + a gt render of a plain frame.
       summary = new_summary_table_block(
-        state = list(vars = c("revenue", "profit"), by = "region")
+        vars = c("revenue", "profit"), by = "region"
       ),
       gt = new_gt_table_block()
     ),

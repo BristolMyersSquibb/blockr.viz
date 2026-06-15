@@ -90,11 +90,9 @@ board <- new_dock_board(
     #    table block detects it and renders sections + indents + per-arm
     #    spanners + an overall column.
     summ = new_summary_table_block(
-      state = list(
-        vars = list("AGE", "SEX", "RACE"),
-        by = list("ARM"),
-        add_overall = TRUE
-      ),
+      vars = list("AGE", "SEX", "RACE"),
+      by = list("ARM"),
+      add_overall = TRUE,
       block_name = "Demographics by arm (summary_table)"),
     summ_tbl = new_table_block(block_name = "Table 1 (structured rendering)"),
 

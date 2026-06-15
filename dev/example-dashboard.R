@@ -90,8 +90,8 @@ board <- new_dock_board(
                                 values = c("SEX", "ARM", "AGE", "BMIBL"),
                                 block_name = "Flat listing"),
     t_summ    = new_summary_table_block(
-                  state = list(vars = list("AGE", "SEX", "RACE"),
-                               by = list("ARM"), add_overall = TRUE),
+                  vars = list("AGE", "SEX", "RACE"),
+                  by = list("ARM"), add_overall = TRUE,
                   block_name = "summary_table (Table 1)"),
     t_summtbl = new_table_block(block_name = "Structured Table 1"),
     xt_summ   = new_summarize_block(

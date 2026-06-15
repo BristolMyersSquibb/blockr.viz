@@ -5,27 +5,42 @@
 \title{Summary Table Block}
 \usage{
 new_summary_table_block(
-  state = list(vars = character(), sections = character(), by = character(), stats =
-    "compact", add_overall = FALSE, overall_label = "Total", indent_details = TRUE,
-    nest_hierarchies = FALSE, id_var = NULL),
+  vars = character(),
+  sections = character(),
+  by = character(),
+  stats = "compact",
+  add_overall = FALSE,
+  overall_label = "Total",
+  indent_details = TRUE,
+  nest_hierarchies = FALSE,
+  id_var = NULL,
   ...
 )
 }
 \arguments{
-\item{state}{Initial state list. Fields:
-\itemize{
-\item \code{vars} — character, variables to summarise.
-\item \code{sections} — character, outer section columns (0..N).
-\item \code{by} — character, column-split dimensions (0..2).
-\item \code{stats} — \code{"compact"} or \code{"expanded"}.
-\item \code{add_overall} — logical, append an overall column.
-\item \code{overall_label} — label for the overall column, default \code{"Total"}.
-\item \code{id_var} — optional column name. When set, column N values and
-percentages are computed over distinct values of this column
-instead of row counts. Useful when each row is an event and
-multiple rows can belong to the same entity (e.g. patient,
-order, session).
-}}
+\item{vars}{Character, variables to summarise (each becomes a row-section).}
+
+\item{sections}{Character, outer section columns that contain \code{vars} (0..N).}
+
+\item{by}{Character, column-split dimensions (0..2).}
+
+\item{stats}{\code{"compact"} (one-row Mean (SD) per numeric) or \code{"expanded"}
+(six-row N / Mean / SD / Median / Q1,Q3 / Min,Max).}
+
+\item{add_overall}{Logical, append an overall column across all \code{by} levels.}
+
+\item{overall_label}{Label for the overall column, default \code{"Total"}.}
+
+\item{indent_details}{Logical, indent detail rows under their variable
+header. Default \code{TRUE}.}
+
+\item{nest_hierarchies}{Logical, advanced row-side drill-down for adjacent
+functionally-dependent categorical vars. Default \code{FALSE}.}
+
+\item{id_var}{Optional subject-identifier column name. When set, column N
+values and percentages are computed over distinct values of this column
+instead of row counts. Useful when each row is an event and multiple rows
+can belong to the same entity (e.g. patient, order, session).}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }

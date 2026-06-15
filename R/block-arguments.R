@@ -68,41 +68,49 @@ pivot_table_arguments <- function() {
 summary_table_arguments <- function() {
   structure(
     c(
-      state = paste0(
-        "Object with fields: ",
-        "`vars` (character, variables to summarise \u2014 each becomes a row-section), ",
-        "`sections` (character, OUTER grouping columns that CONTAIN the `vars`, ",
-        "0..N \u2014 use ONLY for a true nesting hierarchy such as SOC containing PT; ",
-        "leave empty for a flat list of variables), ",
-        "`by` (character, column-split dimensions, 0..2), ",
-        "`stats` (\"compact\" for one-row Mean (SD) per numeric, or \"expanded\" ",
-        "for the 6-row N / Mean / SD / Median / Q1,Q3 / Min,Max pharma SAP template), ",
-        "`add_overall` (logical, append an overall column across all `by` levels), ",
-        "`overall_label` (label for the overall column, default \"Total\"), ",
-        "`id_var` (OPTIONAL subject-identifier column name, e.g. \"USUBJID\": when set, ",
-        "counts and percentages are over DISTINCT values of this column instead of row ",
-        "counts \u2014 set it whenever the data is event-level/long, i.e. multiple rows can ",
-        "belong to one subject and the user wants per-subject counts; leave \"\" otherwise), ",
-        "`indent_details` (logical, default TRUE \u2014 indent detail rows under their ",
-        "variable header; rarely changed), ",
-        "`nest_hierarchies` (logical, default FALSE \u2014 advanced row-side drill-down for ",
-        "adjacent functionally-dependent categorical vars; leave FALSE unless asked). ",
-        "Handles numeric, categorical, and logical columns; logicals are rendered ",
-        "as a one-row TRUE count for pharma flag variables."
+      vars = paste0(
+        "Character, variables to summarise \u2014 each becomes a row-section. ",
+        "Handles numeric, categorical, and logical columns; logicals are ",
+        "rendered as a one-row TRUE count for pharma flag variables."
+      ),
+      sections = paste0(
+        "Character, OUTER grouping columns that CONTAIN the `vars`, 0..N \u2014 ",
+        "use ONLY for a true nesting hierarchy such as SOC containing PT; ",
+        "leave empty for a flat list of variables."
+      ),
+      by = "Character, column-split dimensions, 0..2.",
+      stats = paste0(
+        "\"compact\" for one-row Mean (SD) per numeric, or \"expanded\" for the ",
+        "6-row N / Mean / SD / Median / Q1,Q3 / Min,Max pharma SAP template."
+      ),
+      add_overall = "Logical, append an overall column across all `by` levels.",
+      overall_label = "Label for the overall column, default \"Total\".",
+      indent_details = paste0(
+        "Logical, default TRUE \u2014 indent detail rows under their variable ",
+        "header; rarely changed."
+      ),
+      nest_hierarchies = paste0(
+        "Logical, default FALSE \u2014 advanced row-side drill-down for adjacent ",
+        "functionally-dependent categorical vars; leave FALSE unless asked."
+      ),
+      id_var = paste0(
+        "OPTIONAL subject-identifier column name, e.g. \"USUBJID\": when set, ",
+        "counts and percentages are over DISTINCT values of this column instead ",
+        "of row counts \u2014 set it whenever the data is event-level/long, i.e. ",
+        "multiple rows can belong to one subject and the user wants per-subject ",
+        "counts; leave \"\" otherwise."
       )
     ),
     examples = list(
-      state = list(
-        vars = list("AEDECOD"),
-        sections = list("AEBODSYS"),
-        by = list("TRT01A"),
-        stats = "compact",
-        add_overall = TRUE,
-        overall_label = "Total",
-        id_var = "",
-        indent_details = TRUE,
-        nest_hierarchies = FALSE
-      )
+      vars = list("AEDECOD"),
+      sections = list("AEBODSYS"),
+      by = list("TRT01A"),
+      stats = "compact",
+      add_overall = TRUE,
+      overall_label = "Total",
+      indent_details = TRUE,
+      nest_hierarchies = FALSE,
+      id_var = ""
     ),
     prompt = paste(
       "This block produces a multi-variable descriptive summary \u2014 the",
