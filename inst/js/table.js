@@ -1,4 +1,6 @@
+// @ts-check
 (function () {
+  /** @param {string | number | null | undefined} s */
   function parseNum(s) {
     if (s == null) return null;
     var m = String(s).match(/-?\d[\d,]*(\.\d+)?/);
@@ -14,6 +16,7 @@
   // and the table never resizes. Pin every column except the last; under
   // `table-layout: fixed` the last one takes the exact remaining width, so it
   // is fixed too. No-op if already locked or hidden.
+  /** @param {HTMLElement | null} table */
   function lockTableWidths(table) {
     if (!table || table.dataset.widthsLocked === "1" || table.offsetWidth === 0) return;
     var ths = table.querySelectorAll("thead th");
@@ -27,8 +30,10 @@
     table.dataset.widthsLocked = "1";
   }
 
+  /** @param {HTMLElement} root @param {HTMLElement} table @param {HTMLElement} tbody */
   function wireSort(root, table, tbody) {
     var structured = root.getAttribute("data-dt-structured") === "1";
+    /** @type {{ col: number | null, dir: number }} */
     var state = { col: null, dir: 0 };
     var origin = Array.prototype.slice.call(tbody.children);
     origin.forEach(function (r, i) { r.setAttribute("data-dt-o", i); });
@@ -43,9 +48,10 @@
       tbody.appendChild(f);
     }
 
+    /** @param {Element} a @param {Element} b @param {number} idx @param {number} dir */
     function cmpRows(a, b, idx, dir) {
-      var av = a.children[idx] ? a.children[idx].textContent.trim() : "";
-      var bv = b.children[idx] ? b.children[idx].textContent.trim() : "";
+      var av = a.children[idx] ? (a.children[idx].textContent || "").trim() : "";
+      var bv = b.children[idx] ? (b.children[idx].textContent || "").trim() : "";
       var an = parseNum(av), bn = parseNum(bv), cmp;
       if (an !== null && bn !== null) cmp = an - bn;
       else cmp = av.localeCompare(bv);
@@ -55,9 +61,12 @@
     // Structured tables keep their section grouping: sort the data rows
     // *within* each section block, leaving the section-header rows (and the
     // grouping order) in place — same contract as html_table().
+    /** @param {number} idx @param {number} dir */
     function sortStructured(idx, dir) {
       var rows = Array.prototype.slice.call(tbody.children);
+      /** @type {Array<{ headers: Element[], rows: Element[] }>} */
       var groups = [];
+      /** @type {{ headers: Element[], rows: Element[] }} */
       var cur = { headers: [], rows: [] };
       rows.forEach(function (r) {
         if (r.classList.contains("blockr-section-header")) {
@@ -79,6 +88,7 @@
       tbody.appendChild(f);
     }
 
+    /** @param {number} idx @param {number} dir */
     function sortFlat(idx, dir) {
       var rows = Array.prototype.slice.call(tbody.children);
       rows.sort(function (a, b) { return cmpRows(a, b, idx, dir); });
@@ -87,6 +97,7 @@
       tbody.appendChild(f);
     }
 
+    /** @param {number} idx */
     function sortBy(idx) {
       // Pin widths before the arrow shows, so revealing it never resizes the
       // column (the flat path had no width lock — only the structured collapse
@@ -120,7 +131,7 @@
     root.querySelectorAll("th.blockr-sortable").forEach(function (th) {
       th.addEventListener("click", function (e) {
         e.stopPropagation();
-        var idx = parseInt(th.getAttribute("data-col-index"), 10);
+        var idx = parseInt(th.getAttribute("data-col-index") || "", 10);
         if (!isNaN(idx)) sortBy(idx);
       });
     });
@@ -130,10 +141,12 @@
   // Ported from html_table()'s inline script: each section header toggles a
   // `.collapsed` class; visibility of every row is recomputed from the
   // section-header stack so nested collapse is honoured.
+  /** @param {HTMLElement} root @param {HTMLElement} tbody */
   function wireCollapse(root, tbody) {
     if (root.getAttribute("data-dt-structured") !== "1") return;
-    var table = tbody.closest("table");
+    var table = /** @type {HTMLElement | null} */ (tbody.closest("table"));
     function recompute() {
+      /** @type {Array<{ level: number, collapsed: boolean }>} */
       var stack = [];
       Array.prototype.slice.call(tbody.children).forEach(function (r) {
         if (r.classList.contains("blockr-section-header")) {
@@ -154,6 +167,7 @@
     }
     // Keep the group-button's aria-expanded in sync with the row's collapsed
     // state (the chevron rotation is purely CSS off `.collapsed`).
+    /** @param {Element} h */
     function syncAria(h) {
       var btn = h.querySelector(".blockr-section-btn");
       if (btn) {
@@ -187,19 +201,23 @@
   // Sticky-header scroll shadow: toggle `.scrolled` on the scroll container
   // once it's scrolled away from the top, so the sticky header detaches with
   // a soft shadow rather than a hard line (Direction-01).
+  /** @param {HTMLElement} root */
   function wireScrollShadow(root) {
-    var sc = root.querySelector(".blockr-table-wrapper");
+    // const (not var) so the post-guard non-null narrowing holds inside onScroll.
+    const sc = root.querySelector(".blockr-table-wrapper");
     if (!sc) return;
-    function onScroll() {
+    // Arrow defined after the guard so the non-null narrowing of `sc` is captured.
+    const onScroll = () => {
       if (sc.scrollTop > 2) sc.classList.add("scrolled");
       else sc.classList.remove("scrolled");
-    }
+    };
     sc.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
   }
 
+  /** @param {HTMLElement} root */
   function wireSearch(root) {
-    var inp = root.querySelector("input.blockr-search");
+    var inp = /** @type {HTMLInputElement | null} */ (root.querySelector("input.blockr-search"));
     if (!inp || inp.getAttribute("data-dt-search-wired") === "1") return;
     inp.setAttribute("data-dt-search-wired", "1");
     inp.addEventListener("input", function () {
@@ -209,7 +227,7 @@
       var tbody = table && table.querySelector("tbody");
       if (!tbody) return;
       var structured = root.getAttribute("data-dt-structured") === "1";
-      var q = inp.value.trim().toLowerCase();
+      var q = /** @type {HTMLInputElement} */ (inp).value.trim().toLowerCase();
       var rows = Array.prototype.slice.call(tbody.children);
       rows.forEach(function (r) {
         if (!r.classList.contains("blockr-data-row")) return;
@@ -242,17 +260,19 @@
     });
   }
 
+  /** @param {HTMLElement} root @param {HTMLElement} table @param {HTMLElement} tbody */
   function wireClick(root, table, tbody) {
     var elemId = root.getAttribute("data-dt-elem-id");
     var col = table.getAttribute("data-dt-onclick-col");
     var idx = table.getAttribute("data-dt-onclick-idx");
     if (!elemId || !col || idx == null) return;
-    idx = parseInt(idx, 10);
+    var idxN = parseInt(idx, 10);
     root.classList.add("dt-clickable");
     tbody.addEventListener("click", function (e) {
-      var tr = e.target.closest("tr.blockr-data-row");
-      if (!tr || !tr.children[idx]) return;
-      var val = tr.children[idx].textContent.trim();
+      var t = /** @type {Element | null} */ (e.target);
+      var tr = t && t.closest("tr.blockr-data-row");
+      if (!tr || !tr.children[idxN]) return;
+      var val = (tr.children[idxN].textContent || "").trim();
       if (window.Shiny && Shiny.setInputValue) {
         Shiny.setInputValue(
           elemId + "_action",
@@ -272,6 +292,7 @@
     });
   }
 
+  /** @param {string | null} elemId @param {string} param @param {*} value */
   function sendConfig(elemId, param, value) {
     if (!elemId || !window.Shiny || !Shiny.setInputValue) return;
     Shiny.setInputValue(
@@ -301,6 +322,7 @@
   // Dynamic: the column-scope picker only appears once a coloring mode is on
   // (it is meaningless for a plain table). color_mode has rerender:true so
   // toggling it rebuilds the section list live.
+  /** @param {Record<string, any>} cfg */
   function tableSections(cfg) {
     var pres = ["drill", "row_color", "color_mode"];
     if (cfg && cfg.color_mode && cfg.color_mode !== "off") pres.push("color_columns");
@@ -308,19 +330,22 @@
     return { requiredMap: [], optionalMap: [], mapping: [], presentation: pres };
   }
 
+  /** @param {HTMLElement} root @param {HTMLElement} table */
   function buildCogwheel(root, table) {
     var elemId = root.getAttribute("data-dt-elem-id");
     if (!elemId) return;
 
     // Numeric columns (from R) drive the colType:"num" filter on the colour /
     // bar scope picker, so it only offers shadeable columns.
+    /** @type {Record<string, boolean>} */
     var numSet = {};
     (table.getAttribute("data-dt-num-cols") || "").split(",")
       .forEach(function (n) { if (n) numSet[n] = true; });
+    /** @type {VizColumn[]} */
     var cols = [];
     table.querySelectorAll("thead th .blockr-col-name")
       .forEach(function (s) {
-        var nm = s.textContent.trim();
+        var nm = (s.textContent || "").trim();
         cols.push({ name: nm, type: numSet[nm] ? "numeric" : "any" });
       });
 
@@ -337,6 +362,7 @@
     var onClick = table.getAttribute("data-dt-onclick-col");
     var colorCols = (table.getAttribute("data-dt-color-cols") || "")
       .split(",").filter(function (n) { return !!n; });
+    /** @type {Record<string, any>} */
     var cfg = {
       drill:      (onClick && onClick !== "(none)") ? onClick : "",
       row_color:  table.getAttribute("data-dt-row-color") || "",
@@ -375,7 +401,8 @@
     // Populate the popover with the shared config engine — the same
     // DrilldownConfig the chart uses. cfg keys are the R config params, so a
     // change round-trips via sendConfig(key, value).
-    var DDC = (typeof Blockr !== "undefined" && Blockr.DrilldownConfig) || window.DrilldownConfig;
+    var DDC = /** @type {typeof VizDrilldownConfig} */ (
+      (typeof Blockr !== "undefined" && Blockr.DrilldownConfig) || window.DrilldownConfig);
     new DDC({
       popoverEl: function () { return pop; },
       roles: TABLE_ROLES,
@@ -451,9 +478,9 @@
     // dismiss the settings form. At mousedown the dropdown is still attached.
     document.addEventListener("mousedown", function (e) {
       if (pop.style.display !== "block") return;
-      var t = e.target;
+      var t = /** @type {HTMLElement | null} */ (e.target);
       if (pop.contains(t) || btn.contains(t)) return;
-      if (t.closest && t.closest(".blockr-select__dropdown")) return;
+      if (t && t.closest(".blockr-select__dropdown")) return;
       closePop();
     });
 
@@ -464,6 +491,7 @@
   // Chrome wiring — once per container. The gear, search input and scroll
   // container live in the chrome, which is rendered once and never rebuilt, so
   // these never need re-wiring.
+  /** @param {HTMLElement} root @param {HTMLElement} table */
   function initContainer(root, table) {
     if (root.getAttribute("data-dt-initialized") === "1") return;
     root.setAttribute("data-dt-initialized", "1");
@@ -476,9 +504,10 @@
   // section collapse, all bound to elements inside the table). Only the table
   // re-renders on a filter / config edit, so this re-runs against the new
   // table; the per-table flag keeps re-scans idempotent.
+  /** @param {HTMLElement} root @param {HTMLElement} table */
   function wireTable(root, table) {
     if (table.getAttribute("data-dt-table-wired") === "1") return;
-    var tbody = table.querySelector("tbody");
+    var tbody = /** @type {HTMLElement | null} */ (table.querySelector("tbody"));
     if (!tbody) return;
     table.setAttribute("data-dt-table-wired", "1");
     wireSort(root, table, tbody);
@@ -486,15 +515,16 @@
     wireCollapse(root, tbody);
     // Re-apply any active search filter to the freshly rendered rows (the
     // input persists in the chrome but the new rows start unfiltered).
-    var inp = root.querySelector("input.blockr-search");
+    var inp = /** @type {HTMLInputElement | null} */ (root.querySelector("input.blockr-search"));
     if (inp && inp.value.trim()) inp.dispatchEvent(new Event("input"));
   }
 
+  /** @param {Document | Element} [ctx] */
   function scan(ctx) {
     var nodes = (ctx || document)
       .querySelectorAll(".drilldown-table-container");
-    Array.prototype.forEach.call(nodes, function (root) {
-      var table = root.querySelector("table.blockr-table");
+    Array.prototype.forEach.call(nodes, function (/** @type {HTMLElement} */ root) {
+      var table = /** @type {HTMLElement | null} */ (root.querySelector("table.blockr-table"));
       if (!table) return;
       initContainer(root, table);
       wireTable(root, table);
@@ -514,7 +544,7 @@
   });
   mo.observe(document.documentElement, { childList: true, subtree: true });
 
-  if (window.jQuery) {
+  if (typeof window.jQuery === "function") {
     jQuery(document).on("shiny:value shiny:bound", function () {
       setTimeout(scan, 0);
     });

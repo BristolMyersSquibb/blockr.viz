@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * SummaryTableBlock — JS-driven input binding for blockr.viz::summary_table_block.
  *
@@ -9,15 +10,43 @@
 (() => {
   'use strict';
 
+  /**
+   * @typedef {Object} SummaryTableState
+   * @property {string[]} vars
+   * @property {string[]} sections
+   * @property {string[]} by
+   * @property {string} stats
+   * @property {boolean} add_overall
+   * @property {string} overall_label
+   * @property {boolean} indent_details
+   * @property {boolean} nest_hierarchies
+   * @property {string} id_var
+   */
+
+  /** A toggle <button> carrying its redraw closure as an expando. */
+  /** @typedef {HTMLButtonElement & { _update?: () => void }} ToggleButton */
+
+  /** The binding's container element, with the block instance + pending state. */
+  /** @typedef {HTMLElement & { _block?: SummaryTableBlock, _pendingColumns?: any, _pendingState?: any }} STBHost */
+
   class SummaryTableBlock {
+    /** @param {HTMLElement} el */
     constructor(el) {
       this.el = el;
+      /** @type {string[]} */
       this._varCols = [];
+      /** @type {string[]} */
       this._catCols = [];
+      /** @type {((submit: boolean) => void) | null} */
       this._callback = null;
       this._submitted = false;
+      /** @type {ReturnType<typeof setTimeout> | null} */
       this._debounceTimer = null;
 
+      /** @type {{ vars?: BlockrSelectMultiHandle, sections?: BlockrSelectMultiHandle, by?: BlockrSelectMultiHandle }} */
+      this._selects = {};
+
+      /** @type {SummaryTableState} */
       this._state = {
         vars: [],
         sections: [],
@@ -30,17 +59,22 @@
         id_var: ''
       };
 
-      this._selects = {};
+      // Created here (not in _buildDOM) so their types are definite for the
+      // methods/closures below — _buildDOM only configures and appends them.
+      this.card = document.createElement('div');
+      this.gearBtn = document.createElement('button');
+      this.popover = document.createElement('div');
+
       this._buildDOM();
     }
 
     _autoSubmit() {
-      clearTimeout(this._debounceTimer);
+      clearTimeout(this._debounceTimer ?? undefined);
       this._debounceTimer = setTimeout(() => this._submit(), 300);
     }
 
     _buildDOM() {
-      this.card = document.createElement('div');
+      const BSelect = /** @type {BlockrSelectStatic} */ (Blockr.Select);
       this.card.className = 'stb-card';
       this.card.style.position = 'relative';
       this.el.appendChild(this.card);
@@ -48,7 +82,6 @@
       // Gear button (top-right)
       const gearHeader = document.createElement('div');
       gearHeader.className = 'blockr-gear-header';
-      this.gearBtn = document.createElement('button');
       this.gearBtn.type = 'button';
       this.gearBtn.className = 'blockr-gear-btn';
       this.gearBtn.innerHTML = Blockr.icons.gear;
@@ -72,7 +105,7 @@
       varsLabel.className = 'blockr-label';
       varsLabel.textContent = 'Variables';
       varsWrap.appendChild(varsLabel);
-      this._selects.vars = Blockr.Select.multi(varsWrap, {
+      this._selects.vars = BSelect.multi(varsWrap, {
         options: [],
         selected: [],
         placeholder: 'Columns to summarise\u2026',
@@ -91,7 +124,7 @@
       sectionsLabel.className = 'blockr-label';
       sectionsLabel.textContent = 'Sections (outer grouping)';
       sectionsWrap.appendChild(sectionsLabel);
-      this._selects.sections = Blockr.Select.multi(sectionsWrap, {
+      this._selects.sections = BSelect.multi(sectionsWrap, {
         options: [],
         selected: [],
         placeholder: 'Optional outer section columns\u2026',
@@ -110,7 +143,7 @@
       byLabel.className = 'blockr-label';
       byLabel.textContent = 'By (column split, up to 2)';
       byWrap.appendChild(byLabel);
-      this._selects.by = Blockr.Select.multi(byWrap, {
+      this._selects.by = BSelect.multi(byWrap, {
         options: [],
         selected: [],
         placeholder: 'Up to 2 categorical columns\u2026',
@@ -118,7 +151,7 @@
           const sel = (selected || []).slice(0, 2);
           if ((selected || []).length > 2) {
             // Enforce max 2 — truncate and redraw.
-            this._selects.by.setOptions(this._catCols, sel);
+            this._selects.by?.setOptions(this._catCols, sel);
           }
           this._state.by = sel;
           this._autoSubmit();
@@ -128,7 +161,6 @@
       grid.appendChild(byWrap);
 
       // Gear popover
-      this.popover = document.createElement('div');
       this.popover.className = 'blockr-popover';
       this.popover.style.display = 'none';
 
@@ -154,13 +186,14 @@
       this.card.appendChild(this.popover);
 
       document.addEventListener('click', (e) => {
-        if (!this.card.contains(e.target)) {
+        if (!this.card.contains(/** @type {Node | null} */ (e.target))) {
           this.popover.style.display = 'none';
           this.gearBtn.classList.remove('blockr-gear-active');
         }
       });
     }
 
+    /** @param {HTMLElement | HTMLElement[]} children @param {string} [description] */
     _addPopoverRow(children, description) {
       const row = document.createElement('div');
       row.className = 'blockr-popover-row';
@@ -184,8 +217,13 @@
       return row;
     }
 
+    /**
+     * @param {'indent_details' | 'nest_hierarchies'} key
+     * @param {{ on: string, off: string }} labels
+     * @param {string} [description]
+     */
     _addBooleanRow(key, labels, description) {
-      const btn = document.createElement('button');
+      const btn = /** @type {ToggleButton} */ (document.createElement('button'));
       btn.type = 'button';
       btn.className = 'blockr-pill blockr-popover-toggle';
       const update = () => {
@@ -201,12 +239,12 @@
         this._autoSubmit();
       });
       btn._update = update;
-      this['_toggle_' + key] = btn;
+      (/** @type {Record<string, any>} */ (this))['_toggle_' + key] = btn;
       this._addPopoverRow(btn, description);
     }
 
     _addStatsRow() {
-      const btn = document.createElement('button');
+      const btn = /** @type {ToggleButton} */ (document.createElement('button'));
       btn.type = 'button';
       btn.className = 'blockr-pill blockr-popover-toggle';
       const labels = { compact: 'Compact', expanded: 'Expanded' };
@@ -228,7 +266,7 @@
     }
 
     _addOverallRow() {
-      const btn = document.createElement('button');
+      const btn = /** @type {ToggleButton} */ (document.createElement('button'));
       btn.type = 'button';
       btn.className = 'blockr-pill blockr-popover-toggle';
       const labels = { on: 'With overall', off: 'No overall' };
@@ -346,9 +384,10 @@
       };
     }
 
+    /** @param {any} state */
     setState(state) {
       if (!state) return;
-      const arrayKeys = ['vars', 'sections', 'by'];
+      const arrayKeys = /** @type {Array<'vars' | 'sections' | 'by'>} */ (['vars', 'sections', 'by']);
       for (const k of arrayKeys) {
         if (Array.isArray(state[k])) this._state[k] = state[k].slice();
       }
@@ -366,7 +405,7 @@
       }
 
       for (const key of ['stats', 'add_overall', 'indent_details', 'nest_hierarchies']) {
-        const btn = this['_toggle_' + key];
+        const btn = (/** @type {Record<string, any>} */ (this))['_toggle_' + key];
         if (btn && btn._update) btn._update();
       }
 
@@ -381,6 +420,7 @@
       }
     }
 
+    /** @param {any} msg */
     updateColumns(msg) {
       this._varCols = Array.isArray(msg.var_cols) ? msg.var_cols : [];
       this._catCols = Array.isArray(msg.cat_cols) ? msg.cat_cols : [];
@@ -404,17 +444,17 @@
   // --- Shiny input binding ---
   const binding = new Shiny.InputBinding();
   Object.assign(binding, {
-    find: (scope) => $(scope).find('.summary-table-block-container'),
-    getId: (el) => el.id || null,
-    getValue: (el) => el._block?.getValue() ?? null,
-    setValue: (el, value) => el._block?.setState(value),
-    subscribe: (el, callback) => {
+    find: (/** @type {Document | HTMLElement} */ scope) => $(scope).find('.summary-table-block-container'),
+    getId: (/** @type {STBHost} */ el) => el.id || null,
+    getValue: (/** @type {STBHost} */ el) => el._block?.getValue() ?? null,
+    setValue: (/** @type {STBHost} */ el, /** @type {any} */ value) => el._block?.setState(value),
+    subscribe: (/** @type {STBHost} */ el, /** @type {(v: boolean) => void} */ callback) => {
       if (el._block) el._block._callback = () => callback(true);
     },
-    unsubscribe: (el) => {
+    unsubscribe: (/** @type {STBHost} */ el) => {
       if (el._block) el._block._callback = null;
     },
-    initialize: (el) => {
+    initialize: (/** @type {STBHost} */ el) => {
       el._block = new SummaryTableBlock(el);
       if (el._pendingColumns) {
         el._block.updateColumns(el._pendingColumns);
@@ -428,7 +468,7 @@
   });
   Shiny.inputBindings.register(binding, 'blockr.summary_table');
 
-  const waitForEl = (id, cb) => {
+  const waitForEl = (/** @type {string} */ id, /** @type {(el: STBHost) => void} */ cb) => {
     const el = document.getElementById(id);
     if (el) return cb(el);
     let attempts = 0;

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Drill-Down Chart — configurable chart that acts as a filter.
  *
@@ -36,6 +37,7 @@
   // Display-only number formatting. Data is now sent at full precision
   // (so click-to-filter equality round-trips), so trim noisy decimals
   // for tooltips / status text without touching the underlying value.
+  /** @param {any} v */
   const ddNum = (v) => {
     if (typeof v !== 'number' || !isFinite(v)) return v;
     if (Number.isInteger(v)) return v.toLocaleString();
@@ -76,6 +78,7 @@
 
   // Toolbox WITH the brush feature — only used when the chart actually
   // wires a `brush` component + brushSelected handler (brushable).
+  /** @param {boolean} withBrush */
   const mkToolbox = (withBrush) => withBrush
     ? {
         ...TOOLBOX,
@@ -180,18 +183,49 @@
   // Roles whose control renders inside its primary's row (the paired tail), so
   // a section loop skips them. Passed to the shared config engine.
   const DD_SECONDARY = new Set(
-    Object.values(ROLES).map(r => r.pairedWith).filter(Boolean));
+    Object.values(ROLES).map(r => /** @type {any} */ (r).pairedWith).filter(Boolean));
 
   class DrilldownChart {
+    /** @param {HTMLElement} el */
     constructor(el) {
       this.el = el;
+      /** @type {any[]} */
       this.data = [];
+      /** @type {VizColumn[]} */
       this.columns = [];
+      /** @type {Record<string, any>} */
       this.config = {};
+      /** @type {Record<string, any>} */
       this.argHelp = {};
+      /** @type {any[]} */
       this.charts = [];
+      /** @type {any} */
       this._selected = null;
+      /** @type {any} */
       this.theme = null;  // null -> echarts default theme
+      // DOM fields are populated by _buildDOM() (called below); declared here so
+      // their types are definite for the type-checker. These statements are
+      // no-op reads at runtime.
+      /** @type {HTMLDivElement} */
+      this.card;
+      /** @type {HTMLButtonElement} */
+      this.gearBtn;
+      /** @type {HTMLDivElement} */
+      this.popoverEl;
+      /** @type {HTMLDivElement} */
+      this.chartGrid;
+      /** @type {HTMLDivElement} */
+      this.statusEl;
+      /** @type {((e: MouseEvent) => void) | null | undefined} */
+      this._outsideClick;
+      /** @type {boolean | undefined} */
+      this._popoverOpen;
+      /** @type {any} */
+      this._cfg;
+      /** @type {any} */
+      this._selectedColumn;
+      /** @type {Record<string, any> | null} */
+      this._colorLookup;
       this._buildDOM();
       // The gear-popover config engine (shared with the table block). It owns
       // the popover rendering, role rows, add-as-needed, sticky memory and the
@@ -200,7 +234,7 @@
     }
 
     _makeConfig() {
-      const DCfg = (typeof Blockr !== 'undefined' && Blockr.DrilldownConfig) || window.DrilldownConfig;
+      const DCfg = /** @type {typeof VizDrilldownConfig} */ ((typeof Blockr !== 'undefined' && Blockr.DrilldownConfig) || window.DrilldownConfig);
       return new DCfg({
         popoverEl: () => this.popoverEl,
         roles: ROLES,
@@ -209,24 +243,24 @@
         context: () => this._family(),
         currentType: () => this.config.chart_type,
         sections: () => FAMILY_ROLES[this._family()],
-        sectionsForFamily: (fam) => FAMILY_ROLES[fam],
+        sectionsForFamily: (/** @type {string} */ fam) => /** @type {Record<string, any>} */ (FAMILY_ROLES)[fam],
         secondary: DD_SECONDARY,
         typeKey: 'chart_type',
         typeGroups: [
           // Waterfall is intentionally NOT a picker button — it is a bar option
           // (the `baseline` toggle). It stays in AGGREGATED_TYPES so saved boards
           // with chart_type="waterfall" still classify/render as aggregated bars.
-          { label: 'Aggregated', types: AGGREGATED_TYPES.filter(function (t) { return t !== 'waterfall'; }) },
+          { label: 'Aggregated', types: AGGREGATED_TYPES.filter(function (/** @type {string} */ t) { return t !== 'waterfall'; }) },
           { label: 'Individual', types: INDIVIDUAL_TYPES },
           { label: 'Timeline', types: TIMELINE_TYPES }
         ],
-        familyFor: (t) => AGGREGATED_TYPES.includes(t) ? 'aggregated'
+        familyFor: (/** @type {string} */ t) => AGGREGATED_TYPES.includes(t) ? 'aggregated'
           : TIMELINE_TYPES.includes(t) ? 'timeline' : 'individual',
         // `drill` and `metric` must persist across a family switch — drill is a
         // capability; metric is a required-for-init slot (clearing it wedges the
         // block, the family-switch freeze bug).
         carryKeep: ['drill', 'metric'],
-        entryRequired: (role) => role === 'metric' && this._family() === 'aggregated',
+        entryRequired: (/** @type {string} */ role) => role === 'metric' && this._family() === 'aggregated',
         drillAutoLabel: () => {
           const fam = this._family();
           if (this.config.chart_type === 'radar') return 'Auto — the clicked shape';
@@ -249,11 +283,16 @@
     // Thin delegators so external callers (tests / harness) and setData keep
     // working after the engine moved into DrilldownConfig.
     _renderConfig() { this._cfg.render(); }
+    /** @param {string} t */
     _onChartType(t) { this._cfg._onType(t); }
+    /** @param {string} key */
     _addRole(key) { this._cfg._addRole(key); }
+    /** @param {string} key */
     _removeRole(key) { this._cfg._removeRole(key); }
+    /** @param {string} key @param {any} val */
     _rememberRole(key, val) { this._cfg._rememberRole(key, val); }
 
+    /** @param {any} theme */
     setTheme(theme) {
       const normalized = (theme && theme !== 'default') ? theme : null;
       if (this.theme === normalized) return;
@@ -285,6 +324,7 @@
     // Board scale map (config.scales = { var, color: {level: hex},
     // order: [...] }, resolved in R). Returns it when it targets `varName`,
     // else null — unregistered variables keep palette cycling.
+    /** @param {string} varName */
     _scaleFor(varName) {
       const sc = this.config && this.config.scales;
       return (sc && varName && sc.var === varName) ? sc : null;
@@ -293,23 +333,27 @@
     // Order a set of levels: by the scale's order when one applies, else by
     // the column's factor levels (column metadata), else alphabetically —
     // the pre-scale-map behavior.
+    /** @param {any[]} levels @param {any} scale @param {string} colName */
     _orderLevels(levels, scale, colName) {
+      /** @param {any[]} ref */
       const by = (ref) => {
-        const idx = new Map(ref.map((l, i) => [String(l), i]));
-        return levels.slice().sort((a, b) =>
-          ((idx.has(a) ? idx.get(a) : 1e9) - (idx.has(b) ? idx.get(b) : 1e9))
+        /** @type {Map<string, number>} */
+        const idx = new Map(ref.map((/** @type {any} */ l, /** @type {number} */ i) => /** @type {[string, number]} */ ([String(l), i])));
+        return levels.slice().sort((/** @type {any} */ a, /** @type {any} */ b) =>
+          ((idx.has(a) ? /** @type {number} */ (idx.get(a)) : 1e9) - (idx.has(b) ? /** @type {number} */ (idx.get(b)) : 1e9))
           || a.localeCompare(b));
       };
       if (scale && Array.isArray(scale.order) && scale.order.length) {
         return by(scale.order);
       }
-      const meta = (this.columns || []).find(c => c.name === colName);
+      const meta = /** @type {any} */ ((this.columns || []).find(c => c.name === colName));
       if (meta && Array.isArray(meta.levels) && meta.levels.length) {
         return by(meta.levels);
       }
       return levels.slice().sort();
     }
 
+    /** @param {string} colName */
     _axisTypeFor(colName) {
       if (!colName) return 'value';
       const meta = (this.columns || []).find(c => c.name === colName);
@@ -326,21 +370,24 @@
     // Categories (sorted by companion numeric column if present, e.g.
     // AVISITN for AVISIT). Used by any chart family that puts a categorical
     // column on an axis.
+    /** @param {string} colName @param {any[]} [rows] */
     _orderedCategories(colName, rows) {
       const src = rows || this.data || [];
       // Factor level order from column metadata wins (the data-level order
       // contract); values outside the declared levels append in
       // first-occurrence order.
-      const meta = (this.columns || []).find(c => c.name === colName);
+      const meta = /** @type {any} */ ((this.columns || []).find(c => c.name === colName));
       if (meta && Array.isArray(meta.levels) && meta.levels.length) {
-        const present = new Set(src.map(r => String(r[colName] ?? '')));
-        const out = meta.levels.map(String).filter(l => present.has(l));
+        const present = new Set(src.map((/** @type {any} */ r) => String(r[colName] ?? '')));
+        const out = meta.levels.map(String).filter((/** @type {string} */ l) => present.has(l));
         for (const k of present) if (!out.includes(k)) out.push(k);
         return out;
       }
+      /** @type {Record<string, string>} */
       const companions = { AVISIT: 'AVISITN' };
       const companion = companions[colName];
       if (companion && src.length && src[0][companion] !== undefined) {
+        /** @type {Record<string, number>} */
         const mins = {};
         for (const r of src) {
           const k = String(r[colName] ?? '');
@@ -418,11 +465,12 @@
       // so by click time its ancestor is gone and the exclusion below would
       // miss — picking a value would dismiss the settings form. At mousedown the
       // dropdown is still attached.
-      this._outsideClick = (e) => {
+      this._outsideClick = (/** @type {MouseEvent} */ e) => {
+        var t = /** @type {HTMLElement} */ (/** @type {unknown} */ (e.target));
         if (this._popoverOpen && this.popoverEl &&
-            !this.popoverEl.contains(e.target) &&
-            !this.gearBtn.contains(e.target) &&
-            !(e.target.closest && e.target.closest('.blockr-select__dropdown'))) {
+            !this.popoverEl.contains(t) &&
+            !this.gearBtn.contains(t) &&
+            !(t.closest && t.closest('.blockr-select__dropdown'))) {
           this._closePopover();
         }
       };
@@ -443,6 +491,7 @@
     // Axis title for a mapped column: its variable label when present,
     // else the column name. The popover help shows `name (label)`; an
     // axis is tighter, so just the human label (or the name).
+    /** @param {string} col */
     _axisTitle(col) {
       if (!col) return '';
       const c = (this.columns || []).find(x => x.name === col);
@@ -450,6 +499,7 @@
       return col;
     }
 
+    /** @param {any} v */
     _hasVal(v) { return v !== null && v !== undefined && v !== '' && v !== '(none)'; }
 
     // Size the horizontal category-label gutter to the actual labels rather
@@ -461,6 +511,7 @@
     // short labels, still truncating for long ones. Returns the three coupled
     // numbers the axis/grid need (axisLabel.width + .margin and grid.left),
     // preserving the original 5px label->axis gap and 10px container inset.
+    /** @param {any[]} labels */
     _yGutter(labels) {
       const LABEL_CAP = 145; // matches the historical truncate width
       // Slack added to the measured width: the canvas may measure with the
@@ -468,8 +519,9 @@
       // real font), and an exactly-fitting box truncates on sub-pixel rounding.
       // Without it short labels like "701" render as "7…".
       const PAD = 10;
-      const ctx = DrilldownChart._measureCtx ||
-        (DrilldownChart._measureCtx = document.createElement('canvas').getContext('2d'));
+      const DC = /** @type {any} */ (DrilldownChart);
+      const ctx = DC._measureCtx ||
+        (DC._measureCtx = document.createElement('canvas').getContext('2d'));
       ctx.font = `11px ${BLOCKR_FONT}`;
       let w = 0;
       for (const l of labels) {
@@ -494,7 +546,7 @@
       const cols = this.columns || [];
       if (fam === 'aggregated') {
         if (!this._hasVal(cfg.group) && cols.length) {
-          const cat = cols.find(c => c.type === 'categorical' && c.n_unique <= 30);
+          const cat = cols.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique <= 30);
           cfg.group = cat ? cat.name : cols[0].name;
         }
         if (!cfg.metric) cfg.metric = '.count';
@@ -508,7 +560,7 @@
           cfg.x = num ? num.name : cols[0].name;
         }
         if (!this._hasVal(cfg.y) && cols.length) {
-          const cat = cols.find(c => c.type === 'categorical' && c.n_unique > 1);
+          const cat = cols.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique > 1);
           cfg.y = cat ? cat.name : cols[0].name;
         }
         if (!this._hasVal(cfg.sort_by)) cfg.sort_by = 'onset';
@@ -540,6 +592,7 @@
 
     // -- Data + rendering entry point -----------------------------------------
 
+    /** @param {any} columns @param {any} data @param {any} config @param {any} args */
     setData(columns, data, config, args) {
       this.columns = columns || [];
       this.config = config || {};
@@ -555,6 +608,7 @@
         const n = keys.length > 0 ? (Array.isArray(data[keys[0]]) ? data[keys[0]].length : 1) : 0;
         this.data = new Array(n);
         for (let i = 0; i < n; i++) {
+          /** @type {Record<string, any>} */
           const row = {};
           for (const k of keys) row[k] = Array.isArray(data[k]) ? data[k][i] : data[k];
           this.data[i] = row;
@@ -568,7 +622,7 @@
       const fam = this._family();
       if (fam === 'aggregated') {
         if (!this.config.group && this.columns.length > 0) {
-          const cat = this.columns.find(c => c.type === 'categorical' && c.n_unique <= 30);
+          const cat = this.columns.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique <= 30);
           this.config.group = cat ? cat.name : this.columns[0].name;
         }
         if (!this.config.metric) this.config.metric = '.count';
@@ -581,7 +635,7 @@
           this.config.x = num ? num.name : this.columns[0].name;
         }
         if (!this.config.y) {
-          const cat = this.columns.find(c => c.type === 'categorical' && c.n_unique > 1);
+          const cat = this.columns.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique > 1);
           this.config.y = cat ? cat.name : this.columns[0]?.name;
         }
         if (!this.config.sort_by) this.config.sort_by = 'onset';
@@ -614,6 +668,7 @@
       const { group, color, facet, metric, agg_fn } = this.config;
       if (this.data.length === 0) return [];
 
+      /** @type {Record<string, any>} */
       const groups = {};
       for (const row of this.data) {
         const gv = group ? String(row[group] ?? '') : 'Total';
@@ -636,9 +691,9 @@
         let value;
         if (agg_fn === 'count') value = g.rows.length;
         else if (agg_fn === 'count_distinct') { const s = new Set(); for (const r of g.rows) { const v = r[metric]; if (v != null && !(typeof v === 'number' && Number.isNaN(v))) s.add(v); } value = s.size; }
-        else if (agg_fn === 'mean') value = g.values.length ? g.values.reduce((a, b) => a + b, 0) / g.values.length : 0;
-        else if (agg_fn === 'median') { const s = g.values.slice().sort((a, b) => a - b); const m = Math.floor(s.length / 2); value = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; }
-        else if (agg_fn === 'sum') value = g.values.reduce((a, b) => a + b, 0);
+        else if (agg_fn === 'mean') value = g.values.length ? g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / g.values.length : 0;
+        else if (agg_fn === 'median') { const s = g.values.slice().sort((/** @type {number} */ a, /** @type {number} */ b) => a - b); const m = Math.floor(s.length / 2); value = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; }
+        else if (agg_fn === 'sum') value = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
         else if (agg_fn === 'min') value = g.values.length ? Math.min.apply(null, g.values) : 0;
         else if (agg_fn === 'max') value = g.values.length ? Math.max.apply(null, g.values) : 0;
         result.push({ facet: g.facet, group: g.group, color: g.color, value: Math.round(value * 100) / 100 });
@@ -669,7 +724,7 @@
       if (unset.length) {
         this.chartGrid.innerHTML =
           '<div class="vd-empty-state"><p class="vd-empty-text">Pick ' +
-          unset.map(k => ROLES[k].label).join(' and ') + ' to plot.</p></div>';
+          unset.map(k => /** @type {Record<string, any>} */ (ROLES)[k].label).join(' and ') + ' to plot.</p></div>';
         return;
       }
 
@@ -760,17 +815,19 @@
       // Ordering for the category axis. "alpha" = group name;
       // "value" = total of the computed metric across color stacks;
       // otherwise, a raw-data column whose minimum per group orders the axis.
+      /** @param {any[]} facetData */
       const orderGroups = (facetData) => {
         const groups = [...new Set(facetData.map(a => a.group))];
         if (cumulative) {
-          const meta = (this.columns || []).find(c => c.name === this.config.group);
+          const meta = /** @type {any} */ ((this.columns || []).find(c => c.name === this.config.group));
           if (meta && Array.isArray(meta.levels) && meta.levels.length) {
-            const idx = new Map(meta.levels.map((l, i) => [String(l), i]));
+            const idx = new Map(meta.levels.map((/** @type {any} */ l, /** @type {number} */ i) => [String(l), i]));
             const present = new Set(groups);
-            return meta.levels.map(String).filter(l => present.has(l))
+            return meta.levels.map(String).filter((/** @type {string} */ l) => present.has(l))
               .concat(groups.filter(g => !idx.has(g)));
           }
           // First-seen order in the raw data (stable bridge ordering).
+          /** @type {string[]} */
           const seen = [];
           const seenSet = new Set();
           const groupCol = this.config.group;
@@ -784,16 +841,18 @@
         }
         if (sortBy === 'alpha') {
           // Factor columns: "alpha" means level order (data-level contract).
-          const meta = (this.columns || []).find(c => c.name === this.config.group);
+          const meta = /** @type {any} */ ((this.columns || []).find(c => c.name === this.config.group));
           if (meta && Array.isArray(meta.levels) && meta.levels.length) {
-            const idx = new Map(meta.levels.map((l, i) => [String(l), i]));
+            /** @type {Map<string, number>} */
+            const idx = new Map(meta.levels.map((/** @type {any} */ l, /** @type {number} */ i) => /** @type {[string, number]} */ ([String(l), i])));
             return groups.sort((a, b) =>
-              (((idx.has(a) ? idx.get(a) : 1e9) - (idx.has(b) ? idx.get(b) : 1e9))
+              (((idx.has(a) ? /** @type {number} */ (idx.get(a)) : 1e9) - (idx.has(b) ? /** @type {number} */ (idx.get(b)) : 1e9))
                 || a.localeCompare(b)) * sortDir);
           }
           return groups.sort((a, b) => a.localeCompare(b) * sortDir);
         }
         if (sortBy === 'value') {
+          /** @type {Record<string, number>} */
           const totals = {};
           for (const a of facetData) totals[a.group] = (totals[a.group] || 0) + a.value;
           return groups.sort((a, b) => (totals[a] - totals[b]) * sortDir);
@@ -801,6 +860,7 @@
         // Column name: look up each group's min over the raw data.
         const groupCol = this.config.group;
         if (!groupCol) return groups.sort((a, b) => a.localeCompare(b) * sortDir);
+        /** @type {Record<string, number>} */
         const mins = {};
         for (const r of this.data) {
           const g = String(r[groupCol] ?? '');
@@ -820,6 +880,7 @@
         const facetData = agg.filter(a => a.facet === facet);
         const groups = orderGroups(facetData);
 
+        /** @type {HTMLElement} */
         let container;
         if (singleFacet) {
           container = this.chartGrid;
@@ -882,6 +943,7 @@
       this._updateHighlight();
     }
 
+    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette */
     _buildAggregatedOption(facetData, groups, colors, palette) {
       const ct = this.config.chart_type;
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
@@ -906,6 +968,7 @@
         return this._buildWaterfall(facetData, groups, valueTitle, ax);
       }
 
+      /** @type {any[]} */
       const series = [];
       if (colors.length === 0) {
         series.push({ type: 'bar', data: groups.map(g => { const d = facetData.find(a => a.group === g); return d ? d.value : 0; }), itemStyle: { color: palette[0] }, barWidth: '60%', emphasis: { focus: 'self' } });
@@ -978,18 +1041,22 @@
     // floating offset, and a visible "delta" series carrying the bar height,
     // each datum colored per sign. (vertical orientation only — a bridge reads
     // left-to-right.)
+    /** @param {any[]} facetData @param {any[]} groups @param {any} valueTitle @param {any} ax */
     _buildWaterfall(facetData, groups, valueTitle, ax) {
       // One value per step (sum across any color split — waterfall is a single
       // series along the step axis, color does not stack here).
+      /** @param {any} g */
       const valOf = (g) => facetData.filter(a => a.group === g)
-        .reduce((s, a) => s + a.value, 0);
+        .reduce((/** @type {number} */ s, /** @type {any} */ a) => s + a.value, 0);
 
       // Which steps are "total" bars (baseline reset to 0). Optional; threaded
       // from R as config.waterfall_totals (array of step/group names). Default
       // none -> every bar is relative.
       const totals = new Set((this.config.waterfall_totals || []).map(String));
 
+      /** @type {any[]} */
       const base = [];     // transparent offset (the floating baseline)
+      /** @type {any[]} */
       const delta = [];    // visible bar height, sign-colored per datum
       let cum = 0;
       for (let i = 0; i < groups.length; i++) {
@@ -1034,8 +1101,8 @@
           trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true,
           // Only report the visible delta series (the transparent base is an
           // implementation detail).
-          formatter: (params) => {
-            const p = (params || []).find(x => x.seriesName === 'delta');
+          formatter: (/** @type {any} */ params) => {
+            const p = (params || []).find((/** @type {any} */ x) => x.seriesName === 'delta');
             if (!p) return '';
             return '<b>' + p.name + '</b><br>' + ddNum(p.value);
           }
@@ -1057,6 +1124,7 @@
       };
     }
 
+    /** @param {any[]} facetData @param {any[]} groups @param {any[]} palette */
     _buildPie(facetData, groups, palette) {
       const gScale = this._scaleFor(this.config.group);
       const pieData = groups.map((g, i) => {
@@ -1066,6 +1134,7 @@
       return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: 10, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
     }
 
+    /** @param {any[]} facetData @param {any[]} groups @param {any[]} palette */
     _buildTreemap(facetData, groups, palette) {
       const gScale = this._scaleFor(this.config.group);
       const tmData = groups.map((g, i) => {
@@ -1081,6 +1150,7 @@
     // output the bar chart stacks. Multi-column spokes (the blockr.echarts
     // radar's `metrics`) are expressed by pivoting longer upstream and
     // mapping the name column to `group`.
+    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {any} valueTitle */
     _buildRadar(facetData, groups, colors, palette, valueTitle) {
       const colorScale = this._scaleFor(this.config.color);
       // One shared max across spokes keeps shapes comparable (same contract
@@ -1093,12 +1163,14 @@
       const zeroWhenMissing = ['count', 'count_distinct', 'sum']
         .includes(this.config.agg_fn);
       const gapVal = zeroWhenMissing ? 0 : null;
+      /** @param {any} g @param {any} c */
       const cellVal = (g, c) => {
         const d = c == null
           ? facetData.find(a => a.group === g)
           : facetData.find(a => a.group === g && a.color === c);
         return d ? d.value : gapVal;
       };
+      /** @param {any} name @param {any} vals @param {any} col */
       const mkShape = (name, vals, col) => ({
         name: name,
         value: vals,
@@ -1120,7 +1192,7 @@
         tooltip: {
           trigger: 'item',
           confine: true,
-          formatter: (p) => '<b>' + p.name + '</b><br>' +
+          formatter: (/** @type {any} */ p) => '<b>' + p.name + '</b><br>' +
             groups.map((g, i) => {
               const v = p.value ? p.value[i] : null;
               return g + ': ' + (v == null ? '–' : ddNum(v));
@@ -1151,6 +1223,7 @@
       };
     }
 
+    /** @param {any[]} groups @param {any[]} palette @param {any} ax */
     _buildBoxplot(groups, palette, ax) {
       const groupBy = this.config.group;
       const metric = this.config.metric;
@@ -1162,7 +1235,7 @@
         // preserved). A fake [0,0,0,0,0] summary would render a misleading
         // flat box at zero.
         if (vals.length === 0) return null;
-        const q = (p) => { const i = p * (vals.length - 1); const lo = Math.floor(i); return lo === i ? vals[lo] : vals[lo] + (vals[lo + 1] - vals[lo]) * (i - lo); };
+        const q = (/** @type {number} */ p) => { const i = p * (vals.length - 1); const lo = Math.floor(i); return lo === i ? vals[lo] : vals[lo] + (vals[lo + 1] - vals[lo]) * (i - lo); };
         const q1 = q(0.25), q3 = q(0.75), iqr = q3 - q1;
         const lo = Math.max(vals[0], q1 - 1.5 * iqr);
         const hi = Math.min(vals[vals.length - 1], q3 + 1.5 * iqr);
@@ -1224,7 +1297,7 @@
       // series that belong to the same color group (e.g. all patients on
       // ARM A share one color). When series equals color or only
       // color is set, index by series level.
-      const colorForLevel = (level, index) => {
+      const colorForLevel = (/** @type {any} */ level, /** @type {number} */ index) => {
         if (!color) return palette[0];
         if (seriesCol && seriesCol !== color) {
           const rep = this.data.find(r => String(r[seriesCol]) === level);
@@ -1262,9 +1335,9 @@
       // in axis order, not raw row order, or the polyline zig-zags back
       // and forth between visits (e.g. AVISIT ordered by AVISITN).
       const xOrder = xCats
-        ? new Map(xCats.map((c, i) => [String(c), i]))
+        ? new Map(xCats.map((/** @type {any} */ c, /** @type {number} */ i) => [String(c), i]))
         : null;
-      const sortLinePts = (pts) => {
+      const sortLinePts = (/** @type {any[]} */ pts) => {
         if (!isLine) return;
         if (xOrder) {
           pts.sort((a, b) =>
@@ -1274,14 +1347,15 @@
         }
       };
 
-      const encodeX = (v) => xAxisType === 'category' ? String(v ?? '') : Number(v);
-      const encodeY = (v) => yAxisType === 'category' ? String(v ?? '') : Number(v);
+      const encodeX = (/** @type {any} */ v) => xAxisType === 'category' ? String(v ?? '') : Number(v);
+      const encodeY = (/** @type {any} */ v) => yAxisType === 'category' ? String(v ?? '') : Number(v);
 
       this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
 
       for (const facet of facets) {
         const rows = facet === '__all__' ? this.data : this.data.filter(r => String(r[facet]) === facet);
 
+        /** @type {HTMLElement} */
         let container;
         if (singleFacet) {
           container = this.chartGrid;
@@ -1322,7 +1396,7 @@
         const refX = Array.isArray(this.config.ref_x) ? this.config.ref_x : [];
         const refY = Array.isArray(this.config.ref_y) ? this.config.ref_y : [];
 
-        const mkSeries = (name, data, color) => ({
+        const mkSeries = (/** @type {any} */ name, /** @type {any} */ data, /** @type {any} */ color) => ({
           type: isLine ? 'line' : 'scatter',
           name: name,
           data: data,
@@ -1341,11 +1415,12 @@
 
         // R precomputes the smoother (lm or loess) per group and sends the
         // line points via config.smoother_series. JS just renders.
-        const smootherLine = (groupName) => {
+        const smootherLine = (/** @type {any} */ groupName) => {
           if (smoother === 'none' || !smootherSeries) return null;
           const key = groupName != null ? String(groupName) : '__all__';
           const s = smootherSeries[key];
           if (!s || !s.x || !s.y) return null;
+          /** @type {any[]} */
           const out = [];
           for (let i = 0; i < s.x.length; i++) {
             if (Number.isFinite(s.x[i]) && Number.isFinite(s.y[i])) {
@@ -1362,14 +1437,14 @@
         // single legend entry per series — one click toggles line +
         // whiskers + fit together. legendHoverLink off so legend hover
         // doesn't try to emphasize these (silent) overlay series.
-        const mkErrBarSeries = (name, errPts, color) => ({
+        const mkErrBarSeries = (/** @type {any} */ name, /** @type {any} */ errPts, /** @type {any} */ color) => ({
           type: 'custom',
           name: name,
           legendHoverLink: false,
           silent: true,
           z: 1,
           data: errPts,  // [[x, lo, hi], ...]
-          renderItem: (params, api) => {
+          renderItem: (/** @type {any} */ params, /** @type {any} */ api) => {
             const x = api.value(0), lo = api.value(1), hi = api.value(2);
             const pLo = api.coord([x, lo]);
             const pHi = api.coord([x, hi]);
@@ -1385,8 +1460,9 @@
           }
         });
 
+        /** @type {any[]} */
         const series = [];
-        const pushOverlays = (name, pts, color, rawRows) => {
+        const pushOverlays = (/** @type {any} */ name, /** @type {any} */ pts, /** @type {any} */ color, /** @type {any} */ rawRows) => {
           // Smoother overlay (scatter charts only) — uses R-precomputed
           // points from config.smoother_series.
           if (smoother !== 'none' && !isLine) {
@@ -1407,8 +1483,8 @@
           if ((isLine || isScatter) && loCol && hiCol &&
               rawRows && rawRows.length) {
             const errPts = rawRows
-              .filter(r => r[x] != null && r[loCol] != null && r[hiCol] != null)
-              .map(r => [encodeX(r[x]), Number(r[loCol]), Number(r[hiCol])]);
+              .filter((/** @type {any} */ r) => r[x] != null && r[loCol] != null && r[hiCol] != null)
+              .map((/** @type {any} */ r) => [encodeX(r[x]), Number(r[loCol]), Number(r[hiCol])]);
             if (errPts.length) series.push(mkErrBarSeries(name || 'errbar', errPts, color));
           }
         };
@@ -1433,6 +1509,7 @@
 
         // Reference-line overlays (ref_x vertical, ref_y horizontal)
         if (series.length > 0 && (refX.length || refY.length)) {
+          /** @type {any[]} */
           const refData = [];
           for (const v of refX) refData.push({ xAxis: Number(v) });
           for (const v of refY) refData.push({ yAxis: Number(v) });
@@ -1464,9 +1541,12 @@
         // that shares that color value.
         const useColorByLegend = showLegend && color && seriesCol &&
           seriesCol !== color;
+        /** @type {any[] | null} */
         let colorByLegendData = null;
+        /** @type {Record<string, any[]> | null} */
         let seriesByColorByVal = null;
         if (useColorByLegend) {
+          /** @type {Record<string, any>} */
           const lookup = this._colorLookup || {};
           const cbLevels = [...new Set(this.data.map(
             r => String(r[color] ?? '')
@@ -1516,7 +1596,7 @@
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
           scale: true
         };
-        if (xCats) xAxisSpec.data = xCats;
+        if (xCats) /** @type {any} */ (xAxisSpec).data = xCats;
 
         const yAxisSpec = {
           type: yAxisType,
@@ -1530,7 +1610,7 @@
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
           scale: true
         };
-        if (yCats) yAxisSpec.data = yCats;
+        if (yCats) /** @type {any} */ (yAxisSpec).data = yCats;
 
         // Brushing is skipped when the x-axis is categorical (echarts' brush
         // needs continuous coords), for line charts — on a per-patient
@@ -1549,7 +1629,7 @@
         const option = {
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
           textStyle: { fontFamily: BLOCKR_FONT },
-          tooltip: { trigger: 'item', formatter: (p) => `${x}: ${ddNum(p.value[0])}<br>${y}: ${ddNum(p.value[1])}` + (p.seriesName ? `<br>${color || 'series'}: ${p.seriesName}` : ''), confine: true },
+          tooltip: { trigger: 'item', formatter: (/** @type {any} */ p) => `${x}: ${ddNum(p.value[0])}<br>${y}: ${ddNum(p.value[1])}` + (p.seriesName ? `<br>${color || 'series'}: ${p.seriesName}` : ''), confine: true },
           // Always set explicitly; leaving legend undefined lets echarts
           // auto-render one per series, which eats the plot area when
           // series is high-cardinality (e.g. USUBJID).
@@ -1580,7 +1660,7 @@
         // the clicked color group. Otherwise a click on "F" would do
         // nothing (no series is named "F") and the user couldn't toggle.
         if (useColorByLegend && seriesByColorByVal) {
-          chart.on('legendselectchanged', (params) => {
+          chart.on('legendselectchanged', (/** @type {any} */ params) => {
             const cv = params.name;
             const targets = seriesByColorByVal[cv];
             if (!targets || targets.length === 0) return;
@@ -1788,7 +1868,7 @@
 
       // Convert an x-axis value to a numeric/time coord, or to a category
       // index when the axis is categorical.
-      const xCoord = (v, cats) => {
+      const xCoord = (/** @type {any} */ v, /** @type {any[]} */ cats) => {
         if (xAxisType === 'category') {
           const i = cats.indexOf(String(v ?? ''));
           return i < 0 ? 0 : i;
@@ -1797,13 +1877,14 @@
       };
 
       // Sort helper — ascending min of the sort column per category
-      const sortTerms = (rows) => {
+      const sortTerms = (/** @type {any[]} */ rows) => {
         const sb = sort_by || 'onset';
         if (sb === 'alpha') {
-          return [...new Set(rows.map(r => String(r[y] ?? '')))]
+          return [...new Set(rows.map((/** @type {any} */ r) => String(r[y] ?? '')))]
             .sort((a, b) => a.localeCompare(b) * sortDir);
         }
         const sortCol = (sb === 'onset') ? x : sb;
+        /** @type {Record<string, number>} */
         const mins = {};
         for (const r of rows) {
           const k = String(r[y] ?? '');
@@ -1895,7 +1976,7 @@
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
           scale: true
         };
-        if (xCats) xAxisSpec.data = xCats;
+        if (xCats) /** @type {any} */ (xAxisSpec).data = xCats;
 
         // Auto-legend: show whenever color is set. The legend is
         // scroll-type, so high cardinality (AETERM with 200+ values)
@@ -1907,7 +1988,7 @@
         // series via option.color cycling.
         const legendData = showLegend ? colorLevels.slice() : null;
 
-        const renderItemFn = (params, api) => {
+        const renderItemFn = (/** @type {any} */ params, /** @type {any} */ api) => {
           const start = api.coord([api.value(0), api.value(2)]);
           const end = api.coord([api.value(1), api.value(2)]);
           const h = api.size([0, 1])[1] * 0.6;
@@ -1922,6 +2003,7 @@
           // Unset -> no text. label is its own role, never series/color.
           const barLabel = this.config.label
             ? String(api.value(5) ?? '') : '';
+          /** @type {any[]} */
           const children = [{
             type: 'rect',
             shape: Object.assign({}, rect, { r: 3 }),
@@ -1952,10 +2034,11 @@
         // back to a single anonymous series.
         let seriesArray;
         if (showLegend) {
-          const buckets = new Map(colorLevels.map(lvl => [lvl, []]));
+          /** @type {Map<any, any[]>} */
+          const buckets = new Map(colorLevels.map((/** @type {any} */ lvl) => /** @type {[any, any[]]} */ ([lvl, []])));
           for (const d of barData) {
             const lvl = String(d.value[4] ?? '');
-            if (buckets.has(lvl)) buckets.get(lvl).push(d);
+            if (buckets.has(lvl)) { const b = buckets.get(lvl); if (b) b.push(d); }
           }
           seriesArray = colorLevels.map(lvl => ({
             type: 'custom',
@@ -1977,14 +2060,14 @@
         const option = {
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
           color: (colorScale && colorScale.color && colorLevels.length)
-            ? colorLevels.map((lvl, i) =>
+            ? colorLevels.map((/** @type {any} */ lvl, /** @type {number} */ i) =>
                 colorScale.color[lvl] || palette[i % palette.length])
             : palette,
           textStyle: { fontFamily: BLOCKR_FONT },
           tooltip: {
             trigger: 'item',
             confine: true,
-            formatter: (p) => {
+            formatter: (/** @type {any} */ p) => {
               const v = p.value;
               const term = v[3] || '';
               const colorVal = v[4] || '';
@@ -2059,16 +2142,16 @@
         // would overwrite series[0] for every iteration. Build the full
         // array so each series is updated in place.
         const cats = option.xAxis?.[0]?.data || option.yAxis?.[0]?.data || [];
-        const newSeries = option.series.map((s) => {
+        const newSeries = option.series.map((/** @type {any} */ s) => {
           if (s.type === 'pie') {
-            return { data: (s.data || []).map(d => d == null ? d : ({ ...d, itemStyle: { ...d.itemStyle, opacity: sel && d.name !== sel ? 0.2 : 1 } })) };
+            return { data: (s.data || []).map((/** @type {any} */ d) => d == null ? d : ({ ...d, itemStyle: { ...d.itemStyle, opacity: sel && d.name !== sel ? 0.2 : 1 } })) };
           }
           if (s.type === 'treemap') {
-            return { data: (s.data || []).map(d => d == null ? d : ({ ...d, itemStyle: { ...d.itemStyle, opacity: sel && d.name !== sel ? 0.3 : 1 } })) };
+            return { data: (s.data || []).map((/** @type {any} */ d) => d == null ? d : ({ ...d, itemStyle: { ...d.itemStyle, opacity: sel && d.name !== sel ? 0.3 : 1 } })) };
           }
           if (s.type === 'radar') {
             // Dim the non-selected shapes (one data item per color level).
-            return { data: (s.data || []).map(d => d == null ? d : ({
+            return { data: (s.data || []).map((/** @type {any} */ d) => d == null ? d : ({
               ...d,
               lineStyle: { ...d.lineStyle, opacity: sel && d.name !== sel ? 0.15 : 1 },
               itemStyle: { ...d.itemStyle, opacity: sel && d.name !== sel ? 0.15 : 1 },
@@ -2083,7 +2166,7 @@
             return {};
           }
           if (cats.length === 0) return {};
-          const newData = (s.data || []).map((v, i) => {
+          const newData = (s.data || []).map((/** @type {any} */ v, /** @type {number} */ i) => {
             // typeof null === 'object', so guard v before reading v.value;
             // this series data legitimately contains null gap values for
             // missing groups (see _renderAggregated). Without the `v &&`
@@ -2222,6 +2305,7 @@
     // override the default (group + current _selected) — used by
     // click-to-filter on trajectory series and gantt bars, where the column
     // is series/color rather than group.
+    /** @param {any} [col] @param {any} [values] */
     _sendCategoricalFilter(col, values) {
       if (!this.el.id) return;
       const column = col !== undefined ? col : this.config.group;
@@ -2270,6 +2354,7 @@
     // When drill is off the chart is a pure display — disable ECharts hover
     // emphasis on marks so there is no interactive-looking effect. Mutates and
     // returns the option for use inline at setOption.
+    /** @param {any} option */
     _applyDrillEmphasis(option) {
       if (this._drillState() === 'off' && option && Array.isArray(option.series)) {
         for (const s of option.series) { if (s) s.emphasis = { disabled: true }; }
@@ -2277,6 +2362,7 @@
       return option;
     }
 
+    /** @param {any[]} rows */
     _emitDrill(rows) {
       const c = this._drillColumn();
       if (!c || !rows || !rows.length) return;
@@ -2288,6 +2374,7 @@
 
     // Emits a point filter: the single observation(s) at an exact (x, y).
     // Retained for the brush-race guard path; not used by click drill.
+    /** @param {any} xCol @param {any} yCol @param {any} xVal @param {any} yVal */
     _sendPointFilter(xCol, yCol, xVal, yVal) {
       if (!this.el.id) return;
       Shiny.setInputValue(this.el.id + '_action', {
@@ -2296,6 +2383,7 @@
       }, { priority: 'event' });
     }
 
+    /** @param {any} xRange @param {any} yRange */
     _sendRangeFilter(xRange, yRange) {
       if (!this.el.id) return;
       Shiny.setInputValue(this.el.id + '_action', {
@@ -2381,12 +2469,12 @@
 
   const binding = new Shiny.InputBinding();
   Object.assign(binding, {
-    find: (scope) => $(scope).find('.drilldown-chart-container'),
-    getId: (el) => el.id || null,
+    find: (/** @type {any} */ scope) => $(scope).find('.drilldown-chart-container'),
+    getId: (/** @type {any} */ el) => el.id || null,
     getValue: () => null,
     subscribe: () => {},
     unsubscribe: () => {},
-    initialize: (el) => {
+    initialize: (/** @type {any} */ el) => {
       el._block = new DrilldownChart(el);
       if (el._pendingTheme !== undefined) {
         el._block.setTheme(el._pendingTheme);
@@ -2401,8 +2489,8 @@
   });
   Shiny.inputBindings.register(binding, 'blockr.drilldown');
 
-  Shiny.addCustomMessageHandler('drilldown-data', (msg) => {
-    const el = document.getElementById(msg.id);
+  Shiny.addCustomMessageHandler('drilldown-data', (/** @type {any} */ msg) => {
+    const el = /** @type {any} */ (document.getElementById(msg.id));
     if (el?._block) {
       el._block.setData(msg.columns, msg.data, msg.config, msg.arguments);
     } else if (el) {
@@ -2411,7 +2499,7 @@
       let n = 0;
       const t = setInterval(() => {
         n++;
-        const el2 = document.getElementById(msg.id);
+        const el2 = /** @type {any} */ (document.getElementById(msg.id));
         if (el2?._block) { el2._block.setData(msg.columns, msg.data, msg.config, msg.arguments); clearInterval(t); }
         else if (el2) { el2._pendingData = msg; clearInterval(t); }
         if (n > 50) clearInterval(t);
@@ -2420,8 +2508,8 @@
   });
 
 
-  Shiny.addCustomMessageHandler('drilldown-theme', (msg) => {
-    const el = document.getElementById(msg.id);
+  Shiny.addCustomMessageHandler('drilldown-theme', (/** @type {any} */ msg) => {
+    const el = /** @type {any} */ (document.getElementById(msg.id));
     if (el?._block) {
       el._block.setTheme(msg.theme);
     } else if (el) {
@@ -2430,7 +2518,7 @@
       let n = 0;
       const t = setInterval(() => {
         n++;
-        const el2 = document.getElementById(msg.id);
+        const el2 = /** @type {any} */ (document.getElementById(msg.id));
         if (el2?._block) { el2._block.setTheme(msg.theme); clearInterval(t); }
         else if (el2) { el2._pendingTheme = msg.theme; clearInterval(t); }
         if (n > 50) clearInterval(t);

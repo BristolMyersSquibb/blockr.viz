@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * tile-block.js — gear-popover config + drill for new_tile_block(). The R side
  * (tile_html) emits the tk-* markup with values and fill widths already at
@@ -11,13 +12,15 @@
  */
 (function () {
   // ---- drill: card / row click -> categorical filter on the group ----------
+  /** @param {Element} root */
   function wireDrill(root) {
     if (root.getAttribute('data-tk-drill') !== '1') return;
     var elemId = root.getAttribute('data-tk-elem-id');
     var col = root.getAttribute('data-tk-group');
     if (!elemId || !col) return;
     root.addEventListener('click', function (e) {
-      var hit = e.target.closest('[data-group]');
+      var tgt = /** @type {Element | null} */ (e.target);
+      var hit = tgt && tgt.closest('[data-group]');
       if (!hit || !root.contains(hit)) return;
       var val = hit.getAttribute('data-group');
       if (val == null || val === '') return;
@@ -60,19 +63,23 @@
     presentation: ['style', 'good_when', 'format', 'unit', 'layout']
   };
 
+  /** @param {string | null} elemId @param {string} param @param {*} value */
   function sendConfig(elemId, param, value) {
     if (!elemId || !window.Shiny || !Shiny.setInputValue) return;
     Shiny.setInputValue(elemId + '_action',
       { action: 'config', param: param, value: value }, { priority: 'event' });
   }
 
+  /** @param {Element} root */
   function buildCogwheel(root) {
     var elemId = root.getAttribute('data-tk-elem-id');
     if (!elemId) return;
 
+    /** @type {VizColumn[]} */
     var cols = [];
     try { cols = JSON.parse(root.getAttribute('data-tk-cols') || '[]'); }
     catch (e) { cols = []; }
+    /** @type {Record<string, any>} */
     var cfg;
     try { cfg = JSON.parse(root.getAttribute('data-tk-config') || '{}'); }
     catch (e) { cfg = {}; }
@@ -94,7 +101,8 @@
     header.appendChild(btn);
 
     var esc = (window.CSS && CSS.escape) ? CSS.escape(elemId) : elemId;
-    var staleP = document.querySelector('.dd-popover[data-dd-pop-for="' + esc + '"]');
+    var staleP = /** @type {HTMLElement | null} */ (
+      document.querySelector('.dd-popover[data-dd-pop-for="' + esc + '"]'));
     // renderUI rebuilds the whole tile (this popover included) on every config
     // edit; remember whether the prior instance was open so we can restore it.
     var wasOpen = !!(staleP && staleP.style.display === 'block');
@@ -122,7 +130,7 @@
       typeKey: null,
       typeGroups: null,
       familyFor: null,
-      entryRequired: function (role) { return role === 'value'; },
+      entryRequired: function (/** @type {string} */ role) { return role === 'value'; },
       drillAutoLabel: function () {
         return cfg.by ? ('each ' + cfg.by) : 'the group';
       },
@@ -182,9 +190,9 @@
     // below holds and picking a value no longer dismisses the settings form.
     document.addEventListener('mousedown', function (e) {
       if (pop.style.display !== 'block') return;
-      var t = e.target;
+      var t = /** @type {HTMLElement | null} */ (e.target);
       if (pop.contains(t) || btn.contains(t)) return;
-      if (t.closest && t.closest('.blockr-select__dropdown')) return;
+      if (t && t.closest('.blockr-select__dropdown')) return;
       closePop();
     });
 
@@ -196,6 +204,7 @@
     if (wasOpen) openPop();
   }
 
+  /** @param {Element} root */
   function init(root) {
     if (!root || root.getAttribute('data-tk-initialized') === '1') return;
     root.setAttribute('data-tk-initialized', '1');
@@ -203,6 +212,7 @@
     wireDrill(root);
   }
 
+  /** @param {Document | Element} [ctx] */
   function scan(ctx) {
     var nodes = (ctx || document)
       .querySelectorAll('.tk-block[data-tk-elem-id]:not([data-tk-initialized])');
@@ -222,7 +232,7 @@
   });
   mo.observe(document.documentElement, { childList: true, subtree: true });
 
-  if (window.jQuery) {
+  if (typeof window.jQuery === 'function') {
     jQuery(document).on('shiny:value shiny:bound', function () {
       setTimeout(scan, 0);
     });

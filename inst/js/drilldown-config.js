@@ -32,35 +32,45 @@
  *
  * Exposed as Blockr.DrilldownConfig (and window.DrilldownConfig).
  */
+// @ts-check
 (() => {
   'use strict';
 
   class DrilldownConfig {
+    /** @param {VizDrilldownHost} host */
     constructor(host) {
       this.h = host;
+      /** @type {Record<string, any>} */
       this._selects = {};
+      /** @type {Set<string>} */
       this._added = new Set();      // optional roles the user added this session
+      /** @type {Record<string, string>} */
       this._roleMemory = {};        // role key -> last chosen column (sticky)
     }
 
     // -- small helpers --------------------------------------------------------
     get _SECONDARY() { return this.h.secondary; }
+    /** @param {*} v */
     _hasVal(v) { return v !== null && v !== undefined && v !== '' && v !== '(none)'; }
     _cols() { return this.h.columns() || []; }
     _cfg() { return this.h.config(); }
+    /** @param {string} key */
     _role(key) { return this.h.roles[key]; }
+    /** @param {string} name */
     _colExists(name) { return this._cols().some(c => c.name === name); }
 
+    /** @param {string} key @param {string} name */
     _colFits(key, name) {
       const role = this._role(key);
       const c = this._cols().find(x => x.name === name);
       if (!c) return false;
       const ct = role.colTypeBy ? role.colTypeBy[this.h.context()] : role.colType;
       if (ct === 'num') return c.type === 'numeric';
-      if (ct === 'cat') return c.type === 'categorical' || c.n_unique <= 50;
+      if (ct === 'cat') return c.type === 'categorical' || (c.n_unique != null && c.n_unique <= 50);
       return true;
     }
 
+    /** @param {string} key @param {*} val */
     _rememberRole(key, val) {
       const role = this._role(key);
       if (role && role.kind === 'column' && this._hasVal(val)) {
@@ -68,22 +78,25 @@
       }
     }
 
+    /** @param {string} key @param {{ required?: boolean }} param1 */
     _colOptionsFor(key, { required }) {
       const role = this._role(key);
       const ct = role.colTypeBy ? role.colTypeBy[this.h.context()] : role.colType;
       let cols = this._cols();
       if (ct === 'num') cols = cols.filter(c => c.type === 'numeric');
-      else if (ct === 'cat') cols = cols.filter(c => c.type === 'categorical' || c.n_unique <= 50);
-      if (role.maxUnique) cols = cols.filter(c => c.n_unique <= role.maxUnique);
+      else if (ct === 'cat') cols = cols.filter(c => c.type === 'categorical' || (c.n_unique != null && c.n_unique <= 50));
+      if (role.maxUnique) cols = cols.filter(c => c.n_unique != null && c.n_unique <= role.maxUnique);
       const opts = cols.map(c => c.label ? { value: c.name, label: c.label } : c.name);
       if (role.allowCount) opts.unshift('.count');
       else if (!required) opts.unshift('(none)');
       return opts;
     }
 
+    /** @param {string} key */
     _selectOptionsFor(key) {
       const role = this._role(key);
       const raw = role.optionsBy ? (role.optionsBy[this.h.context()] || []) : (role.options || []);
+      /** @type {Array<string | { value: string, label?: string }>} */
       const out = [];
       for (const o of raw) {
         if (o === '#num') {
@@ -95,6 +108,7 @@
       return out;
     }
 
+    /** @param {string} key */
     _entryApplicable(key) {
       const spec = this.h.sections();
       const all = [...(spec.mapping || []), ...spec.presentation];
@@ -103,6 +117,7 @@
       return typeof e === 'string' || !e.types || e.types.includes(this.h.currentType());
     }
 
+    /** @param {string} key @param {*} value */
     _fieldHelp(key, value) {
       const col = this._cols().find(c => c.name === value);
       if (col && col.label && col.label !== col.name) {
@@ -148,7 +163,7 @@
           group.className = 'dd-type-group';
           const glabel = document.createElement('span');
           glabel.className = 'dd-type-group-label';
-          glabel.textContent = g.label;
+          glabel.textContent = g.label ?? '';
           group.appendChild(glabel);
           const btns = document.createElement('div');
           btns.className = 'dd-cfg-types';
@@ -168,8 +183,8 @@
       // Mapping: required rows, then any always-on mapping controls (the
       // chart's metric + aggregation), shown-optional rows, add menu. Skipped
       // whole if the block has no mapping roles at all (e.g. the table).
-      const shownOpt = spec.optionalMap.filter(k => this._hasVal(cfg[k]) || this._added.has(k));
-      const remaining = spec.optionalMap.filter(k => !shownOpt.includes(k));
+      const shownOpt = spec.optionalMap.filter((/** @type {string} */ k) => this._hasVal(cfg[k]) || this._added.has(k));
+      const remaining = spec.optionalMap.filter((/** @type {string} */ k) => !shownOpt.includes(k));
       const mapExtra = this._filterEntries(spec.mapping || []);
       if (spec.requiredMap.length || mapExtra.length || shownOpt.length || remaining.length) {
         const mapSec = this._sectionEl('Mapping');
@@ -190,6 +205,7 @@
       if (this.h.afterTypeChange) this.h.afterTypeChange();
     }
 
+    /** @param {string} titleText */
     _sectionEl(titleText) {
       const sec = document.createElement('div');
       sec.className = 'dd-section';
@@ -204,6 +220,7 @@
     // Normalise a section's entry list and drop the ones not applicable to the
     // current type / handled as a paired tail. Shared by the Mapping extras and
     // the Presentation section so both filter identically.
+    /** @param {any[]} entries */
     _filterEntries(entries) {
       const ct = this.h.currentType();
       return entries
@@ -212,6 +229,7 @@
         .filter(e => !this._SECONDARY.has(e.role));
     }
 
+    /** @param {HTMLElement} container @param {any[]} list */
     _renderEntries(container, list) {
       for (const e of list) {
         const required = this.h.entryRequired ? this.h.entryRequired(e.role) : false;
@@ -219,12 +237,14 @@
       }
     }
 
+    /** @param {string} titleText @param {any[]} entries */
     _renderSection(titleText, entries) {
       const list = this._filterEntries(entries);
       if (!list.length) return;
       this._renderEntries(this._sectionEl(titleText), list);
     }
 
+    /** @param {HTMLElement} container @param {string} key @param {{ required?: boolean, removable?: boolean }} [opts] */
     _renderRole(container, key, opts = {}) {
       const role = this._role(key);
       const paired = !!(role.pairedWith && this._entryApplicable(role.pairedWith));
@@ -319,10 +339,10 @@
         controls.className = 'dd-row-controls';
         const wrap = document.createElement('div');
         wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
-        const colOpt = (c) => c.label ? { value: c.name, label: c.label } : c.name;
+        const colOpt = (/** @type {VizColumn} */ c) => c.label ? { value: c.name, label: c.label } : c.name;
         const opts = [{ value: 'auto', label: autoLabel }, ...this._cols().map(colOpt)];
         const sel = (this._hasVal(cfg.drill) && cfg.drill !== 'auto') ? cfg.drill : 'auto';
-        const onSel = (val) => { cfg.drill = val; this.h.onChange('drill'); this.h.onClearFilter(); };
+        const onSel = (/** @type {string} */ val) => { cfg.drill = val; this.h.onChange('drill'); this.h.onClearFilter(); };
         if (typeof Blockr !== 'undefined' && Blockr.Select) {
           this._selects['drill'] = Blockr.Select.single(wrap, { options: opts, selected: sel, onChange: onSel });
         } else {
@@ -345,6 +365,7 @@
       }
     }
 
+    /** @param {HTMLElement} parent @param {string} key @param {{ required?: boolean, onChange?: () => void }} [param2] */
     _buildControl(parent, key, { required, onChange } = {}) {
       const role = this._role(key);
       const cb = onChange || (() => {});
@@ -354,7 +375,7 @@
         const wrap = document.createElement('div');
         wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
         const sel = (cfg[key] && cfg[key] !== '(none)') ? cfg[key] : (required ? '' : '(none)');
-        const onSel = (val) => {
+        const onSel = (/** @type {string} */ val) => {
           cfg[key] = (val === '(none)') ? '' : val;
           this._rememberRole(key, cfg[key]);
           cb();
@@ -369,7 +390,7 @@
         wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
         const cur = cfg[key];
         const selv = this._hasVal(cur) ? cur : ((typeof opts[0] === 'object' && opts[0]) ? opts[0].value : opts[0]);
-        const onSel = (val) => {
+        const onSel = (/** @type {string} */ val) => {
           cfg[key] = val; cb(); this.h.onChange(key);
           // Some selects gate which other rows are shown (e.g. the table's
           // Coloring mode reveals the column-scope picker). Re-render so the
@@ -390,7 +411,7 @@
         const sel = Array.isArray(cfg[key]) ? cfg[key].slice() : [];
         const wrap = document.createElement('div');
         wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
-        const onSel = (vals) => { cfg[key] = vals; cb(); this.h.onChange(key); };
+        const onSel = (/** @type {string[]} */ vals) => { cfg[key] = vals; cb(); this.h.onChange(key); };
         if (typeof Blockr !== 'undefined' && Blockr.Select && Blockr.Select.multi) {
           this._selects[key] = Blockr.Select.multi(wrap, {
             options: opts, selected: sel, reorderable: false,
@@ -414,7 +435,7 @@
         parent.appendChild(wrap);
       } else if (role.kind === 'segmented') {
         const cur = this._hasVal(cfg[key]) ? cfg[key] : role.options[0].value;
-        this._buildPill(parent, role.options, cur, (val) => {
+        this._buildPill(parent, role.options, cur, (/** @type {string} */ val) => {
           cfg[key] = val; cb(); this.h.onChange(key);
         });
       } else if (role.kind === 'text') {
@@ -426,6 +447,7 @@
         inp.className = 'blockr-popover-input';
         inp.value = (cfg[key] == null) ? '' : String(cfg[key]);
         if (role.ph) inp.placeholder = role.ph;
+        /** @type {ReturnType<typeof setTimeout> | undefined} */
         let deb;
         inp.addEventListener('input', () => {
           cfg[key] = inp.value;
@@ -440,6 +462,10 @@
 
     // Build a Blockr.Select (or native fallback). `decorate` shows
     // `name (label)` option text (column pickers); else just the label.
+    /**
+     * @param {HTMLElement} wrap @param {any[]} opts @param {string} selected
+     * @param {(val: string) => void} onSel @param {string} key @param {boolean} decorate
+     */
     _mkSelect(wrap, opts, selected, onSel, key, decorate) {
       if (typeof Blockr !== 'undefined' && Blockr.Select) {
         this._selects[key] = Blockr.Select.single(wrap, { options: opts, selected, onChange: onSel });
@@ -460,6 +486,7 @@
       }
     }
 
+    /** @param {HTMLElement} parent @param {string} key */
     _buildSlider(parent, key) {
       const cfg = this._cfg();
       const init = cfg[key];
@@ -476,6 +503,7 @@
       value.className = 'dd-slider-value';
       value.textContent = v0.toFixed(1) + '×';
       wrap.appendChild(value);
+      /** @type {ReturnType<typeof setTimeout> | undefined} */
       let debounce;
       input.addEventListener('input', () => {
         const v = parseFloat(input.value);
@@ -492,6 +520,10 @@
     // `options` ([{value,label}]) on click; highlighted (blockr-popover-toggle-
     // active) whenever the value is off its first/default option. Replaces the
     // old two-button .dd-segmented control.
+    /**
+     * @param {HTMLElement} parent @param {Array<{ value: string, label: string }>} options
+     * @param {string} current @param {(val: string) => void} onPick
+     */
     _buildPill(parent, options, current, onPick) {
       const wrap = document.createElement('div');
       wrap.className = 'dd-pill-wrap';
@@ -515,6 +547,7 @@
       return btn;
     }
 
+    /** @param {HTMLElement} container @param {string[]} remaining */
     _addMappingMenu(container, remaining) {
       const wrap = document.createElement('div');
       wrap.className = 'dd-add-wrap';
@@ -550,6 +583,7 @@
       container.appendChild(wrap);
     }
 
+    /** @param {string} key */
     _addRole(key) {
       const cfg = this._cfg();
       this._added.add(key);
@@ -563,6 +597,7 @@
       if (wasOpen) setTimeout(() => this.h.reopen(), 0);
     }
 
+    /** @param {string} key */
     _removeRole(key) {
       const cfg = this._cfg();
       cfg[key] = '';
@@ -576,6 +611,7 @@
     }
 
     // Type/family switch (chart). No-op-ish when there are no families.
+    /** @param {string} t */
     _onType(t) {
       const cfg = this._cfg();
       const oldFam = this.h.familyFor ? this.h.familyFor(cfg[this.h.typeKey]) : null;
@@ -593,10 +629,11 @@
     }
 
     // Identity-carry + sticky memory across a family switch.
+    /** @param {string | null} newFam */
     _carryRoles(newFam) {
       const spec = this.h.sectionsForFamily(newFam);
       const cfg = this._cfg();
-      const mapKeys = (spec.mapping || []).map(e => (typeof e === 'string' ? e : e.role));
+      const mapKeys = (spec.mapping || []).map((/** @type {any} */ e) => (typeof e === 'string' ? e : e.role));
       const keep = new Set([...spec.requiredMap, ...spec.optionalMap, ...mapKeys]);
       for (const key of Object.keys(this.h.roles)) {
         if (this.h.roles[key].kind !== 'column') continue;
@@ -617,7 +654,9 @@
     }
   }
 
-  const ns = (typeof Blockr !== 'undefined') ? Blockr : (window.Blockr = window.Blockr || {});
+  const ns = /** @type {BlockrNamespace} */ (
+    (typeof Blockr !== 'undefined') ? Blockr
+      : (window.Blockr = window.Blockr || /** @type {BlockrNamespace} */ ({})));
   ns.DrilldownConfig = DrilldownConfig;
   window.DrilldownConfig = DrilldownConfig;
 })();

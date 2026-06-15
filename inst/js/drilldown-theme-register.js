@@ -1,3 +1,4 @@
+// @ts-check
 // Register the "blockr" echarts theme directly in the browser. The drill-down
 // block initialises echarts via `echarts.init(el, name)`, so the name must be
 // known to `window.echarts` before init runs. Echarts' built-in themes (dark,
