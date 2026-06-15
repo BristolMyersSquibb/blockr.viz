@@ -23,6 +23,7 @@ RoxygenNote: 7.3.3
 Imports:
     blockr.core,
     blockr.dplyr,
+    blockr.ui,
     dplyr,
     echarts4r,
     gt,
@@ -50,6 +51,7 @@ Remotes:
     BristolMyersSquibb/blockr.core,
     BristolMyersSquibb/blockr.dplyr,
     BristolMyersSquibb/blockr.ai,
+    BristolMyersSquibb/blockr.ui,
     cynkra/blockr.extra,
     BristolMyersSquibb/blockr.theme
 VignetteBuilder: knitr

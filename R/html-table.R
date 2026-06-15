@@ -74,8 +74,8 @@ html_table <- function(data,
   tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
                             styling_cols = styling_cols)
 
-  # Use the same class names blockr.extra's preview uses so the shared
-  # table_preview_css() rules (typography, padding, hover, sort icons)
+  # Use the same class names the canonical blockr.ui preview uses so the
+  # shared table_preview_css() rules (typography, padding, hover, sort icons)
   # apply to this table without duplication.
   table_tag <- htmltools::tags$table(
     class = "blockr-table",
@@ -112,19 +112,12 @@ html_table <- function(data,
     NULL
   }
 
-  # Pull the shared CSS from blockr.extra if available; else fall back to
-  # our local copy of the same rules. Either way, our delta CSS adds the
-  # section row groups / collapse toggle / search input / title bar /
-  # multi-level header rules that aren't in blockr.extra's preview.
-  shared_css <- if (requireNamespace("blockr.extra", quietly = TRUE) &&
-                    exists("table_preview_css",
-                           envir = asNamespace("blockr.extra"))) {
-    # Dynamic lookup: table_preview_css is an internal of blockr.extra (not
-    # exported), so reference it via its namespace rather than `::`.
-    get("table_preview_css", envir = asNamespace("blockr.extra"))()
-  } else {
-    htmltools::tags$style(htmltools::HTML(html_table_shared_css_fallback()))
-  }
+  # Pull the canonical shared CSS from blockr.ui, the single home of the
+  # table preview. Our delta CSS below adds the section row groups / collapse
+  # toggle / search input / title bar / multi-level header rules that the
+  # canonical preview doesn't carry. `table_preview_css()` returns a ready
+  # <style> tag.
+  shared_css <- blockr.ui::table_preview_css()
 
   htmltools::tagList(
     shared_css,
@@ -450,8 +443,8 @@ section_chevron_svg <- function() {
 # Inline CSS
 # ---------------------------------------------------------------------------
 
-#' Delta CSS layered on top of `blockr.extra::table_preview_css()`. Only
-#' contains rules for things blockr.extra's preview doesn't have: a title
+#' Delta CSS layered on top of `blockr.ui::table_preview_css()`. Only
+#' contains rules for things the canonical preview doesn't have: a title
 #' bar above the table, a search input, multi-level column header
 #' borders, row-side section header rows, the collapse chevron, and the
 #' .indent/.bold/.italic row styling.
@@ -728,10 +721,11 @@ input.blockr-search:focus {
   css
 }
 
-#' Subset of `blockr.extra::table_preview_css()` mirrored verbatim for
-#' standalone use when blockr.extra isn't installed. Keeps html_table()
-#' visually consistent without a hard dependency. If blockr.extra is
-#' available, prefer its exported helper instead — same source of truth.
+#' Shared table CSS for the drilldown table chrome (`dt_chrome()`). Mirrors
+#' the canonical `blockr.ui::table_preview_css()` base rules but adds the
+#' `.drilldown-table-container` recalculating-fade suppression the canonical
+#' preview (scoped to `.blockr-table-container`) doesn't carry. `html_table()`
+#' itself now pulls the canonical CSS straight from blockr.ui.
 #' @noRd
 html_table_shared_css_fallback <- function() {
   "/* Suppress Shiny's `.recalculating` dim (opacity 0.3) on the drilldown
