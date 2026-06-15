@@ -33,8 +33,15 @@ test_that("summary_table_arguments() names match new_summary_table_block() forma
 
 # The remaining blocks deliberately hide some constructor params from the AI
 # surface (runtime-transport reactiveVals such as the filter_* fields). The
-# invariant there is weaker but still important: no descriptor may advertise a
-# phantom argument, and no example may reference a phantom descriptor key.
+# invariant on the *constructor* side is therefore weaker (descriptor args are
+# a subset of the ctor formals), but the *example* must still cover EVERY arg
+# the assistant is shown. A subset check (`names(ex) %in% names(args)`) was too
+# weak: chart_arguments() advertised 23 args but its example carried only 13,
+# and the gap passed silently. blockr.assistant surfaces the example as the
+# canonical arg shape, so any advertised arg missing from the example is one
+# the model has no value to copy -- it then invents a name (drilldown,
+# direction, x_col) that the ctor's `...` swallows, producing a misconfigured
+# block with no error. Require the example to setequal the advertised args.
 test_that("every *_arguments() descriptor is consistent with its constructor", {
   pairs <- list(
     list(args = summary_table_arguments, ctor = new_summary_table_block),
@@ -51,8 +58,9 @@ test_that("every *_arguments() descriptor is consistent with its constructor", {
 
     # no phantom arguments advertised to the assistant
     expect_true(all(names(args) %in% ctor))
-    # examples never reference a key the descriptor doesn't define
-    expect_true(all(names(ex) %in% names(args)))
+    # the example must cover EVERY advertised arg (no missing, no phantom),
+    # so the assistant always has a value to mirror for each one
+    expect_setequal(names(ex), names(args))
     # descriptor entries are non-empty strings
     expect_true(all(nzchar(unlist(args))))
   }
