@@ -99,10 +99,21 @@ new_summary_table_block <- function(
           log_cols <- all_cols[vapply(d, is.logical, logical(1))]
           cat_cols <- setdiff(all_cols, c(num_cols, log_cols))
           var_cols <- c(num_cols, log_cols, cat_cols)
+          # Send {value, label} where the column carries a `label` attribute
+          # (e.g. ADaM/SDTM datasets), bare name otherwise. The JS select
+          # renders the label as a muted hint, like the chart block does.
+          col_opt <- function(col) {
+            lbl <- attr(d[[col]], "label", exact = TRUE)
+            if (!is.null(lbl) && is.character(lbl) && nzchar(lbl[1L])) {
+              list(value = col, label = lbl[1L])
+            } else {
+              col
+            }
+          }
           session$sendCustomMessage("summary-table-columns", list(
             id = ns("summary_input"),
-            var_cols = as.list(var_cols),
-            cat_cols = as.list(cat_cols)
+            var_cols = lapply(var_cols, col_opt),
+            cat_cols = lapply(cat_cols, col_opt)
           ))
         }
 
