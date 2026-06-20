@@ -385,13 +385,21 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
     n <- suppressWarnings(as.integer(data[[".indent"]]))
     n[is.na(n) | n < 0L] <- 0L
     n
-  } else rep(0L, n_rows)
+  } else {
+    rep(0L, n_rows)
+  }
   row_bold <- if (has_bold) {
-    b <- suppressWarnings(as.logical(data[[".bold"]])); !is.na(b) & b
-  } else rep(FALSE, n_rows)
+    b <- suppressWarnings(as.logical(data[[".bold"]]))
+    !is.na(b) & b
+  } else {
+    rep(FALSE, n_rows)
+  }
   row_italic <- if (has_italic) {
-    b <- suppressWarnings(as.logical(data[[".italic"]])); !is.na(b) & b
-  } else rep(FALSE, n_rows)
+    b <- suppressWarnings(as.logical(data[[".italic"]]))
+    !is.na(b) & b
+  } else {
+    rep(FALSE, n_rows)
+  }
 
   row_class <- rep("blockr-data-row", n_rows)
   row_class[row_bold]   <- paste(row_class[row_bold], "blockr-bold")
