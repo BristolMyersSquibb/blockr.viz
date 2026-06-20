@@ -33,9 +33,9 @@
     /** @param {HTMLElement} el */
     constructor(el) {
       this.el = el;
-      /** @type {string[]} */
+      /** @type {BlockrSelectOption[]} */
       this._varCols = [];
-      /** @type {string[]} */
+      /** @type {BlockrSelectOption[]} */
       this._catCols = [];
       /** @type {((submit: boolean) => void) | null} */
       this._callback = null;
