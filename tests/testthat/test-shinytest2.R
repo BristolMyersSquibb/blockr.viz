@@ -538,12 +538,15 @@ test_that("summary_table gear: toggling 'overall' adds a Total row to the output
   # drives summary-table-block.js's real gear -> state -> R -> recomputed output.
   app$run_js(sprintf("document.querySelector('%s .blockr-gear-btn').scrollIntoView({block:'center'});", scope))
   app$run_js(sprintf("document.querySelector('%s .blockr-gear-btn').click();", scope))
-  app$wait_for_idle(); Sys.sleep(0.3)
+  app$wait_for_idle()
+  Sys.sleep(0.3)
   app$run_js(sprintf(
     "(function(){var b=Array.from(document.querySelectorAll('%s .blockr-pill')).filter(function(x){return /overall/i.test(x.textContent);})[0]; if(b) b.click();})()",
     scope
   ))
-  app$wait_for_idle(); Sys.sleep(0.5); app$wait_for_idle()
+  app$wait_for_idle()
+  Sys.sleep(0.5)
+  app$wait_for_idle()
 
   after <- get_block_result("summary")
   expect_true("Total" %in% after$.group)
@@ -566,7 +569,9 @@ test_that("tile: delta secondary renders and a matrix-row click drills", {
     "(function(){var r=Array.from(document.querySelectorAll('%s [data-group]')).filter(function(x){return x.getAttribute('data-group')==='South';})[0]; if(r) r.click();})()",
     scope
   ))
-  app$wait_for_idle(); Sys.sleep(0.4); app$wait_for_idle()
+  app$wait_for_idle()
+  Sys.sleep(0.4)
+  app$wait_for_idle()
 
   res <- get_block_result("tile_x")
   expect_setequal(unique(res$region), "South")

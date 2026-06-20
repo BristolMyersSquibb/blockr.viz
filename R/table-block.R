@@ -131,7 +131,8 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
         dom  <- color$domain
         if (is.null(dom) && length(vals)) {
           dom <- if (identical(color$type, "diverging")) {
-            m <- max(abs(vals)); c(-m, m)   # symmetric around 0 (white at 0)
+            m <- max(abs(vals))   # symmetric around 0 (white at 0)
+            c(-m, m)
           } else {
             range(vals)
           }
@@ -185,8 +186,9 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
     if (any(keep)) {
       vk <- col[keep]
       disp <- if (num_flag[j]) {
-        vapply(vk, function(v) format(round(as.numeric(v), digits),
-          nsmall = 0L, trim = TRUE), character(1L))
+        vapply(vk, function(v) {
+          format(round(as.numeric(v), digits), nsmall = 0L, trim = TRUE)
+        }, character(1L))
       } else {
         as.character(vk)
       }
@@ -528,7 +530,9 @@ dt_color_fun <- function(type, domain, palette) {
 
   if (identical(type, "diverging")) {
     pal <- palette %||% c("#99000d", "#ffffff", "#08306b")
-    c1 <- hex2rgb(pal[1L]); c2 <- hex2rgb(pal[2L]); c3 <- hex2rgb(pal[3L])
+    c1 <- hex2rgb(pal[1L])
+    c2 <- hex2rgb(pal[2L])
+    c3 <- hex2rgb(pal[3L])
     # Diverging is centred on 0 (white-at-zero); the domain is symmetric around
     # 0 (set at inference). A meaningful zero is what "diverging" means — for a
     # correlation matrix this puts white at r = 0 and gives +/- equal saturation.
@@ -548,7 +552,8 @@ dt_color_fun <- function(type, domain, palette) {
     }
   } else {
     pal <- palette %||% c("#eef2ff", "#1d4ed8")
-    c1 <- hex2rgb(pal[1L]); c2 <- hex2rgb(pal[2L])
+    c1 <- hex2rgb(pal[1L])
+    c2 <- hex2rgb(pal[2L])
     function(v) {
       v <- max(min(v, hi), lo)
       t <- if (hi == lo) 0 else (v - lo) / (hi - lo)

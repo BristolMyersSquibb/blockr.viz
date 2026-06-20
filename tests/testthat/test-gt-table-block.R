@@ -51,8 +51,8 @@ test_that("gt_table multi-level .indent scales by level * 16", {
   stub_lines <- regmatches(html,
     gregexpr("<th[^>]*gt_stub[^>]*>[^<]+</th>", html))[[1]]
   expect_false(grepl("text-indent",       stub_lines[1]))
-  expect_true( grepl("text-indent: 16px", stub_lines[2]))
-  expect_true( grepl("text-indent: 32px", stub_lines[3]))
+  expect_true(grepl("text-indent: 16px", stub_lines[2]))
+  expect_true(grepl("text-indent: 32px", stub_lines[3]))
 })
 
 test_that("gt_table renders a tibble with only .indent (no .label/.section)", {

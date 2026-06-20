@@ -618,7 +618,8 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
   fit_one <- function(d) {
     d <- d[!is.na(d[[x_col]]) & !is.na(d[[y_col]]), , drop = FALSE]
     if (nrow(d) < 3L) return(NULL)
-    xv <- d[[x_col]]; yv <- d[[y_col]]
+    xv <- d[[x_col]]
+    yv <- d[[y_col]]
     if (length(unique(xv)) < 2L) return(NULL)
     rng <- range(xv, na.rm = TRUE)
     xs <- seq(rng[1L], rng[2L], length.out = 100L)
@@ -630,7 +631,9 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
         fit <- stats::loess(yv ~ xv, span = 0.75,
                             control = stats::loess.control(surface = "direct"))
         as.numeric(stats::predict(fit, newdata = data.frame(xv = xs)))
-      } else NULL
+      } else {
+        NULL
+      }
     }, error = function(e) NULL)
     if (is.null(ys) || all(is.na(ys))) return(NULL)
     list(x = as.list(xs), y = as.list(unname(ys)))

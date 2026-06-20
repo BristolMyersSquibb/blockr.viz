@@ -33,9 +33,9 @@
     /** @param {HTMLElement} el */
     constructor(el) {
       this.el = el;
-      /** @type {string[]} */
+      /** @type {BlockrSelectOption[]} */
       this._varCols = [];
-      /** @type {string[]} */
+      /** @type {BlockrSelectOption[]} */
       this._catCols = [];
       /** @type {((submit: boolean) => void) | null} */
       this._callback = null;
@@ -347,9 +347,12 @@
       if (!sel) return;
       while (sel.options.length > 1) sel.remove(1);
       for (const col of this._varCols) {
+        // col is either a bare name string or a {value, label} object.
+        const val = (col && typeof col === 'object') ? col.value : col;
+        const lbl = (col && typeof col === 'object' && col.label) ? col.label : '';
         const opt = document.createElement('option');
-        opt.value = col;
-        opt.textContent = col;
+        opt.value = val;
+        opt.textContent = lbl ? `${val} (${lbl})` : val;
         sel.appendChild(opt);
       }
       const want = this._state.id_var || '';
