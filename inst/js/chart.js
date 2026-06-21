@@ -130,6 +130,13 @@
     orientation: { label: 'Orientation', kind: 'segmented',
                    options: [{ value: 'horizontal', label: 'Horizontal' },
                              { value: 'vertical', label: 'Vertical' }] },
+    // Color-split bar layout. Only meaningful with a `color` mapping; without
+    // one all three render identically (a single series). "percent" is stacked
+    // + per-group normalization (see _buildAggregatedOption).
+    bar_mode: { label: 'Stacking', kind: 'segmented',
+                options: [{ value: 'stacked', label: 'Stacked' },
+                          { value: 'grouped', label: 'Grouped' },
+                          { value: 'percent', label: '100%' }] },
     // A waterfall is a bar with a cumulative baseline — exposed here as a bar
     // option, not its own chart_type. "Waterfall" sets baseline='cumulative'.
     baseline: { label: 'Bars', kind: 'segmented',
@@ -159,6 +166,7 @@
       // is vertical-only (a bridge reads left-to-right along the value axis), so
       // it does not expose orientation.
       presentation: ['sort_by', 'sort_dir', { role: 'orientation', types: ['bar'] },
+        { role: 'bar_mode', types: ['bar'] },
         { role: 'baseline', types: ['bar'] }]
     },
     individual: {
@@ -533,6 +541,49 @@
       return { width: w, margin: w + 5, gridLeft: w + 15 };
     }
 
+    // Category labels for an x-axis (vertical bars, waterfall) — the transpose
+    // of _yGutter. Always shows every label (interval:0; decimation would drop
+    // steps of a waterfall). Renders labels HORIZONTAL when each fits its
+    // per-category column, else VERTICAL (90deg) — never diagonal. Long
+    // vertical labels truncate with an ellipsis at a height cap, recoverable
+    // via the bar/axis tooltip (which carries the full category name). Returns
+    // { axisLabel, bottom } where `bottom` is the extra grid gutter the rotated
+    // text needs (0 when horizontal).
+    /** @param {any[]} labels @param {number} availW plot width minus grid margins */
+    _xAxisLabels(labels, availW) {
+      const DC = /** @type {any} */ (DrilldownChart);
+      const ctx = DC._measureCtx ||
+        (DC._measureCtx = document.createElement('canvas').getContext('2d'));
+      ctx.font = `11px ${BLOCKR_FONT}`;
+      let widest = 0;
+      for (const l of labels) {
+        const tw = ctx.measureText(String(l ?? '')).width;
+        if (tw > widest) widest = tw;
+      }
+      const PAD = 8;
+      const n = Math.max(1, labels.length);
+      // Width is unknown when the panel is hidden (clientWidth 0); fall back to
+      // a typical panel width so we don't wrongly rotate short labels.
+      const slot = (availW > 0 ? availW : 600) / n;
+      const base = { color: AXIS_LABEL_COLOR, fontSize: 11, interval: 0 };
+      if (widest + PAD <= slot) {
+        // Fits horizontally — keep flat, truncate only as a safety net.
+        return {
+          axisLabel: { ...base, rotate: 0, overflow: 'truncate',
+            width: Math.max(10, Math.floor(slot - PAD)), ellipsis: '…' },
+          bottom: 0
+        };
+      }
+      // Doesn't fit — rotate to vertical and truncate long labels at a cap.
+      const CAP = 120;
+      const len = Math.min(Math.ceil(widest) + PAD, CAP);
+      return {
+        axisLabel: { ...base, rotate: 90, overflow: 'truncate',
+          width: len, ellipsis: '…' },
+        bottom: len
+      };
+    }
+
     // Establish sensible defaults for the active family. Crucially this also
     // picks the default MAPPING columns (group / x / y) when unset — and it
     // runs in the family-switch path (_onChartType) BEFORE _sendConfig, so R
@@ -554,6 +605,7 @@
         if (!this._hasVal(cfg.sort_by)) cfg.sort_by = 'value';
         if (!this._hasVal(cfg.sort_dir)) cfg.sort_dir = 'desc';
         if (!this._hasVal(cfg.orientation)) cfg.orientation = 'horizontal';
+        if (!this._hasVal(cfg.bar_mode)) cfg.bar_mode = 'stacked';
       } else if (fam === 'timeline') {
         if (!this._hasVal(cfg.x) && cols.length) {
           const num = cols.find(c => c.type === 'numeric');
@@ -907,7 +959,7 @@
           : Math.max(350, groups.length * 28 + 60) + 'px';
         container.appendChild(chartDiv);
 
-        const option = this._buildAggregatedOption(facetData, groups, colors, palette);
+        const option = this._buildAggregatedOption(facetData, groups, colors, palette, chartDiv.clientWidth);
         if (!option) {
           chartDiv.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">Boxplot needs a numeric metric</p></div>';
           continue;
@@ -943,8 +995,8 @@
       this._updateHighlight();
     }
 
-    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette */
-    _buildAggregatedOption(facetData, groups, colors, palette) {
+    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {number} [plotW] container width in px */
+    _buildAggregatedOption(facetData, groups, colors, palette, plotW) {
       const ct = this.config.chart_type;
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
 
@@ -965,8 +1017,26 @@
       // contract (group=step axis, metric+agg_fn=value) and the same bar option
       // shell — only the bars' baseline is shifted.
       if (this._baselineMode() === 'cumulative') {
-        return this._buildWaterfall(facetData, groups, valueTitle, ax);
+        return this._buildWaterfall(facetData, groups, valueTitle, ax, plotW);
       }
+
+      // Color-split bar layout. "grouped" drops the shared stack so ECharts
+      // dodges the series side-by-side; "percent" keeps the stack but feeds
+      // each segment as a share (0..1) of its group total (ECharts has no
+      // native percent stack). "stacked" (default) is absolute stacking.
+      const barMode = this.config.bar_mode || 'stacked';
+      const isGrouped = barMode === 'grouped';
+      const isPercent = barMode === 'percent';
+
+      // Bar sizing. Stacked/percent/single = one bar per category at a fixed
+      // 60% width. Grouped = several bars per category: DON'T force a per-series
+      // width (two 60% bars overflow the band and let the default barGap wedge a
+      // gap inside the group). Instead let ECharts auto-size the series equally
+      // (same width for every color) with barGap:0 so they touch, and a category
+      // gap so groups stay separated.
+      const barLayout = isGrouped
+        ? { barGap: 0, barCategoryGap: '30%' }
+        : { barWidth: '60%' };
 
       /** @type {any[]} */
       const series = [];
@@ -974,6 +1044,16 @@
         series.push({ type: 'bar', data: groups.map(g => { const d = facetData.find(a => a.group === g); return d ? d.value : 0; }), itemStyle: { color: palette[0] }, barWidth: '60%', emphasis: { focus: 'self' } });
       } else {
         const colorScale = this._scaleFor(this.config.color);
+        // Per-group total across colors, for percent normalization only.
+        /** @type {Record<string, number>} */
+        const groupTotals = {};
+        if (isPercent) {
+          for (const g of groups) {
+            groupTotals[g] = facetData
+              .filter(a => a.group === g && a.value != null)
+              .reduce((s, a) => s + a.value, 0);
+          }
+        }
         for (let ci = 0; ci < colors.length; ci++) {
           const color = colors[ci];
           series.push({
@@ -981,17 +1061,26 @@
             // Use null (not 0) for missing (group, color) combos. Stacked
             // bars skip nulls — this ensures a patient on a single arm
             // renders as one colored segment, even if the other arm series
-            // get constructed for the rest of the cohort.
+            // get constructed for the rest of the cohort. In percent mode
+            // the datum is an object {value: share, raw} so the tooltip can
+            // show both the percentage and the underlying value.
             data: groups.map(g => {
               const d = facetData.find(a => a.group === g && a.color === color);
-              return d ? d.value : null;
+              const raw = d ? d.value : null;
+              if (raw == null) return null;
+              if (isPercent) {
+                const tot = groupTotals[g];
+                return tot ? { value: raw / tot, raw } : null;
+              }
+              return raw;
             }),
-            stack: 'stack',
+            // Percent is still stacked (shares sum to 1); only "grouped" dodges.
+            ...(isGrouped ? {} : { stack: 'stack' }),
             itemStyle: {
               color: (colorScale && colorScale.color && colorScale.color[color])
                 || palette[ci % palette.length]
             },
-            barWidth: '60%',
+            ...barLayout,
             emphasis: { focus: 'self' }
           });
         }
@@ -1003,26 +1092,60 @@
       // is unchanged (Group=category, Metric=value) \u2014 flipping re-maps nothing.
       const vertical = this.config.orientation === 'vertical';
       const gut = this._yGutter(groups);
+      // Vertical bars put categories on the x-axis: horizontal-or-vertical
+      // labels (never diagonal), all shown. Grid bottom grows for rotated text.
+      const xlab = vertical ? this._xAxisLabels(groups, (plotW || 0) - 65) : null;
       const catAxis = vertical
-        ? { type: 'category', data: groups, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, rotate: 30, overflow: 'truncate', width: 90, ellipsis: '\u2026' }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
+        ? { type: 'category', data: groups, axisLabel: xlab?.axisLabel, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
         : { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false }, axisTick: { show: false } };
+      // Percent display only applies when a color split is actually present
+      // (a single series is trivially 100% of itself).
+      const showPercent = isPercent && colors.length > 0;
       const valAxis = {
-        type: 'value', name: valueTitle, nameLocation: 'middle',
+        type: 'value', name: showPercent ? '% of group total' : valueTitle,
+        nameLocation: 'middle',
         nameGap: vertical ? 45 : 30,
         nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
-        axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
+        axisLabel: {
+          color: ax.labelColor, fontSize: ax.fontSize,
+          ...(showPercent
+            ? { formatter: (/** @type {number} */ v) => Math.round(v * 100) + '%' }
+            : {})
+        },
+        ...(showPercent ? { max: 1 } : {}),
         axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
         splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } }
       };
+      // Percent tooltip shows both the share and the raw value (carried on the
+      // datum as {value, raw}); default axis tooltip otherwise.
+      const fmtRaw = (/** @type {number} */ n) =>
+        Number.isInteger(n) ? n : Math.round(n * 100) / 100;
+      /** @type {Record<string, any>} */
+      const tooltip = { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true };
+      if (showPercent) {
+        tooltip.formatter = (/** @type {any[]} */ ps) => {
+          if (!ps || !ps.length) return '';
+          const head = ps[0].axisValueLabel || ps[0].name || '';
+          const rows = ps
+            .filter(p => p && p.value != null)
+            .map(p => {
+              const pct = Math.round((Number(p.value) || 0) * 100);
+              const raw = p.data && p.data.raw != null ? fmtRaw(p.data.raw) : null;
+              return p.marker + p.seriesName + ': ' + pct + '%' +
+                (raw != null ? ' (' + raw + ')' : '');
+            });
+          return head + '<br/>' + rows.join('<br/>');
+        };
+      }
       const legendOn = colors.length > 0;
       return {
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true },
+        tooltip,
         toolbox: TOOLBOX,
         legend: legendOn ? { show: true, bottom: 0, textStyle: { fontSize: 11 } } : undefined,
         grid: vertical
-          ? { left: 55, right: 10, top: 30, bottom: (legendOn ? 55 : 40) + 26 }
+          ? { left: 55, right: 10, top: 30, bottom: (legendOn ? 55 : 40) + 26 + (xlab ? xlab.bottom : 0) }
           : { left: gut.gridLeft, right: 5, top: 30, bottom: (legendOn ? 55 : 20) + 26 },
         xAxis: vertical ? catAxis : valAxis,
         yAxis: vertical ? valAxis : catAxis,
@@ -1041,8 +1164,8 @@
     // floating offset, and a visible "delta" series carrying the bar height,
     // each datum colored per sign. (vertical orientation only — a bridge reads
     // left-to-right.)
-    /** @param {any[]} facetData @param {any[]} groups @param {any} valueTitle @param {any} ax */
-    _buildWaterfall(facetData, groups, valueTitle, ax) {
+    /** @param {any[]} facetData @param {any[]} groups @param {any} valueTitle @param {any} ax @param {number} [plotW] container width in px */
+    _buildWaterfall(facetData, groups, valueTitle, ax, plotW) {
       // One value per step (sum across any color split — waterfall is a single
       // series along the step axis, color does not stack here).
       /** @param {any} g */
@@ -1080,10 +1203,12 @@
         }
       }
 
+      // Step labels on the x-axis: horizontal-or-vertical (never diagonal),
+      // every step shown (a waterfall with a hidden step label is unreadable).
+      const xlab = this._xAxisLabels(groups, (plotW || 0) - 65);
       const catAxis = {
         type: 'category', data: groups,
-        axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, rotate: 0,
-          overflow: 'break', width: 100 },
+        axisLabel: xlab.axisLabel,
         axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
         axisTick: { show: false }, splitLine: { show: false }
       };
@@ -1109,7 +1234,7 @@
         },
         toolbox: TOOLBOX,
         legend: { show: false },
-        grid: { left: 55, right: 10, top: 30, bottom: 40 + 26 },
+        grid: { left: 55, right: 10, top: 30, bottom: 40 + 26 + xlab.bottom },
         xAxis: catAxis,
         yAxis: valAxis,
         series: [
@@ -1117,8 +1242,10 @@
             itemStyle: { color: 'transparent', borderColor: 'transparent' },
             emphasis: { disabled: true }, silent: true,
             tooltip: { show: false }, data: base },
+          // No explicit borderRadius: bars follow the default/registered theme
+          // like every other bar series (was a lone hardcoded override that made
+          // the waterfall the only rounded chart).
           { name: 'delta', type: 'bar', stack: 'waterfall', barWidth: '60%',
-            itemStyle: { borderRadius: [3, 3, 0, 0] },
             emphasis: { focus: 'self' }, data: delta }
         ]
       };
@@ -2174,9 +2301,15 @@
             const isObj = (v && typeof v === 'object' && !Array.isArray(v));
             const val = isObj ? v.value : v;
             // Preserve any per-datum itemStyle (e.g. the waterfall delta's
-            // sign color) and only layer the selection opacity on top.
+            // sign color) and only layer the selection opacity on top. Also
+            // carry the percent-mode `raw` value (used by the tooltip) — the
+            // rebuild below would otherwise drop it on the first highlight pass.
             const baseStyle = isObj ? v.itemStyle : undefined;
-            return { value: val, itemStyle: { ...baseStyle, opacity: sel ? (cats[i] === sel ? 1 : 0.15) : 1 } };
+            return {
+              value: val,
+              ...(isObj && v.raw != null ? { raw: v.raw } : {}),
+              itemStyle: { ...baseStyle, opacity: sel ? (cats[i] === sel ? 1 : 0.15) : 1 }
+            };
           });
           return { data: newData };
         });
@@ -2352,12 +2485,22 @@
     }
 
     // When drill is off the chart is a pure display — disable ECharts hover
-    // emphasis on marks so there is no interactive-looking effect. Mutates and
-    // returns the option for use inline at setOption.
+    // emphasis on marks AND drop the pointer ("hand") cursor so there is no
+    // interactive-looking effect on a chart that can't be clicked. ECharts
+    // defaults series items to cursor:'pointer'; some series (line/scatter)
+    // also set itemStyle.cursor explicitly, which overrides the series-level
+    // cursor, so reset both. Mutates and returns the option for use inline at
+    // setOption.
     /** @param {any} option */
     _applyDrillEmphasis(option) {
       if (this._drillState() === 'off' && option && Array.isArray(option.series)) {
-        for (const s of option.series) { if (s) s.emphasis = { disabled: true }; }
+        for (const s of option.series) {
+          if (!s) continue;
+          s.emphasis = { disabled: true };
+          s.cursor = 'default';
+          if (s.itemStyle) s.itemStyle.cursor = 'default';
+          if (s.lineStyle) s.lineStyle.cursor = 'default';
+        }
       }
       return option;
     }
@@ -2419,6 +2562,7 @@
         sort_by: this.config.sort_by || '',
         sort_dir: this.config.sort_dir || 'asc',
         orientation: this.config.orientation || 'horizontal',
+        bar_mode: this.config.bar_mode || 'stacked',
         series: this.config.series || '',
         label: this.config.label || '',
         drill: this.config.drill || '',

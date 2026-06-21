@@ -20,6 +20,7 @@ new_chart_block(
   sort_by = NULL,
   sort_dir = NULL,
   orientation = "horizontal",
+  bar_mode = "stacked",
   filter_type = "categorical",
   filter_column = NULL,
   filter_values = NULL,
@@ -88,6 +89,13 @@ the chart family:
 \item{orientation}{Bar orientation: \code{"horizontal"} (default; category on the
 y-axis, best for long labels) or \code{"vertical"}. Presentation property — the
 mapping (Group/Metric) is unchanged. Bar charts only.}
+
+\item{bar_mode}{Layout for a color-split bar: \code{"stacked"} (default — color
+segments stack into one bar per group), \code{"grouped"} (segments sit
+side-by-side / dodged, for comparing absolute values), or \code{"percent"}
+(stacked but each group normalized to 100\%, for comparing composition).
+No effect without a \code{color} split; ignored when \code{baseline = "cumulative"}
+(waterfall). Bar charts only.}
 
 \item{filter_type, filter_column, filter_values, filter_range, filter_point}{Runtime click/brush filter state (transport for the emitted filter;
 normally left at defaults at creation).}

@@ -56,6 +56,12 @@
 #' @param orientation Bar orientation: `"horizontal"` (default; category on the
 #'   y-axis, best for long labels) or `"vertical"`. Presentation property — the
 #'   mapping (Group/Metric) is unchanged. Bar charts only.
+#' @param bar_mode Layout for a color-split bar: `"stacked"` (default — color
+#'   segments stack into one bar per group), `"grouped"` (segments sit
+#'   side-by-side / dodged, for comparing absolute values), or `"percent"`
+#'   (stacked but each group normalized to 100%, for comparing composition).
+#'   No effect without a `color` split; ignored when `baseline = "cumulative"`
+#'   (waterfall). Bar charts only.
 #' @param filter_type,filter_column,filter_values,filter_range,filter_point
 #'   Runtime click/brush filter state (transport for the emitted filter;
 #'   normally left at defaults at creation).
@@ -104,6 +110,11 @@ new_chart_block <- function(
     sort_by = NULL,
     sort_dir = NULL,
     orientation = "horizontal",
+    # Color-split bar layout. "stacked" (default) = segments stack into one
+    # bar per group; "grouped" = segments sit side-by-side (dodged); "percent"
+    # = stacked but each group normalized to 100% (composition view). No-op
+    # without a `color` split, and ignored when baseline = "cumulative".
+    bar_mode = "stacked",
     # --- Runtime filter transport (NOT creation-time config) -------------
     # These five hold the emitted click/brush filter state. They are set by
     # interaction at runtime, normally left at defaults at creation. They
@@ -156,6 +167,7 @@ new_chart_block <- function(
         r_sort_by <- shiny::reactiveVal(sort_by)
         r_sort_dir <- shiny::reactiveVal(sort_dir)
         r_orientation <- shiny::reactiveVal(orientation)
+        r_bar_mode <- shiny::reactiveVal(bar_mode)
 
         # Filter state (transport for the emitted downstream filter)
         r_filter_type <- shiny::reactiveVal(filter_type)
@@ -263,6 +275,7 @@ new_chart_block <- function(
               xend = r_xend(), series = r_series(), label = r_label(),
               drill = r_drill(), sort_by = r_sort_by(),
               sort_dir = r_sort_dir(), orientation = r_orientation(),
+              bar_mode = r_bar_mode(),
               line_width_mult = r_line_width_mult(),
               dot_size_mult = r_dot_size_mult(), step = r_step(),
               ref_x = as.list(r_ref_x()), ref_y = as.list(r_ref_y()),
@@ -346,6 +359,7 @@ new_chart_block <- function(
             if (!is.null(msg$sort_by))    upd(r_sort_by, nn(msg$sort_by))
             if (!is.null(msg$sort_dir))   upd(r_sort_dir, msg$sort_dir)
             if (!is.null(msg$orientation)) upd(r_orientation, msg$orientation)
+            if (!is.null(msg$bar_mode))   upd(r_bar_mode, msg$bar_mode)
             if (!is.null(msg$smoother))   upd(r_smoother, msg$smoother)
             if (!is.null(msg$lo))         upd(r_lo, nn(msg$lo))
             if (!is.null(msg$hi))         upd(r_hi, nn(msg$hi))
@@ -533,6 +547,7 @@ new_chart_block <- function(
             sort_by = r_sort_by,
             sort_dir = r_sort_dir,
             orientation = r_orientation,
+            bar_mode = r_bar_mode,
             filter_type = r_filter_type,
             filter_column = r_filter_column,
             filter_values = r_filter_values,
@@ -570,7 +585,8 @@ new_chart_block <- function(
       "step", "ref_x", "ref_y", "smoother", "lo", "hi", "waterfall_totals"),
     external_ctrl = c("group", "color", "facet", "metric", "agg_fn",
       "chart_type", "x", "y", "xend", "series", "label", "drill",
-      "sort_by", "sort_dir", "orientation", "filter_type", "filter_column",
+      "sort_by", "sort_dir", "orientation", "bar_mode", "filter_type",
+      "filter_column",
       "filter_values", "filter_range", "filter_point", "line_width_mult",
       "dot_size_mult", "step", "ref_x", "ref_y", "smoother", "lo", "hi",
       "baseline", "waterfall_totals"),
