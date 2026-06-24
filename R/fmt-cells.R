@@ -116,6 +116,13 @@ fmt_assemble <- function(df, group_col = NULL, id_cols = NULL,
   }
   # Plain spread on the single formatted-string column.
   long <- df[, c(id_cols, group_col, ".cell"), drop = FALSE]
+  # pivot_wider() aborts ("spec$.name can't contain the empty string") when a
+  # group level is "" or NA — which happens on real data (e.g. an untreated /
+  # screen-fail subject with a blank TRT01A arm). Relabel those degenerate
+  # levels so the spread can never throw at render time.
+  gv <- as.character(long[[group_col]])
+  blank <- is.na(gv) | !nzchar(trimws(gv))
+  if (any(blank)) long[[group_col]][blank] <- "(Missing)"
   tidyr::pivot_wider(
     long,
     names_from = dplyr::all_of(group_col),
