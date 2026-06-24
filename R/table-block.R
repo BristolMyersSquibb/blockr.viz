@@ -791,7 +791,15 @@ new_table_block <- function(rowname = NULL,
         shiny::observe({
           d <- data()
           shiny::req(is.data.frame(d))
-          upd(r_structured, dt_is_structured(fmt_to_wide(d)))
+          # An unhandled error in a plain observe() is fatal to the Shiny
+          # session (client disconnect), unlike a render error which Shiny
+          # contains. Never let a shape/format failure here take down the
+          # session — fall back to a flat layout; the render below surfaces
+          # the actual error as an ordinary in-block message.
+          upd(r_structured, tryCatch(
+            dt_is_structured(fmt_to_wide(d)),
+            error = function(e) FALSE
+          ))
         })
 
         output$dt_result <- shiny::renderUI({
@@ -825,16 +833,31 @@ new_table_block <- function(rowname = NULL,
           } else {
             NULL
           }
-          dt_table_tag(
-            d,
-            label_col  = r_rowname(),
-            value_cols = r_values(),
-            color      = r_cell_color(),
-            drill      = r_drill(),
-            digits     = r_digits(),
-            row_hex    = if (is.null(rc_col)) NULL else
-                           dd_row_hex(board_scale_map(), rc_col, d),
-            row_color  = rc_col
+          # Contain any render-time failure (formatting/spread/colour) and
+          # show it ON THE PAGE as a red in-block bar instead of letting it
+          # escape — reusing the `blockr-error` style of the framework's
+          # condition bar so it reads like an ordinary block error, never a
+          # session crash. (Tactical guard; see blockr.core #199 / the design
+          # motivation for the first-class side-effect-render seam that would
+          # route this through server$conditions() automatically.)
+          tryCatch(
+            dt_table_tag(
+              d,
+              label_col  = r_rowname(),
+              value_cols = r_values(),
+              color      = r_cell_color(),
+              drill      = r_drill(),
+              digits     = r_digits(),
+              row_hex    = if (is.null(rc_col)) NULL else
+                             dd_row_hex(board_scale_map(), rc_col, d),
+              row_color  = rc_col
+            ),
+            error = function(e) {
+              shiny::tags$div(
+                class = "blockr-error", role = "alert",
+                paste0("Table could not be rendered: ", conditionMessage(e))
+              )
+            }
           )
         })
 

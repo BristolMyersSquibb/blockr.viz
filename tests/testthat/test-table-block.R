@@ -166,3 +166,22 @@ test_that("no click = pass-through, click filters the data", {
     args = list(x = blk, data = list(data = function() df))
   )
 })
+
+test_that("fmt_to_wide tolerates empty/NA group levels (no pivot crash)", {
+  # Regression: a blank/NA `.group` (e.g. an untreated subject's empty TRT01A
+  # arm) used to abort pivot_wider ("spec$.name can't contain the empty
+  # string"), and because the table block calls fmt_to_wide() inside a plain
+  # observe(), that escaped as a fatal session disconnect.
+  mk <- function(g) {
+    data.frame(.var = "AGE", .label = "Mean", .group = g,
+               .fmt = "{n}", n = seq_along(g), stringsAsFactors = FALSE)
+  }
+  for (g in list(c("Drug X", ""), c("Drug X", NA_character_))) {
+    w <- expect_no_error(fmt_to_wide(mk(g)))
+    expect_true("(Missing)" %in% names(w))
+  }
+  # Well-formed groups are untouched.
+  w <- fmt_to_wide(mk(c("Drug X", "Drug Y")))
+  expect_true(all(c("Drug X", "Drug Y") %in% names(w)))
+  expect_false("(Missing)" %in% names(w))
+})
