@@ -830,7 +830,7 @@
       else this._renderIndividual();
 
       // Resize after render + watch for container becoming visible (dock tab switch)
-      setTimeout(() => { for (const c of this.charts) c.resize(); }, 300);
+      setTimeout(() => { this._resizeCharts(); }, 300);
       this._observeResize();
     }
 
@@ -2581,17 +2581,35 @@
       }, { priority: 'event' });
     }
 
+    // Resize every chart, but skip when the container is hidden or has no
+    // layout box. Dock panels are kept mounted (defaultRenderer "always") even
+    // when off-screen, so resizing those canvases is pure waste; when the panel
+    // is revealed its size changes and the ResizeObserver fires again.
+    _resizeCharts() {
+      if (!this.chartGrid || this.chartGrid.offsetParent === null) return;
+      if (!this.chartGrid.clientWidth || !this.chartGrid.clientHeight) return;
+      for (const c of this.charts) c.resize();
+    }
+
     _observeResize() {
       if (this._resizeObserver) this._resizeObserver.disconnect();
+      // Coalesce bursts of resize ticks into one redraw per animation frame.
+      // A dock relayout fires many size changes while it settles; without this
+      // each tick triggers a full synchronous ECharts redraw per chart.
       this._resizeObserver = new ResizeObserver(() => {
-        for (const c of this.charts) c.resize();
+        if (this._resizeRaf) return;
+        this._resizeRaf = requestAnimationFrame(() => {
+          this._resizeRaf = null;
+          this._resizeCharts();
+        });
       });
       this._resizeObserver.observe(this.chartGrid);
     }
 
-    resize() { for (const c of this.charts) c.resize(); }
+    resize() { this._resizeCharts(); }
     dispose() {
       if (this._resizeObserver) this._resizeObserver.disconnect();
+      if (this._resizeRaf) { cancelAnimationFrame(this._resizeRaf); this._resizeRaf = null; }
       for (const c of this.charts) c.dispose();
       this.charts = [];
       // Remove the document-level outside-click listener (otherwise it
