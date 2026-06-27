@@ -62,10 +62,16 @@ html_table <- function(data,
     )
   }
 
-  section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
+  all_section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
+  # Only columns that carry a grouping value render as sections; an entirely
+  # empty .section_*/.var column draws no "(missing)" header — but it must still
+  # be kept out of the data cells (exclude `all_section_cols`, not the filtered
+  # set, from data_cols) or it would leak in as a literal "—" column.
+  section_cols <- nonempty_section_cols(data, all_section_cols)
   stub_col     <- if (".label" %in% names(data)) ".label" else NULL
   styling_cols <- intersect(c(".indent", ".bold", ".italic"), names(data))
-  data_cols    <- setdiff(names(data), c(section_cols, stub_col, styling_cols))
+  data_cols    <- setdiff(names(data),
+                          c(all_section_cols, stub_col, styling_cols))
 
   wrapper_id <- paste0("blockr-html-table-", sub("^file", "", basename(tempfile(""))))
 
@@ -294,6 +300,22 @@ leaf_header_content <- function(data, col_name, fallback_text, span,
 # ---------------------------------------------------------------------------
 # Section-aware <tbody> builder
 # ---------------------------------------------------------------------------
+
+#' Keep only section/var columns that actually carry a grouping value.
+#'
+#' A `.section_*` / `.var` column that is entirely NA/blank is not a real
+#' grouping dimension — rendering it would wrap every row under a single
+#' "(missing)" header. Drop those so the table renders flat (or indent-only)
+#' instead. A *partially* empty column is kept: its gaps still render as
+#' "(missing)", which is the right label for a genuine orphan bucket. Shared by
+#' [html_table()] and the table block's structured path.
+#' @noRd
+nonempty_section_cols <- function(data, section_cols) {
+  section_cols[vapply(section_cols, function(sc) {
+    v <- trimws(as.character(data[[sc]]))
+    any(!is.na(v) & nzchar(v))
+  }, logical(1L))]
+}
 
 #' @noRd
 build_html_tbody <- function(data, section_cols, stub_col, data_cols,

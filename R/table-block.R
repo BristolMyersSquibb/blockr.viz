@@ -274,11 +274,15 @@ dt_is_structured <- function(data) {
 #' when `drill` names it.
 #' @noRd
 dt_table_tag_structured <- function(data, drill, color, digits) {
-  section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
+  all_section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
+  # Empty .section_*/.var columns draw no "(missing)" header, but must still be
+  # excluded from the data cells (use all_section_cols below) or they leak in
+  # as a literal "—" column.
+  section_cols <- nonempty_section_cols(data, all_section_cols)
   stub_col     <- if (".label" %in% names(data)) ".label" else NULL
   styling_cols <- intersect(c(".indent", ".bold", ".italic"), names(data))
   data_cols    <- setdiff(names(data),
-                          c(section_cols, stub_col, styling_cols))
+                          c(all_section_cols, stub_col, styling_cols))
 
   if (length(data_cols) == 0L || nrow(data) == 0L) {
     return(dt_table_attrs(dt_message_table(), NULL, NULL, "off", digits))

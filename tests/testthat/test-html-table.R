@@ -185,6 +185,33 @@ test_that("html_table() renders NA section values as '(missing)'", {
   expect_true(grepl("(missing)", html, fixed = TRUE))
 })
 
+test_that("html_table() ignores an entirely-empty section column", {
+  # A .section_1 that is all NA is not a grouping dimension: draw no section
+  # header at all (no "(missing)" bar), and do NOT leak it in as a data column.
+  df <- tibble::tibble(
+    .section_1 = c(NA, NA, NA),
+    .label     = c("Row 1", "Row 2", "Row 3"),
+    Value      = c("1", "2", "3")
+  )
+
+  html <- as.character(htmltools::tagList(html_table(df)))
+  expect_false(grepl("(missing)", html, fixed = TRUE))
+  expect_false(grepl(".section_1", html, fixed = TRUE))
+  # The stub + the single data column render; the empty section column does not.
+  expect_true(grepl("Row 1", html, fixed = TRUE))
+})
+
+test_that("html_table() indents rows by the .indent column", {
+  df <- tibble::tibble(
+    .label  = c("Parent", "Child"),
+    .indent = c(0L, 1L),
+    Value   = c("1", "2")
+  )
+
+  html <- as.character(htmltools::tagList(html_table(df)))
+  expect_true(grepl("padding-left:", html, fixed = TRUE))
+})
+
 test_that("html_table() rejects legacy long-format input", {
   df <- tibble::tibble(
     label   = c("A", "B"),
