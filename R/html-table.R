@@ -423,18 +423,39 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
     rep(FALSE, n_rows)
   }
 
+  # A row is a collapse toggle when the row immediately below it is more deeply
+  # indented (i.e. it heads a nested group). Derived purely from `.indent` -- no
+  # fabricated sections -- so it covers bold block-label headers ("AGE (years)")
+  # AND data rows that parent deeper rows (SOC over PT) alike. Clicking its
+  # chevron hides/shows that group, down to the next row at <= its own indent.
+  collapsible <- if (!is.null(stub_col)) {
+    c(row_indent[-1L] > row_indent[-n_rows], FALSE)
+  } else {
+    rep(FALSE, n_rows)
+  }
+
   row_class <- rep("blockr-data-row", n_rows)
-  row_class[row_bold]   <- paste(row_class[row_bold], "blockr-bold")
-  row_class[row_italic] <- paste(row_class[row_italic], "blockr-italic")
-  row_class[group_last] <- paste(row_class[group_last], "blockr-group-last")
+  row_class[row_bold]    <- paste(row_class[row_bold], "blockr-bold")
+  row_class[row_italic]  <- paste(row_class[row_italic], "blockr-italic")
+  row_class[group_last]  <- paste(row_class[group_last], "blockr-group-last")
+  row_class[collapsible] <- paste(row_class[collapsible], "blockr-indent-toggle")
 
   # Stub + data cells, column-vectorized.
   if (!is.null(stub_col)) {
     stub_style <- ifelse(row_indent > 0L,
       paste0(" style=\"padding-left:", 24L + row_indent * indent_px, "px;\""),
       "")
-    stub_html <- paste0("<td class=\"blockr-stub\"", stub_style, ">",
-                        esc(data[[stub_col]]), "</td>")
+    # Parent rows get a chevron toggle button before the label; the JS attaches
+    # to the button so it never competes with a drill click on the row.
+    chev_btn <- paste0(
+      "<button class=\"blockr-indent-btn\" type=\"button\" tabindex=\"-1\" ",
+      "aria-expanded=\"true\">", as.character(section_chevron_svg()), "</button>")
+    stub_inner <- ifelse(collapsible,
+      paste0(chev_btn, esc(data[[stub_col]])),
+      esc(data[[stub_col]]))
+    stub_cls <- ifelse(collapsible, "blockr-stub blockr-has-toggle", "blockr-stub")
+    stub_html <- paste0("<td class=\"", stub_cls, "\"", stub_style, ">",
+                        stub_inner, "</td>")
   } else {
     stub_html <- rep("", n_rows)
   }
@@ -448,7 +469,8 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   })
 
   row_inner <- do.call(paste0, c(list(stub_html), data_cell_cols))
-  data_rows <- paste0("<tr class=\"", row_class, "\">", row_inner, "</tr>")
+  data_rows <- paste0("<tr class=\"", row_class, "\" data-indent=\"",
+                      row_indent, "\">", row_inner, "</tr>")
 
   body_html <- paste0(header_prefix, data_rows, collapse = "")
   htmltools::tags$tbody(htmltools::HTML(body_html))
@@ -491,7 +513,7 @@ section_chevron_svg <- function() {
 #' purpose — they are generic table chrome a flat table needs too.
 #' @noRd
 html_table_delta_css <- function(scope = ".blockr-html-table-container") {
-  css <- ".blockr-html-table-container {
+  css <- paste0(".blockr-html-table-container {
   background: #ffffff;
   font-size: var(--blockr-font-size-base, 0.875rem);
   color: var(--blockr-color-text-primary, #111827);
@@ -609,8 +631,12 @@ input.blockr-search:focus {
 /* Stat-label (row-stub) cells \u2014 wrap to 2 lines (never truncate), aligned
    to the top so a wrapped label stays level with its numbers. Typography
    matches the canonical preview (normal weight, base size); the Table-1
-   character comes from STRUCTURE (sections, the 40px indent, bold rows), not
-   from a heavier default font. */
+   character comes from STRUCTURE (sections, indentation, bold rows), not from a
+   heavier default font. The 24px left padding is the indent-0 BASE: nested rows
+   add `row_indent * 16px` on top (build_html_tbody), so level 1 sits at 40px,
+   level 2 at 56px, etc. Keeping this base BELOW the first indent step is what
+   makes the indentation visible \u2014 if it equalled 40px, level-1 rows would not
+   step at all. */
 .blockr-html-table-container .blockr-table tbody td.blockr-stub {
   text-align: left;
   vertical-align: top;
@@ -618,7 +644,7 @@ input.blockr-search:focus {
   overflow: visible;
   text-overflow: clip;
   max-width: none;
-  padding: 9px 18px 9px 40px;
+  padding: 9px 18px 9px 24px;
   font-size: var(--blockr-font-size-base, 0.875rem);
   font-weight: var(--blockr-font-weight-normal, 400);
   color: var(--stbl-ink-2);
@@ -715,6 +741,27 @@ input.blockr-search:focus {
 }
 .blockr-html-table-container tr.blockr-section-header.collapsed .blockr-chev {
   transform: rotate(-90deg);
+}",
+"/* Indent-derived collapse: a chevron button sits before the label of any row
+   that heads a deeper-indented group. Reuses the section chevron, rotating when
+   the row is collapsed. The button is a bare affordance so clicking the label /
+   cells still drills. */
+.blockr-html-table-container .blockr-indent-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin-right: 5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: baseline;
+  margin-left: -18px;
+}
+.blockr-html-table-container .blockr-indent-btn:hover .blockr-chev {
+  color: var(--stbl-ink-1);
+}
+.blockr-html-table-container tr.blockr-indent-toggle.collapsed .blockr-chev {
+  transform: rotate(-90deg);
 }
 .blockr-html-table-container .blockr-table tbody tr:last-child td {
   border-bottom: none;
@@ -744,7 +791,7 @@ input.blockr-search:focus {
 .blockr-hidden-collapse,
 .blockr-hidden-search {
   display: none !important;
-}"
+}")
   if (!identical(scope, ".blockr-html-table-container")) {
     css <- gsub(".blockr-html-table-container", scope, css, fixed = TRUE)
   }
@@ -905,27 +952,43 @@ html_table_js_template <- function() {
   // Nested collapse is respected: a row is hidden iff any ancestor section
   // header has the .collapsed class.
   function recomputeCollapse(){
-    var stack = []; // [{ level, collapsed }]
+    var secStack = []; // [{ level, collapsed }]
+    var indStack = []; // [{ indent, collapsed }]
     var rows = Array.prototype.slice.call(tbody.children);
     rows.forEach(function(r){
-      if (r.classList.contains('blockr-section-header')) {
-        var lvl = parseInt(r.getAttribute('data-level'), 10);
-        while (stack.length > 0 && stack[stack.length-1].level >= lvl) stack.pop();
-        var anyAncestorCollapsed = stack.some(function(s){ return s.collapsed; });
-        if (anyAncestorCollapsed) r.classList.add('blockr-hidden-collapse');
-        else r.classList.remove('blockr-hidden-collapse');
-        stack.push({ level: lvl, collapsed: r.classList.contains('collapsed') });
-      } else if (r.classList.contains('blockr-data-row')) {
-        var hidden = stack.some(function(s){ return s.collapsed; });
-        if (hidden) r.classList.add('blockr-hidden-collapse');
-        else r.classList.remove('blockr-hidden-collapse');
+      var isSec = r.classList.contains('blockr-section-header');
+      var isData = r.classList.contains('blockr-data-row');
+      var ind = parseInt(r.getAttribute('data-indent'), 10);
+      if (isData && !isNaN(ind)) {
+        while (indStack.length > 0 && indStack[indStack.length-1].indent >= ind) indStack.pop();
       }
+      if (isSec) {
+        var lvl = parseInt(r.getAttribute('data-level'), 10);
+        while (secStack.length > 0 && secStack[secStack.length-1].level >= lvl) secStack.pop();
+      }
+      var hidden = secStack.some(function(s){ return s.collapsed; }) ||
+                   indStack.some(function(s){ return s.collapsed; });
+      if (hidden) r.classList.add('blockr-hidden-collapse');
+      else r.classList.remove('blockr-hidden-collapse');
+      if (isSec) secStack.push({ level: parseInt(r.getAttribute('data-level'), 10), collapsed: r.classList.contains('collapsed') });
+      if (isData && r.classList.contains('blockr-indent-toggle')) indStack.push({ indent: ind, collapsed: r.classList.contains('collapsed') });
     });
   }
   function syncAria(h){
     var btn = h.querySelector('.blockr-section-btn');
     if (btn) btn.setAttribute('aria-expanded', h.classList.contains('collapsed') ? 'false' : 'true');
   }
+  root.querySelectorAll('tr.blockr-indent-toggle .blockr-indent-btn').forEach(function(btn){
+    btn.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      ev.preventDefault();
+      var h = btn.closest('tr.blockr-indent-toggle');
+      if (!h) return;
+      h.classList.toggle('collapsed');
+      btn.setAttribute('aria-expanded', h.classList.contains('collapsed') ? 'false' : 'true');
+      recomputeCollapse();
+    });
+  });
   function toggleCollapse(h){
     h.classList.toggle('collapsed');
     syncAria(h);

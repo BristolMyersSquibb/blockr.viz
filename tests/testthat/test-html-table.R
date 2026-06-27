@@ -321,5 +321,9 @@ test_that("collapse JS recomputes visibility from ancestor state", {
   df <- tibble::tibble(.label = "n", Total = "1")
   html <- as.character(htmltools::tagList(html_table(df)))
   expect_true(grepl("recomputeCollapse", html, fixed = TRUE))
-  expect_true(grepl("anyAncestorCollapsed", html, fixed = TRUE))
+  # State-driven: visibility is computed from a collapsed-ancestor stack, not a
+  # one-shot toggle. Both section (data-level) and indent (data-indent) ancestors
+  # participate.
+  expect_true(grepl("collapsed", html, fixed = TRUE))
+  expect_true(grepl("blockr-hidden-collapse", html, fixed = TRUE))
 })

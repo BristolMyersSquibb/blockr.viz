@@ -145,23 +145,40 @@
   function wireCollapse(root, tbody) {
     if (root.getAttribute("data-dt-structured") !== "1") return;
     var table = /** @type {HTMLElement | null} */ (tbody.closest("table"));
+    // Two collapse mechanisms coexist: explicit `.section_*` section headers
+    // (data-level) and indent-derived toggles (a row whose data-indent parents
+    // deeper rows). A row is hidden iff any ancestor of EITHER kind is collapsed.
     function recompute() {
       /** @type {Array<{ level: number, collapsed: boolean }>} */
-      var stack = [];
+      var secStack = [];
+      /** @type {Array<{ indent: number, collapsed: boolean }>} */
+      var indStack = [];
       Array.prototype.slice.call(tbody.children).forEach(function (r) {
-        if (r.classList.contains("blockr-section-header")) {
+        var isSec = r.classList.contains("blockr-section-header");
+        var isData = r.classList.contains("blockr-data-row");
+        var ind = parseInt(r.getAttribute("data-indent"), 10);
+        // Drop indent-ancestors this row is not nested under (>= its own indent).
+        if (isData && !isNaN(ind)) {
+          while (indStack.length > 0 &&
+                 indStack[indStack.length - 1].indent >= ind) indStack.pop();
+        }
+        if (isSec) {
           var lvl = parseInt(r.getAttribute("data-level"), 10);
-          while (stack.length > 0 && stack[stack.length - 1].level >= lvl) stack.pop();
-          var hidden = stack.some(function (s) { return s.collapsed; });
-          if (hidden) r.classList.add("blockr-hidden-collapse");
-          else r.classList.remove("blockr-hidden-collapse");
-          stack.push({ level: lvl, collapsed: r.classList.contains("collapsed") });
-        } else if (r.classList.contains("blockr-data-row")) {
-          if (stack.some(function (s) { return s.collapsed; })) {
-            r.classList.add("blockr-hidden-collapse");
-          } else {
-            r.classList.remove("blockr-hidden-collapse");
-          }
+          while (secStack.length > 0 &&
+                 secStack[secStack.length - 1].level >= lvl) secStack.pop();
+        }
+        var hidden = secStack.some(function (s) { return s.collapsed; }) ||
+                     indStack.some(function (s) { return s.collapsed; });
+        if (hidden) r.classList.add("blockr-hidden-collapse");
+        else r.classList.remove("blockr-hidden-collapse");
+        if (isSec) {
+          secStack.push({
+            level: parseInt(r.getAttribute("data-level"), 10),
+            collapsed: r.classList.contains("collapsed")
+          });
+        }
+        if (isData && r.classList.contains("blockr-indent-toggle")) {
+          indStack.push({ indent: ind, collapsed: r.classList.contains("collapsed") });
         }
       });
     }
@@ -189,6 +206,24 @@
         recompute();
       });
     });
+    // Indent-derived toggles: listen on the chevron button only, so clicking the
+    // label / cells of a parent row still drills (the button never competes).
+    root.querySelectorAll("tr.blockr-indent-toggle .blockr-indent-btn").forEach(
+      function (btn) {
+        btn.addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          ev.preventDefault();
+          var h = btn.closest("tr.blockr-indent-toggle");
+          if (!h) return;
+          lockTableWidths(table);
+          h.classList.toggle("collapsed");
+          btn.setAttribute(
+            "aria-expanded", h.classList.contains("collapsed") ? "false" : "true"
+          );
+          recompute();
+        });
+      }
+    );
     if (root.getAttribute("data-initial-expanded") === "0") {
       root.querySelectorAll("tr.blockr-section-header").forEach(function (h) {
         h.classList.add("collapsed");
