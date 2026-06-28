@@ -69,7 +69,7 @@ html_table <- function(data,
   # set, from data_cols) or it would leak in as a literal "—" column.
   section_cols <- nonempty_section_cols(data, all_section_cols)
   stub_col     <- if (".label" %in% names(data)) ".label" else NULL
-  styling_cols <- intersect(c(".indent", ".bold", ".italic"), names(data))
+  styling_cols <- intersect(c(".indent", ".strong", ".emph"), names(data))
   data_cols    <- setdiff(names(data),
                           c(all_section_cols, stub_col, styling_cols))
 
@@ -157,7 +157,7 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE) {
     depths <- integer(0)
     max_depth <- 1L
   } else {
-    parts <- strsplit(data_cols, "|", fixed = TRUE)
+    parts <- strsplit(data_cols, "||", fixed = TRUE)
     depths <- lengths(parts)
     max_depth <- max(depths)
   }
@@ -324,8 +324,8 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   if (ncol_total == 0L) ncol_total <- 1L
 
   has_indent <- ".indent" %in% styling_cols
-  has_bold   <- ".bold"   %in% styling_cols
-  has_italic <- ".italic" %in% styling_cols
+  has_bold   <- ".strong"   %in% styling_cols
+  has_italic <- ".emph" %in% styling_cols
   indent_px  <- 16L
 
   # Vectorized assembly: build the body as a single HTML string instead of
@@ -411,13 +411,13 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
     rep(0L, n_rows)
   }
   row_bold <- if (has_bold) {
-    b <- suppressWarnings(as.logical(data[[".bold"]]))
+    b <- suppressWarnings(as.logical(data[[".strong"]]))
     !is.na(b) & b
   } else {
     rep(FALSE, n_rows)
   }
   row_italic <- if (has_italic) {
-    b <- suppressWarnings(as.logical(data[[".italic"]]))
+    b <- suppressWarnings(as.logical(data[[".emph"]]))
     !is.na(b) & b
   } else {
     rep(FALSE, n_rows)

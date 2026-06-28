@@ -160,8 +160,8 @@ fmt_to_wide <- function(df) {
       n_val <- group_n[[g]]
       # For length-2 `by` ("outer|inner"), display only the inner level
       # and let tab_spanner_delim pick up the outer level.
-      display_name <- if (grepl("|", g, fixed = TRUE)) {
-        parts <- strsplit(g, "|", fixed = TRUE)[[1]]
+      display_name <- if (grepl("||", g, fixed = TRUE)) {
+        parts <- strsplit(g, "||", fixed = TRUE)[[1]]
         parts[length(parts)]
       } else {
         g

@@ -280,7 +280,7 @@ dt_table_tag_structured <- function(data, drill, color, digits) {
   # as a literal "—" column.
   section_cols <- nonempty_section_cols(data, all_section_cols)
   stub_col     <- if (".label" %in% names(data)) ".label" else NULL
-  styling_cols <- intersect(c(".indent", ".bold", ".italic"), names(data))
+  styling_cols <- intersect(c(".indent", ".strong", ".emph"), names(data))
   data_cols    <- setdiff(names(data),
                           c(all_section_cols, stub_col, styling_cols))
 

@@ -2,8 +2,8 @@ test_that("gt_table hides dotted styling columns and applies tab_style", {
   d <- tibble::tibble(
     .label   = c("Non-white", "American Indian", "Asian", "Black", "White"),
     .indent  = c(0L, 1L, 1L, 1L, 0L),
-    .bold    = c(TRUE, FALSE, FALSE, FALSE, TRUE),
-    .italic  = c(FALSE, FALSE, TRUE, FALSE, FALSE),
+    .strong    = c(TRUE, FALSE, FALSE, FALSE, TRUE),
+    .emph  = c(FALSE, FALSE, TRUE, FALSE, FALSE),
     KarXT    = c("14", "2", "2", "10", "87")
   )
 
@@ -12,8 +12,8 @@ test_that("gt_table hides dotted styling columns and applies tab_style", {
 
   # dotted columns hidden — no <th id="...indent..."> or similar
   expect_false(grepl(">\\.indent<", html))
-  expect_false(grepl(">\\.bold<",   html))
-  expect_false(grepl(">\\.italic<", html))
+  expect_false(grepl(">\\.strong<",   html))
+  expect_false(grepl(">\\.emph<", html))
 
   # extract just the row-label stub cells
   stub_lines <- regmatches(html,

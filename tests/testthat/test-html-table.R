@@ -106,15 +106,15 @@ test_that("html_table() nests sections for multiple .section_* columns", {
 test_that("html_table() builds two-level column spanners from pipe-delimited names", {
   df <- tibble::tibble(
     .label            = c("n", "Mean (SD)"),
-    `KarXT|Week 2`    = c("196", "124.3 (52.2)"),
-    `KarXT|Week 4`    = c("205", "128.4 (51.8)"),
-    `Placebo|Week 2`  = c("198", "120.1 (51.1)"),
-    `Placebo|Week 4`  = c("200", "121.2 (54.1)")
+    `KarXT||Week 2`    = c("196", "124.3 (52.2)"),
+    `KarXT||Week 4`    = c("205", "128.4 (51.8)"),
+    `Placebo||Week 2`  = c("198", "120.1 (51.1)"),
+    `Placebo||Week 4`  = c("200", "121.2 (54.1)")
   )
-  attr(df$`KarXT|Week 2`, "label")   <- "Week 2"
-  attr(df$`KarXT|Week 4`, "label")   <- "Week 4"
-  attr(df$`Placebo|Week 2`, "label") <- "Week 2"
-  attr(df$`Placebo|Week 4`, "label") <- "Week 4"
+  attr(df$`KarXT||Week 2`, "label")   <- "Week 2"
+  attr(df$`KarXT||Week 4`, "label")   <- "Week 4"
+  attr(df$`Placebo||Week 2`, "label") <- "Week 2"
+  attr(df$`Placebo||Week 4`, "label") <- "Week 4"
 
   html <- as.character(htmltools::tagList(html_table(df)))
 
@@ -129,8 +129,8 @@ test_that("html_table() handles mixed-depth columns via rowspan", {
   df <- tibble::tibble(
     .label           = c("n"),
     Total            = c("400"),
-    `KarXT|Week 2`   = c("196"),
-    `KarXT|Week 4`   = c("205")
+    `KarXT||Week 2`   = c("196"),
+    `KarXT||Week 4`   = c("205")
   )
 
   html <- as.character(htmltools::tagList(html_table(df)))
@@ -262,10 +262,10 @@ test_that("leaf data column headers carry data-col-index and sortable class", {
 test_that("merged spanners across data columns are not sortable", {
   df <- tibble::tibble(
     .label           = c("n"),
-    `KarXT|Week 2`   = c("1"),
-    `KarXT|Week 4`   = c("2"),
-    `Placebo|Week 2` = c("3"),
-    `Placebo|Week 4` = c("4")
+    `KarXT||Week 2`   = c("1"),
+    `KarXT||Week 4`   = c("2"),
+    `Placebo||Week 2` = c("3"),
+    `Placebo||Week 4` = c("4")
   )
   html <- as.character(htmltools::tagList(html_table(df)))
   # Each leaf with span=1 should get a sortable class — there are four of them.
@@ -293,12 +293,12 @@ test_that("html_table() places the table inside a scroll container with max-heig
   expect_true(grepl("max-height:400px", html, fixed = TRUE))
 })
 
-test_that("html_table() applies hidden .indent/.bold/.italic styling columns", {
+test_that("html_table() applies hidden .indent/.strong/.emph styling columns", {
   df <- tibble::tibble(
     .label  = c("Row 1", "Row 2", "Row 3"),
     .indent = c(0L, 1L, 2L),
-    .bold   = c(TRUE, FALSE, FALSE),
-    .italic = c(FALSE, TRUE, FALSE),
+    .strong   = c(TRUE, FALSE, FALSE),
+    .emph = c(FALSE, TRUE, FALSE),
     Total   = c("a", "b", "c")
   )
   html <- as.character(htmltools::tagList(html_table(df)))
