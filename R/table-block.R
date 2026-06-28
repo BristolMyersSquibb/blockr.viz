@@ -443,7 +443,8 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
 #' `structured` here (the one place that knows it), so the flat preview stays
 #' plain.
 #' @noRd
-dt_chrome <- function(elem_id, structured, max_height, inner) {
+dt_chrome <- function(elem_id, structured, max_height, inner,
+                      download_slot = NULL) {
   wrapper_id <- paste0(
     "blockr-dt-", sub("^file", "", basename(tempfile("")))
   )
@@ -459,7 +460,10 @@ dt_chrome <- function(elem_id, structured, max_height, inner) {
       htmltools::tags$input(
         type = "search", class = "blockr-search",
         placeholder = "Search\u2026", `aria-label` = "Search table"
-      )
+      ),
+      # Optional Excel-download control (rendered only when the block toggles it
+      # on); sits on the toolbar, outside the gear.
+      download_slot
     )
   )
 
@@ -683,6 +687,10 @@ table_arguments <- function() {
 #' @param filter_type,filter_column,filter_values,filter_range Click
 #'   filter state (kept for contract parity with the drilldown chart;
 #'   `filter_range` is unused by the table).
+#' @param excel_download Logical (default `FALSE`). When `TRUE`, an "Excel"
+#'   download button appears on the table toolbar; it writes the rendered
+#'   (annotated) frame to a styled `.xlsx` via [write_annotated_xlsx()]. Needs
+#'   the `openxlsx` package.
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #' @return A transform block of class `table_block`.
 #' @examplesIf interactive()
@@ -699,6 +707,7 @@ new_table_block <- function(rowname = NULL,
                                       filter_column = NULL,
                                       filter_values = NULL,
                                       filter_range = NULL,
+                                      excel_download = FALSE,
                                       ...) {
   blockr.core::new_transform_block(
     server = function(id, data) {
@@ -716,6 +725,7 @@ new_table_block <- function(rowname = NULL,
         r_filter_column <- shiny::reactiveVal(filter_column)
         r_filter_values <- shiny::reactiveVal(filter_values)
         r_filter_range  <- shiny::reactiveVal(filter_range)
+        r_excel_download <- shiny::reactiveVal(isTRUE(excel_download))
 
         # Only write a reactiveVal when the value actually changes. JS echoes
         # the full config/filter on any popover change, so a blind set would
@@ -778,6 +788,8 @@ new_table_block <- function(rowname = NULL,
               upd(r_row_color, if (identical(v, "(none)") || !nzchar(v)) "" else v)
             } else if (identical(p, "digits")) {
               upd(r_digits, as.integer(v))
+            } else if (identical(p, "excel_download")) {
+              upd(r_excel_download, isTRUE(v))
             }
           }
         })
@@ -813,9 +825,29 @@ new_table_block <- function(rowname = NULL,
             elem_id    = ns("drilldown_table_block"),
             structured = isTRUE(structured),
             max_height = shiny::isolate(r_max_height()),
-            inner      = shiny::uiOutput(ns("dt_table"))
+            inner      = shiny::uiOutput(ns("dt_table")),
+            download_slot = shiny::uiOutput(ns("dt_download"), inline = TRUE)
           )
         })
+
+        # Excel download: a button on the chrome toolbar, shown only when the
+        # block has `excel_download` on. It writes the rendered (annotated) frame
+        # via write_annotated_xlsx() — same frame, the spreadsheet output.
+        output$dt_download <- shiny::renderUI({
+          if (!isTRUE(r_excel_download())) return(NULL)
+          if (!requireNamespace("openxlsx", quietly = TRUE)) return(NULL)
+          shiny::downloadButton(
+            ns("dl_xlsx"), "Excel",
+            class = "blockr-dl-xlsx btn-sm",
+            icon  = shiny::icon("file-excel")
+          )
+        })
+        output$dl_xlsx <- shiny::downloadHandler(
+          filename = function() "table.xlsx",
+          content  = function(file) {
+            write_annotated_xlsx(fmt_to_wide(data()), file)
+          }
+        )
 
         # Board scale map (NULL when the board has none / blockr.theme absent) —
         # the same source the drilldown chart reads. Used to color the
@@ -894,7 +926,8 @@ new_table_block <- function(rowname = NULL,
             filter_type   = r_filter_type,
             filter_column = r_filter_column,
             filter_values = r_filter_values,
-            filter_range  = r_filter_range
+            filter_range  = r_filter_range,
+            excel_download = r_excel_download
           )
         )
       })
@@ -910,7 +943,7 @@ new_table_block <- function(rowname = NULL,
       "drill", "filter_column", "filter_values", "filter_range"),
     external_ctrl = c("rowname", "values", "cell_color", "row_color", "drill",
       "digits", "max_height", "filter_type",
-      "filter_column", "filter_values", "filter_range"),
+      "filter_column", "filter_values", "filter_range", "excel_download"),
     expr_type = "bquoted",
     class = "table_block",
     ...
