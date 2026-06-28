@@ -924,7 +924,34 @@ input.blockr-search:focus {
   border-color: var(--blockr-color-primary, #2563eb);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   background-color: #ffffff;
-}"
+}
+a.blockr-dl-xlsx, a.blockr-dl-xlsx.btn {
+  appearance: none;
+  box-sizing: border-box;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 4px;
+  padding: 4px 10px;
+  margin: 0;
+  font: inherit;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  line-height: 1.3;
+  font-weight: var(--blockr-font-weight-normal, 400);
+  color: var(--blockr-color-text-secondary, #374151);
+  background-color: var(--blockr-color-bg-input, #f9fafb);
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: border-color 0.12s, background-color 0.12s, color 0.12s;
+}
+a.blockr-dl-xlsx:hover, a.blockr-dl-xlsx:focus {
+  border-color: var(--blockr-color-primary, #2563eb);
+  background-color: #ffffff;
+  color: var(--blockr-color-text-primary, #111827);
+  text-decoration: none;
+}
+a.blockr-dl-xlsx > i, a.blockr-dl-xlsx svg { color: #1d6f42; font-size: 0.95em; }"
 }
 
 # ---------------------------------------------------------------------------
