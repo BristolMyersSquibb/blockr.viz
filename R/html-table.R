@@ -151,7 +151,10 @@ html_table <- function(data,
 # ---------------------------------------------------------------------------
 
 #' @noRd
-build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE) {
+build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
+                             sortable = TRUE) {
+  # Global off-switch: when sorting is disabled no header is a sort hook.
+  stub_sortable <- isTRUE(stub_sortable) && isTRUE(sortable)
   if (length(data_cols) == 0L) {
     parts <- list()
     depths <- integer(0)
@@ -211,22 +214,22 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE) {
         # HTML headers render correctly. The sort arrow rides the sub-line
         # (N = k) rather than stacking below it — see leaf_header_content().
         rowspan <- max_depth - L + 1L
-        sortable <- (span == 1L)
-        sort_icon <- if (sortable) {
+        col_sortable <- isTRUE(sortable) && (span == 1L)
+        sort_icon <- if (col_sortable) {
           htmltools::tags$span(class = "blockr-sort-icon")
         }
         content <- leaf_header_content(
           data, data_cols[i], parts[[i]][L], span, sort_icon = sort_icon
         )
         cls <- "blockr-col-header leaf"
-        if (sortable) cls <- paste(cls, "blockr-sortable")
+        if (col_sortable) cls <- paste(cls, "blockr-sortable")
         th_args <- list(
           content,
           class   = cls,
           colspan = span
         )
         if (rowspan > 1L) th_args$rowspan <- rowspan
-        if (sortable) {
+        if (col_sortable) {
           th_args$`data-col-index` <- (i - 1L) + stub_offset
         }
       } else {
@@ -319,7 +322,7 @@ nonempty_section_cols <- function(data, section_cols) {
 
 #' @noRd
 build_html_tbody <- function(data, section_cols, stub_col, data_cols,
-                             styling_cols = character()) {
+                             styling_cols = character(), collapsible = TRUE) {
   ncol_total <- length(data_cols) + (if (is.null(stub_col)) 0L else 1L)
   if (ncol_total == 0L) ncol_total <- 1L
 
@@ -375,7 +378,15 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
 
   # Section-header rows: one HTML string per (row, level), blanked on rows
   # where level L does not restart (L < diff_from, or no change at all).
-  chev <- as.character(section_chevron_svg())
+  # When collapsing is off the section header is a static label — no chevron, no
+  # button affordance (wireCollapse also bails via data-dt-collapsible=0).
+  chev     <- if (isTRUE(collapsible)) as.character(section_chevron_svg()) else ""
+  btn_open <- if (isTRUE(collapsible)) {
+    "<button class=\"blockr-section-btn\" type=\"button\" aria-expanded=\"true\">"
+  } else {
+    "<span class=\"blockr-section-btn blockr-section-btn-static\">"
+  }
+  btn_close <- if (isTRUE(collapsible)) "</button>" else "</span>"
   header_cols <- vector("list", k)
   for (L in seq_len(k)) {
     sc <- section_cols[L]
@@ -392,10 +403,9 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
       "<tr class=\"blockr-section-header\" data-level=\"", L, "\">",
       "<td class=\"blockr-section-cell level-", L,
       "\" colspan=\"", ncol_total, "\">",
-      "<button class=\"blockr-section-btn\" type=\"button\" ",
-      "aria-expanded=\"true\">", chev, prefix,
+      btn_open, chev, prefix,
       "<span class=\"blockr-section-value\">", esc(path_mat[, L]),
-      "</span></button></td></tr>"
+      "</span>", btn_close, "</td></tr>"
     )
     hdr[is.na(diff_from) | L < diff_from] <- ""
     header_cols[[L]] <- hdr
@@ -428,7 +438,7 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   # fabricated sections -- so it covers bold block-label headers ("AGE (years)")
   # AND data rows that parent deeper rows (SOC over PT) alike. Clicking its
   # chevron hides/shows that group, down to the next row at <= its own indent.
-  collapsible <- if (!is.null(stub_col)) {
+  toggle_rows <- if (isTRUE(collapsible) && !is.null(stub_col)) {
     c(row_indent[-1L] > row_indent[-n_rows], FALSE)
   } else {
     rep(FALSE, n_rows)
@@ -438,7 +448,7 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   row_class[row_bold]    <- paste(row_class[row_bold], "blockr-bold")
   row_class[row_italic]  <- paste(row_class[row_italic], "blockr-italic")
   row_class[group_last]  <- paste(row_class[group_last], "blockr-group-last")
-  row_class[collapsible] <- paste(row_class[collapsible], "blockr-indent-toggle")
+  row_class[toggle_rows] <- paste(row_class[toggle_rows], "blockr-indent-toggle")
 
   # Stub + data cells, column-vectorized.
   if (!is.null(stub_col)) {
@@ -450,10 +460,10 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
     chev_btn <- paste0(
       "<button class=\"blockr-indent-btn\" type=\"button\" tabindex=\"-1\" ",
       "aria-expanded=\"true\">", as.character(section_chevron_svg()), "</button>")
-    stub_inner <- ifelse(collapsible,
+    stub_inner <- ifelse(toggle_rows,
       paste0(chev_btn, esc(data[[stub_col]])),
       esc(data[[stub_col]]))
-    stub_cls <- ifelse(collapsible, "blockr-stub blockr-has-toggle", "blockr-stub")
+    stub_cls <- ifelse(toggle_rows, "blockr-stub blockr-has-toggle", "blockr-stub")
     stub_html <- paste0("<td class=\"", stub_cls, "\"", stub_style, ">",
                         stub_inner, "</td>")
   } else {
@@ -541,7 +551,6 @@ html_table_delta_css <- function(scope = ".blockr-html-table-container") {
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
-  margin-left: auto;
 }
 input.blockr-search {
   appearance: none;
@@ -710,6 +719,8 @@ input.blockr-search:focus {
   color: var(--stbl-ink-1);
   padding: 15px 18px 8px;
 }
+/* Collapsing disabled: the section label is a static span, not a control. */
+.blockr-html-table-container .blockr-section-btn-static { cursor: default; }
 .blockr-html-table-container .blockr-section-cell.level-2 .blockr-section-btn {
   padding-left: 36px;
 }
@@ -901,7 +912,6 @@ html_table_shared_css_fallback <- function() {
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
-  margin-left: auto;
 }
 input.blockr-search {
   appearance: none;

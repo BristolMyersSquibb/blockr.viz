@@ -81,10 +81,18 @@ drilldown_table <- function(data,
 #' @noRd
 dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                          color = NULL, drill = NULL, digits = 2L,
-                         row_hex = NULL, row_color = NULL) {
+                         row_hex = NULL, row_color = NULL,
+                         sortable = TRUE, collapsible = TRUE, search = TRUE,
+                         excel_download = FALSE) {
   data <- fmt_to_wide(data)
+  # Display-option states (sortable / collapsible / search / excel) ride on the
+  # <table> as data-attributes so the gear popover reads their current value;
+  # the renderer honours `sortable` / `collapsible` here, while `search` /
+  # `excel_download` are realized by the chrome (dt_chrome / dt_download).
+  toggles <- list(sortable = sortable, collapsible = collapsible,
+                  search = search, excel_download = excel_download)
   if (dt_is_structured(data)) {
-    return(dt_table_tag_structured(data, drill, color, digits))
+    return(dt_table_tag_structured(data, drill, color, digits, toggles))
   }
 
   if (is.null(label_col)) label_col <- names(data)[1L]
@@ -96,7 +104,7 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   if (nrow(data) == 0L || !label_col %in% names(data) ||
       length(value_cols) == 0L) {
     return(dt_table_attrs(dt_message_table(), NULL, NULL, color_mode, digits,
-                          row_color = row_color))
+                          row_color = row_color, toggles = toggles))
   }
 
   # ---- cell visuals: heatmap shading OR data bars ---------------------
@@ -149,12 +157,14 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   # and the body cells (numeric right, text left).
   num_flag <- vapply(data[value_cols], is.numeric, logical(1L))
   th_cells <- list(dt_th(label_col, 0L, stub = TRUE,
-                         label = dt_col_label(data[[label_col]], label_col)))
+                         label = dt_col_label(data[[label_col]], label_col),
+                         sortable = sortable))
   for (i in seq_along(value_cols)) {
     th_cells[[length(th_cells) + 1L]] <- dt_th(
       value_cols[i], i,
       label = dt_col_label(data[[value_cols[i]]], value_cols[i]),
-      numeric = num_flag[i]
+      numeric = num_flag[i],
+      sortable = sortable
     )
   }
   thead <- htmltools::tags$thead(htmltools::tags$tr(th_cells))
@@ -242,7 +252,8 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   dt_table_attrs(table_tag, onclick$col, onclick$idx, color_mode, digits,
                  row_color = row_color,
                  num_cols = value_cols[num_flag],
-                 color_cols = if (!is.null(color)) color$columns else NULL)
+                 color_cols = if (!is.null(color)) color$columns else NULL,
+                 toggles = toggles)
 }
 
 # ---------------------------------------------------------------------------
@@ -273,7 +284,9 @@ dt_is_structured <- function(data) {
 #' structured tables render uncoloured; the stub column is the drill target
 #' when `drill` names it.
 #' @noRd
-dt_table_tag_structured <- function(data, drill, color, digits) {
+dt_table_tag_structured <- function(data, drill, color, digits, toggles = NULL) {
+  sortable    <- toggles$sortable %||% TRUE
+  collapsible <- toggles$collapsible %||% TRUE
   all_section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
   # Empty .section_*/.var columns draw no "(missing)" header, but must still be
   # excluded from the data cells (use all_section_cols below) or they leak in
@@ -285,12 +298,15 @@ dt_table_tag_structured <- function(data, drill, color, digits) {
                           c(all_section_cols, stub_col, styling_cols))
 
   if (length(data_cols) == 0L || nrow(data) == 0L) {
-    return(dt_table_attrs(dt_message_table(), NULL, NULL, "off", digits))
+    return(dt_table_attrs(dt_message_table(), NULL, NULL, "off", digits,
+                          toggles = toggles))
   }
 
-  thead <- build_html_thead(data, data_cols, stub_col, stub_sortable = FALSE)
+  thead <- build_html_thead(data, data_cols, stub_col, stub_sortable = FALSE,
+                            sortable = sortable)
   tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
-                            styling_cols = styling_cols)
+                            styling_cols = styling_cols,
+                            collapsible = collapsible)
 
   table_tag <- htmltools::tags$table(class = "blockr-table", thead, tbody)
 
@@ -304,7 +320,8 @@ dt_table_tag_structured <- function(data, drill, color, digits) {
     NULL
   }
   onclick <- dt_onclick(drill_use, c(stub_col %||% character(), data_cols))
-  dt_table_attrs(table_tag, onclick$col, onclick$idx, "off", digits)
+  dt_table_attrs(table_tag, onclick$col, onclick$idx, "off", digits,
+                 toggles = toggles)
 }
 
 #' Cell-visual spec for [drilldown_table()]
@@ -344,15 +361,20 @@ drilldown_table_color <- function(type = c("diverging", "sequential", "bar"),
 # --- internal helpers --------------------------------------------------
 
 #' @noRd
-dt_th <- function(name, idx, stub = FALSE, label = NULL, numeric = FALSE) {
-  cls <- if (stub) "blockr-stub-header blockr-sortable" else
-    "blockr-col-header leaf blockr-sortable"
+dt_th <- function(name, idx, stub = FALSE, label = NULL, numeric = FALSE,
+                  sortable = TRUE) {
+  # `blockr-sortable` is the hook wireSort() binds to; drop it (and the sort
+  # arrow) when sorting is turned off so the column is inert.
+  base <- if (stub) "blockr-stub-header" else "blockr-col-header leaf"
+  cls  <- if (isTRUE(sortable)) paste(base, "blockr-sortable") else base
   # Align the whole header (name + sub-label + sort arrow) to the column's
   # data type, so a flat table reads like the structured one: numeric right,
   # text left. The explicit class wins over the inherited html-table delta.
   cls <- paste(cls, if (isTRUE(numeric)) "dt-col-num" else "dt-col-txt")
   name_span <- htmltools::tags$span(class = "blockr-col-name", name)
-  sort_span <- htmltools::tags$span(class = "blockr-sort-icon")
+  sort_span <- if (isTRUE(sortable)) {
+    htmltools::tags$span(class = "blockr-sort-icon")
+  }
   if (!is.null(label)) {
     # Labelled column: name on top, then the subtext and the sort arrow
     # share the lower row (label left, arrow right) — like the html
@@ -420,7 +442,9 @@ dt_onclick <- function(drill, all_cols) {
 #' @noRd
 dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
                            color_mode, digits, row_color = NULL,
-                           num_cols = NULL, color_cols = NULL) {
+                           num_cols = NULL, color_cols = NULL,
+                           toggles = NULL) {
+  on_off <- function(x) if (isTRUE(x)) "on" else "off"
   htmltools::tagAppendAttributes(
     table_tag,
     `data-dt-onclick-col` = onclick_col,
@@ -431,7 +455,12 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
     # Numeric columns the gear may offer for the colour/bar scope picker, and
     # the currently-scoped subset ("" = all numeric). Comma-joined.
     `data-dt-num-cols` = paste(num_cols %||% character(), collapse = ","),
-    `data-dt-color-cols` = paste(color_cols %||% character(), collapse = ",")
+    `data-dt-color-cols` = paste(color_cols %||% character(), collapse = ","),
+    # Display-option toggles the gear reads back (default ON, except export).
+    `data-dt-sortable` = on_off(toggles$sortable %||% TRUE),
+    `data-dt-collapsible` = on_off(toggles$collapsible %||% TRUE),
+    `data-dt-search` = on_off(toggles$search %||% TRUE),
+    `data-dt-excel` = on_off(toggles$excel_download %||% FALSE)
   )
 }
 
@@ -444,7 +473,7 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
 #' plain.
 #' @noRd
 dt_chrome <- function(elem_id, structured, max_height, inner,
-                      download_slot = NULL) {
+                      search = TRUE, download_slot = NULL) {
   wrapper_id <- paste0(
     "blockr-dt-", sub("^file", "", basename(tempfile("")))
   )
@@ -457,10 +486,13 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
     class = "blockr-html-table-header",
     htmltools::tags$div(
       class = "blockr-html-table-toolbar",
-      htmltools::tags$input(
-        type = "search", class = "blockr-search",
-        placeholder = "Search\u2026", `aria-label` = "Search table"
-      ),
+      # Search input, suppressed when the block turns `search` off (gear toggle).
+      if (isTRUE(search)) {
+        htmltools::tags$input(
+          type = "search", class = "blockr-search",
+          placeholder = "Search\u2026", `aria-label` = "Search table"
+        )
+      },
       # Optional Excel-download control (rendered only when the block toggles it
       # on); sits on the toolbar, outside the gear.
       download_slot
@@ -599,7 +631,9 @@ drilldown_table_dep <- function() {
     ),
     htmltools::htmlDependency(
       name = "blockr-viz-table",
-      version = utils::packageVersion("blockr.viz"),
+      # Suffix bumped when the bundled table JS/CSS changes, to bust the
+      # version-pinned asset cache (display-option gear toggles).
+      version = paste0(utils::packageVersion("blockr.viz"), ".2"),
       src = system.file(package = "blockr.viz"),
       # drilldown-config.js (the shared engine) must load before the table JS.
       script = c("js/drilldown-config.js", "js/table.js"),
@@ -707,6 +741,9 @@ new_table_block <- function(rowname = NULL,
                                       filter_column = NULL,
                                       filter_values = NULL,
                                       filter_range = NULL,
+                                      sortable = TRUE,
+                                      collapsible = TRUE,
+                                      search = TRUE,
                                       excel_download = FALSE,
                                       ...) {
   blockr.core::new_transform_block(
@@ -725,6 +762,9 @@ new_table_block <- function(rowname = NULL,
         r_filter_column <- shiny::reactiveVal(filter_column)
         r_filter_values <- shiny::reactiveVal(filter_values)
         r_filter_range  <- shiny::reactiveVal(filter_range)
+        r_sortable       <- shiny::reactiveVal(isTRUE(sortable))
+        r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
+        r_search         <- shiny::reactiveVal(isTRUE(search))
         r_excel_download <- shiny::reactiveVal(isTRUE(excel_download))
 
         # Only write a reactiveVal when the value actually changes. JS echoes
@@ -735,6 +775,9 @@ new_table_block <- function(rowname = NULL,
         upd <- function(rv, v) {
           if (!identical(shiny::isolate(rv()), v)) rv(v)
         }
+        # Segmented gear toggles emit "on"/"off"; constructor / restore pass a
+        # logical. Accept both.
+        as_toggle <- function(v) identical(v, "on") || isTRUE(v)
 
         shiny::observeEvent(input$drilldown_table_block_action, {
           msg <- input$drilldown_table_block_action
@@ -788,8 +831,14 @@ new_table_block <- function(rowname = NULL,
               upd(r_row_color, if (identical(v, "(none)") || !nzchar(v)) "" else v)
             } else if (identical(p, "digits")) {
               upd(r_digits, as.integer(v))
+            } else if (identical(p, "sortable")) {
+              upd(r_sortable, as_toggle(v))
+            } else if (identical(p, "collapsible")) {
+              upd(r_collapsible, as_toggle(v))
+            } else if (identical(p, "search")) {
+              upd(r_search, as_toggle(v))
             } else if (identical(p, "excel_download")) {
-              upd(r_excel_download, isTRUE(v))
+              upd(r_excel_download, as_toggle(v))
             }
           }
         })
@@ -826,6 +875,7 @@ new_table_block <- function(rowname = NULL,
             structured = isTRUE(structured),
             max_height = shiny::isolate(r_max_height()),
             inner      = shiny::uiOutput(ns("dt_table")),
+            search     = isTRUE(r_search()),
             download_slot = shiny::uiOutput(ns("dt_download"), inline = TRUE)
           )
         })
@@ -888,7 +938,11 @@ new_table_block <- function(rowname = NULL,
               digits     = r_digits(),
               row_hex    = if (is.null(rc_col)) NULL else
                              dd_row_hex(board_scale_map(), rc_col, d),
-              row_color  = rc_col
+              row_color  = rc_col,
+              sortable    = isTRUE(r_sortable()),
+              collapsible = isTRUE(r_collapsible()),
+              search      = isTRUE(r_search()),
+              excel_download = isTRUE(r_excel_download())
             ),
             error = function(e) {
               shiny::tags$div(
@@ -929,6 +983,9 @@ new_table_block <- function(rowname = NULL,
             filter_column = r_filter_column,
             filter_values = r_filter_values,
             filter_range  = r_filter_range,
+            sortable       = r_sortable,
+            collapsible    = r_collapsible,
+            search         = r_search,
             excel_download = r_excel_download
           )
         )
@@ -945,7 +1002,8 @@ new_table_block <- function(rowname = NULL,
       "drill", "filter_column", "filter_values", "filter_range"),
     external_ctrl = c("rowname", "values", "cell_color", "row_color", "drill",
       "digits", "max_height", "filter_type",
-      "filter_column", "filter_values", "filter_range", "excel_download"),
+      "filter_column", "filter_values", "filter_range",
+      "sortable", "collapsible", "search", "excel_download"),
     expr_type = "bquoted",
     class = "table_block",
     ...

@@ -145,6 +145,8 @@
   function wireCollapse(root, tbody) {
     if (root.getAttribute("data-dt-structured") !== "1") return;
     var table = /** @type {HTMLElement | null} */ (tbody.closest("table"));
+    // Collapsing turned off: leave section headers as static labels.
+    if (table && table.getAttribute("data-dt-collapsible") === "off") return;
     // Two collapse mechanisms coexist: explicit `.section_*` section headers
     // (data-level) and indent-derived toggles (a row whose data-indent parents
     // deeper rows). A row is hidden iff any ancestor of EITHER kind is collapsed.
@@ -342,6 +344,16 @@
   // section holds everything; `drill` is a plain column picker (the column a
   // row-click filters on). Keys match the R config params, so onChange(key) ->
   // sendConfig(key, value) round-trips directly.
+  // Click-through toggle options: the pill states what the CURRENT setting means
+  // (not a bare On/Off) — see blockr.docs design-system/components/blockr-row.md.
+  var SORTABLE_OPT    = [{ value: "on", label: "Sortable" },
+                         { value: "off", label: "Not sortable" }];
+  var COLLAPSIBLE_OPT = [{ value: "on", label: "Collapsible" },
+                         { value: "off", label: "Not collapsible" }];
+  var SEARCH_OPT      = [{ value: "on", label: "Search bar" },
+                         { value: "off", label: "No search bar" }];
+  var EXPORT_OPT      = [{ value: "on", label: "Excel export" },
+                         { value: "off", label: "No Excel export" }];
   var TABLE_ROLES = {
     drill:      { label: "Drill-down", kind: "column", colType: "any" },
     row_color:  { label: "Row color",  kind: "column", colType: "any" },
@@ -352,16 +364,31 @@
     // restricts to those columns (e.g. a single count column for data bars).
     color_columns: { label: "Columns", kind: "columns", colType: "num",
                      placeholder: "All numeric columns" },
-    digits:     { label: "Decimals",   kind: "select", options: ["0", "1", "2", "3", "4"] }
+    digits:     { label: "Decimals",   kind: "select", options: ["0", "1", "2", "3", "4"] },
+    // Display toggles (column-free): click-through pills labelled by meaning.
+    // Keys match the R config params so onChange(key) round-trips to the block
+    // reactiveVals; the row label names the dimension, the pill the state.
+    sortable:    { label: "Sorting",  kind: "segmented", options: SORTABLE_OPT },
+    collapsible: { label: "Sections", kind: "segmented", options: COLLAPSIBLE_OPT },
+    search:      { label: "Search",   kind: "segmented", options: SEARCH_OPT },
+    excel_download: { label: "Export", kind: "segmented", options: EXPORT_OPT }
   };
   // Dynamic: the column-scope picker only appears once a coloring mode is on
   // (it is meaningless for a plain table). color_mode has rerender:true so
-  // toggling it rebuilds the section list live.
-  /** @param {Record<string, any>} cfg */
-  function tableSections(cfg) {
-    var pres = ["drill", "row_color", "color_mode"];
-    if (cfg && cfg.color_mode && cfg.color_mode !== "off") pres.push("color_columns");
-    pres.push("digits");
+  // toggling it rebuilds the section list live. `hasCols` is false for a
+  // structured ("Table 1") frame — there the column-based controls are no-ops,
+  // so only the display toggles show (and Collapsible, which needs sections).
+  /** @param {Record<string, any>} cfg @param {boolean} hasCols */
+  function tableSections(cfg, hasCols) {
+    var pres = [];
+    if (hasCols) {
+      pres.push("drill", "row_color", "color_mode");
+      if (cfg && cfg.color_mode && cfg.color_mode !== "off") pres.push("color_columns");
+      pres.push("digits");
+    }
+    pres.push("sortable");
+    if (!hasCols) pres.push("collapsible");   // only sectioned tables collapse
+    pres.push("search", "excel_download");
     return { requiredMap: [], optionalMap: [], mapping: [], presentation: pres };
   }
 
@@ -385,14 +412,13 @@
       });
 
     // Structured ("Table 1") tables expose no pickable columns (the header is
-    // section spanners, the cells are pre-formatted strings). With no columns
-    // every gear control is a no-op: nothing to drill on, nothing to color rows
-    // by, the numeric heatmap is forced off by the structured renderer, and even
-    // Decimals does nothing (the cells are pre-formatted, build_html_tbody never
-    // re-rounds). So skip the gear entirely rather than show a menu that can't do
-    // anything. Keyed on "no columns" (not a hard-coded "structured" flag) so it
-    // covers any future no-column case too.
-    if (cols.length === 0) return;
+    // section spanners, the cells are pre-formatted strings), so the column-based
+    // controls (drill / colour / decimals) are no-ops and are dropped from the
+    // section list below (`hasCols`). The gear still renders for the column-free
+    // display toggles (sortable / collapsible / search / Excel export) — keyed on
+    // "no columns" (not a hard-coded "structured" flag) so it covers any future
+    // no-column case too.
+    var hasCols = cols.length > 0;
 
     var onClick = table.getAttribute("data-dt-onclick-col");
     var colorCols = (table.getAttribute("data-dt-color-cols") || "")
@@ -403,7 +429,12 @@
       row_color:  table.getAttribute("data-dt-row-color") || "",
       color_mode: table.getAttribute("data-dt-color-mode") || "off",
       color_columns: colorCols,            // [] = all numeric
-      digits:     table.getAttribute("data-dt-digits") || "2"
+      digits:     table.getAttribute("data-dt-digits") || "2",
+      // Display toggles (segmented on/off). Default on, except export.
+      sortable:    table.getAttribute("data-dt-sortable") || "on",
+      collapsible: table.getAttribute("data-dt-collapsible") || "on",
+      search:      table.getAttribute("data-dt-search") || "on",
+      excel_download: table.getAttribute("data-dt-excel") || "off"
     };
 
     var header = document.createElement("div");
@@ -445,8 +476,8 @@
       columns: function () { return cols; },
       context: function () { return "all"; },
       currentType: function () { return cfg.transform; },
-      sections: function () { return tableSections(cfg); },
-      sectionsForFamily: function () { return tableSections(cfg); },
+      sections: function () { return tableSections(cfg, hasCols); },
+      sectionsForFamily: function () { return tableSections(cfg, hasCols); },
       secondary: new Set(),
       typeKey: null,
       typeGroups: null,
