@@ -541,6 +541,7 @@ html_table_delta_css <- function(scope = ".blockr-html-table-container") {
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
+  margin-left: auto;
 }
 input.blockr-search {
   appearance: none;
@@ -900,6 +901,7 @@ html_table_shared_css_fallback <- function() {
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
+  margin-left: auto;
 }
 input.blockr-search {
   appearance: none;
