@@ -44,12 +44,15 @@ write_annotated_xlsx <- function(x, file, title = NULL, sheet = "Table") {
   n_row      <- nrow(df)
 
   indent <- if (".indent" %in% names(df)) {
-    iv <- suppressWarnings(as.integer(df[[".indent"]])); iv[is.na(iv)] <- 0L; iv
+    iv <- suppressWarnings(as.integer(df[[".indent"]]))
+    iv[is.na(iv)] <- 0L
+    iv
   } else {
     rep(0L, n_row)
   }
   bold_row <- if (".strong" %in% names(df)) {
-    bv <- suppressWarnings(as.logical(df[[".strong"]])); !is.na(bv) & bv
+    bv <- suppressWarnings(as.logical(df[[".strong"]]))
+    !is.na(bv) & bv
   } else {
     rep(FALSE, n_row)
   }
@@ -61,7 +64,7 @@ write_annotated_xlsx <- function(x, file, title = NULL, sheet = "Table") {
   top   <- vapply(parts, function(p) if (length(p) > 1L) p[[1L]] else "", character(1))
   leaf  <- vapply(data_cols, function(cn) {
     lbl <- attr(df[[cn]], "label")
-    if (is.null(lbl) || !nzchar(lbl)) tail(strsplit(cn, "||", fixed = TRUE)[[1L]], 1L) else lbl
+    if (is.null(lbl) || !nzchar(lbl)) utils::tail(strsplit(cn, "||", fixed = TRUE)[[1L]], 1L) else lbl
   }, character(1))
   has_spanner <- any(nzchar(top))
 

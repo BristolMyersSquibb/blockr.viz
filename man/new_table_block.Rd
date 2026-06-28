@@ -16,6 +16,9 @@ new_table_block(
   filter_column = NULL,
   filter_values = NULL,
   filter_range = NULL,
+  sortable = TRUE,
+  collapsible = TRUE,
+  search = TRUE,
   excel_download = FALSE,
   ...
 )

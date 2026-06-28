@@ -104,15 +104,22 @@ test_that("config toggle messages update state (on/off and logical back-compat)"
     expect_false(session$returned$state$excel_download())
 
     # Segmented pills emit "on"/"off".
-    cfg(session, "sortable", "off");      expect_false(session$returned$state$sortable())
-    cfg(session, "collapsible", "off");   expect_false(session$returned$state$collapsible())
-    cfg(session, "search", "off");        expect_false(session$returned$state$search())
-    cfg(session, "excel_download", "on"); expect_true(session$returned$state$excel_download())
+    cfg(session, "sortable", "off")
+    expect_false(session$returned$state$sortable())
+    cfg(session, "collapsible", "off")
+    expect_false(session$returned$state$collapsible())
+    cfg(session, "search", "off")
+    expect_false(session$returned$state$search())
+    cfg(session, "excel_download", "on")
+    expect_true(session$returned$state$excel_download())
 
-    cfg(session, "sortable", "on");       expect_true(session$returned$state$sortable())
+    cfg(session, "sortable", "on")
+    expect_true(session$returned$state$sortable())
 
     # Restore / constructor path may pass a logical — accepted too.
-    cfg(session, "search", TRUE);         expect_true(session$returned$state$search())
-    cfg(session, "excel_download", FALSE); expect_false(session$returned$state$excel_download())
+    cfg(session, "search", TRUE)
+    expect_true(session$returned$state$search())
+    cfg(session, "excel_download", FALSE)
+    expect_false(session$returned$state$excel_download())
   })
 })
