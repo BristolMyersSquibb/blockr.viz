@@ -837,9 +837,11 @@ new_table_block <- function(rowname = NULL,
           if (!isTRUE(r_excel_download())) return(NULL)
           if (!requireNamespace("openxlsx", quietly = TRUE)) return(NULL)
           shiny::downloadButton(
-            ns("dl_xlsx"), "Excel",
-            class = "blockr-dl-xlsx btn-sm",
-            icon  = shiny::icon("file-excel")
+            ns("dl_xlsx"),
+            label = NULL,
+            class = "blockr-dl-xlsx",
+            icon  = shiny::icon("download"),
+            title = "Download as Excel"
           )
         })
         output$dl_xlsx <- shiny::downloadHandler(
