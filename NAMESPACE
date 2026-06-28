@@ -3,6 +3,7 @@
 S3method(block_output,gt_table_block)
 S3method(block_ui,gt_table_block)
 S3method(blockr_deser,summary_table_block)
+export(as_annotated_df)
 export(compute_smoother_series)
 export(drilldown_table)
 export(drilldown_table_color)
