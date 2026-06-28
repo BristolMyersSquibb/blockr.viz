@@ -721,6 +721,9 @@ table_arguments <- function() {
 #' @param filter_type,filter_column,filter_values,filter_range Click
 #'   filter state (kept for contract parity with the drilldown chart;
 #'   `filter_range` is unused by the table).
+#' @param sortable,collapsible,search Logical display toggles (each default
+#'   `TRUE`): column sorting, indent-derived collapsible section headers, and
+#'   the toolbar search box. Exposed in the block's gear menu.
 #' @param excel_download Logical (default `FALSE`). When `TRUE`, an "Excel"
 #'   download button appears on the table toolbar; it writes the rendered
 #'   (annotated) frame to a styled `.xlsx` via [write_annotated_xlsx()]. Needs
