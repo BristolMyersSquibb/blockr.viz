@@ -16,6 +16,10 @@ new_table_block(
   filter_column = NULL,
   filter_values = NULL,
   filter_range = NULL,
+  sortable = TRUE,
+  collapsible = TRUE,
+  search = TRUE,
+  excel_download = FALSE,
   ...
 )
 }
@@ -29,6 +33,15 @@ row rather than individual cells. Default \code{NULL} (off).}
 \item{filter_type, filter_column, filter_values, filter_range}{Click
 filter state (kept for contract parity with the drilldown chart;
 \code{filter_range} is unused by the table).}
+
+\item{sortable, collapsible, search}{Logical display toggles (each default
+\code{TRUE}): column sorting, indent-derived collapsible section headers, and
+the toolbar search box. Exposed in the block's gear menu.}
+
+\item{excel_download}{Logical (default \code{FALSE}). When \code{TRUE}, an "Excel"
+download button appears on the table toolbar; it writes the rendered
+(annotated) frame to a styled \code{.xlsx} via \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}. Needs
+the \code{openxlsx} package.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }

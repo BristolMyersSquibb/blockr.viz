@@ -62,10 +62,16 @@ html_table <- function(data,
     )
   }
 
-  section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
+  all_section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
+  # Only columns that carry a grouping value render as sections; an entirely
+  # empty .section_*/.var column draws no "(missing)" header — but it must still
+  # be kept out of the data cells (exclude `all_section_cols`, not the filtered
+  # set, from data_cols) or it would leak in as a literal "—" column.
+  section_cols <- nonempty_section_cols(data, all_section_cols)
   stub_col     <- if (".label" %in% names(data)) ".label" else NULL
-  styling_cols <- intersect(c(".indent", ".bold", ".italic"), names(data))
-  data_cols    <- setdiff(names(data), c(section_cols, stub_col, styling_cols))
+  styling_cols <- intersect(c(".indent", ".strong", ".emph"), names(data))
+  data_cols    <- setdiff(names(data),
+                          c(all_section_cols, stub_col, styling_cols))
 
   wrapper_id <- paste0("blockr-html-table-", sub("^file", "", basename(tempfile(""))))
 
@@ -145,13 +151,16 @@ html_table <- function(data,
 # ---------------------------------------------------------------------------
 
 #' @noRd
-build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE) {
+build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
+                             sortable = TRUE) {
+  # Global off-switch: when sorting is disabled no header is a sort hook.
+  stub_sortable <- isTRUE(stub_sortable) && isTRUE(sortable)
   if (length(data_cols) == 0L) {
     parts <- list()
     depths <- integer(0)
     max_depth <- 1L
   } else {
-    parts <- strsplit(data_cols, "|", fixed = TRUE)
+    parts <- strsplit(data_cols, "||", fixed = TRUE)
     depths <- lengths(parts)
     max_depth <- max(depths)
   }
@@ -205,22 +214,22 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE) {
         # HTML headers render correctly. The sort arrow rides the sub-line
         # (N = k) rather than stacking below it — see leaf_header_content().
         rowspan <- max_depth - L + 1L
-        sortable <- (span == 1L)
-        sort_icon <- if (sortable) {
+        col_sortable <- isTRUE(sortable) && (span == 1L)
+        sort_icon <- if (col_sortable) {
           htmltools::tags$span(class = "blockr-sort-icon")
         }
         content <- leaf_header_content(
           data, data_cols[i], parts[[i]][L], span, sort_icon = sort_icon
         )
         cls <- "blockr-col-header leaf"
-        if (sortable) cls <- paste(cls, "blockr-sortable")
+        if (col_sortable) cls <- paste(cls, "blockr-sortable")
         th_args <- list(
           content,
           class   = cls,
           colspan = span
         )
         if (rowspan > 1L) th_args$rowspan <- rowspan
-        if (sortable) {
+        if (col_sortable) {
           th_args$`data-col-index` <- (i - 1L) + stub_offset
         }
       } else {
@@ -295,15 +304,31 @@ leaf_header_content <- function(data, col_name, fallback_text, span,
 # Section-aware <tbody> builder
 # ---------------------------------------------------------------------------
 
+#' Keep only section/var columns that actually carry a grouping value.
+#'
+#' A `.section_*` / `.var` column that is entirely NA/blank is not a real
+#' grouping dimension — rendering it would wrap every row under a single
+#' "(missing)" header. Drop those so the table renders flat (or indent-only)
+#' instead. A *partially* empty column is kept: its gaps still render as
+#' "(missing)", which is the right label for a genuine orphan bucket. Shared by
+#' [html_table()] and the table block's structured path.
+#' @noRd
+nonempty_section_cols <- function(data, section_cols) {
+  section_cols[vapply(section_cols, function(sc) {
+    v <- trimws(as.character(data[[sc]]))
+    any(!is.na(v) & nzchar(v))
+  }, logical(1L))]
+}
+
 #' @noRd
 build_html_tbody <- function(data, section_cols, stub_col, data_cols,
-                             styling_cols = character()) {
+                             styling_cols = character(), collapsible = TRUE) {
   ncol_total <- length(data_cols) + (if (is.null(stub_col)) 0L else 1L)
   if (ncol_total == 0L) ncol_total <- 1L
 
   has_indent <- ".indent" %in% styling_cols
-  has_bold   <- ".bold"   %in% styling_cols
-  has_italic <- ".italic" %in% styling_cols
+  has_bold   <- ".strong"   %in% styling_cols
+  has_italic <- ".emph" %in% styling_cols
   indent_px  <- 16L
 
   # Vectorized assembly: build the body as a single HTML string instead of
@@ -353,7 +378,15 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
 
   # Section-header rows: one HTML string per (row, level), blanked on rows
   # where level L does not restart (L < diff_from, or no change at all).
-  chev <- as.character(section_chevron_svg())
+  # When collapsing is off the section header is a static label — no chevron, no
+  # button affordance (wireCollapse also bails via data-dt-collapsible=0).
+  chev     <- if (isTRUE(collapsible)) as.character(section_chevron_svg()) else ""
+  btn_open <- if (isTRUE(collapsible)) {
+    "<button class=\"blockr-section-btn\" type=\"button\" aria-expanded=\"true\">"
+  } else {
+    "<span class=\"blockr-section-btn blockr-section-btn-static\">"
+  }
+  btn_close <- if (isTRUE(collapsible)) "</button>" else "</span>"
   header_cols <- vector("list", k)
   for (L in seq_len(k)) {
     sc <- section_cols[L]
@@ -370,10 +403,9 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
       "<tr class=\"blockr-section-header\" data-level=\"", L, "\">",
       "<td class=\"blockr-section-cell level-", L,
       "\" colspan=\"", ncol_total, "\">",
-      "<button class=\"blockr-section-btn\" type=\"button\" ",
-      "aria-expanded=\"true\">", chev, prefix,
+      btn_open, chev, prefix,
       "<span class=\"blockr-section-value\">", esc(path_mat[, L]),
-      "</span></button></td></tr>"
+      "</span>", btn_close, "</td></tr>"
     )
     hdr[is.na(diff_from) | L < diff_from] <- ""
     header_cols[[L]] <- hdr
@@ -389,30 +421,51 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
     rep(0L, n_rows)
   }
   row_bold <- if (has_bold) {
-    b <- suppressWarnings(as.logical(data[[".bold"]]))
+    b <- suppressWarnings(as.logical(data[[".strong"]]))
     !is.na(b) & b
   } else {
     rep(FALSE, n_rows)
   }
   row_italic <- if (has_italic) {
-    b <- suppressWarnings(as.logical(data[[".italic"]]))
+    b <- suppressWarnings(as.logical(data[[".emph"]]))
     !is.na(b) & b
   } else {
     rep(FALSE, n_rows)
   }
 
+  # A row is a collapse toggle when the row immediately below it is more deeply
+  # indented (i.e. it heads a nested group). Derived purely from `.indent` -- no
+  # fabricated sections -- so it covers bold block-label headers ("AGE (years)")
+  # AND data rows that parent deeper rows (SOC over PT) alike. Clicking its
+  # chevron hides/shows that group, down to the next row at <= its own indent.
+  toggle_rows <- if (isTRUE(collapsible) && !is.null(stub_col)) {
+    c(row_indent[-1L] > row_indent[-n_rows], FALSE)
+  } else {
+    rep(FALSE, n_rows)
+  }
+
   row_class <- rep("blockr-data-row", n_rows)
-  row_class[row_bold]   <- paste(row_class[row_bold], "blockr-bold")
-  row_class[row_italic] <- paste(row_class[row_italic], "blockr-italic")
-  row_class[group_last] <- paste(row_class[group_last], "blockr-group-last")
+  row_class[row_bold]    <- paste(row_class[row_bold], "blockr-bold")
+  row_class[row_italic]  <- paste(row_class[row_italic], "blockr-italic")
+  row_class[group_last]  <- paste(row_class[group_last], "blockr-group-last")
+  row_class[toggle_rows] <- paste(row_class[toggle_rows], "blockr-indent-toggle")
 
   # Stub + data cells, column-vectorized.
   if (!is.null(stub_col)) {
     stub_style <- ifelse(row_indent > 0L,
       paste0(" style=\"padding-left:", 24L + row_indent * indent_px, "px;\""),
       "")
-    stub_html <- paste0("<td class=\"blockr-stub\"", stub_style, ">",
-                        esc(data[[stub_col]]), "</td>")
+    # Parent rows get a chevron toggle button before the label; the JS attaches
+    # to the button so it never competes with a drill click on the row.
+    chev_btn <- paste0(
+      "<button class=\"blockr-indent-btn\" type=\"button\" tabindex=\"-1\" ",
+      "aria-expanded=\"true\">", as.character(section_chevron_svg()), "</button>")
+    stub_inner <- ifelse(toggle_rows,
+      paste0(chev_btn, esc(data[[stub_col]])),
+      esc(data[[stub_col]]))
+    stub_cls <- ifelse(toggle_rows, "blockr-stub blockr-has-toggle", "blockr-stub")
+    stub_html <- paste0("<td class=\"", stub_cls, "\"", stub_style, ">",
+                        stub_inner, "</td>")
   } else {
     stub_html <- rep("", n_rows)
   }
@@ -426,7 +479,8 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   })
 
   row_inner <- do.call(paste0, c(list(stub_html), data_cell_cols))
-  data_rows <- paste0("<tr class=\"", row_class, "\">", row_inner, "</tr>")
+  data_rows <- paste0("<tr class=\"", row_class, "\" data-indent=\"",
+                      row_indent, "\">", row_inner, "</tr>")
 
   body_html <- paste0(header_prefix, data_rows, collapse = "")
   htmltools::tags$tbody(htmltools::HTML(body_html))
@@ -469,7 +523,7 @@ section_chevron_svg <- function() {
 #' purpose — they are generic table chrome a flat table needs too.
 #' @noRd
 html_table_delta_css <- function(scope = ".blockr-html-table-container") {
-  css <- ".blockr-html-table-container {
+  css <- paste0(".blockr-html-table-container {
   background: #ffffff;
   font-size: var(--blockr-font-size-base, 0.875rem);
   color: var(--blockr-color-text-primary, #111827);
@@ -587,8 +641,12 @@ input.blockr-search:focus {
 /* Stat-label (row-stub) cells \u2014 wrap to 2 lines (never truncate), aligned
    to the top so a wrapped label stays level with its numbers. Typography
    matches the canonical preview (normal weight, base size); the Table-1
-   character comes from STRUCTURE (sections, the 40px indent, bold rows), not
-   from a heavier default font. */
+   character comes from STRUCTURE (sections, indentation, bold rows), not from a
+   heavier default font. The 24px left padding is the indent-0 BASE: nested rows
+   add `row_indent * 16px` on top (build_html_tbody), so level 1 sits at 40px,
+   level 2 at 56px, etc. Keeping this base BELOW the first indent step is what
+   makes the indentation visible \u2014 if it equalled 40px, level-1 rows would not
+   step at all. */
 .blockr-html-table-container .blockr-table tbody td.blockr-stub {
   text-align: left;
   vertical-align: top;
@@ -596,7 +654,7 @@ input.blockr-search:focus {
   overflow: visible;
   text-overflow: clip;
   max-width: none;
-  padding: 9px 18px 9px 40px;
+  padding: 9px 18px 9px 24px;
   font-size: var(--blockr-font-size-base, 0.875rem);
   font-weight: var(--blockr-font-weight-normal, 400);
   color: var(--stbl-ink-2);
@@ -661,6 +719,8 @@ input.blockr-search:focus {
   color: var(--stbl-ink-1);
   padding: 15px 18px 8px;
 }
+/* Collapsing disabled: the section label is a static span, not a control. */
+.blockr-html-table-container .blockr-section-btn-static { cursor: default; }
 .blockr-html-table-container .blockr-section-cell.level-2 .blockr-section-btn {
   padding-left: 36px;
 }
@@ -693,6 +753,27 @@ input.blockr-search:focus {
 }
 .blockr-html-table-container tr.blockr-section-header.collapsed .blockr-chev {
   transform: rotate(-90deg);
+}",
+"/* Indent-derived collapse: a chevron button sits before the label of any row
+   that heads a deeper-indented group. Reuses the section chevron, rotating when
+   the row is collapsed. The button is a bare affordance so clicking the label /
+   cells still drills. */
+.blockr-html-table-container .blockr-indent-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin-right: 5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: baseline;
+  margin-left: -18px;
+}
+.blockr-html-table-container .blockr-indent-btn:hover .blockr-chev {
+  color: var(--stbl-ink-1);
+}
+.blockr-html-table-container tr.blockr-indent-toggle.collapsed .blockr-chev {
+  transform: rotate(-90deg);
 }
 .blockr-html-table-container .blockr-table tbody tr:last-child td {
   border-bottom: none;
@@ -722,7 +803,7 @@ input.blockr-search:focus {
 .blockr-hidden-collapse,
 .blockr-hidden-search {
   display: none !important;
-}"
+}")
   if (!identical(scope, ".blockr-html-table-container")) {
     css <- gsub(".blockr-html-table-container", scope, css, fixed = TRUE)
   }
@@ -855,7 +936,31 @@ input.blockr-search:focus {
   border-color: var(--blockr-color-primary, #2563eb);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   background-color: #ffffff;
-}"
+}
+a.blockr-dl-xlsx, a.blockr-dl-xlsx.btn {
+  appearance: none;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px 6px;
+  margin: 0;
+  font: inherit;
+  line-height: 1;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+  background-color: transparent;
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition: border-color 0.12s, background-color 0.12s, color 0.12s;
+}
+a.blockr-dl-xlsx:hover, a.blockr-dl-xlsx:focus {
+  border-color: var(--blockr-color-border, #e5e7eb);
+  background-color: var(--blockr-color-bg-input, #f9fafb);
+  color: var(--blockr-color-text-primary, #374151);
+  text-decoration: none;
+}
+a.blockr-dl-xlsx > i, a.blockr-dl-xlsx svg { font-size: 0.95rem; }"
 }
 
 # ---------------------------------------------------------------------------
@@ -883,27 +988,43 @@ html_table_js_template <- function() {
   // Nested collapse is respected: a row is hidden iff any ancestor section
   // header has the .collapsed class.
   function recomputeCollapse(){
-    var stack = []; // [{ level, collapsed }]
+    var secStack = []; // [{ level, collapsed }]
+    var indStack = []; // [{ indent, collapsed }]
     var rows = Array.prototype.slice.call(tbody.children);
     rows.forEach(function(r){
-      if (r.classList.contains('blockr-section-header')) {
-        var lvl = parseInt(r.getAttribute('data-level'), 10);
-        while (stack.length > 0 && stack[stack.length-1].level >= lvl) stack.pop();
-        var anyAncestorCollapsed = stack.some(function(s){ return s.collapsed; });
-        if (anyAncestorCollapsed) r.classList.add('blockr-hidden-collapse');
-        else r.classList.remove('blockr-hidden-collapse');
-        stack.push({ level: lvl, collapsed: r.classList.contains('collapsed') });
-      } else if (r.classList.contains('blockr-data-row')) {
-        var hidden = stack.some(function(s){ return s.collapsed; });
-        if (hidden) r.classList.add('blockr-hidden-collapse');
-        else r.classList.remove('blockr-hidden-collapse');
+      var isSec = r.classList.contains('blockr-section-header');
+      var isData = r.classList.contains('blockr-data-row');
+      var ind = parseInt(r.getAttribute('data-indent'), 10);
+      if (isData && !isNaN(ind)) {
+        while (indStack.length > 0 && indStack[indStack.length-1].indent >= ind) indStack.pop();
       }
+      if (isSec) {
+        var lvl = parseInt(r.getAttribute('data-level'), 10);
+        while (secStack.length > 0 && secStack[secStack.length-1].level >= lvl) secStack.pop();
+      }
+      var hidden = secStack.some(function(s){ return s.collapsed; }) ||
+                   indStack.some(function(s){ return s.collapsed; });
+      if (hidden) r.classList.add('blockr-hidden-collapse');
+      else r.classList.remove('blockr-hidden-collapse');
+      if (isSec) secStack.push({ level: parseInt(r.getAttribute('data-level'), 10), collapsed: r.classList.contains('collapsed') });
+      if (isData && r.classList.contains('blockr-indent-toggle')) indStack.push({ indent: ind, collapsed: r.classList.contains('collapsed') });
     });
   }
   function syncAria(h){
     var btn = h.querySelector('.blockr-section-btn');
     if (btn) btn.setAttribute('aria-expanded', h.classList.contains('collapsed') ? 'false' : 'true');
   }
+  root.querySelectorAll('tr.blockr-indent-toggle .blockr-indent-btn').forEach(function(btn){
+    btn.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      ev.preventDefault();
+      var h = btn.closest('tr.blockr-indent-toggle');
+      if (!h) return;
+      h.classList.toggle('collapsed');
+      btn.setAttribute('aria-expanded', h.classList.contains('collapsed') ? 'false' : 'true');
+      recomputeCollapse();
+    });
+  });
   function toggleCollapse(h){
     h.classList.toggle('collapsed');
     syncAria(h);

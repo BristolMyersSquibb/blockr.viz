@@ -82,7 +82,7 @@ gt_table_wide <- function(data, title = NULL, subtitle = NULL,
 
   # Row-level styling columns (hidden from display, drive tab_style).
   # See blockr.design/open/table-blocks/3-design.md amendment.
-  styling_cols <- intersect(c(".indent", ".bold", ".italic"), names(data))
+  styling_cols <- intersect(c(".indent", ".strong", ".emph"), names(data))
 
   # Data columns = everything that isn't section, stub, or styling
   data_cols <- setdiff(names(data), c(section_cols, stub_col, styling_cols))
@@ -109,8 +109,8 @@ gt_table_wide <- function(data, title = NULL, subtitle = NULL,
   tbl <- gt::sub_missing(tbl, missing_text = na_rep %||% "")
 
   # Pipe-delimited column spanners (for length-2 `by`)
-  if (any(grepl("\\|", names(data)))) {
-    tbl <- gt::tab_spanner_delim(tbl, delim = "|")
+  if (any(grepl("||", names(data), fixed = TRUE))) {
+    tbl <- gt::tab_spanner_delim(tbl, delim = "||")
   }
 
   # Column labels: render newlines as <br> for clean two-line headers
@@ -154,8 +154,8 @@ gt_table_wide <- function(data, title = NULL, subtitle = NULL,
       )
     }
   }
-  if (!is.null(stub_col) && ".bold" %in% styling_cols) {
-    flag <- as.logical(data[[".bold"]])
+  if (!is.null(stub_col) && ".strong" %in% styling_cols) {
+    flag <- as.logical(data[[".strong"]])
     bold_rows <- which(!is.na(flag) & flag)
     if (length(bold_rows)) {
       tbl <- gt::tab_style(
@@ -165,8 +165,8 @@ gt_table_wide <- function(data, title = NULL, subtitle = NULL,
       )
     }
   }
-  if (!is.null(stub_col) && ".italic" %in% styling_cols) {
-    flag <- as.logical(data[[".italic"]])
+  if (!is.null(stub_col) && ".emph" %in% styling_cols) {
+    flag <- as.logical(data[[".emph"]])
     italic_rows <- which(!is.na(flag) & flag)
     if (length(italic_rows)) {
       tbl <- gt::tab_style(

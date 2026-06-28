@@ -280,7 +280,7 @@ compute_group_n <- function(data, by, subject_var, groups,
       matching <- !is.na(data[[by]]) & as.character(data[[by]]) == col_key
       n_distinct_in(data[matching, , drop = FALSE], subject_var)
     } else {
-      parts <- strsplit(col_key, "|", fixed = TRUE)[[1]]
+      parts <- strsplit(col_key, "||", fixed = TRUE)[[1]]
       if (length(parts) != 2L) return(NA_integer_)
       matching <- !is.na(data[[by[1]]]) & !is.na(data[[by[2]]]) &
         as.character(data[[by[1]]]) == parts[1] &
@@ -336,7 +336,7 @@ add_group_col <- function(stats_df, by) {
     stats_df[[by]] <- NULL
   } else {
     stats_df$.group <- paste(as.character(stats_df[[by[1]]]),
-                             as.character(stats_df[[by[2]]]), sep = "|")
+                             as.character(stats_df[[by[2]]]), sep = "||")
     stats_df[[by[1]]] <- NULL
     stats_df[[by[2]]] <- NULL
   }
