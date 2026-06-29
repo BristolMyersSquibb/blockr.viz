@@ -256,76 +256,121 @@ tile_block_dep <- function() {
 #' the AI surface.
 #' @noRd
 tile_arguments <- function() {
-  structure(
-    c(
-      value = paste0(
+  new_block_args(
+    value = new_block_arg(
+      paste0(
         "Numeric column(s) shown as the big number. One column for a long ",
         "tile frame; MULTIPLE columns for wide input (each column becomes a ",
         "measure / card, measure name = column name). Required."
       ),
-      by = paste0(
+      example = list("revenue"),
+      type = arg_array(arg_string())
+    ),
+    by = new_block_arg(
+      paste0(
         "Group / facet column: clusters cards and drives the matrix rows in ",
         "the table layout. Optional; \"\" = a single ungrouped set of cards."
       ),
-      measure = paste0(
+      example = "region",
+      type = arg_string()
+    ),
+    measure = new_block_arg(
+      paste0(
         "Measure-label column, for LONG input (one row per group x measure). ",
         "Leave \"\" for wide input \u2014 then the `value` column names are the ",
         "measure names."
       ),
-      layout = "Layout: \"cards\" (grid of cards) or \"table\" (aligned matrix).",
-      secondary = paste0(
+      example = "",
+      type = arg_string()
+    ),
+    layout = new_block_arg(
+      "Layout: \"cards\" (grid of cards) or \"table\" (aligned matrix).",
+      example = "cards",
+      type = arg_enum(c("cards", "table"))
+    ),
+    secondary = new_block_arg(
+      paste0(
         "A PRECOMPUTED reference column drawn beside the value (a delta, a ",
         "fraction, a status). The renderer does no arithmetic \u2014 compute the ",
         "comparison upstream. Optional; \"\" = no secondary."
       ),
-      style = paste0(
+      example = "rev_delta",
+      type = arg_string()
+    ),
+    style = new_block_arg(
+      paste0(
         "How to draw the secondary: \"plain\" (show the reference), \"delta\" ",
         "(arrow + %, colored by sign), \"fill\" (progress bar to a fraction), ",
         "\"pill\" (status chip)."
       ),
-      good_when = paste0(
+      example = "delta",
+      type = arg_enum(c("plain", "delta", "fill", "pill"))
+    ),
+    good_when = new_block_arg(
+      paste0(
         "Polarity for coloring: \"up\" (an increase is good, default) or ",
         "\"down\" (a decrease is good, e.g. churn / cost)."
       ),
-      format = paste0(
+      example = "up",
+      type = arg_enum(c("up", "down"))
+    ),
+    format = new_block_arg(
+      paste0(
         "How the NUMBER is formatted (never a currency guess): \"number\" ",
         "(separators + smart decimals, default), \"compact\" (1.2M / 38.4K), ",
         "or \"percent\" (a fraction x100 + %)."
       ),
-      unit = paste0(
+      example = "compact",
+      type = arg_enum(c("number", "compact", "percent"))
+    ),
+    unit = new_block_arg(
+      paste0(
         "Free-text unit label shown next to the value / in the matrix header ",
         "(e.g. \"USD\", \"CHF\", \"apples\", \"kg\"). This is how you label a ",
         "currency \u2014 the renderer never infers \"$\"."
       ),
-      overline = paste0(
+      example = "USD",
+      type = arg_string()
+    ),
+    overline = new_block_arg(
+      paste0(
         "Supertext above the value. A column name reads per-cell; any other ",
         "string is a literal label. Defaults to the measure name."
       ),
-      caption = "Subtext below the value: a column name (per-cell) or a literal.",
-      drill = paste0(
+      example = "",
+      type = arg_string()
+    ),
+    caption = new_block_arg(
+      "Subtext below the value: a column name (per-cell) or a literal.",
+      example = "",
+      type = arg_string()
+    ),
+    drill = new_block_arg(
+      paste0(
         "When TRUE, clicking a card / matrix row emits a categorical filter ",
         "on the `by` column downstream (the same contract as the chart / ",
         "table). Off by default; only meaningful with `by` set."
-      )
-    ),
-    examples = list(
-      value = list("revenue"), by = "region", measure = "",
-      layout = "cards", secondary = "rev_delta", style = "delta",
-      good_when = "up", format = "compact", unit = "USD", overline = "",
-      caption = "", drill = TRUE
-    ),
-    prompt = paste(
-      "Bold display of a handful of important numbers \u2014 the KPI-card /",
-      "scorecard renderer. A PURE renderer: do all shaping upstream",
-      "(summarize / describe / a lag-join for comparisons); the tile does no",
-      "arithmetic. Map `value` to the number(s) \u2014 one column for a long",
-      "frame, or several columns for wide input (each becomes a card). Add a",
-      "precomputed `secondary` column and a `style` (delta / fill / pill /",
-      "plain) for a comparison; set `good_when` for the polarity. Use `by`",
-      "to cluster by a group and to drive the matrix rows in the table",
-      "layout. Set `drill = TRUE` to make a card / row click filter",
-      "downstream on `by`. Not a chart (no trends \u2014 that is the chart",
-      "renderer) and not a dense data table."
+      ),
+      example = TRUE,
+      type = arg_boolean()
     )
+  )
+}
+
+#' Construction guidance for the tile block
+#' @noRd
+tile_guidance <- function() {
+  paste(
+    "Bold display of a handful of important numbers \u2014 the KPI-card /",
+    "scorecard renderer. A PURE renderer: do all shaping upstream",
+    "(summarize / describe / a lag-join for comparisons); the tile does no",
+    "arithmetic. Map `value` to the number(s) \u2014 one column for a long",
+    "frame, or several columns for wide input (each becomes a card). Add a",
+    "precomputed `secondary` column and a `style` (delta / fill / pill /",
+    "plain) for a comparison; set `good_when` for the polarity. Use `by`",
+    "to cluster by a group and to drive the matrix rows in the table",
+    "layout. Set `drill = TRUE` to make a card / row click filter",
+    "downstream on `by`. Not a chart (no trends \u2014 that is the chart",
+    "renderer) and not a dense data table."
   )
 }

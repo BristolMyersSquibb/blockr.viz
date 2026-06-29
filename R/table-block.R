@@ -650,19 +650,32 @@ drilldown_table_dep <- function() {
 #' block (the chart block has this; the table was previously invisible).
 #' @noRd
 table_arguments <- function() {
-  structure(
-    c(
-      rowname = paste0(
+  new_block_args(
+    rowname = new_block_arg(
+      paste0(
         "The single column shown as the row labels (the left-hand stub). Names ",
         "a data column; defaults to the first column."
       ),
-      values = paste0(
+      example = "Region",
+      type = arg_string()
+    ),
+    # Populated (explicit value columns array) so the model anchors on setting
+    # these to named columns, not leaving them null.
+    values = new_block_arg(
+      paste0(
         "The columns rendered as the table body (the data cells). When the user ",
         "names specific value/measure columns, set this to EXACTLY those ",
         "columns -- do not leave it null. Leave null only to mean 'all columns ",
         "except `rowname`'."
       ),
-      cell_color = paste0(
+      example = list("Revenue", "Profit"),
+      type = arg_array(arg_string())
+    ),
+    # A `drilldown_table_color()` SPEC object (not a column name); its shape is
+    # an author-only nested structure, so the type is left unset and the NULL
+    # example (a plain table) is dropped.
+    cell_color = new_block_arg(
+      paste0(
         "Cell visuals: a `drilldown_table_color()` spec, or null for a plain ",
         "table. NOTE this is a SPEC object, not a column name (unlike the ",
         "drill-down chart's `color`). `type` is \"diverging\" (correlation ",
@@ -671,37 +684,44 @@ table_arguments <- function() {
         "events). `columns` restricts the effect to named columns; omit it to ",
         "apply to all numeric columns. Presentational only; never changes data."
       ),
-      drill = paste0(
+      example = NULL
+    ),
+    drill = new_block_arg(
+      paste0(
         "Column a row click filters downstream on. Optional; default null = a ",
         "click is inert. When set, clicking a row emits a categorical filter ",
         "on that column's value for the row \u2014 the same filter contract as the ",
         "drill-down chart."
       ),
-      digits = "Decimal places for numeric display. Default 2."
+      example = "Region",
+      type = arg_string()
     ),
-    examples = list(
-      # Populated (label_col + explicit value_cols array + drill) so the model
-      # anchors on setting these to named columns, not leaving them null.
-      rowname = "Region", values = list("Revenue", "Profit"),
-      cell_color = NULL, drill = "Region",
-      digits = 2L
-    ),
-    prompt = paste(
-      "Interactive table (sticky header, client-side sort and search) that can",
-      "also act as a click-to-filter control \u2014 the tabular sibling of the",
-      "drill-down chart. Two optional capabilities, both off by default:",
-      "\n- Coloring: set `cell_color` to a `drilldown_table_color()` spec to give",
-      "numeric cells a value-to-background scale (diverging for correlation,",
-      "sequential for heatmaps). Presentational only.",
-      "\n- Drill-down: set `drill` to a column; clicking a row emits a",
-      "categorical filter on that column's value, so downstream blocks filter",
-      "\u2014 the same filter contract as the drill-down chart.",
-      "\n`rowname`/`values` pick the row-stub and body",
-      "columns: set `values` to EXACTLY the columns the user names (e.g.",
-      "\"Revenue and Profit\" -> values = [\"Revenue\", \"Profit\"]); leave",
-      "them null only when the user does not name specific columns (defaults to",
-      "the first column plus the rest)."
+    digits = new_block_arg(
+      "Decimal places for numeric display. Default 2.",
+      example = 2L,
+      type = arg_integer()
     )
+  )
+}
+
+#' Construction guidance for the drill-down table block
+#' @noRd
+table_guidance <- function() {
+  paste(
+    "Interactive table (sticky header, client-side sort and search) that can",
+    "also act as a click-to-filter control \u2014 the tabular sibling of the",
+    "drill-down chart. Two optional capabilities, both off by default:",
+    "\n- Coloring: set `cell_color` to a `drilldown_table_color()` spec to give",
+    "numeric cells a value-to-background scale (diverging for correlation,",
+    "sequential for heatmaps). Presentational only.",
+    "\n- Drill-down: set `drill` to a column; clicking a row emits a",
+    "categorical filter on that column's value, so downstream blocks filter",
+    "\u2014 the same filter contract as the drill-down chart.",
+    "\n`rowname`/`values` pick the row-stub and body",
+    "columns: set `values` to EXACTLY the columns the user names (e.g.",
+    "\"Revenue and Profit\" -> values = [\"Revenue\", \"Profit\"]); leave",
+    "them null only when the user does not name specific columns (defaults to",
+    "the first column plus the rest)."
   )
 }
 

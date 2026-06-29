@@ -1,9 +1,17 @@
 #' Build arguments metadata for the chart block
+#'
+#' Mirrors the FULL configurable arg set (every name in the descriptions
+#' below) so the model copies the real shape instead of inventing names for
+#' the styling / filter-transport slots it can't see here. Omitting them made
+#' gpt-class models guess plausible-but-wrong names
+#' (trend/line_size/marker_size/filter_mode/brush) -> a rejected add_block and
+#' a wasted retry on every chart. Runtime-transport slots show their
+#' creation-time defaults.
 #' @noRd
 chart_arguments <- function() {
-  structure(
-    c(
-      chart_type = paste0(
+  new_block_args(
+    chart_type = new_block_arg(
+      paste0(
         "Chart type. One of \"bar\", \"waterfall\", \"pie\", \"treemap\", ",
         "\"boxplot\", \"radar\" (aggregated \u2014 use group + metric + agg_fn), ",
         "\"scatter\", \"line\" (individual \u2014 use x + y), or \"gantt\" ",
@@ -14,51 +22,98 @@ chart_arguments <- function() {
         "order). Use for P&L / bridge charts; reshape wide measures with ",
         "pivot_longer to (step, value) upstream first."
       ),
-      group = paste0(
+      example = "scatter",
+      type = arg_enum(
+        c("bar", "waterfall", "pie", "treemap", "boxplot", "radar",
+          "scatter", "line", "gantt")
+      )
+    ),
+    group = new_block_arg(
+      paste0(
         "Column for the categorical axis (aggregated charts). Names a ",
         "data column, never a literal."
       ),
-      color = paste0(
+      example = "Species",
+      type = arg_string()
+    ),
+    color = new_block_arg(
+      paste0(
         "Column mapped to colour. All families. Names a data column, ",
         "never a literal colour. null for no colour mapping."
       ),
-      facet = paste0(
+      example = "Species",
+      type = arg_string()
+    ),
+    facet = new_block_arg(
+      paste0(
         "Column to facet by \u2014 one small panel per level. Optional."
       ),
-      metric = paste0(
+      example = NULL,
+      type = arg_string()
+    ),
+    metric = new_block_arg(
+      paste0(
         "Column to aggregate (aggregated charts only). Use \".count\" for ",
         "row counts; otherwise a numeric column name."
       ),
-      agg_fn = paste0(
+      example = ".count",
+      type = arg_string()
+    ),
+    agg_fn = new_block_arg(
+      paste0(
         "Aggregation function for `metric` (aggregated charts only). ",
         "One of \"count\", \"count_distinct\", \"mean\", \"median\", \"sum\". ",
         "Default \"count\"."
       ),
-      x = paste0(
+      example = "count",
+      type = arg_enum(c("count", "count_distinct", "mean", "median", "sum"))
+    ),
+    x = new_block_arg(
+      paste0(
         "X-axis column (individual: scatter/line; timeline: interval ",
         "start). Names a data column."
       ),
-      y = paste0(
+      example = "Sepal.Length",
+      type = arg_string()
+    ),
+    y = new_block_arg(
+      paste0(
         "Y-axis column (individual: scatter/line; timeline: the lane, ",
         "e.g. USUBJID). Names a data column."
       ),
-      series = paste0(
+      example = "Sepal.Width",
+      type = arg_string()
+    ),
+    series = new_block_arg(
+      paste0(
         "Column whose distinct values split rows into separate series ",
         "(individual: one line/scatter group per value; timeline: per-bar ",
         "label). Splits only \u2014 not a colour, not a drill target. ",
         "Independent of color. High cardinality is fine."
       ),
-      xend = paste0(
+      example = NULL,
+      type = arg_string()
+    ),
+    xend = new_block_arg(
+      paste0(
         "Interval end column (timeline only). Rows with no end render as ",
         "a dot at x."
       ),
-      label = paste0(
+      example = NULL,
+      type = arg_string()
+    ),
+    label = new_block_arg(
+      paste0(
         "Column written as on-mark text. Optional; default null = no ",
         "on-mark text. For pie/treemap, null falls back to `group` ",
         "(a label-less pie is unusable). Label only \u2014 does not affect ",
         "colour, series, or drill."
       ),
-      drill = paste0(
+      example = NULL,
+      type = arg_string()
+    ),
+    drill = new_block_arg(
+      paste0(
         "Drill-down: what a SELECTION (click or brush) filters downstream on. ",
         "Tri-state: null/\"\" = OFF (the chart is a static display \u2014 no filter, ",
         "no hover effect; the default); \"auto\" = ON with the family's natural ",
@@ -70,86 +125,105 @@ chart_arguments <- function() {
         "the same rule (a click is a one-point selection). With \"auto\" on a ",
         "scatter, a brush filters the geometric x/y box."
       ),
-      smoother = paste0(
+      example = "Species",
+      type = arg_string()
+    ),
+    smoother = new_block_arg(
+      paste0(
         "Trend overlay for scatter charts. One of \"none\" (default), ",
         "\"lm\" (linear fit) or \"loess\" (local regression)."
       ),
-      lo = paste0(
+      example = "none",
+      type = arg_enum(c("none", "lm", "loess"))
+    ),
+    lo = new_block_arg(
+      paste0(
         "Lower error-band column (individual line only). Set together ",
         "with hi to draw a band; numeric only."
       ),
-      hi = paste0(
+      example = NULL,
+      type = arg_string()
+    ),
+    hi = new_block_arg(
+      paste0(
         "Upper error-band column (individual line only). Set together ",
         "with lo to draw a band; numeric only."
       ),
-      line_width_mult = paste0(
+      example = NULL,
+      type = arg_string()
+    ),
+    line_width_mult = new_block_arg(
+      paste0(
         "Line width multiplier for line charts (individual only). 1.0\u00d7 ",
         "is the default look; range 0.5\u00d7\u20133.0\u00d7."
       ),
-      dot_size_mult = paste0(
+      example = 1,
+      type = arg_number()
+    ),
+    dot_size_mult = new_block_arg(
+      paste0(
         "Marker size multiplier for scatter points and line markers ",
         "(individual only). 1.0\u00d7 is the default; range 0.5\u00d7\u20133.0\u00d7."
       ),
-      filter_type = paste0(
+      example = 1,
+      type = arg_number()
+    ),
+    filter_type = new_block_arg(
+      paste0(
         "Runtime filter-transport state. Normally left at default ",
         "\"categorical\"; set by interaction, not at creation."
       ),
-      filter_column = paste0(
+      example = "categorical",
+      type = arg_string()
+    ),
+    # Runtime filter-transport slots: NULL examples (dropped) and their type
+    # varies (column name / value array / range object) -> left untyped.
+    filter_column = new_block_arg(
+      paste0(
         "Runtime filter-transport state. The column the last click ",
         "filtered on. Usually null at creation."
       ),
-      filter_values = paste0(
+      example = NULL
+    ),
+    filter_values = new_block_arg(
+      paste0(
         "Runtime filter-transport state. Values kept after the last ",
         "click. Usually null at creation."
       ),
-      filter_range = paste0(
+      example = NULL
+    ),
+    filter_range = new_block_arg(
+      paste0(
         "Runtime filter-transport state for brush/drag on scatter/line ",
         "(x_col, y_col, x_range, y_range). Usually null at creation."
       ),
-      sort_by = paste0(
+      example = NULL
+    ),
+    sort_by = new_block_arg(
+      paste0(
         "Category-axis ordering for aggregated charts. \"value\" ",
         "(default), \"alpha\", or a column name. For timeline: ",
         "\"onset\" (default), \"alpha\", or a column name. Ignored for ",
         "individual (scatter/line) charts."
       ),
-      sort_dir = paste0(
+      example = "value",
+      type = arg_string()
+    ),
+    sort_dir = new_block_arg(
+      paste0(
         "Direction for `sort_by`. One of \"asc\" or \"desc\". Ignored ",
         "for individual (scatter/line) charts."
-      )
-    ),
-    # Mirror the FULL configurable arg set (every name in the descriptions
-    # above) so the model copies the real shape instead of inventing names
-    # for the styling / filter-transport slots it can't see here. Omitting
-    # them made gpt-class models guess plausible-but-wrong names
-    # (trend/line_size/marker_size/filter_mode/brush) -> a rejected add_block
-    # and a wasted retry on every chart. Runtime-transport slots show their
-    # creation-time defaults.
-    examples = list(
-      chart_type = "scatter",
-      group = "Species",
-      color = "Species",
-      facet = NULL,
-      metric = ".count",
-      agg_fn = "count",
-      x = "Sepal.Length",
-      y = "Sepal.Width",
-      series = NULL,
-      xend = NULL,
-      label = NULL,
-      drill = "Species",
-      smoother = "none",
-      lo = NULL,
-      hi = NULL,
-      line_width_mult = 1,
-      dot_size_mult = 1,
-      filter_type = "categorical",
-      filter_column = NULL,
-      filter_values = NULL,
-      filter_range = NULL,
-      sort_by = "value",
-      sort_dir = "desc"
-    ),
-    prompt = paste(
+      ),
+      example = "desc",
+      type = arg_enum(c("asc", "desc"))
+    )
+  )
+}
+
+#' Construction guidance for the chart block
+#' @noRd
+chart_guidance <- function() {
+  paste(
       "This block renders an interactive chart that can also act as a",
       "filter. Every aesthetic argument names a DATA COLUMN, never a",
       "literal value (`color=\"ARM\"` maps the ARM column, it is not the",
@@ -240,6 +314,5 @@ chart_arguments <- function() {
       "\n- agg_fn=\"mean\"/\"sum\" with a metric column that's all-NA or",
       "non-numeric in scope -> NA bars (invisible). Pre-filter to rows",
       "where the metric is populated, or pick a different metric."
-    )
   )
 }
