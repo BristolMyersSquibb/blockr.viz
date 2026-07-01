@@ -18,7 +18,7 @@
 #'
 #' @param data A data.frame. Either:
 #'   - **New wide format**: plain tibble with dotted columns
-#'     `.section_1, ..., .section_k` (optional), `.var` (optional),
+#'     `.section_1, ..., .section_k` (optional), `.strong` (optional),
 #'     `.label` (optional), and data cells (pipe-delimited if nested).
 #'   - **Legacy long format**: has `label`, `depth`, `col_var` columns
 #'     plus stat columns (`n`/`N`/`pct` or `mean`/`sd` or `value`).
@@ -76,8 +76,8 @@ gt_table <- function(data, title = NULL, subtitle = NULL,
 gt_table_wide <- function(data, title = NULL, subtitle = NULL,
                           full_width = TRUE, borders = TRUE,
                           na_rep = "\u2014") {
-  # Section columns are any dotted `.section_N` or `.var` columns.
-  section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
+  # Section columns are any dotted `.section_N` columns.
+  section_cols <- grep("^\\.section_\\d+$", names(data), value = TRUE)
   stub_col <- if (".label" %in% names(data)) ".label" else NULL
 
   # Row-level styling columns (hidden from display, drive tab_style).

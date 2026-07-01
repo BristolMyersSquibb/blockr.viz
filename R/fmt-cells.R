@@ -97,7 +97,7 @@ fmt_cells <- function(df, fmt_col = ".fmt", digits = 2L, na = "NA") {
 #'   `NULL`, no spread — the formatted cell is returned in `.cell` and the
 #'   referenced numeric columns are dropped.
 #' @param id_cols Row-identity columns to keep (default: the dotted columns
-#'   `.section_*`/`.var`/`.label`/`.indent` present in `df`).
+#'   `.section_*`/`.label`/`.indent`/`.strong`/`.emph` present in `df`).
 #' @param digits,na Passed to `fmt_cells()`.
 #' @return A data frame: row-identity columns + either a `.cell` column (no
 #'   spread) or one formatted column per `group_col` level (spread).
@@ -107,7 +107,7 @@ fmt_assemble <- function(df, group_col = NULL, id_cols = NULL,
   stopifnot(is.data.frame(df))
   df[[".cell"]] <- fmt_cells(df, digits = digits, na = na)
   if (is.null(id_cols)) {
-    dotted <- grep("^\\.(section|var|label|indent)", names(df), value = TRUE)
+    dotted <- grep("^\\.(section|label|indent|strong|emph)", names(df), value = TRUE)
     id_cols <- setdiff(dotted, ".fmt")
   }
   if (is.null(group_col)) {

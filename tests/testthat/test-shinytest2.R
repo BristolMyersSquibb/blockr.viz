@@ -584,9 +584,11 @@ test_that("summary_table: produces a tidy summary frame", {
   res <- get_block_result("summary")
   expect_s3_class(res, "data.frame")
   expect_gt(nrow(res), 0)
-  # The tidy summary carries a variable column and computed stats.
-  expect_true(all(c(".var", "mean") %in% names(res)))
-  expect_setequal(unique(res$.var), c("revenue", "profit"))
+  # The tidy summary carries header rows (.strong) and computed stats.
+  expect_true(all(c(".strong", "mean") %in% names(res)))
+  # Header rows for each variable
+  hdr <- res[!is.na(res$.strong) & res$.strong, ]
+  expect_setequal(unique(hdr$.label), c("revenue", "profit"))
 })
 
 test_that("gt_table: registers and binds its gt output", {

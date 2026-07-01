@@ -4,7 +4,7 @@
 #' numeric statistic columns plus a hidden per-row `.fmt` template that
 #' names how to combine them into a display cell. Section structure is
 #' encoded via well-known dotted columns (`.section_1, ..., .section_k,
-#' .var, .label, .indent`), and the by-group dimension lives in a single
+#' .label, .indent, .strong`), and the by-group dimension lives in a single
 #' `.group` column. Designed for the "list of variables by Y" pattern;
 #' the complementary "one measurement across two dimensions" pivot is
 #' produced upstream by composing `summarize` with `tidyr::pivot_wider`.
@@ -36,12 +36,12 @@
 #'   block-internal) holding values from user-provided `sections`.
 #'   Present iff `length(sections) > 0`. Each carries a `label`
 #'   attribute pulled from the original column for renderer display.
-#' - `.var` — synthetic variable-name column. Present iff
-#'   `length(vars) > 1`.
 #' - `.label` — innermost row label. Stat name for numeric vars
 #'   ("N", "Mean", "SD", ...), level name for categoricals, variable
 #'   name for logicals.
 #' - `.indent` — detail-row indentation level (see `indent_details`).
+#' - `.strong` — logical, `TRUE` on variable-header rows (bold,
+#'   blank data cells). Present only when `length(vars) > 1`.
 #' - `.group` — by-group value (one row per var/level × group).
 #'   Pipe-delimited (`"outer|inner"`) for length-2 `by`; the constant
 #'   `"Overall"` when `by` is empty; the `overall_label` value for the
@@ -86,9 +86,9 @@
 #'   drill-down. v1 supports 2-level hierarchies only.
 #'
 #' @return A tidy, long-format tibble: raw numeric statistic columns plus
-#'   dotted structure columns (`.section_*`, `.var`, `.label`, `.indent`),
-#'   a `.group` dimension column, and a per-row `.fmt` template column that
-#'   a renderer interpolates into display cells.
+#'   dotted structure columns (`.section_*`, `.label`, `.indent`,
+#'   `.strong`), a `.group` dimension column, and a per-row `.fmt`
+#'   template column that a renderer interpolates into display cells.
 #' @examples
 #' # Simple demographics
 #' summary_table(
@@ -153,7 +153,7 @@ summary_table <- function(data,
   # Check block-internal namespace collision in the input data
   input_cols <- names(data)
   bad <- c(
-    intersect(c(".var", ".label", ".group", ".fmt"), input_cols),
+    intersect(c(".strong", ".label", ".group", ".fmt"), input_cols),
     grep("^\\.section_\\d+$", input_cols, value = TRUE)
   )
   if (length(bad)) {
@@ -203,24 +203,53 @@ summary_table <- function(data,
           subject_var = subject_var
         )
       })
-      for (i in seq_along(parts)) parts[[i]]$.var <- run[i]
-      bind_per_var_frames(parts, sections = sections, has_var = TRUE)
+      bind_per_var_frames(parts, sections = sections)
     }
   })
 
   per_var <- per_run
 
+  # When multiple independent variable blocks are present, emit
+  # annotated-df-style header rows (.strong=TRUE, blank data cells,
+  # .indent=0) and bump every detail row's .indent by 1 — instead of the
+  # old .var section column.  Hierarchy runs (length(run)==2) already
+  # carry their own parent/child structure so they count as one block.
   all_logical <- all(vapply(vars, function(v) is.logical(data[[v]]),
                             logical(1)))
-  if (length(vars) > 1L && !all_logical) {
+  if (length(per_var) > 1L && !all_logical) {
     for (i in seq_along(per_var)) {
       head_var <- if (length(runs[[i]]) == 1L) runs[[i]] else runs[[i]][1]
-      per_var[[i]]$.var <- var_header_label(data[[head_var]], head_var)
+      hdr_label <- var_header_label(data[[head_var]], head_var)
+
+      df <- per_var[[i]]
+      # Hierarchy frames (parent at 0, child at 1) need a full +1 so the
+      # nesting is preserved under the header.  Non-hierarchy frames
+      # (categorical at 1, compact numeric at 0) just need every row at
+      # indent >= 1 (one level below the header).
+      has_inner_nesting <- any(df$.indent == 0L) && any(df$.indent > 0L)
+      if (has_inner_nesting) {
+        df$.indent <- df$.indent + 1L
+      } else {
+        df$.indent <- pmax(df$.indent, 1L)
+      }
+
+      # One header row per unique (sections... x .group) combination.
+      key_cols <- c(intersect(sections, names(df)), ".group")
+      keys <- unique(df[, key_cols, drop = FALSE])
+      hdr <- keys
+      hdr$.label <- hdr_label
+      hdr$.indent <- 0L
+      hdr$.strong <- TRUE
+      hdr$.fmt <- NA_character_
+      for (sc in intersect(SUMMARY_STAT_COLS, names(df))) {
+        hdr[[sc]] <- NA_real_
+      }
+
+      per_var[[i]] <- rbind_long(hdr, df)
     }
   }
 
-  out <- bind_per_var_frames(per_var, sections = sections,
-                             has_var = length(vars) > 1L)
+  out <- bind_per_var_frames(per_var, sections = sections)
 
   # If indent_details is off, strip the .indent column.
   if (!isTRUE(indent_details) && ".indent" %in% names(out) &&
@@ -238,13 +267,13 @@ summary_table <- function(data,
     }
   }
 
-  # Reorder: .section_*, .var, .label, .indent, .group, .fmt, then numbers
+  # Reorder: .section_*, .label, .indent, .strong, .group, .fmt, then numbers
   stat_cols <- c("n", "pct", "mean", "sd", "median", "q1", "q3", "min", "max")
   front_order <- c(
     if (length(sections) > 0L) paste0(".section_", seq_along(sections)) else character(),
-    if (length(vars) > 1L) ".var" else character(),
     ".label",
     ".indent",
+    ".strong",
     ".group",
     ".fmt"
   )
@@ -451,15 +480,17 @@ compute_categorical_var <- function(data, var, sections, by,
     return(out)
   }
 
-  per_level <- lapply(levels_v, function(lv) {
-    sub <- data[!is.na(data[[var]]) & as.character(data[[var]]) == lv, ,
-                drop = FALSE]
-    num <- compute_denom(sub, group_vars, subject_var)
-    names(num)[names(num) == "N"] <- "n"
-    num$.level <- lv
-    num
-  })
-  num_all <- do.call(rbind, per_level)
+  # Count per level in one grouped operation (not one dplyr pipeline per
+  # level, which is O(levels) and dominates on high-cardinality vars).
+  # Exclude NA subjects to match n_distinct(na.rm = TRUE) semantics.
+  data_nona <- data[!is.na(data[[var]]), , drop = FALSE]
+  if (!is.null(subject_var)) {
+    data_nona <- data_nona[!is.na(data_nona[[subject_var]]), , drop = FALSE]
+  }
+  num_all <- compute_denom(data_nona, c(group_vars, var), subject_var)
+  names(num_all)[names(num_all) == "N"] <- "n"
+  names(num_all)[names(num_all) == var] <- ".level"
+  num_all$.level <- as.character(num_all$.level)
 
   if (length(group_vars) == 0L) {
     stats_df <- cbind(num_all, denom)
@@ -477,15 +508,10 @@ compute_categorical_var <- function(data, var, sections, by,
 
   if (isTRUE(add_overall)) {
     ov_denom <- compute_denom(data, sections, subject_var)
-    ov_per_level <- lapply(levels_v, function(lv) {
-      sub <- data[!is.na(data[[var]]) & as.character(data[[var]]) == lv, ,
-                  drop = FALSE]
-      n <- compute_denom(sub, sections, subject_var)
-      names(n)[names(n) == "N"] <- "n"
-      n$.level <- lv
-      n
-    })
-    ov_num <- do.call(rbind, ov_per_level)
+    ov_num <- compute_denom(data_nona, c(sections, var), subject_var)
+    names(ov_num)[names(ov_num) == "N"] <- "n"
+    names(ov_num)[names(ov_num) == var] <- ".level"
+    ov_num$.level <- as.character(ov_num$.level)
     ov_stats <- if (length(sections) == 0L) {
       cbind(ov_num, ov_denom)
     } else {
@@ -632,23 +658,23 @@ compute_denom <- function(data, group_vars, subject_var) {
   }
 }
 
-#' Reorder a long per-var frame: sections, .label, .indent, .group,
-#' .fmt, then numeric stat columns.
+#' Reorder a long per-var frame: sections, .label, .indent, .strong,
+#' .group, .fmt, then numeric stat columns.
 #' @noRd
 reorder_long <- function(df, sections) {
-  front <- intersect(c(sections, ".label", ".indent", ".group", ".fmt"),
-                     names(df))
+  front <- intersect(c(sections, ".label", ".indent", ".strong", ".group",
+                       ".fmt"), names(df))
   stats_present <- intersect(SUMMARY_STAT_COLS, names(df))
   rest <- setdiff(names(df), c(front, stats_present))
   df[, c(front, stats_present, rest), drop = FALSE]
 }
 
 #' @noRd
-bind_per_var_frames <- function(per_var, sections, has_var) {
+bind_per_var_frames <- function(per_var, sections) {
   all_names <- unique(unlist(lapply(per_var, names)))
 
-  # Canonical front order: sections, .var, .label, .indent, .group, .fmt
-  front <- intersect(c(sections, ".var", ".label", ".indent", ".group",
+  # Canonical front order: sections, .label, .indent, .strong, .group, .fmt
+  front <- intersect(c(sections, ".label", ".indent", ".strong", ".group",
                        ".fmt"), all_names)
   stats_present <- intersect(SUMMARY_STAT_COLS, all_names)
   back <- setdiff(all_names, c(front, stats_present))
@@ -659,6 +685,8 @@ bind_per_var_frames <- function(per_var, sections, has_var) {
     for (mc in missing) {
       df[[mc]] <- if (identical(mc, ".indent")) {
         0L
+      } else if (identical(mc, ".strong")) {
+        NA
       } else if (mc %in% SUMMARY_STAT_COLS) {
         NA_real_
       } else {
@@ -788,5 +816,5 @@ compute_hierarchy_run <- function(data, run, sections, by,
 }
 
 # dplyr uses `.data` pronoun; silence R CMD check warnings
-utils::globalVariables(c(".data", ".colkey", ".level", ".var", ".label",
+utils::globalVariables(c(".data", ".colkey", ".level", ".label",
                          ".group", ".fmt"))

@@ -5,10 +5,10 @@
 #' (one row for compact numerics, six rows for expanded numerics,
 #' one row per level for categoricals, one row per flag for logicals).
 #'
-#' Output is a plain tibble with dotted section columns
-#' (`.section_1, ..., .section_k, .var, .label`), consumable by
-#' [new_gt_table_block()] or any renderer that understands the
-#' convention.
+#' Output is a plain tibble with dotted structure columns
+#' (`.section_1, ..., .section_k, .label, .indent, .strong`),
+#' consumable by [new_gt_table_block()] or any renderer that
+#' understands the annotated-data-frame convention.
 #'
 #' @param vars Character, variables to summarise (each becomes a row-section).
 #' @param sections Character, outer section columns that contain `vars` (0..N).
@@ -28,9 +28,9 @@
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #'
 #' @details
-#' The UI uses the shared `Blockr.Select` widget library (also used by
-#' `blockr.dplyr` blocks) with a gear-icon popover for advanced options
-#' (stats preset, overall column, indent, nest hierarchies).
+#' The UI has two main fields (Summarize, Split by) and a gear popover
+#' with advanced options (stats preset, overall column, nest hierarchy,
+#' group-by sections, count-distinct-by).
 #'
 #' Spec: `blockr.design/open/table-blocks/`.
 #'

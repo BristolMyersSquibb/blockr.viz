@@ -13,8 +13,8 @@
 #'
 #' - `.section_1, ..., .section_k` — nested row-side section columns,
 #'   outermost first. `attr(col, "label")` carries the display label.
-#' - `.var` — synthetic variable-name column, present when
-#'   `length(vars) > 1`.
+#' - `.strong` — logical, bold header rows (variable labels when
+#'   `length(vars) > 1`).
 #' - `.label` — innermost per-row identifier (stat name / factor
 #'   level). Rendered as the leftmost row-stub column.
 #' - Data columns — names use `|` as nesting delimiter for multi-level
@@ -62,9 +62,9 @@ html_table <- function(data,
     )
   }
 
-  all_section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
+  all_section_cols <- grep("^\\.section_\\d+$", names(data), value = TRUE)
   # Only columns that carry a grouping value render as sections; an entirely
-  # empty .section_*/.var column draws no "(missing)" header — but it must still
+  # empty .section_* column draws no "(missing)" header — but it must still
   # be kept out of the data cells (exclude `all_section_cols`, not the filtered
   # set, from data_cols) or it would leak in as a literal "—" column.
   section_cols <- nonempty_section_cols(data, all_section_cols)
@@ -306,7 +306,7 @@ leaf_header_content <- function(data, col_name, fallback_text, span,
 
 #' Keep only section/var columns that actually carry a grouping value.
 #'
-#' A `.section_*` / `.var` column that is entirely NA/blank is not a real
+#' A `.section_*` column that is entirely NA/blank is not a real
 #' grouping dimension — rendering it would wrap every row under a single
 #' "(missing)" header. Drop those so the table renders flat (or indent-only)
 #' instead. A *partially* empty column is kept: its gaps still render as
@@ -391,7 +391,7 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   for (L in seq_len(k)) {
     sc <- section_cols[L]
     sec_label <- attr(data[[sc]], "label")
-    prefix <- if (!identical(sc, ".var") && !is.null(sec_label) &&
+    prefix <- if (!is.null(sec_label) &&
                   is.character(sec_label) && nzchar(sec_label) &&
                   sec_label != sc) {
       paste0("<span class=\"blockr-section-label\">",

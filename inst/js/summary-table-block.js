@@ -98,17 +98,17 @@
       grid.className = 'stb-grid';
       this.card.appendChild(grid);
 
-      // Vars (full-width row)
+      // Summarize (full-width row)
       const varsWrap = document.createElement('div');
       varsWrap.className = 'stb-field stb-field--full';
       const varsLabel = document.createElement('label');
       varsLabel.className = 'blockr-label';
-      varsLabel.textContent = 'Variables';
+      varsLabel.textContent = 'Summarize';
       varsWrap.appendChild(varsLabel);
       this._selects.vars = BSelect.multi(varsWrap, {
         options: [],
         selected: [],
-        placeholder: 'Columns to summarise\u2026',
+        placeholder: 'Columns to summarize\u2026',
         onChange: (selected) => {
           this._state.vars = selected || [];
           this._autoSubmit();
@@ -117,36 +117,17 @@
       this._selects.vars.el.classList.add('blockr-select--bordered');
       grid.appendChild(varsWrap);
 
-      // Sections
-      const sectionsWrap = document.createElement('div');
-      sectionsWrap.className = 'stb-field';
-      const sectionsLabel = document.createElement('label');
-      sectionsLabel.className = 'blockr-label';
-      sectionsLabel.textContent = 'Sections (outer grouping)';
-      sectionsWrap.appendChild(sectionsLabel);
-      this._selects.sections = BSelect.multi(sectionsWrap, {
-        options: [],
-        selected: [],
-        placeholder: 'Optional outer section columns\u2026',
-        onChange: (selected) => {
-          this._state.sections = selected || [];
-          this._autoSubmit();
-        }
-      });
-      this._selects.sections.el.classList.add('blockr-select--bordered');
-      grid.appendChild(sectionsWrap);
-
-      // By (max 2)
+      // Split by (max 2)
       const byWrap = document.createElement('div');
-      byWrap.className = 'stb-field';
+      byWrap.className = 'stb-field stb-field--full';
       const byLabel = document.createElement('label');
       byLabel.className = 'blockr-label';
-      byLabel.textContent = 'By (column split, up to 2)';
+      byLabel.textContent = 'Split by';
       byWrap.appendChild(byLabel);
       this._selects.by = BSelect.multi(byWrap, {
         options: [],
         selected: [],
-        placeholder: 'Up to 2 categorical columns\u2026',
+        placeholder: 'Column dimension (up to 2)\u2026',
         onChange: (selected) => {
           const sel = (selected || []).slice(0, 2);
           if ((selected || []).length > 2) {
@@ -175,12 +156,10 @@
       this._addStatsRow();
       this._addOverallRow();
       this._addOverallLabelRow();
-      this._addBooleanRow('indent_details',
-        { on: 'Indent details', off: 'Flat rows' },
-        'Indent the detail rows within each variable section');
       this._addBooleanRow('nest_hierarchies',
-        { on: 'Nested', off: 'Independent' },
-        'Nest hierarchy columns (sections) visually');
+        { on: 'Nest hierarchy', off: 'Flat' },
+        'Auto-nest adjacent categorical columns (e.g. SOC \u2192 PT)');
+      this._addSectionsRow();
       this._addIdVarRow();
 
       this.card.appendChild(this.popover);
@@ -315,6 +294,39 @@
       this._overallLabelInput = input;
     }
 
+    _addSectionsRow() {
+      const BSelect = /** @type {BlockrSelectStatic} */ (Blockr.Select);
+      const wrap = document.createElement('div');
+      wrap.style.marginBottom = '8px';
+
+      const label = document.createElement('span');
+      label.className = 'blockr-popover-label';
+      label.textContent = 'Group by';
+      label.style.display = 'block';
+      label.style.marginBottom = '4px';
+      wrap.appendChild(label);
+
+      const hint = document.createElement('span');
+      hint.textContent = 'Outer row hierarchy above the summarized variables';
+      hint.style.fontSize = '0.75rem';
+      hint.style.color = '#9ca3af';
+      hint.style.display = 'block';
+      hint.style.marginBottom = '6px';
+      wrap.appendChild(hint);
+
+      this._selects.sections = BSelect.multi(wrap, {
+        options: [],
+        selected: [],
+        placeholder: 'Optional grouping columns\u2026',
+        onChange: (selected) => {
+          this._state.sections = selected || [];
+          this._autoSubmit();
+        }
+      });
+      this._selects.sections.el.classList.add('blockr-select--bordered');
+      this.popover.appendChild(wrap);
+    }
+
     _addIdVarRow() {
       const select = document.createElement('select');
       select.className = 'blockr-popover-input';
@@ -407,7 +419,7 @@
         this._refreshIdVarOptions();
       }
 
-      for (const key of ['stats', 'add_overall', 'indent_details', 'nest_hierarchies']) {
+      for (const key of ['stats', 'add_overall', 'nest_hierarchies']) {
         const btn = (/** @type {Record<string, any>} */ (this))['_toggle_' + key];
         if (btn && btn._update) btn._update();
       }
