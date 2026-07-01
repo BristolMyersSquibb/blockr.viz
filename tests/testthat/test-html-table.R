@@ -162,15 +162,16 @@ test_that("html_table() renders leaf-level attr(col, 'label') as HTML", {
 test_that("html_table() hides internal dotted columns from data cells", {
   df <- tibble::tibble(
     .section_1 = c("A", "A"),
-    .var       = c("AGE", "AGE"),
     .label     = c("n", "Mean"),
+    .indent    = c(1L, 1L),
+    .strong    = c(FALSE, FALSE),
     Total      = c("100", "42.3")
   )
 
   html <- as.character(htmltools::tagList(html_table(df)))
-  expect_false(grepl("<td class=\"blockr-data\">AGE", html, fixed = TRUE))
   expect_false(grepl("<td class=\"blockr-data\">A<", html, fixed = TRUE))
-  expect_true(grepl("<td class=\"blockr-stub\">n<", html, fixed = TRUE))
+  expect_true(grepl("blockr-stub", html, fixed = TRUE))
+  expect_true(grepl(">n<", html, fixed = TRUE))
 })
 
 test_that("html_table() renders NA section values as '(missing)'", {

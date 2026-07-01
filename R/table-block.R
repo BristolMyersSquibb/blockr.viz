@@ -32,7 +32,7 @@
 #' **Structured "Table 1" input.** When `data` follows the dotted-column
 #' convention that [summary_table()] emits — a tidy `.fmt` frame (numeric
 #' columns + a per-row `.fmt` template + `.group`), or the already-wide
-#' display grid with `.section_*` / `.var` / `.label` / `.indent` columns —
+#' display grid with `.section_*` / `.label` / `.indent` / `.strong` columns —
 #' the renderer switches to the *structured* layout: row-side section
 #' headers with collapse/expand toggles, `.indent` row stubs, and
 #' multi-level column spanners parsed from `|`-delimited column names (each
@@ -268,12 +268,12 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
 
 #' Does this (already wide) frame carry the dotted-column structure?
 #'
-#' True when it has any row-side section column (`.section_*` / `.var`) OR a
-#' `.label` stub OR an `.indent` column — the signals [summary_table()] emits
-#' and [html_table()] renders. A plain flat frame has none of these.
+#' True when it has any row-side section column (`.section_*`) OR a
+#' `.label` stub OR an `.indent` / `.strong` column — the signals
+#' [summary_table()] emits and [html_table()] renders.
 #' @noRd
 dt_is_structured <- function(data) {
-  any(grepl("^\\.(section_\\d+|var|label|indent)$", names(data)))
+  any(grepl("^\\.(section_\\d+|label|indent|strong)$", names(data)))
 }
 
 #' Build the structured ("Table 1") `<table>` for the interactive table-block.
@@ -290,8 +290,8 @@ dt_is_structured <- function(data) {
 dt_table_tag_structured <- function(data, drill, color, digits, toggles = NULL) {
   sortable    <- toggles$sortable %||% TRUE
   collapsible <- toggles$collapsible %||% TRUE
-  all_section_cols <- grep("^\\.(section_\\d+|var)$", names(data), value = TRUE)
-  # Empty .section_*/.var columns draw no "(missing)" header, but must still be
+  all_section_cols <- grep("^\\.section_\\d+$", names(data), value = TRUE)
+  # Empty .section_* columns draw no "(missing)" header, but must still be
   # excluded from the data cells (use all_section_cols below) or they leak in
   # as a literal "—" column.
   section_cols <- nonempty_section_cols(data, all_section_cols)
