@@ -64,7 +64,7 @@ emits, so existing filter links keep working.
 \strong{Structured "Table 1" input.} When \code{data} follows the dotted-column
 convention that \code{\link[=summary_table]{summary_table()}} emits — a tidy \code{.fmt} frame (numeric
 columns + a per-row \code{.fmt} template + \code{.group}), or the already-wide
-display grid with \verb{.section_*} / \code{.var} / \code{.label} / \code{.indent} columns —
+display grid with \verb{.section_*} / \code{.label} / \code{.indent} / \code{.strong} columns —
 the renderer switches to the \emph{structured} layout: row-side section
 headers with collapse/expand toggles, \code{.indent} row stubs, and
 multi-level column spanners parsed from \code{|}-delimited column names (each

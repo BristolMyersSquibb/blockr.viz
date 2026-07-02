@@ -46,8 +46,8 @@ The input contract is the same dotted-column wide tibble that
 \itemize{
 \item \verb{.section_1, ..., .section_k} — nested row-side section columns,
 outermost first. \code{attr(col, "label")} carries the display label.
-\item \code{.var} — synthetic variable-name column, present when
-\code{length(vars) > 1}.
+\item \code{.strong} — logical, bold header rows (variable labels when
+\code{length(vars) > 1}).
 \item \code{.label} — innermost per-row identifier (stat name / factor
 level). Rendered as the leftmost row-stub column.
 \item Data columns — names use \code{|} as nesting delimiter for multi-level

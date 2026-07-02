@@ -17,7 +17,7 @@ gt_table(
 \item{data}{A data.frame. Either:
 \itemize{
 \item \strong{New wide format}: plain tibble with dotted columns
-\verb{.section_1, ..., .section_k} (optional), \code{.var} (optional),
+\verb{.section_1, ..., .section_k} (optional), \code{.strong} (optional),
 \code{.label} (optional), and data cells (pipe-delimited if nested).
 \item \strong{Legacy long format}: has \code{label}, \code{depth}, \code{col_var} columns
 plus stat columns (\code{n}/\code{N}/\code{pct} or \code{mean}/\code{sd} or \code{value}).
