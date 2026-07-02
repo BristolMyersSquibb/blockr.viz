@@ -136,3 +136,25 @@
   gap: 2px 18px;
   align-items: center;
 }
+
+/* --- Narrow bands -----------------------------------------------------------
+   The band inherits chart.css's .dd-section grid (auto-fill minmax(180px,1fr)).
+   When that collapses to ONE track, the paired-row rule (.dd-role-paired
+   { grid-column: span 2 }) forces a second implicit ~half-width track: other
+   fields get squeezed beside the section title with a tiny select, and paired
+   controls (metric + aggregation) cram side by side. Below the two-track
+   threshold (2*180px + 14px gap + band padding), drop to an explicit single
+   column, neutralize the span, and let paired controls and the type-picker
+   strips wrap. Container query on the band itself — the same narrow-stacking
+   precedent as filter/mutate's @container rules in blockr.dplyr. */
+.blockr-settings {
+  container-type: inline-size;
+}
+@container (max-width: 404px) {
+  .blockr-settings .dd-section { grid-template-columns: 1fr; }
+  .blockr-settings .dd-section > .dd-role-paired { grid-column: auto; }
+  .blockr-settings .dd-row-controls { flex-wrap: wrap; }
+  .blockr-settings .dd-row-controls > .dd-picker-wrap { flex: 1 1 140px; }
+  .blockr-settings .dd-type-group { flex-wrap: wrap; }
+  .blockr-settings .dd-cfg-types { flex-wrap: wrap; }
+}
