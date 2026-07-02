@@ -103,8 +103,10 @@
   //
   // ROLES — keyed by the existing config key (no persisted-key renames).
   //   kind: 'column' | 'select' | 'segmented' | 'slider'
-  //   colType: 'cat' (categorical or n_unique<=50) | 'num' | 'any'
-  //   allowCount: prepend '.count' to a numeric column picker (metric)
+  //   colType: 'cat' (categorical or n_unique<=50) | 'num' | 'any' | 'none'
+  //            (no data columns), or a function of the current config
+  //   allowCount: prepend '.count' to the column picker (metric); may also
+  //               be a function of the current config
   //   maxUnique: cap a categorical picker (facet)
   //   pairedWith: render this role's control beside its pair in one row
   //   optionsBy / colTypeBy / hintBy: per-family overrides (key = family)
@@ -121,8 +123,18 @@
     facet:  { label: 'Facet',  kind: 'column', colType: 'cat', maxUnique: 10 },
     drill:  { label: 'Drill',  kind: 'column', colType: 'any' },
     label:  { label: 'Label',  kind: 'column', colType: 'any' },
-    metric: { label: 'Metric', kind: 'column', colType: 'num', allowCount: true, pairedWith: 'agg_fn' },
-    agg_fn: { label: 'Agg',    kind: 'select', options: AGG_FNS },
+    // The metric picker follows the aggregation: "count" is a row count (the
+    // metric is ignored -> only the synthetic '.count'), "count_distinct"
+    // works on any column type (e.g. a subject id for patient counts), the
+    // numeric aggregations need a numeric column.
+    metric: { label: 'Metric', kind: 'column', pairedWith: 'agg_fn',
+              ph: 'column to aggregate…',
+              colType: (/** @type {any} */ cfg) =>
+                cfg.agg_fn === 'count_distinct' ? 'any'
+                  : (!cfg.agg_fn || cfg.agg_fn === 'count') ? 'none' : 'num',
+              allowCount: (/** @type {any} */ cfg) =>
+                !cfg.agg_fn || cfg.agg_fn === 'count' },
+    agg_fn: { label: 'Agg',    kind: 'select', options: AGG_FNS, rerender: true },
     sort_by:  { label: 'Sort', kind: 'select', pairedWith: 'sort_dir',
                 optionsBy: { aggregated: ['value', 'alpha', '#num'],
                              timeline: ['onset', 'alpha', '#num'] } },
@@ -283,7 +295,10 @@
             : 'Auto — the selected point';
         },
         title: 'Chart settings',
-        onChange: () => { this._render(); this._sendConfig(); },
+        onChange: (/** @type {string} */ key) => {
+          if (key === 'agg_fn') this._reconcileMetric();
+          this._render(); this._sendConfig();
+        },
         onMults: () => this._sendMults(),
         onClearFilter: () => { this._selected = null; this._sendClearFilter(); },
         ensureDefaults: () => this._ensureFamilyDefaults(),
@@ -317,6 +332,22 @@
       if (AGGREGATED_TYPES.includes(this.config.chart_type)) return 'aggregated';
       if (TIMELINE_TYPES.includes(this.config.chart_type)) return 'timeline';
       return 'individual';
+    }
+
+    // Keep the metric consistent when the aggregation changes: "count" ignores
+    // the metric (force the synthetic '.count'); "count_distinct" takes any
+    // column but not '.count'; the numeric aggregations need a numeric column.
+    // A metric that no longer fits is emptied — the picker then shows the
+    // required-empty state instead of silently charting a wrong number.
+    _reconcileMetric() {
+      const cfg = this.config;
+      if (!cfg.agg_fn || cfg.agg_fn === 'count') { cfg.metric = '.count'; return; }
+      if (cfg.agg_fn === 'count_distinct') {
+        if (cfg.metric === '.count') cfg.metric = '';
+        return;
+      }
+      const col = (this.columns || []).find(c => c.name === cfg.metric);
+      if (!col || col.type !== 'numeric') cfg.metric = '';
     }
 
     // The bar baseline mode: "zero" (a plain bar, every bar starts at 0) or
@@ -641,8 +672,11 @@
           const cat = cols.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique <= 30);
           cfg.group = cat ? cat.name : cols[0].name;
         }
-        if (!cfg.metric) cfg.metric = '.count';
         if (!cfg.agg_fn) cfg.agg_fn = 'count';
+        // '.count' only fits the "count" aggregation; under any other agg an
+        // unset metric stays empty (required-empty picker) rather than
+        // defaulting to a value the aggregation ignores.
+        if (!cfg.metric && cfg.agg_fn === 'count') cfg.metric = '.count';
         if (!this._hasVal(cfg.sort_by)) cfg.sort_by = 'value';
         if (!this._hasVal(cfg.sort_dir)) cfg.sort_dir = 'desc';
         if (!this._hasVal(cfg.orientation)) cfg.orientation = 'horizontal';
@@ -718,8 +752,9 @@
           const cat = this.columns.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique <= 30);
           this.config.group = cat ? cat.name : this.columns[0].name;
         }
-        if (!this.config.metric) this.config.metric = '.count';
         if (!this.config.agg_fn) this.config.agg_fn = 'count';
+        // '.count' only fits the "count" aggregation (see _ensureFamilyDefaults)
+        if (!this.config.metric && this.config.agg_fn === 'count') this.config.metric = '.count';
         if (!this.config.sort_by) this.config.sort_by = 'value';
         if (!this.config.sort_dir) this.config.sort_dir = 'desc';
       } else if (fam === 'timeline') {

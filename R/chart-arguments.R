@@ -53,8 +53,11 @@ chart_arguments <- function() {
     ),
     metric = new_block_arg(
       paste0(
-        "Column to aggregate (aggregated charts only). Use \".count\" for ",
-        "row counts; otherwise a numeric column name."
+        "Column to aggregate (aggregated charts only). Must match `agg_fn`: ",
+        "\".count\" with agg_fn \"count\" (row counts; the metric is ignored ",
+        "otherwise), any column with \"count_distinct\" (e.g. a subject id ",
+        "such as USUBJID to count patients instead of records), a numeric ",
+        "column with the numeric aggregations."
       ),
       example = ".count",
       type = arg_string()
@@ -62,11 +65,17 @@ chart_arguments <- function() {
     agg_fn = new_block_arg(
       paste0(
         "Aggregation function for `metric` (aggregated charts only). ",
-        "One of \"count\", \"count_distinct\", \"mean\", \"median\", \"sum\". ",
-        "Default \"count\"."
+        "One of \"count\", \"count_distinct\", \"mean\", \"median\", ",
+        "\"sum\", \"min\", \"max\". Default \"count\" (row count; ignores ",
+        "`metric`). \"count_distinct\" counts distinct `metric` values per ",
+        "group — note that with a `color` split an entity appearing ",
+        "under several color levels is counted once per level; deduplicate ",
+        "upstream if segments must sum to the per-group distinct count."
       ),
       example = "count",
-      type = arg_enum(c("count", "count_distinct", "mean", "median", "sum"))
+      type = arg_enum(
+        c("count", "count_distinct", "mean", "median", "sum", "min", "max")
+      )
     ),
     x = new_block_arg(
       paste0(

@@ -32,7 +32,7 @@ interface VizColumn {
 
 interface VizDrilldownRole {
   kind?: 'column' | 'select' | string;
-  allowCount?: boolean;
+  allowCount?: boolean | ((cfg: Record<string, any>) => boolean);
   ph?: string;
   hintBy?: Record<string, string>;
   // Roles carry many host-specific, dynamically-shaped fields (colTypeBy,

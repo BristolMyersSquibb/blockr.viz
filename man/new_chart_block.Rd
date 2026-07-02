@@ -47,11 +47,17 @@ new_chart_block(
 
 \item{facet}{Column to facet by — one small panel per level (optional)}
 
-\item{metric}{Column for the metric (".count" for row count,
-aggregated only)}
+\item{metric}{Column for the metric (aggregated only). Must match
+\code{agg_fn}: ".count" for \code{"count"} (row count — the metric is otherwise
+ignored), any column for \code{"count_distinct"} (e.g. a subject id to count
+patients instead of records), a numeric column for the numeric
+aggregations.}
 
 \item{agg_fn}{Aggregation: \code{"count"}, \code{"count_distinct"}, \code{"mean"},
-\code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"}}
+\code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"}. With a \code{color} split,
+\code{"count_distinct"} counts an entity once per colour level it appears
+under; deduplicate upstream if segments must sum to the per-group
+distinct count.}
 
 \item{chart_type}{Chart type: "bar", "waterfall", "scatter", "line",
 "pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with

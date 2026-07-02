@@ -59,12 +59,26 @@
     /** @param {string} name */
     _colExists(name) { return this._cols().some(c => c.name === name); }
 
+    // colType / allowCount may be declared as a function of the current config
+    // (e.g. the chart metric widens to any column under agg "count_distinct").
+    /** @param {any} role */
+    _roleColType(role) {
+      const ct = role.colTypeBy ? role.colTypeBy[this.h.context()] : role.colType;
+      return (typeof ct === 'function') ? ct(this._cfg()) : ct;
+    }
+    /** @param {any} role */
+    _roleAllowCount(role) {
+      return (typeof role.allowCount === 'function')
+        ? role.allowCount(this._cfg()) : !!role.allowCount;
+    }
+
     /** @param {string} key @param {string} name */
     _colFits(key, name) {
       const role = this._role(key);
       const c = this._cols().find(x => x.name === name);
       if (!c) return false;
-      const ct = role.colTypeBy ? role.colTypeBy[this.h.context()] : role.colType;
+      const ct = this._roleColType(role);
+      if (ct === 'none') return false;
       if (ct === 'num') return c.type === 'numeric';
       if (ct === 'cat') return c.type === 'categorical' || (c.n_unique != null && c.n_unique <= 50);
       return true;
@@ -93,13 +107,14 @@
     /** @param {string} key @param {{ required?: boolean }} param1 */
     _colOptionsFor(key, { required }) {
       const role = this._role(key);
-      const ct = role.colTypeBy ? role.colTypeBy[this.h.context()] : role.colType;
+      const ct = this._roleColType(role);
       let cols = this._cols();
-      if (ct === 'num') cols = cols.filter(c => c.type === 'numeric');
+      if (ct === 'none') cols = [];
+      else if (ct === 'num') cols = cols.filter(c => c.type === 'numeric');
       else if (ct === 'cat') cols = cols.filter(c => c.type === 'categorical' || (c.n_unique != null && c.n_unique <= 50));
       if (role.maxUnique) cols = cols.filter(c => c.n_unique != null && c.n_unique <= role.maxUnique);
       const opts = cols.map(c => c.label ? { value: c.name, label: c.label } : c.name);
-      if (role.allowCount) opts.unshift('.count');
+      if (this._roleAllowCount(role)) opts.unshift('.count');
       else if (!required) opts.unshift('(none)');
       return opts;
     }

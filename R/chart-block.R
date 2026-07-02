@@ -26,10 +26,16 @@
 #' @param group Column for the categorical axis (aggregated charts)
 #' @param color Column mapped to colour (optional, all families)
 #' @param facet Column to facet by — one small panel per level (optional)
-#' @param metric Column for the metric (".count" for row count,
-#'   aggregated only)
+#' @param metric Column for the metric (aggregated only). Must match
+#'   `agg_fn`: ".count" for `"count"` (row count — the metric is otherwise
+#'   ignored), any column for `"count_distinct"` (e.g. a subject id to count
+#'   patients instead of records), a numeric column for the numeric
+#'   aggregations.
 #' @param agg_fn Aggregation: `"count"`, `"count_distinct"`, `"mean"`,
-#'   `"median"`, `"sum"`, `"min"`, `"max"`
+#'   `"median"`, `"sum"`, `"min"`, `"max"`. With a `color` split,
+#'   `"count_distinct"` counts an entity once per colour level it appears
+#'   under; deduplicate upstream if segments must sum to the per-group
+#'   distinct count.
 #' @param chart_type Chart type: "bar", "waterfall", "scatter", "line",
 #'   "pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with
 #'   a cumulative baseline (sugar for `bar` + `baseline = "cumulative"`).
