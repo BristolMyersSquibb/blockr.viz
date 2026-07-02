@@ -10,7 +10,7 @@
 #' @importFrom blockr.core register_blocks new_block_args new_block_arg
 #'   arg_string arg_number arg_integer arg_boolean arg_enum arg_array arg_object
 register_viz_blocks <- function() {
-  # Removed outright (2026-06-14) — superseded, with no compat shim kept since
+  # Removed outright (2026-06-14) -- superseded, with no compat shim kept since
   # blockr.bi was renamed to blockr.viz (a conscious upgrade):
   #   - new_kpi_block          -> new_tile_block
   #   - new_pivot_table_block  -> summarize + tidyr::pivot_wider (a composed

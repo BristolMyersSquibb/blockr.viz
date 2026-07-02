@@ -37,20 +37,20 @@ produced upstream by composing \code{summarize} with \code{tidyr::pivot_wider})
 as a hand-rolled HTML table with nested row-side section headers,
 multi-level column spanners, and client-side collapse/expand of
 sections. Designed as a dashboard-native alternative to
-\code{\link[=gt_table]{gt_table()}} — static gt is ideal for print / CSR output, while
+\code{\link[=gt_table]{gt_table()}} -- static gt is ideal for print / CSR output, while
 this renderer is tuned for interactive dashboards.
 }
 \details{
 The input contract is the same dotted-column wide tibble that
 \code{\link[=summary_table]{summary_table()}} produces:
 \itemize{
-\item \verb{.section_1, ..., .section_k} — nested row-side section columns,
+\item \verb{.section_1, ..., .section_k} -- nested row-side section columns,
 outermost first. \code{attr(col, "label")} carries the display label.
-\item \code{.strong} — logical, bold header rows (variable labels when
+\item \code{.strong} -- logical, bold header rows (variable labels when
 \code{length(vars) > 1}).
-\item \code{.label} — innermost per-row identifier (stat name / factor
+\item \code{.label} -- innermost per-row identifier (stat name / factor
 level). Rendered as the leftmost row-stub column.
-\item Data columns — names use \code{|} as nesting delimiter for multi-level
+\item Data columns -- names use \code{|} as nesting delimiter for multi-level
 column spanners (e.g. \code{"KarXT|Week 2"}). \code{attr(col, "label")} may
 carry HTML-wrapped display text for the leaf column header.
 \item Cells are pre-formatted character strings.

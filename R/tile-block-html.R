@@ -19,7 +19,7 @@ tk_measure_spec <- function(measure, measures, flat) {
 }
 
 #' Per-measure format specs, resolved from ALL of a measure's values (so every
-#' card / cell of one measure formats identically — not per single value).
+#' card / cell of one measure formats identically -- not per single value).
 #' @noRd
 tile_fspecs <- function(cells, flat, measures) {
   ms_names <- unique(cells$measure)

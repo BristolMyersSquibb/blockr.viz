@@ -35,7 +35,7 @@ echart_theme_blockr_viz <- function() {
 #' Returns a reactive that tracks the board's `echart_theme` option. Used by
 #' the drill-down block to re-render charts when the theme changes.
 #'
-#' @param session Shiny session; ignored — the helper uses
+#' @param session Shiny session; ignored -- the helper uses
 #'   `blockr.core::get_session()` to reach the session that carries the
 #'   board options.
 #' @return A reactive resolving to a theme name (e.g. `"default"`, `"blockr"`).

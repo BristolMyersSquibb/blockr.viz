@@ -5,19 +5,19 @@
 #' as a hand-rolled HTML table with nested row-side section headers,
 #' multi-level column spanners, and client-side collapse/expand of
 #' sections. Designed as a dashboard-native alternative to
-#' [gt_table()] — static gt is ideal for print / CSR output, while
+#' [gt_table()] -- static gt is ideal for print / CSR output, while
 #' this renderer is tuned for interactive dashboards.
 #'
 #' The input contract is the same dotted-column wide tibble that
 #' [summary_table()] produces:
 #'
-#' - `.section_1, ..., .section_k` — nested row-side section columns,
+#' - `.section_1, ..., .section_k` -- nested row-side section columns,
 #'   outermost first. `attr(col, "label")` carries the display label.
-#' - `.strong` — logical, bold header rows (variable labels when
+#' - `.strong` -- logical, bold header rows (variable labels when
 #'   `length(vars) > 1`).
-#' - `.label` — innermost per-row identifier (stat name / factor
+#' - `.label` -- innermost per-row identifier (stat name / factor
 #'   level). Rendered as the leftmost row-stub column.
-#' - Data columns — names use `|` as nesting delimiter for multi-level
+#' - Data columns -- names use `|` as nesting delimiter for multi-level
 #'   column spanners (e.g. `"KarXT|Week 2"`). `attr(col, "label")` may
 #'   carry HTML-wrapped display text for the leaf column header.
 #' - Cells are pre-formatted character strings.
@@ -50,7 +50,7 @@ html_table <- function(data,
                        max_height = "600px") {
   stopifnot(is.data.frame(data))
 
-  # Tidy `.fmt` form (numbers + per-row template + `.group`) → wide
+  # Tidy `.fmt` form (numbers + per-row template + `.group`) -> wide
   # display grid (format-then-spread). No-op on already-wide input.
   data <- fmt_to_wide(data)
 
@@ -64,9 +64,9 @@ html_table <- function(data,
 
   all_section_cols <- grep("^\\.section_\\d+$", names(data), value = TRUE)
   # Only columns that carry a grouping value render as sections; an entirely
-  # empty .section_* column draws no "(missing)" header — but it must still
+  # empty .section_* column draws no "(missing)" header -- but it must still
   # be kept out of the data cells (exclude `all_section_cols`, not the filtered
-  # set, from data_cols) or it would leak in as a literal "—" column.
+  # set, from data_cols) or it would leak in as a literal em-dash column.
   section_cols <- nonempty_section_cols(data, all_section_cols)
   stub_col     <- if (".label" %in% names(data)) ".label" else NULL
   styling_cols <- intersect(c(".indent", ".strong", ".emph"), names(data))
@@ -296,7 +296,7 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
         # At the leaf row, honour attr(col, "label") so that
         # summary_table_block's pre-baked "<strong>...</strong><br>N = ..."
         # HTML headers render correctly. The sort arrow rides the sub-line
-        # (N = k) rather than stacking below it — see leaf_header_content().
+        # (N = k) rather than stacking below it -- see leaf_header_content().
         rowspan <- max_depth - L + 1L
         col_sortable <- isTRUE(sortable) && (span == 1L)
         sort_icon <- if (col_sortable) {
@@ -339,7 +339,7 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
 leaf_header_content <- function(data, col_name, fallback_text, span,
                                 sort_icon = NULL) {
   if (span > 1L) {
-    # Group spanner — never sortable, so the icon (if any) is dropped.
+    # Group spanner -- never sortable, so the icon (if any) is dropped.
     return(fallback_text)
   }
   lbl <- attr(data[[col_name]], "label")
@@ -353,7 +353,7 @@ leaf_header_content <- function(data, col_name, fallback_text, span,
     ))
   }
   if (grepl("<", lbl, fixed = TRUE)) {
-    # Pre-baked HTML label (legacy / spanner path) — pass through untouched,
+    # Pre-baked HTML label (legacy / spanner path) -- pass through untouched,
     # with the sort arrow trailing.
     return(htmltools::tagList(htmltools::HTML(lbl), sort_icon))
   }
@@ -391,7 +391,7 @@ leaf_header_content <- function(data, col_name, fallback_text, span,
 #' Keep only section/var columns that actually carry a grouping value.
 #'
 #' A `.section_*` column that is entirely NA/blank is not a real
-#' grouping dimension — rendering it would wrap every row under a single
+#' grouping dimension -- rendering it would wrap every row under a single
 #' "(missing)" header. Drop those so the table renders flat (or indent-only)
 #' instead. A *partially* empty column is kept: its gaps still render as
 #' "(missing)", which is the right label for a genuine orphan bucket. Shared by
@@ -462,7 +462,7 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
 
   # Section-header rows: one HTML string per (row, level), blanked on rows
   # where level L does not restart (L < diff_from, or no change at all).
-  # When collapsing is off the section header is a static label — no chevron, no
+  # When collapsing is off the section header is a static label -- no chevron, no
   # button affordance (wireCollapse also bails via data-dt-collapsible=0).
   chev     <- if (isTRUE(collapsible)) as.character(section_chevron_svg()) else ""
   btn_open <- if (isTRUE(collapsible)) {
@@ -600,11 +600,11 @@ section_chevron_svg <- function() {
 #' [html_table()], whose container carries that class). The drilldown table
 #' block passes the narrower `.drilldown-table-structured` so the Table-1
 #' typography (medium 500 stat values, the 450 stub, the 13.5px size) is gated
-#' to STRUCTURED output only — a `<style>` tag is page-global, and a flat table
+#' to STRUCTURED output only -- a `<style>` tag is page-global, and a flat table
 #' shares the `.blockr-html-table-container` class, so an unscoped delta would
 #' leak the bold cells onto a sibling flat table. The bare chrome rules (title
 #' bar, toolbar, search input) carry no container prefix and stay global on
-#' purpose — they are generic table chrome a flat table needs too.
+#' purpose -- they are generic table chrome a flat table needs too.
 #' @noRd
 html_table_delta_css <- function(scope = ".blockr-html-table-container") {
   css <- paste0(".blockr-html-table-container {
@@ -1048,7 +1048,7 @@ a.blockr-dl-xlsx > i, a.blockr-dl-xlsx svg { font-size: 0.95rem; }"
 }
 
 # ---------------------------------------------------------------------------
-# Inline JS — idempotent, scoped to a specific wrapper id
+# Inline JS -- idempotent, scoped to a specific wrapper id
 # ---------------------------------------------------------------------------
 
 #' @noRd

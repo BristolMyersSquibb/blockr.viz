@@ -1,6 +1,6 @@
 #' Tile Block (KPI renderer)
 #'
-#' A pure renderer for the bold display of a handful of important numbers —
+#' A pure renderer for the bold display of a handful of important numbers --
 #' the KPI-card / scorecard family. Parallel to the `chart` and `table`
 #' interactive renderers: all shaping (`summarize` / `describe` / a lag-join
 #' for comparisons) happens upstream; the tile does no arithmetic. It maps
@@ -11,19 +11,19 @@
 #' # Input contract
 #'
 #' The canonical input is a long "tile frame": one row per (group, measure)
-#' cell. Wide input is also accepted — when `value` names multiple numeric
+#' cell. Wide input is also accepted -- when `value` names multiple numeric
 #' columns each becomes a measure (measure name = column name) and the
 #' renderer pivots to long internally (covers the one-row
 #' `summarize(across())` case).
 #'
 #' # Slots
 #'
-#' `overline` (supertext) · `value` (the main number, + `format` + `unit`) ·
-#' one `secondary` (a precomputed reference column drawn with a `style`) ·
+#' `overline` (supertext), `value` (the main number, + `format` + `unit`) ,
+#' one `secondary` (a precomputed reference column drawn with a `style`) ,
 #' `caption` (subtext). The secondary `style` is one of `plain` (show the
-#' reference), `delta` (▲▼ % colored by sign × `good_when`), `fill` (a
+#' reference), `delta` (up/down % colored by sign x `good_when`), `fill` (a
 #' progress bar to a fraction), `pill` (a status chip). `delta` / `target` /
-#' `max` are not distinct elements — they are one `secondary` + a style.
+#' `max` are not distinct elements -- they are one `secondary` + a style.
 #'
 #' @param value Character vector of numeric column name(s). Multiple columns
 #'   => wide input (each becomes a measure).
@@ -38,13 +38,13 @@
 #'   `""` = none.
 #' @param style Secondary display style: `plain` / `delta` / `fill` / `pill`.
 #' @param good_when Polarity for delta / fill / pill coloring: `"up"` (an
-#'   increase is good) or `"down"` (a decrease is good — e.g. churn).
+#'   increase is good) or `"down"` (a decrease is good -- e.g. churn).
 #' @param format How the number is formatted (never a currency guess):
 #'   `"number"` (separators + smart decimals), `"compact"` (1.2M / 38.4K), or
-#'   `"percent"` (a fraction ×100 + %).
+#'   `"percent"` (a fraction x100 + %).
 #' @param unit Free-text unit label shown next to the value / in the matrix
 #'   header (e.g. `"USD"`, `"CHF"`, `"apples"`). This is how you label a
-#'   currency — the renderer never infers `$`.
+#'   currency -- the renderer never infers `$`.
 #' @param measures Optional per-measure override list, keyed by measure name,
 #'   each `list(style, good_when, format, unit)`. Lets a matrix draw Revenue
 #'   as `delta` and Budget as `fill`. Falls back to the flat defaults.
@@ -188,7 +188,7 @@ new_tile_block <- function(value = character(),
     dat_valid = function(data) {
       if (!is.data.frame(data)) stop("Input must be a data frame")
     },
-    # Optional roles only — clearing a non-listed field would wedge the block
+    # Optional roles only -- clearing a non-listed field would wedge the block
     # (see reference_blockr_allow_empty_state_wedge). The enum fields
     # (layout/style/good_when/format) always carry a value and are omitted.
     allow_empty_state = c("value", "by", "measure", "overline", "caption",

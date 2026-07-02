@@ -1,6 +1,6 @@
 # Drilldown-chart glue for the board scale map (convention: option id
-# "scale_map", see blockr.design/open/blockr.theme). The contract code —
-# value shape, resolver, hash assignment — lives in blockr.theme, consumed
+# "scale_map", see blockr.design/open/blockr.theme). The contract code --
+# value shape, resolver, hash assignment -- lives in blockr.theme, consumed
 # here behind a Suggests guard: without blockr.theme installed the chart
 # keeps its standard palette cycling. Reading the option value needs only
 # blockr.core.
@@ -19,7 +19,7 @@ dd_board_scale_map <- function() {
 # JS render paths in inst/js/chart.js): stacked bar, radar and the
 # individual/timeline families color by the `color` role; pie and treemap
 # color their `group` slices; boxplot draws single-color boxes (no colored
-# role). The x-axis/category role never auto-colors — coloring by a variable
+# role). The x-axis/category role never auto-colors -- coloring by a variable
 # means mapping it to the colored role, like ggplot.
 dd_colored_var <- function(chart_type, color, group) {
   role <- switch(
@@ -50,7 +50,7 @@ dd_levels <- function(col) {
   }
 }
 
-# Mirrors the JS BLOCKR_PALETTE (inst/js/chart.js) — the pool the
+# Mirrors the JS BLOCKR_PALETTE (inst/js/chart.js) -- the pool the
 # chart cycles when no scale applies, so hash assignment draws from the same
 # colors.
 DD_BLOCKR_PALETTE <- c(
@@ -91,7 +91,7 @@ dd_scales_config <- function(map, chart_type, color, group, data) {
 
 # Resolve `col`'s scale-map colors to a PER-ROW hex vector (one entry per row
 # of `data`, NA where the row's value is unmapped) for the CATEGORICAL row
-# swatch (e.g. SEX: F = teal, M = orange) — the same colors the chart uses, via
+# swatch (e.g. SEX: F = teal, M = orange) -- the same colors the chart uses, via
 # the same resolver. This is orthogonal to the numeric `cell_color` heatmap
 # (sequential / diverging over the body cells): the swatch rides the categorical
 # column, the heatmap owns the numeric body, so both coexist. Returns NULL when

@@ -2,7 +2,7 @@
 % Please edit documentation in R/summary-table.R
 \name{summary_table}
 \alias{summary_table}
-\title{Summary Table — Tidy, Long-Format Multi-Variable Summary}
+\title{Summary Table -- Tidy, Long-Format Multi-Variable Summary}
 \usage{
 summary_table(
   data,
@@ -27,7 +27,7 @@ becomes a section in the output.}
 columns from \code{data}. Used for nested row-side hierarchy (e.g.
 \verb{sections = "AESOC", vars = "AEDECOD"}).}
 
-\item{by}{Character vector of length 0–2. Values become the \code{.group}
+\item{by}{Character vector of length 0-2. Values become the \code{.group}
 dimension. Length-2 produces pipe-delimited nested group keys
 consumable by \code{gt::tab_spanner_delim("|")} after the renderer
 spreads \code{.group} to columns.}
@@ -84,46 +84,46 @@ The output stays \code{dplyr}-able (every number is a plain numeric column)
 and re-renderable: a renderer turns it into the familiar wide display
 grid by formatting each row's \code{.fmt} template, then spreading \code{.group}
 to columns (see \code{fmt_assemble()}). The shaper no longer bakes display
-strings — it emits numbers + templates and leaves formatting to the
+strings -- it emits numbers + templates and leaves formatting to the
 renderer.
 
 Each \code{vars} entry contributes rows shaped by the variable's type and
 the chosen \code{stats} selection:
 \itemize{
-\item \strong{numeric} → one row per selected stat key (see \code{stats}). A single
-key emits one un-indented row per variable (e.g. \code{"mean_sd"} →
+\item \strong{numeric} -> one row per selected stat key (see \code{stats}). A single
+key emits one un-indented row per variable (e.g. \code{"mean_sd"} ->
 \code{.fmt = "{mean:1} ({sd:2})"}); several keys emit one indented row
 each, in catalog order.
-\item \strong{categorical} → one row per level, \code{.fmt = "{n:0} ({pct:1}\%)"}.
-\item \strong{logical} → one row per variable, \code{.fmt = "{n:0} ({pct:1}\%)"} for
-the TRUE count. The FALSE row is suppressed — this matches pharma
+\item \strong{categorical} -> one row per level, \code{.fmt = "{n:0} ({pct:1}\%)"}.
+\item \strong{logical} -> one row per variable, \code{.fmt = "{n:0} ({pct:1}\%)"} for
+the TRUE count. The FALSE row is suppressed -- this matches pharma
 flag-variable conventions (TEAE, SAE, etc.).
 }
 
 Output columns:
 \itemize{
-\item \verb{.section_1, ..., .section_k} — section columns (dotted,
+\item \verb{.section_1, ..., .section_k} -- section columns (dotted,
 block-internal) holding values from user-provided \code{sections}.
 Present iff \code{length(sections) > 0}. Each carries a \code{label}
 attribute pulled from the original column for renderer display.
-\item \code{.label} — innermost row label. Stat name for numeric vars
+\item \code{.label} -- innermost row label. Stat name for numeric vars
 ("N", "Mean", "SD", ...), level name for categoricals, variable
 name for logicals.
-\item \code{.indent} — detail-row indentation level (see \code{indent_details}).
-\item \code{.strong} — logical, \code{TRUE} on variable-header rows (bold,
+\item \code{.indent} -- detail-row indentation level (see \code{indent_details}).
+\item \code{.strong} -- logical, \code{TRUE} on variable-header rows (bold,
 blank data cells). Present only when \code{length(vars) > 1}.
-\item \code{.group} — by-group value (one row per var/level × group).
+\item \code{.group} -- by-group value (one row per var/level x group).
 Pipe-delimited (\code{"outer|inner"}) for length-2 \code{by}; the constant
 \code{"Overall"} when \code{by} is empty; the \code{overall_label} value for the
 appended overall column when \code{add_overall = TRUE}.
-\item \code{.fmt} — per-row display template (the \code{.fmt} convention).
+\item \code{.fmt} -- per-row display template (the \code{.fmt} convention).
 \item Raw numeric stat columns: \verb{n, pct} (categorical/logical, and
 numeric where \code{pct} is the share of non-missing rows), \verb{mean, sd, median, q1, q3, min, max} (numeric). \code{NA} where not applicable.
 }
 
 The per-group denominators (for \code{"<group>\\\\nN = <n>"} column headers)
 ride along as a \strong{named numeric vector} in \code{attr(out, "group_n")}
-(group key → N). A renderer assembling the wide display reattaches
+(group key -> N). A renderer assembling the wide display reattaches
 these as column labels.
 }
 \examples{

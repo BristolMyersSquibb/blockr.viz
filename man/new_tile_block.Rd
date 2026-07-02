@@ -44,15 +44,15 @@ measure label.}
 \item{style}{Secondary display style: \code{plain} / \code{delta} / \code{fill} / \code{pill}.}
 
 \item{good_when}{Polarity for delta / fill / pill coloring: \code{"up"} (an
-increase is good) or \code{"down"} (a decrease is good — e.g. churn).}
+increase is good) or \code{"down"} (a decrease is good -- e.g. churn).}
 
 \item{format}{How the number is formatted (never a currency guess):
 \code{"number"} (separators + smart decimals), \code{"compact"} (1.2M / 38.4K), or
-\code{"percent"} (a fraction ×100 + \%).}
+\code{"percent"} (a fraction x100 + \%).}
 
 \item{unit}{Free-text unit label shown next to the value / in the matrix
 header (e.g. \code{"USD"}, \code{"CHF"}, \code{"apples"}). This is how you label a
-currency — the renderer never infers \code{$}.}
+currency -- the renderer never infers \code{$}.}
 
 \item{measures}{Optional per-measure override list, keyed by measure name,
 each \code{list(style, good_when, format, unit)}. Lets a matrix draw Revenue
@@ -74,7 +74,7 @@ upstream data filtered by the last click (passthrough when no drill),
 exactly like \code{\link[=new_table_block]{new_table_block()}}.
 }
 \description{
-A pure renderer for the bold display of a handful of important numbers —
+A pure renderer for the bold display of a handful of important numbers --
 the KPI-card / scorecard family. Parallel to the \code{chart} and \code{table}
 interactive renderers: all shaping (\code{summarize} / \code{describe} / a lag-join
 for comparisons) happens upstream; the tile does no arithmetic. It maps
@@ -84,19 +84,19 @@ using the same transport as the chart / table.
 }
 \section{Input contract}{
 The canonical input is a long "tile frame": one row per (group, measure)
-cell. Wide input is also accepted — when \code{value} names multiple numeric
+cell. Wide input is also accepted -- when \code{value} names multiple numeric
 columns each becomes a measure (measure name = column name) and the
 renderer pivots to long internally (covers the one-row
 \code{summarize(across())} case).
 }
 
 \section{Slots}{
-\code{overline} (supertext) · \code{value} (the main number, + \code{format} + \code{unit}) ·
-one \code{secondary} (a precomputed reference column drawn with a \code{style}) ·
+\code{overline} (supertext), \code{value} (the main number, + \code{format} + \code{unit}) ,
+one \code{secondary} (a precomputed reference column drawn with a \code{style}) ,
 \code{caption} (subtext). The secondary \code{style} is one of \code{plain} (show the
-reference), \code{delta} (▲▼ \% colored by sign × \code{good_when}), \code{fill} (a
+reference), \code{delta} (up/down \% colored by sign x \code{good_when}), \code{fill} (a
 progress bar to a fraction), \code{pill} (a status chip). \code{delta} / \code{target} /
-\code{max} are not distinct elements — they are one \code{secondary} + a style.
+\code{max} are not distinct elements -- they are one \code{secondary} + a style.
 }
 
 \examples{

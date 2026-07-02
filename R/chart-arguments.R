@@ -68,7 +68,7 @@ chart_arguments <- function() {
         "One of \"count\", \"count_distinct\", \"mean\", \"median\", ",
         "\"sum\", \"min\", \"max\". Default \"count\" (row count; ignores ",
         "`metric`). \"count_distinct\" counts distinct `metric` values per ",
-        "group — note that with a `color` split an entity appearing ",
+        "group -- note that with a `color` split an entity appearing ",
         "under several color levels is counted once per level; deduplicate ",
         "upstream if segments must sum to the per-group distinct count."
       ),

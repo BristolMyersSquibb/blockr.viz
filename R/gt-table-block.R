@@ -8,7 +8,7 @@
 #' long-format input from `blockr.sandbox`'s `tidy_summary_block` and
 #' `occurrence_summary_block` via a separate code path.
 #'
-#' Column headers are driven by `attr(col, "label")` — a standard R
+#' Column headers are driven by `attr(col, "label")` -- a standard R
 #' convention. `gt::gt()` reads these labels natively. If a column
 #' has no label attribute, the column name is used. Upstream blocks
 #' (including [summary_table()]) can set labels on the columns they
@@ -46,7 +46,7 @@ gt_table <- function(data, title = NULL, subtitle = NULL,
     title <- attr(data, "label")
   }
 
-  # Tidy `.fmt` form (numbers + per-row template + `.group`) → wide
+  # Tidy `.fmt` form (numbers + per-row template + `.group`) -> wide
   # display grid (format-then-spread). No-op on already-wide input.
   data <- fmt_to_wide(data)
 
@@ -88,7 +88,7 @@ gt_table_wide <- function(data, title = NULL, subtitle = NULL,
   data_cols <- setdiff(names(data), c(section_cols, stub_col, styling_cols))
 
   # gt::gt() with groupname_col handles section rendering natively.
-  # Column labels flow from `attr(col, "label")` — gt reads them
+  # Column labels flow from `attr(col, "label")` -- gt reads them
   # automatically. The shaper (summary_table) is responsible for
   # setting them; the renderer stays dumb.
   tbl <- if (length(section_cols) > 0L || !is.null(stub_col)) {
@@ -100,7 +100,7 @@ gt_table_wide <- function(data, title = NULL, subtitle = NULL,
     gt::gt(data)
   }
 
-  # Hide the row-styling columns from display — they drive tab_style
+  # Hide the row-styling columns from display -- they drive tab_style
   # below but are not rendered as their own columns.
   if (length(styling_cols) > 0L) {
     tbl <- gt::cols_hide(tbl, columns = dplyr::all_of(styling_cols))
@@ -114,7 +114,7 @@ gt_table_wide <- function(data, title = NULL, subtitle = NULL,
   }
 
   # Column labels: render newlines as <br> for clean two-line headers
-  # (e.g. "Placebo\nN = 121" → "Placebo<br>N = 121"). No bold/styling.
+  # (e.g. "Placebo\nN = 121" -> "Placebo<br>N = 121"). No bold/styling.
   col_labels <- list()
   for (cn in data_cols) {
     lbl <- attr(data[[cn]], "label")
@@ -140,7 +140,7 @@ gt_table_wide <- function(data, title = NULL, subtitle = NULL,
   }
 
   # Row-level styling driven by hidden `.indent` / `.bold` / `.italic`
-  # columns. `INDENT_PX` is hardcoded to 16 for now — no UI control,
+  # columns. `INDENT_PX` is hardcoded to 16 for now -- no UI control,
   # no block parameter. See spec amendment in 3-design.md.
   INDENT_PX <- 16L
   if (!is.null(stub_col) && ".indent" %in% styling_cols) {

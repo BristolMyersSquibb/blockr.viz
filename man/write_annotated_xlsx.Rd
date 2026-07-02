@@ -24,7 +24,7 @@ Renders an \link[=as_annotated_df]{annotated data frame} to an Excel worksheet
 that preserves the table's \emph{structure}: row indentation (\code{.indent} ->
 native cell indent), bold header rows (\code{.strong}), and two-level column
 spanners (\code{Top||Leaf} -> merged header cells). The same frame that drives the
-blockr.viz table renderer also drives this export — one structured artifact,
+blockr.viz table renderer also drives this export -- one structured artifact,
 two outputs.
 }
 \details{
@@ -39,7 +39,7 @@ faked spaces); \code{.strong} rows are bold.
 (\code{"Placebo\\nN = 86"}) is the leaf header text.
 }
 The header is frozen, bordered, and bold; numbers right-align, the stub
-left-aligns. No blockr / Shiny dependency — just the data frame and openxlsx.
+left-aligns. No blockr / Shiny dependency -- just the data frame and openxlsx.
 }
 \seealso{
 \code{\link[=as_annotated_df]{as_annotated_df()}}, \code{\link[=new_table_block]{new_table_block()}}

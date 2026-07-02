@@ -9,11 +9,11 @@ tile_demo_data()
 \value{
 A list of tibbles:
 \itemize{
-\item \code{scorecard} — one row per metric with precomputed \code{delta} / \code{progress}
+\item \code{scorecard} -- one row per metric with precomputed \code{delta} / \code{progress}
 / \code{status} columns (long tile frame; for the card styles).
-\item \code{regions} — wide, one row per region with several measure columns (for
+\item \code{regions} -- wide, one row per region with several measure columns (for
 the grouped matrix / \code{by}-clustered cards and drill).
-\item \code{transactions} — raw rows, to demo the upstream \code{summarize} -> tile flow.
+\item \code{transactions} -- raw rows, to demo the upstream \code{summarize} -> tile flow.
 }
 }
 \description{

@@ -2,7 +2,7 @@
 #'
 #' A configurable chart that can also act as a filter. Arguments are
 #' grammar-of-graphics aesthetics: each one names a **data column**, never
-#' a literal value. Roles are orthogonal — `color` only colours, `series`
+#' a literal value. Roles are orthogonal -- `color` only colours, `series`
 #' only splits into series, `label` only writes on-mark text, position is
 #' `x`/`y`/`xend` or `group`.
 #'
@@ -25,9 +25,9 @@
 #'
 #' @param group Column for the categorical axis (aggregated charts)
 #' @param color Column mapped to colour (optional, all families)
-#' @param facet Column to facet by — one small panel per level (optional)
+#' @param facet Column to facet by -- one small panel per level (optional)
 #' @param metric Column for the metric (aggregated only). Must match
-#'   `agg_fn`: ".count" for `"count"` (row count — the metric is otherwise
+#'   `agg_fn`: ".count" for `"count"` (row count -- the metric is otherwise
 #'   ignored), any column for `"count_distinct"` (e.g. a subject id to count
 #'   patients instead of records), a numeric column for the numeric
 #'   aggregations.
@@ -60,9 +60,9 @@
 #'   * Individual: ignored.
 #' @param sort_dir `"asc"` or `"desc"`. Reverses the `sort_by` ordering.
 #' @param orientation Bar orientation: `"horizontal"` (default; category on the
-#'   y-axis, best for long labels) or `"vertical"`. Presentation property — the
+#'   y-axis, best for long labels) or `"vertical"`. Presentation property -- the
 #'   mapping (Group/Metric) is unchanged. Bar charts only.
-#' @param bar_mode Layout for a color-split bar: `"stacked"` (default — color
+#' @param bar_mode Layout for a color-split bar: `"stacked"` (default -- color
 #'   segments stack into one bar per group), `"grouped"` (segments sit
 #'   side-by-side / dodged, for comparing absolute values), or `"percent"`
 #'   (stacked but each group normalized to 100%, for comparing composition).
@@ -71,8 +71,8 @@
 #' @param filter_type,filter_column,filter_values,filter_range,filter_point
 #'   Runtime click/brush filter state (transport for the emitted filter;
 #'   normally left at defaults at creation).
-#' @param baseline Bar baseline mode: `"zero"` (default — every bar starts at
-#'   0) or `"cumulative"` (a waterfall/bridge — each bar floats from the
+#' @param baseline Bar baseline mode: `"zero"` (default -- every bar starts at
+#'   0) or `"cumulative"` (a waterfall/bridge -- each bar floats from the
 #'   running cumulative of the bars before it; the step axis honors data order,
 #'   each `metric` value is a delta). `chart_type = "waterfall"` implies
 #'   `"cumulative"`. Bar family only.
@@ -81,9 +81,9 @@
 #'   to 0 and they draw the absolute running cumulative. Default `NULL` (every
 #'   bar is a relative delta).
 #' @param line_width_mult Multiplier on the default line width for line
-#'   charts. Default `1.0`. Range `0.5`–`3.0`. Individual family only.
+#'   charts. Default `1.0`. Range `0.5`-`3.0`. Individual family only.
 #' @param dot_size_mult Multiplier on the default marker size. Default
-#'   `1.0`. Range `0.5`–`3.0`. Individual family only.
+#'   `1.0`. Range `0.5`-`3.0`. Individual family only.
 #' @param step Step-line mode for line charts. `NULL` (default) draws a
 #'   straight line; a step mode (e.g. `"start"`/`"middle"`/`"end"`) draws a
 #'   stepped line. Consumed by the JS renderer.
@@ -228,12 +228,12 @@ new_chart_block <- function(
           })
         })
 
-        # Columns needed by the chart (reactive — changes when config
+        # Columns needed by the chart (reactive -- changes when config
         # changes). drill and label are included so the browser has the
         # columns a click filters on / a mark is labelled by.
         # Columns the current mapping needs (so the whole wide flatten is
         # never shipped). Reads the config reactiveVals, so the enclosing
-        # observe re-runs when the mapping changes — same as before the
+        # observe re-runs when the mapping changes -- same as before the
         # roles refactor.
         needed_cols <- function(d) {
           needed <- c(
@@ -271,7 +271,7 @@ new_chart_block <- function(
             d[0]
           }
           # Reuse the column metadata reactive (same name/type/n_unique/label
-          # shape) instead of recomputing it inline — it is derived from the
+          # shape) instead of recomputing it inline -- it is derived from the
           # same data() and was duplicated here.
           col_meta <- r_col_meta()
           session$sendCustomMessage("drilldown-data", list(
@@ -310,7 +310,7 @@ new_chart_block <- function(
               }),
               lo = r_lo(), hi = r_hi(),
               # Board scale map, resolved for the chart type's colored role
-              # (NULL when no map / no binding / no colored role — JS then
+              # (NULL when no map / no binding / no colored role -- JS then
               # keeps palette cycling).
               scales = dd_scales_config(
                 r_scale_map(), r_chart_type(),
@@ -341,7 +341,7 @@ new_chart_block <- function(
         # data-send observer transitively depends on these (via
         # r_needed_cols / the config list), a blind set would re-pump the
         # whole (potentially large) data frame and re-render every chart
-        # on each echo — a render storm that hangs heavy views. Only
+        # on each echo -- a render storm that hangs heavy views. Only
         # write when the value actually changes. This is the
         # "prevent R->JS->R loops" guard from
         # blockr.docs/patterns/js-driven-blocks.md.
@@ -392,7 +392,7 @@ new_chart_block <- function(
             # blind set to an unchanged value would invalidate (and re-pump)
             # needlessly on an echoed filter. The click-vs-brush race logic
             # (the `is_point` no-op below, the `!is.null` gating) is
-            # unchanged — only the actual writes are now guarded.
+            # unchanged -- only the actual writes are now guarded.
             ft <- msg$filter_type %||% "categorical"
 
             if (ft == "categorical") {
@@ -423,7 +423,7 @@ new_chart_block <- function(
                 # A degenerate range (xlo == xhi) is now legitimate: it is a
                 # scatter-auto CLICK (a one-point selection -> the observation
                 # via between(x, v, v)). The old click-vs-brush race that this
-                # guarded against is gone — within each drill mode click and
+                # guarded against is gone -- within each drill mode click and
                 # brush emit the SAME filter type (override -> categorical,
                 # auto -> range), so there is nothing to clobber.
                 upd(r_filter_column, NULL)
@@ -449,11 +449,11 @@ new_chart_block <- function(
 
         # Build filter expression. With expr_type = "bquoted", `.(data)` is
         # substituted by blockr.core with the upstream block's id at eval
-        # time — so the no-filter branch passes the upstream data frame
+        # time -- so the no-filter branch passes the upstream data frame
         # straight through, keeping the lazy eval chain intact.
         # Configured aesthetic columns that must exist in the upstream data.
         # If an upstream block renames/drops a mapped column, the chart would
-        # otherwise read NA silently and mis-render — surface a clear invalid
+        # otherwise read NA silently and mis-render -- surface a clear invalid
         # state instead. `.count` is the synthetic count metric (no column),
         # `drill = "auto"` is a sentinel resolved at click time from the clicked
         # shape (not a literal column), and the runtime sort_by sentinels are

@@ -7,7 +7,7 @@
 setup_drilldown_theme_sync(session = NULL)
 }
 \arguments{
-\item{session}{Shiny session; ignored — the helper uses
+\item{session}{Shiny session; ignored -- the helper uses
 \code{blockr.core::get_session()} to reach the session that carries the
 board options.}
 }

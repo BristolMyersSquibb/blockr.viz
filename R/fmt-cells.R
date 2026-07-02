@@ -17,7 +17,7 @@
 
 #' Format one numeric value for display
 #'
-#' Fixed-decimal display (trailing zeros KEPT — `65` at 1 dp renders
+#' Fixed-decimal display (trailing zeros KEPT -- `65` at 1 dp renders
 #' `65.0`), matching the pharma fixed-precision convention the shapers
 #' produced via `sprintf("%.1f", ...)`. Non-numerics pass through.
 #' @noRd
@@ -35,7 +35,7 @@ fmt_num <- function(x, digits) {
 #' value of `col`, rounded to `digits` (or to a per-row `.digits` column when
 #' present). A token MAY carry its own precision as `{col:N}` (e.g.
 #' `"{mean:1} ({sd:2})"`), which overrides both `.digits` and `digits` for that
-#' one token — needed when a single cell mixes precisions (mean at 1 dp, SD at
+#' one token -- needed when a single cell mixes precisions (mean at 1 dp, SD at
 #' 2 dp). Rows whose template is `NA`/`""` yield `NA` (the caller decides the
 #' fallback). Tokens naming a missing column, or rows whose referenced value is
 #' `NA`, render as `na`.
@@ -94,7 +94,7 @@ fmt_cells <- function(df, fmt_col = ".fmt", digits = 2L, na = "NA") {
 #'
 #' @param df Tidy frame with a `.fmt` column.
 #' @param group_col Optional column whose levels become the value columns. When
-#'   `NULL`, no spread — the formatted cell is returned in `.cell` and the
+#'   `NULL`, no spread -- the formatted cell is returned in `.cell` and the
 #'   referenced numeric columns are dropped.
 #' @param id_cols Row-identity columns to keep (default: the dotted columns
 #'   `.section_*`/`.label`/`.indent`/`.strong`/`.emph` present in `df`).
@@ -117,7 +117,7 @@ fmt_assemble <- function(df, group_col = NULL, id_cols = NULL,
   # Plain spread on the single formatted-string column.
   long <- df[, c(id_cols, group_col, ".cell"), drop = FALSE]
   # pivot_wider() aborts ("spec$.name can't contain the empty string") when a
-  # group level is "" or NA — which happens on real data (e.g. an untreated /
+  # group level is "" or NA -- which happens on real data (e.g. an untreated /
   # screen-fail subject with a blank TRT01A arm). Relabel those degenerate
   # levels so the spread can never throw at render time.
   gv <- as.character(long[[group_col]])

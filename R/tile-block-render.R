@@ -1,6 +1,6 @@
 # Render layer for new_tile_block(): reshape the input to a normalized long
 # "tile frame" (one row per group x measure cell) and emit the tk-* markup.
-# A pure presentation of the tidy frame — the
+# A pure presentation of the tidy frame -- the
 # renderer does NO arithmetic; secondaries (delta / fill fraction / pill
 # status) are precomputed columns. Render-time concerns only: number
 # formatting, sign x good_when coloring, and bar / chip / arrow drawing.
@@ -121,12 +121,12 @@ tk_pretty <- function(x) {
 
 #' Resolve a format spec for a measure's values.
 #'
-#' Predictable and NOT name-based — the renderer never guesses currency from a
+#' Predictable and NOT name-based -- the renderer never guesses currency from a
 #' column name (that produced absurd `$` results). The unit / currency label is
 #' the free-text `unit` field's job. `format` is one of:
-#'   - "number" (default / "auto") — thousands separators + smart decimals,
-#'   - "compact" — 1.2K / 38.4M / 1.2B,
-#'   - "percent" — value x100 (when it looks like a fraction) + "%".
+#'   - "number" (default / "auto") -- thousands separators + smart decimals,
+#'   - "compact" -- 1.2K / 38.4M / 1.2B,
+#'   - "percent" -- value x100 (when it looks like a fraction) + "%".
 #' Returns list(kind, digits, scale).
 #' @noRd
 tk_resolve_format <- function(format, values) {
@@ -151,7 +151,7 @@ tk_digits <- function(values) {
 
 #' Format one value to its display string per a resolved format spec. The
 #' `unit` (a free-text label like "USD" / "CHF" / "apples") is rendered as a
-#' SEPARATE `.tk-unit` span by the cell builders, not baked in here — except
+#' SEPARATE `.tk-unit` span by the cell builders, not baked in here -- except
 #' percent, where "%" is intrinsic.
 #' @noRd
 tk_format <- function(x, spec) {
@@ -163,7 +163,7 @@ tk_format <- function(x, spec) {
   formatC(x, format = "f", digits = spec$digits, big.mark = ",")
 }
 
-#' Compact K/M/B formatting (no currency symbol — the unit field labels it).
+#' Compact K/M/B formatting (no currency symbol -- the unit field labels it).
 #' @noRd
 tk_compact <- function(x) {
   neg <- x < 0
@@ -188,7 +188,7 @@ tk_compact <- function(x) {
 # ---------------------------------------------------------------------------
 
 #' The big value span with is-neg coloring. Rendered at its final value (no
-#' count-up animation — the number should read instantly).
+#' count-up animation -- the number should read instantly).
 #' @noRd
 tk_value_span <- function(x, spec, extra_class = NULL) {
   txt <- tk_format(x, spec)
@@ -246,7 +246,7 @@ tk_pill_tone <- function(status) {
 }
 
 #' Fill fraction as a 0-100 percent. A value in `[0,1]` is a fraction; a value
-#' in (1,100] is already a percent (§ "a percent value defaults ref to 100").
+#' in (1,100] is already a percent (see "a percent value defaults ref to 100").
 #' @noRd
 tk_fill_pct <- function(value) {
   v <- suppressWarnings(as.numeric(value))

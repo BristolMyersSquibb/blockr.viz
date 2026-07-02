@@ -4,7 +4,7 @@
 #' that preserves the table's *structure*: row indentation (`.indent` ->
 #' native cell indent), bold header rows (`.strong`), and two-level column
 #' spanners (`Top||Leaf` -> merged header cells). The same frame that drives the
-#' blockr.viz table renderer also drives this export — one structured artifact,
+#' blockr.viz table renderer also drives this export -- one structured artifact,
 #' two outputs.
 #'
 #' @details
@@ -19,7 +19,7 @@
 #'     (`"Placebo\nN = 86"`) is the leaf header text.
 #' }
 #' The header is frozen, bordered, and bold; numbers right-align, the stub
-#' left-aligns. No blockr / Shiny dependency — just the data frame and openxlsx.
+#' left-aligns. No blockr / Shiny dependency -- just the data frame and openxlsx.
 #'
 #' @param x An annotated data frame, or any object with an [as_annotated_df()]
 #'   method (e.g. a composer `composed_table`), which is coerced first.

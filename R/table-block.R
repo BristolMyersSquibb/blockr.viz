@@ -30,9 +30,9 @@
 #'
 #' @details
 #' **Structured "Table 1" input.** When `data` follows the dotted-column
-#' convention that [summary_table()] emits — a tidy `.fmt` frame (numeric
+#' convention that [summary_table()] emits -- a tidy `.fmt` frame (numeric
 #' columns + a per-row `.fmt` template + `.group`), or the already-wide
-#' display grid with `.section_*` / `.label` / `.indent` / `.strong` columns —
+#' display grid with `.section_*` / `.label` / `.indent` / `.strong` columns --
 #' the renderer switches to the *structured* layout: row-side section
 #' headers with collapse/expand toggles, `.indent` row stubs, and
 #' multi-level column spanners parsed from `|`-delimited column names (each
@@ -74,7 +74,7 @@ drilldown_table <- function(data,
 #' JS reads off it (drill onclick col/idx, colour mode, digits).
 #'
 #' Split from the chrome (`dt_chrome()`: search bar, gear, scroll container) so
-#' a data or config change re-renders ONLY the table — the chrome renders once
+#' a data or config change re-renders ONLY the table -- the chrome renders once
 #' and is never rebuilt, so there is no whole-panel blank-out and the search
 #' text / scroll position survive a filter. See the block server's
 #' `dt_result` (chrome) / `dt_table` (this) output split.
@@ -173,14 +173,14 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   # Build the body as a single HTML string instead of one htmltools tag
   # object per cell. For a wide preview (e.g. ADaM ADSL, ~48 columns) the
   # per-cell `tags$td()` construction plus the `renderTags()` tree walk
-  # dominated render time — ~1 s for the full frame, the source of the
+  # dominated render time -- ~1 s for the full frame, the source of the
   # "drilldown filter takes ~2 s" lag. Column-vectorized string assembly
   # is ~100x faster and emits identical markup (inter-tag whitespace
   # aside). Numeric columns are formatted with a single vectorized
   # `formatC(format = "fg", drop0trailing = TRUE)` call: `"fg"` formats
   # each value independently (no decimal alignment across the column, so
   # 1.5 stays "1.5" while a sibling 2.25 stays "2.25") and `drop0trailing`
-  # trims padding — byte-identical to the old per-element
+  # trims padding -- byte-identical to the old per-element
   # `format(round(v), nsmall = 0, trim = TRUE)` but ~11x faster (the
   # per-cell `vapply(format())` was ~72% of the build time on a
   # numeric-heavy frame).
@@ -237,7 +237,7 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   # independent of the numeric `cell_bg` heatmap above.
   # NOTE (follow-up): to keep the bar visible when scrolling a wide table
   # horizontally, this stub cell's bar should become a dedicated left:0 sticky
-  # indicator cell — which needs the sort/drill column-index map to skip it.
+  # indicator cell -- which needs the sort/drill column-index map to skip it.
   stub_lbl <- esc(data[[label_col]])
   if (!is.null(row_hex) && length(row_hex) == nrow(data)) {
     bar <- ifelse(
@@ -277,7 +277,7 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
 }
 
 # ---------------------------------------------------------------------------
-# Structured ("Table 1") rendering — section nesting, indents, spanners.
+# Structured ("Table 1") rendering -- section nesting, indents, spanners.
 # Reuses html_table()'s thead / tbody builders so the structure matches the
 # static html_table renderer exactly; only the surrounding chrome (the
 # table-block wrapper, gear, drill/colour attributes) differs.
@@ -286,7 +286,7 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
 #' Does this (already wide) frame carry the dotted-column structure?
 #'
 #' True when it has any row-side section column (`.section_*`) OR a
-#' `.label` stub OR an `.indent` / `.strong` column — the signals
+#' `.label` stub OR an `.indent` / `.strong` column -- the signals
 #' [summary_table()] emits and [html_table()] renders.
 #' @noRd
 dt_is_structured <- function(data) {
@@ -310,7 +310,7 @@ dt_table_tag_structured <- function(data, drill, color, digits, toggles = NULL) 
   all_section_cols <- grep("^\\.section_\\d+$", names(data), value = TRUE)
   # Empty .section_* columns draw no "(missing)" header, but must still be
   # excluded from the data cells (use all_section_cols below) or they leak in
-  # as a literal "—" column.
+  # as a literal em-dash column.
   section_cols <- nonempty_section_cols(data, all_section_cols)
   stub_col     <- if (".label" %in% names(data)) ".label" else NULL
   styling_cols <- intersect(c(".indent", ".strong", ".emph"), names(data))
@@ -352,10 +352,10 @@ dt_table_tag_structured <- function(data, drill, color, digits, toggles = NULL) 
 #' Describes how numeric cells are decorated. Three modes, all purely
 #' presentational (the data is never changed):
 #'
-#' - `"diverging"` — a value-to-background scale centred on 0 with a
+#' - `"diverging"` -- a value-to-background scale centred on 0 with a
 #'   symmetric domain (correlation matrices: -1 white-at-0 +1).
-#' - `"sequential"` — a low-to-high background ramp (heatmaps).
-#' - `"bar"` — an in-cell horizontal data bar proportional to the value
+#' - `"sequential"` -- a low-to-high background ramp (heatmaps).
+#' - `"bar"` -- an in-cell horizontal data bar proportional to the value
 #'   (e.g. "patients with most adverse events"), normalised per column on
 #'   absolute magnitude and left-anchored.
 #'
@@ -364,10 +364,10 @@ dt_table_tag_structured <- function(data, drill, color, digits, toggles = NULL) 
 #'   Ignored for `"bar"` (always per-column). For `"diverging"` the
 #'   inferred domain is symmetric around 0.
 #' @param palette `NULL` for type defaults, or a character vector of
-#'   colors — length 3 for diverging (low/mid/high), length 2 for
+#'   colors -- length 3 for diverging (low/mid/high), length 2 for
 #'   sequential (low/high), length 1 for the bar fill.
 #' @param columns `NULL`/empty to apply to **all** numeric columns (a
-#'   rule, re-resolved against whatever data arrives — survives upstream
+#'   rule, re-resolved against whatever data arrives -- survives upstream
 #'   schema changes), or a character vector to restrict to those columns.
 #'   A picked column that no longer exists is silently skipped.
 #' @return A list consumed by [drilldown_table()].
@@ -400,7 +400,7 @@ dt_th <- function(name, idx, stub = FALSE, label = NULL, numeric = FALSE,
   }
   if (!is.null(label)) {
     # Labelled column: name on top, then the subtext and the sort arrow
-    # share the lower row (label left, arrow right) — like the html
+    # share the lower row (label left, arrow right) -- like the html
     # preview, so the arrow doesn't add a row of its own.
     htmltools::tags$th(
       class = cls,
@@ -489,8 +489,8 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
 
 #' Table-block chrome: the scoped CSS, the search/gear header, and the scroll
 #' container, with `inner` (a `<table>` tag or a `uiOutput()` slot) dropped into
-#' the scroll wrapper. Rendered ONCE per block — the gear/search/scroll never
-#' rebuild — so only `inner` (the table) re-renders on a filter or gear edit.
+#' the scroll wrapper. Rendered ONCE per block -- the gear/search/scroll never
+#' rebuild -- so only `inner` (the table) re-renders on a filter or gear edit.
 #' The `drilldown-table-structured` class + the Table-1 delta CSS are gated on
 #' `structured` here (the one place that knows it), so the flat preview stays
 #' plain.
@@ -532,7 +532,7 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
     shared_css,
     # The delta CSS is the STRUCTURED Table-1 design treatment (section headers,
     # two-tier arm headers, the stub indent + medium stat/value weights). Inject
-    # it only for structured tables — a flat data table should match the canonical
+    # it only for structured tables -- a flat data table should match the canonical
     # html preview (normal-weight cells, plain stub), not carry the Table-1 styling.
     if (isTRUE(structured)) {
       # Scope the Table-1 typography to `.drilldown-table-structured` (this
@@ -565,7 +565,7 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
 
 #' Per-cell inline style for a data bar: a left-anchored CSS gradient whose
 #' width is `|v| / mx * 100%` (absolute-magnitude normalisation, no center
-#' baseline — matches the crossfilter block). Vectorised over the column so the
+#' baseline -- matches the crossfilter block). Vectorised over the column so the
 #' table stays on the single-`HTML()` fast path. Returns `""` for a degenerate
 #' column (all-zero / non-finite max), i.e. no bar.
 #' @noRd
@@ -597,7 +597,7 @@ dt_color_fun <- function(type, domain, palette) {
     c2 <- hex2rgb(pal[2L])
     c3 <- hex2rgb(pal[3L])
     # Diverging is centred on 0 (white-at-zero); the domain is symmetric around
-    # 0 (set at inference). A meaningful zero is what "diverging" means — for a
+    # 0 (set at inference). A meaningful zero is what "diverging" means -- for a
     # correlation matrix this puts white at r = 0 and gives +/- equal saturation.
     mid <- 0
     function(v) {
@@ -630,7 +630,7 @@ dt_color_fun <- function(type, domain, palette) {
 #' @noRd
 drilldown_table_dep <- function() {
   htmltools::tagList(
-    # Shared blockr.dplyr CSS/JS (gear, popover, rows, Blockr.Select, icons) —
+    # Shared blockr.dplyr CSS/JS (gear, popover, rows, Blockr.Select, icons) --
     # same dep names as the chart so they de-dupe on a page with both blocks.
     htmltools::htmlDependency(
       name = "blockr-blocks-css",
@@ -816,7 +816,7 @@ new_table_block <- function(rowname = NULL,
 
         # Only write a reactiveVal when the value actually changes. JS echoes
         # the full config/filter on any popover change, so a blind set would
-        # invalidate (and re-render the table) on every echo — the
+        # invalidate (and re-render the table) on every echo -- the
         # "prevent R->JS->R loops" guard the chart block uses. (Mirrors
         # chart-block.R.)
         upd <- function(rv, v) {
@@ -856,7 +856,7 @@ new_table_block <- function(rowname = NULL,
               }
             } else if (identical(p, "color_columns")) {
               # The column-scope multi-select. Empty selection = NULL = "all
-              # numeric" (a rule, not a snapshot — self-heals on schema change).
+              # numeric" (a rule, not a snapshot -- self-heals on schema change).
               # Ignored when no colour mode is active.
               cur <- shiny::isolate(r_cell_color())
               if (!is.null(cur)) {
@@ -891,7 +891,7 @@ new_table_block <- function(rowname = NULL,
         })
 
         # Split render so a filter (or gear edit) re-renders ONLY the <table>,
-        # never the search bar / gear / scroll container — no whole-panel
+        # never the search bar / gear / scroll container -- no whole-panel
         # blank-out, and search text + scroll position survive. `dt_result` is
         # the chrome: it depends only on whether the frame is structured (which
         # is fixed for a given block), so it renders once and is never rebuilt
@@ -906,7 +906,7 @@ new_table_block <- function(rowname = NULL,
           # An unhandled error in a plain observe() is fatal to the Shiny
           # session (client disconnect), unlike a render error which Shiny
           # contains. Never let a shape/format failure here take down the
-          # session — fall back to a flat layout; the render below surfaces
+          # session -- fall back to a flat layout; the render below surfaces
           # the actual error as an ordinary in-block message.
           upd(r_structured, tryCatch(
             dt_is_structured(fmt_to_wide(d)),
@@ -929,7 +929,7 @@ new_table_block <- function(rowname = NULL,
 
         # Excel download: a button on the chrome toolbar, shown only when the
         # block has `excel_download` on. It writes the rendered (annotated) frame
-        # via write_annotated_xlsx() — same frame, the spreadsheet output.
+        # via write_annotated_xlsx() -- same frame, the spreadsheet output.
         output$dt_download <- shiny::renderUI({
           if (!isTRUE(r_excel_download())) return(NULL)
           if (!requireNamespace("openxlsx", quietly = TRUE)) return(NULL)
@@ -948,7 +948,7 @@ new_table_block <- function(rowname = NULL,
           }
         )
 
-        # Board scale map (NULL when the board has none / blockr.theme absent) —
+        # Board scale map (NULL when the board has none / blockr.theme absent) --
         # the same source the drilldown chart reads. Used to color the
         # categorical row-stub, matching the chart's legend.
         board_scale_map <- dd_board_scale_map()
@@ -970,7 +970,7 @@ new_table_block <- function(rowname = NULL,
           }
           # Contain any render-time failure (formatting/spread/colour) and
           # show it ON THE PAGE as a red in-block bar instead of letting it
-          # escape — reusing the `blockr-error` style of the framework's
+          # escape -- reusing the `blockr-error` style of the framework's
           # condition bar so it reads like an ordinary block error, never a
           # session crash. (Tactical guard; see blockr.core #199 / the design
           # motivation for the first-class side-effect-render seam that would
@@ -1059,7 +1059,7 @@ new_table_block <- function(rowname = NULL,
 
 # NB: no block_ui / block_output overrides. The styled table renders in the
 # Controls pane (the `ui =` function above, via uiOutput("dt_result")), and the
-# block falls back to the transform_block defaults for the output pane — so the
+# block falls back to the transform_block defaults for the output pane -- so the
 # Preview pane shows the filtered passthrough data frame as a DT, exactly like
 # new_chart_block(). (They were previously nulled out, which left the
 # Preview pane blank.)

@@ -52,7 +52,7 @@ long-format input from \code{blockr.sandbox}'s \code{tidy_summary_block} and
 \code{occurrence_summary_block} via a separate code path.
 }
 \details{
-Column headers are driven by \code{attr(col, "label")} — a standard R
+Column headers are driven by \code{attr(col, "label")} -- a standard R
 convention. \code{gt::gt()} reads these labels natively. If a column
 has no label attribute, the column name is used. Upstream blocks
 (including \code{\link[=summary_table]{summary_table()}}) can set labels on the columns they

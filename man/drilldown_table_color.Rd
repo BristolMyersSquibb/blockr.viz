@@ -19,11 +19,11 @@ Ignored for \code{"bar"} (always per-column). For \code{"diverging"} the
 inferred domain is symmetric around 0.}
 
 \item{palette}{\code{NULL} for type defaults, or a character vector of
-colors — length 3 for diverging (low/mid/high), length 2 for
+colors -- length 3 for diverging (low/mid/high), length 2 for
 sequential (low/high), length 1 for the bar fill.}
 
 \item{columns}{\code{NULL}/empty to apply to \strong{all} numeric columns (a
-rule, re-resolved against whatever data arrives — survives upstream
+rule, re-resolved against whatever data arrives -- survives upstream
 schema changes), or a character vector to restrict to those columns.
 A picked column that no longer exists is silently skipped.}
 }
@@ -36,10 +36,10 @@ presentational (the data is never changed):
 }
 \details{
 \itemize{
-\item \code{"diverging"} — a value-to-background scale centred on 0 with a
+\item \code{"diverging"} -- a value-to-background scale centred on 0 with a
 symmetric domain (correlation matrices: -1 white-at-0 +1).
-\item \code{"sequential"} — a low-to-high background ramp (heatmaps).
-\item \code{"bar"} — an in-cell horizontal data bar proportional to the value
+\item \code{"sequential"} -- a low-to-high background ramp (heatmaps).
+\item \code{"bar"} -- an in-cell horizontal data bar proportional to the value
 (e.g. "patients with most adverse events"), normalised per column on
 absolute magnitude and left-anchored.
 }

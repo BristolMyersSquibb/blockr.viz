@@ -1,4 +1,4 @@
-#' Summary Table — Tidy, Long-Format Multi-Variable Summary
+#' Summary Table -- Tidy, Long-Format Multi-Variable Summary
 #'
 #' Aggregate a flat data.frame into a **tidy, long** summary frame: raw
 #' numeric statistic columns plus a hidden per-row `.fmt` template that
@@ -13,45 +13,45 @@
 #' and re-renderable: a renderer turns it into the familiar wide display
 #' grid by formatting each row's `.fmt` template, then spreading `.group`
 #' to columns (see `fmt_assemble()`). The shaper no longer bakes display
-#' strings — it emits numbers + templates and leaves formatting to the
+#' strings -- it emits numbers + templates and leaves formatting to the
 #' renderer.
 #'
 #' Each `vars` entry contributes rows shaped by the variable's type and
 #' the chosen `stats` selection:
 #'
-#' - **numeric** → one row per selected stat key (see `stats`). A single
-#'   key emits one un-indented row per variable (e.g. `"mean_sd"` →
+#' - **numeric** -> one row per selected stat key (see `stats`). A single
+#'   key emits one un-indented row per variable (e.g. `"mean_sd"` ->
 #'   `.fmt = "{mean:1} ({sd:2})"`); several keys emit one indented row
 #'   each, in catalog order.
-#' - **categorical** → one row per level, `.fmt = "{n:0} ({pct:1}%)"`.
-#' - **logical** → one row per variable, `.fmt = "{n:0} ({pct:1}%)"` for
-#'   the TRUE count. The FALSE row is suppressed — this matches pharma
+#' - **categorical** -> one row per level, `.fmt = "{n:0} ({pct:1}%)"`.
+#' - **logical** -> one row per variable, `.fmt = "{n:0} ({pct:1}%)"` for
+#'   the TRUE count. The FALSE row is suppressed -- this matches pharma
 #'   flag-variable conventions (TEAE, SAE, etc.).
 #'
 #' Output columns:
 #'
-#' - `.section_1, ..., .section_k` — section columns (dotted,
+#' - `.section_1, ..., .section_k` -- section columns (dotted,
 #'   block-internal) holding values from user-provided `sections`.
 #'   Present iff `length(sections) > 0`. Each carries a `label`
 #'   attribute pulled from the original column for renderer display.
-#' - `.label` — innermost row label. Stat name for numeric vars
+#' - `.label` -- innermost row label. Stat name for numeric vars
 #'   ("N", "Mean", "SD", ...), level name for categoricals, variable
 #'   name for logicals.
-#' - `.indent` — detail-row indentation level (see `indent_details`).
-#' - `.strong` — logical, `TRUE` on variable-header rows (bold,
+#' - `.indent` -- detail-row indentation level (see `indent_details`).
+#' - `.strong` -- logical, `TRUE` on variable-header rows (bold,
 #'   blank data cells). Present only when `length(vars) > 1`.
-#' - `.group` — by-group value (one row per var/level × group).
+#' - `.group` -- by-group value (one row per var/level x group).
 #'   Pipe-delimited (`"outer|inner"`) for length-2 `by`; the constant
 #'   `"Overall"` when `by` is empty; the `overall_label` value for the
 #'   appended overall column when `add_overall = TRUE`.
-#' - `.fmt` — per-row display template (the `.fmt` convention).
+#' - `.fmt` -- per-row display template (the `.fmt` convention).
 #' - Raw numeric stat columns: `n, pct` (categorical/logical, and
 #'   numeric where `pct` is the share of non-missing rows), `mean,
 #'   sd, median, q1, q3, min, max` (numeric). `NA` where not applicable.
 #'
 #' The per-group denominators (for `"<group>\\nN = <n>"` column headers)
 #' ride along as a **named numeric vector** in `attr(out, "group_n")`
-#' (group key → N). A renderer assembling the wide display reattaches
+#' (group key -> N). A renderer assembling the wide display reattaches
 #' these as column labels.
 #'
 #' @param data A flat data.frame.
@@ -60,7 +60,7 @@
 #' @param sections Optional character vector of outer section
 #'   columns from `data`. Used for nested row-side hierarchy (e.g.
 #'   `sections = "AESOC", vars = "AEDECOD"`).
-#' @param by Character vector of length 0–2. Values become the `.group`
+#' @param by Character vector of length 0-2. Values become the `.group`
 #'   dimension. Length-2 produces pipe-delimited nested group keys
 #'   consumable by `gt::tab_spanner_delim("|")` after the renderer
 #'   spreads `.group` to columns.
@@ -214,7 +214,7 @@ summary_table <- function(data,
 
   # When multiple independent variable blocks are present, emit
   # annotated-df-style header rows (.strong=TRUE, blank data cells,
-  # .indent=0) and bump every detail row's .indent by 1 — instead of the
+  # .indent=0) and bump every detail row's .indent by 1 -- instead of the
   # old .var section column.  Hierarchy runs (length(run)==2) already
   # carry their own parent/child structure so they count as one block.
   all_logical <- all(vapply(vars, function(v) is.logical(data[[v]]),
@@ -380,7 +380,7 @@ add_group_col <- function(stats_df, by) {
 # =============================================================================
 
 # Each entry maps a stat key to the row label and `.fmt` template it emits
-# for numeric variables. Catalog order is the canonical row order — the
+# for numeric variables. Catalog order is the canonical row order -- the
 # selection is reordered to it, so serialized boards are order-insensitive.
 SUMMARY_STATS_CATALOG <- list(
   n            = list(label = "N",               fmt = "{n:0}"),
@@ -445,7 +445,7 @@ compute_one_var <- function(data, var, stats, sections, by,
   }
 }
 
-# ---- Numeric — one row per selected stat key ----
+# ---- Numeric -- one row per selected stat key ----
 
 #' @noRd
 compute_numeric_rows <- function(data, var, stats, sections, by,
@@ -624,7 +624,7 @@ rbind_long <- function(...) {
 }
 
 #' Per-group numeric stats. `pct` is the share of non-missing rows in the
-#' group (the `n_pct` denominator is always a row count — a distinct-subject
+#' group (the `n_pct` denominator is always a row count -- a distinct-subject
 #' denominator would not match the non-missing-value numerator).
 #' @noRd
 compute_numeric_stats <- function(data, var, group_vars) {

@@ -13,7 +13,7 @@
 "_PACKAGE"
 
 # NSE column names used inside dplyr pipelines built in the chart / table /
-# tile server closures — declared so R CMD check does not flag them as
+# tile server closures -- declared so R CMD check does not flag them as
 # undefined global variables.
 utils::globalVariables(c(
   ".", "val", "xv", "yv", "xlo", "xhi", "ylo", "yhi"

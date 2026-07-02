@@ -45,10 +45,10 @@ new_chart_block(
 
 \item{color}{Column mapped to colour (optional, all families)}
 
-\item{facet}{Column to facet by — one small panel per level (optional)}
+\item{facet}{Column to facet by -- one small panel per level (optional)}
 
 \item{metric}{Column for the metric (aggregated only). Must match
-\code{agg_fn}: ".count" for \code{"count"} (row count — the metric is otherwise
+\code{agg_fn}: ".count" for \code{"count"} (row count -- the metric is otherwise
 ignored), any column for \code{"count_distinct"} (e.g. a subject id to count
 patients instead of records), a numeric column for the numeric
 aggregations.}
@@ -94,10 +94,10 @@ the chart family:
 \item{sort_dir}{\code{"asc"} or \code{"desc"}. Reverses the \code{sort_by} ordering.}
 
 \item{orientation}{Bar orientation: \code{"horizontal"} (default; category on the
-y-axis, best for long labels) or \code{"vertical"}. Presentation property — the
+y-axis, best for long labels) or \code{"vertical"}. Presentation property -- the
 mapping (Group/Metric) is unchanged. Bar charts only.}
 
-\item{bar_mode}{Layout for a color-split bar: \code{"stacked"} (default — color
+\item{bar_mode}{Layout for a color-split bar: \code{"stacked"} (default -- color
 segments stack into one bar per group), \code{"grouped"} (segments sit
 side-by-side / dodged, for comparing absolute values), or \code{"percent"}
 (stacked but each group normalized to 100\%, for comparing composition).
@@ -108,10 +108,10 @@ No effect without a \code{color} split; ignored when \code{baseline = "cumulativ
 normally left at defaults at creation).}
 
 \item{line_width_mult}{Multiplier on the default line width for line
-charts. Default \code{1.0}. Range \code{0.5}–\code{3.0}. Individual family only.}
+charts. Default \code{1.0}. Range \code{0.5}-\code{3.0}. Individual family only.}
 
 \item{dot_size_mult}{Multiplier on the default marker size. Default
-\code{1.0}. Range \code{0.5}–\code{3.0}. Individual family only.}
+\code{1.0}. Range \code{0.5}-\code{3.0}. Individual family only.}
 
 \item{step}{Step-line mode for line charts. \code{NULL} (default) draws a
 straight line; a step mode (e.g. \code{"start"}/\code{"middle"}/\code{"end"}) draws a
@@ -131,8 +131,8 @@ the overlap of the x and y ranges (shift / agreement plots).}
 \item{lo, hi}{Optional lower / upper value bounds used by the renderer to
 clamp or annotate the value axis. Default \code{NULL} (auto).}
 
-\item{baseline}{Bar baseline mode: \code{"zero"} (default — every bar starts at
-0) or \code{"cumulative"} (a waterfall/bridge — each bar floats from the
+\item{baseline}{Bar baseline mode: \code{"zero"} (default -- every bar starts at
+0) or \code{"cumulative"} (a waterfall/bridge -- each bar floats from the
 running cumulative of the bars before it; the step axis honors data order,
 each \code{metric} value is a delta). \code{chart_type = "waterfall"} implies
 \code{"cumulative"}. Bar family only.}
@@ -150,7 +150,7 @@ A transform block of class \code{chart_block}
 \description{
 A configurable chart that can also act as a filter. Arguments are
 grammar-of-graphics aesthetics: each one names a \strong{data column}, never
-a literal value. Roles are orthogonal — \code{color} only colours, \code{series}
+a literal value. Roles are orthogonal -- \code{color} only colours, \code{series}
 only splits into series, \code{label} only writes on-mark text, position is
 \code{x}/\code{y}/\code{xend} or \code{group}.
 }

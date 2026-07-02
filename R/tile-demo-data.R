@@ -6,11 +6,11 @@
 #' `status`) so each display style can be demoed directly.
 #'
 #' @return A list of tibbles:
-#'   - `scorecard` — one row per metric with precomputed `delta` / `progress`
+#'   - `scorecard` -- one row per metric with precomputed `delta` / `progress`
 #'     / `status` columns (long tile frame; for the card styles).
-#'   - `regions` — wide, one row per region with several measure columns (for
+#'   - `regions` -- wide, one row per region with several measure columns (for
 #'     the grouped matrix / `by`-clustered cards and drill).
-#'   - `transactions` — raw rows, to demo the upstream `summarize` -> tile flow.
+#'   - `transactions` -- raw rows, to demo the upstream `summarize` -> tile flow.
 #' @examples
 #' names(tile_demo_data())
 #' @export

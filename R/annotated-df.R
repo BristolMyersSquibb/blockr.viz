@@ -11,7 +11,7 @@
 #'
 #' `as_annotated_df()` is the broom-style hub: it coerces a table-producing
 #' object (composer, gtsummary, gt, rtables, ...) into that data frame. Producer
-#' packages register one S3 method each — e.g. blockr.sandbox provides the
+#' packages register one S3 method each -- e.g. blockr.sandbox provides the
 #' composer methods (`as_annotated_df.composed_table` / `.gt_tbl`). The generic
 #' lives here, with the renderer that defines the convention; the methods live
 #' with their producers (composer is an internal package, so its method stays in
