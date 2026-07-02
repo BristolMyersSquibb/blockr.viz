@@ -1366,10 +1366,26 @@
         const q1 = q(0.25), q3 = q(0.75), iqr = q3 - q1;
         const lo = Math.max(vals[0], q1 - 1.5 * iqr);
         const hi = Math.min(vals[vals.length - 1], q3 + 1.5 * iqr);
-        return [lo, q1, q(0.5), q3, hi];
+        // Datum object (not bare array) so the tooltip can report the
+        // group's observation count alongside the five-number summary.
+        return { value: [lo, q1, q(0.5), q3, hi], n: vals.length };
       });
       const gut = this._yGutter(groups);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true }, grid: { left: gut.gridLeft, right: 5, top: 30, bottom: 46 }, xAxis: { type: 'value', name: this._axisTitle(this.config.metric), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } }, yAxis: { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false } }, series: [{ type: 'boxplot', data: boxData, itemStyle: { color: palette[0] + '22', borderColor: palette[0] } }] };
+      // p.data is our {value, n} datum; whiskers are 1.5*IQR-capped, so
+      // they're labeled as whiskers rather than min/max.
+      const boxTooltipFmt = (/** @type {any} */ p) => {
+        const d = p.data;
+        if (!d || !Array.isArray(d.value)) return '';
+        // ECharts normalizes boxplot datum values to
+        // [dataIndex, lo, q1, med, q3, hi] — read the last five.
+        const [lo, q1, med, q3, hi] = d.value.slice(-5);
+        return (p.name ? p.name + '<br/>' : '') +
+          'n: ' + d.n +
+          '<br/>Median: ' + ddNum(med) +
+          '<br/>Q1, Q3: ' + ddNum(q1) + ', ' + ddNum(q3) +
+          '<br/>Whiskers: ' + ddNum(lo) + ' \u2013 ' + ddNum(hi);
+      };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true, formatter: boxTooltipFmt }, grid: { left: gut.gridLeft, right: 5, top: 30, bottom: 46 }, xAxis: { type: 'value', name: this._axisTitle(this.config.metric), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } }, yAxis: { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false } }, series: [{ type: 'boxplot', data: boxData, itemStyle: { color: palette[0] + '22', borderColor: palette[0] } }] };
     }
 
     // -- Individual rendering -------------------------------------------------
@@ -1767,7 +1783,11 @@
         // symbol:'none' — no hover box at all. The formatter lists each
         // line's value at the hovered x, capped so a trajectory overlay
         // (hundreds of patients) doesn't produce an unreadable tower.
+        // When the cursor is ON a line (series mouseover via
+        // triggerLineEvent), the box narrows to that series only,
+        // matching the emphasis/blur highlight.
         const TT_ROW_CAP = 12;
+        const hover = { si: /** @type {number | null} */ (null) };
         const lineTooltip = {
           trigger: 'axis',
           axisPointer: { type: 'line' },
@@ -1776,9 +1796,22 @@
             if (!Array.isArray(ps)) ps = [ps];
             // Only real line series: drop error-bar overlays (custom) and
             // the empty legend-binding series (no data -> never present).
-            const rows = ps.filter((/** @type {any} */ p) =>
+            let rows = ps.filter((/** @type {any} */ p) =>
               p && p.seriesType === 'line' && Array.isArray(p.value));
             if (!rows.length) return '';
+            if (hover.si != null) {
+              const own = rows.filter((/** @type {any} */ p) =>
+                p.seriesIndex === hover.si);
+              if (own.length) rows = own;
+            }
+            // One row per series: data with several observations per x
+            // (replicates) yields one param per datum — keep the first.
+            const seen = new Set();
+            rows = rows.filter((/** @type {any} */ p) => {
+              if (seen.has(p.seriesIndex)) return false;
+              seen.add(p.seriesIndex);
+              return true;
+            });
             // Category x: the visit label is the header. Numeric x: name
             // the value ("Day: 30"), else it reads as a bare number.
             const head = xCats
@@ -1827,6 +1860,23 @@
         };
 
         chart.setOption(this._applyDrillEmphasis(option), true);
+
+        // Track which line the cursor is on (triggerLineEvent makes bare
+        // line segments fire series mouseover/mouseout) so the axis
+        // tooltip above can narrow to the hovered series.
+        if (isLine) {
+          chart.on('mouseover', (/** @type {any} */ p) => {
+            if (p.componentType === 'series' && p.seriesType === 'line') {
+              hover.si = p.seriesIndex;
+            }
+          });
+          chart.on('mouseout', (/** @type {any} */ p) => {
+            if (p.componentType === 'series' && p.seriesType === 'line') {
+              hover.si = null;
+            }
+          });
+          chart.on('globalout', () => { hover.si = null; });
+        }
 
         // When the legend shows color levels (not series), intercept
         // legend clicks and fan them out to every series that belongs to
