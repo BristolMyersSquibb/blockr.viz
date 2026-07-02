@@ -8,27 +8,14 @@
     return parseFloat(m[0].replace(/,/g, ""));
   }
 
-  // Freeze the content-fit column widths so neither collapsing a section nor
-  // showing the sort arrow ever reflows the columns. Measured while the table
-  // is visible and still at its natural (auto) widths — the arrow is hidden at
-  // that moment, so the pinned widths are the max-content ones; afterwards the
-  // arrow appears INSIDE the fixed cell (the sub-label ellipsises to make room)
-  // and the table never resizes. Pin every column except the last; under
-  // `table-layout: fixed` the last one takes the exact remaining width, so it
-  // is fixed too. No-op if already locked or hidden.
-  /** @param {HTMLElement | null} table */
-  function lockTableWidths(table) {
-    if (!table || table.dataset.widthsLocked === "1" || table.offsetWidth === 0) return;
-    var ths = table.querySelectorAll("thead th");
-    if (ths.length < 2) return;
-    var widths = Array.prototype.map.call(ths, function (th) { return th.offsetWidth; });
-    table.style.tableLayout = "fixed";
-    table.style.width = "100%";
-    Array.prototype.forEach.call(ths, function (th, i) {
-      if (i < ths.length - 1) th.style.width = widths[i] + "px";
-    });
-    table.dataset.widthsLocked = "1";
-  }
+  // Column widths are computed server-side (blockr.ui::column_widths_px,
+  // carried by each table's <colgroup>) and the table renders with
+  // table-layout: fixed from the first paint, so nothing in this script
+  // measures or mutates layout: sort-arrow reveal, section collapse and
+  // search filtering cannot reflow the columns by construction. (The old
+  // lockTableWidths() measured the DOM lazily before the first reflow -
+  // it skipped hidden tables and never covered the search path at all, so
+  // filtering reflowed columns live while typing.)
 
   /** @param {HTMLElement} root @param {HTMLElement} table @param {HTMLElement} tbody */
   function wireSort(root, table, tbody) {
@@ -99,10 +86,6 @@
 
     /** @param {number} idx */
     function sortBy(idx) {
-      // Pin widths before the arrow shows, so revealing it never resizes the
-      // column (the flat path had no width lock — only the structured collapse
-      // did — which is why correlation / simple tables jumped on sort).
-      lockTableWidths(table);
       if (state.col === idx) {
         state.dir = state.dir === 1 ? -1 : (state.dir === -1 ? 0 : 1);
       } else {
@@ -202,7 +185,6 @@
       // the button and any bare-cell click.
       h.addEventListener("click", function (ev) {
         ev.stopPropagation();
-        lockTableWidths(table);    // pin widths before the first reflow
         h.classList.toggle("collapsed");
         syncAria(h);
         recompute();
@@ -217,7 +199,6 @@
           ev.preventDefault();
           var h = btn.closest("tr.blockr-indent-toggle");
           if (!h) return;
-          lockTableWidths(table);
           h.classList.toggle("collapsed");
           btn.setAttribute(
             "aria-expanded", h.classList.contains("collapsed") ? "false" : "true"

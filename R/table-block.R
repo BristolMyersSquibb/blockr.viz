@@ -190,6 +190,9 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   esc <- function(x) htmltools::htmlEscape(as.character(x), attribute = FALSE)
 
   col_cells <- vector("list", length(value_cols))
+  # Display strings per column, kept for the server-side width estimation
+  # below (same strings the cells render, no second formatting pass).
+  disp_by_col <- rep(list(character(0L)), length(value_cols))
   for (j in seq_along(value_cols)) {
     col   <- data[[value_cols[j]]]
     keep  <- !is.na(col)
@@ -205,6 +208,7 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
       } else {
         as.character(vk)
       }
+      disp_by_col[[j]] <- disp
       style <- ""
       if (num_flag[j] && value_cols[j] %in% targets) {
         if (bar_mode) {
@@ -250,7 +254,20 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                        collapse = "")
   tbody <- htmltools::tags$tbody(htmltools::HTML(rows_html))
 
-  table_tag <- htmltools::tags$table(class = "blockr-table", thead, tbody)
+  flat_labels <- c(
+    dt_col_label(data[[label_col]], label_col) %||% "",
+    vapply(value_cols, function(vc) {
+      dt_col_label(data[[vc]], vc) %||% ""
+    }, character(1L))
+  )
+  table_tag <- dt_fixed_table_tag(
+    thead, tbody,
+    dt_colgroup(
+      c(label_col, value_cols),
+      c(list(as.character(data[[label_col]])), disp_by_col),
+      labels = flat_labels
+    )
+  )
   onclick <- dt_onclick(drill, c(label_col, value_cols))
   dt_table_attrs(table_tag, onclick$col, onclick$idx, color_mode, digits,
                  row_color = row_color,
@@ -311,7 +328,10 @@ dt_table_tag_structured <- function(data, drill, color, digits, toggles = NULL) 
                             styling_cols = styling_cols,
                             collapsible = collapsible)
 
-  table_tag <- htmltools::tags$table(class = "blockr-table", thead, tbody)
+  table_tag <- dt_fixed_table_tag(
+    thead, tbody,
+    structured_colgroup(data, data_cols, stub_col)
+  )
 
   # The stub is column 0 in a structured table; only honour drill when it
   # names the stub (the only categorical row identity that survives the

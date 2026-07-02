@@ -83,10 +83,9 @@ html_table <- function(data,
   # Use the same class names the canonical blockr.ui preview uses so the
   # shared table_preview_css() rules (typography, padding, hover, sort icons)
   # apply to this table without duplication.
-  table_tag <- htmltools::tags$table(
-    class = "blockr-table",
-    thead,
-    tbody
+  table_tag <- dt_fixed_table_tag(
+    thead, tbody,
+    structured_colgroup(data, data_cols, stub_col)
   )
 
   scroll_style <- if (!is.null(max_height)) {
@@ -144,6 +143,91 @@ html_table <- function(data,
       gsub("__WRAPPER_ID__", wrapper_id, html_table_js_template(), fixed = TRUE)
     ))
   )
+}
+
+# ---------------------------------------------------------------------------
+# Server-computed fixed-layout column widths
+# ---------------------------------------------------------------------------
+# Widths come from blockr.ui::column_widths_px() - the same estimator the
+# canonical table preview uses - so the layout never depends on measuring
+# the DOM (the retired lockTableWidths() in table.js read 0 whenever it ran
+# against a hidden panel, and the search filter never locked at all, so
+# columns reflowed live while typing). Multi-level spanner headers rule out
+# per-th widths: in fixed layout the FIRST header row sizes the columns and
+# that row holds colspan group cells, so the widths ride a <colgroup>.
+
+#' Assemble the fixed-layout blockr table tag
+#' @noRd
+dt_fixed_table_tag <- function(thead, tbody, colgroup) {
+  htmltools::tags$table(
+    class = "blockr-table",
+    # width stays 100% via the class: a fixed table's used width is
+    # max(100%, sum of columns), so narrow tables fill the panel and wide
+    # ones overflow-scroll.
+    style = "table-layout: fixed;",
+    colgroup,
+    thead,
+    tbody
+  )
+}
+
+#' <colgroup> from header texts + display strings (leaf-column DOM order)
+#' @noRd
+dt_colgroup <- function(header_texts, cells,
+                        labels = character(length(header_texts)),
+                        extra_px = 0L) {
+  widths <- blockr.ui::column_widths_px(
+    col_names = header_texts,
+    col_labels = labels,
+    formatted = lapply(cells, as.character)
+  ) + extra_px
+  htmltools::tags$colgroup(
+    lapply(widths, function(w) {
+      htmltools::tags$col(style = sprintf("width: %dpx;", w))
+    })
+  )
+}
+
+#' Plain-text header line for width estimation: honour attr(col, "label"),
+#' strip HTML, take the widest line of a multi-line label.
+#' @noRd
+dt_header_text <- function(data, col) {
+  lbl <- attr(data[[col]], "label")
+  txt <- if (is.character(lbl) && length(lbl) == 1L && nzchar(lbl)) {
+    lbl
+  } else {
+    p <- strsplit(col, "||", fixed = TRUE)[[1L]]
+    p[[length(p)]]
+  }
+  txt <- gsub("<br */?>", "\n", txt)
+  txt <- gsub("<[^>]*>", "", txt)
+  lines <- trimws(strsplit(txt, "\n", fixed = TRUE)[[1L]])
+  if (!length(lines)) return("")
+  lines[[which.max(nchar(lines, type = "width"))]]
+}
+
+#' Colgroup for the structured (dotted-column) layout shared by
+#' html_table() and the structured table block: optional stub + leaf
+#' data columns, with an indent allowance on the stub.
+#' @noRd
+structured_colgroup <- function(data, data_cols, stub_col) {
+  header_texts <- vapply(data_cols, function(col) dt_header_text(data, col),
+                         character(1L))
+  cells <- lapply(data_cols, function(col) as.character(data[[col]]))
+  extra <- rep(0L, length(data_cols))
+  if (!is.null(stub_col)) {
+    header_texts <- c("", header_texts)
+    cells <- c(list(as.character(data[[stub_col]])), cells)
+    # Stub rows indent 24px base + 16px per level (build_html_tbody) in
+    # place of the plain 16px left padding the estimator assumes.
+    max_indent <- if (".indent" %in% names(data)) {
+      suppressWarnings(max(c(0, as.numeric(data$.indent)), na.rm = TRUE))
+    } else {
+      0
+    }
+    extra <- c(8L + 16L * as.integer(max_indent), extra)
+  }
+  dt_colgroup(header_texts, cells, extra_px = extra)
 }
 
 # ---------------------------------------------------------------------------

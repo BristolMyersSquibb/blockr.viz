@@ -9,7 +9,15 @@ test_that("html_table() returns a tagList for a minimal flat input", {
   expect_s3_class(out, "shiny.tag.list")
 
   html <- as.character(htmltools::tagList(out))
-  expect_true(grepl("<table class=\"blockr-table\">", html, fixed = TRUE))
+  expect_true(grepl(
+    "<table class=\"blockr-table\" style=\"table-layout: fixed;\">",
+    html,
+    fixed = TRUE
+  ))
+  # Server-computed widths ride a <colgroup>: one <col> per rendered column
+  # (stub + 2 arms), so sort / collapse / search can never reflow columns.
+  expect_true(grepl("<colgroup>", html, fixed = TRUE))
+  expect_length(gregexpr("<col style=\"width: [0-9]+px;\"/>", html)[[1]], 3L)
   expect_true(grepl("<thead>", html, fixed = TRUE))
   expect_true(grepl("<tbody>", html, fixed = TRUE))
   expect_true(grepl("blockr-html-table-container", html, fixed = TRUE))

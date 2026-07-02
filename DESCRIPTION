@@ -23,7 +23,7 @@ RoxygenNote: 7.3.3
 Imports:
     blockr.core,
     blockr.dplyr,
-    blockr.ui,
+    blockr.ui (>= 0.0.0.9012),
     dplyr,
     echarts4r,
     gt,
