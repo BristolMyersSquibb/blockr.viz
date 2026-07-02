@@ -70,6 +70,11 @@
       { action: 'config', param: param, value: value }, { priority: 'event' });
   }
 
+  // renderUI rebuilds the whole tile (settings band included) on every config
+  // edit; remember the band's open state per element id so it survives.
+  /** @type {Record<string, boolean>} */
+  var bandOpen = {};
+
   /** @param {Element} root */
   function buildCogwheel(root) {
     var elemId = root.getAttribute('data-tk-elem-id');
@@ -100,18 +105,14 @@
       ? Blockr.icons.gear : '⚙';
     header.appendChild(btn);
 
-    var esc = (window.CSS && CSS.escape) ? CSS.escape(elemId) : elemId;
-    var staleP = /** @type {HTMLElement | null} */ (
-      document.querySelector('.dd-popover[data-dd-pop-for="' + esc + '"]'));
-    // renderUI rebuilds the whole tile (this popover included) on every config
-    // edit; remember whether the prior instance was open so we can restore it.
-    var wasOpen = !!(staleP && staleP.style.display === 'block');
-    if (staleP && staleP.parentNode) staleP.parentNode.removeChild(staleP);
+    // In-flow settings band (design-system pilot — blockr.ui/dev/
+    // gear-panel-proposals.html, variant B): inside the tile below the gear
+    // header, no <body> portal, no fixed positioning.
+    var wasOpen = !!bandOpen[elemId];
 
     var pop = document.createElement('div');
-    pop.className = 'blockr-popover dd-popover';
+    pop.className = 'blockr-settings dd-popover';
     pop.setAttribute('data-dd-pop-for', elemId);
-    pop.style.display = 'none';
 
     var DDC = (typeof Blockr !== 'undefined' && Blockr.DrilldownConfig) ||
       window.DrilldownConfig;
@@ -143,64 +144,34 @@
       onClearFilter: function () {},
       ensureDefaults: function () {},
       afterTypeChange: function () {},
-      isOpen: function () { return pop.style.display === 'block'; },
+      isOpen: function () { return pop.classList.contains('blockr-settings--open'); },
       reopen: function () { openPop(); }
     }).render();
 
-    function positionPop() {
-      var g = btn.getBoundingClientRect();
-      var vw = window.innerWidth, vh = window.innerHeight;
-      pop.style.position = 'fixed';
-      pop.style.right = 'auto';
-      pop.style.maxHeight = (vh - 16) + 'px';
-      var pw = pop.offsetWidth, ph = pop.offsetHeight;
-      var left = Math.min(g.right, vw - 8) - pw;
-      left = Math.max(8, Math.min(left, vw - pw - 8));
-      var top = g.bottom + 6;
-      if (top + ph > vh - 8) top = Math.max(8, vh - 8 - ph);
-      pop.style.left = left + 'px';
-      pop.style.top = top + 'px';
-      pop.style.maxHeight = (vh - top - 8) + 'px';
-    }
-    var reposition = function () { if (pop.style.display === 'block') positionPop(); };
+    // The band is in flow: opening is a class toggle — no positioning, no
+    // scroll/resize listeners, no outside-click dismissal (it is a panel,
+    // not a menu; the gear is the only toggle).
     function openPop() {
-      pop.style.display = 'block';
+      pop.classList.add('blockr-settings--open');
       btn.classList.add('blockr-gear-active');
       btn.setAttribute('aria-expanded', 'true');
-      positionPop();
-      requestAnimationFrame(positionPop);
-      window.addEventListener('scroll', reposition, true);
-      window.addEventListener('resize', reposition);
+      bandOpen[elemId] = true;
     }
     function closePop() {
-      pop.style.display = 'none';
+      pop.classList.remove('blockr-settings--open');
       btn.classList.remove('blockr-gear-active');
       btn.setAttribute('aria-expanded', 'false');
-      window.removeEventListener('scroll', reposition, true);
-      window.removeEventListener('resize', reposition);
+      bandOpen[elemId] = false;
     }
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      if (pop.style.display === 'block') closePop(); else openPop();
-    });
-    // Decide on mousedown, not click: a Blockr.Select dropdown is portaled to
-    // <body> (outside this popover) and tears itself down on the option click,
-    // so by click time e.target is already detached and the dropdown ancestor
-    // is gone. At mousedown the dropdown is still attached, so the exclusion
-    // below holds and picking a value no longer dismisses the settings form.
-    document.addEventListener('mousedown', function (e) {
-      if (pop.style.display !== 'block') return;
-      var t = /** @type {HTMLElement | null} */ (e.target);
-      if (pop.contains(t) || btn.contains(t)) return;
-      if (t && t.closest('.blockr-select__dropdown')) return;
-      closePop();
+      if (pop.classList.contains('blockr-settings--open')) closePop(); else openPop();
     });
 
-    document.body.appendChild(pop);
     root.insertBefore(header, root.firstChild);
-    // The form must stay open until the user clicks away, but each config edit
-    // re-renders the tile from the server and rebuilds this popover closed.
-    // Restore the open state captured from the prior instance above.
+    root.insertBefore(pop, header.nextSibling);
+    // Each config edit re-renders the tile from the server and rebuilds this
+    // band closed; restore the remembered open state.
     if (wasOpen) openPop();
   }
 

@@ -3,9 +3,11 @@
  * SummaryTableBlock — JS-driven input binding for blockr.viz::summary_table_block.
  *
  * Main: three Blockr.Select widgets (vars multi / sections multi / by multi, max 2).
- * Gear: stat picker pills, overall toggle + label, indent_details, nest_hierarchies.
+ * Gear: an in-flow settings band (stat checkboxes, overall checkbox + label,
+ * nest_hierarchies checkbox, group-by select, count-distinct select).
  *
- * Depends on: blockr-core.js, blockr-select.js (from blockr.dplyr), blockr-blocks.css.
+ * Depends on: blockr-core.js, blockr-select.js (from blockr.dplyr),
+ * blockr-blocks.css, settings-band.js/.css (Blockr.checkbox + .blockr-settings).
  */
 (() => {
   'use strict';
@@ -175,17 +177,21 @@
       this._selects.by.el.classList.add('blockr-select--bordered');
       grid.appendChild(byWrap);
 
-      // Gear popover
-      this.popover.className = 'blockr-popover';
-      this.popover.style.display = 'none';
+      // Settings band (design-system pilot \u2014 blockr.ui/dev/
+      // gear-panel-proposals.html variant B): a full-width, in-flow panel
+      // between the gear header and the main grid, built from the standard
+      // controls; on/off options are .blockr-checkbox (see
+      // boolean-controls-proposals.html), not self-labeling pills.
+      this.popover.className = 'blockr-settings';
 
       const popTitle = document.createElement('div');
-      popTitle.className = 'blockr-popover-label';
-      popTitle.style.fontWeight = '600';
-      popTitle.style.color = '#374151';
-      popTitle.style.marginBottom = '10px';
-      popTitle.textContent = 'Advanced';
+      popTitle.className = 'blockr-settings__title';
+      popTitle.textContent = 'Settings';
       this.popover.appendChild(popTitle);
+
+      this._bandGrid = document.createElement('div');
+      this._bandGrid.className = 'blockr-settings__grid';
+      this.popover.appendChild(this._bandGrid);
 
       this._addStatsRow();
       this._addOverallRow();
@@ -196,21 +202,17 @@
       this._addSectionsRow();
       this._addIdVarRow();
 
-      this.card.appendChild(this.popover);
-
-      document.addEventListener('click', (e) => {
-        if (!this.card.contains(/** @type {Node | null} */ (e.target))) {
-          this.popover.style.display = 'none';
-          this.gearBtn.classList.remove('blockr-gear-active');
-        }
-      });
+      // In flow: opening pushes the main grid down; the gear is the only
+      // toggle (a panel, not a menu \u2014 no outside-click dismissal).
+      this.card.insertBefore(this.popover, grid);
     }
 
     /** @param {HTMLElement | HTMLElement[]} children @param {string} [description] */
     _addPopoverRow(children, description) {
       const row = document.createElement('div');
-      row.className = 'blockr-popover-row';
+      row.className = 'blockr-settings__field blockr-settings__field--full';
       row.style.display = 'flex';
+      row.style.flexDirection = 'row';
       row.style.alignItems = 'center';
       row.style.gap = '10px';
       row.style.marginBottom = '8px';
@@ -226,7 +228,7 @@
         row.appendChild(muted);
       }
 
-      this.popover.appendChild(row);
+      this._bandGrid.appendChild(row);
       return row;
     }
 
@@ -236,32 +238,24 @@
      * @param {string} [description]
      */
     _addBooleanRow(key, labels, description) {
-      const btn = /** @type {ToggleButton} */ (document.createElement('button'));
-      btn.type = 'button';
-      btn.className = 'blockr-pill blockr-popover-toggle';
-      const update = () => {
-        const active = !!this._state[key];
-        btn.textContent = active ? labels.on : labels.off;
-        btn.classList.toggle('blockr-popover-toggle-active', active);
-      };
-      update();
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this._state[key] = !this._state[key];
-        update();
+      // Boolean data option -> checkbox (design-system rule); the label
+      // carries the affirmative meaning, the box carries the state.
+      const box = Blockr.checkbox(labels.on, !!this._state[key], (checked) => {
+        this._state[key] = checked;
         this._autoSubmit();
       });
-      btn._update = update;
-      (/** @type {Record<string, any>} */ (this))['_toggle_' + key] = btn;
-      this._addPopoverRow(btn, description);
+      const update = () => { box.set(!!this._state[key]); };
+      (/** @type {Record<string, any>} */ (this))['_toggle_' + key] = { _update: update };
+      this._addPopoverRow(box.el, description);
     }
 
     _addStatsRow() {
       const wrap = document.createElement('div');
+      wrap.className = 'blockr-settings__field blockr-settings__field--full';
       wrap.style.marginBottom = '8px';
 
       const label = document.createElement('span');
-      label.className = 'blockr-popover-label';
+      label.className = 'blockr-label';
       label.textContent = 'Statistics';
       label.style.display = 'block';
       label.style.marginBottom = '4px';
@@ -275,80 +269,69 @@
       hint.style.marginBottom = '6px';
       wrap.appendChild(hint);
 
-      const pillRow = document.createElement('div');
-      pillRow.style.display = 'flex';
-      pillRow.style.flexWrap = 'wrap';
-      pillRow.style.gap = '6px';
-      wrap.appendChild(pillRow);
+      // One checkbox per stat (independent on/off options — design-system
+      // rule: data options are checkboxes, not self-labeling pills).
+      const boxRow = document.createElement('div');
+      boxRow.className = 'blockr-checkbox-row';
+      wrap.appendChild(boxRow);
 
-      const buttons = STAT_OPTIONS.map((opt) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'blockr-pill blockr-popover-toggle';
-        btn.textContent = opt.label;
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const idx = this._state.stats.indexOf(opt.key);
-          if (idx >= 0) {
-            // Never deselect the last stat — the engine needs at least one.
-            if (this._state.stats.length === 1) return;
-            this._state.stats.splice(idx, 1);
-          } else {
-            // Keep canonical catalog order regardless of click order.
-            this._state.stats = STAT_KEYS.filter(
-              k => k === opt.key || this._state.stats.indexOf(k) >= 0
-            );
-          }
-          update();
-          this._autoSubmit();
-        });
-        return btn;
+      const boxes = STAT_OPTIONS.map((opt) => {
+        const box = Blockr.checkbox(
+          opt.label,
+          this._state.stats.indexOf(opt.key) >= 0,
+          (/** @type {boolean} */ checked) => {
+            if (!checked) {
+              // Never deselect the last stat — the engine needs at least one.
+              if (this._state.stats.length === 1) { box.set(true); return; }
+              const idx = this._state.stats.indexOf(opt.key);
+              if (idx >= 0) this._state.stats.splice(idx, 1);
+            } else {
+              // Keep canonical catalog order regardless of click order.
+              this._state.stats = STAT_KEYS.filter(
+                k => k === opt.key || this._state.stats.indexOf(k) >= 0
+              );
+            }
+            this._autoSubmit();
+          });
+        return box;
       });
-      buttons.forEach(b => pillRow.appendChild(b));
+      boxes.forEach(b => boxRow.appendChild(b.el));
 
       const update = () => {
-        buttons.forEach((btn, i) => {
-          const active = this._state.stats.indexOf(STAT_OPTIONS[i].key) >= 0;
-          btn.classList.toggle('blockr-popover-toggle-active', active);
+        boxes.forEach((box, i) => {
+          box.set(this._state.stats.indexOf(STAT_OPTIONS[i].key) >= 0);
         });
       };
-      update();
 
-      // Same `{ _update }` shape as the ToggleButtons so setState's
+      // Same `{ _update }` shape as the toggle handles so setState's
       // refresh loop can repaint it uniformly.
       this._toggle_stats = /** @type {any} */ ({ _update: update });
-      this.popover.appendChild(wrap);
+      this._bandGrid.appendChild(wrap);
     }
 
     _addOverallRow() {
-      const btn = /** @type {ToggleButton} */ (document.createElement('button'));
-      btn.type = 'button';
-      btn.className = 'blockr-pill blockr-popover-toggle';
-      const labels = { on: 'With overall', off: 'No overall' };
       const update = () => {
-        const active = !!this._state.add_overall;
-        btn.textContent = active ? labels.on : labels.off;
-        btn.classList.toggle('blockr-popover-toggle-active', active);
+        box.set(!!this._state.add_overall);
         if (this._overallLabelRow) {
-          this._overallLabelRow.style.display = active ? 'flex' : 'none';
+          this._overallLabelRow.style.display = this._state.add_overall ? 'flex' : 'none';
         }
       };
-      update();
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this._state.add_overall = !this._state.add_overall;
-        update();
-        this._autoSubmit();
-      });
-      btn._update = update;
-      this._toggle_add_overall = btn;
-      this._addPopoverRow(btn, 'Append an overall column across all groups');
+      const box = Blockr.checkbox('Overall column', !!this._state.add_overall,
+        (/** @type {boolean} */ checked) => {
+          this._state.add_overall = checked;
+          update();
+          this._autoSubmit();
+        });
+      this._toggle_add_overall = /** @type {any} */ ({ _update: update });
+      this._addPopoverRow(box.el, 'Append an overall column across all groups');
     }
 
     _addOverallLabelRow() {
       const input = document.createElement('input');
       input.type = 'text';
-      input.className = 'blockr-popover-input';
+      // Standard 42px text input — the band uses the same controls as the
+      // main UI (no popover-specific input recipe).
+      input.className = 'blockr-text-input';
       input.placeholder = 'Overall column label';
       input.value = this._state.overall_label || '';
       input.style.flex = '1';
@@ -356,10 +339,9 @@
         this._state.overall_label = input.value;
         this._autoSubmit();
       });
-      input.addEventListener('click', (e) => e.stopPropagation());
 
       const label = document.createElement('span');
-      label.className = 'blockr-popover-label';
+      label.className = 'blockr-label';
       label.textContent = 'Label:';
       label.style.marginBottom = '0';
       label.style.flexShrink = '0';
@@ -373,10 +355,11 @@
     _addSectionsRow() {
       const BSelect = /** @type {BlockrSelectStatic} */ (Blockr.Select);
       const wrap = document.createElement('div');
+      wrap.className = 'blockr-settings__field blockr-settings__field--full';
       wrap.style.marginBottom = '8px';
 
       const label = document.createElement('span');
-      label.className = 'blockr-popover-label';
+      label.className = 'blockr-label';
       label.textContent = 'Group by';
       label.style.display = 'block';
       label.style.marginBottom = '4px';
@@ -400,13 +383,15 @@
         }
       });
       this._selects.sections.el.classList.add('blockr-select--bordered');
-      this.popover.appendChild(wrap);
+      this._bandGrid.appendChild(wrap);
     }
 
     _addIdVarRow() {
       const select = document.createElement('select');
-      select.className = 'blockr-popover-input';
+      // Standard 42px control (same inputs as the main UI).
+      select.className = 'blockr-text-input';
       select.style.flex = '1';
+      select.style.width = 'auto';
 
       const empty = document.createElement('option');
       empty.value = '';
@@ -417,10 +402,9 @@
         this._state.id_var = select.value;
         this._autoSubmit();
       });
-      select.addEventListener('click', (e) => e.stopPropagation());
 
       const label = document.createElement('span');
-      label.className = 'blockr-popover-label';
+      label.className = 'blockr-label';
       label.textContent = 'Count distinct by:';
       label.style.marginBottom = '0';
       label.style.flexShrink = '0';
@@ -450,8 +434,8 @@
     }
 
     _togglePopover() {
-      const showing = this.popover.style.display === 'none';
-      this.popover.style.display = showing ? 'block' : 'none';
+      const showing = !this.popover.classList.contains('blockr-settings--open');
+      this.popover.classList.toggle('blockr-settings--open', showing);
       this.gearBtn.classList.toggle('blockr-gear-active', showing);
     }
 

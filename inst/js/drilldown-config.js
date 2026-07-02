@@ -70,6 +70,18 @@
       return true;
     }
 
+    // A "segmented" role whose two values are literally on/off is a plain
+    // boolean data option — per the design-system rule (values -> pill, data
+    // options -> checkbox) it renders as a .blockr-checkbox, not a pill.
+    // Non-boolean segmented roles (Good when up/down, Layout cards/table)
+    // stay cycling pills: their label IS the value.
+    /** @param {any} role */
+    _isBoolSegmented(role) {
+      return !!role && role.kind === 'segmented' && Array.isArray(role.options) &&
+        role.options.length === 2 &&
+        role.options.every((/** @type {any} */ o) => o.value === 'on' || o.value === 'off');
+    }
+
     /** @param {string} key @param {*} val */
     _rememberRole(key, val) {
       const role = this._role(key);
@@ -119,10 +131,10 @@
 
     /** @param {string} key @param {*} value */
     _fieldHelp(key, value) {
-      const col = this._cols().find(c => c.name === value);
-      if (col && col.label && col.label !== col.name) {
-        return col.name + ' (' + col.label + ')';
-      }
+      // Filled fields get no help line: the select's value display already
+      // shows `name  label` (labels-everywhere, blockr-select.js
+      // fillOptContent), so echoing `name (label)` here would duplicate it.
+      // The help line only surfaces the role hint while the field is empty.
       if (this._hasVal(value)) return '';
       const role = this._role(key);
       if (!role) return '';
@@ -252,6 +264,19 @@
       row.className = 'blockr-popover-row dd-form-row dd-role-' + key +
         (paired ? ' dd-role-paired' : '');
 
+      // Boolean option -> a single self-describing checkbox row: the checkbox
+      // label carries the affirmative meaning (the on-option label), so the
+      // usual head label would just repeat it.
+      if (!opts.removable && this._isBoolSegmented(role) &&
+          typeof Blockr !== 'undefined' && Blockr.checkbox) {
+        const controls = document.createElement('div');
+        controls.className = 'dd-row-controls';
+        this._buildControl(controls, key, { onChange: () => {} });
+        row.appendChild(controls);
+        container.appendChild(row);
+        return;
+      }
+
       const head = document.createElement('div');
       head.className = 'dd-row-head';
       const lbl = document.createElement('span');
@@ -302,26 +327,35 @@
 
       const tRow = document.createElement('div');
       tRow.className = 'blockr-popover-row dd-form-row';
-      const tHead = document.createElement('div');
-      tHead.className = 'dd-row-head';
-      const tLbl = document.createElement('span');
-      tLbl.className = 'blockr-popover-label';
-      tLbl.textContent = 'Filter on selection';
-      tHead.appendChild(tLbl);
-      tRow.appendChild(tHead);
-      this._buildPill(
-        tRow,
-        [{ value: 'off', label: 'No filter' }, { value: 'on', label: 'Filters downstream' }],
-        on ? 'on' : 'off',
-        (val) => {
-          if (val === 'off') cfg.drill = '';
-          else if (!this._hasVal(cfg.drill)) cfg.drill = 'auto';
-          const wasOpen = this.h.isOpen();
-          this.render();
-          if (wasOpen) setTimeout(() => this.h.reopen(), 0);
-          this.h.onChange('drill'); this.h.onClearFilter();
-        }
-      );
+      const onDrillToggle = (/** @type {boolean} */ enabled) => {
+        if (!enabled) cfg.drill = '';
+        else if (!this._hasVal(cfg.drill)) cfg.drill = 'auto';
+        const wasOpen = this.h.isOpen();
+        this.render();
+        if (wasOpen) setTimeout(() => this.h.reopen(), 0);
+        this.h.onChange('drill'); this.h.onClearFilter();
+      };
+      if (typeof Blockr !== 'undefined' && Blockr.checkbox) {
+        // Boolean data option -> checkbox (design-system rule); the label
+        // states the affirmative meaning, checked = filtering is on.
+        const box = Blockr.checkbox('Filter downstream on selection', on,
+          (/** @type {boolean} */ checked) => onDrillToggle(checked));
+        tRow.appendChild(box.el);
+      } else {
+        const tHead = document.createElement('div');
+        tHead.className = 'dd-row-head';
+        const tLbl = document.createElement('span');
+        tLbl.className = 'blockr-popover-label';
+        tLbl.textContent = 'Filter on selection';
+        tHead.appendChild(tLbl);
+        tRow.appendChild(tHead);
+        this._buildPill(
+          tRow,
+          [{ value: 'off', label: 'No filter' }, { value: 'on', label: 'Filters downstream' }],
+          on ? 'on' : 'off',
+          (val) => onDrillToggle(val === 'on')
+        );
+      }
       sec.appendChild(tRow);
 
       if (on) {
@@ -435,9 +469,24 @@
         parent.appendChild(wrap);
       } else if (role.kind === 'segmented') {
         const cur = this._hasVal(cfg[key]) ? cfg[key] : role.options[0].value;
-        this._buildPill(parent, role.options, cur, (/** @type {string} */ val) => {
-          cfg[key] = val; cb(); this.h.onChange(key);
-        });
+        if (this._isBoolSegmented(role) &&
+            typeof Blockr !== 'undefined' && Blockr.checkbox) {
+          const onOpt = role.options.find((/** @type {any} */ o) => o.value === 'on');
+          const box = Blockr.checkbox(onOpt.label, cur === 'on',
+            (/** @type {boolean} */ checked) => {
+              cfg[key] = checked ? 'on' : 'off';
+              cb();
+              this.h.onChange(key);
+            });
+          const wrap = document.createElement('div');
+          wrap.className = 'dd-pill-wrap';
+          wrap.appendChild(box.el);
+          parent.appendChild(wrap);
+        } else {
+          this._buildPill(parent, role.options, cur, (/** @type {string} */ val) => {
+            cfg[key] = val; cb(); this.h.onChange(key);
+          });
+        }
       } else if (role.kind === 'text') {
         // Canonical popover text input (blockr.dplyr blockr-blocks.css). Note:
         // no .dd-picker-wrap here — that wrapper carries its own border for the
