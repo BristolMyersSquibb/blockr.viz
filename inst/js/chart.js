@@ -561,6 +561,65 @@
       };
     }
 
+    // Bottom-anchored legends wrap onto extra rows when the chip labels
+    // exceed the chart width, and ECharts grows them UPWARD from bottom:0 —
+    // every grid.bottom in the option builders reserves a single legend row,
+    // so row two lands on the x-axis title. This predicts the wrap the same
+    // way the label helpers above predict text width (shared canvas,
+    // ECharts' horizontal-legend layout constants: 25px chip + ~5px
+    // chip-to-text gap per item, 10px itemGap between items and rows, 14px
+    // itemHeight, 5px viewport padding per side) and returns
+    //   { extra, scroll }
+    // extra  = px to ADD to the one-row reservation (0 for a single row).
+    // scroll = true when the legend would exceed MAX_ROWS; the caller should
+    //          set legend type:'scroll' (the timeline chart's standing policy
+    //          for high cardinality) and reserve nothing extra, instead of
+    //          letting the legend eat the plot.
+    // The +2px per-item slack biases toward predicting a wrap: over-reserving
+    // costs whitespace, under-reserving is the overlap this exists to fix.
+    /** @param {any[]} items legend entries (strings or {name} objects)
+     *  @param {number} plotW chart container width in px (0 = unknown) */
+    _legendRows(items, plotW) {
+      const ONE_ROW = { extra: 0, scroll: false };
+      // Width unknown (hidden panel): assume the row the grid already
+      // reserves — a resize re-renders with a real width anyway.
+      if (!items || items.length < 2 || !(plotW > 0)) return ONE_ROW;
+      const MAX_ROWS = 4;
+      const ROW_ADVANCE = 24; // itemHeight 14 + 10 itemGap between rows
+      const DC = /** @type {any} */ (DrilldownChart);
+      const ctx = DC._measureCtx ||
+        (DC._measureCtx = document.createElement('canvas').getContext('2d'));
+      ctx.font = `11px ${BLOCKR_FONT}`;
+      const availW = plotW - 10;
+      let x = 0;
+      let rows = 1;
+      for (const it of items) {
+        const name = it != null && typeof it === 'object' ? it.name : it;
+        const w = 25 + 5 + ctx.measureText(String(name ?? '')).width + 2;
+        if (x > 0 && x + w > availW) { rows += 1; x = 0; }
+        x += w + 10;
+      }
+      if (rows > MAX_ROWS) return { extra: 0, scroll: true };
+      return { extra: (rows - 1) * ROW_ADVANCE, scroll: false };
+    }
+
+    // Radar companion to the grid.bottom reservation: the radar canvas is a
+    // fixed 350px tall and has no grid, so extra legend rows instead lift the
+    // polygon's center and shrink its radius by half the extra each, clearing
+    // both the top edge and the legend block. Base numbers are the '62%' /
+    // '46%' defaults in px. Shared by the builder and _refitLegend.
+    /** @param {number} extra @param {number} plotW @param {boolean} showLegend */
+    _radarLayout(extra, plotW, showLegend) {
+      const H = 350;
+      const baseRadius = 0.62 * Math.min(plotW > 0 ? plotW : H, H) / 2;
+      return {
+        radius: extra ? Math.max(60, Math.round(baseRadius - extra / 2)) : '62%',
+        center: ['50%', extra
+          ? Math.round(0.46 * H - extra / 2)
+          : (showLegend ? '46%' : '50%')]
+      };
+    }
+
     // Establish sensible defaults for the active family. Crucially this also
     // picks the default MAPPING columns (group / x / y) when unset — and it
     // runs in the family-switch path (_onChartType) BEFORE _sendConfig, so R
@@ -943,6 +1002,12 @@
         }
         const chart = echarts.init(chartDiv, this.theme || undefined);
         this.charts.push(chart);
+        // Legend-fit metadata rides on the option (the builders have no chart
+        // handle); move it onto the instance for _refitLegend before ECharts
+        // sees the option.
+        const anyOption = /** @type {any} */ (option);
+        /** @type {any} */ (chart).__legendFit = anyOption.__legendFit;
+        delete anyOption.__legendFit;
         chart.setOption(this._applyDrillEmphasis(option), true);
 
         chart.on('click', (params) => {
@@ -987,7 +1052,7 @@
       if (ct === 'pie') return this._buildPie(facetData, groups, palette);
       if (ct === 'boxplot') return this._buildBoxplot(groups, palette, ax);
       if (ct === 'treemap') return this._buildTreemap(facetData, groups, palette);
-      if (ct === 'radar') return this._buildRadar(facetData, groups, colors, palette, valueTitle);
+      if (ct === 'radar') return this._buildRadar(facetData, groups, colors, palette, valueTitle, plotW || 0);
       // Waterfall = a bar with baseline "cumulative": each bar floats from the
       // running cumulative of the bars before it. Sugar for bar +
       // baseline="cumulative" (see _baselineMode). It reuses the same aggregated
@@ -1115,15 +1180,24 @@
         };
       }
       const legendOn = colors.length > 0;
+      const leg = legendOn ? this._legendRows(colors, plotW || 0) : { extra: 0, scroll: false };
+      const bottomBase = vertical
+        ? (legendOn ? 55 : 40) + 26 + (xlab ? xlab.bottom : 0)
+        : (legendOn ? 55 : 20) + 26;
       return {
+        __legendFit: legendOn
+          ? { items: colors, base: bottomBase, key: leg.extra + (leg.scroll ? 'S' : '') }
+          : undefined,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip,
         toolbox: TOOLBOX,
-        legend: legendOn ? { show: true, bottom: 0, textStyle: { fontSize: 11 } } : undefined,
+        legend: legendOn
+          ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, ...(leg.scroll ? { type: 'scroll' } : {}) }
+          : undefined,
         grid: vertical
-          ? { left: 55, right: 10, top: 30, bottom: (legendOn ? 55 : 40) + 26 + (xlab ? xlab.bottom : 0) }
-          : { left: gut.gridLeft, right: 5, top: 30, bottom: (legendOn ? 55 : 20) + 26 },
+          ? { left: 55, right: 10, top: 30, bottom: bottomBase + leg.extra }
+          : { left: gut.gridLeft, right: 5, top: 30, bottom: bottomBase + leg.extra },
         xAxis: vertical ? catAxis : valAxis,
         yAxis: vertical ? valAxis : catAxis,
         series
@@ -1254,8 +1328,8 @@
     // output the bar chart stacks. Multi-column spokes (the blockr.echarts
     // radar's `metrics`) are expressed by pivoting longer upstream and
     // mapping the name column to `group`.
-    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {any} valueTitle */
-    _buildRadar(facetData, groups, colors, palette, valueTitle) {
+    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {any} valueTitle @param {number} plotW */
+    _buildRadar(facetData, groups, colors, palette, valueTitle, plotW) {
       const colorScale = this._scaleFor(this.config.color);
       // One shared max across spokes keeps shapes comparable (same contract
       // as the blockr.echarts radar). Guard 0/negative-only data with 1.
@@ -1289,7 +1363,12 @@
             (colorScale && colorScale.color && colorScale.color[c])
               || palette[ci % palette.length]));
       const showLegend = colors.length > 0;
+      const leg = showLegend ? this._legendRows(colors, plotW) : { extra: 0, scroll: false };
+      const rl = this._radarLayout(leg.extra, plotW, showLegend);
       return {
+        __legendFit: showLegend
+          ? { items: colors, radar: true, key: leg.extra + (leg.scroll ? 'S' : '') }
+          : undefined,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         toolbox: TOOLBOX,
@@ -1303,12 +1382,12 @@
             }).join('<br>')
         },
         legend: showLegend
-          ? { show: true, bottom: 0, textStyle: { fontSize: 11 } }
+          ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, ...(leg.scroll ? { type: 'scroll' } : {}) }
           : { show: false },
         radar: {
           indicator,
-          radius: '62%',
-          center: ['50%', showLegend ? '46%' : '50%'],
+          radius: rl.radius,
+          center: rl.center,
           axisName: {
             color: AXIS_LABEL_COLOR, fontSize: 11,
             overflow: 'truncate', width: 90
@@ -1806,6 +1885,22 @@
             return head + '<br/>' + lines.join('<br/>');
           }
         };
+        // Legend entries are the color levels either way (explicit data when
+        // series ≠ color, series names — one per color level — otherwise).
+        const legendItems = useColorByLegend
+          ? colorByLegendData
+          : showLegend
+            ? [...new Set(this.data.map(r => String(r[color] ?? '')))]
+            : null;
+        const leg = legendItems
+          ? this._legendRows(legendItems, chartDiv.clientWidth)
+          : { extra: 0, scroll: false };
+        /** @type {any} */ (chart).__legendFit = legendItems
+          ? { items: legendItems,
+              base: (showLegend ? 78 : 52) + (xlab ? xlab.bottom : 0),
+              key: leg.extra + (leg.scroll ? 'S' : '') }
+          : undefined;
+
         const option = {
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
           textStyle: { fontFamily: BLOCKR_FONT },
@@ -1817,14 +1912,16 @@
           // series is high-cardinality (e.g. USUBJID).
           legend: useColorByLegend
             ? { show: true, bottom: 0, textStyle: { fontSize: 11 },
-                data: colorByLegendData }
+                data: colorByLegendData,
+                ...(leg.scroll ? { type: 'scroll' } : {}) }
             : showLegend
-              ? { show: true, bottom: 0, textStyle: { fontSize: 11 } }
+              ? { show: true, bottom: 0, textStyle: { fontSize: 11 },
+                  ...(leg.scroll ? { type: 'scroll' } : {}) }
               : { show: false },
           // left / bottom widened so the rotated Y title and the X title
           // (nameGap above) clear the tick labels and the legend; rotated
           // categorical x labels add their text height on top.
-          grid: { left: 66, right: 5, top: 30, bottom: (showLegend ? 78 : 52) + (xlab ? xlab.bottom : 0) },
+          grid: { left: 66, right: 5, top: 30, bottom: (showLegend ? 78 : 52) + leg.extra + (xlab ? xlab.bottom : 0) },
           xAxis: xAxisSpec,
           yAxis: yAxisSpec,
           toolbox: mkToolbox(brushable),
@@ -2617,7 +2714,30 @@
     _resizeCharts() {
       if (!this.chartGrid || this.chartGrid.offsetParent === null) return;
       if (!this.chartGrid.clientWidth || !this.chartGrid.clientHeight) return;
-      for (const c of this.charts) c.resize();
+      for (const c of this.charts) { c.resize(); this._refitLegend(c); }
+    }
+
+    // Re-fit the bottom-legend reservation after a container resize.
+    // chart.resize() re-lays-out with the option BUILT AT THE OLD WIDTH, so a
+    // legend that wrapped to 2 rows at build time can wrap to 4 once the dock
+    // narrows the panel — climbing back into the axis title. Builders stash
+    // the legend items + the one-row grid bottom on the instance
+    // (__legendFit); this recomputes the wrap at the new width and merges the
+    // corrected reservation in. Also covers charts built while hidden
+    // (clientWidth 0 → one-row assumption): the reveal resize lands here.
+    /** @param {any} chart */
+    _refitLegend(chart) {
+      const fit = chart.__legendFit;
+      if (!fit) return;
+      const leg = this._legendRows(fit.items, chart.getWidth());
+      const key = leg.extra + (leg.scroll ? 'S' : '');
+      if (fit.key === key) return;
+      fit.key = key;
+      const legendPatch = { type: leg.scroll ? 'scroll' : 'plain' };
+      chart.setOption(fit.radar
+        ? { legend: legendPatch,
+            radar: this._radarLayout(leg.extra, chart.getWidth(), true) }
+        : { legend: legendPatch, grid: { bottom: fit.base + leg.extra } });
     }
 
     _observeResize() {
