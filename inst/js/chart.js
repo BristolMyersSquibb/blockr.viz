@@ -1712,13 +1712,22 @@
         // the chart itself is now the only place the reader can see what
         // the axes stand for. Use the variable label (else the column
         // name); the grid margins below leave room for them.
+        // Categorical x (visits): reuse the bar-chart label policy — every
+        // label shown (no auto-interval decimation), horizontal when it
+        // fits its per-category slot, else vertical with an ellipsis cap.
+        // The x title drops below the rotated text via nameGap.
+        const xlab = xCats
+          ? this._xAxisLabels(xCats, chartDiv.clientWidth - 71)
+          : null;
         const xAxisSpec = {
           type: xAxisType,
           name: this._axisTitle(x),
           nameLocation: 'middle',
-          nameGap: 28,
+          nameGap: xlab && xlab.bottom ? xlab.bottom + 16 : 28,
           nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
-          axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
+          axisLabel: xlab
+            ? xlab.axisLabel
+            : { color: ax.labelColor, fontSize: ax.fontSize },
           axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
           scale: true
@@ -1753,10 +1762,46 @@
         const brushable = xAxisType !== 'category' && !isLine && !seriesCol;
 
 
+        // Line charts hover per x-position (axis trigger): item trigger
+        // only fires on symbols, and high series counts render with
+        // symbol:'none' — no hover box at all. The formatter lists each
+        // line's value at the hovered x, capped so a trajectory overlay
+        // (hundreds of patients) doesn't produce an unreadable tower.
+        const TT_ROW_CAP = 12;
+        const lineTooltip = {
+          trigger: 'axis',
+          axisPointer: { type: 'line' },
+          confine: true,
+          formatter: (/** @type {any} */ ps) => {
+            if (!Array.isArray(ps)) ps = [ps];
+            // Only real line series: drop error-bar overlays (custom) and
+            // the empty legend-binding series (no data -> never present).
+            const rows = ps.filter((/** @type {any} */ p) =>
+              p && p.seriesType === 'line' && Array.isArray(p.value));
+            if (!rows.length) return '';
+            // Category x: the visit label is the header. Numeric x: name
+            // the value ("Day: 30"), else it reads as a bare number.
+            const head = xCats
+              ? (rows[0].axisValueLabel ?? String(rows[0].value[0]))
+              : this._axisTitle(x) + ': ' + ddNum(rows[0].value[0]);
+            const lines = rows.slice(0, TT_ROW_CAP).map((/** @type {any} */ p) => {
+              // Without a series split there is one unnamed series and
+              // ECharts invents "series0" — label the y column instead.
+              const nm = splitCol ? p.seriesName : this._axisTitle(y);
+              return p.marker + nm + ': ' + ddNum(p.value[1]);
+            });
+            if (rows.length > TT_ROW_CAP) {
+              lines.push('… +' + (rows.length - TT_ROW_CAP) + ' more');
+            }
+            return head + '<br/>' + lines.join('<br/>');
+          }
+        };
         const option = {
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
           textStyle: { fontFamily: BLOCKR_FONT },
-          tooltip: { trigger: 'item', formatter: (/** @type {any} */ p) => `${x}: ${ddNum(p.value[0])}<br>${y}: ${ddNum(p.value[1])}` + (p.seriesName ? `<br>${color || 'series'}: ${p.seriesName}` : ''), confine: true },
+          tooltip: isLine
+            ? lineTooltip
+            : { trigger: 'item', formatter: (/** @type {any} */ p) => `${x}: ${ddNum(p.value[0])}<br>${y}: ${ddNum(p.value[1])}` + (p.seriesName ? `<br>${color || 'series'}: ${p.seriesName}` : ''), confine: true },
           // Always set explicitly; leaving legend undefined lets echarts
           // auto-render one per series, which eats the plot area when
           // series is high-cardinality (e.g. USUBJID).
@@ -1767,8 +1812,9 @@
               ? { show: true, bottom: 0, textStyle: { fontSize: 11 } }
               : { show: false },
           // left / bottom widened so the rotated Y title and the X title
-          // (nameGap above) clear the tick labels and the legend.
-          grid: { left: 66, right: 5, top: 30, bottom: showLegend ? 78 : 52 },
+          // (nameGap above) clear the tick labels and the legend; rotated
+          // categorical x labels add their text height on top.
+          grid: { left: 66, right: 5, top: 30, bottom: (showLegend ? 78 : 52) + (xlab ? xlab.bottom : 0) },
           xAxis: xAxisSpec,
           yAxis: yAxisSpec,
           toolbox: mkToolbox(brushable),
