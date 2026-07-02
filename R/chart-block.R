@@ -86,6 +86,9 @@
 #' @param smoother Trend overlay for scatter charts: one of `"none"`
 #'   (default), `"lm"`, or `"loess"`. Fit per `color`/`series` group via
 #'   [compute_smoother_series()].
+#' @param identity_line Identity-line overlay for scatter charts: `"off"`
+#'   (default) or `"on"` draws a dashed 45-degree y = x guide line across
+#'   the overlap of the x and y ranges (shift / agreement plots).
 #' @param lo,hi Optional lower / upper value bounds used by the renderer to
 #'   clamp or annotate the value axis. Default `NULL` (auto).
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
@@ -135,6 +138,7 @@ new_chart_block <- function(
     ref_x = NULL,
     ref_y = NULL,
     smoother = "none",
+    identity_line = "off",
     lo = NULL,
     hi = NULL,
     # Bar baseline mode. "zero" (default) = a normal bar (every bar starts at
@@ -187,6 +191,7 @@ new_chart_block <- function(
         r_ref_x <- shiny::reactiveVal(ref_x)
         r_ref_y <- shiny::reactiveVal(ref_y)
         r_smoother <- shiny::reactiveVal(smoother)
+        r_identity_line <- shiny::reactiveVal(identity_line)
         r_lo <- shiny::reactiveVal(lo)
         r_hi <- shiny::reactiveVal(hi)
         # Bar baseline mode + waterfall total-bar steps (see constructor args).
@@ -280,6 +285,7 @@ new_chart_block <- function(
               dot_size_mult = r_dot_size_mult(), step = r_step(),
               ref_x = as.list(r_ref_x()), ref_y = as.list(r_ref_y()),
               smoother = r_smoother(),
+              identity_line = r_identity_line(),
               # Bar baseline mode. chart_type "waterfall" implies "cumulative"
               # on the JS side (sugar); also send the flag explicitly so a plain
               # bar can opt into the cumulative bridge, and pass the optional
@@ -361,6 +367,9 @@ new_chart_block <- function(
             if (!is.null(msg$orientation)) upd(r_orientation, msg$orientation)
             if (!is.null(msg$bar_mode))   upd(r_bar_mode, msg$bar_mode)
             if (!is.null(msg$smoother))   upd(r_smoother, msg$smoother)
+            if (!is.null(msg$identity_line)) {
+              upd(r_identity_line, msg$identity_line)
+            }
             if (!is.null(msg$lo))         upd(r_lo, nn(msg$lo))
             if (!is.null(msg$hi))         upd(r_hi, nn(msg$hi))
           } else if (action == "set_mults") {
@@ -559,6 +568,7 @@ new_chart_block <- function(
             ref_x = r_ref_x,
             ref_y = r_ref_y,
             smoother = r_smoother,
+            identity_line = r_identity_line,
             lo = r_lo,
             hi = r_hi,
             baseline = r_baseline,
@@ -582,14 +592,15 @@ new_chart_block <- function(
     allow_empty_state = c("group", "color", "facet", "filter_column",
       "filter_values", "x", "y", "xend", "series", "label", "drill",
       "sort_by", "sort_dir", "filter_range", "filter_point",
-      "step", "ref_x", "ref_y", "smoother", "lo", "hi", "waterfall_totals"),
+      "step", "ref_x", "ref_y", "smoother", "identity_line", "lo", "hi",
+      "waterfall_totals"),
     external_ctrl = c("group", "color", "facet", "metric", "agg_fn",
       "chart_type", "x", "y", "xend", "series", "label", "drill",
       "sort_by", "sort_dir", "orientation", "bar_mode", "filter_type",
       "filter_column",
       "filter_values", "filter_range", "filter_point", "line_width_mult",
-      "dot_size_mult", "step", "ref_x", "ref_y", "smoother", "lo", "hi",
-      "baseline", "waterfall_totals"),
+      "dot_size_mult", "step", "ref_x", "ref_y", "smoother", "identity_line",
+      "lo", "hi", "baseline", "waterfall_totals"),
     expr_type = "bquoted",
     class = "chart_block",
     ...

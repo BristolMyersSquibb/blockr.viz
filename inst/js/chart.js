@@ -143,6 +143,10 @@
                 options: [{ value: 'zero', label: 'Standard' },
                           { value: 'cumulative', label: 'Waterfall' }] },
     smoother: { label: 'Smoother', kind: 'select', options: ['none', 'lm', 'loess'] },
+    // Boolean on/off segmented -> rendered as a checkbox (see _isBoolSegmented).
+    identity_line: { label: 'Identity', kind: 'segmented',
+                     options: [{ value: 'on', label: 'Identity line (y = x)' },
+                               { value: 'off', label: 'Off' }] },
     lo:       { label: 'Lo', kind: 'column', colType: 'num' },
     hi:       { label: 'Hi', kind: 'column', colType: 'num' },
     line_width_mult: { label: 'Line width', kind: 'slider' },
@@ -175,6 +179,7 @@
       mapping: [],
       presentation: [
         { role: 'smoother', types: ['scatter'] },
+        { role: 'identity_line', types: ['scatter'] },
         { role: 'lo', types: ['line'] },
         { role: 'hi', types: ['line'] },
         'line_width_mult', 'dot_size_mult'
@@ -1594,6 +1599,10 @@
         const hiCol = this.config.hi;
         const refX = Array.isArray(this.config.ref_x) ? this.config.ref_x : [];
         const refY = Array.isArray(this.config.ref_y) ? this.config.ref_y : [];
+        // Identity line (y = x): scatter with numeric axes only — a 45°
+        // guide is meaningless against a categorical axis.
+        const identityOn = this.config.identity_line === 'on' && !isLine &&
+          xAxisType !== 'category' && yAxisType !== 'category';
 
         const mkSeries = (/** @type {any} */ name, /** @type {any} */ data, /** @type {any} */ color) => ({
           type: isLine ? 'line' : 'scatter',
@@ -1706,12 +1715,34 @@
           }
         }
 
-        // Reference-line overlays (ref_x vertical, ref_y horizontal)
-        if (series.length > 0 && (refX.length || refY.length)) {
-          /** @type {any[]} */
-          const refData = [];
-          for (const v of refX) refData.push({ xAxis: Number(v) });
-          for (const v of refY) refData.push({ yAxis: Number(v) });
+        // Reference-line overlays (ref_x vertical, ref_y horizontal) and the
+        // identity line share one markLine on series[0] (echarts allows one
+        // markLine per series).
+        /** @type {any[]} */
+        const refData = [];
+        for (const v of refX) refData.push({ xAxis: Number(v) });
+        for (const v of refY) refData.push({ yAxis: Number(v) });
+        if (identityOn) {
+          // Span the overlap of the x and y data ranges: both endpoints then
+          // sit inside both axes whatever padding echarts adds, so the
+          // segment never leaks outside the grid (markLine is not clipped).
+          let xLo = Infinity, xHi = -Infinity, yLo = Infinity, yHi = -Infinity;
+          for (const s of series) {
+            if (s.type !== 'scatter' || !Array.isArray(s.data)) continue;
+            for (const p of s.data) {
+              const px = Number(p[0]), py = Number(p[1]);
+              if (Number.isFinite(px)) { if (px < xLo) xLo = px; if (px > xHi) xHi = px; }
+              if (Number.isFinite(py)) { if (py < yLo) yLo = py; if (py > yHi) yHi = py; }
+            }
+          }
+          const lo = Math.max(xLo, yLo), hi = Math.min(xHi, yHi);
+          if (lo < hi) refData.push([
+            { coord: [lo, lo],
+              lineStyle: { color: '#64748b', type: 'dashed', width: 1.5 } },
+            { coord: [hi, hi] }
+          ]);
+        }
+        if (series.length > 0 && refData.length) {
           series[0].markLine = {
             silent: true,
             symbol: 'none',
@@ -2693,6 +2724,7 @@
         label: this.config.label || '',
         drill: this.config.drill || '',
         smoother: this.config.smoother || 'none',
+        identity_line: this.config.identity_line || 'off',
         lo: this.config.lo || '',
         hi: this.config.hi || ''
       }, { priority: 'event' });

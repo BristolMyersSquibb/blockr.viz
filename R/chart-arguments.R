@@ -136,6 +136,15 @@ chart_arguments <- function() {
       example = "none",
       type = arg_enum(c("none", "lm", "loess"))
     ),
+    identity_line = new_block_arg(
+      paste0(
+        "Identity-line overlay for scatter charts: \"off\" (default) or ",
+        "\"on\" draws a dashed 45-degree y = x guide line. Use for shift ",
+        "or agreement plots (e.g. baseline vs post-baseline)."
+      ),
+      example = "off",
+      type = arg_enum(c("off", "on"))
+    ),
     lo = new_block_arg(
       paste0(
         "Lower error-band column (individual line only). Set together ",
@@ -260,6 +269,8 @@ chart_guidance <- function() {
       "`drill=\"AEDECOD\"` to drill the term).",
       "\n\nMap common requests:",
       "\n- \"scatter of X vs Y\" -> chart_type=\"scatter\", x=\"X\", y=\"Y\"",
+      "\n- \"shift plot of X vs Y\" (baseline vs post-baseline, agreement)",
+      "-> chart_type=\"scatter\", x=\"X\", y=\"Y\", identity_line=\"on\"",
       "\n- \"coloured by Z\" -> color=\"Z\"",
       "\n- \"faceted by Z\" -> facet=\"Z\"",
       "\n- \"bar of counts by X, click filters X\" -> chart_type=\"bar\",",

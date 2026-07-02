@@ -370,6 +370,30 @@ test_that("drill and label round-trip through state and config", {
   )
 })
 
+test_that("identity_line round-trips through state and config", {
+  blk <- new_chart_block(
+    chart_type = "scatter", x = "base", y = "post", metric = ".count",
+    identity_line = "on"
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expect_equal(session$returned$state$identity_line(), "on")
+      # Gear checkbox sends the new value via the config action.
+      expr_scope <- session$makeScope("expr")
+      expr_scope$setInputs(drilldown_block_action = list(
+        action = "config", identity_line = "off"
+      ))
+      session$flushReact()
+      expect_equal(session$returned$state$identity_line(), "off")
+    },
+    args = list(x = blk, data = list(data = function() {
+      data.frame(base = c(1, 2, 3), post = c(1.5, 1.8, 3.2))
+    }))
+  )
+})
+
 test_that("unset drill emits no downstream filter (inert)", {
   blk <- new_chart_block(chart_type = "bar", group = "g")
   shiny::testServer(

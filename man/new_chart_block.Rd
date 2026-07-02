@@ -32,6 +32,7 @@ new_chart_block(
   ref_x = NULL,
   ref_y = NULL,
   smoother = "none",
+  identity_line = "off",
   lo = NULL,
   hi = NULL,
   baseline = "zero",
@@ -116,6 +117,10 @@ value (vertical / horizontal guide line). Default \code{NULL} (no overlay).}
 \item{smoother}{Trend overlay for scatter charts: one of \code{"none"}
 (default), \code{"lm"}, or \code{"loess"}. Fit per \code{color}/\code{series} group via
 \code{\link[=compute_smoother_series]{compute_smoother_series()}}.}
+
+\item{identity_line}{Identity-line overlay for scatter charts: \code{"off"}
+(default) or \code{"on"} draws a dashed 45-degree y = x guide line across
+the overlap of the x and y ranges (shift / agreement plots).}
 
 \item{lo, hi}{Optional lower / upper value bounds used by the renderer to
 clamp or annotate the value axis. Default \code{NULL} (auto).}
