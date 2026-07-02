@@ -339,6 +339,12 @@
     );
   }
 
+  // A chrome-affecting config edit (search / sortable / export toggles)
+  // re-renders the whole container, band included; remember the band's open
+  // state per element id so it survives the rebuild.
+  /** @type {Record<string, boolean>} */
+  var bandOpen = {};
+
   // Table role-spec for the shared DrilldownConfig engine. The table has no
   // chart families and no add-as-needed mapping, so a single Presentation
   // section holds everything; `drill` is a plain column picker (the column a
@@ -450,19 +456,14 @@
       ? Blockr.icons.gear : "⚙";
     header.appendChild(btn);
 
-    // Remove a stale popover orphaned on <body> by a previous MOUNT of this
-    // element (the popover is portaled to <body>). The gear is built once per
-    // container now — the chrome never re-renders on a filter or config edit —
-    // so there is no per-edit rebuild to restore (the old wasOpen hack is gone).
-    var staleP = document.querySelector(
-      '.dd-popover[data-dd-pop-for="' + (window.CSS && CSS.escape
-        ? CSS.escape(elemId) : elemId) + '"]');
-    if (staleP && staleP.parentNode) staleP.parentNode.removeChild(staleP);
-
+    // In-flow settings band (design-system pilot — blockr.ui/dev/
+    // gear-panel-proposals.html, variant B). Lives inside the container right
+    // below the gear header: no <body> portal, no fixed positioning, no
+    // z-index/clipping concerns in dock panels. Opening pushes the table down
+    // so the content being configured stays visible.
     var pop = document.createElement("div");
-    pop.className = "blockr-popover dd-popover";
+    pop.className = "blockr-settings dd-popover";
     pop.setAttribute("data-dd-pop-for", elemId);
-    pop.style.display = "none";
 
     // Populate the popover with the shared config engine — the same
     // DrilldownConfig the chart uses. cfg keys are the R config params, so a
@@ -490,68 +491,34 @@
       onClearFilter: function () {},
       ensureDefaults: function () {},
       afterTypeChange: function () {},
-      isOpen: function () { return pop.style.display === "block"; },
+      isOpen: function () { return pop.classList.contains("blockr-settings--open"); },
       reopen: function () { openPop(); }
     }).render();
 
-    // Anchor the popover to the gear in viewport coords. The shared CSS
-    // anchors .blockr-popover absolute/right:0 to its offset parent, so
-    // inside a table card it lands below the table, not the gear, and a
-    // Dockview panel's overflow:auto / transform clips or traps it.
-    // Portaling to <body> + position:fixed (same as the drilldown chart
-    // and blockr-select) escapes both.
-    function positionPop() {
-      var g = btn.getBoundingClientRect();
-      var vw = window.innerWidth, vh = window.innerHeight;
-      pop.style.position = "fixed";
-      pop.style.right = "auto";
-      pop.style.maxHeight = (vh - 16) + "px";
-      var pw = pop.offsetWidth, ph = pop.offsetHeight;
-      var left = Math.min(g.right, vw - 8) - pw;
-      left = Math.max(8, Math.min(left, vw - pw - 8));
-      var top = g.bottom + 6;
-      if (top + ph > vh - 8) top = Math.max(8, vh - 8 - ph);
-      pop.style.left = left + "px";
-      pop.style.top = top + "px";
-      pop.style.maxHeight = (vh - top - 8) + "px";
-    }
-    var reposition = function () {
-      if (pop.style.display === "block") positionPop();
-    };
+    // The band is in flow: opening is a class toggle, no positioning, no
+    // scroll/resize listeners, and no outside-click dismissal — it is a
+    // panel, not a menu; the gear is the only toggle.
     function openPop() {
-      pop.style.display = "block";
+      pop.classList.add("blockr-settings--open");
       btn.classList.add("blockr-gear-active");
       btn.setAttribute("aria-expanded", "true");
-      positionPop();
-      requestAnimationFrame(positionPop);
-      window.addEventListener("scroll", reposition, true);
-      window.addEventListener("resize", reposition);
+      bandOpen[elemId] = true;
     }
     function closePop() {
-      pop.style.display = "none";
+      pop.classList.remove("blockr-settings--open");
       btn.classList.remove("blockr-gear-active");
       btn.setAttribute("aria-expanded", "false");
-      window.removeEventListener("scroll", reposition, true);
-      window.removeEventListener("resize", reposition);
+      bandOpen[elemId] = false;
     }
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
-      if (pop.style.display === "block") closePop(); else openPop();
-    });
-    // Decide on mousedown, not click: a Blockr.Select dropdown is portaled to
-    // <body> (outside the popover) and tears itself down on the option click,
-    // so at click time the exclusion below would miss and picking a value would
-    // dismiss the settings form. At mousedown the dropdown is still attached.
-    document.addEventListener("mousedown", function (e) {
-      if (pop.style.display !== "block") return;
-      var t = /** @type {HTMLElement | null} */ (e.target);
-      if (pop.contains(t) || btn.contains(t)) return;
-      if (t && t.closest(".blockr-select__dropdown")) return;
-      closePop();
+      if (pop.classList.contains("blockr-settings--open")) closePop(); else openPop();
     });
 
-    document.body.appendChild(pop);
     root.insertBefore(header, root.firstChild);
+    root.insertBefore(pop, header.nextSibling);
+    // Restore the remembered open state across chrome rebuilds.
+    if (bandOpen[elemId]) openPop();
   }
 
   // Chrome wiring — once per container. The gear, search input and scroll

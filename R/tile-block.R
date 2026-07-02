@@ -237,6 +237,7 @@ tile_block_dep <- function() {
       src = system.file("css", package = "blockr.viz"),
       stylesheet = "chart.css"
     ),
+    settings_band_dep(),
     htmltools::htmlDependency(
       name = "tile-block",
       version = utils::packageVersion("blockr.viz"),

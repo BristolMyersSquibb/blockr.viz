@@ -415,11 +415,8 @@
     }
 
     _buildDOM() {
-      // The popover is portaled to <body> (see below); a re-render of the
-      // widget would otherwise orphan the old one. Remove it first.
-      if (this.popoverEl && this.popoverEl.parentNode) {
-        this.popoverEl.parentNode.removeChild(this.popoverEl);
-      }
+      // The settings band lives inside the card, so clearing the element
+      // removes it along with everything else.
       this.el.innerHTML = '';
 
       // Card wrapper (for popover positioning)
@@ -448,41 +445,21 @@
 
       // All configuration (mapping + presentation) lives behind the gear.
       // The card itself shows only the result + its direct interactions.
-      // See blockr.docs design-system/components/blockr-popover.md.
 
-      // Popover. Portaled to <body> so it escapes Dockview's transformed
-      // panels (a transformed ancestor traps position:fixed, and the
-      // panel's overflow:auto clips an absolute popover). Same pattern as
-      // blockr-select's dropdown. The `dd-popover` class carries all the
-      // styling that used to be scoped under .drilldown-chart-container.
+      // In-flow settings band (design-system pilot — blockr.ui/dev/
+      // gear-panel-proposals.html, variant B): inside the card between the
+      // gear header and the chart, full block width. No <body> portal, no
+      // fixed positioning, no outside-click dismissal — it is a panel, not a
+      // menu; opening pushes the chart down so the result stays visible.
       this.popoverEl = document.createElement('div');
-      this.popoverEl.className = 'blockr-popover dd-popover';
-      this.popoverEl.style.display = 'none';
-      document.body.appendChild(this.popoverEl);
-
-      // Close popover on outside click. The handler is stored so dispose()
-      // (and a re-_buildDOM()) can remove it — otherwise each widget
-      // instance leaks one document-level listener that closes over a stale
-      // popoverEl. Remove any previously registered handler first so only
-      // one is ever active per instance.
-      if (this._outsideClick) {
-        document.removeEventListener('mousedown', this._outsideClick);
+      this.popoverEl.className = 'blockr-settings dd-popover';
+      this.card.appendChild(this.popoverEl);
+      // A widget re-render rebuilds the DOM; restore the band's open state.
+      if (this._popoverOpen) {
+        this.popoverEl.classList.add('blockr-settings--open');
+        this.gearBtn.classList.add('blockr-gear-active');
+        this.gearBtn.setAttribute('aria-expanded', 'true');
       }
-      // Decide on mousedown, not click: a Blockr.Select dropdown is portaled to
-      // <body> (outside the popover) and tears itself down on the option click,
-      // so by click time its ancestor is gone and the exclusion below would
-      // miss — picking a value would dismiss the settings form. At mousedown the
-      // dropdown is still attached.
-      this._outsideClick = (/** @type {MouseEvent} */ e) => {
-        var t = /** @type {HTMLElement} */ (/** @type {unknown} */ (e.target));
-        if (this._popoverOpen && this.popoverEl &&
-            !this.popoverEl.contains(t) &&
-            !this.gearBtn.contains(t) &&
-            !(t.closest && t.closest('.blockr-select__dropdown'))) {
-          this._closePopover();
-        }
-      };
-      document.addEventListener('mousedown', this._outsideClick);
 
       // Chart area
       this.chartGrid = document.createElement('div');
@@ -2423,65 +2400,21 @@
       this._popoverOpen ? this._closePopover() : this._openPopover();
     }
     _openPopover() {
-      this.popoverEl.style.display = 'block';
+      // The band is in flow: opening is a class toggle. No positioning, no
+      // scroll/resize listeners, nothing to clamp to the viewport.
+      this.popoverEl.classList.add('blockr-settings--open');
       this._popoverOpen = true;
       this.gearBtn.classList.add('blockr-gear-active');
       this.gearBtn.setAttribute('aria-expanded', 'true');
-      // Anchor in viewport coords with position:fixed. The shared CSS
-      // anchors the popover absolute/right:0 to the card; in a narrow
-      // dock tile a 680px popover then overflows ~500px off-screen left
-      // and the panel's overflow:auto clips it. position:fixed is NOT
-      // clipped by overflow ancestors and (unlike portaling to body)
-      // keeps the element inside .drilldown-chart-container so the
-      // scoped popover/family-visibility CSS still applies.
-      this._positionPopover();
-      // Blockr.Select components reflow after the first paint and grow the
-      // popover; reposition on the next frame so the clamp uses the final
-      // height.
-      requestAnimationFrame(() => {
-        if (this._popoverOpen) this._positionPopover();
-      });
-      this._popReposition = () => {
-        if (this._popoverOpen) this._positionPopover();
-      };
-      window.addEventListener('scroll', this._popReposition, true);
-      window.addEventListener('resize', this._popReposition);
-    }
-    _positionPopover() {
-      const g = this.gearBtn.getBoundingClientRect();
-      const pop = this.popoverEl;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      pop.style.position = 'fixed';
-      pop.style.right = 'auto';
-      // Never let the popover exceed the viewport; it scrolls internally
-      // (overflow-y:auto in the stylesheet) when content is taller.
-      pop.style.maxHeight = (vh - 16) + 'px';
-      const pw = pop.offsetWidth;
-      const ph = pop.offsetHeight;
-      // Right edge aligns under the gear; clamp within the viewport.
-      let left = Math.min(g.right, vw - 8) - pw;
-      left = Math.max(8, Math.min(left, vw - pw - 8));
-      // Prefer just below the gear; if it would overflow the bottom,
-      // lift it up so the whole popover stays on screen.
-      let top = g.bottom + 6;
-      if (top + ph > vh - 8) top = Math.max(8, vh - 8 - ph);
-      pop.style.left = left + 'px';
-      pop.style.top = top + 'px';
-      // Final guard: tighten max-height to the space actually available
-      // from the chosen top, so the bottom edge never leaves the screen.
-      pop.style.maxHeight = (vh - top - 8) + 'px';
+      // The chart shares vertical space with the band now; re-measure.
+      this._resizeCharts();
     }
     _closePopover() {
-      this.popoverEl.style.display = 'none';
+      this.popoverEl.classList.remove('blockr-settings--open');
       this._popoverOpen = false;
       this.gearBtn.classList.remove('blockr-gear-active');
       this.gearBtn.setAttribute('aria-expanded', 'false');
-      if (this._popReposition) {
-        window.removeEventListener('scroll', this._popReposition, true);
-        window.removeEventListener('resize', this._popReposition);
-        this._popReposition = null;
-      }
+      this._resizeCharts();
     }
 
     // -- Status footer --------------------------------------------------------
@@ -2708,18 +2641,9 @@
       if (this._resizeRaf) { cancelAnimationFrame(this._resizeRaf); this._resizeRaf = null; }
       for (const c of this.charts) c.dispose();
       this.charts = [];
-      // Remove the document-level outside-click listener (otherwise it
-      // accumulates one stale closure per widget instance).
-      if (this._outsideClick) {
-        document.removeEventListener('mousedown', this._outsideClick);
-        this._outsideClick = null;
-      }
-      // Remove the popover that was portaled to <body> — if the widget
-      // element is torn down without dispose() reaching here it would
-      // orphan the popover in the DOM.
-      if (this.popoverEl && this.popoverEl.parentNode) {
-        this.popoverEl.parentNode.removeChild(this.popoverEl);
-      }
+      // The settings band lives inside the widget element, so it is torn
+      // down with the card — no portaled popover or document-level
+      // outside-click listener to clean up anymore.
     }
   }
 

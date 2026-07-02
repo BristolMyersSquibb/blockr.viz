@@ -265,6 +265,7 @@ new_summary_table_block <- function(
 
 summary_table_block_dep <- function() {
   htmltools::tagList(
+    settings_band_dep(),
     htmltools::htmlDependency(
       name = "summary-table-block-js",
       version = utils::packageVersion("blockr.viz"),

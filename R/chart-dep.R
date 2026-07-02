@@ -15,6 +15,7 @@ drilldown_chart_dep <- function() {
       src = system.file("js", package = "blockr.dplyr"),
       script = c("blockr-core.js", "blockr-select.js")
     ),
+    settings_band_dep(),
     drilldown_echarts_themes_dep(),
     htmltools::htmlDependency(
       name = "chart-js",

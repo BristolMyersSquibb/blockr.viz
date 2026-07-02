@@ -124,10 +124,11 @@ cdp_click <- function(x, y) {
   app$wait_for_idle()
 }
 
-# --- Gear popover (drilldown-config.js) -----------------------------------
-# Popovers are portaled to <body>, one per chart; the OPEN one has
-# display:block. These helpers scope to that open popover.
-POPOVER_OPEN_JS <- "Array.from(document.querySelectorAll('.blockr-popover')).find(function(p){return p.style.display!=='none';})"
+# --- Gear settings band (drilldown-config.js) ------------------------------
+# The gear opens an in-flow .blockr-settings band inside the block (design-
+# system pilot; no more <body>-portaled popover). The OPEN one carries the
+# --open modifier. These helpers scope to that open band.
+POPOVER_OPEN_JS <- "document.querySelector('.blockr-settings.blockr-settings--open')"
 
 gear_open <- function(block_id) {
   app$run_js(sprintf(
@@ -534,14 +535,14 @@ test_that("summary_table gear: toggling 'overall' adds a Total row to the output
   before <- get_block_result("summary")
   expect_false("Total" %in% before$.group)
 
-  # Open the gear and click the overall pill (label "No overall" -> on). This
-  # drives summary-table-block.js's real gear -> state -> R -> recomputed output.
+  # Open the gear and tick the "Overall column" checkbox (design-system band).
+  # This drives summary-table-block.js's real gear -> state -> R -> output.
   app$run_js(sprintf("document.querySelector('%s .blockr-gear-btn').scrollIntoView({block:'center'});", scope))
   app$run_js(sprintf("document.querySelector('%s .blockr-gear-btn').click();", scope))
   app$wait_for_idle()
   Sys.sleep(0.3)
   app$run_js(sprintf(
-    "(function(){var b=Array.from(document.querySelectorAll('%s .blockr-pill')).filter(function(x){return /overall/i.test(x.textContent);})[0]; if(b) b.click();})()",
+    "(function(){var b=Array.from(document.querySelectorAll('%s .blockr-checkbox')).filter(function(x){return /overall/i.test(x.textContent);})[0]; if(b) b.querySelector('input').click();})()",
     scope
   ))
   app$wait_for_idle()

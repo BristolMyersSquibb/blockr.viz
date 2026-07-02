@@ -632,6 +632,7 @@ drilldown_table_dep <- function() {
       src = system.file("css", package = "blockr.viz"),
       stylesheet = "chart.css"
     ),
+    settings_band_dep(),
     htmltools::htmlDependency(
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
