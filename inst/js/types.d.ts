@@ -126,6 +126,17 @@ interface BlockrNamespace {
   contentWidth(el: Element): number;
   /** The shared drilldown popover engine (defined in this package). */
   DrilldownConfig: typeof VizDrilldownConfig;
+  /** Design-system checkbox factory (settings-band.js). */
+  checkbox(
+    label: string,
+    checked: boolean,
+    onChange: (checked: boolean) => void
+  ): {
+    el: HTMLLabelElement;
+    input: HTMLInputElement;
+    set(v: boolean): void;
+    get(): boolean;
+  };
   [member: string]: unknown;
 }
 

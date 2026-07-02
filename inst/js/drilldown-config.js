@@ -283,7 +283,7 @@
       // label carries the affirmative meaning (the on-option label), so the
       // usual head label would just repeat it.
       if (!opts.removable && this._isBoolSegmented(role) &&
-          typeof Blockr !== 'undefined' && Blockr.checkbox) {
+          typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
         const controls = document.createElement('div');
         controls.className = 'dd-row-controls';
         this._buildControl(controls, key, { onChange: () => {} });
@@ -350,7 +350,7 @@
         if (wasOpen) setTimeout(() => this.h.reopen(), 0);
         this.h.onChange('drill'); this.h.onClearFilter();
       };
-      if (typeof Blockr !== 'undefined' && Blockr.checkbox) {
+      if (typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
         // Boolean data option -> checkbox (design-system rule); the label
         // states the affirmative meaning, checked = filtering is on.
         const box = Blockr.checkbox('Filter downstream on selection', on,
@@ -485,7 +485,7 @@
       } else if (role.kind === 'segmented') {
         const cur = this._hasVal(cfg[key]) ? cfg[key] : role.options[0].value;
         if (this._isBoolSegmented(role) &&
-            typeof Blockr !== 'undefined' && Blockr.checkbox) {
+            typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
           const onOpt = role.options.find((/** @type {any} */ o) => o.value === 'on');
           const box = Blockr.checkbox(onOpt.label, cur === 'on',
             (/** @type {boolean} */ checked) => {

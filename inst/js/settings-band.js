@@ -48,8 +48,8 @@
     };
   }
 
-  var ns = /** @type {any} */ (
+  var ns = /** @type {BlockrNamespace} */ (
     (typeof Blockr !== 'undefined') ? Blockr
-      : (window.Blockr = window.Blockr || {}));
+      : (window.Blockr = window.Blockr || /** @type {BlockrNamespace} */ ({})));
   ns.checkbox = checkbox;
 })();

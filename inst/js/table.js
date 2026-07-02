@@ -381,8 +381,10 @@
 
   /** @param {HTMLElement} root @param {HTMLElement} table */
   function buildCogwheel(root, table) {
-    var elemId = root.getAttribute("data-dt-elem-id");
-    if (!elemId) return;
+    var elemIdAttr = root.getAttribute("data-dt-elem-id");
+    if (!elemIdAttr) return;
+    // Rebound after the guard so the closures below see a plain string.
+    const elemId = elemIdAttr;
 
     // Numeric columns (from R) drive the colType:"num" filter on the colour /
     // bar scope picker, so it only offers shadeable columns.

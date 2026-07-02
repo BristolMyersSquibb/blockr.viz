@@ -45,7 +45,8 @@
     { key: 'min_max',      label: 'Min, Max' }
   ];
   const STAT_KEYS = STAT_OPTIONS.map(o => o.key);
-  /** Legacy preset values from boards saved before `stats` was a vector. */
+  /** Legacy preset values from boards saved before `stats` was a vector.
+   *  @type {Record<string, string[]>} */
   const STAT_LEGACY = {
     compact: ['mean_sd'],
     expanded: ['n', 'mean', 'sd', 'median', 'q1_q3', 'min_max']
@@ -100,6 +101,7 @@
       this.card = document.createElement('div');
       this.gearBtn = document.createElement('button');
       this.popover = document.createElement('div');
+      this._bandGrid = document.createElement('div');
 
       this._buildDOM();
     }
@@ -189,7 +191,6 @@
       popTitle.textContent = 'Settings';
       this.popover.appendChild(popTitle);
 
-      this._bandGrid = document.createElement('div');
       this._bandGrid.className = 'blockr-settings__grid';
       this.popover.appendChild(this._bandGrid);
 

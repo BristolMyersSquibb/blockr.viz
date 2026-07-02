@@ -77,8 +77,10 @@
 
   /** @param {Element} root */
   function buildCogwheel(root) {
-    var elemId = root.getAttribute('data-tk-elem-id');
-    if (!elemId) return;
+    var elemIdAttr = root.getAttribute('data-tk-elem-id');
+    if (!elemIdAttr) return;
+    // Rebound after the guard so the closures below see a plain string.
+    const elemId = elemIdAttr;
 
     /** @type {VizColumn[]} */
     var cols = [];
