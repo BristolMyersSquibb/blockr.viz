@@ -8,7 +8,7 @@ new_summary_table_block(
   vars = character(),
   sections = character(),
   by = character(),
-  stats = "compact",
+  stats = "mean_sd",
   add_overall = FALSE,
   overall_label = "Total",
   indent_details = TRUE,
@@ -24,8 +24,11 @@ new_summary_table_block(
 
 \item{by}{Character, column-split dimensions (0..2).}
 
-\item{stats}{\code{"compact"} (one-row Mean (SD) per numeric) or \code{"expanded"}
-(six-row N / Mean / SD / Median / Q1,Q3 / Min,Max).}
+\item{stats}{Character vector of stat keys emitted for numeric variables
+(see \code{\link[=summary_table]{summary_table()}}): any combination of \code{"n"}, \code{"n_pct"}, \code{"mean"},
+\code{"sd"}, \code{"mean_sd"}, \code{"median"}, \code{"median_q1_q3"}, \code{"q1_q3"},
+\code{"min_max"}. One key = a single row per variable; several = one row per
+stat. Legacy \code{"compact"} / \code{"expanded"} presets are still accepted.}
 
 \item{add_overall}{Logical, append an overall column across all \code{by} levels.}
 
@@ -50,18 +53,18 @@ A blockr transform block of class \code{summary_table_block}.
 \description{
 Blockr transform block wrapping \code{\link[=summary_table]{summary_table()}}. Multi-variable
 descriptive summary where each \code{vars} entry becomes a row-section
-(one row for compact numerics, six rows for expanded numerics,
-one row per level for categoricals, one row per flag for logicals).
+(one row per selected stat for numerics, one row per level for
+categoricals, one row per flag for logicals).
 }
 \details{
-Output is a plain tibble with dotted section columns
-(\verb{.section_1, ..., .section_k, .var, .label}), consumable by
-\code{\link[=new_gt_table_block]{new_gt_table_block()}} or any renderer that understands the
-convention.
+Output is a plain tibble with dotted structure columns
+(\verb{.section_1, ..., .section_k, .label, .indent, .strong}),
+consumable by \code{\link[=new_gt_table_block]{new_gt_table_block()}} or any renderer that
+understands the annotated-data-frame convention.
 
-The UI uses the shared \code{Blockr.Select} widget library (also used by
-\code{blockr.dplyr} blocks) with a gear-icon popover for advanced options
-(stats preset, overall column, indent, nest hierarchies).
+The UI has two main fields (Summarize, Split by) and a gear popover
+with advanced options (stat picker pills, overall column, nest
+hierarchy, group-by sections, count-distinct-by).
 
 Spec: \verb{blockr.design/open/table-blocks/}.
 }

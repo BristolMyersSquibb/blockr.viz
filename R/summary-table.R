@@ -17,14 +17,12 @@
 #' renderer.
 #'
 #' Each `vars` entry contributes rows shaped by the variable's type and
-#' the chosen `stats` preset:
+#' the chosen `stats` selection:
 #'
-#' - **numeric** under `stats = "compact"` → one row per variable,
-#'   `.fmt = "{mean:1} ({sd:2})"`.
-#' - **numeric** under `stats = "expanded"` → six rows per variable, one
-#'   per stat (N, Mean, SD, Median, Q1 Q3, Min Max), each carrying the
-#'   matching template (`"{n:0}"`, `"{mean:1}"`, `"{sd:2}"`,
-#'   `"{median:1}"`, `"{q1:1}, {q3:1}"`, `"{min:1}, {max:1}"`).
+#' - **numeric** → one row per selected stat key (see `stats`). A single
+#'   key emits one un-indented row per variable (e.g. `"mean_sd"` →
+#'   `.fmt = "{mean:1} ({sd:2})"`); several keys emit one indented row
+#'   each, in catalog order.
 #' - **categorical** → one row per level, `.fmt = "{n:0} ({pct:1}%)"`.
 #' - **logical** → one row per variable, `.fmt = "{n:0} ({pct:1}%)"` for
 #'   the TRUE count. The FALSE row is suppressed — this matches pharma
@@ -47,7 +45,8 @@
 #'   `"Overall"` when `by` is empty; the `overall_label` value for the
 #'   appended overall column when `add_overall = TRUE`.
 #' - `.fmt` — per-row display template (the `.fmt` convention).
-#' - Raw numeric stat columns: `n, pct` (categorical/logical), `mean,
+#' - Raw numeric stat columns: `n, pct` (categorical/logical, and
+#'   numeric where `pct` is the share of non-missing rows), `mean,
 #'   sd, median, q1, q3, min, max` (numeric). `NA` where not applicable.
 #'
 #' The per-group denominators (for `"<group>\\nN = <n>"` column headers)
@@ -65,9 +64,16 @@
 #'   dimension. Length-2 produces pipe-delimited nested group keys
 #'   consumable by `gt::tab_spanner_delim("|")` after the renderer
 #'   spreads `.group` to columns.
-#' @param stats One of `"compact"` (default) or `"expanded"`.
-#'   See Details. Changes only which rows / templates are emitted; the
-#'   underlying numbers are identical.
+#' @param stats Character vector of stat keys controlling which rows /
+#'   templates are emitted for **numeric** variables (the underlying
+#'   numbers are always all computed). Any combination of `"n"`,
+#'   `"n_pct"` (non-missing n and % of group rows), `"mean"`, `"sd"`,
+#'   `"mean_sd"`, `"median"`, `"median_q1_q3"`, `"q1_q3"`, `"min_max"`;
+#'   rows follow this canonical order regardless of input order. A single
+#'   key gives one row per variable, several give one row per stat. The
+#'   legacy presets `"compact"` (= `"mean_sd"`) and `"expanded"`
+#'   (= `c("n", "mean", "sd", "median", "q1_q3", "min_max")`) are still
+#'   accepted. Default `"mean_sd"`.
 #' @param add_overall Logical. If TRUE, append an extra `.group` whose
 #'   rows are computed on the unsplit data (ignoring `by`). Matches
 #'   `gtsummary::add_overall()`.
@@ -95,15 +101,15 @@
 #'   iris,
 #'   vars = c("Sepal.Length", "Species"),
 #'   by = character(),
-#'   stats = "compact"
+#'   stats = "mean_sd"
 #' )
 #'
-#' # Expanded numeric layout, split by a grouping column
+#' # Any stat combination, split by a grouping column
 #' summary_table(
 #'   mtcars,
 #'   vars = c("mpg", "hp"),
 #'   by = "cyl",
-#'   stats = "expanded",
+#'   stats = c("n_pct", "median_q1_q3", "min_max"),
 #'   add_overall = TRUE
 #' )
 #'
@@ -112,7 +118,7 @@ summary_table <- function(data,
                           vars = character(),
                           sections = character(),
                           by = character(),
-                          stats = "compact",
+                          stats = "mean_sd",
                           add_overall = FALSE,
                           overall_label = "Total",
                           subject_var = NULL,
@@ -130,10 +136,7 @@ summary_table <- function(data,
     stop("summary_table() supports at most 2 `by` dimensions. ",
          "Got ", length(by), ".")
   }
-  if (!stats %in% c("compact", "expanded")) {
-    stop("`stats` must be one of \"compact\" or \"expanded\". ",
-         "Got \"", stats, "\".")
-  }
+  stats <- normalize_summary_stats(stats)
 
   missing_cols <- setdiff(c(vars, sections, by, subject_var), names(data))
   if (length(missing_cols)) {
@@ -373,6 +376,55 @@ add_group_col <- function(stats_df, by) {
 }
 
 # =============================================================================
+# Internal: numeric stat catalog (`stats` vocabulary)
+# =============================================================================
+
+# Each entry maps a stat key to the row label and `.fmt` template it emits
+# for numeric variables. Catalog order is the canonical row order — the
+# selection is reordered to it, so serialized boards are order-insensitive.
+SUMMARY_STATS_CATALOG <- list(
+  n            = list(label = "N",               fmt = "{n:0}"),
+  n_pct        = list(label = "n (%)",           fmt = "{n:0} ({pct:1}%)"),
+  mean         = list(label = "Mean",            fmt = "{mean:1}"),
+  sd           = list(label = "SD",              fmt = "{sd:2}"),
+  mean_sd      = list(label = "Mean (SD)",       fmt = "{mean:1} ({sd:2})"),
+  median       = list(label = "Median",          fmt = "{median:1}"),
+  median_q1_q3 = list(label = "Median (Q1, Q3)", fmt = "{median:1} ({q1:1}, {q3:1})"),
+  q1_q3        = list(label = "Q1, Q3",          fmt = "{q1:1}, {q3:1}"),
+  min_max      = list(label = "Min, Max",        fmt = "{min:1}, {max:1}")
+)
+
+# Legacy preset values accepted for back-compat with boards serialized
+# before `stats` became a key vector.
+SUMMARY_STATS_LEGACY <- list(
+  compact  = "mean_sd",
+  expanded = c("n", "mean", "sd", "median", "q1_q3", "min_max")
+)
+
+#' Normalize a `stats` value to a deduplicated vector of catalog keys in
+#' canonical (catalog) order. Accepts the legacy `"compact"` / `"expanded"`
+#' scalars.
+#' @noRd
+normalize_summary_stats <- function(stats) {
+  stats <- as.character(stats)
+  if (length(stats) == 1L && stats %in% names(SUMMARY_STATS_LEGACY)) {
+    return(SUMMARY_STATS_LEGACY[[stats]])
+  }
+  bad <- setdiff(stats, names(SUMMARY_STATS_CATALOG))
+  if (length(bad)) {
+    stop("Unknown `stats` value(s): ",
+         paste0("\"", bad, "\"", collapse = ", "),
+         ". Valid keys: ",
+         paste0("\"", names(SUMMARY_STATS_CATALOG), "\"", collapse = ", "),
+         " (or legacy \"compact\" / \"expanded\").")
+  }
+  if (length(stats) == 0L) {
+    stop("summary_table() requires at least one `stats` key.")
+  }
+  intersect(names(SUMMARY_STATS_CATALOG), stats)
+}
+
+# =============================================================================
 # Internal: compute per-var long frame
 # =============================================================================
 
@@ -385,50 +437,19 @@ compute_one_var <- function(data, var, stats, sections, by,
     compute_logical_var(data, var, sections, by,
                         add_overall, overall_label, subject_var)
   } else if (is.numeric(col)) {
-    if (stats == "compact") {
-      compute_numeric_compact(data, var, sections, by,
-                              add_overall, overall_label)
-    } else {
-      compute_numeric_expanded(data, var, sections, by,
-                               add_overall, overall_label)
-    }
+    compute_numeric_rows(data, var, stats, sections, by,
+                         add_overall, overall_label)
   } else {
     compute_categorical_var(data, var, sections, by,
                             add_overall, overall_label, subject_var)
   }
 }
 
-# ---- Numeric compact ----
+# ---- Numeric — one row per selected stat key ----
 
 #' @noRd
-compute_numeric_compact <- function(data, var, sections, by,
-                                    add_overall, overall_label) {
-  stats_df <- compute_numeric_stats(data, var, group_vars = c(sections, by))
-  long <- add_group_col(stats_df, by)
-  long$.label <- "Mean (SD)"
-  long$.indent <- 0L
-  long$.fmt <- "{mean:1} ({sd:2})"
-
-  if (isTRUE(add_overall)) {
-    ov <- compute_numeric_stats(data, var, group_vars = sections)
-    ov$.group <- overall_label
-    ov$.label <- "Mean (SD)"
-    ov$.indent <- 0L
-    ov$.fmt <- "{mean:1} ({sd:2})"
-    long <- rbind_long(long, ov)
-  }
-
-  # Empty cells (n == 0): blank template -> NA cell at render time.
-  long$.fmt[!is.na(long$n) & long$n == 0] <- NA_character_
-
-  reorder_long(long, sections)
-}
-
-# ---- Numeric expanded — 6 rows per var matching pharma SAP ----
-
-#' @noRd
-compute_numeric_expanded <- function(data, var, sections, by,
-                                     add_overall, overall_label) {
+compute_numeric_rows <- function(data, var, stats, sections, by,
+                                 add_overall, overall_label) {
   stats_df <- compute_numeric_stats(data, var, group_vars = c(sections, by))
   base <- add_group_col(stats_df, by)
 
@@ -438,20 +459,18 @@ compute_numeric_expanded <- function(data, var, sections, by,
     base <- rbind_long(base, ov)
   }
 
-  stat_rows <- list(
-    list(lbl = "N",        fmt = "{n:0}"),
-    list(lbl = "Mean",     fmt = "{mean:1}"),
-    list(lbl = "SD",       fmt = "{sd:2}"),
-    list(lbl = "Median",   fmt = "{median:1}"),
-    list(lbl = "Q1, Q3",   fmt = "{q1:1}, {q3:1}"),
-    list(lbl = "Min, Max", fmt = "{min:1}, {max:1}")
-  )
+  # A single stat renders as one un-indented row per variable (the old
+  # "compact" shape); several stats render as one indented row each (the
+  # old "expanded" shape, headed by the variable when there are 2+ vars).
+  indent <- if (length(stats) == 1L) 0L else 1L
 
-  frames <- lapply(stat_rows, function(s) {
+  frames <- lapply(stats, function(key) {
+    entry <- SUMMARY_STATS_CATALOG[[key]]
     f <- base
-    f$.label <- s$lbl
-    f$.indent <- 1L
-    f$.fmt <- s$fmt
+    f$.label <- entry$label
+    f$.indent <- indent
+    f$.fmt <- entry$fmt
+    # Empty cells (n == 0): blank template -> NA cell at render time.
     f$.fmt[!is.na(f$n) & f$n == 0] <- NA_character_
     f
   })
@@ -604,12 +623,16 @@ rbind_long <- function(...) {
   do.call(rbind, frames)
 }
 
+#' Per-group numeric stats. `pct` is the share of non-missing rows in the
+#' group (the `n_pct` denominator is always a row count — a distinct-subject
+#' denominator would not match the non-missing-value numerator).
 #' @noRd
 compute_numeric_stats <- function(data, var, group_vars) {
   if (length(group_vars) == 0L) {
     v <- data[[var]]
     tibble::tibble(
       n      = sum(!is.na(v)),
+      pct    = if (length(v) > 0) sum(!is.na(v)) / length(v) * 100 else 0,
       mean   = mean(v, na.rm = TRUE),
       sd     = stats::sd(v, na.rm = TRUE),
       median = stats::median(v, na.rm = TRUE),
@@ -623,6 +646,7 @@ compute_numeric_stats <- function(data, var, group_vars) {
       dplyr::group_by(dplyr::across(dplyr::all_of(group_vars))) |>
       dplyr::summarise(
         n      = sum(!is.na(.data[[var]])),
+        pct    = sum(!is.na(.data[[var]])) / dplyr::n() * 100,
         mean   = mean(.data[[var]], na.rm = TRUE),
         sd     = stats::sd(.data[[var]], na.rm = TRUE),
         median = stats::median(.data[[var]], na.rm = TRUE),

@@ -108,11 +108,16 @@ summary_table_arguments <- function() {
     ),
     stats = new_block_arg(
       paste0(
-        "\"compact\" for one-row Mean (SD) per numeric, or \"expanded\" for the ",
-        "6-row N / Mean / SD / Median / Q1,Q3 / Min,Max pharma SAP template."
+        "Statistics emitted for each NUMERIC variable, any combination of: ",
+        "\"n\", \"n_pct\" (non-missing n and % of group rows), \"mean\", ",
+        "\"sd\", \"mean_sd\", \"median\", \"median_q1_q3\", \"q1_q3\", ",
+        "\"min_max\". ONE key = a single row per variable (e.g. [\"mean_sd\"] ",
+        "or [\"n_pct\"]); SEVERAL keys = one row per statistic under a ",
+        "variable header. Output rows follow the order above regardless of ",
+        "input order. Default [\"mean_sd\"]."
       ),
-      example = "compact",
-      type = arg_enum(c("compact", "expanded"))
+      example = list("mean_sd"),
+      type = arg_array(arg_enum(names(SUMMARY_STATS_CATALOG)))
     ),
     add_overall = new_block_arg(
       "Logical, append an overall column across all `by` levels.",
@@ -161,8 +166,8 @@ summary_table_guidance <- function() {
       "This block produces a multi-variable descriptive summary \u2014 the",
       "\"list of variables by Y\" (Table 1 / demographics, AE counts) pattern.",
       "Each variable in `vars` becomes a row-section in the output: one row",
-      "for compact numerics, six rows for expanded numerics, one row per",
-      "level for categoricals, one row per flag for logicals.",
+      "per selected `stats` key for numerics, one row per level for",
+      "categoricals, one row per flag for logicals.",
       "\n\nKey distinctions:",
       "\n- `vars` = the variables being summarised (the rows).",
       "\n- `sections` = an OUTER column that CONTAINS the vars in a hierarchy",
@@ -183,7 +188,10 @@ summary_table_guidance <- function() {
       "\n\nMap common user requests:",
       "\n- \"demographics by arm\" ->",
       "vars=[\"AGE\",\"SEX\",\"RACE\"], by=[\"TRT01A\"], add_overall=TRUE, id_var=\"\"",
-      "\n- \"table 1 with full stats\" -> stats=\"expanded\"",
+      "\n- \"table 1 with full stats\" ->",
+      "stats=[\"n\",\"mean\",\"sd\",\"median\",\"q1_q3\",\"min_max\"]",
+      "\n- \"counts and percentages instead of mean\" -> stats=[\"n_pct\"]",
+      "\n- \"median with IQR and range\" -> stats=[\"median_q1_q3\",\"min_max\"]",
       "\n- \"baseline characteristics by treatment\" ->",
       "vars=[\"AGE\",\"SEX\",\"BMIBL\"], by=[\"TRT01A\"]",
       "\n- \"AE counts by SOC and term\" ->",

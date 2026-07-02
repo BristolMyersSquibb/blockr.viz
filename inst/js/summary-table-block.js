@@ -3,7 +3,7 @@
  * SummaryTableBlock — JS-driven input binding for blockr.viz::summary_table_block.
  *
  * Main: three Blockr.Select widgets (vars multi / sections multi / by multi, max 2).
- * Gear: stats preset, overall toggle + label, indent_details, nest_hierarchies.
+ * Gear: stat picker pills, overall toggle + label, indent_details, nest_hierarchies.
  *
  * Depends on: blockr-core.js, blockr-select.js (from blockr.dplyr), blockr-blocks.css.
  */
@@ -15,7 +15,7 @@
    * @property {string[]} vars
    * @property {string[]} sections
    * @property {string[]} by
-   * @property {string} stats
+   * @property {string[]} stats
    * @property {boolean} add_overall
    * @property {string} overall_label
    * @property {boolean} indent_details
@@ -25,6 +25,40 @@
 
   /** A toggle <button> carrying its redraw closure as an expando. */
   /** @typedef {HTMLButtonElement & { _update?: () => void }} ToggleButton */
+
+  /**
+   * Numeric stat vocabulary — must mirror SUMMARY_STATS_CATALOG in
+   * R/summary-table.R. Array order is the canonical row order; the
+   * selection is kept in this order regardless of click order.
+   */
+  const STAT_OPTIONS = [
+    { key: 'n',            label: 'N' },
+    { key: 'n_pct',        label: 'n (%)' },
+    { key: 'mean',         label: 'Mean' },
+    { key: 'sd',           label: 'SD' },
+    { key: 'mean_sd',      label: 'Mean (SD)' },
+    { key: 'median',       label: 'Median' },
+    { key: 'median_q1_q3', label: 'Median (Q1, Q3)' },
+    { key: 'q1_q3',        label: 'Q1, Q3' },
+    { key: 'min_max',      label: 'Min, Max' }
+  ];
+  const STAT_KEYS = STAT_OPTIONS.map(o => o.key);
+  /** Legacy preset values from boards saved before `stats` was a vector. */
+  const STAT_LEGACY = {
+    compact: ['mean_sd'],
+    expanded: ['n', 'mean', 'sd', 'median', 'q1_q3', 'min_max']
+  };
+
+  /** @param {any} stats @returns {string[] | null} */
+  const normalizeStats = (stats) => {
+    if (typeof stats === 'string') {
+      if (STAT_LEGACY[stats]) return STAT_LEGACY[stats].slice();
+      stats = [stats];
+    }
+    if (!Array.isArray(stats)) return null;
+    const keys = STAT_KEYS.filter(k => stats.indexOf(k) >= 0);
+    return keys.length ? keys : null;
+  };
 
   /** The binding's container element, with the block instance + pending state. */
   /** @typedef {HTMLElement & { _block?: SummaryTableBlock, _pendingColumns?: any, _pendingState?: any }} STBHost */
@@ -51,7 +85,7 @@
         vars: [],
         sections: [],
         by: [],
-        stats: 'compact',
+        stats: ['mean_sd'],
         add_overall: false,
         overall_label: 'Total',
         indent_details: true,
@@ -223,25 +257,67 @@
     }
 
     _addStatsRow() {
-      const btn = /** @type {ToggleButton} */ (document.createElement('button'));
-      btn.type = 'button';
-      btn.className = 'blockr-pill blockr-popover-toggle';
-      const labels = { compact: 'Compact', expanded: 'Expanded' };
+      const wrap = document.createElement('div');
+      wrap.style.marginBottom = '8px';
+
+      const label = document.createElement('span');
+      label.className = 'blockr-popover-label';
+      label.textContent = 'Statistics';
+      label.style.display = 'block';
+      label.style.marginBottom = '4px';
+      wrap.appendChild(label);
+
+      const hint = document.createElement('span');
+      hint.textContent = 'Rows per numeric variable — one selected = a single row, several = one row each.';
+      hint.style.fontSize = '0.75rem';
+      hint.style.color = '#9ca3af';
+      hint.style.display = 'block';
+      hint.style.marginBottom = '6px';
+      wrap.appendChild(hint);
+
+      const pillRow = document.createElement('div');
+      pillRow.style.display = 'flex';
+      pillRow.style.flexWrap = 'wrap';
+      pillRow.style.gap = '6px';
+      wrap.appendChild(pillRow);
+
+      const buttons = STAT_OPTIONS.map((opt) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'blockr-pill blockr-popover-toggle';
+        btn.textContent = opt.label;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = this._state.stats.indexOf(opt.key);
+          if (idx >= 0) {
+            // Never deselect the last stat — the engine needs at least one.
+            if (this._state.stats.length === 1) return;
+            this._state.stats.splice(idx, 1);
+          } else {
+            // Keep canonical catalog order regardless of click order.
+            this._state.stats = STAT_KEYS.filter(
+              k => k === opt.key || this._state.stats.indexOf(k) >= 0
+            );
+          }
+          update();
+          this._autoSubmit();
+        });
+        return btn;
+      });
+      buttons.forEach(b => pillRow.appendChild(b));
+
       const update = () => {
-        const isExpanded = this._state.stats === 'expanded';
-        btn.textContent = isExpanded ? labels.expanded : labels.compact;
-        btn.classList.toggle('blockr-popover-toggle-active', isExpanded);
+        buttons.forEach((btn, i) => {
+          const active = this._state.stats.indexOf(STAT_OPTIONS[i].key) >= 0;
+          btn.classList.toggle('blockr-popover-toggle-active', active);
+        });
       };
       update();
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this._state.stats = this._state.stats === 'expanded' ? 'compact' : 'expanded';
-        update();
-        this._autoSubmit();
-      });
-      btn._update = update;
-      this._toggle_stats = btn;
-      this._addPopoverRow(btn, 'Compact = Mean (SD). Expanded = N/Mean/SD/Median/Q1,Q3/Min,Max.');
+
+      // Same `{ _update }` shape as the ToggleButtons so setState's
+      // refresh loop can repaint it uniformly.
+      this._toggle_stats = /** @type {any} */ ({ _update: update });
+      this.popover.appendChild(wrap);
     }
 
     _addOverallRow() {
@@ -406,7 +482,8 @@
       for (const k of arrayKeys) {
         if (Array.isArray(state[k])) this._state[k] = state[k].slice();
       }
-      if (typeof state.stats === 'string') this._state.stats = state.stats;
+      const stats = normalizeStats(state.stats);
+      if (stats) this._state.stats = stats;
       if (typeof state.add_overall === 'boolean') this._state.add_overall = state.add_overall;
       if (typeof state.overall_label === 'string') {
         this._state.overall_label = state.overall_label;

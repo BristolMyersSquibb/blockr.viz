@@ -2,8 +2,8 @@
 #'
 #' Blockr transform block wrapping [summary_table()]. Multi-variable
 #' descriptive summary where each `vars` entry becomes a row-section
-#' (one row for compact numerics, six rows for expanded numerics,
-#' one row per level for categoricals, one row per flag for logicals).
+#' (one row per selected stat for numerics, one row per level for
+#' categoricals, one row per flag for logicals).
 #'
 #' Output is a plain tibble with dotted structure columns
 #' (`.section_1, ..., .section_k, .label, .indent, .strong`),
@@ -13,8 +13,11 @@
 #' @param vars Character, variables to summarise (each becomes a row-section).
 #' @param sections Character, outer section columns that contain `vars` (0..N).
 #' @param by Character, column-split dimensions (0..2).
-#' @param stats `"compact"` (one-row Mean (SD) per numeric) or `"expanded"`
-#'   (six-row N / Mean / SD / Median / Q1,Q3 / Min,Max).
+#' @param stats Character vector of stat keys emitted for numeric variables
+#'   (see [summary_table()]): any combination of `"n"`, `"n_pct"`, `"mean"`,
+#'   `"sd"`, `"mean_sd"`, `"median"`, `"median_q1_q3"`, `"q1_q3"`,
+#'   `"min_max"`. One key = a single row per variable; several = one row per
+#'   stat. Legacy `"compact"` / `"expanded"` presets are still accepted.
 #' @param add_overall Logical, append an overall column across all `by` levels.
 #' @param overall_label Label for the overall column, default `"Total"`.
 #' @param indent_details Logical, indent detail rows under their variable
@@ -29,8 +32,8 @@
 #'
 #' @details
 #' The UI has two main fields (Summarize, Split by) and a gear popover
-#' with advanced options (stats preset, overall column, nest hierarchy,
-#' group-by sections, count-distinct-by).
+#' with advanced options (stat picker pills, overall column, nest
+#' hierarchy, group-by sections, count-distinct-by).
 #'
 #' Spec: `blockr.design/open/table-blocks/`.
 #'
@@ -42,7 +45,7 @@ new_summary_table_block <- function(
   vars = character(),
   sections = character(),
   by = character(),
-  stats = "compact",
+  stats = "mean_sd",
   add_overall = FALSE,
   overall_label = "Total",
   indent_details = TRUE,
@@ -64,7 +67,12 @@ new_summary_table_block <- function(
         r_vars             <- shiny::reactiveVal(as.character(vars))
         r_sections         <- shiny::reactiveVal(as.character(sections))
         r_by               <- shiny::reactiveVal(as.character(by))
-        r_stats            <- shiny::reactiveVal(stats %||% "compact")
+        # Normalizing here maps legacy "compact"/"expanded" (old serialized
+        # boards restore through the ctor) to canonical catalog keys, so
+        # both the JS widget and re-serialized state only ever see keys.
+        r_stats            <- shiny::reactiveVal(
+          normalize_summary_stats(stats %||% "mean_sd")
+        )
         r_add_overall      <- shiny::reactiveVal(isTRUE(add_overall))
         r_overall_label    <- shiny::reactiveVal(overall_label %||% "Total")
         r_indent_details   <- shiny::reactiveVal(isTRUE(indent_details))
@@ -123,7 +131,7 @@ new_summary_table_block <- function(
         # which then round-trips back to R as empty and breaks the pipeline.
         # Wrap as.list() to keep them as JSON arrays regardless of length.
         normalize_state_for_js <- function(state) {
-          for (k in c("vars", "sections", "by")) {
+          for (k in c("vars", "sections", "by", "stats")) {
             state[[k]] <- as.list(state[[k]] %||% character())
           }
           state$id_var <- state$id_var %||% ""
@@ -150,7 +158,14 @@ new_summary_table_block <- function(
           r_vars(as.character(new_state$vars %||% character()))
           r_sections(as.character(new_state$sections %||% character()))
           r_by(as.character(new_state$by %||% character()))
-          r_stats(new_state$stats %||% "compact")
+          # The JS widget only emits catalog keys and never an empty
+          # selection; the filter + fallback just keep malformed input
+          # (e.g. via external_ctrl) from wedging the block.
+          stats_in <- intersect(
+            names(SUMMARY_STATS_CATALOG),
+            as.character(new_state$stats %||% character())
+          )
+          r_stats(if (length(stats_in)) stats_in else "mean_sd")
           r_add_overall(isTRUE(new_state$add_overall))
           r_overall_label(new_state$overall_label %||% "Total")
           r_indent_details(isTRUE(new_state$indent_details))

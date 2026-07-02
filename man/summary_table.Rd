@@ -9,7 +9,7 @@ summary_table(
   vars = character(),
   sections = character(),
   by = character(),
-  stats = "compact",
+  stats = "mean_sd",
   add_overall = FALSE,
   overall_label = "Total",
   subject_var = NULL,
@@ -32,9 +32,16 @@ dimension. Length-2 produces pipe-delimited nested group keys
 consumable by \code{gt::tab_spanner_delim("|")} after the renderer
 spreads \code{.group} to columns.}
 
-\item{stats}{One of \code{"compact"} (default) or \code{"expanded"}.
-See Details. Changes only which rows / templates are emitted; the
-underlying numbers are identical.}
+\item{stats}{Character vector of stat keys controlling which rows /
+templates are emitted for \strong{numeric} variables (the underlying
+numbers are always all computed). Any combination of \code{"n"},
+\code{"n_pct"} (non-missing n and \% of group rows), \code{"mean"}, \code{"sd"},
+\code{"mean_sd"}, \code{"median"}, \code{"median_q1_q3"}, \code{"q1_q3"}, \code{"min_max"};
+rows follow this canonical order regardless of input order. A single
+key gives one row per variable, several give one row per stat. The
+legacy presets \code{"compact"} (= \code{"mean_sd"}) and \code{"expanded"}
+(= \code{c("n", "mean", "sd", "median", "q1_q3", "min_max")}) are still
+accepted. Default \code{"mean_sd"}.}
 
 \item{add_overall}{Logical. If TRUE, append an extra \code{.group} whose
 rows are computed on the unsplit data (ignoring \code{by}). Matches
@@ -59,15 +66,15 @@ drill-down. v1 supports 2-level hierarchies only.}
 }
 \value{
 A tidy, long-format tibble: raw numeric statistic columns plus
-dotted structure columns (\verb{.section_*}, \code{.var}, \code{.label}, \code{.indent}),
-a \code{.group} dimension column, and a per-row \code{.fmt} template column that
-a renderer interpolates into display cells.
+dotted structure columns (\verb{.section_*}, \code{.label}, \code{.indent},
+\code{.strong}), a \code{.group} dimension column, and a per-row \code{.fmt}
+template column that a renderer interpolates into display cells.
 }
 \description{
 Aggregate a flat data.frame into a \strong{tidy, long} summary frame: raw
 numeric statistic columns plus a hidden per-row \code{.fmt} template that
 names how to combine them into a display cell. Section structure is
-encoded via well-known dotted columns (\verb{.section_1, ..., .section_k, .var, .label, .indent}), and the by-group dimension lives in a single
+encoded via well-known dotted columns (\verb{.section_1, ..., .section_k, .label, .indent, .strong}), and the by-group dimension lives in a single
 \code{.group} column. Designed for the "list of variables by Y" pattern;
 the complementary "one measurement across two dimensions" pivot is
 produced upstream by composing \code{summarize} with \code{tidyr::pivot_wider}.
@@ -81,14 +88,12 @@ strings — it emits numbers + templates and leaves formatting to the
 renderer.
 
 Each \code{vars} entry contributes rows shaped by the variable's type and
-the chosen \code{stats} preset:
+the chosen \code{stats} selection:
 \itemize{
-\item \strong{numeric} under \code{stats = "compact"} → one row per variable,
-\code{.fmt = "{mean:1} ({sd:2})"}.
-\item \strong{numeric} under \code{stats = "expanded"} → six rows per variable, one
-per stat (N, Mean, SD, Median, Q1 Q3, Min Max), each carrying the
-matching template (\code{"{n:0}"}, \code{"{mean:1}"}, \code{"{sd:2}"},
-\code{"{median:1}"}, \code{"{q1:1}, {q3:1}"}, \code{"{min:1}, {max:1}"}).
+\item \strong{numeric} → one row per selected stat key (see \code{stats}). A single
+key emits one un-indented row per variable (e.g. \code{"mean_sd"} →
+\code{.fmt = "{mean:1} ({sd:2})"}); several keys emit one indented row
+each, in catalog order.
 \item \strong{categorical} → one row per level, \code{.fmt = "{n:0} ({pct:1}\%)"}.
 \item \strong{logical} → one row per variable, \code{.fmt = "{n:0} ({pct:1}\%)"} for
 the TRUE count. The FALSE row is suppressed — this matches pharma
@@ -101,18 +106,19 @@ Output columns:
 block-internal) holding values from user-provided \code{sections}.
 Present iff \code{length(sections) > 0}. Each carries a \code{label}
 attribute pulled from the original column for renderer display.
-\item \code{.var} — synthetic variable-name column. Present iff
-\code{length(vars) > 1}.
 \item \code{.label} — innermost row label. Stat name for numeric vars
 ("N", "Mean", "SD", ...), level name for categoricals, variable
 name for logicals.
 \item \code{.indent} — detail-row indentation level (see \code{indent_details}).
+\item \code{.strong} — logical, \code{TRUE} on variable-header rows (bold,
+blank data cells). Present only when \code{length(vars) > 1}.
 \item \code{.group} — by-group value (one row per var/level × group).
 Pipe-delimited (\code{"outer|inner"}) for length-2 \code{by}; the constant
 \code{"Overall"} when \code{by} is empty; the \code{overall_label} value for the
 appended overall column when \code{add_overall = TRUE}.
 \item \code{.fmt} — per-row display template (the \code{.fmt} convention).
-\item Raw numeric stat columns: \verb{n, pct} (categorical/logical), \verb{mean, sd, median, q1, q3, min, max} (numeric). \code{NA} where not applicable.
+\item Raw numeric stat columns: \verb{n, pct} (categorical/logical, and
+numeric where \code{pct} is the share of non-missing rows), \verb{mean, sd, median, q1, q3, min, max} (numeric). \code{NA} where not applicable.
 }
 
 The per-group denominators (for \code{"<group>\\\\nN = <n>"} column headers)
@@ -126,15 +132,15 @@ summary_table(
   iris,
   vars = c("Sepal.Length", "Species"),
   by = character(),
-  stats = "compact"
+  stats = "mean_sd"
 )
 
-# Expanded numeric layout, split by a grouping column
+# Any stat combination, split by a grouping column
 summary_table(
   mtcars,
   vars = c("mpg", "hp"),
   by = "cyl",
-  stats = "expanded",
+  stats = c("n_pct", "median_q1_q3", "min_max"),
   add_overall = TRUE
 )
 
