@@ -131,10 +131,10 @@
 
     /** @param {string} key @param {*} value */
     _fieldHelp(key, value) {
-      const col = this._cols().find(c => c.name === value);
-      if (col && col.label && col.label !== col.name) {
-        return col.name + ' (' + col.label + ')';
-      }
+      // Filled fields get no help line: the select's value display already
+      // shows `name  label` (labels-everywhere, blockr-select.js
+      // fillOptContent), so echoing `name (label)` here would duplicate it.
+      // The help line only surfaces the role hint while the field is empty.
       if (this._hasVal(value)) return '';
       const role = this._role(key);
       if (!role) return '';

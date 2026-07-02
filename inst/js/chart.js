@@ -474,8 +474,8 @@
     }
 
     // Axis title for a mapped column: its variable label when present,
-    // else the column name. The popover help shows `name (label)`; an
-    // axis is tighter, so just the human label (or the name).
+    // else the column name. The settings-band select shows `name  label`;
+    // an axis is tighter, so just the human label (or the name).
     /** @param {string} col */
     _axisTitle(col) {
       if (!col) return '';
