@@ -236,13 +236,17 @@ new_chart_block <- function(
         # observe re-runs when the mapping changes -- same as before the
         # roles refactor.
         needed_cols <- function(d) {
-          needed <- c(
+          # as.character(unlist(...)) so a config arg that arrives as an
+          # empty list() -- e.g. a NULL aesthetic corrupted by DAG copy/paste
+          # into `list()` -- does not coerce the whole vector to a list and
+          # crash `d[, needed]` ("must be ... not a list").
+          needed <- as.character(unlist(c(
             r_group(), r_color(), r_facet(), r_metric(),
             r_x(), r_y(), r_xend(), r_series(),
             r_label(), r_drill(), r_lo(), r_hi()
-          )
-          sb <- r_sort_by()
-          if (!is.null(sb) && !sb %in% c("onset", "alpha")) {
+          )))
+          sb <- as.character(unlist(r_sort_by()))
+          if (length(sb) && !sb %in% c("onset", "alpha")) {
             needed <- c(needed, sb)
           }
           if (!is.data.frame(d)) return(character())
