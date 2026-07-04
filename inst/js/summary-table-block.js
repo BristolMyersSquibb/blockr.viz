@@ -190,7 +190,9 @@
       // between the gear header and the main grid, built from the standard
       // controls; on/off options are .blockr-checkbox (see
       // boolean-controls-proposals.html), not self-labeling pills.
-      this.popover.className = 'blockr-settings';
+      // --beak: gear connector T1 (settings-band.css) — the open band grows
+      // a notch pointing at the gear that opened it.
+      this.popover.className = 'blockr-settings blockr-settings--beak';
 
       const popTitle = document.createElement('div');
       popTitle.className = 'blockr-settings__title';

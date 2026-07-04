@@ -648,7 +648,7 @@ drilldown_table_dep <- function() {
     # chart.css; the table's gear popover reuses it (de-dups by dep name).
     htmltools::htmlDependency(
       name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.viz"), ".24"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".25"),
       src = system.file("css", package = "blockr.viz"),
       stylesheet = "chart.css"
     ),
@@ -657,7 +657,7 @@ drilldown_table_dep <- function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".2"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".3"),
       src = system.file(package = "blockr.viz"),
       # drilldown-config.js (the shared engine) must load before the table JS.
       script = c("js/drilldown-config.js", "js/table.js"),

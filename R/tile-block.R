@@ -233,14 +233,14 @@ tile_block_dep <- function() {
     ),
     htmltools::htmlDependency(
       name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.viz"), ".24"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".25"),
       src = system.file("css", package = "blockr.viz"),
       stylesheet = "chart.css"
     ),
     settings_band_dep(),
     htmltools::htmlDependency(
       name = "tile-block",
-      version = utils::packageVersion("blockr.viz"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".1"),
       src = system.file(package = "blockr.viz"),
       # drilldown-config.js (the shared engine) must load before tile-block.js.
       script = c("js/drilldown-config.js", "js/tile-block.js"),

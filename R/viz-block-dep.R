@@ -17,7 +17,7 @@ viz_block_css_dep <- function() {
 settings_band_dep <- function() {
   htmltools::htmlDependency(
     name = "blockr-viz-settings-band",
-    version = utils::packageVersion("blockr.viz"),
+    version = paste0(utils::packageVersion("blockr.viz"), ".1"),
     src = system.file(package = "blockr.viz"),
     script = "js/settings-band.js",
     stylesheet = "css/settings-band.css"
