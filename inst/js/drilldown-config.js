@@ -367,34 +367,21 @@
       // drill styles land in the same position of the capability cluster.
       if (this.h.drillAutoLabel || this.h.drillHint) this._renderDrillSection();
 
-      // Coloring as a checkbox capability (Variant A). spec.colorToggle.modeKey
-      // is the mode select (diverging / sequential / bar — the 'off' state is
-      // folded into the checkbox); .extra lists the roles revealed alongside it
-      // (the numeric column scope). Unchecking sets the mode to 'off' (no
-      // coloring); checking defaults it to 'diverging'.
-      if (spec.colorToggle) {
-        const modeKey = spec.colorToggle.modeKey;
-        const open = this._secOpen('color',
-          () => this._hasVal(cfg[modeKey]) && cfg[modeKey] !== 'off');
-        const sec = this._sectionEl('Coloring', {
-          toggle: { checked: open, onToggle: (on) => this._toggleSection('color', on,
-            () => { cfg[modeKey] = 'off'; this.h.onChange(modeKey); },
-            () => {
-              if (!this._hasVal(cfg[modeKey]) || cfg[modeKey] === 'off') {
-                cfg[modeKey] = 'diverging'; this.h.onChange(modeKey);
-              }
-            }) }
-        });
-        if (open) {
-          this._renderRole(sec, modeKey);
-          for (const k of (spec.colorToggle.extra || [])) this._renderRole(sec, k);
+      // COLOR — a PLAIN section (deliberately NOT a checkbox capability:
+      // unlike Aggregation/Drill, checking would seed nothing real — color's
+      // activation lives in the picks; "(none)" / no shading rows IS off).
+      // spec.colorSection = { colorKey, shadings }:
+      //   colorKey — the categorical IDENTITY color ("Color by"): the chart's
+      //     color aesthetic applied to rows/cards via the board scale map.
+      //   shadings — true renders the repeatable VALUE-encoding rules
+      //     ("Shade cells [mode] on [cols]") via shadingsList()/
+      //     onShadingsChange() (table only; a tile has no cell matrix).
+      if (spec.colorSection) {
+        const sec = this._sectionEl('Color');
+        this._renderRole(sec, spec.colorSection.colorKey);
+        if (spec.colorSection.shadings && this.h.shadingsList) {
+          this._renderShadings(sec);
         }
-      }
-
-      // Row color as a checkbox capability — a categorical tint applied to whole
-      // rows. Same shape as Drill-down: a single column picker, unchecking clears.
-      if (spec.rowColorToggle) {
-        this._renderToggleColumnSection('Row color', 'rowcolor', spec.rowColorToggle);
       }
 
       if (this.h.afterTypeChange) this.h.afterTypeChange();
@@ -748,6 +735,90 @@
       add.addEventListener('click', (e) => {
         e.stopPropagation();
         summaries.push({ func: 'mean', cols: [] }); commit(); this._rerender();
+      });
+      wrap.appendChild(add);
+      container.appendChild(wrap);
+    }
+
+    // Repeatable cell value-encoding rules ("Shade cells"): one
+    // "[mode] on [columns]" row per rule — the same interaction as the
+    // summaries list, same shape family ({func, cols} / {mode, cols}).
+    // ZERO rows is a valid state (no shading — there is no floor row, unlike
+    // summaries); "Add shading" seeds `[diverging] on []`, and an EMPTY
+    // column pick means "all numeric columns not claimed by another rule"
+    // (override semantics; the R dd_shading_visuals expansion) — which makes
+    // the correlation matrix the one-click default. The host owns the list
+    // via shadingsList() / onShadingsChange(). Table only.
+    /** @param {HTMLElement} container */
+    _renderShadings(container) {
+      const shadings = (this.h.shadingsList && this.h.shadingsList()) || [];
+      const modeRole = this._role('shade_mode') || {};
+      const modeOpts = modeRole.options ||
+        ['diverging', 'sequential', 'bar'];
+      const commit = () => {
+        if (this.h.onShadingsChange) this.h.onShadingsChange(shadings);
+      };
+      const S = (typeof Blockr !== 'undefined' && Blockr.Select) || null;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'dd-summaries dd-shadings';
+      const lbl = document.createElement('span');
+      lbl.className = 'blockr-popover-label';
+      lbl.textContent = 'Shade cells';
+      wrap.appendChild(lbl);
+
+      shadings.forEach((s, i) => {
+        const row = document.createElement('div');
+        row.className = 'dd-value-row dd-shading-row';
+
+        const modeWrap = document.createElement('div');
+        modeWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-value-agg';
+        if (S && S.single) {
+          S.single(modeWrap, {
+            options: modeOpts, selected: s.mode || 'diverging',
+            onChange: (/** @type {string} */ val) => { s.mode = val; commit(); }
+          });
+        }
+        row.appendChild(modeWrap);
+
+        const on = document.createElement('span');
+        on.className = 'dd-pair-connector';
+        on.textContent = 'on';
+        row.appendChild(on);
+
+        const colsWrap = document.createElement('div');
+        colsWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-value-cols';
+        if (S && S.multi) {
+          S.multi(colsWrap, {
+            options: this._colOptsByType('num'),
+            selected: (s.cols || []).slice(), reorderable: false,
+            placeholder: 'All numeric columns',
+            onChange: (/** @type {string[]} */ vals) => { s.cols = vals; commit(); }
+          });
+        }
+        row.appendChild(colsWrap);
+
+        const rm = document.createElement('button');
+        rm.type = 'button';
+        rm.className = 'dd-role-remove dd-value-remove';
+        rm.title = 'Remove shading';
+        rm.innerHTML = '✕';
+        rm.addEventListener('click', (e) => {
+          e.stopPropagation();
+          shadings.splice(i, 1); commit(); this._rerender();
+        });
+        row.appendChild(rm);
+        wrap.appendChild(row);
+      });
+
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'blockr-add-link dd-add-trigger dd-add-shading';
+      const plus = (typeof Blockr !== 'undefined' && Blockr.icons) ? Blockr.icons.plus : '+';
+      add.innerHTML = `<span class="blockr-add-icon">${plus}</span> Add shading`;
+      add.addEventListener('click', (e) => {
+        e.stopPropagation();
+        shadings.push({ mode: 'diverging', cols: [] }); commit(); this._rerender();
       });
       wrap.appendChild(add);
       container.appendChild(wrap);

@@ -39,6 +39,12 @@
 #'   one cluster per group level; with `group` empty, grand-total cards. A
 #'   display projection only -- the block's data output stays the raw input
 #'   filtered by the click. Empty (default) = no aggregation.
+#' @param color Categorical identity color ("Color by") -- the SAME argument
+#'   as the chart's `color`, applied to cards: names the tile's group column
+#'   or its Name column; each card / matrix row gets a scale-map accent in
+#'   that value's color, so SEX-colored cards match the SEX-colored chart.
+#'   `""` (default) = no tint. Structural columns only (group / Name);
+#'   other columns are ignored.
 #' @param layout `"cards"` or `"table"`. Same slots either way.
 #' @param overline,caption Supertext / subtext. A column name reads per-cell;
 #'   any other non-empty string is a literal. `overline` defaults to the
@@ -79,6 +85,7 @@ new_tile_block <- function(value = character(),
                            group = character(),
                            name = "",
                            summaries = list(),
+                           color = "",
                            layout = "cards",
                            overline = "",
                            caption = "",
@@ -100,6 +107,10 @@ new_tile_block <- function(value = character(),
         r_group     <- shiny::reactiveVal(as.character(group))
         r_name      <- shiny::reactiveVal(name)
         r_summaries   <- shiny::reactiveVal(dd_parse_summaries(summaries))
+        # Identity color ("Color by"): the card tint column, resolved through
+        # the board scale map so tiles match the chart's colors. Structural
+        # columns only (the group, or the Name column) -- "" = no tint.
+        r_color     <- shiny::reactiveVal(color)
         r_layout    <- shiny::reactiveVal(layout)
         r_overline  <- shiny::reactiveVal(overline)
         r_caption   <- shiny::reactiveVal(caption)
@@ -136,6 +147,7 @@ new_tile_block <- function(value = character(),
               group     = upd(r_group, tk_group(v)),
               name      = upd(r_name, tk_blank(v)),
               summaries   = upd(r_summaries, dd_parse_summaries(v)),
+              color     = upd(r_color, tk_blank(v)),
               secondary = upd(r_secondary, tk_blank(v)),
               style     = upd(r_style, v %||% "plain"),
               good_when = upd(r_good_when, v %||% "up"),
@@ -150,6 +162,10 @@ new_tile_block <- function(value = character(),
           }
         })
 
+        # Board scale map (NULL when the board has no "scale_map" option) --
+        # resolves the "Color by" card tint to the same hexes the chart uses.
+        board_scale_map <- dd_board_scale_map()
+
         output$tile_result <- shiny::renderUI({
           d <- data()
           shiny::req(is.data.frame(d))
@@ -157,6 +173,7 @@ new_tile_block <- function(value = character(),
             d,
             value = r_value(), group = r_group(), measure = r_name(),
             summaries = r_summaries(), layout = r_layout(),
+            color = r_color(), scale_map = board_scale_map(),
             overline = r_overline(), caption = r_caption(),
             secondary = r_secondary(), style = r_style(),
             # Polarity is ALWAYS "up" (an increase reads good): the gear
@@ -187,7 +204,8 @@ new_tile_block <- function(value = character(),
           }),
           state = list(
             value = r_value, group = r_group, name = r_name,
-            summaries = r_summaries, layout = r_layout, overline = r_overline,
+            summaries = r_summaries, color = r_color,
+            layout = r_layout, overline = r_overline,
             caption = r_caption, secondary = r_secondary, style = r_style,
             good_when = r_good_when, format = r_format, unit = r_unit,
             drill = r_drill, filter_col = r_filter_col,
@@ -206,9 +224,10 @@ new_tile_block <- function(value = character(),
     # Optional roles only -- clearing a non-listed field would wedge the block
     # (see reference_blockr_allow_empty_state_wedge). The enum fields
     # (layout/style/good_when/format) always carry a value and are omitted.
-    allow_empty_state = c("value", "group", "name", "summaries", "overline",
+    allow_empty_state = c("value", "group", "name", "summaries", "color",
+      "overline",
       "caption", "secondary", "unit", "drill", "filter_col", "filter_value"),
-    external_ctrl = c("value", "group", "name", "summaries", "layout",
+    external_ctrl = c("value", "group", "name", "summaries", "color", "layout",
       "overline", "caption", "secondary", "style", "good_when", "format",
       "unit", "drill", "filter_col", "filter_value"),
     expr_type = "bquoted",
@@ -268,7 +287,7 @@ tile_block_dep <- function() {
     drilldown_shared_dep(),
     htmltools::htmlDependency(
       name = "tile-block",
-      version = paste0(utils::packageVersion("blockr.viz"), ".9"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".10"),
       src = system.file(package = "blockr.viz"),
       script = "js/tile-block.js",
       stylesheet = "css/tile-block.css"
@@ -313,6 +332,17 @@ tile_arguments <- function() {
         "the `value` column names are the KPI names. (Gear label: \"Name\".)"
       ),
       example = "",
+      type = arg_string()
+    ),
+    color = new_block_arg(
+      paste0(
+        "Categorical identity color (\"Color by\") — the SAME argument as ",
+        "the chart's `color`, applied to cards: the tile's `group` column or ",
+        "its `name` column; each card / matrix row gets a scale-map accent ",
+        "in that value's color, so SEX-colored cards match the SEX-colored ",
+        "chart. \"\" = no tint. Structural columns only (group / name)."
+      ),
+      example = "SEX",
       type = arg_string()
     ),
     summaries = new_block_arg(

@@ -90,6 +90,13 @@
       // Empty cols on a numeric aggregation = all numeric columns (the
       // dd_metric_plan override rule — the tile shares the table's R path).
       metricsDefaultAll: true,
+      // COLOR — plain section, "Color by" only (a tile has no cell matrix to
+      // shade). Like the drill, the tint keys on what a card structurally IS
+      // (its group level / its Name value), so the section shows only when
+      // the tile has such a column; the picker offers exactly those (see the
+      // per-instance `color` role built in buildCogwheel).
+      colorSection: (cfg && (cfg.group || cfg.name))
+        ? { colorKey: 'color', shadings: false } : null,
       // Value formatting is presentation, not data mapping. "Secondary
       // style" only applies when a secondary is mapped — hidden otherwise
       // (removing the Secondary role re-renders the popover, so the list
@@ -134,6 +141,17 @@
     try { cfg.summaries = JSON.parse(root.getAttribute('data-tk-summaries') || '[]'); }
     catch (e) { cfg.summaries = []; }
 
+    // Per-instance roles: the "Color by" picker offers exactly the tile's
+    // STRUCTURAL columns (its group, its Name column) — a card's tint keys
+    // on what the card IS, like the drill. Computed at build time; a group /
+    // Name change re-renders the whole tile, which rebuilds this.
+    var colorOpts = [{ value: '', label: '(none)' }];
+    if (cfg.group) colorOpts.push(cfg.group);
+    if (cfg.name && cfg.name !== cfg.group) colorOpts.push(cfg.name);
+    var roles = Object.assign({}, TILE_ROLES, {
+      color: { label: 'Color by', kind: 'select', options: colorOpts }
+    });
+
     var header = document.createElement('div');
     header.className = 'blockr-gear-header';
     var btn = document.createElement('button');
@@ -164,7 +182,7 @@
 
     new DDC({
       popoverEl: function () { return pop; },
-      roles: TILE_ROLES,
+      roles: roles,
       config: function () { return cfg; },
       columns: function () { return cols; },
       context: function () { return 'all'; },

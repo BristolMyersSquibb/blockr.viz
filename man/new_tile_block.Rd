@@ -7,8 +7,9 @@
 new_tile_block(
   value = character(),
   group = character(),
-  measure = "",
+  name = "",
   summaries = list(),
+  color = "",
   layout = "cards",
   overline = "",
   caption = "",
@@ -31,7 +32,7 @@ new_tile_block(
 \code{group_by} column when \code{summaries} aggregate the input in place. \code{""} = no
 grouping.}
 
-\item{measure}{Measure-label column for long input. \code{""} = use the \code{value}
+\item{name}{Column naming each KPI (long input). \code{""} = use the \code{value}
 column names as measure names.}
 
 \item{summaries}{Optional in-block aggregations: a list, each entry
@@ -40,6 +41,13 @@ median / sum / min / max). Each metric becomes a card. With \code{group} set,
 one cluster per group level; with \code{group} empty, grand-total cards. A
 display projection only -- the block's data output stays the raw input
 filtered by the click. Empty (default) = no aggregation.}
+
+\item{color}{Categorical identity color ("Color by") -- the SAME argument
+as the chart's \code{color}, applied to cards: names the tile's group column
+or its Name column; each card / matrix row gets a scale-map accent in
+that value's color, so SEX-colored cards match the SEX-colored chart.
+\code{""} (default) = no tint. Structural columns only (group / Name);
+other columns are ignored.}
 
 \item{layout}{\code{"cards"} or \code{"table"}. Same slots either way.}
 
@@ -69,7 +77,7 @@ currency -- the renderer never infers \code{$}.}
 \item{drill}{Logical; when \code{TRUE} a card / matrix-row click emits a
 categorical filter downstream. The filter column is structurally
 determined (never user-picked): the \code{group} column when grouped, else
-the \code{measure} ("Name") column on an ungrouped long KPI list. Off by
+the \code{name} column on an ungrouped long KPI list. Off by
 default; inert when the tile has neither (bare KPI, grand totals).}
 
 \item{filter_col, filter_value}{Click-filter state. Kept as constructor

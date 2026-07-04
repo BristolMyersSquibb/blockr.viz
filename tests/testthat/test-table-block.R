@@ -107,29 +107,49 @@ test_that("block state round-trips constructor args", {
   )
 })
 
-test_that("cogwheel config actions update color, drill, digits", {
+test_that("cogwheel config actions update color, shadings, drill, digits", {
+  # Legacy ctor args map into the unified vocabulary: a cell_color spec
+  # becomes one `shadings` rule; row_color becomes `color`.
   blk <- new_table_block(
-    cell_color = drilldown_table_color("diverging", domain = c(-1, 1))
+    cell_color = drilldown_table_color("diverging", domain = c(-1, 1)),
+    row_color = "parameter"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
       session$flushReact()
-      expect_equal(session$returned$state$cell_color()$type, "diverging")
+      sh <- session$returned$state$shadings()
+      expect_length(sh, 1L)
+      expect_equal(sh[[1]]$mode, "diverging")
+      expect_equal(unlist(sh[[1]]$domain), c(-1, 1))
+      expect_equal(session$returned$state$color(), "parameter")
+      # Legacy formals serialize as NULL (restore re-enters via the new args).
+      expect_null(session$returned$state$cell_color())
+      expect_null(session$returned$state$row_color())
 
       es <- session$makeScope("expr")
+      # The gear sends the whole shadings list as JSON ("" rules = off).
       es$setInputs(drilldown_table_block_action = list(
-        action = "config", param = "color_mode", value = "off"
+        action = "config", param = "shadings", value = "[]"
       ))
       session$flushReact()
-      expect_null(session$returned$state$cell_color())
+      expect_length(session$returned$state$shadings(), 0L)
 
       es$setInputs(drilldown_table_block_action = list(
-        action = "config", param = "color_mode", value = "diverging"
+        action = "config", param = "shadings",
+        value = '[{"mode":"bar","cols":["result"]}]'
       ))
       session$flushReact()
-      # constructor domain is preserved when toggling back to same type
-      expect_equal(session$returned$state$cell_color()$domain, c(-1, 1))
+      sh2 <- session$returned$state$shadings()
+      expect_equal(sh2[[1]]$mode, "bar")
+      expect_equal(sh2[[1]]$cols, "result")
+
+      # "(none)" from the Color-by picker = explicit off ("").
+      es$setInputs(drilldown_table_block_action = list(
+        action = "config", param = "color", value = "(none)"
+      ))
+      session$flushReact()
+      expect_equal(session$returned$state$color(), "")
 
       es$setInputs(drilldown_table_block_action = list(
         action = "config", param = "drill", value = "parameter"
