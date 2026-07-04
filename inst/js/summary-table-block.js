@@ -149,11 +149,17 @@
         placeholder: 'Columns to summarize\u2026',
         onChange: (selected) => {
           this._state.vars = selected || [];
+          this._setVarsAttention();
           this._autoSubmit();
         }
       });
       this._selects.vars.el.classList.add('blockr-select--bordered');
       grid.appendChild(varsWrap);
+      // Summarize is the one required field: highlight it amber while empty
+      // (design-system "needs a value" affordance, mirroring the chart block's
+      // .dd-role-required-empty) instead of letting the block read as broken.
+      this._varsWrap = varsWrap;
+      this._setVarsAttention();
 
       // Split by (max 2)
       const byWrap = document.createElement('div');
@@ -434,6 +440,14 @@
       if (sel.value !== want) this._state.id_var = '';
     }
 
+    /** Amber-highlight the Summarize field whenever no variable is chosen. */
+    _setVarsAttention() {
+      if (this._varsWrap) {
+        this._varsWrap.classList.toggle(
+          'stb-field--required-empty', this._state.vars.length === 0);
+      }
+    }
+
     _togglePopover() {
       const showing = !this.popover.classList.contains('blockr-settings--open');
       this.popover.classList.toggle('blockr-settings--open', showing);
@@ -495,6 +509,7 @@
       if (this._selects.by) {
         this._selects.by.setOptions(this._catCols, this._state.by);
       }
+      this._setVarsAttention();
     }
 
     /** @param {any} msg */
@@ -514,6 +529,7 @@
         this._state.by = this._selects.by.getValue();
       }
       this._refreshIdVarOptions();
+      this._setVarsAttention();
       this._autoSubmit();
     }
   }

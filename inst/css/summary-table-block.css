@@ -16,3 +16,11 @@
   flex-direction: column;
 }
 .stb-field--full { flex: 1 1 100%; }
+
+/* Required-but-empty "Summarize" field: soft amber attention, not a hard
+   error (design-system target -- mirrors the chart block's
+   .dd-role-required-empty). Clears as soon as a column is picked. */
+.stb-field--required-empty .blockr-select__control {
+  border-color: var(--blockr-color-warning, #f59e0b);
+  background: var(--blockr-color-warning-bg, #fffbeb);
+}
