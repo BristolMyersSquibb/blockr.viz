@@ -18,6 +18,47 @@
   const INDIVIDUAL_TYPES = ['scatter', 'line'];
   const TIMELINE_TYPES = ['gantt'];
 
+  // Subtle inline chart-type glyphs for the tile picker (design-system
+  // type-picker proposal B; hand-drawn 14px, currentColor, dimmed via CSS
+  // so the text label stays primary — no icon-font dependency).
+  /** @type {Record<string, string>} */
+  const TYPE_ICONS = {
+    bar:
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
+      '<rect x="2" y="8" width="3" height="6"/><rect x="6.5" y="4" width="3" height="10"/>' +
+      '<rect x="11" y="10" width="3" height="4"/></svg>',
+    pie:
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.4">' +
+      '<circle cx="8" cy="8" r="6"/><path d="M8 8 V2 M8 8 L13 11"/></svg>',
+    treemap:
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
+      '<rect x="2" y="2" width="7" height="12" rx="1"/><rect x="10" y="2" width="4" height="6" rx="1"/>' +
+      '<rect x="10" y="9" width="4" height="5" rx="1"/></svg>',
+    boxplot:
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.4">' +
+      '<rect x="4" y="5" width="8" height="6"/>' +
+      '<path d="M4 8 h8 M8 2 v3 M8 11 v3 M6 2 h4 M6 14 h4"/></svg>',
+    radar:
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.2">' +
+      '<path d="M8 2 L14 6.5 L11.7 13.5 L4.3 13.5 L2 6.5 Z"/>' +
+      '<path d="M8 8 L8 2 M8 8 L14 6.5 M8 8 L11.7 13.5 M8 8 L4.3 13.5 M8 8 L2 6.5"/></svg>',
+    scatter:
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
+      '<circle cx="4" cy="11" r="1.6"/><circle cx="8" cy="6" r="1.6"/>' +
+      '<circle cx="12" cy="9" r="1.6"/><circle cx="13" cy="3" r="1.6"/></svg>',
+    line:
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.6" stroke-linecap="round">' +
+      '<path d="M2 12 L6 7 L10 9 L14 3"/></svg>',
+    gantt:
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
+      '<rect x="2" y="3" width="8" height="2.6" rx="1"/><rect x="5" y="6.8" width="9" height="2.6" rx="1"/>' +
+      '<rect x="3" y="10.6" width="6" height="2.6" rx="1"/></svg>'
+  };
+
   // Individual-family render baselines. Multipliers (`line_width_mult`,
   // `dot_size_mult`) scale these so slider 1.0× matches echarts' default
   // look. Values mirror the literals previously hardcoded in mkSeries.
@@ -276,6 +317,10 @@
         sectionsForFamily: (/** @type {string} */ fam) => /** @type {Record<string, any>} */ (FAMILY_ROLES)[fam],
         secondary: DD_SECONDARY,
         typeKey: 'chart_type',
+        // Icon tile grid with per-family headings (design-system type-picker
+        // proposal B) instead of the segmented strip.
+        typeTiles: true,
+        typeIcon: (/** @type {string} */ t) => TYPE_ICONS[t] || '',
         typeGroups: [
           // Waterfall is intentionally NOT a picker button — it is a bar option
           // (the `baseline` toggle). It stays in AGGREGATED_TYPES so saved boards
@@ -492,8 +537,10 @@
       // gear header and the chart, full block width. No <body> portal, no
       // fixed positioning, no outside-click dismissal — it is a panel, not a
       // menu; opening pushes the chart down so the result stays visible.
+      // --beak: connector T1 of the type-picker proposals — the open band
+      // grows a notch pointing at the gear that opened it (settings-band.css).
       this.popoverEl = document.createElement('div');
-      this.popoverEl.className = 'blockr-settings dd-popover';
+      this.popoverEl.className = 'blockr-settings blockr-settings--beak dd-popover';
       this.card.appendChild(this.popoverEl);
       // A widget re-render rebuilds the DOM; restore the band's open state.
       if (this._popoverOpen) {

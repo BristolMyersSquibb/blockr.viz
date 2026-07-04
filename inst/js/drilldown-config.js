@@ -18,6 +18,11 @@
  *   secondary        -> Set of paired-tail role keys (skipped in section loops)
  *   typeKey          -> the config key the type picker writes (e.g. 'chart_type')
  *   typeGroups       -> [{label, types:[...]}] for the type picker, or null
+ *   typeTiles        -> render the type picker as an icon-over-label tile grid
+ *                       (design-system type-picker proposal B) instead of the
+ *                       segmented strip; group labels become a field label
+ *                       above the grid, or per-group headings with 2+ groups
+ *   typeIcon(t)      -> inline SVG for a type button/tile, or '' (optional)
  *   familyFor(type)  -> family string for a type, or null (no families)
  *   entryRequired(role) -> mark a section role required (chart: metric in aggregated)
  *   drillAutoLabel() -> label for the drill "Auto" option, or null (no drill section)
@@ -182,7 +187,40 @@
       pop.appendChild(title);
 
       // Type picker (optional — chart only)
-      if (this.h.typeGroups && this.h.typeGroups.length) {
+      if (this.h.typeGroups && this.h.typeGroups.length && this.h.typeTiles) {
+        // Tile type picker (design-system type-picker proposal B). One group ->
+        // its label is a normal field label above the grid; several groups
+        // -> per-group micro-headings inside one grid.
+        const typesRow = document.createElement('div');
+        typesRow.className = 'blockr-popover-row dd-popover-types dd-popover-types-tiles';
+        const single = this.h.typeGroups.length === 1;
+        for (const g of this.h.typeGroups) {
+          if (g.label) {
+            const glabel = document.createElement('div');
+            glabel.className = single
+              ? 'blockr-popover-label dd-type-grid-label'
+              : 'dd-type-group-head';
+            glabel.textContent = g.label;
+            typesRow.appendChild(glabel);
+          }
+          const grid = document.createElement('div');
+          grid.className = 'dd-type-grid';
+          for (const t of g.types) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'dd-type-tile' +
+              (t === cfg[this.h.typeKey] ? ' dd-type-active' : '');
+            btn.title = t;
+            const ic = this.h.typeIcon ? this.h.typeIcon(t) : '';
+            btn.innerHTML = (ic ? '<span class="dd-type-tile-icon">' + ic + '</span>' : '') +
+              '<span class="dd-type-tile-label">' + t + '</span>';
+            btn.addEventListener('click', () => this._onType(t));
+            grid.appendChild(btn);
+          }
+          typesRow.appendChild(grid);
+        }
+        pop.appendChild(typesRow);
+      } else if (this.h.typeGroups && this.h.typeGroups.length) {
         const typesRow = document.createElement('div');
         typesRow.className = 'blockr-popover-row dd-popover-types';
         for (const g of this.h.typeGroups) {
@@ -197,7 +235,16 @@
           for (const t of g.types) {
             const btn = document.createElement('button');
             btn.className = 'dd-type-btn' + (t === cfg[this.h.typeKey] ? ' dd-type-active' : '');
-            btn.textContent = t;
+            // Optional subtle icon before the label (host.typeIcon).
+            const ic = this.h.typeIcon ? this.h.typeIcon(t) : '';
+            if (ic) {
+              btn.innerHTML = ic;
+              const lbl = document.createElement('span');
+              lbl.textContent = t;
+              btn.appendChild(lbl);
+            } else {
+              btn.textContent = t;
+            }
             btn.addEventListener('click', () => this._onType(t));
             btns.appendChild(btn);
           }
@@ -521,7 +568,47 @@
         parent.appendChild(inp);
       } else if (role.kind === 'slider') {
         this._buildSlider(parent, key);
+      } else if (role.kind === 'color') {
+        this._buildColor(parent, key, cb);
       }
+    }
+
+    // Color control (kind 'color') = native swatch + "Theme
+    // default" checkbox. '' (empty) means "keep the theme default"; a hex
+    // value overrides it. Picking a color unchecks the default box; checking
+    // it clears the value (the swatch keeps its last hex for re-enabling).
+    /** @param {HTMLElement} parent @param {string} key @param {() => void} cb */
+    _buildColor(parent, key, cb) {
+      const cfg = this._cfg();
+      const role = this._role(key);
+      const cur = cfg[key];
+      const hasColor = this._hasVal(cur);
+      const wrap = document.createElement('div');
+      wrap.className = 'dd-color-wrap' + (hasColor ? '' : ' dd-color-default');
+      const input = document.createElement('input');
+      input.type = 'color';
+      input.className = 'dd-color-swatch';
+      input.value = hasColor ? cur : (role.fallback || '#ffffff');
+      wrap.appendChild(input);
+      /** @type {{ set: (v: boolean) => void } | null} */
+      let box = null;
+      input.addEventListener('input', () => {
+        cfg[key] = input.value;
+        wrap.classList.remove('dd-color-default');
+        if (box) box.set(false);
+        cb();
+        this.h.onChange(key);
+      });
+      if (typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
+        box = Blockr.checkbox('Theme default', !hasColor, (checked) => {
+          cfg[key] = checked ? '' : input.value;
+          wrap.classList.toggle('dd-color-default', checked);
+          cb();
+          this.h.onChange(key);
+        });
+        wrap.appendChild(/** @type {any} */ (box).el);
+      }
+      parent.appendChild(wrap);
     }
 
     // Build a Blockr.Select (or native fallback). `decorate` shows
@@ -532,7 +619,10 @@
      */
     _mkSelect(wrap, opts, selected, onSel, key, decorate) {
       if (typeof Blockr !== 'undefined' && Blockr.Select) {
-        this._selects[key] = Blockr.Select.single(wrap, { options: opts, selected, onChange: onSel });
+        // role.ph doubles as the select placeholder so ''-valued options
+        // ("Auto", "None") don't render an empty control.
+        const ph = (this._role(key) || {}).ph;
+        this._selects[key] = Blockr.Select.single(wrap, { options: opts, selected, placeholder: ph, onChange: onSel });
       } else {
         const s = document.createElement('select');
         s.className = 'dd-cfg-select';
@@ -553,25 +643,35 @@
     /** @param {HTMLElement} parent @param {string} key */
     _buildSlider(parent, key) {
       const cfg = this._cfg();
+      // Bounds/unit come from the role spec when given; defaults match the
+      // canonical blockr.viz slider (font/size multipliers).
+      const role = this.h.roles[key] || {};
+      const min = (typeof role.min === 'number') ? role.min : 0.5;
+      const max = (typeof role.max === 'number') ? role.max : 3.0;
+      const step = (typeof role.step === 'number') ? role.step : 0.1;
+      const unit = (typeof role.unit === 'string') ? role.unit : '×';
+      const dec = Math.max(0, Math.ceil(-Math.log10(step)));
+      /** @param {number} v */
+      const fmt = (v) => v.toFixed(dec) + unit;
       const init = cfg[key];
       const v0 = (typeof init === 'number' && isFinite(init)) ? init : 1.0;
       const wrap = document.createElement('div');
       wrap.className = 'dd-slider-wrap';
       const input = document.createElement('input');
       input.type = 'range';
-      input.min = '0.5'; input.max = '3.0'; input.step = '0.1';
+      input.min = String(min); input.max = String(max); input.step = String(step);
       input.value = String(v0);
       input.className = 'dd-slider';
       wrap.appendChild(input);
       const value = document.createElement('span');
       value.className = 'dd-slider-value';
-      value.textContent = v0.toFixed(1) + '×';
+      value.textContent = fmt(v0);
       wrap.appendChild(value);
       /** @type {ReturnType<typeof setTimeout> | undefined} */
       let debounce;
       input.addEventListener('input', () => {
         const v = parseFloat(input.value);
-        value.textContent = v.toFixed(1) + '×';
+        value.textContent = fmt(v);
         cfg[key] = v;
         clearTimeout(debounce);
         debounce = setTimeout(() => this.h.onMults(), 150);
@@ -641,6 +741,15 @@
         e.stopPropagation();
         menu.style.display = (menu.style.display === 'none') ? '' : 'none';
       });
+      // The menu is a dropdown (styled in chart.css), so it dismisses on
+      // outside click like any menu.
+      if (typeof Blockr !== 'undefined' && typeof Blockr.onDocClick === 'function') {
+        Blockr.onDocClick(wrap, (/** @type {MouseEvent} */ e) => {
+          if (!wrap.contains(/** @type {Node} */ (e.target))) {
+            menu.style.display = 'none';
+          }
+        });
+      }
       bar.appendChild(btn);
       wrap.appendChild(bar);
       wrap.appendChild(menu);

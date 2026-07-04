@@ -167,23 +167,37 @@
   font: inherit;
   color: inherit;
 }
+/* The add menu is a real dropdown anchored under the trigger (design
+   feedback on the chip strip: choose-and-done; the engine closes it on
+   outside click). */
 .dd-add-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 30;
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 160px;
+  margin-top: 4px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: var(--blockr-shadow-dropdown, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 .dd-add-item {
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  background: #fff;
+  border: none;
+  background: transparent;
   cursor: pointer;
   font-size: var(--blockr-font-size-sm, 0.8125rem);
-  padding: 4px 10px;
-  border-radius: 6px;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 4px;
 }
 .dd-add-item:hover {
-  border-color: var(--blockr-color-primary, #2563eb);
-  color: var(--blockr-color-primary, #2563eb);
+  background: var(--blockr-grey-50, #f9fafb);
 }
 
 /* Click-through toggle (Good when, Layout, Orientation, drill on/off). Renders
@@ -246,6 +260,77 @@
   background: #eff6ff;
   color: var(--blockr-color-primary, #2563eb);
   font-weight: var(--blockr-font-weight-medium, 500);
+}
+
+/* ===== Type picker as icon tile grid (typeTiles, proposal B) =====
+   Uniform icon-over-label tiles in an auto-fill grid — wraps into even
+   rows at any width; per-family micro-headings when a host has several
+   type groups. */
+.dd-popover-types-tiles {
+  display: block;
+}
+.dd-type-grid-label {
+  margin-bottom: 5px;
+}
+.dd-type-grid {
+  display: grid;
+  /* 72px fits the longest labels without truncation. */
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px;
+}
+.dd-type-group-head {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-medium, 500);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--blockr-grey-400, #9ca3af);
+  margin: 8px 0 4px;
+}
+.dd-type-group-head:first-child {
+  margin-top: 0;
+}
+.dd-type-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 4px 7px;
+  background: #fff;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: var(--blockr-radius-md, 6px);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-500, #6b7280);
+  cursor: pointer;
+  text-transform: capitalize;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.dd-type-tile:hover {
+  background: var(--blockr-grey-50, #f9fafb);
+  border-color: var(--blockr-grey-300, #d1d5db);
+}
+.dd-type-tile.dd-type-active {
+  background: #eff6ff;
+  border-color: var(--blockr-color-primary, #2563eb);
+  color: var(--blockr-color-primary, #2563eb);
+  font-weight: var(--blockr-font-weight-medium, 500);
+}
+.dd-type-tile-icon svg {
+  display: block;
+  opacity: 0.5;
+}
+.dd-type-tile.dd-type-active .dd-type-tile-icon svg {
+  opacity: 0.9;
+}
+.dd-type-tile-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.dd-popover .dd-type-tile:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--blockr-color-focus, rgba(37, 99, 235, 0.45));
+  border-radius: var(--blockr-radius-md, 6px);
 }
 
 /* ===== Chart grid (faceting) ===== */

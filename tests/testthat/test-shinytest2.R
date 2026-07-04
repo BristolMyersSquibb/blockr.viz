@@ -145,14 +145,14 @@ popover_is_open <- function() {
 
 popover_active_type <- function() {
   app$get_js(sprintf(
-    "(function(){var p=%s; if(!p) return null; var a=p.querySelector('.dd-type-btn.dd-type-active'); return a?a.textContent:null;})()",
+    "(function(){var p=%s; if(!p) return null; var a=p.querySelector('.dd-type-btn.dd-type-active, .dd-type-tile.dd-type-active'); return a?a.textContent:null;})()",
     POPOVER_OPEN_JS
   ))
 }
 
 popover_click_type <- function(type) {
   app$run_js(sprintf(
-    "(function(){var p=%s; Array.from(p.querySelectorAll('.dd-type-btn')).filter(function(b){return b.textContent==='%s';})[0].click();})()",
+    "(function(){var p=%s; Array.from(p.querySelectorAll('.dd-type-btn, .dd-type-tile')).filter(function(b){return b.textContent==='%s';})[0].click();})()",
     POPOVER_OPEN_JS, type
   ))
   app$wait_for_idle()
