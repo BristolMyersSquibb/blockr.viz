@@ -191,7 +191,16 @@ new_summary_table_block <- function(
         list(
           expr = shiny::reactive({
             s <- cur_state()
-            shiny::req(length(s$vars) > 0)
+            # `vars` is the one required field. While it is empty, pass the
+            # input through unchanged instead of erroring: this keeps the block
+            # in a valid, non-error state (no hard red banner) while the
+            # Summarize field is highlighted amber -- the design-system "needs a
+            # value" affordance used by the chart block. The expr must be a call
+            # (blockr requires `typeof(expr) == "language"`), so `data` is
+            # wrapped rather than returned as a bare symbol.
+            if (!length(s$vars)) {
+              return(quote(identity(data)))
+            }
             if (!is.null(s$id_var) && nzchar(s$id_var)) {
               bquote(
                 blockr.viz::summary_table(
