@@ -19,7 +19,7 @@ drilldown_chart_dep <- function() {
     drilldown_echarts_themes_dep(),
     htmltools::htmlDependency(
       name = "chart-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".34"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".35"),
       src = system.file("js", package = "blockr.viz"),
       # drilldown-config.js (the shared gear-popover engine) must load BEFORE
       # chart.js, which references Blockr.DrilldownConfig.

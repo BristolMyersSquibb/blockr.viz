@@ -326,8 +326,12 @@
           // (the `baseline` toggle). It stays in AGGREGATED_TYPES so saved boards
           // with chart_type="waterfall" still classify/render as aggregated bars.
           { label: 'Aggregated', types: AGGREGATED_TYPES.filter(function (/** @type {string} */ t) { return t !== 'waterfall'; }) },
-          { label: 'Individual', types: INDIVIDUAL_TYPES },
-          { label: 'Timeline', types: TIMELINE_TYPES }
+          // Gantt lists under Individual: like scatter/line it plots rows
+          // as-is (one bar per row) rather than self-aggregating — the picker
+          // heading describes data handling, not chart shape. This grouping
+          // is presentation-only; familyFor() still classifies gantt as the
+          // timeline family (x/xend/y mappings, lane drill).
+          { label: 'Individual', types: INDIVIDUAL_TYPES.concat(TIMELINE_TYPES) }
         ],
         familyFor: (/** @type {string} */ t) => AGGREGATED_TYPES.includes(t) ? 'aggregated'
           : TIMELINE_TYPES.includes(t) ? 'timeline' : 'individual',
