@@ -946,9 +946,6 @@
       }
 
       if (!this.config.chart_type) this.config.chart_type = 'bar';
-      // Normalize the multi-value list and mirror its first entry onto
-      // value/func BEFORE the family defaults below (they read cfg.value).
-      this._normalizeMetrics();
 
       const fam = this._family();
       if (fam === 'aggregated') {
@@ -997,145 +994,6 @@
     }
 
     // -- Aggregation ----------------------------------------------------------
-
-    // -- Multi-value (bar) ----------------------------------------------
-    // cfg.summaries is the table block's shape: [{func, cols[]}], each
-    // aggregation x column pair one series. Empty/absent = single-value
-    // mode (cfg.value + cfg.func drive everything, as before).
-
-    // Normalize cfg.summaries (cols always an array) and mirror the FIRST
-    // planned value onto cfg.value/cfg.func so every single-value code
-    // path (pie/treemap/boxplot/waterfall, sort, axis titles, tooltips)
-    // renders a summaries-only state without changes.
-    _normalizeMetrics() {
-      const cfg = this.config;
-      const ms = Array.isArray(cfg.summaries) ? cfg.summaries : [];
-      cfg.summaries = ms.map((/** @type {any} */ m) => ({
-        func: (m && m.func) || 'count',
-        cols: (m && m.cols != null)
-          ? [].concat(m.cols).filter(Boolean) : []
-      }));
-      const plan = this._metricPlan();
-      if (plan.length) {
-        cfg.func = plan[0].fn;
-        cfg.value = plan[0].col || '.count';
-      }
-    }
-
-    // Expand cfg.summaries to flat entries [{name, fn, col}] — one per
-    // aggregation x column pair (count has no column). Mirrors the table's
-    // dd_metric_plan naming: the source column names the series; a repeated
-    // column is stat-qualified so names stay unique.
-    _metricPlan() {
-      const ms = Array.isArray(this.config.summaries) ? this.config.summaries : [];
-      const numeric = new Set((this.columns || [])
-        .filter(c => c.type === 'numeric').map(c => c.name));
-      /** @type {{name: string, fn: string, col: string | null}[]} */
-      const plan = [];
-      const used = new Set();
-      const uniq = (/** @type {string} */ nm, /** @type {string} */ tag) => {
-        if (!used.has(nm)) { used.add(nm); return nm; }
-        let nm2 = nm + ' (' + tag + ')';
-        while (used.has(nm2)) nm2 += ' ';
-        used.add(nm2);
-        return nm2;
-      };
-      for (const m of ms) {
-        const fn = m.func || 'count';
-        if (fn === 'count') {
-          plan.push({ name: uniq('Count', 'count'), fn, col: null });
-          continue;
-        }
-        for (const col of (m.cols || [])) {
-          if (fn !== 'count_distinct' && !numeric.has(col)) continue;
-          plan.push({ name: uniq(col, fn), fn, col });
-        }
-      }
-      return plan;
-    }
-
-    // Multiple summaries render as one series per value — bar only (pie /
-    // treemap / radar / the waterfall bridge are structurally single-measure;
-    // they consume the first planned value via the cfg.value mirror).
-    _multiMetricActive() {
-      return this.config.chart_type === 'bar' &&
-        this._baselineMode() !== 'cumulative' &&
-        this._metricPlan().length > 1;
-    }
-
-    // Per-series tooltip label, keyed by plan name: "Count" for a row count,
-    // else "<Fn> <col>" ("Mean AGE"). Used by the multi-value bar tooltip.
-    _metricWords() {
-      /** @type {Record<string, {label: string, fn: string}>} */
-      const out = {};
-      for (const p of this._metricPlan()) {
-        out[p.name] = {
-          fn: p.fn,
-          label: p.fn === 'count'
-            ? 'Count' : (DAgg.AGG_WORDS[p.fn] || p.fn) + ' ' + p.col
-        };
-      }
-      return out;
-    }
-
-    // Aggregate per (facet, group) x plan entry. Returns the _aggregate()
-    // row shape with the value NAME in the color slot, so the existing
-    // series / sort / legend / tooltip machinery in _renderAggregated
-    // renders one series per value. The color mapping is ignored while
-    // multi-value is active — the summaries own the series dimension
-    // (stacking or splitting summaries of different units is meaningless).
-    _aggregateMulti() {
-      const { group, facet } = this.config;
-      const plan = this._metricPlan();
-      if (this.data.length === 0 || !plan.length) return [];
-      /** @type {Record<string, any>} */
-      const cells = {};
-      for (const row of this.data) {
-        const gv = group ? String(row[group] ?? '') : 'Total';
-        const fv = facet ? String(row[facet] ?? '') : '__all__';
-        const key = fv + '|||' + gv;
-        if (!cells[key]) cells[key] = { facet: fv, group: gv, rows: [] };
-        cells[key].rows.push(row);
-      }
-      // Same per-cell math as _aggregate(): numeric coercion skips NaN so a
-      // bad cell can't poison a mean/sum.
-      const aggOf = (/** @type {string} */ fn, /** @type {any[]} */ rows, /** @type {string | null} */ col) => {
-        if (fn === 'count') return rows.length;
-        if (fn === 'count_distinct') {
-          const s = new Set();
-          for (const r of rows) {
-            const v = col ? r[col] : null;
-            if (v != null && !(typeof v === 'number' && Number.isNaN(v))) s.add(v);
-          }
-          return s.size;
-        }
-        /** @type {number[]} */
-        const vals = [];
-        for (const r of rows) {
-          const v = col ? r[col] : null;
-          if (v == null) continue;
-          const n = Number(v);
-          if (!Number.isNaN(n)) vals.push(n);
-        }
-        if (fn === 'mean') return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-        if (fn === 'median') { const s = vals.slice().sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; }
-        if (fn === 'sum') return vals.reduce((a, b) => a + b, 0);
-        if (fn === 'min') return vals.length ? Math.min.apply(null, vals) : 0;
-        if (fn === 'max') return vals.length ? Math.max.apply(null, vals) : 0;
-        return 0;
-      };
-      const result = [];
-      for (const c of Object.values(cells)) {
-        for (const p of plan) {
-          result.push({
-            facet: c.facet, group: c.group, color: p.name,
-            value: Math.round(aggOf(p.fn, c.rows, p.col) * 100) / 100,
-            n: c.rows.length
-          });
-        }
-      }
-      return result;
-    }
 
     _aggregate() {
       const { group, color, facet, value, func } = this.config;
@@ -1261,23 +1119,17 @@
 
     _renderAggregated() {
       // Multi-value bar: one series per planned value, riding the color
-      // slot (value name where the color level would be). The color mapping
-      // is ignored while active; "colors" become the plan names in plan order
-      // (no scale-map / level reordering — the user ordered the summaries).
-      const multi = this._multiMetricActive();
-      const agg = multi ? this._aggregateMulti() : this._aggregate();
+      const agg = this._aggregate();
       if (agg.length === 0) {
         this.chartGrid.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">No data to chart</p></div>';
         return;
       }
 
       const facets = [...new Set(agg.map(a => a.facet))].sort();
-      const colorScale = multi ? null : this._scaleFor(this.config.color);
-      const colors = multi
-        ? this._metricPlan().map(p => p.name)
-        : this._orderLevels(
-            [...new Set(agg.map(a => a.color))].filter(c => c !== '__all__'),
-            colorScale, this.config.color);
+      const colorScale = this._scaleFor(this.config.color);
+      const colors = this._orderLevels(
+        [...new Set(agg.map(a => a.color))].filter(c => c !== '__all__'),
+        colorScale, this.config.color);
       const palette = BLOCKR_PALETTE;
       const singleFacet = facets.length === 1;
 
@@ -1334,14 +1186,10 @@
           return groups.sort((a, b) => a.localeCompare(b) * sortDir);
         }
         if (sortBy === 'value') {
-          // "value" = total of the value across color stacks. With multiple
-          // summaries, summing across series would mix units (mean AGE + sum
-          // DOSE), so order by the FIRST value only.
-          const first = multi ? colors[0] : null;
+          // "value" = total of the value across color stacks.
           /** @type {Record<string, number>} */
           const totals = {};
           for (const a of facetData) {
-            if (multi && a.color !== first) continue;
             totals[a.group] = (totals[a.group] || 0) + a.value;
           }
           return groups.sort((a, b) => ((totals[a] || 0) - (totals[b] || 0)) * sortDir);
@@ -1455,20 +1303,8 @@
       // chart must say what it shows. Multi-value: the legend names the
       // series, so the axis says the shared aggregation ("Mean") when all
       // series agree, else just "Value" (mixed units share one axis).
-      const multi = this._multiMetricActive();
-      const metricWords = multi ? this._metricWords() : null;
-      let valueTitle;
-      if (multi) {
-        const plan = this._metricPlan();
-        const fns = [...new Set(plan.map(p => p.fn))];
-        valueTitle = fns.length === 1
-          ? (fns[0] === 'count_distinct'
-              ? 'Distinct count' : (DAgg.AGG_WORDS[fns[0]] || 'Value'))
-          : 'Value';
-      } else {
-        valueTitle = this.config.value === '.count'
-          ? 'Count' : this._axisTitle(this.config.value);
-      }
+      const valueTitle = this.config.value === '.count'
+        ? 'Count' : this._axisTitle(this.config.value);
 
       if (ct === 'pie') return this._buildPie(facetData, groups, palette);
       if (ct === 'boxplot') return this._buildBoxplot(groups, palette, ax, plotW, facet);
@@ -1487,9 +1323,7 @@
       // dodges the series side-by-side; "percent" keeps the stack but feeds
       // each segment as a share (0..1) of its group total (ECharts has no
       // native percent stack). "stacked" (default) is absolute stacking.
-      // Multi-value forces "grouped": stacking (or percent-normalizing)
-      // series of different units is meaningless.
-      const barMode = multi ? 'grouped' : (this.config.bar_mode || 'stacked');
+      const barMode = this.config.bar_mode || 'stacked';
       const isGrouped = barMode === 'grouped';
       const isPercent = barMode === 'percent';
 
@@ -1512,9 +1346,7 @@
       if (colors.length === 0) {
         series.push({ type: 'bar', data: groups.map(g => { const d = facetData.find(a => a.group === g); return d ? d.value : 0; }), itemStyle: { color: palette[0] }, barWidth: '60%', barMaxWidth: BAR_MAX, emphasis: { focus: 'self' } });
       } else {
-        // Multi-value series ride the color slot but are NOT color levels:
-        // no board scale-map lookup, plain palette cycling in plan order.
-        const colorScale = multi ? null : this._scaleFor(this.config.color);
+        const colorScale = this._scaleFor(this.config.color);
         // Per-group total across colors, for percent normalization only.
         /** @type {Record<string, number>} */
         const groupTotals = {};
@@ -1627,12 +1459,10 @@
               // means ("Mean AGE: 75.3"), with n except for a count series
               // (whose value already is n). Color-split: series = color
               // level; single: the aggregation label.
-              const mw = metricWords ? metricWords[p.seriesName] : null;
-              const nm = mw ? mw.label
-                : (colors.length ? p.seriesName : aggLabel);
+              const nm = colors.length ? p.seriesName : aggLabel;
               const key = head + '|||' + (colors.length ? p.seriesName : '__all__');
               const n = nOf[key];
-              const withN = mw ? mw.fn !== 'count' : showN;
+              const withN = showN;
               return p.marker + this._esc(nm) + ': ' + fmtRaw(Number(p.value)) +
                 (withN && n != null ? '  (n=' + n + ')' : '');
             });
