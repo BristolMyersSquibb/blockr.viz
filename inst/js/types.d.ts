@@ -65,6 +65,22 @@ declare class VizDrilldownConfig {
   [member: string]: any;
 }
 
+/* --- Shared aggregation vocabulary (drilldown-agg.js) ---
+   The group/value/func role triple + AGG_FNS + value-follows-agg reconcile,
+   consumed identically by chart.js, table.js and tile-block.js. Exposed as
+   Blockr.DrilldownAgg (and window.DrilldownAgg). */
+
+interface VizDrilldownAgg {
+  /** Aggregation-function select options; mirrors R AGG_FNS (drift-tested). */
+  AGG_FNS: Array<{ value: string; label: string }>;
+  /** One word per aggregation for composed labels ("Mean AGE", axis titles). */
+  AGG_WORDS: Record<string, string>;
+  /** The group + value + func role-spec triple hosts spread into their ROLES. */
+  aggRoles(opts?: { multiple?: boolean }): Record<string, VizDrilldownRole>;
+  /** Keep `value` consistent with `func`; mutates cfg in place. */
+  reconcileValue(cfg: Record<string, any>, columns: VizColumn[] | null | undefined): void;
+}
+
 /* --- Blockr namespace: the subset blockr.viz consumes from blockr.dplyr --- */
 
 /** Option entry: a bare value string, or {value, label} for a muted label. */
@@ -126,6 +142,8 @@ interface BlockrNamespace {
   contentWidth(el: Element): number;
   /** The shared drilldown popover engine (defined in this package). */
   DrilldownConfig: typeof VizDrilldownConfig;
+  /** Shared aggregation vocabulary (drilldown-agg.js). */
+  DrilldownAgg?: VizDrilldownAgg;
   /** Design-system checkbox factory (settings-band.js). */
   checkbox(
     label: string,
@@ -192,6 +210,7 @@ interface Window {
   // `if (window.jQuery)`, the `|| window.DrilldownConfig` fallback, ...).
   Blockr?: BlockrNamespace;
   DrilldownConfig?: typeof VizDrilldownConfig;
+  DrilldownAgg?: VizDrilldownAgg;
   Shiny?: typeof Shiny;
   echarts?: typeof echarts;
   jQuery?: typeof jQuery;

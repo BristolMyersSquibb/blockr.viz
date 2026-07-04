@@ -97,7 +97,7 @@
 
   const ns = /** @type {any} */ (
     (typeof Blockr !== 'undefined') ? Blockr
-      : (window.Blockr = window.Blockr || {}));
+      : (window.Blockr = window.Blockr || /** @type {any} */ ({})));
   ns.DrilldownAgg = { AGG_FNS, AGG_WORDS, aggRoles, reconcileValue };
   window.DrilldownAgg = ns.DrilldownAgg;
 })();

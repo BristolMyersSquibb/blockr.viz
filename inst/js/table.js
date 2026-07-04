@@ -2,8 +2,8 @@
 (function () {
   // Shared aggregation vocabulary (group/value/func roles + AGG_FNS +
   // value-follows-agg reconcile) — the identical control the chart/tile use.
-  var DAgg = (typeof Blockr !== "undefined" && Blockr.DrilldownAgg) ||
-    window.DrilldownAgg;
+  var DAgg = /** @type {VizDrilldownAgg} */ (
+    (typeof Blockr !== "undefined" && Blockr.DrilldownAgg) || window.DrilldownAgg);
 
   /** @param {string | number | null | undefined} s */
   function parseNum(s) {
@@ -317,11 +317,12 @@
       var t = /** @type {Element | null} */ (e.target);
       var tr = t && t.closest("tr.blockr-data-row");
       if (!tr) return;
+      var row = tr;
       if (window.Shiny && Shiny.setInputValue) {
         if (grouped) {
-          var filters = [];
+          var filters = /** @type {Array<{ column: string, value: string }>} */ ([]);
           groupIdx.forEach(function (g) {
-            var cell = tr.children[g.idx];
+            var cell = row.children[g.idx];
             if (cell) filters.push({
               column: g.column, value: (cell.textContent || "").trim()
             });
@@ -419,7 +420,7 @@
     pres.push("sortable");
     if (!hasCols) pres.push("collapsible");   // only sectioned tables collapse
     pres.push("search", "excel_download");
-    var spec = { requiredMap: [], optionalMap: [],
+    var spec = /** @type {Record<string, any>} */ ({ requiredMap: [], optionalMap: [],
                  mapping: hasCols ? ["group"] : [],
                  summaries: hasCols,         // offer the summaries list whenever the box is on
                  aggregatable: hasCols,    // Variant A: Aggregation checkbox section
@@ -439,7 +440,7 @@
                  // scope. Row color checkbox section: a categorical row tint.
                  colorToggle: hasCols ? { modeKey: "color_mode", extra: ["color_columns"] } : null,
                  rowColorToggle: hasCols ? "row_color" : null,
-                 presentation: pres };
+                 presentation: pres });
     // Structured ("Table 1") input is an already-summarized annotated data
     // frame with no pickable columns, so grouping / aggregation / drill / colour
     // don't apply. A small badge names it; the tooltip carries the why.

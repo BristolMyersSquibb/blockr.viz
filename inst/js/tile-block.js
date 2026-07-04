@@ -13,8 +13,8 @@
 (function () {
   // Shared aggregation vocabulary (group/value/func roles + AGG_FNS) — the
   // identical control the chart / table use. Must load before this script.
-  var DAgg = (typeof Blockr !== "undefined" && Blockr.DrilldownAgg) ||
-    window.DrilldownAgg;
+  var DAgg = /** @type {VizDrilldownAgg} */ (
+    (typeof Blockr !== "undefined" && Blockr.DrilldownAgg) || window.DrilldownAgg);
 
   // ---- drill: card / row click -> categorical filter on the group ----------
   /** @param {Element} root */

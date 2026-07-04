@@ -413,19 +413,20 @@
       const h = document.createElement('div');
       h.className = 'dd-section-title';
       if (opts.toggle) {
+        const toggle = opts.toggle;
         h.classList.add('dd-section-title--toggle');
         const box = document.createElement('span');
-        box.className = 'dd-section-checkbox' + (opts.toggle.checked ? ' dd-on' : '');
+        box.className = 'dd-section-checkbox' + (toggle.checked ? ' dd-on' : '');
         box.setAttribute('role', 'checkbox');
         box.setAttribute('tabindex', '0');
-        box.setAttribute('aria-checked', opts.toggle.checked ? 'true' : 'false');
+        box.setAttribute('aria-checked', toggle.checked ? 'true' : 'false');
         const label = document.createElement('span');
         label.textContent = titleText;
         h.appendChild(box);
         h.appendChild(label);
         const flip = (/** @type {Event} */ e) => {
           e.stopPropagation();
-          opts.toggle.onToggle(!opts.toggle.checked);
+          toggle.onToggle(!toggle.checked);
         };
         h.addEventListener('click', flip);
       } else {
@@ -441,13 +442,13 @@
     // from the config the first time a section is seen.
     /** @param {string} key @param {() => boolean} initial */
     _secOpen(key, initial) {
-      if (!this._openSec) this._openSec = {};
+      if (!this._openSec) this._openSec = /** @type {Record<string, boolean>} */ ({});
       if (!(key in this._openSec)) this._openSec[key] = !!initial();
       return this._openSec[key];
     }
     /** @param {string} key @param {boolean} on */
     _setSecOpen(key, on) {
-      if (!this._openSec) this._openSec = {};
+      if (!this._openSec) this._openSec = /** @type {Record<string, boolean>} */ ({});
       this._openSec[key] = on;
     }
     // Flip a toggle section; when turning OFF run offFn to clear the capability
@@ -666,7 +667,7 @@
       lbl.textContent = 'Aggregate';
       wrap.appendChild(lbl);
 
-      summaries.forEach((m, i) => {
+      summaries.forEach((/** @type {any} */ m, /** @type {number} */ i) => {
         const row = document.createElement('div');
         row.className = 'dd-value-row';
 
