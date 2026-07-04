@@ -2,9 +2,15 @@
 % Please edit documentation in R/annotated-df.R
 \name{as_annotated_df}
 \alias{as_annotated_df}
+\alias{as_annotated_df.data.frame}
+\alias{as_annotated_df.default}
 \title{Coerce a table object into an annotated data frame}
 \usage{
 as_annotated_df(x, ...)
+
+\method{as_annotated_df}{data.frame}(x, ...)
+
+\method{as_annotated_df}{default}(x, ...)
 }
 \arguments{
 \item{x}{A table-producing object that has an \code{as_annotated_df} method.}
@@ -32,6 +38,11 @@ composer methods (\code{as_annotated_df.composed_table} / \code{.gt_tbl}). The g
 lives here, with the renderer that defines the convention; the methods live
 with their producers (composer is an internal package, so its method stays in
 blockr.sandbox).
+
+Consumers call the generic unconditionally: a data frame passes through
+untouched (it is already the target format), so coercion is idempotent and
+explicit \code{as_annotated_df()} steps upstream of a coercing consumer (such as
+\code{\link[=new_table_block]{new_table_block()}}) are harmless.
 }
 \seealso{
 \code{\link[=new_table_block]{new_table_block()}}, \code{\link[=summary_table]{summary_table()}}

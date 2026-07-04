@@ -6,7 +6,7 @@
 \usage{
 new_table_block(
   rowname = NULL,
-  values = NULL,
+  value = NULL,
   group = NULL,
   summaries = list(),
   cell_color = NULL,
@@ -28,7 +28,7 @@ new_table_block(
 )
 }
 \arguments{
-\item{rowname, values, cell_color, drill, digits, max_height}{Forwarded to \code{\link[=drilldown_table]{drilldown_table()}}. The block has no in-table title:
+\item{rowname, value, cell_color, drill, digits, max_height}{Forwarded to \code{\link[=drilldown_table]{drilldown_table()}}. The block has no in-table title:
 the block's own name (card header) serves that role.}
 
 \item{row_color}{Optional per-row colouring spec applied to the whole
@@ -58,6 +58,13 @@ rendered from the upstream (pre-filter) data so every row stays
 clickable; the block's data output is the upstream data filtered by
 the last click, using the exact same contract as
 \code{\link[=new_chart_block]{new_chart_block()}} (so existing filter links compose).
+}
+\details{
+The block accepts a data frame, or any table-producing object with an
+\code{\link[=as_annotated_df]{as_annotated_df()}} method (e.g. a composer table): the input is coerced
+through the generic before rendering and filtering, so such objects can be
+connected directly without an explicit coercion step in between. Plain
+data frames pass through untouched.
 }
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
