@@ -57,8 +57,8 @@ descriptive summary where each \code{vars} entry becomes a row-section
 categoricals, one row per flag for logicals).
 }
 \details{
-Output is a plain tibble with dotted structure columns
-(\verb{.section_1, ..., .section_k, .label, .indent, .strong}),
+Output is the wide annotated data frame \code{\link[=summary_table]{summary_table()}} produces
+(dotted structure columns \verb{.section_1, ..., .section_k, .label, .indent, .strong} plus one formatted column per by-group level),
 consumable by \code{\link[=new_gt_table_block]{new_gt_table_block()}} or any renderer that
 understands the annotated-data-frame convention.
 

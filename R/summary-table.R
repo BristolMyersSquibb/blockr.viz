@@ -95,26 +95,8 @@
 #'   dotted structure columns (`.section_*`, `.label`, `.indent`,
 #'   `.strong`), a `.group` dimension column, and a per-row `.fmt`
 #'   template column that a renderer interpolates into display cells.
-#' @examples
-#' # Simple demographics
-#' summary_table(
-#'   iris,
-#'   vars = c("Sepal.Length", "Species"),
-#'   by = character(),
-#'   stats = "mean_sd"
-#' )
-#'
-#' # Any stat combination, split by a grouping column
-#' summary_table(
-#'   mtcars,
-#'   vars = c("mpg", "hp"),
-#'   by = "cyl",
-#'   stats = c("n_pct", "median_q1_q3", "min_max"),
-#'   add_overall = TRUE
-#' )
-#'
-#' @export
-summary_table <- function(data,
+#' @noRd
+summary_table_long <- function(data,
                           vars = character(),
                           sections = character(),
                           by = character(),
@@ -296,6 +278,72 @@ summary_table <- function(data,
   out <- tibble::as_tibble(out)
   attr(out, "group_n") <- group_n
   out
+}
+
+#' Summary Table -- Multi-Variable Descriptive Summary (Table 1)
+#'
+#' Aggregate a flat data.frame into the **wide annotated data frame** the
+#' blockr table renderers consume directly: one formatted column per by-group
+#' level (each cell baked from its statistic at produce time, so the renderer
+#' does no arithmetic), dotted structure columns (`.section_*`, `.label`,
+#' `.indent`, `.strong`) for the row-side hierarchy, `Top||Leaf` spanner column
+#' names for length-2 `by`, and per-group `"<group>\nN = <n>"` column labels.
+#' This is the same annotated-df contract that `composer` emits via
+#' [as_annotated_df()], so the table block treats both identically.
+#'
+#' Numeric variables emit one row per selected `stats` key
+#' (mean/sd/median/...), categoricals one row per level as `n (%)`, and
+#' logicals a single TRUE-count row (the pharma flag convention). Digit
+#' precision is fixed per statistic and applied here, at aggregation time.
+#'
+#' @inheritParams summary_table_long
+#' @return A wide annotated data frame: dotted structure columns plus one
+#'   formatted character column per by-group level, each carrying a `label`
+#'   attribute holding its `"<group>\nN = <n>"` header. Consumed by
+#'   [new_table_block()] / [html_table()] and any renderer that understands the
+#'   annotated-data-frame convention.
+#' @seealso [as_annotated_df()]
+#' @examples
+#' # Simple demographics
+#' summary_table(
+#'   iris,
+#'   vars = c("Sepal.Length", "Species"),
+#'   stats = "mean_sd"
+#' )
+#'
+#' # Any stat combination, split by a grouping column
+#' summary_table(
+#'   mtcars,
+#'   vars = c("mpg", "hp"),
+#'   by = "cyl",
+#'   stats = c("n_pct", "median_q1_q3", "min_max"),
+#'   add_overall = TRUE
+#' )
+#' @export
+summary_table <- function(data,
+                          vars = character(),
+                          sections = character(),
+                          by = character(),
+                          stats = "mean_sd",
+                          add_overall = FALSE,
+                          overall_label = "Total",
+                          subject_var = NULL,
+                          indent_details = TRUE,
+                          nest_hierarchies = FALSE) {
+  fmt_to_wide(
+    summary_table_long(
+      data,
+      vars             = vars,
+      sections         = sections,
+      by               = by,
+      stats            = stats,
+      add_overall      = add_overall,
+      overall_label    = overall_label,
+      subject_var      = subject_var,
+      indent_details   = indent_details,
+      nest_hierarchies = nest_hierarchies
+    )
+  )
 }
 
 # =============================================================================

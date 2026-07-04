@@ -56,7 +56,7 @@ test_that("summary_table() distinct-subject denominator drops NA ids end-to-end"
     stringsAsFactors = FALSE
   )
 
-  out <- summary_table(
+  out <- summary_table_long(
     df,
     vars        = "AESEV",
     subject_var = "USUBJID"

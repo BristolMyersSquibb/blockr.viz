@@ -5,8 +5,9 @@
 #' (one row per selected stat for numerics, one row per level for
 #' categoricals, one row per flag for logicals).
 #'
-#' Output is a plain tibble with dotted structure columns
-#' (`.section_1, ..., .section_k, .label, .indent, .strong`),
+#' Output is the wide annotated data frame [summary_table()] produces
+#' (dotted structure columns `.section_1, ..., .section_k, .label,
+#' .indent, .strong` plus one formatted column per by-group level),
 #' consumable by [new_gt_table_block()] or any renderer that
 #' understands the annotated-data-frame convention.
 #'

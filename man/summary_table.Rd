@@ -2,7 +2,7 @@
 % Please edit documentation in R/summary-table.R
 \name{summary_table}
 \alias{summary_table}
-\title{Summary Table -- Tidy, Long-Format Multi-Variable Summary}
+\title{Summary Table -- Multi-Variable Descriptive Summary (Table 1)}
 \usage{
 summary_table(
   data,
@@ -17,121 +17,34 @@ summary_table(
   nest_hierarchies = FALSE
 )
 }
-\arguments{
-\item{data}{A flat data.frame.}
-
-\item{vars}{Character vector of variables to summarise. Each
-becomes a section in the output.}
-
-\item{sections}{Optional character vector of outer section
-columns from \code{data}. Used for nested row-side hierarchy (e.g.
-\verb{sections = "AESOC", vars = "AEDECOD"}).}
-
-\item{by}{Character vector of length 0-2. Values become the \code{.group}
-dimension. Length-2 produces pipe-delimited nested group keys
-consumable by \code{gt::tab_spanner_delim("|")} after the renderer
-spreads \code{.group} to columns.}
-
-\item{stats}{Character vector of stat keys controlling which rows /
-templates are emitted for \strong{numeric} variables (the underlying
-numbers are always all computed). Any combination of \code{"n"},
-\code{"n_pct"} (non-missing n and \% of group rows), \code{"mean"}, \code{"sd"},
-\code{"mean_sd"}, \code{"median"}, \code{"median_q1_q3"}, \code{"q1_q3"}, \code{"min_max"};
-rows follow this canonical order regardless of input order. A single
-key gives one row per variable, several give one row per stat. The
-legacy presets \code{"compact"} (= \code{"mean_sd"}) and \code{"expanded"}
-(= \code{c("n", "mean", "sd", "median", "q1_q3", "min_max")}) are still
-accepted. Default \code{"mean_sd"}.}
-
-\item{add_overall}{Logical. If TRUE, append an extra \code{.group} whose
-rows are computed on the unsplit data (ignoring \code{by}). Matches
-\code{gtsummary::add_overall()}.}
-
-\item{overall_label}{Character. \code{.group} value for the overall rows
-when \code{add_overall = TRUE}. Default \code{"Total"}.}
-
-\item{subject_var}{Optional subject-identifier column for
-distinct-subject counts (for categorical \code{n_pct}). If NULL,
-rows are counted instead.}
-
-\item{indent_details}{Logical, default \code{TRUE}. When \code{TRUE}, detail
-rows (stat rows for expanded numerics, category-level rows for
-categoricals) are tagged with \code{.indent = 1}. When \code{FALSE}, no
-\code{.indent} column is emitted.}
-
-\item{nest_hierarchies}{Logical, default \code{FALSE}. Advanced option.
-When \code{TRUE}, adjacent categorical entries in \code{vars} that form a
-functional dependency in \code{data} are rendered as a row-side
-drill-down. v1 supports 2-level hierarchies only.}
-}
 \value{
-A tidy, long-format tibble: raw numeric statistic columns plus
-dotted structure columns (\verb{.section_*}, \code{.label}, \code{.indent},
-\code{.strong}), a \code{.group} dimension column, and a per-row \code{.fmt}
-template column that a renderer interpolates into display cells.
+A wide annotated data frame: dotted structure columns plus one
+formatted character column per by-group level, each carrying a \code{label}
+attribute holding its \code{"<group>\\nN = <n>"} header. Consumed by
+\code{\link[=new_table_block]{new_table_block()}} / \code{\link[=html_table]{html_table()}} and any renderer that understands the
+annotated-data-frame convention.
 }
 \description{
-Aggregate a flat data.frame into a \strong{tidy, long} summary frame: raw
-numeric statistic columns plus a hidden per-row \code{.fmt} template that
-names how to combine them into a display cell. Section structure is
-encoded via well-known dotted columns (\verb{.section_1, ..., .section_k, .label, .indent, .strong}), and the by-group dimension lives in a single
-\code{.group} column. Designed for the "list of variables by Y" pattern;
-the complementary "one measurement across two dimensions" pivot is
-produced upstream by composing \code{summarize} with \code{tidyr::pivot_wider}.
+Aggregate a flat data.frame into the \strong{wide annotated data frame} the
+blockr table renderers consume directly: one formatted column per by-group
+level (each cell baked from its statistic at produce time, so the renderer
+does no arithmetic), dotted structure columns (\verb{.section_*}, \code{.label},
+\code{.indent}, \code{.strong}) for the row-side hierarchy, \code{Top||Leaf} spanner column
+names for length-2 \code{by}, and per-group \code{"<group>\\nN = <n>"} column labels.
+This is the same annotated-df contract that \code{composer} emits via
+\code{\link[=as_annotated_df]{as_annotated_df()}}, so the table block treats both identically.
 }
 \details{
-The output stays \code{dplyr}-able (every number is a plain numeric column)
-and re-renderable: a renderer turns it into the familiar wide display
-grid by formatting each row's \code{.fmt} template, then spreading \code{.group}
-to columns (see \code{fmt_assemble()}). The shaper no longer bakes display
-strings -- it emits numbers + templates and leaves formatting to the
-renderer.
-
-Each \code{vars} entry contributes rows shaped by the variable's type and
-the chosen \code{stats} selection:
-\itemize{
-\item \strong{numeric} -> one row per selected stat key (see \code{stats}). A single
-key emits one un-indented row per variable (e.g. \code{"mean_sd"} ->
-\code{.fmt = "{mean:1} ({sd:2})"}); several keys emit one indented row
-each, in catalog order.
-\item \strong{categorical} -> one row per level, \code{.fmt = "{n:0} ({pct:1}\%)"}.
-\item \strong{logical} -> one row per variable, \code{.fmt = "{n:0} ({pct:1}\%)"} for
-the TRUE count. The FALSE row is suppressed -- this matches pharma
-flag-variable conventions (TEAE, SAE, etc.).
-}
-
-Output columns:
-\itemize{
-\item \verb{.section_1, ..., .section_k} -- section columns (dotted,
-block-internal) holding values from user-provided \code{sections}.
-Present iff \code{length(sections) > 0}. Each carries a \code{label}
-attribute pulled from the original column for renderer display.
-\item \code{.label} -- innermost row label. Stat name for numeric vars
-("N", "Mean", "SD", ...), level name for categoricals, variable
-name for logicals.
-\item \code{.indent} -- detail-row indentation level (see \code{indent_details}).
-\item \code{.strong} -- logical, \code{TRUE} on variable-header rows (bold,
-blank data cells). Present only when \code{length(vars) > 1}.
-\item \code{.group} -- by-group value (one row per var/level x group).
-Pipe-delimited (\code{"outer|inner"}) for length-2 \code{by}; the constant
-\code{"Overall"} when \code{by} is empty; the \code{overall_label} value for the
-appended overall column when \code{add_overall = TRUE}.
-\item \code{.fmt} -- per-row display template (the \code{.fmt} convention).
-\item Raw numeric stat columns: \verb{n, pct} (categorical/logical, and
-numeric where \code{pct} is the share of non-missing rows), \verb{mean, sd, median, q1, q3, min, max} (numeric). \code{NA} where not applicable.
-}
-
-The per-group denominators (for \code{"<group>\\\\nN = <n>"} column headers)
-ride along as a \strong{named numeric vector} in \code{attr(out, "group_n")}
-(group key -> N). A renderer assembling the wide display reattaches
-these as column labels.
+Numeric variables emit one row per selected \code{stats} key
+(mean/sd/median/...), categoricals one row per level as \verb{n (\%)}, and
+logicals a single TRUE-count row (the pharma flag convention). Digit
+precision is fixed per statistic and applied here, at aggregation time.
 }
 \examples{
 # Simple demographics
 summary_table(
   iris,
   vars = c("Sepal.Length", "Species"),
-  by = character(),
   stats = "mean_sd"
 )
 
@@ -143,5 +56,7 @@ summary_table(
   stats = c("n_pct", "median_q1_q3", "min_max"),
   add_overall = TRUE
 )
-
+}
+\seealso{
+\code{\link[=as_annotated_df]{as_annotated_df()}}
 }
