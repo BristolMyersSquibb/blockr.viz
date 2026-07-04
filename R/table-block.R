@@ -985,6 +985,12 @@ table_guidance <- function() {
 #' the last click, using the exact same contract as
 #' [new_chart_block()] (so existing filter links compose).
 #'
+#' The block accepts a data frame, or any table-producing object with an
+#' [as_annotated_df()] method (e.g. a composer table): the input is coerced
+#' through the generic before rendering and filtering, so such objects can be
+#' connected directly without an explicit coercion step in between. Plain
+#' data frames pass through untouched.
+#'
 #' @param rowname,value,cell_color,drill,digits,max_height
 #'   Forwarded to [drilldown_table()]. The block has no in-table title:
 #'   the block's own name (card header) serves that role.
@@ -1063,6 +1069,16 @@ new_table_block <- function(rowname = NULL,
         # Segmented gear toggles emit "on"/"off"; constructor / restore pass a
         # logical. Accept both.
         as_toggle <- function(v) identical(v, "on") || isTRUE(v)
+
+        # What the render paths consume: the input coerced to an annotated
+        # data frame (as_annotated_df() is a passthrough for plain data
+        # frames). The inner server sees `data` even while `dat_valid` is
+        # failing, and a method may refuse a particular value at eval time --
+        # so readers below take the tryCatch(ann_data()) + req() route rather
+        # than reading `data()` directly: coercion failures then park the
+        # render silently and the block condition (from dat_valid / the
+        # block expr, which coerces the same way) does the explaining.
+        ann_data <- shiny::reactive(as_annotated_df(data()))
 
         shiny::observeEvent(input$drilldown_table_block_action, {
           msg <- input$drilldown_table_block_action
@@ -1158,13 +1174,14 @@ new_table_block <- function(rowname = NULL,
         # block's "static container + reactive content" shape.
         r_structured <- shiny::reactiveVal(NULL)
         shiny::observe({
-          d <- data()
-          shiny::req(is.data.frame(d))
           # An unhandled error in a plain observe() is fatal to the Shiny
           # session (client disconnect), unlike a render error which Shiny
-          # contains. Never let a shape/format failure here take down the
-          # session -- fall back to a flat layout; the render below surfaces
-          # the actual error as an ordinary in-block message.
+          # contains. Never let a coercion or shape/format failure here take
+          # down the session -- fall back to a flat layout; the block
+          # condition surfaces the actual error as an ordinary in-block
+          # message.
+          d <- tryCatch(ann_data(), error = function(e) NULL)
+          shiny::req(is.data.frame(d))
           upd(r_structured, tryCatch(
             dt_is_structured(fmt_to_wide(d)),
             error = function(e) FALSE
@@ -1216,7 +1233,7 @@ new_table_block <- function(rowname = NULL,
         output$dl_xlsx <- shiny::downloadHandler(
           filename = function() "table.xlsx",
           content  = function(file) {
-            write_annotated_xlsx(fmt_to_wide(data()), file)
+            write_annotated_xlsx(fmt_to_wide(ann_data()), file)
           }
         )
 
@@ -1226,7 +1243,7 @@ new_table_block <- function(rowname = NULL,
         board_scale_map <- dd_board_scale_map()
 
         output$dt_table <- shiny::renderUI({
-          d <- data()
+          d <- tryCatch(ann_data(), error = function(e) NULL)
           shiny::req(is.data.frame(d))
           # Aggregation is a DISPLAY projection: when `group` is set, draw the
           # summarised frame (one row per group + a measure). The block's data
@@ -1322,6 +1339,11 @@ new_table_block <- function(rowname = NULL,
         })
 
         list(
+          # The expr coerces before filtering, so the block's data output (and
+          # the drill filter) is always the annotated data frame -- one
+          # downstream contract whether the input was a plain data frame
+          # (passthrough) or a table-producing object such as a composer
+          # table. Self-qualified so the emitted code stands alone.
           expr = shiny::reactive({
             gc <- r_filter_group_cols()
             gv <- r_filter_group_vals()
@@ -1330,18 +1352,28 @@ new_table_block <- function(rowname = NULL,
             if (length(gc) && length(gc) == length(gv)) {
               # Grouped drill: AND each clicked group key (raw input -> members).
               cond <- dd_group_filter_call(gc, gv)
-              blockr.core::bbquote(dplyr::filter(.(data), .(cond)),
-                                   list(cond = cond))
+              blockr.core::bbquote(
+                dplyr::filter(blockr.viz::as_annotated_df(.(data)), .(cond)),
+                list(cond = cond)
+              )
             } else if (is.null(col) || is.null(vals) || length(vals) == 0) {
-              blockr.core::bbquote(dplyr::filter(.(data), TRUE))
+              blockr.core::bbquote(
+                dplyr::filter(blockr.viz::as_annotated_df(.(data)), TRUE)
+              )
             } else if (length(vals) == 1) {
               blockr.core::bbquote(
-                dplyr::filter(.(data), .data[[.(col)]] == .(val)),
+                dplyr::filter(
+                  blockr.viz::as_annotated_df(.(data)),
+                  .data[[.(col)]] == .(val)
+                ),
                 list(col = col, val = vals[[1]])
               )
             } else {
               blockr.core::bbquote(
-                dplyr::filter(.(data), .data[[.(col)]] %in% .(vals)),
+                dplyr::filter(
+                  blockr.viz::as_annotated_df(.(data)),
+                  .data[[.(col)]] %in% .(vals)
+                ),
                 list(col = col, vals = vals)
               )
             }
@@ -1375,7 +1407,16 @@ new_table_block <- function(rowname = NULL,
       shiny::tagList(shiny::uiOutput(ns("dt_result")))
     },
     dat_valid = function(data) {
-      if (!is.data.frame(data)) stop("Input must be a data frame")
+      # Contract check only -- dispatch lookup, never the (possibly costly)
+      # coercion itself. A method that exists but refuses this particular
+      # value errors at eval time instead; core surfaces both the same way.
+      if (!is.data.frame(data) && !has_annotated_df_method(data)) {
+        stop(
+          "Input must be a data frame or an object with an ",
+          "as_annotated_df() method (e.g. a composer table); got <",
+          paste(class(data), collapse = "/"), ">"
+        )
+      }
     },
     allow_empty_state = c("rowname", "value", "group", "summaries", "cell_color",
       "row_color", "drill", "filter_column", "filter_values", "filter_range",

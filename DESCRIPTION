@@ -34,7 +34,8 @@ Imports:
     stats,
     tibble,
     tidyr,
-    tools
+    tools,
+    utils
 Suggests:
     blockr.ai,
     blockr.dag,
