@@ -123,6 +123,11 @@
     facet:  { label: 'Facet',  kind: 'column', colType: 'cat', maxUnique: 10 },
     drill:  { label: 'Drill',  kind: 'column', colType: 'any' },
     label:  { label: 'Label',  kind: 'column', colType: 'any' },
+    // Extra columns to append to each mark's hover tooltip (beyond the mapped
+    // roles). Multi-select; empty = none. Values are shipped and packed
+    // per-bar, so this is bounded to the picked columns, never the whole row.
+    tt_fields: { label: 'Tooltip fields', kind: 'columns', colType: 'any',
+                 placeholder: 'add columns…' },
     // The metric picker follows the aggregation: "count" is a row count (the
     // metric is ignored -> only the synthetic '.count'), "count_distinct"
     // works on any column type (e.g. a subject id for patient counts), the
@@ -199,7 +204,7 @@
     },
     timeline: {
       requiredMap: ['x', 'xend', 'y'],
-      optionalMap: ['series', 'color', 'facet', 'label'],
+      optionalMap: ['series', 'color', 'facet', 'label', 'tt_fields'],
       mapping: [],
       presentation: ['sort_by', 'sort_dir']
     }
@@ -520,6 +525,92 @@
       return col;
     }
 
+    // Escape the HTML-special characters so a data value (which can contain
+    // <, >, & — e.g. a verbatim term or a comment column pulled into the
+    // tooltip) is shown as text, never injected as markup.
+    /** @param {any} s */
+    _esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Human label for the current aggregation (aggregated charts). "Count"
+    // for a row count, "Distinct <col>" for count_distinct, else
+    // "<Fn> of <col>" (e.g. "Mean of AVAL"). Tells the reader what the bar's
+    // number actually is — the piece an aggregated tooltip was missing.
+    _aggLabel() {
+      const fn = this.config.agg_fn || 'count';
+      const col = this._axisTitle(this.config.metric);
+      if (fn === 'count') return 'Count';
+      if (fn === 'count_distinct') return 'Distinct ' + col;
+      const nm = /** @type {Record<string, string>} */ (
+        { mean: 'Mean', median: 'Median', sum: 'Sum',
+          min: 'Min', max: 'Max' })[fn] || fn;
+      return nm + ' of ' + col;
+    }
+
+    // Label/value rows for an aggregated mark's tooltip: the aggregation
+    // (named) and value, an optional share, and n (rows behind the mark) —
+    // skipped for a plain count, where value already IS n.
+    /** @param {number} value @param {number} [n] @param {number} [percent] */
+    _aggPairs(value, n, percent) {
+      /** @type {Array<[string, any]>} */
+      const pairs = [[this._aggLabel(), ddNum(value)]];
+      if (percent != null) pairs.push(['Share', Math.round(percent) + '%']);
+      if (this.config.agg_fn !== 'count' && n != null) pairs.push(['n', n]);
+      return pairs;
+    }
+
+    // Format an x-axis value for a tooltip: an ISO date for a time axis, the
+    // category label for a categorical axis, else a trimmed number. `xCats`
+    // is the ordered category array (category axes index into it).
+    /** @param {any} v @param {string} xAxisType @param {any[]|null} xCats */
+    _fmtXVal(v, xAxisType, xCats) {
+      if (v == null || v === '') return '';
+      if (xAxisType === 'category') {
+        return (xCats && xCats[v] != null) ? String(xCats[v]) : String(v);
+      }
+      if (xAxisType === 'time') {
+        const d = new Date(Number(v));
+        return isNaN(d.getTime()) ? String(v) : d.toISOString().slice(0, 10);
+      }
+      return ddNum(Number(v));
+    }
+
+    // Span between two x coords as a human string. Days on a time axis (the
+    // AE gantt convention is ms since epoch), bare units on a value axis,
+    // empty for a categorical axis or a missing bound.
+    /** @param {any} a @param {any} b @param {string} xAxisType */
+    _durationStr(a, b, xAxisType) {
+      if (xAxisType === 'category') return '';
+      const s = Number(a), e = Number(b);
+      if (isNaN(s) || isNaN(e)) return '';
+      if (xAxisType === 'time') {
+        const days = Math.round((e - s) / 86400000);
+        return days + (Math.abs(days) === 1 ? ' day' : ' days');
+      }
+      return String(Math.round((e - s) * 100) / 100);
+    }
+
+    // Shared row-level tooltip: a bold headline over a list of label/value
+    // rows (nullish/empty values dropped). Used by the gantt and scatter
+    // tooltips so a hovered mark reports every dimension mapped to it, not
+    // just one. `pairs` is an array of [label, value].
+    /** @param {any} headline @param {Array<[string, any]>} pairs */
+    _rowTooltip(headline, pairs) {
+      const rows = pairs
+        .filter(p => p[1] != null && p[1] !== '')
+        .map(p =>
+          '<div style="display:flex;gap:16px;font-size:11px;line-height:1.6">' +
+          '<span style="color:#888">' + this._esc(p[0]) + '</span>' +
+          '<span style="margin-left:auto;font-weight:500;text-align:right">' +
+          this._esc(p[1]) + '</span></div>')
+        .join('');
+      return '<div style="min-width:170px">' +
+        '<div style="font-weight:700;margin-bottom:4px">' +
+        this._esc(headline) + '</div>' + rows + '</div>';
+    }
+
     /** @param {any} v */
     _hasVal(v) { return v !== null && v !== undefined && v !== '' && v !== '(none)'; }
 
@@ -824,7 +915,9 @@
         else if (agg_fn === 'sum') value = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
         else if (agg_fn === 'min') value = g.values.length ? Math.min.apply(null, g.values) : 0;
         else if (agg_fn === 'max') value = g.values.length ? Math.max.apply(null, g.values) : 0;
-        result.push({ facet: g.facet, group: g.group, color: g.color, value: Math.round(value * 100) / 100 });
+        // n = rows behind this (group, color) cell, for the tooltip's
+        // "n = ..." line (how many observations the mark aggregates).
+        result.push({ facet: g.facet, group: g.group, color: g.color, value: Math.round(value * 100) / 100, n: g.rows.length });
       }
       return result;
     }
@@ -1218,6 +1311,30 @@
             });
           return head + '<br/>' + rows.join('<br/>');
         };
+      } else {
+        // Non-percent bar: name the value by the aggregation (a bare number
+        // doesn't say what it is) and append n where it adds information
+        // (skipped for a plain count, where the bar height already IS n).
+        // n is looked up per (group, color) cell from the aggregated data.
+        /** @type {Record<string, number>} */
+        const nOf = {};
+        for (const a of facetData) nOf[a.group + '|||' + a.color] = a.n;
+        const aggLabel = this._aggLabel();
+        const showN = this.config.agg_fn !== 'count';
+        tooltip.formatter = (/** @type {any[]} */ ps) => {
+          if (!ps || !ps.length) return '';
+          const head = ps[0].axisValueLabel || ps[0].name || '';
+          const rows = ps
+            .filter(p => p && p.value != null)
+            .map(p => {
+              const nm = colors.length ? p.seriesName : aggLabel;
+              const key = head + '|||' + (colors.length ? p.seriesName : '__all__');
+              const n = nOf[key];
+              return p.marker + this._esc(nm) + ': ' + fmtRaw(Number(p.value)) +
+                (showN && n != null ? '  (n=' + n + ')' : '');
+            });
+          return this._esc(head) + '<br/>' + rows.join('<br/>');
+        };
       }
       const legendOn = colors.length > 0;
       const leg = legendOn ? this._legendRows(colors, plotW || 0) : { extra: 0, scroll: false };
@@ -1346,20 +1463,24 @@
     _buildPie(facetData, groups, palette) {
       const gScale = this._scaleFor(this.config.group);
       const pieData = groups.map((g, i) => {
-        const total = facetData.filter(a => a.group === g).reduce((s, a) => s + a.value, 0);
-        return { name: g, value: total, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
+        const cells = facetData.filter(a => a.group === g);
+        const total = cells.reduce((s, a) => s + a.value, 0);
+        const n = cells.reduce((s, a) => s + (a.n || 0), 0);
+        return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: 10, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n, p.percent)) }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: 10, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
     }
 
     /** @param {any[]} facetData @param {any[]} groups @param {any[]} palette */
     _buildTreemap(facetData, groups, palette) {
       const gScale = this._scaleFor(this.config.group);
       const tmData = groups.map((g, i) => {
-        const total = facetData.filter(a => a.group === g).reduce((s, a) => s + a.value, 0);
-        return { name: g, value: total, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
+        const cells = facetData.filter(a => a.group === g);
+        const total = cells.reduce((s, a) => s + a.value, 0);
+        const n = cells.reduce((s, a) => s + (a.n || 0), 0);
+        return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', formatter: '{b}: {c}' }, series: [{ type: 'treemap', data: tmData, width: '100%', height: '100%', roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: '{b}\n{c}' }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, width: '100%', height: '100%', roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: '{b}\n{c}' }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
     }
 
     // Radar = an aggregated chart in polar coords: the group levels are the
@@ -1415,10 +1536,12 @@
         tooltip: {
           trigger: 'item',
           confine: true,
-          formatter: (/** @type {any} */ p) => '<b>' + p.name + '</b><br>' +
+          formatter: (/** @type {any} */ p) => '<b>' + this._esc(p.name) +
+            '</b> <span style="color:#888;font-size:11px">(' +
+            this._esc(this._aggLabel()) + ')</span><br>' +
             groups.map((g, i) => {
               const v = p.value ? p.value[i] : null;
-              return g + ': ' + (v == null ? '–' : ddNum(v));
+              return this._esc(g) + ': ' + (v == null ? '–' : ddNum(v));
             }).join('<br>')
         },
         legend: showLegend
@@ -1972,7 +2095,21 @@
           textStyle: { fontFamily: BLOCKR_FONT },
           tooltip: isLine
             ? lineTooltip
-            : { trigger: 'item', formatter: (/** @type {any} */ p) => `${x}: ${ddNum(p.value[0])}<br>${y}: ${ddNum(p.value[1])}` + (p.seriesName ? `<br>${color || 'series'}: ${p.seriesName}` : ''), confine: true },
+            : { trigger: 'item', confine: true,
+                // Scatter point: the split (series/color) level headlines when
+                // present, else the y variable. x/y are labeled by their
+                // variable, x formatted per its axis kind (date/category/num).
+                formatter: (/** @type {any} */ p) => {
+                  const lvl = (splitCol && p.seriesName) ? p.seriesName : null;
+                  const headline = lvl || this._axisTitle(y) || 'Point';
+                  /** @type {Array<[string, any]>} */
+                  const pairs = [
+                    [this._axisTitle(x) || 'X', this._fmtXVal(p.value[0], xAxisType, null)],
+                    [this._axisTitle(y) || 'Y', ddNum(p.value[1])]
+                  ];
+                  if (lvl) pairs.push([this._axisTitle(splitCol) || 'Series', lvl]);
+                  return this._rowTooltip(headline, pairs);
+                } },
           // Always set explicitly; leaving legend undefined lets echarts
           // auto-render one per series, which eats the plot area when
           // series is high-cardinality (e.g. USUBJID).
@@ -2198,6 +2335,12 @@
 
     _renderTimeline() {
       const { x, xend, y, color, facet, sort_by, series, label } = this.config;
+      // Extra columns the user chose to surface on hover (optional "+" role).
+      // Normalized to a string array; values are packed at tuple slot 8 and
+      // listed after the mapped roles in the tooltip. Bounded to the picked
+      // columns — never the whole row (that froze the AE tab, see below).
+      const ttFields = [].concat(this.config.tt_fields || [])
+        .map(String).filter(c => c && c !== 'null');
       // Effective drill column (tri-state): null when off, the lane (y) for
       // 'auto', or an override column. Packed at tuple slot 7 for the click.
       const drill = this._drillColumn();
@@ -2318,13 +2461,15 @@
           barData.push({
             // Slot 5: `label` column value (on-bar text). Slot 7: the
             // `drill` column value for this row (a click filters on it).
-            // Scalars only — never pack the whole row object: the AE
-            // swim-lane has thousands of bars and retaining full rows in
-            // the echarts series froze the AE tab.
+            // Slot 8: the chosen extra tooltip-field values (a short array,
+            // aligned to `ttFields`). Scalars/short arrays only — never pack
+            // the whole row object: the AE swim-lane has thousands of bars
+            // and retaining full rows in the echarts series froze the AE tab.
             value: [s, e, lane, term, r[color] ?? '',
                     (label != null ? (r[label] ?? '') : ''),
                     r[series] ?? '',
-                    (drill != null ? (r[drill] ?? '') : '')]
+                    (drill != null ? (r[drill] ?? '') : ''),
+                    ttFields.length ? ttFields.map(c => r[c] ?? '') : 0]
           });
         }
 
@@ -2430,21 +2575,47 @@
           tooltip: {
             trigger: 'item',
             confine: true,
+            // Report every dimension mapped to the hovered bar: the on-bar
+            // label (the event term) headlines, then the lane, its interval
+            // (from -> to + duration), color, series, and any extra fields.
             formatter: (/** @type {any} */ p) => {
               const v = p.value;
-              const term = v[3] || '';
-              const colorVal = v[4] || '';
-              const detail = v[6] || '';
-              // Headline is the most specific label available: series
-              // (per-bar detail) wins, else fall back to y (lane).
-              const headline = detail || term;
-              let html = `<div style="min-width:180px"><div style="font-weight:700;margin-bottom:4px">${headline}</div>`;
-              if (detail && term && term !== detail) {
-                html += `<div style="font-size:11px;color:#666">${term}</div>`;
+              const term = String(v[3] ?? '');           // y (lane)
+              const colorVal = String(v[4] ?? '');        // color
+              const labelVal = label != null ? String(v[5] ?? '') : '';
+              const detail = String(v[6] ?? '');          // series
+              // Headline = the most specific name: the on-bar label (event
+              // term) wins, else the series detail, else the lane.
+              const headline = labelVal || detail || term;
+              /** @type {Array<[string, any]>} */
+              const pairs = [];
+              if (term && term !== headline) {
+                pairs.push([this._axisTitle(y) || 'Y', term]);
               }
-              if (colorVal) html += `<div style="font-size:11px;color:#666">${colorVal}</div>`;
-              html += '</div>';
-              return html;
+              if (detail && detail !== headline) {
+                pairs.push([this._axisTitle(series) || 'Series', detail]);
+              }
+              // Interval. Single-day events (no distinct end) show one date.
+              const fromTxt = this._fmtXVal(v[0], xAxisType, xCats);
+              const hasEnd = v[1] != null && v[1] !== v[0];
+              if (hasEnd) {
+                const toTxt = this._fmtXVal(v[1], xAxisType, xCats);
+                const dur = this._durationStr(v[0], v[1], xAxisType);
+                pairs.push([this._axisTitle(x) || 'From', fromTxt]);
+                pairs.push([(this.config.xend ? this._axisTitle(xend) : '') || 'To',
+                            toTxt + (dur ? ' (' + dur + ')' : '')]);
+              } else {
+                pairs.push([this._axisTitle(x) || 'Date', fromTxt]);
+              }
+              if (colorVal) {
+                pairs.push([this._axisTitle(color) || 'Color', colorVal]);
+              }
+              // Extra fields (slot 8, aligned to ttFields; 0 when none).
+              const extra = Array.isArray(v[8]) ? v[8] : [];
+              ttFields.forEach((c, i) => {
+                pairs.push([this._axisTitle(c) || c, extra[i]]);
+              });
+              return this._rowTooltip(headline, pairs);
             }
           },
           legend: showLegend
@@ -2761,7 +2932,10 @@
         smoother: this.config.smoother || 'none',
         identity_line: this.config.identity_line || 'off',
         lo: this.config.lo || '',
-        hi: this.config.hi || ''
+        hi: this.config.hi || '',
+        // Extra tooltip columns (gantt): always an array so R can tell an
+        // empty selection ([] -> NULL) from an unchanged one.
+        tt_fields: Array.isArray(this.config.tt_fields) ? this.config.tt_fields : []
       }, { priority: 'event' });
     }
 

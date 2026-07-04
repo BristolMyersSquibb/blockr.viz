@@ -49,6 +49,10 @@
 #' @param label Column whose value is written on each mark. Default unset
 #'   (no on-mark text). For `pie`/`treemap`, when unset the label falls
 #'   back to `group` (a label-less pie is unusable).
+#' @param tt_fields Character vector of extra column names appended to each
+#'   mark's hover tooltip, beyond the mapped roles (gantt). Default `NULL`
+#'   (none). Display-only -- does not affect the plot; a listed column dropped
+#'   upstream is silently omitted.
 #' @param drill Column a click filters downstream on. Default unset (a
 #'   click is inert). When set, clicking a mark emits a categorical
 #'   filter on this column's value(s) for the clicked mark. For an
@@ -115,6 +119,7 @@ new_chart_block <- function(
     series = NULL,
     xend = NULL,
     label = NULL,
+    tt_fields = NULL,
     drill = NULL,
     sort_by = NULL,
     sort_dir = NULL,
@@ -173,6 +178,10 @@ new_chart_block <- function(
         r_xend <- shiny::reactiveVal(xend)
         r_series <- shiny::reactiveVal(series)
         r_label <- shiny::reactiveVal(label)
+        # Extra columns to append to each mark's hover tooltip (gantt). A
+        # character vector or NULL. Optional display-only role, so a value
+        # dropped upstream is silently omitted (not a hard invalid-state).
+        r_tt_fields <- shiny::reactiveVal(tt_fields)
         r_drill <- shiny::reactiveVal(drill)
         r_sort_by <- shiny::reactiveVal(sort_by)
         r_sort_dir <- shiny::reactiveVal(sort_dir)
@@ -243,7 +252,7 @@ new_chart_block <- function(
           needed <- as.character(unlist(c(
             r_group(), r_color(), r_facet(), r_metric(),
             r_x(), r_y(), r_xend(), r_series(),
-            r_label(), r_drill(), r_lo(), r_hi()
+            r_label(), r_tt_fields(), r_drill(), r_lo(), r_hi()
           )))
           sb <- as.character(unlist(r_sort_by()))
           if (length(sb) && !sb %in% c("onset", "alpha")) {
@@ -288,6 +297,10 @@ new_chart_block <- function(
               metric = r_metric(), agg_fn = r_agg_fn(),
               chart_type = r_chart_type(), x = r_x(), y = r_y(),
               xend = r_xend(), series = r_series(), label = r_label(),
+              # Extra tooltip columns. as.list() keeps a length-1 vector a JSON
+              # array; NULL when empty so the JS "+" role stays hidden until the
+              # user adds it (an empty [] would read as "present").
+              tt_fields = if (length(r_tt_fields())) as.list(r_tt_fields()) else NULL,
               drill = r_drill(), sort_by = r_sort_by(),
               sort_dir = r_sort_dir(), orientation = r_orientation(),
               bar_mode = r_bar_mode(),
@@ -371,6 +384,13 @@ new_chart_block <- function(
             if (!is.null(msg$xend))       upd(r_xend, nn(msg$xend))
             if (!is.null(msg$series))     upd(r_series, nn(msg$series))
             if (!is.null(msg$label))      upd(r_label, nn(msg$label))
+            if (!is.null(msg$tt_fields)) {
+              # Arrives as a JSON array (possibly empty). Flatten to a
+              # character vector; an empty selection becomes NULL.
+              tf <- as.character(unlist(msg$tt_fields))
+              tf <- tf[nzchar(tf)]
+              upd(r_tt_fields, if (length(tf)) tf else NULL)
+            }
             if (!is.null(msg$drill))      upd(r_drill, nn(msg$drill))
             if (!is.null(msg$sort_by))    upd(r_sort_by, nn(msg$sort_by))
             if (!is.null(msg$sort_dir))   upd(r_sort_dir, msg$sort_dir)
@@ -562,6 +582,7 @@ new_chart_block <- function(
             xend = r_xend,
             series = r_series,
             label = r_label,
+            tt_fields = r_tt_fields,
             drill = r_drill,
             sort_by = r_sort_by,
             sort_dir = r_sort_dir,
@@ -600,12 +621,12 @@ new_chart_block <- function(
       if (!is.data.frame(data)) stop("Input must be a data frame")
     },
     allow_empty_state = c("group", "color", "facet", "filter_column",
-      "filter_values", "x", "y", "xend", "series", "label", "drill",
-      "sort_by", "sort_dir", "filter_range", "filter_point",
+      "filter_values", "x", "y", "xend", "series", "label", "tt_fields",
+      "drill", "sort_by", "sort_dir", "filter_range", "filter_point",
       "step", "ref_x", "ref_y", "smoother", "identity_line", "lo", "hi",
       "waterfall_totals"),
     external_ctrl = c("group", "color", "facet", "metric", "agg_fn",
-      "chart_type", "x", "y", "xend", "series", "label", "drill",
+      "chart_type", "x", "y", "xend", "series", "label", "tt_fields", "drill",
       "sort_by", "sort_dir", "orientation", "bar_mode", "filter_type",
       "filter_column",
       "filter_values", "filter_range", "filter_point", "line_width_mult",

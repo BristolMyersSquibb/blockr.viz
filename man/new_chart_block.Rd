@@ -16,6 +16,7 @@ new_chart_block(
   series = NULL,
   xend = NULL,
   label = NULL,
+  tt_fields = NULL,
   drill = NULL,
   sort_by = NULL,
   sort_dir = NULL,
@@ -77,6 +78,11 @@ dots at \code{x})}
 \item{label}{Column whose value is written on each mark. Default unset
 (no on-mark text). For \code{pie}/\code{treemap}, when unset the label falls
 back to \code{group} (a label-less pie is unusable).}
+
+\item{tt_fields}{Character vector of extra column names appended to each
+mark's hover tooltip, beyond the mapped roles (gantt). Default \code{NULL}
+(none). Display-only -- does not affect the plot; a listed column dropped
+upstream is silently omitted.}
 
 \item{drill}{Column a click filters downstream on. Default unset (a
 click is inert). When set, clicking a mark emits a categorical
