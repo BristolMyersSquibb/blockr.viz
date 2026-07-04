@@ -640,6 +640,7 @@ input.blockr-search {
   appearance: none;
   -webkit-appearance: none;
   box-sizing: border-box;
+  height: var(--blockr-control-h-sm, 30px);
   border: 1px solid var(--blockr-color-border, #e5e7eb);
   border-radius: 4px;
   padding: 4px 8px 4px 26px;
@@ -1001,6 +1002,7 @@ input.blockr-search {
   appearance: none;
   -webkit-appearance: none;
   box-sizing: border-box;
+  height: var(--blockr-control-h-sm, 30px);
   border: 1px solid var(--blockr-color-border, #e5e7eb);
   border-radius: 4px;
   padding: 4px 8px 4px 26px;
@@ -1030,8 +1032,8 @@ a.blockr-dl-xlsx {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: var(--blockr-control-h-sm, 30px);
+  height: var(--blockr-control-h-sm, 30px);
   flex: 0 0 auto;
   padding: 0;
   margin: 0;
