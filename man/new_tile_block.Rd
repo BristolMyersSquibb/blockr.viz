@@ -7,7 +7,7 @@
 new_tile_block(
   value = character(),
   group = character(),
-  measure = "",
+  name = "",
   summaries = list(),
   layout = "cards",
   overline = "",
@@ -31,7 +31,7 @@ new_tile_block(
 \code{group_by} column when \code{summaries} aggregate the input in place. \code{""} = no
 grouping.}
 
-\item{measure}{Measure-label column for long input. \code{""} = use the \code{value}
+\item{name}{Column naming each KPI (long input). \code{""} = use the \code{value}
 column names as measure names.}
 
 \item{summaries}{Optional in-block aggregations: a list, each entry
@@ -69,7 +69,7 @@ currency -- the renderer never infers \code{$}.}
 \item{drill}{Logical; when \code{TRUE} a card / matrix-row click emits a
 categorical filter downstream. The filter column is structurally
 determined (never user-picked): the \code{group} column when grouped, else
-the \code{measure} ("Name") column on an ungrouped long KPI list. Off by
+the \code{name} column on an ungrouped long KPI list. Off by
 default; inert when the tile has neither (bare KPI, grand totals).}
 
 \item{filter_col, filter_value}{Click-filter state. Kept as constructor
