@@ -8,9 +8,9 @@ new_chart_block(
   group = NULL,
   color = NULL,
   facet = NULL,
-  metric = ".count",
-  agg_fn = "count",
-  metrics = NULL,
+  value = ".count",
+  func = "count",
+  summaries = NULL,
   chart_type = "bar",
   x = NULL,
   y = NULL,
@@ -49,26 +49,26 @@ new_chart_block(
 
 \item{facet}{Column to facet by -- one small panel per level (optional)}
 
-\item{metric}{Column for the metric (aggregated only). Must match
-\code{agg_fn}: ".count" for \code{"count"} (row count -- the metric is otherwise
+\item{value}{Column for the value (aggregated only). Must match
+\code{func}: ".count" for \code{"count"} (row count -- the value is otherwise
 ignored), any column for \code{"count_distinct"} (e.g. a subject id to count
 patients instead of records), a numeric column for the numeric
-aggregations.}
+aggregations. (Was \code{metric}.)}
 
-\item{agg_fn}{Aggregation: \code{"count"}, \code{"count_distinct"}, \code{"mean"},
+\item{func}{Aggregation function: \code{"count"}, \code{"count_distinct"}, \code{"mean"},
 \code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"}. With a \code{color} split,
 \code{"count_distinct"} counts an entity once per colour level it appears
 under; deduplicate upstream if segments must sum to the per-group
-distinct count.}
+distinct count. (Was \code{agg_fn}.)}
 
-\item{metrics}{Optional multi-metric aggregation (bar charts only): a
-list, each entry \code{list(agg_fn, cols)} -- the same shape as the table
-block's \code{metrics}. Each aggregation x column pair becomes one bar
-series per group (side-by-side), the legend names the metrics. With
-more than one series the \code{color} split is ignored (metrics own the
+\item{summaries}{Optional multi-value aggregation (bar charts only): a
+list, each entry \code{list(func, cols)} -- the same shape as the table
+block's \code{summaries}. Each aggregation x column pair becomes one bar
+series per group (side-by-side), the legend names the series. With
+more than one series the \code{color} split is ignored (summaries own the
 series dimension). Chart types other than "bar" use the FIRST entry
-only (they are structurally single-metric). When set, \code{metric} /
-\code{agg_fn} are superseded. Default \code{NULL} (single-metric mode).}
+only (they are structurally single-value). When set, \code{value} /
+\code{func} are superseded. Default \code{NULL} (single-value mode).}
 
 \item{chart_type}{Chart type: "bar", "waterfall", "scatter", "line",
 "pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with
@@ -159,6 +159,9 @@ to 0 and they draw the absolute running cumulative. Default \code{NULL} (every
 bar is a relative delta).}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
+
+\item{metric, agg_fn}{Deprecated aliases for \code{value} / \code{func}, kept so saved
+boards restore. See \code{dev/unified-arg-naming.md}.}
 }
 \value{
 A transform block of class \code{chart_block}

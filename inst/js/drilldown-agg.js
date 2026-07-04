@@ -11,15 +11,16 @@
  *     side; a drift test guards it).
  *
  *   aggRoles({ multiple })
- *     The `group` + `metric` + `agg_fn` role-spec triple the DrilldownConfig
+ *     The `group` + `value` + `func` role-spec triple the DrilldownConfig
  *     engine renders. Hosts spread it into their ROLES dict. `multiple` widens
  *     `group` to a multi-column picker (the table groups by several columns;
- *     the chart and tile group by one).
+ *     the chart and tile group by one). (`value`/`func` were `metric`/`agg_fn`;
+ *     see dev/unified-arg-naming.md.)
  *
- *   reconcileMetric(cfg, columns)
- *     Keep `metric` consistent with `agg_fn`: "count" ignores the metric (force
+ *   reconcileValue(cfg, columns)
+ *     Keep `value` consistent with `func`: "count" ignores the value (force
  *     the synthetic '.count'); "count_distinct" takes any column but not
- *     '.count'; the numeric aggregations need a numeric column. A metric that
+ *     '.count'; the numeric aggregations need a numeric column. A value that
  *     no longer fits is emptied — the picker then shows the required-empty
  *     state instead of silently charting a wrong number.
  *
@@ -54,46 +55,49 @@
       group: {
         label: 'Group', kind: multiple ? 'columns' : 'column',
         colType: 'cat', ph: 'category column…',
-        // The table's multi-group gates the metrics list, so a change re-renders
-        // the gear (reveals/hides the aggregations). The chart's single group
-        // gates nothing, so it does not.
+        // The table's multi-group gates the summaries list, so a change
+        // re-renders the gear (reveals/hides the aggregations). The chart's
+        // single group gates nothing, so it does not.
         rerender: multiple
       },
-      // The metric picker follows the aggregation (see reconcileMetric): row
-      // count ignores the metric, count_distinct takes any column, the numeric
+      // The value picker follows the aggregation (see reconcileValue): row
+      // count ignores the value, count_distinct takes any column, the numeric
       // aggregations need a numeric column. `pairReversed` renders the row as a
-      // verb-object phrase — "[agg] of [column]" — so the aggregation leads.
-      metric: {
-        label: 'Aggregate', kind: 'column', pairedWith: 'agg_fn',
+      // verb-object phrase — "[func] of [column]" — so the aggregation leads.
+      // Config keys `value` / `func` (were `metric` / `agg_fn`); see
+      // dev/unified-arg-naming.md.
+      value: {
+        label: 'Value', kind: 'column', pairedWith: 'func',
         pairReversed: true,
         ph: 'column to aggregate…',
         colType: (/** @type {any} */ cfg) =>
-          cfg.agg_fn === 'count_distinct' ? 'any'
-            : (!cfg.agg_fn || cfg.agg_fn === 'count') ? 'none' : 'num',
+          cfg.func === 'count_distinct' ? 'any'
+            : (!cfg.func || cfg.func === 'count') ? 'none' : 'num',
         allowCount: (/** @type {any} */ cfg) =>
-          !cfg.agg_fn || cfg.agg_fn === 'count'
+          !cfg.func || cfg.func === 'count'
       },
-      agg_fn: { label: 'Agg', kind: 'select', options: AGG_FNS, rerender: true }
+      func: { label: 'Agg', kind: 'select', options: AGG_FNS, rerender: true }
     };
   }
 
   /**
+   * Keep `value` consistent with `func` (the aggregation function).
    * @param {any} cfg     the mutable config object (mutated in place)
    * @param {any[]} columns  column metadata [{name, type, ...}]
    */
-  function reconcileMetric(cfg, columns) {
-    if (!cfg.agg_fn || cfg.agg_fn === 'count') { cfg.metric = '.count'; return; }
-    if (cfg.agg_fn === 'count_distinct') {
-      if (cfg.metric === '.count') cfg.metric = '';
+  function reconcileValue(cfg, columns) {
+    if (!cfg.func || cfg.func === 'count') { cfg.value = '.count'; return; }
+    if (cfg.func === 'count_distinct') {
+      if (cfg.value === '.count') cfg.value = '';
       return;
     }
-    const col = (columns || []).find((/** @type {any} */ c) => c.name === cfg.metric);
-    if (!col || col.type !== 'numeric') cfg.metric = '';
+    const col = (columns || []).find((/** @type {any} */ c) => c.name === cfg.value);
+    if (!col || col.type !== 'numeric') cfg.value = '';
   }
 
   const ns = /** @type {any} */ (
     (typeof Blockr !== 'undefined') ? Blockr
       : (window.Blockr = window.Blockr || {}));
-  ns.DrilldownAgg = { AGG_FNS, AGG_WORDS, aggRoles, reconcileMetric };
+  ns.DrilldownAgg = { AGG_FNS, AGG_WORDS, aggRoles, reconcileValue };
   window.DrilldownAgg = ns.DrilldownAgg;
 })();

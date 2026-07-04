@@ -40,16 +40,16 @@ serve(
       chart = new_chart_block(
         chart_type = "bar",
         group      = "region",
-        metric     = "revenue",
-        agg_fn     = "sum",
+        value     = "revenue",
+        func     = "sum",
         drill      = "region"
       ),
       # Aggregated pie: clicking a slice drills on the group.
       chart_pie = new_chart_block(
         chart_type = "pie",
         group      = "region",
-        metric     = "revenue",
-        agg_fn     = "sum",
+        value     = "revenue",
+        func     = "sum",
         drill      = "region"
       ),
       # Individual scatter split by region: clicking a point drills its region.
@@ -73,8 +73,8 @@ serve(
       chart_cfg = new_chart_block(
         chart_type = "bar",
         group      = "region",
-        metric     = "revenue",
-        agg_fn     = "sum",
+        value     = "revenue",
+        func     = "sum",
         drill      = "region"
       ),
       # KPI tile matrix, click-to-filter drill on the group.

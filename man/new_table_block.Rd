@@ -8,7 +8,7 @@ new_table_block(
   rowname = NULL,
   values = NULL,
   group = NULL,
-  metrics = list(),
+  summaries = list(),
   cell_color = NULL,
   row_color = NULL,
   drill = NULL,

@@ -26,24 +26,18 @@
 #' @param group Column for the categorical axis (aggregated charts)
 #' @param color Column mapped to colour (optional, all families)
 #' @param facet Column to facet by -- one small panel per level (optional)
-#' @param metric Column for the metric (aggregated only). Must match
-#'   `agg_fn`: ".count" for `"count"` (row count -- the metric is otherwise
+#' @param value Column for the value (aggregated only). Must match
+#'   `func`: ".count" for `"count"` (row count -- the value is otherwise
 #'   ignored), any column for `"count_distinct"` (e.g. a subject id to count
 #'   patients instead of records), a numeric column for the numeric
-#'   aggregations.
-#' @param agg_fn Aggregation: `"count"`, `"count_distinct"`, `"mean"`,
+#'   aggregations. (Was `metric`.)
+#' @param func Aggregation function: `"count"`, `"count_distinct"`, `"mean"`,
 #'   `"median"`, `"sum"`, `"min"`, `"max"`. With a `color` split,
 #'   `"count_distinct"` counts an entity once per colour level it appears
 #'   under; deduplicate upstream if segments must sum to the per-group
-#'   distinct count.
-#' @param metrics Optional multi-metric aggregation (bar charts only): a
-#'   list, each entry `list(agg_fn, cols)` -- the same shape as the table
-#'   block's `metrics`. Each aggregation x column pair becomes one bar
-#'   series per group (side-by-side), the legend names the metrics. With
-#'   more than one series the `color` split is ignored (metrics own the
-#'   series dimension). Chart types other than "bar" use the FIRST entry
-#'   only (they are structurally single-metric). When set, `metric` /
-#'   `agg_fn` are superseded. Default `NULL` (single-metric mode).
+#'   distinct count. (Was `agg_fn`.)
+#' @param metric,agg_fn Deprecated aliases for `value` / `func`, kept so saved
+#'   boards restore. See `dev/unified-arg-naming.md`.
 #' @param chart_type Chart type: "bar", "waterfall", "scatter", "line",
 #'   "pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with
 #'   a cumulative baseline (sugar for `bar` + `baseline = "cumulative"`).
@@ -119,9 +113,8 @@ new_chart_block <- function(
     group = NULL,
     color = NULL,
     facet = NULL,
-    metric = ".count",
-    agg_fn = "count",
-    metrics = NULL,
+    value = ".count",
+    func = "count",
     chart_type = "bar",
     x = NULL,
     y = NULL,
@@ -170,6 +163,23 @@ new_chart_block <- function(
     waterfall_totals = NULL,
     ...) {
 
+  # ARG-RENAME (see dev/unified-arg-naming.md): `metric`/`agg_fn` are the
+  # pre-rename names of `value`/`func`. Taken from `...` rather than made
+  # formals -- a formal would demand a matching `state` entry and re-serialize
+  # under the old name -- so saved boards (which pass the old names on restore)
+  # still map onto the new args. Remove after one release cycle.
+  .dep <- list(...)
+  if (!is.null(.dep$metric)) {
+    warning("new_chart_block(): `metric` is deprecated, use `value`.",
+            call. = FALSE)
+    value <- .dep$metric
+  }
+  if (!is.null(.dep$agg_fn)) {
+    warning("new_chart_block(): `agg_fn` is deprecated, use `func`.",
+            call. = FALSE)
+    func <- .dep$agg_fn
+  }
+
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {
@@ -179,12 +189,8 @@ new_chart_block <- function(
         r_group <- shiny::reactiveVal(group)
         r_color <- shiny::reactiveVal(color)
         r_facet <- shiny::reactiveVal(facet)
-        r_metric <- shiny::reactiveVal(metric)
-        r_agg_fn <- shiny::reactiveVal(agg_fn)
-        # Multi-metric list (bar): normalized to list(list(agg_fn, cols), ...)
-        # -- the table block's shape (dd_parse_metrics accepts an R list or the
-        # gear's JSON string). Empty = single-metric mode (metric/agg_fn above).
-        r_metrics <- shiny::reactiveVal(dd_parse_metrics(metrics))
+        r_value <- shiny::reactiveVal(value)
+        r_func <- shiny::reactiveVal(func)
         r_chart_type <- shiny::reactiveVal(chart_type)
         r_x <- shiny::reactiveVal(x)
         r_y <- shiny::reactiveVal(y)
@@ -263,9 +269,7 @@ new_chart_block <- function(
           # into `list()` -- does not coerce the whole vector to a list and
           # crash `d[, needed]` ("must be ... not a list").
           needed <- as.character(unlist(c(
-            r_group(), r_color(), r_facet(), r_metric(),
-            # Multi-metric columns (each entry's cols; count entries have none).
-            lapply(r_metrics(), `[[`, "cols"),
+            r_group(), r_color(), r_facet(), r_value(),
             r_x(), r_y(), r_xend(), r_series(),
             r_label(), r_tt_fields(), r_drill(), r_lo(), r_hi()
           )))
@@ -309,18 +313,7 @@ new_chart_block <- function(
                                     digits = NA),
             config = list(
               group = r_group(), color = r_color(), facet = r_facet(),
-              metric = r_metric(), agg_fn = r_agg_fn(),
-              # Multi-metric list (bar). Each cols as.list() so a length-1
-              # vector stays a JSON array (auto_unbox); NULL when empty so the
-              # JS stays in single-metric mode.
-              metrics = if (length(r_metrics())) {
-                lapply(r_metrics(), function(m) list(
-                  agg_fn = m$agg_fn,
-                  cols = as.list(as.character(m$cols))
-                ))
-              } else {
-                NULL
-              },
+              value = r_value(), func = r_func(),
               chart_type = r_chart_type(), x = r_x(), y = r_y(),
               xend = r_xend(), series = r_series(), label = r_label(),
               # Extra tooltip columns. as.list() keeps a length-1 vector a JSON
@@ -402,15 +395,8 @@ new_chart_block <- function(
             if (!is.null(msg$group))      upd(r_group, nn(msg$group))
             if (!is.null(msg$color))      upd(r_color, nn(msg$color))
             if (!is.null(msg$facet))      upd(r_facet, nn(msg$facet))
-            if (!is.null(msg$metric))     upd(r_metric, msg$metric)
-            if (!is.null(msg$agg_fn))     upd(r_agg_fn, msg$agg_fn)
-            # Multi-metric list: a JSON string (gear edit) or nested list.
-            # "[]" / empty clears back to single-metric mode. Sent explicitly
-            # (not piggybacked on the full-config echo) with a `metrics_set`
-            # marker so its absence never clears state.
-            if (isTRUE(msg$metrics_set)) {
-              upd(r_metrics, dd_parse_metrics(msg$metrics))
-            }
+            if (!is.null(msg$value))     upd(r_value, msg$value)
+            if (!is.null(msg$func))     upd(r_func, msg$func)
             if (!is.null(msg$chart_type)) upd(r_chart_type, msg$chart_type)
             if (!is.null(msg$x))          upd(r_x, msg$x)
             if (!is.null(msg$y))          upd(r_y, msg$y)
@@ -519,8 +505,7 @@ new_chart_block <- function(
         mapped_cols <- function(d) {
           drill <- r_drill()
           if (identical(drill, "auto")) drill <- NULL
-          cols <- c(r_group(), r_color(), r_facet(), r_metric(),
-            as.character(unlist(lapply(r_metrics(), `[[`, "cols"))),
+          cols <- c(r_group(), r_color(), r_facet(), r_value(),
             r_x(), r_y(), r_xend(), r_series(), r_label(), drill)
           cols <- unique(cols[!is.null(cols) & nzchar(cols) & cols != ".count"])
           cols[!cols %in% names(d)]
@@ -608,9 +593,8 @@ new_chart_block <- function(
             group = r_group,
             color = r_color,
             facet = r_facet,
-            metric = r_metric,
-            agg_fn = r_agg_fn,
-            metrics = r_metrics,
+            value = r_value,
+            func = r_func,
             chart_type = r_chart_type,
             x = r_x,
             y = r_y,
@@ -659,8 +643,8 @@ new_chart_block <- function(
       "filter_values", "x", "y", "xend", "series", "label", "tt_fields",
       "drill", "sort_by", "sort_dir", "filter_range", "filter_point",
       "step", "ref_x", "ref_y", "smoother", "identity_line", "lo", "hi",
-      "waterfall_totals", "metrics"),
-    external_ctrl = c("group", "color", "facet", "metric", "agg_fn", "metrics",
+      "waterfall_totals"),
+    external_ctrl = c("group", "color", "facet", "value", "func",
       "chart_type", "x", "y", "xend", "series", "label", "tt_fields", "drill",
       "sort_by", "sort_dir", "orientation", "bar_mode", "filter_type",
       "filter_column",

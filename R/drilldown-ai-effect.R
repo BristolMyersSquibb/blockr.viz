@@ -11,7 +11,7 @@
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
 # Column-valued roles, in display order, for the chart block.
-dd_chart_roles <- c("group", "x", "y", "xend", "metric", "color", "facet",
+dd_chart_roles <- c("group", "x", "y", "xend", "value", "color", "facet",
                     "series", "label", "drill", "lo", "hi", "ref_x", "ref_y")
 
 #' @noRd
@@ -31,7 +31,7 @@ config_effect.chart_block <- function(block, args, data = NULL, ...) {
       bad <- c(bad, paste0(r, " references '", v, "'"))
     }
   }
-  agg <- args$agg_fn
+  agg <- args$func
   agg_txt <- if (!is.null(agg) && nzchar(as.character(agg)[1])) {
     paste0(" agg=", as.character(agg)[1])
   } else {

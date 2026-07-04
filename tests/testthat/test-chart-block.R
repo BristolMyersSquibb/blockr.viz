@@ -372,7 +372,7 @@ test_that("drill and label round-trip through state and config", {
 
 test_that("identity_line round-trips through state and config", {
   blk <- new_chart_block(
-    chart_type = "scatter", x = "base", y = "post", metric = ".count",
+    chart_type = "scatter", x = "base", y = "post", value = ".count",
     identity_line = "on"
   )
   shiny::testServer(
@@ -424,7 +424,7 @@ test_that("radar round-trips through state and filters on the color column", {
   )
   blk <- new_chart_block(
     chart_type = "radar", group = "AVISIT", color = "TRT01A",
-    metric = "AVAL", agg_fn = "mean", drill = "auto"
+    value = "AVAL", func = "mean", drill = "auto"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -433,7 +433,7 @@ test_that("radar round-trips through state and filters on the color column", {
       expect_equal(session$returned$state$chart_type(), "radar")
       expect_equal(session$returned$state$group(), "AVISIT")
       expect_equal(session$returned$state$color(), "TRT01A")
-      expect_equal(session$returned$state$agg_fn(), "mean")
+      expect_equal(session$returned$state$func(), "mean")
       # Click on the "ARM A" shape: JS emits a categorical filter on the
       # color column with that level.
       expr_scope <- session$makeScope("expr")

@@ -11,7 +11,7 @@
  * popover keyed by the ns()-based elem id, so two tiles never collide).
  */
 (function () {
-  // Shared aggregation vocabulary (group/metric/agg_fn roles + AGG_FNS) — the
+  // Shared aggregation vocabulary (group/value/func roles + AGG_FNS) — the
   // identical control the chart / table use. Must load before this script.
   var DAgg = (typeof Blockr !== "undefined" && Blockr.DrilldownAgg) ||
     window.DrilldownAgg;
@@ -42,7 +42,7 @@
   }
 
   // ---- gear popover via the shared DrilldownConfig engine ------------------
-  // Roles: the shared aggregation triple (group / metric / agg_fn, single-group
+  // Roles: the shared aggregation triple (group / value / func, single-group
   // like the chart — a KPI clusters by one dimension) plus the tile's display
   // roles. `group` comes from DAgg.aggRoles(); the old standalone `by` role is
   // gone (renamed to the aggregation `group`).
@@ -53,7 +53,7 @@
     // overline role: two pickers fed one visual slot with an invisible
     // fallback (overline defaulted to the name) and read as duplicates —
     // the ctor arg still works for saved boards, it just has no gear control.
-    measure:   { label: 'Name',      kind: 'column', colType: 'cat',
+    name:      { label: 'Name',      kind: 'column', colType: 'cat',
                  ph: 'column naming each KPI…' },
     secondary: { label: 'Secondary', kind: 'column', colType: 'any' },
     caption:   { label: 'Caption',   kind: 'column', colType: 'any' },
@@ -68,8 +68,8 @@
                  options: [{ value: 'cards', label: 'Cards' }, { value: 'table', label: 'Table' }] }
   });
   // A FUNCTION of the config (mirrors table.js): the display roles map under
-  // "Mapping"; the Aggregation checkbox section (group + repeatable metrics)
-  // renders separately via aggregatable/metrics. hasCols is false only for an
+  // "Mapping"; the Aggregation checkbox section (group + repeatable summaries)
+  // renders separately via aggregatable/summaries. hasCols is false only for an
   // empty input, where the column pickers have nothing to offer.
   /** @param {Record<string, any>} cfg @param {boolean} hasCols */
   function tileSections(cfg, hasCols) {
@@ -77,12 +77,12 @@
       requiredMap: hasCols ? ['value'] : [],
       // `group` is a MAPPING for the tile — it clusters precomputed cards /
       // drives the matrix rows even with no aggregation (and doubles as the
-      // group_by column when metrics aggregate). It therefore lives under
+      // group_by column when summaries aggregate). It therefore lives under
       // Mapping, NOT inside the Aggregation section (the table's group IS
       // its aggregation; the tile's isn't).
-      optionalMap: hasCols ? ['group', 'measure', 'secondary', 'caption'] : [],
+      optionalMap: hasCols ? ['group', 'name', 'secondary', 'caption'] : [],
       mapping: [],
-      metrics: hasCols,        // repeatable "[agg] of [cols]" list
+      summaries: hasCols,        // repeatable "[agg] of [cols]" list
       aggregatable: hasCols,   // Variant A: Aggregation checkbox section
       // Aggregation is active iff METRICS are set; the checkbox must not
       // seed from (or clear) the clustering group.
@@ -129,10 +129,10 @@
     // The engine's drill section is value-based ('' off / 'auto' on); the tile
     // always filters on the group column, so map the boolean to 'auto'/''.
     cfg.drill = cfg.drill ? 'auto' : '';
-    // The repeatable aggregation list rides on its own attribute (agg_fn a
-    // scalar, cols an array), parsed into cfg.metrics for the engine.
-    try { cfg.metrics = JSON.parse(root.getAttribute('data-tk-metrics') || '[]'); }
-    catch (e) { cfg.metrics = []; }
+    // The repeatable aggregation list rides on its own attribute (func a
+    // scalar, cols an array), parsed into cfg.summaries for the engine.
+    try { cfg.summaries = JSON.parse(root.getAttribute('data-tk-summaries') || '[]'); }
+    catch (e) { cfg.summaries = []; }
 
     var header = document.createElement('div');
     header.className = 'blockr-gear-header';
@@ -171,7 +171,7 @@
       currentType: function () { return null; },
       sections: function () { return tileSections(cfg, cols.length > 0); },
       sectionsForFamily: function () { return tileSections(cfg, cols.length > 0); },
-      // Paired-tail roles (agg_fn behind metric) render inside their partner's
+      // Paired-tail roles (func behind value) render inside their partner's
       // row, never standalone — mirror the chart / table.
       secondary: new Set(Object.keys(TILE_ROLES)
         .map(function (k) { return TILE_ROLES[k].pairedWith; })
@@ -191,15 +191,15 @@
         if (!col) return null;
         return 'Clicking a card or row filters downstream on ' + col + '.';
       },
-      // Repeatable aggregation list: one "[agg] of [cols]" row per metric. A
+      // Repeatable aggregation list: one "[agg] of [cols]" row per value. A
       // single count is the floor, so an empty list surfaces as one count row.
       metricsList: function () {
-        return (cfg.metrics && cfg.metrics.length)
-          ? cfg.metrics : [{ agg_fn: 'count', cols: [] }];
+        return (cfg.summaries && cfg.summaries.length)
+          ? cfg.summaries : [{ func: 'count', cols: [] }];
       },
       onMetricsChange: function (/** @type {any[]} */ ms) {
-        cfg.metrics = ms;
-        sendConfig(elemId, 'metrics', JSON.stringify(ms));
+        cfg.summaries = ms;
+        sendConfig(elemId, 'summaries', JSON.stringify(ms));
       },
       title: 'Tile settings',
       onChange: function (key) {

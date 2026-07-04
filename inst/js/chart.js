@@ -3,7 +3,7 @@
  * Drill-Down Chart — configurable chart that acts as a filter.
  *
  * Three families:
- *   Aggregated (bar, pie, treemap, boxplot, radar): group-by + metric, click
+ *   Aggregated (bar, pie, treemap, boxplot, radar): group-by + value, click
  *     to filter. Radar puts the group levels on the spokes and draws one
  *     shape per color level; a click on a shape filters on its color value.
  *   Individual (scatter, line): x/y columns, brush-drag to filter. Clicking a
@@ -134,8 +134,8 @@
       }
     : TOOLBOX;
 
-  // Aggregation vocabulary + the group/metric/agg_fn role triple + the
-  // metric-follows-agg reconcile now live in the shared drilldown-agg.js so the
+  // Aggregation vocabulary + the group/value/func role triple + the
+  // value-follows-agg reconcile now live in the shared drilldown-agg.js so the
   // table and tile render the identical control. Loaded before chart.js.
   const DAgg = /** @type {any} */ (
     (typeof Blockr !== 'undefined' && Blockr.DrilldownAgg) || window.DrilldownAgg);
@@ -148,7 +148,7 @@
   //   kind: 'column' | 'select' | 'segmented' | 'slider'
   //   colType: 'cat' (categorical or n_unique<=50) | 'num' | 'any' | 'none'
   //            (no data columns), or a function of the current config
-  //   allowCount: prepend '.count' to the column picker (metric); may also
+  //   allowCount: prepend '.count' to the column picker (value); may also
   //               be a function of the current config
   //   maxUnique: cap a categorical picker (facet)
   //   pairedWith: render this role's control beside its pair in one row
@@ -156,7 +156,7 @@
   // Inlined here for v1; extract to a shared module when the table/ggplot
   // blocks adopt it (follow-up specs).
   const ROLES = {
-    // group / metric / agg_fn are shared with the table + tile so all three
+    // group / value / func are shared with the table + tile so all three
     // render the identical aggregation control — see drilldown-agg.js.
     ...DAgg.aggRoles(),
     x:      { label: 'X',      kind: 'column', colType: 'any',
@@ -219,14 +219,14 @@
     dot_size_mult:   { label: 'Dot size',   kind: 'slider' }
   };
 
-  // The metric is one shared slot across every chart: the numeric variable the
+  // The value is one shared slot across every chart: the numeric variable the
   // chart is about. Bar/pie/etc. wrap it in an aggregation, so it reads as part
   // of "mean of AGE" under the Aggregation section. A boxplot does NOT
   // aggregate — it shows the raw distribution of that same variable — so there
   // the very same slot is just the "Value" to plot. Same argument, different
   // framing. (Label is a function of config; the config engine resolves it.)
-  ROLES.metric = /** @type {any} */ ({
-    ...ROLES.metric,
+  ROLES.value = /** @type {any} */ ({
+    ...ROLES.value,
     label: (/** @type {any} */ cfg) => cfg.chart_type === 'boxplot' ? 'Value' : 'Aggregate'
   });
 
@@ -234,8 +234,8 @@
   // (always shown for the family) or { role, types:[...] } (shown only for
   // those chart types). requiredMap rows render immediately; optionalMap rows
   // are added on demand from the "+ Add mapping" menu. `mapping` holds always-on
-  // controls — for the aggregated family that is `metric` (required, carries its
-  // own marker) + the `agg_fn`. `aggTitle` (aggregated family only) splits those
+  // controls — for the aggregated family that is `value` (required, carries its
+  // own marker) + the `func`. `aggTitle` (aggregated family only) splits those
   // stat controls into their own trailing "Aggregation" section, ggplot-style:
   // Mapping = the aesthetics (group / color / facet / label), Aggregation = the
   // stat (mean of AVGDD). Families without aggTitle keep everything under Mapping.
@@ -252,7 +252,7 @@
         { role: 'color', types: ['bar', 'boxplot', 'radar'] },
         'facet'
       ],
-      mapping: ['metric', { role: 'agg_fn', types: ['bar', 'waterfall', 'pie', 'treemap', 'radar'] }],
+      mapping: ['value', { role: 'func', types: ['bar', 'waterfall', 'pie', 'treemap', 'radar'] }],
       aggTitle: 'Aggregation',
       // orientation: bar only for v1 (boxplot swap is a follow-up). Waterfall
       // is vertical-only (a bridge reads left-to-right along the value axis), so
@@ -347,31 +347,10 @@
         currentType: () => this.config.chart_type,
         sections: () => this._sectionsSpec(),
         sectionsForFamily: (/** @type {string} */ fam) => /** @type {Record<string, any>} */ (FAMILY_ROLES)[fam],
-        // Repeatable metrics list (plain bar only — see _sectionsSpec).
-        // Seeds from the single metric/agg_fn so the list opens where the
-        // block is; edits flow through the same normalize + mirror path as
-        // a metrics-carrying setData.
-        metricsList: () => {
-          const cfg = this.config;
-          if (!Array.isArray(cfg.metrics) || !cfg.metrics.length) {
-            const fn = cfg.agg_fn || 'count';
-            cfg.metrics = [{
-              agg_fn: fn,
-              cols: (cfg.metric && cfg.metric !== '.count') ? [cfg.metric] : []
-            }];
-          }
-          return cfg.metrics;
-        },
-        onMetricsChange: (/** @type {any[]} */ ms) => {
-          this.config.metrics = ms;
-          this._normalizeMetrics();   // mirror plan[0] onto metric/agg_fn
-          // Exclusivity: several planned series own the series dimension —
-          // clear the color split (_sectionsSpec also stops offering it).
-          if (this._multiMetricActive() && this.config.color) {
-            this.config.color = '';
-          }
-          this._render(); this._sendConfig();
-        },
+        // NOTE: `summaries` (the multi-aggregation list) is a table/tile
+        // concept and is intentionally NOT exposed on charts — a chart
+        // aggregates a single value + func, and shows multiple measures via
+        // color/series from the data shape. See dev/unified-arg-naming.md.
         secondary: DD_SECONDARY,
         typeKey: 'chart_type',
         // Icon tile grid with per-family headings (design-system type-picker
@@ -392,11 +371,11 @@
         ],
         familyFor: (/** @type {string} */ t) => AGGREGATED_TYPES.includes(t) ? 'aggregated'
           : TIMELINE_TYPES.includes(t) ? 'timeline' : 'individual',
-        // `drill` and `metric` must persist across a family switch — drill is a
-        // capability; metric is a required-for-init slot (clearing it wedges the
+        // `drill` and `value` must persist across a family switch — drill is a
+        // capability; value is a required-for-init slot (clearing it wedges the
         // block, the family-switch freeze bug).
-        carryKeep: ['drill', 'metric'],
-        entryRequired: (/** @type {string} */ role) => role === 'metric' && this._family() === 'aggregated',
+        carryKeep: ['drill', 'value'],
+        entryRequired: (/** @type {string} */ role) => role === 'value' && this._family() === 'aggregated',
         drillAutoLabel: () => {
           const fam = this._family();
           if (this.config.chart_type === 'radar') return 'Auto — the clicked shape';
@@ -407,16 +386,7 @@
         },
         title: 'Chart settings',
         onChange: (/** @type {string} */ key) => {
-          // The gear is (until the engine grows the repeatable list) the
-          // single-metric surface: editing metric/agg_fn there takes the
-          // chart out of multi-metric mode — the edited pair IS the intent.
-          // Left in place, a stale cfg.metrics would override the edit on
-          // the next R data push (the first-entry mirror wins).
-          if ((key === 'metric' || key === 'agg_fn') &&
-              Array.isArray(this.config.metrics) && this.config.metrics.length) {
-            this.config.metrics = [];
-          }
-          if (key === 'agg_fn') this._reconcileMetric();
+          if (key === 'func') this._reconcileMetric();
           this._render(); this._sendConfig();
         },
         onMults: () => this._sendMults(),
@@ -457,55 +427,40 @@
     // Section spec for the gear, per chart type. A boxplot uses the aggregated
     // machinery (group + value on a category axis, group drill) but does NOT
     // aggregate, so it drops the trailing "Aggregation" section: with aggTitle
-    // cleared the value slot renders under Mapping, and its agg_fn is already
+    // cleared the value slot renders under Mapping, and its func is already
     // excluded by type. Everything else keeps the family spec unchanged.
     _sectionsSpec() {
       const base = FAMILY_ROLES[this._family()];
       if (this.config.chart_type === 'boxplot') {
         return /** @type {any} */ ({ ...base, aggTitle: null });
       }
-      if (this._family() !== 'aggregated') return base;
-      const spec = /** @type {any} */ ({ ...base });
-      // Plain bar: the Aggregation section renders the REPEATABLE metrics
-      // list (one dodged series per aggregation x column — same control as
-      // the table/tile). The structurally single-metric types (pie / treemap
-      // / radar / the waterfall bridge) keep the single [agg of col] pair.
-      spec.aggMetrics = this.config.chart_type === 'bar' &&
-        this._baselineMode() !== 'cumulative';
-      // Exclusivity: with several planned series the metrics own the series
-      // dimension — the color split is not offered (adding a second metric
-      // cleared it; see onMetricsChange).
-      if (this._multiMetricActive()) {
-        spec.optionalMap = base.optionalMap.filter((/** @type {any} */ e) =>
-          (typeof e === 'string' ? e : e.role) !== 'color');
-      }
-      return spec;
+      return base;
     }
 
-    // Keep the metric consistent when the aggregation changes (shared with the
-    // table + tile — see drilldown-agg.js reconcileMetric).
+    // Keep the value consistent when the aggregation changes (shared with the
+    // table + tile — see drilldown-agg.js reconcileValue).
     _reconcileMetric() {
-      DAgg.reconcileMetric(this.config, this.columns);
+      DAgg.reconcileValue(this.config, this.columns);
     }
 
     // Boxplot summarizes RAW numeric values (its box = the five-number summary
-    // of the metric within a group) and ignores agg_fn entirely, so it needs a
-    // numeric metric and never the synthetic '.count'. The shared metric
-    // machinery gates pickability on agg_fn, and agg_fn is not shown for
-    // boxplot — left at the aggregated default 'count' it forces metric to
-    // '.count', which the boxplot can't plot ("needs a numeric metric"). Drive
+    // of the value within a group) and ignores func entirely, so it needs a
+    // numeric value and never the synthetic '.count'. The shared value
+    // machinery gates pickability on func, and func is not shown for
+    // boxplot — left at the aggregated default 'count' it forces value to
+    // '.count', which the boxplot can't plot ("needs a numeric value"). Drive
     // it into numeric mode: swap a count aggregation for 'mean' (inert for the
     // boxplot, but makes the picker offer numeric columns) and pick / keep a
     // numeric column. Returns true when it handled a boxplot config.
     /** @param {any} cfg */
     _ensureBoxplotMetric(cfg) {
       if (cfg.chart_type !== 'boxplot') return false;
-      if (!cfg.agg_fn || cfg.agg_fn === 'count') cfg.agg_fn = 'mean';
+      if (!cfg.func || cfg.func === 'count') cfg.func = 'mean';
       // Never carry the synthetic row count into a boxplot. Leave the value
       // empty (required) rather than auto-guessing a numeric column: the first
       // numeric is often a code (e.g. a treatment number) that plots as a flat
       // line, which reads as broken. An empty "Value *" prompts a real choice.
-      if (cfg.metric === '.count') cfg.metric = '';
+      if (cfg.value === '.count') cfg.value = '';
       return true;
     }
 
@@ -695,8 +650,8 @@
     // "<Fn> of <col>" (e.g. "Mean of AVAL"). Tells the reader what the bar's
     // number actually is — the piece an aggregated tooltip was missing.
     _aggLabel() {
-      const fn = this.config.agg_fn || 'count';
-      const col = this._axisTitle(this.config.metric);
+      const fn = this.config.func || 'count';
+      const col = this._axisTitle(this.config.value);
       if (fn === 'count') return 'Count';
       if (fn === 'count_distinct') return 'Distinct ' + col;
       return (DAgg.AGG_WORDS[fn] || fn) + ' of ' + col;
@@ -710,7 +665,7 @@
       /** @type {Array<[string, any]>} */
       const pairs = [[this._aggLabel(), ddNum(value)]];
       if (percent != null) pairs.push(['Share', Math.round(percent) + '%']);
-      if (this.config.agg_fn !== 'count' && n != null) pairs.push(['n', n]);
+      if (this.config.func !== 'count' && n != null) pairs.push(['n', n]);
       return pairs;
     }
 
@@ -917,11 +872,11 @@
           cfg.group = cat ? cat.name : cols[0].name;
         }
         if (!this._ensureBoxplotMetric(cfg)) {
-          if (!cfg.agg_fn) cfg.agg_fn = 'count';
+          if (!cfg.func) cfg.func = 'count';
           // '.count' only fits the "count" aggregation; under any other agg an
-          // unset metric stays empty (required-empty picker) rather than
+          // unset value stays empty (required-empty picker) rather than
           // defaulting to a value the aggregation ignores.
-          if (!cfg.metric && cfg.agg_fn === 'count') cfg.metric = '.count';
+          if (!cfg.value && cfg.func === 'count') cfg.value = '.count';
         }
         if (!this._hasVal(cfg.sort_by)) cfg.sort_by = 'value';
         if (!this._hasVal(cfg.sort_dir)) cfg.sort_dir = 'desc';
@@ -991,8 +946,8 @@
       }
 
       if (!this.config.chart_type) this.config.chart_type = 'bar';
-      // Normalize the multi-metric list and mirror its first entry onto
-      // metric/agg_fn BEFORE the family defaults below (they read cfg.metric).
+      // Normalize the multi-value list and mirror its first entry onto
+      // value/func BEFORE the family defaults below (they read cfg.value).
       this._normalizeMetrics();
 
       const fam = this._family();
@@ -1002,9 +957,9 @@
           this.config.group = cat ? cat.name : this.columns[0].name;
         }
         if (!this._ensureBoxplotMetric(this.config)) {
-          if (!this.config.agg_fn) this.config.agg_fn = 'count';
+          if (!this.config.func) this.config.func = 'count';
           // '.count' only fits the "count" aggregation (see _ensureFamilyDefaults)
-          if (!this.config.metric && this.config.agg_fn === 'count') this.config.metric = '.count';
+          if (!this.config.value && this.config.func === 'count') this.config.value = '.count';
         }
         if (!this.config.sort_by) this.config.sort_by = 'value';
         if (!this.config.sort_dir) this.config.sort_dir = 'desc';
@@ -1043,36 +998,36 @@
 
     // -- Aggregation ----------------------------------------------------------
 
-    // -- Multi-metric (bar) ----------------------------------------------
-    // cfg.metrics is the table block's shape: [{agg_fn, cols[]}], each
-    // aggregation x column pair one series. Empty/absent = single-metric
-    // mode (cfg.metric + cfg.agg_fn drive everything, as before).
+    // -- Multi-value (bar) ----------------------------------------------
+    // cfg.summaries is the table block's shape: [{func, cols[]}], each
+    // aggregation x column pair one series. Empty/absent = single-value
+    // mode (cfg.value + cfg.func drive everything, as before).
 
-    // Normalize cfg.metrics (cols always an array) and mirror the FIRST
-    // planned metric onto cfg.metric/cfg.agg_fn so every single-metric code
+    // Normalize cfg.summaries (cols always an array) and mirror the FIRST
+    // planned value onto cfg.value/cfg.func so every single-value code
     // path (pie/treemap/boxplot/waterfall, sort, axis titles, tooltips)
-    // renders a metrics-only state without changes.
+    // renders a summaries-only state without changes.
     _normalizeMetrics() {
       const cfg = this.config;
-      const ms = Array.isArray(cfg.metrics) ? cfg.metrics : [];
-      cfg.metrics = ms.map((/** @type {any} */ m) => ({
-        agg_fn: (m && m.agg_fn) || 'count',
+      const ms = Array.isArray(cfg.summaries) ? cfg.summaries : [];
+      cfg.summaries = ms.map((/** @type {any} */ m) => ({
+        func: (m && m.func) || 'count',
         cols: (m && m.cols != null)
           ? [].concat(m.cols).filter(Boolean) : []
       }));
       const plan = this._metricPlan();
       if (plan.length) {
-        cfg.agg_fn = plan[0].fn;
-        cfg.metric = plan[0].col || '.count';
+        cfg.func = plan[0].fn;
+        cfg.value = plan[0].col || '.count';
       }
     }
 
-    // Expand cfg.metrics to flat entries [{name, fn, col}] — one per
+    // Expand cfg.summaries to flat entries [{name, fn, col}] — one per
     // aggregation x column pair (count has no column). Mirrors the table's
     // dd_metric_plan naming: the source column names the series; a repeated
     // column is stat-qualified so names stay unique.
     _metricPlan() {
-      const ms = Array.isArray(this.config.metrics) ? this.config.metrics : [];
+      const ms = Array.isArray(this.config.summaries) ? this.config.summaries : [];
       const numeric = new Set((this.columns || [])
         .filter(c => c.type === 'numeric').map(c => c.name));
       /** @type {{name: string, fn: string, col: string | null}[]} */
@@ -1086,7 +1041,7 @@
         return nm2;
       };
       for (const m of ms) {
-        const fn = m.agg_fn || 'count';
+        const fn = m.func || 'count';
         if (fn === 'count') {
           plan.push({ name: uniq('Count', 'count'), fn, col: null });
           continue;
@@ -1099,9 +1054,9 @@
       return plan;
     }
 
-    // Multiple metrics render as one series per metric — bar only (pie /
+    // Multiple summaries render as one series per value — bar only (pie /
     // treemap / radar / the waterfall bridge are structurally single-measure;
-    // they consume the first planned metric via the cfg.metric mirror).
+    // they consume the first planned value via the cfg.value mirror).
     _multiMetricActive() {
       return this.config.chart_type === 'bar' &&
         this._baselineMode() !== 'cumulative' &&
@@ -1109,7 +1064,7 @@
     }
 
     // Per-series tooltip label, keyed by plan name: "Count" for a row count,
-    // else "<Fn> <col>" ("Mean AGE"). Used by the multi-metric bar tooltip.
+    // else "<Fn> <col>" ("Mean AGE"). Used by the multi-value bar tooltip.
     _metricWords() {
       /** @type {Record<string, {label: string, fn: string}>} */
       const out = {};
@@ -1124,11 +1079,11 @@
     }
 
     // Aggregate per (facet, group) x plan entry. Returns the _aggregate()
-    // row shape with the metric NAME in the color slot, so the existing
+    // row shape with the value NAME in the color slot, so the existing
     // series / sort / legend / tooltip machinery in _renderAggregated
-    // renders one series per metric. The color mapping is ignored while
-    // multi-metric is active — the metrics own the series dimension
-    // (stacking or splitting metrics of different units is meaningless).
+    // renders one series per value. The color mapping is ignored while
+    // multi-value is active — the summaries own the series dimension
+    // (stacking or splitting summaries of different units is meaningless).
     _aggregateMulti() {
       const { group, facet } = this.config;
       const plan = this._metricPlan();
@@ -1183,7 +1138,7 @@
     }
 
     _aggregate() {
-      const { group, color, facet, metric, agg_fn } = this.config;
+      const { group, color, facet, value, func } = this.config;
       if (this.data.length === 0) return [];
 
       /** @type {Record<string, any>} */
@@ -1195,11 +1150,11 @@
         const key = fv + '|||' + gv + '|||' + cv;
         if (!groups[key]) groups[key] = { facet: fv, group: gv, color: cv, values: [], rows: [] };
         groups[key].rows.push(row);
-        // Collect numeric metric values for mean/median/sum/min/max. Skip
+        // Collect numeric value values for mean/median/sum/min/max. Skip
         // entries that coerce to NaN (non-numeric text, empty strings) so a
         // single bad cell can't poison a mean/sum into NaN.
-        if (metric !== '.count' && row[metric] != null) {
-          const n = Number(row[metric]);
+        if (value !== '.count' && row[value] != null) {
+          const n = Number(row[value]);
           if (!Number.isNaN(n)) groups[key].values.push(n);
         }
       }
@@ -1207,13 +1162,13 @@
       const result = [];
       for (const g of Object.values(groups)) {
         let value;
-        if (agg_fn === 'count') value = g.rows.length;
-        else if (agg_fn === 'count_distinct') { const s = new Set(); for (const r of g.rows) { const v = r[metric]; if (v != null && !(typeof v === 'number' && Number.isNaN(v))) s.add(v); } value = s.size; }
-        else if (agg_fn === 'mean') value = g.values.length ? g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / g.values.length : 0;
-        else if (agg_fn === 'median') { const s = g.values.slice().sort((/** @type {number} */ a, /** @type {number} */ b) => a - b); const m = Math.floor(s.length / 2); value = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; }
-        else if (agg_fn === 'sum') value = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
-        else if (agg_fn === 'min') value = g.values.length ? Math.min.apply(null, g.values) : 0;
-        else if (agg_fn === 'max') value = g.values.length ? Math.max.apply(null, g.values) : 0;
+        if (func === 'count') value = g.rows.length;
+        else if (func === 'count_distinct') { const s = new Set(); for (const r of g.rows) { const v = r[value]; if (v != null && !(typeof v === 'number' && Number.isNaN(v))) s.add(v); } value = s.size; }
+        else if (func === 'mean') value = g.values.length ? g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / g.values.length : 0;
+        else if (func === 'median') { const s = g.values.slice().sort((/** @type {number} */ a, /** @type {number} */ b) => a - b); const m = Math.floor(s.length / 2); value = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; }
+        else if (func === 'sum') value = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
+        else if (func === 'min') value = g.values.length ? Math.min.apply(null, g.values) : 0;
+        else if (func === 'max') value = g.values.length ? Math.max.apply(null, g.values) : 0;
         // n = rows behind this (group, color) cell, for the tooltip's
         // "n = ..." line (how many observations the mark aggregates).
         result.push({ facet: g.facet, group: g.group, color: g.color, value: Math.round(value * 100) / 100, n: g.rows.length });
@@ -1274,7 +1229,7 @@
       const colSet = new Set((this.columns || []).map(c => c.name));
       const req = fam === 'aggregated'
         ? [['Group', cfg.group],
-           ['Metric', cfg.metric !== '.count' ? cfg.metric : null]]
+           ['Metric', cfg.value !== '.count' ? cfg.value : null]]
         : [['X', cfg.x], ['Y', cfg.y]];
       const missing = req
         .filter(([, v]) => v && !colSet.has(v))
@@ -1305,10 +1260,10 @@
     // -- Aggregated rendering -------------------------------------------------
 
     _renderAggregated() {
-      // Multi-metric bar: one series per planned metric, riding the color
-      // slot (metric name where the color level would be). The color mapping
+      // Multi-value bar: one series per planned value, riding the color
+      // slot (value name where the color level would be). The color mapping
       // is ignored while active; "colors" become the plan names in plan order
-      // (no scale-map / level reordering — the user ordered the metrics).
+      // (no scale-map / level reordering — the user ordered the summaries).
       const multi = this._multiMetricActive();
       const agg = multi ? this._aggregateMulti() : this._aggregate();
       if (agg.length === 0) {
@@ -1340,7 +1295,7 @@
       const cumulative = this._baselineMode() === 'cumulative';
 
       // Ordering for the category axis. "alpha" = group name;
-      // "value" = total of the computed metric across color stacks;
+      // "value" = total of the computed value across color stacks;
       // otherwise, a raw-data column whose minimum per group orders the axis.
       /** @param {any[]} facetData */
       const orderGroups = (facetData) => {
@@ -1379,9 +1334,9 @@
           return groups.sort((a, b) => a.localeCompare(b) * sortDir);
         }
         if (sortBy === 'value') {
-          // "value" = total of the metric across color stacks. With multiple
-          // metrics, summing across series would mix units (mean AGE + sum
-          // DOSE), so order by the FIRST metric only.
+          // "value" = total of the value across color stacks. With multiple
+          // summaries, summing across series would mix units (mean AGE + sum
+          // DOSE), so order by the FIRST value only.
           const first = multi ? colors[0] : null;
           /** @type {Record<string, number>} */
           const totals = {};
@@ -1494,10 +1449,10 @@
       const ct = this.config.chart_type;
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
 
-      // Value-axis title (the numeric axis on bar / boxplot): the metric's
+      // Value-axis title (the numeric axis on bar / boxplot): the value's
       // variable label, or "Count" for a row count. Same rationale as the
       // line/scatter axis titles — the mapping moved into the gear, so the
-      // chart must say what it shows. Multi-metric: the legend names the
+      // chart must say what it shows. Multi-value: the legend names the
       // series, so the axis says the shared aggregation ("Mean") when all
       // series agree, else just "Value" (mixed units share one axis).
       const multi = this._multiMetricActive();
@@ -1511,8 +1466,8 @@
               ? 'Distinct count' : (DAgg.AGG_WORDS[fns[0]] || 'Value'))
           : 'Value';
       } else {
-        valueTitle = this.config.metric === '.count'
-          ? 'Count' : this._axisTitle(this.config.metric);
+        valueTitle = this.config.value === '.count'
+          ? 'Count' : this._axisTitle(this.config.value);
       }
 
       if (ct === 'pie') return this._buildPie(facetData, groups, palette);
@@ -1522,7 +1477,7 @@
       // Waterfall = a bar with baseline "cumulative": each bar floats from the
       // running cumulative of the bars before it. Sugar for bar +
       // baseline="cumulative" (see _baselineMode). It reuses the same aggregated
-      // contract (group=step axis, metric+agg_fn=value) and the same bar option
+      // contract (group=step axis, value+func=value) and the same bar option
       // shell — only the bars' baseline is shifted.
       if (this._baselineMode() === 'cumulative') {
         return this._buildWaterfall(facetData, groups, valueTitle, ax, plotW);
@@ -1532,7 +1487,7 @@
       // dodges the series side-by-side; "percent" keeps the stack but feeds
       // each segment as a share (0..1) of its group total (ECharts has no
       // native percent stack). "stacked" (default) is absolute stacking.
-      // Multi-metric forces "grouped": stacking (or percent-normalizing)
+      // Multi-value forces "grouped": stacking (or percent-normalizing)
       // series of different units is meaningless.
       const barMode = multi ? 'grouped' : (this.config.bar_mode || 'stacked');
       const isGrouped = barMode === 'grouped';
@@ -1557,7 +1512,7 @@
       if (colors.length === 0) {
         series.push({ type: 'bar', data: groups.map(g => { const d = facetData.find(a => a.group === g); return d ? d.value : 0; }), itemStyle: { color: palette[0] }, barWidth: '60%', barMaxWidth: BAR_MAX, emphasis: { focus: 'self' } });
       } else {
-        // Multi-metric series ride the color slot but are NOT color levels:
+        // Multi-value series ride the color slot but are NOT color levels:
         // no board scale-map lookup, plain palette cycling in plan order.
         const colorScale = multi ? null : this._scaleFor(this.config.color);
         // Per-group total across colors, for percent normalization only.
@@ -1661,14 +1616,14 @@
         const nOf = {};
         for (const a of facetData) nOf[a.group + '|||' + a.color] = a.n;
         const aggLabel = this._aggLabel();
-        const showN = this.config.agg_fn !== 'count';
+        const showN = this.config.func !== 'count';
         tooltip.formatter = (/** @type {any[]} */ ps) => {
           if (!ps || !ps.length) return '';
           const head = ps[0].axisValueLabel || ps[0].name || '';
           const rows = ps
             .filter(p => p && p.value != null)
             .map(p => {
-              // Multi-metric: the series IS a metric — say what its number
+              // Multi-value: the series IS a value — say what its number
               // means ("Mean AGE: 75.3"), with n except for a count series
               // (whose value already is n). Color-split: series = color
               // level; single: the aggregation label.
@@ -1833,9 +1788,9 @@
 
     // Radar = an aggregated chart in polar coords: the group levels are the
     // spokes (indicators), each color level draws one shape, and each vertex
-    // is agg_fn(metric) for that (group, color) cell — the same _aggregate()
+    // is func(value) for that (group, color) cell — the same _aggregate()
     // output the bar chart stacks. Multi-column spokes (the blockr.echarts
-    // radar's `metrics`) are expressed by pivoting longer upstream and
+    // radar's `summaries`) are expressed by pivoting longer upstream and
     // mapping the name column to `group`.
     /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {any} valueTitle @param {number} plotW */
     _buildRadar(facetData, groups, colors, palette, valueTitle, plotW) {
@@ -1848,7 +1803,7 @@
       // aggregations; for mean/median/min/max there is no value — null
       // leaves a gap instead of faking a 0.
       const zeroWhenMissing = ['count', 'count_distinct', 'sum']
-        .includes(this.config.agg_fn);
+        .includes(this.config.func);
       const gapVal = zeroWhenMissing ? 0 : null;
       /** @param {any} g @param {any} c */
       const cellVal = (g, c) => {
@@ -1922,10 +1877,10 @@
       const groupBy = this.config.group;
       const colorCol = this.config.color;
       const facetCol = this.config.facet;
-      const metric = this.config.metric;
+      const value = this.config.value;
       // No numeric value (unset or the synthetic row count) -> nothing to
       // summarize; the caller shows the "pick a numeric Value" empty state.
-      if (!metric || metric === '.count') return null;
+      if (!value || value === '.count') return null;
 
       // This facet's raw rows. Unlike bar/pie (which read pre-aggregated
       // facetData), boxplot needs the raw values, so it filters this.data
@@ -1935,13 +1890,13 @@
         ? this.data.filter(r => String(r[facetCol]) === String(facet))
         : this.data;
 
-      // Five-number summary (whiskers capped at 1.5*IQR) over the raw metric
+      // Five-number summary (whiskers capped at 1.5*IQR) over the raw value
       // values of a set of rows. Returns null for an empty / all-NA set so the
       // caller can drop that category slot rather than draw a misleading flat
       // box at zero. Datum is an object (not a bare array) so the tooltip can
       // report the observation count alongside the summary.
       const summarize = (/** @type {any[]} */ rows) => {
-        const vals = rows.map(r => Number(r[metric])).filter(v => !Number.isNaN(v)).sort((a, b) => a - b);
+        const vals = rows.map(r => Number(r[value])).filter(v => !Number.isNaN(v)).sort((a, b) => a - b);
         if (vals.length === 0) return null;
         const q = (/** @type {number} */ p) => { const i = p * (vals.length - 1); const lo = Math.floor(i); return lo === i ? vals[lo] : vals[lo] + (vals[lo + 1] - vals[lo]) * (i - lo); };
         const q1 = q(0.25), q3 = q(0.75), iqr = q3 - q1;
@@ -1969,7 +1924,7 @@
       const rowsFor = (/** @type {string} */ g, /** @type {string} */ lv) =>
         facetRows.filter(r =>
           String(r[groupBy]) === g &&
-          r[metric] != null &&
+          r[value] != null &&
           (lv === '__all__' || String(r[colorCol] ?? '') === lv));
 
       // Category axis. Plain boxplot: one slot per group. Color-split: one slot
@@ -2044,7 +1999,7 @@
           ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, ...(leg.scroll ? { type: 'scroll' } : {}) }
           : undefined,
         grid: { left: gut.gridLeft, right: 5, top: 30, bottom: bottomBase + leg.extra },
-        xAxis: { type: 'value', name: this._axisTitle(this.config.metric), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } },
+        xAxis: { type: 'value', name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } },
         yAxis: { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(split ? { formatter: (/** @type {string} */ v) => String(v).split(BOX_CAT_SEP)[0] } : {}) }, axisLine: { show: false } },
         series
       };
@@ -3359,14 +3314,8 @@
         group: this.config.group,
         color: this.config.color || '',
         facet: this.config.facet || '',
-        metric: this.config.metric,
-        agg_fn: this.config.agg_fn,
-        // Multi-metric list as a JSON string (arrays of objects mangle in
-        // Shiny's input deserialization; dd_parse_metrics parses the string).
-        // metrics_set marks the field as present so R can distinguish an
-        // explicit clear ("[]") from an absent key.
-        metrics_set: true,
-        metrics: JSON.stringify(this.config.metrics || []),
+        value: this.config.value,
+        func: this.config.func,
         chart_type: this.config.chart_type,
         x: this.config.x || '',
         y: this.config.y || '',

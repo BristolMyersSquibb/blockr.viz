@@ -11,10 +11,10 @@
 
 # Shared aggregation vocabulary for the drilldown renderers (chart, table,
 # tile). This vector MUST mirror `AGG_FNS` in inst/js/drilldown-agg.js (a drift
-# test guards the pair). It is the single source for the `agg_fn` enum.
+# test guards the pair). It is the single source for the `func` enum.
 AGG_FNS <- c("count", "count_distinct", "mean", "median", "sum", "min", "max")
 
-#' Shared `group` / `metric` / `agg_fn` argument triple.
+#' Shared `group` / `value` / `func` argument triple.
 #'
 #' The aggregation half of the chart / table / tile registry surface. Each
 #' renderer spreads these into its own `*_arguments()` builder so the assistant
@@ -37,10 +37,10 @@ agg_block_args <- function(group_multiple = FALSE) {
       example = if (group_multiple) list("region") else "region",
       type = if (group_multiple) arg_array(arg_string()) else arg_string()
     ),
-    metric = new_block_arg(
+    value = new_block_arg(
       paste0(
-        "Column to aggregate. Must match `agg_fn`: \".count\" with agg_fn ",
-        "\"count\" (row counts; the metric is ignored otherwise), any column ",
+        "Column to aggregate. Must match `func`: \".count\" with func ",
+        "\"count\" (row counts; the value is ignored otherwise), any column ",
         "with \"count_distinct\" (e.g. a subject id such as USUBJID to count ",
         "patients instead of records), a numeric column with the numeric ",
         "aggregations."
@@ -48,11 +48,11 @@ agg_block_args <- function(group_multiple = FALSE) {
       example = ".count",
       type = arg_string()
     ),
-    agg_fn = new_block_arg(
+    func = new_block_arg(
       paste0(
-        "Aggregation function for `metric`. One of \"count\", ",
+        "Aggregation function for `value`. One of \"count\", ",
         "\"count_distinct\", \"mean\", \"median\", \"sum\", \"min\", \"max\". ",
-        "Default \"count\" (row count; ignores `metric`)."
+        "Default \"count\" (row count; ignores `value`)."
       ),
       example = "count",
       type = arg_enum(AGG_FNS)

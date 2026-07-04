@@ -228,7 +228,7 @@ tk_table_wrap <- function(thead, tbody) {
 #'
 #' @param data Input data frame (upstream, pre-filter).
 #' @param value,group,measure,secondary,overline,caption Role mappings.
-#' @param metrics Optional in-block aggregation list (`list(agg_fn, cols)`),
+#' @param summaries Optional in-block aggregation list (`list(func, cols)`),
 #'   shared with the table. When set, the raw input is reduced FOR DISPLAY --
 #'   grand totals (no `group`) or one row per `group` level -- and each metric
 #'   becomes a card / matrix column.
@@ -242,23 +242,23 @@ tile_html <- function(data, value = character(), group = character(),
                       measure = "", layout = "cards", overline = "",
                       caption = "", secondary = "", style = "plain",
                       good_when = "up", format = "number", unit = "",
-                      metrics = list(), drill = FALSE, elem_id = NULL) {
+                      summaries = list(), drill = FALSE, elem_id = NULL) {
   flat <- list(style = style %||% "plain", good_when = good_when %||% "up",
                format = format %||% "number", unit = unit %||% "")
 
-  # In-block aggregation (the shared table aggregator): when `metrics` (and/or a
+  # In-block aggregation (the shared table aggregator): when `summaries` (and/or a
   # `group`) is set, reduce the raw input FOR DISPLAY -- one column per metric,
   # one row per group level (or a single grand-total row when `group` is
   # empty). The result feeds the wide-input renderer (each metric -> a card /
   # matrix column). No metric and no group -> the raw frame renders as before.
   group <- intersect(as.character(group), names(data))
-  # Aggregate ONLY when metrics are set. The table treats "group, no metric"
+  # Aggregate ONLY when summaries are set. The table treats "group, no metric"
   # as a grouped count (its gear seeds a count on checking Aggregation), but
   # the tile's `group` doubles as the CLUSTERING column for precomputed
-  # input (cards per region, matrix rows) -- group-without-metrics must keep
+  # input (cards per region, matrix rows) -- group-without-summaries must keep
   # rendering the precomputed values, not silently turn into a count.
-  agg <- if (length(metrics)) {
-    dd_table_aggregate(data, group, metrics)
+  agg <- if (length(summaries)) {
+    dd_table_aggregate(data, group, summaries)
   } else {
     list(aggregated = FALSE)
   }
@@ -339,7 +339,7 @@ tile_html <- function(data, value = character(), group = character(),
     `data-tk-config`  = tile_config_json(value, group, measure, secondary, style,
                                          good_when, format, unit, overline,
                                          caption, layout, drill),
-    `data-tk-metrics` = dd_metrics_json(metrics),
+    `data-tk-summaries` = dd_summaries_json(summaries),
     body
   )
 
@@ -366,14 +366,14 @@ tile_cols_json <- function(data) {
 #' scalar (the first measure column); multi-column wide `value` is author / AI
 #' set, not popover-editable in v1.
 #' @noRd
-tile_config_json <- function(value, group, measure, secondary, style, good_when,
+tile_config_json <- function(value, group, name, secondary, style, good_when,
                              format, unit, overline, caption, layout, drill) {
   value <- as.character(value)
   group <- as.character(group)
   cfg <- list(
     value     = if (length(value)) value[1] else "",
     group     = if (length(group)) group[1] else "",
-    measure   = measure %||% "",
+    name      = name %||% "",
     secondary = secondary %||% "",
     style     = style %||% "plain",
     good_when = good_when %||% "up",

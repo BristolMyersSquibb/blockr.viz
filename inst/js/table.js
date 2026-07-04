@@ -1,7 +1,7 @@
 // @ts-check
 (function () {
-  // Shared aggregation vocabulary (group/metric/agg_fn roles + AGG_FNS +
-  // metric-follows-agg reconcile) — the identical control the chart/tile use.
+  // Shared aggregation vocabulary (group/value/func roles + AGG_FNS +
+  // value-follows-agg reconcile) — the identical control the chart/tile use.
   var DAgg = (typeof Blockr !== "undefined" && Blockr.DrilldownAgg) ||
     window.DrilldownAgg;
 
@@ -407,13 +407,13 @@
   /** @param {Record<string, any>} cfg @param {boolean} hasCols @param {string} [stubCol] */
   function tableSections(cfg, hasCols, stubCol) {
     // Aggregation lives under the "Aggregation" header: `group` is always
-    // offered; the repeatable metrics list (spec.metrics) appears once a group
-    // is set. `metric`/`agg_fn` are no longer standalone roles here — the
-    // metrics list owns them.
+    // offered; the repeatable summaries list (spec.summaries) appears once a group
+    // is set. `value`/`func` are no longer standalone roles here — the
+    // summaries list owns them.
     var hasGroup = hasCols && cfg && cfg.group && cfg.group.length > 0;
-    // Aggregation is "on" when a metric is carried (checking the box seeds a
+    // Aggregation is "on" when a value is carried (checking the box seeds a
     // count). Grand totals = on with no group -> a single totals row.
-    var aggOn = hasCols && cfg && cfg.metrics && cfg.metrics.length > 0;
+    var aggOn = hasCols && cfg && cfg.summaries && cfg.summaries.length > 0;
     var pres = [];
     if (hasCols) pres.push("digits");
     pres.push("sortable");
@@ -421,7 +421,7 @@
     pres.push("search", "excel_download");
     var spec = { requiredMap: [], optionalMap: [],
                  mapping: hasCols ? ["group"] : [],
-                 metrics: hasCols,         // offer the metrics list whenever the box is on
+                 summaries: hasCols,         // offer the summaries list whenever the box is on
                  aggregatable: hasCols,    // Variant A: Aggregation checkbox section
                  // Empty cols on a numeric aggregation = all numeric columns
                  // (override rule, dd_metric_plan) — placeholder promises it.
@@ -491,12 +491,12 @@
       .split(",").filter(function (n) { return !!n; });
     /** @type {Record<string, any>} */
     var cfg = {
-      // Aggregation config: group (comma-joined -> array), and a metrics list
-      // (JSON array of {agg_fn, cols}) parsed off the table element.
+      // Aggregation config: group (comma-joined -> array), and a summaries list
+      // (JSON array of {func, cols}) parsed off the table element.
       group: (table.getAttribute("data-dt-group") || "")
         .split(",").filter(function (n) { return !!n; }),
-      metrics: (function () {
-        try { return JSON.parse(table.getAttribute("data-dt-metrics") || "[]"); }
+      summaries: (function () {
+        try { return JSON.parse(table.getAttribute("data-dt-summaries") || "[]"); }
         catch (e) { return []; }
       })(),
       // Drill state. Raw table: the filter column (data-dt-onclick-col).
@@ -561,7 +561,7 @@
       sectionsForFamily: function () {
         return tableSections(cfg, hasCols, cols.length ? cols[0].name : "");
       },
-      // Paired-tail roles (e.g. agg_fn behind metric) are rendered inside their
+      // Paired-tail roles (e.g. func behind value) are rendered inside their
       // partner's row, never standalone — mirror the chart's DD_SECONDARY.
       secondary: new Set(Object.keys(TABLE_ROLES)
         .map(function (k) { return TABLE_ROLES[k].pairedWith; })
@@ -588,15 +588,15 @@
       },
       title: "Table settings",
       // Repeatable aggregation list: the engine renders one "[agg] of [cols]"
-      // row per metric. A grouped table always shows at least a count, so an
+      // row per value. A grouped table always shows at least a count, so an
       // empty list surfaces as a single count row.
       metricsList: function () {
-        return (cfg.metrics && cfg.metrics.length)
-          ? cfg.metrics : [{ agg_fn: "count", cols: [] }];
+        return (cfg.summaries && cfg.summaries.length)
+          ? cfg.summaries : [{ func: "count", cols: [] }];
       },
       onMetricsChange: function (/** @type {any[]} */ ms) {
-        cfg.metrics = ms;
-        sendConfig(elemId, "metrics", JSON.stringify(ms));
+        cfg.summaries = ms;
+        sendConfig(elemId, "summaries", JSON.stringify(ms));
       },
       onChange: function (/** @type {string} */ key) {
         sendConfig(elemId, key, cfg[key]);

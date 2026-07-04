@@ -13,11 +13,11 @@ chart_arguments <- function() {
     chart_type = new_block_arg(
       paste0(
         "Chart type. One of \"bar\", \"waterfall\", \"pie\", \"treemap\", ",
-        "\"boxplot\", \"radar\" (aggregated \u2014 use group + metric + agg_fn), ",
+        "\"boxplot\", \"radar\" (aggregated \u2014 use group + value + func), ",
         "\"scatter\", \"line\" (individual \u2014 use x + y), or \"gantt\" ",
         "(timeline \u2014 use x + xend + y). Default \"bar\". Radar: group levels ",
         "are the spokes, one shape per color level. Waterfall: a bar with a ",
-        "cumulative baseline \u2014 each step's metric value is a DELTA and bars ",
+        "cumulative baseline \u2014 each step's value value is a DELTA and bars ",
         "float from the running total (group = step axis, honored in data ",
         "order). Use for P&L / bridge charts; reshape wide measures with ",
         "pivot_longer to (step, value) upstream first."
@@ -51,10 +51,10 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_string()
     ),
-    metric = new_block_arg(
+    value = new_block_arg(
       paste0(
-        "Column to aggregate (aggregated charts only). Must match `agg_fn`: ",
-        "\".count\" with agg_fn \"count\" (row counts; the metric is ignored ",
+        "Column to aggregate (aggregated charts only). Must match `func`: ",
+        "\".count\" with func \"count\" (row counts; the value is ignored ",
         "otherwise), any column with \"count_distinct\" (e.g. a subject id ",
         "such as USUBJID to count patients instead of records), a numeric ",
         "column with the numeric aggregations."
@@ -62,33 +62,18 @@ chart_arguments <- function() {
       example = ".count",
       type = arg_string()
     ),
-    agg_fn = new_block_arg(
+    func = new_block_arg(
       paste0(
-        "Aggregation function for `metric` (aggregated charts only). ",
+        "Aggregation function for `value` (aggregated charts only). ",
         "One of \"count\", \"count_distinct\", \"mean\", \"median\", ",
         "\"sum\", \"min\", \"max\". Default \"count\" (row count; ignores ",
-        "`metric`). \"count_distinct\" counts distinct `metric` values per ",
+        "`value`). \"count_distinct\" counts distinct `value` values per ",
         "group -- note that with a `color` split an entity appearing ",
         "under several color levels is counted once per level; deduplicate ",
         "upstream if segments must sum to the per-group distinct count."
       ),
       example = "count",
       type = arg_enum(AGG_FNS)
-    ),
-    metrics = new_block_arg(
-      paste0(
-        "Multi-metric aggregation (bar charts only): a list, each entry ",
-        "`{agg_fn, cols}` -- the same shape as the table block's `metrics`. ",
-        "Each aggregation x column pair renders as one bar series per group ",
-        "(side-by-side; the legend names the metrics), e.g. mean AGE next to ",
-        "mean BMIBL per ARM. With more than one series the `color` split is ",
-        "ignored (the metrics own the series dimension). Non-bar chart types ",
-        "use the FIRST entry only. When set, supersedes `metric`/`agg_fn`. ",
-        "Empty/NULL = single-metric mode."
-      ),
-      example = list(
-        list(agg_fn = "mean", cols = list("AGE", "BMIBL"))
-      )
     ),
     x = new_block_arg(
       paste0(
@@ -269,10 +254,10 @@ chart_guidance <- function() {
       "\n\nThree chart families share the block (an internal detail that",
       "never changes what an argument means):",
       "\n- Aggregated (bar/pie/treemap/boxplot/radar): set `group`,",
-      "`agg_fn`, and `metric` (\".count\" for row counts). To make clicking",
+      "`func`, and `value` (\".count\" for row counts). To make clicking",
       "a bar filter to that group, set `drill=\"<the group column>\"`.",
       "A radar puts the `group` levels on the spokes and draws one shape",
-      "per `color` level (each vertex = agg_fn(metric) for that cell);",
+      "per `color` level (each vertex = func(value) for that cell);",
       "clicking a shape drills on its `color` value. To compare several",
       "numeric columns as spokes, pivot longer upstream and map the name",
       "column to `group`.",
@@ -280,10 +265,10 @@ chart_guidance <- function() {
       "into one line/group per value (e.g. `series=\"USUBJID\"`).",
       "Brush-drag filters the brushed points: on `drill` if set (categorical",
       "on the drill column's values), else the x/y range.",
-      "ALSO set `metric` (e.g. metric=\".count\") even though the",
+      "ALSO set `value` (e.g. value=\".count\") even though the",
       "individual family doesn't render it -- the block's state",
-      "requires the metric slot to initialize, and omitting it",
-      "errors with \"State values 'metric' are not yet",
+      "requires the value slot to initialize, and omitting it",
+      "errors with \"State values 'value' are not yet",
       "initialized\".",
       "\n- Timeline (gantt): set `x` (start), `xend` (end), `y` (the",
       "lane, e.g. USUBJID). To drill to the clicked entity set `drill`",
@@ -296,15 +281,15 @@ chart_guidance <- function() {
       "\n- \"coloured by Z\" -> color=\"Z\"",
       "\n- \"faceted by Z\" -> facet=\"Z\"",
       "\n- \"bar of counts by X, click filters X\" -> chart_type=\"bar\",",
-      "group=\"X\", metric=\".count\", agg_fn=\"count\", drill=\"X\"",
+      "group=\"X\", value=\".count\", func=\"count\", drill=\"X\"",
       "\n- \"mean Y by X\" -> chart_type=\"bar\", group=\"X\",",
-      "metric=\"Y\", agg_fn=\"mean\"",
+      "value=\"Y\", func=\"mean\"",
       "\n- \"radar / spider of mean Y across X, one shape per Z\" ->",
-      "chart_type=\"radar\", group=\"X\", metric=\"Y\", agg_fn=\"mean\",",
+      "chart_type=\"radar\", group=\"X\", value=\"Y\", func=\"mean\",",
       "color=\"Z\". Works best with 3+ group levels and few color levels.",
       "\n- \"waterfall / bridge of value V across steps S\" (e.g. a P&L:",
       "Revenue -> Costs -> Profit) -> chart_type=\"waterfall\", group=\"S\",",
-      "metric=\"V\", agg_fn=\"sum\". Each step's value is a DELTA; bars float",
+      "value=\"V\", func=\"sum\". Each step's value is a DELTA; bars float",
       "from the running cumulative and the step axis is shown in DATA ORDER",
       "(make S an ordered factor, or arrange upstream). Wide measures-as-",
       "columns data must be pivot_longer'd to (step, value) first.",
@@ -316,9 +301,9 @@ chart_guidance <- function() {
       "family; raw rows would be drawn in row order and produce",
       "tangles or empty plots.",
       "\n- \"distribution / spread / boxplot of Y by X\" ->",
-      "chart_type=\"boxplot\", group=\"X\", metric=\"Y\". A boxplot",
-      "shows the SPREAD of `metric` within each `group` \u2014 do NOT set",
-      "an aggregating `agg_fn` (mean/median/sum/count); that collapses",
+      "chart_type=\"boxplot\", group=\"X\", value=\"Y\". A boxplot",
+      "shows the SPREAD of `value` within each `group` \u2014 do NOT set",
+      "an aggregating `func` (mean/median/sum/count); that collapses",
       "each group to one value and the plot renders EMPTY. Use `color`",
       "or `facet` to split the boxes (e.g. by treatment arm).",
       "\n- \"label bars with W\" -> label=\"W\"",
@@ -342,10 +327,10 @@ chart_guidance <- function() {
       "TRT01A/TRT01P; many other tables have TRTA/TRTP only). Run",
       "describe_block or query_data on the upstream to confirm the",
       "column exists here before referencing it.",
-      "\n- Mixing chart families: setting BOTH `group`/`metric` AND",
+      "\n- Mixing chart families: setting BOTH `group`/`value` AND",
       "`x`/`y` confuses the renderer. Pick one family per chart_type.",
-      "\n- agg_fn=\"mean\"/\"sum\" with a metric column that's all-NA or",
+      "\n- func=\"mean\"/\"sum\" with a value column that's all-NA or",
       "non-numeric in scope -> NA bars (invisible). Pre-filter to rows",
-      "where the metric is populated, or pick a different metric."
+      "where the value is populated, or pick a different value."
   )
 }

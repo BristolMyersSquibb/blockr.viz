@@ -7,9 +7,9 @@ reg <- tile_demo_data()$regions
 
 test_that("tile_long_frame reshapes wide and long input", {
   # long: one row per (group, measure)
-  lf <- blockr.viz:::tile_long_frame(df, value = "value", measure = "metric")
+  lf <- blockr.viz:::tile_long_frame(df, value = "value", measure = "value")
   expect_equal(nrow(lf), nrow(df))
-  expect_setequal(lf$measure, df$metric)
+  expect_setequal(lf$measure, df$value)
 
   # wide: each value column becomes a measure
   wf <- blockr.viz:::tile_long_frame(reg, value = c("revenue", "orders"),
@@ -59,11 +59,11 @@ test_that("delta polarity respects good_when", {
 
 test_that("each style x layout renders a valid payload", {
   ren <- function(...) paste(as.character(blockr.viz:::tile_html(...)), collapse = "")
-  expect_true(grepl("tk-delta", ren(df, value = "value", measure = "metric",
+  expect_true(grepl("tk-delta", ren(df, value = "value", measure = "value",
                                     secondary = "delta", style = "delta")))
-  expect_true(grepl("tk-fill__bar", ren(df, value = "value", measure = "metric",
+  expect_true(grepl("tk-fill__bar", ren(df, value = "value", measure = "value",
                                         secondary = "progress", style = "fill")))
-  expect_true(grepl("tk-pill", ren(df, value = "value", measure = "metric",
+  expect_true(grepl("tk-pill", ren(df, value = "value", measure = "value",
                                    secondary = "status", style = "pill")))
   # table matrix (grouped wide) — a real matrix with per-group rows
   mx <- ren(reg, value = c("revenue", "conversion", "orders"), group = "region",
@@ -77,23 +77,23 @@ test_that("each style x layout renders a valid payload", {
 })
 
 # ---------------------------------------------------------------------------
-# In-block aggregation (shared with the table): grouped metrics + grand totals
+# In-block aggregation (shared with the table): grouped summaries + grand totals
 # ---------------------------------------------------------------------------
 
-test_that("metrics aggregate in place — one card cluster per group level", {
+test_that("summaries aggregate in place — one card cluster per group level", {
   ren <- function(...) paste(as.character(blockr.viz:::tile_html(...)), collapse = "")
   out <- ren(reg, group = "region",
-             metrics = list(list(agg_fn = "sum", cols = list("revenue"))))
+             summaries = list(list(func = "sum", cols = list("revenue"))))
   # one card per region (grouped), and the drill group attribute is present
   expect_true(grepl("tk-grid", out))
   for (r in reg$region) expect_true(grepl(r, out, fixed = TRUE))
 })
 
-test_that("metrics with no group render grand-total cards (one row)", {
+test_that("summaries with no group render grand-total cards (one row)", {
   agg <- blockr.viz:::dd_table_aggregate(
     reg, character(),
-    list(list(agg_fn = "count", cols = list()),
-         list(agg_fn = "mean", cols = list("revenue")))
+    list(list(func = "count", cols = list()),
+         list(func = "mean", cols = list("revenue")))
   )
   expect_true(agg$aggregated)
   expect_equal(nrow(agg$data), 1L)              # a single totals row
@@ -102,7 +102,7 @@ test_that("metrics with no group render grand-total cards (one row)", {
   expect_length(agg$group, 0L)
 })
 
-test_that("neither group nor metrics -> raw passthrough (not aggregated)", {
+test_that("neither group nor summaries -> raw passthrough (not aggregated)", {
   agg <- blockr.viz:::dd_table_aggregate(reg, character(), list())
   expect_false(agg$aggregated)
   expect_identical(agg$data, reg)
@@ -113,7 +113,7 @@ test_that("neither group nor metrics -> raw passthrough (not aggregated)", {
 # ---------------------------------------------------------------------------
 
 test_that("block state round-trips constructor args", {
-  blk <- new_tile_block(value = "value", measure = "metric", secondary = "delta",
+  blk <- new_tile_block(value = "value", name = "value", secondary = "delta",
                         style = "delta", good_when = "up", layout = "cards")
   expect_s3_class(blk, "tile_block")
   shiny::testServer(
@@ -122,7 +122,7 @@ test_that("block state round-trips constructor args", {
       session$flushReact()
       st <- session$returned$state
       expect_equal(st$value(), "value")
-      expect_equal(st$measure(), "metric")
+      expect_equal(st$name(), "value")
       expect_equal(st$style(), "delta")
       expect_equal(st$layout(), "cards")
       expect_false(st$drill())
@@ -132,7 +132,7 @@ test_that("block state round-trips constructor args", {
 })
 
 test_that("config action switches layout; no wedge on clearing a listed field", {
-  blk <- new_tile_block(value = "value", measure = "metric")
+  blk <- new_tile_block(value = "value", measure = "value")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
@@ -147,14 +147,14 @@ test_that("config action switches layout; no wedge on clearing a listed field", 
       es$setInputs(tile_block_action = list(action = "config",
                                             param = "measure", value = "(none)"))
       session$flushReact()
-      expect_equal(session$returned$state$measure(), "")
+      expect_equal(session$returned$state$name(), "")
       expect_s3_class(session$returned$result(), "data.frame")
     },
     args = list(x = blk, data = list(data = function() df))
   )
 })
 
-test_that("group + metrics config actions round-trip via the gear", {
+test_that("group + summaries config actions round-trip via the gear", {
   blk <- new_tile_block(value = "revenue")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -163,12 +163,12 @@ test_that("group + metrics config actions round-trip via the gear", {
       es <- session$makeScope("expr")
       es$setInputs(tile_block_action = list(action = "config",
                                             param = "group", value = "region"))
-      es$setInputs(tile_block_action = list(action = "config", param = "metrics",
-        value = '[{"agg_fn":"sum","cols":["revenue"]}]'))
+      es$setInputs(tile_block_action = list(action = "config", param = "summaries",
+        value = '[{"func":"sum","cols":["revenue"]}]'))
       session$flushReact()
       expect_equal(session$returned$state$group(), "region")
-      ms <- session$returned$state$metrics()
-      expect_equal(ms[[1]]$agg_fn, "sum")
+      ms <- session$returned$state$summaries()
+      expect_equal(ms[[1]]$func, "sum")
       expect_equal(ms[[1]]$cols, "revenue")
       # aggregation is a display projection: data output stays the raw frame
       expect_equal(nrow(session$returned$result()), nrow(reg))

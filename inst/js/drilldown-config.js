@@ -13,7 +13,7 @@
  *   currentType()    -> the chart-type value (for type-conditional rows) or null
  *   sections()       -> {requiredMap,optionalMap,mapping,presentation} (current)
  *                       (`mapping` = always-on controls shown under the Mapping
- *                        header after the role-picker rows, e.g. metric + agg)
+ *                        header after the role-picker rows, e.g. value + agg)
  *   sectionsForFamily(fam) -> the same for a specific family (carry-over)
  *   secondary        -> Set of paired-tail role keys (skipped in section loops)
  *   typeKey          -> the config key the type picker writes (e.g. 'chart_type')
@@ -24,7 +24,7 @@
  *                       above the grid, or per-group headings with 2+ groups
  *   typeIcon(t)      -> inline SVG for a type button/tile, or '' (optional)
  *   familyFor(type)  -> family string for a type, or null (no families)
- *   entryRequired(role) -> mark a section role required (chart: metric in aggregated)
+ *   entryRequired(role) -> mark a section role required (chart: value in aggregated)
  *   drillAutoLabel() -> label for the drill "Auto" option, or null (no drill section)
  *   title            -> popover title string
  *   onChange()       -> a config value changed: re-render output + send to R
@@ -65,7 +65,7 @@
     _colExists(name) { return this._cols().some(c => c.name === name); }
 
     // colType / allowCount may be declared as a function of the current config
-    // (e.g. the chart metric widens to any column under agg "count_distinct").
+    // (e.g. the chart value widens to any column under agg "count_distinct").
     /** @param {any} role */
     _roleColType(role) {
       const ct = role.colTypeBy ? role.colTypeBy[this.h.context()] : role.colType;
@@ -268,7 +268,7 @@
       }
 
       // Mapping: required rows, then any always-on mapping controls (the
-      // chart's metric + aggregation), shown-optional rows, add menu. Skipped
+      // chart's value + aggregation), shown-optional rows, add menu. Skipped
       // whole if the block has no mapping roles at all (e.g. the table).
       // optionalMap entries may be plain role keys or { role, types } — the
       // latter offers the role only for those chart types (e.g. the chart's
@@ -282,8 +282,8 @@
       // pure-aggregation host (the table) has none of these, so it is skipped
       // and only the Aggregation section below shows; the chart renders its
       // aesthetics here; the tile renders value / measure / secondary / … here
-      // AND its group + metrics in the Aggregation section below. The mapping
-      // extras (chart: metric + agg_fn) sit here unless the host splits them
+      // AND its group + summaries in the Aggregation section below. The mapping
+      // extras (chart: value + func) sit here unless the host splits them
       // into a trailing aggTitle section, or owns them in the Aggregation
       // checkbox section (aggregatable hosts — the group lives there).
       const mapNeeded = spec.requiredMap.length || shownOpt.length ||
@@ -293,15 +293,15 @@
         for (const key of spec.requiredMap) this._renderRole(mapSec, key, { required: true });
         if (!spec.aggTitle && !spec.aggregatable) this._renderEntries(mapSec, mapExtra);
         // Repeatable aggregation list under Mapping only for non-aggregatable
-        // metric hosts; aggregatable hosts render it in the Aggregation section.
-        if (!spec.aggregatable && spec.metrics && this.h.metricsList) this._renderMetrics(mapSec);
+        // value hosts; aggregatable hosts render it in the Aggregation section.
+        if (!spec.aggregatable && spec.summaries && this.h.metricsList) this._renderMetrics(mapSec);
         for (const key of shownOpt) this._renderRole(mapSec, key, { removable: true });
         if (remaining.length) this._addMappingMenu(mapSec, remaining);
 
         // ggplot-style split: the aggregation stat gets its own section after
         // the aesthetic mapping (host opts in via spec.aggTitle). With
-        // spec.aggMetrics the section renders the REPEATABLE metrics list
-        // instead of the single metric+agg_fn pair (the chart's bar type —
+        // spec.aggMetrics the section renders the REPEATABLE summaries list
+        // instead of the single value+func pair (the chart's bar type —
         // one series per aggregation x column); other types keep the pair.
         if (spec.aggTitle && (mapExtra.length || spec.aggMetrics)) {
           const aggSec = this._sectionEl(spec.aggTitle);
@@ -320,17 +320,17 @@
       this._renderSection('Presentation', spec.presentation);
 
       // Aggregation as a checkbox capability (Variant A). Activation is
-      // DECOUPLED from the group: checking seeds a default metric (a count) so
+      // DECOUPLED from the group: checking seeds a default value (a count) so
       // the box reads "on" before any group is picked, and unchecking clears
-      // both the metrics and the group. With the box on and NO group the
-      // metrics reduce the whole frame to a single totals row (grand totals);
+      // both the summaries and the group. With the box on and NO group the
+      // summaries reduce the whole frame to a single totals row (grand totals);
       // with a group, one row per group level. The group picker (mapExtra) and
-      // the repeatable metrics list both render inside this section.
+      // the repeatable summaries list both render inside this section.
       if (spec.aggregatable) {
-        const hasMetrics = !!(cfg.metrics && cfg.metrics.length);
+        const hasMetrics = !!(cfg.summaries && cfg.summaries.length);
         // spec.aggSeedsFromGroup === false (the tile): the group is a MAPPING
         // (clustering of precomputed cards) that lives outside this section —
-        // aggregation is active iff metrics are set, and unchecking must NOT
+        // aggregation is active iff summaries are set, and unchecking must NOT
         // clear the clustering group. Default (the table): the group lives in
         // this section, seeds the open state and clears on uncheck.
         const groupIsAgg = spec.aggSeedsFromGroup !== false;
@@ -345,11 +345,11 @@
           toggle: { checked: open, onToggle: (on) => this._toggleSection('agg', on,
             () => { clearGroup(); if (this.h.onMetricsChange) this.h.onMetricsChange([]); },
             () => { if (this.h.onMetricsChange && !hasMetrics)
-                      this.h.onMetricsChange([{ agg_fn: 'count', cols: [] }]); }) }
+                      this.h.onMetricsChange([{ func: 'count', cols: [] }]); }) }
         });
         if (open) {
           this._renderEntries(sec, mapExtra);
-          if (spec.metrics && this.h.metricsList) this._renderMetrics(sec);
+          if (spec.summaries && this.h.metricsList) this._renderMetrics(sec);
         }
       }
 
@@ -533,8 +533,8 @@
     _renderRole(container, key, opts = {}) {
       const role = this._role(key);
       const paired = !!(role.pairedWith && this._entryApplicable(role.pairedWith));
-      // Verb-object pair (e.g. metric+agg_fn): render "[agg] of [metric]" with
-      // the aggregation leading; the metric only shows for aggregations that
+      // Verb-object pair (e.g. value+func): render "[agg] of [value]" with
+      // the aggregation leading; the value only shows for aggregations that
       // consume it (a bare row count ignores it, reading just "Count").
       const reversed = paired && !!role.pairReversed;
       const usesMetric = () => {
@@ -562,11 +562,11 @@
       head.className = 'dd-row-head';
       const lbl = document.createElement('span');
       lbl.className = 'blockr-popover-label';
-      // In a reversed pair the required marker tracks the metric, which is only
+      // In a reversed pair the required marker tracks the value, which is only
       // needed for aggregations that consume it (not a bare count).
       const reqMark = opts.required && (!reversed || usesMetric());
       // A role.label may be a function of the current config (e.g. the chart's
-      // metric reads "Value" on a boxplot, "Aggregate" when it feeds an
+      // value reads "Value" on a boxplot, "Aggregate" when it feeds an
       // aggregation), so resolve it before use.
       const roleLabel = (typeof role.label === 'function') ? role.label(this._cfg()) : role.label;
       lbl.textContent = roleLabel + (reqMark ? ' *' : '');
@@ -602,7 +602,7 @@
       };
 
       if (reversed) {
-        // "[agg ▾] of [metric ▾]" — aggregation leads; metric only when used.
+        // "[agg ▾] of [value ▾]" — aggregation leads; value only when used.
         this._buildControl(controls, role.pairedWith, { onChange: () => {} });
         if (usesMetric()) {
           const of = document.createElement('span');
@@ -623,7 +623,7 @@
     }
 
     // Re-render the popover, preserving the open state (used by the repeatable
-    // metrics group when a row is added / removed / its function changes).
+    // summaries group when a row is added / removed / its function changes).
     _rerender() {
       const wasOpen = this.h.isOpen();
       this.render();
@@ -631,7 +631,7 @@
     }
 
     // Column options filtered by a colType string ('num' / 'cat' / 'any' /
-    // 'none'), for a control that is not a role (the per-metric column picker).
+    // 'none'), for a control that is not a role (the per-value column picker).
     /** @param {string} ct */
     _colOptsByType(ct) {
       if (ct === 'none') return [];
@@ -641,42 +641,42 @@
       return cols.map(c => c.label ? { value: c.name, label: c.label } : c.name);
     }
 
-    // Repeatable aggregation list: renders each metric as a verb-object row
+    // Repeatable aggregation list: renders each value as a verb-object row
     // "[agg] of [columns]" (the aggregation leads; the columns show only for
     // functions that consume them, so a bare count reads just "Count"), with a
     // remove control per row and an "Add aggregation" button. The host owns the
     // list via metricsList() / onMetricsChange(). This is the table/tile form;
-    // the chart uses the single metric role (_renderRole reversed pair).
+    // the chart uses the single value role (_renderRole reversed pair).
     /** @param {HTMLElement} container */
     _renderMetrics(container) {
-      const metrics = (this.h.metricsList && this.h.metricsList()) || [];
-      const aggOpts = (this._role('agg_fn') || {}).options || [];
+      const summaries = (this.h.metricsList && this.h.metricsList()) || [];
+      const aggOpts = (this._role('func') || {}).options || [];
       const usesCols = (/** @type {string} */ fn) => !!fn && fn !== 'count';
       const colType = (/** @type {string} */ fn) =>
         fn === 'count_distinct' ? 'any' : (usesCols(fn) ? 'num' : 'none');
-      const commit = () => { if (this.h.onMetricsChange) this.h.onMetricsChange(metrics); };
+      const commit = () => { if (this.h.onMetricsChange) this.h.onMetricsChange(summaries); };
       const S = (typeof Blockr !== 'undefined' && Blockr.Select) || null;
 
       // Full-width block (breaks out of the section's narrow grid cells) so each
       // "[agg] of [columns]" row has room. One "Aggregate" label for the list.
       const wrap = document.createElement('div');
-      wrap.className = 'dd-metrics';
+      wrap.className = 'dd-summaries';
       const lbl = document.createElement('span');
       lbl.className = 'blockr-popover-label';
       lbl.textContent = 'Aggregate';
       wrap.appendChild(lbl);
 
-      metrics.forEach((m, i) => {
+      summaries.forEach((m, i) => {
         const row = document.createElement('div');
-        row.className = 'dd-metric-row';
+        row.className = 'dd-value-row';
 
         const aggWrap = document.createElement('div');
-        aggWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-metric-agg';
+        aggWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-value-agg';
         if (S && S.single) {
           S.single(aggWrap, {
-            options: aggOpts, selected: m.agg_fn || 'count',
+            options: aggOpts, selected: m.func || 'count',
             onChange: (/** @type {string} */ val) => {
-              m.agg_fn = val;
+              m.func = val;
               // Keep the columns consistent with the new function: count drops
               // them; a numeric aggregation keeps only numeric columns.
               const ct = colType(val);
@@ -693,14 +693,14 @@
         }
         row.appendChild(aggWrap);
 
-        if (usesCols(m.agg_fn)) {
+        if (usesCols(m.func)) {
           const of = document.createElement('span');
           of.className = 'dd-pair-connector';
           of.textContent = 'of';
           row.appendChild(of);
           const colsWrap = document.createElement('div');
-          colsWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-metric-cols';
-          const opts = this._colOptsByType(colType(m.agg_fn));
+          colsWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-value-cols';
+          const opts = this._colOptsByType(colType(m.func));
           // Empty selection on a NUMERIC aggregation means "all numeric
           // columns not claimed by another row" (default-function rule,
           // override semantics — mirrors the R dd_metric_plan expansion and
@@ -711,7 +711,7 @@
           // must not promise the rule. count_distinct is explicit-only
           // everywhere.
           const defAll = !!this.h.sections().metricsDefaultAll;
-          const ph = (m.agg_fn !== 'count_distinct' && defAll)
+          const ph = (m.func !== 'count_distinct' && defAll)
             ? 'All numeric columns' : 'column(s)…';
           if (S && S.multi) {
             S.multi(colsWrap, {
@@ -723,17 +723,17 @@
           row.appendChild(colsWrap);
         }
 
-        // A single metric is the floor (a grouped table always shows something),
+        // A single value is the floor (a grouped table always shows something),
         // so the remove control appears only when there is more than one.
-        if (metrics.length > 1) {
+        if (summaries.length > 1) {
           const rm = document.createElement('button');
           rm.type = 'button';
-          rm.className = 'dd-role-remove dd-metric-remove';
+          rm.className = 'dd-role-remove dd-value-remove';
           rm.title = 'Remove aggregation';
           rm.innerHTML = '✕';
           rm.addEventListener('click', (e) => {
             e.stopPropagation();
-            metrics.splice(i, 1); commit(); this._rerender();
+            summaries.splice(i, 1); commit(); this._rerender();
           });
           row.appendChild(rm);
         }
@@ -742,12 +742,12 @@
 
       const add = document.createElement('button');
       add.type = 'button';
-      add.className = 'blockr-add-link dd-add-trigger dd-add-metric';
+      add.className = 'blockr-add-link dd-add-trigger dd-add-value';
       const plus = (typeof Blockr !== 'undefined' && Blockr.icons) ? Blockr.icons.plus : '+';
       add.innerHTML = `<span class="blockr-add-icon">${plus}</span> Add aggregation`;
       add.addEventListener('click', (e) => {
         e.stopPropagation();
-        metrics.push({ agg_fn: 'mean', cols: [] }); commit(); this._rerender();
+        summaries.push({ func: 'mean', cols: [] }); commit(); this._rerender();
       });
       wrap.appendChild(add);
       container.appendChild(wrap);
@@ -878,7 +878,7 @@
         const onSel = (/** @type {string[]} */ vals) => {
           cfg[key] = vals; cb(); this.h.onChange(key);
           // A multi-picker that gates other rows (e.g. the table's group reveals
-          // the metrics list once set) re-renders the section list live.
+          // the summaries list once set) re-renders the section list live.
           if (role.rerender) {
             const wasOpen = this.h.isOpen();
             this.render();
