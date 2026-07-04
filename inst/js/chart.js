@@ -213,6 +213,13 @@
     identity_line: { label: 'Identity', kind: 'segmented',
                      options: [{ value: 'on', label: 'Identity line (y = x)' },
                                { value: 'off', label: 'Off' }] },
+    // Boxplot observation overlay. "none" = box only; "outliers" = only the
+    // points past the 1.5x IQR whiskers; "all" = jittered strip of every
+    // observation over the box.
+    box_points: { label: 'Points', kind: 'segmented',
+                  options: [{ value: 'none', label: 'None' },
+                            { value: 'outliers', label: 'Outliers' },
+                            { value: 'all', label: 'All' }] },
     lo:       { label: 'Lo', kind: 'column', colType: 'num' },
     hi:       { label: 'Hi', kind: 'column', colType: 'num' },
     line_width_mult: { label: 'Line width', kind: 'slider' },
@@ -259,7 +266,8 @@
       // it does not expose orientation.
       presentation: ['sort_by', 'sort_dir', { role: 'orientation', types: ['bar'] },
         { role: 'bar_mode', types: ['bar'] },
-        { role: 'baseline', types: ['bar'] }]
+        { role: 'baseline', types: ['bar'] },
+        { role: 'box_points', types: ['boxplot'] }]
     },
     individual: {
       requiredMap: ['x', 'y'],
@@ -1795,6 +1803,55 @@
         return { type: 'boxplot', name: split ? lv : undefined, data, itemStyle: { color: hex + '22', borderColor: hex } };
       });
 
+      // Observation overlay (box_points). "outliers" plots only the points
+      // beyond the 1.5*IQR whiskers; "all" plots every observation as a
+      // strip over the box. Every point sits ON the box's centre line (same
+      // category index as the box, no vertical jitter), so "all" reads as a
+      // rug over the box and outliers sit on the axis exactly where a classic
+      // boxplot draws them. Points are `silent` so the box below keeps
+      // click-to-drill and the summary tooltip (a silent series is skipped in
+      // hit-testing), and share their box's color / legend name so toggling a
+      // legend level hides its box and its points together. One scatter series
+      // per level mirrors the boxplot series above.
+      const boxPoints = this.config.box_points || 'none';
+      const pointSeries = (boxPoints === 'none') ? [] : seriesLevels.map((lv, li) => {
+        const hex = split ? hexFor(lv, li) : palette[0];
+        // Cap per box so a huge group can't stall the render; even stride
+        // sample keeps the shape. Outliers are never capped (always few).
+        const MAX_PTS = 1500;
+        /** @type {[number, number][]} */
+        const pts = [];
+        catMeta.forEach((cm, ci) => {
+          if (cm.level !== lv) return;
+          const rows = rowsFor(cm.group, lv);
+          let vals = rows.map(r => Number(r[value])).filter(v => !Number.isNaN(v));
+          if (boxPoints === 'outliers') {
+            // Outliers = points past the box's own whiskers (Q1/Q3 ± 1.5*IQR).
+            // Same lo/hi the box draws, so the box defines the outliers.
+            const s = summarize(rows);
+            if (!s) return;
+            const wlo = s.value[0], whi = s.value[4];
+            vals = vals.filter(v => v < wlo || v > whi);
+          } else if (vals.length > MAX_PTS) {
+            const stride = vals.length / MAX_PTS;
+            const keep = [];
+            for (let i = 0; i < MAX_PTS; i++) keep.push(vals[Math.floor(i * stride)]);
+            vals = keep;
+          }
+          vals.forEach((v) => pts.push([v, ci]));
+        });
+        return {
+          type: 'scatter', name: split ? lv : undefined, data: pts, silent: true,
+          symbolSize: boxPoints === 'all' ? 4 : 5, z: 3,
+          large: true, largeThreshold: 800,
+          itemStyle: {
+            color: hex,
+            opacity: boxPoints === 'all' ? 0.45 : 0.85,
+            ...(boxPoints === 'outliers' ? { borderColor: hex, borderWidth: 1 } : {})
+          }
+        };
+      }).filter(s => s.data.length > 0);
+
       const gut = this._yGutter(cats.map(c => split ? c.split(BOX_CAT_SEP)[0] : c));
       // p.data is our {value, n} datum; whiskers are 1.5*IQR-capped, so
       // they're labeled as whiskers rather than min/max.
@@ -1831,7 +1888,7 @@
         grid: { left: gut.gridLeft, right: 5, top: 30, bottom: bottomBase + leg.extra },
         xAxis: { type: 'value', name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } },
         yAxis: { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(split ? { formatter: (/** @type {string} */ v) => String(v).split(BOX_CAT_SEP)[0] } : {}) }, axisLine: { show: false } },
-        series
+        series: [...series, ...pointSeries]
       };
     }
 
@@ -3159,6 +3216,7 @@
         drill: this.config.drill || '',
         smoother: this.config.smoother || 'none',
         identity_line: this.config.identity_line || 'off',
+        box_points: this.config.box_points || 'none',
         lo: this.config.lo || '',
         hi: this.config.hi || '',
         // Extra tooltip columns (gantt): always an array so R can tell an

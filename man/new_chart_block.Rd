@@ -10,7 +10,6 @@ new_chart_block(
   facet = NULL,
   value = ".count",
   func = "count",
-  summaries = NULL,
   chart_type = "bar",
   x = NULL,
   y = NULL,
@@ -35,6 +34,7 @@ new_chart_block(
   ref_y = NULL,
   smoother = "none",
   identity_line = "off",
+  box_points = "none",
   lo = NULL,
   hi = NULL,
   baseline = "zero",
@@ -60,15 +60,6 @@ aggregations. (Was \code{metric}.)}
 \code{"count_distinct"} counts an entity once per colour level it appears
 under; deduplicate upstream if segments must sum to the per-group
 distinct count. (Was \code{agg_fn}.)}
-
-\item{summaries}{Optional multi-value aggregation (bar charts only): a
-list, each entry \code{list(func, cols)} -- the same shape as the table
-block's \code{summaries}. Each aggregation x column pair becomes one bar
-series per group (side-by-side), the legend names the series. With
-more than one series the \code{color} split is ignored (summaries own the
-series dimension). Chart types other than "bar" use the FIRST entry
-only (they are structurally single-value). When set, \code{value} /
-\code{func} are superseded. Default \code{NULL} (single-value mode).}
 
 \item{chart_type}{Chart type: "bar", "waterfall", "scatter", "line",
 "pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with
@@ -143,6 +134,11 @@ value (vertical / horizontal guide line). Default \code{NULL} (no overlay).}
 \item{identity_line}{Identity-line overlay for scatter charts: \code{"off"}
 (default) or \code{"on"} draws a dashed 45-degree y = x guide line across
 the overlap of the x and y ranges (shift / agreement plots).}
+
+\item{box_points}{Observation overlay for boxplots: one of \code{"none"}
+(default, box only), \code{"outliers"} (plot only the points beyond the
+1.5x IQR whiskers) or \code{"all"} (jittered strip of every observation on
+top of the box). No-op for other chart types.}
 
 \item{lo, hi}{Optional lower / upper value bounds used by the renderer to
 clamp or annotate the value axis. Default \code{NULL} (auto).}
