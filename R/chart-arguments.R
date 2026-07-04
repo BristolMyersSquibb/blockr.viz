@@ -75,6 +75,21 @@ chart_arguments <- function() {
       example = "count",
       type = arg_enum(AGG_FNS)
     ),
+    metrics = new_block_arg(
+      paste0(
+        "Multi-metric aggregation (bar charts only): a list, each entry ",
+        "`{agg_fn, cols}` -- the same shape as the table block's `metrics`. ",
+        "Each aggregation x column pair renders as one bar series per group ",
+        "(side-by-side; the legend names the metrics), e.g. mean AGE next to ",
+        "mean BMIBL per ARM. With more than one series the `color` split is ",
+        "ignored (the metrics own the series dimension). Non-bar chart types ",
+        "use the FIRST entry only. When set, supersedes `metric`/`agg_fn`. ",
+        "Empty/NULL = single-metric mode."
+      ),
+      example = list(
+        list(agg_fn = "mean", cols = list("AGE", "BMIBL"))
+      )
+    ),
     x = new_block_arg(
       paste0(
         "X-axis column (individual: scatter/line; timeline: interval ",

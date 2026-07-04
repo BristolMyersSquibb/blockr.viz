@@ -57,10 +57,22 @@ tk_card <- function(cell, flat, fspecs) {
     htmltools::tags$div(class = "tk-caption", cell$caption)
   }
 
+  # No eyebrow when the overline is NA/empty (a single unlabelled value
+  # column, or the Name mapping removed) -- same guard as the caption;
+  # an unguarded NA would render as literal "NA" text.
+  over_node <- if (!is.na(over) && nzchar(over)) {
+    htmltools::tags$div(class = "tk-overline tk-clamp", over)
+  }
+
   htmltools::tags$article(
     class = "tk-card",
-    `data-group` = if (nzchar(cell$group)) cell$group else NULL,
-    htmltools::tags$div(class = "tk-overline tk-clamp", over),
+    # Drill level: the group value when grouped, the measure (Name) value on
+    # an ungrouped KPI list -- computed once in tile_html (cells$.dg).
+    `data-group` = {
+      dg <- cell$.dg %||% cell$group
+      if (!is.null(dg) && nzchar(dg)) dg else NULL
+    },
+    over_node,
     valrow, sec, cap
   )
 }
@@ -114,7 +126,10 @@ tk_table_flat <- function(cells, flat, fspecs = list()) {
       htmltools::tags$span(class = "unit", flat$unit)
     }
     tds <- list(
-      htmltools::tags$td(class = "lbl", cell$overline),
+      # Same NA/empty guard as the card eyebrow (number-only rows keep a
+      # blank label cell rather than literal "NA").
+      htmltools::tags$td(class = "lbl",
+        if (!is.na(cell$overline) && nzchar(cell$overline)) cell$overline),
       htmltools::tags$td(class = tk_val_td_class(cell$value),
                          tk_format(cell$value, fspec), unit_sfx)
     )
@@ -124,7 +139,11 @@ tk_table_flat <- function(cells, flat, fspecs = list()) {
       tds[[3]] <- htmltools::tags$td(class = "r", node)
     }
     htmltools::tags$tr(class = "tk-data-row",
-                       `data-group` = if (nzchar(cell$group)) cell$group else NULL,
+                       # Drill level (group value / Name value) -- see tk_card.
+                       `data-group` = {
+                         dg <- cell$.dg %||% cell$group
+                         if (!is.null(dg) && nzchar(dg)) dg else NULL
+                       },
                        tds)
   })
   tk_table_wrap(thead, htmltools::tags$tbody(rows))
@@ -233,7 +252,16 @@ tile_html <- function(data, value = character(), group = character(),
   # empty). The result feeds the wide-input renderer (each metric -> a card /
   # matrix column). No metric and no group -> the raw frame renders as before.
   group <- intersect(as.character(group), names(data))
-  agg <- dd_table_aggregate(data, group, metrics)
+  # Aggregate ONLY when metrics are set. The table treats "group, no metric"
+  # as a grouped count (its gear seeds a count on checking Aggregation), but
+  # the tile's `group` doubles as the CLUSTERING column for precomputed
+  # input (cards per region, matrix rows) -- group-without-metrics must keep
+  # rendering the precomputed values, not silently turn into a count.
+  agg <- if (length(metrics)) {
+    dd_table_aggregate(data, group, metrics)
+  } else {
+    list(aggregated = FALSE)
+  }
   if (isTRUE(agg$aggregated)) {
     disp_data  <- agg$data
     disp_value <- agg$metric_cols
@@ -253,6 +281,31 @@ tile_html <- function(data, value = character(), group = character(),
   grouped <- nrow(cells) > 0L && any(nzchar(cells$group)) &&
     tk_is_col(disp_by, disp_data)
 
+  # Drill target -- structurally determined, never user-picked. Grouped tile:
+  # a click identifies a group level -> filter on the group column. Ungrouped
+  # LONG tile (a KPI list): a click identifies a Name (measure) level ->
+  # filter on the measure column. Anything else (bare single KPI, wide
+  # columns-as-measures, aggregated grand totals whose "measures" are metric
+  # names, not data values) has no meaningful click target -> no drill.
+  drill_col <- if (grouped) {
+    disp_by
+  } else if (tk_is_col(disp_meas, disp_data)) {
+    disp_meas
+  } else {
+    ""
+  }
+  # Per-cell drill level riding on the cells frame (`data-group` on each
+  # card / row): the group value when grouped, the measure value otherwise.
+  if (nrow(cells) > 0L) {
+    cells$.dg <- if (!nzchar(drill_col)) {
+      ""
+    } else if (grouped) {
+      cells$group
+    } else {
+      cells$measure
+    }
+  }
+
   fspecs <- if (nrow(cells) > 0L) tile_fspecs(cells, flat) else list()
 
   body <- if (nrow(cells) == 0L) {
@@ -269,12 +322,16 @@ tile_html <- function(data, value = character(), group = character(),
     tk_cards_layout(cells, flat, grouped, fspecs)
   }
 
-  drill_on <- isTRUE(drill) && grouped && !is.null(elem_id)
+  drill_on <- isTRUE(drill) && nzchar(drill_col) && !is.null(elem_id)
   wrapper <- htmltools::tags$div(
     class = paste("tk-block", if (drill_on) "tk-clickable"),
     `data-tk-elem-id` = if (!is.null(elem_id)) elem_id else NULL,
     `data-tk-drill`   = if (drill_on) "1" else NULL,
-    `data-tk-group`   = if (drill_on) disp_by else NULL,
+    `data-tk-group`   = if (drill_on) drill_col else NULL,
+    # The resolvable drill target, emitted even while drill is OFF: the gear
+    # needs it to show (and word) the picker-less Drill-down section before
+    # the capability is enabled. Empty/absent = no target -> section hidden.
+    `data-tk-drill-col` = if (nzchar(drill_col)) drill_col else NULL,
     `data-tk-layout`  = layout,
     # The gear's column pickers offer the RAW columns (what you group /
     # aggregate over), not the aggregated frame.

@@ -270,8 +270,12 @@
       // Mapping: required rows, then any always-on mapping controls (the
       // chart's metric + aggregation), shown-optional rows, add menu. Skipped
       // whole if the block has no mapping roles at all (e.g. the table).
-      const shownOpt = spec.optionalMap.filter((/** @type {string} */ k) => this._hasVal(cfg[k]) || this._added.has(k));
-      const remaining = spec.optionalMap.filter((/** @type {string} */ k) => !shownOpt.includes(k));
+      // optionalMap entries may be plain role keys or { role, types } — the
+      // latter offers the role only for those chart types (e.g. the chart's
+      // color is inert on pie/treemap, so it is not offered there).
+      const optKeys = this._filterEntries(spec.optionalMap || []).map(e => e.role);
+      const shownOpt = optKeys.filter((/** @type {string} */ k) => this._hasVal(cfg[k]) || this._added.has(k));
+      const remaining = optKeys.filter((/** @type {string} */ k) => !shownOpt.includes(k));
       const mapExtra = this._filterEntries(spec.mapping || []);
 
       // Mapping section: required + optional (add-as-needed) display roles. A
@@ -295,11 +299,25 @@
         if (remaining.length) this._addMappingMenu(mapSec, remaining);
 
         // ggplot-style split: the aggregation stat gets its own section after
-        // the aesthetic mapping (host opts in via spec.aggTitle).
-        if (spec.aggTitle && mapExtra.length) {
-          this._renderEntries(this._sectionEl(spec.aggTitle), mapExtra);
+        // the aesthetic mapping (host opts in via spec.aggTitle). With
+        // spec.aggMetrics the section renders the REPEATABLE metrics list
+        // instead of the single metric+agg_fn pair (the chart's bar type —
+        // one series per aggregation x column); other types keep the pair.
+        if (spec.aggTitle && (mapExtra.length || spec.aggMetrics)) {
+          const aggSec = this._sectionEl(spec.aggTitle);
+          if (spec.aggMetrics && this.h.metricsList) this._renderMetrics(aggSec);
+          else this._renderEntries(aggSec, mapExtra);
         }
       }
+
+      // Presentation — formatting, sorting, layout: everything past the data
+      // mapping. Renders BEFORE the capability checkboxes: the always-on
+      // sections (Mapping / the chart's required stat / Presentation) come
+      // first, and the opt-in capabilities cluster at the bottom in a fixed
+      // order (Aggregation → Drill-down → Coloring → Row color), so every
+      // block's gear reads the same top-to-bottom: what it shows, how it
+      // looks, what it can do.
+      this._renderSection('Presentation', spec.presentation);
 
       // Aggregation as a checkbox capability (Variant A). Activation is
       // DECOUPLED from the group: checking seeds a default metric (a count) so
@@ -310,9 +328,16 @@
       // the repeatable metrics list both render inside this section.
       if (spec.aggregatable) {
         const hasMetrics = !!(cfg.metrics && cfg.metrics.length);
-        const hasGrp = !!(cfg.group && cfg.group.length);
+        // spec.aggSeedsFromGroup === false (the tile): the group is a MAPPING
+        // (clustering of precomputed cards) that lives outside this section —
+        // aggregation is active iff metrics are set, and unchecking must NOT
+        // clear the clustering group. Default (the table): the group lives in
+        // this section, seeds the open state and clears on uncheck.
+        const groupIsAgg = spec.aggSeedsFromGroup !== false;
+        const hasGrp = groupIsAgg && !!(cfg.group && cfg.group.length);
         const open = this._secOpen('agg', () => hasMetrics || hasGrp);
         const clearGroup = () => {
+          if (!groupIsAgg) return;
           cfg.group = Array.isArray(cfg.group) ? [] : '';
           this.h.onChange('group');
         };
@@ -332,8 +357,15 @@
       // the config key the picker writes (the table's 'drill'). Checked reveals
       // the filter-column picker; unchecking clears it.
       if (spec.drillToggle) {
-        this._renderToggleColumnSection('Drill-down', 'drill', spec.drillToggle);
+        this._renderToggleColumnSection('Drill-down', 'drill', spec.drillToggle,
+          spec.drillDefault);
       }
+
+      // Chart / tile drill-down. The chart opts in via drillAutoLabel (the
+      // Auto + column picker); the tile via drillHint (picker-less — its
+      // target is structurally determined). Same slot as drillToggle so all
+      // drill styles land in the same position of the capability cluster.
+      if (this.h.drillAutoLabel || this.h.drillHint) this._renderDrillSection();
 
       // Coloring as a checkbox capability (Variant A). spec.colorToggle.modeKey
       // is the mode select (diverging / sequential / bar — the 'off' state is
@@ -364,13 +396,6 @@
       if (spec.rowColorToggle) {
         this._renderToggleColumnSection('Row color', 'rowcolor', spec.rowColorToggle);
       }
-
-      // Presentation — formatting, sorting, layout: everything past the data
-      // mapping.
-      this._renderSection('Presentation', spec.presentation);
-
-      // Chart drill-down (legacy Auto section — host opts in via drillAutoLabel).
-      if (this.h.drillAutoLabel) this._renderDrillSection();
 
       if (this.h.afterTypeChange) this.h.afterTypeChange();
     }
@@ -442,13 +467,27 @@
     // '(none)' option — the checkbox IS the none state); unchecking clears the
     // config key. Seeds/persists its open state via _secOpen under `secKey`.
     /** @param {string} title @param {string} secKey @param {string} cfgKey */
-    _renderToggleColumnSection(title, secKey, cfgKey) {
+    /**
+     * @param {string} title @param {string} secKey @param {string} cfgKey
+     * @param {string} [seed] column pre-filled when the user CHECKS the box
+     *   (e.g. the table's rowname/stub for drill), so the capability works in
+     *   one click; the picker stays for re-aiming. Empty/absent = the picker
+     *   opens required-empty as before.
+     */
+    _renderToggleColumnSection(title, secKey, cfgKey, seed) {
       const cfg = this._cfg();
       const open = this._secOpen(secKey,
         () => this._hasVal(cfg[cfgKey]) && cfg[cfgKey] !== '(none)');
       const sec = this._sectionEl(title, {
         toggle: { checked: open, onToggle: (on) =>
-          this._toggleSection(secKey, on, () => { cfg[cfgKey] = ''; this.h.onChange(cfgKey); }) }
+          this._toggleSection(secKey, on,
+            () => { cfg[cfgKey] = ''; this.h.onChange(cfgKey); },
+            () => {
+              if (!this._hasVal(cfg[cfgKey]) && seed && this._colExists(seed)) {
+                cfg[cfgKey] = seed;
+                this.h.onChange(cfgKey);
+              }
+            }) }
       });
       if (open) this._renderRole(sec, cfgKey, { required: true });
     }
@@ -526,13 +565,17 @@
       // In a reversed pair the required marker tracks the metric, which is only
       // needed for aggregations that consume it (not a bare count).
       const reqMark = opts.required && (!reversed || usesMetric());
-      lbl.textContent = role.label + (reqMark ? ' *' : '');
+      // A role.label may be a function of the current config (e.g. the chart's
+      // metric reads "Value" on a boxplot, "Aggregate" when it feeds an
+      // aggregation), so resolve it before use.
+      const roleLabel = (typeof role.label === 'function') ? role.label(this._cfg()) : role.label;
+      lbl.textContent = roleLabel + (reqMark ? ' *' : '');
       head.appendChild(lbl);
       if (opts.removable) {
         const rm = document.createElement('button');
         rm.type = 'button';
         rm.className = 'dd-role-remove';
-        rm.title = 'Remove ' + role.label;
+        rm.title = 'Remove ' + roleLabel;
         rm.innerHTML = '✕';
         rm.addEventListener('click', (e) => { e.stopPropagation(); this._removeRole(key); });
         head.appendChild(rm);
@@ -658,10 +701,22 @@
           const colsWrap = document.createElement('div');
           colsWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-metric-cols';
           const opts = this._colOptsByType(colType(m.agg_fn));
+          // Empty selection on a NUMERIC aggregation means "all numeric
+          // columns not claimed by another row" (default-function rule,
+          // override semantics — mirrors the R dd_metric_plan expansion and
+          // the colour scope's empty = all convention). The placeholder says
+          // so — but ONLY for hosts with that expansion (table/tile, via
+          // spec.metricsDefaultAll); the chart stays explicit (20 series
+          // from one empty picker would be unreadable), so its placeholder
+          // must not promise the rule. count_distinct is explicit-only
+          // everywhere.
+          const defAll = !!this.h.sections().metricsDefaultAll;
+          const ph = (m.agg_fn !== 'count_distinct' && defAll)
+            ? 'All numeric columns' : 'column(s)…';
           if (S && S.multi) {
             S.multi(colsWrap, {
               options: opts, selected: (m.cols || []).slice(), reorderable: false,
-              placeholder: 'column(s)…',
+              placeholder: ph,
               onChange: (/** @type {string[]} */ vals) => { m.cols = vals; commit(); }
             });
           }
@@ -700,6 +755,12 @@
 
     _renderDrillSection() {
       const cfg = this._cfg();
+      // Picker-less variant (tile): the host supplies drillHint() -> a string
+      // ("Click a card to filter downstream on <col>") when a drill target is
+      // structurally determined, or null when the block has none (bare KPI,
+      // grand totals) -- then the whole section is hidden: nothing to enable.
+      const hint = this.h.drillHint ? this.h.drillHint() : undefined;
+      if (this.h.drillHint && hint == null) return;
       // Variant A: the enable checkbox lives in the section header (matches the
       // table's Drill-down), replacing the old separate "Filter downstream on
       // selection" checkbox row that read as a different control style. `on` here
@@ -715,6 +776,17 @@
           this.h.onChange('drill'); this.h.onClearFilter();
         } }
       });
+
+      // Hint-only body: the drill target is implied by the block's structure
+      // (the tile filters on its group / Name column), so there is no column
+      // picker -- a muted line says what a click will do.
+      if (on && this.h.drillHint) {
+        const p = document.createElement('div');
+        p.className = 'dd-form-help dd-drill-hint';
+        p.textContent = hint;
+        sec.appendChild(p);
+        return;
+      }
 
       if (on) {
         const autoLabel = this.h.drillAutoLabel();
@@ -1111,8 +1183,13 @@
     _carryRoles(newFam) {
       const spec = this.h.sectionsForFamily(newFam);
       const cfg = this._cfg();
-      const mapKeys = (spec.mapping || []).map((/** @type {any} */ e) => (typeof e === 'string' ? e : e.role));
-      const keep = new Set([...spec.requiredMap, ...spec.optionalMap, ...mapKeys]);
+      const asKey = (/** @type {any} */ e) => (typeof e === 'string' ? e : e.role);
+      const mapKeys = (spec.mapping || []).map(asKey);
+      // optionalMap entries may be { role, types } (type-conditional roles);
+      // for the carry keep-set the KEY suffices — type applicability is
+      // re-checked at render time.
+      const optKeys = (spec.optionalMap || []).map(asKey);
+      const keep = new Set([...spec.requiredMap, ...optKeys, ...mapKeys]);
       for (const key of Object.keys(this.h.roles)) {
         if (this.h.roles[key].kind !== 'column') continue;
         if (this.h.carryKeep && this.h.carryKeep.includes(key)) continue;

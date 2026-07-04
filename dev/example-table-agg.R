@@ -24,6 +24,7 @@ board <- new_dock_board(
     by_arm = new_table_block(
       group = "ARM",
       metrics = list(list(agg_fn = "count", cols = list())),
+      drill = "auto",   # group-keys drill is OPT-IN (checkbox, default off)
       block_name = "Subjects by arm (grouped count)"),
     by_arm_members = new_table_block(
       rowname = "USUBJID", values = c("SEX", "ARM", "AGE"),
@@ -37,6 +38,7 @@ board <- new_dock_board(
         list(agg_fn = "mean", cols = list("AGE", "BMIBL")),
         list(agg_fn = "sum",  cols = list("WEIGHTBL"))
       ),
+      drill = "auto",
       block_name = "Age/BMI mean + weight sum by arm x sex"),
     by_arm_sex_members = new_table_block(
       rowname = "USUBJID", values = c("SEX", "ARM", "AGE"),

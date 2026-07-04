@@ -39,6 +39,14 @@
     { value: 'max', label: 'Max' }
   ];
 
+  // One word per aggregation, for composed labels ("Mean AGE", axis titles,
+  // tooltips). Single home — the hosts used to duplicate this map.
+  /** @type {Record<string, string>} */
+  const AGG_WORDS = {
+    count: 'Count', count_distinct: 'Distinct', mean: 'Mean',
+    median: 'Median', sum: 'Sum', min: 'Min', max: 'Max'
+  };
+
   /** @param {{ multiple?: boolean }} [opts] */
   function aggRoles(opts) {
     const multiple = !!(opts && opts.multiple);
@@ -86,6 +94,6 @@
   const ns = /** @type {any} */ (
     (typeof Blockr !== 'undefined') ? Blockr
       : (window.Blockr = window.Blockr || {}));
-  ns.DrilldownAgg = { AGG_FNS, aggRoles, reconcileMetric };
+  ns.DrilldownAgg = { AGG_FNS, AGG_WORDS, aggRoles, reconcileMetric };
   window.DrilldownAgg = ns.DrilldownAgg;
 })();

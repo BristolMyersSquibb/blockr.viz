@@ -48,14 +48,19 @@
   // gone (renamed to the aggregation `group`).
   var TILE_ROLES = Object.assign({}, DAgg.aggRoles({ multiple: false }), {
     value:     { label: 'Value',     kind: 'column', colType: 'num' },
-    measure:   { label: 'Measure',   kind: 'column', colType: 'cat' },
+    // "Name" = the column naming each KPI (long input: one row per KPI).
+    // The name shows above the value. There is deliberately NO separate
+    // overline role: two pickers fed one visual slot with an invisible
+    // fallback (overline defaulted to the name) and read as duplicates —
+    // the ctor arg still works for saved boards, it just has no gear control.
+    measure:   { label: 'Name',      kind: 'column', colType: 'cat',
+                 ph: 'column naming each KPI…' },
     secondary: { label: 'Secondary', kind: 'column', colType: 'any' },
-    overline:  { label: 'Overline',  kind: 'column', colType: 'any' },
     caption:   { label: 'Caption',   kind: 'column', colType: 'any' },
     style:     { label: 'Secondary style', kind: 'select',
                  options: ['plain', 'delta', 'fill', 'pill'] },
-    good_when: { label: 'Good when', kind: 'segmented',
-                 options: [{ value: 'up', label: 'Up' }, { value: 'down', label: 'Down' }] },
+    // No good_when role: polarity is always "up" (an increase reads good) —
+    // Christoph cut the control; the ctor arg is legacy-ignored.
     format:    { label: 'Number format', kind: 'select',
                  options: ['number', 'compact', 'percent'] },
     unit:      { label: 'Unit', kind: 'text', ph: 'e.g. USD, CHF, apples' },
@@ -70,14 +75,27 @@
   function tileSections(cfg, hasCols) {
     return {
       requiredMap: hasCols ? ['value'] : [],
-      optionalMap: hasCols ? ['measure', 'secondary', 'overline', 'caption'] : [],
-      // The group lives in the Aggregation section (rendered from `mapping`).
-      mapping: hasCols ? ['group'] : [],
+      // `group` is a MAPPING for the tile — it clusters precomputed cards /
+      // drives the matrix rows even with no aggregation (and doubles as the
+      // group_by column when metrics aggregate). It therefore lives under
+      // Mapping, NOT inside the Aggregation section (the table's group IS
+      // its aggregation; the tile's isn't).
+      optionalMap: hasCols ? ['group', 'measure', 'secondary', 'caption'] : [],
+      mapping: [],
       metrics: hasCols,        // repeatable "[agg] of [cols]" list
       aggregatable: hasCols,   // Variant A: Aggregation checkbox section
-      // Value formatting (style / good-when / number format / unit) is
-      // presentation, not data mapping — alongside layout under Presentation.
-      presentation: ['style', 'good_when', 'format', 'unit', 'layout']
+      // Aggregation is active iff METRICS are set; the checkbox must not
+      // seed from (or clear) the clustering group.
+      aggSeedsFromGroup: false,
+      // Empty cols on a numeric aggregation = all numeric columns (the
+      // dd_metric_plan override rule — the tile shares the table's R path).
+      metricsDefaultAll: true,
+      // Value formatting is presentation, not data mapping. "Secondary
+      // style" only applies when a secondary is mapped — hidden otherwise
+      // (removing the Secondary role re-renders the popover, so the list
+      // re-evaluates live).
+      presentation: (cfg && cfg.secondary ? ['style'] : [])
+        .concat(['format', 'unit', 'layout'])
     };
   }
 
@@ -164,10 +182,14 @@
       typeGroups: null,
       familyFor: null,
       entryRequired: function (/** @type {string} */ role) { return role === 'value'; },
-      // Legacy Auto drill section: the tile's drill is a boolean (click a card
-      // to filter the group downstream), only meaningful once a group is set.
-      drillAutoLabel: function () {
-        return cfg.group ? ('each ' + cfg.group) : 'the group';
+      // Picker-less drill section: the tile's drill target is structurally
+      // determined (the group column when grouped, the Name column on an
+      // ungrouped KPI list — data-tk-drill-col, computed in R). No target
+      // (bare KPI, grand totals) -> null -> the section is hidden entirely.
+      drillHint: function () {
+        var col = root.getAttribute('data-tk-drill-col') || '';
+        if (!col) return null;
+        return 'Clicking a card or row filters downstream on ' + col + '.';
       },
       // Repeatable aggregation list: one "[agg] of [cols]" row per metric. A
       // single count is the floor, so an empty list surfaces as one count row.

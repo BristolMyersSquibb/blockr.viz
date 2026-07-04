@@ -90,7 +90,22 @@ tile_long_frame <- function(data, value = character(), by = "",
       )
       d$value     <- suppressWarnings(as.numeric(data[[col]]))
       d$secondary <- if (has_sec) data[[secondary]] else rep(NA, n)
-      d$overline  <- if (is.null(over)) rep(tk_col_overline(data, col), n) else over
+      # Eyebrow fallback. Several value columns side by side need naming
+      # (label or prettified column name -- cards would be indistinguishable
+      # without). A SINGLE value column shows supertext only when the column
+      # carries a real label attr (aggregated metric columns always do, e.g.
+      # "Number of Observations"); a bare unlabelled column renders just the
+      # number ("remove Name -> number only") -- never invent text from a
+      # raw column name.
+      lbl <- attr(data[[col]], "label", exact = TRUE)
+      has_lbl <- is.character(lbl) && length(lbl) == 1L && nzchar(lbl)
+      d$overline  <- if (!is.null(over)) {
+        over
+      } else if (length(value) > 1L || has_lbl) {
+        rep(tk_col_overline(data, col), n)
+      } else {
+        rep(NA_character_, n)
+      }
       d$caption   <- if (is.null(cap)) rep(NA_character_, n) else cap
       d$.col      <- rep(col, n)
       d

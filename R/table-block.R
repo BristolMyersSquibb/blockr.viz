@@ -530,15 +530,39 @@ dd_metric_plan <- function(metrics, data) {
   add <- function(name, expr, label) {
     plan[[length(plan) + 1L]] <<- list(name = name, expr = expr, label = label)
   }
+  # Default-function rule (override semantics): a NUMERIC aggregation whose
+  # entry names no columns applies to ALL numeric columns EXCEPT those
+  # explicitly claimed by other entries -- dplyr's
+  # `summarise(across(where(is.numeric), fn), DOSE = sum(DOSE))` with the
+  # explicit entry winning its column. A rule, not a snapshot: it re-resolves
+  # against the current frame, so upstream schema changes self-heal (same
+  # convention as the empty colour scope = "all numeric"). count needs no
+  # columns; count_distinct stays explicit-only (a distinct count over every
+  # numeric column is rarely meant).
+  claimed <- unique(unlist(lapply(
+    metrics %||% list(),
+    function(m) as.character(m$cols %||% character())
+  )))
+  all_num <- names(data)[vapply(data, is.numeric, logical(1))]
   for (m in metrics %||% list()) {
     fn   <- as.character(m$agg_fn %||% "count")[1L]
-    cols <- intersect(as.character(m$cols %||% character()), names(data))
+    raw  <- as.character(m$cols %||% character())
+    cols <- intersect(raw, names(data))
+    # Expand only when NOTHING was picked -- picked-but-dropped-upstream
+    # columns must stay a visible no-op, not silently widen to all numerics.
+    if (!length(raw) && fn %in% names(fn_calls)) {
+      cols <- setdiff(all_num, claimed)
+    }
     if (identical(fn, "count")) {
       add(uniq("Count", "count"), quote(dplyr::n()), "Number of Observations")
     } else if (identical(fn, "count_distinct")) {
       for (col in cols) {
         add(uniq(col, "distinct"),
-            bquote(dplyr::n_distinct(.data[[.(col)]]), list(col = col)),
+            # na.rm: NA is missingness, not a distinct value -- and the JS
+            # chart aggregation excludes null/NaN, so the same distinct count
+            # must read the same number on a chart and its table twin.
+            bquote(dplyr::n_distinct(.data[[.(col)]], na.rm = TRUE),
+                   list(col = col)),
             paste0(words[["count_distinct"]], ": ", orig_label(col)))
       }
     } else if (!is.null(fn_calls[[fn]])) {
@@ -815,15 +839,16 @@ drilldown_table_dep <- function() {
       stylesheet = "chart.css"
     ),
     settings_band_dep(),
+    # Shared aggregation vocabulary + gear engine (one dep, one version — see
+    # drilldown_shared_dep()). Before the table JS, which reads both globals.
+    drilldown_shared_dep(),
     htmltools::htmlDependency(
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".16"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".22"),
       src = system.file(package = "blockr.viz"),
-      # drilldown-agg.js (shared aggregation vocabulary) and drilldown-config.js
-      # (the shared engine) must load before the table JS.
-      script = c("js/drilldown-agg.js", "js/drilldown-config.js", "js/table.js"),
+      script = "js/table.js",
       stylesheet = "css/table.css"
     )
   )
@@ -853,12 +878,17 @@ table_arguments <- function() {
     ),
     metrics = new_block_arg(
       paste0(
-        "The aggregations shown when `group` is set: a list, each entry ",
-        "`{agg_fn, cols}`. `agg_fn` is one of \"count\", \"count_distinct\", ",
-        "\"mean\", \"median\", \"sum\", \"min\", \"max\"; `cols` is the numeric ",
-        "column(s) it reduces (empty for \"count\"). One entry per aggregation, ",
-        "so mean of AGE and sum of DOSE is two entries. Empty = a plain row ",
-        "count per group."
+        "The aggregations shown: a list, each entry `{agg_fn, cols}`. ",
+        "`agg_fn` is one of \"count\", \"count_distinct\", \"mean\", ",
+        "\"median\", \"sum\", \"min\", \"max\"; `cols` is the numeric ",
+        "column(s) it reduces. One entry per aggregation, so mean of AGE and ",
+        "sum of DOSE is two entries. Empty `cols` on a NUMERIC aggregation = ",
+        "ALL numeric columns except those claimed by another entry (so ",
+        "`{mean, []}` + `{sum, [DOSE]}` means DOSE as a sum, everything else ",
+        "as a mean); empty for \"count\" (needs no column). With `group` ",
+        "empty the metrics reduce the whole frame to ONE grand-total row; ",
+        "with `group` set, one row per group level. `metrics` empty = a ",
+        "plain row count per group."
       ),
       example = list(
         list(agg_fn = "mean", cols = list("AGE")),
@@ -902,10 +932,12 @@ table_arguments <- function() {
     ),
     drill = new_block_arg(
       paste0(
-        "Column a row click filters downstream on. Optional; default null = a ",
-        "click is inert. When set, clicking a row emits a categorical filter ",
-        "on that column's value for the row \u2014 the same filter contract as the ",
-        "drill-down chart."
+        "Row-click drill-down. Optional; default null = a click is inert ",
+        "(drill is opt-in everywhere). RAW table: a column name \u2014 clicking a ",
+        "row emits a categorical filter on that column's value (the same ",
+        "filter contract as the chart / tile). GROUPED / aggregated table: ",
+        "\"auto\" \u2014 clicking a row ANDs its group-key values into the ",
+        "downstream filter (the keys are the target; no column choice)."
       ),
       example = "Region",
       type = arg_string()
@@ -1221,7 +1253,16 @@ new_table_block <- function(rowname = NULL,
                 value_cols = if (gl) c(setdiff(agg$group, agg$group[1L]), agg$metric_cols)
                              else agg$metric_cols,
                 drill      = NULL,
-                group_cols = agg$group,   # empty for grand totals -> no row drill
+                # Group-keys drill is OPT-IN (checkbox default off, like every
+                # drill): the keys wire up only when `drill` is set -- "auto"
+                # from the gear checkbox, or any truthy legacy value from a
+                # saved board. Empty group_cols -> no row click wiring.
+                # (Empty anyway for grand totals -- nothing to key on.)
+                group_cols = if (!is.null(r_drill()) && nzchar(r_drill())) {
+                  agg$group
+                } else {
+                  character()
+                },
                 group      = r_group(), metrics = r_metrics(),
                 digits     = r_digits(),
                 sortable    = isTRUE(r_sortable()),

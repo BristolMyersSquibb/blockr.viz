@@ -404,8 +404,8 @@
   // sorting, search, export). `hasCols` is false for a structured ("Table 1")
   // frame — there the column-based capabilities are no-ops, so only the display
   // toggles show (and Collapsible, which needs sections).
-  /** @param {Record<string, any>} cfg @param {boolean} hasCols */
-  function tableSections(cfg, hasCols) {
+  /** @param {Record<string, any>} cfg @param {boolean} hasCols @param {string} [stubCol] */
+  function tableSections(cfg, hasCols, stubCol) {
     // Aggregation lives under the "Aggregation" header: `group` is always
     // offered; the repeatable metrics list (spec.metrics) appears once a group
     // is set. `metric`/`agg_fn` are no longer standalone roles here — the
@@ -423,10 +423,18 @@
                  mapping: hasCols ? ["group"] : [],
                  metrics: hasCols,         // offer the metrics list whenever the box is on
                  aggregatable: hasCols,    // Variant A: Aggregation checkbox section
+                 // Empty cols on a numeric aggregation = all numeric columns
+                 // (override rule, dd_metric_plan) — placeholder promises it.
+                 metricsDefaultAll: true,
                  // Drill-down checkbox section only for a raw (non-aggregated)
                  // table; a grouped table drills on its group keys, and a
                  // totals row (aggregating, no group) has nothing to drill.
                  drillToggle: (hasCols && !hasGroup && !aggOn) ? "drill" : null,
+                 // Checking the box pre-fills the filter column with the
+                 // rowname/stub column (the row's identity — the natural
+                 // click target), so drill works in one click; the picker
+                 // stays for re-aiming (e.g. AETERM instead of USUBJID).
+                 drillDefault: stubCol || "",
                  // Coloring checkbox section: the mode select + numeric column
                  // scope. Row color checkbox section: a categorical row tint.
                  colorToggle: hasCols ? { modeKey: "color_mode", extra: ["color_columns"] } : null,
@@ -491,7 +499,15 @@
         try { return JSON.parse(table.getAttribute("data-dt-metrics") || "[]"); }
         catch (e) { return []; }
       })(),
-      drill:      (onClick && onClick !== "(none)") ? onClick : "",
+      // Drill state. Raw table: the filter column (data-dt-onclick-col).
+      // Grouped/aggregated table: the keys drill is a boolean — ON iff the
+      // renderer wired the group-cols (data-dt-group-cols is emitted only
+      // when drill is enabled); represented as 'auto' for the engine's
+      // checkbox section.
+      drill: (function () {
+        if ((table.getAttribute("data-dt-group-cols") || "") !== "") return "auto";
+        return (onClick && onClick !== "(none)") ? onClick : "";
+      })(),
       row_color:  table.getAttribute("data-dt-row-color") || "",
       color_mode: table.getAttribute("data-dt-color-mode") || "off",
       color_columns: colorCols,            // [] = all numeric
@@ -539,8 +555,12 @@
       columns: function () { return cols; },
       context: function () { return "all"; },
       currentType: function () { return cfg.transform; },
-      sections: function () { return tableSections(cfg, hasCols); },
-      sectionsForFamily: function () { return tableSections(cfg, hasCols); },
+      sections: function () {
+        return tableSections(cfg, hasCols, cols.length ? cols[0].name : "");
+      },
+      sectionsForFamily: function () {
+        return tableSections(cfg, hasCols, cols.length ? cols[0].name : "");
+      },
       // Paired-tail roles (e.g. agg_fn behind metric) are rendered inside their
       // partner's row, never standalone — mirror the chart's DD_SECONDARY.
       secondary: new Set(Object.keys(TABLE_ROLES)
@@ -555,6 +575,17 @@
       familyFor: null,
       entryRequired: function () { return false; },
       drillAutoLabel: null,
+      // Grouped table: the drill target is the group keys — structurally
+      // determined, so the section is a picker-less checkbox (same as the
+      // tile). Raw table: null — its drill is the drillToggle column picker
+      // (a raw row is multi-column; the target is a genuine choice). No
+      // columns (annotated frame) or grand totals: null (section hidden).
+      drillHint: function () {
+        var hasGroup = cfg.group && cfg.group.length > 0;
+        if (!hasCols || !hasGroup) return null;
+        return "Clicking a row filters downstream on the group key" +
+          (cfg.group.length > 1 ? "s" : "") + " (" + cfg.group.join(", ") + ").";
+      },
       title: "Table settings",
       // Repeatable aggregation list: the engine renders one "[agg] of [cols]"
       // row per metric. A grouped table always shows at least a count, so an

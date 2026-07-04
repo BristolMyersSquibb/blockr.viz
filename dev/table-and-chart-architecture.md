@@ -400,3 +400,60 @@ chart/table rename and may have drifted** — confirm before editing.
 `blockr.csr` (the unused CSR example dashboard) was the last live consumer of
 `gt_table` + `html_table`; it's an archive candidate, which is what unblocks the
 renderer convergence above. See the workspace memory note `project_blockr_csr_unused`.
+
+---
+
+## The unified renderer principles (2026-07-04, settled with Christoph)
+
+All three interactive renderers — **chart, table, tile** — follow the same
+contract, sharing one gear engine (`drilldown-config.js`), one aggregation
+vocabulary (`drilldown-agg.js` / R `AGG_FNS`, drift-tested), and one filter
+transport. The principles:
+
+1. **Raw data in.** A renderer receives a tidy frame and never mutates the
+   pipeline: in-block aggregation is a *display projection*; the block's data
+   output stays the raw input filtered by the last click.
+2. **Optionally aggregate.** The Aggregation capability is a checkbox section
+   with the repeatable `[agg] of [cols]` metrics list (`metrics =
+   list(list(agg_fn, cols))`, identical shape in all three blocks).
+   - *No group* → one grand-total row / headline cards
+     (`dplyr::summarise` without `.by`).
+   - *Empty `cols` on a numeric aggregation* → all numeric columns MINUS
+     columns claimed by other entries (override semantics, a rule that
+     re-resolves against the current frame). The chart is the exception: it
+     stays explicit (20 series from one empty picker is unreadable).
+   - **The chart expresses raw-vs-aggregated via chart TYPE** (scatter/line
+     ARE the raw view; a bar IS an aggregate), so its Aggregation section is
+     the required stat, not a checkbox — the one designed exception. Plain
+     bars take the full metrics list (one dodged series per aggregation x
+     column); pie/treemap/radar/waterfall are structurally single-metric and
+     keep the single pair. Multiple metrics and a `color` split are mutually
+     exclusive (both want the series dimension).
+3. **Optionally drill.** Every drill is OPT-IN (checkbox, default off) and
+   emits the same categorical filter message. **The column picker exists only
+   where the click is ambiguous**: a tile card or a grouped-table row is
+   one-dimensional (target = the group keys / the Name column — hint-only
+   checkbox); a RAW table row is n-dimensional (picker, seeded with the
+   rowname/stub column); the chart offers Auto (the clicked mark) or a
+   column. No meaningful target (bare KPI, grand totals, annotated frame) →
+   no Drill-down section at all.
+4. **Sections appear on demand, in one fixed order.** Always-on sections
+   first (Mapping / the chart's required stat / Presentation); the opt-in
+   capability checkboxes cluster at the BOTTOM: Aggregation → Drill-down →
+   Coloring → Row color. Unchecked = a one-line header; checked reveals the
+   config. Roles that don't apply are not offered (label is gantt-only,
+   color is hidden on pie/treemap, "Secondary style" only with a secondary).
+5. **Group means what the block means.** The table's group IS its
+   aggregation (lives in the Aggregation section, seeds/clears with it). The
+   tile's group is a *mapping* (clusters precomputed cards; also the
+   `group_by` when metrics are set), so it lives under Mapping and survives
+   unchecking Aggregation. The chart's group is an aesthetic (Mapping).
+6. **Pre-aggregated input is respected.** A structured / annotated data
+   frame (dot-prefixed layout columns) renders read-only structure: the
+   in-block capabilities are hidden and a badge explains why.
+
+Shared-asset hygiene: the engine + vocabulary ship in ONE dependency
+(`drilldown_shared_dep()`), so an engine edit is a single version bump.
+JS↔R vocabulary drift is guarded by tests (`test-agg-fns-drift.R`,
+`test-stat-options-drift.R`); NA semantics match between the JS chart
+aggregation and the R path (mean/sum skip NA; `n_distinct(na.rm = TRUE)`).

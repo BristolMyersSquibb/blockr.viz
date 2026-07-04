@@ -45,15 +45,18 @@ filtered by the click. Empty (default) = no aggregation.}
 
 \item{overline, caption}{Supertext / subtext. A column name reads per-cell;
 any other non-empty string is a literal. \code{overline} defaults to the
-measure label.}
+measure ("Name") label and is LEGACY: it has no gear control and is not
+in the registry (two pickers fed the same visual slot and read as
+duplicates) -- the arg stays accepted so saved boards keep rendering.}
 
 \item{secondary}{Precomputed reference column drawn as the secondary.
 \code{""} = none.}
 
 \item{style}{Secondary display style: \code{plain} / \code{delta} / \code{fill} / \code{pill}.}
 
-\item{good_when}{Polarity for delta / fill / pill coloring: \code{"up"} (an
-increase is good) or \code{"down"} (a decrease is good -- e.g. churn).}
+\item{good_when}{LEGACY, ignored: polarity is always \code{"up"} (an increase
+reads good). The arg stays accepted so saved boards restore; there is no
+gear control and no registry entry.}
 
 \item{format}{How the number is formatted (never a currency guess):
 \code{"number"} (separators + smart decimals), \code{"compact"} (1.2M / 38.4K), or
@@ -64,8 +67,10 @@ header (e.g. \code{"USD"}, \code{"CHF"}, \code{"apples"}). This is how you label
 currency -- the renderer never infers \code{$}.}
 
 \item{drill}{Logical; when \code{TRUE} a card / matrix-row click emits a
-categorical filter on the \code{group} column downstream. Off by default; only
-active when \code{group} is mapped.}
+categorical filter downstream. The filter column is structurally
+determined (never user-picked): the \code{group} column when grouped, else
+the \code{measure} ("Name") column on an ungrouped long KPI list. Off by
+default; inert when the tile has neither (bare KPI, grand totals).}
 
 \item{filter_col, filter_value}{Click-filter state. Kept as constructor
 params so the filter round-trips through save/restore (blockr.core

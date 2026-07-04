@@ -17,15 +17,15 @@ drilldown_chart_dep <- function() {
     ),
     settings_band_dep(),
     drilldown_echarts_themes_dep(),
+    # The shared aggregation vocabulary + gear engine (one dep, one version —
+    # see drilldown_shared_dep()). Listed BEFORE chart-js: chart.js reads
+    # Blockr.DrilldownAgg and Blockr.DrilldownConfig at load.
+    drilldown_shared_dep(),
     htmltools::htmlDependency(
       name = "chart-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".48"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".59"),
       src = system.file("js", package = "blockr.viz"),
-      # drilldown-agg.js (shared aggregation vocabulary) and drilldown-config.js
-      # (the shared gear-popover engine) must load BEFORE chart.js, which
-      # references Blockr.DrilldownAgg and Blockr.DrilldownConfig.
-      script = c("drilldown-theme-register.js", "drilldown-agg.js",
-                 "drilldown-config.js", "chart.js")
+      script = c("drilldown-theme-register.js", "chart.js")
     ),
     htmltools::htmlDependency(
       name = "chart-css",

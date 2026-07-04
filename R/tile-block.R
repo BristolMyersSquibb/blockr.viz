@@ -42,12 +42,15 @@
 #' @param layout `"cards"` or `"table"`. Same slots either way.
 #' @param overline,caption Supertext / subtext. A column name reads per-cell;
 #'   any other non-empty string is a literal. `overline` defaults to the
-#'   measure label.
+#'   measure ("Name") label and is LEGACY: it has no gear control and is not
+#'   in the registry (two pickers fed the same visual slot and read as
+#'   duplicates) -- the arg stays accepted so saved boards keep rendering.
 #' @param secondary Precomputed reference column drawn as the secondary.
 #'   `""` = none.
 #' @param style Secondary display style: `plain` / `delta` / `fill` / `pill`.
-#' @param good_when Polarity for delta / fill / pill coloring: `"up"` (an
-#'   increase is good) or `"down"` (a decrease is good -- e.g. churn).
+#' @param good_when LEGACY, ignored: polarity is always `"up"` (an increase
+#'   reads good). The arg stays accepted so saved boards restore; there is no
+#'   gear control and no registry entry.
 #' @param format How the number is formatted (never a currency guess):
 #'   `"number"` (separators + smart decimals), `"compact"` (1.2M / 38.4K), or
 #'   `"percent"` (a fraction x100 + %).
@@ -55,8 +58,10 @@
 #'   header (e.g. `"USD"`, `"CHF"`, `"apples"`). This is how you label a
 #'   currency -- the renderer never infers `$`.
 #' @param drill Logical; when `TRUE` a card / matrix-row click emits a
-#'   categorical filter on the `group` column downstream. Off by default; only
-#'   active when `group` is mapped.
+#'   categorical filter downstream. The filter column is structurally
+#'   determined (never user-picked): the `group` column when grouped, else
+#'   the `measure` ("Name") column on an ungrouped long KPI list. Off by
+#'   default; inert when the tile has neither (bare KPI, grand totals).
 #' @param filter_col,filter_value Click-filter state. Kept as constructor
 #'   params so the filter round-trips through save/restore (blockr.core
 #'   deserializes a block via its constructor formals).
@@ -154,7 +159,10 @@ new_tile_block <- function(value = character(),
             metrics = r_metrics(), layout = r_layout(),
             overline = r_overline(), caption = r_caption(),
             secondary = r_secondary(), style = r_style(),
-            good_when = r_good_when(), format = r_format(), unit = r_unit(),
+            # Polarity is ALWAYS "up" (an increase reads good): the gear
+            # control and registry arg are gone (Christoph); the ctor arg is
+            # legacy-ignored so old saved boards restore without erroring.
+            good_when = "up", format = r_format(), unit = r_unit(),
             drill = r_drill(), elem_id = ns("tile_block")
           )
         })
@@ -255,14 +263,14 @@ tile_block_dep <- function() {
       stylesheet = "chart.css"
     ),
     settings_band_dep(),
+    # Shared aggregation vocabulary + gear engine (one dep, one version — see
+    # drilldown_shared_dep()). Before tile-block.js, which reads both globals.
+    drilldown_shared_dep(),
     htmltools::htmlDependency(
       name = "tile-block",
-      version = paste0(utils::packageVersion("blockr.viz"), ".2"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".9"),
       src = system.file(package = "blockr.viz"),
-      # drilldown-agg.js (shared aggregation vocabulary) and drilldown-config.js
-      # (the shared engine) must load before tile-block.js.
-      script = c("js/drilldown-agg.js", "js/drilldown-config.js",
-                 "js/tile-block.js"),
+      script = "js/tile-block.js",
       stylesheet = "css/tile-block.css"
     )
   )
@@ -299,9 +307,10 @@ tile_arguments <- function() {
     ),
     measure = new_block_arg(
       paste0(
-        "Measure-label column, for LONG input (one row per group x measure). ",
-        "Leave \"\" for wide input \u2014 then the `value` column names are the ",
-        "measure names."
+        "The column NAMING each KPI, for LONG input (one row per group x ",
+        "measure); the name shows above the value and drives per-KPI number ",
+        "formatting and the matrix columns. Leave \"\" for wide input \u2014 then ",
+        "the `value` column names are the KPI names. (Gear label: \"Name\".)"
       ),
       example = "",
       type = arg_string()
@@ -311,7 +320,9 @@ tile_arguments <- function() {
         "In-block aggregations shown as cards: a list, each entry ",
         "`{agg_fn, cols}`. `agg_fn` is one of \"count\", \"count_distinct\", ",
         "\"mean\", \"median\", \"sum\", \"min\", \"max\"; `cols` the numeric ",
-        "column(s) it reduces (empty for \"count\"). One card per metric. With ",
+        "column(s) it reduces. Empty `cols` on a NUMERIC aggregation = ALL ",
+        "numeric columns except those claimed by another entry; empty for ",
+        "\"count\" (needs no column). One card per metric. With ",
         "`group` empty the metrics reduce the whole frame to grand-total cards; ",
         "with `group` set, one cluster of cards per group level. This is a ",
         "DISPLAY projection \u2014 a card / row click still drills to the raw rows, ",
@@ -346,14 +357,6 @@ tile_arguments <- function() {
       example = "delta",
       type = arg_enum(c("plain", "delta", "fill", "pill"))
     ),
-    good_when = new_block_arg(
-      paste0(
-        "Polarity for coloring: \"up\" (an increase is good, default) or ",
-        "\"down\" (a decrease is good, e.g. churn / cost)."
-      ),
-      example = "up",
-      type = arg_enum(c("up", "down"))
-    ),
     format = new_block_arg(
       paste0(
         "How the NUMBER is formatted (never a currency guess): \"number\" ",
@@ -372,14 +375,6 @@ tile_arguments <- function() {
       example = "USD",
       type = arg_string()
     ),
-    overline = new_block_arg(
-      paste0(
-        "Supertext above the value. A column name reads per-cell; any other ",
-        "string is a literal label. Defaults to the measure name."
-      ),
-      example = "",
-      type = arg_string()
-    ),
     caption = new_block_arg(
       "Subtext below the value: a column name (per-cell) or a literal.",
       example = "",
@@ -388,8 +383,11 @@ tile_arguments <- function() {
     drill = new_block_arg(
       paste0(
         "When TRUE, clicking a card / matrix row emits a categorical filter ",
-        "on the `by` column downstream (the same contract as the chart / ",
-        "table). Off by default; only meaningful with `by` set."
+        "downstream (the same contract as the chart / table). The filter ",
+        "column is determined by the tile's structure, never picked: the ",
+        "`group` column when grouped, else the `measure` column on an ",
+        "ungrouped long KPI list. Off by default; inert when the tile has ",
+        "neither (a bare single KPI, or grand-total metric cards)."
       ),
       example = TRUE,
       type = arg_boolean()

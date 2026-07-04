@@ -10,6 +10,7 @@ new_chart_block(
   facet = NULL,
   metric = ".count",
   agg_fn = "count",
+  metrics = NULL,
   chart_type = "bar",
   x = NULL,
   y = NULL,
@@ -59,6 +60,15 @@ aggregations.}
 \code{"count_distinct"} counts an entity once per colour level it appears
 under; deduplicate upstream if segments must sum to the per-group
 distinct count.}
+
+\item{metrics}{Optional multi-metric aggregation (bar charts only): a
+list, each entry \code{list(agg_fn, cols)} -- the same shape as the table
+block's \code{metrics}. Each aggregation x column pair becomes one bar
+series per group (side-by-side), the legend names the metrics. With
+more than one series the \code{color} split is ignored (metrics own the
+series dimension). Chart types other than "bar" use the FIRST entry
+only (they are structurally single-metric). When set, \code{metric} /
+\code{agg_fn} are superseded. Default \code{NULL} (single-metric mode).}
 
 \item{chart_type}{Chart type: "bar", "waterfall", "scatter", "line",
 "pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with

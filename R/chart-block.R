@@ -36,6 +36,14 @@
 #'   `"count_distinct"` counts an entity once per colour level it appears
 #'   under; deduplicate upstream if segments must sum to the per-group
 #'   distinct count.
+#' @param metrics Optional multi-metric aggregation (bar charts only): a
+#'   list, each entry `list(agg_fn, cols)` -- the same shape as the table
+#'   block's `metrics`. Each aggregation x column pair becomes one bar
+#'   series per group (side-by-side), the legend names the metrics. With
+#'   more than one series the `color` split is ignored (metrics own the
+#'   series dimension). Chart types other than "bar" use the FIRST entry
+#'   only (they are structurally single-metric). When set, `metric` /
+#'   `agg_fn` are superseded. Default `NULL` (single-metric mode).
 #' @param chart_type Chart type: "bar", "waterfall", "scatter", "line",
 #'   "pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with
 #'   a cumulative baseline (sugar for `bar` + `baseline = "cumulative"`).
@@ -113,6 +121,7 @@ new_chart_block <- function(
     facet = NULL,
     metric = ".count",
     agg_fn = "count",
+    metrics = NULL,
     chart_type = "bar",
     x = NULL,
     y = NULL,
@@ -172,6 +181,10 @@ new_chart_block <- function(
         r_facet <- shiny::reactiveVal(facet)
         r_metric <- shiny::reactiveVal(metric)
         r_agg_fn <- shiny::reactiveVal(agg_fn)
+        # Multi-metric list (bar): normalized to list(list(agg_fn, cols), ...)
+        # -- the table block's shape (dd_parse_metrics accepts an R list or the
+        # gear's JSON string). Empty = single-metric mode (metric/agg_fn above).
+        r_metrics <- shiny::reactiveVal(dd_parse_metrics(metrics))
         r_chart_type <- shiny::reactiveVal(chart_type)
         r_x <- shiny::reactiveVal(x)
         r_y <- shiny::reactiveVal(y)
@@ -251,6 +264,8 @@ new_chart_block <- function(
           # crash `d[, needed]` ("must be ... not a list").
           needed <- as.character(unlist(c(
             r_group(), r_color(), r_facet(), r_metric(),
+            # Multi-metric columns (each entry's cols; count entries have none).
+            lapply(r_metrics(), `[[`, "cols"),
             r_x(), r_y(), r_xend(), r_series(),
             r_label(), r_tt_fields(), r_drill(), r_lo(), r_hi()
           )))
@@ -295,6 +310,17 @@ new_chart_block <- function(
             config = list(
               group = r_group(), color = r_color(), facet = r_facet(),
               metric = r_metric(), agg_fn = r_agg_fn(),
+              # Multi-metric list (bar). Each cols as.list() so a length-1
+              # vector stays a JSON array (auto_unbox); NULL when empty so the
+              # JS stays in single-metric mode.
+              metrics = if (length(r_metrics())) {
+                lapply(r_metrics(), function(m) list(
+                  agg_fn = m$agg_fn,
+                  cols = as.list(as.character(m$cols))
+                ))
+              } else {
+                NULL
+              },
               chart_type = r_chart_type(), x = r_x(), y = r_y(),
               xend = r_xend(), series = r_series(), label = r_label(),
               # Extra tooltip columns. as.list() keeps a length-1 vector a JSON
@@ -378,6 +404,13 @@ new_chart_block <- function(
             if (!is.null(msg$facet))      upd(r_facet, nn(msg$facet))
             if (!is.null(msg$metric))     upd(r_metric, msg$metric)
             if (!is.null(msg$agg_fn))     upd(r_agg_fn, msg$agg_fn)
+            # Multi-metric list: a JSON string (gear edit) or nested list.
+            # "[]" / empty clears back to single-metric mode. Sent explicitly
+            # (not piggybacked on the full-config echo) with a `metrics_set`
+            # marker so its absence never clears state.
+            if (isTRUE(msg$metrics_set)) {
+              upd(r_metrics, dd_parse_metrics(msg$metrics))
+            }
             if (!is.null(msg$chart_type)) upd(r_chart_type, msg$chart_type)
             if (!is.null(msg$x))          upd(r_x, msg$x)
             if (!is.null(msg$y))          upd(r_y, msg$y)
@@ -487,6 +520,7 @@ new_chart_block <- function(
           drill <- r_drill()
           if (identical(drill, "auto")) drill <- NULL
           cols <- c(r_group(), r_color(), r_facet(), r_metric(),
+            as.character(unlist(lapply(r_metrics(), `[[`, "cols"))),
             r_x(), r_y(), r_xend(), r_series(), r_label(), drill)
           cols <- unique(cols[!is.null(cols) & nzchar(cols) & cols != ".count"])
           cols[!cols %in% names(d)]
@@ -576,6 +610,7 @@ new_chart_block <- function(
             facet = r_facet,
             metric = r_metric,
             agg_fn = r_agg_fn,
+            metrics = r_metrics,
             chart_type = r_chart_type,
             x = r_x,
             y = r_y,
@@ -624,8 +659,8 @@ new_chart_block <- function(
       "filter_values", "x", "y", "xend", "series", "label", "tt_fields",
       "drill", "sort_by", "sort_dir", "filter_range", "filter_point",
       "step", "ref_x", "ref_y", "smoother", "identity_line", "lo", "hi",
-      "waterfall_totals"),
-    external_ctrl = c("group", "color", "facet", "metric", "agg_fn",
+      "waterfall_totals", "metrics"),
+    external_ctrl = c("group", "color", "facet", "metric", "agg_fn", "metrics",
       "chart_type", "x", "y", "xend", "series", "label", "tt_fields", "drill",
       "sort_by", "sort_dir", "orientation", "bar_mode", "filter_type",
       "filter_column",
