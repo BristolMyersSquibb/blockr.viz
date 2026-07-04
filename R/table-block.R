@@ -657,7 +657,7 @@ drilldown_table_dep <- function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".3"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".4"),
       src = system.file(package = "blockr.viz"),
       # drilldown-config.js (the shared engine) must load before the table JS.
       script = c("js/drilldown-config.js", "js/table.js"),
@@ -927,18 +927,33 @@ new_table_block <- function(rowname = NULL,
           )
         })
 
-        # Excel download: a button on the chrome toolbar, shown only when the
+        # Excel download: a control on the chrome toolbar, shown only when the
         # block has `excel_download` on. It writes the rendered (annotated) frame
         # via write_annotated_xlsx() -- same frame, the spreadsheet output.
+        # Hand-built download link (the `shiny-download-link` class is what
+        # shiny's download binding attaches to) instead of
+        # shiny::downloadButton, so it renders as a quiet design-system icon
+        # button (table.css) rather than a stock Bootstrap .btn with a
+        # FontAwesome icon.
         output$dt_download <- shiny::renderUI({
           if (!isTRUE(r_excel_download())) return(NULL)
           if (!requireNamespace("openxlsx", quietly = TRUE)) return(NULL)
-          shiny::downloadButton(
-            ns("dl_xlsx"),
-            label = NULL,
-            class = "blockr-dl-xlsx",
-            icon  = shiny::icon("download"),
-            title = "Download as Excel"
+          htmltools::tags$a(
+            id = ns("dl_xlsx"),
+            class = "blockr-dl-xlsx shiny-download-link",
+            href = "",
+            target = "_blank",
+            download = NA,
+            title = "Download as Excel",
+            `aria-label` = "Download as Excel",
+            htmltools::HTML(paste0(
+              '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ',
+              'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" ',
+              'stroke-linejoin="round">',
+              '<path d="M8 2.5 V10 M4.8 7 L8 10.2 L11.2 7"/>',
+              '<path d="M2.5 11.5 V12.8 A1.2 1.2 0 0 0 3.7 14 H12.3 ',
+              'A1.2 1.2 0 0 0 13.5 12.8 V11.5"/></svg>'
+            ))
           )
         })
         output$dl_xlsx <- shiny::downloadHandler(

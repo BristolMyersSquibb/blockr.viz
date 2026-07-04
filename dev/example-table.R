@@ -100,19 +100,15 @@ board <- new_dock_board(
     #    wide grid, then heatmap the counts with a sequential scale. This single
     #    view shows BOTH pivoting and numeric cell colouring.
     xt_summ = new_summarize_block(
-      state = list(
-        summaries = list(
-          list(type = "simple", name = "n", func = "n", col = "AGE")
-        ),
-        by = list("AGEGR1", "ARM")
+      summaries = list(
+        list(type = "simple", name = "n", func = "n", col = "AGE")
       ),
+      by = list("AGEGR1", "ARM"),
       block_name = "Count by age-group x arm"),
     xt_wide = new_pivot_wider_block(
-      state = list(
-        id_cols = list("AGEGR1"),
-        names_from = list("ARM"),
-        values_from = list("n")
-      ),
+      id_cols = list("AGEGR1"),
+      names_from = list("ARM"),
+      values_from = list("n"),
       block_name = "Pivot to crosstab"),
     xt_tbl = new_table_block(
       rowname = "AGEGR1",
@@ -137,13 +133,11 @@ board <- new_dock_board(
       metric = ".count", agg_fn = "count",
       block_name = "Patients by arm x sex (chart — colour role)"),
     by_sex = new_summarize_block(
-      state = list(
-        summaries = list(
-          list(type = "simple", name = "n",        func = "n",    col = "AGE"),
-          list(type = "simple", name = "mean_age", func = "mean", col = "AGE")
-        ),
-        by = list("SEX")
+      summaries = list(
+        list(type = "simple", name = "n",        func = "n",    col = "AGE"),
+        list(type = "simple", name = "mean_age", func = "mean", col = "AGE")
       ),
+      by = list("SEX"),
       block_name = "Summaries by sex"),
     sex_tbl = new_table_block(
       rowname = "SEX", values = c("n", "mean_age"),

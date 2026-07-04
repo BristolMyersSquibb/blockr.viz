@@ -95,15 +95,14 @@ board <- new_dock_board(
                   block_name = "summary_table (Table 1)"),
     t_summtbl = new_table_block(block_name = "Structured Table 1"),
     xt_summ   = new_summarize_block(
-                  state = list(
-                    summaries = list(
-                      list(type = "simple", name = "n", func = "n", col = "AGE")),
-                    by = list("AGEGR1", "ARM")),
+                  summaries = list(
+                    list(type = "simple", name = "n", func = "n", col = "AGE")),
+                  by = list("AGEGR1", "ARM"),
                   block_name = "Count by age-group x arm"),
     xt_wide   = new_pivot_wider_block(
-                  state = list(id_cols = list("AGEGR1"),
-                               names_from = list("ARM"),
-                               values_from = list("n")),
+                  id_cols = list("AGEGR1"),
+                  names_from = list("ARM"),
+                  values_from = list("n"),
                   block_name = "Pivot to crosstab"),
     t_xt      = new_table_block(rowname = "AGEGR1",
                                 cell_color = drilldown_table_color(type = "sequential"),
