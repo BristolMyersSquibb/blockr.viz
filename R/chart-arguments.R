@@ -73,9 +73,7 @@ chart_arguments <- function() {
         "upstream if segments must sum to the per-group distinct count."
       ),
       example = "count",
-      type = arg_enum(
-        c("count", "count_distinct", "mean", "median", "sum", "min", "max")
-      )
+      type = arg_enum(AGG_FNS)
     ),
     x = new_block_arg(
       paste0(

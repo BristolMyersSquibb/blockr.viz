@@ -75,6 +75,12 @@
   // colorblind-safe and well-tested for general categorical encoding.
   const BLOCKR_PALETTE = ['#0072B2', '#D55E00', '#F0E442', '#009E73', '#56B4E9', '#E69F00', '#CC79A7'];
   const BLOCKR_FONT = "'Open Sans', system-ui, sans-serif";
+  // A color-split boxplot dodges its boxes by giving each (group, color) box
+  // its own category slot; the slot value is `group + SEP + level`. ECharts
+  // dedupes a category axis by value, so a bare group label would collapse the
+  // per-color boxes into one slot — the separator keeps them distinct while the
+  // axisLabel formatter strips it back to the group name for display.
+  const BOX_CAT_SEP = '\u0000';
   // Display-only number formatting. Data is now sent at full precision
   // (so click-to-filter equality round-trips), so trim noisy decimals
   // for tooltips / status text without touching the underlying value.
@@ -128,15 +134,11 @@
       }
     : TOOLBOX;
 
-  const AGG_FNS = [
-    { value: 'count', label: 'Count' },
-    { value: 'count_distinct', label: 'Count distinct' },
-    { value: 'mean', label: 'Mean' },
-    { value: 'median', label: 'Median' },
-    { value: 'sum', label: 'Sum' },
-    { value: 'min', label: 'Min' },
-    { value: 'max', label: 'Max' }
-  ];
+  // Aggregation vocabulary + the group/metric/agg_fn role triple + the
+  // metric-follows-agg reconcile now live in the shared drilldown-agg.js so the
+  // table and tile render the identical control. Loaded before chart.js.
+  const DAgg = /** @type {any} */ (
+    (typeof Blockr !== 'undefined' && Blockr.DrilldownAgg) || window.DrilldownAgg);
 
   // ===== Role spec ==========================================================
   // The config popover is a pure function of these two structures plus the
@@ -154,7 +156,9 @@
   // Inlined here for v1; extract to a shared module when the table/ggplot
   // blocks adopt it (follow-up specs).
   const ROLES = {
-    group:  { label: 'Group',  kind: 'column', colType: 'cat', ph: 'category column…' },
+    // group / metric / agg_fn are shared with the table + tile so all three
+    // render the identical aggregation control — see drilldown-agg.js.
+    ...DAgg.aggRoles(),
     x:      { label: 'X',      kind: 'column', colType: 'any',
               hintBy: { individual: 'numeric column…', timeline: 'time / sequence…' } },
     y:      { label: 'Y',      kind: 'column', colTypeBy: { individual: 'num', timeline: 'any' } },
@@ -169,22 +173,12 @@
     // per-bar, so this is bounded to the picked columns, never the whole row.
     tt_fields: { label: 'Tooltip fields', kind: 'columns', colType: 'any',
                  placeholder: 'add columns…' },
-    // The metric picker follows the aggregation: "count" is a row count (the
-    // metric is ignored -> only the synthetic '.count'), "count_distinct"
-    // works on any column type (e.g. a subject id for patient counts), the
-    // numeric aggregations need a numeric column.
-    metric: { label: 'Metric', kind: 'column', pairedWith: 'agg_fn',
-              ph: 'column to aggregate…',
-              colType: (/** @type {any} */ cfg) =>
-                cfg.agg_fn === 'count_distinct' ? 'any'
-                  : (!cfg.agg_fn || cfg.agg_fn === 'count') ? 'none' : 'num',
-              allowCount: (/** @type {any} */ cfg) =>
-                !cfg.agg_fn || cfg.agg_fn === 'count' },
-    agg_fn: { label: 'Agg',    kind: 'select', options: AGG_FNS, rerender: true },
     sort_by:  { label: 'Sort', kind: 'select', pairedWith: 'sort_dir',
                 optionsBy: { aggregated: ['value', 'alpha', '#num'],
                              timeline: ['onset', 'alpha', '#num'] } },
-    sort_dir: { label: 'Dir',  kind: 'select', options: ['asc', 'desc'] },
+    sort_dir: { label: 'Order', kind: 'select',
+                options: [{ value: 'asc',  label: 'Ascending' },
+                          { value: 'desc', label: 'Descending' }] },
     orientation: { label: 'Orientation', kind: 'segmented',
                    options: [{ value: 'horizontal', label: 'Horizontal' },
                              { value: 'vertical', label: 'Vertical' }] },
@@ -215,15 +209,17 @@
   // (always shown for the family) or { role, types:[...] } (shown only for
   // those chart types). requiredMap rows render immediately; optionalMap rows
   // are added on demand from the "+ Add mapping" menu. `mapping` holds always-on
-  // controls shown under the Mapping header after the role rows — for the chart
-  // that is `metric` (required, carries its own marker) + the `agg_fn`: a bar IS
-  // a sum-of-group, so the aggregation is part of the mapping, not a separate
-  // "encoding" step.
+  // controls — for the aggregated family that is `metric` (required, carries its
+  // own marker) + the `agg_fn`. `aggTitle` (aggregated family only) splits those
+  // stat controls into their own trailing "Aggregation" section, ggplot-style:
+  // Mapping = the aesthetics (group / color / facet / label), Aggregation = the
+  // stat (mean of AVGDD). Families without aggTitle keep everything under Mapping.
   const FAMILY_ROLES = {
     aggregated: {
       requiredMap: ['group'],
       optionalMap: ['color', 'facet', 'label'],
       mapping: ['metric', { role: 'agg_fn', types: ['bar', 'waterfall', 'pie', 'treemap', 'radar'] }],
+      aggTitle: 'Aggregation',
       // orientation: bar only for v1 (boxplot swap is a follow-up). Waterfall
       // is vertical-only (a bridge reads left-to-right along the value axis), so
       // it does not expose orientation.
@@ -388,20 +384,30 @@
       return 'individual';
     }
 
-    // Keep the metric consistent when the aggregation changes: "count" ignores
-    // the metric (force the synthetic '.count'); "count_distinct" takes any
-    // column but not '.count'; the numeric aggregations need a numeric column.
-    // A metric that no longer fits is emptied — the picker then shows the
-    // required-empty state instead of silently charting a wrong number.
+    // Keep the metric consistent when the aggregation changes (shared with the
+    // table + tile — see drilldown-agg.js reconcileMetric).
     _reconcileMetric() {
-      const cfg = this.config;
-      if (!cfg.agg_fn || cfg.agg_fn === 'count') { cfg.metric = '.count'; return; }
-      if (cfg.agg_fn === 'count_distinct') {
-        if (cfg.metric === '.count') cfg.metric = '';
-        return;
+      DAgg.reconcileMetric(this.config, this.columns);
+    }
+
+    // Boxplot summarizes RAW numeric values (its box = the five-number summary
+    // of the metric within a group) and ignores agg_fn entirely, so it needs a
+    // numeric metric and never the synthetic '.count'. The shared metric
+    // machinery gates pickability on agg_fn, and agg_fn is not shown for
+    // boxplot — left at the aggregated default 'count' it forces metric to
+    // '.count', which the boxplot can't plot ("needs a numeric metric"). Drive
+    // it into numeric mode: swap a count aggregation for 'mean' (inert for the
+    // boxplot, but makes the picker offer numeric columns) and pick / keep a
+    // numeric column. Returns true when it handled a boxplot config.
+    /** @param {any} cfg */
+    _ensureBoxplotMetric(cfg) {
+      if (cfg.chart_type !== 'boxplot') return false;
+      if (!cfg.agg_fn || cfg.agg_fn === 'count') cfg.agg_fn = 'mean';
+      if (!this._hasVal(cfg.metric) || cfg.metric === '.count') {
+        const num = (this.columns || []).find((/** @type {any} */ c) => c.type === 'numeric');
+        cfg.metric = num ? num.name : '';
       }
-      const col = (this.columns || []).find(c => c.name === cfg.metric);
-      if (!col || col.type !== 'numeric') cfg.metric = '';
+      return true;
     }
 
     // The bar baseline mode: "zero" (a plain bar, every bar starts at 0) or
@@ -814,11 +820,13 @@
           const cat = cols.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique <= 30);
           cfg.group = cat ? cat.name : cols[0].name;
         }
-        if (!cfg.agg_fn) cfg.agg_fn = 'count';
-        // '.count' only fits the "count" aggregation; under any other agg an
-        // unset metric stays empty (required-empty picker) rather than
-        // defaulting to a value the aggregation ignores.
-        if (!cfg.metric && cfg.agg_fn === 'count') cfg.metric = '.count';
+        if (!this._ensureBoxplotMetric(cfg)) {
+          if (!cfg.agg_fn) cfg.agg_fn = 'count';
+          // '.count' only fits the "count" aggregation; under any other agg an
+          // unset metric stays empty (required-empty picker) rather than
+          // defaulting to a value the aggregation ignores.
+          if (!cfg.metric && cfg.agg_fn === 'count') cfg.metric = '.count';
+        }
         if (!this._hasVal(cfg.sort_by)) cfg.sort_by = 'value';
         if (!this._hasVal(cfg.sort_dir)) cfg.sort_dir = 'desc';
         if (!this._hasVal(cfg.orientation)) cfg.orientation = 'horizontal';
@@ -894,9 +902,11 @@
           const cat = this.columns.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique <= 30);
           this.config.group = cat ? cat.name : this.columns[0].name;
         }
-        if (!this.config.agg_fn) this.config.agg_fn = 'count';
-        // '.count' only fits the "count" aggregation (see _ensureFamilyDefaults)
-        if (!this.config.metric && this.config.agg_fn === 'count') this.config.metric = '.count';
+        if (!this._ensureBoxplotMetric(this.config)) {
+          if (!this.config.agg_fn) this.config.agg_fn = 'count';
+          // '.count' only fits the "count" aggregation (see _ensureFamilyDefaults)
+          if (!this.config.metric && this.config.agg_fn === 'count') this.config.metric = '.count';
+        }
         if (!this.config.sort_by) this.config.sort_by = 'value';
         if (!this.config.sort_dir) this.config.sort_dir = 'desc';
       } else if (fam === 'timeline') {
@@ -1179,7 +1189,7 @@
           : Math.max(350, groups.length * 28 + 60) + 'px';
         container.appendChild(chartDiv);
 
-        const option = this._buildAggregatedOption(facetData, groups, colors, palette, chartDiv.clientWidth);
+        const option = this._buildAggregatedOption(facetData, groups, colors, palette, chartDiv.clientWidth, facet);
         if (!option) {
           chartDiv.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">Boxplot needs a numeric metric</p></div>';
           continue;
@@ -1202,8 +1212,14 @@
           // select, the click is inert.
           const isRadar = ct === 'radar';
           if (isRadar && !this.config.color) return;
-          const clickedGroup = params.name || (params.value && params.value[0]);
+          let clickedGroup = params.name || (params.value && params.value[0]);
           if (!clickedGroup) return;
+          // A color-split boxplot slot is `group + BOX_CAT_SEP + level`; drill
+          // (like a color-split bar) targets the whole group, so strip the
+          // level suffix back to the group name.
+          if (ct === 'boxplot' && this.config.color && typeof clickedGroup === 'string') {
+            clickedGroup = clickedGroup.split(BOX_CAT_SEP)[0];
+          }
           this._selected = this._selected === clickedGroup ? null : clickedGroup;
           this._updateHighlight();
           if (this._selected == null) { this._sendClearFilter(); return; }
@@ -1221,8 +1237,8 @@
       this._updateHighlight();
     }
 
-    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {number} [plotW] container width in px */
-    _buildAggregatedOption(facetData, groups, colors, palette, plotW) {
+    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {number} [plotW] container width in px @param {string} [facet] current facet value ('__all__' when unfaceted) */
+    _buildAggregatedOption(facetData, groups, colors, palette, plotW, facet) {
       const ct = this.config.chart_type;
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
 
@@ -1234,7 +1250,7 @@
         ? 'Count' : this._axisTitle(this.config.metric);
 
       if (ct === 'pie') return this._buildPie(facetData, groups, palette);
-      if (ct === 'boxplot') return this._buildBoxplot(groups, palette, ax);
+      if (ct === 'boxplot') return this._buildBoxplot(groups, palette, ax, plotW, facet);
       if (ct === 'treemap') return this._buildTreemap(facetData, groups, palette);
       if (ct === 'radar') return this._buildRadar(facetData, groups, colors, palette, valueTitle, plotW || 0);
       // Waterfall = a bar with baseline "cumulative": each bar floats from the
@@ -1620,27 +1636,92 @@
       };
     }
 
-    /** @param {any[]} groups @param {any[]} palette @param {any} ax */
-    _buildBoxplot(groups, palette, ax) {
+    /** @param {any[]} groups @param {any[]} palette @param {any} ax @param {number} [plotW] container width in px @param {string} [facet] current facet value ('__all__' when unfaceted) */
+    _buildBoxplot(groups, palette, ax, plotW, facet) {
       const groupBy = this.config.group;
+      const colorCol = this.config.color;
+      const facetCol = this.config.facet;
       const metric = this.config.metric;
-      if (metric === '.count') return null;
-      const boxData = groups.map(g => {
-        const vals = this.data.filter(r => String(r[groupBy]) === g && r[metric] != null).map(r => Number(r[metric])).filter(v => !Number.isNaN(v)).sort((a, b) => a - b);
-        // Empty / all-NA group: return null so ECharts draws nothing for
-        // this category slot (index alignment with `groups` / yAxis.data is
-        // preserved). A fake [0,0,0,0,0] summary would render a misleading
-        // flat box at zero.
+      // No numeric metric (unset or the synthetic row count) -> nothing to
+      // summarize; the caller shows "Boxplot needs a numeric metric".
+      if (!metric || metric === '.count') return null;
+
+      // This facet's raw rows. Unlike bar/pie (which read pre-aggregated
+      // facetData), boxplot needs the raw values, so it filters this.data
+      // itself — including by the facet column, else every facet panel would
+      // draw the whole dataset.
+      const facetRows = (facetCol && facet && facet !== '__all__')
+        ? this.data.filter(r => String(r[facetCol]) === String(facet))
+        : this.data;
+
+      // Five-number summary (whiskers capped at 1.5*IQR) over the raw metric
+      // values of a set of rows. Returns null for an empty / all-NA set so the
+      // caller can drop that category slot rather than draw a misleading flat
+      // box at zero. Datum is an object (not a bare array) so the tooltip can
+      // report the observation count alongside the summary.
+      const summarize = (/** @type {any[]} */ rows) => {
+        const vals = rows.map(r => Number(r[metric])).filter(v => !Number.isNaN(v)).sort((a, b) => a - b);
         if (vals.length === 0) return null;
         const q = (/** @type {number} */ p) => { const i = p * (vals.length - 1); const lo = Math.floor(i); return lo === i ? vals[lo] : vals[lo] + (vals[lo + 1] - vals[lo]) * (i - lo); };
         const q1 = q(0.25), q3 = q(0.75), iqr = q3 - q1;
         const lo = Math.max(vals[0], q1 - 1.5 * iqr);
         const hi = Math.min(vals[vals.length - 1], q3 + 1.5 * iqr);
-        // Datum object (not bare array) so the tooltip can report the
-        // group's observation count alongside the five-number summary.
         return { value: [lo, q1, q(0.5), q3, hi], n: vals.length };
+      };
+
+      // Color levels, in scale / factor order. Levels with no rows drop out.
+      // _renderAggregated already rejects a color mapping with > MAX_COLOR_LEVELS
+      // distinct values before we get here, so this stays a small palette.
+      const colorScale = this._scaleFor(colorCol);
+      const levels = colorCol
+        ? this._orderLevels(
+            [...new Set(this.data.map(r => String(r[colorCol] ?? '')))].filter(l => l !== ''),
+            colorScale, colorCol)
+        : [];
+      const split = levels.length > 0;
+      const hexFor = (/** @type {string} */ lv, /** @type {number} */ i) =>
+        (colorScale && colorScale.color && colorScale.color[lv]) || palette[i % palette.length];
+
+      // Rows behind a (group, level) box, within this facet. level ===
+      // '__all__' means no split. Levels themselves are taken from the full
+      // data (below) so the legend / colors stay stable across facet panels.
+      const rowsFor = (/** @type {string} */ g, /** @type {string} */ lv) =>
+        facetRows.filter(r =>
+          String(r[groupBy]) === g &&
+          r[metric] != null &&
+          (lv === '__all__' || String(r[colorCol] ?? '') === lv));
+
+      // Category axis. Plain boxplot: one slot per group. Color-split: one slot
+      // per (group, level) that has data, group-major so a group's per-color
+      // boxes sit together; the slot value carries the level (BOX_CAT_SEP) so
+      // ECharts keeps them distinct, and the axisLabel formatter strips it back
+      // to the group name.
+      /** @type {string[]} */
+      const cats = [];
+      /** @type {{group: string, level: string}[]} */
+      const catMeta = [];
+      for (const g of groups) {
+        for (const lv of (split ? levels : ['__all__'])) {
+          // Split path: drop empty (group, level) combos so there is no blank
+          // slot. Plain path: keep the slot (null box) to preserve index/label
+          // alignment, matching the pre-color behavior.
+          if (split && rowsFor(g, lv).length === 0) continue;
+          cats.push(split ? g + BOX_CAT_SEP + lv : g);
+          catMeta.push({ group: g, level: lv });
+        }
+      }
+
+      // One boxplot series per color level so the legend and per-series color
+      // come for free; each series only carries data at its own slots (null
+      // elsewhere), which also dodges the boxes since one slot = one box.
+      const seriesLevels = split ? levels : ['__all__'];
+      const series = seriesLevels.map((lv, li) => {
+        const hex = split ? hexFor(lv, li) : palette[0];
+        const data = catMeta.map(cm => cm.level === lv ? summarize(rowsFor(cm.group, lv)) : null);
+        return { type: 'boxplot', name: split ? lv : undefined, data, itemStyle: { color: hex + '22', borderColor: hex } };
       });
-      const gut = this._yGutter(groups);
+
+      const gut = this._yGutter(cats.map(c => split ? c.split(BOX_CAT_SEP)[0] : c));
       // p.data is our {value, n} datum; whiskers are 1.5*IQR-capped, so
       // they're labeled as whiskers rather than min/max.
       const boxTooltipFmt = (/** @type {any} */ p) => {
@@ -1648,14 +1729,35 @@
         if (!d || !Array.isArray(d.value)) return '';
         // ECharts normalizes boxplot datum values to
         // [dataIndex, lo, q1, med, q3, hi] — read the last five.
-        const [lo, q1, med, q3, hi] = d.value.slice(-5);
-        return (p.name ? p.name + '<br/>' : '') +
+        const five = d.value.slice(-5);
+        const lo = five[0], q1 = five[1], med = five[2], q3 = five[3], hi = five[4];
+        // p.name is the (possibly composite) category; show "group \u00b7 level".
+        const head = split ? String(p.name).replace(BOX_CAT_SEP, ' \u00b7 ') : p.name;
+        return (head ? head + '<br/>' : '') +
           'n: ' + d.n +
           '<br/>Median: ' + ddNum(med) +
           '<br/>Q1, Q3: ' + ddNum(q1) + ', ' + ddNum(q3) +
           '<br/>Whiskers: ' + ddNum(lo) + ' \u2013 ' + ddNum(hi);
       };
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true, formatter: boxTooltipFmt }, grid: { left: gut.gridLeft, right: 5, top: 30, bottom: 46 }, xAxis: { type: 'value', name: this._axisTitle(this.config.metric), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } }, yAxis: { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false } }, series: [{ type: 'boxplot', data: boxData, itemStyle: { color: palette[0] + '22', borderColor: palette[0] } }] };
+      const legendOn = split;
+      const leg = legendOn ? this._legendRows(levels, plotW || 0) : { extra: 0, scroll: false };
+      const bottomBase = 46 + (legendOn ? 29 : 0);
+      return {
+        __legendFit: legendOn
+          ? { items: levels, base: bottomBase, key: leg.extra + (leg.scroll ? 'S' : '') }
+          : undefined,
+        ...(this.theme ? {} : { backgroundColor: 'transparent' }),
+        textStyle: { fontFamily: BLOCKR_FONT },
+        toolbox: TOOLBOX,
+        tooltip: { trigger: 'item', confine: true, formatter: boxTooltipFmt },
+        legend: legendOn
+          ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, ...(leg.scroll ? { type: 'scroll' } : {}) }
+          : undefined,
+        grid: { left: gut.gridLeft, right: 5, top: 30, bottom: bottomBase + leg.extra },
+        xAxis: { type: 'value', name: this._axisTitle(this.config.metric), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } },
+        yAxis: { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(split ? { formatter: (/** @type {string} */ v) => String(v).split(BOX_CAT_SEP)[0] } : {}) }, axisLine: { show: false } },
+        series
+      };
     }
 
     // -- Individual rendering -------------------------------------------------

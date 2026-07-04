@@ -6,8 +6,9 @@
 \usage{
 new_tile_block(
   value = character(),
-  by = "",
+  group = character(),
   measure = "",
+  metrics = list(),
   layout = "cards",
   overline = "",
   caption = "",
@@ -16,7 +17,6 @@ new_tile_block(
   good_when = "up",
   format = "number",
   unit = "",
-  measures = list(),
   drill = FALSE,
   filter_col = NULL,
   filter_value = NULL,
@@ -27,10 +27,19 @@ new_tile_block(
 \item{value}{Character vector of numeric column name(s). Multiple columns
 => wide input (each becomes a measure).}
 
-\item{by}{Group/facet column (matrix rows / card clusters). \code{""} = none.}
+\item{group}{Grouping column: clusters cards / matrix rows, and the
+\code{group_by} column when \code{metrics} aggregate the input in place. \code{""} = no
+grouping.}
 
 \item{measure}{Measure-label column for long input. \code{""} = use the \code{value}
 column names as measure names.}
+
+\item{metrics}{Optional in-block aggregations: a list, each entry
+\code{list(agg_fn, cols)} (\code{agg_fn} one of count / count_distinct / mean /
+median / sum / min / max). Each metric becomes a card. With \code{group} set,
+one cluster per group level; with \code{group} empty, grand-total cards. A
+display projection only -- the block's data output stays the raw input
+filtered by the click. Empty (default) = no aggregation.}
 
 \item{layout}{\code{"cards"} or \code{"table"}. Same slots either way.}
 
@@ -54,13 +63,9 @@ increase is good) or \code{"down"} (a decrease is good -- e.g. churn).}
 header (e.g. \code{"USD"}, \code{"CHF"}, \code{"apples"}). This is how you label a
 currency -- the renderer never infers \code{$}.}
 
-\item{measures}{Optional per-measure override list, keyed by measure name,
-each \code{list(style, good_when, format, unit)}. Lets a matrix draw Revenue
-as \code{delta} and Budget as \code{fill}. Falls back to the flat defaults.}
-
 \item{drill}{Logical; when \code{TRUE} a card / matrix-row click emits a
-categorical filter on the \code{by} column downstream. Off by default; only
-active when \code{by} is mapped.}
+categorical filter on the \code{group} column downstream. Off by default; only
+active when \code{group} is mapped.}
 
 \item{filter_col, filter_value}{Click-filter state. Kept as constructor
 params so the filter round-trips through save/restore (blockr.core
@@ -74,13 +79,14 @@ upstream data filtered by the last click (passthrough when no drill),
 exactly like \code{\link[=new_table_block]{new_table_block()}}.
 }
 \description{
-A pure renderer for the bold display of a handful of important numbers --
-the KPI-card / scorecard family. Parallel to the \code{chart} and \code{table}
-interactive renderers: all shaping (\code{summarize} / \code{describe} / a lag-join
-for comparisons) happens upstream; the tile does no arithmetic. It maps
-columns to slots and draws them, in one of two layouts of identical
-content (\code{cards} or \code{table}), and is opt-in clickable as a filter (\code{drill})
-using the same transport as the chart / table.
+The bold display of a handful of important numbers -- the KPI-card /
+scorecard family. Parallel to the \code{chart} and \code{table} interactive
+renderers. It maps columns to slots and draws them, in one of two layouts
+of identical content (\code{cards} or \code{table}), and is opt-in clickable as a
+filter (\code{drill}) using the same transport as the chart / table. Like the
+table it can aggregate in place (\code{group} + \code{metrics}, the shared
+aggregation vocabulary) into grand-total or per-group cards; secondaries
+(delta / fill / pill) stay precomputed upstream (a tile is not a pivot).
 }
 \section{Input contract}{
 The canonical input is a long "tile frame": one row per (group, measure)

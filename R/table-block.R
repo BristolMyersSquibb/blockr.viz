@@ -83,7 +83,8 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                          color = NULL, drill = NULL, digits = 2L,
                          row_hex = NULL, row_color = NULL,
                          sortable = TRUE, collapsible = TRUE, search = TRUE,
-                         excel_download = FALSE) {
+                         excel_download = FALSE, group_cols = NULL,
+                         group = character(), metrics = list()) {
   data <- fmt_to_wide(data)
   # Display-option states (sortable / collapsible / search / excel) ride on the
   # <table> as data-attributes so the gear popover reads their current value;
@@ -273,7 +274,8 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                  row_color = row_color,
                  num_cols = value_cols[num_flag],
                  color_cols = if (!is.null(color)) color$columns else NULL,
-                 toggles = toggles)
+                 toggles = toggles, group_cols = group_cols,
+                 group = group, metrics = metrics)
 }
 
 # ---------------------------------------------------------------------------
@@ -448,6 +450,158 @@ dt_message_table <- function(msg = "No data") {
   )
 }
 
+#' Aggregate the table's input FOR DISPLAY.
+#'
+#' When `group` names one or more (existing) columns, collapse the frame to one
+#' row per group with a column per metric. `metrics` is a list, each element
+#' `list(agg_fn, cols)`, so one table can carry several metrics at once (e.g.
+#' mean(AGE) and sum(DOSE)). Same aggregation vocabulary the chart uses (shared
+#' `AGG_FNS`). This is a display projection only; the block's data output stays
+#' the raw input filtered by the click (see the block server's `expr`). No group
+#' -> the frame is returned unchanged, so the renderer draws the raw table.
+#'
+#' @return `list(data, group, metric_cols)` -- the (aggregated or raw) frame,
+#'   the resolved group columns, and the metric column names.
+#' @noRd
+dd_table_aggregate <- function(data, group, metrics) {
+  group <- intersect(as.character(group), names(data))
+  plan  <- dd_metric_plan(metrics, data)
+  # Aggregation is "active" when the block carries a group and/or a metric.
+  # Neither -> the raw frame passes through unchanged (`aggregated = FALSE`).
+  if (!length(group) && !length(plan)) {
+    return(list(data = data, group = character(), metric_cols = character(),
+                aggregated = FALSE))
+  }
+  # A grouped request with no usable metric still counts; a metric with no group
+  # reduces the WHOLE frame to a single totals row (grand totals).
+  if (!length(plan)) {
+    plan <- list(list(name = "Count", expr = quote(dplyr::n()), label = NULL))
+  }
+  exprs <- stats::setNames(lapply(plan, `[[`, "expr"),
+                           vapply(plan, `[[`, "", "name"))
+  out <- if (length(group)) {
+    g <- dplyr::group_by(data, dplyr::across(dplyr::all_of(group)))
+    as.data.frame(dplyr::summarise(g, !!!exprs, .groups = "drop"),
+                  check.names = FALSE)
+  } else {
+    # Grand totals: an ungrouped summarise -> exactly one row of metric values.
+    as.data.frame(dplyr::summarise(data, !!!exprs), check.names = FALSE)
+  }
+  # Carry a friendly, stat-prefixed label onto each metric column -- the source
+  # column's own label is lost in summarise -- so the header reads e.g. bold
+  # "BMIBL" over "Mean: Baseline BMI (kg/m^2)" (dt_col_label surfaces it).
+  for (p in plan) {
+    if (!is.null(p$label) && p$name %in% names(out)) {
+      attr(out[[p$name]], "label") <- p$label
+    }
+  }
+  list(data = out, group = group,
+       metric_cols = vapply(plan, `[[`, "", "name"), aggregated = TRUE)
+}
+
+#' Plan the metric columns for a metrics list.
+#'
+#' For each metric produces `list(name, expr, label)`: `name` is the bold header
+#' (the source variable when free, else stat-qualified so it stays unique),
+#' `expr` the summarise call, and `label` the grey subtext -- the source column's
+#' own label prefixed with the stat, e.g. "Median: Baseline BMI (kg/m^2)". count
+#' -> "Count" (no label); count_distinct / numeric aggregations -> one entry per
+#' (numeric) column. Non-numeric or missing columns fall away.
+#' @noRd
+dd_metric_plan <- function(metrics, data) {
+  words <- c(mean = "Mean", median = "Median", sum = "Sum", min = "Min",
+             max = "Max", count_distinct = "Distinct")
+  fn_calls <- list(mean = quote(mean), median = quote(stats::median),
+                   sum = quote(sum), min = quote(min), max = quote(max))
+  orig_label <- function(col) {
+    l <- attr(data[[col]], "label", exact = TRUE)
+    if (is.character(l) && length(l) == 1L && nzchar(l)) l else col
+  }
+  used <- character()
+  uniq <- function(nm, tag) {
+    if (!(nm %in% used)) { used <<- c(used, nm); return(nm) }
+    # Same variable aggregated twice -> qualify the second so the name is unique.
+    nm2 <- paste0(nm, " (", tag, ")")
+    while (nm2 %in% used) nm2 <- paste0(nm2, " ")
+    used <<- c(used, nm2)
+    nm2
+  }
+  plan <- list()
+  add <- function(name, expr, label) {
+    plan[[length(plan) + 1L]] <<- list(name = name, expr = expr, label = label)
+  }
+  for (m in metrics %||% list()) {
+    fn   <- as.character(m$agg_fn %||% "count")[1L]
+    cols <- intersect(as.character(m$cols %||% character()), names(data))
+    if (identical(fn, "count")) {
+      add(uniq("Count", "count"), quote(dplyr::n()), "Number of Observations")
+    } else if (identical(fn, "count_distinct")) {
+      for (col in cols) {
+        add(uniq(col, "distinct"),
+            bquote(dplyr::n_distinct(.data[[.(col)]]), list(col = col)),
+            paste0(words[["count_distinct"]], ": ", orig_label(col)))
+      }
+    } else if (!is.null(fn_calls[[fn]])) {
+      fc <- fn_calls[[fn]]
+      for (col in cols) {
+        if (is.numeric(data[[col]])) {
+          add(uniq(col, fn),
+              bquote(.(fc)(.data[[.(col)]], na.rm = TRUE),
+                     list(fc = fc, col = col)),
+              paste0(words[[fn]], ": ", orig_label(col)))
+        }
+      }
+    }
+  }
+  plan
+}
+
+#' Normalize the `metrics` list from a restored block state (an R list) or from
+#' JS (a JSON string) to `list(list(agg_fn, cols), ...)`.
+#' @noRd
+dd_parse_metrics <- function(v) {
+  if (is.null(v)) return(list())
+  ms <- if (is.character(v) && length(v) == 1L) {
+    tryCatch(jsonlite::fromJSON(v, simplifyVector = FALSE),
+             error = function(e) list())
+  } else if (is.list(v)) {
+    v
+  } else {
+    list()
+  }
+  lapply(ms, function(m) list(
+    agg_fn = as.character(m$agg_fn %||% "count")[1L],
+    cols = as.character(unlist(m$cols %||% character()))
+  ))
+}
+
+#' Serialize the `metrics` list to the JSON the gear reads off `data-dt-metrics`
+#' (`agg_fn` a scalar, `cols` always an array). JSON lives only at this edge.
+#' @noRd
+dd_metrics_json <- function(metrics) {
+  if (!length(metrics)) return("[]")
+  as.character(jsonlite::toJSON(
+    lapply(metrics, function(m) list(
+      agg_fn = jsonlite::unbox(as.character(m$agg_fn %||% "count")[1L]),
+      cols = as.character(m$cols %||% character())
+    )),
+    auto_unbox = FALSE
+  ))
+}
+
+#' Build the ANDed equality filter for a grouped-table row click.
+#'
+#' Returns a language object `.data[[c1]] == v1 & .data[[c2]] == v2 & ...` from
+#' aligned column / value vectors (the clicked row's group keys), for splicing
+#' into the block's `dplyr::filter()` expr so downstream gets that group's
+#' member rows.
+#' @noRd
+dd_group_filter_call <- function(cols, vals) {
+  conds <- Map(function(cl, vl) bquote(.data[[.(cl)]] == .(vl)),
+               as.character(cols), as.character(vals))
+  Reduce(function(a, b) bquote(.(a) & .(b)), conds)
+}
+
 #' Drill onclick target for a row click: the column name + its 0-based index in
 #' the rendered column order, or NULLs when `drill` is unset / not a column.
 #' @noRd
@@ -466,10 +620,18 @@ dt_onclick <- function(drill, all_cols) {
 dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
                            color_mode, digits, row_color = NULL,
                            num_cols = NULL, color_cols = NULL,
-                           toggles = NULL) {
+                           toggles = NULL, group_cols = NULL,
+                           group = character(), metrics = list()) {
   on_off <- function(x) if (isTRUE(x)) "on" else "off"
   htmltools::tagAppendAttributes(
     table_tag,
+    # Current aggregation config, read back by the gear (group comma-joined,
+    # metrics a JSON array of {agg_fn, cols} -- JSON lives only at this edge).
+    `data-dt-group` = paste(group %||% character(), collapse = ","),
+    `data-dt-metrics` = dd_metrics_json(metrics),
+    # Grouped-table drill: the group columns whose per-row values a click ANDs
+    # into a downstream filter (comma-joined; "" = not a grouped table).
+    `data-dt-group-cols` = paste(group_cols %||% character(), collapse = ","),
     `data-dt-onclick-col` = onclick_col,
     `data-dt-onclick-idx` = if (!is.null(onclick_idx)) onclick_idx else NULL,
     `data-dt-color-mode` = color_mode,
@@ -648,7 +810,7 @@ drilldown_table_dep <- function() {
     # chart.css; the table's gear popover reuses it (de-dups by dep name).
     htmltools::htmlDependency(
       name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.viz"), ".25"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".32"),
       src = system.file("css", package = "blockr.viz"),
       stylesheet = "chart.css"
     ),
@@ -657,10 +819,11 @@ drilldown_table_dep <- function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".4"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".16"),
       src = system.file(package = "blockr.viz"),
-      # drilldown-config.js (the shared engine) must load before the table JS.
-      script = c("js/drilldown-config.js", "js/table.js"),
+      # drilldown-agg.js (shared aggregation vocabulary) and drilldown-config.js
+      # (the shared engine) must load before the table JS.
+      script = c("js/drilldown-agg.js", "js/drilldown-config.js", "js/table.js"),
       stylesheet = "css/table.css"
     )
   )
@@ -675,6 +838,33 @@ drilldown_table_dep <- function() {
 #' @noRd
 table_arguments <- function() {
   new_block_args(
+    # Aggregation: group by column(s), then one or more metrics. Same vocabulary
+    # as the chart, but the table carries a LIST of metrics (mean of AGE AND sum
+    # of DOSE at once), so it takes `metrics` rather than the chart's single
+    # `metric` + `agg_fn`.
+    group = new_block_arg(
+      paste0(
+        "Grouping column(s) to aggregate over. One or more categorical columns ",
+        "(nested from outer to inner). Empty = no grouping (a raw row-level ",
+        "table)."
+      ),
+      example = list("SEX", "ARM"),
+      type = arg_array(arg_string())
+    ),
+    metrics = new_block_arg(
+      paste0(
+        "The aggregations shown when `group` is set: a list, each entry ",
+        "`{agg_fn, cols}`. `agg_fn` is one of \"count\", \"count_distinct\", ",
+        "\"mean\", \"median\", \"sum\", \"min\", \"max\"; `cols` is the numeric ",
+        "column(s) it reduces (empty for \"count\"). One entry per aggregation, ",
+        "so mean of AGE and sum of DOSE is two entries. Empty = a plain row ",
+        "count per group."
+      ),
+      example = list(
+        list(agg_fn = "mean", cols = list("AGE")),
+        list(agg_fn = "sum", cols = list("DOSE"))
+      )
+    ),
     rowname = new_block_arg(
       paste0(
         "The single column shown as the row labels (the left-hand stub). Names ",
@@ -741,6 +931,12 @@ table_guidance <- function() {
     "\n- Drill-down: set `drill` to a column; clicking a row emits a",
     "categorical filter on that column's value, so downstream blocks filter",
     "\u2014 the same filter contract as the drill-down chart.",
+    "\n- Aggregation: set `group` (one or more columns) to collapse the table",
+    "in place, one row per group. `metrics` is a list of `{agg_fn, cols}`",
+    "(count / count_distinct / mean / median / sum / min / max), one entry per",
+    "aggregation, so mean(AGE) and sum(DOSE) is two entries. Display-only: a",
+    "row click drills to that group's raw rows, and downstream still receives",
+    "the raw (filtered) data. Leave `group` empty for a plain row-level table.",
     "\n`rowname`/`values` pick the row-stub and body",
     "columns: set `values` to EXACTLY the columns the user names (e.g.",
     "\"Revenue and Profit\" -> values = [\"Revenue\", \"Profit\"]); leave",
@@ -779,6 +975,8 @@ table_guidance <- function() {
 #' @export
 new_table_block <- function(rowname = NULL,
                                       values = NULL,
+                                      group = NULL,
+                                      metrics = list(),
                                       cell_color = NULL,
                                       row_color = NULL,
                                       drill = NULL,
@@ -788,6 +986,8 @@ new_table_block <- function(rowname = NULL,
                                       filter_column = NULL,
                                       filter_values = NULL,
                                       filter_range = NULL,
+                                      filter_group_cols = NULL,
+                                      filter_group_vals = NULL,
                                       sortable = TRUE,
                                       collapsible = TRUE,
                                       search = TRUE,
@@ -800,6 +1000,8 @@ new_table_block <- function(rowname = NULL,
 
         r_rowname    <- shiny::reactiveVal(rowname)
         r_values     <- shiny::reactiveVal(values)
+        r_group      <- shiny::reactiveVal(as.character(group))
+        r_metrics    <- shiny::reactiveVal(dd_parse_metrics(metrics))
         r_cell_color    <- shiny::reactiveVal(cell_color)
         r_row_color  <- shiny::reactiveVal(row_color)
         r_drill      <- shiny::reactiveVal(drill)
@@ -809,6 +1011,10 @@ new_table_block <- function(rowname = NULL,
         r_filter_column <- shiny::reactiveVal(filter_column)
         r_filter_values <- shiny::reactiveVal(filter_values)
         r_filter_range  <- shiny::reactiveVal(filter_range)
+        # Grouped-table drill: a row click ANDs the clicked row's group-key
+        # values (aligned vectors) to filter the raw input to that group.
+        r_filter_group_cols <- shiny::reactiveVal(filter_group_cols)
+        r_filter_group_vals <- shiny::reactiveVal(filter_group_vals)
         r_sortable       <- shiny::reactiveVal(isTRUE(sortable))
         r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
         r_search         <- shiny::reactiveVal(isTRUE(search))
@@ -831,8 +1037,22 @@ new_table_block <- function(rowname = NULL,
           if (is.null(msg)) return()
           act <- msg$action %||% "config"
           if (identical(act, "filter")) {
-            upd(r_filter_column, msg$column)
-            upd(r_filter_values, msg$values)
+            if (!is.null(msg$filters)) {
+              # Grouped drill: [{column, value}, ...] -> aligned vectors, ANDed.
+              cols <- vapply(msg$filters, function(f) as.character(f$column),
+                             character(1L))
+              vals <- vapply(msg$filters, function(f) as.character(f$value),
+                             character(1L))
+              upd(r_filter_group_cols, cols)
+              upd(r_filter_group_vals, vals)
+              upd(r_filter_column, NULL)
+              upd(r_filter_values, NULL)
+            } else {
+              upd(r_filter_column, msg$column)
+              upd(r_filter_values, msg$values)
+              upd(r_filter_group_cols, NULL)
+              upd(r_filter_group_vals, NULL)
+            }
             upd(r_filter_type, "categorical")
             upd(r_filter_range, NULL)
           } else if (identical(act, "config")) {
@@ -872,6 +1092,11 @@ new_table_block <- function(rowname = NULL,
               }
             } else if (identical(p, "drill")) {
               upd(r_drill, if (identical(v, "(none)") || !nzchar(v)) NULL else v)
+            } else if (identical(p, "group")) {
+              upd(r_group, as.character(unlist(v)))
+            } else if (identical(p, "metrics")) {
+              # JS sends the whole metrics list as a JSON string on any edit.
+              upd(r_metrics, dd_parse_metrics(v))
             } else if (identical(p, "row_color")) {
               # "" (explicit none from "(none)") is distinct from NULL (unset /
               # smart default), so store "" rather than collapsing to NULL.
@@ -971,6 +1196,45 @@ new_table_block <- function(rowname = NULL,
         output$dt_table <- shiny::renderUI({
           d <- data()
           shiny::req(is.data.frame(d))
+          # Aggregation is a DISPLAY projection: when `group` is set, draw the
+          # summarised frame (one row per group + a measure). The block's data
+          # output stays the raw input filtered by the click (see `expr`), and
+          # a row click drills on the group keys. No group -> the raw table,
+          # exactly as before.
+          agg <- dd_table_aggregate(d, r_group(), r_metrics())
+          if (isTRUE(agg$aggregated)) {
+            gl <- length(agg$group)
+            # Grand totals (no group): prepend a "Total" stub so there is always
+            # a row label plus at least one metric column to render.
+            ad <- agg$data
+            if (!gl) {
+              ad <- cbind(
+                stats::setNames(data.frame("Total", stringsAsFactors = FALSE,
+                                           check.names = FALSE), " "),
+                ad
+              )
+            }
+            return(tryCatch(
+              dt_table_tag(
+                ad,
+                label_col  = if (gl) agg$group[1L] else " ",
+                value_cols = if (gl) c(setdiff(agg$group, agg$group[1L]), agg$metric_cols)
+                             else agg$metric_cols,
+                drill      = NULL,
+                group_cols = agg$group,   # empty for grand totals -> no row drill
+                group      = r_group(), metrics = r_metrics(),
+                digits     = r_digits(),
+                sortable    = isTRUE(r_sortable()),
+                collapsible = isTRUE(r_collapsible()),
+                search      = isTRUE(r_search()),
+                excel_download = isTRUE(r_excel_download())
+              ),
+              error = function(e) shiny::tags$div(
+                class = "blockr-error", role = "alert",
+                paste0("Table could not be rendered: ", conditionMessage(e))
+              )
+            ))
+          }
           # `row_color` names the column whose scale-map colors tint the rows
           # (like ggplot's aes(color = SEX)). NULL (unset) = smart default: use
           # the row-stub column. "" = explicitly off (gear "(none)"). A name =
@@ -1001,6 +1265,7 @@ new_table_block <- function(rowname = NULL,
               row_hex    = if (is.null(rc_col)) NULL else
                              dd_row_hex(board_scale_map(), rc_col, d),
               row_color  = rc_col,
+              group      = r_group(), metrics = r_metrics(),
               sortable    = isTRUE(r_sortable()),
               collapsible = isTRUE(r_collapsible()),
               search      = isTRUE(r_search()),
@@ -1017,9 +1282,16 @@ new_table_block <- function(rowname = NULL,
 
         list(
           expr = shiny::reactive({
+            gc <- r_filter_group_cols()
+            gv <- r_filter_group_vals()
             col  <- r_filter_column()
             vals <- r_filter_values()
-            if (is.null(col) || is.null(vals) || length(vals) == 0) {
+            if (length(gc) && length(gc) == length(gv)) {
+              # Grouped drill: AND each clicked group key (raw input -> members).
+              cond <- dd_group_filter_call(gc, gv)
+              blockr.core::bbquote(dplyr::filter(.(data), .(cond)),
+                                   list(cond = cond))
+            } else if (is.null(col) || is.null(vals) || length(vals) == 0) {
               blockr.core::bbquote(dplyr::filter(.(data), TRUE))
             } else if (length(vals) == 1) {
               blockr.core::bbquote(
@@ -1036,6 +1308,8 @@ new_table_block <- function(rowname = NULL,
           state = list(
             rowname       = r_rowname,
             values        = r_values,
+            group         = r_group,
+            metrics       = r_metrics,
             cell_color    = r_cell_color,
             row_color     = r_row_color,
             drill      = r_drill,
@@ -1045,6 +1319,8 @@ new_table_block <- function(rowname = NULL,
             filter_column = r_filter_column,
             filter_values = r_filter_values,
             filter_range  = r_filter_range,
+            filter_group_cols = r_filter_group_cols,
+            filter_group_vals = r_filter_group_vals,
             sortable       = r_sortable,
             collapsible    = r_collapsible,
             search         = r_search,
@@ -1060,11 +1336,14 @@ new_table_block <- function(rowname = NULL,
     dat_valid = function(data) {
       if (!is.data.frame(data)) stop("Input must be a data frame")
     },
-    allow_empty_state = c("rowname", "values", "cell_color", "row_color",
-      "drill", "filter_column", "filter_values", "filter_range"),
-    external_ctrl = c("rowname", "values", "cell_color", "row_color", "drill",
+    allow_empty_state = c("rowname", "values", "group", "metrics", "cell_color",
+      "row_color", "drill", "filter_column", "filter_values", "filter_range",
+      "filter_group_cols", "filter_group_vals"),
+    external_ctrl = c("rowname", "values", "group", "metrics",
+      "cell_color", "row_color", "drill",
       "digits", "max_height", "filter_type",
       "filter_column", "filter_values", "filter_range",
+      "filter_group_cols", "filter_group_vals",
       "sortable", "collapsible", "search", "excel_download"),
     expr_type = "bquoted",
     class = "table_block",

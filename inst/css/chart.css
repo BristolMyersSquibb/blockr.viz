@@ -114,6 +114,38 @@
   border-top: 1px solid var(--blockr-color-border, #e5e7eb);
   padding-top: 10px;
 }
+/* Variant A: a capability section whose header carries a checkbox. Off = just
+   this header line; on = the section body renders below. */
+.dd-section-title--toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.dd-section-checkbox {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  border: 1.5px solid var(--blockr-grey-300, #cfd4da);
+  background: #fff;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.dd-section-checkbox.dd-on {
+  background: var(--blockr-color-primary, #2563eb);
+  border-color: var(--blockr-color-primary, #2563eb);
+}
+.dd-section-checkbox.dd-on::after {
+  content: "";
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-top: -2px;
+}
 
 /* Row head: label + remove button on one line above the control. */
 .dd-row-head {
@@ -147,6 +179,51 @@
 .dd-row-controls > .dd-picker-wrap,
 .dd-row-controls > .dd-pill-wrap,
 .dd-row-controls > .dd-slider-wrap { flex: 1 1 0; min-width: 0; }
+/* "of" connector in a verb-object aggregation row: "[agg] of [column]". */
+.dd-pair-connector {
+  align-self: center;
+  flex: 0 0 auto;
+  color: var(--blockr-color-text-muted, #6b7280);
+  font-size: 12px;
+  white-space: nowrap;
+}
+/* Small input-type badge above Mapping (e.g. an annotated data frame has no
+   grouping / aggregation controls). The fuller explanation is the hover
+   tooltip, so the panel stays compact. */
+.dd-input-badge {
+  display: inline-block;
+  margin: 2px 0 8px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--blockr-color-surface-2, #f3f4f6);
+  color: var(--blockr-color-text-muted, #6b7280);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: default;
+}
+/* Repeatable metrics list (table/tile aggregation). Breaks out of the section's
+   narrow grid cells to the full popover width so each "[agg] of [columns]" row
+   has room; the column picker grows, the function select stays compact. */
+.dd-metrics {
+  grid-column: span 2;   /* like the chart's paired metric+agg row */
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+.dd-metric-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.dd-metric-row > .dd-metric-agg { flex: 0 0 132px; }
+.dd-metric-row > .dd-metric-cols { flex: 1 1 0; min-width: 0; }
+.dd-metric-remove { flex: 0 0 auto; }
+/* "Add aggregation" trigger under the list (subtle link, chrome reset via
+   .dd-add-trigger). */
+.dd-add-metric { align-self: flex-start; margin-top: 2px; }
 
 /* Required mapping with no value: soft attention, not a hard error. The border
    now lives on the select control (.blockr-popover-select-wrap), so tint it

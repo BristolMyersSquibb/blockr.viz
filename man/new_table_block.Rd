@@ -7,6 +7,8 @@
 new_table_block(
   rowname = NULL,
   values = NULL,
+  group = NULL,
+  metrics = list(),
   cell_color = NULL,
   row_color = NULL,
   drill = NULL,
@@ -16,6 +18,8 @@ new_table_block(
   filter_column = NULL,
   filter_values = NULL,
   filter_range = NULL,
+  filter_group_cols = NULL,
+  filter_group_vals = NULL,
   sortable = TRUE,
   collapsible = TRUE,
   search = TRUE,

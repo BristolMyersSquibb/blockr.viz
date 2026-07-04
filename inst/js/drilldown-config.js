@@ -254,41 +254,213 @@
         pop.appendChild(typesRow);
       }
 
+      // Optional input-type badge (a small chip above Mapping). A host sets
+      // spec.badge to name the input when the mapping controls are absent —
+      // e.g. an already-summarized ("annotated data frame") table has no
+      // pickable columns to group or aggregate. spec.badgeTitle is the hover
+      // tooltip with the fuller explanation.
+      if (spec.badge) {
+        const chip = document.createElement('span');
+        chip.className = 'dd-input-badge';
+        chip.textContent = spec.badge;
+        if (spec.badgeTitle) chip.title = spec.badgeTitle;
+        pop.appendChild(chip);
+      }
+
       // Mapping: required rows, then any always-on mapping controls (the
       // chart's metric + aggregation), shown-optional rows, add menu. Skipped
       // whole if the block has no mapping roles at all (e.g. the table).
       const shownOpt = spec.optionalMap.filter((/** @type {string} */ k) => this._hasVal(cfg[k]) || this._added.has(k));
       const remaining = spec.optionalMap.filter((/** @type {string} */ k) => !shownOpt.includes(k));
       const mapExtra = this._filterEntries(spec.mapping || []);
-      if (spec.requiredMap.length || mapExtra.length || shownOpt.length || remaining.length) {
-        const mapSec = this._sectionEl('Mapping');
+
+      // Mapping section: required + optional (add-as-needed) display roles. A
+      // pure-aggregation host (the table) has none of these, so it is skipped
+      // and only the Aggregation section below shows; the chart renders its
+      // aesthetics here; the tile renders value / measure / secondary / … here
+      // AND its group + metrics in the Aggregation section below. The mapping
+      // extras (chart: metric + agg_fn) sit here unless the host splits them
+      // into a trailing aggTitle section, or owns them in the Aggregation
+      // checkbox section (aggregatable hosts — the group lives there).
+      const mapNeeded = spec.requiredMap.length || shownOpt.length ||
+        remaining.length || (!spec.aggregatable && mapExtra.length);
+      if (mapNeeded) {
+        const mapSec = this._sectionEl(this._mappingTitle('Mapping'));
         for (const key of spec.requiredMap) this._renderRole(mapSec, key, { required: true });
-        this._renderEntries(mapSec, mapExtra);
+        if (!spec.aggTitle && !spec.aggregatable) this._renderEntries(mapSec, mapExtra);
+        // Repeatable aggregation list under Mapping only for non-aggregatable
+        // metric hosts; aggregatable hosts render it in the Aggregation section.
+        if (!spec.aggregatable && spec.metrics && this.h.metricsList) this._renderMetrics(mapSec);
         for (const key of shownOpt) this._renderRole(mapSec, key, { removable: true });
         if (remaining.length) this._addMappingMenu(mapSec, remaining);
+
+        // ggplot-style split: the aggregation stat gets its own section after
+        // the aesthetic mapping (host opts in via spec.aggTitle).
+        if (spec.aggTitle && mapExtra.length) {
+          this._renderEntries(this._sectionEl(spec.aggTitle), mapExtra);
+        }
+      }
+
+      // Aggregation as a checkbox capability (Variant A). Activation is
+      // DECOUPLED from the group: checking seeds a default metric (a count) so
+      // the box reads "on" before any group is picked, and unchecking clears
+      // both the metrics and the group. With the box on and NO group the
+      // metrics reduce the whole frame to a single totals row (grand totals);
+      // with a group, one row per group level. The group picker (mapExtra) and
+      // the repeatable metrics list both render inside this section.
+      if (spec.aggregatable) {
+        const hasMetrics = !!(cfg.metrics && cfg.metrics.length);
+        const hasGrp = !!(cfg.group && cfg.group.length);
+        const open = this._secOpen('agg', () => hasMetrics || hasGrp);
+        const clearGroup = () => {
+          cfg.group = Array.isArray(cfg.group) ? [] : '';
+          this.h.onChange('group');
+        };
+        const sec = this._sectionEl(this._mappingTitle('Aggregation'), {
+          toggle: { checked: open, onToggle: (on) => this._toggleSection('agg', on,
+            () => { clearGroup(); if (this.h.onMetricsChange) this.h.onMetricsChange([]); },
+            () => { if (this.h.onMetricsChange && !hasMetrics)
+                      this.h.onMetricsChange([{ agg_fn: 'count', cols: [] }]); }) }
+        });
+        if (open) {
+          this._renderEntries(sec, mapExtra);
+          if (spec.metrics && this.h.metricsList) this._renderMetrics(sec);
+        }
+      }
+
+      // Drill-down as a checkbox capability (Variant A). spec.drillToggle names
+      // the config key the picker writes (the table's 'drill'). Checked reveals
+      // the filter-column picker; unchecking clears it.
+      if (spec.drillToggle) {
+        this._renderToggleColumnSection('Drill-down', 'drill', spec.drillToggle);
+      }
+
+      // Coloring as a checkbox capability (Variant A). spec.colorToggle.modeKey
+      // is the mode select (diverging / sequential / bar — the 'off' state is
+      // folded into the checkbox); .extra lists the roles revealed alongside it
+      // (the numeric column scope). Unchecking sets the mode to 'off' (no
+      // coloring); checking defaults it to 'diverging'.
+      if (spec.colorToggle) {
+        const modeKey = spec.colorToggle.modeKey;
+        const open = this._secOpen('color',
+          () => this._hasVal(cfg[modeKey]) && cfg[modeKey] !== 'off');
+        const sec = this._sectionEl('Coloring', {
+          toggle: { checked: open, onToggle: (on) => this._toggleSection('color', on,
+            () => { cfg[modeKey] = 'off'; this.h.onChange(modeKey); },
+            () => {
+              if (!this._hasVal(cfg[modeKey]) || cfg[modeKey] === 'off') {
+                cfg[modeKey] = 'diverging'; this.h.onChange(modeKey);
+              }
+            }) }
+        });
+        if (open) {
+          this._renderRole(sec, modeKey);
+          for (const k of (spec.colorToggle.extra || [])) this._renderRole(sec, k);
+        }
+      }
+
+      // Row color as a checkbox capability — a categorical tint applied to whole
+      // rows. Same shape as Drill-down: a single column picker, unchecking clears.
+      if (spec.rowColorToggle) {
+        this._renderToggleColumnSection('Row color', 'rowcolor', spec.rowColorToggle);
       }
 
       // Presentation — formatting, sorting, layout: everything past the data
-      // mapping. (The former "Encoding" section was folded away: chart metric +
-      // aggregation moved up into Mapping; tile value-formatting moved here.)
+      // mapping.
       this._renderSection('Presentation', spec.presentation);
 
-      // Drill-down (optional — host opts out by returning null from drillAutoLabel)
+      // Chart drill-down (legacy Auto section — host opts in via drillAutoLabel).
       if (this.h.drillAutoLabel) this._renderDrillSection();
 
       if (this.h.afterTypeChange) this.h.afterTypeChange();
     }
 
-    /** @param {string} titleText */
-    _sectionEl(titleText) {
+    /**
+     * @param {string} titleText
+     * @param {{ toggle?: { checked: boolean, onToggle: (on: boolean) => void } }} [opts]
+     *   When `toggle` is given the header carries a checkbox (Variant A): the
+     *   section is a capability that is off by default and reveals its body only
+     *   when checked.
+     */
+    _sectionEl(titleText, opts = {}) {
       const sec = document.createElement('div');
       sec.className = 'dd-section';
       const h = document.createElement('div');
       h.className = 'dd-section-title';
-      h.textContent = titleText;
+      if (opts.toggle) {
+        h.classList.add('dd-section-title--toggle');
+        const box = document.createElement('span');
+        box.className = 'dd-section-checkbox' + (opts.toggle.checked ? ' dd-on' : '');
+        box.setAttribute('role', 'checkbox');
+        box.setAttribute('tabindex', '0');
+        box.setAttribute('aria-checked', opts.toggle.checked ? 'true' : 'false');
+        const label = document.createElement('span');
+        label.textContent = titleText;
+        h.appendChild(box);
+        h.appendChild(label);
+        const flip = (/** @type {Event} */ e) => {
+          e.stopPropagation();
+          opts.toggle.onToggle(!opts.toggle.checked);
+        };
+        h.addEventListener('click', flip);
+      } else {
+        h.textContent = titleText;
+      }
       sec.appendChild(h);
       this.h.popoverEl().appendChild(sec);
       return sec;
+    }
+
+    // Per-section open state for the Variant A toggle sections (aggregation,
+    // drill-down). Persists across re-renders (it is an instance field), seeded
+    // from the config the first time a section is seen.
+    /** @param {string} key @param {() => boolean} initial */
+    _secOpen(key, initial) {
+      if (!this._openSec) this._openSec = {};
+      if (!(key in this._openSec)) this._openSec[key] = !!initial();
+      return this._openSec[key];
+    }
+    /** @param {string} key @param {boolean} on */
+    _setSecOpen(key, on) {
+      if (!this._openSec) this._openSec = {};
+      this._openSec[key] = on;
+    }
+    // Flip a toggle section; when turning OFF run offFn to clear the capability
+    // (raw table / no drill / no coloring), when turning ON run the optional
+    // onFn to seed a default (e.g. the coloring mode), then re-render preserving
+    // the open popover.
+    /** @param {string} key @param {boolean} on @param {() => void} offFn @param {() => void} [onFn] */
+    _toggleSection(key, on, offFn, onFn) {
+      this._setSecOpen(key, on);
+      if (on) { if (typeof onFn === 'function') onFn(); }
+      else if (typeof offFn === 'function') offFn();
+      this._rerender();
+    }
+
+    // A checkbox capability whose body is a single required column picker
+    // (Drill-down, Row color). Off = header only; on reveals the picker (no
+    // '(none)' option — the checkbox IS the none state); unchecking clears the
+    // config key. Seeds/persists its open state via _secOpen under `secKey`.
+    /** @param {string} title @param {string} secKey @param {string} cfgKey */
+    _renderToggleColumnSection(title, secKey, cfgKey) {
+      const cfg = this._cfg();
+      const open = this._secOpen(secKey,
+        () => this._hasVal(cfg[cfgKey]) && cfg[cfgKey] !== '(none)');
+      const sec = this._sectionEl(title, {
+        toggle: { checked: open, onToggle: (on) =>
+          this._toggleSection(secKey, on, () => { cfg[cfgKey] = ''; this.h.onChange(cfgKey); }) }
+      });
+      if (open) this._renderRole(sec, cfgKey, { required: true });
+    }
+
+    // Resolve the mapping-section header title. A host may supply a plain string
+    // (the table's "Aggregation") or a function of the current state (the chart,
+    // which reads "Aggregation" only for its aggregated family, "Mapping" else).
+    /** @param {string} fallback */
+    _mappingTitle(fallback) {
+      const mt = this.h.mappingTitle;
+      const v = (typeof mt === 'function') ? mt() : mt;
+      return v || fallback;
     }
 
     // Normalise a section's entry list and drop the ones not applicable to the
@@ -322,6 +494,14 @@
     _renderRole(container, key, opts = {}) {
       const role = this._role(key);
       const paired = !!(role.pairedWith && this._entryApplicable(role.pairedWith));
+      // Verb-object pair (e.g. metric+agg_fn): render "[agg] of [metric]" with
+      // the aggregation leading; the metric only shows for aggregations that
+      // consume it (a bare row count ignores it, reading just "Count").
+      const reversed = paired && !!role.pairReversed;
+      const usesMetric = () => {
+        const a = this._cfg()[role.pairedWith];
+        return !!a && a !== 'count';
+      };
       const row = document.createElement('div');
       row.className = 'blockr-popover-row dd-form-row dd-role-' + key +
         (paired ? ' dd-role-paired' : '');
@@ -343,7 +523,10 @@
       head.className = 'dd-row-head';
       const lbl = document.createElement('span');
       lbl.className = 'blockr-popover-label';
-      lbl.textContent = role.label + (opts.required ? ' *' : '');
+      // In a reversed pair the required marker tracks the metric, which is only
+      // needed for aggregations that consume it (not a bare count).
+      const reqMark = opts.required && (!reversed || usesMetric());
+      lbl.textContent = role.label + (reqMark ? ' *' : '');
       head.appendChild(lbl);
       if (opts.removable) {
         const rm = document.createElement('button');
@@ -363,17 +546,32 @@
 
       const markRequired = () => {
         row.classList.toggle('dd-role-required-empty',
-          !!opts.required && !this._hasVal(this._cfg()[key]));
+          !!opts.required && (!reversed || usesMetric()) &&
+          !this._hasVal(this._cfg()[key]));
       };
       const setHelp = () => {
-        if (role.kind !== 'column') { helpEl.style.display = 'none'; return; }
+        if (role.kind !== 'column' || (reversed && !usesMetric())) {
+          helpEl.style.display = 'none'; return;
+        }
         const txt = this._fieldHelp(key, this._cfg()[key]);
         helpEl.textContent = txt;
         helpEl.style.display = txt ? '' : 'none';
       };
 
-      this._buildControl(controls, key, { required: opts.required, onChange: () => { setHelp(); markRequired(); } });
-      if (paired) this._buildControl(controls, role.pairedWith, { onChange: () => {} });
+      if (reversed) {
+        // "[agg ▾] of [metric ▾]" — aggregation leads; metric only when used.
+        this._buildControl(controls, role.pairedWith, { onChange: () => {} });
+        if (usesMetric()) {
+          const of = document.createElement('span');
+          of.className = 'dd-pair-connector';
+          of.textContent = 'of';
+          controls.appendChild(of);
+          this._buildControl(controls, key, { required: opts.required, onChange: () => { setHelp(); markRequired(); } });
+        }
+      } else {
+        this._buildControl(controls, key, { required: opts.required, onChange: () => { setHelp(); markRequired(); } });
+        if (paired) this._buildControl(controls, role.pairedWith, { onChange: () => {} });
+      }
       row.appendChild(controls);
       row.appendChild(helpEl);
       setHelp();
@@ -381,44 +579,142 @@
       container.appendChild(row);
     }
 
+    // Re-render the popover, preserving the open state (used by the repeatable
+    // metrics group when a row is added / removed / its function changes).
+    _rerender() {
+      const wasOpen = this.h.isOpen();
+      this.render();
+      if (wasOpen) setTimeout(() => this.h.reopen(), 0);
+    }
+
+    // Column options filtered by a colType string ('num' / 'cat' / 'any' /
+    // 'none'), for a control that is not a role (the per-metric column picker).
+    /** @param {string} ct */
+    _colOptsByType(ct) {
+      if (ct === 'none') return [];
+      let cols = this._cols();
+      if (ct === 'num') cols = cols.filter(c => c.type === 'numeric');
+      else if (ct === 'cat') cols = cols.filter(c => c.type === 'categorical' || (c.n_unique != null && c.n_unique <= 50));
+      return cols.map(c => c.label ? { value: c.name, label: c.label } : c.name);
+    }
+
+    // Repeatable aggregation list: renders each metric as a verb-object row
+    // "[agg] of [columns]" (the aggregation leads; the columns show only for
+    // functions that consume them, so a bare count reads just "Count"), with a
+    // remove control per row and an "Add aggregation" button. The host owns the
+    // list via metricsList() / onMetricsChange(). This is the table/tile form;
+    // the chart uses the single metric role (_renderRole reversed pair).
+    /** @param {HTMLElement} container */
+    _renderMetrics(container) {
+      const metrics = (this.h.metricsList && this.h.metricsList()) || [];
+      const aggOpts = (this._role('agg_fn') || {}).options || [];
+      const usesCols = (/** @type {string} */ fn) => !!fn && fn !== 'count';
+      const colType = (/** @type {string} */ fn) =>
+        fn === 'count_distinct' ? 'any' : (usesCols(fn) ? 'num' : 'none');
+      const commit = () => { if (this.h.onMetricsChange) this.h.onMetricsChange(metrics); };
+      const S = (typeof Blockr !== 'undefined' && Blockr.Select) || null;
+
+      // Full-width block (breaks out of the section's narrow grid cells) so each
+      // "[agg] of [columns]" row has room. One "Aggregate" label for the list.
+      const wrap = document.createElement('div');
+      wrap.className = 'dd-metrics';
+      const lbl = document.createElement('span');
+      lbl.className = 'blockr-popover-label';
+      lbl.textContent = 'Aggregate';
+      wrap.appendChild(lbl);
+
+      metrics.forEach((m, i) => {
+        const row = document.createElement('div');
+        row.className = 'dd-metric-row';
+
+        const aggWrap = document.createElement('div');
+        aggWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-metric-agg';
+        if (S && S.single) {
+          S.single(aggWrap, {
+            options: aggOpts, selected: m.agg_fn || 'count',
+            onChange: (/** @type {string} */ val) => {
+              m.agg_fn = val;
+              // Keep the columns consistent with the new function: count drops
+              // them; a numeric aggregation keeps only numeric columns.
+              const ct = colType(val);
+              if (ct === 'none') m.cols = [];
+              else if (ct === 'num') {
+                m.cols = (m.cols || []).filter((/** @type {string} */ c) => {
+                  const col = this._cols().find(x => x.name === c);
+                  return col && col.type === 'numeric';
+                });
+              }
+              commit(); this._rerender();
+            }
+          });
+        }
+        row.appendChild(aggWrap);
+
+        if (usesCols(m.agg_fn)) {
+          const of = document.createElement('span');
+          of.className = 'dd-pair-connector';
+          of.textContent = 'of';
+          row.appendChild(of);
+          const colsWrap = document.createElement('div');
+          colsWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-metric-cols';
+          const opts = this._colOptsByType(colType(m.agg_fn));
+          if (S && S.multi) {
+            S.multi(colsWrap, {
+              options: opts, selected: (m.cols || []).slice(), reorderable: false,
+              placeholder: 'column(s)…',
+              onChange: (/** @type {string[]} */ vals) => { m.cols = vals; commit(); }
+            });
+          }
+          row.appendChild(colsWrap);
+        }
+
+        // A single metric is the floor (a grouped table always shows something),
+        // so the remove control appears only when there is more than one.
+        if (metrics.length > 1) {
+          const rm = document.createElement('button');
+          rm.type = 'button';
+          rm.className = 'dd-role-remove dd-metric-remove';
+          rm.title = 'Remove aggregation';
+          rm.innerHTML = '✕';
+          rm.addEventListener('click', (e) => {
+            e.stopPropagation();
+            metrics.splice(i, 1); commit(); this._rerender();
+          });
+          row.appendChild(rm);
+        }
+        wrap.appendChild(row);
+      });
+
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'blockr-add-link dd-add-trigger dd-add-metric';
+      const plus = (typeof Blockr !== 'undefined' && Blockr.icons) ? Blockr.icons.plus : '+';
+      add.innerHTML = `<span class="blockr-add-icon">${plus}</span> Add aggregation`;
+      add.addEventListener('click', (e) => {
+        e.stopPropagation();
+        metrics.push({ agg_fn: 'mean', cols: [] }); commit(); this._rerender();
+      });
+      wrap.appendChild(add);
+      container.appendChild(wrap);
+    }
+
     _renderDrillSection() {
       const cfg = this._cfg();
-      const d = cfg.drill;
-      const on = this._hasVal(d);
-      const sec = this._sectionEl('Drill-down');
-
-      const tRow = document.createElement('div');
-      tRow.className = 'blockr-popover-row dd-form-row';
-      const onDrillToggle = (/** @type {boolean} */ enabled) => {
-        if (!enabled) cfg.drill = '';
-        else if (!this._hasVal(cfg.drill)) cfg.drill = 'auto';
-        const wasOpen = this.h.isOpen();
-        this.render();
-        if (wasOpen) setTimeout(() => this.h.reopen(), 0);
-        this.h.onChange('drill'); this.h.onClearFilter();
-      };
-      if (typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
-        // Boolean data option -> checkbox (design-system rule); the label
-        // states the affirmative meaning, checked = filtering is on.
-        const box = Blockr.checkbox('Filter downstream on selection', on,
-          (/** @type {boolean} */ checked) => onDrillToggle(checked));
-        tRow.appendChild(box.el);
-      } else {
-        const tHead = document.createElement('div');
-        tHead.className = 'dd-row-head';
-        const tLbl = document.createElement('span');
-        tLbl.className = 'blockr-popover-label';
-        tLbl.textContent = 'Filter on selection';
-        tHead.appendChild(tLbl);
-        tRow.appendChild(tHead);
-        this._buildPill(
-          tRow,
-          [{ value: 'off', label: 'No filter' }, { value: 'on', label: 'Filters downstream' }],
-          on ? 'on' : 'off',
-          (val) => onDrillToggle(val === 'on')
-        );
-      }
-      sec.appendChild(tRow);
+      // Variant A: the enable checkbox lives in the section header (matches the
+      // table's Drill-down), replacing the old separate "Filter downstream on
+      // selection" checkbox row that read as a different control style. `on` here
+      // is the section-open state; unchecking clears drill, checking defaults it
+      // to 'auto'.
+      const on = this._secOpen('chartdrill', () => this._hasVal(cfg.drill));
+      const sec = this._sectionEl('Drill-down', {
+        toggle: { checked: on, onToggle: (/** @type {boolean} */ enabled) => {
+          this._setSecOpen('chartdrill', enabled);
+          if (!enabled) cfg.drill = '';
+          else if (!this._hasVal(cfg.drill)) cfg.drill = 'auto';
+          this._rerender();
+          this.h.onChange('drill'); this.h.onClearFilter();
+        } }
+      });
 
       if (on) {
         const autoLabel = this.h.drillAutoLabel();
@@ -507,7 +803,16 @@
         const sel = Array.isArray(cfg[key]) ? cfg[key].slice() : [];
         const wrap = document.createElement('div');
         wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
-        const onSel = (/** @type {string[]} */ vals) => { cfg[key] = vals; cb(); this.h.onChange(key); };
+        const onSel = (/** @type {string[]} */ vals) => {
+          cfg[key] = vals; cb(); this.h.onChange(key);
+          // A multi-picker that gates other rows (e.g. the table's group reveals
+          // the metrics list once set) re-renders the section list live.
+          if (role.rerender) {
+            const wasOpen = this.h.isOpen();
+            this.render();
+            if (wasOpen) setTimeout(() => this.h.reopen(), 0);
+          }
+        };
         if (typeof Blockr !== 'undefined' && Blockr.Select && Blockr.Select.multi) {
           this._selects[key] = Blockr.Select.multi(wrap, {
             options: opts, selected: sel, reorderable: false,

@@ -1,12 +1,13 @@
 #' Tile Block (KPI renderer)
 #'
-#' A pure renderer for the bold display of a handful of important numbers --
-#' the KPI-card / scorecard family. Parallel to the `chart` and `table`
-#' interactive renderers: all shaping (`summarize` / `describe` / a lag-join
-#' for comparisons) happens upstream; the tile does no arithmetic. It maps
-#' columns to slots and draws them, in one of two layouts of identical
-#' content (`cards` or `table`), and is opt-in clickable as a filter (`drill`)
-#' using the same transport as the chart / table.
+#' The bold display of a handful of important numbers -- the KPI-card /
+#' scorecard family. Parallel to the `chart` and `table` interactive
+#' renderers. It maps columns to slots and draws them, in one of two layouts
+#' of identical content (`cards` or `table`), and is opt-in clickable as a
+#' filter (`drill`) using the same transport as the chart / table. Like the
+#' table it can aggregate in place (`group` + `metrics`, the shared
+#' aggregation vocabulary) into grand-total or per-group cards; secondaries
+#' (delta / fill / pill) stay precomputed upstream (a tile is not a pivot).
 #'
 #' # Input contract
 #'
@@ -27,9 +28,17 @@
 #'
 #' @param value Character vector of numeric column name(s). Multiple columns
 #'   => wide input (each becomes a measure).
-#' @param by Group/facet column (matrix rows / card clusters). `""` = none.
+#' @param group Grouping column: clusters cards / matrix rows, and the
+#'   `group_by` column when `metrics` aggregate the input in place. `""` = no
+#'   grouping.
 #' @param measure Measure-label column for long input. `""` = use the `value`
 #'   column names as measure names.
+#' @param metrics Optional in-block aggregations: a list, each entry
+#'   `list(agg_fn, cols)` (`agg_fn` one of count / count_distinct / mean /
+#'   median / sum / min / max). Each metric becomes a card. With `group` set,
+#'   one cluster per group level; with `group` empty, grand-total cards. A
+#'   display projection only -- the block's data output stays the raw input
+#'   filtered by the click. Empty (default) = no aggregation.
 #' @param layout `"cards"` or `"table"`. Same slots either way.
 #' @param overline,caption Supertext / subtext. A column name reads per-cell;
 #'   any other non-empty string is a literal. `overline` defaults to the
@@ -45,12 +54,9 @@
 #' @param unit Free-text unit label shown next to the value / in the matrix
 #'   header (e.g. `"USD"`, `"CHF"`, `"apples"`). This is how you label a
 #'   currency -- the renderer never infers `$`.
-#' @param measures Optional per-measure override list, keyed by measure name,
-#'   each `list(style, good_when, format, unit)`. Lets a matrix draw Revenue
-#'   as `delta` and Budget as `fill`. Falls back to the flat defaults.
 #' @param drill Logical; when `TRUE` a card / matrix-row click emits a
-#'   categorical filter on the `by` column downstream. Off by default; only
-#'   active when `by` is mapped.
+#'   categorical filter on the `group` column downstream. Off by default; only
+#'   active when `group` is mapped.
 #' @param filter_col,filter_value Click-filter state. Kept as constructor
 #'   params so the filter round-trips through save/restore (blockr.core
 #'   deserializes a block via its constructor formals).
@@ -65,8 +71,9 @@
 #' new_tile_block()
 #' @export
 new_tile_block <- function(value = character(),
-                           by = "",
+                           group = character(),
                            measure = "",
+                           metrics = list(),
                            layout = "cards",
                            overline = "",
                            caption = "",
@@ -75,7 +82,6 @@ new_tile_block <- function(value = character(),
                            good_when = "up",
                            format = "number",
                            unit = "",
-                           measures = list(),
                            drill = FALSE,
                            filter_col = NULL,
                            filter_value = NULL,
@@ -86,8 +92,9 @@ new_tile_block <- function(value = character(),
         ns <- session$ns
 
         r_value     <- shiny::reactiveVal(as.character(value))
-        r_by        <- shiny::reactiveVal(by)
+        r_group     <- shiny::reactiveVal(as.character(group))
         r_measure   <- shiny::reactiveVal(measure)
+        r_metrics   <- shiny::reactiveVal(dd_parse_metrics(metrics))
         r_layout    <- shiny::reactiveVal(layout)
         r_overline  <- shiny::reactiveVal(overline)
         r_caption   <- shiny::reactiveVal(caption)
@@ -96,7 +103,6 @@ new_tile_block <- function(value = character(),
         r_good_when <- shiny::reactiveVal(good_when)
         r_format    <- shiny::reactiveVal(format)
         r_unit      <- shiny::reactiveVal(unit)
-        r_measures  <- shiny::reactiveVal(measures)
         r_drill     <- shiny::reactiveVal(isTRUE(drill))
         r_filter_col   <- shiny::reactiveVal(filter_col)
         r_filter_value <- shiny::reactiveVal(filter_value)
@@ -122,8 +128,9 @@ new_tile_block <- function(value = character(),
             switch(
               p,
               value     = upd(r_value, as.character(v)),
-              by        = upd(r_by, tk_blank(v)),
+              group     = upd(r_group, tk_group(v)),
               measure   = upd(r_measure, tk_blank(v)),
+              metrics   = upd(r_metrics, dd_parse_metrics(v)),
               secondary = upd(r_secondary, tk_blank(v)),
               style     = upd(r_style, v %||% "plain"),
               good_when = upd(r_good_when, v %||% "up"),
@@ -143,11 +150,11 @@ new_tile_block <- function(value = character(),
           shiny::req(is.data.frame(d))
           tile_html(
             d,
-            value = r_value(), by = r_by(), measure = r_measure(),
-            layout = r_layout(), overline = r_overline(),
-            caption = r_caption(), secondary = r_secondary(),
-            style = r_style(), good_when = r_good_when(),
-            format = r_format(), unit = r_unit(), measures = r_measures(),
+            value = r_value(), group = r_group(), measure = r_measure(),
+            metrics = r_metrics(), layout = r_layout(),
+            overline = r_overline(), caption = r_caption(),
+            secondary = r_secondary(), style = r_style(),
+            good_when = r_good_when(), format = r_format(), unit = r_unit(),
             drill = r_drill(), elem_id = ns("tile_block")
           )
         })
@@ -171,10 +178,10 @@ new_tile_block <- function(value = character(),
             }
           }),
           state = list(
-            value = r_value, by = r_by, measure = r_measure,
-            layout = r_layout, overline = r_overline, caption = r_caption,
-            secondary = r_secondary, style = r_style, good_when = r_good_when,
-            format = r_format, unit = r_unit, measures = r_measures,
+            value = r_value, group = r_group, measure = r_measure,
+            metrics = r_metrics, layout = r_layout, overline = r_overline,
+            caption = r_caption, secondary = r_secondary, style = r_style,
+            good_when = r_good_when, format = r_format, unit = r_unit,
             drill = r_drill, filter_col = r_filter_col,
             filter_value = r_filter_value
           )
@@ -191,11 +198,11 @@ new_tile_block <- function(value = character(),
     # Optional roles only -- clearing a non-listed field would wedge the block
     # (see reference_blockr_allow_empty_state_wedge). The enum fields
     # (layout/style/good_when/format) always carry a value and are omitted.
-    allow_empty_state = c("value", "by", "measure", "overline", "caption",
-      "secondary", "unit", "measures", "drill", "filter_col", "filter_value"),
-    external_ctrl = c("value", "by", "measure", "layout", "overline",
-      "caption", "secondary", "style", "good_when", "format", "unit",
-      "measures", "drill", "filter_col", "filter_value"),
+    allow_empty_state = c("value", "group", "measure", "metrics", "overline",
+      "caption", "secondary", "unit", "drill", "filter_col", "filter_value"),
+    external_ctrl = c("value", "group", "measure", "metrics", "layout",
+      "overline", "caption", "secondary", "style", "good_when", "format",
+      "unit", "drill", "filter_col", "filter_value"),
     expr_type = "bquoted",
     class = "tile_block",
     ...
@@ -208,6 +215,16 @@ tk_blank <- function(v) {
   if (is.null(v) || length(v) == 0L) return("")
   v <- as.character(v)[1]
   if (is.na(v) || identical(v, "(none)") || !nzchar(v)) "" else v
+}
+
+#' Normalize the single-group picker value to `character(0)` (none) or the one
+#' picked column. The tile groups by a single dimension (a KPI clusters by one),
+#' so `group` is stored as a length-0/1 character vector.
+#' @noRd
+tk_group <- function(v) {
+  g <- as.character(unlist(v))
+  g <- g[!is.na(g) & nzchar(g) & !g %in% "(none)"]
+  if (length(g)) g[1L] else character()
 }
 
 #' HTML dependency for the tile renderer.
@@ -240,10 +257,12 @@ tile_block_dep <- function() {
     settings_band_dep(),
     htmltools::htmlDependency(
       name = "tile-block",
-      version = paste0(utils::packageVersion("blockr.viz"), ".1"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".2"),
       src = system.file(package = "blockr.viz"),
-      # drilldown-config.js (the shared engine) must load before tile-block.js.
-      script = c("js/drilldown-config.js", "js/tile-block.js"),
+      # drilldown-agg.js (shared aggregation vocabulary) and drilldown-config.js
+      # (the shared engine) must load before tile-block.js.
+      script = c("js/drilldown-agg.js", "js/drilldown-config.js",
+                 "js/tile-block.js"),
       stylesheet = "css/tile-block.css"
     )
   )
@@ -267,10 +286,13 @@ tile_arguments <- function() {
       example = list("revenue"),
       type = arg_array(arg_string())
     ),
-    by = new_block_arg(
+    group = new_block_arg(
       paste0(
-        "Group / facet column: clusters cards and drives the matrix rows in ",
-        "the table layout. Optional; \"\" = a single ungrouped set of cards."
+        "Grouping column: clusters cards / drives the matrix rows, and is the ",
+        "dplyr::group_by column when `metrics` aggregate the input in place. ",
+        "One column (a KPI clusters by a single dimension). Optional; \"\" = a ",
+        "single ungrouped set of cards (or grand-total cards when `metrics` is ",
+        "set)."
       ),
       example = "region",
       type = arg_string()
@@ -283,6 +305,23 @@ tile_arguments <- function() {
       ),
       example = "",
       type = arg_string()
+    ),
+    metrics = new_block_arg(
+      paste0(
+        "In-block aggregations shown as cards: a list, each entry ",
+        "`{agg_fn, cols}`. `agg_fn` is one of \"count\", \"count_distinct\", ",
+        "\"mean\", \"median\", \"sum\", \"min\", \"max\"; `cols` the numeric ",
+        "column(s) it reduces (empty for \"count\"). One card per metric. With ",
+        "`group` empty the metrics reduce the whole frame to grand-total cards; ",
+        "with `group` set, one cluster of cards per group level. This is a ",
+        "DISPLAY projection \u2014 a card / row click still drills to the raw rows, ",
+        "and downstream receives the raw (filtered) data. Empty = no ",
+        "aggregation (the tile renders precomputed input, as before)."
+      ),
+      example = list(
+        list(agg_fn = "mean", cols = list("revenue")),
+        list(agg_fn = "count", cols = list())
+      )
     ),
     layout = new_block_arg(
       "Layout: \"cards\" (grid of cards) or \"table\" (aligned matrix).",
@@ -363,15 +402,17 @@ tile_arguments <- function() {
 tile_guidance <- function() {
   paste(
     "Bold display of a handful of important numbers \u2014 the KPI-card /",
-    "scorecard renderer. A PURE renderer: do all shaping upstream",
-    "(summarize / describe / a lag-join for comparisons); the tile does no",
-    "arithmetic. Map `value` to the number(s) \u2014 one column for a long",
-    "frame, or several columns for wide input (each becomes a card). Add a",
+    "scorecard renderer. Map `value` to the number(s) \u2014 one column for a",
+    "long frame, or several columns for wide input (each becomes a card). It",
+    "can aggregate in place: set `metrics` (a list of {agg_fn, cols}) to reduce",
+    "the input to grand-total cards, or add `group` for one cluster of cards",
+    "per group level \u2014 the same vocabulary as the table. Leave `metrics`",
+    "empty and shape upstream to render precomputed numbers as-is. Add a",
     "precomputed `secondary` column and a `style` (delta / fill / pill /",
-    "plain) for a comparison; set `good_when` for the polarity. Use `by`",
-    "to cluster by a group and to drive the matrix rows in the table",
-    "layout. Set `drill = TRUE` to make a card / row click filter",
-    "downstream on `by`. Not a chart (no trends \u2014 that is the chart",
-    "renderer) and not a dense data table."
+    "plain) for a comparison; set `good_when` for the polarity. Use `group`",
+    "to cluster and to drive the matrix rows in the table layout. Set",
+    "`drill = TRUE` to make a card / row click filter downstream on `group`.",
+    "Not a chart (no trends \u2014 that is the chart renderer) and not a dense",
+    "data table."
   )
 }

@@ -80,14 +80,14 @@ serve(
       # KPI tile matrix, click-to-filter drill on the group.
       tile = new_tile_block(
         value = "revenue",
-        by    = "region",
+        group = "region",
         drill = TRUE
       ),
       # Tile in table (matrix) layout with a delta-styled secondary: covers
       # the cell-coloring render and a real matrix-row drill click.
       tile_x = new_tile_block(
         value     = "revenue",
-        by        = "region",
+        group     = "region",
         secondary = "growth",
         style     = "delta",
         layout    = "table",

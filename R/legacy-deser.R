@@ -43,3 +43,41 @@ blockr_deser.summary_table_block <- function(x, data, ...) {
 
   do.call(blockr.core::ctor_fun(ctor), args)
 }
+
+#' Legacy deserialization for the tile block
+#'
+#' Restores boards saved before the tile gained in-block aggregation. The
+#' grouping column was `by` (now `group`, the dplyr::group_by column shared with
+#' the table), and per-measure display overrides rode on `measures` (dropped --
+#' multi-measure tiles are now homogeneous). Rename `by` -> `group` and drop
+#' `measures`; current payloads pass straight through.
+#'
+#' Drop this method when backwards compatibility is no longer needed.
+#'
+#' @param x,data,... Passed through from [blockr.core::blockr_deser()].
+#' @keywords internal
+#' @export
+blockr_deser.tile_block <- function(x, data, ...) {
+  stopifnot(all(c("constructor", "payload") %in% names(data)))
+
+  payload <- data[["payload"]]
+  if ("by" %in% names(payload) && !("group" %in% names(payload))) {
+    payload[["group"]] <- payload[["by"]]
+  }
+  payload[["by"]] <- NULL
+  payload[["measures"]] <- NULL
+
+  ctor <- blockr.core::blockr_deser(data[["constructor"]])
+  args <- c(
+    payload,
+    list(
+      ctor = blockr.core::coal(
+        blockr.core::ctor_name(ctor),
+        blockr.core::ctor_fun(ctor)
+      ),
+      ctor_pkg = blockr.core::ctor_pkg(ctor)
+    )
+  )
+
+  do.call(blockr.core::ctor_fun(ctor), args)
+}

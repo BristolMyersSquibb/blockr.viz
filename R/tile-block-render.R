@@ -90,7 +90,7 @@ tile_long_frame <- function(data, value = character(), by = "",
       )
       d$value     <- suppressWarnings(as.numeric(data[[col]]))
       d$secondary <- if (has_sec) data[[secondary]] else rep(NA, n)
-      d$overline  <- if (is.null(over)) rep(tk_pretty(col), n) else over
+      d$overline  <- if (is.null(over)) rep(tk_col_overline(data, col), n) else over
       d$caption   <- if (is.null(cap)) rep(NA_character_, n) else cap
       d$.col      <- rep(col, n)
       d
@@ -106,6 +106,16 @@ tile_empty_cells <- function() {
              secondary = I(list()), overline = character(),
              caption = character(), .col = character(),
              stringsAsFactors = FALSE)
+}
+
+#' Default overline for a wide-input measure column: the column's variable
+#' label if it carries one (an aggregated metric column carries a friendly
+#' stat-prefixed label, e.g. "Mean: Revenue"; a labelled source column carries
+#' its own), else the prettified column name.
+#' @noRd
+tk_col_overline <- function(data, col) {
+  lbl <- attr(data[[col]], "label", exact = TRUE)
+  if (is.character(lbl) && length(lbl) == 1L && nzchar(lbl)) lbl else tk_pretty(col)
 }
 
 #' Snake / dot case -> Title Case.

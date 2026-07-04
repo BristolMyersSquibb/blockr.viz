@@ -66,14 +66,46 @@ test_that("each style x layout renders a valid payload", {
   expect_true(grepl("tk-pill", ren(df, value = "value", measure = "metric",
                                    secondary = "status", style = "pill")))
   # table matrix (grouped wide) — a real matrix with per-group rows
-  mx <- ren(reg, value = c("revenue", "conversion", "orders"), by = "region",
+  mx <- ren(reg, value = c("revenue", "conversion", "orders"), group = "region",
             layout = "table")
   expect_true(grepl("tk-table", mx) && grepl("data-group", mx))
   # an explicit unit shows in the matrix header (no inference)
-  mxu <- ren(reg, value = "revenue", by = "region", unit = "USD", layout = "table")
+  mxu <- ren(reg, value = "revenue", group = "region", unit = "USD", layout = "table")
   expect_true(grepl("th-unit", mxu) && grepl("USD", mxu))
   # empty
   expect_true(grepl("is-empty", ren(data.frame(), value = "value")))
+})
+
+# ---------------------------------------------------------------------------
+# In-block aggregation (shared with the table): grouped metrics + grand totals
+# ---------------------------------------------------------------------------
+
+test_that("metrics aggregate in place — one card cluster per group level", {
+  ren <- function(...) paste(as.character(blockr.viz:::tile_html(...)), collapse = "")
+  out <- ren(reg, group = "region",
+             metrics = list(list(agg_fn = "sum", cols = list("revenue"))))
+  # one card per region (grouped), and the drill group attribute is present
+  expect_true(grepl("tk-grid", out))
+  for (r in reg$region) expect_true(grepl(r, out, fixed = TRUE))
+})
+
+test_that("metrics with no group render grand-total cards (one row)", {
+  agg <- blockr.viz:::dd_table_aggregate(
+    reg, character(),
+    list(list(agg_fn = "count", cols = list()),
+         list(agg_fn = "mean", cols = list("revenue")))
+  )
+  expect_true(agg$aggregated)
+  expect_equal(nrow(agg$data), 1L)              # a single totals row
+  expect_setequal(agg$metric_cols, names(agg$data))
+  # and no group -> no per-row drill keys
+  expect_length(agg$group, 0L)
+})
+
+test_that("neither group nor metrics -> raw passthrough (not aggregated)", {
+  agg <- blockr.viz:::dd_table_aggregate(reg, character(), list())
+  expect_false(agg$aggregated)
+  expect_identical(agg$data, reg)
 })
 
 # ---------------------------------------------------------------------------
@@ -122,8 +154,31 @@ test_that("config action switches layout; no wedge on clearing a listed field", 
   )
 })
 
+test_that("group + metrics config actions round-trip via the gear", {
+  blk <- new_tile_block(value = "revenue")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      es <- session$makeScope("expr")
+      es$setInputs(tile_block_action = list(action = "config",
+                                            param = "group", value = "region"))
+      es$setInputs(tile_block_action = list(action = "config", param = "metrics",
+        value = '[{"agg_fn":"sum","cols":["revenue"]}]'))
+      session$flushReact()
+      expect_equal(session$returned$state$group(), "region")
+      ms <- session$returned$state$metrics()
+      expect_equal(ms[[1]]$agg_fn, "sum")
+      expect_equal(ms[[1]]$cols, "revenue")
+      # aggregation is a display projection: data output stays the raw frame
+      expect_equal(nrow(session$returned$result()), nrow(reg))
+    },
+    args = list(x = blk, data = list(data = function() reg))
+  )
+})
+
 test_that("no click = pass-through; a drill click filters downstream", {
-  blk <- new_tile_block(value = c("revenue", "orders"), by = "region",
+  blk <- new_tile_block(value = c("revenue", "orders"), group = "region",
                         layout = "table", drill = TRUE)
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),

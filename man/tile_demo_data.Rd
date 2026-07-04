@@ -12,7 +12,7 @@ A list of tibbles:
 \item \code{scorecard} -- one row per metric with precomputed \code{delta} / \code{progress}
 / \code{status} columns (long tile frame; for the card styles).
 \item \code{regions} -- wide, one row per region with several measure columns (for
-the grouped matrix / \code{by}-clustered cards and drill).
+the grouped matrix / \code{group}-clustered cards and drill).
 \item \code{transactions} -- raw rows, to demo the upstream \code{summarize} -> tile flow.
 }
 }

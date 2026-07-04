@@ -1,5 +1,10 @@
 // @ts-check
 (function () {
+  // Shared aggregation vocabulary (group/metric/agg_fn roles + AGG_FNS +
+  // metric-follows-agg reconcile) — the identical control the chart/tile use.
+  var DAgg = (typeof Blockr !== "undefined" && Blockr.DrilldownAgg) ||
+    window.DrilldownAgg;
+
   /** @param {string | number | null | undefined} s */
   function parseNum(s) {
     if (s == null) return null;
@@ -281,27 +286,58 @@
   /** @param {HTMLElement} root @param {HTMLElement} table @param {HTMLElement} tbody */
   function wireClick(root, table, tbody) {
     var elemId = root.getAttribute("data-dt-elem-id");
+    if (!elemId) return;
+    // Grouped table: a row click ANDs the clicked row's group-key values into a
+    // downstream filter (raw input -> that group's members). Otherwise the
+    // legacy single-column drill (data-dt-onclick-col/idx).
+    var groupCols = (table.getAttribute("data-dt-group-cols") || "")
+      .split(",").filter(function (n) { return !!n; });
+    var grouped = groupCols.length > 0;
     var col = table.getAttribute("data-dt-onclick-col");
     var idx = table.getAttribute("data-dt-onclick-idx");
-    if (!elemId || !col || idx == null) return;
-    var idxN = parseInt(idx, 10);
+    if (!grouped && (!col || idx == null)) return;
+
+    // Map each group column name to its rendered column index (header order ==
+    // cell order; the stub is column 0).
+    /** @type {Array<{ column: string, idx: number }>} */
+    var groupIdx = [];
+    if (grouped) {
+      /** @type {string[]} */
+      var names = [];
+      table.querySelectorAll("thead th .blockr-col-name")
+        .forEach(function (s) { names.push((s.textContent || "").trim()); });
+      groupCols.forEach(function (gc) {
+        var i = names.indexOf(gc);
+        if (i >= 0) groupIdx.push({ column: gc, idx: i });
+      });
+    }
+    var idxN = grouped ? -1 : parseInt(idx || "", 10);
     root.classList.add("dt-clickable");
     tbody.addEventListener("click", function (e) {
       var t = /** @type {Element | null} */ (e.target);
       var tr = t && t.closest("tr.blockr-data-row");
-      if (!tr || !tr.children[idxN]) return;
-      var val = (tr.children[idxN].textContent || "").trim();
+      if (!tr) return;
       if (window.Shiny && Shiny.setInputValue) {
-        Shiny.setInputValue(
-          elemId + "_action",
-          {
-            action: "filter",
-            column: col,
-            values: [val],
-            filter_type: "categorical"
-          },
-          { priority: "event" }
-        );
+        if (grouped) {
+          var filters = [];
+          groupIdx.forEach(function (g) {
+            var cell = tr.children[g.idx];
+            if (cell) filters.push({
+              column: g.column, value: (cell.textContent || "").trim()
+            });
+          });
+          if (!filters.length) return;
+          Shiny.setInputValue(elemId + "_action",
+            { action: "filter", filters: filters, filter_type: "categorical" },
+            { priority: "event" });
+        } else {
+          if (!tr.children[idxN]) return;
+          var val = (tr.children[idxN].textContent || "").trim();
+          Shiny.setInputValue(elemId + "_action",
+            { action: "filter", column: col, values: [val],
+              filter_type: "categorical" },
+            { priority: "event" });
+        }
       }
       Array.prototype.slice.call(tbody.children).forEach(function (r) {
         r.classList.remove("dt-row-active");
@@ -341,11 +377,13 @@
                          { value: "off", label: "No search bar" }];
   var EXPORT_OPT      = [{ value: "on", label: "Excel export" },
                          { value: "off", label: "No Excel export" }];
-  var TABLE_ROLES = {
-    drill:      { label: "Drill-down", kind: "column", colType: "any" },
+  var TABLE_ROLES = Object.assign({}, DAgg.aggRoles({ multiple: true }), {
+    drill:      { label: "Filter column", kind: "column", colType: "any" },
     row_color:  { label: "Row color",  kind: "column", colType: "any" },
-    color_mode: { label: "Coloring",   kind: "select", rerender: true,
-                  options: ["off", "diverging", "sequential", "bar"] },
+    // 'off' is folded into the Coloring checkbox section (unchecked = off), so
+    // the mode select only offers the active modes.
+    color_mode: { label: "Mode",       kind: "select",
+                  options: ["diverging", "sequential", "bar"] },
     // Column-scope multi-select: empty = ALL numeric columns (the common case,
     // e.g. a correlation heatmap), so the placeholder spells that out. Picking
     // restricts to those columns (e.g. a single count column for data bars).
@@ -359,24 +397,52 @@
     collapsible: { label: "Sections", kind: "segmented", options: COLLAPSIBLE_OPT },
     search:      { label: "Search",   kind: "segmented", options: SEARCH_OPT },
     excel_download: { label: "Export", kind: "segmented", options: EXPORT_OPT }
-  };
-  // Dynamic: the column-scope picker only appears once a coloring mode is on
-  // (it is meaningless for a plain table). color_mode has rerender:true so
-  // toggling it rebuilds the section list live. `hasCols` is false for a
-  // structured ("Table 1") frame — there the column-based controls are no-ops,
-  // so only the display toggles show (and Collapsible, which needs sections).
+  });
+  // Variant A: Aggregation, Drill-down, Coloring and Row color are each a
+  // checkbox capability section (off by default, revealing their controls when
+  // checked); Presentation keeps only the always-on display options (decimals,
+  // sorting, search, export). `hasCols` is false for a structured ("Table 1")
+  // frame — there the column-based capabilities are no-ops, so only the display
+  // toggles show (and Collapsible, which needs sections).
   /** @param {Record<string, any>} cfg @param {boolean} hasCols */
   function tableSections(cfg, hasCols) {
+    // Aggregation lives under the "Aggregation" header: `group` is always
+    // offered; the repeatable metrics list (spec.metrics) appears once a group
+    // is set. `metric`/`agg_fn` are no longer standalone roles here — the
+    // metrics list owns them.
+    var hasGroup = hasCols && cfg && cfg.group && cfg.group.length > 0;
+    // Aggregation is "on" when a metric is carried (checking the box seeds a
+    // count). Grand totals = on with no group -> a single totals row.
+    var aggOn = hasCols && cfg && cfg.metrics && cfg.metrics.length > 0;
     var pres = [];
-    if (hasCols) {
-      pres.push("drill", "row_color", "color_mode");
-      if (cfg && cfg.color_mode && cfg.color_mode !== "off") pres.push("color_columns");
-      pres.push("digits");
-    }
+    if (hasCols) pres.push("digits");
     pres.push("sortable");
     if (!hasCols) pres.push("collapsible");   // only sectioned tables collapse
     pres.push("search", "excel_download");
-    return { requiredMap: [], optionalMap: [], mapping: [], presentation: pres };
+    var spec = { requiredMap: [], optionalMap: [],
+                 mapping: hasCols ? ["group"] : [],
+                 metrics: hasCols,         // offer the metrics list whenever the box is on
+                 aggregatable: hasCols,    // Variant A: Aggregation checkbox section
+                 // Drill-down checkbox section only for a raw (non-aggregated)
+                 // table; a grouped table drills on its group keys, and a
+                 // totals row (aggregating, no group) has nothing to drill.
+                 drillToggle: (hasCols && !hasGroup && !aggOn) ? "drill" : null,
+                 // Coloring checkbox section: the mode select + numeric column
+                 // scope. Row color checkbox section: a categorical row tint.
+                 colorToggle: hasCols ? { modeKey: "color_mode", extra: ["color_columns"] } : null,
+                 rowColorToggle: hasCols ? "row_color" : null,
+                 presentation: pres };
+    // Structured ("Table 1") input is an already-summarized annotated data
+    // frame with no pickable columns, so grouping / aggregation / drill / colour
+    // don't apply. A small badge names it; the tooltip carries the why.
+    if (!hasCols) {
+      spec.badge = "Annotated data frame";
+      spec.badgeTitle = "Dot-prefixed columns (.label, .section, .indent, …) " +
+        "were detected and interpreted as layout — they build the section " +
+        "structure and are not shown as data columns. Grouping and aggregation " +
+        "are set upstream, so only display options apply here.";
+    }
+    return spec;
   }
 
   /** @param {HTMLElement} root @param {HTMLElement} table */
@@ -397,7 +463,10 @@
     table.querySelectorAll("thead th .blockr-col-name")
       .forEach(function (s) {
         var nm = (s.textContent || "").trim();
-        cols.push({ name: nm, type: numSet[nm] ? "numeric" : "any" });
+        // Non-numeric columns are "categorical" (not "any") so the Group /
+        // aggregate picker (colType "cat") offers them — the columns you can
+        // aggregate over. "any" pickers (drill, row color) still match either.
+        cols.push({ name: nm, type: numSet[nm] ? "numeric" : "categorical" });
       });
 
     // Structured ("Table 1") tables expose no pickable columns (the header is
@@ -414,6 +483,14 @@
       .split(",").filter(function (n) { return !!n; });
     /** @type {Record<string, any>} */
     var cfg = {
+      // Aggregation config: group (comma-joined -> array), and a metrics list
+      // (JSON array of {agg_fn, cols}) parsed off the table element.
+      group: (table.getAttribute("data-dt-group") || "")
+        .split(",").filter(function (n) { return !!n; }),
+      metrics: (function () {
+        try { return JSON.parse(table.getAttribute("data-dt-metrics") || "[]"); }
+        catch (e) { return []; }
+      })(),
       drill:      (onClick && onClick !== "(none)") ? onClick : "",
       row_color:  table.getAttribute("data-dt-row-color") || "",
       color_mode: table.getAttribute("data-dt-color-mode") || "off",
@@ -464,14 +541,35 @@
       currentType: function () { return cfg.transform; },
       sections: function () { return tableSections(cfg, hasCols); },
       sectionsForFamily: function () { return tableSections(cfg, hasCols); },
-      secondary: new Set(),
+      // Paired-tail roles (e.g. agg_fn behind metric) are rendered inside their
+      // partner's row, never standalone — mirror the chart's DD_SECONDARY.
+      secondary: new Set(Object.keys(TABLE_ROLES)
+        .map(function (k) { return TABLE_ROLES[k].pairedWith; })
+        .filter(Boolean)),
+      // The table's mapping section is purely the aggregation step (group +
+      // aggregate), so name it "Aggregation" — clearer than "Mapping" that it
+      // transforms the data before display.
+      mappingTitle: "Aggregation",
       typeKey: null,
       typeGroups: null,
       familyFor: null,
       entryRequired: function () { return false; },
       drillAutoLabel: null,
       title: "Table settings",
-      onChange: function (key) { sendConfig(elemId, key, cfg[key]); },
+      // Repeatable aggregation list: the engine renders one "[agg] of [cols]"
+      // row per metric. A grouped table always shows at least a count, so an
+      // empty list surfaces as a single count row.
+      metricsList: function () {
+        return (cfg.metrics && cfg.metrics.length)
+          ? cfg.metrics : [{ agg_fn: "count", cols: [] }];
+      },
+      onMetricsChange: function (/** @type {any[]} */ ms) {
+        cfg.metrics = ms;
+        sendConfig(elemId, "metrics", JSON.stringify(ms));
+      },
+      onChange: function (/** @type {string} */ key) {
+        sendConfig(elemId, key, cfg[key]);
+      },
       onMults: function () {},
       onClearFilter: function () {},
       ensureDefaults: function () {},

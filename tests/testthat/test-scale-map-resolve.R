@@ -10,9 +10,10 @@ test_that("dd_colored_var follows the per-chart-type table", {
   # pie/treemap color their group slices
   expect_identical(dd_colored_var("pie", NULL, "BOR"), "BOR")
   expect_identical(dd_colored_var("treemap", NULL, "BOR"), "BOR")
-  # boxplot has no colored role; bar without a color role never auto-colors
-  # its category axis
-  expect_null(dd_colored_var("boxplot", "TRT", "AVISIT"))
+  # boxplot colors by its `color` role (one box per level within each group)
+  expect_identical(dd_colored_var("boxplot", "SEX", "ARM"), "SEX")
+  # bar without a color role never auto-colors its category axis
+  expect_null(dd_colored_var("boxplot", NULL, "ARM"))
   expect_null(dd_colored_var("bar", NULL, "BOR"))
   expect_null(dd_colored_var("bar", "", "BOR"))
 })

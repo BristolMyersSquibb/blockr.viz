@@ -11,6 +11,11 @@
  * popover keyed by the ns()-based elem id, so two tiles never collide).
  */
 (function () {
+  // Shared aggregation vocabulary (group/metric/agg_fn roles + AGG_FNS) — the
+  // identical control the chart / table use. Must load before this script.
+  var DAgg = (typeof Blockr !== "undefined" && Blockr.DrilldownAgg) ||
+    window.DrilldownAgg;
+
   // ---- drill: card / row click -> categorical filter on the group ----------
   /** @param {Element} root */
   function wireDrill(root) {
@@ -37,9 +42,12 @@
   }
 
   // ---- gear popover via the shared DrilldownConfig engine ------------------
-  var TILE_ROLES = {
+  // Roles: the shared aggregation triple (group / metric / agg_fn, single-group
+  // like the chart — a KPI clusters by one dimension) plus the tile's display
+  // roles. `group` comes from DAgg.aggRoles(); the old standalone `by` role is
+  // gone (renamed to the aggregation `group`).
+  var TILE_ROLES = Object.assign({}, DAgg.aggRoles({ multiple: false }), {
     value:     { label: 'Value',     kind: 'column', colType: 'num' },
-    by:        { label: 'Group',     kind: 'column', colType: 'cat' },
     measure:   { label: 'Measure',   kind: 'column', colType: 'cat' },
     secondary: { label: 'Secondary', kind: 'column', colType: 'any' },
     overline:  { label: 'Overline',  kind: 'column', colType: 'any' },
@@ -53,15 +61,25 @@
     unit:      { label: 'Unit', kind: 'text', ph: 'e.g. USD, CHF, apples' },
     layout:    { label: 'Layout', kind: 'segmented',
                  options: [{ value: 'cards', label: 'Cards' }, { value: 'table', label: 'Table' }] }
-  };
-  var TILE_SECTIONS = {
-    requiredMap: ['value'],
-    optionalMap: ['by', 'measure', 'secondary', 'overline', 'caption'],
-    mapping: [],
-    // Value formatting (style / good-when / number format / unit) is presentation,
-    // not data mapping — it lives alongside layout under the Presentation header.
-    presentation: ['style', 'good_when', 'format', 'unit', 'layout']
-  };
+  });
+  // A FUNCTION of the config (mirrors table.js): the display roles map under
+  // "Mapping"; the Aggregation checkbox section (group + repeatable metrics)
+  // renders separately via aggregatable/metrics. hasCols is false only for an
+  // empty input, where the column pickers have nothing to offer.
+  /** @param {Record<string, any>} cfg @param {boolean} hasCols */
+  function tileSections(cfg, hasCols) {
+    return {
+      requiredMap: hasCols ? ['value'] : [],
+      optionalMap: hasCols ? ['measure', 'secondary', 'overline', 'caption'] : [],
+      // The group lives in the Aggregation section (rendered from `mapping`).
+      mapping: hasCols ? ['group'] : [],
+      metrics: hasCols,        // repeatable "[agg] of [cols]" list
+      aggregatable: hasCols,   // Variant A: Aggregation checkbox section
+      // Value formatting (style / good-when / number format / unit) is
+      // presentation, not data mapping — alongside layout under Presentation.
+      presentation: ['style', 'good_when', 'format', 'unit', 'layout']
+    };
+  }
 
   /** @param {string | null} elemId @param {string} param @param {*} value */
   function sendConfig(elemId, param, value) {
@@ -93,6 +111,10 @@
     // The engine's drill section is value-based ('' off / 'auto' on); the tile
     // always filters on the group column, so map the boolean to 'auto'/''.
     cfg.drill = cfg.drill ? 'auto' : '';
+    // The repeatable aggregation list rides on its own attribute (agg_fn a
+    // scalar, cols an array), parsed into cfg.metrics for the engine.
+    try { cfg.metrics = JSON.parse(root.getAttribute('data-tk-metrics') || '[]'); }
+    catch (e) { cfg.metrics = []; }
 
     var header = document.createElement('div');
     header.className = 'blockr-gear-header';
@@ -129,15 +151,33 @@
       columns: function () { return cols; },
       context: function () { return 'all'; },
       currentType: function () { return null; },
-      sections: function () { return TILE_SECTIONS; },
-      sectionsForFamily: function () { return TILE_SECTIONS; },
-      secondary: new Set(),
+      sections: function () { return tileSections(cfg, cols.length > 0); },
+      sectionsForFamily: function () { return tileSections(cfg, cols.length > 0); },
+      // Paired-tail roles (agg_fn behind metric) render inside their partner's
+      // row, never standalone — mirror the chart / table.
+      secondary: new Set(Object.keys(TILE_ROLES)
+        .map(function (k) { return TILE_ROLES[k].pairedWith; })
+        .filter(Boolean)),
+      // No mappingTitle override: the display roles keep the "Mapping" header
+      // and the aggregation checkbox section gets "Aggregation" (its default).
       typeKey: null,
       typeGroups: null,
       familyFor: null,
       entryRequired: function (/** @type {string} */ role) { return role === 'value'; },
+      // Legacy Auto drill section: the tile's drill is a boolean (click a card
+      // to filter the group downstream), only meaningful once a group is set.
       drillAutoLabel: function () {
-        return cfg.by ? ('each ' + cfg.by) : 'the group';
+        return cfg.group ? ('each ' + cfg.group) : 'the group';
+      },
+      // Repeatable aggregation list: one "[agg] of [cols]" row per metric. A
+      // single count is the floor, so an empty list surfaces as one count row.
+      metricsList: function () {
+        return (cfg.metrics && cfg.metrics.length)
+          ? cfg.metrics : [{ agg_fn: 'count', cols: [] }];
+      },
+      onMetricsChange: function (/** @type {any[]} */ ms) {
+        cfg.metrics = ms;
+        sendConfig(elemId, 'metrics', JSON.stringify(ms));
       },
       title: 'Tile settings',
       onChange: function (key) {

@@ -19,16 +19,17 @@ drilldown_chart_dep <- function() {
     drilldown_echarts_themes_dep(),
     htmltools::htmlDependency(
       name = "chart-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".35"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".48"),
       src = system.file("js", package = "blockr.viz"),
-      # drilldown-config.js (the shared gear-popover engine) must load BEFORE
-      # chart.js, which references Blockr.DrilldownConfig.
-      script = c("drilldown-theme-register.js", "drilldown-config.js",
-                 "chart.js")
+      # drilldown-agg.js (shared aggregation vocabulary) and drilldown-config.js
+      # (the shared gear-popover engine) must load BEFORE chart.js, which
+      # references Blockr.DrilldownAgg and Blockr.DrilldownConfig.
+      script = c("drilldown-theme-register.js", "drilldown-agg.js",
+                 "drilldown-config.js", "chart.js")
     ),
     htmltools::htmlDependency(
       name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.viz"), ".25"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".32"),
       src = system.file("css", package = "blockr.viz"),
       stylesheet = "chart.css"
     )
