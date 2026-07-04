@@ -34,6 +34,7 @@ new_chart_block(
   ref_y = NULL,
   smoother = "none",
   identity_line = "off",
+  box_points = "none",
   lo = NULL,
   hi = NULL,
   baseline = "zero",
@@ -133,6 +134,11 @@ value (vertical / horizontal guide line). Default \code{NULL} (no overlay).}
 \item{identity_line}{Identity-line overlay for scatter charts: \code{"off"}
 (default) or \code{"on"} draws a dashed 45-degree y = x guide line across
 the overlap of the x and y ranges (shift / agreement plots).}
+
+\item{box_points}{Observation overlay for boxplots: one of \code{"none"}
+(default, box only), \code{"outliers"} (plot only the points beyond the
+1.5x IQR whiskers) or \code{"all"} (jittered strip of every observation on
+top of the box). No-op for other chart types.}
 
 \item{lo, hi}{Optional lower / upper value bounds used by the renderer to
 clamp or annotate the value axis. Default \code{NULL} (auto).}

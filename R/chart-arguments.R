@@ -152,6 +152,18 @@ chart_arguments <- function() {
       example = "off",
       type = arg_enum(c("off", "on"))
     ),
+    box_points = new_block_arg(
+      paste0(
+        "Observation overlay for boxplots (chart_type=\"boxplot\"): ",
+        "\"none\" (default, box only), \"outliers\" (plot only the points ",
+        "beyond the 1.5x IQR whiskers) or \"all\" (a jittered strip of ",
+        "every observation drawn over the box). Use \"outliers\" to flag ",
+        "extreme values, \"all\" to show the full distribution / sample ",
+        "size. No-op for non-boxplot charts."
+      ),
+      example = "none",
+      type = arg_enum(c("none", "outliers", "all"))
+    ),
     lo = new_block_arg(
       paste0(
         "Lower error-band column (individual line only). Set together ",
@@ -305,7 +317,10 @@ chart_guidance <- function() {
       "shows the SPREAD of `value` within each `group` \u2014 do NOT set",
       "an aggregating `func` (mean/median/sum/count); that collapses",
       "each group to one value and the plot renders EMPTY. Use `color`",
-      "or `facet` to split the boxes (e.g. by treatment arm).",
+      "or `facet` to split the boxes (e.g. by treatment arm). To show",
+      "the underlying observations set `box_points`: \"outliers\" flags",
+      "the extreme points past the whiskers, \"all\" draws a jittered",
+      "strip of every point over the box.",
       "\n- \"label bars with W\" -> label=\"W\"",
       "\n\nLeave filter_type/filter_column/filter_values/filter_range at",
       "defaults \u2014 they are runtime transport for the emitted filter, not",
