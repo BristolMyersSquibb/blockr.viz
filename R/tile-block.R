@@ -180,7 +180,14 @@ new_tile_block <- function(value = character(),
             # control and registry arg are gone (Christoph); the ctor arg is
             # legacy-ignored so old saved boards restore without erroring.
             good_when = "up", format = r_format(), unit = r_unit(),
-            drill = r_drill(), elem_id = ns("tile_block")
+            drill = r_drill(), elem_id = ns("tile_block"),
+            # Reactive (not isolated) reads: a click re-renders the tile so
+            # the active-card mark and the status footer stay server-rendered
+            # truth -- cheap for a KPI tile, and it makes restore free. (The
+            # table renders its status line as a separate small output
+            # instead, because its body render is heavy.)
+            active_col = r_filter_col(),
+            active_values = r_filter_value()
           )
         })
 
@@ -287,7 +294,7 @@ tile_block_dep <- function() {
     drilldown_shared_dep(),
     htmltools::htmlDependency(
       name = "tile-block",
-      version = paste0(utils::packageVersion("blockr.viz"), ".11"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".12"),
       src = system.file(package = "blockr.viz"),
       script = "js/tile-block.js",
       stylesheet = "css/tile-block.css"

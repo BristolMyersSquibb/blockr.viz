@@ -991,10 +991,15 @@
         }
       }
 
-      // Restore filter state if provided (e.g., from saved board)
-      if (config?.filter_values && config?.filter_column) {
+      // Restore filter state if provided (e.g., from saved board). The R side
+      // sends filter_values as an array (as.list) and only alongside a
+      // filter_column; the column also feeds the footer's "Filtered: col ="
+      // label and survives a Reset (which nulls both).
+      if (config?.filter_values && config.filter_values.length &&
+          config?.filter_column) {
         this._selected = config.filter_values.length === 1
           ? config.filter_values[0] : config.filter_values;
+        this._selectedColumn = config.filter_column;
       }
 
       this._renderConfig();

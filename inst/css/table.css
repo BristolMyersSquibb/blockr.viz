@@ -21,6 +21,15 @@
 .drilldown-table-container.dt-clickable .blockr-table tbody tr.blockr-data-row {
   cursor: pointer;
 }
+/* A drill row with an NA drill value emits nothing (no data-raw -> the click
+   is a no-op), so it must not look clickable: default cursor + the neutral
+   reading-aid hover instead of the accent-blue "actionable" tint. */
+.drilldown-table-container.dt-clickable .blockr-table tbody tr.blockr-data-row.dt-row-nodrill {
+  cursor: default;
+}
+.drilldown-table-container.dt-clickable .blockr-table tbody tr.blockr-data-row.dt-row-nodrill:hover td {
+  background: var(--blockr-color-bg-subtle, #f9fafb);
+}
 /* No drill: the row is inert. The html-table base paints an accent-blue hover
    (which reads as "clickable"), and the drilldown container inherits it because
    it also carries .blockr-html-table-container. When drill is off, swap that for

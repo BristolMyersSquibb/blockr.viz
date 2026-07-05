@@ -9,6 +9,9 @@ viz_data <- data.frame(
   revenue = c(100, 50, 80, 40, 60, 30),
   profit  = c(10, 5, 8, 4, 6, 3),
   growth  = c(0.12, -0.04, 0.20, -0.10, 0.08, 0.00), # deltas for the tile
+  # Unique high-precision values: displayed rounded (digits = 2), so a drill
+  # on this column only works if the click emits the RAW value (data-raw).
+  ratio   = c(0.123456, 0.234567, 0.345678, 0.456789, 0.567891, 0.678912),
   stringsAsFactors = FALSE
 )
 
@@ -93,6 +96,43 @@ serve(
         layout    = "table",
         drill     = TRUE
       ),
+      # Numeric-column drill: the display rounds ratio to 2 digits, the
+      # click must filter on the raw value (drill value fidelity).
+      table_num = new_table_block(
+        rowname = "region",
+        values  = c("ratio", "revenue"),
+        drill   = "ratio",
+        digits  = 2L
+      ),
+      # "Restored board" fixtures: filter state passed through the ctor is
+      # exactly what a board restore does — these must come up already
+      # filtered, with the active highlight and the status footer.
+      table_restored = new_table_block(
+        rowname       = "region",
+        values        = c("revenue", "profit"),
+        drill         = "region",
+        filter_column = "region",
+        filter_values = list("North")
+      ),
+      tile_restored = new_tile_block(
+        value        = "revenue",
+        group        = "region",
+        drill        = TRUE,
+        filter_col   = "region",
+        filter_value = list("South")
+      ),
+      chart_restored = new_chart_block(
+        chart_type    = "bar",
+        group         = "region",
+        value         = "revenue",
+        func          = "sum",
+        drill         = "region",
+        filter_column = "region",
+        filter_values = list("North")
+      ),
+      # A genuine DOWNSTREAM consumer of the drill table: its result is the
+      # table's filtered output flowing through a real board link.
+      table_ds = new_head_block(n = 100L),
       # Display-shaped summary + a gt render of a plain frame.
       summary = new_summary_table_block(
         vars = c("revenue", "profit"), by = "region"
@@ -110,6 +150,11 @@ serve(
       new_link("data", "chart_cfg", "data"),
       new_link("data", "tile", "data"),
       new_link("data", "tile_x", "data"),
+      new_link("data", "table_num", "data"),
+      new_link("data", "table_restored", "data"),
+      new_link("data", "tile_restored", "data"),
+      new_link("data", "chart_restored", "data"),
+      new_link("table", "table_ds", "data"),
       new_link("data", "summary", "data"),
       new_link("data", "gt", "data")
     )

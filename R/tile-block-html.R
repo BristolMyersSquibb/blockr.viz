@@ -289,6 +289,11 @@ tk_table_wrap <- function(thead, tbody) {
 #' @param style,good_when,format,unit Flat render spec defaults.
 #' @param drill Logical; when TRUE cards / rows are clickable filters.
 #' @param elem_id ns()-based id used to build the `_action` input name.
+#' @param active_col,active_values The block's click-filter state at render
+#'   time (the filter reactiveVals): drive the `.tk-active` card highlight
+#'   (via the `data-tk-active` attribute the tile JS reads) and the
+#'   active-filter status footer, so a restored board shows which card
+#'   filters downstream.
 #' @return An [htmltools::tagList()].
 #' @noRd
 tile_html <- function(data, value = character(), group = character(),
@@ -296,7 +301,8 @@ tile_html <- function(data, value = character(), group = character(),
                       caption = "", secondary = "", style = "plain",
                       good_when = "up", format = "number", unit = "",
                       summaries = list(), drill = FALSE, elem_id = NULL,
-                      color = "", scale_map = NULL) {
+                      color = "", scale_map = NULL,
+                      active_col = NULL, active_values = NULL) {
   flat <- list(style = style %||% "plain", good_when = good_when %||% "up",
                format = format %||% "number", unit = unit %||% "")
 
@@ -416,11 +422,48 @@ tile_html <- function(data, value = character(), group = character(),
   }
 
   drill_on <- isTRUE(drill) && nzchar(drill_col) && !is.null(elem_id)
+
+  # Active click-filter state (chart-footer parity). The highlight keys on
+  # the drill values (`data-group`), so it only applies while the stored
+  # filter column still IS the drill target; the status line always reports
+  # the stored filter (even after a re-aim), so an active filter is never
+  # invisible.
+  act_vals <- as.character(unlist(active_values %||% character()))
+  act_on   <- !is.null(active_col) && nzchar(active_col) && length(act_vals)
+  status <- if (drill_on || act_on) {
+    htmltools::tags$div(
+      class = "dd-status-footer",
+      htmltools::tags$span(
+        class = "dd-status-text",
+        if (act_on) {
+          paste0("Filtered: ", active_col, " = ",
+                 paste(act_vals, collapse = ", "))
+        } else {
+          "No filter active"
+        }
+      ),
+      if (act_on) {
+        htmltools::tags$button(
+          type = "button", class = "dd-status-reset", "Reset"
+        )
+      }
+    )
+  }
+
   wrapper <- htmltools::tags$div(
     class = paste("tk-block", if (drill_on) "tk-clickable"),
     `data-tk-elem-id` = if (!is.null(elem_id)) elem_id else NULL,
     `data-tk-drill`   = if (drill_on) "1" else NULL,
     `data-tk-group`   = if (drill_on) drill_col else NULL,
+    # Active drill value(s) as a JSON array; the tile JS re-applies the
+    # .tk-active mark to matching cards / rows on every (re)render.
+    # auto_unbox = FALSE on the character VECTOR keeps a single value a JSON
+    # array (["South"], never a nested [["South"]]).
+    `data-tk-active`  = if (act_on && identical(active_col, drill_col)) {
+      as.character(jsonlite::toJSON(act_vals, auto_unbox = FALSE))
+    } else {
+      NULL
+    },
     # The resolvable drill target, emitted even while drill is OFF: the gear
     # needs it to show (and word) the picker-less Drill-down section before
     # the capability is enabled. Empty/absent = no target -> section hidden.
@@ -433,7 +476,8 @@ tile_html <- function(data, value = character(), group = character(),
                                          good_when, format, unit, overline,
                                          caption, layout, drill, color = color),
     `data-tk-summaries` = dd_summaries_json(summaries),
-    body
+    body,
+    status
   )
 
   htmltools::tagList(tile_block_dep(), wrapper)
