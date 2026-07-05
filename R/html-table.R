@@ -1069,6 +1069,16 @@ a.blockr-dl-xlsx:focus-visible {
 }
 /* Shiny toggles .disabled on download links until the handler is ready. */
 a.blockr-dl-xlsx.disabled { opacity: 0.45; pointer-events: none; }
+/* Export toggled on but openxlsx not installed: muted, not-allowed, and
+   NO pointer-events:none -- the tooltip must still explain why. */
+a.blockr-dl-xlsx--off,
+a.blockr-dl-xlsx--off:hover {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: var(--blockr-color-bg-input, #f9fafb);
+  border-color: var(--blockr-color-border, #e5e7eb);
+  color: var(--blockr-grey-500, #6b7280);
+}
 a.blockr-dl-xlsx svg { display: block; }"
 }
 
