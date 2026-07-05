@@ -103,6 +103,13 @@ new_tile_block <- function(value = character(),
       shiny::moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
+        # What the renderer consumes: a plain data frame passes through
+        # untouched; a table-producing object (composer et al., per the
+        # shared input contract) is coerced via as_plain_df(), which drops
+        # the reserved `.`-annotation columns -- a tile of a structured
+        # frame reads its data columns. Mirrors the chart block.
+        plain_data <- shiny::reactive(coerce_plain_df(data()))
+
         r_value     <- shiny::reactiveVal(as.character(value))
         r_group     <- shiny::reactiveVal(as.character(group))
         r_name      <- shiny::reactiveVal(name)
@@ -167,7 +174,7 @@ new_tile_block <- function(value = character(),
         board_scale_map <- dd_board_scale_map()
 
         output$tile_result <- shiny::renderUI({
-          d <- data()
+          d <- plain_data()
           shiny::req(is.data.frame(d))
           tile_html(
             d,
@@ -195,7 +202,7 @@ new_tile_block <- function(value = character(),
           expr = shiny::reactive({
             col  <- r_filter_col()
             vals <- r_filter_value()
-            if (is.null(col) || is.null(vals) || length(vals) == 0) {
+            ex <- if (is.null(col) || is.null(vals) || length(vals) == 0) {
               blockr.core::bbquote(dplyr::filter(.(data), TRUE))
             } else if (length(vals) == 1) {
               blockr.core::bbquote(
@@ -208,6 +215,16 @@ new_tile_block <- function(value = character(),
                 list(col = col, vals = vals)
               )
             }
+            # Non-data-frame input under the shared contract (a composer
+            # table et al.): the emitted code must coerce the same way the
+            # renderer does, so downstream receives the same plain frame
+            # the tile reads. Plain data frames (and a not-yet-connected /
+            # erroring upstream) keep the exact pre-contract expr.
+            d <- tryCatch(data(), error = function(e) NULL)
+            if (!is.null(d) && !is.data.frame(d)) {
+              ex <- wrap_plain_df_input(ex)
+            }
+            ex
           }),
           state = list(
             value = r_value, group = r_group, name = r_name,
@@ -225,9 +242,10 @@ new_tile_block <- function(value = character(),
       ns <- shiny::NS(id)
       shiny::tagList(shiny::uiOutput(ns("tile_result")))
     },
-    dat_valid = function(data) {
-      if (!is.data.frame(data)) stop("Input must be a data frame")
-    },
+    # Shared input contract (see validate_annotated_df_input): a data frame,
+    # or a table-producing object coerced via as_annotated_df() -- the tile
+    # then reads the coerced frame's data columns (as_plain_df()).
+    dat_valid = validate_annotated_df_input,
     # Optional roles only -- clearing a non-listed field would wedge the block
     # (see reference_blockr_allow_empty_state_wedge). The enum fields
     # (layout/style/good_when/format) always carry a value and are omitted.

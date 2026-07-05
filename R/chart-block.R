@@ -191,6 +191,15 @@ new_chart_block <- function(
       shiny::moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
+        # What the render paths consume: a plain data frame passes through
+        # untouched; a table-producing object (composer et al., per the
+        # shared input contract) is coerced via as_plain_df(), which drops
+        # the reserved `.`-annotation columns -- a chart of a structured
+        # frame charts its data columns (the read-only-structure rendering
+        # of principle 6 belongs to the table). Mirrors the table block's
+        # ann_data reactive.
+        plain_data <- shiny::reactive(coerce_plain_df(data()))
+
         # Config state (orthogonal aesthetics)
         r_group <- shiny::reactiveVal(group)
         r_color <- shiny::reactiveVal(color)
@@ -248,7 +257,7 @@ new_chart_block <- function(
         # the gear pickers must stay usable while an upstream filter has
         # emptied the data.
         r_col_meta <- shiny::reactive({
-          d <- data()
+          d <- plain_data()
           shiny::req(is.data.frame(d))
           lapply(names(d), function(col) {
             vals <- d[[col]]
@@ -301,7 +310,7 @@ new_chart_block <- function(
         # change (data or a mapping role), never on a presentation-only
         # edit (sort_dir, orientation, bar_mode, ...).
         r_needed_cols <- shiny::reactive({
-          needed_cols(data())
+          needed_cols(plain_data())
         })
 
         # Serialized data payload, cached. jsonlite::toJSON over all rows is
@@ -318,7 +327,7 @@ new_chart_block <- function(
         # panels.
         payload_rev <- 0L
         r_data_json <- shiny::reactive({
-          d <- data()
+          d <- plain_data()
           shiny::req(is.data.frame(d))
           needed <- r_needed_cols()
           df_send <- if (length(needed)) {
@@ -343,7 +352,7 @@ new_chart_block <- function(
           sm <- r_smoother()
           if (is.null(sm) || identical(sm, "none")) return(NULL)
           tryCatch(compute_smoother_series(
-            data(), sm, r_x(), r_y(), r_color(), r_series()
+            plain_data(), sm, r_x(), r_y(), r_color(), r_series()
           ), error = function(e) {
             # Keep the NULL fallback (no overlay) but surface the failure
             # so a broken smoother fit is diagnosable instead of silent.
@@ -363,7 +372,7 @@ new_chart_block <- function(
         # (toJSON, smoother fit) live in the cached reactives above -- read
         # only from in here, so they inherit this observer's suspension.
         shiny::observe({
-          d <- data()
+          d <- plain_data()
           # No nrow gate: an upstream filter emptying the frame MUST push,
           # or the browser keeps rendering (clickable) stale marks over data
           # that no longer exists while the block's output is already the
@@ -582,9 +591,85 @@ new_chart_block <- function(
           cols[!cols %in% names(d)]
         }
 
+        # The click/brush filter expr, over `.(data)` as-is. Kept in its own
+        # function so the expr reactive below can wrap the data slot in an
+        # as_plain_df() coercion for non-data-frame inputs while plain data
+        # frames keep this exact (byte-identical) emitted code.
+        build_filter_expr <- function() {
+          ft <- r_filter_type()
+
+          if (ft == "categorical") {
+            col <- r_filter_column()
+            vals <- r_filter_values()
+
+            if (is.null(col) || is.null(vals) || length(vals) == 0) {
+              blockr.core::bbquote(dplyr::filter(.(data), TRUE))
+            } else if (length(vals) == 1) {
+              blockr.core::bbquote(
+                dplyr::filter(.(data), .data[[.(col)]] == .(val)),
+                list(col = col, val = vals[[1]])
+              )
+            } else {
+              blockr.core::bbquote(
+                dplyr::filter(.(data), .data[[.(col)]] %in% .(vals)),
+                list(col = col, vals = vals)
+              )
+            }
+          } else if (ft == "point") {
+            pt <- r_filter_point()
+            if (is.null(pt) || is.null(pt$x_col) || is.null(pt$y_col)) {
+              return(blockr.core::bbquote(dplyr::filter(.(data), TRUE)))
+            }
+            blockr.core::bbquote(
+              dplyr::filter(.(data),
+                .data[[.(xc)]] == .(xv) & .data[[.(yc)]] == .(yv)
+              ),
+              list(xc = pt$x_col, yc = pt$y_col,
+                xv = pt$x_val, yv = pt$y_val)
+            )
+          } else if (ft == "range") {
+            rng <- r_filter_range()
+            if (is.null(rng) || is.null(rng$x_range)) {
+              return(blockr.core::bbquote(dplyr::filter(.(data), TRUE)))
+            }
+            xc <- rng$x_col
+            xr <- rng$x_range
+            yr <- rng$y_range
+            if (!is.null(yr) && !is.null(rng$y_col)) {
+              # 2D brush (scatter): filter on both x and y
+              yc <- rng$y_col
+              blockr.core::bbquote(
+                dplyr::filter(.(data),
+                  dplyr::between(.data[[.(xc)]], .(xlo), .(xhi)) &
+                    dplyr::between(.data[[.(yc)]], .(ylo), .(yhi))
+                ),
+                list(xc = xc, yc = yc,
+                  xlo = xr[1], xhi = xr[2],
+                  ylo = yr[1], yhi = yr[2])
+              )
+            } else {
+              # 1D brush (line): filter on x only
+              blockr.core::bbquote(
+                dplyr::filter(.(data),
+                  dplyr::between(.data[[.(xc)]], .(xlo), .(xhi))
+                ),
+                list(xc = xc, xlo = xr[1], xhi = xr[2])
+              )
+            }
+          } else {
+            blockr.core::bbquote(dplyr::filter(.(data), TRUE))
+          }
+        }
+
         list(
           expr = shiny::reactive({
             d <- data()
+            # Non-data-frame input under the shared contract (a composer
+            # table et al.): the emitted code must coerce the same way the
+            # renderer does, so downstream receives the same plain frame the
+            # chart draws. NULL input (no upstream yet) stays unwrapped.
+            coerce <- !is.null(d) && !is.data.frame(d)
+            if (coerce) d <- coerce_plain_df(d)
             if (is.data.frame(d)) {
               missing_cols <- mapped_cols(d)
               shiny::validate(shiny::need(
@@ -596,69 +681,8 @@ new_chart_block <- function(
                 )
               ))
             }
-            ft <- r_filter_type()
-
-            if (ft == "categorical") {
-              col <- r_filter_column()
-              vals <- r_filter_values()
-
-              if (is.null(col) || is.null(vals) || length(vals) == 0) {
-                blockr.core::bbquote(dplyr::filter(.(data), TRUE))
-              } else if (length(vals) == 1) {
-                blockr.core::bbquote(
-                  dplyr::filter(.(data), .data[[.(col)]] == .(val)),
-                  list(col = col, val = vals[[1]])
-                )
-              } else {
-                blockr.core::bbquote(
-                  dplyr::filter(.(data), .data[[.(col)]] %in% .(vals)),
-                  list(col = col, vals = vals)
-                )
-              }
-            } else if (ft == "point") {
-              pt <- r_filter_point()
-              if (is.null(pt) || is.null(pt$x_col) || is.null(pt$y_col)) {
-                return(blockr.core::bbquote(dplyr::filter(.(data), TRUE)))
-              }
-              blockr.core::bbquote(
-                dplyr::filter(.(data),
-                  .data[[.(xc)]] == .(xv) & .data[[.(yc)]] == .(yv)
-                ),
-                list(xc = pt$x_col, yc = pt$y_col,
-                  xv = pt$x_val, yv = pt$y_val)
-              )
-            } else if (ft == "range") {
-              rng <- r_filter_range()
-              if (is.null(rng) || is.null(rng$x_range)) {
-                return(blockr.core::bbquote(dplyr::filter(.(data), TRUE)))
-              }
-              xc <- rng$x_col
-              xr <- rng$x_range
-              yr <- rng$y_range
-              if (!is.null(yr) && !is.null(rng$y_col)) {
-                # 2D brush (scatter): filter on both x and y
-                yc <- rng$y_col
-                blockr.core::bbquote(
-                  dplyr::filter(.(data),
-                    dplyr::between(.data[[.(xc)]], .(xlo), .(xhi)) &
-                      dplyr::between(.data[[.(yc)]], .(ylo), .(yhi))
-                  ),
-                  list(xc = xc, yc = yc,
-                    xlo = xr[1], xhi = xr[2],
-                    ylo = yr[1], yhi = yr[2])
-                )
-              } else {
-                # 1D brush (line): filter on x only
-                blockr.core::bbquote(
-                  dplyr::filter(.(data),
-                    dplyr::between(.data[[.(xc)]], .(xlo), .(xhi))
-                  ),
-                  list(xc = xc, xlo = xr[1], xhi = xr[2])
-                )
-              }
-            } else {
-              blockr.core::bbquote(dplyr::filter(.(data), TRUE))
-            }
+            ex <- build_filter_expr()
+            if (coerce) wrap_plain_df_input(ex) else ex
           }),
           state = list(
             group = r_group,
@@ -708,9 +732,10 @@ new_chart_block <- function(
         shiny::div(id = ns("drilldown_block"), class = "drilldown-chart-container")
       )
     },
-    dat_valid = function(data) {
-      if (!is.data.frame(data)) stop("Input must be a data frame")
-    },
+    # Shared input contract (see validate_annotated_df_input): a data frame,
+    # or a table-producing object coerced via as_annotated_df() -- the chart
+    # then charts the coerced frame's data columns (as_plain_df()).
+    dat_valid = validate_annotated_df_input,
     # `value` must stay listed: the gear legitimately empties it mid-config
     # (reconcileValue in drilldown-agg.js / _ensureBoxplotMetric in chart.js
     # set value = '' when the aggregation changes and the old column no longer
