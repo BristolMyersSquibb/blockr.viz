@@ -437,7 +437,9 @@ tile_guidance <- function() {
     "per group level \u2014 the same vocabulary as the table. Leave `summaries`",
     "empty and shape upstream to render precomputed numbers as-is. Add a",
     "precomputed `secondary` column and a `style` (delta / fill / pill /",
-    "plain) for a comparison; set `good_when` for the polarity. Use `group`",
+    # No `good_when` advice here: the arg is legacy-ignored (polarity is
+    # forced to "up"; the ctor keeps it only so saved boards restore).
+    "plain) for a comparison. Use `group`",
     "to cluster and to drive the matrix rows in the table layout. Set",
     "`drill = TRUE` to make a card / row click filter downstream on `group`.",
     "Not a chart (no trends \u2014 that is the chart renderer) and not a dense",

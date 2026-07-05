@@ -650,11 +650,18 @@ new_chart_block <- function(
     dat_valid = function(data) {
       if (!is.data.frame(data)) stop("Input must be a data frame")
     },
+    # `value` must stay listed: the gear legitimately empties it mid-config
+    # (reconcileValue in drilldown-agg.js / _ensureBoxplotMetric in chart.js
+    # set value = '' when the aggregation changes and the old column no longer
+    # fits) and the observer stores that verbatim -- without the entry the
+    # block silently wedges (reference_blockr_allow_empty_state_wedge).
+    # `func` is NOT listed: the JS side never emits it empty (a fixed-option
+    # select, backfilled to "count"/"mean" wherever unset).
     allow_empty_state = c("group", "color", "facet", "filter_column",
-      "filter_values", "x", "y", "xend", "series", "label", "tt_fields",
-      "drill", "sort_by", "sort_dir", "filter_range", "filter_point",
-      "step", "ref_x", "ref_y", "smoother", "identity_line", "box_points",
-      "lo", "hi", "waterfall_totals"),
+      "filter_values", "value", "x", "y", "xend", "series", "label",
+      "tt_fields", "drill", "sort_by", "sort_dir", "filter_range",
+      "filter_point", "step", "ref_x", "ref_y", "smoother", "identity_line",
+      "box_points", "lo", "hi", "waterfall_totals"),
     external_ctrl = c("group", "color", "facet", "value", "func",
       "chart_type", "x", "y", "xend", "series", "label", "tt_fields", "drill",
       "sort_by", "sort_dir", "orientation", "bar_mode", "filter_type",
