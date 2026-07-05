@@ -42,10 +42,18 @@ register_viz_blocks <- function() {
       "Configurable chart with click-to-filter drill-down",
       "Interactive table (sticky header, sort, search) with optional cell coloring and click-to-filter drill-down"
     ),
+    # Categories come from blockr.core::suggested_categories() (a fixed
+    # vocabulary the pickers group by; anything else warns as discouraged).
+    # The three interactive renderers (tile / chart / table) are display
+    # blocks (dev/table-and-chart-architecture.md): the tile and chart are
+    # visualizations ("plot"), the table is tabular display ("table") -- the
+    # tile is NOT a transform (it renders, its data output is a passthrough
+    # filter). summary_table stays "transform": it is a shaper whose output
+    # feeds the renderers.
     category = c(
       "transform",
       "table",
-      "transform",
+      "plot",
       "plot",
       "table"
     ),

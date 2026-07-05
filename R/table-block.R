@@ -91,7 +91,7 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                          sortable = TRUE, collapsible = TRUE, search = TRUE,
                          excel_download = FALSE, group_cols = NULL,
                          group = character(), summaries = list(),
-                         active = NULL) {
+                         active = NULL, gear_cols = NULL) {
   data <- fmt_to_wide(data)
   # Display-option states (sortable / collapsible / search / excel) ride on the
   # <table> as data-attributes so the gear popover reads their current value;
@@ -103,6 +103,10 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
     return(dt_table_tag_structured(data, drill, digits, toggles,
                                    active = active))
   }
+  # Pickable columns for the gear (data-dt-cols). `data` here is the raw
+  # input except in the block server's aggregated branch, which displays a
+  # projection and passes the raw schema in explicitly.
+  if (is.null(gear_cols)) gear_cols <- dt_gear_cols_json(data)
 
   value_cols_raw <- value_cols
   if (is.null(label_col)) label_col <- names(data)[1L]
@@ -115,8 +119,11 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   # with three different fixes -- one generic "No data" hid all of them.
   msg <- dt_state_message(data, label_col, value_cols, value_cols_raw)
   if (!is.null(msg)) {
+    # The gear must still offer the (current) input columns on a message
+    # table -- fixing a vanished-column config happens through it.
     return(dt_table_attrs(dt_message_table(msg), NULL, NULL, digits,
-                          color = color, toggles = toggles))
+                          color = color, toggles = toggles,
+                          gear_cols = gear_cols))
   }
 
   # ---- cell visuals: value-encoding `shadings` rules ------------------
@@ -278,7 +285,8 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                  color = color, shadings = shadings,
                  num_cols = value_cols[num_flag],
                  toggles = toggles, group_cols = group_cols,
-                 group = group, summaries = summaries, active = active)
+                 group = group, summaries = summaries, active = active,
+                 gear_cols = gear_cols)
 }
 
 # ---------------------------------------------------------------------------
@@ -330,7 +338,7 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
     msg <- if (nrow(data) == 0L) "No rows to display"
            else "No value columns to display"
     return(dt_table_attrs(dt_message_table(msg), NULL, NULL, digits,
-                          toggles = toggles))
+                          toggles = toggles, gear_cols = "[]"))
   }
 
   thead <- build_html_thead(data, data_cols, stub_col, stub_sortable = FALSE,
@@ -354,8 +362,10 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
     NULL
   }
   onclick <- dt_onclick(drill_use, c(stub_col %||% character(), data_cols))
+  # "[]" (not absent): a structured frame HAS no pickable columns -- the gear
+  # must read that, not fall back to scraping the section-spanner header.
   dt_table_attrs(table_tag, onclick$col, onclick$idx, digits,
-                 toggles = toggles, active = active)
+                 toggles = toggles, active = active, gear_cols = "[]")
 }
 
 #' Cell-visual spec for [drilldown_table()]
@@ -727,6 +737,26 @@ dd_shadings_json <- function(shadings) {
   ))
 }
 
+#' Column metadata for the gear popover, stamped on the `<table>` as
+#' `data-dt-cols` (JSON `[{name, type}]`; `"[]"` for a structured frame, whose
+#' pre-formatted cells offer nothing to pick). Always the block's raw INPUT
+#' columns -- NOT the displayed projection -- so the gear's column pickers stay
+#' correct while the table shows an aggregated frame, and re-reading the
+#' attribute at popover-open time (table.js) picks up upstream schema changes
+#' and server-side config edits without a chrome rebuild.
+#' @noRd
+dt_gear_cols_json <- function(data) {
+  data <- tryCatch(fmt_to_wide(data), error = function(e) data)
+  if (!is.data.frame(data) || dt_is_structured(data)) return("[]")
+  cols <- lapply(names(data), function(nm) {
+    list(
+      name = nm,
+      type = if (is.numeric(data[[nm]])) "numeric" else "categorical"
+    )
+  })
+  as.character(jsonlite::toJSON(cols, auto_unbox = TRUE))
+}
+
 #' Resolve the `shadings` rules to per-column cell visuals.
 #'
 #' Override semantics, mirroring dd_metric_plan: a rule with EMPTY `cols`
@@ -846,10 +876,14 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
                            num_cols = NULL,
                            toggles = NULL, group_cols = NULL,
                            group = character(), summaries = list(),
-                           active = NULL) {
+                           active = NULL, gear_cols = NULL) {
   on_off <- function(x) if (isTRUE(x)) "on" else "off"
   htmltools::tagAppendAttributes(
     table_tag,
+    # The gear's pickable columns (raw input schema, dt_gear_cols_json) --
+    # re-stamped on every table render so the popover re-reads CURRENT
+    # columns when it opens.
+    `data-dt-cols` = gear_cols,
     # Active drill filter at render time (JSON; NULL = none). table.js
     # matches rows by their data-raw values and re-applies the dt-row-active
     # highlight, so a restored board (or a config re-render) shows which row
@@ -878,6 +912,13 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
     `data-dt-search` = on_off(toggles$search %||% TRUE),
     `data-dt-excel` = on_off(toggles$excel_download %||% FALSE)
   )
+}
+
+#' Is the Excel writer available? A seam (not an inline requireNamespace) so
+#' tests can mock the openxlsx-missing state (see the dt_download renderUI).
+#' @noRd
+dt_has_openxlsx <- function() {
+  requireNamespace("openxlsx", quietly = TRUE)
 }
 
 #' Table-block chrome: the scoped CSS, the search/gear header, and the scroll
@@ -1061,7 +1102,7 @@ drilldown_table_dep <- function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".25"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".26"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"
@@ -1241,9 +1282,13 @@ table_guidance <- function() {
 #'   `cell_color` (a [drilldown_table_color()] spec) becomes one `shadings`
 #'   rule; `row_color` becomes `color`. Kept as formals so saved boards
 #'   restore; no gear control, not in the registry.
-#' @param filter_type,filter_column,filter_values,filter_range Click
-#'   filter state (kept for contract parity with the drilldown chart;
-#'   `filter_range` is unused by the table).
+#' @param filter_column,filter_values Click-filter state (the shared filter
+#'   transport names, identical to the chart / tile). Kept as constructor
+#'   params so the filter round-trips through save/restore.
+#' @param filter_type,filter_range LEGACY, ignored: the table only ever
+#'   emits categorical filters (its JS never sets either). Kept as formals so
+#'   saved boards restore; serialized as NULL, no gear control, not in the
+#'   registry.
 #' @param filter_group_cols,filter_group_vals Grouped-table drill filter
 #'   state: the aligned group-key columns and values ANDed to filter the raw
 #'   input to a clicked row's group. Default `NULL` (no grouped drill active).
@@ -1305,10 +1350,8 @@ new_table_block <- function(rowname = NULL,
         r_drill      <- shiny::reactiveVal(drill)
         r_digits        <- shiny::reactiveVal(digits)
         r_max_height    <- shiny::reactiveVal(max_height)
-        r_filter_type   <- shiny::reactiveVal(filter_type)
         r_filter_column <- shiny::reactiveVal(filter_column)
         r_filter_values <- shiny::reactiveVal(filter_values)
-        r_filter_range  <- shiny::reactiveVal(filter_range)
         # Grouped-table drill: a row click ANDs the clicked row's group-key
         # values (aligned vectors) to filter the raw input to that group.
         r_filter_group_cols <- shiny::reactiveVal(filter_group_cols)
@@ -1361,8 +1404,6 @@ new_table_block <- function(rowname = NULL,
               upd(r_filter_group_cols, NULL)
               upd(r_filter_group_vals, NULL)
             }
-            upd(r_filter_type, "categorical")
-            upd(r_filter_range, NULL)
           } else if (identical(act, "config")) {
             p <- msg$param
             v <- msg$value
@@ -1475,9 +1516,34 @@ new_table_block <- function(rowname = NULL,
         # shiny::downloadButton, so it renders as a quiet design-system icon
         # button (table.css) rather than a stock Bootstrap .btn with a
         # FontAwesome icon.
+        dl_xlsx_icon <- function() {
+          htmltools::HTML(paste0(
+            '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ',
+            'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" ',
+            'stroke-linejoin="round">',
+            '<path d="M8 2.5 V10 M4.8 7 L8 10.2 L11.2 7"/>',
+            '<path d="M2.5 11.5 V12.8 A1.2 1.2 0 0 0 3.7 14 H12.3 ',
+            'A1.2 1.2 0 0 0 13.5 12.8 V11.5"/></svg>'
+          ))
+        }
         output$dt_download <- shiny::renderUI({
           if (!isTRUE(r_excel_download())) return(NULL)
-          if (!requireNamespace("openxlsx", quietly = TRUE)) return(NULL)
+          if (!dt_has_openxlsx()) {
+            # The user just checked the gear's "Excel export" pill: silently
+            # rendering NOTHING reads as a broken toggle. Show the button
+            # disabled, with the why on the tooltip (blockr-dl-xlsx--off:
+            # muted + cursor not-allowed, NOT pointer-events none, so the
+            # tooltip still shows). No shiny-download-link class -- there is
+            # no handler to bind.
+            return(htmltools::tags$a(
+              class = "blockr-dl-xlsx blockr-dl-xlsx--off",
+              title = "Excel export requires the openxlsx package",
+              `aria-label` =
+                "Excel export unavailable: requires the openxlsx package",
+              `aria-disabled` = "true",
+              dl_xlsx_icon()
+            ))
+          }
           htmltools::tags$a(
             id = ns("dl_xlsx"),
             class = "blockr-dl-xlsx shiny-download-link",
@@ -1486,14 +1552,7 @@ new_table_block <- function(rowname = NULL,
             download = NA,
             title = "Download as Excel",
             `aria-label` = "Download as Excel",
-            htmltools::HTML(paste0(
-              '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ',
-              'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" ',
-              'stroke-linejoin="round">',
-              '<path d="M8 2.5 V10 M4.8 7 L8 10.2 L11.2 7"/>',
-              '<path d="M2.5 11.5 V12.8 A1.2 1.2 0 0 0 3.7 14 H12.3 ',
-              'A1.2 1.2 0 0 0 13.5 12.8 V11.5"/></svg>'
-            ))
+            dl_xlsx_icon()
           )
         })
         output$dl_xlsx <- shiny::downloadHandler(
@@ -1556,6 +1615,10 @@ new_table_block <- function(rowname = NULL,
             return(tryCatch(
               dt_table_tag(
                 ad,
+                # The displayed frame is a projection; the gear's pickers
+                # must keep offering the RAW input schema (group / value /
+                # drill choices act on `d`, not on the aggregate).
+                gear_cols  = dt_gear_cols_json(d),
                 label_col  = if (gl) agg$group[1L] else " ",
                 value_cols = if (gl) c(setdiff(agg$group, agg$group[1L]), agg$metric_cols)
                              else agg$metric_cols,
@@ -1705,10 +1768,13 @@ new_table_block <- function(rowname = NULL,
             drill      = r_drill,
             digits        = r_digits,
             max_height    = r_max_height,
-            filter_type   = r_filter_type,
             filter_column = r_filter_column,
             filter_values = r_filter_values,
-            filter_range  = r_filter_range,
+            # Legacy formals (never set by the table's JS -- it only emits
+            # categorical filters): serialized as NULL, kept as ctor formals
+            # so old saved boards restore.
+            filter_type   = function() NULL,
+            filter_range  = function() NULL,
             filter_group_cols = r_filter_group_cols,
             filter_group_vals = r_filter_group_vals,
             sortable       = r_sortable,
@@ -1723,26 +1789,19 @@ new_table_block <- function(rowname = NULL,
       ns <- shiny::NS(id)
       shiny::tagList(shiny::uiOutput(ns("dt_result")))
     },
-    dat_valid = function(data) {
-      # Contract check only -- dispatch lookup, never the (possibly costly)
-      # coercion itself. A method that exists but refuses this particular
-      # value errors at eval time instead; core surfaces both the same way.
-      if (!is.data.frame(data) && !has_annotated_df_method(data)) {
-        stop(
-          "Input must be a data frame or an object with an ",
-          "as_annotated_df() method (e.g. a composer table); got <",
-          paste(class(data), collapse = "/"), ">"
-        )
-      }
-    },
+    # Shared input contract (see validate_annotated_df_input): contract
+    # check only -- dispatch lookup, never the (possibly costly) coercion
+    # itself. A method that exists but refuses this particular value errors
+    # at eval time instead; core surfaces both the same way.
+    dat_valid = validate_annotated_df_input,
     allow_empty_state = c("rowname", "value", "group", "summaries", "color",
       "shadings", "cell_color", "row_color", "drill", "filter_column",
-      "filter_values", "filter_range",
+      "filter_values", "filter_type", "filter_range",
       "filter_group_cols", "filter_group_vals"),
     external_ctrl = c("rowname", "value", "group", "summaries",
       "color", "shadings", "drill",
-      "digits", "max_height", "filter_type",
-      "filter_column", "filter_values", "filter_range",
+      "digits", "max_height",
+      "filter_column", "filter_values",
       "filter_group_cols", "filter_group_vals",
       "sortable", "collapsible", "search", "excel_download"),
     expr_type = "bquoted",

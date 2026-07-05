@@ -101,7 +101,9 @@ test_that("block state round-trips constructor args", {
       session$flushReact()
       expect_equal(session$returned$state$drill(), "USUBJID")
       expect_equal(session$returned$state$digits(), 2L)
-      expect_equal(session$returned$state$filter_type(), "categorical")
+      # Vestigial filter_type/filter_range serialize as NULL (legacy formals).
+      expect_null(session$returned$state$filter_type())
+      expect_null(session$returned$state$filter_range())
     },
     args = list(x = blk, data = list(data = function() df))
   )

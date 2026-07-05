@@ -46,11 +46,15 @@ blockr_deser.summary_table_block <- function(x, data, ...) {
 
 #' Legacy deserialization for the tile block
 #'
-#' Restores boards saved before the tile gained in-block aggregation. The
+#' Restores boards saved before the tile gained in-block aggregation, and
+#' before the drill-filter state took the shared transport names. The
 #' grouping column was `by` (now `group`, the dplyr::group_by column shared with
 #' the table), and per-measure display overrides rode on `measures` (dropped --
-#' multi-measure tiles are now homogeneous). Rename `by` -> `group` and drop
-#' `measures`; current payloads pass straight through.
+#' multi-measure tiles are now homogeneous). The click-filter state was
+#' `filter_col` / `filter_value` (now `filter_column` / `filter_values`, the
+#' names the chart and table share; the old scalar value coerces to the
+#' plural list shape). Rename `by` -> `group`, drop `measures`, rename the
+#' filter fields; current payloads pass straight through.
 #'
 #' Drop this method when backwards compatibility is no longer needed.
 #'
@@ -66,6 +70,20 @@ blockr_deser.tile_block <- function(x, data, ...) {
   }
   payload[["by"]] <- NULL
   payload[["measures"]] <- NULL
+  # Pre-rename filter transport: filter_col / filter_value -> the shared
+  # filter_column / filter_values (the old filter_value was scalar; coerce to
+  # the plural list shape). Mapping here keeps restores warning-free -- the
+  # ctor's own alias path warns, this one must not.
+  if (!is.null(payload[["filter_col"]]) &&
+        is.null(payload[["filter_column"]])) {
+    payload[["filter_column"]] <- payload[["filter_col"]]
+  }
+  if (!is.null(payload[["filter_value"]]) &&
+        is.null(payload[["filter_values"]])) {
+    payload[["filter_values"]] <- as.list(payload[["filter_value"]])
+  }
+  payload[["filter_col"]] <- NULL
+  payload[["filter_value"]] <- NULL
 
   ctor <- blockr.core::blockr_deser(data[["constructor"]])
   args <- c(

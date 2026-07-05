@@ -19,6 +19,8 @@ new_tile_block(
   format = "number",
   unit = "",
   drill = FALSE,
+  filter_column = NULL,
+  filter_values = NULL,
   filter_col = NULL,
   filter_value = NULL,
   ...
@@ -80,9 +82,15 @@ determined (never user-picked): the \code{group} column when grouped, else
 the \code{name} column on an ungrouped long KPI list. Off by
 default; inert when the tile has neither (bare KPI, grand totals).}
 
-\item{filter_col, filter_value}{Click-filter state. Kept as constructor
+\item{filter_column, filter_values}{Click-filter state (the shared filter
+transport names, identical to the chart / table). Kept as constructor
 params so the filter round-trips through save/restore (blockr.core
 deserializes a block via its constructor formals).}
+
+\item{filter_col, filter_value}{LEGACY aliases for
+\code{filter_column} / \code{filter_values}, mapped on construction (the old
+scalar \code{filter_value} coerces to the plural list shape). Kept as formals
+so saved boards restore; new names win when both are given.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }
