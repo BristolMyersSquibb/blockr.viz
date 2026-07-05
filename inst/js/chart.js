@@ -1027,17 +1027,20 @@
 
       const result = [];
       for (const g of Object.values(groups)) {
-        let value;
-        if (func === 'count') value = g.rows.length;
-        else if (func === 'count_distinct') { const s = new Set(); for (const r of g.rows) { const v = r[value]; if (v != null && !(typeof v === 'number' && Number.isNaN(v))) s.add(v); } value = s.size; }
-        else if (func === 'mean') value = g.values.length ? g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / g.values.length : 0;
-        else if (func === 'median') { const s = g.values.slice().sort((/** @type {number} */ a, /** @type {number} */ b) => a - b); const m = Math.floor(s.length / 2); value = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; }
-        else if (func === 'sum') value = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
-        else if (func === 'min') value = g.values.length ? Math.min.apply(null, g.values) : 0;
-        else if (func === 'max') value = g.values.length ? Math.max.apply(null, g.values) : 0;
+        // `out` (not `value`) — `value` is the config's aggregated column name,
+        // read as r[value] in the count_distinct branch; a local `value` would
+        // shadow it and silently count r[undefined] (every group → 0).
+        let out;
+        if (func === 'count') out = g.rows.length;
+        else if (func === 'count_distinct') { const s = new Set(); for (const r of g.rows) { const v = r[value]; if (v != null && !(typeof v === 'number' && Number.isNaN(v))) s.add(v); } out = s.size; }
+        else if (func === 'mean') out = g.values.length ? g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / g.values.length : 0;
+        else if (func === 'median') { const s = g.values.slice().sort((/** @type {number} */ a, /** @type {number} */ b) => a - b); const m = Math.floor(s.length / 2); out = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; }
+        else if (func === 'sum') out = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
+        else if (func === 'min') out = g.values.length ? Math.min.apply(null, g.values) : 0;
+        else if (func === 'max') out = g.values.length ? Math.max.apply(null, g.values) : 0;
         // n = rows behind this (group, color) cell, for the tooltip's
         // "n = ..." line (how many observations the mark aggregates).
-        result.push({ facet: g.facet, group: g.group, color: g.color, value: Math.round(value * 100) / 100, n: g.rows.length });
+        result.push({ facet: g.facet, group: g.group, color: g.color, value: Math.round(out * 100) / 100, n: g.rows.length });
       }
       return result;
     }
