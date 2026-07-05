@@ -1256,6 +1256,14 @@ html_table_js_template <- function() {
 
   // ---------- Search ----------
   var searchInput = root.querySelector('input.blockr-search');
+  // Per-row lowercase text, read ONCE (rows here are static - no re-render),
+  // so a keystroke never re-extracts textContent of the whole tbody.
+  var searchText = new WeakMap();
+  function rowText(r){
+    var t = searchText.get(r);
+    if (t == null) { t = r.textContent.toLowerCase(); searchText.set(r, t); }
+    return t;
+  }
   function applySearch(){
     var query = (searchInput ? searchInput.value : '').trim().toLowerCase();
     var rows = Array.prototype.slice.call(tbody.children);
@@ -1265,8 +1273,7 @@ html_table_js_template <- function() {
         r.classList.remove('blockr-hidden-search');
         return;
       }
-      var text = r.textContent.toLowerCase();
-      if (text.indexOf(query) !== -1) r.classList.remove('blockr-hidden-search');
+      if (rowText(r).indexOf(query) !== -1) r.classList.remove('blockr-hidden-search');
       else r.classList.add('blockr-hidden-search');
     });
     for (var i = rows.length - 1; i >= 0; i--) {
@@ -1288,7 +1295,16 @@ html_table_js_template <- function() {
     }
   }
   if (searchInput) {
-    searchInput.addEventListener('input', applySearch);
+    // Debounced: one filter pass per 150 ms typing pause (each pass touches
+    // every row) - same coalescing as the block renderer's table.js.
+    var searchTimer = null;
+    searchInput.addEventListener('input', function(){
+      if (searchTimer != null) clearTimeout(searchTimer);
+      searchTimer = setTimeout(function(){
+        searchTimer = null;
+        applySearch();
+      }, 150);
+    });
   }
 })();"
 }

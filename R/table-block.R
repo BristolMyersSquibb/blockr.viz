@@ -104,13 +104,18 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                                    active = active))
   }
 
+  value_cols_raw <- value_cols
   if (is.null(label_col)) label_col <- names(data)[1L]
   if (is.null(value_cols)) value_cols <- setdiff(names(data), label_col)
   value_cols <- intersect(value_cols, names(data))
 
-  if (nrow(data) == 0L || !label_col %in% names(data) ||
-      length(value_cols) == 0L) {
-    return(dt_table_attrs(dt_message_table(), NULL, NULL, digits,
+  # Differentiated non-renderable states (chart-empty-state parity): a
+  # configured column that vanished upstream, a required mapping still
+  # unconfigured, and a genuinely 0-row frame are three different problems
+  # with three different fixes -- one generic "No data" hid all of them.
+  msg <- dt_state_message(data, label_col, value_cols, value_cols_raw)
+  if (!is.null(msg)) {
+    return(dt_table_attrs(dt_message_table(msg), NULL, NULL, digits,
                           color = color, toggles = toggles))
   }
 
@@ -206,10 +211,11 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
           # (no per-cell DOM node). Text reads on top of the fill.
           style <- dt_bar_style(as.numeric(vk), sv$max, sv$fill)
         } else {
-          style <- vapply(as.numeric(vk), function(v) {
-            bg <- sv$fun(v)
-            paste0(" style=\"background:", bg$bg, ";color:", bg$fg, ";\"")
-          }, character(1L))
+          # Heatmap: sv$fun is vectorized (see dt_color_fun) -- one call
+          # styles the whole column, like dt_bar_style above.
+          bg <- sv$fun(as.numeric(vk))
+          style <- paste0(" style=\"background:", bg$bg, ";color:", bg$fg,
+                          ";\"")
         }
       }
       raw <- if (value_cols[j] %in% raw_cols) raw_attr(vk) else ""
@@ -318,7 +324,12 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
                           c(all_section_cols, stub_col, styling_cols))
 
   if (length(data_cols) == 0L || nrow(data) == 0L) {
-    return(dt_table_attrs(dt_message_table(), NULL, NULL, digits,
+    # Structured frames carry no gear-picked mappings, so only two states
+    # apply here: no rows vs no data columns left after the structural
+    # (.section_* / .label / styling) columns.
+    msg <- if (nrow(data) == 0L) "No rows to display"
+           else "No value columns to display"
+    return(dt_table_attrs(dt_message_table(msg), NULL, NULL, digits,
                           toggles = toggles))
   }
 
@@ -436,6 +447,38 @@ dt_col_label <- function(x, name) {
   lbl <- trimws(lbl)
   if (!nzchar(lbl) || identical(lbl, name)) return(NULL)
   lbl
+}
+
+#' Differentiated message for the flat table's non-renderable states, or NULL
+#' when the table can render. Wording mirrors the chart's empty states
+#' (chart.js): a configured column no longer in the data names the column and
+#' hints at an upstream rename + "re-pick it in the gear"; a required mapping
+#' with nothing configured is a pick prompt; a 0-row frame is just "no rows".
+#' `value_cols_raw` is the caller's pre-default `value_cols` (NULL = "all but
+#' the rowname"), so an EXPLICIT pick whose columns all vanished reads as a
+#' config error, never as empty data. A partially-missing explicit pick keeps
+#' rendering the surviving columns (the documented silent-skip rule).
+#' @noRd
+dt_state_message <- function(data, label_col, value_cols, value_cols_raw) {
+  missing <- character()
+  if (!label_col %in% names(data)) {
+    missing <- paste0("Rowname = \"", label_col, "\"")
+  }
+  raw <- as.character(value_cols_raw %||% character())
+  if (length(raw) && !length(value_cols)) {
+    missing <- c(missing,
+                 paste0("Value = \"", setdiff(raw, names(data)), "\""))
+  }
+  if (length(missing)) {
+    return(paste0(
+      "Mapped column not in data: ", paste(missing, collapse = ", "),
+      ". A rename, flatten or pivot upstream may have changed the column ",
+      "name \u2014 re-pick it in the gear."
+    ))
+  }
+  if (nrow(data) == 0L) return("No rows to display")
+  if (!length(value_cols)) return("Pick a Value column in the gear")
+  NULL
 }
 
 #' @noRd
@@ -933,17 +976,23 @@ dt_bar_style <- function(v, mx, fill) {
          "%,transparent ", pct, "%);\"")
 }
 
+#' Build the heatmap ramp for a shading rule. The returned function is
+#' VECTORIZED over `v` end-to-end (clamp, interpolation t, per-channel lerp,
+#' `rgb()`, and the luminance contrast test all take vectors) and returns
+#' `list(bg =, fg =)` of hex vectors -- the caller styles a whole column in
+#' one call, keeping the shaded table on the same vectorized fast path as
+#' dt_bar_style(). A 10k x 10 shaded table used to burn 100k scalar closure
+#' calls per render here.
 #' @noRd
 dt_color_fun <- function(type, domain, palette) {
   lo <- domain[1L]
   hi <- domain[2L]
   hex2rgb <- function(h) grDevices::col2rgb(h)[, 1L]
-  lerp <- function(a, b, t) round(a + (b - a) * t)
-  lum <- function(rgb) {
-    (0.299 * rgb[1L] + 0.587 * rgb[2L] + 0.114 * rgb[3L]) / 255
-  }
-  to_hex <- function(rgb) {
-    grDevices::rgb(rgb[1L], rgb[2L], rgb[3L], maxColorValue = 255)
+  # Per-channel r/g/b vectors -> bg hex + contrast-tested fg hex.
+  bg_fg <- function(r, g, b) {
+    lum <- (0.299 * r + 0.587 * g + 0.114 * b) / 255
+    list(bg = grDevices::rgb(r, g, b, maxColorValue = 255),
+         fg = ifelse(lum < 0.55, "#ffffff", "#111827"))
   }
 
   if (identical(type, "diverging")) {
@@ -956,28 +1005,25 @@ dt_color_fun <- function(type, domain, palette) {
     # correlation matrix this puts white at r = 0 and gives +/- equal saturation.
     mid <- 0
     function(v) {
-      v <- max(min(v, hi), lo)
-      if (v <= mid) {
-        t <- if (mid == lo) 0 else (v - lo) / (mid - lo)
-        rgb <- c(lerp(c1[1L], c2[1L], t), lerp(c1[2L], c2[2L], t),
-                 lerp(c1[3L], c2[3L], t))
-      } else {
-        t <- if (hi == mid) 0 else (v - mid) / (hi - mid)
-        rgb <- c(lerp(c2[1L], c3[1L], t), lerp(c2[2L], c3[2L], t),
-                 lerp(c2[3L], c3[3L], t))
+      v <- pmax(pmin(v, hi), lo)
+      low <- v <= mid
+      t_lo <- if (mid == lo) rep(0, length(v)) else (v - lo) / (mid - lo)
+      t_hi <- if (hi == mid) rep(0, length(v)) else (v - mid) / (hi - mid)
+      ch <- function(i) {
+        round(ifelse(low, c1[i] + (c2[i] - c1[i]) * t_lo,
+                          c2[i] + (c3[i] - c2[i]) * t_hi))
       }
-      list(bg = to_hex(rgb), fg = if (lum(rgb) < 0.55) "#ffffff" else "#111827")
+      bg_fg(ch(1L), ch(2L), ch(3L))
     }
   } else {
     pal <- palette %||% c("#eef2ff", "#1d4ed8")
     c1 <- hex2rgb(pal[1L])
     c2 <- hex2rgb(pal[2L])
     function(v) {
-      v <- max(min(v, hi), lo)
-      t <- if (hi == lo) 0 else (v - lo) / (hi - lo)
-      rgb <- c(lerp(c1[1L], c2[1L], t), lerp(c1[2L], c2[2L], t),
-               lerp(c1[3L], c2[3L], t))
-      list(bg = to_hex(rgb), fg = if (lum(rgb) < 0.55) "#ffffff" else "#111827")
+      v <- pmax(pmin(v, hi), lo)
+      t <- if (hi == lo) rep(0, length(v)) else (v - lo) / (hi - lo)
+      ch <- function(i) round(c1[i] + (c2[i] - c1[i]) * t)
+      bg_fg(ch(1L), ch(2L), ch(3L))
     }
   }
 }
@@ -1015,7 +1061,7 @@ drilldown_table_dep <- function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".24"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".25"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"

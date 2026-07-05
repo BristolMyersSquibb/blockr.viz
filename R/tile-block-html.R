@@ -408,7 +408,10 @@ tile_html <- function(data, value = character(), group = character(),
   fspecs <- if (nrow(cells) > 0L) tile_fspecs(cells, flat) else list()
 
   body <- if (nrow(cells) == 0L) {
-    tk_empty_card()
+    # Say WHY there is nothing to draw (unconfigured / column gone / 0 rows)
+    # against the DISPLAY frame -- post-aggregation, where the value columns
+    # actually live.
+    tk_empty_card(tk_state_message(disp_data, disp_value))
   } else if (identical(layout, "table")) {
     if (grouped) {
       tk_table_matrix(cells, flat,

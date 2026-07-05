@@ -346,7 +346,7 @@ tk_secondary_node <- function(style, value, good_when, spec, context = "card",
 # ---------------------------------------------------------------------------
 
 #' @noRd
-tk_empty_card <- function() {
+tk_empty_card <- function(msg = "No data") {
   htmltools::tags$article(
     class = "tk-card is-empty",
     htmltools::tags$div(
@@ -357,7 +357,31 @@ tk_empty_card <- function() {
         '<path d="M3 3v18h18"/>',
         '<path d="M7 14.5l3-2 3 1 4-4.5" stroke-dasharray="2 2.5"/></svg>'
       )),
-      htmltools::tags$span("No data")
+      htmltools::tags$span(msg)
     )
   )
+}
+
+#' Differentiated message for a tile with no cells to draw (chart / table
+#' parity, see dt_state_message): the Value mapping unconfigured is a pick
+#' prompt; every configured value column gone (renamed/dropped upstream) is a
+#' config error naming the column(s) + the re-pick hint; a 0-row frame is
+#' just "no rows". A partially-missing pick renders the surviving columns and
+#' never reaches this (tile_long_frame yields cells for them).
+#' @noRd
+tk_state_message <- function(data, value) {
+  value <- as.character(value)
+  value <- value[nzchar(value)]
+  if (!length(value)) return("Pick a Value column in the gear")
+  missing <- setdiff(value, names(data))
+  if (length(missing) == length(value)) {
+    return(paste0(
+      "Mapped column not in data: ",
+      paste0("Value = \"", missing, "\"", collapse = ", "),
+      ". A rename, flatten or pivot upstream may have changed the column ",
+      "name \u2014 re-pick it in the gear."
+    ))
+  }
+  if (nrow(data) == 0L) return("No rows to display")
+  "No data"
 }
