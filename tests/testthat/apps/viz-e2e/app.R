@@ -115,11 +115,11 @@ serve(
         filter_values = list("North")
       ),
       tile_restored = new_tile_block(
-        value        = "revenue",
-        group        = "region",
-        drill        = TRUE,
-        filter_col   = "region",
-        filter_value = list("South")
+        value         = "revenue",
+        group         = "region",
+        drill         = TRUE,
+        filter_column = "region",
+        filter_values = list("South")
       ),
       chart_restored = new_chart_block(
         chart_type    = "bar",

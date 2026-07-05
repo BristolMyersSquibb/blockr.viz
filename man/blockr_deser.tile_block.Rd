@@ -10,11 +10,15 @@
 \item{x, data, ...}{Passed through from \code{\link[blockr.core:blockr_ser]{blockr.core::blockr_deser()}}.}
 }
 \description{
-Restores boards saved before the tile gained in-block aggregation. The
+Restores boards saved before the tile gained in-block aggregation, and
+before the drill-filter state took the shared transport names. The
 grouping column was \code{by} (now \code{group}, the dplyr::group_by column shared with
 the table), and per-measure display overrides rode on \code{measures} (dropped --
-multi-measure tiles are now homogeneous). Rename \code{by} -> \code{group} and drop
-\code{measures}; current payloads pass straight through.
+multi-measure tiles are now homogeneous). The click-filter state was
+\code{filter_col} / \code{filter_value} (now \code{filter_column} / \code{filter_values}, the
+names the chart and table share; the old scalar value coerces to the
+plural list shape). Rename \code{by} -> \code{group}, drop \code{measures}, rename the
+filter fields; current payloads pass straight through.
 }
 \details{
 Drop this method when backwards compatibility is no longer needed.

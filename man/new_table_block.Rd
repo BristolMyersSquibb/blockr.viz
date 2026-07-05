@@ -55,9 +55,14 @@ all numeric columns except those claimed by another rule. Default
 rule; \code{row_color} becomes \code{color}. Kept as formals so saved boards
 restore; no gear control, not in the registry.}
 
-\item{filter_type, filter_column, filter_values, filter_range}{Click
-filter state (kept for contract parity with the drilldown chart;
-\code{filter_range} is unused by the table).}
+\item{filter_type, filter_range}{LEGACY, ignored: the table only ever
+emits categorical filters (its JS never sets either). Kept as formals so
+saved boards restore; serialized as NULL, no gear control, not in the
+registry.}
+
+\item{filter_column, filter_values}{Click-filter state (the shared filter
+transport names, identical to the chart / tile). Kept as constructor
+params so the filter round-trips through save/restore.}
 
 \item{filter_group_cols, filter_group_vals}{Grouped-table drill filter
 state: the aligned group-key columns and values ANDed to filter the raw

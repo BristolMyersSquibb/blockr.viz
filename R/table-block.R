@@ -1282,9 +1282,13 @@ table_guidance <- function() {
 #'   `cell_color` (a [drilldown_table_color()] spec) becomes one `shadings`
 #'   rule; `row_color` becomes `color`. Kept as formals so saved boards
 #'   restore; no gear control, not in the registry.
-#' @param filter_type,filter_column,filter_values,filter_range Click
-#'   filter state (kept for contract parity with the drilldown chart;
-#'   `filter_range` is unused by the table).
+#' @param filter_column,filter_values Click-filter state (the shared filter
+#'   transport names, identical to the chart / tile). Kept as constructor
+#'   params so the filter round-trips through save/restore.
+#' @param filter_type,filter_range LEGACY, ignored: the table only ever
+#'   emits categorical filters (its JS never sets either). Kept as formals so
+#'   saved boards restore; serialized as NULL, no gear control, not in the
+#'   registry.
 #' @param filter_group_cols,filter_group_vals Grouped-table drill filter
 #'   state: the aligned group-key columns and values ANDed to filter the raw
 #'   input to a clicked row's group. Default `NULL` (no grouped drill active).
@@ -1346,10 +1350,8 @@ new_table_block <- function(rowname = NULL,
         r_drill      <- shiny::reactiveVal(drill)
         r_digits        <- shiny::reactiveVal(digits)
         r_max_height    <- shiny::reactiveVal(max_height)
-        r_filter_type   <- shiny::reactiveVal(filter_type)
         r_filter_column <- shiny::reactiveVal(filter_column)
         r_filter_values <- shiny::reactiveVal(filter_values)
-        r_filter_range  <- shiny::reactiveVal(filter_range)
         # Grouped-table drill: a row click ANDs the clicked row's group-key
         # values (aligned vectors) to filter the raw input to that group.
         r_filter_group_cols <- shiny::reactiveVal(filter_group_cols)
@@ -1402,8 +1404,6 @@ new_table_block <- function(rowname = NULL,
               upd(r_filter_group_cols, NULL)
               upd(r_filter_group_vals, NULL)
             }
-            upd(r_filter_type, "categorical")
-            upd(r_filter_range, NULL)
           } else if (identical(act, "config")) {
             p <- msg$param
             v <- msg$value
@@ -1768,10 +1768,13 @@ new_table_block <- function(rowname = NULL,
             drill      = r_drill,
             digits        = r_digits,
             max_height    = r_max_height,
-            filter_type   = r_filter_type,
             filter_column = r_filter_column,
             filter_values = r_filter_values,
-            filter_range  = r_filter_range,
+            # Legacy formals (never set by the table's JS -- it only emits
+            # categorical filters): serialized as NULL, kept as ctor formals
+            # so old saved boards restore.
+            filter_type   = function() NULL,
+            filter_range  = function() NULL,
             filter_group_cols = r_filter_group_cols,
             filter_group_vals = r_filter_group_vals,
             sortable       = r_sortable,
@@ -1793,12 +1796,12 @@ new_table_block <- function(rowname = NULL,
     dat_valid = validate_annotated_df_input,
     allow_empty_state = c("rowname", "value", "group", "summaries", "color",
       "shadings", "cell_color", "row_color", "drill", "filter_column",
-      "filter_values", "filter_range",
+      "filter_values", "filter_type", "filter_range",
       "filter_group_cols", "filter_group_vals"),
     external_ctrl = c("rowname", "value", "group", "summaries",
       "color", "shadings", "drill",
-      "digits", "max_height", "filter_type",
-      "filter_column", "filter_values", "filter_range",
+      "digits", "max_height",
+      "filter_column", "filter_values",
       "filter_group_cols", "filter_group_vals",
       "sortable", "collapsible", "search", "excel_download"),
     expr_type = "bquoted",

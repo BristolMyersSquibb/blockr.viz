@@ -29,14 +29,14 @@ registry_allowlist <- list(
   table = c(
     # Runtime filter transport: written by clicks, round-trips through
     # save/restore only -- never AI-set at creation.
-    "filter_type", "filter_column", "filter_values", "filter_range",
+    "filter_column", "filter_values",
     "filter_group_cols", "filter_group_vals",
     # Display-only gear toggles / sizing, deliberately off the AI surface.
     "max_height", "sortable", "collapsible", "search", "excel_download"
   ),
   tile = c(
     # Runtime filter transport (see the table's filter_* above).
-    "filter_col", "filter_value",
+    "filter_column", "filter_values",
     # LEGACY, ctor-only for saved-board restore: `overline` lost its gear
     # control (duplicated the Name slot); `good_when` is ignored (polarity
     # is forced to "up"). Neither may be advertised to the AI.
