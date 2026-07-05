@@ -104,13 +104,18 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                                    active = active))
   }
 
+  value_cols_raw <- value_cols
   if (is.null(label_col)) label_col <- names(data)[1L]
   if (is.null(value_cols)) value_cols <- setdiff(names(data), label_col)
   value_cols <- intersect(value_cols, names(data))
 
-  if (nrow(data) == 0L || !label_col %in% names(data) ||
-      length(value_cols) == 0L) {
-    return(dt_table_attrs(dt_message_table(), NULL, NULL, digits,
+  # Differentiated non-renderable states (chart-empty-state parity): a
+  # configured column that vanished upstream, a required mapping still
+  # unconfigured, and a genuinely 0-row frame are three different problems
+  # with three different fixes -- one generic "No data" hid all of them.
+  msg <- dt_state_message(data, label_col, value_cols, value_cols_raw)
+  if (!is.null(msg)) {
+    return(dt_table_attrs(dt_message_table(msg), NULL, NULL, digits,
                           color = color, toggles = toggles))
   }
 
@@ -318,7 +323,12 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
                           c(all_section_cols, stub_col, styling_cols))
 
   if (length(data_cols) == 0L || nrow(data) == 0L) {
-    return(dt_table_attrs(dt_message_table(), NULL, NULL, digits,
+    # Structured frames carry no gear-picked mappings, so only two states
+    # apply here: no rows vs no data columns left after the structural
+    # (.section_* / .label / styling) columns.
+    msg <- if (nrow(data) == 0L) "No rows to display"
+           else "No value columns to display"
+    return(dt_table_attrs(dt_message_table(msg), NULL, NULL, digits,
                           toggles = toggles))
   }
 
@@ -436,6 +446,38 @@ dt_col_label <- function(x, name) {
   lbl <- trimws(lbl)
   if (!nzchar(lbl) || identical(lbl, name)) return(NULL)
   lbl
+}
+
+#' Differentiated message for the flat table's non-renderable states, or NULL
+#' when the table can render. Wording mirrors the chart's empty states
+#' (chart.js): a configured column no longer in the data names the column and
+#' hints at an upstream rename + "re-pick it in the gear"; a required mapping
+#' with nothing configured is a pick prompt; a 0-row frame is just "no rows".
+#' `value_cols_raw` is the caller's pre-default `value_cols` (NULL = "all but
+#' the rowname"), so an EXPLICIT pick whose columns all vanished reads as a
+#' config error, never as empty data. A partially-missing explicit pick keeps
+#' rendering the surviving columns (the documented silent-skip rule).
+#' @noRd
+dt_state_message <- function(data, label_col, value_cols, value_cols_raw) {
+  missing <- character()
+  if (!label_col %in% names(data)) {
+    missing <- paste0("Rowname = \"", label_col, "\"")
+  }
+  raw <- as.character(value_cols_raw %||% character())
+  if (length(raw) && !length(value_cols)) {
+    missing <- c(missing,
+                 paste0("Value = \"", setdiff(raw, names(data)), "\""))
+  }
+  if (length(missing)) {
+    return(paste0(
+      "Mapped column not in data: ", paste(missing, collapse = ", "),
+      ". A rename, flatten or pivot upstream may have changed the column ",
+      "name \u2014 re-pick it in the gear."
+    ))
+  }
+  if (nrow(data) == 0L) return("No rows to display")
+  if (!length(value_cols)) return("Pick a Value column in the gear")
+  NULL
 }
 
 #' @noRd

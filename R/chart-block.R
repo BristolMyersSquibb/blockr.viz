@@ -243,10 +243,13 @@ new_chart_block <- function(
         # resolved per data push, never stored in block state.
         r_scale_map <- dd_board_scale_map()
 
-        # Column metadata (computed once when data changes)
+        # Column metadata (computed once when data changes). No nrow gate:
+        # a 0-row frame still HAS columns (names/types/labels/levels), and
+        # the gear pickers must stay usable while an upstream filter has
+        # emptied the data.
         r_col_meta <- shiny::reactive({
           d <- data()
-          shiny::req(is.data.frame(d), nrow(d) > 0)
+          shiny::req(is.data.frame(d))
           lapply(names(d), function(col) {
             vals <- d[[col]]
             lbl <- attr(vals, "label")
@@ -361,7 +364,11 @@ new_chart_block <- function(
         # only from in here, so they inherit this observer's suspension.
         shiny::observe({
           d <- data()
-          shiny::req(is.data.frame(d), nrow(d) > 0)
+          # No nrow gate: an upstream filter emptying the frame MUST push,
+          # or the browser keeps rendering (clickable) stale marks over data
+          # that no longer exists while the block's output is already the
+          # empty frame. JS renders its own empty state for 0 rows.
+          shiny::req(is.data.frame(d))
           # Reuse the column metadata reactive (same name/type/n_unique/label
           # shape) instead of recomputing it inline -- it is derived from the
           # same data() and was duplicated here.

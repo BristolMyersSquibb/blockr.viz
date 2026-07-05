@@ -1085,6 +1085,11 @@
     _showEmpty(html) {
       this._teardownCharts();
       this.chartGrid.innerHTML = html;
+      // The status footer lives OUTSIDE the grid, so it survives the empty
+      // state — but the family renders that normally refresh it are skipped.
+      // Refresh here so a drill that emptied the chart's own data still
+      // shows "Filtered: …" + Reset (the recovery path).
+      this._updateStatus();
     }
 
     // Tear down when the render shape changed; otherwise keep the slots for

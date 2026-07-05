@@ -65,11 +65,11 @@ test_that("column labels render as muted text in headers", {
   expect_false(grepl("blockr-col-label[^>]*>USUBJID<", h))
 })
 
-test_that("empty data renders a No data table", {
+test_that("empty data renders a no-rows table", {
   h <- as.character(htmltools::renderTags(
     drilldown_table(df[0, ])
   )$html)
-  expect_true(grepl("No data", h))
+  expect_true(grepl("No rows to display", h))
 })
 
 test_that("degenerate color domain falls back to plain render", {
