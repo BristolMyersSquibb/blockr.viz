@@ -528,12 +528,12 @@ test_that("tile: a filter action filters the tile block's output", {
 # SUMMARY TABLE / GT TABLE: render smoke
 # ===========================================================================
 
-test_that("summary_table gear: toggling 'overall' adds a Total row to the output", {
+test_that("summary_table gear: toggling 'overall' adds a Total column to the output", {
   skip_if_no_app()
 
   scope <- "#board-block_summary-expr-summary_input"
   before <- get_block_result("summary")
-  expect_false("Total" %in% before$.group)
+  expect_false("Total" %in% names(before))
 
   # Open the gear and tick the "Overall column" checkbox (design-system band).
   # This drives summary-table-block.js's real gear -> state -> R -> output.
@@ -550,8 +550,8 @@ test_that("summary_table gear: toggling 'overall' adds a Total row to the output
   app$wait_for_idle()
 
   after <- get_block_result("summary")
-  expect_true("Total" %in% after$.group)
-  expect_gt(nrow(after), nrow(before))
+  expect_true("Total" %in% names(after))
+  expect_gt(ncol(after), ncol(before))
 })
 
 test_that("tile: delta secondary renders and a matrix-row click drills", {
@@ -579,14 +579,15 @@ test_that("tile: delta secondary renders and a matrix-row click drills", {
   expect_equal(nrow(res), 2L)
 })
 
-test_that("summary_table: produces a tidy summary frame", {
+test_that("summary_table: produces the wide annotated summary frame", {
   skip_if_no_app()
 
   res <- get_block_result("summary")
   expect_s3_class(res, "data.frame")
   expect_gt(nrow(res), 0)
-  # The tidy summary carries header rows (.strong) and computed stats.
-  expect_true(all(c(".strong", "mean") %in% names(res)))
+  # The wide annotated df carries header rows (.strong) and one baked
+  # cell column per region level.
+  expect_true(all(c(".strong", "North", "South") %in% names(res)))
   # Header rows for each variable
   hdr <- res[!is.na(res$.strong) & res$.strong, ]
   expect_setequal(unique(hdr$.label), c("revenue", "profit"))
@@ -604,4 +605,266 @@ test_that("gt_table: registers and binds its gt output", {
        '#board-block_gt-result.shiny-bound-output.gt_shiny')"
   )
   expect_true(bound)
+})
+
+# ===========================================================================
+# DRILL LIFECYCLE (table / tile parity with the chart): real row clicks,
+# click-to-toggle, Reset, raw-value fidelity, gear uncheck, ctor restore.
+# ===========================================================================
+
+# Click the first row of `block_id`'s table whose drill cell carries the
+# given data-raw value (a REAL DOM click through table.js's tbody handler).
+dt_click_raw <- function(block_id, raw) {
+  app$run_js(sprintf(
+    "document.querySelector('%s tbody td[data-raw=\"%s\"]')
+       .closest('tr').click();",
+    dt_result(block_id), raw
+  ))
+  app$wait_for_idle()
+}
+
+dt_status_text <- function(block_id) {
+  app$get_js(sprintf(
+    "(function(){var s=document.querySelector('%s .dd-status-text');
+       return s ? s.textContent : null;})()",
+    dt_result(block_id)
+  ))
+}
+
+dt_active_rows <- function(block_id) {
+  app$get_js(sprintf(
+    "document.querySelectorAll('%s tbody tr.dt-row-active').length",
+    dt_result(block_id)
+  ))
+}
+
+test_that("table drill: a real row click filters; re-click clears (toggle)", {
+  skip_if_no_app()
+
+  # Baseline: earlier drill tests left the filter cleared.
+  expect_equal(nrow(get_block_result("table")), 6L)
+  expect_equal(dt_status_text("table"), "No filter active")
+
+  dt_click_raw("table", "West")
+  res <- get_block_result("table")
+  expect_equal(nrow(res), 1L)
+  expect_equal(res$region, "West")
+  expect_equal(dt_active_rows("table"), 1)
+  expect_equal(dt_status_text("table"), "Filtered: region = West")
+  # A genuinely LINKED downstream block sees the filtered frame.
+  expect_equal(nrow(get_block_result("table_ds")), 1L)
+
+  # Re-click the (now active) row -> filter and highlight clear; the
+  # downstream block recovers the full frame.
+  dt_click_raw("table", "West")
+  expect_equal(nrow(get_block_result("table")), 6L)
+  expect_equal(dt_active_rows("table"), 0)
+  expect_equal(dt_status_text("table"), "No filter active")
+  expect_equal(nrow(get_block_result("table_ds")), 6L)
+})
+
+test_that("table drill: the status-footer Reset clears the filter", {
+  skip_if_no_app()
+
+  dt_click_raw("table", "North")
+  expect_equal(nrow(get_block_result("table")), 2L)
+  app$run_js(sprintf(
+    "document.querySelector('%s .dd-status-reset').click();",
+    dt_result("table")
+  ))
+  app$wait_for_idle()
+  expect_equal(nrow(get_block_result("table")), 6L)
+  expect_equal(dt_active_rows("table"), 0)
+  expect_equal(dt_status_text("table"), "No filter active")
+})
+
+test_that("table drill: a rounded numeric cell filters on its RAW value", {
+  skip_if_no_app()
+
+  # The cell displays the rounded value but carries the raw one.
+  cell <- app$get_js(sprintf(
+    "(function(){var td=document.querySelector('%s tbody td[data-raw=\"0.123456\"]');
+       return td ? td.textContent.trim() : null;})()",
+    dt_result("table_num")
+  ))
+  expect_equal(cell, "0.12")
+
+  dt_click_raw("table_num", "0.123456")
+  res <- get_block_result("table_num")
+  expect_equal(nrow(res), 1L)
+  expect_equal(res$ratio, 0.123456)
+  expect_equal(res$region, "North")
+})
+
+test_that("table drill: unchecking the gear's Drill-down clears the filter", {
+  skip_if_no_app()
+
+  scope <- dt_result("table")
+  dt_click_raw("table", "East")
+  expect_equal(nrow(get_block_result("table")), 1L)
+
+  # Open the gear and uncheck the Drill-down capability section.
+  app$run_js(sprintf(
+    "document.querySelector('%s .blockr-gear-btn').click();", scope
+  ))
+  app$wait_for_idle()
+  app$run_js(sprintf(
+    "(function(){var t=Array.from(document.querySelectorAll(
+        '%s .dd-section-title--toggle'))
+       .filter(function(x){return /Drill-down/.test(x.textContent);})[0];
+     t.click();})()",
+    scope
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.5)
+  app$wait_for_idle()
+
+  # Downstream recovers AND the drill config is off (clicks now inert).
+  expect_equal(nrow(get_block_result("table")), 6L)
+  expect_null(app$get_js(sprintf(
+    "document.querySelector('%s table').getAttribute('data-dt-onclick-col')",
+    scope
+  )))
+  expect_equal(dt_active_rows("table"), 0)
+})
+
+test_that("tile drill: re-clicking the active row clears (toggle)", {
+  skip_if_no_app()
+
+  scope <- "#board-block_tile_x-expr-tile_result"
+  # The earlier tile_x test left it drilled to South; the server re-render
+  # must have marked that row active (data-tk-active -> .tk-active).
+  expect_equal(nrow(get_block_result("tile_x")), 2L)
+  app$wait_for_js(sprintf(
+    "!!document.querySelector('%s .tk-active[data-group=\"South\"]')", scope
+  ), timeout = 5000)
+
+  app$run_js(sprintf(
+    "document.querySelector('%s .tk-active[data-group=\"South\"]').click();",
+    scope
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.4)
+  app$wait_for_idle()
+
+  expect_equal(nrow(get_block_result("tile_x")), 6L)
+  expect_equal(
+    app$get_js(sprintf(
+      "document.querySelectorAll('%s .tk-active').length", scope
+    )),
+    0
+  )
+  expect_equal(
+    app$get_js(sprintf(
+      "document.querySelector('%s .dd-status-text').textContent", scope
+    )),
+    "No filter active"
+  )
+})
+
+test_that("restore: a table with ctor filter state comes up filtered + marked", {
+  skip_if_no_app()
+
+  # Ctor filter args = what a board restore replays.
+  res <- get_block_result("table_restored")
+  expect_equal(nrow(res), 2L)
+  expect_true(all(res$region == "North"))
+
+  scope <- dt_result("table_restored")
+  app$wait_for_js(sprintf(
+    "document.querySelectorAll('%s tbody tr.dt-row-active').length > 0", scope
+  ), timeout = 5000)
+  expect_equal(dt_active_rows("table_restored"), 2)
+  expect_equal(dt_status_text("table_restored"), "Filtered: region = North")
+})
+
+test_that("restore: a tile with ctor filter state marks the card + footer", {
+  skip_if_no_app()
+
+  res <- get_block_result("tile_restored")
+  expect_equal(nrow(res), 2L)
+  expect_true(all(res$region == "South"))
+
+  scope <- "#board-block_tile_restored-expr-tile_result"
+  app$wait_for_js(sprintf(
+    "!!document.querySelector('%s .tk-active[data-group=\"South\"]')", scope
+  ), timeout = 5000)
+  expect_equal(
+    app$get_js(sprintf(
+      "document.querySelector('%s .dd-status-text').textContent", scope
+    )),
+    "Filtered: region = South"
+  )
+
+  # The footer's Reset clears the restored filter too.
+  app$run_js(sprintf(
+    "document.querySelector('%s .dd-status-reset').click();", scope
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.4)
+  app$wait_for_idle()
+  expect_equal(nrow(get_block_result("tile_restored")), 6L)
+  expect_equal(
+    app$get_js(sprintf(
+      "document.querySelectorAll('%s .tk-active').length", scope
+    )),
+    0
+  )
+})
+
+test_that("restore: a chart with ctor filter state labels its footer", {
+  skip_if_no_app()
+
+  res <- get_block_result("chart_restored")
+  expect_equal(nrow(res), 2L)
+  expect_true(all(res$region == "North"))
+
+  # The config payload now carries filter_column/filter_values, so the JS
+  # restore branch re-selects the mark and the footer names the filter.
+  chart_settle("chart_restored")
+  txt <- app$get_js(
+    "document.querySelector(
+       '#board-block_chart_restored-expr-drilldown_block .dd-status-text'
+     ).textContent"
+  )
+  expect_equal(txt, "Filtered: region = North")
+})
+
+test_that("tile drill: unchecking the gear's Drill-down clears the filter", {
+  skip_if_no_app()
+
+  scope <- "#board-block_tile-expr-tile_result"
+  app$run_js(sprintf(
+    "document.querySelector('%s [data-group=\"East\"]').click();", scope
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.4)
+  app$wait_for_idle()
+  expect_equal(nrow(get_block_result("tile")), 1L)
+
+  # Open the gear (the band was rebuilt by the filter re-render) and uncheck
+  # the picker-less Drill-down section: the engine's off-branch must clear
+  # the drill config AND the active filter, so downstream recovers.
+  app$run_js(sprintf(
+    "document.querySelector('%s .blockr-gear-btn').click();", scope
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.3)
+  app$run_js(sprintf(
+    "(function(){var t=Array.from(document.querySelectorAll(
+        '%s .dd-section-title--toggle'))
+       .filter(function(x){return /Drill-down/.test(x.textContent);})[0];
+     t.click();})()",
+    scope
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.5)
+  app$wait_for_idle()
+
+  expect_equal(nrow(get_block_result("tile")), 6L)
+  # Drill is off: the wrapper no longer wires clicks.
+  expect_null(app$get_js(sprintf(
+    "document.querySelector('%s .tk-block').getAttribute('data-tk-drill')",
+    scope
+  )))
 })

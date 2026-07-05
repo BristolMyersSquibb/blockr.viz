@@ -90,7 +90,8 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                          row_hex = NULL, color = NULL,
                          sortable = TRUE, collapsible = TRUE, search = TRUE,
                          excel_download = FALSE, group_cols = NULL,
-                         group = character(), summaries = list()) {
+                         group = character(), summaries = list(),
+                         active = NULL) {
   data <- fmt_to_wide(data)
   # Display-option states (sortable / collapsible / search / excel) ride on the
   # <table> as data-attributes so the gear popover reads their current value;
@@ -99,7 +100,8 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   toggles <- list(sortable = sortable, collapsible = collapsible,
                   search = search, excel_download = excel_download)
   if (dt_is_structured(data)) {
-    return(dt_table_tag_structured(data, drill, digits, toggles))
+    return(dt_table_tag_structured(data, drill, digits, toggles,
+                                   active = active))
   }
 
   if (is.null(label_col)) label_col <- names(data)[1L]
@@ -157,6 +159,24 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   # escaped, quotes are not.
   esc <- function(x) htmltools::htmlEscape(as.character(x), attribute = FALSE)
 
+  # Drill-relevant columns carry each cell's RAW value on a data-raw
+  # attribute (read by wireClick in table.js instead of the displayed text):
+  # numeric cells display rounded and NA renders as an em-dash, so a filter
+  # built from textContent would match zero rows and silently empty
+  # downstream. `as.character(raw)` round-trips exactly -- comparing a
+  # numeric column to a character value in the filter expr coerces through
+  # the same as.character(). NA cells get NO data-raw (the click is a no-op;
+  # see the dt-row-nodrill class below).
+  raw_cols <- intersect(unique(c(drill %||% character(),
+                                 group_cols %||% character())),
+                        c(label_col, value_cols))
+  raw_attr <- function(x) {
+    ifelse(is.na(x), "", paste0(
+      " data-raw=\"",
+      htmltools::htmlEscape(as.character(x), attribute = TRUE), "\""
+    ))
+  }
+
   col_cells <- vector("list", length(value_cols))
   # Display strings per column, kept for the server-side width estimation
   # below (same strings the cells render, no second formatting pass).
@@ -192,7 +212,8 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
           }, character(1L))
         }
       }
-      out_j[keep] <- paste0("<td class=\"", td_cls, "\"", style, ">",
+      raw <- if (value_cols[j] %in% raw_cols) raw_attr(vk) else ""
+      out_j[keep] <- paste0("<td class=\"", td_cls, "\"", raw, style, ">",
                             esc(disp), "</td>")
     }
     col_cells[[j]] <- out_j
@@ -208,18 +229,27 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   # horizontally, this stub cell's bar should become a dedicated left:0 sticky
   # indicator cell -- which needs the sort/drill column-index map to skip it.
   stub_lbl <- esc(data[[label_col]])
+  stub_raw <- if (label_col %in% raw_cols) raw_attr(data[[label_col]]) else ""
   if (!is.null(row_hex) && length(row_hex) == nrow(data)) {
     bar <- ifelse(
       is.na(row_hex), "",
       paste0(" style=\"box-shadow:inset 3px 0 0 0 ", row_hex, ";\"")
     )
-    stub_cells <- paste0("<td class=\"blockr-stub blockr-row-bar\"", bar, ">",
-                         stub_lbl, "</td>")
+    stub_cells <- paste0("<td class=\"blockr-stub blockr-row-bar\"", stub_raw,
+                         bar, ">", stub_lbl, "</td>")
   } else {
-    stub_cells <- paste0("<td class=\"blockr-stub\">", stub_lbl, "</td>")
+    stub_cells <- paste0("<td class=\"blockr-stub\"", stub_raw, ">",
+                         stub_lbl, "</td>")
+  }
+  # A row whose drill value(s) include an NA cannot emit a filter (no data-raw
+  # -> the click is a no-op); mark it so it doesn't LOOK clickable.
+  row_cls <- rep("blockr-data-row", nrow(data))
+  if (length(raw_cols)) {
+    nodrill <- Reduce(`|`, lapply(raw_cols, function(cn) is.na(data[[cn]])))
+    row_cls[nodrill] <- "blockr-data-row dt-row-nodrill"
   }
   row_inner  <- do.call(paste0, c(list(stub_cells), col_cells))
-  rows_html  <- paste0("<tr class=\"blockr-data-row\">", row_inner, "</tr>",
+  rows_html  <- paste0("<tr class=\"", row_cls, "\">", row_inner, "</tr>",
                        collapse = "")
   tbody <- htmltools::tags$tbody(htmltools::HTML(rows_html))
 
@@ -242,7 +272,7 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                  color = color, shadings = shadings,
                  num_cols = value_cols[num_flag],
                  toggles = toggles, group_cols = group_cols,
-                 group = group, summaries = summaries)
+                 group = group, summaries = summaries, active = active)
 }
 
 # ---------------------------------------------------------------------------
@@ -273,7 +303,8 @@ dt_is_structured <- function(data) {
 #' structured tables render uncoloured; the stub column is the drill target
 #' when `drill` names it.
 #' @noRd
-dt_table_tag_structured <- function(data, drill, digits, toggles = NULL) {
+dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
+                                    active = NULL) {
   sortable    <- toggles$sortable %||% TRUE
   collapsible <- toggles$collapsible %||% TRUE
   all_section_cols <- grep("^\\.section_\\d+$", names(data), value = TRUE)
@@ -313,7 +344,7 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL) {
   }
   onclick <- dt_onclick(drill_use, c(stub_col %||% character(), data_cols))
   dt_table_attrs(table_tag, onclick$col, onclick$idx, digits,
-                 toggles = toggles)
+                 toggles = toggles, active = active)
 }
 
 #' Cell-visual spec for [drilldown_table()]
@@ -466,6 +497,25 @@ dd_table_aggregate <- function(data, group, summaries) {
        metric_cols = vapply(plan, `[[`, "", "name"), aggregated = TRUE)
 }
 
+#' min/max with an empty-group guard.
+#'
+#' `min(x, na.rm = TRUE)` on an all-NA (or empty) group warns and returns
+#' `Inf` (`-Inf` for max) -- neither a real extremum nor the `NA` the rest of
+#' the vocabulary yields (mean -> NaN, median -> NA). An empty group has no
+#' extremum: return NA (of `x`'s type), matching the JS engine's null and
+#' keeping a chart and its table twin on the same number. `na.rm` is accepted
+#' (dd_metric_plan composes every numeric aggregation as `fn(x, na.rm = TRUE)`)
+#' but missing values are always removed.
+#' @noRd
+dd_agg_min <- function(x, na.rm = TRUE) {
+  if (all(is.na(x))) x[NA_integer_] else min(x, na.rm = TRUE)
+}
+
+#' @noRd
+dd_agg_max <- function(x, na.rm = TRUE) {
+  if (all(is.na(x))) x[NA_integer_] else max(x, na.rm = TRUE)
+}
+
 #' Plan the metric columns for a summaries list.
 #'
 #' For each metric produces `list(name, expr, label)`: `name` is the bold header
@@ -476,10 +526,11 @@ dd_table_aggregate <- function(data, group, summaries) {
 #' (numeric) column. Non-numeric or missing columns fall away.
 #' @noRd
 dd_metric_plan <- function(summaries, data) {
-  words <- c(mean = "Mean", median = "Median", sum = "Sum", min = "Min",
-             max = "Max", count_distinct = "Distinct")
+  # Words come from the shared AGG_WORDS (R/block-arguments.R), the R twin of
+  # the JS AGG_WORDS -- one home per side, tied by the drift test.
   fn_calls <- list(mean = quote(mean), median = quote(stats::median),
-                   sum = quote(sum), min = quote(min), max = quote(max))
+                   sum = quote(sum), min = quote(dd_agg_min),
+                   max = quote(dd_agg_max))
   orig_label <- function(col) {
     l <- attr(data[[col]], "label", exact = TRUE)
     if (is.character(l) && length(l) == 1L && nzchar(l)) l else col
@@ -524,7 +575,8 @@ dd_metric_plan <- function(summaries, data) {
       cols <- setdiff(all_num, claimed)
     }
     if (identical(fn, "count")) {
-      add(uniq("Count", "count"), quote(dplyr::n()), "Number of Observations")
+      add(uniq(AGG_WORDS[["count"]], "count"), quote(dplyr::n()),
+          "Number of Observations")
     } else if (identical(fn, "count_distinct")) {
       for (col in cols) {
         add(uniq(col, "distinct"),
@@ -533,7 +585,7 @@ dd_metric_plan <- function(summaries, data) {
             # must read the same number on a chart and its table twin.
             bquote(dplyr::n_distinct(.data[[.(col)]], na.rm = TRUE),
                    list(col = col)),
-            paste0(words[["count_distinct"]], ": ", orig_label(col)))
+            paste0(AGG_WORDS[["count_distinct"]], ": ", orig_label(col)))
       }
     } else if (!is.null(fn_calls[[fn]])) {
       fc <- fn_calls[[fn]]
@@ -542,7 +594,7 @@ dd_metric_plan <- function(summaries, data) {
           add(uniq(col, fn),
               bquote(.(fc)(.data[[.(col)]], na.rm = TRUE),
                      list(fc = fc, col = col)),
-              paste0(words[[fn]], ": ", orig_label(col)))
+              paste0(AGG_WORDS[[fn]], ": ", orig_label(col)))
         }
       }
     }
@@ -703,6 +755,34 @@ dd_group_filter_call <- function(cols, vals) {
   Reduce(function(a, b) bquote(.(a) & .(b)), conds)
 }
 
+#' Serialize the block's active drill-filter state for the `data-dt-active`
+#' table attribute (JSON lives only at this edge, like `summaries`). `active`
+#' is `list(col, vals, gcols, gvals)` -- the filter reactiveVals as captured
+#' at render time; returns `NULL` when no filter is active so the attribute
+#' is simply absent.
+#' @noRd
+dd_active_filter_json <- function(active) {
+  if (is.null(active)) return(NULL)
+  gcols <- as.character(unlist(active$gcols %||% character()))
+  gvals <- as.character(unlist(active$gvals %||% character()))
+  if (length(gcols) && length(gcols) == length(gvals)) {
+    return(as.character(jsonlite::toJSON(
+      list(filters = unname(Map(
+        function(cl, vl) list(column = cl, value = vl), gcols, gvals
+      ))),
+      auto_unbox = TRUE
+    )))
+  }
+  col  <- active$col
+  vals <- as.character(unlist(active$vals %||% character()))
+  if (is.null(col) || !length(vals)) return(NULL)
+  as.character(jsonlite::toJSON(
+    # auto_unbox = FALSE keeps the `values` vector an array even at length 1.
+    list(column = jsonlite::unbox(as.character(col)[1L]), values = vals),
+    auto_unbox = FALSE
+  ))
+}
+
 #' Drill onclick target for a row click: the column name + its 0-based index in
 #' the rendered column order, or NULLs when `drill` is unset / not a column.
 #' @noRd
@@ -722,10 +802,16 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
                            digits, color = NULL, shadings = list(),
                            num_cols = NULL,
                            toggles = NULL, group_cols = NULL,
-                           group = character(), summaries = list()) {
+                           group = character(), summaries = list(),
+                           active = NULL) {
   on_off <- function(x) if (isTRUE(x)) "on" else "off"
   htmltools::tagAppendAttributes(
     table_tag,
+    # Active drill filter at render time (JSON; NULL = none). table.js
+    # matches rows by their data-raw values and re-applies the dt-row-active
+    # highlight, so a restored board (or a config re-render) shows which row
+    # drives the downstream filter.
+    `data-dt-active` = dd_active_filter_json(active),
     # Current aggregation config, read back by the gear (group comma-joined,
     # summaries a JSON array of {func, cols} -- JSON lives only at this edge).
     `data-dt-group` = paste(group %||% character(), collapse = ","),
@@ -760,7 +846,8 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
 #' plain.
 #' @noRd
 dt_chrome <- function(elem_id, structured, max_height, inner,
-                      search = TRUE, download_slot = NULL) {
+                      search = TRUE, download_slot = NULL,
+                      status_slot = NULL) {
   wrapper_id <- paste0(
     "blockr-dt-", sub("^file", "", basename(tempfile("")))
   )
@@ -822,7 +909,11 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
         class = "blockr-table-wrapper",
         style = scroll_style,
         inner
-      )
+      ),
+      # Active-filter status line + Reset (chart-footer parity), rendered
+      # server-side off the block's filter state (see the block server's
+      # dt_status output) so it also survives a board restore.
+      status_slot
     )
   )
 }
@@ -924,7 +1015,7 @@ drilldown_table_dep <- function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".23"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".24"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"
@@ -1292,7 +1383,41 @@ new_table_block <- function(rowname = NULL,
             max_height = shiny::isolate(r_max_height()),
             inner      = shiny::uiOutput(ns("dt_table")),
             search     = isTRUE(r_search()),
-            download_slot = shiny::uiOutput(ns("dt_download"), inline = TRUE)
+            download_slot = shiny::uiOutput(ns("dt_download"), inline = TRUE),
+            status_slot   = shiny::uiOutput(ns("dt_status"))
+          )
+        })
+
+        # Active-filter status line + Reset (the chart footer's classes, so
+        # both read identically). A tiny output of the filter reactiveVals
+        # only -- the (potentially heavy) table body never re-renders on a
+        # click. Present whenever drill is enabled ("No filter active", chart
+        # parity) or a filter is still active (e.g. restored from a saved
+        # board); the Reset button is wired by delegation in table.js.
+        output$dt_status <- shiny::renderUI({
+          gc  <- as.character(unlist(r_filter_group_cols()))
+          gv  <- as.character(unlist(r_filter_group_vals()))
+          col <- r_filter_column()
+          vals <- as.character(unlist(r_filter_values()))
+          grouped_on <- length(gc) > 0 && length(gc) == length(gv)
+          single_on  <- !is.null(col) && length(vals) > 0
+          drill_on   <- !is.null(r_drill()) && nzchar(r_drill())
+          if (!grouped_on && !single_on && !drill_on) return(NULL)
+          text <- if (grouped_on) {
+            paste0("Filtered: ", paste0(gc, " = ", gv, collapse = " & "))
+          } else if (single_on) {
+            paste0("Filtered: ", col, " = ", paste(vals, collapse = ", "))
+          } else {
+            "No filter active"
+          }
+          htmltools::tags$div(
+            class = "dd-status-footer",
+            htmltools::tags$span(class = "dd-status-text", text),
+            if (grouped_on || single_on) {
+              htmltools::tags$button(
+                type = "button", class = "dd-status-reset", "Reset"
+              )
+            }
           )
         })
 
@@ -1340,6 +1465,15 @@ new_table_block <- function(rowname = NULL,
         output$dt_table <- shiny::renderUI({
           d <- tryCatch(ann_data(), error = function(e) NULL)
           shiny::req(is.data.frame(d))
+          # Filter state at render time, ISOLATED: the table body must never
+          # re-render on a click (the split-render perf contract) -- the JS
+          # keeps the row highlight live between renders, and any fresh
+          # render (restore, config edit, new data) re-reads the then-current
+          # state here, so the highlight survives those too.
+          act <- shiny::isolate(list(
+            col   = r_filter_column(),  vals  = r_filter_values(),
+            gcols = r_filter_group_cols(), gvals = r_filter_group_vals()
+          ))
           # Aggregation is a DISPLAY projection: when `group` is set, draw the
           # summarised frame (one row per group + a measure). The block's data
           # output stays the raw input filtered by the click (see `expr`), and
@@ -1404,7 +1538,8 @@ new_table_block <- function(rowname = NULL,
                 sortable    = isTRUE(r_sortable()),
                 collapsible = isTRUE(r_collapsible()),
                 search      = isTRUE(r_search()),
-                excel_download = isTRUE(r_excel_download())
+                excel_download = isTRUE(r_excel_download()),
+                active     = act
               ),
               error = function(e) {
                 shiny::tags$div(
@@ -1457,7 +1592,8 @@ new_table_block <- function(rowname = NULL,
               sortable    = isTRUE(r_sortable()),
               collapsible = isTRUE(r_collapsible()),
               search      = isTRUE(r_search()),
-              excel_download = isTRUE(r_excel_download())
+              excel_download = isTRUE(r_excel_download()),
+              active     = act
             ),
             error = function(e) {
               shiny::tags$div(

@@ -268,8 +268,8 @@ new_chart_block <- function(
         # columns a click filters on / a mark is labelled by.
         # Columns the current mapping needs (so the whole wide flatten is
         # never shipped). Reads the config reactiveVals, so the enclosing
-        # observe re-runs when the mapping changes -- same as before the
-        # roles refactor.
+        # reactive (r_needed_cols below) invalidates when the mapping
+        # changes -- same set as before the payload-cache refactor.
         needed_cols <- function(d) {
           # as.character(unlist(...)) so a config arg that arrives as an
           # empty list() -- e.g. a NULL aesthetic corrupted by DAG copy/paste
@@ -293,31 +293,85 @@ new_chart_block <- function(
             needed != ".count" & needed %in% names(d)]
         }
 
+        # Columns the current mapping ships, as their own reactive so the
+        # JSON cache below only invalidates when the shipped-column set can
+        # change (data or a mapping role), never on a presentation-only
+        # edit (sort_dir, orientation, bar_mode, ...).
+        r_needed_cols <- shiny::reactive({
+          needed_cols(data())
+        })
+
+        # Serialized data payload, cached. jsonlite::toJSON over all rows is
+        # the expensive part of every push, and it depends only on the data
+        # and the shipped columns -- so a presentation-only gear edit
+        # re-sends the SAME payload instead of re-serializing the frame.
+        # `rev` ticks only when this reactive actually recomputes: shiny
+        # splices the json-classed string verbatim into the websocket
+        # message (json_verbatim), so the browser receives a parsed OBJECT
+        # and cannot use string identity -- an unchanged rev is its signal
+        # to skip the row conversion (see setData in chart.js). Read
+        # exclusively inside the gated observer below: a reactive is
+        # pull-based, so it stays suspended with the observer for hidden
+        # panels.
+        payload_rev <- 0L
+        r_data_json <- shiny::reactive({
+          d <- data()
+          shiny::req(is.data.frame(d))
+          needed <- r_needed_cols()
+          df_send <- if (length(needed)) {
+            d[, needed, drop = FALSE]
+          } else {
+            d[0]
+          }
+          payload_rev <<- payload_rev + 1L
+          list(
+            rev = payload_rev,
+            json = jsonlite::toJSON(df_send, dataframe = "columns",
+                                    digits = NA)
+          )
+        })
+
+        # Smoother overlay, cached on exactly compute_smoother_series()'s
+        # inputs: the smoother kind, the data, and the x/y/color/series
+        # roles. A loess fit (surface = "direct") is O(n^2), so any other
+        # gear edit must reuse the cached fit. With smoother "none" the
+        # early return keeps the reactive off the data dependency entirely.
+        r_smoother_series <- shiny::reactive({
+          sm <- r_smoother()
+          if (is.null(sm) || identical(sm, "none")) return(NULL)
+          tryCatch(compute_smoother_series(
+            data(), sm, r_x(), r_y(), r_color(), r_series()
+          ), error = function(e) {
+            # Keep the NULL fallback (no overlay) but surface the failure
+            # so a broken smoother fit is diagnosable instead of silent.
+            warning("drilldown_chart smoother computation failed: ",
+                    conditionMessage(e), call. = FALSE)
+            NULL
+          })
+        })
+
         # Push data + config to JS. Single observe, exactly as before the
         # roles refactor: this shape is what the blockr.dock lazy-eval
         # card-probe pairing correctly suspends for hidden panels, so
         # off-view charts do not render. (The earlier observeEvent +
         # separate config channel rewrite escaped that gating and was the
         # AE-tab freeze.) Only the columns the current mapping needs are
-        # shipped, never the whole wide flatten.
+        # shipped, never the whole wide flatten. The expensive pieces
+        # (toJSON, smoother fit) live in the cached reactives above -- read
+        # only from in here, so they inherit this observer's suspension.
         shiny::observe({
           d <- data()
           shiny::req(is.data.frame(d), nrow(d) > 0)
-          needed <- needed_cols(d)
-          df_send <- if (length(needed)) {
-            d[, needed, drop = FALSE]
-          } else {
-            d[0]
-          }
           # Reuse the column metadata reactive (same name/type/n_unique/label
           # shape) instead of recomputing it inline -- it is derived from the
           # same data() and was duplicated here.
           col_meta <- r_col_meta()
+          payload <- r_data_json()
           session$sendCustomMessage("drilldown-data", list(
             id = ns("drilldown_block"),
             columns = col_meta,
-            data = jsonlite::toJSON(df_send, dataframe = "columns",
-                                    digits = NA),
+            data = payload$json,
+            data_rev = payload$rev,
             config = list(
               group = r_group(), color = r_color(), facet = r_facet(),
               value = r_value(), func = r_func(),
@@ -328,6 +382,14 @@ new_chart_block <- function(
               # user adds it (an empty [] would read as "present").
               tt_fields = if (length(r_tt_fields())) as.list(r_tt_fields()) else NULL,
               drill = r_drill(), sort_by = r_sort_by(),
+              # Click-filter state, ISOLATED: reading it reactively would
+              # re-pump the whole data frame on every click (the render-storm
+              # guard above). Only a genuine re-send (restore at session
+              # start, config/data change) carries it -- exactly what the JS
+              # restore branch needs to re-select the mark and label the
+              # footer. as.list() so a length-1 value stays a JSON array.
+              filter_column = shiny::isolate(r_filter_column()),
+              filter_values = as.list(shiny::isolate(r_filter_values())),
               sort_dir = r_sort_dir(), orientation = r_orientation(),
               bar_mode = r_bar_mode(),
               line_width_mult = r_line_width_mult(),
@@ -343,15 +405,7 @@ new_chart_block <- function(
               # serializes as a JSON array.
               baseline = r_baseline(),
               waterfall_totals = as.list(r_waterfall_totals()),
-              smoother_series = tryCatch(compute_smoother_series(
-                d, r_smoother(), r_x(), r_y(), r_color(), r_series()
-              ), error = function(e) {
-                # Keep the NULL fallback (no overlay) but surface the failure
-                # so a broken smoother fit is diagnosable instead of silent.
-                warning("drilldown_chart smoother computation failed: ",
-                        conditionMessage(e), call. = FALSE)
-                NULL
-              }),
+              smoother_series = r_smoother_series(),
               lo = r_lo(), hi = r_hi(),
               # Board scale map, resolved for the chart type's colored role
               # (NULL when no map / no binding / no colored role -- JS then
@@ -423,6 +477,7 @@ new_chart_block <- function(
             if (!is.null(msg$sort_dir))   upd(r_sort_dir, msg$sort_dir)
             if (!is.null(msg$orientation)) upd(r_orientation, msg$orientation)
             if (!is.null(msg$bar_mode))   upd(r_bar_mode, msg$bar_mode)
+            if (!is.null(msg$baseline))   upd(r_baseline, msg$baseline)
             if (!is.null(msg$smoother))   upd(r_smoother, msg$smoother)
             if (!is.null(msg$identity_line)) {
               upd(r_identity_line, msg$identity_line)
@@ -649,11 +704,18 @@ new_chart_block <- function(
     dat_valid = function(data) {
       if (!is.data.frame(data)) stop("Input must be a data frame")
     },
+    # `value` must stay listed: the gear legitimately empties it mid-config
+    # (reconcileValue in drilldown-agg.js / _ensureBoxplotMetric in chart.js
+    # set value = '' when the aggregation changes and the old column no longer
+    # fits) and the observer stores that verbatim -- without the entry the
+    # block silently wedges (reference_blockr_allow_empty_state_wedge).
+    # `func` is NOT listed: the JS side never emits it empty (a fixed-option
+    # select, backfilled to "count"/"mean" wherever unset).
     allow_empty_state = c("group", "color", "facet", "filter_column",
-      "filter_values", "x", "y", "xend", "series", "label", "tt_fields",
-      "drill", "sort_by", "sort_dir", "filter_range", "filter_point",
-      "step", "ref_x", "ref_y", "smoother", "identity_line", "box_points",
-      "lo", "hi", "waterfall_totals"),
+      "filter_values", "value", "x", "y", "xend", "series", "label",
+      "tt_fields", "drill", "sort_by", "sort_dir", "filter_range",
+      "filter_point", "step", "ref_x", "ref_y", "smoother", "identity_line",
+      "box_points", "lo", "hi", "waterfall_totals"),
     external_ctrl = c("group", "color", "facet", "value", "func",
       "chart_type", "x", "y", "xend", "series", "label", "tt_fields", "drill",
       "sort_by", "sort_dir", "orientation", "bar_mode", "filter_type",

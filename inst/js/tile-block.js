@@ -16,19 +16,39 @@
   var DAgg = /** @type {VizDrilldownAgg} */ (
     (typeof Blockr !== "undefined" && Blockr.DrilldownAgg) || window.DrilldownAgg);
 
+  // Emit the filter-clear action (chart parity: _sendClearFilter). The R
+  // side's filter branch reads the null column/values as "clear" and resets
+  // the filter reactiveVals, so downstream recovers.
+  /** @param {string} elemId */
+  function sendClearFilter(elemId) {
+    if (!window.Shiny || !Shiny.setInputValue) return;
+    Shiny.setInputValue(elemId + '_action', {
+      action: 'filter', column: null, values: null, filter_type: 'categorical'
+    }, { priority: 'event' });
+  }
+
   // ---- drill: card / row click -> categorical filter on the group ----------
   /** @param {Element} root */
   function wireDrill(root) {
     if (root.getAttribute('data-tk-drill') !== '1') return;
-    var elemId = root.getAttribute('data-tk-elem-id');
+    var elemIdAttr = root.getAttribute('data-tk-elem-id');
     var col = root.getAttribute('data-tk-group');
-    if (!elemId || !col) return;
+    if (!elemIdAttr || !col) return;
+    // Rebound after the guard so the closures below see a plain string.
+    const elemId = elemIdAttr;
     root.addEventListener('click', function (e) {
       var tgt = /** @type {Element | null} */ (e.target);
       var hit = tgt && tgt.closest('[data-group]');
       if (!hit || !root.contains(hit)) return;
       var val = hit.getAttribute('data-group');
       if (val == null || val === '') return;
+      // Click-to-toggle (chart parity): re-clicking the active card / row
+      // clears the filter and the highlight.
+      if (hit.classList.contains('tk-active')) {
+        hit.classList.remove('tk-active');
+        sendClearFilter(elemId);
+        return;
+      }
       if (window.Shiny && Shiny.setInputValue) {
         Shiny.setInputValue(elemId + '_action', {
           action: 'filter', column: col, values: [val], filter_type: 'categorical'
@@ -38,6 +58,38 @@
         n.classList.remove('tk-active');
       });
       hit.classList.add('tk-active');
+    });
+  }
+
+  // Active-filter indication (restore + server re-render): the R renderer
+  // stamps the active drill value(s) on the wrapper (data-tk-active, a JSON
+  // array) and renders the status footer with its Reset control; mark the
+  // matching card(s)/row(s) and delegate Reset clicks. The tile re-renders
+  // per filter change, so this runs against fresh markup every time.
+  /** @param {Element} root */
+  function wireActive(root) {
+    var elemIdAttr = root.getAttribute('data-tk-elem-id');
+    if (!elemIdAttr) return;
+    // Rebound after the guard so the closure sees a plain string.
+    const elemId = elemIdAttr;
+    root.addEventListener('click', function (e) {
+      var t = /** @type {Element | null} */ (e.target);
+      if (!t || !t.closest('.dd-status-reset')) return;
+      root.querySelectorAll('.tk-active').forEach(function (n) {
+        n.classList.remove('tk-active');
+      });
+      sendClearFilter(elemId);
+    });
+    var activeJson = root.getAttribute('data-tk-active');
+    if (!activeJson) return;
+    /** @type {any} */
+    var vals = null;
+    try { vals = JSON.parse(activeJson); } catch (err) { vals = null; }
+    if (!vals || !vals.length) return;
+    root.querySelectorAll('[data-group]').forEach(function (n) {
+      if (vals.indexOf(n.getAttribute('data-group')) !== -1) {
+        n.classList.add('tk-active');
+      }
     });
   }
 
@@ -225,7 +277,14 @@
         sendConfig(elemId, key, v);
       },
       onMults: function () {},
-      onClearFilter: function () {},
+      // Engine hook: a drill section-uncheck / re-aim must drop the emitted
+      // filter (or downstream stays filtered forever with clicks inert).
+      onClearFilter: function () {
+        root.querySelectorAll('.tk-active').forEach(function (n) {
+          n.classList.remove('tk-active');
+        });
+        sendClearFilter(elemId);
+      },
       ensureDefaults: function () {},
       afterTypeChange: function () {},
       isOpen: function () { return pop.classList.contains('blockr-settings--open'); },
@@ -265,6 +324,7 @@
     root.setAttribute('data-tk-initialized', '1');
     buildCogwheel(root);
     wireDrill(root);
+    wireActive(root);
   }
 
   /** @param {Document | Element} [ctx] */

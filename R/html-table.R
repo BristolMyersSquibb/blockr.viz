@@ -548,8 +548,18 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
       paste0(chev_btn, esc(data[[stub_col]])),
       esc(data[[stub_col]]))
     stub_cls <- ifelse(toggle_rows, "blockr-stub blockr-has-toggle", "blockr-stub")
-    stub_html <- paste0("<td class=\"", stub_cls, "\"", stub_style, ">",
-                        stub_inner, "</td>")
+    # The stub carries its raw value on data-raw: the structured table's
+    # drill target is the stub column, and the drilldown table JS reads the
+    # attribute (never the displayed text, which may include toggle chrome).
+    # NA stubs get no attribute -> the click is a no-op there.
+    stub_raw <- ifelse(
+      is.na(data[[stub_col]]), "",
+      paste0(" data-raw=\"",
+             htmltools::htmlEscape(as.character(data[[stub_col]]),
+                                   attribute = TRUE), "\"")
+    )
+    stub_html <- paste0("<td class=\"", stub_cls, "\"", stub_raw, stub_style,
+                        ">", stub_inner, "</td>")
   } else {
     stub_html <- rep("", n_rows)
   }

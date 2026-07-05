@@ -119,6 +119,16 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_string()
     ),
+    tt_fields = new_block_arg(
+      paste0(
+        "Extra column names appended to each mark's hover tooltip, beyond ",
+        "the mapped roles (timeline/gantt). Display-only \u2014 never affects ",
+        "the plot; a listed column dropped upstream is silently omitted. ",
+        "Empty = no extra tooltip fields."
+      ),
+      example = NULL,
+      type = arg_array(arg_string())
+    ),
     drill = new_block_arg(
       paste0(
         "Drill-down: what a SELECTION (click or brush) filters downstream on. ",
@@ -180,6 +190,37 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_string()
     ),
+    step = new_block_arg(
+      paste0(
+        "Step-line mode for line charts. null (default) draws straight ",
+        "segments; \"start\", \"middle\" or \"end\" draw a stepped line ",
+        "(where along the interval the vertical jump happens). Use for ",
+        "values that hold between observations (dose levels, states). ",
+        "Line charts only."
+      ),
+      example = NULL,
+      type = arg_enum(c("start", "middle", "end"))
+    ),
+    ref_x = new_block_arg(
+      paste0(
+        "Numeric reference-line value(s): each entry draws a dashed ",
+        "VERTICAL guide line at that x position. LITERAL numbers (e.g. a ",
+        "threshold like 5), never column names. Empty = no vertical ",
+        "reference line. Scatter/line charts."
+      ),
+      example = NULL,
+      type = arg_array(arg_number())
+    ),
+    ref_y = new_block_arg(
+      paste0(
+        "Numeric reference-line value(s): each entry draws a dashed ",
+        "HORIZONTAL guide line at that y position (e.g. a normal-range ",
+        "limit). LITERAL numbers, never column names. Empty = no ",
+        "horizontal reference line. Scatter/line charts."
+      ),
+      example = NULL,
+      type = arg_array(arg_number())
+    ),
     line_width_mult = new_block_arg(
       paste0(
         "Line width multiplier for line charts (individual only). 1.0\u00d7 ",
@@ -227,6 +268,14 @@ chart_arguments <- function() {
       ),
       example = NULL
     ),
+    filter_point = new_block_arg(
+      paste0(
+        "Runtime filter-transport state for a single-point click on a ",
+        "scatter with no drill column (x_col, y_col, x_val, y_val). ",
+        "Usually null at creation."
+      ),
+      example = NULL
+    ),
     sort_by = new_block_arg(
       paste0(
         "Category-axis ordering for aggregated charts. \"value\" ",
@@ -244,6 +293,48 @@ chart_arguments <- function() {
       ),
       example = "desc",
       type = arg_enum(c("asc", "desc"))
+    ),
+    orientation = new_block_arg(
+      paste0(
+        "Bar orientation: \"horizontal\" (default; category on the y-axis, ",
+        "best for long labels) or \"vertical\". Presentation only \u2014 the ",
+        "group/value mapping is unchanged. Bar charts only."
+      ),
+      example = "horizontal",
+      type = arg_enum(c("horizontal", "vertical"))
+    ),
+    bar_mode = new_block_arg(
+      paste0(
+        "Layout for a color-split bar: \"stacked\" (default \u2014 color ",
+        "segments stack into one bar per group), \"grouped\" (segments sit ",
+        "side-by-side / dodged, for comparing absolute values), or ",
+        "\"percent\" (stacked but each group normalized to 100%, for ",
+        "comparing composition). No effect without a `color` split; ignored ",
+        "when baseline=\"cumulative\" (waterfall). Bar charts only."
+      ),
+      example = "stacked",
+      type = arg_enum(c("stacked", "grouped", "percent"))
+    ),
+    baseline = new_block_arg(
+      paste0(
+        "Bar baseline mode: \"zero\" (default \u2014 every bar starts at 0) or ",
+        "\"cumulative\" (a waterfall/bridge \u2014 each bar floats from the ",
+        "running cumulative of the bars before it; each value is a DELTA and ",
+        "the step axis honors data order). chart_type=\"waterfall\" implies ",
+        "\"cumulative\". Bar family only."
+      ),
+      example = "zero",
+      type = arg_enum(c("zero", "cumulative"))
+    ),
+    waterfall_totals = new_block_arg(
+      paste0(
+        "Group (step) values rendered as total/subtotal bars in a ",
+        "cumulative-baseline bar: their baseline resets to 0 and they show ",
+        "the absolute running cumulative (e.g. [\"Profit\"] in a Revenue -> ",
+        "Costs -> Profit bridge). Empty = every bar is a relative delta."
+      ),
+      example = NULL,
+      type = arg_array(arg_string())
     )
   )
 }

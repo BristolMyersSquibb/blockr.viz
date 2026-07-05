@@ -57,6 +57,23 @@ test_that("delta polarity respects good_when", {
   expect_equal(blockr.viz:::tk_delta_class(0, "up"), "flat")
 })
 
+test_that("pill tone maps warn-family statuses to warn, not bad", {
+  tone <- blockr.viz:::tk_pill_tone
+  for (s in c("warn", "warning", "at risk", "amber")) {
+    expect_equal(tone(s), "warn")
+  }
+  expect_equal(tone("neutral"), "neutral")
+  expect_equal(tone("some free text"), "neutral")
+  expect_equal(tone("on track"), "good")
+  expect_equal(tone("critical"), "bad")
+  # the tone reaches the DOM as the pill's class
+  node <- function(v) {
+    as.character(blockr.viz:::tk_secondary_node("pill", v, "up", NULL))
+  }
+  expect_match(node("At Risk"), "class=\"tk-pill warn\"")
+  expect_match(node("Neutral"), "class=\"tk-pill neutral\"")
+})
+
 test_that("each style x layout renders a valid payload", {
   ren <- function(...) paste(as.character(blockr.viz:::tile_html(...)), collapse = "")
   expect_true(grepl("tk-delta", ren(df, value = "value", measure = "value",

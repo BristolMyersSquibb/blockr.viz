@@ -296,6 +296,20 @@
   const DD_SECONDARY = new Set(
     Object.values(ROLES).map(r => /** @type {any} */ (r).pairedWith).filter(Boolean));
 
+  /**
+   * A persistent per-facet render slot. The DOM container and the ECharts
+   * instance survive re-renders — a data/config change swaps the option in
+   * place (setOption, notMerge) instead of dispose + innerHTML='' + re-init,
+   * so a gear edit no longer rebuilds every canvas. Event handlers are
+   * attached once per instance lifetime and read live state via `slot`
+   * (facetVal, hover, seriesByColorByVal) rather than render-time locals.
+   * @typedef {{ container: HTMLElement, labelEl: HTMLElement | null,
+   *             chartDiv: HTMLDivElement, chart: any, facetVal: any,
+   *             hover: { si: number | null },
+   *             seriesByColorByVal: Record<string, any[]> | null,
+   *             brushable: boolean }} ChartSlot
+   */
+
   class DrilldownChart {
     /** @param {HTMLElement} el */
     constructor(el) {
@@ -310,6 +324,17 @@
       this.argHelp = {};
       /** @type {any[]} */
       this.charts = [];
+      // Persistent per-facet render slots (see the ChartSlot typedef) plus
+      // the shape key that decides teardown-vs-reuse and the last raw data
+      // payload string (identical string -> skip the re-parse).
+      /** @type {ChartSlot[]} */
+      this._slots = [];
+      /** @type {string | null} */
+      this._renderShape = null;
+      /** @type {string | null} */
+      this._lastDataStr = null;
+      /** @type {any} */
+      this._lastDataRev = null;
       /** @type {any} */
       this._selected = null;
       /** @type {any} */
@@ -928,30 +953,46 @@
 
     // -- Data + rendering entry point -----------------------------------------
 
-    /** @param {any} columns @param {any} data @param {any} config @param {any} args */
-    setData(columns, data, config, args) {
+    /** @param {any} columns @param {any} data @param {any} config
+     *  @param {any} args @param {any} [dataRev] */
+    setData(columns, data, config, args, dataRev) {
       this.columns = columns || [];
       this.config = config || {};
       if (args) this.argHelp = args;
 
-      // Convert column-oriented data to row-oriented array
-      // Data may arrive as: JSON string (pre-encoded), column object, or row array
-      if (typeof data === 'string') {
-        data = JSON.parse(data);
-      }
-      if (data && !Array.isArray(data)) {
-        const keys = Object.keys(data);
-        const n = keys.length > 0 ? (Array.isArray(data[keys[0]]) ? data[keys[0]].length : 1) : 0;
-        this.data = new Array(n);
-        for (let i = 0; i < n; i++) {
-          /** @type {Record<string, any>} */
-          const row = {};
-          for (const k of keys) row[k] = Array.isArray(data[k]) ? data[k][i] : data[k];
-          this.data[i] = row;
-        }
+      // Convert column-oriented data to row-oriented array.
+      // Data may arrive as: JSON string (pre-encoded), column object, or row
+      // array. The R side caches the serialized payload and re-sends the
+      // SAME one on a config-only edit; `data_rev` ticks only when it
+      // re-serializes. An unchanged rev (or an identical payload string —
+      // the direct-string path) means identical rows, so skip the
+      // full-frame parse + row conversion and keep this.data as-is.
+      const unchanged =
+        (dataRev != null && dataRev === this._lastDataRev &&
+          Array.isArray(this.data)) ||
+        (typeof data === 'string' && data === this._lastDataStr);
+      if (unchanged) {
+        data = this.data;
       } else {
-        this.data = data || [];
+        this._lastDataStr = typeof data === 'string' ? data : null;
+        if (typeof data === 'string') {
+          data = JSON.parse(data);
+        }
+        if (data && !Array.isArray(data)) {
+          const keys = Object.keys(data);
+          const n = keys.length > 0 ? (Array.isArray(data[keys[0]]) ? data[keys[0]].length : 1) : 0;
+          const rows = new Array(n);
+          for (let i = 0; i < n; i++) {
+            /** @type {Record<string, any>} */
+            const row = {};
+            for (const k of keys) row[k] = Array.isArray(data[k]) ? data[k][i] : data[k];
+            rows[i] = row;
+          }
+          data = rows;
+        }
       }
+      this._lastDataRev = dataRev != null ? dataRev : null;
+      this.data = data || [];
 
       if (!this.config.chart_type) this.config.chart_type = 'bar';
 
@@ -991,10 +1032,15 @@
         }
       }
 
-      // Restore filter state if provided (e.g., from saved board)
-      if (config?.filter_values && config?.filter_column) {
+      // Restore filter state if provided (e.g., from saved board). The R side
+      // sends filter_values as an array (as.list) and only alongside a
+      // filter_column; the column also feeds the footer's "Filtered: col ="
+      // label and survives a Reset (which nulls both).
+      if (config?.filter_values && config.filter_values.length &&
+          config?.filter_column) {
         this._selected = config.filter_values.length === 1
           ? config.filter_values[0] : config.filter_values;
+        this._selectedColumn = config.filter_column;
       }
 
       this._renderConfig();
@@ -1003,57 +1049,365 @@
 
     // -- Aggregation ----------------------------------------------------------
 
+    // Grouping + aggregation live in the shared DrilldownAgg engine (the R
+    // twin is dd_table_aggregate; a golden cross-test ties them). Returns RAW
+    // values — a cell with no usable numeric value is null (rendered as a
+    // gap, never a fabricated 0); rounding happens in the tooltip/label
+    // formatters (fmtRaw / ddNum).
+    /** @returns {Array<{facet: string, group: string, color: string,
+     *                   value: number|null, n: number}>} */
     _aggregate() {
       const { group, color, facet, value, func } = this.config;
-      if (this.data.length === 0) return [];
-
-      /** @type {Record<string, any>} */
-      const groups = {};
-      for (const row of this.data) {
-        const gv = group ? String(row[group] ?? '') : 'Total';
-        const cv = color ? String(row[color] ?? '') : '__all__';
-        const fv = facet ? String(row[facet] ?? '') : '__all__';
-        const key = fv + '|||' + gv + '|||' + cv;
-        if (!groups[key]) groups[key] = { facet: fv, group: gv, color: cv, values: [], rows: [] };
-        groups[key].rows.push(row);
-        // Collect numeric value values for mean/median/sum/min/max. Skip
-        // entries that coerce to NaN (non-numeric text, empty strings) so a
-        // single bad cell can't poison a mean/sum into NaN.
-        if (value !== '.count' && row[value] != null) {
-          const n = Number(row[value]);
-          if (!Number.isNaN(n)) groups[key].values.push(n);
-        }
-      }
-
-      const result = [];
-      for (const g of Object.values(groups)) {
-        // `out` (not `value`) — `value` is the config's aggregated column name,
-        // read as r[value] in the count_distinct branch; a local `value` would
-        // shadow it and silently count r[undefined] (every group → 0).
-        let out;
-        if (func === 'count') out = g.rows.length;
-        else if (func === 'count_distinct') { const s = new Set(); for (const r of g.rows) { const v = r[value]; if (v != null && !(typeof v === 'number' && Number.isNaN(v))) s.add(v); } out = s.size; }
-        else if (func === 'mean') out = g.values.length ? g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / g.values.length : 0;
-        else if (func === 'median') { const s = g.values.slice().sort((/** @type {number} */ a, /** @type {number} */ b) => a - b); const m = Math.floor(s.length / 2); out = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; }
-        else if (func === 'sum') out = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
-        else if (func === 'min') out = g.values.length ? Math.min.apply(null, g.values) : 0;
-        else if (func === 'max') out = g.values.length ? Math.max.apply(null, g.values) : 0;
-        // n = rows behind this (group, color) cell, for the tooltip's
-        // "n = ..." line (how many observations the mark aggregates).
-        result.push({ facet: g.facet, group: g.group, color: g.color, value: Math.round(out * 100) / 100, n: g.rows.length });
-      }
-      return result;
+      return DAgg.aggregate(this.data, { group, color, facet, value, func });
     }
 
     // -- Chart rendering ------------------------------------------------------
+    //
+    // Persistent render slots: one slot per facet panel, holding the DOM
+    // container and the ECharts instance across re-renders. A data/config
+    // change swaps the option in place via setOption(option, notMerge=true);
+    // instances are disposed only when the render SHAPE changes — chart
+    // family (which decides the event-handler set), facet-panel count, or
+    // theme (fixed at echarts.init). This retires the dispose-everything +
+    // innerHTML='' + re-init cycle that rebuilt every canvas on every
+    // message.
+
+    /** Dispose every chart + slot and clear the grid. */
+    _teardownCharts() {
+      for (const s of this._slots) { if (s && s.chart) s.chart.dispose(); }
+      this._slots = [];
+      this.charts = [];
+      this._renderShape = null;
+      this.chartGrid.innerHTML = '';
+    }
+
+    /** Tear down and show a grid-wide empty-state. @param {string} html */
+    _showEmpty(html) {
+      this._teardownCharts();
+      this.chartGrid.innerHTML = html;
+    }
+
+    // Tear down when the render shape changed; otherwise keep the slots for
+    // in-place reuse.
+    /** @param {string} family @param {number} count */
+    _syncShape(family, count) {
+      const shape = family + '|' + count + '|' + (this.theme || '');
+      if (this._renderShape !== shape) {
+        this._teardownCharts();
+        this._renderShape = shape;
+      }
+    }
+
+    // Slot i's DOM (facet wrapper + label + chart div), created on first
+    // use; on reuse only the facet label text is refreshed.
+    /** @param {number} i @param {string | null} facetLabel
+     *  @param {boolean} singleFacet @returns {ChartSlot} */
+    _ensureSlot(i, facetLabel, singleFacet) {
+      let slot = this._slots[i];
+      if (!slot) {
+        /** @type {HTMLElement} */
+        let container;
+        /** @type {HTMLElement | null} */
+        let labelEl = null;
+        if (singleFacet) {
+          container = this.chartGrid;
+        } else {
+          container = document.createElement('div');
+          container.className = 'dd-facet';
+          labelEl = document.createElement('div');
+          labelEl.className = 'dd-facet-label';
+          container.appendChild(labelEl);
+          this.chartGrid.appendChild(container);
+        }
+        const chartDiv = document.createElement('div');
+        chartDiv.className = 'dd-chart';
+        container.appendChild(chartDiv);
+        slot = { container, labelEl, chartDiv, chart: null, facetVal: null,
+                 hover: { si: null }, seriesByColorByVal: null,
+                 brushable: false };
+        this._slots[i] = slot;
+      }
+      if (slot.labelEl) {
+        slot.labelEl.textContent = facetLabel ?? '';
+        slot.labelEl.style.display = facetLabel ? '' : 'none';
+      }
+      return slot;
+    }
+
+    // The slot's ECharts instance, init'd on first use with the family's
+    // event handlers attached ONCE per instance lifetime (they read live
+    // state — this.config / this.data / slot.* — never render-time locals,
+    // which would go stale under instance reuse).
+    /** @param {ChartSlot} slot @param {string} family */
+    _ensureSlotChart(slot, family) {
+      if (!slot.chart) {
+        slot.chartDiv.innerHTML = '';
+        slot.chart = echarts.init(slot.chartDiv, this.theme || undefined);
+        this._attachHandlers(slot, family);
+      }
+      return slot.chart;
+    }
+
+    // Set the slot's chart height; returns whether it changed (the caller
+    // resizes a RETAINED instance after setOption when it did — a fresh
+    // init measures the already-set height and needs none).
+    /** @param {ChartSlot} slot @param {string} h */
+    _setSlotHeight(slot, h) {
+      if (slot.chartDiv.style.height === h) return false;
+      slot.chartDiv.style.height = h;
+      return true;
+    }
+
+    // Event handlers for a fresh instance, attached ONCE per instance
+    // lifetime — setOption never re-attaches, so a config edit cannot stack
+    // duplicate listeners. Everything a handler needs is read LIVE
+    // (this.config / this.data / this._drillColumn() / slot.*): under
+    // instance reuse, render-time captures would go stale.
+    /** @param {ChartSlot} slot @param {string} family */
+    _attachHandlers(slot, family) {
+      const chart = slot.chart;
+
+      if (family === 'aggregated') {
+        chart.on('click', (/** @type {any} */ params) => {
+          if (this._drillState() === 'off') return;
+          const ct = this.config.chart_type;
+          // Radar: the clickable mark is the shape (one per color level), so
+          // the selection identifies a color value, not a group. Without a
+          // color mapping there is a single all-rows shape — nothing to
+          // select, the click is inert.
+          const isRadar = ct === 'radar';
+          if (isRadar && !this.config.color) return;
+          let clickedGroup = params.name || (params.value && params.value[0]);
+          if (!clickedGroup) return;
+          // A color-split boxplot slot is `group + BOX_CAT_SEP + level`; drill
+          // (like a color-split bar) targets the whole group, so strip the
+          // level suffix back to the group name.
+          if (ct === 'boxplot' && this.config.color && typeof clickedGroup === 'string') {
+            clickedGroup = clickedGroup.split(BOX_CAT_SEP)[0];
+          }
+          this._selected = this._selected === clickedGroup ? null : clickedGroup;
+          this._updateHighlight();
+          if (this._selected == null) { this._sendClearFilter(); return; }
+          // The clicked mark's source rows -> _emitDrill. With drill 'auto'
+          // the target is the group column (radar: the color column); with
+          // an override, that column.
+          const g = isRadar ? this.config.color : this.config.group;
+          const fc = this.config.facet;
+          const facet = slot.facetVal;
+          const rows = (this.data || []).filter(r =>
+            String(r[g]) === String(clickedGroup) &&
+            (facet === '__all__' || !fc || String(r[fc]) === String(facet)));
+          this._emitDrill(rows);
+        });
+        return;
+      }
+
+      if (family === 'timeline') {
+        chart.on('click', (/** @type {any} */ params) => {
+          if (this._drillState() === 'off') return;
+          if (params.componentType !== 'series') return;
+          // The clicked bar's drill value is packed at tuple slot 7 (the
+          // effective drill column: lane for 'auto', or an override).
+          const v = params.value;
+          if (!v) return;
+          this._selected = String(v[3] || '');
+          this._updateStatus();
+          const drill = this._drillColumn();
+          const dv = v[7];
+          if (drill && dv != null && dv !== '') {
+            this._emitDrill([{ [drill]: dv }]);
+          }
+        });
+        return;
+      }
+
+      // -- individual (scatter/line) --
+
+      // Track which line the cursor is on (triggerLineEvent makes bare
+      // line segments fire series mouseover/mouseout) so the axis
+      // tooltip can narrow to the hovered series. Inert for scatter
+      // (seriesType never 'line').
+      chart.on('mouseover', (/** @type {any} */ p) => {
+        if (p.componentType === 'series' && p.seriesType === 'line') {
+          slot.hover.si = p.seriesIndex;
+        }
+      });
+      chart.on('mouseout', (/** @type {any} */ p) => {
+        if (p.componentType === 'series' && p.seriesType === 'line') {
+          slot.hover.si = null;
+        }
+      });
+      chart.on('globalout', () => { slot.hover.si = null; });
+
+      // When the legend shows color levels (not series), intercept
+      // legend clicks and fan them out to every series that belongs to
+      // the clicked color group. Otherwise a click on "F" would do
+      // nothing (no series is named "F") and the user couldn't toggle.
+      // slot.seriesByColorByVal is rebuilt per render (null = plain legend).
+      chart.on('legendselectchanged', (/** @type {any} */ params) => {
+        const fanout = slot.seriesByColorByVal;
+        if (!fanout) return;
+        const cv = params.name;
+        const targets = fanout[cv];
+        if (!targets || targets.length === 0) return;
+        const show = !!(params.selected && params.selected[cv]);
+        const action = show ? 'legendSelect' : 'legendUnSelect';
+        for (const sn of targets) {
+          chart.dispatchAction({ type: action, name: sn });
+        }
+      });
+
+      // Click identifies a mark -> a selection (a click is a one-point
+      // selection). With drill 'off' it's inert. With a drill column (auto
+      // for line = series, or an override) it emits a categorical filter;
+      // for a scatter under 'auto' (no categorical key) it filters the exact
+      // observation (point filter on x&y). Brush is the same rule at range.
+      chart.on('click', (/** @type {any} */ params) => {
+        if (this._drillState() === 'off') return;
+        if (params.componentType !== 'series') return;
+        // Clicking a point in brush mode also fires brushSelected/brush
+        // "cleared" events that would call _sendClearFilter and wipe this
+        // click's filter. Suppress those for a short window after a click.
+        this._suppressBrushClear = true;
+        setTimeout(() => { this._suppressBrushClear = false; }, 150);
+        const { x, y } = this.config;
+        const splitCol = this.config.series || this.config.color;
+        let hitRows, pointVal = null;
+        if (splitCol && params.seriesName) {
+          hitRows = (this.data || []).filter(
+            r => String(r[splitCol]) === String(params.seriesName));
+          this._selected = params.seriesName;
+        } else {
+          const v = params.value;
+          if (!Array.isArray(v) || v.length < 2 || !x || !y) return;
+          hitRows = (this.data || []).filter(
+            r => String(r[x]) === String(v[0]) &&
+                 String(r[y]) === String(v[1]));
+          this._selected = `${ddNum(v[0])}, ${ddNum(v[1])}`;
+          pointVal = v;
+        }
+        this._updateStatus();
+        if (this._drillColumn()) {
+          this._emitDrill(hitRows);
+        } else if (pointVal) {
+          // scatter auto: a click is a one-point selection -> a zero-width
+          // x/y range (between(x,v,v) & between(y,v,v) = the observation).
+          this._hasBrushFilter = true;
+          this._sendRangeFilter([pointVal[0], pointVal[0]], [pointVal[1], pointVal[1]]);
+        }
+      });
+
+      chart.on('brushSelected', (/** @type {any} */ params) => {
+        if (this._drillState() === 'off') return;
+        if (!params.batch || params.batch.length === 0) return;
+        const isLine = this.config.chart_type === 'line';
+
+        // Collect all selected data indices across all areas/series
+        const batch = params.batch[0];
+        if (!batch?.selected) {
+          if (this._suppressBrushClear) return;
+          this._hasBrushFilter = false;
+          this._updateStatus();
+          this._sendClearFilter();
+          return;
+        }
+
+        // Gather selected (seriesIndex, dataIndex) pairs. A brushSelected
+        // dataIndex is RELATIVE TO ITS OWN SERIES, so it must be looked up
+        // in that series' data array — not in a flattened concatenation of
+        // all series (which mis-maps once there is more than one series).
+        const selected = [];
+        for (const s of batch.selected) {
+          if (s.dataIndex && s.dataIndex.length > 0) {
+            for (const di of s.dataIndex) {
+              selected.push({ seriesIndex: s.seriesIndex, dataIndex: di });
+            }
+          }
+        }
+
+        if (selected.length === 0) {
+          if (this._suppressBrushClear) return;
+          this._hasBrushFilter = false;
+          this._updateStatus();
+          this._sendClearFilter();
+          return;
+        }
+
+        // Clear brush on other facet charts
+        for (const other of this.charts) {
+          if (other !== chart) other.dispatchAction({ type: 'brush', areas: [] });
+        }
+
+        // Compute x/y range from selected points' actual values. Index
+        // into each point's own series array and bounds-check so an
+        // out-of-range index can neither throw nor pull the wrong point.
+        const opt = chart.getOption();
+        const allSeries = opt.series || [];
+
+        // With a drill column (an override, or 'auto' resolving to a
+        // categorical key), the brush filters downstream on that column's
+        // values for the brushed points — the same rule as click-drill, so a
+        // selection filters consistently whether click or brush. Build a
+        // (x|y) -> rows index once to map brushed points back to source rows.
+        // With no drill column (scatter 'auto'), the brush does a geometric
+        // x/y range filter.
+        const drillCol = this._drillColumn();
+        let rowIndex = null;
+        if (drillCol) {
+          rowIndex = new Map();
+          const xc = this.config.x, yc = this.config.y;
+          for (const r of (this.data || [])) {
+            const k = String(r[xc]) + '|||' + String(r[yc]);
+            if (!rowIndex.has(k)) rowIndex.set(k, []);
+            rowIndex.get(k).push(r);
+          }
+        }
+
+        let xVals = [], yVals = [], brushedRows = [];
+        for (const sel of selected) {
+          const sData = allSeries[sel.seriesIndex]?.data;
+          if (!sData || sel.dataIndex < 0 || sel.dataIndex >= sData.length) continue;
+          const pt = sData[sel.dataIndex];
+          if (!pt) continue;
+          const vx = Array.isArray(pt) ? pt[0] : pt.value?.[0];
+          const vy = Array.isArray(pt) ? pt[1] : pt.value?.[1];
+          if (vx != null) xVals.push(vx);
+          if (vy != null) yVals.push(vy);
+          if (rowIndex) {
+            const hit = rowIndex.get(String(vx) + '|||' + String(vy));
+            if (hit) brushedRows.push(...hit);
+          }
+        }
+
+        this._hasBrushFilter = true;
+        this._updateStatus();
+
+        if (drillCol && brushedRows.length) {
+          this._emitDrill(brushedRows);
+        } else if (xVals.length > 0) {
+          const xRange = [Math.min(...xVals), Math.max(...xVals)];
+          if (isLine) {
+            this._sendRangeFilter(xRange, null);
+          } else {
+            const yRange = yVals.length > 0 ? [Math.min(...yVals), Math.max(...yVals)] : null;
+            this._sendRangeFilter(xRange, yRange);
+          }
+        }
+      });
+
+      chart.on('brush', (/** @type {any} */ params) => {
+        if (!params.areas || params.areas.length === 0) {
+          if (this._suppressBrushClear) return;
+          this._hasBrushFilter = false;
+          this._updateStatus();
+          this._sendClearFilter();
+        }
+      });
+    }
 
     _render() {
-      for (const c of this.charts) c.dispose();
-      this.charts = [];
-      this.chartGrid.innerHTML = '';
-
       if (this.data.length === 0) {
-        this.chartGrid.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">No data to chart</p></div>';
+        this._showEmpty('<div class="vd-empty-state"><p class="vd-empty-text">No data to chart</p></div>');
         return;
       }
 
@@ -1066,9 +1420,9 @@
       const gate = FAMILY_ROLES[fam].requiredMap.filter(k => k !== 'xend');
       const unset = gate.filter(k => !this._hasVal(this.config[k]));
       if (unset.length) {
-        this.chartGrid.innerHTML =
+        this._showEmpty(
           '<div class="vd-empty-state"><p class="vd-empty-text">Pick ' +
-          unset.map(k => /** @type {Record<string, any>} */ (ROLES)[k].label).join(' and ') + ' to plot.</p></div>';
+          unset.map(k => /** @type {Record<string, any>} */ (ROLES)[k].label).join(' and ') + ' to plot.</p></div>');
         return;
       }
 
@@ -1086,7 +1440,7 @@
           const hint = fam === 'aggregated'
             ? `Pick a column with \u2264${MAX_COLOR_LEVELS} categories.`
             : `Use <code>series</code> to split into series (e.g. USUBJID); keep <code>color</code> for low-cardinality grouping (e.g. ARM).`;
-          this.chartGrid.innerHTML = `<div class="vd-empty-state"><p class="vd-empty-text">Too many color levels (${nColors}). ${hint}</p></div>`;
+          this._showEmpty(`<div class="vd-empty-state"><p class="vd-empty-text">Too many color levels (${nColors}). ${hint}</p></div>`);
           return;
         }
       }
@@ -1109,11 +1463,11 @@
           ? ' Columns available here: ' + avail.slice(0, 30).join(', ') +
             (avail.length > 30 ? ', …' : '') + '.'
           : '';
-        this.chartGrid.innerHTML =
+        this._showEmpty(
           '<div class="vd-empty-state"><p class="vd-empty-text">' +
           'Mapped column not in data: ' + missing.join(', ') + '.' + availTxt +
           ' A rename, flatten or pivot upstream may have changed the column ' +
-          'name — re-pick it in the gear.</p></div>';
+          'name — re-pick it in the gear.</p></div>');
         return;
       }
 
@@ -1132,7 +1486,7 @@
       // Multi-value bar: one series per planned value, riding the color
       const agg = this._aggregate();
       if (agg.length === 0) {
-        this.chartGrid.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">No data to chart</p></div>';
+        this._showEmpty('<div class="vd-empty-state"><p class="vd-empty-text">No data to chart</p></div>');
         return;
       }
 
@@ -1146,6 +1500,7 @@
 
       // Switch grid off for single facet
       this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
+      this._syncShape('aggregated', facets.length);
 
       const sortBy = this.config.sort_by || 'alpha';
       const sortDir = this.config.sort_dir === 'desc' ? -1 : 1;
@@ -1197,11 +1552,12 @@
           return groups.sort((a, b) => a.localeCompare(b) * sortDir);
         }
         if (sortBy === 'value') {
-          // "value" = total of the value across color stacks.
+          // "value" = total of the value across color stacks (a null cell —
+          // no usable value — contributes nothing).
           /** @type {Record<string, number>} */
           const totals = {};
           for (const a of facetData) {
-            totals[a.group] = (totals[a.group] || 0) + a.value;
+            totals[a.group] = (totals[a.group] || 0) + (a.value ?? 0);
           }
           return groups.sort((a, b) => ((totals[a] || 0) - (totals[b] || 0)) * sortDir);
         }
@@ -1224,44 +1580,34 @@
         });
       };
 
-      for (const facet of facets) {
+      for (let fi = 0; fi < facets.length; fi++) {
+        const facet = facets[fi];
         const facetData = agg.filter(a => a.facet === facet);
         const groups = orderGroups(facetData);
 
-        /** @type {HTMLElement} */
-        let container;
-        if (singleFacet) {
-          container = this.chartGrid;
-        } else {
-          container = document.createElement('div');
-          container.className = 'dd-facet';
-          if (facet !== '__all__') {
-            const label = document.createElement('div');
-            label.className = 'dd-facet-label';
-            label.textContent = facet;
-            container.appendChild(label);
-          }
-          this.chartGrid.appendChild(container);
-        }
+        const slot = this._ensureSlot(fi,
+          (!singleFacet && facet !== '__all__') ? facet : null, singleFacet);
+        slot.facetVal = facet;
 
-        const chartDiv = document.createElement('div');
-        chartDiv.className = 'dd-chart';
         const ct = this.config.chart_type;
         // Waterfall is vertical (category on the x-axis), so it takes the fixed
         // height like pie/radar — not the per-row horizontal-bar height.
-        chartDiv.style.height = (ct === 'pie' || ct === 'treemap' ||
-            ct === 'radar' || this._baselineMode() === 'cumulative')
+        const hChanged = this._setSlotHeight(slot, (ct === 'pie' ||
+            ct === 'treemap' || ct === 'radar' ||
+            this._baselineMode() === 'cumulative')
           ? '350px'
-          : Math.max(350, groups.length * 28 + 60) + 'px';
-        container.appendChild(chartDiv);
+          : Math.max(350, groups.length * 28 + 60) + 'px');
 
-        const option = this._buildAggregatedOption(facetData, groups, colors, palette, chartDiv.clientWidth, facet);
+        const option = this._buildAggregatedOption(facetData, groups, colors, palette, slot.chartDiv.clientWidth, facet);
         if (!option) {
-          chartDiv.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">Pick a numeric Value to plot its distribution</p></div>';
+          // No chart to draw in this slot (boxplot without a numeric value):
+          // drop the instance so the empty-state markup can own the div.
+          if (slot.chart) { slot.chart.dispose(); slot.chart = null; }
+          slot.chartDiv.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">Pick a numeric Value to plot its distribution</p></div>';
           continue;
         }
-        const chart = echarts.init(chartDiv, this.theme || undefined);
-        this.charts.push(chart);
+        const existed = !!slot.chart;
+        const chart = this._ensureSlotChart(slot, 'aggregated');
         // Legend-fit metadata rides on the option (the builders have no chart
         // handle); move it onto the instance for _refitLegend before ECharts
         // sees the option.
@@ -1269,37 +1615,9 @@
         /** @type {any} */ (chart).__legendFit = anyOption.__legendFit;
         delete anyOption.__legendFit;
         chart.setOption(this._applyDrillEmphasis(option), true);
-
-        chart.on('click', (params) => {
-          if (this._drillState() === 'off') return;
-          // Radar: the clickable mark is the shape (one per color level), so
-          // the selection identifies a color value, not a group. Without a
-          // color mapping there is a single all-rows shape — nothing to
-          // select, the click is inert.
-          const isRadar = ct === 'radar';
-          if (isRadar && !this.config.color) return;
-          let clickedGroup = params.name || (params.value && params.value[0]);
-          if (!clickedGroup) return;
-          // A color-split boxplot slot is `group + BOX_CAT_SEP + level`; drill
-          // (like a color-split bar) targets the whole group, so strip the
-          // level suffix back to the group name.
-          if (ct === 'boxplot' && this.config.color && typeof clickedGroup === 'string') {
-            clickedGroup = clickedGroup.split(BOX_CAT_SEP)[0];
-          }
-          this._selected = this._selected === clickedGroup ? null : clickedGroup;
-          this._updateHighlight();
-          if (this._selected == null) { this._sendClearFilter(); return; }
-          // The clicked mark's source rows -> _emitDrill. With drill 'auto'
-          // the target is the group column (radar: the color column); with
-          // an override, that column.
-          const g = isRadar ? this.config.color : this.config.group;
-          const fc = this.config.facet;
-          const rows = (this.data || []).filter(r =>
-            String(r[g]) === String(clickedGroup) &&
-            (facet === '__all__' || !fc || String(r[fc]) === String(facet)));
-          this._emitDrill(rows);
-        });
+        if (existed && hChanged) chart.resize();
       }
+      this.charts = this._slots.map(s => s.chart).filter(Boolean);
       this._updateHighlight();
     }
 
@@ -1355,7 +1673,9 @@
       /** @type {any[]} */
       const series = [];
       if (colors.length === 0) {
-        series.push({ type: 'bar', data: groups.map(g => { const d = facetData.find(a => a.group === g); return d ? d.value : 0; }), itemStyle: { color: palette[0] }, barWidth: '60%', barMaxWidth: BAR_MAX, emphasis: { focus: 'self' } });
+        // A null aggregate (no usable value in the group) stays null — ECharts
+        // renders a gap, not a zero bar.
+        series.push({ type: 'bar', data: groups.map(g => { const d = facetData.find(a => a.group === g); return d ? d.value : null; }), itemStyle: { color: palette[0] }, barWidth: '60%', barMaxWidth: BAR_MAX, emphasis: { focus: 'self' } });
       } else {
         const colorScale = this._scaleFor(this.config.color);
         // Per-group total across colors, for percent normalization only.
@@ -1519,10 +1839,17 @@
     /** @param {any[]} facetData @param {any[]} groups @param {any} valueTitle @param {any} ax @param {number} [plotW] container width in px */
     _buildWaterfall(facetData, groups, valueTitle, ax, plotW) {
       // One value per step (sum across any color split — waterfall is a single
-      // series along the step axis, color does not stack here).
+      // series along the step axis, color does not stack here). A step whose
+      // cells are ALL null (no usable value) is null, not 0.
       /** @param {any} g */
-      const valOf = (g) => facetData.filter(a => a.group === g)
-        .reduce((/** @type {number} */ s, /** @type {any} */ a) => s + a.value, 0);
+      const valOf = (g) => {
+        const vals = facetData
+          .filter(a => a.group === g && a.value != null)
+          .map(a => a.value);
+        return vals.length
+          ? vals.reduce((/** @type {number} */ s, /** @type {number} */ v) => s + v, 0)
+          : null;
+      };
 
       // Which steps are "total" bars (baseline reset to 0). Optional; threaded
       // from R as config.waterfall_totals (array of step/group names). Default
@@ -1538,6 +1865,13 @@
         const g = groups[i];
         const v = valOf(g);
         const isTotal = totals.has(g);
+        if (v == null && !isTotal) {
+          // A null step has no delta: the bridge holds its cumulative and the
+          // step renders as a gap (null bar), never a fabricated 0 step.
+          base.push(0);
+          delta.push(null);
+          continue;
+        }
         if (isTotal) {
           // Total / subtotal bar: from 0 up to the running cumulative.
           base.push(0);
@@ -1581,7 +1915,9 @@
           formatter: (/** @type {any} */ params) => {
             const p = (params || []).find((/** @type {any} */ x) => x.seriesName === 'delta');
             if (!p) return '';
-            return '<b>' + p.name + '</b><br>' + ddNum(p.value);
+            // A null step (gap) has no delta to report.
+            return '<b>' + p.name + '</b><br>' +
+              (p.value == null ? '–' : ddNum(p.value));
           }
         },
         toolbox: TOOLBOX,
@@ -1608,7 +1944,7 @@
       const gScale = this._scaleFor(this.config.group);
       const pieData = groups.map((g, i) => {
         const cells = facetData.filter(a => a.group === g);
-        const total = cells.reduce((s, a) => s + a.value, 0);
+        const total = cells.reduce((s, a) => s + (a.value ?? 0), 0);
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
       }).filter(d => d.value > 0);
@@ -1620,11 +1956,11 @@
       const gScale = this._scaleFor(this.config.group);
       const tmData = groups.map((g, i) => {
         const cells = facetData.filter(a => a.group === g);
-        const total = cells.reduce((s, a) => s + a.value, 0);
+        const total = cells.reduce((s, a) => s + (a.value ?? 0), 0);
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: '{b}\n{c}' }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: (/** @type {any} */ p) => p.name + '\n' + ddNum(Number(p.value)) }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
     }
 
     // Radar = an aggregated chart in polar coords: the group levels are the
@@ -1637,8 +1973,9 @@
     _buildRadar(facetData, groups, colors, palette, valueTitle, plotW) {
       const colorScale = this._scaleFor(this.config.color);
       // One shared max across spokes keeps shapes comparable (same contract
-      // as the blockr.echarts radar). Guard 0/negative-only data with 1.
-      const maxVal = Math.max(...facetData.map(a => a.value), 0) || 1;
+      // as the blockr.echarts radar). Null cells (no usable value) don't
+      // shape the scale. Guard 0/negative-only data with 1.
+      const maxVal = Math.max(...facetData.map(a => a.value ?? 0), 0) || 1;
       const indicator = groups.map(g => ({ name: g, max: maxVal }));
       // A missing (group, color) cell is a true zero for counting
       // aggregations; for mean/median/min/max there is no value — null
@@ -1905,7 +2242,7 @@
       // useColorByLegend loop, forcing a full data scan per series level.
       const { x, y, color, facet, series: seriesCol } = this.config;
       if (!x || !y) {
-        this.chartGrid.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">Select X and Y columns</p></div>';
+        this._showEmpty('<div class="vd-empty-state"><p class="vd-empty-text">Select X and Y columns</p></div>');
         return;
       }
 
@@ -2001,33 +2338,25 @@
       const encodeY = (/** @type {any} */ v) => yAxisType === 'category' ? String(v ?? '') : Number(v);
 
       this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
+      this._syncShape('individual', facets.length);
 
-      for (const facet of facets) {
-        const rows = facet === '__all__' ? this.data : this.data.filter(r => String(r[facet]) === facet);
+      // `fv` (not `facet`) — `facet` is the config's facet COLUMN name; a
+      // loop-local `facet` would shadow it and turn the row filter into
+      // r[<level>] (a column named e.g. "Female" — every panel empty).
+      for (let fi = 0; fi < facets.length; fi++) {
+        const fv = facets[fi];
+        const rows = fv === '__all__' ? this.data : this.data.filter(r => String(r[facet]) === fv);
 
-        /** @type {HTMLElement} */
-        let container;
-        if (singleFacet) {
-          container = this.chartGrid;
-        } else {
-          container = document.createElement('div');
-          container.className = 'dd-facet';
-          if (facet !== '__all__') {
-            const label = document.createElement('div');
-            label.className = 'dd-facet-label';
-            label.textContent = facet;
-            container.appendChild(label);
-          }
-          this.chartGrid.appendChild(container);
-        }
-
-        const chartDiv = document.createElement('div');
-        chartDiv.className = 'dd-chart';
-        chartDiv.style.height = '400px';
-        container.appendChild(chartDiv);
-
-        const chart = echarts.init(chartDiv, this.theme || undefined);
-        this.charts.push(chart);
+        const slot = this._ensureSlot(fi,
+          (!singleFacet && fv !== '__all__') ? fv : null, singleFacet);
+        slot.facetVal = fv;
+        this._setSlotHeight(slot, '400px');
+        const chartDiv = slot.chartDiv;
+        const chart = this._ensureSlotChart(slot, 'individual');
+        // Per-slot hover tracker (which line the cursor is on) — persistent
+        // so the once-attached mouseover/out handlers and the per-render
+        // tooltip formatter share it. Reset on re-render.
+        slot.hover.si = null;
 
         const dm = this.config.dot_size_mult   ?? 1.0;
         const lm = this.config.line_width_mult ?? 1.0;
@@ -2050,7 +2379,7 @@
         const identityOn = this.config.identity_line === 'on' && !isLine &&
           xAxisType !== 'category' && yAxisType !== 'category';
 
-        const mkSeries = (/** @type {any} */ name, /** @type {any} */ data, /** @type {any} */ color) => ({
+        const mkSeries = (/** @type {any} */ name, /** @type {any} */ data, /** @type {any} */ clr) => ({
           type: isLine ? 'line' : 'scatter',
           name: name,
           data: data,
@@ -2061,7 +2390,7 @@
           triggerLineEvent: isLine ? true : undefined,
           symbol: isLine ? symbol : 'circle',
           symbolSize: isLine ? lineMarkerPx : scatterPx,
-          itemStyle: { color: color, cursor: 'pointer' },
+          itemStyle: { color: clr, cursor: 'pointer' },
           lineStyle: isLine ? { width: lineBaseW, opacity: lineOpacity } : undefined,
           emphasis: isLine ? { focus: 'series', lineStyle: { width: lineHoverW, opacity: 1 } } : { focus: 'self' },
           blur: isLine ? { lineStyle: { opacity: 0.05 } } : undefined
@@ -2091,7 +2420,7 @@
         // single legend entry per series — one click toggles line +
         // whiskers + fit together. legendHoverLink off so legend hover
         // doesn't try to emphasize these (silent) overlay series.
-        const mkErrBarSeries = (/** @type {any} */ name, /** @type {any} */ errPts, /** @type {any} */ color) => ({
+        const mkErrBarSeries = (/** @type {any} */ name, /** @type {any} */ errPts, /** @type {any} */ clr) => ({
           type: 'custom',
           name: name,
           legendHoverLink: false,
@@ -2099,16 +2428,16 @@
           z: 1,
           data: errPts,  // [[x, lo, hi], ...]
           renderItem: (/** @type {any} */ params, /** @type {any} */ api) => {
-            const x = api.value(0), lo = api.value(1), hi = api.value(2);
-            const pLo = api.coord([x, lo]);
-            const pHi = api.coord([x, hi]);
+            const xv = api.value(0), lo = api.value(1), hi = api.value(2);
+            const pLo = api.coord([xv, lo]);
+            const pHi = api.coord([xv, hi]);
             const w = 4;
             return {
               type: 'group',
               children: [
-                { type: 'line', shape: { x1: pLo[0], y1: pLo[1], x2: pHi[0], y2: pHi[1] }, style: { stroke: color, lineWidth: 1 } },
-                { type: 'line', shape: { x1: pLo[0]-w, y1: pLo[1], x2: pLo[0]+w, y2: pLo[1] }, style: { stroke: color, lineWidth: 1 } },
-                { type: 'line', shape: { x1: pHi[0]-w, y1: pHi[1], x2: pHi[0]+w, y2: pHi[1] }, style: { stroke: color, lineWidth: 1 } }
+                { type: 'line', shape: { x1: pLo[0], y1: pLo[1], x2: pHi[0], y2: pHi[1] }, style: { stroke: clr, lineWidth: 1 } },
+                { type: 'line', shape: { x1: pLo[0]-w, y1: pLo[1], x2: pLo[0]+w, y2: pLo[1] }, style: { stroke: clr, lineWidth: 1 } },
+                { type: 'line', shape: { x1: pHi[0]-w, y1: pHi[1], x2: pHi[0]+w, y2: pHi[1] }, style: { stroke: clr, lineWidth: 1 } }
               ]
             };
           }
@@ -2116,7 +2445,7 @@
 
         /** @type {any[]} */
         const series = [];
-        const pushOverlays = (/** @type {any} */ name, /** @type {any} */ pts, /** @type {any} */ color, /** @type {any} */ rawRows) => {
+        const pushOverlays = (/** @type {any} */ name, /** @type {any} */ pts, /** @type {any} */ clr, /** @type {any} */ rawRows) => {
           // Smoother overlay (scatter charts only) — uses R-precomputed
           // points from config.smoother_series.
           if (smoother !== 'none' && !isLine) {
@@ -2128,7 +2457,7 @@
               data: ln,
               silent: true,
               showSymbol: false,
-              lineStyle: { color: color, width: 2, type: 'solid', opacity: 0.9 },
+              lineStyle: { color: clr, width: 2, type: 'solid', opacity: 0.9 },
               z: 2
             });
           }
@@ -2139,7 +2468,7 @@
             const errPts = rawRows
               .filter((/** @type {any} */ r) => r[x] != null && r[loCol] != null && r[hiCol] != null)
               .map((/** @type {any} */ r) => [encodeX(r[x]), Number(r[loCol]), Number(r[hiCol])]);
-            if (errPts.length) series.push(mkErrBarSeries(name || 'errbar', errPts, color));
+            if (errPts.length) series.push(mkErrBarSeries(name || 'errbar', errPts, clr));
           }
         };
 
@@ -2155,9 +2484,9 @@
             const grpRows = rows.filter(r => String(r[splitCol]) === cl && r[x] != null && r[y] != null);
             const pts = grpRows.map(r => [encodeX(r[x]), encodeY(r[y])]);
             sortLinePts(pts);
-            const color = colorForLevel(cl, ci);
-            series.push(mkSeries(cl, pts, color));
-            pushOverlays(cl, pts, color, grpRows);
+            const clr = colorForLevel(cl, ci);
+            series.push(mkSeries(cl, pts, clr));
+            pushOverlays(cl, pts, clr, grpRows);
           }
         }
 
@@ -2320,7 +2649,7 @@
         // triggerLineEvent), the box narrows to that series only,
         // matching the emphasis/blur highlight.
         const TT_ROW_CAP = 12;
-        const hover = { si: /** @type {number | null} */ (null) };
+        const hover = slot.hover;
         const lineTooltip = {
           trigger: 'axis',
           axisPointer: { type: 'line' },
@@ -2329,18 +2658,18 @@
             if (!Array.isArray(ps)) ps = [ps];
             // Only real line series: drop error-bar overlays (custom) and
             // the empty legend-binding series (no data -> never present).
-            let rows = ps.filter((/** @type {any} */ p) =>
+            let ttRows = ps.filter((/** @type {any} */ p) =>
               p && p.seriesType === 'line' && Array.isArray(p.value));
-            if (!rows.length) return '';
+            if (!ttRows.length) return '';
             if (hover.si != null) {
-              const own = rows.filter((/** @type {any} */ p) =>
+              const own = ttRows.filter((/** @type {any} */ p) =>
                 p.seriesIndex === hover.si);
-              if (own.length) rows = own;
+              if (own.length) ttRows = own;
             }
             // One row per series: data with several observations per x
             // (replicates) yields one param per datum — keep the first.
             const seen = new Set();
-            rows = rows.filter((/** @type {any} */ p) => {
+            ttRows = ttRows.filter((/** @type {any} */ p) => {
               if (seen.has(p.seriesIndex)) return false;
               seen.add(p.seriesIndex);
               return true;
@@ -2348,16 +2677,16 @@
             // Category x: the visit label is the header. Numeric x: name
             // the value ("Day: 30"), else it reads as a bare number.
             const head = xCats
-              ? (rows[0].axisValueLabel ?? String(rows[0].value[0]))
-              : this._axisTitle(x) + ': ' + ddNum(rows[0].value[0]);
-            const lines = rows.slice(0, TT_ROW_CAP).map((/** @type {any} */ p) => {
+              ? (ttRows[0].axisValueLabel ?? String(ttRows[0].value[0]))
+              : this._axisTitle(x) + ': ' + ddNum(ttRows[0].value[0]);
+            const lines = ttRows.slice(0, TT_ROW_CAP).map((/** @type {any} */ p) => {
               // Without a series split there is one unnamed series and
               // ECharts invents "series0" — label the y column instead.
               const nm = splitCol ? p.seriesName : this._axisTitle(y);
               return p.marker + nm + ': ' + ddNum(p.value[1]);
             });
-            if (rows.length > TT_ROW_CAP) {
-              lines.push('… +' + (rows.length - TT_ROW_CAP) + ' more');
+            if (ttRows.length > TT_ROW_CAP) {
+              lines.push('… +' + (ttRows.length - TT_ROW_CAP) + ' more');
             }
             return head + '<br/>' + lines.join('<br/>');
           }
@@ -2424,197 +2753,34 @@
           series
         };
 
+        // Legend fan-out map for the once-attached legendselectchanged
+        // handler (null when the legend is plain / off).
+        slot.seriesByColorByVal =
+          (useColorByLegend && seriesByColorByVal) ? seriesByColorByVal : null;
+
         chart.setOption(this._applyDrillEmphasis(option), true);
 
-        // Track which line the cursor is on (triggerLineEvent makes bare
-        // line segments fire series mouseover/mouseout) so the axis
-        // tooltip above can narrow to the hovered series.
-        if (isLine) {
-          chart.on('mouseover', (/** @type {any} */ p) => {
-            if (p.componentType === 'series' && p.seriesType === 'line') {
-              hover.si = p.seriesIndex;
-            }
-          });
-          chart.on('mouseout', (/** @type {any} */ p) => {
-            if (p.componentType === 'series' && p.seriesType === 'line') {
-              hover.si = null;
-            }
-          });
-          chart.on('globalout', () => { hover.si = null; });
-        }
-
-        // When the legend shows color levels (not series), intercept
-        // legend clicks and fan them out to every series that belongs to
-        // the clicked color group. Otherwise a click on "F" would do
-        // nothing (no series is named "F") and the user couldn't toggle.
-        if (useColorByLegend && seriesByColorByVal) {
-          chart.on('legendselectchanged', (/** @type {any} */ params) => {
-            const cv = params.name;
-            const targets = seriesByColorByVal[cv];
-            if (!targets || targets.length === 0) return;
-            const show = !!(params.selected && params.selected[cv]);
-            const action = show ? 'legendSelect' : 'legendUnSelect';
-            for (const sn of targets) {
-              chart.dispatchAction({ type: action, name: sn });
-            }
-          });
-        }
-
-        // Click identifies a mark -> a selection (a click is a one-point
-        // selection). With drill 'off' it's inert. With a drill column (auto
-        // for line = series, or an override) it emits a categorical filter;
-        // for a scatter under 'auto' (no categorical key) it filters the exact
-        // observation (point filter on x&y). Brush is the same rule at range.
-        chart.on('click', (params) => {
-          if (this._drillState() === 'off') return;
-          if (params.componentType !== 'series') return;
-          // Clicking a point in brush mode also fires brushSelected/brush
-          // "cleared" events that would call _sendClearFilter and wipe this
-          // click's filter. Suppress those for a short window after a click.
-          this._suppressBrushClear = true;
-          setTimeout(() => { this._suppressBrushClear = false; }, 150);
-          const splitCol = seriesCol || color;
-          let rows, pointVal = null;
-          if (splitCol && params.seriesName) {
-            rows = (this.data || []).filter(
-              r => String(r[splitCol]) === String(params.seriesName));
-            this._selected = params.seriesName;
-          } else {
-            const v = params.value;
-            if (!Array.isArray(v) || v.length < 2 || !x || !y) return;
-            rows = (this.data || []).filter(
-              r => String(r[x]) === String(v[0]) &&
-                   String(r[y]) === String(v[1]));
-            this._selected = `${ddNum(v[0])}, ${ddNum(v[1])}`;
-            pointVal = v;
-          }
-          this._updateStatus();
-          if (this._drillColumn()) {
-            this._emitDrill(rows);
-          } else if (pointVal) {
-            // scatter auto: a click is a one-point selection -> a zero-width
-            // x/y range (between(x,v,v) & between(y,v,v) = the observation).
-            this._hasBrushFilter = true;
-            this._sendRangeFilter([pointVal[0], pointVal[0]], [pointVal[1], pointVal[1]]);
-          }
-        });
-
-        // Activate brush mode by default (no need to click toolbox first)
+        // Activate brush mode by default (no need to click toolbox first).
+        // With retained instances this runs after every setOption, and the
+        // cursor is RELEASED when the chart stopped being brushable (e.g. a
+        // series mapping was added) — a fresh init used to reset it for free.
         if (brushable) {
           chart.dispatchAction({
             type: 'takeGlobalCursor',
             key: 'brush',
             brushOption: { brushType: isLine ? 'lineX' : 'rect', brushMode: 'single' }
           });
+        } else if (slot.brushable) {
+          chart.dispatchAction({
+            type: 'takeGlobalCursor',
+            key: 'brush',
+            brushOption: { brushType: false }
+          });
         }
-
-        chart.on('brushSelected', (params) => {
-          if (this._drillState() === 'off') return;
-          if (!params.batch || params.batch.length === 0) return;
-
-          // Collect all selected data indices across all areas/series
-          const batch = params.batch[0];
-          if (!batch?.selected) {
-            if (this._suppressBrushClear) return;
-            this._hasBrushFilter = false;
-            this._updateStatus();
-            this._sendClearFilter();
-            return;
-          }
-
-          // Gather selected (seriesIndex, dataIndex) pairs. A brushSelected
-          // dataIndex is RELATIVE TO ITS OWN SERIES, so it must be looked up
-          // in that series' data array — not in a flattened concatenation of
-          // all series (which mis-maps once there is more than one series).
-          const selected = [];
-          for (const s of batch.selected) {
-            if (s.dataIndex && s.dataIndex.length > 0) {
-              for (const di of s.dataIndex) {
-                selected.push({ seriesIndex: s.seriesIndex, dataIndex: di });
-              }
-            }
-          }
-
-          if (selected.length === 0) {
-            if (this._suppressBrushClear) return;
-            this._hasBrushFilter = false;
-            this._updateStatus();
-            this._sendClearFilter();
-            return;
-          }
-
-          // Clear brush on other facet charts
-          for (const other of this.charts) {
-            if (other !== chart) other.dispatchAction({ type: 'brush', areas: [] });
-          }
-
-          // Compute x/y range from selected points' actual values. Index
-          // into each point's own series array and bounds-check so an
-          // out-of-range index can neither throw nor pull the wrong point.
-          const opt = chart.getOption();
-          const allSeries = opt.series || [];
-
-          // With a drill column (an override, or 'auto' resolving to a
-          // categorical key), the brush filters downstream on that column's
-          // values for the brushed points — the same rule as click-drill, so a
-          // selection filters consistently whether click or brush. Build a
-          // (x|y) -> rows index once to map brushed points back to source rows.
-          // With no drill column (scatter 'auto'), the brush does a geometric
-          // x/y range filter.
-          const drillCol = this._drillColumn();
-          let rowIndex = null;
-          if (drillCol) {
-            rowIndex = new Map();
-            const xc = this.config.x, yc = this.config.y;
-            for (const r of (this.data || [])) {
-              const k = String(r[xc]) + '|||' + String(r[yc]);
-              if (!rowIndex.has(k)) rowIndex.set(k, []);
-              rowIndex.get(k).push(r);
-            }
-          }
-
-          let xVals = [], yVals = [], brushedRows = [];
-          for (const sel of selected) {
-            const sData = allSeries[sel.seriesIndex]?.data;
-            if (!sData || sel.dataIndex < 0 || sel.dataIndex >= sData.length) continue;
-            const pt = sData[sel.dataIndex];
-            if (!pt) continue;
-            const x = Array.isArray(pt) ? pt[0] : pt.value?.[0];
-            const y = Array.isArray(pt) ? pt[1] : pt.value?.[1];
-            if (x != null) xVals.push(x);
-            if (y != null) yVals.push(y);
-            if (rowIndex) {
-              const hit = rowIndex.get(String(x) + '|||' + String(y));
-              if (hit) brushedRows.push(...hit);
-            }
-          }
-
-          this._hasBrushFilter = true;
-          this._updateStatus();
-
-          if (drillCol && brushedRows.length) {
-            this._emitDrill(brushedRows);
-          } else if (xVals.length > 0) {
-            const xRange = [Math.min(...xVals), Math.max(...xVals)];
-            if (isLine) {
-              this._sendRangeFilter(xRange, null);
-            } else {
-              const yRange = yVals.length > 0 ? [Math.min(...yVals), Math.max(...yVals)] : null;
-              this._sendRangeFilter(xRange, yRange);
-            }
-          }
-        });
-
-        chart.on('brush', (params) => {
-          if (!params.areas || params.areas.length === 0) {
-            if (this._suppressBrushClear) return;
-            this._hasBrushFilter = false;
-            this._updateStatus();
-            this._sendClearFilter();
-          }
-        });
+        slot.brushable = brushable;
       }
 
+      this.charts = this._slots.map(s => s.chart).filter(Boolean);
       this._capMessage = capMessage;
       this._updateStatus();
     }
@@ -2634,7 +2800,7 @@
       const drill = this._drillColumn();
       const sortDir = this.config.sort_dir === 'desc' ? -1 : 1;
       if (!x || !y) {
-        this.chartGrid.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">Select X (start) and Y (term) columns</p></div>';
+        this._showEmpty('<div class="vd-empty-state"><p class="vd-empty-text">Select X (start) and Y (term) columns</p></div>');
         return;
       }
 
@@ -2699,38 +2865,35 @@
         });
       };
 
-      for (const facet of facets) {
-        const rows = facet === '__all__' ? this.data
-          : this.data.filter(r => String(r[facet]) === facet);
-        if (rows.length === 0) continue;
+      // `fv` (not `facet`) — same shadowing hazard as _renderIndividual: the
+      // filter must read the config's facet COLUMN, not a column named after
+      // the level (which, with the empty-facet skip below, blanked the whole
+      // grid). Empty facets render no slot, so the PANEL count (not the
+      // facet count) is this family's shape key.
+      const panels = [];
+      for (const fv of facets) {
+        const rows = fv === '__all__' ? this.data
+          : this.data.filter(r => String(r[facet]) === fv);
+        if (rows.length) panels.push({ fv, rows });
+      }
+      this._syncShape('timeline', panels.length);
 
-        let container;
-        if (singleFacet) {
-          container = this.chartGrid;
-        } else {
-          container = document.createElement('div');
-          container.className = 'dd-facet';
-          if (facet !== '__all__') {
-            const label = document.createElement('div');
-            label.className = 'dd-facet-label';
-            label.textContent = facet;
-            container.appendChild(label);
-          }
-          this.chartGrid.appendChild(container);
-        }
+      for (let fi = 0; fi < panels.length; fi++) {
+        const { fv, rows } = panels[fi];
+
+        const slot = this._ensureSlot(fi,
+          (!singleFacet && fv !== '__all__') ? fv : null, singleFacet);
+        slot.facetVal = fv;
 
         const terms = sortTerms(rows);
 
-        const chartDiv = document.createElement('div');
-        chartDiv.className = 'dd-chart';
         // Extra 20px when the legend is on, to keep the legend visually
         // separated from the x-axis labels.
         const heightExtra = (color && colorLevels.length > 0) ? 100 : 80;
-        chartDiv.style.height = Math.max(200, terms.length * 28 + heightExtra) + 'px';
-        container.appendChild(chartDiv);
-
-        const chart = echarts.init(chartDiv, this.theme || undefined);
-        this.charts.push(chart);
+        const hChanged = this._setSlotHeight(slot,
+          Math.max(200, terms.length * 28 + heightExtra) + 'px');
+        const existed = !!slot.chart;
+        const chart = this._ensureSlotChart(slot, 'timeline');
 
         const barData = [];
         for (const r of rows) {
@@ -2929,23 +3092,10 @@
         };
 
         chart.setOption(this._applyDrillEmphasis(option), true);
-
-        chart.on('click', (params) => {
-          if (this._drillState() === 'off') return;
-          if (params.componentType !== 'series') return;
-          // The clicked bar's drill value is packed at slot 7 (the effective
-          // drill column: lane for 'auto', or an override).
-          const v = params.value;
-          if (!v) return;
-          this._selected = String(v[3] || '');
-          this._updateStatus();
-          const dv = v[7];
-          if (drill && dv != null && dv !== '') {
-            this._emitDrill([{ [drill]: dv }]);
-          }
-        });
+        if (existed && hChanged) chart.resize();
       }
 
+      this.charts = this._slots.map(s => s.chart).filter(Boolean);
       this._capMessage = null;
       this._updateStatus();
     }
@@ -3214,6 +3364,7 @@
         sort_dir: this.config.sort_dir || 'asc',
         orientation: this.config.orientation || 'horizontal',
         bar_mode: this.config.bar_mode || 'stacked',
+        baseline: this.config.baseline || 'zero',
         series: this.config.series || '',
         label: this.config.label || '',
         drill: this.config.drill || '',
@@ -3289,8 +3440,7 @@
     dispose() {
       if (this._resizeObserver) this._resizeObserver.disconnect();
       if (this._resizeRaf) { cancelAnimationFrame(this._resizeRaf); this._resizeRaf = null; }
-      for (const c of this.charts) c.dispose();
-      this.charts = [];
+      this._teardownCharts();
       // The settings band lives inside the widget element, so it is torn
       // down with the card — no portaled popover or document-level
       // outside-click listener to clean up anymore.
@@ -3323,7 +3473,7 @@
       }
       if (el.id in pendingData) {
         const p = pendingData[el.id];
-        el._block.setData(p.columns, p.data, p.config, p.arguments);
+        el._block.setData(p.columns, p.data, p.config, p.arguments, p.data_rev);
         delete pendingData[el.id];
       }
     }
@@ -3333,7 +3483,7 @@
   Shiny.addCustomMessageHandler('drilldown-data', (/** @type {any} */ msg) => {
     const el = /** @type {any} */ (document.getElementById(msg.id));
     if (el?._block) {
-      el._block.setData(msg.columns, msg.data, msg.config, msg.arguments);
+      el._block.setData(msg.columns, msg.data, msg.config, msg.arguments, msg.data_rev);
     } else {
       pendingData[msg.id] = msg;
     }

@@ -283,10 +283,31 @@
     });
   }
 
+  // Emit the filter-clear action (chart parity: _sendClearFilter). The R
+  // side's filter branch reads the null column/values as "clear" and resets
+  // the filter reactiveVals, so downstream recovers.
+  /** @param {string} elemId */
+  function sendClearFilter(elemId) {
+    if (!window.Shiny || !Shiny.setInputValue) return;
+    Shiny.setInputValue(elemId + "_action",
+      { action: "filter", column: null, values: null,
+        filter_type: "categorical" },
+      { priority: "event" });
+  }
+
+  /** @param {HTMLElement} root */
+  function clearActiveRows(root) {
+    root.querySelectorAll("tr.dt-row-active").forEach(function (r) {
+      r.classList.remove("dt-row-active");
+    });
+  }
+
   /** @param {HTMLElement} root @param {HTMLElement} table @param {HTMLElement} tbody */
   function wireClick(root, table, tbody) {
-    var elemId = root.getAttribute("data-dt-elem-id");
-    if (!elemId) return;
+    var elemIdAttr = root.getAttribute("data-dt-elem-id");
+    if (!elemIdAttr) return;
+    // Rebound after the guard so the closures below see a plain string.
+    const elemId = elemIdAttr;
     // Grouped table: a row click ANDs the clicked row's group-key values into a
     // downstream filter (raw input -> that group's members). Otherwise the
     // legacy single-column drill (data-dt-onclick-col/idx).
@@ -312,39 +333,87 @@
       });
     }
     var idxN = grouped ? -1 : parseInt(idx || "", 10);
+
+    // A drill cell carries its RAW value on data-raw (emitted by the R
+    // renderer): numeric cells display rounded and NA renders as an em-dash,
+    // so textContent would emit a filter that matches zero rows and silently
+    // empty downstream. No data-raw = an NA cell -> the click is a no-op
+    // (the row also renders .dt-row-nodrill, so it never looks clickable);
+    // we never emit an is.na() filter — the simplest never-empties policy.
+    /** @param {Element} row @param {number} i */
+    function rawAt(row, i) {
+      var cell = row.children[i];
+      return cell ? cell.getAttribute("data-raw") : null;
+    }
+
     root.classList.add("dt-clickable");
     tbody.addEventListener("click", function (e) {
       var t = /** @type {Element | null} */ (e.target);
       var tr = t && t.closest("tr.blockr-data-row");
       if (!tr) return;
       var row = tr;
-      if (window.Shiny && Shiny.setInputValue) {
-        if (grouped) {
-          var filters = /** @type {Array<{ column: string, value: string }>} */ ([]);
-          groupIdx.forEach(function (g) {
-            var cell = row.children[g.idx];
-            if (cell) filters.push({
-              column: g.column, value: (cell.textContent || "").trim()
-            });
-          });
-          if (!filters.length) return;
-          Shiny.setInputValue(elemId + "_action",
-            { action: "filter", filters: filters, filter_type: "categorical" },
-            { priority: "event" });
-        } else {
-          if (!tr.children[idxN]) return;
-          var val = (tr.children[idxN].textContent || "").trim();
-          Shiny.setInputValue(elemId + "_action",
-            { action: "filter", column: col, values: [val],
-              filter_type: "categorical" },
-            { priority: "event" });
-        }
+      if (!window.Shiny || !Shiny.setInputValue) return;
+      // Click-to-toggle (chart parity): re-clicking the active row clears
+      // the filter and the highlight.
+      if (tr.classList.contains("dt-row-active")) {
+        tr.classList.remove("dt-row-active");
+        sendClearFilter(elemId);
+        return;
+      }
+      if (grouped) {
+        var filters = /** @type {Array<{ column: string, value: string }>} */ ([]);
+        var incomplete = false;
+        groupIdx.forEach(function (g) {
+          var raw = rawAt(row, g.idx);
+          if (raw == null) { incomplete = true; return; }
+          filters.push({ column: g.column, value: raw });
+        });
+        if (incomplete || !filters.length) return;   // NA group key -> no-op
+        Shiny.setInputValue(elemId + "_action",
+          { action: "filter", filters: filters, filter_type: "categorical" },
+          { priority: "event" });
+      } else {
+        var val = rawAt(tr, idxN);
+        if (val == null) return;                     // NA drill cell -> no-op
+        Shiny.setInputValue(elemId + "_action",
+          { action: "filter", column: col, values: [val],
+            filter_type: "categorical" },
+          { priority: "event" });
       }
       Array.prototype.slice.call(tbody.children).forEach(function (r) {
         r.classList.remove("dt-row-active");
       });
       tr.classList.add("dt-row-active");
     });
+
+    // Restored / re-rendered active filter -> row highlight. The renderer
+    // stamps the block's current filter state on the <table>
+    // (data-dt-active, JSON) at render time; match rows by RAW value so a
+    // restored board shows which row drives the downstream filter.
+    var activeJson = table.getAttribute("data-dt-active");
+    if (activeJson) {
+      /** @type {any} */
+      var af = null;
+      try { af = JSON.parse(activeJson); } catch (e) { af = null; }
+      if (af) {
+        Array.prototype.slice.call(tbody.children).forEach(function (r) {
+          if (!r.classList.contains("blockr-data-row")) return;
+          var hit = false;
+          if (grouped && af.filters && af.filters.length) {
+            hit = af.filters.every(function (/** @type {any} */ f) {
+              var g = groupIdx.filter(function (x) {
+                return x.column === f.column;
+              })[0];
+              return !!g && rawAt(r, g.idx) === String(f.value);
+            });
+          } else if (!grouped && af.column === col && af.values) {
+            var rv = rawAt(r, idxN);
+            hit = rv != null && af.values.indexOf(rv) !== -1;
+          }
+          if (hit) r.classList.add("dt-row-active");
+        });
+      }
+    }
   }
 
   /** @param {string | null} elemId @param {string} param @param {*} value */
@@ -609,7 +678,12 @@
         sendConfig(elemId, key, cfg[key]);
       },
       onMults: function () {},
-      onClearFilter: function () {},
+      // Engine hook: a drill re-aim / section-uncheck must drop the emitted
+      // filter (or downstream stays filtered forever with clicks inert).
+      onClearFilter: function () {
+        clearActiveRows(root);
+        sendClearFilter(elemId);
+      },
       ensureDefaults: function () {},
       afterTypeChange: function () {},
       isOpen: function () { return pop.classList.contains("blockr-settings--open"); },
@@ -652,6 +726,20 @@
     buildCogwheel(root, table);
     wireSearch(root);
     wireScrollShadow(root);
+    // Status-footer Reset (the footer is a server-rendered output inside the
+    // chrome and re-renders per filter change, so delegate from the
+    // container rather than wiring the button itself).
+    var elemIdAttr = root.getAttribute("data-dt-elem-id");
+    if (elemIdAttr) {
+      // Rebound after the guard so the closure sees a plain string.
+      const elemId = elemIdAttr;
+      root.addEventListener("click", function (e) {
+        var t = /** @type {Element | null} */ (e.target);
+        if (!t || !t.closest(".dd-status-reset")) return;
+        clearActiveRows(root);
+        sendClearFilter(elemId);
+      });
+    }
   }
 
   // Table wiring — for each freshly-rendered <table> (sort, row-click drill,
