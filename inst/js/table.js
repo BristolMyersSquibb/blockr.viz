@@ -605,38 +605,39 @@
     return spec;
   }
 
-  /** @param {HTMLElement} root @param {HTMLElement} table */
-  function buildCogwheel(root, table) {
-    var elemIdAttr = root.getAttribute("data-dt-elem-id");
-    if (!elemIdAttr) return;
-    // Rebound after the guard so the closures below see a plain string.
-    const elemId = elemIdAttr;
-
-    // Numeric columns (from R) drive the colType:"num" filter on the colour /
-    // bar scope picker, so it only offers shadeable columns.
-    /** @type {Record<string, boolean>} */
-    var numSet = {};
-    (table.getAttribute("data-dt-num-cols") || "").split(",")
-      .forEach(function (n) { if (n) numSet[n] = true; });
+  // Parse the gear's working state — the pickable columns and the current
+  // config — off a rendered <table>'s data-attributes. Pure read (no DOM
+  // writes), so the gear can re-run it against the FRESHLY rendered table
+  // whenever it opens (see buildCogwheel): the chrome (and the gear with it)
+  // is built once, while the inner table re-renders on every data / config
+  // change with these attributes re-stamped by R (dt_table_attrs).
+  /** @param {HTMLElement} table */
+  function readGearState(table) {
     /** @type {VizColumn[]} */
     var cols = [];
-    table.querySelectorAll("thead th .blockr-col-name")
-      .forEach(function (s) {
-        var nm = (s.textContent || "").trim();
-        // Non-numeric columns are "categorical" (not "any") so the Group /
-        // aggregate picker (colType "cat") offers them — the columns you can
-        // aggregate over. "any" pickers (drill, row color) still match either.
-        cols.push({ name: nm, type: numSet[nm] ? "numeric" : "categorical" });
-      });
-
-    // Structured ("Table 1") tables expose no pickable columns (the header is
-    // section spanners, the cells are pre-formatted strings), so the column-based
-    // controls (drill / colour / decimals) are no-ops and are dropped from the
-    // section list below (`hasCols`). The gear still renders for the column-free
-    // display toggles (sortable / collapsible / search / Excel export) — keyed on
-    // "no columns" (not a hard-coded "structured" flag) so it covers any future
-    // no-column case too.
-    var hasCols = cols.length > 0;
+    var colsAttr = table.getAttribute("data-dt-cols");
+    if (colsAttr) {
+      // Raw input schema stamped by R (dt_gear_cols_json) — correct even
+      // while the table displays an aggregated projection. "[]" for
+      // structured ("Table 1") frames: no pickable columns.
+      try { cols = JSON.parse(colsAttr) || []; } catch (e) { cols = []; }
+    } else {
+      // Legacy markup (no data-dt-cols): scrape the rendered header. Numeric
+      // columns (from R) drive the colType:"num" filter on the colour / bar
+      // scope picker, so it only offers shadeable columns.
+      /** @type {Record<string, boolean>} */
+      var numSet = {};
+      (table.getAttribute("data-dt-num-cols") || "").split(",")
+        .forEach(function (n) { if (n) numSet[n] = true; });
+      table.querySelectorAll("thead th .blockr-col-name")
+        .forEach(function (s) {
+          var nm = (s.textContent || "").trim();
+          // Non-numeric columns are "categorical" (not "any") so the Group /
+          // aggregate picker (colType "cat") offers them — the columns you can
+          // aggregate over. "any" pickers (drill, row color) still match either.
+          cols.push({ name: nm, type: numSet[nm] ? "numeric" : "categorical" });
+        });
+    }
 
     var onClick = table.getAttribute("data-dt-onclick-col");
     /** @type {Record<string, any>} */
@@ -672,6 +673,47 @@
       search:      table.getAttribute("data-dt-search") || "on",
       excel_download: table.getAttribute("data-dt-excel") || "off"
     };
+    return { cols: cols, cfg: cfg };
+  }
+
+  /** @param {HTMLElement} root @param {HTMLElement} table */
+  function buildCogwheel(root, table) {
+    var elemIdAttr = root.getAttribute("data-dt-elem-id");
+    if (!elemIdAttr) return;
+    // Rebound after the guard so the closures below see a plain string.
+    const elemId = elemIdAttr;
+
+    // Working state, initially off the table rendered at chrome-init time.
+    // `cfg` / `cols` are REASSIGNED by refreshState() below, so every engine
+    // callback reads them through the closure (never captures the objects).
+    var st = readGearState(table);
+    var cols = st.cols;
+    var cfg = st.cfg;
+
+    // Re-read state off the CURRENT table. The chrome — and this gear —
+    // outlives table re-renders, so the state captured at init goes stale as
+    // soon as the config changes anywhere else (state-restore race, AI /
+    // external_ctrl edits, upstream schema changes). Called on every popover
+    // OPEN (with engine.refresh()), never mid-interaction: while the popover
+    // is open its own edits are already in cfg, and re-parsing then could
+    // resurrect pre-round-trip server state.
+    function refreshState() {
+      var t = /** @type {HTMLElement | null} */ (
+        root.querySelector("table.blockr-table"));
+      if (!t) return;
+      var s = readGearState(t);
+      cols = s.cols;
+      cfg = s.cfg;
+    }
+
+    // Structured ("Table 1") tables expose no pickable columns (the header is
+    // section spanners, the cells are pre-formatted strings), so the column-based
+    // controls (drill / colour / decimals) are no-ops and are dropped from the
+    // section list below (`hasCols`). The gear still renders for the column-free
+    // display toggles (sortable / collapsible / search / Excel export) — keyed on
+    // "no columns" (not a hard-coded "structured" flag) so it covers any future
+    // no-column case too.
+    function hasCols() { return cols.length > 0; }
 
     var header = document.createElement("div");
     header.className = "blockr-gear-header";
@@ -702,7 +744,7 @@
     // change round-trips via sendConfig(key, value).
     var DDC = /** @type {typeof VizDrilldownConfig} */ (
       (typeof Blockr !== "undefined" && Blockr.DrilldownConfig) || window.DrilldownConfig);
-    new DDC({
+    var engine = new DDC({
       popoverEl: function () { return pop; },
       roles: TABLE_ROLES,
       config: function () { return cfg; },
@@ -710,10 +752,10 @@
       context: function () { return "all"; },
       currentType: function () { return cfg.transform; },
       sections: function () {
-        return tableSections(cfg, hasCols, cols.length ? cols[0].name : "");
+        return tableSections(cfg, hasCols(), cols.length ? cols[0].name : "");
       },
       sectionsForFamily: function () {
-        return tableSections(cfg, hasCols, cols.length ? cols[0].name : "");
+        return tableSections(cfg, hasCols(), cols.length ? cols[0].name : "");
       },
       // Paired-tail roles (e.g. func behind value) are rendered inside their
       // partner's row, never standalone — mirror the chart's DD_SECONDARY.
@@ -736,7 +778,7 @@
       // columns (annotated frame) or grand totals: null (section hidden).
       drillHint: function () {
         var hasGroup = cfg.group && cfg.group.length > 0;
-        if (!hasCols || !hasGroup) return null;
+        if (!hasCols() || !hasGroup) return null;
         return "Clicking a row filters downstream on the group key" +
           (cfg.group.length > 1 ? "s" : "") + " (" + cfg.group.join(", ") + ").";
       },
@@ -773,7 +815,8 @@
       afterTypeChange: function () {},
       isOpen: function () { return pop.classList.contains("blockr-settings--open"); },
       reopen: function () { openPop(); }
-    }).render();
+    });
+    engine.render();
 
     // The band is in flow: opening is a class toggle, no positioning, no
     // scroll/resize listeners, and no outside-click dismissal — it is a
@@ -792,12 +835,21 @@
     }
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
-      if (pop.classList.contains("blockr-settings--open")) closePop(); else openPop();
+      if (pop.classList.contains("blockr-settings--open")) { closePop(); return; }
+      // The gear opens on CURRENT state: re-read the freshly rendered
+      // table's attributes and rebuild the popover from them, so a config
+      // that changed server-side while the gear was closed (restore race,
+      // AI / external_ctrl, upstream schema change) is what the user sees —
+      // and what the change paths (sendConfig) then write back.
+      refreshState();
+      engine.refresh();
+      openPop();
     });
 
     root.insertBefore(header, root.firstChild);
     root.insertBefore(pop, header.nextSibling);
-    // Restore the remembered open state across chrome rebuilds.
+    // Restore the remembered open state across chrome rebuilds (the state
+    // was parsed just above, so no refresh needed here).
     if (bandOpen[elemId]) openPop();
   }
 

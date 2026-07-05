@@ -62,6 +62,8 @@ declare class VizDrilldownConfig {
   constructor(host: VizDrilldownHost);
   /** Rebuilds the popover DOM in place. */
   render(): void;
+  /** render() from the host's CURRENT state, re-seeding section checkboxes. */
+  refresh(): void;
   [member: string]: any;
 }
 

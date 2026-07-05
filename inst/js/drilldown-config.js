@@ -51,6 +51,22 @@
       this._added = new Set();      // optional roles the user added this session
       /** @type {Record<string, string>} */
       this._roleMemory = {};        // role key -> last chosen column (sticky)
+      /** @type {Record<string, boolean> | null} */
+      this._openSec = null;         // capability-section open state (lazy)
+      /** @type {MutationObserver | null} */
+      this._closeWatch = null;      // armed deferred re-render (multi picks)
+    }
+
+    // Rebuild the popover from the host's CURRENT config/columns, dropping
+    // the per-session section-open memory so the capability checkboxes
+    // (Aggregation, Drill-down, …) re-seed from the config. A host calls this
+    // when the gear OPENS on state that may have changed server-side since
+    // the popover was built (state restore, AI / external_ctrl edits) — see
+    // table.js's refreshState(); plain interactions keep using render() /
+    // _rerender(), which preserve the open-section memory.
+    refresh() {
+      this._openSec = null;
+      this.render();
     }
 
     // -- small helpers --------------------------------------------------------
@@ -167,6 +183,10 @@
       const spec = this.h.sections();
       const pop = this.h.popoverEl();
 
+      // A full rebuild reflects the current config, so an armed deferred
+      // re-render (multi-select dropdown still open) is moot — and its
+      // observed select is about to be destroyed anyway.
+      this._dropCloseWatch();
       for (const s of Object.values(this._selects)) {
         if (s && typeof s.destroy === 'function') s.destroy();
       }
@@ -630,6 +650,42 @@
       if (wasOpen) setTimeout(() => this.h.reopen(), 0);
     }
 
+    // Deferred gated re-render for a MULTI-select role with rerender
+    // semantics (the table's Group picker): Blockr.Select keeps its dropdown
+    // open across picks, so rebuilding the popover on every onChange would
+    // destroy the dropdown after each pick — selecting three columns meant
+    // reopening it three times. Instead, watch the select's open state
+    // (blockr-select.js mirrors it on the control root via aria-expanded)
+    // and re-render ONCE when the dropdown closes; the config itself is
+    // committed per pick (onChange already ran), only the popover rebuild
+    // waits. Single-select roles keep their immediate re-render: their
+    // dropdown closes on pick anyway.
+    /** @param {string} key */
+    _rerenderOnDropdownClose(key) {
+      const inst = this._selects[key];
+      const el = inst && inst.el;
+      // No live select (native <select multiple> fallback) or dropdown
+      // already closed (tag-remove click) -> re-render now, as before.
+      if (!el || el.getAttribute('aria-expanded') !== 'true') {
+        this._rerender();
+        return;
+      }
+      if (this._closeWatch) return;   // already armed for this open dropdown
+      const mo = new MutationObserver(() => {
+        if (el.getAttribute('aria-expanded') === 'true') return;
+        this._dropCloseWatch();
+        this._rerender();
+      });
+      mo.observe(el, { attributes: true, attributeFilter: ['aria-expanded'] });
+      this._closeWatch = mo;
+    }
+
+    _dropCloseWatch() {
+      if (!this._closeWatch) return;
+      this._closeWatch.disconnect();
+      this._closeWatch = null;
+    }
+
     // Column options filtered by a colType string ('num' / 'cat' / 'any' /
     // 'none'), for a control that is not a role (the per-value column picker).
     /** @param {string} ct */
@@ -961,13 +1017,11 @@
         wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
         const onSel = (/** @type {string[]} */ vals) => {
           cfg[key] = vals; cb(); this.h.onChange(key);
-          // A multi-picker that gates other rows (e.g. the table's group reveals
-          // the summaries list once set) re-renders the section list live.
-          if (role.rerender) {
-            const wasOpen = this.h.isOpen();
-            this.render();
-            if (wasOpen) setTimeout(() => this.h.reopen(), 0);
-          }
+          // A multi-picker that gates other rows (e.g. the table's group
+          // reveals the summaries list once set) re-renders the section list
+          // — deferred until its dropdown closes, so a multi-pick keeps the
+          // dropdown (and focus) alive across picks.
+          if (role.rerender) this._rerenderOnDropdownClose(key);
         };
         if (typeof Blockr !== 'undefined' && Blockr.Select && Blockr.Select.multi) {
           this._selects[key] = Blockr.Select.multi(wrap, {
