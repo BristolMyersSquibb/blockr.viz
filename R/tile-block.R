@@ -68,9 +68,14 @@
 #'   determined (never user-picked): the `group` column when grouped, else
 #'   the `name` column on an ungrouped long KPI list. Off by
 #'   default; inert when the tile has neither (bare KPI, grand totals).
-#' @param filter_col,filter_value Click-filter state. Kept as constructor
+#' @param filter_column,filter_values Click-filter state (the shared filter
+#'   transport names, identical to the chart / table). Kept as constructor
 #'   params so the filter round-trips through save/restore (blockr.core
 #'   deserializes a block via its constructor formals).
+#' @param filter_col,filter_value LEGACY aliases for
+#'   `filter_column` / `filter_values`, mapped on construction (the old
+#'   scalar `filter_value` coerces to the plural list shape). Kept as formals
+#'   so saved boards restore; new names win when both are given.
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #'
 #' @return A transform block of class `tile_block`. Its `result` is the
@@ -95,9 +100,29 @@ new_tile_block <- function(value = character(),
                            format = "number",
                            unit = "",
                            drill = FALSE,
+                           filter_column = NULL,
+                           filter_values = NULL,
                            filter_col = NULL,
                            filter_value = NULL,
                            ...) {
+  # Legacy aliases mapped on construction (pre-rename saved boards / callers
+  # restore through these formals): filter_col / filter_value become the
+  # shared chart / table transport names filter_column / filter_values, the
+  # old scalar filter_value coerced to the plural list shape. New names win
+  # when both are given. (blockr_deser.tile_block renames saved payloads
+  # before they reach the ctor, so board restores never warn here.)
+  if (!is.null(filter_col) || !is.null(filter_value)) {
+    warning(
+      "`filter_col` / `filter_value` are deprecated; use `filter_column` / ",
+      "`filter_values`.",
+      call. = FALSE
+    )
+    if (is.null(filter_column)) filter_column <- filter_col
+    if (is.null(filter_values) && !is.null(filter_value)) {
+      filter_values <- as.list(filter_value)
+    }
+  }
+
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {
@@ -120,8 +145,8 @@ new_tile_block <- function(value = character(),
         r_format    <- shiny::reactiveVal(format)
         r_unit      <- shiny::reactiveVal(unit)
         r_drill     <- shiny::reactiveVal(isTRUE(drill))
-        r_filter_col   <- shiny::reactiveVal(filter_col)
-        r_filter_value <- shiny::reactiveVal(filter_value)
+        r_filter_column <- shiny::reactiveVal(filter_column)
+        r_filter_values <- shiny::reactiveVal(filter_values)
 
         # Only write when the value actually changes. The JS echoes the full
         # config on any popover change, so a blind set would re-render on
@@ -136,8 +161,8 @@ new_tile_block <- function(value = character(),
           if (is.null(msg)) return()
           act <- msg$action %||% "config"
           if (identical(act, "filter")) {
-            upd(r_filter_col, msg$column)
-            upd(r_filter_value, msg$values)
+            upd(r_filter_column, msg$column)
+            upd(r_filter_values, msg$values)
           } else if (identical(act, "config")) {
             p <- msg$param
             v <- msg$value
@@ -186,15 +211,15 @@ new_tile_block <- function(value = character(),
             # truth -- cheap for a KPI tile, and it makes restore free. (The
             # table renders its status line as a separate small output
             # instead, because its body render is heavy.)
-            active_col = r_filter_col(),
-            active_values = r_filter_value()
+            active_col = r_filter_column(),
+            active_values = r_filter_values()
           )
         })
 
         list(
           expr = shiny::reactive({
-            col  <- r_filter_col()
-            vals <- r_filter_value()
+            col  <- r_filter_column()
+            vals <- r_filter_values()
             if (is.null(col) || is.null(vals) || length(vals) == 0) {
               blockr.core::bbquote(dplyr::filter(.(data), TRUE))
             } else if (length(vals) == 1) {
@@ -215,8 +240,13 @@ new_tile_block <- function(value = character(),
             layout = r_layout, overline = r_overline,
             caption = r_caption, secondary = r_secondary, style = r_style,
             good_when = r_good_when, format = r_format, unit = r_unit,
-            drill = r_drill, filter_col = r_filter_col,
-            filter_value = r_filter_value
+            drill = r_drill, filter_column = r_filter_column,
+            filter_values = r_filter_values,
+            # Legacy alias formals (mapped on construction): serialized as
+            # NULL so restored boards re-enter through the new names;
+            # blockr.core requires every ctor formal in the state.
+            filter_col = function() NULL,
+            filter_value = function() NULL
           )
         )
       })
@@ -233,10 +263,11 @@ new_tile_block <- function(value = character(),
     # (layout/style/good_when/format) always carry a value and are omitted.
     allow_empty_state = c("value", "group", "name", "summaries", "color",
       "overline",
-      "caption", "secondary", "unit", "drill", "filter_col", "filter_value"),
+      "caption", "secondary", "unit", "drill", "filter_column",
+      "filter_values", "filter_col", "filter_value"),
     external_ctrl = c("value", "group", "name", "summaries", "color", "layout",
       "overline", "caption", "secondary", "style", "good_when", "format",
-      "unit", "drill", "filter_col", "filter_value"),
+      "unit", "drill", "filter_column", "filter_values"),
     expr_type = "bquoted",
     class = "tile_block",
     ...
