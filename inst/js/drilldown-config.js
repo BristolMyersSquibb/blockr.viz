@@ -469,7 +469,12 @@
       const sec = this._sectionEl(title, {
         toggle: { checked: open, onToggle: (on) =>
           this._toggleSection(secKey, on,
-            () => { cfg[cfgKey] = ''; this.h.onChange(cfgKey); },
+            // Unchecking the capability also clears the active emitted
+            // filter (single source of truth: the engine's off-branch, same
+            // as _renderDrillSection) — otherwise downstream stays filtered
+            // on the last click with clicks now inert.
+            () => { cfg[cfgKey] = ''; this.h.onChange(cfgKey);
+                    this.h.onClearFilter(); },
             () => {
               if (!this._hasVal(cfg[cfgKey]) && seed && this._colExists(seed)) {
                 cfg[cfgKey] = seed;

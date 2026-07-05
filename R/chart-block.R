@@ -328,6 +328,14 @@ new_chart_block <- function(
               # user adds it (an empty [] would read as "present").
               tt_fields = if (length(r_tt_fields())) as.list(r_tt_fields()) else NULL,
               drill = r_drill(), sort_by = r_sort_by(),
+              # Click-filter state, ISOLATED: reading it reactively would
+              # re-pump the whole data frame on every click (the render-storm
+              # guard above). Only a genuine re-send (restore at session
+              # start, config/data change) carries it -- exactly what the JS
+              # restore branch needs to re-select the mark and label the
+              # footer. as.list() so a length-1 value stays a JSON array.
+              filter_column = shiny::isolate(r_filter_column()),
+              filter_values = as.list(shiny::isolate(r_filter_values())),
               sort_dir = r_sort_dir(), orientation = r_orientation(),
               bar_mode = r_bar_mode(),
               line_width_mult = r_line_width_mult(),
