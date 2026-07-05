@@ -140,3 +140,11 @@
   display: none !important;
 }
 
+/* Zero-match search feedback (table.js updateNoMatch): shown under the
+   header when an active query hides every data row, removed with matches. */
+.drilldown-table-container .blockr-search-empty {
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--blockr-color-text-muted, #6b7280);
+}

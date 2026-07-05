@@ -40,14 +40,24 @@
       tbody.appendChild(f);
     }
 
-    /** @param {Element} a @param {Element} b @param {number} idx @param {number} dir */
-    function cmpRows(a, b, idx, dir) {
-      var av = a.children[idx] ? (a.children[idx].textContent || "").trim() : "";
-      var bv = b.children[idx] ? (b.children[idx].textContent || "").trim() : "";
-      var an = parseNum(av), bn = parseNum(bv), cmp;
-      if (an !== null && bn !== null) cmp = an - bn;
-      else cmp = av.localeCompare(bv);
-      return dir * cmp;
+    // Decorate-sort-undecorate: read + parse each row's sort key ONCE (n
+    // extractions), then sort the keyed array — a comparator that hit the DOM
+    // did ~n log n textContent reads and regex parses per header click.
+    // Comparator semantics are unchanged (numeric when both keys parse, else
+    // locale compare; native sort stability keeps ties in document order).
+    /** @param {Element[]} rows @param {number} idx @param {number} dir */
+    function sortRows(rows, idx, dir) {
+      var keyed = rows.map(function (r) {
+        var v = r.children[idx] ? (r.children[idx].textContent || "").trim() : "";
+        return { row: r, str: v, num: parseNum(v) };
+      });
+      keyed.sort(function (a, b) {
+        var cmp;
+        if (a.num !== null && b.num !== null) cmp = a.num - b.num;
+        else cmp = a.str.localeCompare(b.str);
+        return dir * cmp;
+      });
+      return keyed.map(function (k) { return k.row; });
     }
 
     // Structured tables keep their section grouping: sort the data rows
@@ -70,7 +80,7 @@
       });
       if (cur.headers.length > 0 || cur.rows.length > 0) groups.push(cur);
       groups.forEach(function (g) {
-        g.rows.sort(function (a, b) { return cmpRows(a, b, idx, dir); });
+        g.rows = sortRows(g.rows, idx, dir);
       });
       var f = document.createDocumentFragment();
       groups.forEach(function (g) {
@@ -82,8 +92,7 @@
 
     /** @param {number} idx @param {number} dir */
     function sortFlat(idx, dir) {
-      var rows = Array.prototype.slice.call(tbody.children);
-      rows.sort(function (a, b) { return cmpRows(a, b, idx, dir); });
+      var rows = sortRows(Array.prototype.slice.call(tbody.children), idx, dir);
       var f = document.createDocumentFragment();
       rows.forEach(function (r) { f.appendChild(r); });
       tbody.appendChild(f);
@@ -96,15 +105,19 @@
       } else {
         state.col = idx; state.dir = 1;
       }
-      root.querySelectorAll("th.blockr-sortable .blockr-sort-icon")
-        .forEach(function (ic) {
-          ic.classList.remove("blockr-sort-icon-asc", "blockr-sort-icon-desc");
-        });
+      root.querySelectorAll("th.blockr-sortable").forEach(function (h) {
+        h.setAttribute("aria-sort", "none");
+        var i = h.querySelector(".blockr-sort-icon");
+        if (i) i.classList.remove("blockr-sort-icon-asc", "blockr-sort-icon-desc");
+      });
       if (state.dir === 0) { state.col = null; reset(); return; }
       var th = root.querySelector(
         'th.blockr-sortable[data-col-index="' + idx + '"]'
       );
       if (th) {
+        th.setAttribute(
+          "aria-sort", state.dir === 1 ? "ascending" : "descending"
+        );
         var ic = th.querySelector(".blockr-sort-icon");
         if (ic) {
           ic.classList.add(
@@ -117,10 +130,22 @@
     }
 
     root.querySelectorAll("th.blockr-sortable").forEach(function (th) {
-      th.addEventListener("click", function (e) {
+      // Keyboard parity: the header is focusable and Enter/Space sort like a
+      // click; aria-sort starts at "none" and tracks the state in sortBy.
+      th.setAttribute("tabindex", "0");
+      th.setAttribute("aria-sort", "none");
+      /** @param {Event} e */
+      var activate = function (e) {
         e.stopPropagation();
         var idx = parseInt(th.getAttribute("data-col-index") || "", 10);
         if (!isNaN(idx)) sortBy(idx);
+      };
+      th.addEventListener("click", activate);
+      th.addEventListener("keydown", function (e) {
+        var k = /** @type {KeyboardEvent} */ (e).key;
+        if (k !== "Enter" && k !== " ") return;
+        e.preventDefault();   // Space must sort, not scroll the panel
+        activate(e);
       });
     });
   }
@@ -238,48 +263,107 @@
     onScroll();
   }
 
+  // Per-row lowercase search text, read + lowered ONCE per rendered row
+  // (per-keystroke filtering used to re-extract textContent of the whole
+  // tbody — on a 10k-row table every typed character walked the entire DOM).
+  // Keyed on the row ELEMENT: a re-render mints fresh rows, so the cache can
+  // never go stale and the old entries fall out with the old DOM.
+  /** @type {WeakMap<Element, string>} */
+  var searchText = new WeakMap();
+
+  /** @param {Element} r */
+  function rowText(r) {
+    var t = searchText.get(r);
+    if (t == null) {
+      t = (r.textContent || "").toLowerCase();
+      searchText.set(r, t);
+    }
+    return t;
+  }
+
+  // Zero-match feedback: with a query active and every data row hidden the
+  // table is just a header over nothing — say so. The message lives next to
+  // the <table> (inside the scroll wrapper), so it re-derives per filter pass
+  // and vanishes with the old table on a re-render.
+  /** @param {HTMLElement} table @param {boolean} show */
+  function updateNoMatch(table, show) {
+    var parent = table.parentElement;
+    if (!parent) return;
+    var msg = parent.querySelector(".blockr-search-empty");
+    if (!show) {
+      if (msg) parent.removeChild(msg);
+      return;
+    }
+    if (msg) return;
+    msg = document.createElement("div");
+    msg.className = "blockr-search-empty";
+    msg.setAttribute("role", "status");
+    msg.textContent = "No matching rows";
+    parent.insertBefore(msg, table.nextSibling);
+  }
+
+  // One filter pass over the current table (also run directly by wireTable to
+  // re-apply an active query to freshly rendered rows, skipping the debounce).
+  /** @param {HTMLElement} root */
+  function applySearch(root) {
+    var inp = /** @type {HTMLInputElement | null} */ (root.querySelector("input.blockr-search"));
+    // The <table>/<tbody> re-renders on each filter while the input (in the
+    // chrome) persists, so query them live rather than closing over them.
+    var table = /** @type {HTMLElement | null} */ (root.querySelector("table.blockr-table"));
+    var tbody = table && table.querySelector("tbody");
+    if (!inp || !table || !tbody) return;
+    var structured = root.getAttribute("data-dt-structured") === "1";
+    var q = inp.value.trim().toLowerCase();
+    var rows = Array.prototype.slice.call(tbody.children);
+    var anyMatch = false;
+    rows.forEach(function (r) {
+      if (!r.classList.contains("blockr-data-row")) return;
+      if (!q || rowText(r).indexOf(q) !== -1) {
+        r.classList.remove("blockr-hidden-search");
+        anyMatch = true;
+      } else {
+        r.classList.add("blockr-hidden-search");
+      }
+    });
+    updateNoMatch(table, !!q && !anyMatch);
+    if (!structured) return;
+    // A section header stays visible iff any descendant row (up to the next
+    // header of equal/shallower level) is still visible — same as
+    // html_table()'s search.
+    for (var i = rows.length - 1; i >= 0; i--) {
+      var r = rows[i];
+      if (!r.classList.contains("blockr-section-header")) continue;
+      if (!q) { r.classList.remove("blockr-hidden-search"); continue; }
+      var level = parseInt(r.getAttribute("data-level"), 10);
+      var anyVisible = false;
+      for (var j = i + 1; j < rows.length; j++) {
+        var n = rows[j];
+        if (n.classList.contains("blockr-section-header")) {
+          if (parseInt(n.getAttribute("data-level"), 10) <= level) break;
+        }
+        if (!n.classList.contains("blockr-hidden-search")) { anyVisible = true; break; }
+      }
+      if (anyVisible) r.classList.remove("blockr-hidden-search");
+      else r.classList.add("blockr-hidden-search");
+    }
+  }
+
   /** @param {HTMLElement} root */
   function wireSearch(root) {
     var inp = /** @type {HTMLInputElement | null} */ (root.querySelector("input.blockr-search"));
     if (!inp || inp.getAttribute("data-dt-search-wired") === "1") return;
     inp.setAttribute("data-dt-search-wired", "1");
+    // Debounced: coalesce a typing burst into one filter pass per 150 ms
+    // pause — each pass touches every row, so per-keystroke passes scale
+    // with table size.
+    /** @type {number | undefined} */
+    var timer;
     inp.addEventListener("input", function () {
-      // The <table>/<tbody> re-renders on each filter while this input (in the
-      // chrome) persists, so query it live rather than closing over it.
-      var table = root.querySelector("table.blockr-table");
-      var tbody = table && table.querySelector("tbody");
-      if (!tbody) return;
-      var structured = root.getAttribute("data-dt-structured") === "1";
-      var q = /** @type {HTMLInputElement} */ (inp).value.trim().toLowerCase();
-      var rows = Array.prototype.slice.call(tbody.children);
-      rows.forEach(function (r) {
-        if (!r.classList.contains("blockr-data-row")) return;
-        if (!q || r.textContent.toLowerCase().indexOf(q) !== -1) {
-          r.classList.remove("blockr-hidden-search");
-        } else {
-          r.classList.add("blockr-hidden-search");
-        }
-      });
-      if (!structured) return;
-      // A section header stays visible iff any descendant row (up to the next
-      // header of equal/shallower level) is still visible — same as
-      // html_table()'s search.
-      for (var i = rows.length - 1; i >= 0; i--) {
-        var r = rows[i];
-        if (!r.classList.contains("blockr-section-header")) continue;
-        if (!q) { r.classList.remove("blockr-hidden-search"); continue; }
-        var level = parseInt(r.getAttribute("data-level"), 10);
-        var anyVisible = false;
-        for (var j = i + 1; j < rows.length; j++) {
-          var n = rows[j];
-          if (n.classList.contains("blockr-section-header")) {
-            if (parseInt(n.getAttribute("data-level"), 10) <= level) break;
-          }
-          if (!n.classList.contains("blockr-hidden-search")) { anyVisible = true; break; }
-        }
-        if (anyVisible) r.classList.remove("blockr-hidden-search");
-        else r.classList.add("blockr-hidden-search");
-      }
+      if (timer != null) clearTimeout(timer);
+      timer = window.setTimeout(function () {
+        timer = undefined;
+        applySearch(root);
+      }, 150);
     });
   }
 
@@ -448,7 +532,8 @@
   var EXPORT_OPT      = [{ value: "on", label: "Excel export" },
                          { value: "off", label: "No Excel export" }];
   var TABLE_ROLES = Object.assign({}, DAgg.aggRoles({ multiple: true }), {
-    drill:      { label: "Filter column", kind: "column", colType: "any" },
+    // "Filter on" matches the chart's drill picker label (one vocabulary).
+    drill:      { label: "Filter on", kind: "column", colType: "any" },
     // Categorical identity color ("Color by") — the chart's color aesthetic
     // applied to rows (scale-map tint). "(none)" = no tint.
     color:      { label: "Color by",   kind: "column", colType: "cat" },
@@ -757,8 +842,10 @@
     wireCollapse(root, tbody);
     // Re-apply any active search filter to the freshly rendered rows (the
     // input persists in the chrome but the new rows start unfiltered).
+    // Directly, not via an input event: the listener debounces, and 150 ms
+    // of unfiltered rows after every re-render would flash.
     var inp = /** @type {HTMLInputElement | null} */ (root.querySelector("input.blockr-search"));
-    if (inp && inp.value.trim()) inp.dispatchEvent(new Event("input"));
+    if (inp && inp.value.trim()) applySearch(root);
   }
 
   /** @param {HTMLElement} root */
