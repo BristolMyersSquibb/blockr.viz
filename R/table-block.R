@@ -466,6 +466,25 @@ dd_table_aggregate <- function(data, group, summaries) {
        metric_cols = vapply(plan, `[[`, "", "name"), aggregated = TRUE)
 }
 
+#' min/max with an empty-group guard.
+#'
+#' `min(x, na.rm = TRUE)` on an all-NA (or empty) group warns and returns
+#' `Inf` (`-Inf` for max) -- neither a real extremum nor the `NA` the rest of
+#' the vocabulary yields (mean -> NaN, median -> NA). An empty group has no
+#' extremum: return NA (of `x`'s type), matching the JS engine's null and
+#' keeping a chart and its table twin on the same number. `na.rm` is accepted
+#' (dd_metric_plan composes every numeric aggregation as `fn(x, na.rm = TRUE)`)
+#' but missing values are always removed.
+#' @noRd
+dd_agg_min <- function(x, na.rm = TRUE) {
+  if (all(is.na(x))) x[NA_integer_] else min(x, na.rm = TRUE)
+}
+
+#' @noRd
+dd_agg_max <- function(x, na.rm = TRUE) {
+  if (all(is.na(x))) x[NA_integer_] else max(x, na.rm = TRUE)
+}
+
 #' Plan the metric columns for a summaries list.
 #'
 #' For each metric produces `list(name, expr, label)`: `name` is the bold header
@@ -476,10 +495,11 @@ dd_table_aggregate <- function(data, group, summaries) {
 #' (numeric) column. Non-numeric or missing columns fall away.
 #' @noRd
 dd_metric_plan <- function(summaries, data) {
-  words <- c(mean = "Mean", median = "Median", sum = "Sum", min = "Min",
-             max = "Max", count_distinct = "Distinct")
+  # Words come from the shared AGG_WORDS (R/block-arguments.R), the R twin of
+  # the JS AGG_WORDS -- one home per side, tied by the drift test.
   fn_calls <- list(mean = quote(mean), median = quote(stats::median),
-                   sum = quote(sum), min = quote(min), max = quote(max))
+                   sum = quote(sum), min = quote(dd_agg_min),
+                   max = quote(dd_agg_max))
   orig_label <- function(col) {
     l <- attr(data[[col]], "label", exact = TRUE)
     if (is.character(l) && length(l) == 1L && nzchar(l)) l else col
@@ -524,7 +544,8 @@ dd_metric_plan <- function(summaries, data) {
       cols <- setdiff(all_num, claimed)
     }
     if (identical(fn, "count")) {
-      add(uniq("Count", "count"), quote(dplyr::n()), "Number of Observations")
+      add(uniq(AGG_WORDS[["count"]], "count"), quote(dplyr::n()),
+          "Number of Observations")
     } else if (identical(fn, "count_distinct")) {
       for (col in cols) {
         add(uniq(col, "distinct"),
@@ -533,7 +554,7 @@ dd_metric_plan <- function(summaries, data) {
             # must read the same number on a chart and its table twin.
             bquote(dplyr::n_distinct(.data[[.(col)]], na.rm = TRUE),
                    list(col = col)),
-            paste0(words[["count_distinct"]], ": ", orig_label(col)))
+            paste0(AGG_WORDS[["count_distinct"]], ": ", orig_label(col)))
       }
     } else if (!is.null(fn_calls[[fn]])) {
       fc <- fn_calls[[fn]]
@@ -542,7 +563,7 @@ dd_metric_plan <- function(summaries, data) {
           add(uniq(col, fn),
               bquote(.(fc)(.data[[.(col)]], na.rm = TRUE),
                      list(fc = fc, col = col)),
-              paste0(words[[fn]], ": ", orig_label(col)))
+              paste0(AGG_WORDS[[fn]], ": ", orig_label(col)))
         }
       }
     }
