@@ -204,7 +204,7 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
     if (any(keep)) {
       vk <- col[keep]
       disp <- if (num_flag[j]) {
-        formatC(round(as.numeric(vk), digits), format = "fg",
+        formatC(round(as.numeric(vk), digits), format = "f", digits = digits,
                 drop0trailing = TRUE, big.mark = "")
       } else {
         as.character(vk)

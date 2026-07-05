@@ -266,7 +266,7 @@ tk_pill_tone <- function(status) {
                "healthy", "green")) return("good")
   if (s %in% c("bad", "fail", "below", "below plan", "down", "critical",
                "red", "off track")) return("bad")
-  if (s %in% c("warn", "warning", "at risk", "amber", "neutral")) return("bad")
+  if (s %in% c("warn", "warning", "at risk", "amber")) return("bad")
   "neutral"
 }
 
