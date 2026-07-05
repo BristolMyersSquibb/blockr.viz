@@ -1325,12 +1325,28 @@ new_table_block <- function(rowname = NULL,
                 ad
               )
             }
+            # COLOR applies to the AGGREGATED frame too: shadings resolve
+            # against the displayed (aggregated) columns, and "Color by"
+            # tints rows whose color column survived the aggregation (a
+            # group key; a non-grouped column has no per-row value here and
+            # silently yields no tint). Smart default (color NULL) = the
+            # first group key, map-bound-only; explicit pick = chart-parity
+            # palette fallback (dd_ident_hex).
+            arc <- r_color()
+            arc_col <- if (is.null(arc)) {
+              if (gl) agg$group[1L] else NULL
+            } else if (nzchar(arc)) {
+              arc
+            } else {
+              NULL
+            }
             return(tryCatch(
               dt_table_tag(
                 ad,
                 label_col  = if (gl) agg$group[1L] else " ",
                 value_cols = if (gl) c(setdiff(agg$group, agg$group[1L]), agg$metric_cols)
                              else agg$metric_cols,
+                shadings   = r_shadings(),
                 drill      = NULL,
                 # Group-keys drill is OPT-IN (checkbox default off, like every
                 # drill): the keys wire up only when `drill` is set -- "auto"
@@ -1342,6 +1358,14 @@ new_table_block <- function(rowname = NULL,
                 } else {
                   character()
                 },
+                row_hex    = if (is.null(arc_col)) {
+                  NULL
+                } else if (is.null(arc)) {
+                  dd_row_hex(board_scale_map(), arc_col, ad)
+                } else {
+                  dd_ident_hex(board_scale_map(), arc_col, ad)
+                },
+                color      = arc_col,
                 group      = r_group(), summaries = r_summaries(),
                 digits     = r_digits(),
                 sortable    = isTRUE(r_sortable()),

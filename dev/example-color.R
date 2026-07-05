@@ -51,6 +51,15 @@ board <- new_dock_board(
       row_color = "ARM",
       block_name = "LEGACY args (cell_color + row_color)"),
 
+    # 2b. AGGREGATED table: group=ARM + mean summaries, Color by ARM +
+    #     diverging shading -- COLOR must apply to the aggregated frame too.
+    agg_tbl = new_table_block(
+      group = "ARM",
+      summaries = list(list(func = "mean", cols = list())),
+      color = "ARM",
+      shadings = list(list(mode = "diverging", cols = list())),
+      block_name = "AGGREGATED: Color by ARM + diverging shading"),
+
     # 3. Tile: grouped by region, Color by region (card accents via map
     #    palette fallback... ARM bound; region -> board palette).
     tile_g = new_tile_block(
@@ -64,10 +73,10 @@ board <- new_dock_board(
       color = "metric", layout = "table",
       block_name = "Tile: Color by Name (metric)")
   ),
-  links = links(from = c("data", "data", "kpis", "kpis"),
-                to = c("tbl", "legacy", "tile_g", "tile_n")),
+  links = links(from = c("data", "data", "data", "kpis", "kpis"),
+                to = c("tbl", "legacy", "agg_tbl", "tile_g", "tile_n")),
   layouts = list(
-    tables = dock_layout("tbl", "legacy", name = "1. Tables"),
+    tables = dock_layout("tbl", "legacy", "agg_tbl", name = "1. Tables"),
     tiles  = dock_layout("tile_g", "tile_n", name = "2. Tiles")
   ),
   options = new_board_options(new_scale_map_option(study_scale_map)),
