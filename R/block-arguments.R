@@ -14,6 +14,15 @@
 # test guards the pair). It is the single source for the `func` enum.
 AGG_FNS <- c("count", "count_distinct", "mean", "median", "sum", "min", "max")
 
+# One word per aggregation, for composed labels ("Mean: Baseline BMI", metric
+# headers, tooltips). MUST mirror `AGG_WORDS` in inst/js/drilldown-agg.js (the
+# same drift test guards the pair). Single R-side home -- dd_metric_plan()
+# (R/table-block.R) reads it; do not re-inline per consumer.
+AGG_WORDS <- c(
+  count = "Count", count_distinct = "Distinct", mean = "Mean",
+  median = "Median", sum = "Sum", min = "Min", max = "Max"
+)
+
 #' Shared `group` / `value` / `func` argument triple.
 #'
 #' The aggregation half of the chart / table / tile registry surface. Each

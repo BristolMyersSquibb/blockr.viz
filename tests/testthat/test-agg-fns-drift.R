@@ -15,3 +15,22 @@ test_that("JS AGG_FNS mirrors R AGG_FNS", {
 
   expect_identical(vals, AGG_FNS)
 })
+
+# Same guard for the label words: the JS `AGG_WORDS` (composed labels in the
+# chart tooltip / gear) MUST mirror the R `AGG_WORDS` (R/block-arguments.R,
+# consumed by dd_metric_plan for the table/tile metric headers).
+test_that("JS AGG_WORDS mirrors R AGG_WORDS", {
+  js_path <- system.file("js", "drilldown-agg.js", package = "blockr.viz")
+  expect_true(nzchar(js_path))
+  js <- paste(readLines(js_path, warn = FALSE), collapse = "\n")
+
+  # Extract the `key: 'Word'` entries of the `const AGG_WORDS = {...}` literal.
+  obj <- regmatches(js, regexpr("AGG_WORDS = \\{[^}]*\\}", js))
+  expect_length(obj, 1L)
+  entries <- regmatches(obj, gregexpr("[a-z_]+: '[A-Za-z ]+'", obj))[[1]]
+  keys <- sub(":.*$", "", entries)
+  vals <- sub("^.*: '([^']+)'$", "\\1", entries)
+
+  expect_identical(keys, names(AGG_WORDS))
+  expect_identical(vals, unname(AGG_WORDS))
+})

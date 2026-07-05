@@ -1008,46 +1008,16 @@
 
     // -- Aggregation ----------------------------------------------------------
 
+    // Grouping + aggregation live in the shared DrilldownAgg engine (the R
+    // twin is dd_table_aggregate; a golden cross-test ties them). Returns RAW
+    // values — a cell with no usable numeric value is null (rendered as a
+    // gap, never a fabricated 0); rounding happens in the tooltip/label
+    // formatters (fmtRaw / ddNum).
+    /** @returns {Array<{facet: string, group: string, color: string,
+     *                   value: number|null, n: number}>} */
     _aggregate() {
       const { group, color, facet, value, func } = this.config;
-      if (this.data.length === 0) return [];
-
-      /** @type {Record<string, any>} */
-      const groups = {};
-      for (const row of this.data) {
-        const gv = group ? String(row[group] ?? '') : 'Total';
-        const cv = color ? String(row[color] ?? '') : '__all__';
-        const fv = facet ? String(row[facet] ?? '') : '__all__';
-        const key = fv + '|||' + gv + '|||' + cv;
-        if (!groups[key]) groups[key] = { facet: fv, group: gv, color: cv, values: [], rows: [] };
-        groups[key].rows.push(row);
-        // Collect numeric value values for mean/median/sum/min/max. Skip
-        // entries that coerce to NaN (non-numeric text, empty strings) so a
-        // single bad cell can't poison a mean/sum into NaN.
-        if (value !== '.count' && row[value] != null) {
-          const n = Number(row[value]);
-          if (!Number.isNaN(n)) groups[key].values.push(n);
-        }
-      }
-
-      const result = [];
-      for (const g of Object.values(groups)) {
-        // `out` (not `value`) — `value` is the config's aggregated column name,
-        // read as r[value] in the count_distinct branch; a local `value` would
-        // shadow it and silently count r[undefined] (every group → 0).
-        let out;
-        if (func === 'count') out = g.rows.length;
-        else if (func === 'count_distinct') { const s = new Set(); for (const r of g.rows) { const v = r[value]; if (v != null && !(typeof v === 'number' && Number.isNaN(v))) s.add(v); } out = s.size; }
-        else if (func === 'mean') out = g.values.length ? g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / g.values.length : 0;
-        else if (func === 'median') { const s = g.values.slice().sort((/** @type {number} */ a, /** @type {number} */ b) => a - b); const m = Math.floor(s.length / 2); out = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; }
-        else if (func === 'sum') out = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
-        else if (func === 'min') out = g.values.length ? Math.min.apply(null, g.values) : 0;
-        else if (func === 'max') out = g.values.length ? Math.max.apply(null, g.values) : 0;
-        // n = rows behind this (group, color) cell, for the tooltip's
-        // "n = ..." line (how many observations the mark aggregates).
-        result.push({ facet: g.facet, group: g.group, color: g.color, value: Math.round(out * 100) / 100, n: g.rows.length });
-      }
-      return result;
+      return DAgg.aggregate(this.data, { group, color, facet, value, func });
     }
 
     // -- Chart rendering ------------------------------------------------------
@@ -1202,11 +1172,12 @@
           return groups.sort((a, b) => a.localeCompare(b) * sortDir);
         }
         if (sortBy === 'value') {
-          // "value" = total of the value across color stacks.
+          // "value" = total of the value across color stacks (a null cell —
+          // no usable value — contributes nothing).
           /** @type {Record<string, number>} */
           const totals = {};
           for (const a of facetData) {
-            totals[a.group] = (totals[a.group] || 0) + a.value;
+            totals[a.group] = (totals[a.group] || 0) + (a.value ?? 0);
           }
           return groups.sort((a, b) => ((totals[a] || 0) - (totals[b] || 0)) * sortDir);
         }
@@ -1360,7 +1331,9 @@
       /** @type {any[]} */
       const series = [];
       if (colors.length === 0) {
-        series.push({ type: 'bar', data: groups.map(g => { const d = facetData.find(a => a.group === g); return d ? d.value : 0; }), itemStyle: { color: palette[0] }, barWidth: '60%', barMaxWidth: BAR_MAX, emphasis: { focus: 'self' } });
+        // A null aggregate (no usable value in the group) stays null — ECharts
+        // renders a gap, not a zero bar.
+        series.push({ type: 'bar', data: groups.map(g => { const d = facetData.find(a => a.group === g); return d ? d.value : null; }), itemStyle: { color: palette[0] }, barWidth: '60%', barMaxWidth: BAR_MAX, emphasis: { focus: 'self' } });
       } else {
         const colorScale = this._scaleFor(this.config.color);
         // Per-group total across colors, for percent normalization only.
@@ -1524,10 +1497,17 @@
     /** @param {any[]} facetData @param {any[]} groups @param {any} valueTitle @param {any} ax @param {number} [plotW] container width in px */
     _buildWaterfall(facetData, groups, valueTitle, ax, plotW) {
       // One value per step (sum across any color split — waterfall is a single
-      // series along the step axis, color does not stack here).
+      // series along the step axis, color does not stack here). A step whose
+      // cells are ALL null (no usable value) is null, not 0.
       /** @param {any} g */
-      const valOf = (g) => facetData.filter(a => a.group === g)
-        .reduce((/** @type {number} */ s, /** @type {any} */ a) => s + a.value, 0);
+      const valOf = (g) => {
+        const vals = facetData
+          .filter(a => a.group === g && a.value != null)
+          .map(a => a.value);
+        return vals.length
+          ? vals.reduce((/** @type {number} */ s, /** @type {number} */ v) => s + v, 0)
+          : null;
+      };
 
       // Which steps are "total" bars (baseline reset to 0). Optional; threaded
       // from R as config.waterfall_totals (array of step/group names). Default
@@ -1543,6 +1523,13 @@
         const g = groups[i];
         const v = valOf(g);
         const isTotal = totals.has(g);
+        if (v == null && !isTotal) {
+          // A null step has no delta: the bridge holds its cumulative and the
+          // step renders as a gap (null bar), never a fabricated 0 step.
+          base.push(0);
+          delta.push(null);
+          continue;
+        }
         if (isTotal) {
           // Total / subtotal bar: from 0 up to the running cumulative.
           base.push(0);
@@ -1586,7 +1573,9 @@
           formatter: (/** @type {any} */ params) => {
             const p = (params || []).find((/** @type {any} */ x) => x.seriesName === 'delta');
             if (!p) return '';
-            return '<b>' + p.name + '</b><br>' + ddNum(p.value);
+            // A null step (gap) has no delta to report.
+            return '<b>' + p.name + '</b><br>' +
+              (p.value == null ? '–' : ddNum(p.value));
           }
         },
         toolbox: TOOLBOX,
@@ -1613,7 +1602,7 @@
       const gScale = this._scaleFor(this.config.group);
       const pieData = groups.map((g, i) => {
         const cells = facetData.filter(a => a.group === g);
-        const total = cells.reduce((s, a) => s + a.value, 0);
+        const total = cells.reduce((s, a) => s + (a.value ?? 0), 0);
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
       }).filter(d => d.value > 0);
@@ -1625,11 +1614,11 @@
       const gScale = this._scaleFor(this.config.group);
       const tmData = groups.map((g, i) => {
         const cells = facetData.filter(a => a.group === g);
-        const total = cells.reduce((s, a) => s + a.value, 0);
+        const total = cells.reduce((s, a) => s + (a.value ?? 0), 0);
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: '{b}\n{c}' }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: (/** @type {any} */ p) => p.name + '\n' + ddNum(Number(p.value)) }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
     }
 
     // Radar = an aggregated chart in polar coords: the group levels are the
@@ -1642,8 +1631,9 @@
     _buildRadar(facetData, groups, colors, palette, valueTitle, plotW) {
       const colorScale = this._scaleFor(this.config.color);
       // One shared max across spokes keeps shapes comparable (same contract
-      // as the blockr.echarts radar). Guard 0/negative-only data with 1.
-      const maxVal = Math.max(...facetData.map(a => a.value), 0) || 1;
+      // as the blockr.echarts radar). Null cells (no usable value) don't
+      // shape the scale. Guard 0/negative-only data with 1.
+      const maxVal = Math.max(...facetData.map(a => a.value ?? 0), 0) || 1;
       const indicator = groups.map(g => ({ name: g, max: maxVal }));
       // A missing (group, color) cell is a true zero for counting
       // aggregations; for mean/median/min/max there is no value — null
