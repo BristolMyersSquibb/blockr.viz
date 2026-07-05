@@ -622,10 +622,12 @@ dd_parse_shadings <- function(v) {
 dd_shadings_json <- function(shadings) {
   if (!length(shadings)) return("[]")
   as.character(jsonlite::toJSON(
-    lapply(shadings, function(s) list(
-      mode = jsonlite::unbox(as.character(s$mode %||% "diverging")[1L]),
-      cols = as.character(s$cols %||% character())
-    )),
+    lapply(shadings, function(s) {
+      list(
+        mode = jsonlite::unbox(as.character(s$mode %||% "diverging")[1L]),
+        cols = as.character(s$cols %||% character())
+      )
+    }),
     auto_unbox = FALSE
   ))
 }
@@ -915,7 +917,7 @@ drilldown_table_dep <- function() {
       stylesheet = "chart.css"
     ),
     settings_band_dep(),
-    # Shared aggregation vocabulary + gear engine (one dep, one version — see
+    # Shared aggregation vocabulary + gear engine (one dep, one version -- see
     # drilldown_shared_dep()). Before the table JS, which reads both globals.
     drilldown_shared_dep(),
     htmltools::htmlDependency(
@@ -996,7 +998,7 @@ table_arguments <- function() {
     # example (a plain table) is dropped.
     color = new_block_arg(
       paste0(
-        "Categorical identity color (\"Color by\") — the SAME argument as the ",
+        "Categorical identity color (\"Color by\") -- the SAME argument as the ",
         "chart's `color`, applied to rows: names one categorical column whose ",
         "values tint the rows through the board scale map, so a SEX-colored ",
         "table matches the SEX-colored chart. Empty string = no tint; omit ",

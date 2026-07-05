@@ -282,7 +282,7 @@ tile_block_dep <- function() {
       stylesheet = "chart.css"
     ),
     settings_band_dep(),
-    # Shared aggregation vocabulary + gear engine (one dep, one version — see
+    # Shared aggregation vocabulary + gear engine (one dep, one version -- see
     # drilldown_shared_dep()). Before tile-block.js, which reads both globals.
     drilldown_shared_dep(),
     htmltools::htmlDependency(
@@ -336,7 +336,7 @@ tile_arguments <- function() {
     ),
     color = new_block_arg(
       paste0(
-        "Categorical identity color (\"Color by\") — the SAME argument as ",
+        "Categorical identity color (\"Color by\") -- the SAME argument as ",
         "the chart's `color`, applied to cards: the tile's `group` column or ",
         "its `name` column; each card / matrix row gets a scale-map accent ",
         "in that value's color, so SEX-colored cards match the SEX-colored ",
