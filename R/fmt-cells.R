@@ -59,28 +59,53 @@ fmt_cells <- function(df, fmt_col = ".fmt", digits = 2L, na = "NA") {
     rep(NA_integer_, nrow(df))
   }
   out <- rep(NA_character_, nrow(df))
-  for (i in seq_len(nrow(df))) {
-    t <- tmpl[i]
-    if (is.na(t) || !nzchar(t)) next
-    d <- if (is.na(row_digits[i])) digits else row_digits[i]
-    toks <- regmatches(t, gregexpr("\\{[^{}]+\\}", t))[[1]]
-    cell <- t
-    for (tok in unique(toks)) {
-      spec <- sub("^\\{(.*)\\}$", "\\1", tok)
-      # Optional per-token precision: "{col:N}" pins this token's digits.
-      tok_digits <- d
-      if (grepl(":", spec, fixed = TRUE)) {
-        parts <- strsplit(spec, ":", fixed = TRUE)[[1]]
-        spec <- parts[1]
-        pd <- suppressWarnings(as.integer(parts[2]))
-        if (!is.na(pd)) tok_digits <- pd
-      }
-      col <- spec
-      val <- if (col %in% names(df)) df[[col]][i] else NA
-      sval <- if (length(val) != 1L || is.na(val)) na else fmt_num(val, tok_digits)
-      cell <- gsub(tok, sval, cell, fixed = TRUE)
+  live <- which(!is.na(tmpl) & nzchar(tmpl))
+  if (!length(live)) return(out)
+  eff_digits <- ifelse(is.na(row_digits[live]), digits, row_digits[live])
+  # Templates are highly repetitive (a handful of distinct values across
+  # thousands of rows), so parse each distinct (template, digits) combo ONCE
+  # and interpolate its rows column-vectorized: split the template into
+  # literal segments around the tokens and paste0() them back with the
+  # formatted value VECTORS (fmt_num is already vectorized). The digits
+  # default takes part in the key because it feeds every token without an
+  # explicit ":N" precision.
+  for (g in split(seq_along(live), paste0(eff_digits, "\r", tmpl[live]))) {
+    rows <- live[g]
+    t <- tmpl[rows[1L]]
+    d <- eff_digits[g[1L]]
+    m <- gregexpr("\\{[^{}]+\\}", t)[[1L]]
+    if (m[1L] == -1L) {
+      out[rows] <- t                    # no tokens: the template is literal
+      next
     }
-    out[i] <- cell
+    starts <- as.integer(m)
+    lens   <- attr(m, "match.length")
+    toks   <- substring(t, starts, starts + lens - 1L)
+    lits   <- substring(t, c(1L, starts + lens), c(starts - 1L, nchar(t)))
+    vals   <- list()                    # per-token cache (tokens may repeat)
+    pieces <- vector("list", 2L * length(toks) + 1L)
+    pieces[[1L]] <- lits[1L]
+    for (j in seq_along(toks)) {
+      tok <- toks[j]
+      if (is.null(vals[[tok]])) {
+        spec <- substring(tok, 2L, nchar(tok) - 1L)
+        # Optional per-token precision: "{col:N}" pins this token's digits.
+        tok_digits <- d
+        if (grepl(":", spec, fixed = TRUE)) {
+          parts <- strsplit(spec, ":", fixed = TRUE)[[1]]
+          spec <- parts[1]
+          pd <- suppressWarnings(as.integer(parts[2]))
+          if (!is.na(pd)) tok_digits <- pd
+        }
+        v <- if (spec %in% names(df)) df[[spec]][rows] else rep(NA, length(rows))
+        sv <- fmt_num(v, tok_digits)
+        sv[is.na(v)] <- na
+        vals[[tok]] <- sv
+      }
+      pieces[[2L * j]]      <- vals[[tok]]
+      pieces[[2L * j + 1L]] <- lits[j + 1L]
+    }
+    out[rows] <- do.call(paste0, pieces)
   }
   out
 }
