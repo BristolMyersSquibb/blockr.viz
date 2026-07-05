@@ -14,13 +14,18 @@ gt_table(
 )
 }
 \arguments{
-\item{data}{A data.frame. Either:
+\item{data}{A data frame (or an object with an \code{\link[=as_annotated_df]{as_annotated_df()}}
+method, e.g. a composer table -- coerced on entry). Either:
 \itemize{
-\item \strong{New wide format}: plain tibble with dotted columns
-\verb{.section_1, ..., .section_k} (optional), \code{.strong} (optional),
-\code{.label} (optional), and data cells (pipe-delimited if nested).
+\item \strong{Annotated / wide format}: a \code{\link[=summary_table]{summary_table()}}-style frame with
+optional dotted columns (\verb{.section_*}, \code{.label}, \code{.indent},
+\code{.strong}, \code{.emph}) and data cells (pipe-delimited if nested), or
+the tidy \code{.fmt} form (numbers + per-row template), which is spread
+to the wide grid via \code{fmt_to_wide()}. A plain frame with none of
+the dotted columns renders as a plain gt table.
 \item \strong{Legacy long format}: has \code{label}, \code{depth}, \code{col_var} columns
 plus stat columns (\code{n}/\code{N}/\code{pct} or \code{mean}/\code{sd} or \code{value}).
+Deprecated -- shape with \code{\link[=summary_table]{summary_table()}} instead.
 }}
 
 \item{title}{Optional table title.}

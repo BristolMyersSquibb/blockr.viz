@@ -1786,18 +1786,11 @@ new_table_block <- function(rowname = NULL,
       ns <- shiny::NS(id)
       shiny::tagList(shiny::uiOutput(ns("dt_result")))
     },
-    dat_valid = function(data) {
-      # Contract check only -- dispatch lookup, never the (possibly costly)
-      # coercion itself. A method that exists but refuses this particular
-      # value errors at eval time instead; core surfaces both the same way.
-      if (!is.data.frame(data) && !has_annotated_df_method(data)) {
-        stop(
-          "Input must be a data frame or an object with an ",
-          "as_annotated_df() method (e.g. a composer table); got <",
-          paste(class(data), collapse = "/"), ">"
-        )
-      }
-    },
+    # Shared input contract (see validate_annotated_df_input): contract
+    # check only -- dispatch lookup, never the (possibly costly) coercion
+    # itself. A method that exists but refuses this particular value errors
+    # at eval time instead; core surfaces both the same way.
+    dat_valid = validate_annotated_df_input,
     allow_empty_state = c("rowname", "value", "group", "summaries", "color",
       "shadings", "cell_color", "row_color", "drill", "filter_column",
       "filter_values", "filter_range",

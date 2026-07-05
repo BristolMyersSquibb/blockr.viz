@@ -16,12 +16,17 @@
 #' want custom labels can use a `mutate_block` upstream to overwrite
 #' `attr(col, "label")`.
 #'
-#' @param data A data.frame. Either:
-#'   - **New wide format**: plain tibble with dotted columns
-#'     `.section_1, ..., .section_k` (optional), `.strong` (optional),
-#'     `.label` (optional), and data cells (pipe-delimited if nested).
+#' @param data A data frame (or an object with an [as_annotated_df()]
+#'   method, e.g. a composer table -- coerced on entry). Either:
+#'   - **Annotated / wide format**: a [summary_table()]-style frame with
+#'     optional dotted columns (`.section_*`, `.label`, `.indent`,
+#'     `.strong`, `.emph`) and data cells (pipe-delimited if nested), or
+#'     the tidy `.fmt` form (numbers + per-row template), which is spread
+#'     to the wide grid via `fmt_to_wide()`. A plain frame with none of
+#'     the dotted columns renders as a plain gt table.
 #'   - **Legacy long format**: has `label`, `depth`, `col_var` columns
 #'     plus stat columns (`n`/`N`/`pct` or `mean`/`sd` or `value`).
+#'     Deprecated -- shape with [summary_table()] instead.
 #' @param title Optional table title.
 #' @param subtitle Optional subtitle shown under the title.
 #' @param full_width Logical. If `TRUE` (default) the table stretches
@@ -42,6 +47,10 @@
 gt_table <- function(data, title = NULL, subtitle = NULL,
                      full_width = TRUE, borders = TRUE,
                      na_rep = "\u2014") {
+  # Shared input contract: a data frame passes through untouched; a
+  # table-producing object (composer et al.) is coerced first.
+  data <- as_annotated_df(data)
+
   if (is.null(title) || !nzchar(title)) {
     title <- attr(data, "label")
   }
@@ -267,6 +276,21 @@ prepare_table_wide <- function(data) {
 
 #' @noRd
 gt_table_legacy <- function(data, title = NULL, na_rep = "\u2014") {
+  # Deprecation nudge (lifecycle is not a dependency, so a once-per-session
+  # rlang warning stands in for lifecycle::deprecate_soft()). The branch
+  # itself stays: saved boards fed by blockr.sandbox's tidy_summary_block /
+  # occurrence_summary_block long output must keep rendering.
+  rlang::warn(
+    paste0(
+      "The legacy long-format input to gt_table() (label/depth/col_var + ",
+      "stat columns) is deprecated. Please shape with ",
+      "blockr.viz::summary_table() (or emit the annotated wide format) ",
+      "instead."
+    ),
+    .frequency = "once",
+    .frequency_id = "blockr.viz_gt_table_legacy"
+  )
+
   prep <- prepare_table_wide(data)
   wide <- prep$wide
 
@@ -481,29 +505,14 @@ new_gt_table_block <- function(title = "",
         )
       )
     },
-    dat_valid = function(data) {
-      if (!is.data.frame(data)) stop("Input must be a data frame")
-
-      # Accept either:
-      # 1) New wide format: plain tibble with dotted columns
-      is_wide <- !any(c("label", "depth", "col_var") %in% names(data)) &&
-        (".label" %in% names(data) ||
-         any(grepl("^\\.(section_\\d+|var|indent|bold|italic)$", names(data))))
-      if (is_wide) return(invisible(NULL))
-
-      # 2) Legacy long format
-      required <- c("label", "depth")
-      missing <- setdiff(required, names(data))
-      if (length(missing) > 0) {
-        stop("Missing required columns: ", paste(missing, collapse = ", "))
-      }
-      has_occurrence <- all(c("n", "N", "pct") %in% names(data))
-      has_continuous <- all(c("mean", "sd") %in% names(data))
-      has_value <- "value" %in% names(data)
-      if (!has_occurrence && !has_continuous && !has_value) {
-        stop("Data must contain stat columns (n/N/pct or mean/sd) or a 'value' column")
-      }
-    },
+    # Shared input contract (see validate_annotated_df_input): a data frame
+    # -- annotated ([summary_table()] output, the tidy `.fmt` form, a wide
+    # display grid, the legacy long format) or plain -- or a table-producing
+    # object coerced via as_annotated_df(). Shape-specific refusals (e.g. a
+    # legacy long frame without stat columns) surface at render time from
+    # gt_table() itself; the old column-name sniff here rejected valid tidy
+    # `.fmt` frames and leaked internal column names into the error.
+    dat_valid = validate_annotated_df_input,
     class = "gt_table_block",
     external_ctrl = TRUE,
     allow_empty_state = c("title", "subtitle", "na_rep"),
