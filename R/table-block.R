@@ -519,7 +519,10 @@ dd_metric_plan <- function(summaries, data) {
   }
   used <- character()
   uniq <- function(nm, tag) {
-    if (!(nm %in% used)) { used <<- c(used, nm); return(nm) }
+    if (!(nm %in% used)) {
+      used <<- c(used, nm)
+      return(nm)
+    }
     # Same variable aggregated twice -> qualify the second so the name is unique.
     nm2 <- paste0(nm, " (", tag, ")")
     while (nm2 %in% used) nm2 <- paste0(nm2, " ")
@@ -593,10 +596,12 @@ dd_parse_summaries <- function(v) {
   } else {
     list()
   }
-  lapply(ms, function(m) list(
-    func = as.character(m$func %||% "count")[1L],
-    cols = as.character(unlist(m$cols %||% character()))
-  ))
+  lapply(ms, function(m) {
+    list(
+      func = as.character(m$func %||% "count")[1L],
+      cols = as.character(unlist(m$cols %||% character()))
+    )
+  })
 }
 
 #' Serialize the `summaries` list to the JSON the gear reads off `data-dt-summaries`
@@ -605,10 +610,12 @@ dd_parse_summaries <- function(v) {
 dd_summaries_json <- function(summaries) {
   if (!length(summaries)) return("[]")
   as.character(jsonlite::toJSON(
-    lapply(summaries, function(m) list(
-      func = jsonlite::unbox(as.character(m$func %||% "count")[1L]),
-      cols = as.character(m$cols %||% character())
-    )),
+    lapply(summaries, function(m) {
+      list(
+        func = jsonlite::unbox(as.character(m$func %||% "count")[1L]),
+        cols = as.character(m$cols %||% character())
+      )
+    }),
     auto_unbox = FALSE
   ))
 }
@@ -1294,10 +1301,12 @@ new_table_block <- function(rowname = NULL,
                 search      = isTRUE(r_search()),
                 excel_download = isTRUE(r_excel_download())
               ),
-              error = function(e) shiny::tags$div(
-                class = "blockr-error", role = "alert",
-                paste0("Table could not be rendered: ", conditionMessage(e))
-              )
+              error = function(e) {
+                shiny::tags$div(
+                  class = "blockr-error", role = "alert",
+                  paste0("Table could not be rendered: ", conditionMessage(e))
+                )
+              }
             ))
           }
           # `row_color` names the column whose scale-map colors tint the rows
