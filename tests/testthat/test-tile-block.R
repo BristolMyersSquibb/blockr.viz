@@ -67,9 +67,9 @@ test_that("pill tone maps warn-family statuses to warn, not bad", {
   expect_equal(tone("on track"), "good")
   expect_equal(tone("critical"), "bad")
   # the tone reaches the DOM as the pill's class
-  node <- function(v) as.character(
-    blockr.viz:::tk_secondary_node("pill", v, "up", NULL)
-  )
+  node <- function(v) {
+    as.character(blockr.viz:::tk_secondary_node("pill", v, "up", NULL))
+  }
   expect_match(node("At Risk"), "class=\"tk-pill warn\"")
   expect_match(node("Neutral"), "class=\"tk-pill neutral\"")
 })
