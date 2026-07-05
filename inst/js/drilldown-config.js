@@ -416,6 +416,13 @@
           toggle.onToggle(!toggle.checked);
         };
         h.addEventListener('click', flip);
+        // The checkbox is focusable (role=checkbox, tabindex=0) but the click
+        // listener sits on the header row — give Space/Enter the same toggle.
+        box.addEventListener('keydown', (e) => {
+          if (e.key !== ' ' && e.key !== 'Enter') return;
+          e.preventDefault();   // Space must toggle, not scroll the popover
+          flip(e);
+        });
       } else {
         h.textContent = titleText;
       }

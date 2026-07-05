@@ -83,7 +83,7 @@
         allowCount: (/** @type {any} */ cfg) =>
           !cfg.func || cfg.func === 'count'
       },
-      func: { label: 'Agg', kind: 'select', options: AGG_FNS, rerender: true }
+      func: { label: 'Aggregate', kind: 'select', options: AGG_FNS, rerender: true }
     };
   }
 
