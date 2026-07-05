@@ -10,9 +10,11 @@
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
-# Column-valued roles, in display order, for the chart block.
+# Column-valued roles, in display order, for the chart block. ref_x / ref_y
+# are NOT roles: they hold numeric reference-line values, not column names
+# (reported separately below, never validated against the columns).
 dd_chart_roles <- c("group", "x", "y", "xend", "value", "color", "facet",
-                    "series", "label", "drill", "lo", "hi", "ref_x", "ref_y")
+                    "series", "label", "drill", "lo", "hi")
 
 #' @noRd
 config_effect.chart_block <- function(block, args, data = NULL, ...) {
@@ -30,6 +32,12 @@ config_effect.chart_block <- function(block, args, data = NULL, ...) {
     if (!is.null(cols) && !(v %in% c(".count", "auto")) && !(v %in% cols)) {
       bad <- c(bad, paste0(r, " references '", v, "'"))
     }
+  }
+  # Reference-line overlays: plain numeric values (possibly several per
+  # axis), echoed verbatim so the model sees them configured.
+  for (r in c("ref_x", "ref_y")) {
+    v <- unlist(args[[r]])
+    if (length(v)) parts <- c(parts, paste0(r, "=", paste(v, collapse = ",")))
   }
   agg <- args$func
   agg_txt <- if (!is.null(agg) && nzchar(as.character(agg)[1])) {
@@ -66,11 +74,14 @@ config_effect.table_block <- function(block, args, data = NULL, ...) {
     parts <- c(parts, paste0(r, "=", v))
     if (!is.null(cols) && !(v %in% cols)) bad <- c(bad, paste0(r, " references '", v, "'"))
   }
-  vc <- unlist(args$values)
+  # `value` (renamed from `values`, see dev/unified-arg-naming.md): the body
+  # column(s), a scalar or character vector. unlist() flattens either shape.
+  vc <- as.character(unlist(args$value))
+  vc <- vc[nzchar(vc)]
   if (length(vc)) {
-    parts <- c(parts, paste0("values=", paste(vc, collapse = "/")))
+    parts <- c(parts, paste0("value=", paste(vc, collapse = "/")))
     miss <- setdiff(vc, cols %||% vc)
-    if (length(miss)) bad <- c(bad, paste0("values ", paste(miss, collapse = ",")))
+    if (length(miss)) bad <- c(bad, paste0("value ", paste(miss, collapse = ",")))
   }
   desc <- paste0("drilldown table configured: ",
                  if (length(parts)) paste(parts, collapse = ", ") else "(defaults)")
