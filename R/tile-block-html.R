@@ -40,6 +40,7 @@ tk_card <- function(cell, flat, fspecs) {
   unit_node <- if (nzchar(flat$unit %||% "") && !identical(fspec$kind, "percent")) {
     htmltools::tags$span(class = "tk-unit", flat$unit)
   }
+  hex <- cell$.hex %||% NA_character_
   valrow <- htmltools::tags$div(
     class = "tk-valrow",
     tk_value_span(cell$value, fspec),
@@ -50,7 +51,8 @@ tk_card <- function(cell, flat, fspecs) {
   )
 
   sec <- if (!identical(flat$style, "delta")) {
-    node <- tk_secondary_node(flat$style, cell$secondary[[1]], flat$good_when, fspec)
+    node <- tk_secondary_node(flat$style, cell$secondary[[1]], flat$good_when,
+                              fspec, hex = hex)
     if (!is.null(node)) htmltools::tags$div(class = "tk-secondaries", node)
   }
   cap <- if (!is.na(cell$caption) && nzchar(cell$caption)) {
@@ -59,9 +61,24 @@ tk_card <- function(cell, flat, fspecs) {
 
   # No eyebrow when the overline is NA/empty (a single unlabelled value
   # column, or the Name mapping removed) -- same guard as the caption;
-  # an unguarded NA would render as literal "NA" text.
+  # an unguarded NA would render as literal "NA" text. With an identity hex
+  # ("Color by") the name wears it as a PILL -- a tinted chip with a derived
+  # readable text tone (G + Reach 2, settled with Christoph): the identity
+  # colors the NAME and the judgment-free fill bar, never the semantic
+  # delta / status colors.
   over_node <- if (!is.na(over) && nzchar(over)) {
-    htmltools::tags$div(class = "tk-overline tk-clamp", over)
+    # Pill only when the tint keys on the NAME -- then the overline IS the
+    # identity. When it keys on the GROUP, the pill sits on the cluster
+    # heading (tk_cards_layout) / row stub instead; card overlines stay plain.
+    pill <- if (identical(cell$.hex_on %||% "", "name")) {
+      tk_ident_pill_style(hex)
+    }
+    htmltools::tags$div(
+      class = paste("tk-overline tk-clamp",
+                    if (!is.null(pill)) "tk-overline--pill"),
+      style = pill,
+      over
+    )
   }
 
   htmltools::tags$article(
@@ -72,22 +89,23 @@ tk_card <- function(cell, flat, fspecs) {
       dg <- cell$.dg %||% cell$group
       if (!is.null(dg) && nzchar(dg)) dg else NULL
     },
-    # "Color by" identity accent (cells$.hex, scale-map resolved): the same
-    # left accent bar the table's row tint uses -- inset shadow adds no width.
-    style = tk_hex_accent(cell$.hex),
     over_node,
     valrow, sec, cap
   )
 }
 
-#' Inline style for the "Color by" identity accent (a left accent bar in the
-#' scale-map color, the table row tint's visual language), or NULL when the
-#' cell carries no hex (no tint / no map).
+#' Inline style for the "Color by" identity pill (a tinted chip on the name /
+#' row stub): background = a soft wash of the scale color over the card
+#' surface, text = a readable tone of it (color-mix against the theme tokens,
+#' so it adapts with them). NULL when the cell carries no hex.
 #' @noRd
-tk_hex_accent <- function(hex) {
+tk_ident_pill_style <- function(hex) {
   hex <- hex %||% NA_character_
   if (is.na(hex) || !nzchar(hex)) return(NULL)
-  paste0("box-shadow: inset 3px 0 0 0 ", hex, ";")
+  paste0(
+    "background:color-mix(in srgb, ", hex, " 14%, var(--tk-surface-1));",
+    "color:color-mix(in srgb, ", hex, " 68%, var(--tk-ink-1));"
+  )
 }
 
 #' Cards layout: ungrouped -> a single auto-fit grid (card per measure);
@@ -105,9 +123,18 @@ tk_cards_layout <- function(cells, flat, grouped, fspecs) {
     sub <- cells[cells$group == g, , drop = FALSE]
     cards <- lapply(seq_len(nrow(sub)),
                     function(i) tk_card(sub[i, ], flat, fspecs))
+    # "Color by" the group: the CLUSTER HEADING is the identity's name, so
+    # it wears the pill (cards inside stay plain -- their overlines are
+    # measure names, not the identity).
+    pill <- if (identical(sub$.hex_on[1] %||% "", "group")) {
+      tk_ident_pill_style(sub$.hex[1])
+    }
     htmltools::tagList(
-      htmltools::tags$p(class = "tk-overline",
-                        style = "margin:18px 0 11px;", g),
+      htmltools::tags$p(
+        class = paste("tk-overline", if (!is.null(pill)) "tk-overline--pill"),
+        style = paste0("margin:18px 0 11px;", pill %||% ""),
+        g
+      ),
       htmltools::tags$div(class = "tk-grid", cards)
     )
   })
@@ -138,17 +165,24 @@ tk_table_flat <- function(cells, flat, fspecs = list()) {
     unit_sfx <- if (nzchar(flat$unit %||% "") && !identical(fspec$kind, "percent")) {
       htmltools::tags$span(class = "unit", flat$unit)
     }
+    hex <- cell$.hex %||% NA_character_
+    pill <- tk_ident_pill_style(hex)
     tds <- list(
       # Same NA/empty guard as the card eyebrow (number-only rows keep a
-      # blank label cell rather than literal "NA").
+      # blank label cell rather than literal "NA"). With an identity hex the
+      # label wears the "Color by" pill (G + Reach 2).
       htmltools::tags$td(class = "lbl",
-        if (!is.na(cell$overline) && nzchar(cell$overline)) cell$overline),
+        if (!is.na(cell$overline) && nzchar(cell$overline)) {
+          if (is.null(pill)) cell$overline
+          else htmltools::tags$span(class = "tk-stub-pill", style = pill,
+                                    cell$overline)
+        }),
       htmltools::tags$td(class = tk_val_td_class(cell$value),
                          tk_format(cell$value, fspec), unit_sfx)
     )
     if (has_sec_col) {
       node <- tk_secondary_node(flat$style, cell$secondary[[1]], flat$good_when,
-                                fspec, context = "cell")
+                                fspec, context = "cell", hex = hex)
       tds[[3]] <- htmltools::tags$td(class = "r", node)
     }
     htmltools::tags$tr(class = "tk-data-row",
@@ -157,8 +191,6 @@ tk_table_flat <- function(cells, flat, fspecs = list()) {
                          dg <- cell$.dg %||% cell$group
                          if (!is.null(dg) && nzchar(dg)) dg else NULL
                        },
-                       # "Color by" identity accent -- see tk_hex_accent.
-                       style = tk_hex_accent(cell$.hex),
                        tds)
   })
   tk_table_wrap(thead, htmltools::tags$tbody(rows))
@@ -183,7 +215,13 @@ tk_table_matrix <- function(cells, flat, groups, meas) {
   thead <- htmltools::tags$thead(htmltools::tags$tr(ths))
 
   rows <- lapply(groups, function(g) {
-    tds <- list(htmltools::tags$td(class = "lbl", g))
+    # "Color by" identity pill on the row stub (G + Reach 2); any cell of
+    # this group carries the group's hex.
+    hex <- cells$.hex[match(g, cells$group)] %||% NA_character_
+    pill <- tk_ident_pill_style(hex)
+    tds <- list(htmltools::tags$td(class = "lbl",
+      if (is.null(pill)) g
+      else htmltools::tags$span(class = "tk-stub-pill", style = pill, g)))
     for (m in meas) {
       idx <- which(cells$group == g & cells$measure == m)
       if (length(idx) == 0L) {
@@ -195,7 +233,7 @@ tk_table_matrix <- function(cells, flat, groups, meas) {
       td <- if (identical(flat$style, "fill")) {
         htmltools::tags$td(class = "r",
           tk_secondary_node("fill", cell$secondary[[1]], flat$good_when, fspec,
-                            context = "cell"))
+                            context = "cell", hex = hex))
       } else if (identical(flat$style, "delta")) {
         htmltools::tags$td(class = "r", htmltools::tags$span(
           class = "tk-cell",
@@ -208,11 +246,7 @@ tk_table_matrix <- function(cells, flat, groups, meas) {
       }
       tds[[length(tds) + 1L]] <- td
     }
-    htmltools::tags$tr(class = "tk-data-row", `data-group` = g,
-                       # "Color by" accent: any cell of this group's row
-                       # carries the group's hex -- see tk_hex_accent.
-                       style = tk_hex_accent(cells$.hex[match(g, cells$group)]),
-                       tds)
+    htmltools::tags$tr(class = "tk-data-row", `data-group` = g, tds)
   })
   tk_table_wrap(thead, htmltools::tags$tbody(rows))
 }
@@ -334,15 +368,22 @@ tile_html <- function(data, value = character(), group = character(),
   if (nrow(cells) > 0L) {
     cells$.hex <- NA_character_
     color <- as.character(color %||% "")[1L]
+    hex_on <- ""
     key_vals <- if (!nzchar(color)) {
       NULL
     } else if (identical(color, disp_by) && grouped) {
+      hex_on <- "group"
       cells$group
     } else if (identical(color, disp_meas) && tk_is_col(disp_meas, disp_data)) {
+      hex_on <- "name"
       cells$measure
     } else {
       NULL
     }
+    # Where the identity's NAME lives decides where the pill sits: on each
+    # card's overline when the tint keys on the Name column, on the cluster
+    # heading / row stub when it keys on the group.
+    cells$.hex_on <- hex_on
     if (!is.null(key_vals)) {
       lk <- unique(key_vals)
       # dd_ident_hex: scale map first, deterministic palette fallback when

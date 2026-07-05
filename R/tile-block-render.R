@@ -283,7 +283,8 @@ tk_fill_pct <- function(value) {
 #' Draw the secondary in the chosen style. Returns a tag or NULL.
 #' `context` is "card" or "cell" (compact, for the matrix).
 #' @noRd
-tk_secondary_node <- function(style, value, good_when, spec, context = "card") {
+tk_secondary_node <- function(style, value, good_when, spec, context = "card",
+                              hex = NULL) {
   style <- style %||% "plain"
   if (identical(style, "delta")) {
     return(tk_delta_node(value, good_when))
@@ -293,23 +294,34 @@ tk_secondary_node <- function(style, value, good_when, spec, context = "card") {
     if (!is.finite(pct)) return(NULL)
     good <- !identical(good_when, "down")
     w <- formatC(pct, format = "f", digits = 1)
+    # "Color by" reach: the fill bar carries NO judgment (unlike delta /
+    # status pills, whose semantic colors must never be overridden), so with
+    # an identity hex it takes the card's color -- bar in the hue, track in
+    # a faint wash of it.
+    hex <- hex %||% NA_character_
+    tinted <- !is.na(hex) && nzchar(hex)
+    bar_extra <- if (tinted) paste0("background:", hex, ";") else ""
+    track_style <- if (tinted) {
+      paste0("background:color-mix(in srgb, ", hex,
+             " 12%, var(--tk-surface-2));")
+    }
     if (identical(context, "cell")) {
       return(htmltools::tags$span(
         class = "tk-cellfill",
         htmltools::tags$span(class = "pct num", paste0(round(pct), "%")),
-        htmltools::tags$span(class = "tk-fill__track",
+        htmltools::tags$span(class = "tk-fill__track", style = track_style,
           htmltools::tags$span(
             class = paste("tk-fill__bar", if (good) "good"),
-            style = sprintf("display:block;width:%s%%", w)))
+            style = paste0(sprintf("display:block;width:%s%%;", w), bar_extra)))
       ))
     }
     bar <- htmltools::tags$div(
       class = paste("tk-fill__bar", if (good) "good"),
-      style = sprintf("width:%s%%", w)
+      style = paste0(sprintf("width:%s%%;", w), bar_extra)
     )
     return(htmltools::tags$div(
       class = "tk-fill",
-      htmltools::tags$div(class = "tk-fill__track", bar),
+      htmltools::tags$div(class = "tk-fill__track", style = track_style, bar),
       htmltools::tags$div(class = "tk-fill__meta",
                           htmltools::tags$b(class = "num", paste0(round(pct), "%")))
     ))
