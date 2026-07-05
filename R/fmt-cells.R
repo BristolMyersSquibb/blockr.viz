@@ -109,9 +109,14 @@ fmt_assemble <- function(df, group_col = NULL, id_cols = NULL,
   if (is.null(id_cols)) {
     dotted <- grep("^\\.(section|label|indent|strong|emph)", names(df), value = TRUE)
     id_cols <- setdiff(dotted, ".fmt")
+    # `.var` (source-variable identity) must take part in row identity: two
+    # variables routinely share level labels ("OTHER", "UNKNOWN", ...), and
+    # without it the pivot merges their rows into list-cols. It is dropped
+    # again after the spread so the wide output shape is unchanged.
+    if (".var" %in% names(df)) id_cols <- c(id_cols, ".var")
   }
   if (is.null(group_col)) {
-    keep <- c(id_cols, ".cell")
+    keep <- c(setdiff(id_cols, ".var"), ".cell")
     return(df[, intersect(keep, names(df)), drop = FALSE])
   }
   # Plain spread on the single formatted-string column.
@@ -123,11 +128,13 @@ fmt_assemble <- function(df, group_col = NULL, id_cols = NULL,
   gv <- as.character(long[[group_col]])
   blank <- is.na(gv) | !nzchar(trimws(gv))
   if (any(blank)) long[[group_col]][blank] <- "(Missing)"
-  tidyr::pivot_wider(
+  wide <- tidyr::pivot_wider(
     long,
     names_from = dplyr::all_of(group_col),
     values_from = ".cell"
   )
+  wide[[".var"]] <- NULL
+  wide
 }
 
 #' Convert a tidy `.fmt` summary frame to the wide display grid the

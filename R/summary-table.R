@@ -40,6 +40,10 @@
 #' - `.indent` -- detail-row indentation level (see `indent_details`).
 #' - `.strong` -- logical, `TRUE` on variable-header rows (bold,
 #'   blank data cells). Present only when `length(vars) > 1`.
+#' - `.var` -- source variable (run) identity. Row-identity only: it keeps
+#'   equal level labels from different variables ("OTHER", "UNKNOWN", ...)
+#'   apart in the display pivot, and `fmt_assemble()` drops it from the
+#'   wide output.
 #' - `.group` -- by-group value (one row per var/level x group).
 #'   Pipe-delimited (`"outer|inner"`) for length-2 `by`; the constant
 #'   `"Overall"` when `by` is empty; the `overall_label` value for the
@@ -138,7 +142,7 @@ summary_table_long <- function(data,
   # Check block-internal namespace collision in the input data
   input_cols <- names(data)
   bad <- c(
-    intersect(c(".strong", ".label", ".group", ".fmt"), input_cols),
+    intersect(c(".strong", ".label", ".group", ".fmt", ".var"), input_cols),
     grep("^\\.section_\\d+$", input_cols, value = TRUE)
   )
   if (length(bad)) {
@@ -160,33 +164,43 @@ summary_table_long <- function(data,
     lapply(vars, function(v) v)
   }
 
-  # Compute per-run long frames.
+  # Compute per-run long frames. Each frame is tagged with a hidden `.var`
+  # source-variable column: distinct variables routinely share level labels
+  # ("OTHER", "UNKNOWN", "MISSING"), and without it the display pivot in
+  # `fmt_assemble()` cannot tell their rows apart (rows merge into
+  # list-cols). `.var` never reaches the wide output.
   per_run <- lapply(runs, function(run) {
     if (length(run) == 2L) {
-      compute_hierarchy_run(
+      df <- compute_hierarchy_run(
         data = data, run = run,
         sections = sections, by = by,
         add_overall = add_overall,
         overall_label = overall_label,
         subject_var = subject_var
       )
+      df$.var <- paste(run, collapse = "|")
+      df
     } else if (length(run) == 1L) {
-      compute_one_var(
+      df <- compute_one_var(
         data = data, var = run,
         stats = stats, sections = sections, by = by,
         add_overall = add_overall,
         overall_label = overall_label,
         subject_var = subject_var
       )
+      df$.var <- run
+      df
     } else {
       parts <- lapply(run, function(v) {
-        compute_one_var(
+        df <- compute_one_var(
           data = data, var = v,
           stats = stats, sections = sections, by = by,
           add_overall = add_overall,
           overall_label = overall_label,
           subject_var = subject_var
         )
+        df$.var <- v
+        df
       })
       bind_per_var_frames(parts, sections = sections)
     }
@@ -225,6 +239,9 @@ summary_table_long <- function(data,
       hdr$.label <- hdr_label
       hdr$.indent <- 0L
       hdr$.strong <- TRUE
+      # Header rows share the frame's `.var` so two variables whose display
+      # labels coincide still pivot to separate header rows.
+      hdr$.var <- paste(runs[[i]], collapse = "|")
       hdr$.fmt <- NA_character_
       for (sc in intersect(SUMMARY_STAT_COLS, names(df))) {
         hdr[[sc]] <- NA_real_
@@ -252,13 +269,15 @@ summary_table_long <- function(data,
     }
   }
 
-  # Reorder: .section_*, .label, .indent, .strong, .group, .fmt, then numbers
+  # Reorder: .section_*, .label, .indent, .strong, .var, .group, .fmt,
+  # then numbers
   stat_cols <- c("n", "pct", "mean", "sd", "median", "q1", "q3", "min", "max")
   front_order <- c(
     if (length(sections) > 0L) paste0(".section_", seq_along(sections)) else character(),
     ".label",
     ".indent",
     ".strong",
+    ".var",
     ".group",
     ".fmt"
   )
@@ -780,9 +799,10 @@ reorder_long <- function(df, sections) {
 bind_per_var_frames <- function(per_var, sections) {
   all_names <- unique(unlist(lapply(per_var, names)))
 
-  # Canonical front order: sections, .label, .indent, .strong, .group, .fmt
-  front <- intersect(c(sections, ".label", ".indent", ".strong", ".group",
-                       ".fmt"), all_names)
+  # Canonical front order: sections, .label, .indent, .strong, .var,
+  # .group, .fmt
+  front <- intersect(c(sections, ".label", ".indent", ".strong", ".var",
+                       ".group", ".fmt"), all_names)
   stats_present <- intersect(SUMMARY_STAT_COLS, all_names)
   back <- setdiff(all_names, c(front, stats_present))
   all_names <- c(front, stats_present, back)
