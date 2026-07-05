@@ -3299,6 +3299,15 @@
 
   // -- Shiny binding ----------------------------------------------------------
 
+  // Last undelivered payload per container id. A message can arrive before
+  // its container exists or is bound (dock panels can mount arbitrarily
+  // late); it waits here until the binding's initialize() consumes it — no
+  // timers, no delivery window that can expire.
+  /** @type {Record<string, any>} */
+  const pendingData = {};
+  /** @type {Record<string, any>} */
+  const pendingTheme = {};
+
   const binding = new Shiny.InputBinding();
   Object.assign(binding, {
     find: (/** @type {any} */ scope) => $(scope).find('.drilldown-chart-container'),
@@ -3308,14 +3317,14 @@
     unsubscribe: () => {},
     initialize: (/** @type {any} */ el) => {
       el._block = new DrilldownChart(el);
-      if (el._pendingTheme !== undefined) {
-        el._block.setTheme(el._pendingTheme);
-        delete el._pendingTheme;
+      if (el.id in pendingTheme) {
+        el._block.setTheme(pendingTheme[el.id]);
+        delete pendingTheme[el.id];
       }
-      if (el._pendingData) {
-        const p = el._pendingData;
+      if (el.id in pendingData) {
+        const p = pendingData[el.id];
         el._block.setData(p.columns, p.data, p.config, p.arguments);
-        delete el._pendingData;
+        delete pendingData[el.id];
       }
     }
   });
@@ -3325,17 +3334,8 @@
     const el = /** @type {any} */ (document.getElementById(msg.id));
     if (el?._block) {
       el._block.setData(msg.columns, msg.data, msg.config, msg.arguments);
-    } else if (el) {
-      el._pendingData = msg;
     } else {
-      let n = 0;
-      const t = setInterval(() => {
-        n++;
-        const el2 = /** @type {any} */ (document.getElementById(msg.id));
-        if (el2?._block) { el2._block.setData(msg.columns, msg.data, msg.config, msg.arguments); clearInterval(t); }
-        else if (el2) { el2._pendingData = msg; clearInterval(t); }
-        if (n > 50) clearInterval(t);
-      }, 100);
+      pendingData[msg.id] = msg;
     }
   });
 
@@ -3344,17 +3344,8 @@
     const el = /** @type {any} */ (document.getElementById(msg.id));
     if (el?._block) {
       el._block.setTheme(msg.theme);
-    } else if (el) {
-      el._pendingTheme = msg.theme;
     } else {
-      let n = 0;
-      const t = setInterval(() => {
-        n++;
-        const el2 = /** @type {any} */ (document.getElementById(msg.id));
-        if (el2?._block) { el2._block.setTheme(msg.theme); clearInterval(t); }
-        else if (el2) { el2._pendingTheme = msg.theme; clearInterval(t); }
-        if (n > 50) clearInterval(t);
-      }, 100);
+      pendingTheme[msg.id] = msg.theme;
     }
   });
 

@@ -673,35 +673,56 @@
     if (inp && inp.value.trim()) inp.dispatchEvent(new Event("input"));
   }
 
+  /** @param {HTMLElement} root */
+  function wireRoot(root) {
+    var table = /** @type {HTMLElement | null} */ (root.querySelector("table.blockr-table"));
+    if (!table) return;
+    initContainer(root, table);
+    wireTable(root, table);
+  }
+
   /** @param {Document | Element} [ctx] */
   function scan(ctx) {
     var nodes = (ctx || document)
       .querySelectorAll(".drilldown-table-container");
-    Array.prototype.forEach.call(nodes, function (/** @type {HTMLElement} */ root) {
-      var table = /** @type {HTMLElement | null} */ (root.querySelector("table.blockr-table"));
-      if (!table) return;
-      initContainer(root, table);
-      wireTable(root, table);
-    });
+    Array.prototype.forEach.call(nodes, wireRoot);
   }
 
-  // Coalesce scan triggers to at most one scan per animation frame. During
-  // board init every output render mutates the DOM; scanning per mutation
-  // batch (and per shiny:value, per block) is an O(blocks x events) sweep
-  // concentrated exactly in the startup window.
-  var scanScheduled = false;
-  function scheduleScan() {
-    if (scanScheduled) return;
-    scanScheduled = true;
+  // Wire exactly the part of the DOM an event touched. A table (re)renders
+  // *inside* its container (the renderUI output sits within the chrome), so
+  // the enclosing container is found via closest(); a subtree that itself
+  // contains containers (initial UI, insertUI) is scanned scoped. Everything
+  // else costs one querySelectorAll over a small unrelated subtree.
+  /** @param {EventTarget | Element | null | undefined} el */
+  function scanAround(el) {
+    var e = /** @type {Element | null} */ (
+      el && /** @type {Node} */ (el).nodeType === 1 ? el : null);
+    if (!e) { scan(); return; }
+    var root = e.closest(".drilldown-table-container");
+    if (root) wireRoot(/** @type {HTMLElement} */ (root));
+    else scan(e);
+  }
+
+  // Fallback path only (see below): queue the relevant added nodes and wire
+  // just those subtrees, coalesced to one flush per animation frame. Wiring
+  // is idempotent (data-attribute guards), so overlap with the shiny:value
+  // path costs an attribute check, never a rewire.
+  /** @type {Element[]} */
+  var pendingNodes = [];
+  var flushScheduled = false;
+  /** @param {Element} n */
+  function queueWire(n) {
+    pendingNodes.push(n);
+    if (flushScheduled) return;
+    flushScheduled = true;
     window.requestAnimationFrame(function () {
-      scanScheduled = false;
-      scan();
+      flushScheduled = false;
+      var nodes = pendingNodes;
+      pendingNodes = [];
+      nodes.forEach(scanAround);
     });
   }
 
-  // A mutation is only relevant if it adds a table container or a (re)rendered
-  // table inside one — ECharts tooltips, dock relayout etc. churn the DOM
-  // constantly and must not wake the scanner.
   var SCAN_SEL = ".drilldown-table-container, table.blockr-table";
 
   if (document.readyState === "loading") {
@@ -710,22 +731,28 @@
     scan();
   }
 
+  // Primary wiring path: shiny:value / shiny:bound fire on the output element
+  // that just (re)rendered — wire only that subtree. The setTimeout defers
+  // past Shiny's DOM swap (shiny:value fires before the new HTML is applied).
+  if (typeof window.jQuery === "function") {
+    jQuery(document).on("shiny:value shiny:bound", function (/** @type {any} */ e) {
+      var t = e.target;
+      setTimeout(function () { scanAround(t); }, 0);
+    });
+  }
+
+  // Fallback for tables that enter the DOM outside a Shiny render event.
+  // Gated on relevance so tooltip/relayout churn never wakes it: only a
+  // mutation that adds a container (or a table inside one) queues its node.
   var mo = new MutationObserver(function (muts) {
     for (var i = 0; i < muts.length; i++) {
       var added = muts[i].addedNodes;
       for (var j = 0; j < added.length; j++) {
         var n = /** @type {Element} */ (added[j]);
         if (n.nodeType !== 1) continue;
-        if (n.matches(SCAN_SEL) || n.querySelector(SCAN_SEL)) {
-          scheduleScan();
-          return;
-        }
+        if (n.matches(SCAN_SEL) || n.querySelector(SCAN_SEL)) queueWire(n);
       }
     }
   });
   mo.observe(document.documentElement, { childList: true, subtree: true });
-
-  if (typeof window.jQuery === "function") {
-    jQuery(document).on("shiny:value shiny:bound", scheduleScan);
-  }
 })();
