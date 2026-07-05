@@ -106,7 +106,7 @@
 
 /* pill — a status chip, styled like the app's .badge-two-tone (subtle rounded
    rect + 1px border, no dot). Neutral reuses the shared grey badge tokens;
-   good / bad add a semantic tint. */
+   good / warn / bad add a semantic tint. */
 .tk-pill{
   display:inline-block;align-self:flex-start;
   padding:2px 8px;border-radius:4px;white-space:nowrap;
@@ -118,6 +118,10 @@
 .tk-pill.good{
   background:var(--tk-green-soft);color:var(--tk-green);
   border-color:color-mix(in srgb, var(--tk-green) 25%, transparent);
+}
+.tk-pill.warn{
+  background:var(--tk-amber-soft);color:var(--tk-amber);
+  border-color:color-mix(in srgb, var(--tk-amber) 25%, transparent);
 }
 .tk-pill.bad{
   background:var(--tk-red-soft);color:var(--tk-red);

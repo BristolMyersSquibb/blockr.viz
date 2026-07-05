@@ -528,12 +528,12 @@ test_that("tile: a filter action filters the tile block's output", {
 # SUMMARY TABLE / GT TABLE: render smoke
 # ===========================================================================
 
-test_that("summary_table gear: toggling 'overall' adds a Total row to the output", {
+test_that("summary_table gear: toggling 'overall' adds a Total column to the output", {
   skip_if_no_app()
 
   scope <- "#board-block_summary-expr-summary_input"
   before <- get_block_result("summary")
-  expect_false("Total" %in% before$.group)
+  expect_false("Total" %in% names(before))
 
   # Open the gear and tick the "Overall column" checkbox (design-system band).
   # This drives summary-table-block.js's real gear -> state -> R -> output.
@@ -550,8 +550,8 @@ test_that("summary_table gear: toggling 'overall' adds a Total row to the output
   app$wait_for_idle()
 
   after <- get_block_result("summary")
-  expect_true("Total" %in% after$.group)
-  expect_gt(nrow(after), nrow(before))
+  expect_true("Total" %in% names(after))
+  expect_gt(ncol(after), ncol(before))
 })
 
 test_that("tile: delta secondary renders and a matrix-row click drills", {
@@ -579,14 +579,15 @@ test_that("tile: delta secondary renders and a matrix-row click drills", {
   expect_equal(nrow(res), 2L)
 })
 
-test_that("summary_table: produces a tidy summary frame", {
+test_that("summary_table: produces the wide annotated summary frame", {
   skip_if_no_app()
 
   res <- get_block_result("summary")
   expect_s3_class(res, "data.frame")
   expect_gt(nrow(res), 0)
-  # The tidy summary carries header rows (.strong) and computed stats.
-  expect_true(all(c(".strong", "mean") %in% names(res)))
+  # The wide annotated df carries header rows (.strong) and one baked
+  # cell column per region level.
+  expect_true(all(c(".strong", "North", "South") %in% names(res)))
   # Header rows for each variable
   hdr <- res[!is.na(res$.strong) & res$.strong, ]
   expect_setequal(unique(hdr$.label), c("revenue", "profit"))
