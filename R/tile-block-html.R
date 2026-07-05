@@ -72,9 +72,22 @@ tk_card <- function(cell, flat, fspecs) {
       dg <- cell$.dg %||% cell$group
       if (!is.null(dg) && nzchar(dg)) dg else NULL
     },
+    # "Color by" identity accent (cells$.hex, scale-map resolved): the same
+    # left accent bar the table's row tint uses -- inset shadow adds no width.
+    style = tk_hex_accent(cell$.hex),
     over_node,
     valrow, sec, cap
   )
+}
+
+#' Inline style for the "Color by" identity accent (a left accent bar in the
+#' scale-map color, the table row tint's visual language), or NULL when the
+#' cell carries no hex (no tint / no map).
+#' @noRd
+tk_hex_accent <- function(hex) {
+  hex <- hex %||% NA_character_
+  if (is.na(hex) || !nzchar(hex)) return(NULL)
+  paste0("box-shadow: inset 3px 0 0 0 ", hex, ";")
 }
 
 #' Cards layout: ungrouped -> a single auto-fit grid (card per measure);
@@ -144,6 +157,8 @@ tk_table_flat <- function(cells, flat, fspecs = list()) {
                          dg <- cell$.dg %||% cell$group
                          if (!is.null(dg) && nzchar(dg)) dg else NULL
                        },
+                       # "Color by" identity accent -- see tk_hex_accent.
+                       style = tk_hex_accent(cell$.hex),
                        tds)
   })
   tk_table_wrap(thead, htmltools::tags$tbody(rows))
@@ -193,7 +208,11 @@ tk_table_matrix <- function(cells, flat, groups, meas) {
       }
       tds[[length(tds) + 1L]] <- td
     }
-    htmltools::tags$tr(class = "tk-data-row", `data-group` = g, tds)
+    htmltools::tags$tr(class = "tk-data-row", `data-group` = g,
+                       # "Color by" accent: any cell of this group's row
+                       # carries the group's hex -- see tk_hex_accent.
+                       style = tk_hex_accent(cells$.hex[match(g, cells$group)]),
+                       tds)
   })
   tk_table_wrap(thead, htmltools::tags$tbody(rows))
 }
@@ -242,7 +261,8 @@ tile_html <- function(data, value = character(), group = character(),
                       measure = "", layout = "cards", overline = "",
                       caption = "", secondary = "", style = "plain",
                       good_when = "up", format = "number", unit = "",
-                      summaries = list(), drill = FALSE, elem_id = NULL) {
+                      summaries = list(), drill = FALSE, elem_id = NULL,
+                      color = "", scale_map = NULL) {
   flat <- list(style = style %||% "plain", good_when = good_when %||% "up",
                format = format %||% "number", unit = unit %||% "")
 
@@ -306,6 +326,38 @@ tile_html <- function(data, value = character(), group = character(),
     }
   }
 
+  # "Color by" card tint -- the chart's identity color applied to cards,
+  # resolved through the board scale map (dd_row_hex), so a SEX-tinted tile
+  # matches the SEX-colored chart. STRUCTURAL columns only (the group, or
+  # the Name column) -- like the drill, the tint keys on what a card IS.
+  # NA hex (no map / no binding / other column) = no tint.
+  if (nrow(cells) > 0L) {
+    cells$.hex <- NA_character_
+    color <- as.character(color %||% "")[1L]
+    key_vals <- if (!nzchar(color)) {
+      NULL
+    } else if (identical(color, disp_by) && grouped) {
+      cells$group
+    } else if (identical(color, disp_meas) && tk_is_col(disp_meas, disp_data)) {
+      cells$measure
+    } else {
+      NULL
+    }
+    if (!is.null(key_vals)) {
+      lk <- unique(key_vals)
+      # dd_ident_hex: scale map first, deterministic palette fallback when
+      # unbound (chart parity) -- the tile's color is always an explicit pick.
+      lk_hex <- dd_ident_hex(
+        scale_map, color,
+        stats::setNames(
+          data.frame(lk, stringsAsFactors = FALSE, check.names = FALSE),
+          color
+        )
+      )
+      if (!is.null(lk_hex)) cells$.hex <- lk_hex[match(key_vals, lk)]
+    }
+  }
+
   fspecs <- if (nrow(cells) > 0L) tile_fspecs(cells, flat) else list()
 
   body <- if (nrow(cells) == 0L) {
@@ -338,7 +390,7 @@ tile_html <- function(data, value = character(), group = character(),
     `data-tk-cols`    = tile_cols_json(data),
     `data-tk-config`  = tile_config_json(value, group, measure, secondary, style,
                                          good_when, format, unit, overline,
-                                         caption, layout, drill),
+                                         caption, layout, drill, color = color),
     `data-tk-summaries` = dd_summaries_json(summaries),
     body
   )
@@ -367,13 +419,15 @@ tile_cols_json <- function(data) {
 #' set, not popover-editable in v1.
 #' @noRd
 tile_config_json <- function(value, group, name, secondary, style, good_when,
-                             format, unit, overline, caption, layout, drill) {
+                             format, unit, overline, caption, layout, drill,
+                             color = "") {
   value <- as.character(value)
   group <- as.character(group)
   cfg <- list(
     value     = if (length(value)) value[1] else "",
     group     = if (length(group)) group[1] else "",
     name      = name %||% "",
+    color     = color %||% "",
     secondary = secondary %||% "",
     style     = style %||% "plain",
     good_when = good_when %||% "up",

@@ -9,6 +9,7 @@ new_tile_block(
   group = character(),
   name = "",
   summaries = list(),
+  color = "",
   layout = "cards",
   overline = "",
   caption = "",
@@ -40,6 +41,13 @@ median / sum / min / max). Each metric becomes a card. With \code{group} set,
 one cluster per group level; with \code{group} empty, grand-total cards. A
 display projection only -- the block's data output stays the raw input
 filtered by the click. Empty (default) = no aggregation.}
+
+\item{color}{Categorical identity color ("Color by") -- the SAME argument
+as the chart's \code{color}, applied to cards: names the tile's group column
+or its Name column; each card / matrix row gets a scale-map accent in
+that value's color, so SEX-colored cards match the SEX-colored chart.
+\code{""} (default) = no tint. Structural columns only (group / Name);
+other columns are ignored.}
 
 \item{layout}{\code{"cards"} or \code{"table"}. Same slots either way.}
 

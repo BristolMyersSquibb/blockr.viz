@@ -187,6 +187,21 @@
   font-size: 12px;
   white-space: nowrap;
 }
+/* Repeatable rule lists (Aggregate summaries, Shade cells). The wrapper spans
+   the full popover width — breaking out of the section's narrow grid cells —
+   which also leaves the Group / Color-by picker alone on its own row. Each
+   rule then reads as ONE row: "[fn] of [columns] ✕" / "[mode] on [columns] ✕".
+   The fn/mode picker keeps a compact share; the columns picker gets the rest. */
+.dd-section > .dd-summaries { grid-column: 1 / -1; }
+.dd-summaries > .blockr-popover-label { display: block; }
+.dd-value-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.dd-value-row > .dd-picker-wrap { flex: 1 1 0; min-width: 0; }
+.dd-value-row > .dd-value-agg { flex: 0 1 35%; }
 /* Small input-type badge above Mapping (e.g. an annotated data frame has no
    grouping / aggregation controls). The fuller explanation is the hover
    tooltip, so the panel stays compact. */
