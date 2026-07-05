@@ -1256,7 +1256,7 @@ html_table_js_template <- function() {
 
   // ---------- Search ----------
   var searchInput = root.querySelector('input.blockr-search');
-  // Per-row lowercase text, read ONCE (rows here are static — no re-render),
+  // Per-row lowercase text, read ONCE (rows here are static - no re-render),
   // so a keystroke never re-extracts textContent of the whole tbody.
   var searchText = new WeakMap();
   function rowText(r){
@@ -1296,7 +1296,7 @@ html_table_js_template <- function() {
   }
   if (searchInput) {
     // Debounced: one filter pass per 150 ms typing pause (each pass touches
-    // every row) — same coalescing as the block renderer's table.js.
+    // every row) - same coalescing as the block renderer's table.js.
     var searchTimer = null;
     searchInput.addEventListener('input', function(){
       if (searchTimer != null) clearTimeout(searchTimer);
