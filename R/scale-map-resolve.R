@@ -121,3 +121,30 @@ dd_row_hex <- function(map, col, data) {
 
   unname(pal[as.character(data[[col]])])
 }
+
+# Identity color for an EXPLICIT "Color by" pick: dd_row_hex (the scale map)
+# first, falling back to deterministic palette cycling when the column has no
+# binding (or the board has no map) -- the same fallback the chart applies,
+# so "Color by" works on any categorical column and STILL matches the chart's
+# colors. Level order mirrors the chart's _orderLevels for unbound columns
+# (factor levels, else alphabetical -- JS sorts by localeCompare), keeping the
+# level -> color assignment identical across blocks. NOT used for the table's
+# smart-default stub tint, which stays map-bound-only (an unbound, usually
+# unique, rowname column would rainbow every table by default).
+dd_ident_hex <- function(map, col, data) {
+  hx <- dd_row_hex(map, col, data)
+  if (!is.null(hx)) {
+    return(hx)
+  }
+  if (is.null(col) || !is.data.frame(data) || !col %in% names(data)) {
+    return(NULL)
+  }
+  x <- data[[col]]
+  lv <- if (is.factor(x)) levels(x) else sort(unique(as.character(x)))
+  lv <- lv[!is.na(lv)]
+  if (!length(lv)) {
+    return(NULL)
+  }
+  pal <- stats::setNames(rep_len(DD_BLOCKR_PALETTE, length(lv)), lv)
+  unname(pal[as.character(x)])
+}

@@ -9,6 +9,8 @@ new_table_block(
   value = NULL,
   group = NULL,
   summaries = list(),
+  color = NULL,
+  shadings = list(),
   cell_color = NULL,
   row_color = NULL,
   drill = NULL,
@@ -28,7 +30,7 @@ new_table_block(
 )
 }
 \arguments{
-\item{rowname, value, cell_color, drill, digits, max_height}{Forwarded to \code{\link[=drilldown_table]{drilldown_table()}}. The block has no in-table title:
+\item{rowname, value, drill, digits, max_height}{Forwarded to the renderer. The block has no in-table title:
 the block's own name (card header) serves that role.}
 
 \item{group}{Optional grouping column(s) for an aggregated table. Default
@@ -37,8 +39,21 @@ the block's own name (card header) serves that role.}
 \item{summaries}{Summary-column specification for aggregated tables (a list
 of aggregations keyed by output column). Default \code{list()} (none).}
 
-\item{row_color}{Optional per-row colouring spec applied to the whole
-row rather than individual cells. Default \code{NULL} (off).}
+\item{color}{Categorical identity color ("Color by") -- the SAME argument
+as the chart's \code{color}, applied to rows: one categorical column whose
+values tint the rows through the board scale map. \code{""} = no tint;
+\code{NULL} (default) = a subtle default tint by the rowname column.}
+
+\item{shadings}{Cell value-encoding rules: a list, each entry
+\code{list(mode, cols)} (mode one of \code{"diverging"} / \code{"sequential"} /
+\code{"bar"}; same shape family as \code{summaries}). Empty \code{cols} on a rule =
+all numeric columns except those claimed by another rule. Default
+\code{list()} (plain cells).}
+
+\item{cell_color, row_color}{LEGACY, mapped on construction:
+\code{cell_color} (a \code{\link[=drilldown_table_color]{drilldown_table_color()}} spec) becomes one \code{shadings}
+rule; \code{row_color} becomes \code{color}. Kept as formals so saved boards
+restore; no gear control, not in the registry.}
 
 \item{filter_type, filter_column, filter_values, filter_range}{Click
 filter state (kept for contract parity with the drilldown chart;

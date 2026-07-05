@@ -1027,17 +1027,20 @@
 
       const result = [];
       for (const g of Object.values(groups)) {
-        let value;
-        if (func === 'count') value = g.rows.length;
-        else if (func === 'count_distinct') { const s = new Set(); for (const r of g.rows) { const v = r[value]; if (v != null && !(typeof v === 'number' && Number.isNaN(v))) s.add(v); } value = s.size; }
-        else if (func === 'mean') value = g.values.length ? g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / g.values.length : 0;
-        else if (func === 'median') { const s = g.values.slice().sort((/** @type {number} */ a, /** @type {number} */ b) => a - b); const m = Math.floor(s.length / 2); value = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; }
-        else if (func === 'sum') value = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
-        else if (func === 'min') value = g.values.length ? Math.min.apply(null, g.values) : 0;
-        else if (func === 'max') value = g.values.length ? Math.max.apply(null, g.values) : 0;
+        // `out` (not `value`) — `value` is the config's aggregated column name,
+        // read as r[value] in the count_distinct branch; a local `value` would
+        // shadow it and silently count r[undefined] (every group → 0).
+        let out;
+        if (func === 'count') out = g.rows.length;
+        else if (func === 'count_distinct') { const s = new Set(); for (const r of g.rows) { const v = r[value]; if (v != null && !(typeof v === 'number' && Number.isNaN(v))) s.add(v); } out = s.size; }
+        else if (func === 'mean') out = g.values.length ? g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / g.values.length : 0;
+        else if (func === 'median') { const s = g.values.slice().sort((/** @type {number} */ a, /** @type {number} */ b) => a - b); const m = Math.floor(s.length / 2); out = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; }
+        else if (func === 'sum') out = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
+        else if (func === 'min') out = g.values.length ? Math.min.apply(null, g.values) : 0;
+        else if (func === 'max') out = g.values.length ? Math.max.apply(null, g.values) : 0;
         // n = rows behind this (group, color) cell, for the tooltip's
         // "n = ..." line (how many observations the mark aggregates).
-        result.push({ facet: g.facet, group: g.group, color: g.color, value: Math.round(value * 100) / 100, n: g.rows.length });
+        result.push({ facet: g.facet, group: g.group, color: g.color, value: Math.round(out * 100) / 100, n: g.rows.length });
       }
       return result;
     }
@@ -3296,6 +3299,15 @@
 
   // -- Shiny binding ----------------------------------------------------------
 
+  // Last undelivered payload per container id. A message can arrive before
+  // its container exists or is bound (dock panels can mount arbitrarily
+  // late); it waits here until the binding's initialize() consumes it — no
+  // timers, no delivery window that can expire.
+  /** @type {Record<string, any>} */
+  const pendingData = {};
+  /** @type {Record<string, any>} */
+  const pendingTheme = {};
+
   const binding = new Shiny.InputBinding();
   Object.assign(binding, {
     find: (/** @type {any} */ scope) => $(scope).find('.drilldown-chart-container'),
@@ -3305,14 +3317,14 @@
     unsubscribe: () => {},
     initialize: (/** @type {any} */ el) => {
       el._block = new DrilldownChart(el);
-      if (el._pendingTheme !== undefined) {
-        el._block.setTheme(el._pendingTheme);
-        delete el._pendingTheme;
+      if (el.id in pendingTheme) {
+        el._block.setTheme(pendingTheme[el.id]);
+        delete pendingTheme[el.id];
       }
-      if (el._pendingData) {
-        const p = el._pendingData;
+      if (el.id in pendingData) {
+        const p = pendingData[el.id];
         el._block.setData(p.columns, p.data, p.config, p.arguments);
-        delete el._pendingData;
+        delete pendingData[el.id];
       }
     }
   });
@@ -3322,17 +3334,8 @@
     const el = /** @type {any} */ (document.getElementById(msg.id));
     if (el?._block) {
       el._block.setData(msg.columns, msg.data, msg.config, msg.arguments);
-    } else if (el) {
-      el._pendingData = msg;
     } else {
-      let n = 0;
-      const t = setInterval(() => {
-        n++;
-        const el2 = /** @type {any} */ (document.getElementById(msg.id));
-        if (el2?._block) { el2._block.setData(msg.columns, msg.data, msg.config, msg.arguments); clearInterval(t); }
-        else if (el2) { el2._pendingData = msg; clearInterval(t); }
-        if (n > 50) clearInterval(t);
-      }, 100);
+      pendingData[msg.id] = msg;
     }
   });
 
@@ -3341,17 +3344,8 @@
     const el = /** @type {any} */ (document.getElementById(msg.id));
     if (el?._block) {
       el._block.setTheme(msg.theme);
-    } else if (el) {
-      el._pendingTheme = msg.theme;
     } else {
-      let n = 0;
-      const t = setInterval(() => {
-        n++;
-        const el2 = /** @type {any} */ (document.getElementById(msg.id));
-        if (el2?._block) { el2._block.setTheme(msg.theme); clearInterval(t); }
-        else if (el2) { el2._pendingTheme = msg.theme; clearInterval(t); }
-        if (n > 50) clearInterval(t);
-      }, 100);
+      pendingTheme[msg.id] = msg.theme;
     }
   });
 

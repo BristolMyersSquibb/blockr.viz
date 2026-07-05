@@ -380,16 +380,13 @@
                          { value: "off", label: "No Excel export" }];
   var TABLE_ROLES = Object.assign({}, DAgg.aggRoles({ multiple: true }), {
     drill:      { label: "Filter column", kind: "column", colType: "any" },
-    row_color:  { label: "Row color",  kind: "column", colType: "any" },
-    // 'off' is folded into the Coloring checkbox section (unchecked = off), so
-    // the mode select only offers the active modes.
-    color_mode: { label: "Mode",       kind: "select",
+    // Categorical identity color ("Color by") — the chart's color aesthetic
+    // applied to rows (scale-map tint). "(none)" = no tint.
+    color:      { label: "Color by",   kind: "column", colType: "cat" },
+    // Mode vocabulary for the repeatable "Shade cells" rules (rendered by the
+    // engine's _renderShadings, not as a standalone role row).
+    shade_mode: { label: "Mode",       kind: "select",
                   options: ["diverging", "sequential", "bar"] },
-    // Column-scope multi-select: empty = ALL numeric columns (the common case,
-    // e.g. a correlation heatmap), so the placeholder spells that out. Picking
-    // restricts to those columns (e.g. a single count column for data bars).
-    color_columns: { label: "Columns", kind: "columns", colType: "num",
-                     placeholder: "All numeric columns" },
     digits:     { label: "Decimals",   kind: "select", options: ["0", "1", "2", "3", "4"] },
     // Display toggles (column-free): click-through pills labelled by meaning.
     // Keys match the R config params so onChange(key) round-trips to the block
@@ -436,10 +433,10 @@
                  // click target), so drill works in one click; the picker
                  // stays for re-aiming (e.g. AETERM instead of USUBJID).
                  drillDefault: stubCol || "",
-                 // Coloring checkbox section: the mode select + numeric column
-                 // scope. Row color checkbox section: a categorical row tint.
-                 colorToggle: hasCols ? { modeKey: "color_mode", extra: ["color_columns"] } : null,
-                 rowColorToggle: hasCols ? "row_color" : null,
+                 // COLOR — one plain section (no checkbox: its activation
+                 // lives in the picks): "Color by" identity tint + the
+                 // repeatable "Shade cells" value-encoding rules.
+                 colorSection: hasCols ? { colorKey: "color", shadings: true } : null,
                  presentation: pres });
     // Structured ("Table 1") input is an already-summarized annotated data
     // frame with no pickable columns, so grouping / aggregation / drill / colour
@@ -488,8 +485,6 @@
     var hasCols = cols.length > 0;
 
     var onClick = table.getAttribute("data-dt-onclick-col");
-    var colorCols = (table.getAttribute("data-dt-color-cols") || "")
-      .split(",").filter(function (n) { return !!n; });
     /** @type {Record<string, any>} */
     var cfg = {
       // Aggregation config: group (comma-joined -> array), and a summaries list
@@ -509,9 +504,13 @@
         if ((table.getAttribute("data-dt-group-cols") || "") !== "") return "auto";
         return (onClick && onClick !== "(none)") ? onClick : "";
       })(),
-      row_color:  table.getAttribute("data-dt-row-color") || "",
-      color_mode: table.getAttribute("data-dt-color-mode") || "off",
-      color_columns: colorCols,            // [] = all numeric
+      // Identity color ("Color by") + value-encoding rules ({mode, cols}
+      // JSON) — same transports as group / summaries.
+      color: table.getAttribute("data-dt-color") || "",
+      shadings: (function () {
+        try { return JSON.parse(table.getAttribute("data-dt-shadings") || "[]"); }
+        catch (e) { return []; }
+      })(),
       digits:     table.getAttribute("data-dt-digits") || "2",
       // Display toggles (segmented on/off). Default on, except export.
       sortable:    table.getAttribute("data-dt-sortable") || "on",
@@ -599,6 +598,13 @@
         cfg.summaries = ms;
         sendConfig(elemId, "summaries", JSON.stringify(ms));
       },
+      // Repeatable "Shade cells" rules — same JSON transport as summaries.
+      // No floor row: an empty list IS "no shading".
+      shadingsList: function () { return cfg.shadings || []; },
+      onShadingsChange: function (/** @type {any[]} */ ss) {
+        cfg.shadings = ss;
+        sendConfig(elemId, "shadings", JSON.stringify(ss));
+      },
       onChange: function (/** @type {string} */ key) {
         sendConfig(elemId, key, cfg[key]);
       },
@@ -667,17 +673,57 @@
     if (inp && inp.value.trim()) inp.dispatchEvent(new Event("input"));
   }
 
+  /** @param {HTMLElement} root */
+  function wireRoot(root) {
+    var table = /** @type {HTMLElement | null} */ (root.querySelector("table.blockr-table"));
+    if (!table) return;
+    initContainer(root, table);
+    wireTable(root, table);
+  }
+
   /** @param {Document | Element} [ctx] */
   function scan(ctx) {
     var nodes = (ctx || document)
       .querySelectorAll(".drilldown-table-container");
-    Array.prototype.forEach.call(nodes, function (/** @type {HTMLElement} */ root) {
-      var table = /** @type {HTMLElement | null} */ (root.querySelector("table.blockr-table"));
-      if (!table) return;
-      initContainer(root, table);
-      wireTable(root, table);
+    Array.prototype.forEach.call(nodes, wireRoot);
+  }
+
+  // Wire exactly the part of the DOM an event touched. A table (re)renders
+  // *inside* its container (the renderUI output sits within the chrome), so
+  // the enclosing container is found via closest(); a subtree that itself
+  // contains containers (initial UI, insertUI) is scanned scoped. Everything
+  // else costs one querySelectorAll over a small unrelated subtree.
+  /** @param {EventTarget | Element | null | undefined} el */
+  function scanAround(el) {
+    var e = /** @type {Element | null} */ (
+      el && /** @type {Node} */ (el).nodeType === 1 ? el : null);
+    if (!e) { scan(); return; }
+    var root = e.closest(".drilldown-table-container");
+    if (root) wireRoot(/** @type {HTMLElement} */ (root));
+    else scan(e);
+  }
+
+  // Fallback path only (see below): queue the relevant added nodes and wire
+  // just those subtrees, coalesced to one flush per animation frame. Wiring
+  // is idempotent (data-attribute guards), so overlap with the shiny:value
+  // path costs an attribute check, never a rewire.
+  /** @type {Element[]} */
+  var pendingNodes = [];
+  var flushScheduled = false;
+  /** @param {Element} n */
+  function queueWire(n) {
+    pendingNodes.push(n);
+    if (flushScheduled) return;
+    flushScheduled = true;
+    window.requestAnimationFrame(function () {
+      flushScheduled = false;
+      var nodes = pendingNodes;
+      pendingNodes = [];
+      nodes.forEach(scanAround);
     });
   }
+
+  var SCAN_SEL = ".drilldown-table-container, table.blockr-table";
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () { scan(); });
@@ -685,16 +731,28 @@
     scan();
   }
 
+  // Primary wiring path: shiny:value / shiny:bound fire on the output element
+  // that just (re)rendered — wire only that subtree. The setTimeout defers
+  // past Shiny's DOM swap (shiny:value fires before the new HTML is applied).
+  if (typeof window.jQuery === "function") {
+    jQuery(document).on("shiny:value shiny:bound", function (/** @type {any} */ e) {
+      var t = e.target;
+      setTimeout(function () { scanAround(t); }, 0);
+    });
+  }
+
+  // Fallback for tables that enter the DOM outside a Shiny render event.
+  // Gated on relevance so tooltip/relayout churn never wakes it: only a
+  // mutation that adds a container (or a table inside one) queues its node.
   var mo = new MutationObserver(function (muts) {
     for (var i = 0; i < muts.length; i++) {
-      if (muts[i].addedNodes && muts[i].addedNodes.length) { scan(); break; }
+      var added = muts[i].addedNodes;
+      for (var j = 0; j < added.length; j++) {
+        var n = /** @type {Element} */ (added[j]);
+        if (n.nodeType !== 1) continue;
+        if (n.matches(SCAN_SEL) || n.querySelector(SCAN_SEL)) queueWire(n);
+      }
     }
   });
   mo.observe(document.documentElement, { childList: true, subtree: true });
-
-  if (typeof window.jQuery === "function") {
-    jQuery(document).on("shiny:value shiny:bound", function () {
-      setTimeout(scan, 0);
-    });
-  }
 })();

@@ -65,8 +65,14 @@ drilldown_table <- function(data,
     elem_id    = elem_id,
     structured = dt_is_structured(data),
     max_height = max_height,
-    inner      = dt_table_tag(data, label_col, value_cols, color, drill, digits,
-                              row_hex = row_hex, row_color = row_color)
+    # This exported wrapper keeps its historical API (a single
+    # drilldown_table_color() spec + row_color); internally the renderer
+    # speaks the unified vocabulary -- `shadings` (a LIST of {mode, cols}
+    # value-encoding rules) and `color` (the categorical identity column).
+    inner      = dt_table_tag(data, label_col, value_cols,
+                              shadings = dd_parse_shadings(color),
+                              drill = drill, digits = digits,
+                              row_hex = row_hex, color = row_color)
   )
 }
 
@@ -80,8 +86,8 @@ drilldown_table <- function(data,
 #' `dt_result` (chrome) / `dt_table` (this) output split.
 #' @noRd
 dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
-                         color = NULL, drill = NULL, digits = 2L,
-                         row_hex = NULL, row_color = NULL,
+                         shadings = list(), drill = NULL, digits = 2L,
+                         row_hex = NULL, color = NULL,
                          sortable = TRUE, collapsible = TRUE, search = TRUE,
                          excel_download = FALSE, group_cols = NULL,
                          group = character(), summaries = list()) {
@@ -93,65 +99,26 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   toggles <- list(sortable = sortable, collapsible = collapsible,
                   search = search, excel_download = excel_download)
   if (dt_is_structured(data)) {
-    return(dt_table_tag_structured(data, drill, color, digits, toggles))
+    return(dt_table_tag_structured(data, drill, digits, toggles))
   }
 
   if (is.null(label_col)) label_col <- names(data)[1L]
   if (is.null(value_cols)) value_cols <- setdiff(names(data), label_col)
   value_cols <- intersect(value_cols, names(data))
 
-  color_mode <- if (is.null(color)) "off" else color$type
-
   if (nrow(data) == 0L || !label_col %in% names(data) ||
       length(value_cols) == 0L) {
-    return(dt_table_attrs(dt_message_table(), NULL, NULL, color_mode, digits,
-                          row_color = row_color, toggles = toggles))
+    return(dt_table_attrs(dt_message_table(), NULL, NULL, digits,
+                          color = color, toggles = toggles))
   }
 
-  # ---- cell visuals: heatmap shading OR data bars ---------------------
-  # `color` is a drilldown_table_color() spec. `color$columns` names which
-  # numeric columns get the treatment; empty/NULL = ALL numeric columns
-  # (a rule re-resolved here, so it survives upstream schema changes). A
-  # picked column that no longer exists is dropped (fail-soft: that column
-  # just renders plain). Normalization follows the mode: `bar` is
-  # per-column on absolute magnitude; diverging/sequential share one pooled
-  # domain across the target columns (so a correlation matrix reads on one
-  # scale).
-  bar_mode  <- FALSE
-  bar_fill  <- NULL
-  bar_max   <- NULL    # named per-column abs-max for bars
-  cell_bg   <- NULL    # shared value->color closure for diverging/sequential
-  targets   <- character()
-  if (!is.null(color)) {
-    num_cols <- value_cols[vapply(data[value_cols], is.numeric, logical(1L))]
-    picked   <- color$columns
-    targets  <- if (length(picked)) intersect(picked, num_cols) else num_cols
-    if (length(targets)) {
-      if (identical(color$type, "bar")) {
-        bar_mode <- TRUE
-        bar_fill <- (color$palette %||% "rgba(37, 99, 235, 0.22)")[1L]
-        bar_max  <- vapply(targets, function(cn) {
-          v <- data[[cn]][is.finite(data[[cn]])]
-          if (length(v)) max(abs(v)) else 0
-        }, numeric(1L))
-      } else {
-        vals <- unlist(data[targets], use.names = FALSE)
-        vals <- vals[is.finite(vals)]
-        dom  <- color$domain
-        if (is.null(dom) && length(vals)) {
-          dom <- if (identical(color$type, "diverging")) {
-            m <- max(abs(vals))   # symmetric around 0 (white at 0)
-            c(-m, m)
-          } else {
-            range(vals)
-          }
-        }
-        if (!is.null(dom) && length(vals) && diff(range(dom)) > 0) {
-          cell_bg <- dt_color_fun(color$type, dom, color$palette)
-        }
-      }
-    }
-  }
+  # ---- cell visuals: value-encoding `shadings` rules ------------------
+  # Repeatable rules `list(list(mode, cols))` resolved to per-column visuals
+  # (see dd_shading_visuals): explicit cols claim; empty cols = all numeric
+  # minus claimed (override rule, re-resolved per render so it survives
+  # upstream schema changes); diverging/sequential pool one domain per rule,
+  # bars normalize per column.
+  shading_vis <- dd_shading_visuals(shadings, data, value_cols)
 
   # ---- thead ----------------------------------------------------------
   # Per-column numeric flag drives type-based alignment for both the header
@@ -204,22 +171,23 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
     if (any(keep)) {
       vk <- col[keep]
       disp <- if (num_flag[j]) {
-        formatC(round(as.numeric(vk), digits), format = "fg",
+        formatC(round(as.numeric(vk), digits), format = "f", digits = digits,
                 drop0trailing = TRUE, big.mark = "")
       } else {
         as.character(vk)
       }
       disp_by_col[[j]] <- disp
       style <- ""
-      if (num_flag[j] && value_cols[j] %in% targets) {
-        if (bar_mode) {
+      sv <- shading_vis[[value_cols[j]]]
+      if (num_flag[j] && !is.null(sv)) {
+        if (identical(sv$kind, "bar")) {
           # Data bar: left-anchored gradient, width = |v| / column-abs-max.
           # A CSS gradient string keeps the vectorized single-HTML() render
           # (no per-cell DOM node). Text reads on top of the fill.
-          style <- dt_bar_style(as.numeric(vk), bar_max[[value_cols[j]]], bar_fill)
-        } else if (!is.null(cell_bg)) {
+          style <- dt_bar_style(as.numeric(vk), sv$max, sv$fill)
+        } else {
           style <- vapply(as.numeric(vk), function(v) {
-            bg <- cell_bg(v)
+            bg <- sv$fun(v)
             paste0(" style=\"background:", bg$bg, ";color:", bg$fg, ";\"")
           }, character(1L))
         }
@@ -270,10 +238,9 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
     )
   )
   onclick <- dt_onclick(drill, c(label_col, value_cols))
-  dt_table_attrs(table_tag, onclick$col, onclick$idx, color_mode, digits,
-                 row_color = row_color,
+  dt_table_attrs(table_tag, onclick$col, onclick$idx, digits,
+                 color = color, shadings = shadings,
                  num_cols = value_cols[num_flag],
-                 color_cols = if (!is.null(color)) color$columns else NULL,
                  toggles = toggles, group_cols = group_cols,
                  group = group, summaries = summaries)
 }
@@ -306,7 +273,7 @@ dt_is_structured <- function(data) {
 #' structured tables render uncoloured; the stub column is the drill target
 #' when `drill` names it.
 #' @noRd
-dt_table_tag_structured <- function(data, drill, color, digits, toggles = NULL) {
+dt_table_tag_structured <- function(data, drill, digits, toggles = NULL) {
   sortable    <- toggles$sortable %||% TRUE
   collapsible <- toggles$collapsible %||% TRUE
   all_section_cols <- grep("^\\.section_\\d+$", names(data), value = TRUE)
@@ -320,7 +287,7 @@ dt_table_tag_structured <- function(data, drill, color, digits, toggles = NULL) 
                           c(all_section_cols, stub_col, styling_cols))
 
   if (length(data_cols) == 0L || nrow(data) == 0L) {
-    return(dt_table_attrs(dt_message_table(), NULL, NULL, "off", digits,
+    return(dt_table_attrs(dt_message_table(), NULL, NULL, digits,
                           toggles = toggles))
   }
 
@@ -345,7 +312,7 @@ dt_table_tag_structured <- function(data, drill, color, digits, toggles = NULL) 
     NULL
   }
   onclick <- dt_onclick(drill_use, c(stub_col %||% character(), data_cols))
-  dt_table_attrs(table_tag, onclick$col, onclick$idx, "off", digits,
+  dt_table_attrs(table_tag, onclick$col, onclick$idx, digits,
                  toggles = toggles)
 }
 
@@ -620,6 +587,109 @@ dd_summaries_json <- function(summaries) {
   ))
 }
 
+#' Normalize the `shadings` list (cell value-encoding rules) from a restored
+#' block state (an R list) or from the gear (a JSON string) to
+#' `list(list(mode, cols), ...)`. Mirrors dd_parse_summaries -- the two lists
+#' share their shape family (`{func, cols}` / `{mode, cols}`).
+#' @noRd
+dd_parse_shadings <- function(v) {
+  if (is.null(v)) return(list())
+  ss <- if (is.character(v) && length(v) == 1L) {
+    tryCatch(jsonlite::fromJSON(v, simplifyVector = FALSE),
+             error = function(e) list())
+  } else if (is.list(v)) {
+    # A single drilldown_table_color()-style spec (has $type) reads as one rule.
+    if (!is.null(v$type)) list(v) else v
+  } else {
+    list()
+  }
+  lapply(ss, function(s) {
+    out <- list(
+      mode = as.character(s$mode %||% s$type %||% "diverging")[1L],
+      cols = as.character(unlist(s$cols %||% s$columns %||% character()))
+    )
+    # Optional power knobs (per-rule palette / fixed domain) ride along when
+    # present -- the gear never writes them, ctor / legacy specs may.
+    if (!is.null(s$palette)) out$palette <- s$palette
+    if (!is.null(s$domain))  out$domain <- s$domain
+    out
+  })
+}
+
+#' Serialize the `shadings` list to the JSON the gear reads off
+#' `data-dt-shadings` (`mode` a scalar, `cols` always an array).
+#' @noRd
+dd_shadings_json <- function(shadings) {
+  if (!length(shadings)) return("[]")
+  as.character(jsonlite::toJSON(
+    lapply(shadings, function(s) {
+      list(
+        mode = jsonlite::unbox(as.character(s$mode %||% "diverging")[1L]),
+        cols = as.character(s$cols %||% character())
+      )
+    }),
+    auto_unbox = FALSE
+  ))
+}
+
+#' Resolve the `shadings` rules to per-column cell visuals.
+#'
+#' Override semantics, mirroring dd_metric_plan: a rule with EMPTY `cols`
+#' covers ALL numeric columns except those explicitly claimed by other rules
+#' (so `bar on DOSE` + `diverging on []` bars DOSE and shades everything
+#' else); explicit-but-dropped columns stay a visible no-op; among competing
+#' rules the FIRST wins a column. diverging/sequential pool ONE domain across
+#' the rule's resolved columns (a correlation matrix reads on one scale);
+#' `bar` normalizes per column on absolute magnitude.
+#'
+#' @return named list: column -> `list(kind = "bar", fill, max)` or
+#'   `list(kind = "bg", fun)` (a dt_color_fun closure). Unlisted columns
+#'   render plain.
+#' @noRd
+dd_shading_visuals <- function(shadings, data, value_cols) {
+  out <- list()
+  if (!length(shadings)) return(out)
+  num_cols <- value_cols[vapply(data[value_cols], is.numeric, logical(1L))]
+  claimed <- unique(unlist(lapply(
+    shadings, function(s) as.character(s$cols %||% character())
+  )))
+  taken <- character()
+  for (s in shadings) {
+    mode <- as.character(s$mode %||% "diverging")[1L]
+    raw  <- as.character(s$cols %||% character())
+    cols <- if (length(raw)) intersect(raw, num_cols)
+            else setdiff(num_cols, claimed)
+    cols <- setdiff(cols, taken)
+    if (!length(cols)) next
+    taken <- c(taken, cols)
+    if (identical(mode, "bar")) {
+      fill <- (s$palette %||% "rgba(37, 99, 235, 0.22)")[1L]
+      for (cn in cols) {
+        v <- data[[cn]][is.finite(data[[cn]])]
+        out[[cn]] <- list(kind = "bar", fill = fill,
+                          max = if (length(v)) max(abs(v)) else 0)
+      }
+    } else {
+      vals <- unlist(data[cols], use.names = FALSE)
+      vals <- vals[is.finite(vals)]
+      dom <- s$domain
+      if (is.null(dom) && length(vals)) {
+        dom <- if (identical(mode, "diverging")) {
+          m <- max(abs(vals))   # symmetric around 0 (white at 0)
+          c(-m, m)
+        } else {
+          range(vals)
+        }
+      }
+      if (!is.null(dom) && length(vals) && diff(range(dom)) > 0) {
+        fun <- dt_color_fun(mode, dom, s$palette)
+        for (cn in cols) out[[cn]] <- list(kind = "bg", fun = fun)
+      }
+    }
+  }
+  out
+}
+
 #' Build the ANDed equality filter for a grouped-table row click.
 #'
 #' Returns a language object `.data[[c1]] == v1 & .data[[c2]] == v2 & ...` from
@@ -649,8 +719,8 @@ dt_onclick <- function(drill, all_cols) {
 #' the JS, while the chrome stays put.
 #' @noRd
 dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
-                           color_mode, digits, row_color = NULL,
-                           num_cols = NULL, color_cols = NULL,
+                           digits, color = NULL, shadings = list(),
+                           num_cols = NULL,
                            toggles = NULL, group_cols = NULL,
                            group = character(), summaries = list()) {
   on_off <- function(x) if (isTRUE(x)) "on" else "off"
@@ -665,13 +735,14 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
     `data-dt-group-cols` = paste(group_cols %||% character(), collapse = ","),
     `data-dt-onclick-col` = onclick_col,
     `data-dt-onclick-idx` = if (!is.null(onclick_idx)) onclick_idx else NULL,
-    `data-dt-color-mode` = color_mode,
     `data-dt-digits` = as.character(digits),
-    `data-dt-row-color` = row_color %||% "",
-    # Numeric columns the gear may offer for the colour/bar scope picker, and
-    # the currently-scoped subset ("" = all numeric). Comma-joined.
+    # Categorical identity color ("Color by" -- row tint via the board scale
+    # map; the chart's color aesthetic applied to rows) and the value-encoding
+    # `shadings` rules ({mode, cols} JSON, only at this edge).
+    `data-dt-color` = color %||% "",
+    `data-dt-shadings` = dd_shadings_json(shadings),
+    # Numeric columns the gear may offer for the shading scope pickers.
     `data-dt-num-cols` = paste(num_cols %||% character(), collapse = ","),
-    `data-dt-color-cols` = paste(color_cols %||% character(), collapse = ","),
     # Display-option toggles the gear reads back (default ON, except export).
     `data-dt-sortable` = on_off(toggles$sortable %||% TRUE),
     `data-dt-collapsible` = on_off(toggles$collapsible %||% TRUE),
@@ -846,14 +917,14 @@ drilldown_table_dep <- function() {
       stylesheet = "chart.css"
     ),
     settings_band_dep(),
-    # Shared aggregation vocabulary + gear engine (one dep, one version — see
+    # Shared aggregation vocabulary + gear engine (one dep, one version -- see
     # drilldown_shared_dep()). Before the table JS, which reads both globals.
     drilldown_shared_dep(),
     htmltools::htmlDependency(
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".22"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".23"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"
@@ -925,17 +996,32 @@ table_arguments <- function() {
     # A `drilldown_table_color()` SPEC object (not a column name); its shape is
     # an author-only nested structure, so the type is left unset and the NULL
     # example (a plain table) is dropped.
-    cell_color = new_block_arg(
+    color = new_block_arg(
       paste0(
-        "Cell visuals: a `drilldown_table_color()` spec, or null for a plain ",
-        "table. NOTE this is a SPEC object, not a column name (unlike the ",
-        "drill-down chart's `color`). `type` is \"diverging\" (correlation ",
-        "matrices, centred on 0), \"sequential\" (heatmaps), or \"bar\" (an ",
-        "in-cell data bar proportional to the value, e.g. counts of adverse ",
-        "events). `columns` restricts the effect to named columns; omit it to ",
-        "apply to all numeric columns. Presentational only; never changes data."
+        "Categorical identity color (\"Color by\") -- the SAME argument as the ",
+        "chart's `color`, applied to rows: names one categorical column whose ",
+        "values tint the rows through the board scale map, so a SEX-colored ",
+        "table matches the SEX-colored chart. Empty string = no tint; omit ",
+        "(null) = a subtle default tint by the rowname column. Presentational ",
+        "only; never changes data."
       ),
-      example = NULL
+      example = "SEX",
+      type = arg_string()
+    ),
+    shadings = new_block_arg(
+      paste0(
+        "Cell value-encoding rules: a list, each entry `{mode, cols}` (same ",
+        "shape family as `summaries`). `mode` is \"diverging\" (correlation ",
+        "matrices, centred on 0), \"sequential\" (heatmaps), or \"bar\" (an ",
+        "in-cell data bar proportional to the value). Empty `cols` on a rule ",
+        "= ALL numeric columns except those claimed by another rule (so ",
+        "`{bar, [DOSE]}` + `{diverging, []}` bars DOSE and shades everything ",
+        "else). Empty list = plain cells. Presentational only; never changes ",
+        "data."
+      ),
+      example = list(
+        list(mode = "diverging", cols = list())
+      )
     ),
     drill = new_block_arg(
       paste0(
@@ -998,15 +1084,26 @@ table_guidance <- function() {
 #' connected directly without an explicit coercion step in between. Plain
 #' data frames pass through untouched.
 #'
-#' @param rowname,value,cell_color,drill,digits,max_height
-#'   Forwarded to [drilldown_table()]. The block has no in-table title:
+#' @param rowname,value,drill,digits,max_height
+#'   Forwarded to the renderer. The block has no in-table title:
 #'   the block's own name (card header) serves that role.
 #' @param group Optional grouping column(s) for an aggregated table. Default
 #'   `NULL` (row-per-observation).
 #' @param summaries Summary-column specification for aggregated tables (a list
 #'   of aggregations keyed by output column). Default `list()` (none).
-#' @param row_color Optional per-row colouring spec applied to the whole
-#'   row rather than individual cells. Default `NULL` (off).
+#' @param color Categorical identity color ("Color by") -- the SAME argument
+#'   as the chart's `color`, applied to rows: one categorical column whose
+#'   values tint the rows through the board scale map. `""` = no tint;
+#'   `NULL` (default) = a subtle default tint by the rowname column.
+#' @param shadings Cell value-encoding rules: a list, each entry
+#'   `list(mode, cols)` (mode one of `"diverging"` / `"sequential"` /
+#'   `"bar"`; same shape family as `summaries`). Empty `cols` on a rule =
+#'   all numeric columns except those claimed by another rule. Default
+#'   `list()` (plain cells).
+#' @param cell_color,row_color LEGACY, mapped on construction:
+#'   `cell_color` (a [drilldown_table_color()] spec) becomes one `shadings`
+#'   rule; `row_color` becomes `color`. Kept as formals so saved boards
+#'   restore; no gear control, not in the registry.
 #' @param filter_type,filter_column,filter_values,filter_range Click
 #'   filter state (kept for contract parity with the drilldown chart;
 #'   `filter_range` is unused by the table).
@@ -1029,6 +1126,8 @@ new_table_block <- function(rowname = NULL,
                                       value = NULL,
                                       group = NULL,
                                       summaries = list(),
+                                      color = NULL,
+                                      shadings = list(),
                                       cell_color = NULL,
                                       row_color = NULL,
                                       drill = NULL,
@@ -1045,6 +1144,14 @@ new_table_block <- function(rowname = NULL,
                                       search = TRUE,
                                       excel_download = FALSE,
                                       ...) {
+  # Legacy args mapped on construction (old saved boards restore through
+  # these formals): a cell_color spec reads as one `shadings` rule; row_color
+  # reads as `color`. New names win when both are given.
+  if (!length(shadings) && !is.null(cell_color)) {
+    shadings <- dd_parse_shadings(cell_color)
+  }
+  if (is.null(color) && !is.null(row_color)) color <- row_color
+
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {
@@ -1054,8 +1161,10 @@ new_table_block <- function(rowname = NULL,
         r_value     <- shiny::reactiveVal(value)
         r_group      <- shiny::reactiveVal(as.character(group))
         r_summaries    <- shiny::reactiveVal(dd_parse_summaries(summaries))
-        r_cell_color    <- shiny::reactiveVal(cell_color)
-        r_row_color  <- shiny::reactiveVal(row_color)
+        # `color` = identity tint column (NULL = smart default by rowname,
+        # "" = explicitly off); `shadings` = value-encoding rules list.
+        r_color    <- shiny::reactiveVal(color)
+        r_shadings <- shiny::reactiveVal(dd_parse_shadings(shadings))
         r_drill      <- shiny::reactiveVal(drill)
         r_digits        <- shiny::reactiveVal(digits)
         r_max_height    <- shiny::reactiveVal(max_height)
@@ -1120,38 +1229,14 @@ new_table_block <- function(rowname = NULL,
           } else if (identical(act, "config")) {
             p <- msg$param
             v <- msg$value
-            if (identical(p, "color_mode")) {
-              cur <- shiny::isolate(r_cell_color()) %||% cell_color
-              if (identical(v, "off")) {
-                upd(r_cell_color, NULL)
-              } else {
-                # Switching mode keeps the current column scope; domain/palette
-                # only carry over when the type is unchanged (they are
-                # type-specific). columns = NULL/empty means "all numeric".
-                same <- !is.null(cur) && identical(cur$type, v)
-                upd(r_cell_color, drilldown_table_color(
-                  v,
-                  domain  = if (same) cur$domain  else NULL,
-                  palette = if (same) cur$palette else NULL,
-                  columns = if (!is.null(cur)) cur$columns else NULL
-                ))
-              }
-            } else if (identical(p, "color_columns")) {
-              # The column-scope multi-select. Empty selection = NULL = "all
-              # numeric" (a rule, not a snapshot -- self-heals on schema change).
-              # Ignored when no colour mode is active.
-              cur <- shiny::isolate(r_cell_color())
-              if (!is.null(cur)) {
-                cols <- as.character(unlist(v))
-                if (length(cols) == 0L ||
-                    (length(cols) == 1L && !nzchar(cols))) {
-                  cols <- NULL
-                }
-                upd(r_cell_color, drilldown_table_color(
-                  cur$type, domain = cur$domain, palette = cur$palette,
-                  columns = cols
-                ))
-              }
+            if (identical(p, "shadings")) {
+              # JS sends the whole shadings list as a JSON string on any edit
+              # (same transport as `summaries`).
+              upd(r_shadings, dd_parse_shadings(v))
+            } else if (identical(p, "color")) {
+              # "" (explicit none from "(none)") is distinct from NULL (unset /
+              # smart default), so store "" rather than collapsing to NULL.
+              upd(r_color, if (identical(v, "(none)") || !nzchar(v)) "" else v)
             } else if (identical(p, "drill")) {
               upd(r_drill, if (identical(v, "(none)") || !nzchar(v)) NULL else v)
             } else if (identical(p, "group")) {
@@ -1159,10 +1244,6 @@ new_table_block <- function(rowname = NULL,
             } else if (identical(p, "summaries")) {
               # JS sends the whole summaries list as a JSON string on any edit.
               upd(r_summaries, dd_parse_summaries(v))
-            } else if (identical(p, "row_color")) {
-              # "" (explicit none from "(none)") is distinct from NULL (unset /
-              # smart default), so store "" rather than collapsing to NULL.
-              upd(r_row_color, if (identical(v, "(none)") || !nzchar(v)) "" else v)
             } else if (identical(p, "digits")) {
               upd(r_digits, as.integer(v))
             } else if (identical(p, "sortable")) {
@@ -1277,12 +1358,28 @@ new_table_block <- function(rowname = NULL,
                 ad
               )
             }
+            # COLOR applies to the AGGREGATED frame too: shadings resolve
+            # against the displayed (aggregated) columns, and "Color by"
+            # tints rows whose color column survived the aggregation (a
+            # group key; a non-grouped column has no per-row value here and
+            # silently yields no tint). Smart default (color NULL) = the
+            # first group key, map-bound-only; explicit pick = chart-parity
+            # palette fallback (dd_ident_hex).
+            arc <- r_color()
+            arc_col <- if (is.null(arc)) {
+              if (gl) agg$group[1L] else NULL
+            } else if (nzchar(arc)) {
+              arc
+            } else {
+              NULL
+            }
             return(tryCatch(
               dt_table_tag(
                 ad,
                 label_col  = if (gl) agg$group[1L] else " ",
                 value_cols = if (gl) c(setdiff(agg$group, agg$group[1L]), agg$metric_cols)
                              else agg$metric_cols,
+                shadings   = r_shadings(),
                 drill      = NULL,
                 # Group-keys drill is OPT-IN (checkbox default off, like every
                 # drill): the keys wire up only when `drill` is set -- "auto"
@@ -1294,6 +1391,14 @@ new_table_block <- function(rowname = NULL,
                 } else {
                   character()
                 },
+                row_hex    = if (is.null(arc_col)) {
+                  NULL
+                } else if (is.null(arc)) {
+                  dd_row_hex(board_scale_map(), arc_col, ad)
+                } else {
+                  dd_ident_hex(board_scale_map(), arc_col, ad)
+                },
+                color      = arc_col,
                 group      = r_group(), summaries = r_summaries(),
                 digits     = r_digits(),
                 sortable    = isTRUE(r_sortable()),
@@ -1309,11 +1414,11 @@ new_table_block <- function(rowname = NULL,
               }
             ))
           }
-          # `row_color` names the column whose scale-map colors tint the rows
-          # (like ggplot's aes(color = SEX)). NULL (unset) = smart default: use
-          # the row-stub column. "" = explicitly off (gear "(none)"). A name =
-          # that column.
-          rc <- r_row_color()
+          # `color` names the column whose scale-map colors tint the rows
+          # (the chart's color aesthetic applied to rows -- "Color by").
+          # NULL (unset) = smart default: use the row-stub column. "" =
+          # explicitly off (gear "(none)"). A name = that column.
+          rc <- r_color()
           rc_col <- if (is.null(rc)) {
             r_rowname() %||% names(d)[1L]
           } else if (nzchar(rc)) {
@@ -1333,12 +1438,21 @@ new_table_block <- function(rowname = NULL,
               d,
               label_col  = r_rowname(),
               value_cols = r_value(),
-              color      = r_cell_color(),
+              shadings   = r_shadings(),
               drill      = r_drill(),
               digits     = r_digits(),
-              row_hex    = if (is.null(rc_col)) NULL else
-                             dd_row_hex(board_scale_map(), rc_col, d),
-              row_color  = rc_col,
+              # Explicit "Color by" pick -> dd_ident_hex (scale map first,
+              # palette fallback when unbound: chart parity). Smart default
+              # (color NULL -> stub column) stays MAP-BOUND-ONLY: an unbound,
+              # usually unique, rowname would rainbow every table by default.
+              row_hex    = if (is.null(rc_col)) {
+                NULL
+              } else if (is.null(rc)) {
+                dd_row_hex(board_scale_map(), rc_col, d)
+              } else {
+                dd_ident_hex(board_scale_map(), rc_col, d)
+              },
+              color      = rc_col,
               group      = r_group(), summaries = r_summaries(),
               sortable    = isTRUE(r_sortable()),
               collapsible = isTRUE(r_collapsible()),
@@ -1399,8 +1513,13 @@ new_table_block <- function(rowname = NULL,
             value         = r_value,
             group         = r_group,
             summaries       = r_summaries,
-            cell_color    = r_cell_color,
-            row_color     = r_row_color,
+            color         = r_color,
+            shadings      = r_shadings,
+            # Legacy formals (mapped into color/shadings on construction):
+            # serialized as NULL so restored boards re-enter through the new
+            # args; blockr.core requires every ctor formal in the state.
+            cell_color    = function() NULL,
+            row_color     = function() NULL,
             drill      = r_drill,
             digits        = r_digits,
             max_height    = r_max_height,
@@ -1434,11 +1553,12 @@ new_table_block <- function(rowname = NULL,
         )
       }
     },
-    allow_empty_state = c("rowname", "value", "group", "summaries", "cell_color",
-      "row_color", "drill", "filter_column", "filter_values", "filter_range",
+    allow_empty_state = c("rowname", "value", "group", "summaries", "color",
+      "shadings", "cell_color", "row_color", "drill", "filter_column",
+      "filter_values", "filter_range",
       "filter_group_cols", "filter_group_vals"),
     external_ctrl = c("rowname", "value", "group", "summaries",
-      "cell_color", "row_color", "drill",
+      "color", "shadings", "drill",
       "digits", "max_height", "filter_type",
       "filter_column", "filter_values", "filter_range",
       "filter_group_cols", "filter_group_vals",
