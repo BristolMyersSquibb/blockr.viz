@@ -296,7 +296,42 @@ summary_table_long <- function(data,
 #' logicals a single TRUE-count row (the pharma flag convention). Digit
 #' precision is fixed per statistic and applied here, at aggregation time.
 #'
-#' @inheritParams summary_table_long
+#' @param data A flat data.frame.
+#' @param vars Character vector of variables to summarise. Each
+#'   becomes a section in the output.
+#' @param sections Optional character vector of outer section
+#'   columns from `data`. Used for nested row-side hierarchy (e.g.
+#'   `sections = "AESOC", vars = "AEDECOD"`).
+#' @param by Character vector of length 0-2. Values become the `.group`
+#'   dimension. Length-2 produces pipe-delimited nested group keys
+#'   consumable by `gt::tab_spanner_delim("|")` after the renderer
+#'   spreads `.group` to columns.
+#' @param stats Character vector of stat keys controlling which rows /
+#'   templates are emitted for **numeric** variables (the underlying
+#'   numbers are always all computed). Any combination of `"n"`,
+#'   `"n_pct"` (non-missing n and % of group rows), `"mean"`, `"sd"`,
+#'   `"mean_sd"`, `"median"`, `"median_q1_q3"`, `"q1_q3"`, `"min_max"`;
+#'   rows follow this canonical order regardless of input order. A single
+#'   key gives one row per variable, several give one row per stat. The
+#'   legacy presets `"compact"` (= `"mean_sd"`) and `"expanded"`
+#'   (= `c("n", "mean", "sd", "median", "q1_q3", "min_max")`) are still
+#'   accepted. Default `"mean_sd"`.
+#' @param add_overall Logical. If TRUE, append an extra `.group` whose
+#'   rows are computed on the unsplit data (ignoring `by`). Matches
+#'   `gtsummary::add_overall()`.
+#' @param overall_label Character. `.group` value for the overall rows
+#'   when `add_overall = TRUE`. Default `"Total"`.
+#' @param subject_var Optional subject-identifier column for
+#'   distinct-subject counts (for categorical `n_pct`). If NULL,
+#'   rows are counted instead.
+#' @param indent_details Logical, default `TRUE`. When `TRUE`, detail
+#'   rows (stat rows for expanded numerics, category-level rows for
+#'   categoricals) are tagged with `.indent = 1`. When `FALSE`, no
+#'   `.indent` column is emitted.
+#' @param nest_hierarchies Logical, default `FALSE`. Advanced option.
+#'   When `TRUE`, adjacent categorical entries in `vars` that form a
+#'   functional dependency in `data` are rendered as a row-side
+#'   drill-down. v1 supports 2-level hierarchies only.
 #' @return A wide annotated data frame: dotted structure columns plus one
 #'   formatted character column per by-group level, each carrying a `label`
 #'   attribute holding its `"<group>\nN = <n>"` header. Consumed by

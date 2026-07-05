@@ -1024,7 +1024,7 @@ input.blockr-search:focus {
   background-color: #ffffff;
 }
 /* Excel download: a quiet icon button matching the search input's chrome
-   (28px, radius 4, bg-input) — an inline-SVG anchor built by the block
+   (28px, radius 4, bg-input) - an inline-SVG anchor built by the block
    server (no Bootstrap .btn, no icon font). */
 a.blockr-dl-xlsx {
   appearance: none;

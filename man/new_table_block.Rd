@@ -31,12 +31,22 @@ new_table_block(
 \item{rowname, value, cell_color, drill, digits, max_height}{Forwarded to \code{\link[=drilldown_table]{drilldown_table()}}. The block has no in-table title:
 the block's own name (card header) serves that role.}
 
+\item{group}{Optional grouping column(s) for an aggregated table. Default
+\code{NULL} (row-per-observation).}
+
+\item{summaries}{Summary-column specification for aggregated tables (a list
+of aggregations keyed by output column). Default \code{list()} (none).}
+
 \item{row_color}{Optional per-row colouring spec applied to the whole
 row rather than individual cells. Default \code{NULL} (off).}
 
 \item{filter_type, filter_column, filter_values, filter_range}{Click
 filter state (kept for contract parity with the drilldown chart;
 \code{filter_range} is unused by the table).}
+
+\item{filter_group_cols, filter_group_vals}{Grouped-table drill filter
+state: the aligned group-key columns and values ANDed to filter the raw
+input to a clicked row's group. Default \code{NULL} (no grouped drill active).}
 
 \item{sortable, collapsible, search}{Logical display toggles (each default
 \code{TRUE}): column sorting, indent-derived collapsible section headers, and

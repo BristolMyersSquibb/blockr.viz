@@ -17,6 +17,53 @@ summary_table(
   nest_hierarchies = FALSE
 )
 }
+\arguments{
+\item{data}{A flat data.frame.}
+
+\item{vars}{Character vector of variables to summarise. Each
+becomes a section in the output.}
+
+\item{sections}{Optional character vector of outer section
+columns from \code{data}. Used for nested row-side hierarchy (e.g.
+\verb{sections = "AESOC", vars = "AEDECOD"}).}
+
+\item{by}{Character vector of length 0-2. Values become the \code{.group}
+dimension. Length-2 produces pipe-delimited nested group keys
+consumable by \code{gt::tab_spanner_delim("|")} after the renderer
+spreads \code{.group} to columns.}
+
+\item{stats}{Character vector of stat keys controlling which rows /
+templates are emitted for \strong{numeric} variables (the underlying
+numbers are always all computed). Any combination of \code{"n"},
+\code{"n_pct"} (non-missing n and \% of group rows), \code{"mean"}, \code{"sd"},
+\code{"mean_sd"}, \code{"median"}, \code{"median_q1_q3"}, \code{"q1_q3"}, \code{"min_max"};
+rows follow this canonical order regardless of input order. A single
+key gives one row per variable, several give one row per stat. The
+legacy presets \code{"compact"} (= \code{"mean_sd"}) and \code{"expanded"}
+(= \code{c("n", "mean", "sd", "median", "q1_q3", "min_max")}) are still
+accepted. Default \code{"mean_sd"}.}
+
+\item{add_overall}{Logical. If TRUE, append an extra \code{.group} whose
+rows are computed on the unsplit data (ignoring \code{by}). Matches
+\code{gtsummary::add_overall()}.}
+
+\item{overall_label}{Character. \code{.group} value for the overall rows
+when \code{add_overall = TRUE}. Default \code{"Total"}.}
+
+\item{subject_var}{Optional subject-identifier column for
+distinct-subject counts (for categorical \code{n_pct}). If NULL,
+rows are counted instead.}
+
+\item{indent_details}{Logical, default \code{TRUE}. When \code{TRUE}, detail
+rows (stat rows for expanded numerics, category-level rows for
+categoricals) are tagged with \code{.indent = 1}. When \code{FALSE}, no
+\code{.indent} column is emitted.}
+
+\item{nest_hierarchies}{Logical, default \code{FALSE}. Advanced option.
+When \code{TRUE}, adjacent categorical entries in \code{vars} that form a
+functional dependency in \code{data} are rendered as a row-side
+drill-down. v1 supports 2-level hierarchies only.}
+}
 \value{
 A wide annotated data frame: dotted structure columns plus one
 formatted character column per by-group level, each carrying a \code{label}

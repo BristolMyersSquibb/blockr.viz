@@ -36,8 +36,6 @@
 #'   `"count_distinct"` counts an entity once per colour level it appears
 #'   under; deduplicate upstream if segments must sum to the per-group
 #'   distinct count. (Was `agg_fn`.)
-#' @param metric,agg_fn Deprecated aliases for `value` / `func`, kept so saved
-#'   boards restore. See `dev/unified-arg-naming.md`.
 #' @param chart_type Chart type: "bar", "waterfall", "scatter", "line",
 #'   "pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with
 #'   a cumulative baseline (sugar for `bar` + `baseline = "cumulative"`).

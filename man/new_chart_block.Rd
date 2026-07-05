@@ -155,9 +155,6 @@ to 0 and they draw the absolute running cumulative. Default \code{NULL} (every
 bar is a relative delta).}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
-
-\item{metric, agg_fn}{Deprecated aliases for \code{value} / \code{func}, kept so saved
-boards restore. See \code{dev/unified-arg-naming.md}.}
 }
 \value{
 A transform block of class \code{chart_block}

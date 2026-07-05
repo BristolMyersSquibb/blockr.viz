@@ -994,11 +994,18 @@ table_guidance <- function() {
 #' @param rowname,value,cell_color,drill,digits,max_height
 #'   Forwarded to [drilldown_table()]. The block has no in-table title:
 #'   the block's own name (card header) serves that role.
+#' @param group Optional grouping column(s) for an aggregated table. Default
+#'   `NULL` (row-per-observation).
+#' @param summaries Summary-column specification for aggregated tables (a list
+#'   of aggregations keyed by output column). Default `list()` (none).
 #' @param row_color Optional per-row colouring spec applied to the whole
 #'   row rather than individual cells. Default `NULL` (off).
 #' @param filter_type,filter_column,filter_values,filter_range Click
 #'   filter state (kept for contract parity with the drilldown chart;
 #'   `filter_range` is unused by the table).
+#' @param filter_group_cols,filter_group_vals Grouped-table drill filter
+#'   state: the aligned group-key columns and values ANDed to filter the raw
+#'   input to a clicked row's group. Default `NULL` (no grouped drill active).
 #' @param sortable,collapsible,search Logical display toggles (each default
 #'   `TRUE`): column sorting, indent-derived collapsible section headers, and
 #'   the toolbar search box. Exposed in the block's gear menu.
