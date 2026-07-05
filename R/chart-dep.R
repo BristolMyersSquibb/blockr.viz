@@ -23,7 +23,7 @@ drilldown_chart_dep <- function() {
     drilldown_shared_dep(),
     htmltools::htmlDependency(
       name = "chart-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".62"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".63"),
       src = system.file("js", package = "blockr.viz"),
       script = c("drilldown-theme-register.js", "chart.js")
     ),
