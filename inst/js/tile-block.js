@@ -274,25 +274,56 @@
     Array.prototype.forEach.call(nodes, init);
   }
 
-  // Coalesce scan triggers to at most one scan per animation frame, and only
-  // wake for mutations that actually add a tile block — board init and dock
-  // relayout churn the DOM constantly (see table.js for the same pattern).
-  var scanScheduled = false;
-  function scheduleScan() {
-    if (scanScheduled) return;
-    scanScheduled = true;
-    window.requestAnimationFrame(function () {
-      scanScheduled = false;
-      scan();
-    });
-  }
-
   var SCAN_SEL = '.tk-block[data-tk-elem-id]';
+
+  // Wire exactly the part of the DOM an event touched: the enclosing tile if
+  // the node sits inside one, else any tiles within the subtree. init() is
+  // idempotent (data-tk-initialized), so overlapping paths never re-wire.
+  // Same pattern as table.js.
+  /** @param {EventTarget | Element | null | undefined} el */
+  function scanAround(el) {
+    var e = /** @type {Element | null} */ (
+      el && /** @type {Node} */ (el).nodeType === 1 ? el : null);
+    if (!e) { scan(); return; }
+    var root = e.closest(SCAN_SEL);
+    if (root) init(root);
+    else scan(e);
+  }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { scan(); });
   } else {
     scan();
+  }
+
+  // Primary wiring path: shiny:value / shiny:bound fire on the output element
+  // that just (re)rendered — wire only that subtree (deferred past Shiny's
+  // DOM swap; shiny:value fires before the new HTML is applied).
+  if (typeof window.jQuery === 'function') {
+    jQuery(document).on('shiny:value shiny:bound', function (/** @type {any} */ e) {
+      var t = e.target;
+      setTimeout(function () { scanAround(t); }, 0);
+    });
+  }
+
+  // Fallback for tiles that enter the DOM outside a Shiny render event:
+  // queue relevant added nodes and wire those subtrees, coalesced to one
+  // flush per animation frame. Irrelevant churn (tooltips, dock relayout)
+  // never queues anything.
+  /** @type {Element[]} */
+  var pendingNodes = [];
+  var flushScheduled = false;
+  /** @param {Element} n */
+  function queueWire(n) {
+    pendingNodes.push(n);
+    if (flushScheduled) return;
+    flushScheduled = true;
+    window.requestAnimationFrame(function () {
+      flushScheduled = false;
+      var nodes = pendingNodes;
+      pendingNodes = [];
+      nodes.forEach(scanAround);
+    });
   }
 
   var mo = new MutationObserver(function (muts) {
@@ -301,16 +332,9 @@
       for (var j = 0; j < added.length; j++) {
         var n = /** @type {Element} */ (added[j]);
         if (n.nodeType !== 1) continue;
-        if (n.matches(SCAN_SEL) || n.querySelector(SCAN_SEL)) {
-          scheduleScan();
-          return;
-        }
+        if (n.matches(SCAN_SEL) || n.querySelector(SCAN_SEL)) queueWire(n);
       }
     }
   });
   mo.observe(document.documentElement, { childList: true, subtree: true });
-
-  if (typeof window.jQuery === 'function') {
-    jQuery(document).on('shiny:value shiny:bound', scheduleScan);
-  }
 })();

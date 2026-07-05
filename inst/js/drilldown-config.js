@@ -768,7 +768,7 @@
       lbl.textContent = 'Shade cells';
       wrap.appendChild(lbl);
 
-      shadings.forEach((s, i) => {
+      shadings.forEach((/** @type {any} */ s, /** @type {number} */ i) => {
         const row = document.createElement('div');
         row.className = 'dd-value-row dd-shading-row';
 
