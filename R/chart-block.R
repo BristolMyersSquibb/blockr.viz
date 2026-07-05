@@ -423,6 +423,7 @@ new_chart_block <- function(
             if (!is.null(msg$sort_dir))   upd(r_sort_dir, msg$sort_dir)
             if (!is.null(msg$orientation)) upd(r_orientation, msg$orientation)
             if (!is.null(msg$bar_mode))   upd(r_bar_mode, msg$bar_mode)
+            if (!is.null(msg$baseline))   upd(r_baseline, msg$baseline)
             if (!is.null(msg$smoother))   upd(r_smoother, msg$smoother)
             if (!is.null(msg$identity_line)) {
               upd(r_identity_line, msg$identity_line)

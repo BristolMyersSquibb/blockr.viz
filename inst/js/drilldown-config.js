@@ -132,7 +132,7 @@
       const out = [];
       for (const o of raw) {
         if (o === '#num') {
-          for (const c of this._cols().filter(c => c.type === 'numeric')) {
+          for (const c of this._cols().filter(cc => cc.type === 'numeric')) {
             out.push(c.label ? { value: c.name, label: c.label } : c.name);
           }
         } else { out.push(o); }

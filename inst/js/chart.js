@@ -2002,8 +2002,11 @@
 
       this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
 
-      for (const facet of facets) {
-        const rows = facet === '__all__' ? this.data : this.data.filter(r => String(r[facet]) === facet);
+      // `fv` (not `facet`) — `facet` is the config's facet COLUMN name; a
+      // loop-local `facet` would shadow it and turn the row filter into
+      // r[<level>] (a column named e.g. "Female" — every panel empty).
+      for (const fv of facets) {
+        const rows = fv === '__all__' ? this.data : this.data.filter(r => String(r[facet]) === fv);
 
         /** @type {HTMLElement} */
         let container;
@@ -2012,10 +2015,10 @@
         } else {
           container = document.createElement('div');
           container.className = 'dd-facet';
-          if (facet !== '__all__') {
+          if (fv !== '__all__') {
             const label = document.createElement('div');
             label.className = 'dd-facet-label';
-            label.textContent = facet;
+            label.textContent = fv;
             container.appendChild(label);
           }
           this.chartGrid.appendChild(container);
@@ -2050,7 +2053,7 @@
         const identityOn = this.config.identity_line === 'on' && !isLine &&
           xAxisType !== 'category' && yAxisType !== 'category';
 
-        const mkSeries = (/** @type {any} */ name, /** @type {any} */ data, /** @type {any} */ color) => ({
+        const mkSeries = (/** @type {any} */ name, /** @type {any} */ data, /** @type {any} */ clr) => ({
           type: isLine ? 'line' : 'scatter',
           name: name,
           data: data,
@@ -2061,7 +2064,7 @@
           triggerLineEvent: isLine ? true : undefined,
           symbol: isLine ? symbol : 'circle',
           symbolSize: isLine ? lineMarkerPx : scatterPx,
-          itemStyle: { color: color, cursor: 'pointer' },
+          itemStyle: { color: clr, cursor: 'pointer' },
           lineStyle: isLine ? { width: lineBaseW, opacity: lineOpacity } : undefined,
           emphasis: isLine ? { focus: 'series', lineStyle: { width: lineHoverW, opacity: 1 } } : { focus: 'self' },
           blur: isLine ? { lineStyle: { opacity: 0.05 } } : undefined
@@ -2091,7 +2094,7 @@
         // single legend entry per series — one click toggles line +
         // whiskers + fit together. legendHoverLink off so legend hover
         // doesn't try to emphasize these (silent) overlay series.
-        const mkErrBarSeries = (/** @type {any} */ name, /** @type {any} */ errPts, /** @type {any} */ color) => ({
+        const mkErrBarSeries = (/** @type {any} */ name, /** @type {any} */ errPts, /** @type {any} */ clr) => ({
           type: 'custom',
           name: name,
           legendHoverLink: false,
@@ -2099,16 +2102,16 @@
           z: 1,
           data: errPts,  // [[x, lo, hi], ...]
           renderItem: (/** @type {any} */ params, /** @type {any} */ api) => {
-            const x = api.value(0), lo = api.value(1), hi = api.value(2);
-            const pLo = api.coord([x, lo]);
-            const pHi = api.coord([x, hi]);
+            const xv = api.value(0), lo = api.value(1), hi = api.value(2);
+            const pLo = api.coord([xv, lo]);
+            const pHi = api.coord([xv, hi]);
             const w = 4;
             return {
               type: 'group',
               children: [
-                { type: 'line', shape: { x1: pLo[0], y1: pLo[1], x2: pHi[0], y2: pHi[1] }, style: { stroke: color, lineWidth: 1 } },
-                { type: 'line', shape: { x1: pLo[0]-w, y1: pLo[1], x2: pLo[0]+w, y2: pLo[1] }, style: { stroke: color, lineWidth: 1 } },
-                { type: 'line', shape: { x1: pHi[0]-w, y1: pHi[1], x2: pHi[0]+w, y2: pHi[1] }, style: { stroke: color, lineWidth: 1 } }
+                { type: 'line', shape: { x1: pLo[0], y1: pLo[1], x2: pHi[0], y2: pHi[1] }, style: { stroke: clr, lineWidth: 1 } },
+                { type: 'line', shape: { x1: pLo[0]-w, y1: pLo[1], x2: pLo[0]+w, y2: pLo[1] }, style: { stroke: clr, lineWidth: 1 } },
+                { type: 'line', shape: { x1: pHi[0]-w, y1: pHi[1], x2: pHi[0]+w, y2: pHi[1] }, style: { stroke: clr, lineWidth: 1 } }
               ]
             };
           }
@@ -2116,7 +2119,7 @@
 
         /** @type {any[]} */
         const series = [];
-        const pushOverlays = (/** @type {any} */ name, /** @type {any} */ pts, /** @type {any} */ color, /** @type {any} */ rawRows) => {
+        const pushOverlays = (/** @type {any} */ name, /** @type {any} */ pts, /** @type {any} */ clr, /** @type {any} */ rawRows) => {
           // Smoother overlay (scatter charts only) — uses R-precomputed
           // points from config.smoother_series.
           if (smoother !== 'none' && !isLine) {
@@ -2128,7 +2131,7 @@
               data: ln,
               silent: true,
               showSymbol: false,
-              lineStyle: { color: color, width: 2, type: 'solid', opacity: 0.9 },
+              lineStyle: { color: clr, width: 2, type: 'solid', opacity: 0.9 },
               z: 2
             });
           }
@@ -2139,7 +2142,7 @@
             const errPts = rawRows
               .filter((/** @type {any} */ r) => r[x] != null && r[loCol] != null && r[hiCol] != null)
               .map((/** @type {any} */ r) => [encodeX(r[x]), Number(r[loCol]), Number(r[hiCol])]);
-            if (errPts.length) series.push(mkErrBarSeries(name || 'errbar', errPts, color));
+            if (errPts.length) series.push(mkErrBarSeries(name || 'errbar', errPts, clr));
           }
         };
 
@@ -2155,9 +2158,9 @@
             const grpRows = rows.filter(r => String(r[splitCol]) === cl && r[x] != null && r[y] != null);
             const pts = grpRows.map(r => [encodeX(r[x]), encodeY(r[y])]);
             sortLinePts(pts);
-            const color = colorForLevel(cl, ci);
-            series.push(mkSeries(cl, pts, color));
-            pushOverlays(cl, pts, color, grpRows);
+            const clr = colorForLevel(cl, ci);
+            series.push(mkSeries(cl, pts, clr));
+            pushOverlays(cl, pts, clr, grpRows);
           }
         }
 
@@ -2329,18 +2332,18 @@
             if (!Array.isArray(ps)) ps = [ps];
             // Only real line series: drop error-bar overlays (custom) and
             // the empty legend-binding series (no data -> never present).
-            let rows = ps.filter((/** @type {any} */ p) =>
+            let ttRows = ps.filter((/** @type {any} */ p) =>
               p && p.seriesType === 'line' && Array.isArray(p.value));
-            if (!rows.length) return '';
+            if (!ttRows.length) return '';
             if (hover.si != null) {
-              const own = rows.filter((/** @type {any} */ p) =>
+              const own = ttRows.filter((/** @type {any} */ p) =>
                 p.seriesIndex === hover.si);
-              if (own.length) rows = own;
+              if (own.length) ttRows = own;
             }
             // One row per series: data with several observations per x
             // (replicates) yields one param per datum — keep the first.
             const seen = new Set();
-            rows = rows.filter((/** @type {any} */ p) => {
+            ttRows = ttRows.filter((/** @type {any} */ p) => {
               if (seen.has(p.seriesIndex)) return false;
               seen.add(p.seriesIndex);
               return true;
@@ -2348,16 +2351,16 @@
             // Category x: the visit label is the header. Numeric x: name
             // the value ("Day: 30"), else it reads as a bare number.
             const head = xCats
-              ? (rows[0].axisValueLabel ?? String(rows[0].value[0]))
-              : this._axisTitle(x) + ': ' + ddNum(rows[0].value[0]);
-            const lines = rows.slice(0, TT_ROW_CAP).map((/** @type {any} */ p) => {
+              ? (ttRows[0].axisValueLabel ?? String(ttRows[0].value[0]))
+              : this._axisTitle(x) + ': ' + ddNum(ttRows[0].value[0]);
+            const lines = ttRows.slice(0, TT_ROW_CAP).map((/** @type {any} */ p) => {
               // Without a series split there is one unnamed series and
               // ECharts invents "series0" — label the y column instead.
               const nm = splitCol ? p.seriesName : this._axisTitle(y);
               return p.marker + nm + ': ' + ddNum(p.value[1]);
             });
-            if (rows.length > TT_ROW_CAP) {
-              lines.push('… +' + (rows.length - TT_ROW_CAP) + ' more');
+            if (ttRows.length > TT_ROW_CAP) {
+              lines.push('… +' + (ttRows.length - TT_ROW_CAP) + ' more');
             }
             return head + '<br/>' + lines.join('<br/>');
           }
@@ -2473,16 +2476,15 @@
           // click's filter. Suppress those for a short window after a click.
           this._suppressBrushClear = true;
           setTimeout(() => { this._suppressBrushClear = false; }, 150);
-          const splitCol = seriesCol || color;
-          let rows, pointVal = null;
+          let hitRows, pointVal = null;
           if (splitCol && params.seriesName) {
-            rows = (this.data || []).filter(
+            hitRows = (this.data || []).filter(
               r => String(r[splitCol]) === String(params.seriesName));
             this._selected = params.seriesName;
           } else {
             const v = params.value;
             if (!Array.isArray(v) || v.length < 2 || !x || !y) return;
-            rows = (this.data || []).filter(
+            hitRows = (this.data || []).filter(
               r => String(r[x]) === String(v[0]) &&
                    String(r[y]) === String(v[1]));
             this._selected = `${ddNum(v[0])}, ${ddNum(v[1])}`;
@@ -2490,7 +2492,7 @@
           }
           this._updateStatus();
           if (this._drillColumn()) {
-            this._emitDrill(rows);
+            this._emitDrill(hitRows);
           } else if (pointVal) {
             // scatter auto: a click is a one-point selection -> a zero-width
             // x/y range (between(x,v,v) & between(y,v,v) = the observation).
@@ -2579,12 +2581,12 @@
             if (!sData || sel.dataIndex < 0 || sel.dataIndex >= sData.length) continue;
             const pt = sData[sel.dataIndex];
             if (!pt) continue;
-            const x = Array.isArray(pt) ? pt[0] : pt.value?.[0];
-            const y = Array.isArray(pt) ? pt[1] : pt.value?.[1];
-            if (x != null) xVals.push(x);
-            if (y != null) yVals.push(y);
+            const vx = Array.isArray(pt) ? pt[0] : pt.value?.[0];
+            const vy = Array.isArray(pt) ? pt[1] : pt.value?.[1];
+            if (vx != null) xVals.push(vx);
+            if (vy != null) yVals.push(vy);
             if (rowIndex) {
-              const hit = rowIndex.get(String(x) + '|||' + String(y));
+              const hit = rowIndex.get(String(vx) + '|||' + String(vy));
               if (hit) brushedRows.push(...hit);
             }
           }
@@ -2699,9 +2701,12 @@
         });
       };
 
-      for (const facet of facets) {
-        const rows = facet === '__all__' ? this.data
-          : this.data.filter(r => String(r[facet]) === facet);
+      // `fv` (not `facet`) — same shadowing hazard as _renderIndividual: the
+      // filter must read the config's facet COLUMN, not a column named after
+      // the level (which, with the `continue` below, blanked the whole grid).
+      for (const fv of facets) {
+        const rows = fv === '__all__' ? this.data
+          : this.data.filter(r => String(r[facet]) === fv);
         if (rows.length === 0) continue;
 
         let container;
@@ -2710,11 +2715,13 @@
         } else {
           container = document.createElement('div');
           container.className = 'dd-facet';
-          if (facet !== '__all__') {
-            const label = document.createElement('div');
-            label.className = 'dd-facet-label';
-            label.textContent = facet;
-            container.appendChild(label);
+          if (fv !== '__all__') {
+            // `labEl`, not `label` — `label` is the config's on-bar text
+            // column, read as r[label] when packing barData below.
+            const labEl = document.createElement('div');
+            labEl.className = 'dd-facet-label';
+            labEl.textContent = fv;
+            container.appendChild(labEl);
           }
           this.chartGrid.appendChild(container);
         }
@@ -3214,6 +3221,7 @@
         sort_dir: this.config.sort_dir || 'asc',
         orientation: this.config.orientation || 'horizontal',
         bar_mode: this.config.bar_mode || 'stacked',
+        baseline: this.config.baseline || 'zero',
         series: this.config.series || '',
         label: this.config.label || '',
         drill: this.config.drill || '',
