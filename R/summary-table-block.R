@@ -279,7 +279,7 @@ summary_table_block_dep <- function() {
     settings_band_dep(),
     htmltools::htmlDependency(
       name = "summary-table-block-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".2"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".3"),
       src = system.file("js", package = "blockr.viz"),
       script = "summary-table-block.js"
     ),

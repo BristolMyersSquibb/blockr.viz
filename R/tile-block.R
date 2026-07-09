@@ -321,13 +321,13 @@ tile_block_dep <- function() {
   htmltools::tagList(
     htmltools::htmlDependency(
       name = "blockr-blocks-css",
-      version = paste0(utils::packageVersion("blockr.dplyr"), ".2"),
+      version = paste0(utils::packageVersion("blockr.dplyr"), ".3"),
       src = system.file("css", package = "blockr.dplyr"),
       stylesheet = c("blockr-blocks.css", "blockr-select.css")
     ),
     htmltools::htmlDependency(
       name = "blockr-select-js",
-      version = paste0(utils::packageVersion("blockr.dplyr"), ".2"),
+      version = paste0(utils::packageVersion("blockr.dplyr"), ".3"),
       src = system.file("js", package = "blockr.dplyr"),
       script = c("blockr-core.js", "blockr-select.js")
     ),

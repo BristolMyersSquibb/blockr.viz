@@ -401,7 +401,15 @@
       label.style.marginBottom = '0';
       label.style.flexShrink = '0';
 
-      const row = this._addPopoverRow([label, input, chip]);
+      // .blockr-commit-field (blockr-blocks.css) overlays the chip inside the
+      // input's right edge instead of parking it beside the field.
+      const field = document.createElement('div');
+      field.className = 'blockr-commit-field';
+      field.style.flex = '1';
+      field.appendChild(input);
+      field.appendChild(chip);
+
+      const row = this._addPopoverRow([label, field]);
       row.style.display = this._state.add_overall ? 'flex' : 'none';
       this._overallLabelRow = row;
       this._overallLabelInput = input;
