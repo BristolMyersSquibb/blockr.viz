@@ -33,7 +33,11 @@ interface VizColumn {
 interface VizDrilldownRole {
   kind?: 'column' | 'select' | string;
   allowCount?: boolean | ((cfg: Record<string, any>) => boolean);
+  /** Placeholder: the empty slot's voice. `phBy` keys it by host context(). */
   ph?: string;
+  phBy?: Record<string, string>;
+  /** Help line: speaks about the value, and survives the field being filled. */
+  hint?: string;
   hintBy?: Record<string, string>;
   // Roles carry many host-specific, dynamically-shaped fields (colTypeBy,
   // optionsBy, options, pairedWith, maxUnique, placeholder, label, ...).

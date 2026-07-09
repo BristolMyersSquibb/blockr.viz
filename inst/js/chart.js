@@ -152,15 +152,18 @@
   //               be a function of the current config
   //   maxUnique: cap a categorical picker (facet)
   //   pairedWith: render this role's control beside its pair in one row
-  //   optionsBy / colTypeBy / hintBy: per-family overrides (key = family)
+  //   optionsBy / colTypeBy / phBy: per-family overrides (key = family)
   // Inlined here for v1; extract to a shared module when the table/ggplot
   // blocks adopt it (follow-up specs).
   const ROLES = {
     // group / value / func are shared with the table + tile so all three
     // render the identical aggregation control — see drilldown-agg.js.
     ...DAgg.aggRoles(),
+    // `x` accepts any column, but the useful one differs by family, and the
+    // picker cannot show that. It belongs in the placeholder (the empty slot's
+    // voice), not in a help line beneath the control.
     x:      { label: 'X',      kind: 'column', colType: 'any',
-              hintBy: { individual: 'numeric column…', timeline: 'time / sequence…' } },
+              phBy: { individual: 'numeric column…', timeline: 'time / sequence…' } },
     y:      { label: 'Y',      kind: 'column', colTypeBy: { individual: 'num', timeline: 'any' } },
     xend:   { label: 'X end',  kind: 'column', colType: 'any', ph: 'interval end…' },
     series: { label: 'Series', kind: 'column', colType: 'any' },
