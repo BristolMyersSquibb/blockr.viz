@@ -1805,7 +1805,7 @@ new_table_block <- function(rowname = NULL,
                   !is.null(sp_from) && nzchar(sp_from)) {
                 mcall <- as.call(list(
                   quote(dplyr::mutate), fcall,
-                  blockr.core::bbquote(.data[[.(from)]], list(from = sp_from))
+                  blockr.core::bbquote(.data[[.(sp_from)]], list(sp_from = sp_from))
                 ))
                 names(mcall) <- c("", "", sp_col)
                 mcall
