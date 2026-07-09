@@ -132,16 +132,20 @@ fmt_assemble <- function(df, group_col = NULL, id_cols = NULL,
   stopifnot(is.data.frame(df))
   df[[".cell"]] <- fmt_cells(df, digits = digits, na = na)
   if (is.null(id_cols)) {
-    dotted <- grep("^\\.(section|label|indent|strong|emph)", names(df), value = TRUE)
-    id_cols <- setdiff(dotted, ".fmt")
-    # `.var` (source-variable identity) must take part in row identity: two
-    # variables routinely share level labels ("OTHER", "UNKNOWN", ...), and
-    # without it the pivot merges their rows into list-cols. It is dropped
-    # again after the spread so the wide output shape is unchanged.
-    if (".var" %in% names(df)) id_cols <- c(id_cols, ".var")
+    # The annotated-df v2 identity + display columns. `.variable` takes part
+    # in row identity (two variables routinely share level labels -- "OTHER",
+    # "UNKNOWN", ... -- and without it the pivot merges their rows into
+    # list-cols) and, unlike the retired hidden `.var`, it STAYS in the wide
+    # output: it is the machine name a drill filters on.
+    id_cols <- grep(
+      paste0("^\\.(label|indent|strong|emph",
+             "|group\\d+(_level|_label)?",
+             "|variable(_level|_label)?)$"),
+      names(df), value = TRUE
+    )
   }
   if (is.null(group_col)) {
-    keep <- c(setdiff(id_cols, ".var"), ".cell")
+    keep <- c(id_cols, ".cell")
     return(df[, intersect(keep, names(df)), drop = FALSE])
   }
   # Plain spread on the single formatted-string column.
@@ -158,7 +162,6 @@ fmt_assemble <- function(df, group_col = NULL, id_cols = NULL,
     names_from = dplyr::all_of(group_col),
     values_from = ".cell"
   )
-  wide[[".var"]] <- NULL
   wide
 }
 

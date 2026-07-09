@@ -17,7 +17,7 @@ A data frame without the reserved annotation columns.
 \description{
 \code{\link[=as_annotated_df]{as_annotated_df()}} followed by dropping the reserved \code{.}-annotation
 columns (\code{.label}, \code{.indent}, \code{.strong}, \code{.emph}, \code{.fmt}, \code{.digits},
-\verb{.section_*}). This is what the chart / tile blocks consume when a
+\verb{.variable*}, \verb{.group<k>*}). This is what the chart / tile blocks consume when a
 table-producing object (a composer table, a gtsummary table, ...) is
 connected: a chart of a structured display table charts its \strong{data
 columns}; the row-structure rendering belongs to the table renderers.

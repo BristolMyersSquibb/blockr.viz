@@ -2,12 +2,15 @@
 #'
 #' Aggregate a flat data.frame into a **tidy, long** summary frame: raw
 #' numeric statistic columns plus a hidden per-row `.fmt` template that
-#' names how to combine them into a display cell. Section structure is
-#' encoded via well-known dotted columns (`.section_1, ..., .section_k,
-#' .label, .indent, .strong`), and the by-group dimension lives in a single
-#' `.group` column. Designed for the "list of variables by Y" pattern;
-#' the complementary "one measurement across two dimensions" pivot is
-#' produced upstream by composing `summarize` with `tidyr::pivot_wider`.
+#' names how to combine them into a display cell. Structure and identity are
+#' encoded via well-known dotted columns (the `.group<k>` / `.group<k>_level`
+#' pairs, `.variable` / `.variable_level` / `.variable_label`, `.label`,
+#' `.indent`), and the by-group dimension lives in a single `.group` column.
+#' This long form is **internal**: `fmt_to_wide()` spreads it into the wide
+#' annotated df, the only public shape. Designed for the "list of variables
+#' by Y" pattern; the complementary "one measurement across two dimensions"
+#' pivot is produced upstream by composing `summarize` with
+#' `tidyr::pivot_wider`.
 #'
 #' The output stays `dplyr`-able (every number is a plain numeric column)
 #' and re-renderable: a renderer turns it into the familiar wide display
@@ -30,25 +33,32 @@
 #'
 #' Output columns:
 #'
-#' - `.section_1, ..., .section_k` -- section columns (dotted,
-#'   block-internal) holding values from user-provided `sections`.
-#'   Present iff `length(sections) > 0`. Each carries a `label`
-#'   attribute pulled from the original column for renderer display.
+#' - `.group1/.group1_level, ..., .group<k>/.group<k>_level` -- row-grouping
+#'   pairs from user-provided `sections`: the source variable NAME (constant)
+#'   and its character-coerced value per row. Present iff
+#'   `length(sections) > 0`. The `_level` column carries a `label` attribute
+#'   pulled from the original column for renderer display.
+#' - `.variable` / `.variable_level` -- leaf source identity per row: the
+#'   summarised variable's name and, for level rows (categorical levels,
+#'   logical TRUE counts, hierarchy values), its character-coerced value.
+#'   Stat rows (numeric "Mean (SD)", ...) carry `NA` -- they make no
+#'   source-value claim. Also the pivot row identity: equal level labels
+#'   from different variables ("OTHER", "UNKNOWN", ...) stay apart.
+#' - `.variable_label` -- constant display label per variable block when
+#'   `length(vars) > 1` (the renderer synthesizes one collapsible header per
+#'   label run); absent for single-variable and all-logical (flag list)
+#'   tables, which render flat.
 #' - `.label` -- innermost row label. Stat name for numeric vars
 #'   ("N", "Mean", "SD", ...), level name for categoricals, variable
 #'   name for logicals.
 #' - `.indent` -- detail-row indentation level (see `indent_details`).
-#' - `.strong` -- logical, `TRUE` on variable-header rows (bold,
-#'   blank data cells). Present only when `length(vars) > 1`.
-#' - `.var` -- source variable (run) identity. Row-identity only: it keeps
-#'   equal level labels from different variables ("OTHER", "UNKNOWN", ...)
-#'   apart in the display pivot, and `fmt_assemble()` drops it from the
-#'   wide output.
 #' - `.group` -- by-group value (one row per var/level x group).
 #'   Pipe-delimited (`"outer|inner"`) for length-2 `by`; the constant
 #'   `"Overall"` when `by` is empty; the `overall_label` value for the
-#'   appended overall column when `add_overall = TRUE`.
-#' - `.fmt` -- per-row display template (the `.fmt` convention).
+#'   appended overall column when `add_overall = TRUE`. Internal: consumed
+#'   by the `fmt_to_wide()` spread, never part of the wide output.
+#' - `.fmt` -- per-row display template (the `.fmt` convention). Internal,
+#'   like `.group`.
 #' - Raw numeric stat columns: `n, pct` (categorical/logical, and
 #'   numeric where `pct` is the share of non-missing rows), `mean,
 #'   sd, median, q1, q3, min, max` (numeric). `NA` where not applicable.
@@ -96,8 +106,9 @@
 #'   drill-down. v1 supports 2-level hierarchies only.
 #'
 #' @return A tidy, long-format tibble: raw numeric statistic columns plus
-#'   dotted structure columns (`.section_*`, `.label`, `.indent`,
-#'   `.strong`), a `.group` dimension column, and a per-row `.fmt`
+#'   dotted structure / identity columns (`.group<k>` / `.group<k>_level`,
+#'   `.variable` / `.variable_level` / `.variable_label`, `.label`,
+#'   `.indent`), a `.group` dimension column, and a per-row `.fmt`
 #'   template column that a renderer interpolates into display cells.
 #' @noRd
 summary_table_long <- function(data,
@@ -142,8 +153,10 @@ summary_table_long <- function(data,
   # Check block-internal namespace collision in the input data
   input_cols <- names(data)
   bad <- c(
-    intersect(c(".strong", ".label", ".group", ".fmt", ".var"), input_cols),
-    grep("^\\.section_\\d+$", input_cols, value = TRUE)
+    intersect(c(".strong", ".label", ".indent", ".group", ".fmt",
+                ".variable", ".variable_level", ".variable_label"),
+              input_cols),
+    grep("^\\.group\\d+(_level|_label)?$", input_cols, value = TRUE)
   )
   if (length(bad)) {
     stop("Input data contains columns in the block-internal namespace: ",
@@ -164,43 +177,37 @@ summary_table_long <- function(data,
     lapply(vars, function(v) v)
   }
 
-  # Compute per-run long frames. Each frame is tagged with a hidden `.var`
-  # source-variable column: distinct variables routinely share level labels
-  # ("OTHER", "UNKNOWN", "MISSING"), and without it the display pivot in
-  # `fmt_assemble()` cannot tell their rows apart (rows merge into
-  # list-cols). `.var` never reaches the wide output.
+  # Compute per-run long frames. Each row carries its source identity as the
+  # `.variable` / `.variable_level` pair (the annotated-df v2 contract):
+  # distinct variables routinely share level labels ("OTHER", "UNKNOWN",
+  # "MISSING"), and `.variable` keeps their rows apart in the display pivot
+  # while also naming the column a drill filters on.
   per_run <- lapply(runs, function(run) {
     if (length(run) == 2L) {
-      df <- compute_hierarchy_run(
+      compute_hierarchy_run(
         data = data, run = run,
         sections = sections, by = by,
         add_overall = add_overall,
         overall_label = overall_label,
         subject_var = subject_var
       )
-      df$.var <- paste(run, collapse = "|")
-      df
     } else if (length(run) == 1L) {
-      df <- compute_one_var(
+      compute_one_var(
         data = data, var = run,
         stats = stats, sections = sections, by = by,
         add_overall = add_overall,
         overall_label = overall_label,
         subject_var = subject_var
       )
-      df$.var <- run
-      df
     } else {
       parts <- lapply(run, function(v) {
-        df <- compute_one_var(
+        compute_one_var(
           data = data, var = v,
           stats = stats, sections = sections, by = by,
           add_overall = add_overall,
           overall_label = overall_label,
           subject_var = subject_var
         )
-        df$.var <- v
-        df
       })
       bind_per_var_frames(parts, sections = sections)
     }
@@ -208,11 +215,14 @@ summary_table_long <- function(data,
 
   per_var <- per_run
 
-  # When multiple independent variable blocks are present, emit
-  # annotated-df-style header rows (.strong=TRUE, blank data cells,
-  # .indent=0) and bump every detail row's .indent by 1 -- instead of the
-  # old .var section column.  Hierarchy runs (length(run)==2) already
-  # carry their own parent/child structure so they count as one block.
+  # When multiple independent variable blocks are present, tag every row of a
+  # run with a constant `.variable_label` -- the renderer synthesizes one
+  # collapsible header per label run (headers are rendering, never data rows;
+  # annotated-df v2). Detail rows keep the absolute indents the materialized
+  # header rows used to impose, so the rendered depths are unchanged.
+  # Hierarchy runs (length(run)==2) count as one block: their rows share the
+  # outer variable's label even though `.variable` alternates outer/inner.
+  # Flag lists (all-logical vars) render flat -- no `.variable_label`.
   all_logical <- all(vapply(vars, function(v) is.logical(data[[v]]),
                             logical(1)))
   if (length(per_var) > 1L && !all_logical) {
@@ -231,23 +241,9 @@ summary_table_long <- function(data,
       } else {
         df$.indent <- pmax(df$.indent, 1L)
       }
+      df$.variable_label <- hdr_label
 
-      # One header row per unique (sections... x .group) combination.
-      key_cols <- c(intersect(sections, names(df)), ".group")
-      keys <- unique(df[, key_cols, drop = FALSE])
-      hdr <- keys
-      hdr$.label <- hdr_label
-      hdr$.indent <- 0L
-      hdr$.strong <- TRUE
-      # Header rows share the frame's `.var` so two variables whose display
-      # labels coincide still pivot to separate header rows.
-      hdr$.var <- paste(runs[[i]], collapse = "|")
-      hdr$.fmt <- NA_character_
-      for (sc in intersect(SUMMARY_STAT_COLS, names(df))) {
-        hdr[[sc]] <- NA_real_
-      }
-
-      per_var[[i]] <- rbind_long(hdr, df)
+      per_var[[i]] <- df
     }
   }
 
@@ -259,25 +255,36 @@ summary_table_long <- function(data,
     out$.indent <- NULL
   }
 
-  # Rename user `sections` columns to .section_1, .section_2, ...
+  # Encode user `sections` columns as ARD-named pairs: `.group<i>` holds the
+  # source variable NAME (constant), `.group<i>_level` its value on the row
+  # (character-coerced per the contract). The section display label rides as
+  # a `label` attribute on the `_level` column (chrome, renderer prefix).
   if (length(sections) > 0L) {
     for (i in seq_along(sections)) {
       src <- sections[i]
-      dst <- paste0(".section_", i)
+      dst <- paste0(".group", i, "_level")
       names(out)[names(out) == src] <- dst
+      out[[dst]] <- as.character(out[[dst]])
       attr(out[[dst]], "label") <- section_labels[i]
+      out[[paste0(".group", i)]] <- src
     }
   }
 
-  # Reorder: .section_*, .label, .indent, .strong, .var, .group, .fmt,
-  # then numbers
+  # Reorder: .group<i>/.group<i>_level, .variable*, .label, .indent, .group,
+  # .fmt, then numbers
   stat_cols <- c("n", "pct", "mean", "sd", "median", "q1", "q3", "min", "max")
   front_order <- c(
-    if (length(sections) > 0L) paste0(".section_", seq_along(sections)) else character(),
+    if (length(sections) > 0L) {
+      as.vector(rbind(paste0(".group", seq_along(sections)),
+                      paste0(".group", seq_along(sections), "_level")))
+    } else {
+      character()
+    },
+    ".variable",
+    ".variable_label",
+    ".variable_level",
     ".label",
     ".indent",
-    ".strong",
-    ".var",
     ".group",
     ".fmt"
   )
@@ -304,11 +311,16 @@ summary_table_long <- function(data,
 #' Aggregate a flat data.frame into the **wide annotated data frame** the
 #' blockr table renderers consume directly: one formatted column per by-group
 #' level (each cell baked from its statistic at produce time, so the renderer
-#' does no arithmetic), dotted structure columns (`.section_*`, `.label`,
-#' `.indent`, `.strong`) for the row-side hierarchy, `Top||Leaf` spanner column
+#' does no arithmetic), dotted identity / structure columns for the row-side
+#' hierarchy (the ARD-named `.group<k>` / `.group<k>_level` pairs for
+#' `sections`, `.variable` / `.variable_level` / `.variable_label` for the
+#' leaf rows -- section and variable headers are synthesized by the renderer
+#' from value runs, never materialized as rows), `Top||Leaf` spanner column
 #' names for length-2 `by`, and per-group `"<group>\nN = <n>"` column labels.
 #' This is the same annotated-df contract that `composer` emits via
-#' [as_annotated_df()], so the table block treats both identically.
+#' [as_annotated_df()], so the table block treats both identically. The
+#' identity pairs are what a drill-down filters on; a level row asserts
+#' "the source rows where `.variable == .variable_level`".
 #'
 #' Numeric variables emit one row per selected `stats` key
 #' (mean/sd/median/...), categoricals one row per level as `n (%)`, and
@@ -351,9 +363,9 @@ summary_table_long <- function(data,
 #'   When `TRUE`, adjacent categorical entries in `vars` that form a
 #'   functional dependency in `data` are rendered as a row-side
 #'   drill-down. v1 supports 2-level hierarchies only.
-#' @return A wide annotated data frame: dotted structure columns plus one
-#'   formatted character column per by-group level, each carrying a `label`
-#'   attribute holding its `"<group>\nN = <n>"` header. Consumed by
+#' @return A wide annotated data frame: dotted identity / structure columns
+#'   plus one formatted character column per by-group level, each carrying a
+#'   `label` attribute holding its `"<group>\nN = <n>"` header. Consumed by
 #'   [new_table_block()] / [html_table()] and any renderer that understands the
 #'   annotated-data-frame convention.
 #' @seealso [as_annotated_df()]
@@ -578,6 +590,10 @@ compute_numeric_rows <- function(data, var, stats, sections, by,
   })
 
   long <- do.call(rbind_long, frames)
+  # Stat rows are not data values: .variable_level stays NA (the row makes no
+  # "source rows where var == level" claim -- see the annotated-df contract).
+  long$.variable <- var
+  long$.variable_level <- NA_character_
   reorder_long(long, sections)
 }
 
@@ -592,6 +608,7 @@ compute_categorical_var <- function(data, var, sections, by,
   levels_v <- sort(unique(as.character(data[[var]][!is.na(data[[var]])])))
   if (length(levels_v) == 0L) {
     out <- data.frame(.label = NA_character_, .indent = 1L,
+                      .variable = var, .variable_level = NA_character_,
                       .group = NA_character_, .fmt = NA_character_,
                       n = NA_real_, pct = NA_real_,
                       stringsAsFactors = FALSE)
@@ -648,6 +665,10 @@ compute_categorical_var <- function(data, var, sections, by,
     long <- rbind_long(long, ov_stats)
   }
 
+  # Every categorical row is a level row: the label IS the (character-coerced)
+  # data value, so it doubles as .variable_level.
+  long$.variable <- var
+  long$.variable_level <- long$.label
   reorder_long(long, sections)
 }
 
@@ -696,6 +717,10 @@ compute_logical_var <- function(data, var, sections, by,
     long <- rbind_long(long, ov_stats)
   }
 
+  # The flag row counts TRUEs, so its level is the value "TRUE" (a drill on
+  # it filters source rows where the flag is TRUE, via %in% coercion).
+  long$.variable <- var
+  long$.variable_level <- "TRUE"
   reorder_long(long, sections)
 }
 
@@ -784,12 +809,13 @@ compute_denom <- function(data, group_vars, subject_var) {
   }
 }
 
-#' Reorder a long per-var frame: sections, .label, .indent, .strong,
+#' Reorder a long per-var frame: sections, .variable*, .label, .indent,
 #' .group, .fmt, then numeric stat columns.
 #' @noRd
 reorder_long <- function(df, sections) {
-  front <- intersect(c(sections, ".label", ".indent", ".strong", ".group",
-                       ".fmt"), names(df))
+  front <- intersect(c(sections, ".variable", ".variable_label",
+                       ".variable_level", ".label", ".indent", ".strong",
+                       ".group", ".fmt"), names(df))
   stats_present <- intersect(SUMMARY_STAT_COLS, names(df))
   rest <- setdiff(names(df), c(front, stats_present))
   df[, c(front, stats_present, rest), drop = FALSE]
@@ -799,9 +825,10 @@ reorder_long <- function(df, sections) {
 bind_per_var_frames <- function(per_var, sections) {
   all_names <- unique(unlist(lapply(per_var, names)))
 
-  # Canonical front order: sections, .label, .indent, .strong, .var,
+  # Canonical front order: sections, .variable*, .label, .indent, .strong,
   # .group, .fmt
-  front <- intersect(c(sections, ".label", ".indent", ".strong", ".var",
+  front <- intersect(c(sections, ".variable", ".variable_label",
+                       ".variable_level", ".label", ".indent", ".strong",
                        ".group", ".fmt"), all_names)
   stats_present <- intersect(SUMMARY_STAT_COLS, all_names)
   back <- setdiff(all_names, c(front, stats_present))
@@ -886,6 +913,8 @@ compute_hierarchy_run <- function(data, run, sections, by,
     names(outer_long)[names(outer_long) == "N"] <- "n"
     outer_long$.label <- as.character(outer_long[[outer]])
     outer_long$.indent <- 0L
+    outer_long$.variable <- outer
+    outer_long$.variable_level <- outer_long$.label
     outer_long$.sort_outer <- as.character(outer_long[[outer]])
     outer_long$.sort_inner <- ""
     outer_long[[outer]] <- NULL
@@ -897,6 +926,8 @@ compute_hierarchy_run <- function(data, run, sections, by,
     names(inner_long)[names(inner_long) == "N"] <- "n"
     inner_long$.label <- as.character(inner_long[[inner]])
     inner_long$.indent <- 1L
+    inner_long$.variable <- inner
+    inner_long$.variable_level <- inner_long$.label
     inner_long$.sort_outer <- as.character(inner_long[[outer]])
     inner_long$.sort_inner <- as.character(inner_long[[inner]])
     inner_long[[outer]] <- NULL

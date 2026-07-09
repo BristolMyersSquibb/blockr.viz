@@ -31,19 +31,19 @@ test_that("write_annotated_xlsx() writes indent + bold + values", {
   expect_true(grepl("indent=\"1\"", styles, fixed = TRUE))
 })
 
-test_that("write_annotated_xlsx() renders .section_* as header rows, not columns", {
+test_that("write_annotated_xlsx() renders row-side groups as header rows, not columns", {
   skip_if_not_installed("openxlsx")
   # A sectioned Table-1 frame as the table block's download handler passes it
   # in (fmt_to_wide(ann_data()) keeps the dotted structure columns).
   df <- data.frame(
-    .section_1 = c("Screening", "Screening", "Treatment", "Treatment"),
+    .group1_level = c("Screening", "Screening", "Treatment", "Treatment"),
     .label  = c("Age", "Sex", "Dose", "Weight"),
     .indent = c(0L, 0L, 0L, 0L),
     .strong = c(FALSE, FALSE, FALSE, FALSE),
     Placebo = c("64.1", "43 F", "0 mg", "71.3"),
     check.names = FALSE, stringsAsFactors = FALSE
   )
-  attr(df$.section_1, "label") <- "Visit"
+  attr(df$.group1_level, "label") <- "Visit"
   f <- tempfile(fileext = ".xlsx")
   on.exit(unlink(f), add = TRUE)
   write_annotated_xlsx(df, f)
@@ -51,8 +51,8 @@ test_that("write_annotated_xlsx() renders .section_* as header rows, not columns
   cells <- openxlsx::read.xlsx(f, colNames = FALSE, skipEmptyRows = FALSE,
                                skipEmptyCols = FALSE)
   flat <- unlist(cells, use.names = FALSE)
-  # The structure column never leaks as a ".section_1"-headed data column ...
-  expect_false(any(grepl("^\\.section", flat[!is.na(flat)])))
+  # The structure column never leaks as a dotted-headed data column ...
+  expect_false(any(grepl("^\\.group", flat[!is.na(flat)])))
   expect_identical(ncol(cells), 2L)   # stub + Placebo only
   # ... and each section restart gets a bold header row (label-prefixed, like
   # the HTML renderer's section rows).

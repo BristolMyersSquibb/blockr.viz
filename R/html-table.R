@@ -9,12 +9,17 @@
 #' this renderer is tuned for interactive dashboards.
 #'
 #' The input contract is the same dotted-column wide tibble that
-#' [summary_table()] produces:
+#' [summary_table()] produces (annotated-df v2):
 #'
-#' - `.section_1, ..., .section_k` -- nested row-side section columns,
-#'   outermost first. `attr(col, "label")` carries the display label.
-#' - `.strong` -- logical, bold header rows (variable labels when
-#'   `length(vars) > 1`).
+#' - `.group1/.group1_level, ..., .group<k>/.group<k>_level` -- nested
+#'   row-side grouping pairs (variable name / value), outermost first.
+#'   Section headers are synthesized from value runs;
+#'   `attr(.group<k>_level, "label")` carries the display prefix.
+#' - `.variable` / `.variable_level` / `.variable_label` -- leaf source
+#'   identity; runs of `.variable_label` render as the innermost
+#'   (variable) header blocks.
+#' - `.strong` / `.indent` -- fallback positional dialect for coerced
+#'   free-form tables (bold header rows + indented children).
 #' - `.label` -- innermost per-row identifier (stat name / factor
 #'   level). Rendered as the leftmost row-stub column.
 #' - Data columns -- names use `|` as nesting delimiter for multi-level
@@ -50,9 +55,10 @@ html_table <- function(data,
                        max_height = "600px") {
   stopifnot(is.data.frame(data))
 
-  # Tidy `.fmt` form (numbers + per-row template + `.group`) -> wide
-  # display grid (format-then-spread). No-op on already-wide input.
-  data <- fmt_to_wide(data)
+  # The contract is the wide display grid; summary_table()'s internal long
+  # dialect is rejected with an actionable error (pre-v2 it was silently
+  # pivoted here, making two shapes of the same table valid input).
+  reject_long_form(data)
 
   if (all(c("label", "depth") %in% names(data)) &&
       any(c("col_var", "n", "value") %in% names(data))) {
@@ -62,16 +68,16 @@ html_table <- function(data,
     )
   }
 
-  all_section_cols <- grep("^\\.section_\\d+$", names(data), value = TRUE)
-  # Only columns that carry a grouping value render as sections; an entirely
-  # empty .section_* column draws no "(missing)" header -- but it must still
-  # be kept out of the data cells (exclude `all_section_cols`, not the filtered
-  # set, from data_cols) or it would leak in as a literal em-dash column.
-  section_cols <- nonempty_section_cols(data, all_section_cols)
+  view <- annotated_structure_view(data)
+  data <- view$data
+  section_cols <- view$section_cols
   stub_col     <- if (".label" %in% names(data)) ".label" else NULL
   styling_cols <- intersect(c(".indent", ".strong", ".emph"), names(data))
+  # Exclude every reserved column (grouping values AND their name/label
+  # companions), not just the rendered section axes, or they leak into the
+  # data cells as literal em-dash columns.
   data_cols    <- setdiff(names(data),
-                          c(all_section_cols, stub_col, styling_cols))
+                          c(view$reserved_cols, stub_col, styling_cols))
 
   wrapper_id <- paste0("blockr-html-table-", sub("^file", "", basename(tempfile(""))))
 
@@ -390,7 +396,7 @@ leaf_header_content <- function(data, col_name, fallback_text, span,
 
 #' Keep only section/var columns that actually carry a grouping value.
 #'
-#' A `.section_*` column that is entirely NA/blank is not a real
+#' A grouping-value column that is entirely NA/blank is not a real
 #' grouping dimension -- rendering it would wrap every row under a single
 #' "(missing)" header. Drop those so the table renders flat (or indent-only)
 #' instead. A *partially* empty column is kept: its gaps still render as
@@ -402,6 +408,41 @@ nonempty_section_cols <- function(data, section_cols) {
     v <- trimws(as.character(data[[sc]]))
     any(!is.na(v) & nzchar(v))
   }, logical(1L))]
+}
+
+#' Resolve an annotated df's row-side structure for rendering.
+#'
+#' The v2 contract keeps structure columnar: `.group<k>_level` columns are the
+#' grouping-value axes (outermost first), and runs of `.variable_label` form
+#' the innermost variable blocks of a multi-variable summary. This helper
+#' turns both into the single `section_cols` vector `build_html_tbody()`
+#' synthesizes headers from: the group `_level` columns, plus -- when any row
+#' carries a `.variable_label` -- a synthetic `.variable_block` column holding
+#' that label (no `label` attribute, so no "name: " prefix). All-empty axes
+#' are dropped via `nonempty_section_cols()`.
+#'
+#' Returns `list(data, section_cols, reserved_cols)`; `reserved_cols` is every
+#' annotation column (including the synthetic one) that must stay out of the
+#' data cells. Shared by [html_table()], the table block's structured path,
+#' the gt renderer, and the Excel writer.
+#' @noRd
+annotated_structure_view <- function(data) {
+  section_cols <- annotation_group_level_cols(data)
+
+  vlab <- data[[".variable_label"]]
+  if (!is.null(vlab) && any(!is.na(vlab) & nzchar(as.character(vlab)))) {
+    data[[".variable_block"]] <- as.character(vlab)
+    section_cols <- c(section_cols, ".variable_block")
+  }
+
+  reserved_cols <- unique(c(annotation_cols_in(data),
+                            intersect(".variable_block", names(data))))
+
+  list(
+    data = data,
+    section_cols = nonempty_section_cols(data, section_cols),
+    reserved_cols = reserved_cols
+  )
 }
 
 #' @noRd

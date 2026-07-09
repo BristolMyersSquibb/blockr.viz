@@ -6,10 +6,11 @@
 #' categoricals, one row per flag for logicals).
 #'
 #' Output is the wide annotated data frame [summary_table()] produces
-#' (dotted structure columns `.section_1, ..., .section_k, .label,
-#' .indent, .strong` plus one formatted column per by-group level),
-#' consumable by [new_gt_table_block()] or any renderer that
-#' understands the annotated-data-frame convention.
+#' (dotted identity columns `.group<k>` / `.group<k>_level`, `.variable` /
+#' `.variable_level` / `.variable_label`, `.label`, `.indent`, plus one
+#' formatted column per by-group level), consumable by
+#' [new_gt_table_block()] or any renderer that understands the
+#' annotated-data-frame convention.
 #'
 #' @param vars Character, variables to summarise (each becomes a row-section).
 #' @param sections Character, outer section columns that contain `vars` (0..N).

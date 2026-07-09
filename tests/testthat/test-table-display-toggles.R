@@ -50,7 +50,7 @@ test_that("collapsible gates the chevron toggles on a structured table", {
 
 test_that("collapsible off makes section headers static (no button)", {
   df <- data.frame(
-    .section_1 = c("GI", "GI"),
+    .group1_level = c("GI", "GI"),
     .label     = c("Nausea", "Vomiting"),
     Total      = c("3", "4"),
     check.names = FALSE

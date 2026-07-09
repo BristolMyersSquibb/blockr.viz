@@ -62,11 +62,12 @@ emits, so existing filter links keep working.
 }
 
 \strong{Structured "Table 1" input.} When \code{data} follows the dotted-column
-convention that \code{\link[=summary_table]{summary_table()}} emits -- a tidy \code{.fmt} frame (numeric
-columns + a per-row \code{.fmt} template + \code{.group}), or the already-wide
-display grid with \verb{.section_*} / \code{.label} / \code{.indent} / \code{.strong} columns --
+convention that \code{\link[=summary_table]{summary_table()}} emits -- the wide display grid with
+\verb{.group<k>} / \verb{.group<k>_level}, \verb{.variable*}, \code{.label}, \code{.indent} columns
+(summary_table's internal long \code{.fmt} form is rejected with an error) --
 the renderer switches to the \emph{structured} layout: row-side section
-headers with collapse/expand toggles, \code{.indent} row stubs, and
+headers synthesized from grouping-value runs with collapse/expand
+toggles, \code{.indent} row stubs, and
 multi-level column spanners parsed from \code{|}-delimited column names (each
 leaf carries its header text in \code{attr(col, "label")}). This is the same
 structure \code{\link[=html_table]{html_table()}} renders, folded into the interactive table so

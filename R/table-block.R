@@ -30,11 +30,12 @@
 #'
 #' @details
 #' **Structured "Table 1" input.** When `data` follows the dotted-column
-#' convention that [summary_table()] emits -- a tidy `.fmt` frame (numeric
-#' columns + a per-row `.fmt` template + `.group`), or the already-wide
-#' display grid with `.section_*` / `.label` / `.indent` / `.strong` columns --
+#' convention that [summary_table()] emits -- the wide display grid with
+#' `.group<k>` / `.group<k>_level`, `.variable*`, `.label`, `.indent` columns
+#' (summary_table's internal long `.fmt` form is rejected with an error) --
 #' the renderer switches to the *structured* layout: row-side section
-#' headers with collapse/expand toggles, `.indent` row stubs, and
+#' headers synthesized from grouping-value runs with collapse/expand
+#' toggles, `.indent` row stubs, and
 #' multi-level column spanners parsed from `|`-delimited column names (each
 #' leaf carries its header text in `attr(col, "label")`). This is the same
 #' structure [html_table()] renders, folded into the interactive table so
@@ -92,7 +93,9 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                          excel_download = FALSE, group_cols = NULL,
                          group = character(), summaries = list(),
                          active = NULL, gear_cols = NULL) {
-  data <- fmt_to_wide(data)
+  # The inter-block currency is the wide annotated df; summary_table()'s
+  # internal long dialect errors here instead of being silently pivoted.
+  reject_long_form(data)
   # Display-option states (sortable / collapsible / search / excel) ride on the
   # <table> as data-attributes so the gear popover reads their current value;
   # the renderer honours `sortable` / `collapsible` here, while `search` /
@@ -298,12 +301,14 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
 
 #' Does this (already wide) frame carry the dotted-column structure?
 #'
-#' True when it has any row-side section column (`.section_*`) OR a
-#' `.label` stub OR an `.indent` / `.strong` column -- the signals
-#' [summary_table()] emits and [html_table()] renders.
+#' True when it has any row-side grouping / identity column (the ARD-named
+#' `.group<k>*` / `.variable*` pairs) OR a `.label` stub OR an `.indent` /
+#' `.strong` column (the positional fallback dialect) -- the signals
+#' [summary_table()] and coercing producers emit and [html_table()] renders.
 #' @noRd
 dt_is_structured <- function(data) {
-  any(grepl("^\\.(section_\\d+|label|indent|strong)$", names(data)))
+  any(grepl("^\\.(group\\d+(_level|_label)?|variable(_level|_label)?|label|indent|strong)$",
+            names(data)))
 }
 
 #' Build the structured ("Table 1") `<table>` for the interactive table-block.
@@ -321,20 +326,20 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
                                     active = NULL) {
   sortable    <- toggles$sortable %||% TRUE
   collapsible <- toggles$collapsible %||% TRUE
-  all_section_cols <- grep("^\\.section_\\d+$", names(data), value = TRUE)
-  # Empty .section_* columns draw no "(missing)" header, but must still be
-  # excluded from the data cells (use all_section_cols below) or they leak in
-  # as a literal em-dash column.
-  section_cols <- nonempty_section_cols(data, all_section_cols)
+  view <- annotated_structure_view(data)
+  data <- view$data
+  section_cols <- view$section_cols
   stub_col     <- if (".label" %in% names(data)) ".label" else NULL
   styling_cols <- intersect(c(".indent", ".strong", ".emph"), names(data))
+  # Every reserved column (grouping values and their name/label companions)
+  # stays out of the data cells or it leaks in as a literal em-dash column.
   data_cols    <- setdiff(names(data),
-                          c(all_section_cols, stub_col, styling_cols))
+                          c(view$reserved_cols, stub_col, styling_cols))
 
   if (length(data_cols) == 0L || nrow(data) == 0L) {
     # Structured frames carry no gear-picked mappings, so only two states
     # apply here: no rows vs no data columns left after the structural
-    # (.section_* / .label / styling) columns.
+    # (identity / .label / styling) columns.
     msg <- if (nrow(data) == 0L) "No rows to display"
            else "No value columns to display"
     return(dt_table_attrs(dt_message_table(msg), NULL, NULL, digits,

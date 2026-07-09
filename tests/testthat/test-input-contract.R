@@ -31,7 +31,7 @@ ann_df <- data.frame(
   .emph      = c(FALSE, TRUE),
   .fmt       = c("{n}", "{n}"),
   .digits    = c(1L, 1L),
-  .section_1 = c("Stats", "Stats"),
+  .group1_level = c("Stats", "Stats"),
   .keepme    = c("u", "v"),
   grp        = c("A", "B"),
   n          = c(10, 2),
