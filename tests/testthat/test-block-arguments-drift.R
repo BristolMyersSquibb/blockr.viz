@@ -31,6 +31,7 @@ registry_allowlist <- list(
     # save/restore only -- never AI-set at creation.
     "filter_column", "filter_values",
     "filter_group_cols", "filter_group_vals",
+    "filter_spread_col", "filter_spread_from",
     # Display-only gear toggles / sizing, deliberately off the AI surface.
     "max_height", "sortable", "collapsible", "search", "excel_download"
   ),

@@ -214,6 +214,16 @@
       // bubbles to this row-level handler, so a single listener covers both
       // the button and any bare-cell click.
       h.addEventListener("click", function (ev) {
+        // Structured drill: the section VALUE text is the drill target
+        // (wireClick emits the section's filter); only the chevron / label
+        // area keeps toggling collapse. Read the attr at click time -- the
+        // <table> re-renders on config changes while these rows persist.
+        var tbl = h.closest("table");
+        var t = /** @type {Element | null} */ (ev.target);
+        if (tbl && tbl.getAttribute("data-dt-structured-drill") === "1" &&
+            t && t.closest(".blockr-section-value")) {
+          return;
+        }
         ev.stopPropagation();
         h.classList.toggle("collapsed");
         syncAria(h);
@@ -398,9 +408,13 @@
     var groupCols = (table.getAttribute("data-dt-group-cols") || "")
       .split(",").filter(function (n) { return !!n; });
     var grouped = groupCols.length > 0;
+    // Structured drill: rows / section headers carry their own filter keys
+    // (data-dd-keys, stamped by dd_row_drill_attrs) -- no column mapping at
+    // all; a click just forwards the row's keys + spread.
+    var structured = table.getAttribute("data-dt-structured-drill") === "1";
     var col = table.getAttribute("data-dt-onclick-col");
     var idx = table.getAttribute("data-dt-onclick-idx");
-    if (!grouped && (!col || idx == null)) return;
+    if (!structured && !grouped && (!col || idx == null)) return;
 
     // Map each group column name to its rendered column index (header order ==
     // cell order; the stub is column 0).
@@ -433,6 +447,42 @@
     root.classList.add("dt-clickable");
     tbody.addEventListener("click", function (e) {
       var t = /** @type {Element | null} */ (e.target);
+      if (structured) {
+        // Drill target: a data row, or a section header's VALUE text (the
+        // chevron / label area keeps toggling collapse -- see wireCollapse).
+        var secVal = t && t.closest(".blockr-section-value");
+        var srcTr = secVal
+          ? secVal.closest("tr.blockr-section-header")
+          : (t && t.closest("tr.blockr-data-row"));
+        if (!srcTr) return;
+        var keysJson = srcTr.getAttribute("data-dd-keys");
+        if (!keysJson) return;                       // no identity -> no-op
+        if (!window.Shiny || !Shiny.setInputValue) return;
+        if (srcTr.classList.contains("dt-row-active")) {
+          srcTr.classList.remove("dt-row-active");
+          sendClearFilter(elemId);
+          return;
+        }
+        /** @type {any} */
+        var keys = null;
+        try { keys = JSON.parse(keysJson); } catch (err) { keys = null; }
+        if (!keys || !keys.length) return;
+        /** @type {any} */
+        var spread = null;
+        var spreadJson = srcTr.getAttribute("data-dd-spread");
+        if (spreadJson) {
+          try { spread = JSON.parse(spreadJson); } catch (err) { spread = null; }
+        }
+        Shiny.setInputValue(elemId + "_action",
+          { action: "filter", filters: keys, spread: spread,
+            filter_type: "categorical" },
+          { priority: "event" });
+        Array.prototype.slice.call(tbody.children).forEach(function (r) {
+          r.classList.remove("dt-row-active");
+        });
+        srcTr.classList.add("dt-row-active");
+        return;
+      }
       var tr = t && t.closest("tr.blockr-data-row");
       if (!tr) return;
       var row = tr;
@@ -479,7 +529,28 @@
       /** @type {any} */
       var af = null;
       try { af = JSON.parse(activeJson); } catch (e) { af = null; }
-      if (af) {
+      if (af && structured && af.filters && af.filters.length) {
+        // Structured rows/headers self-describe via data-dd-keys: the active
+        // element is the one whose keys equal the restored filter set.
+        /** @type {Record<string, string>} */
+        var want = {};
+        af.filters.forEach(function (/** @type {any} */ f) {
+          want[f.column] = String(f.value);
+        });
+        var wantN = af.filters.length;
+        tbody.querySelectorAll("tr[data-dd-keys]").forEach(function (r) {
+          /** @type {any} */
+          var ks = null;
+          try { ks = JSON.parse(r.getAttribute("data-dd-keys") || ""); }
+          catch (err) { ks = null; }
+          if (ks && ks.length === wantN &&
+              ks.every(function (/** @type {any} */ k) {
+                return want[k.column] === String(k.value);
+              })) {
+            r.classList.add("dt-row-active");
+          }
+        });
+      } else if (af) {
         Array.prototype.slice.call(tbody.children).forEach(function (r) {
           if (!r.classList.contains("blockr-data-row")) return;
           var hit = false;
@@ -597,10 +668,11 @@
     // don't apply. A small badge names it; the tooltip carries the why.
     if (!hasCols) {
       spec.badge = "Annotated data frame";
-      spec.badgeTitle = "Dot-prefixed columns (.label, .section, .indent, …) " +
-        "were detected and interpreted as layout — they build the section " +
-        "structure and are not shown as data columns. Grouping and aggregation " +
-        "are set upstream, so only display options apply here.";
+      spec.badgeTitle = "Dot-prefixed columns (.label, .variable, .group1, …) " +
+        "were detected and interpreted as structure — they build the section " +
+        "hierarchy and row identity and are not shown as data columns. " +
+        "Grouping and aggregation are set upstream; Drill-down and the " +
+        "display options apply here.";
     }
     return spec;
   }
@@ -656,6 +728,10 @@
       // when drill is enabled); represented as 'auto' for the engine's
       // checkbox section.
       drill: (function () {
+        // Structured drill: ON iff the renderer stamped the row keys
+        // (data-dt-structured-drill), represented as 'auto' like the grouped
+        // table's keys drill.
+        if (table.getAttribute("data-dt-structured-drill") === "1") return "auto";
         if ((table.getAttribute("data-dt-group-cols") || "") !== "") return "auto";
         return (onClick && onClick !== "(none)") ? onClick : "";
       })(),
@@ -777,6 +853,15 @@
       // (a raw row is multi-column; the target is a genuine choice). No
       // columns (annotated frame) or grand totals: null (section hidden).
       drillHint: function () {
+        // Structured (annotated) table: the drill target is the row's own
+        // identity columns -- structurally determined, so the section is the
+        // picker-less checkbox (same as the grouped table / tile).
+        if (root.getAttribute("data-dt-structured") === "1") {
+          return "Clicking a row filters downstream to that row's identity " +
+            "(variable and value, plus its sections); the selection is also " +
+            "named as a real column, so a dm filter-by-data block can " +
+            "cascade it to the source data.";
+        }
         var hasGroup = cfg.group && cfg.group.length > 0;
         if (!hasCols() || !hasGroup) return null;
         return "Clicking a row filters downstream on the group key" +

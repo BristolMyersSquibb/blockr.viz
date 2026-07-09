@@ -445,9 +445,142 @@ annotated_structure_view <- function(data) {
   )
 }
 
+#' Per-row structured-drill attributes.
+#'
+#' For every data row, the filter keys a click emits (JSON array of
+#' `{column, value}` pairs over the identity columns: the enclosing
+#' `.group<k>_level`s, `.variable`, and `.variable_level` -- or `.label` for
+#' stat rows) and, when the row is a level row, the dm-spread instruction
+#' (`{column: <.variable value>, from: ".variable_level"}`: the block's expr
+#' mutates the filtered frame with a real column of that name so a
+#' name-matching consumer like blockr.dm's dm_filter_by_data_block can pick
+#' it up). Rows with no usable keys get "" -> no attribute -> click no-op.
+#' @noRd
+dd_row_drill_attrs <- function(data, section_cols) {
+  n <- nrow(data)
+  group_cols <- intersect(section_cols,
+                          grep("^\\.group\\d+_level$", names(data), value = TRUE))
+  has_var   <- ".variable" %in% names(data)
+  has_lvl   <- ".variable_level" %in% names(data)
+  has_lab   <- ".label" %in% names(data)
+
+  chr <- function(col) if (col %in% names(data)) as.character(data[[col]]) else rep(NA_character_, n)
+  v_var <- chr(".variable")
+  v_lvl <- chr(".variable_level")
+  v_lab <- chr(".label")
+
+  keys <- character(n)
+  spread <- character(n)
+  for (i in seq_len(n)) {
+    pairs <- list()
+    for (sc in group_cols) {
+      val <- as.character(data[[sc]][i])
+      if (!is.na(val)) pairs[[length(pairs) + 1L]] <-
+          list(column = sc, value = val)
+    }
+    if (has_var && !is.na(v_var[i])) {
+      pairs[[length(pairs) + 1L]] <- list(column = ".variable", value = v_var[i])
+    }
+    if (has_lvl && !is.na(v_lvl[i])) {
+      pairs[[length(pairs) + 1L]] <- list(column = ".variable_level", value = v_lvl[i])
+    } else if (has_lab && !is.na(v_lab[i])) {
+      pairs[[length(pairs) + 1L]] <- list(column = ".label", value = v_lab[i])
+    }
+    if (length(pairs)) {
+      keys[i] <- as.character(jsonlite::toJSON(pairs, auto_unbox = TRUE))
+      if (has_var && has_lvl && !is.na(v_var[i]) && !is.na(v_lvl[i])) {
+        spread[i] <- as.character(jsonlite::toJSON(
+          list(column = v_var[i], from = ".variable_level"), auto_unbox = TRUE))
+      }
+    }
+  }
+  list(keys = keys, spread = spread)
+}
+
+#' Per-header-row structured-drill attributes for section level `L`.
+#'
+#' A section-header click selects the whole section: keys = the header path
+#' up to `L` (real `.group<k>_level` pairs; the synthetic variable block keys
+#' on `.variable_label`). The spread names the axis's machine column: the
+#' sibling `.group<k>` value for a group level, or -- for a variable block --
+#' the block's `.variable` when it is unique within the run (hierarchy runs
+#' mix variables and get no spread).
+#' @noRd
+dd_header_drill_attrs <- function(data, section_cols, L, diff_from) {
+  n <- nrow(data)
+  keys <- character(n)
+  spread <- character(n)
+  emitted <- !is.na(diff_from) & diff_from <= L
+
+  # Run id at level L: a new run starts wherever a header at level <= L is
+  # emitted (used for the variable-block uniqueness check).
+  run_id <- cumsum(emitted)
+
+  sc_L <- section_cols[L]
+  synthetic <- identical(sc_L, ".variable_block")
+  var_by_run <- NULL
+  if (synthetic && ".variable" %in% names(data)) {
+    v <- as.character(data[[".variable"]])
+    var_by_run <- vapply(split(v, run_id), function(x) {
+      u <- unique(x[!is.na(x)])
+      if (length(u) == 1L) u else NA_character_
+    }, character(1L))
+  }
+
+  for (i in which(emitted)) {
+    pairs <- list()
+    for (l in seq_len(L)) {
+      sc <- section_cols[l]
+      if (identical(sc, ".variable_block")) {
+        val <- if (".variable_label" %in% names(data)) {
+          as.character(data[[".variable_label"]][i])
+        } else {
+          NA_character_
+        }
+        if (!is.na(val)) pairs[[length(pairs) + 1L]] <-
+            list(column = ".variable_label", value = val)
+      } else if (grepl("^\\.group\\d+_level$", sc)) {
+        val <- as.character(data[[sc]][i])
+        if (!is.na(val)) pairs[[length(pairs) + 1L]] <-
+            list(column = sc, value = val)
+      }
+    }
+    if (!length(pairs)) next
+    keys[i] <- as.character(jsonlite::toJSON(pairs, auto_unbox = TRUE))
+
+    if (synthetic) {
+      vu <- if (!is.null(var_by_run)) var_by_run[[as.character(run_id[i])]] else NA_character_
+      if (!is.na(vu)) {
+        spread[i] <- as.character(jsonlite::toJSON(
+          list(column = vu, from = ".variable_level"), auto_unbox = TRUE))
+      }
+    } else if (grepl("^\\.group\\d+_level$", sc_L)) {
+      name_col <- sub("_level$", "", sc_L)
+      nm <- if (name_col %in% names(data)) as.character(data[[name_col]][i]) else NA_character_
+      if (!is.na(nm)) {
+        spread[i] <- as.character(jsonlite::toJSON(
+          list(column = nm, from = sc_L), auto_unbox = TRUE))
+      }
+    }
+  }
+  list(keys = keys, spread = spread)
+}
+
+#' JSON -> escaped HTML attribute chunk (' data-<name>="..."'), "" when empty.
+#' @noRd
+dd_attr_chunk <- function(name, json) {
+  ifelse(
+    nzchar(json),
+    paste0(" data-", name, "=\"",
+           htmltools::htmlEscape(json, attribute = TRUE), "\""),
+    ""
+  )
+}
+
 #' @noRd
 build_html_tbody <- function(data, section_cols, stub_col, data_cols,
-                             styling_cols = character(), collapsible = TRUE) {
+                             styling_cols = character(), collapsible = TRUE,
+                             drill_keys = FALSE) {
   ncol_total <- length(data_cols) + (if (is.null(stub_col)) 0L else 1L)
   if (ncol_total == 0L) ncol_total <- 1L
 
@@ -524,8 +657,19 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
     } else {
       ""
     }
+    # Structured drill: the header row carries its section's filter keys +
+    # spread so a click on the value text selects the whole section (the
+    # chevron keeps toggling collapse -- separate targets in table.js).
+    hdr_drill <- if (isTRUE(drill_keys)) {
+      a <- dd_header_drill_attrs(data, section_cols, L, diff_from)
+      paste0(dd_attr_chunk("dd-keys", a$keys),
+             dd_attr_chunk("dd-spread", a$spread))
+    } else {
+      rep("", n_rows)
+    }
     hdr <- paste0(
-      "<tr class=\"blockr-section-header\" data-level=\"", L, "\">",
+      "<tr class=\"blockr-section-header\" data-level=\"", L, "\"",
+      hdr_drill, ">",
       "<td class=\"blockr-section-cell level-", L,
       "\" colspan=\"", ncol_total, "\">",
       btn_open, chev, prefix,
@@ -613,9 +757,19 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
     out
   })
 
+  # Structured drill: each data row carries its own identity keys + spread,
+  # so the click handler never walks headers or guesses columns.
+  row_drill <- if (isTRUE(drill_keys)) {
+    a <- dd_row_drill_attrs(data, section_cols)
+    paste0(dd_attr_chunk("dd-keys", a$keys),
+           dd_attr_chunk("dd-spread", a$spread))
+  } else {
+    rep("", n_rows)
+  }
+
   row_inner <- do.call(paste0, c(list(stub_html), data_cell_cols))
   data_rows <- paste0("<tr class=\"", row_class, "\" data-indent=\"",
-                      row_indent, "\">", row_inner, "</tr>")
+                      row_indent, "\"", row_drill, ">", row_inner, "</tr>")
 
   body_html <- paste0(header_prefix, data_rows, collapse = "")
   htmltools::tags$tbody(htmltools::HTML(body_html))
