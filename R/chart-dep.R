@@ -29,7 +29,7 @@ drilldown_chart_dep <- function() {
     ),
     htmltools::htmlDependency(
       name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.viz"), ".32"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".33"),
       src = system.file("css", package = "blockr.viz"),
       stylesheet = "chart.css"
     )

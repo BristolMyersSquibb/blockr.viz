@@ -59,10 +59,23 @@
    (bordered control, focus ring) comes from blockr.dplyr's
    .blockr-popover-select-wrap (blockr-blocks.css), applied alongside this
    class; here we only own width so the select fills its form row. Text inputs
-   use .blockr-popover-input directly (no wrap — see drilldown-config.js). */
+   sit in a .dd-text-wrap next to their commit chip (see drilldown-config.js). */
 .dd-picker-wrap {
   width: 100%;
   box-sizing: border-box;
+}
+
+/* Text input + "Enter ↵" commit chip (design-system §5.5 confirm cycle). */
+.dd-text-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.dd-text-wrap .blockr-popover-input {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* Fallback native select (only when Blockr.Select is unavailable) — mirror the
@@ -480,7 +493,7 @@
 
 .dd-status-cap {
   font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-color-warning, #b45309);
+  color: var(--blockr-color-warning-text, #b45309);
   font-style: italic;
   margin-left: 12px;
 }
@@ -512,7 +525,7 @@
 
 .dd-slider {
   width: 100%;
-  accent-color: var(--blockr-color-primary, #0072B2);
+  accent-color: var(--blockr-color-primary, #2563eb);
   cursor: pointer;
 }
 

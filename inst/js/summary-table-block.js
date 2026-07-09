@@ -103,6 +103,9 @@
       this.popover = document.createElement('div');
       this._bandGrid = document.createElement('div');
 
+      /** @type {((value: string) => void) | null} */
+      this._overallLabelSync = null;
+
       this._buildDOM();
     }
 
@@ -344,10 +347,53 @@
       input.placeholder = 'Overall column label';
       input.value = this._state.overall_label || '';
       input.style.flex = '1';
-      input.addEventListener('input', () => {
+      // Commit model (design-system §5.5): typing never submits — the value
+      // commits on Enter/blur/chip, the chip fades to ✓, Escape reverts.
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'blockr-expr-confirm';
+      chip.title = 'Apply (Enter)';
+      chip.setAttribute('aria-label', 'Apply (Enter)');
+      chip.style.display = 'none';
+      let committed = input.value;
+      let everCommitted = false;
+      const syncChip = () => {
+        if (input.value !== committed) {
+          chip.style.display = '';
+          chip.classList.remove('confirmed');
+          chip.innerHTML = 'Enter <span class="blockr-kbd">↵</span>';
+        } else if (everCommitted) {
+          chip.style.display = '';
+          chip.classList.add('confirmed');
+          chip.innerHTML = (Blockr.icons && Blockr.icons.confirm) || '✓';
+        } else {
+          chip.style.display = 'none';
+        }
+      };
+      const commit = () => {
+        if (input.value === committed) return;
+        committed = input.value;
+        everCommitted = true;
         this._state.overall_label = input.value;
-        this._autoSubmit();
+        this._submit();
+        syncChip();
+      };
+      input.addEventListener('input', syncChip);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        else if (e.key === 'Escape') { input.value = committed; syncChip(); }
       });
+      input.addEventListener('blur', commit);
+      chip.addEventListener('mousedown', (e) => e.preventDefault());
+      chip.addEventListener('click', commit);
+      // Programmatic restores (setState) reset the committed baseline so a
+      // restored value never shows an armed chip.
+      this._overallLabelSync = (/** @type {string} */ value) => {
+        input.value = value;
+        committed = value;
+        everCommitted = false;
+        syncChip();
+      };
 
       const label = document.createElement('span');
       label.className = 'blockr-label';
@@ -355,7 +401,7 @@
       label.style.marginBottom = '0';
       label.style.flexShrink = '0';
 
-      const row = this._addPopoverRow([label, input]);
+      const row = this._addPopoverRow([label, input, chip]);
       row.style.display = this._state.add_overall ? 'flex' : 'none';
       this._overallLabelRow = row;
       this._overallLabelInput = input;
@@ -488,7 +534,8 @@
       if (typeof state.add_overall === 'boolean') this._state.add_overall = state.add_overall;
       if (typeof state.overall_label === 'string') {
         this._state.overall_label = state.overall_label;
-        if (this._overallLabelInput) this._overallLabelInput.value = state.overall_label;
+        if (this._overallLabelSync) this._overallLabelSync(state.overall_label);
+        else if (this._overallLabelInput) this._overallLabelInput.value = state.overall_label;
       }
       if (typeof state.indent_details === 'boolean') this._state.indent_details = state.indent_details;
       if (typeof state.nest_hierarchies === 'boolean') this._state.nest_hierarchies = state.nest_hierarchies;
