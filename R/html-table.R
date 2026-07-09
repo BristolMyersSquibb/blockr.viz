@@ -9,12 +9,17 @@
 #' this renderer is tuned for interactive dashboards.
 #'
 #' The input contract is the same dotted-column wide tibble that
-#' [summary_table()] produces:
+#' [summary_table()] produces (annotated-df v2):
 #'
-#' - `.section_1, ..., .section_k` -- nested row-side section columns,
-#'   outermost first. `attr(col, "label")` carries the display label.
-#' - `.strong` -- logical, bold header rows (variable labels when
-#'   `length(vars) > 1`).
+#' - `.group1/.group1_level, ..., .group<k>/.group<k>_level` -- nested
+#'   row-side grouping pairs (variable name / value), outermost first.
+#'   Section headers are synthesized from value runs;
+#'   `attr(.group<k>_level, "label")` carries the display prefix.
+#' - `.variable` / `.variable_level` / `.variable_label` -- leaf source
+#'   identity; runs of `.variable_label` render as the innermost
+#'   (variable) header blocks.
+#' - `.strong` / `.indent` -- fallback positional dialect for coerced
+#'   free-form tables (bold header rows + indented children).
 #' - `.label` -- innermost per-row identifier (stat name / factor
 #'   level). Rendered as the leftmost row-stub column.
 #' - Data columns -- names use `|` as nesting delimiter for multi-level
@@ -50,9 +55,10 @@ html_table <- function(data,
                        max_height = "600px") {
   stopifnot(is.data.frame(data))
 
-  # Tidy `.fmt` form (numbers + per-row template + `.group`) -> wide
-  # display grid (format-then-spread). No-op on already-wide input.
-  data <- fmt_to_wide(data)
+  # The contract is the wide display grid; summary_table()'s internal long
+  # dialect is rejected with an actionable error (pre-v2 it was silently
+  # pivoted here, making two shapes of the same table valid input).
+  reject_long_form(data)
 
   if (all(c("label", "depth") %in% names(data)) &&
       any(c("col_var", "n", "value") %in% names(data))) {
@@ -62,16 +68,16 @@ html_table <- function(data,
     )
   }
 
-  all_section_cols <- grep("^\\.section_\\d+$", names(data), value = TRUE)
-  # Only columns that carry a grouping value render as sections; an entirely
-  # empty .section_* column draws no "(missing)" header -- but it must still
-  # be kept out of the data cells (exclude `all_section_cols`, not the filtered
-  # set, from data_cols) or it would leak in as a literal em-dash column.
-  section_cols <- nonempty_section_cols(data, all_section_cols)
+  view <- annotated_structure_view(data)
+  data <- view$data
+  section_cols <- view$section_cols
   stub_col     <- if (".label" %in% names(data)) ".label" else NULL
   styling_cols <- intersect(c(".indent", ".strong", ".emph"), names(data))
+  # Exclude every reserved column (grouping values AND their name/label
+  # companions), not just the rendered section axes, or they leak into the
+  # data cells as literal em-dash columns.
   data_cols    <- setdiff(names(data),
-                          c(all_section_cols, stub_col, styling_cols))
+                          c(view$reserved_cols, stub_col, styling_cols))
 
   wrapper_id <- paste0("blockr-html-table-", sub("^file", "", basename(tempfile(""))))
 
@@ -390,7 +396,7 @@ leaf_header_content <- function(data, col_name, fallback_text, span,
 
 #' Keep only section/var columns that actually carry a grouping value.
 #'
-#' A `.section_*` column that is entirely NA/blank is not a real
+#' A grouping-value column that is entirely NA/blank is not a real
 #' grouping dimension -- rendering it would wrap every row under a single
 #' "(missing)" header. Drop those so the table renders flat (or indent-only)
 #' instead. A *partially* empty column is kept: its gaps still render as
@@ -404,9 +410,185 @@ nonempty_section_cols <- function(data, section_cols) {
   }, logical(1L))]
 }
 
+#' Resolve an annotated df's row-side structure for rendering.
+#'
+#' The v2 contract keeps structure columnar: `.group<k>_level` columns are the
+#' grouping-value axes (outermost first), and runs of `.variable_label` form
+#' the innermost variable blocks of a multi-variable summary. This helper
+#' turns both into the single `section_cols` vector `build_html_tbody()`
+#' synthesizes headers from: the group `_level` columns, plus -- when any row
+#' carries a `.variable_label` -- a synthetic `.variable_block` column holding
+#' that label (no `label` attribute, so no "name: " prefix). All-empty axes
+#' are dropped via `nonempty_section_cols()`.
+#'
+#' Returns `list(data, section_cols, reserved_cols)`; `reserved_cols` is every
+#' annotation column (including the synthetic one) that must stay out of the
+#' data cells. Shared by [html_table()], the table block's structured path,
+#' the gt renderer, and the Excel writer.
+#' @noRd
+annotated_structure_view <- function(data) {
+  section_cols <- annotation_group_level_cols(data)
+
+  vlab <- data[[".variable_label"]]
+  if (!is.null(vlab) && any(!is.na(vlab) & nzchar(as.character(vlab)))) {
+    data[[".variable_block"]] <- as.character(vlab)
+    section_cols <- c(section_cols, ".variable_block")
+  }
+
+  reserved_cols <- unique(c(annotation_cols_in(data),
+                            intersect(".variable_block", names(data))))
+
+  list(
+    data = data,
+    section_cols = nonempty_section_cols(data, section_cols),
+    reserved_cols = reserved_cols
+  )
+}
+
+#' Per-row structured-drill attributes.
+#'
+#' For every data row, the filter keys a click emits (JSON array of
+#' `{column, value}` pairs over the identity columns: the enclosing
+#' `.group<k>_level`s, `.variable`, and `.variable_level` -- or `.label` for
+#' stat rows) and, when the row is a level row, the dm-spread instruction
+#' (`{column: <.variable value>, from: ".variable_level"}`: the block's expr
+#' mutates the filtered frame with a real column of that name so a
+#' name-matching consumer like blockr.dm's dm_filter_by_data_block can pick
+#' it up). Rows with no usable keys get "" -> no attribute -> click no-op.
+#' @noRd
+dd_row_drill_attrs <- function(data, section_cols) {
+  n <- nrow(data)
+  group_cols <- intersect(section_cols,
+                          grep("^\\.group\\d+_level$", names(data), value = TRUE))
+  has_var   <- ".variable" %in% names(data)
+  has_lvl   <- ".variable_level" %in% names(data)
+  has_lab   <- ".label" %in% names(data)
+
+  chr <- function(col) if (col %in% names(data)) as.character(data[[col]]) else rep(NA_character_, n)
+  v_var <- chr(".variable")
+  v_lvl <- chr(".variable_level")
+  v_lab <- chr(".label")
+  v_vlb <- chr(".variable_label")
+
+  keys <- character(n)
+  spread <- character(n)
+  for (i in seq_len(n)) {
+    pairs <- list()
+    for (sc in group_cols) {
+      val <- as.character(data[[sc]][i])
+      if (!is.na(val)) pairs[[length(pairs) + 1L]] <-
+          list(column = sc, value = val)
+    }
+    # The block label disambiguates rows whose `.variable` is unknown (a
+    # coerced table's stat rows: two blocks both have a "Median") and is a
+    # harmless extra AND term when `.variable` is present.
+    if (!is.na(v_vlb[i])) {
+      pairs[[length(pairs) + 1L]] <-
+        list(column = ".variable_label", value = v_vlb[i])
+    }
+    if (has_var && !is.na(v_var[i])) {
+      pairs[[length(pairs) + 1L]] <- list(column = ".variable", value = v_var[i])
+    }
+    if (has_lvl && !is.na(v_lvl[i])) {
+      pairs[[length(pairs) + 1L]] <- list(column = ".variable_level", value = v_lvl[i])
+    } else if (has_lab && !is.na(v_lab[i])) {
+      pairs[[length(pairs) + 1L]] <- list(column = ".label", value = v_lab[i])
+    }
+    if (length(pairs)) {
+      keys[i] <- as.character(jsonlite::toJSON(pairs, auto_unbox = TRUE))
+      if (has_var && has_lvl && !is.na(v_var[i]) && !is.na(v_lvl[i])) {
+        spread[i] <- as.character(jsonlite::toJSON(
+          list(column = v_var[i], from = ".variable_level"), auto_unbox = TRUE))
+      }
+    }
+  }
+  list(keys = keys, spread = spread)
+}
+
+#' Per-header-row structured-drill attributes for section level `L`.
+#'
+#' A section-header click selects the whole section: keys = the header path
+#' up to `L` (real `.group<k>_level` pairs; the synthetic variable block keys
+#' on `.variable_label`). The spread names the axis's machine column: the
+#' sibling `.group<k>` value for a group level, or -- for a variable block --
+#' the block's `.variable` when it is unique within the run (hierarchy runs
+#' mix variables and get no spread).
+#' @noRd
+dd_header_drill_attrs <- function(data, section_cols, L, diff_from) {
+  n <- nrow(data)
+  keys <- character(n)
+  spread <- character(n)
+  emitted <- !is.na(diff_from) & diff_from <= L
+
+  # Run id at level L: a new run starts wherever a header at level <= L is
+  # emitted (used for the variable-block uniqueness check).
+  run_id <- cumsum(emitted)
+
+  sc_L <- section_cols[L]
+  synthetic <- identical(sc_L, ".variable_block")
+  var_by_run <- NULL
+  if (synthetic && ".variable" %in% names(data)) {
+    v <- as.character(data[[".variable"]])
+    var_by_run <- vapply(split(v, run_id), function(x) {
+      u <- unique(x[!is.na(x)])
+      if (length(u) == 1L) u else NA_character_
+    }, character(1L))
+  }
+
+  for (i in which(emitted)) {
+    pairs <- list()
+    for (l in seq_len(L)) {
+      sc <- section_cols[l]
+      if (identical(sc, ".variable_block")) {
+        val <- if (".variable_label" %in% names(data)) {
+          as.character(data[[".variable_label"]][i])
+        } else {
+          NA_character_
+        }
+        if (!is.na(val)) pairs[[length(pairs) + 1L]] <-
+            list(column = ".variable_label", value = val)
+      } else if (grepl("^\\.group\\d+_level$", sc)) {
+        val <- as.character(data[[sc]][i])
+        if (!is.na(val)) pairs[[length(pairs) + 1L]] <-
+            list(column = sc, value = val)
+      }
+    }
+    if (!length(pairs)) next
+    keys[i] <- as.character(jsonlite::toJSON(pairs, auto_unbox = TRUE))
+
+    if (synthetic) {
+      vu <- if (!is.null(var_by_run)) var_by_run[[as.character(run_id[i])]] else NA_character_
+      if (!is.na(vu)) {
+        spread[i] <- as.character(jsonlite::toJSON(
+          list(column = vu, from = ".variable_level"), auto_unbox = TRUE))
+      }
+    } else if (grepl("^\\.group\\d+_level$", sc_L)) {
+      name_col <- sub("_level$", "", sc_L)
+      nm <- if (name_col %in% names(data)) as.character(data[[name_col]][i]) else NA_character_
+      if (!is.na(nm)) {
+        spread[i] <- as.character(jsonlite::toJSON(
+          list(column = nm, from = sc_L), auto_unbox = TRUE))
+      }
+    }
+  }
+  list(keys = keys, spread = spread)
+}
+
+#' JSON -> escaped HTML attribute chunk (' data-<name>="..."'), "" when empty.
+#' @noRd
+dd_attr_chunk <- function(name, json) {
+  ifelse(
+    nzchar(json),
+    paste0(" data-", name, "=\"",
+           htmltools::htmlEscape(json, attribute = TRUE), "\""),
+    ""
+  )
+}
+
 #' @noRd
 build_html_tbody <- function(data, section_cols, stub_col, data_cols,
-                             styling_cols = character(), collapsible = TRUE) {
+                             styling_cols = character(), collapsible = TRUE,
+                             drill_keys = FALSE) {
   ncol_total <- length(data_cols) + (if (is.null(stub_col)) 0L else 1L)
   if (ncol_total == 0L) ncol_total <- 1L
 
@@ -483,8 +665,19 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
     } else {
       ""
     }
+    # Structured drill: the header row carries its section's filter keys +
+    # spread so a click on the value text selects the whole section (the
+    # chevron keeps toggling collapse -- separate targets in table.js).
+    hdr_drill <- if (isTRUE(drill_keys)) {
+      a <- dd_header_drill_attrs(data, section_cols, L, diff_from)
+      paste0(dd_attr_chunk("dd-keys", a$keys),
+             dd_attr_chunk("dd-spread", a$spread))
+    } else {
+      rep("", n_rows)
+    }
     hdr <- paste0(
-      "<tr class=\"blockr-section-header\" data-level=\"", L, "\">",
+      "<tr class=\"blockr-section-header\" data-level=\"", L, "\"",
+      hdr_drill, ">",
       "<td class=\"blockr-section-cell level-", L,
       "\" colspan=\"", ncol_total, "\">",
       btn_open, chev, prefix,
@@ -572,9 +765,19 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
     out
   })
 
+  # Structured drill: each data row carries its own identity keys + spread,
+  # so the click handler never walks headers or guesses columns.
+  row_drill <- if (isTRUE(drill_keys)) {
+    a <- dd_row_drill_attrs(data, section_cols)
+    paste0(dd_attr_chunk("dd-keys", a$keys),
+           dd_attr_chunk("dd-spread", a$spread))
+  } else {
+    rep("", n_rows)
+  }
+
   row_inner <- do.call(paste0, c(list(stub_html), data_cell_cols))
   data_rows <- paste0("<tr class=\"", row_class, "\" data-indent=\"",
-                      row_indent, "\">", row_inner, "</tr>")
+                      row_indent, "\"", row_drill, ">", row_inner, "</tr>")
 
   body_html <- paste0(header_prefix, data_rows, collapse = "")
   htmltools::tags$tbody(htmltools::HTML(body_html))

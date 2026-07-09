@@ -5,13 +5,13 @@ drilldown_chart_dep <- function() {
     # Reuse blockr.dplyr's shared CSS (gear, popover, rows) and select component
     htmltools::htmlDependency(
       name = "blockr-blocks-css",
-      version = paste0(utils::packageVersion("blockr.dplyr"), ".2"),
+      version = paste0(utils::packageVersion("blockr.dplyr"), ".3"),
       src = system.file("css", package = "blockr.dplyr"),
       stylesheet = c("blockr-blocks.css", "blockr-select.css")
     ),
     htmltools::htmlDependency(
       name = "blockr-select-js",
-      version = paste0(utils::packageVersion("blockr.dplyr"), ".2"),
+      version = paste0(utils::packageVersion("blockr.dplyr"), ".3"),
       src = system.file("js", package = "blockr.dplyr"),
       script = c("blockr-core.js", "blockr-select.js")
     ),
@@ -29,7 +29,7 @@ drilldown_chart_dep <- function() {
     ),
     htmltools::htmlDependency(
       name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.viz"), ".32"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".34"),
       src = system.file("css", package = "blockr.viz"),
       stylesheet = "chart.css"
     )

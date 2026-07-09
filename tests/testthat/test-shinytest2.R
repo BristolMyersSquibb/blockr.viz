@@ -585,12 +585,12 @@ test_that("summary_table: produces the wide annotated summary frame", {
   res <- get_block_result("summary")
   expect_s3_class(res, "data.frame")
   expect_gt(nrow(res), 0)
-  # The wide annotated df carries header rows (.strong) and one baked
-  # cell column per region level.
-  expect_true(all(c(".strong", "North", "South") %in% names(res)))
-  # Header rows for each variable
-  hdr <- res[!is.na(res$.strong) & res$.strong, ]
-  expect_setequal(unique(hdr$.label), c("revenue", "profit"))
+  # The wide annotated df carries per-row identity (.variable) and one baked
+  # cell column per region level; variable headers are synthesized by the
+  # renderer from .variable_label runs, never materialized as rows.
+  expect_true(all(c(".variable", ".variable_label", "North", "South")
+                  %in% names(res)))
+  expect_setequal(unique(res$.variable_label), c("revenue", "profit"))
 })
 
 test_that("gt_table: registers and binds its gt output", {

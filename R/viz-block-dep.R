@@ -17,7 +17,7 @@ viz_block_css_dep <- function() {
 settings_band_dep <- function() {
   htmltools::htmlDependency(
     name = "blockr-viz-settings-band",
-    version = paste0(utils::packageVersion("blockr.viz"), ".1"),
+    version = paste0(utils::packageVersion("blockr.viz"), ".2"),
     src = system.file(package = "blockr.viz"),
     script = "js/settings-band.js",
     stylesheet = "css/settings-band.css"
@@ -40,7 +40,7 @@ settings_band_dep <- function() {
 drilldown_shared_dep <- function() {
   htmltools::htmlDependency(
     name = "blockr-viz-drilldown-shared",
-    version = paste0(utils::packageVersion("blockr.viz"), ".7"),
+    version = paste0(utils::packageVersion("blockr.viz"), ".9"),
     src = system.file("js", package = "blockr.viz"),
     script = c("drilldown-agg.js", "drilldown-config.js")
   )

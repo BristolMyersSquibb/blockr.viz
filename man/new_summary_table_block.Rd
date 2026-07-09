@@ -58,9 +58,11 @@ categoricals, one row per flag for logicals).
 }
 \details{
 Output is the wide annotated data frame \code{\link[=summary_table]{summary_table()}} produces
-(dotted structure columns \verb{.section_1, ..., .section_k, .label, .indent, .strong} plus one formatted column per by-group level),
-consumable by \code{\link[=new_gt_table_block]{new_gt_table_block()}} or any renderer that
-understands the annotated-data-frame convention.
+(dotted identity columns \verb{.group<k>} / \verb{.group<k>_level}, \code{.variable} /
+\code{.variable_level} / \code{.variable_label}, \code{.label}, \code{.indent}, plus one
+formatted column per by-group level), consumable by
+\code{\link[=new_gt_table_block]{new_gt_table_block()}} or any renderer that understands the
+annotated-data-frame convention.
 
 The UI has two main fields (Summarize, Split by) and a gear popover
 with advanced options (stat picker pills, overall column, nest

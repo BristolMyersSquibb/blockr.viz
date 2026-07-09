@@ -68,10 +68,13 @@ test_that("summary_table() returns the wide annotated df with baked cells", {
   wide <- summary_table(mtcars, vars = "mpg", by = "cyl", stats = "mean_sd")
   # No long-form plumbing columns survive the widen.
   expect_false(any(c(".fmt", ".group", "n", "pct") %in% names(wide)))
-  # Row-side structure columns do, plus one formatted column per group level.
+  # Row-side structure / identity columns do, plus one formatted column per
+  # group level.
   expect_true(".label" %in% names(wide))
   expect_setequal(
-    setdiff(names(wide), c(".label", ".indent", ".strong")),
+    setdiff(names(wide),
+            c(".variable", ".variable_level", ".variable_label",
+              ".label", ".indent", ".strong")),
     as.character(sort(unique(mtcars$cyl)))
   )
   # Cells are baked strings at the catalog precision, not raw numbers.

@@ -65,9 +65,9 @@ functional dependency in \code{data} are rendered as a row-side
 drill-down. v1 supports 2-level hierarchies only.}
 }
 \value{
-A wide annotated data frame: dotted structure columns plus one
-formatted character column per by-group level, each carrying a \code{label}
-attribute holding its \code{"<group>\\nN = <n>"} header. Consumed by
+A wide annotated data frame: dotted identity / structure columns
+plus one formatted character column per by-group level, each carrying a
+\code{label} attribute holding its \code{"<group>\\nN = <n>"} header. Consumed by
 \code{\link[=new_table_block]{new_table_block()}} / \code{\link[=html_table]{html_table()}} and any renderer that understands the
 annotated-data-frame convention.
 }
@@ -75,11 +75,16 @@ annotated-data-frame convention.
 Aggregate a flat data.frame into the \strong{wide annotated data frame} the
 blockr table renderers consume directly: one formatted column per by-group
 level (each cell baked from its statistic at produce time, so the renderer
-does no arithmetic), dotted structure columns (\verb{.section_*}, \code{.label},
-\code{.indent}, \code{.strong}) for the row-side hierarchy, \code{Top||Leaf} spanner column
+does no arithmetic), dotted identity / structure columns for the row-side
+hierarchy (the ARD-named \verb{.group<k>} / \verb{.group<k>_level} pairs for
+\code{sections}, \code{.variable} / \code{.variable_level} / \code{.variable_label} for the
+leaf rows -- section and variable headers are synthesized by the renderer
+from value runs, never materialized as rows), \code{Top||Leaf} spanner column
 names for length-2 \code{by}, and per-group \code{"<group>\\nN = <n>"} column labels.
 This is the same annotated-df contract that \code{composer} emits via
-\code{\link[=as_annotated_df]{as_annotated_df()}}, so the table block treats both identically.
+\code{\link[=as_annotated_df]{as_annotated_df()}}, so the table block treats both identically. The
+identity pairs are what a drill-down filters on; a level row asserts
+"the source rows where \code{.variable == .variable_level}".
 }
 \details{
 Numeric variables emit one row per selected \code{stats} key

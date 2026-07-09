@@ -6,10 +6,11 @@
 #' categoricals, one row per flag for logicals).
 #'
 #' Output is the wide annotated data frame [summary_table()] produces
-#' (dotted structure columns `.section_1, ..., .section_k, .label,
-#' .indent, .strong` plus one formatted column per by-group level),
-#' consumable by [new_gt_table_block()] or any renderer that
-#' understands the annotated-data-frame convention.
+#' (dotted identity columns `.group<k>` / `.group<k>_level`, `.variable` /
+#' `.variable_level` / `.variable_label`, `.label`, `.indent`, plus one
+#' formatted column per by-group level), consumable by
+#' [new_gt_table_block()] or any renderer that understands the
+#' annotated-data-frame convention.
 #'
 #' @param vars Character, variables to summarise (each becomes a row-section).
 #' @param sections Character, outer section columns that contain `vars` (0..N).
@@ -278,7 +279,7 @@ summary_table_block_dep <- function() {
     settings_band_dep(),
     htmltools::htmlDependency(
       name = "summary-table-block-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".1"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".3"),
       src = system.file("js", package = "blockr.viz"),
       script = "summary-table-block.js"
     ),

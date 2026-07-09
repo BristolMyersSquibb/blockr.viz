@@ -112,3 +112,121 @@ test_that("a config message updates the drill state", {
     expect_null(session$returned$state$drill())
   })
 })
+
+# ---- structured (annotated df) drill ---------------------------------------
+# The structured click emits the grouped `filters` payload over the identity
+# columns plus a `spread` instruction; the expr must filter the annotated df
+# AND name the selection as a real column (the dm-bridge contract).
+
+structured_fixture <- function() {
+  adae <- data.frame(
+    AETOXGR = c(1, 1, 2, 3, 1, 2),
+    AEDECOD = c("ABDOMINAL PAIN", "AGITATION", "ABDOMINAL PAIN",
+                "ANXIETY", "AGITATION", "ANXIETY"),
+    ARM     = c("Placebo", "Placebo", "Drug", "Drug", "Placebo", "Drug"),
+    stringsAsFactors = FALSE
+  )
+  summary_table(adae, vars = c("AETOXGR", "AEDECOD"), by = "ARM")
+}
+
+test_that("a structured level-row click filters the annotated df and spreads the column", {
+  wide <- structured_fixture()
+  blk <- new_table_block(drill = "auto")
+
+  testServer(blk$expr_server, args = list(data = reactive(wide)), {
+    # The payload table.js emits from the clicked row's data-dd-keys/-spread.
+    session$setInputs(
+      drilldown_table_block_action = list(
+        action = "filter",
+        filter_type = "categorical",
+        filters = list(
+          list(column = ".variable",       value = "AEDECOD"),
+          list(column = ".variable_level", value = "ABDOMINAL PAIN")
+        ),
+        spread = list(column = "AEDECOD", from = ".variable_level")
+      )
+    )
+
+    expect_equal(session$returned$state$filter_spread_col(), "AEDECOD")
+    expect_equal(session$returned$state$filter_spread_from(), ".variable_level")
+
+    out <- eval_block_expr(session$returned$expr(), wide)
+    expect_equal(nrow(out), 1L)
+    expect_equal(out$.label, "ABDOMINAL PAIN")
+    # The dm-bridge contract: the selection appears under its real name.
+    expect_true("AEDECOD" %in% names(out))
+    expect_equal(out$AEDECOD, "ABDOMINAL PAIN")
+  })
+})
+
+test_that("a stat-row click filters without spreading (no source-value claim)", {
+  wide <- structured_fixture()
+  blk <- new_table_block(drill = "auto")
+
+  testServer(blk$expr_server, args = list(data = reactive(wide)), {
+    session$setInputs(
+      drilldown_table_block_action = list(
+        action = "filter",
+        filter_type = "categorical",
+        filters = list(
+          list(column = ".variable", value = "AETOXGR"),
+          list(column = ".label",    value = "Mean (SD)")
+        ),
+        spread = NULL
+      )
+    )
+
+    expect_null(session$returned$state$filter_spread_col())
+    out <- eval_block_expr(session$returned$expr(), wide)
+    expect_equal(nrow(out), 1L)
+    expect_equal(out$.label, "Mean (SD)")
+    expect_false("AETOXGR" %in% names(out))
+  })
+})
+
+test_that("clearing a structured drill resets the spread with the keys", {
+  wide <- structured_fixture()
+  blk <- new_table_block(drill = "auto")
+
+  testServer(blk$expr_server, args = list(data = reactive(wide)), {
+    session$setInputs(
+      drilldown_table_block_action = list(
+        action = "filter",
+        filter_type = "categorical",
+        filters = list(
+          list(column = ".variable",       value = "AEDECOD"),
+          list(column = ".variable_level", value = "ANXIETY")
+        ),
+        spread = list(column = "AEDECOD", from = ".variable_level")
+      )
+    )
+    session$setInputs(
+      drilldown_table_block_action = list(
+        action = "filter",
+        column = NULL, values = NULL, filter_type = "categorical"
+      )
+    )
+    expect_null(session$returned$state$filter_spread_col())
+    expect_null(session$returned$state$filter_group_cols())
+    out <- eval_block_expr(session$returned$expr(), wide)
+    expect_equal(nrow(out), nrow(wide))
+    expect_false("AEDECOD" %in% names(out))
+  })
+})
+
+test_that("structured drill state restores through the constructor", {
+  wide <- structured_fixture()
+  blk <- new_table_block(
+    drill = "auto",
+    filter_group_cols  = c(".variable", ".variable_level"),
+    filter_group_vals  = c("AEDECOD", "ABDOMINAL PAIN"),
+    filter_spread_col  = "AEDECOD",
+    filter_spread_from = ".variable_level"
+  )
+
+  testServer(blk$expr_server, args = list(data = reactive(wide)), {
+    out <- eval_block_expr(session$returned$expr(), wide)
+    expect_equal(nrow(out), 1L)
+    expect_equal(out$AEDECOD, "ABDOMINAL PAIN")
+  })
+})

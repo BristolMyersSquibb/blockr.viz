@@ -42,10 +42,10 @@ write_annotated_xlsx <- function(x, file, title = NULL, sheet = "Table") {
 
   stub_col   <- if (".label" %in% names(df)) ".label" else names(df)[1]
   # ALL dot-prefixed columns are structure, not data (the annotated-df
-  # contract): .indent/.strong/.emph style rows, .section_* nest them (rendered
-  # as bold section-header rows below, mirroring build_html_tbody()), and any
-  # other dotted plumbing column (.var, .fmt, ...) must never leak into the
-  # export as a ".section_1"-headed value column.
+  # contract): .indent/.strong/.emph style rows, the .group<k>*/.variable*
+  # identity pairs nest them (rendered as bold section-header rows below,
+  # mirroring build_html_tbody()), and any other dotted plumbing column must
+  # never leak into the export as a dotted-headed value column.
   data_cols  <- setdiff(names(df), stub_col)
   data_cols  <- data_cols[!startsWith(data_cols, ".")]
   n_data     <- length(data_cols)
@@ -130,9 +130,9 @@ write_annotated_xlsx <- function(x, file, title = NULL, sheet = "Table") {
   # data row, the outermost changed level and every level below it emit a
   # header. Header text carries the section column's label prefix when one is
   # set; nesting shows as cell indent (level - 1).
-  section_cols <- nonempty_section_cols(
-    df, grep("^\\.section_\\d+$", names(df), value = TRUE)
-  )
+  view <- annotated_structure_view(df)
+  df <- view$data
+  section_cols <- view$section_cols
   k <- length(section_cols)
   diff_from <- rep(NA_integer_, n_row)
   path_mat <- matrix(character(), nrow = n_row, ncol = 0L)

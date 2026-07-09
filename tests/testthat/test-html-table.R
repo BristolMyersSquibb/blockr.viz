@@ -71,14 +71,14 @@ test_that("structured dt_chrome scopes the delta; flat dt_chrome omits it", {
   expect_false(grepl("td.blockr-data", flat, fixed = TRUE))
 })
 
-test_that("html_table() emits section header rows for .section_1 boundaries", {
+test_that("html_table() emits section header rows for .group1_level boundaries", {
   df <- tibble::tibble(
-    .section_1 = c("GI Disorders", "GI Disorders", "Nervous System", "Nervous System"),
+    .group1_level = c("GI Disorders", "GI Disorders", "Nervous System", "Nervous System"),
     .label     = c("Nausea", "Vomiting", "Headache", "Dizziness"),
     KarXT      = c("12 (12%)", "9 (9%)", "18 (18%)", "10 (10%)"),
     Placebo    = c("8 (8%)", "5 (5%)", "15 (15%)", "7 (7%)")
   )
-  attr(df$.section_1, "label") <- "Body System or Organ Class"
+  attr(df$.group1_level, "label") <- "Body System or Organ Class"
 
   html <- as.character(htmltools::tagList(html_table(df)))
 
@@ -89,19 +89,19 @@ test_that("html_table() emits section header rows for .section_1 boundaries", {
   expect_true(grepl("GI Disorders", html, fixed = TRUE))
   expect_true(grepl("Nervous System", html, fixed = TRUE))
   expect_true(grepl("Body System or Organ Class", html, fixed = TRUE))
-  # .section_1 values must not leak into data cells
+  # .group1_level values must not leak into data cells
   expect_false(grepl("<td class=\"blockr-data\">GI Disorders", html, fixed = TRUE))
 })
 
 test_that("html_table() nests sections for multiple .section_* columns", {
   df <- tibble::tibble(
-    .section_1 = c("Cardiac", "Cardiac", "Nervous", "Nervous"),
-    .section_2 = c("Arrhythmia", "Arrhythmia", "Headache", "Headache"),
+    .group1_level = c("Cardiac", "Cardiac", "Nervous", "Nervous"),
+    .group2_level = c("Arrhythmia", "Arrhythmia", "Headache", "Headache"),
     .label     = c("Mild", "Severe", "Mild", "Severe"),
     Total      = c("4 (4%)", "2 (2%)", "5 (5%)", "1 (1%)")
   )
-  attr(df$.section_1, "label") <- "System"
-  attr(df$.section_2, "label") <- "Subclass"
+  attr(df$.group1_level, "label") <- "System"
+  attr(df$.group2_level, "label") <- "Subclass"
 
   html <- as.character(htmltools::tagList(html_table(df)))
 
@@ -169,7 +169,7 @@ test_that("html_table() renders leaf-level attr(col, 'label') as HTML", {
 
 test_that("html_table() hides internal dotted columns from data cells", {
   df <- tibble::tibble(
-    .section_1 = c("A", "A"),
+    .group1_level = c("A", "A"),
     .label     = c("n", "Mean"),
     .indent    = c(1L, 1L),
     .strong    = c(FALSE, FALSE),
@@ -184,28 +184,28 @@ test_that("html_table() hides internal dotted columns from data cells", {
 
 test_that("html_table() renders NA section values as '(missing)'", {
   df <- tibble::tibble(
-    .section_1 = c(NA, "Known"),
+    .group1_level = c(NA, "Known"),
     .label     = c("Row 1", "Row 2"),
     Value      = c("1", "2")
   )
-  attr(df$.section_1, "label") <- "System"
+  attr(df$.group1_level, "label") <- "System"
 
   html <- as.character(htmltools::tagList(html_table(df)))
   expect_true(grepl("(missing)", html, fixed = TRUE))
 })
 
 test_that("html_table() ignores an entirely-empty section column", {
-  # A .section_1 that is all NA is not a grouping dimension: draw no section
+  # A .group1_level that is all NA is not a grouping dimension: draw no section
   # header at all (no "(missing)" bar), and do NOT leak it in as a data column.
   df <- tibble::tibble(
-    .section_1 = c(NA, NA, NA),
+    .group1_level = c(NA, NA, NA),
     .label     = c("Row 1", "Row 2", "Row 3"),
     Value      = c("1", "2", "3")
   )
 
   html <- as.character(htmltools::tagList(html_table(df)))
   expect_false(grepl("(missing)", html, fixed = TRUE))
-  expect_false(grepl(".section_1", html, fixed = TRUE))
+  expect_false(grepl(".group1_level", html, fixed = TRUE))
   # The stub + the single data column render; the empty section column does not.
   expect_true(grepl("Row 1", html, fixed = TRUE))
 })

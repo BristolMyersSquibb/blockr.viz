@@ -1,13 +1,19 @@
 #' Coerce a table object into an annotated data frame
 #'
 #' The blockr **annotated data frame** is a plain data frame whose reserved
-#' `.`-columns describe a display table's structure: `.label` (row stub),
-#' `.indent` (hierarchy depth), `.section_*` (grouping), `.strong` / `.emph`
-#' (emphasis), `.fmt` (optional per-row format template); two-level column
+#' `.`-columns describe a display table's structure and identity: `.label`
+#' (row stub), the ARD-named identity pairs `.group<k>` / `.group<k>_level`
+#' (row-grouping variable name / value) and `.variable` / `.variable_level`
+#' (leaf source variable / value; `NA` level marks a stat row), their
+#' optional `_label` display companions, `.indent` (extra display depth,
+#' fallback dialect), `.strong` / `.emph` (emphasis); two-level column
 #' spanners are encoded in the column name as `Top||Leaf`, and the column /
-#' table labels carry the headers / title. It is what the blockr.viz table
-#' renderer ([new_table_block()] / [html_table()]) consumes and what
-#' [summary_table()] produces.
+#' table labels carry the headers / title. Section headers are synthesized by
+#' the renderer from grouping-value runs -- they are never rows of the frame.
+#' It is what the blockr.viz table renderer ([new_table_block()] /
+#' [html_table()]) consumes and what [summary_table()] produces. The full
+#' contract lives in the blockr.design spec
+#' (`open/annotated-data-frame/format.md`).
 #'
 #' `as_annotated_df()` is the broom-style hub: it coerces a table-producing
 #' object (composer, gtsummary, gt, rtables, ...) into that data frame. Producer
@@ -86,17 +92,58 @@ validate_annotated_df_input <- function(data) {
 }
 
 # The reserved annotation columns of the convention (see as_annotated_df()
-# roxygen and fmt-cells.R): row stub / hierarchy / grouping / emphasis / the
-# `.fmt` template and its `.digits` precision sibling. Other dot-prefixed
-# names (`.count`, user columns) are NOT reserved and pass through.
+# roxygen and the spec, _blockr.design/open/annotated-data-frame/format.md):
+# row stub / hierarchy / identity / emphasis / the `.fmt` template and its
+# `.digits` precision sibling. Row-grouping axes are the ARD-named pairs
+# `.group<k>` / `.group<k>_level` (+ optional `.group<k>_label`), matched by
+# ANNOTATION_GROUP_RE. Other dot-prefixed names (`.count`, user columns) are
+# NOT reserved and pass through.
 ANNOTATION_COLS <- c(".label", ".indent", ".strong", ".emph", ".fmt",
-                     ".digits")
+                     ".digits",
+                     ".variable", ".variable_level", ".variable_label")
+ANNOTATION_GROUP_RE <- "^\\.group\\d+(_level|_label)?$"
+
+# All reserved annotation column names present in `data` (fixed names plus
+# the numbered group pairs). What renderers exclude from the data cells and
+# as_plain_df() strips.
+annotation_cols_in <- function(data) {
+  names(data)[names(data) %in% ANNOTATION_COLS |
+                grepl(ANNOTATION_GROUP_RE, names(data))]
+}
+
+# The `.group<k>_level` columns in `data`, ordered by level number. These are
+# the row-side grouping value columns the renderer synthesizes section
+# headers from (outermost first).
+annotation_group_level_cols <- function(data) {
+  cols <- grep("^\\.group(\\d+)_level$", names(data), value = TRUE)
+  cols[order(as.integer(sub("^\\.group(\\d+)_level$", "\\1", cols)))]
+}
+
+# Reject the summary_table-internal long dialect at the renderer boundary.
+# Pre-v2, renderers silently pivoted long input via fmt_to_wide(); that made
+# two shapes of the same table valid inter-block currency, which was
+# confusing. The long form (`.fmt` template + unspread `.group` dimension) is
+# now internal to summary_table() -- anything else holding those columns gets
+# an actionable error instead of a silent spread.
+reject_long_form <- function(data) {
+  if (is.data.frame(data) &&
+      all(c(".fmt", ".group") %in% names(data))) {
+    stop(
+      "This looks like summary_table()'s internal long form (it carries ",
+      "`.fmt` and `.group` columns). The annotated-df contract is the wide ",
+      "display grid -- pass the output of summary_table() (or another ",
+      "as_annotated_df() producer) instead.",
+      call. = FALSE
+    )
+  }
+  invisible(data)
+}
 
 #' Coerce a table object into a plain data frame
 #'
 #' [as_annotated_df()] followed by dropping the reserved `.`-annotation
 #' columns (`.label`, `.indent`, `.strong`, `.emph`, `.fmt`, `.digits`,
-#' `.section_*`). This is what the chart / tile blocks consume when a
+#' `.variable*`, `.group<k>*`). This is what the chart / tile blocks consume when a
 #' table-producing object (a composer table, a gtsummary table, ...) is
 #' connected: a chart of a structured display table charts its **data
 #' columns**; the row-structure rendering belongs to the table renderers.
@@ -110,8 +157,7 @@ ANNOTATION_COLS <- c(".label", ".indent", ".strong", ".emph", ".fmt",
 #' @export
 as_plain_df <- function(x, ...) {
   x <- as_annotated_df(x, ...)
-  drop <- names(x) %in% ANNOTATION_COLS |
-    grepl("^\\.section_\\d+$", names(x))
+  drop <- names(x) %in% annotation_cols_in(x)
   x[, !drop, drop = FALSE]
 }
 

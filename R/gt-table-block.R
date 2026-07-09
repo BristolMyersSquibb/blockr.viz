@@ -85,16 +85,20 @@ gt_table <- function(data, title = NULL, subtitle = NULL,
 gt_table_wide <- function(data, title = NULL, subtitle = NULL,
                           full_width = TRUE, borders = TRUE,
                           na_rep = "\u2014") {
-  # Section columns are any dotted `.section_N` columns.
-  section_cols <- grep("^\\.section_\\d+$", names(data), value = TRUE)
+  # Row-side structure: grouping-value axes + variable blocks (the v2
+  # annotated-df contract, shared resolution with html_table()).
+  view <- annotated_structure_view(data)
+  data <- view$data
+  section_cols <- view$section_cols
   stub_col <- if (".label" %in% names(data)) ".label" else NULL
 
   # Row-level styling columns (hidden from display, drive tab_style).
   # See blockr.design/open/table-blocks/3-design.md amendment.
   styling_cols <- intersect(c(".indent", ".strong", ".emph"), names(data))
 
-  # Data columns = everything that isn't section, stub, or styling
-  data_cols <- setdiff(names(data), c(section_cols, stub_col, styling_cols))
+  # Data columns = everything that isn't reserved structure, stub, or styling
+  data_cols <- setdiff(names(data),
+                       c(view$reserved_cols, stub_col, styling_cols))
 
   # gt::gt() with groupname_col handles section rendering natively.
   # Column labels flow from `attr(col, "label")` -- gt reads them
@@ -109,10 +113,14 @@ gt_table_wide <- function(data, title = NULL, subtitle = NULL,
     gt::gt(data)
   }
 
-  # Hide the row-styling columns from display -- they drive tab_style
-  # below but are not rendered as their own columns.
-  if (length(styling_cols) > 0L) {
-    tbl <- gt::cols_hide(tbl, columns = dplyr::all_of(styling_cols))
+  # Hide the row-styling and identity columns from display -- they drive
+  # tab_style / drilling but are not rendered as their own columns (the
+  # section axes are consumed by groupname_col above).
+  hide_cols <- setdiff(unique(c(styling_cols, view$reserved_cols)),
+                       c(section_cols, stub_col))
+  hide_cols <- intersect(hide_cols, names(data))
+  if (length(hide_cols) > 0L) {
+    tbl <- gt::cols_hide(tbl, columns = dplyr::all_of(hide_cols))
   }
 
   tbl <- gt::sub_missing(tbl, missing_text = na_rep %||% "")

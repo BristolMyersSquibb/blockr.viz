@@ -42,12 +42,17 @@ this renderer is tuned for interactive dashboards.
 }
 \details{
 The input contract is the same dotted-column wide tibble that
-\code{\link[=summary_table]{summary_table()}} produces:
+\code{\link[=summary_table]{summary_table()}} produces (annotated-df v2):
 \itemize{
-\item \verb{.section_1, ..., .section_k} -- nested row-side section columns,
-outermost first. \code{attr(col, "label")} carries the display label.
-\item \code{.strong} -- logical, bold header rows (variable labels when
-\code{length(vars) > 1}).
+\item \verb{.group1/.group1_level, ..., .group<k>/.group<k>_level} -- nested
+row-side grouping pairs (variable name / value), outermost first.
+Section headers are synthesized from value runs;
+\verb{attr(.group<k>_level, "label")} carries the display prefix.
+\item \code{.variable} / \code{.variable_level} / \code{.variable_label} -- leaf source
+identity; runs of \code{.variable_label} render as the innermost
+(variable) header blocks.
+\item \code{.strong} / \code{.indent} -- fallback positional dialect for coerced
+free-form tables (bold header rows + indented children).
 \item \code{.label} -- innermost per-row identifier (stat name / factor
 level). Rendered as the leftmost row-stub column.
 \item Data columns -- names use \code{|} as nesting delimiter for multi-level

@@ -22,13 +22,19 @@ An annotated data frame.
 }
 \description{
 The blockr \strong{annotated data frame} is a plain data frame whose reserved
-\code{.}-columns describe a display table's structure: \code{.label} (row stub),
-\code{.indent} (hierarchy depth), \verb{.section_*} (grouping), \code{.strong} / \code{.emph}
-(emphasis), \code{.fmt} (optional per-row format template); two-level column
+\code{.}-columns describe a display table's structure and identity: \code{.label}
+(row stub), the ARD-named identity pairs \verb{.group<k>} / \verb{.group<k>_level}
+(row-grouping variable name / value) and \code{.variable} / \code{.variable_level}
+(leaf source variable / value; \code{NA} level marks a stat row), their
+optional \verb{_label} display companions, \code{.indent} (extra display depth,
+fallback dialect), \code{.strong} / \code{.emph} (emphasis); two-level column
 spanners are encoded in the column name as \code{Top||Leaf}, and the column /
-table labels carry the headers / title. It is what the blockr.viz table
-renderer (\code{\link[=new_table_block]{new_table_block()}} / \code{\link[=html_table]{html_table()}}) consumes and what
-\code{\link[=summary_table]{summary_table()}} produces.
+table labels carry the headers / title. Section headers are synthesized by
+the renderer from grouping-value runs -- they are never rows of the frame.
+It is what the blockr.viz table renderer (\code{\link[=new_table_block]{new_table_block()}} /
+\code{\link[=html_table]{html_table()}}) consumes and what \code{\link[=summary_table]{summary_table()}} produces. The full
+contract lives in the blockr.design spec
+(\code{open/annotated-data-frame/format.md}).
 }
 \details{
 \code{as_annotated_df()} is the broom-style hub: it coerces a table-producing
