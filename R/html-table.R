@@ -468,6 +468,7 @@ dd_row_drill_attrs <- function(data, section_cols) {
   v_var <- chr(".variable")
   v_lvl <- chr(".variable_level")
   v_lab <- chr(".label")
+  v_vlb <- chr(".variable_label")
 
   keys <- character(n)
   spread <- character(n)
@@ -477,6 +478,13 @@ dd_row_drill_attrs <- function(data, section_cols) {
       val <- as.character(data[[sc]][i])
       if (!is.na(val)) pairs[[length(pairs) + 1L]] <-
           list(column = sc, value = val)
+    }
+    # The block label disambiguates rows whose `.variable` is unknown (a
+    # coerced table's stat rows: two blocks both have a "Median") and is a
+    # harmless extra AND term when `.variable` is present.
+    if (!is.na(v_vlb[i])) {
+      pairs[[length(pairs) + 1L]] <-
+        list(column = ".variable_label", value = v_vlb[i])
     }
     if (has_var && !is.na(v_var[i])) {
       pairs[[length(pairs) + 1L]] <- list(column = ".variable", value = v_var[i])

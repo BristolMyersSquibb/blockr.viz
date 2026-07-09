@@ -1547,6 +1547,14 @@ new_table_block <- function(rowname = NULL,
             gc <- gc[keep]
             gv <- gv[keep]
           }
+          if (grouped_on) {
+            # Remaining dotted identity keys (section-header / stat-row
+            # clicks) read as plain words, never internals.
+            gc[gc == ".variable_label"] <- "Section"
+            gc[gc == ".variable"]       <- "Variable"
+            gc[gc == ".variable_level"] <- "Value"
+            gc[gc == ".label"]          <- "Row"
+          }
           text <- if (grouped_on) {
             paste0("Filtered: ", paste0(gc, " = ", gv, collapse = " & "))
           } else if (single_on) {
