@@ -992,13 +992,27 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
     # it only for structured tables -- a flat data table should match the canonical
     # html preview (normal-weight cells, plain stub), not carry the Table-1 styling.
     if (isTRUE(structured) || unknown) {
-      # Scope the Table-1 typography to `.drilldown-table-structured` (this
-      # container carries it). A `<style>` is page-global, and a flat table
-      # block shares `.blockr-html-table-container`, so an unscoped delta would
-      # leak the medium-weight cells onto a sibling flat table.
-      htmltools::tags$style(htmltools::HTML(
+      # The Table-1 typography must land the instant the structured <table> is in
+      # the DOM, NOT after table.js promotes `.drilldown-table-structured` onto
+      # the container -- otherwise a structured table paints flat for one frame
+      # and then restyles (a visible flash on every re-render, e.g. a tab
+      # switch). Two scopes, both self-gating so a sibling flat table never
+      # picks up the delta:
+      #   1. `:has(... [data-dt-structured])` -- applies as soon as the marked
+      #      <table> exists inside the container, with no JS in the loop. The
+      #      structured <table> carries `data-dt-structured="1"` from the
+      #      server, so this is flash-free on first paint and every re-render.
+      #   2. `.drilldown-table-structured` -- the class table.js promotes; a
+      #      fallback for browsers without :has() (styles after promotion).
+      htmltools::tags$style(htmltools::HTML(paste0(
+        html_table_delta_css(
+          scope = paste0(
+            ".blockr-html-table-container",
+            ":has(.blockr-table[data-dt-structured=\"1\"])"
+          )
+        ),
         html_table_delta_css(scope = ".drilldown-table-structured")
-      ))
+      )))
     },
     drilldown_table_dep(),
     htmltools::tags$div(
@@ -1092,7 +1106,7 @@ dt_color_fun <- function(type, domain, palette) {
 }
 
 #' @noRd
-drilldown_table_dep <- function() {
+drilldown_table_dep <- function() dep_cached("drilldown_table_dep", function() {
   htmltools::tagList(
     # Shared blockr.dplyr CSS/JS (gear, popover, rows, Blockr.Select, icons) --
     # same dep names as the chart so they de-dupe on a page with both blocks.
@@ -1130,7 +1144,7 @@ drilldown_table_dep <- function() {
       stylesheet = "css/table.css"
     )
   )
-}
+})
 
 # --- block -------------------------------------------------------------
 

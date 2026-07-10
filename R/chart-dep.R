@@ -1,6 +1,6 @@
 #' HTML dependencies for the chart block
 #' @noRd
-drilldown_chart_dep <- function() {
+drilldown_chart_dep <- function() dep_cached("drilldown_chart_dep", function() {
   htmltools::tagList(
     # Reuse blockr.dplyr's shared CSS (gear, popover, rows) and select component
     htmltools::htmlDependency(
@@ -34,12 +34,12 @@ drilldown_chart_dep <- function() {
       stylesheet = "chart.css"
     )
   )
-}
+})
 
 # Bundled echarts theme files (dark, vintage, westeros, ...) live inside the
 # echarts4r package. The block calls `echarts.init(el, name)` directly, so
 # each theme's JS must be loaded in the page for the name to resolve.
-drilldown_echarts_themes_dep <- function() {
+drilldown_echarts_themes_dep <- function() dep_cached("drilldown_echarts_themes_dep", function() {
   theme_dir <- system.file(
     "htmlwidgets/lib/echarts-6.0.0/themes", package = "echarts4r"
   )
@@ -59,4 +59,4 @@ drilldown_echarts_themes_dep <- function() {
     src = theme_dir,
     script = scripts
   )
-}
+})

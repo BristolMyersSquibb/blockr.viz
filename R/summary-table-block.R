@@ -274,7 +274,7 @@ new_summary_table_block <- function(
   )
 }
 
-summary_table_block_dep <- function() {
+summary_table_block_dep <- function() dep_cached("summary_table_block_dep", function() {
   htmltools::tagList(
     settings_band_dep(),
     htmltools::htmlDependency(
@@ -290,4 +290,4 @@ summary_table_block_dep <- function() {
       stylesheet = "summary-table-block.css"
     )
   )
-}
+})
