@@ -11,19 +11,35 @@
 # output carries the selection as a real column (AEDECOD for a term click,
 # AESEV for a severity click), so EVERY section drills against ONE bridge.
 #
-# Run from the workspace root: Rscript blockr.viz/dev/verify-structured-drill.R
-# Serves on port 3838 (the only forwarded port).
+# Run from the workspace root or from the package dir:
+#   Rscript blockr.viz/dev/verify-structured-drill.R
+#
+# Serves on 3838 (the only forwarded port) unless overridden -- a positional
+# arg wins, then BLOCKR_PORT.  Long-lived demo servers from earlier sessions
+# routinely squat on 3838, hence the override:
+#   Rscript blockr.viz/dev/verify-structured-drill.R 3900
+#   BLOCKR_PORT=3900 Rscript blockr.viz/dev/verify-structured-drill.R
 
-options(shiny.port = 3838L, shiny.host = "0.0.0.0")
+port <- local({
+  arg <- commandArgs(trailingOnly = TRUE)[1L]
+  env <- Sys.getenv("BLOCKR_PORT", unset = "")
+  raw <- if (!is.na(arg)) arg else if (nzchar(env)) env else "3838"
+  p <- suppressWarnings(as.integer(raw))
+  if (is.na(p)) stop("Not a port: ", raw, call. = FALSE)
+  p
+})
+
+options(shiny.port = port, shiny.host = "0.0.0.0")
 options(blockr.dock_is_locked = FALSE)
 
-pkgload::load_all("blockr.core")
-pkgload::load_all("blockr.ui")
-pkgload::load_all("blockr.dock")
-pkgload::load_all("blockr.dag")
-pkgload::load_all("blockr.theme")
-pkgload::load_all("blockr.dm")
-pkgload::load_all("blockr.viz")
+# load_all() ALL of them, never a mix: packages resolve each other's
+# htmlDependency assets via system.file(), which pkgload only shims inside
+# namespaces it loaded itself.
+root <- if (file.exists("blockr.viz/DESCRIPTION")) "." else ".."
+for (p in c("blockr.core", "blockr.ui", "blockr.dock", "blockr.dag",
+            "blockr.theme", "blockr.dm", "blockr.viz")) {
+  pkgload::load_all(file.path(root, p), quiet = TRUE)
+}
 
 stopifnot(requireNamespace("safetyData", quietly = TRUE))
 
@@ -53,6 +69,17 @@ board <- new_dock_board(
     new_link(from = "bridge", to = "pts",  input = "data")
   ),
   extensions = list(blockr.dag::new_dag_extension())
+)
+
+# Shiny announces the *bind* address ("Listening on http://0.0.0.0:PORT"), which
+# is not a URL you can click.  We bind 0.0.0.0 on purpose -- it is what lets the
+# devcontainer forward the port -- so print the reachable address ourselves.
+#
+# Deferred onto the event loop, which serve() starts only after httpuv has bound
+# the port: that keeps this line *below* Shiny's own, and stops it promising a
+# URL that would still refuse the connection for another few seconds.
+later::later(
+  function() message("\n  blockr dock ready:  http://127.0.0.1:", port, "/\n")
 )
 
 serve(board)
