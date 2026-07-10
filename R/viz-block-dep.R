@@ -40,7 +40,7 @@ settings_band_dep <- function() {
 drilldown_shared_dep <- function() {
   htmltools::htmlDependency(
     name = "blockr-viz-drilldown-shared",
-    version = paste0(utils::packageVersion("blockr.viz"), ".9"),
+    version = paste0(utils::packageVersion("blockr.viz"), ".10"),
     src = system.file("js", package = "blockr.viz"),
     script = c("drilldown-agg.js", "drilldown-config.js")
   )
