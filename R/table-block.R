@@ -365,6 +365,12 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
     thead, tbody,
     structured_colgroup(data, data_cols, stub_col)
   )
+  # The chrome may have been rendered before the data existed, in which case it
+  # carries no `drilldown-table-structured` class. This marker lets table.js
+  # promote it onto the container at wire time.
+  table_tag <- htmltools::tagAppendAttributes(
+    table_tag, `data-dt-structured` = "1"
+  )
   if (drill_on) {
     table_tag <- htmltools::tagAppendAttributes(
       table_tag, `data-dt-structured-drill` = "1"
@@ -934,13 +940,20 @@ dt_has_openxlsx <- function() {
 #' container, with `inner` (a `<table>` tag or a `uiOutput()` slot) dropped into
 #' the scroll wrapper. Rendered ONCE per block -- the gear/search/scroll never
 #' rebuild -- so only `inner` (the table) re-renders on a filter or gear edit.
-#' The `drilldown-table-structured` class + the Table-1 delta CSS are gated on
-#' `structured` here (the one place that knows it), so the flat preview stays
-#' plain.
+#'
+#' `structured` may be `NULL`, meaning "not known yet": the chrome is then built
+#' without the data (the block server renders it before its pipeline has
+#' evaluated, so the control section paints immediately). The delta CSS still
+#' ships -- it is scoped to `.drilldown-table-structured`, so it is inert until
+#' the class lands -- and table.js promotes the class + `data-dt-structured` off
+#' the `<table>` once the body renders. Callers that already hold the data pass
+#' `TRUE`/`FALSE` and get the class server-side, as before.
 #' @noRd
 dt_chrome <- function(elem_id, structured, max_height, inner,
                       search = TRUE, download_slot = NULL,
                       status_slot = NULL) {
+  # NULL = undetermined; only a known-flat frame suppresses the delta CSS.
+  unknown <- is.null(structured)
   wrapper_id <- paste0(
     "blockr-dt-", sub("^file", "", basename(tempfile("")))
   )
@@ -978,7 +991,7 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
     # two-tier arm headers, the stub indent + medium stat/value weights). Inject
     # it only for structured tables -- a flat data table should match the canonical
     # html preview (normal-weight cells, plain stub), not carry the Table-1 styling.
-    if (isTRUE(structured)) {
+    if (isTRUE(structured) || unknown) {
       # Scope the Table-1 typography to `.drilldown-table-structured` (this
       # container carries it). A `<style>` is page-global, and a flat table
       # block shares `.blockr-html-table-container`, so an unscoped delta would
@@ -1489,28 +1502,17 @@ new_table_block <- function(rowname = NULL,
         # or config change; the gear/drill/colour/digits state travels on the
         # <table>'s data-attributes (see dt_table_attrs()). Mirrors the chart
         # block's "static container + reactive content" shape.
-        r_structured <- shiny::reactiveVal(NULL)
-        shiny::observe({
-          # An unhandled error in a plain observe() is fatal to the Shiny
-          # session (client disconnect), unlike a render error which Shiny
-          # contains. Never let a coercion or shape/format failure here take
-          # down the session -- fall back to a flat layout; the block
-          # condition surfaces the actual error as an ordinary in-block
-          # message.
-          d <- tryCatch(ann_data(), error = function(e) NULL)
-          shiny::req(is.data.frame(d))
-          upd(r_structured, tryCatch(
-            dt_is_structured(d),
-            error = function(e) FALSE
-          ))
-        })
-
+        # The chrome does NOT depend on the data. It used to wait for
+        # `dt_is_structured(ann_data())`, which meant the whole control section
+        # (search box, download, scroll container, status line) could not paint
+        # until the upstream pipeline had evaluated -- seconds, on a big board
+        # where a view switch wakes a dormant chain. `structured = NULL` builds
+        # the same chrome minus the class, and table.js promotes the class off
+        # the `<table>` when the body arrives.
         output$dt_result <- shiny::renderUI({
-          structured <- r_structured()
-          shiny::req(!is.null(structured))
           dt_chrome(
             elem_id    = ns("drilldown_table_block"),
-            structured = isTRUE(structured),
+            structured = NULL,
             max_height = shiny::isolate(r_max_height()),
             inner      = shiny::uiOutput(ns("dt_table")),
             search     = isTRUE(r_search()),
