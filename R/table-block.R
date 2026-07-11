@@ -1106,7 +1106,7 @@ dt_color_fun <- function(type, domain, palette) {
 }
 
 #' @noRd
-drilldown_table_dep <- function() dep_cached("drilldown_table_dep", function() {
+drilldown_table_dep <- memoise0(function() {
   htmltools::tagList(
     # Shared blockr.dplyr CSS/JS (gear, popover, rows, Blockr.Select, icons) --
     # same dep names as the chart so they de-dupe on a page with both blocks.

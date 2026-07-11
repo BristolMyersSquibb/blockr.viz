@@ -274,7 +274,7 @@ new_summary_table_block <- function(
   )
 }
 
-summary_table_block_dep <- function() dep_cached("summary_table_block_dep", function() {
+summary_table_block_dep <- memoise0(function() {
   htmltools::tagList(
     settings_band_dep(),
     htmltools::htmlDependency(
