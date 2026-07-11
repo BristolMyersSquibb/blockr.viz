@@ -317,7 +317,7 @@ tk_group <- function(v) {
 #' classes the config engine emits), then the shared config engine
 #' (drilldown-config.js) which must load before the tile JS.
 #' @noRd
-tile_block_dep <- function() {
+tile_block_dep <- memoise0(function() {
   htmltools::tagList(
     htmltools::htmlDependency(
       name = "blockr-blocks-css",
@@ -349,7 +349,7 @@ tile_block_dep <- function() {
       stylesheet = "css/tile-block.css"
     )
   )
-}
+})
 
 #' Build arguments metadata for the tile block (registry / LLM surface).
 #'

@@ -1,12 +1,18 @@
+# The block htmlDependency builders are memoised (memoise0, R/aaa-memoise.R):
+# each takes no data-dependent args and returns the same immutable object for
+# the life of the process, but was re-running disk I/O (packageVersion ->
+# read.dcf + system.file) on every render and construct -- ~95% of dt_chrome()
+# and of dplyr block construction. See dev/block-build-cost-findings.md.
+
 #' @noRd
-viz_block_css_dep <- function() {
+viz_block_css_dep <- memoise0(function() {
   htmltools::htmlDependency(
     name = "viz-block-css",
     version = utils::packageVersion("blockr.viz"),
     src = system.file("css", package = "blockr.viz"),
     stylesheet = "viz-block.css"
   )
-}
+})
 
 #' Settings band + checkbox (design-system pilot; see blockr.ui/dev/
 #' gear-panel-proposals.html and boolean-controls-proposals.html). The gear
@@ -14,7 +20,7 @@ viz_block_css_dep <- function() {
 #' options render as checkboxes. settings-band.js must load before
 #' drilldown-config.js / the block scripts (they use Blockr.checkbox).
 #' @noRd
-settings_band_dep <- function() {
+settings_band_dep <- memoise0(function() {
   htmltools::htmlDependency(
     name = "blockr-viz-settings-band",
     version = paste0(utils::packageVersion("blockr.viz"), ".2"),
@@ -22,7 +28,7 @@ settings_band_dep <- function() {
     script = "js/settings-band.js",
     stylesheet = "css/settings-band.css"
   )
-}
+})
 
 #' The shared drilldown JS — the aggregation vocabulary (drilldown-agg.js)
 #' and the gear-popover config engine (drilldown-config.js) consumed by the
@@ -37,18 +43,18 @@ settings_band_dep <- function() {
 #' Bump the version suffix on EVERY drilldown-agg.js / drilldown-config.js
 #' edit (version-pinned asset cache).
 #' @noRd
-drilldown_shared_dep <- function() {
+drilldown_shared_dep <- memoise0(function() {
   htmltools::htmlDependency(
     name = "blockr-viz-drilldown-shared",
     version = paste0(utils::packageVersion("blockr.viz"), ".10"),
     src = system.file("js", package = "blockr.viz"),
     script = c("drilldown-agg.js", "drilldown-config.js")
   )
-}
+})
 
 #' Ensure echarts is available via echarts4r's dependency
 #' @noRd
-viz_echarts_dep <- function() {
+viz_echarts_dep <- memoise0(function() {
   w <- echarts4r::e_charts(height = 0)
   htmltools::findDependencies(w)
-}
+})

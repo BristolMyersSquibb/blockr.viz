@@ -989,6 +989,15 @@
   function wireRoot(root) {
     var table = /** @type {HTMLElement | null} */ (root.querySelector("table.blockr-table"));
     if (!table) return;
+    // The chrome can be rendered before the data is known (the block server
+    // paints it immediately so the control section does not wait on the
+    // pipeline), so it may lack the structured class. The <table> always
+    // carries the verdict — promote it before anything reads the container.
+    if (table.getAttribute("data-dt-structured") === "1" &&
+        root.getAttribute("data-dt-structured") !== "1") {
+      root.setAttribute("data-dt-structured", "1");
+      root.classList.add("drilldown-table-structured");
+    }
     initContainer(root, table);
     wireTable(root, table);
   }
