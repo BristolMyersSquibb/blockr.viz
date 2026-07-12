@@ -70,14 +70,14 @@ params so the filter round-trips through save/restore.}
 drill filter state: the aligned key columns and values ANDed to filter
 the input to the clicked row (group keys for an aggregated table;
 identity columns \verb{.group<k>_level} / \code{.variable} / \code{.variable_level} for
-a structured one). Default \code{NULL} (no drill filter active).}
+a structured one). Default \code{NULL} (no drill filter active). The drilled
+output is a pure subset of the annotated df: the identity columns carry
+the selection, no synthetic column is added.}
 
-\item{filter_spread_col, filter_spread_from}{Structured-drill spread state:
-the clicked row's machine column name (e.g. \code{"AEDECOD"}) and the identity
-column it copies (\code{".variable_level"} or a \code{".group<k>_level"}). When
-set, the block's output gains \verb{<filter_spread_col> = <that column>} so a
-name-matching consumer (e.g. \code{blockr.dm::new_dm_filter_by_data_block})
-can cascade the click to the source data. Default \code{NULL}.}
+\item{filter_spread_col, filter_spread_from}{Defunct (the drill no longer
+spreads the selection into a synthetic column). Kept as formals so boards
+saved while the spread existed still restore; always serialized as
+\code{NULL}, ignored.}
 
 \item{sortable, collapsible, search}{Logical display toggles (each default
 \code{TRUE}): column sorting, indent-derived collapsible section headers, and

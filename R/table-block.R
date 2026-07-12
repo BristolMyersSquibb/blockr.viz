@@ -349,7 +349,7 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
   # Structured drill is opt-in via the gear's picker-less Drill-down checkbox
   # (config param `drill`, "auto" -- same convention as the grouped table /
   # tile) or the `drill=` ctor arg. When on, every data row / section header
-  # carries its identity keys + spread as data attributes (see
+  # carries its identity keys as data attributes (see
   # dd_row_drill_attrs) and the click branch in table.js emits the shared
   # grouped-filter payload from them.
   drill_on <- !is.null(drill) && nzchar(drill)
@@ -1334,13 +1334,13 @@ table_guidance <- function() {
 #'   drill filter state: the aligned key columns and values ANDed to filter
 #'   the input to the clicked row (group keys for an aggregated table;
 #'   identity columns `.group<k>_level` / `.variable` / `.variable_level` for
-#'   a structured one). Default `NULL` (no drill filter active).
-#' @param filter_spread_col,filter_spread_from Structured-drill spread state:
-#'   the clicked row's machine column name (e.g. `"AEDECOD"`) and the identity
-#'   column it copies (`".variable_level"` or a `".group<k>_level"`). When
-#'   set, the block's output gains `<filter_spread_col> = <that column>` so a
-#'   name-matching consumer (e.g. `blockr.dm::new_dm_filter_by_data_block`)
-#'   can cascade the click to the source data. Default `NULL`.
+#'   a structured one). Default `NULL` (no drill filter active). The drilled
+#'   output is a pure subset of the annotated df: the identity columns carry
+#'   the selection, no synthetic column is added.
+#' @param filter_spread_col,filter_spread_from Defunct (the drill no longer
+#'   spreads the selection into a synthetic column). Kept as formals so boards
+#'   saved while the spread existed still restore; always serialized as
+#'   `NULL`, ignored.
 #' @param sortable,collapsible,search Logical display toggles (each default
 #'   `TRUE`): column sorting, indent-derived collapsible section headers, and
 #'   the toolbar search box. Exposed in the block's gear menu.
@@ -1407,14 +1407,6 @@ new_table_block <- function(rowname = NULL,
         # values (aligned vectors) to filter the raw input to that group.
         r_filter_group_cols <- shiny::reactiveVal(filter_group_cols)
         r_filter_group_vals <- shiny::reactiveVal(filter_group_vals)
-        # Structured-drill spread: the clicked row's machine column name and
-        # the identity column it copies (".variable_level" / ".group<k>_level").
-        # The expr mutates the filtered frame with `<col> = .data[[from]]`, so
-        # the drilled output carries the selection under its real-world name
-        # -- what a name-matching consumer (blockr.dm's dm_filter_by_data
-        # semi-join) picks up to cascade the click to patient level.
-        r_filter_spread_col  <- shiny::reactiveVal(filter_spread_col)
-        r_filter_spread_from <- shiny::reactiveVal(filter_spread_from)
         r_sortable       <- shiny::reactiveVal(isTRUE(sortable))
         r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
         r_search         <- shiny::reactiveVal(isTRUE(search))
@@ -1457,23 +1449,11 @@ new_table_block <- function(rowname = NULL,
               upd(r_filter_group_vals, vals)
               upd(r_filter_column, NULL)
               upd(r_filter_values, NULL)
-              # Structured drill sends the spread alongside the keys; a stat
-              # row (no source-value claim) sends none -> cleared.
-              sp <- msg$spread
-              if (!is.null(sp) && !is.null(sp$column) && !is.null(sp$from)) {
-                upd(r_filter_spread_col, as.character(sp$column))
-                upd(r_filter_spread_from, as.character(sp$from))
-              } else {
-                upd(r_filter_spread_col, NULL)
-                upd(r_filter_spread_from, NULL)
-              }
             } else {
               upd(r_filter_column, msg$column)
               upd(r_filter_values, msg$values)
               upd(r_filter_group_cols, NULL)
               upd(r_filter_group_vals, NULL)
-              upd(r_filter_spread_col, NULL)
-              upd(r_filter_spread_from, NULL)
             }
           } else if (identical(act, "config")) {
             p <- msg$param
@@ -1550,29 +1530,25 @@ new_table_block <- function(rowname = NULL,
           single_on  <- !is.null(col) && length(vals) > 0
           drill_on   <- !is.null(r_drill()) && nzchar(r_drill())
           if (!grouped_on && !single_on && !drill_on) return(NULL)
-          # Structured drill: the spread names the selection in source terms
-          # ("AEDECOD = ABDOMINAL PAIN"), which reads better than the dotted
-          # identity keys it was derived from.
-          sp_col  <- r_filter_spread_col()
-          sp_from <- r_filter_spread_from()
-          if (grouped_on && !is.null(sp_col) && nzchar(sp_col %||% "") &&
-              !is.null(sp_from) && sp_from %in% gc) {
-            i <- match(sp_from, gc)
-            gc[i] <- sp_col
-            keep <- !(gc %in% c(".variable", ".variable_label"))
-            gc <- gc[keep]
-            gv <- gv[keep]
-          }
-          if (grouped_on) {
-            # Remaining dotted identity keys (section-header / stat-row
-            # clicks) read as plain words, never internals.
-            gc[gc == ".variable_label"] <- "Section"
-            gc[gc == ".variable"]       <- "Variable"
-            gc[gc == ".variable_level"] <- "Value"
-            gc[gc == ".label"]          <- "Row"
-          }
           text <- if (grouped_on) {
-            paste0("Filtered: ", paste0(gc, " = ", gv, collapse = " & "))
+            # Structured drill keys are identity columns; read the source
+            # terms out of the VALUES ("AEDECOD = ABDOMINAL PAIN" -- the
+            # variable NAME is the `.variable` key's value), with enclosing
+            # group levels as a breadcrumb. Falls back to a plain group
+            # breadcrumb for header clicks, and to `col = value` pairs for
+            # the aggregated-table drill (real column names).
+            glv <- grepl("^\\.group[0-9]+_level$", gc)
+            vi <- match(".variable", gc)
+            li <- match(".variable_level", gc)
+            structured_keys <- !is.na(li) || any(glv)
+            lab <- if (!is.na(vi) && !is.na(li)) {
+              c(gv[glv], paste0(gv[vi], " = ", gv[li]))
+            } else if (structured_keys) {
+              gv[glv]
+            } else {
+              paste0(gc, " = ", gv)
+            }
+            paste0("Filtered: ", paste0(lab, collapse = " › "))
           } else if (single_on) {
             paste0("Filtered: ", col, " = ", paste(vals, collapse = ", "))
           } else {
@@ -1806,28 +1782,16 @@ new_table_block <- function(rowname = NULL,
             col  <- r_filter_column()
             vals <- r_filter_values()
             if (length(gc) && length(gc) == length(gv)) {
-              # Grouped drill: AND each clicked group key (raw input -> members).
+              # Grouped / structured drill: AND each clicked key. The output
+              # is a pure SUBSET of the annotated df -- the identity columns
+              # (`.variable`, `.variable_level`, `.group<k>*`) already carry
+              # the selection, so no synthetic column is added; downstream
+              # consumers read the identity columns themselves.
               cond <- dd_group_filter_call(gc, gv)
-              fcall <- blockr.core::bbquote(
+              blockr.core::bbquote(
                 dplyr::filter(blockr.viz::as_annotated_df(.(data)), .(cond)),
                 list(cond = cond)
               )
-              # Structured drill spread: name the selection as a real column
-              # (`AEDECOD = .data[[".variable_level"]]`) so downstream
-              # name-matching consumers (dm_filter_by_data_block) see it.
-              sp_col  <- r_filter_spread_col()
-              sp_from <- r_filter_spread_from()
-              if (!is.null(sp_col) && nzchar(sp_col) &&
-                  !is.null(sp_from) && nzchar(sp_from)) {
-                mcall <- as.call(list(
-                  quote(dplyr::mutate), fcall,
-                  blockr.core::bbquote(.data[[.(sp_from)]], list(sp_from = sp_from))
-                ))
-                names(mcall) <- c("", "", sp_col)
-                mcall
-              } else {
-                fcall
-              }
             } else if (is.null(col) || is.null(vals) || length(vals) == 0) {
               blockr.core::bbquote(
                 dplyr::filter(blockr.viz::as_annotated_df(.(data)), TRUE)
@@ -1874,8 +1838,12 @@ new_table_block <- function(rowname = NULL,
             filter_range  = function() NULL,
             filter_group_cols = r_filter_group_cols,
             filter_group_vals = r_filter_group_vals,
-            filter_spread_col  = r_filter_spread_col,
-            filter_spread_from = r_filter_spread_from,
+            # Legacy spread formals (the drill no longer adds a synthetic
+            # column -- the output is a pure subset and the identity columns
+            # are the interface): serialized as NULL, kept as ctor formals so
+            # boards saved while the spread existed still restore.
+            filter_spread_col  = function() NULL,
+            filter_spread_from = function() NULL,
             sortable       = r_sortable,
             collapsible    = r_collapsible,
             search         = r_search,
@@ -1903,7 +1871,6 @@ new_table_block <- function(rowname = NULL,
       "digits", "max_height",
       "filter_column", "filter_values",
       "filter_group_cols", "filter_group_vals",
-      "filter_spread_col", "filter_spread_from",
       "sortable", "collapsible", "search", "excel_download"),
     expr_type = "bquoted",
     class = "table_block",

@@ -115,8 +115,9 @@ test_that("a config message updates the drill state", {
 
 # ---- structured (annotated df) drill ---------------------------------------
 # The structured click emits the grouped `filters` payload over the identity
-# columns plus a `spread` instruction; the expr must filter the annotated df
-# AND name the selection as a real column (the dm-bridge contract).
+# columns; the expr filters the annotated df to a PURE SUBSET. The identity
+# columns (`.variable`, `.variable_level`, `.group<k>*`) carry the selection;
+# no synthetic column is added -- downstream consumers read them directly.
 
 structured_fixture <- function() {
   adae <- data.frame(
@@ -129,12 +130,12 @@ structured_fixture <- function() {
   summary_table(adae, vars = c("AETOXGR", "AEDECOD"), by = "ARM")
 }
 
-test_that("a structured level-row click filters the annotated df and spreads the column", {
+test_that("a structured level-row click subsets the annotated df, nothing added", {
   wide <- structured_fixture()
   blk <- new_table_block(drill = "auto")
 
   testServer(blk$expr_server, args = list(data = reactive(wide)), {
-    # The payload table.js emits from the clicked row's data-dd-keys/-spread.
+    # The payload table.js emits from the clicked row's data-dd-keys.
     session$setInputs(
       drilldown_table_block_action = list(
         action = "filter",
@@ -142,49 +143,21 @@ test_that("a structured level-row click filters the annotated df and spreads the
         filters = list(
           list(column = ".variable",       value = "AEDECOD"),
           list(column = ".variable_level", value = "ABDOMINAL PAIN")
-        ),
-        spread = list(column = "AEDECOD", from = ".variable_level")
+        )
       )
     )
-
-    expect_equal(session$returned$state$filter_spread_col(), "AEDECOD")
-    expect_equal(session$returned$state$filter_spread_from(), ".variable_level")
 
     out <- eval_block_expr(session$returned$expr(), wide)
     expect_equal(nrow(out), 1L)
     expect_equal(out$.label, "ABDOMINAL PAIN")
-    # The dm-bridge contract: the selection appears under its real name.
-    expect_true("AEDECOD" %in% names(out))
-    expect_equal(out$AEDECOD, "ABDOMINAL PAIN")
+    expect_equal(out$.variable, "AEDECOD")
+    expect_equal(out$.variable_level, "ABDOMINAL PAIN")
+    # Pure subset: same columns as the annotated frame, no synthetic spread.
+    expect_identical(names(out), names(as_annotated_df(wide)))
   })
 })
 
-test_that("a stat-row click filters without spreading (no source-value claim)", {
-  wide <- structured_fixture()
-  blk <- new_table_block(drill = "auto")
-
-  testServer(blk$expr_server, args = list(data = reactive(wide)), {
-    session$setInputs(
-      drilldown_table_block_action = list(
-        action = "filter",
-        filter_type = "categorical",
-        filters = list(
-          list(column = ".variable", value = "AETOXGR"),
-          list(column = ".label",    value = "Mean (SD)")
-        ),
-        spread = NULL
-      )
-    )
-
-    expect_null(session$returned$state$filter_spread_col())
-    out <- eval_block_expr(session$returned$expr(), wide)
-    expect_equal(nrow(out), 1L)
-    expect_equal(out$.label, "Mean (SD)")
-    expect_false("AETOXGR" %in% names(out))
-  })
-})
-
-test_that("clearing a structured drill resets the spread with the keys", {
+test_that("clearing a structured drill resets the keys", {
   wide <- structured_fixture()
   blk <- new_table_block(drill = "auto")
 
@@ -196,8 +169,7 @@ test_that("clearing a structured drill resets the spread with the keys", {
         filters = list(
           list(column = ".variable",       value = "AEDECOD"),
           list(column = ".variable_level", value = "ANXIETY")
-        ),
-        spread = list(column = "AEDECOD", from = ".variable_level")
+        )
       )
     )
     session$setInputs(
@@ -206,11 +178,9 @@ test_that("clearing a structured drill resets the spread with the keys", {
         column = NULL, values = NULL, filter_type = "categorical"
       )
     )
-    expect_null(session$returned$state$filter_spread_col())
     expect_null(session$returned$state$filter_group_cols())
     out <- eval_block_expr(session$returned$expr(), wide)
     expect_equal(nrow(out), nrow(wide))
-    expect_false("AEDECOD" %in% names(out))
   })
 })
 
@@ -220,6 +190,7 @@ test_that("structured drill state restores through the constructor", {
     drill = "auto",
     filter_group_cols  = c(".variable", ".variable_level"),
     filter_group_vals  = c("AEDECOD", "ABDOMINAL PAIN"),
+    # Defunct spread formals from older saved boards are absorbed silently.
     filter_spread_col  = "AEDECOD",
     filter_spread_from = ".variable_level"
   )
@@ -227,6 +198,21 @@ test_that("structured drill state restores through the constructor", {
   testServer(blk$expr_server, args = list(data = reactive(wide)), {
     out <- eval_block_expr(session$returned$expr(), wide)
     expect_equal(nrow(out), 1L)
-    expect_equal(out$AEDECOD, "ABDOMINAL PAIN")
+    expect_equal(out$.variable_level, "ABDOMINAL PAIN")
+    expect_false("AEDECOD" %in% names(out))
+    expect_null(session$returned$state$filter_spread_col())
   })
+})
+
+test_that("only identity-claim rows are clickable in the structured renderer", {
+  wide <- structured_fixture()
+  view <- annotated_structure_view(as_annotated_df(wide))
+  a <- dd_row_drill_attrs(view$data, view$section_cols)
+
+  lvl <- !is.na(view$data$.variable_level)
+  # Level rows carry keys; stat rows (no .variable_level) carry none.
+  expect_true(all(nzchar(a$keys[lvl])))
+  expect_true(all(!nzchar(a$keys[!lvl])))
+  # And no spread instruction exists anywhere anymore.
+  expect_null(a$spread)
 })

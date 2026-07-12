@@ -215,13 +215,17 @@
       // the button and any bare-cell click.
       h.addEventListener("click", function (ev) {
         // Structured drill: the section VALUE text is the drill target
-        // (wireClick emits the section's filter); only the chevron / label
-        // area keeps toggling collapse. Read the attr at click time -- the
-        // <table> re-renders on config changes while these rows persist.
+        // (wireClick emits the section's filter) -- but only on headers
+        // that carry an identity claim (data-dd-keys: row-group headers).
+        // Variable-block headers ("Sex") have no claim, so their value
+        // text falls through to the collapse toggle like the rest of the
+        // row. Read the attrs at click time -- the <table> re-renders on
+        // config changes while these rows persist.
         var tbl = h.closest("table");
         var t = /** @type {Element | null} */ (ev.target);
         if (tbl && tbl.getAttribute("data-dt-structured-drill") === "1" &&
-            t && t.closest(".blockr-section-value")) {
+            t && t.closest(".blockr-section-value") &&
+            h.getAttribute("data-dd-keys")) {
           return;
         }
         ev.stopPropagation();
@@ -410,7 +414,8 @@
     var grouped = groupCols.length > 0;
     // Structured drill: rows / section headers carry their own filter keys
     // (data-dd-keys, stamped by dd_row_drill_attrs) -- no column mapping at
-    // all; a click just forwards the row's keys + spread.
+    // all; a click just forwards the row's keys. Rows without keys (stat
+    // rows, variable-block headers -- no identity claim) are inert.
     var structured = table.getAttribute("data-dt-structured-drill") === "1";
     var col = table.getAttribute("data-dt-onclick-col");
     var idx = table.getAttribute("data-dt-onclick-idx");
@@ -467,14 +472,8 @@
         var keys = null;
         try { keys = JSON.parse(keysJson); } catch (err) { keys = null; }
         if (!keys || !keys.length) return;
-        /** @type {any} */
-        var spread = null;
-        var spreadJson = srcTr.getAttribute("data-dd-spread");
-        if (spreadJson) {
-          try { spread = JSON.parse(spreadJson); } catch (err) { spread = null; }
-        }
         Shiny.setInputValue(elemId + "_action",
-          { action: "filter", filters: keys, spread: spread,
+          { action: "filter", filters: keys,
             filter_type: "categorical" },
           { priority: "event" });
         Array.prototype.slice.call(tbody.children).forEach(function (r) {
