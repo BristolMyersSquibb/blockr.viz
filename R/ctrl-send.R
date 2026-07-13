@@ -657,16 +657,29 @@ dd_ctrl_claims <- function(data, table, filters) {
 #' Shiny does not define, so the sender could read a stale `pristine = TRUE` and
 #' swallow the user's very first drill. Evaluated inside the sender's observer,
 #' the read is ordered by construction.
+#'
+#' `r_state` must report EVERY piece of drill state the block has, and `initial`
+#' the constructor's value for each. Watching only some of it silently disables
+#' the sender: a drill that moves state this closure cannot see leaves the latch
+#' pristine, and the claim is recorded as sent but never pushed. That is not
+#' hypothetical -- the first cut watched only `column`/`values`, and the table's
+#' STRUCTURED drill (which moves `group_cols`/`group_vals` and leaves
+#' `column`/`values` NULL) stopped sending entirely while the chart's categorical
+#' drill still worked. The chart's range and point drills were silently broken the
+#' same way. Add a drill dimension to a block, add it here.
+#'
+#' @param r_state Function returning the block's current drill state, as a list.
+#' @param initial The same shape, as the constructor was given it.
 #' @noRd
-dd_ctrl_pristine <- function(r_column, r_values, column, values) {
+dd_ctrl_pristine <- function(r_state, initial) {
 
   touched <- FALSE
 
   function() {
 
-    cur <- list(r_column(), r_values())
+    cur <- r_state()
 
-    if (!touched && !identical(cur, list(column, values))) {
+    if (!touched && !identical(cur, initial)) {
       touched <<- TRUE
     }
 

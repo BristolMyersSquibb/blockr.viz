@@ -654,7 +654,12 @@ new_chart_block <- function(
           r_ctrl_target,
           r_ctrl_claims,
           dd_ctrl_pristine(
-            r_filter_column, r_filter_values, filter_column, filter_values
+            function() {
+              list(r_filter_type(), r_filter_column(), r_filter_values(),
+                   r_filter_range(), r_filter_point())
+            },
+            list(filter_type, filter_column, filter_values, filter_range,
+                 filter_point)
           ),
           session
         )

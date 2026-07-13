@@ -1574,7 +1574,12 @@ new_table_block <- function(rowname = NULL,
           r_ctrl_target,
           r_ctrl_claims,
           dd_ctrl_pristine(
-            r_filter_column, r_filter_values, filter_column, filter_values
+            function() {
+              list(r_filter_column(), r_filter_values(),
+                   r_filter_group_cols(), r_filter_group_vals())
+            },
+            list(filter_column, filter_values, filter_group_cols,
+                 filter_group_vals)
           ),
           session
         )

@@ -65,7 +65,9 @@ test_that("a restored claim is not pushed at startup", {
 
         dd_ctrl_sender(
           shiny::reactiveVal("vf"), r_claims,
-          dd_ctrl_pristine(r_column, r_values, column, values),
+          dd_ctrl_pristine(
+            function() list(r_column(), r_values()), list(column, values)
+          ),
           session = session
         )
 
@@ -117,7 +119,9 @@ test_that("clearing back to the constructor's drill still notifies the target", 
 
         dd_ctrl_sender(
           shiny::reactiveVal("vf"), r_claims,
-          dd_ctrl_pristine(r_column, r_values, column, values),
+          dd_ctrl_pristine(
+            function() list(r_column(), r_values()), list(column, values)
+          ),
           session = session
         )
 
@@ -163,6 +167,67 @@ test_that("a claim that really changes still sends", {
     },
     {
       expect_length(sends, 2L)
+    }
+  )
+})
+
+test_that("a STRUCTURED (group) drill sends -- the latch must watch ALL drill state", {
+  # The table drills two ways. A structured drill moves group_cols/group_vals and
+  # leaves column/values NULL, i.e. identical to the constructor. A latch that
+  # watches only column/values reads that as pristine and silently never sends,
+  # which is exactly how the table's send-to-filter broke while the chart's
+  # categorical drill kept working.
+  sends <- 0
+
+  shiny::testServer(
+    function(id) {
+      shiny::moduleServer(id, function(input, output, session) {
+        session$userData$blockr_ctrl_send <- function(target, args,
+                                                      author = NULL) {
+          sends <<- sends + 1
+        }
+
+        filter_column <- NULL
+        filter_values <- NULL
+        filter_group_cols <- NULL
+        filter_group_vals <- NULL
+
+        r_column <- shiny::reactiveVal(filter_column)
+        r_values <- shiny::reactiveVal(filter_values)
+        r_group_cols <- shiny::reactiveVal(filter_group_cols)
+        r_group_vals <- shiny::reactiveVal(filter_group_vals)
+
+        r_claims <- shiny::reactive({
+          gc <- r_group_cols()
+          if (!length(gc)) {
+            return(list())
+          }
+          list(list(table = "adsl", column = gc[[1L]],
+                    values = r_group_vals()))
+        })
+
+        dd_ctrl_sender(
+          shiny::reactiveVal("vf"), r_claims,
+          dd_ctrl_pristine(
+            function() {
+              list(r_column(), r_values(), r_group_cols(), r_group_vals())
+            },
+            list(filter_column, filter_values, filter_group_cols,
+                 filter_group_vals)
+          ),
+          session = session
+        )
+
+        session$flushReact()
+
+        # a structured drill: column/values stay NULL, only the group pair moves
+        r_group_cols(list("SEX"))
+        r_group_vals(list("M"))
+        session$flushReact()
+      })
+    },
+    {
+      expect_identical(sends, 1)
     }
   )
 })
