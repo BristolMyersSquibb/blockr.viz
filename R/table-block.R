@@ -1570,7 +1570,14 @@ new_table_block <- function(rowname = NULL,
           dd_ctrl_claims(d, r_ctrl_table(), filters)
         })
 
-        dd_ctrl_sender(r_ctrl_target, r_ctrl_claims, session)
+        dd_ctrl_sender(
+          r_ctrl_target,
+          r_ctrl_claims,
+          dd_ctrl_pristine(
+            r_filter_column, r_filter_values, filter_column, filter_values
+          ),
+          session
+        )
 
         # Split render so a filter (or gear edit) re-renders ONLY the <table>,
         # never the search bar / gear / scroll container -- no whole-panel

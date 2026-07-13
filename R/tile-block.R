@@ -239,7 +239,14 @@ new_tile_block <- function(value = character(),
           dd_ctrl_claims(d, r_ctrl_table(), filters)
         })
 
-        dd_ctrl_sender(r_ctrl_target, r_ctrl_claims, session)
+        dd_ctrl_sender(
+          r_ctrl_target,
+          r_ctrl_claims,
+          dd_ctrl_pristine(
+            r_filter_column, r_filter_values, filter_column, filter_values
+          ),
+          session
+        )
 
         # Board scale map (NULL when the board has no "scale_map" option) --
         # resolves the "Color by" card tint to the same hexes the chart uses.

@@ -642,6 +642,38 @@ dd_ctrl_claims <- function(data, table, filters) {
   )
 }
 
+#' Has the user actually drilled, or is this still the state we were built with?
+#'
+#' A LATCH, not a comparison: TRUE until the drill selection first differs from
+#' the constructor's, FALSE for ever after. It has to latch, because a user who
+#' drills and then clears back to exactly the constructor's selection has still
+#' made a change the target must hear about -- a live comparison would read that
+#' as pristine again and swallow the clear, leaving the filter stuck on a claim
+#' the block no longer makes.
+#'
+#' Returns a plain closure, deliberately, and the latch flips when the SENDER
+#' calls it. A `reactiveVal` latched from its own `observe()` would be a race:
+#' that observer and the sender's both invalidate on the same drill, in an order
+#' Shiny does not define, so the sender could read a stale `pristine = TRUE` and
+#' swallow the user's very first drill. Evaluated inside the sender's observer,
+#' the read is ordered by construction.
+#' @noRd
+dd_ctrl_pristine <- function(r_column, r_values, column, values) {
+
+  touched <- FALSE
+
+  function() {
+
+    cur <- list(r_column(), r_values())
+
+    if (!touched && !identical(cur, list(column, values))) {
+      touched <<- TRUE
+    }
+
+    !touched
+  }
+}
+
 #' Keep a target value filter in sync with a block's claim.
 #'
 #' The one observer shared by the three drill senders: a claim sends, no
@@ -650,8 +682,16 @@ dd_ctrl_claims <- function(data, table, filters) {
 #' cohort. Re-aiming (or un-setting) the target releases the OLD target's
 #' claim the same ownership-scoped way, so a filter is never left stuck on a
 #' sender that no longer points at it.
+#'
+#' `r_pristine` suppresses the startup push. A board restores the sender's drill
+#' AND the target's filter from the same saved board, so re-sending a restored
+#' claim tells the target what it already knows -- at the price of a board update,
+#' which re-evaluates every block on the board. On a pipeline that takes seconds
+#' that is a wholly redundant reload on every open. While pristine we record the
+#' claim as sent without sending it, so the first real drill still diffs against
+#' it correctly.
 #' @noRd
-dd_ctrl_sender <- function(r_target, r_claims,
+dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
                            session = shiny::getDefaultReactiveDomain()) {
 
   last_target <- ""
@@ -683,10 +723,23 @@ dd_ctrl_sender <- function(r_target, r_claims,
     # reads as the app reloading itself over and over. Nothing else damps this:
     # a plain reactive has no identical()-skip, and ctrl_send() re-sends
     # unconditionally, so the payload comparison has to happen here.
+    # Read the latch on EVERY pass, before any early return: it is what takes
+    # this observer's dependency on the drill selection, and a run that returns
+    # without reading it would drop that dependency.
+    pristine <- is.function(r_pristine) && isTRUE(r_pristine())
+
     if (identical(payload, last_sent)) {
       return()
     }
     last_sent <<- payload
+
+    # Restored state: the target came back from the same board carrying this
+    # very claim. Record it as sent -- so the first real drill diffs against
+    # it -- but do not push it, and do not pay for a board-wide re-evaluation
+    # on every open.
+    if (pristine) {
+      return()
+    }
 
     if (length(claims)) {
       ctrl_send(tgt, state = payload, session = session)
