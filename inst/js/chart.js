@@ -3386,7 +3386,12 @@
         hi: this.config.hi || '',
         // Extra tooltip columns (gantt): always an array so R can tell an
         // empty selection ([] -> NULL) from an unchanged one.
-        tt_fields: Array.isArray(this.config.tt_fields) ? this.config.tt_fields : []
+        tt_fields: Array.isArray(this.config.tt_fields) ? this.config.tt_fields : [],
+        // External-control send (beta). "" is a real value on both (un-targeting
+        // the sender / a plain-data target that names no table), so they are
+        // always sent rather than omitted when empty.
+        ctrl_target: this.config.ctrl_target || '',
+        ctrl_table: this.config.ctrl_table || ''
       }, { priority: 'event' });
     }
 
