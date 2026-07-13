@@ -661,6 +661,10 @@
                  // lives in the picks): "Color by" identity tint + the
                  // repeatable "Shade cells" value-encoding rules.
                  colorSection: hasCols ? { colorKey: "color", shadings: true } : null,
+                 // External-control send (beta) — available on every table:
+                 // the structured ("Table 1") frame is the prime sender (its
+                 // drilled output carries the ARD identity the claim reads).
+                 ctrlSection: true,
                  presentation: pres });
     // Structured ("Table 1") input is an already-summarized annotated data
     // frame with no pickable columns, so grouping / aggregation / drill / colour
@@ -746,7 +750,15 @@
       sortable:    table.getAttribute("data-dt-sortable") || "on",
       collapsible: table.getAttribute("data-dt-collapsible") || "on",
       search:      table.getAttribute("data-dt-search") || "on",
-      excel_download: table.getAttribute("data-dt-excel") || "off"
+      excel_download: table.getAttribute("data-dt-excel") || "off",
+      // External-control send (beta): target value filter block + dm table,
+      // and the board's candidate targets ([{value,label}] JSON, stamped by R).
+      ctrl_target: table.getAttribute("data-dt-ctrl-target") || "",
+      ctrl_table:  table.getAttribute("data-dt-ctrl-table") || "",
+      ctrl_choices: (function () {
+        try { return JSON.parse(table.getAttribute("data-dt-ctrl-choices") || "[]"); }
+        catch (e) { return []; }
+      })()
     };
     return { cols: cols, cfg: cfg };
   }

@@ -467,10 +467,13 @@
     // excluded by type. Everything else keeps the family spec unchanged.
     _sectionsSpec() {
       const base = FAMILY_ROLES[this._family()];
+      // External-control send (beta) on every family: push the drilled value
+      // into a value filter block. cfg.ctrl_* rides in the drilldown-data
+      // config from R.
       if (this.config.chart_type === 'boxplot') {
-        return /** @type {any} */ ({ ...base, aggTitle: null });
+        return /** @type {any} */ ({ ...base, aggTitle: null, ctrlSection: true });
       }
-      return base;
+      return /** @type {any} */ ({ ...base, ctrlSection: true });
     }
 
     // Keep the value consistent when the aggregation changes (shared with the

@@ -145,6 +145,29 @@ chart_arguments <- function() {
       example = "Species",
       type = arg_string()
     ),
+    ctrl_target = new_block_arg(
+      paste0(
+        "BETA. Block id of a value filter block on the SAME board: a ",
+        "categorical drill click's claim (e.g. SEX = F) is also pushed into ",
+        "that block over the board's control channel, so the drill filters ",
+        "a pipeline the chart has no data link to. Requires `drill` to be ",
+        "on and the board to carry the control bridge extension. Range / ",
+        "point / brush selections are never pushed (a claim is one value). ",
+        "Empty (default) = off; the drill then behaves exactly as ",
+        "documented above."
+      ),
+      example = "cohort_filter",
+      type = arg_string()
+    ),
+    ctrl_table = new_block_arg(
+      paste0(
+        "BETA. Only with `ctrl_target`: the table in the target's dm the ",
+        "pushed conditions apply to (e.g. \"adsl\"). Leave empty when the ",
+        "target filters a plain data frame."
+      ),
+      example = "adsl",
+      type = arg_string()
+    ),
     smoother = new_block_arg(
       paste0(
         "Trend overlay for scatter charts. One of \"none\" (default), ",

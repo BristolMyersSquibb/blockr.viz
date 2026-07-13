@@ -1138,7 +1138,7 @@ drilldown_table_dep <- memoise0(function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".26"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".27"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"
@@ -1258,6 +1258,27 @@ table_arguments <- function() {
       "Decimal places for numeric display. Default 2.",
       example = 2L,
       type = arg_integer()
+    ),
+    ctrl_target = new_block_arg(
+      paste0(
+        "BETA. Block id of a value filter block on the SAME board: the ",
+        "drill's claim (e.g. SEX = F) is also pushed into that block over ",
+        "the board's control channel, so the drill filters a pipeline the ",
+        "table has no data link to. Requires drill to be on and the board ",
+        "to carry the control bridge extension. Empty (default) = off; the ",
+        "drill then behaves exactly as documented above."
+      ),
+      example = "cohort_filter",
+      type = arg_string()
+    ),
+    ctrl_table = new_block_arg(
+      paste0(
+        "BETA. Only with `ctrl_target`: the table in the target's dm the ",
+        "pushed conditions apply to (e.g. \"adsl\"). Leave empty when the ",
+        "target filters a plain data frame."
+      ),
+      example = "adsl",
+      type = arg_string()
     )
   )
 }
@@ -1348,6 +1369,15 @@ table_guidance <- function() {
 #'   download button appears on the table toolbar; it writes the rendered
 #'   (annotated) frame to a styled `.xlsx` via [write_annotated_xlsx()]. Needs
 #'   the `openxlsx` package.
+#' @param ctrl_target Character(1), beta. Block id of a value filter block on
+#'   the board: the drill's claim is ALSO pushed there over the board's
+#'   control channel ([ctrl_send()]; the board needs the channel installed,
+#'   see [new_ctrl_bridge_extension()]). Empty (the default) = off; the drill
+#'   behaves exactly as before. Exposed in the gear's "Send to filter (beta)"
+#'   section.
+#' @param ctrl_table Character(1), beta. Name of the table in the target's
+#'   `dm` the pushed conditions apply to (e.g. `"adsl"`). Leave empty when the
+#'   target filters a plain data frame.
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #' @return A transform block of class `table_block`.
 #' @examplesIf interactive()
@@ -1376,6 +1406,8 @@ new_table_block <- function(rowname = NULL,
                                       collapsible = TRUE,
                                       search = TRUE,
                                       excel_download = FALSE,
+                                      ctrl_target = "",
+                                      ctrl_table = "",
                                       ...) {
   # Legacy args mapped on construction (old saved boards restore through
   # these formals): a cell_color spec reads as one `shadings` rule; row_color
@@ -1411,6 +1443,12 @@ new_table_block <- function(rowname = NULL,
         r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
         r_search         <- shiny::reactiveVal(isTRUE(search))
         r_excel_download <- shiny::reactiveVal(isTRUE(excel_download))
+        # External-control send (beta): the drill also pushes its claim into
+        # a value filter block (gear section "Send to filter"). Empty target
+        # = off, today's behaviour.
+        r_ctrl_target  <- shiny::reactiveVal(ctrl_target %||% "")
+        r_ctrl_table   <- shiny::reactiveVal(ctrl_table %||% "")
+        r_ctrl_choices <- dd_ctrl_choices()
 
         # Only write a reactiveVal when the value actually changes. JS echoes
         # the full config/filter on any popover change, so a blind set would
@@ -1483,9 +1521,35 @@ new_table_block <- function(rowname = NULL,
               upd(r_search, as_toggle(v))
             } else if (identical(p, "excel_download")) {
               upd(r_excel_download, as_toggle(v))
+            } else if (identical(p, "ctrl_target")) {
+              upd(r_ctrl_target, trimws(as.character(v %||% "")))
+            } else if (identical(p, "ctrl_table")) {
+              upd(r_ctrl_table, trimws(as.character(v %||% "")))
             }
           }
         })
+
+        # What the drill claims, read off the block's OWN filter state: the
+        # structured drill's identity keys (all dot-prefixed -> ARD mode) or
+        # the flat drill's column + values (-> source-column mode). Shared
+        # code path with the chart / tile (dd_ctrl_claims / dd_ctrl_sender).
+        r_ctrl_claims <- shiny::reactive({
+          d <- tryCatch(ann_data(), error = function(e) NULL)
+          gc <- r_filter_group_cols()
+          gv <- r_filter_group_vals()
+          col <- r_filter_column()
+          vals <- r_filter_values()
+          filters <- if (length(gc) && length(gc) == length(gv)) {
+            stats::setNames(as.list(gv), gc)
+          } else if (!is.null(col) && length(vals)) {
+            stats::setNames(list(vals), col)
+          } else {
+            list()
+          }
+          dd_ctrl_claims(d, r_ctrl_table(), filters)
+        })
+
+        dd_ctrl_sender(r_ctrl_target, r_ctrl_claims, session)
 
         # Split render so a filter (or gear edit) re-renders ONLY the <table>,
         # never the search bar / gear / scroll container -- no whole-panel
@@ -1624,6 +1688,20 @@ new_table_block <- function(rowname = NULL,
         # categorical row-stub, matching the chart's legend.
         board_scale_map <- dd_board_scale_map()
 
+        # The ctrl config rides on the rendered <table> as data-attributes
+        # (like every other gear-read state, see dt_table_attrs): stamped
+        # post-hoc so the render helpers stay ctrl-agnostic. Reading the
+        # choices reactiveVal here re-renders the table only when the
+        # candidate set changes (identical() skip in dd_ctrl_choices).
+        stamp_ctrl <- function(tag) {
+          htmltools::tagAppendAttributes(
+            tag,
+            `data-dt-ctrl-target` = r_ctrl_target(),
+            `data-dt-ctrl-table` = r_ctrl_table(),
+            `data-dt-ctrl-choices` = dd_ctrl_choices_json(r_ctrl_choices())
+          )
+        }
+
         output$dt_table <- shiny::renderUI({
           d <- tryCatch(ann_data(), error = function(e) NULL)
           shiny::req(is.data.frame(d))
@@ -1670,7 +1748,7 @@ new_table_block <- function(rowname = NULL,
               NULL
             }
             return(tryCatch(
-              dt_table_tag(
+              stamp_ctrl(dt_table_tag(
                 ad,
                 # The displayed frame is a projection; the gear's pickers
                 # must keep offering the RAW input schema (group / value /
@@ -1706,7 +1784,7 @@ new_table_block <- function(rowname = NULL,
                 search      = isTRUE(r_search()),
                 excel_download = isTRUE(r_excel_download()),
                 active     = act
-              ),
+              )),
               error = function(e) {
                 shiny::tags$div(
                   class = "blockr-error", role = "alert",
@@ -1735,7 +1813,7 @@ new_table_block <- function(rowname = NULL,
           # motivation for the first-class side-effect-render seam that would
           # route this through server$conditions() automatically.)
           tryCatch(
-            dt_table_tag(
+            stamp_ctrl(dt_table_tag(
               d,
               label_col  = r_rowname(),
               value_cols = r_value(),
@@ -1760,7 +1838,7 @@ new_table_block <- function(rowname = NULL,
               search      = isTRUE(r_search()),
               excel_download = isTRUE(r_excel_download()),
               active     = act
-            ),
+            )),
             error = function(e) {
               shiny::tags$div(
                 class = "blockr-error", role = "alert",
@@ -1847,7 +1925,9 @@ new_table_block <- function(rowname = NULL,
             sortable       = r_sortable,
             collapsible    = r_collapsible,
             search         = r_search,
-            excel_download = r_excel_download
+            excel_download = r_excel_download,
+            ctrl_target    = r_ctrl_target,
+            ctrl_table     = r_ctrl_table
           )
         )
       })
@@ -1865,13 +1945,15 @@ new_table_block <- function(rowname = NULL,
       "shadings", "cell_color", "row_color", "drill", "filter_column",
       "filter_values", "filter_type", "filter_range",
       "filter_group_cols", "filter_group_vals",
-      "filter_spread_col", "filter_spread_from"),
+      "filter_spread_col", "filter_spread_from",
+      "ctrl_target", "ctrl_table"),
     external_ctrl = c("rowname", "value", "group", "summaries",
       "color", "shadings", "drill",
       "digits", "max_height",
       "filter_column", "filter_values",
       "filter_group_cols", "filter_group_vals",
-      "sortable", "collapsible", "search", "excel_download"),
+      "sortable", "collapsible", "search", "excel_download",
+      "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",
     class = "table_block",
     ...

@@ -39,6 +39,8 @@ new_chart_block(
   hi = NULL,
   baseline = "zero",
   waterfall_totals = NULL,
+  ctrl_target = "",
+  ctrl_table = "",
   ...
 )
 }
@@ -153,6 +155,17 @@ each \code{metric} value is a delta). \code{chart_type = "waterfall"} implies
 as total/subtotal bars in a cumulative-baseline bar: their baseline resets
 to 0 and they draw the absolute running cumulative. Default \code{NULL} (every
 bar is a relative delta).}
+
+\item{ctrl_target}{Character(1), beta. Block id of a value filter block on
+the board: a categorical drill click's claim is ALSO pushed there over
+the board's control channel (\code{\link[=ctrl_send]{ctrl_send()}}; the board needs the channel
+installed, see \code{\link[=new_ctrl_bridge_extension]{new_ctrl_bridge_extension()}}). Empty (the default) =
+off; the drill behaves exactly as before. Exposed in the gear's "Send
+to filter (beta)" section.}
+
+\item{ctrl_table}{Character(1), beta. Name of the table in the target's
+\code{dm} the pushed conditions apply to (e.g. \code{"adsl"}). Leave empty when
+the target filters a plain data frame.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
 }

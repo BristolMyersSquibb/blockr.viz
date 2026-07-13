@@ -589,3 +589,136 @@ new_ctrl_bridge_extension <- function() {
   )
 }
 
+# ---------------------------------------------------------------------------
+# Drill sender glue -- the shared block-side wiring behind the table / chart /
+# tile blocks' "Send to filter (beta)" gear section. One code path for all
+# three: each block server supplies its OWN drill-filter state, and these
+# helpers turn it into a claim (dd_ctrl_claims) and keep the target block in
+# sync (dd_ctrl_sender). Deliberately NOT exported: the public surface is the
+# block argument (`ctrl_target` / `ctrl_table`), not the plumbing.
+# ---------------------------------------------------------------------------
+
+#' Claims from a block's own drill-filter state.
+#'
+#' `filters` is a named list, column -> drilled value(s), taken from the
+#' block's filter reactives (the state its drill click wrote). The input is
+#' subset on those pairs and the claim is read off the subset with
+#' [drill_claim_columns()] -- so the one-value-per-dimension rule (and the
+#' un-drill propagation it buys) is the same one the standalone
+#' `ctrl_filter_block` applies downstream.
+#'
+#' Which claim mode applies falls out of the filter columns themselves: a
+#' structured table drills on its dot-prefixed identity columns
+#' (`.variable`, `.group<k>`, ...), so all-dot filters read the ARD identity
+#' off the subset (`columns = NULL`); a chart / tile / flat table drills on a
+#' real source column, which IS the claim column. The block never asks the
+#' user which column was drilled -- it knows.
+#' @noRd
+dd_ctrl_claims <- function(data, table, filters) {
+
+  if (!is.data.frame(data) || !length(filters)) {
+    return(list())
+  }
+
+  if (!all(names(filters) %in% names(data))) {
+    return(list())
+  }
+
+  keep <- rep(TRUE, nrow(data))
+  for (col in names(filters)) {
+    keep <- keep & as.character(data[[col]]) %in% as.character(filters[[col]])
+  }
+
+  cols <- names(filters)[!startsWith(names(filters), ".")]
+
+  drill_claim_columns(
+    data[keep, , drop = FALSE],
+    table = table %||% "",
+    columns = if (length(cols)) cols
+  )
+}
+
+#' Keep a target value filter in sync with a block's claim.
+#'
+#' The one observer shared by the three drill senders: a claim sends, no
+#' claim clears -- and [ctrl_clear()] only acts when this block still owns
+#' the target's last claim, so an un-drill never clobbers a sibling sender's
+#' cohort. Re-aiming (or un-setting) the target releases the OLD target's
+#' claim the same ownership-scoped way, so a filter is never left stuck on a
+#' sender that no longer points at it.
+#' @noRd
+dd_ctrl_sender <- function(r_target, r_claims,
+                           session = shiny::getDefaultReactiveDomain()) {
+
+  last_target <- ""
+
+  shiny::observe({
+    tgt <- trimws(r_target() %||% "")
+    claims <- r_claims()
+
+    if (nzchar(last_target) && !identical(last_target, tgt)) {
+      ctrl_clear(last_target, state = list(columns = list()),
+                 session = session)
+    }
+    last_target <<- tgt
+
+    if (!nzchar(tgt)) {
+      return()
+    }
+
+    payload <- list(columns = claims)
+
+    if (length(claims)) {
+      ctrl_send(tgt, state = payload, session = session)
+    } else {
+      ctrl_clear(tgt, state = payload, session = session)
+    }
+  })
+}
+
+#' The board's candidate targets, as a reactiveVal with an identical() skip.
+#'
+#' [ctrl_targets()] reads the board reactively, and EVERY board update --
+#' including this block's own [ctrl_send()] -- invalidates it. The skip means
+#' anything rendering off this reactiveVal (the gear's target picker, the
+#' table's data-attributes) re-renders only when the candidate SET actually
+#' changes: blocks added / removed / renamed, not every click.
+#' @noRd
+dd_ctrl_choices <- function(session = shiny::getDefaultReactiveDomain()) {
+
+  rv <- shiny::reactiveVal(character())
+
+  shiny::observe({
+    choices <- ctrl_targets("value_filter_block", session = session)
+    if (!identical(choices, rv())) {
+      rv(choices)
+    }
+  })
+
+  rv
+}
+
+#' Candidate targets for the JS gear: `[{value: blockId, label: blockName}]`.
+#' @noRd
+dd_ctrl_choices_json <- function(choices) {
+  if (!length(choices)) {
+    return("[]")
+  }
+  as.character(jsonlite::toJSON(
+    data.frame(value = unname(choices), label = names(choices),
+               stringsAsFactors = FALSE)
+  ))
+}
+
+#' The same, as a plain list for hosts whose config travels as one R list
+#' (the chart's `drilldown-data` message, the tile's config JSON).
+#' @noRd
+dd_ctrl_choices_list <- function(choices) {
+  if (!length(choices)) {
+    return(list())
+  }
+  unname(Map(
+    function(value, label) list(value = value, label = label),
+    unname(choices), names(choices)
+  ))
+}
