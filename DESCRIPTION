@@ -1,6 +1,6 @@
 Package: blockr.viz
 Title: Visualization and Render Blocks for Blockr
-Version: 0.2.4
+Version: 0.2.5
 Authors@R:
     person(given = "Christoph",
            family = "Sax",
@@ -39,6 +39,7 @@ Imports:
 Suggests:
     blockr.ai,
     blockr.dag,
+    blockr.dock,
     blockr.extra,
     blockr.io,
     blockr.theme,
@@ -55,6 +56,7 @@ Remotes:
     BristolMyersSquibb/blockr.ai,
     BristolMyersSquibb/blockr.ui,
     cynkra/blockr.extra,
-    BristolMyersSquibb/blockr.theme
+    BristolMyersSquibb/blockr.theme,
+    BristolMyersSquibb/blockr.dock
 VignetteBuilder: knitr
 Config/testthat/edition: 3
