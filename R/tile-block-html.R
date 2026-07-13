@@ -302,7 +302,8 @@ tile_html <- function(data, value = character(), group = character(),
                       good_when = "up", format = "number", unit = "",
                       summaries = list(), drill = FALSE, elem_id = NULL,
                       color = "", scale_map = NULL,
-                      active_col = NULL, active_values = NULL) {
+                      active_col = NULL, active_values = NULL,
+                      ctrl = NULL) {
   flat <- list(style = style %||% "plain", good_when = good_when %||% "up",
                format = format %||% "number", unit = unit %||% "")
 
@@ -477,7 +478,8 @@ tile_html <- function(data, value = character(), group = character(),
     `data-tk-cols`    = tile_cols_json(data),
     `data-tk-config`  = tile_config_json(value, group, measure, secondary, style,
                                          good_when, format, unit, overline,
-                                         caption, layout, drill, color = color),
+                                         caption, layout, drill, color = color,
+                                         ctrl = ctrl),
     `data-tk-summaries` = dd_summaries_json(summaries),
     body,
     status
@@ -508,7 +510,7 @@ tile_cols_json <- function(data) {
 #' @noRd
 tile_config_json <- function(value, group, name, secondary, style, good_when,
                              format, unit, overline, caption, layout, drill,
-                             color = "") {
+                             color = "", ctrl = NULL) {
   value <- as.character(value)
   group <- as.character(group)
   cfg <- list(
@@ -524,7 +526,12 @@ tile_config_json <- function(value, group, name, secondary, style, good_when,
     overline  = overline %||% "",
     caption   = caption %||% "",
     layout    = layout %||% "cards",
-    drill     = isTRUE(drill)
+    drill     = isTRUE(drill),
+    # External-control send (beta): target/table + the board's candidate
+    # value filter blocks for the gear's picker (see dd_ctrl_choices_list).
+    ctrl_target = ctrl$target %||% "",
+    ctrl_table = ctrl$table %||% "",
+    ctrl_choices = ctrl$choices %||% list()
   )
   as.character(jsonlite::toJSON(cfg, auto_unbox = TRUE, null = "null"))
 }

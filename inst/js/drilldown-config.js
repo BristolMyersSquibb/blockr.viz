@@ -80,6 +80,11 @@
     // required `columns` role never gets the amber required-empty cue.
     _hasVal(v) {
       if (Array.isArray(v)) return v.length > 0;
+      // A plain object is never a value. State copied through the DAG
+      // clipboard turns NULL into `{}` (blockr.dag#144); without this the
+      // empty object counts as set, the optional row renders, and the picker
+      // stringifies it as "[object Object]".
+      if (v !== null && typeof v === 'object') return false;
       return v !== null && v !== undefined && v !== '' && v !== '(none)';
     }
     _cols() { return this.h.columns() || []; }
@@ -390,16 +395,20 @@
 
       // Drill-down as a checkbox capability (Variant A). spec.drillToggle names
       // the config key the picker writes (the table's 'drill'). Checked reveals
-      // the filter-column picker; unchecking clears it.
+      // the filter-column picker; unchecking clears it. The external-control
+      // send (spec.ctrlSection) nests INSIDE the open section: it rides on the
+      // drill's clicks, so without drill there is nothing to send.
       if (spec.drillToggle) {
         this._renderToggleColumnSection('Drill-down', 'drill', spec.drillToggle,
-          spec.drillDefault);
+          spec.drillDefault,
+          spec.ctrlSection ? (sec) => this._renderCtrlRows(sec) : null);
       }
 
       // Chart / tile drill-down. The chart opts in via drillAutoLabel (the
       // Auto + column picker); the tile via drillHint (picker-less — its
       // target is structurally determined). Same slot as drillToggle so all
       // drill styles land in the same position of the capability cluster.
+      // The external-control send nests inside here too (see above).
       if (this.h.drillAutoLabel || this.h.drillHint) this._renderDrillSection();
 
       // COLOR — a PLAIN section (deliberately NOT a checkbox capability:
@@ -503,8 +512,11 @@
      *   (e.g. the table's rowname/stub for drill), so the capability works in
      *   one click; the picker stays for re-aiming. Empty/absent = the picker
      *   opens required-empty as before.
+     * @param {((sec: HTMLElement) => void) | null} [extras] rendered into the
+     *   OPEN section after the picker — capabilities that ride on this one
+     *   (the drill's external-control send).
      */
-    _renderToggleColumnSection(title, secKey, cfgKey, seed) {
+    _renderToggleColumnSection(title, secKey, cfgKey, seed, extras) {
       const cfg = this._cfg();
       const open = this._secOpen(secKey,
         () => this._hasVal(cfg[cfgKey]) && cfg[cfgKey] !== '(none)');
@@ -524,7 +536,10 @@
               }
             }) }
       });
-      if (open) this._renderRole(sec, cfgKey, { required: true });
+      if (open) {
+        this._renderRole(sec, cfgKey, { required: true });
+        if (extras) extras(sec);
+      }
     }
 
     // Resolve the mapping-section header title. A host may supply a plain string
@@ -941,6 +956,7 @@
         p.className = 'dd-form-help dd-drill-hint';
         p.textContent = hint;
         sec.appendChild(p);
+        if (this.h.sections().ctrlSection) this._renderCtrlRows(sec);
         return;
       }
 
@@ -982,7 +998,140 @@
         controls.appendChild(wrap);
         row.appendChild(controls);
         sec.appendChild(row);
+        if (this.h.sections().ctrlSection) this._renderCtrlRows(sec);
       }
+    }
+
+    // "Send to filter (beta)" — the external-control tail of the drill: the
+    // value a click drills to is ALSO pushed into a value filter block
+    // elsewhere on the board (cfg.ctrl_target), over the board's control
+    // channel. Rendered INSIDE the open Drill-down section (it rides on the
+    // drill's clicks — without drill there is nothing to send), as a checkbox
+    // revealing the target rows. The host supplies the candidate targets in
+    // cfg.ctrl_choices ([{value: blockId, label: blockName}], stamped by R
+    // off the board); cfg.ctrl_table names the dm table the pushed conditions
+    // apply to (empty for a value filter fed a plain data frame). The claim
+    // column is NOT configurable on purpose: the block knows what it drills on.
+    /** @param {HTMLElement} sec */
+    _renderCtrlRows(sec) {
+      const cfg = this._cfg();
+      const on = this._secOpen('ctrlsend', () => this._hasVal(cfg.ctrl_target));
+      const onToggle = (/** @type {boolean} */ enabled) => {
+        this._setSecOpen('ctrlsend', enabled);
+        // Unchecking un-targets the sender; the R side clears its claim on
+        // the old target (ownership-scoped), so downstream does not stay
+        // filtered on a sender that no longer exists.
+        if (!enabled && this._hasVal(cfg.ctrl_target)) {
+          cfg.ctrl_target = '';
+          this.h.onChange('ctrl_target');
+        }
+        this._rerender();
+      };
+      const boxRow = document.createElement('div');
+      boxRow.className = 'blockr-popover-row dd-form-row dd-ctrl-toggle';
+      if (typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
+        const box = Blockr.checkbox('Send to filter (beta)', on, onToggle);
+        boxRow.appendChild(box.el);
+      } else {
+        const lab = document.createElement('label');
+        const inp = document.createElement('input');
+        inp.type = 'checkbox';
+        inp.checked = on;
+        inp.addEventListener('change', () => onToggle(inp.checked));
+        lab.appendChild(inp);
+        lab.appendChild(document.createTextNode(' Send to filter (beta)'));
+        boxRow.appendChild(lab);
+      }
+      sec.appendChild(boxRow);
+      if (!on) return;
+
+      const choices = Array.isArray(cfg.ctrl_choices) ? cfg.ctrl_choices : [];
+      const cur = cfg.ctrl_target || '';
+      /** @type {Array<{value: string, label: string}>} */
+      const opts = [{ value: '', label: 'Not set' }];
+      // A configured target no longer on the board stays visible as its own
+      // option rather than being silently dropped (deleted block, or a board
+      // restored before its blocks registered).
+      if (this._hasVal(cur) && !choices.some((/** @type {any} */ c) => c.value === cur)) {
+        opts.push({ value: cur, label: cur + ' (missing)' });
+      }
+      for (const c of choices) opts.push(c);
+
+      const row = document.createElement('div');
+      row.className = 'blockr-popover-row dd-form-row';
+      const head = document.createElement('div');
+      head.className = 'dd-row-head';
+      const lbl = document.createElement('span');
+      lbl.className = 'blockr-popover-label';
+      lbl.textContent = 'Target filter';
+      head.appendChild(lbl);
+      row.appendChild(head);
+      const controls = document.createElement('div');
+      controls.className = 'dd-row-controls';
+      const wrap = document.createElement('div');
+      wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+      const onSel = (/** @type {string} */ val) => {
+        cfg.ctrl_target = val;
+        this.h.onChange('ctrl_target');
+      };
+      if (typeof Blockr !== 'undefined' && Blockr.Select) {
+        this._selects['ctrl_target'] = Blockr.Select.single(wrap,
+          { options: opts, selected: cur, onChange: onSel });
+      } else {
+        const s = document.createElement('select');
+        s.className = 'dd-cfg-select';
+        for (const o of opts) {
+          const op = document.createElement('option');
+          op.value = o.value; op.textContent = o.label;
+          if (o.value === cur) op.selected = true;
+          s.appendChild(op);
+        }
+        s.addEventListener('change', () => onSel(s.value));
+        wrap.appendChild(s);
+      }
+      controls.appendChild(wrap);
+      row.appendChild(controls);
+      const help = document.createElement('span');
+      help.className = 'dd-form-help';
+      help.textContent = choices.length
+        ? 'Drilling also filters the chosen block.'
+        : 'No value filter block found on this board (is the control bridge installed?).';
+      row.appendChild(help);
+      sec.appendChild(row);
+
+      // The dm table the pushed conditions apply to. Free text committed on
+      // change (blur / Enter), NOT on keystroke: every commit re-sends the
+      // claim, and half-typed table names would push junk conditions.
+      const trow = document.createElement('div');
+      trow.className = 'blockr-popover-row dd-form-row';
+      const thead = document.createElement('div');
+      thead.className = 'dd-row-head';
+      const tlbl = document.createElement('span');
+      tlbl.className = 'blockr-popover-label';
+      tlbl.textContent = 'Table';
+      thead.appendChild(tlbl);
+      trow.appendChild(thead);
+      const tcontrols = document.createElement('div');
+      tcontrols.className = 'dd-row-controls';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'blockr-popover-input';
+      input.value = cfg.ctrl_table || '';
+      input.placeholder = 'dm only — e.g. adsl';
+      input.addEventListener('change', () => {
+        cfg.ctrl_table = input.value.trim();
+        this.h.onChange('ctrl_table');
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      });
+      tcontrols.appendChild(input);
+      trow.appendChild(tcontrols);
+      const thelp = document.createElement('span');
+      thelp.className = 'dd-form-help';
+      thelp.textContent = 'Only when the target filters a dm; leave empty for plain data.';
+      trow.appendChild(thelp);
+      sec.appendChild(trow);
     }
 
     /** @param {HTMLElement} parent @param {string} key @param {{ required?: boolean, onChange?: () => void }} [param2] */
@@ -994,7 +1143,7 @@
         const opts = this._colOptionsFor(key, { required });
         const wrap = document.createElement('div');
         wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
-        const sel = (cfg[key] && cfg[key] !== '(none)') ? cfg[key] : (required ? '' : '(none)');
+        const sel = this._hasVal(cfg[key]) ? cfg[key] : (required ? '' : '(none)');
         const onSel = (/** @type {string} */ val) => {
           cfg[key] = (val === '(none)') ? '' : val;
           this._rememberRole(key, cfg[key]);

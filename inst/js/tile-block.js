@@ -149,6 +149,9 @@
       // per-instance `color` role built in buildCogwheel).
       colorSection: (cfg && (cfg.group || cfg.name))
         ? { colorKey: 'color', shadings: false } : null,
+      // External-control send (beta): push the drilled card's value into a
+      // value filter block on the board. cfg.ctrl_* rides in data-tk-config.
+      ctrlSection: true,
       // Value formatting is presentation, not data mapping. "Secondary
       // style" only applies when a secondary is mapped — hidden otherwise
       // (removing the Secondary role re-renders the popover, so the list

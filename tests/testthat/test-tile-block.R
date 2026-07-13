@@ -214,3 +214,19 @@ test_that("no click = pass-through; a drill click filters downstream", {
     args = list(x = blk, data = list(data = function() reg))
   )
 })
+
+test_that("empty-list state from a pre-#144 DAG paste normalizes back to NULL", {
+  # Only the filter transport is exposed (every other tile slot defaults to
+  # character()/""). The heal must run BEFORE the legacy-alias check: a
+  # poisoned `filter_col` is not NULL, so it would otherwise trip the
+  # deprecation warning and copy list() into `filter_column`.
+  expect_no_warning(
+    blk <- new_tile_block(
+      value = "AVAL", filter_column = list(), filter_values = list(),
+      filter_col = list(), filter_value = list()
+    )
+  )
+  payload <- blockr.core::blockr_ser(blk)[["payload"]]
+  expect_null(payload$filter_column)
+  expect_null(payload$filter_values)
+})

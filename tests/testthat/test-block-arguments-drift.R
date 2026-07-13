@@ -28,10 +28,11 @@ registry_allowlist <- list(
   chart = character(),
   table = c(
     # Runtime filter transport: written by clicks, round-trips through
-    # save/restore only -- never AI-set at creation.
+    # save/restore only -- never AI-set at creation. (filter_spread_col /
+    # filter_spread_from are DEFUNCT restore-only formals: no longer
+    # external_ctrl, so not listed here.)
     "filter_column", "filter_values",
     "filter_group_cols", "filter_group_vals",
-    "filter_spread_col", "filter_spread_from",
     # Display-only gear toggles / sizing, deliberately off the AI surface.
     "max_height", "sortable", "collapsible", "search", "excel_download"
   ),

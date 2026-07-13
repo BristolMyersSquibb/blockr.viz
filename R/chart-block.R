@@ -105,6 +105,15 @@
 #'   top of the box). No-op for other chart types.
 #' @param lo,hi Optional lower / upper value bounds used by the renderer to
 #'   clamp or annotate the value axis. Default `NULL` (auto).
+#' @param ctrl_target Character(1), beta. Block id of a value filter block on
+#'   the board: a categorical drill click's claim is ALSO pushed there over
+#'   the board's control channel ([ctrl_send()]; the board needs the channel
+#'   installed, see [new_ctrl_bridge_extension()]). Empty (the default) =
+#'   off; the drill behaves exactly as before. Exposed in the gear's "Send
+#'   to filter (beta)" section.
+#' @param ctrl_table Character(1), beta. Name of the table in the target's
+#'   `dm` the pushed conditions apply to (e.g. `"adsl"`). Leave empty when
+#'   the target filters a plain data frame.
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
 #' @return A transform block of class `chart_block`
@@ -167,6 +176,8 @@ new_chart_block <- function(
     # (baseline reset to 0, drawn as the absolute running cumulative).
     baseline = "zero",
     waterfall_totals = NULL,
+    ctrl_target = "",
+    ctrl_table = "",
     ...) {
 
   # ARG-RENAME (see dev/unified-arg-naming.md): `metric`/`agg_fn` are the
@@ -185,6 +196,36 @@ new_chart_block <- function(
             call. = FALSE)
     func <- .dep$agg_fn
   }
+
+  # A pre-#144 DAG copy/paste wrote NULL state as `{}`, which arrives here as
+  # an empty list(); a board saved in that state keeps re-emitting it (see
+  # R/state-normalize.R). Heal every optional slot back to NULL, so a block
+  # restored from a poisoned board is indistinguishable from a clean one --
+  # the mapping row stays hidden instead of rendering an "[object Object]"
+  # picker, and the render paths stop coercing their vectors to lists. Column
+  # roles normalize to character; the numeric / free-form slots only collapse
+  # the empty list, keeping their type.
+  group <- chr_state(group)
+  color <- chr_state(color)
+  facet <- chr_state(facet)
+  x <- chr_state(x)
+  y <- chr_state(y)
+  xend <- chr_state(xend)
+  series <- chr_state(series)
+  label <- chr_state(label)
+  drill <- chr_state(drill)
+  filter_column <- chr_state(filter_column)
+  sort_by <- chr_state(sort_by)
+  lo <- chr_state(lo)
+  hi <- chr_state(hi)
+  step <- chr_state(step)
+  tt_fields <- chr_vec_state(tt_fields)
+  waterfall_totals <- chr_vec_state(waterfall_totals)
+  ref_x <- null_state(ref_x)
+  ref_y <- null_state(ref_y)
+  filter_values <- null_state(filter_values)
+  filter_range <- null_state(filter_range)
+  filter_point <- null_state(filter_point)
 
   blockr.core::new_transform_block(
     server = function(id, data) {
@@ -228,6 +269,13 @@ new_chart_block <- function(
         r_filter_values <- shiny::reactiveVal(filter_values)
         r_filter_range <- shiny::reactiveVal(filter_range)
         r_filter_point <- shiny::reactiveVal(filter_point)
+
+        # External-control send (beta): the drill also pushes its claim into
+        # a value filter block (gear section "Send to filter"). Empty target
+        # = off, today's behaviour.
+        r_ctrl_target  <- shiny::reactiveVal(ctrl_target %||% "")
+        r_ctrl_table   <- shiny::reactiveVal(ctrl_table %||% "")
+        r_ctrl_choices <- dd_ctrl_choices()
 
         # Theming state
         r_line_width_mult <- shiny::reactiveVal(line_width_mult)
@@ -429,7 +477,14 @@ new_chart_block <- function(
               scales = dd_scales_config(
                 r_scale_map(), r_chart_type(),
                 color = r_color(), group = r_group(), data = d
-              )
+              ),
+              # External-control send (beta): current target/table + the
+              # board's candidate targets for the gear's picker. The choices
+              # reactiveVal skips identical sets, so this re-pumps only when
+              # value filter blocks come, go or get renamed.
+              ctrl_target = r_ctrl_target(),
+              ctrl_table = r_ctrl_table(),
+              ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices())
             )
             # NB: the registry _arguments() prose is intentionally NOT sent to
             # the browser. LLM prompts live in the registry only; popover help
@@ -501,6 +556,13 @@ new_chart_block <- function(
             if (!is.null(msg$box_points)) upd(r_box_points, msg$box_points)
             if (!is.null(msg$lo))         upd(r_lo, nn(msg$lo))
             if (!is.null(msg$hi))         upd(r_hi, nn(msg$hi))
+            # "" is a real value here (un-targeting the sender), so no nn().
+            if (!is.null(msg$ctrl_target)) {
+              upd(r_ctrl_target, trimws(as.character(msg$ctrl_target)))
+            }
+            if (!is.null(msg$ctrl_table)) {
+              upd(r_ctrl_table, trimws(as.character(msg$ctrl_table)))
+            }
           } else if (action == "set_mults") {
             if (!is.null(msg$line_width_mult)) {
               upd(r_line_width_mult, as.numeric(msg$line_width_mult))
@@ -569,6 +631,26 @@ new_chart_block <- function(
             }
           }
         })
+
+        # What the drill claims: only a CATEGORICAL click is a claim (one
+        # value is a decision). Range / point / brush selections are
+        # deliberately not claims -- same rule as drill_claim_columns(). The
+        # filter state records the column actually drilled at click time
+        # (JS resolves drill = "auto" there), so no user-facing claim field.
+        r_ctrl_claims <- shiny::reactive({
+          d <- tryCatch(plain_data(), error = function(e) NULL)
+          col <- r_filter_column()
+          vals <- as.character(unlist(r_filter_values()))
+          filters <- if (identical(r_filter_type(), "categorical") &&
+                           !is.null(col) && length(vals)) {
+            stats::setNames(list(vals), col)
+          } else {
+            list()
+          }
+          dd_ctrl_claims(d, r_ctrl_table(), filters)
+        })
+
+        dd_ctrl_sender(r_ctrl_target, r_ctrl_claims, session)
 
         # Build filter expression. With expr_type = "bquoted", `.(data)` is
         # substituted by blockr.core with the upstream block's id at eval
@@ -718,7 +800,9 @@ new_chart_block <- function(
             lo = r_lo,
             hi = r_hi,
             baseline = r_baseline,
-            waterfall_totals = r_waterfall_totals
+            waterfall_totals = r_waterfall_totals,
+            ctrl_target = r_ctrl_target,
+            ctrl_table = r_ctrl_table
           )
         )
       })
@@ -747,14 +831,16 @@ new_chart_block <- function(
       "filter_values", "value", "x", "y", "xend", "series", "label",
       "tt_fields", "drill", "sort_by", "sort_dir", "filter_range",
       "filter_point", "step", "ref_x", "ref_y", "smoother", "identity_line",
-      "box_points", "lo", "hi", "waterfall_totals"),
+      "box_points", "lo", "hi", "waterfall_totals",
+      "ctrl_target", "ctrl_table"),
     external_ctrl = c("group", "color", "facet", "value", "func",
       "chart_type", "x", "y", "xend", "series", "label", "tt_fields", "drill",
       "sort_by", "sort_dir", "orientation", "bar_mode", "filter_type",
       "filter_column",
       "filter_values", "filter_range", "filter_point", "line_width_mult",
       "dot_size_mult", "step", "ref_x", "ref_y", "smoother", "identity_line",
-      "box_points", "lo", "hi", "baseline", "waterfall_totals"),
+      "box_points", "lo", "hi", "baseline", "waterfall_totals",
+      "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",
     class = "chart_block",
     ...

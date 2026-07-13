@@ -30,6 +30,13 @@
 .drilldown-table-container.dt-clickable .blockr-table tbody tr.blockr-data-row.dt-row-nodrill:hover td {
   background: var(--blockr-color-bg-subtle, #f9fafb);
 }
+/* Section headers: only those that ARE an identity claim (row-group headers,
+   e.g. a SOC over its PTs -- they carry data-dd-keys) read as clickable.
+   Variable-block headers ("Sex", "Age") are labels, not claims: no keys, no
+   pointer, click is a no-op. */
+.drilldown-table-container.dt-clickable .blockr-table tbody tr.blockr-section-header[data-dd-keys] .blockr-section-value {
+  cursor: pointer;
+}
 /* No drill: the row is inert. The html-table base paints an accent-blue hover
    (which reads as "clickable"), and the drilldown container inherits it because
    it also carries .blockr-html-table-container. When drill is off, swap that for

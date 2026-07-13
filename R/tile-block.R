@@ -76,6 +76,15 @@
 #'   `filter_column` / `filter_values`, mapped on construction (the old
 #'   scalar `filter_value` coerces to the plural list shape). Kept as formals
 #'   so saved boards restore; new names win when both are given.
+#' @param ctrl_target Character(1), beta. Block id of a value filter block on
+#'   the board: the drill's claim is ALSO pushed there over the board's
+#'   control channel ([ctrl_send()]; the board needs the channel installed,
+#'   see [new_ctrl_bridge_extension()]). Empty (the default) = off; the drill
+#'   behaves exactly as before. Exposed in the gear's "Send to filter (beta)"
+#'   section.
+#' @param ctrl_table Character(1), beta. Name of the table in the target's
+#'   `dm` the pushed conditions apply to (e.g. `"adsl"`). Leave empty when
+#'   the target filters a plain data frame.
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #'
 #' @return A transform block of class `tile_block`. Its `result` is the
@@ -104,7 +113,20 @@ new_tile_block <- function(value = character(),
                            filter_values = NULL,
                            filter_col = NULL,
                            filter_value = NULL,
+                           ctrl_target = "",
+                           ctrl_table = "",
                            ...) {
+  # Heal state poisoned by a pre-#144 DAG copy/paste (NULL slot -> list(); see
+  # R/state-normalize.R). Only the filter transport is exposed here -- every
+  # other slot defaults to character()/"" and so was never serialized as NULL.
+  # MUST run before the legacy-alias check below: a poisoned `filter_col` is
+  # not NULL, so it would trip the deprecation warning and copy list() into
+  # `filter_column`.
+  filter_column <- chr_state(filter_column)
+  filter_col <- chr_state(filter_col)
+  filter_values <- null_state(filter_values)
+  filter_value <- null_state(filter_value)
+
   # Legacy aliases mapped on construction (pre-rename saved boards / callers
   # restore through these formals): filter_col / filter_value become the
   # shared chart / table transport names filter_column / filter_values, the
@@ -154,6 +176,12 @@ new_tile_block <- function(value = character(),
         r_drill     <- shiny::reactiveVal(isTRUE(drill))
         r_filter_column <- shiny::reactiveVal(filter_column)
         r_filter_values <- shiny::reactiveVal(filter_values)
+        # External-control send (beta): the drill also pushes its claim into
+        # a value filter block (gear section "Send to filter"). Empty target
+        # = off, today's behaviour.
+        r_ctrl_target  <- shiny::reactiveVal(ctrl_target %||% "")
+        r_ctrl_table   <- shiny::reactiveVal(ctrl_table %||% "")
+        r_ctrl_choices <- dd_ctrl_choices()
 
         # Only write when the value actually changes. The JS echoes the full
         # config on any popover change, so a blind set would re-render on
@@ -189,10 +217,29 @@ new_tile_block <- function(value = character(),
               caption   = upd(r_caption, tk_blank(v)),
               layout    = upd(r_layout, v %||% "cards"),
               drill     = upd(r_drill, isTRUE(v) || identical(v, "true")),
+              ctrl_target = upd(r_ctrl_target, trimws(as.character(v %||% ""))),
+              ctrl_table  = upd(r_ctrl_table, trimws(as.character(v %||% ""))),
               NULL
             )
           }
         })
+
+        # What the drill claims, read off the block's own filter state (the
+        # filter column is structurally determined at click time). Shared
+        # code path with the chart / table (dd_ctrl_claims / dd_ctrl_sender).
+        r_ctrl_claims <- shiny::reactive({
+          d <- tryCatch(plain_data(), error = function(e) NULL)
+          col <- r_filter_column()
+          vals <- as.character(unlist(r_filter_values()))
+          filters <- if (!is.null(col) && length(vals)) {
+            stats::setNames(list(vals), col)
+          } else {
+            list()
+          }
+          dd_ctrl_claims(d, r_ctrl_table(), filters)
+        })
+
+        dd_ctrl_sender(r_ctrl_target, r_ctrl_claims, session)
 
         # Board scale map (NULL when the board has no "scale_map" option) --
         # resolves the "Color by" card tint to the same hexes the chart uses.
@@ -219,7 +266,15 @@ new_tile_block <- function(value = character(),
             # table renders its status line as a separate small output
             # instead, because its body render is heavy.)
             active_col = r_filter_column(),
-            active_values = r_filter_values()
+            active_values = r_filter_values(),
+            # External-control send (beta): rides in data-tk-config for the
+            # gear. Reading the choices reactiveVal here re-renders the tile
+            # only when the candidate set changes (identical() skip).
+            ctrl = list(
+              target = r_ctrl_target(),
+              table = r_ctrl_table(),
+              choices = dd_ctrl_choices_list(r_ctrl_choices())
+            )
           )
         })
 
@@ -263,7 +318,9 @@ new_tile_block <- function(value = character(),
             # NULL so restored boards re-enter through the new names;
             # blockr.core requires every ctor formal in the state.
             filter_col = function() NULL,
-            filter_value = function() NULL
+            filter_value = function() NULL,
+            ctrl_target = r_ctrl_target,
+            ctrl_table = r_ctrl_table
           )
         )
       })
@@ -282,10 +339,12 @@ new_tile_block <- function(value = character(),
     allow_empty_state = c("value", "group", "name", "summaries", "color",
       "overline",
       "caption", "secondary", "unit", "drill", "filter_column",
-      "filter_values", "filter_col", "filter_value"),
+      "filter_values", "filter_col", "filter_value",
+      "ctrl_target", "ctrl_table"),
     external_ctrl = c("value", "group", "name", "summaries", "color", "layout",
       "overline", "caption", "secondary", "style", "good_when", "format",
-      "unit", "drill", "filter_column", "filter_values"),
+      "unit", "drill", "filter_column", "filter_values",
+      "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",
     class = "tile_block",
     ...
@@ -333,7 +392,7 @@ tile_block_dep <- memoise0(function() {
     ),
     htmltools::htmlDependency(
       name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.viz"), ".27"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".26"),
       src = system.file("css", package = "blockr.viz"),
       stylesheet = "chart.css"
     ),
@@ -343,7 +402,7 @@ tile_block_dep <- memoise0(function() {
     drilldown_shared_dep(),
     htmltools::htmlDependency(
       name = "tile-block",
-      version = paste0(utils::packageVersion("blockr.viz"), ".12"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".13"),
       src = system.file(package = "blockr.viz"),
       script = "js/tile-block.js",
       stylesheet = "css/tile-block.css"
@@ -477,6 +536,27 @@ tile_arguments <- function() {
       ),
       example = TRUE,
       type = arg_boolean()
+    ),
+    ctrl_target = new_block_arg(
+      paste0(
+        "BETA. Block id of a value filter block on the SAME board: the ",
+        "drill's claim (e.g. SEX = F) is also pushed into that block over ",
+        "the board's control channel, so the drill filters a pipeline the ",
+        "tile has no data link to. Requires `drill = TRUE` and the board ",
+        "to carry the control bridge extension. Empty (default) = off; the ",
+        "drill then behaves exactly as documented above."
+      ),
+      example = "cohort_filter",
+      type = arg_string()
+    ),
+    ctrl_table = new_block_arg(
+      paste0(
+        "BETA. Only with `ctrl_target`: the table in the target's dm the ",
+        "pushed conditions apply to (e.g. \"adsl\"). Leave empty when the ",
+        "target filters a plain data frame."
+      ),
+      example = "adsl",
+      type = arg_string()
     )
   )
 }

@@ -349,7 +349,7 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
   # Structured drill is opt-in via the gear's picker-less Drill-down checkbox
   # (config param `drill`, "auto" -- same convention as the grouped table /
   # tile) or the `drill=` ctor arg. When on, every data row / section header
-  # carries its identity keys + spread as data attributes (see
+  # carries its identity keys as data attributes (see
   # dd_row_drill_attrs) and the click branch in table.js emits the shared
   # grouped-filter payload from them.
   drill_on <- !is.null(drill) && nzchar(drill)
@@ -1138,7 +1138,7 @@ drilldown_table_dep <- memoise0(function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".26"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".27"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"
@@ -1258,6 +1258,27 @@ table_arguments <- function() {
       "Decimal places for numeric display. Default 2.",
       example = 2L,
       type = arg_integer()
+    ),
+    ctrl_target = new_block_arg(
+      paste0(
+        "BETA. Block id of a value filter block on the SAME board: the ",
+        "drill's claim (e.g. SEX = F) is also pushed into that block over ",
+        "the board's control channel, so the drill filters a pipeline the ",
+        "table has no data link to. Requires drill to be on and the board ",
+        "to carry the control bridge extension. Empty (default) = off; the ",
+        "drill then behaves exactly as documented above."
+      ),
+      example = "cohort_filter",
+      type = arg_string()
+    ),
+    ctrl_table = new_block_arg(
+      paste0(
+        "BETA. Only with `ctrl_target`: the table in the target's dm the ",
+        "pushed conditions apply to (e.g. \"adsl\"). Leave empty when the ",
+        "target filters a plain data frame."
+      ),
+      example = "adsl",
+      type = arg_string()
     )
   )
 }
@@ -1334,13 +1355,13 @@ table_guidance <- function() {
 #'   drill filter state: the aligned key columns and values ANDed to filter
 #'   the input to the clicked row (group keys for an aggregated table;
 #'   identity columns `.group<k>_level` / `.variable` / `.variable_level` for
-#'   a structured one). Default `NULL` (no drill filter active).
-#' @param filter_spread_col,filter_spread_from Structured-drill spread state:
-#'   the clicked row's machine column name (e.g. `"AEDECOD"`) and the identity
-#'   column it copies (`".variable_level"` or a `".group<k>_level"`). When
-#'   set, the block's output gains `<filter_spread_col> = <that column>` so a
-#'   name-matching consumer (e.g. `blockr.dm::new_dm_filter_by_data_block`)
-#'   can cascade the click to the source data. Default `NULL`.
+#'   a structured one). Default `NULL` (no drill filter active). The drilled
+#'   output is a pure subset of the annotated df: the identity columns carry
+#'   the selection, no synthetic column is added.
+#' @param filter_spread_col,filter_spread_from Defunct (the drill no longer
+#'   spreads the selection into a synthetic column). Kept as formals so boards
+#'   saved while the spread existed still restore; always serialized as
+#'   `NULL`, ignored.
 #' @param sortable,collapsible,search Logical display toggles (each default
 #'   `TRUE`): column sorting, indent-derived collapsible section headers, and
 #'   the toolbar search box. Exposed in the block's gear menu.
@@ -1348,6 +1369,15 @@ table_guidance <- function() {
 #'   download button appears on the table toolbar; it writes the rendered
 #'   (annotated) frame to a styled `.xlsx` via [write_annotated_xlsx()]. Needs
 #'   the `openxlsx` package.
+#' @param ctrl_target Character(1), beta. Block id of a value filter block on
+#'   the board: the drill's claim is ALSO pushed there over the board's
+#'   control channel ([ctrl_send()]; the board needs the channel installed,
+#'   see [new_ctrl_bridge_extension()]). Empty (the default) = off; the drill
+#'   behaves exactly as before. Exposed in the gear's "Send to filter (beta)"
+#'   section.
+#' @param ctrl_table Character(1), beta. Name of the table in the target's
+#'   `dm` the pushed conditions apply to (e.g. `"adsl"`). Leave empty when the
+#'   target filters a plain data frame.
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #' @return A transform block of class `table_block`.
 #' @examplesIf interactive()
@@ -1376,7 +1406,30 @@ new_table_block <- function(rowname = NULL,
                                       collapsible = TRUE,
                                       search = TRUE,
                                       excel_download = FALSE,
+                                      ctrl_target = "",
+                                      ctrl_table = "",
                                       ...) {
+  # Heal state poisoned by a pre-#144 DAG copy/paste, where a NULL slot came
+  # back as list() (see R/state-normalize.R -- this block is where that bug was
+  # first diagnosed: a pasted `row_color` holding list() reached nzchar() and
+  # threw "argument is of length zero"). Column roles normalize to character;
+  # the color slots only collapse the empty list, because "" is meaningful
+  # there (explicitly off, as against NULL = smart default) and must survive.
+  rowname <- chr_state(rowname)
+  value <- chr_state(value)
+  drill <- chr_state(drill)
+  filter_column <- chr_state(filter_column)
+  filter_spread_col <- chr_state(filter_spread_col)
+  group <- chr_vec_state(group)
+  filter_group_cols <- chr_vec_state(filter_group_cols)
+  color <- null_state(color)
+  cell_color <- null_state(cell_color)
+  row_color <- null_state(row_color)
+  filter_values <- null_state(filter_values)
+  filter_range <- null_state(filter_range)
+  filter_group_vals <- null_state(filter_group_vals)
+  filter_spread_from <- null_state(filter_spread_from)
+
   # Legacy args mapped on construction (old saved boards restore through
   # these formals): a cell_color spec reads as one `shadings` rule; row_color
   # reads as `color`. New names win when both are given.
@@ -1407,18 +1460,16 @@ new_table_block <- function(rowname = NULL,
         # values (aligned vectors) to filter the raw input to that group.
         r_filter_group_cols <- shiny::reactiveVal(filter_group_cols)
         r_filter_group_vals <- shiny::reactiveVal(filter_group_vals)
-        # Structured-drill spread: the clicked row's machine column name and
-        # the identity column it copies (".variable_level" / ".group<k>_level").
-        # The expr mutates the filtered frame with `<col> = .data[[from]]`, so
-        # the drilled output carries the selection under its real-world name
-        # -- what a name-matching consumer (blockr.dm's dm_filter_by_data
-        # semi-join) picks up to cascade the click to patient level.
-        r_filter_spread_col  <- shiny::reactiveVal(filter_spread_col)
-        r_filter_spread_from <- shiny::reactiveVal(filter_spread_from)
         r_sortable       <- shiny::reactiveVal(isTRUE(sortable))
         r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
         r_search         <- shiny::reactiveVal(isTRUE(search))
         r_excel_download <- shiny::reactiveVal(isTRUE(excel_download))
+        # External-control send (beta): the drill also pushes its claim into
+        # a value filter block (gear section "Send to filter"). Empty target
+        # = off, today's behaviour.
+        r_ctrl_target  <- shiny::reactiveVal(ctrl_target %||% "")
+        r_ctrl_table   <- shiny::reactiveVal(ctrl_table %||% "")
+        r_ctrl_choices <- dd_ctrl_choices()
 
         # Only write a reactiveVal when the value actually changes. JS echoes
         # the full config/filter on any popover change, so a blind set would
@@ -1457,23 +1508,11 @@ new_table_block <- function(rowname = NULL,
               upd(r_filter_group_vals, vals)
               upd(r_filter_column, NULL)
               upd(r_filter_values, NULL)
-              # Structured drill sends the spread alongside the keys; a stat
-              # row (no source-value claim) sends none -> cleared.
-              sp <- msg$spread
-              if (!is.null(sp) && !is.null(sp$column) && !is.null(sp$from)) {
-                upd(r_filter_spread_col, as.character(sp$column))
-                upd(r_filter_spread_from, as.character(sp$from))
-              } else {
-                upd(r_filter_spread_col, NULL)
-                upd(r_filter_spread_from, NULL)
-              }
             } else {
               upd(r_filter_column, msg$column)
               upd(r_filter_values, msg$values)
               upd(r_filter_group_cols, NULL)
               upd(r_filter_group_vals, NULL)
-              upd(r_filter_spread_col, NULL)
-              upd(r_filter_spread_from, NULL)
             }
           } else if (identical(act, "config")) {
             p <- msg$param
@@ -1503,9 +1542,35 @@ new_table_block <- function(rowname = NULL,
               upd(r_search, as_toggle(v))
             } else if (identical(p, "excel_download")) {
               upd(r_excel_download, as_toggle(v))
+            } else if (identical(p, "ctrl_target")) {
+              upd(r_ctrl_target, trimws(as.character(v %||% "")))
+            } else if (identical(p, "ctrl_table")) {
+              upd(r_ctrl_table, trimws(as.character(v %||% "")))
             }
           }
         })
+
+        # What the drill claims, read off the block's OWN filter state: the
+        # structured drill's identity keys (all dot-prefixed -> ARD mode) or
+        # the flat drill's column + values (-> source-column mode). Shared
+        # code path with the chart / tile (dd_ctrl_claims / dd_ctrl_sender).
+        r_ctrl_claims <- shiny::reactive({
+          d <- tryCatch(ann_data(), error = function(e) NULL)
+          gc <- r_filter_group_cols()
+          gv <- r_filter_group_vals()
+          col <- r_filter_column()
+          vals <- r_filter_values()
+          filters <- if (length(gc) && length(gc) == length(gv)) {
+            stats::setNames(as.list(gv), gc)
+          } else if (!is.null(col) && length(vals)) {
+            stats::setNames(list(vals), col)
+          } else {
+            list()
+          }
+          dd_ctrl_claims(d, r_ctrl_table(), filters)
+        })
+
+        dd_ctrl_sender(r_ctrl_target, r_ctrl_claims, session)
 
         # Split render so a filter (or gear edit) re-renders ONLY the <table>,
         # never the search bar / gear / scroll container -- no whole-panel
@@ -1550,29 +1615,25 @@ new_table_block <- function(rowname = NULL,
           single_on  <- !is.null(col) && length(vals) > 0
           drill_on   <- !is.null(r_drill()) && nzchar(r_drill())
           if (!grouped_on && !single_on && !drill_on) return(NULL)
-          # Structured drill: the spread names the selection in source terms
-          # ("AEDECOD = ABDOMINAL PAIN"), which reads better than the dotted
-          # identity keys it was derived from.
-          sp_col  <- r_filter_spread_col()
-          sp_from <- r_filter_spread_from()
-          if (grouped_on && !is.null(sp_col) && nzchar(sp_col %||% "") &&
-              !is.null(sp_from) && sp_from %in% gc) {
-            i <- match(sp_from, gc)
-            gc[i] <- sp_col
-            keep <- !(gc %in% c(".variable", ".variable_label"))
-            gc <- gc[keep]
-            gv <- gv[keep]
-          }
-          if (grouped_on) {
-            # Remaining dotted identity keys (section-header / stat-row
-            # clicks) read as plain words, never internals.
-            gc[gc == ".variable_label"] <- "Section"
-            gc[gc == ".variable"]       <- "Variable"
-            gc[gc == ".variable_level"] <- "Value"
-            gc[gc == ".label"]          <- "Row"
-          }
           text <- if (grouped_on) {
-            paste0("Filtered: ", paste0(gc, " = ", gv, collapse = " & "))
+            # Structured drill keys are identity columns; read the source
+            # terms out of the VALUES ("AEDECOD = ABDOMINAL PAIN" -- the
+            # variable NAME is the `.variable` key's value), with enclosing
+            # group levels as a breadcrumb. Falls back to a plain group
+            # breadcrumb for header clicks, and to `col = value` pairs for
+            # the aggregated-table drill (real column names).
+            glv <- grepl("^\\.group[0-9]+_level$", gc)
+            vi <- match(".variable", gc)
+            li <- match(".variable_level", gc)
+            structured_keys <- !is.na(li) || any(glv)
+            lab <- if (!is.na(vi) && !is.na(li)) {
+              c(gv[glv], paste0(gv[vi], " = ", gv[li]))
+            } else if (structured_keys) {
+              gv[glv]
+            } else {
+              paste0(gc, " = ", gv)
+            }
+            paste0("Filtered: ", paste0(lab, collapse = " \u203a "))
           } else if (single_on) {
             paste0("Filtered: ", col, " = ", paste(vals, collapse = ", "))
           } else {
@@ -1648,6 +1709,20 @@ new_table_block <- function(rowname = NULL,
         # categorical row-stub, matching the chart's legend.
         board_scale_map <- dd_board_scale_map()
 
+        # The ctrl config rides on the rendered <table> as data-attributes
+        # (like every other gear-read state, see dt_table_attrs): stamped
+        # post-hoc so the render helpers stay ctrl-agnostic. Reading the
+        # choices reactiveVal here re-renders the table only when the
+        # candidate set changes (identical() skip in dd_ctrl_choices).
+        stamp_ctrl <- function(tag) {
+          htmltools::tagAppendAttributes(
+            tag,
+            `data-dt-ctrl-target` = r_ctrl_target(),
+            `data-dt-ctrl-table` = r_ctrl_table(),
+            `data-dt-ctrl-choices` = dd_ctrl_choices_json(r_ctrl_choices())
+          )
+        }
+
         output$dt_table <- shiny::renderUI({
           d <- tryCatch(ann_data(), error = function(e) NULL)
           shiny::req(is.data.frame(d))
@@ -1694,7 +1769,7 @@ new_table_block <- function(rowname = NULL,
               NULL
             }
             return(tryCatch(
-              dt_table_tag(
+              stamp_ctrl(dt_table_tag(
                 ad,
                 # The displayed frame is a projection; the gear's pickers
                 # must keep offering the RAW input schema (group / value /
@@ -1730,7 +1805,7 @@ new_table_block <- function(rowname = NULL,
                 search      = isTRUE(r_search()),
                 excel_download = isTRUE(r_excel_download()),
                 active     = act
-              ),
+              )),
               error = function(e) {
                 shiny::tags$div(
                   class = "blockr-error", role = "alert",
@@ -1759,7 +1834,7 @@ new_table_block <- function(rowname = NULL,
           # motivation for the first-class side-effect-render seam that would
           # route this through server$conditions() automatically.)
           tryCatch(
-            dt_table_tag(
+            stamp_ctrl(dt_table_tag(
               d,
               label_col  = r_rowname(),
               value_cols = r_value(),
@@ -1784,7 +1859,7 @@ new_table_block <- function(rowname = NULL,
               search      = isTRUE(r_search()),
               excel_download = isTRUE(r_excel_download()),
               active     = act
-            ),
+            )),
             error = function(e) {
               shiny::tags$div(
                 class = "blockr-error", role = "alert",
@@ -1806,28 +1881,16 @@ new_table_block <- function(rowname = NULL,
             col  <- r_filter_column()
             vals <- r_filter_values()
             if (length(gc) && length(gc) == length(gv)) {
-              # Grouped drill: AND each clicked group key (raw input -> members).
+              # Grouped / structured drill: AND each clicked key. The output
+              # is a pure SUBSET of the annotated df -- the identity columns
+              # (`.variable`, `.variable_level`, `.group<k>*`) already carry
+              # the selection, so no synthetic column is added; downstream
+              # consumers read the identity columns themselves.
               cond <- dd_group_filter_call(gc, gv)
-              fcall <- blockr.core::bbquote(
+              blockr.core::bbquote(
                 dplyr::filter(blockr.viz::as_annotated_df(.(data)), .(cond)),
                 list(cond = cond)
               )
-              # Structured drill spread: name the selection as a real column
-              # (`AEDECOD = .data[[".variable_level"]]`) so downstream
-              # name-matching consumers (dm_filter_by_data_block) see it.
-              sp_col  <- r_filter_spread_col()
-              sp_from <- r_filter_spread_from()
-              if (!is.null(sp_col) && nzchar(sp_col) &&
-                  !is.null(sp_from) && nzchar(sp_from)) {
-                mcall <- as.call(list(
-                  quote(dplyr::mutate), fcall,
-                  blockr.core::bbquote(.data[[.(sp_from)]], list(sp_from = sp_from))
-                ))
-                names(mcall) <- c("", "", sp_col)
-                mcall
-              } else {
-                fcall
-              }
             } else if (is.null(col) || is.null(vals) || length(vals) == 0) {
               blockr.core::bbquote(
                 dplyr::filter(blockr.viz::as_annotated_df(.(data)), TRUE)
@@ -1874,12 +1937,18 @@ new_table_block <- function(rowname = NULL,
             filter_range  = function() NULL,
             filter_group_cols = r_filter_group_cols,
             filter_group_vals = r_filter_group_vals,
-            filter_spread_col  = r_filter_spread_col,
-            filter_spread_from = r_filter_spread_from,
+            # Legacy spread formals (the drill no longer adds a synthetic
+            # column -- the output is a pure subset and the identity columns
+            # are the interface): serialized as NULL, kept as ctor formals so
+            # boards saved while the spread existed still restore.
+            filter_spread_col  = function() NULL,
+            filter_spread_from = function() NULL,
             sortable       = r_sortable,
             collapsible    = r_collapsible,
             search         = r_search,
-            excel_download = r_excel_download
+            excel_download = r_excel_download,
+            ctrl_target    = r_ctrl_target,
+            ctrl_table     = r_ctrl_table
           )
         )
       })
@@ -1897,14 +1966,15 @@ new_table_block <- function(rowname = NULL,
       "shadings", "cell_color", "row_color", "drill", "filter_column",
       "filter_values", "filter_type", "filter_range",
       "filter_group_cols", "filter_group_vals",
-      "filter_spread_col", "filter_spread_from"),
+      "filter_spread_col", "filter_spread_from",
+      "ctrl_target", "ctrl_table"),
     external_ctrl = c("rowname", "value", "group", "summaries",
       "color", "shadings", "drill",
       "digits", "max_height",
       "filter_column", "filter_values",
       "filter_group_cols", "filter_group_vals",
-      "filter_spread_col", "filter_spread_from",
-      "sortable", "collapsible", "search", "excel_download"),
+      "sortable", "collapsible", "search", "excel_download",
+      "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",
     class = "table_block",
     ...

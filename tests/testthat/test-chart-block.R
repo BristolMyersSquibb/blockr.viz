@@ -449,3 +449,38 @@ test_that("radar round-trips through state and filters on the color column", {
     args = list(x = blk, data = list(data = function() df))
   )
 })
+
+test_that("empty-list state from a pre-#144 DAG paste normalizes back to NULL", {
+  # A pre-#144 blockr.dag clipboard wrote NULL state as `{}`, so a pasted block
+  # arrives with list() where it should hold NULL -- and a board saved in that
+  # state keeps re-emitting it, so restores carry the corruption forward. Left
+  # alone it reaches the gear as an empty JS object: the optional mapping row
+  # renders and shows "[object Object]" instead of staying hidden, and the
+  # render paths coerce their column vectors to lists and error.
+  # Slot list taken from a real poisoned clipboard payload (viz 0.1.18 chart).
+  blk <- new_chart_block(
+    chart_type = "line", x = "VISIT", y = "AVAL", facet = "ARM",
+    value = "AVAL", func = "mean", lo = "AVAL_LOW", hi = "AVAL_UP",
+    sort_by = "value",
+    group = list(), color = list(), xend = list(), series = list(),
+    label = list(), tt_fields = list(), drill = list(), step = list(),
+    ref_x = list(), ref_y = list(), waterfall_totals = list(),
+    filter_column = list(), filter_values = list(), filter_range = list(),
+    filter_point = list()
+  )
+  payload <- blockr.core::blockr_ser(blk)[["payload"]]
+
+  empty_list <- vapply(payload, function(v) is.list(v) && !length(v), logical(1))
+  expect_equal(names(payload)[empty_list], character())
+
+  # Real config survives the heal untouched.
+  expect_equal(payload$facet, "ARM")
+  expect_equal(payload$x, "VISIT")
+  expect_equal(payload$lo, "AVAL_LOW")
+  expect_equal(payload$sort_by, "value")
+  # A scalar that arrives boxed in a list unboxes rather than being dropped.
+  expect_equal(
+    blockr.core::blockr_ser(new_chart_block(color = list("TRT01A")))[["payload"]]$color,
+    "TRT01A"
+  )
+})
