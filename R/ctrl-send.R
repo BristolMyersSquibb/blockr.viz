@@ -214,8 +214,7 @@ install_ctrl_send <- function(update, board = NULL,
 #'
 #' The block ids a sender may point at: every block on the board of the given
 #' class. Populates the target picker of the drill senders (the table, chart
-#' and tile blocks' external-control option, and
-#' `blockr.extra::new_ctrl_filter_block()`), and is available to a hand-rolled
+#' and tile blocks' external-control option), and is available to a hand-rolled
 #' sender (a function block calling [ctrl_send()]) that wants one too.
 #'
 #' Reads the board reactively, so a picker built on it re-renders as blocks are
@@ -604,8 +603,8 @@ new_ctrl_bridge_extension <- function() {
 #' block's filter reactives (the state its drill click wrote). The input is
 #' subset on those pairs and the claim is read off the subset with
 #' [drill_claim_columns()] -- so the one-value-per-dimension rule (and the
-#' un-drill propagation it buys) is the same one the standalone
-#' `ctrl_filter_block` applies downstream.
+#' un-drill propagation it buys) is the same one a hand-rolled downstream
+#' sender reading the drilled output would apply.
 #'
 #' Which claim mode applies falls out of the filter columns themselves: a
 #' structured table drills on its dot-prefixed identity columns

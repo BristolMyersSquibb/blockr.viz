@@ -1633,7 +1633,7 @@ new_table_block <- function(rowname = NULL,
             } else {
               paste0(gc, " = ", gv)
             }
-            paste0("Filtered: ", paste0(lab, collapse = " › "))
+            paste0("Filtered: ", paste0(lab, collapse = " \u203a "))
           } else if (single_on) {
             paste0("Filtered: ", col, " = ", paste(vals, collapse = ", "))
           } else {

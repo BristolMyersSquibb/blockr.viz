@@ -24,8 +24,7 @@ back to the id). Empty when there is no channel or no candidate.
 \description{
 The block ids a sender may point at: every block on the board of the given
 class. Populates the target picker of the drill senders (the table, chart
-and tile blocks' external-control option, and
-\code{blockr.extra::new_ctrl_filter_block()}), and is available to a hand-rolled
+and tile blocks' external-control option), and is available to a hand-rolled
 sender (a function block calling \code{\link[=ctrl_send]{ctrl_send()}}) that wants one too.
 }
 \details{
