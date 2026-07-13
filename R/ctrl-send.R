@@ -655,6 +655,7 @@ dd_ctrl_sender <- function(r_target, r_claims,
                            session = shiny::getDefaultReactiveDomain()) {
 
   last_target <- ""
+  last_sent <- NULL
 
   shiny::observe({
     tgt <- trimws(r_target() %||% "")
@@ -663,6 +664,7 @@ dd_ctrl_sender <- function(r_target, r_claims,
     if (nzchar(last_target) && !identical(last_target, tgt)) {
       ctrl_clear(last_target, state = list(columns = list()),
                  session = session)
+      last_sent <<- NULL
     }
     last_target <<- tgt
 
@@ -671,6 +673,20 @@ dd_ctrl_sender <- function(r_target, r_claims,
     }
 
     payload <- list(columns = claims)
+
+    # Send only what is NEW. A ctrl_send() is a board update, and a board update
+    # re-evaluates EVERY block -- including this one. `r_claims` is a plain
+    # reactive over the block's data, so it invalidates on that re-evaluation
+    # even when the drill has not changed, and this observer would push the same
+    # claim again: send -> board update -> re-evaluate -> send, without end, one
+    # cycle per board evaluation. On a board whose pipeline takes seconds that
+    # reads as the app reloading itself over and over. Nothing else damps this:
+    # a plain reactive has no identical()-skip, and ctrl_send() re-sends
+    # unconditionally, so the payload comparison has to happen here.
+    if (identical(payload, last_sent)) {
+      return()
+    }
+    last_sent <<- payload
 
     if (length(claims)) {
       ctrl_send(tgt, state = payload, session = session)
