@@ -207,3 +207,25 @@ test_that("fmt_to_wide tolerates empty/NA group levels (no pivot crash)", {
   expect_true(all(c("Drug X", "Drug Y") %in% names(w)))
   expect_false("(Missing)" %in% names(w))
 })
+
+test_that("empty-list state from a pre-#144 DAG paste normalizes back to NULL", {
+  # Where this bug was first diagnosed: a pasted `row_color` holding list()
+  # reached nzchar() and threw "argument is of length zero" on first reconnect.
+  blk <- new_table_block(
+    rowname = list(), value = list(), group = list(), color = list(),
+    row_color = list(), cell_color = list(), drill = list(),
+    filter_column = list(), filter_values = list(), filter_range = list(),
+    filter_group_cols = list(), filter_group_vals = list(),
+    filter_spread_col = list(), filter_spread_from = list()
+  )
+  payload <- blockr.core::blockr_ser(blk)[["payload"]]
+
+  # `summaries` / `shadings` default to list(): that IS their empty value, not
+  # corruption. Every other slot must have healed back to NULL.
+  empty_list <- vapply(payload, function(v) is.list(v) && !length(v), logical(1))
+  expect_equal(sort(names(payload)[empty_list]), c("shadings", "summaries"))
+
+  # "" is meaningful on `color` (tint explicitly OFF, as against NULL = smart
+  # default by rowname), so the heal must not collapse it to NULL.
+  expect_equal(blockr.core::blockr_ser(new_table_block(color = ""))[["payload"]]$color, "")
+})

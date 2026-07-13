@@ -116,6 +116,17 @@ new_tile_block <- function(value = character(),
                            ctrl_target = "",
                            ctrl_table = "",
                            ...) {
+  # Heal state poisoned by a pre-#144 DAG copy/paste (NULL slot -> list(); see
+  # R/state-normalize.R). Only the filter transport is exposed here -- every
+  # other slot defaults to character()/"" and so was never serialized as NULL.
+  # MUST run before the legacy-alias check below: a poisoned `filter_col` is
+  # not NULL, so it would trip the deprecation warning and copy list() into
+  # `filter_column`.
+  filter_column <- chr_state(filter_column)
+  filter_col <- chr_state(filter_col)
+  filter_values <- null_state(filter_values)
+  filter_value <- null_state(filter_value)
+
   # Legacy aliases mapped on construction (pre-rename saved boards / callers
   # restore through these formals): filter_col / filter_value become the
   # shared chart / table transport names filter_column / filter_values, the

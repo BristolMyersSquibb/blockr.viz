@@ -80,6 +80,11 @@
     // required `columns` role never gets the amber required-empty cue.
     _hasVal(v) {
       if (Array.isArray(v)) return v.length > 0;
+      // A plain object is never a value. State copied through the DAG
+      // clipboard turns NULL into `{}` (blockr.dag#144); without this the
+      // empty object counts as set, the optional row renders, and the picker
+      // stringifies it as "[object Object]".
+      if (v !== null && typeof v === 'object') return false;
       return v !== null && v !== undefined && v !== '' && v !== '(none)';
     }
     _cols() { return this.h.columns() || []; }
@@ -1138,7 +1143,7 @@
         const opts = this._colOptionsFor(key, { required });
         const wrap = document.createElement('div');
         wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
-        const sel = (cfg[key] && cfg[key] !== '(none)') ? cfg[key] : (required ? '' : '(none)');
+        const sel = this._hasVal(cfg[key]) ? cfg[key] : (required ? '' : '(none)');
         const onSel = (/** @type {string} */ val) => {
           cfg[key] = (val === '(none)') ? '' : val;
           this._rememberRole(key, cfg[key]);

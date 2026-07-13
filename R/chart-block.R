@@ -197,6 +197,36 @@ new_chart_block <- function(
     func <- .dep$agg_fn
   }
 
+  # A pre-#144 DAG copy/paste wrote NULL state as `{}`, which arrives here as
+  # an empty list(); a board saved in that state keeps re-emitting it (see
+  # R/state-normalize.R). Heal every optional slot back to NULL, so a block
+  # restored from a poisoned board is indistinguishable from a clean one --
+  # the mapping row stays hidden instead of rendering an "[object Object]"
+  # picker, and the render paths stop coercing their vectors to lists. Column
+  # roles normalize to character; the numeric / free-form slots only collapse
+  # the empty list, keeping their type.
+  group <- chr_state(group)
+  color <- chr_state(color)
+  facet <- chr_state(facet)
+  x <- chr_state(x)
+  y <- chr_state(y)
+  xend <- chr_state(xend)
+  series <- chr_state(series)
+  label <- chr_state(label)
+  drill <- chr_state(drill)
+  filter_column <- chr_state(filter_column)
+  sort_by <- chr_state(sort_by)
+  lo <- chr_state(lo)
+  hi <- chr_state(hi)
+  step <- chr_state(step)
+  tt_fields <- chr_vec_state(tt_fields)
+  waterfall_totals <- chr_vec_state(waterfall_totals)
+  ref_x <- null_state(ref_x)
+  ref_y <- null_state(ref_y)
+  filter_values <- null_state(filter_values)
+  filter_range <- null_state(filter_range)
+  filter_point <- null_state(filter_point)
+
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {

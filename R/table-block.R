@@ -1409,6 +1409,27 @@ new_table_block <- function(rowname = NULL,
                                       ctrl_target = "",
                                       ctrl_table = "",
                                       ...) {
+  # Heal state poisoned by a pre-#144 DAG copy/paste, where a NULL slot came
+  # back as list() (see R/state-normalize.R -- this block is where that bug was
+  # first diagnosed: a pasted `row_color` holding list() reached nzchar() and
+  # threw "argument is of length zero"). Column roles normalize to character;
+  # the color slots only collapse the empty list, because "" is meaningful
+  # there (explicitly off, as against NULL = smart default) and must survive.
+  rowname <- chr_state(rowname)
+  value <- chr_state(value)
+  drill <- chr_state(drill)
+  filter_column <- chr_state(filter_column)
+  filter_spread_col <- chr_state(filter_spread_col)
+  group <- chr_vec_state(group)
+  filter_group_cols <- chr_vec_state(filter_group_cols)
+  color <- null_state(color)
+  cell_color <- null_state(cell_color)
+  row_color <- null_state(row_color)
+  filter_values <- null_state(filter_values)
+  filter_range <- null_state(filter_range)
+  filter_group_vals <- null_state(filter_group_vals)
+  filter_spread_from <- null_state(filter_spread_from)
+
   # Legacy args mapped on construction (old saved boards restore through
   # these formals): a cell_color spec reads as one `shadings` rule; row_color
   # reads as `color`. New names win when both are given.
