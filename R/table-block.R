@@ -603,21 +603,28 @@ dd_metric_plan <- function(summaries, data) {
     l <- attr(data[[col]], "label", exact = TRUE)
     if (is.character(l) && length(l) == 1L && nzchar(l)) l else col
   }
-  used <- character()
+  # `uniq()` and `add()` accumulate across the whole loop below, so their state
+  # is held in an environment and mutated with a plain `<-`: an env is the one
+  # R value with reference semantics, which is what the accumulation needs.
+  # Do not fold this back into locals + `<<-` -- that is the same write with a
+  # less explicit target.
+  acc <- new.env(parent = emptyenv())
+  acc$used <- character()
+  acc$plan <- list()
   uniq <- function(nm, tag) {
-    if (!(nm %in% used)) {
-      used <<- c(used, nm)
+    if (!(nm %in% acc$used)) {
+      acc$used <- c(acc$used, nm)
       return(nm)
     }
     # Same variable aggregated twice -> qualify the second so the name is unique.
     nm2 <- paste0(nm, " (", tag, ")")
-    while (nm2 %in% used) nm2 <- paste0(nm2, " ")
-    used <<- c(used, nm2)
+    while (nm2 %in% acc$used) nm2 <- paste0(nm2, " ")
+    acc$used <- c(acc$used, nm2)
     nm2
   }
-  plan <- list()
   add <- function(name, expr, label) {
-    plan[[length(plan) + 1L]] <<- list(name = name, expr = expr, label = label)
+    acc$plan[[length(acc$plan) + 1L]] <-
+      list(name = name, expr = expr, label = label)
   }
   # Default-function rule (override semantics): a NUMERIC aggregation whose
   # entry names no columns applies to ALL numeric columns EXCEPT those
@@ -667,7 +674,7 @@ dd_metric_plan <- function(summaries, data) {
       }
     }
   }
-  plan
+  acc$plan
 }
 
 #' Normalize the `summaries` list from a restored block state (an R list) or from
