@@ -617,10 +617,24 @@ new_ctrl_bridge_extension <- function(...) {
 #' off the subset (`columns = NULL`); a chart / tile / flat table drills on a
 #' real source column, which IS the claim column. The block never asks the
 #' user which column was drilled -- it knows.
+#'
+#' Returns `NULL` -- no opinion, distinct from the evaluated no-claim
+#' `list()` -- when there is no data frame to read. Under lazy evaluation a
+#' block's input is gated to `NULL` whenever the block leaves the screen, so
+#' "no data" says nothing about the drill: the user's selection is still
+#' latched in the block's filter state and comes back with the view. Only an
+#' evaluated frame may speak -- `list()` from real data is what propagates an
+#' un-drill (see [dd_ctrl_sender()], which holds on `NULL`). Without this
+#' distinction a mere view switch cleared the target filter and re-sent the
+#' claim on return, one board-wide update each way.
 #' @noRd
 dd_ctrl_claims <- function(data, table, filters) {
 
-  if (!is.data.frame(data) || !length(filters)) {
+  if (!is.data.frame(data)) {
+    return(NULL)
+  }
+
+  if (!length(filters)) {
     return(list())
   }
 
@@ -725,8 +739,6 @@ dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
       return()
     }
 
-    payload <- list(columns = claims)
-
     # Send only what is NEW. A ctrl_send() is a board update, and a board update
     # re-evaluates EVERY block -- including this one. `r_claims` is a plain
     # reactive over the block's data, so it invalidates on that re-evaluation
@@ -740,6 +752,20 @@ dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
     # this observer's dependency on the drill selection, and a run that returns
     # without reading it would drop that dependency.
     pristine <- is.function(r_pristine) && isTRUE(r_pristine())
+
+    # NULL claims = the block has no evaluated data to read a claim off (its
+    # input is gated while off screen under lazy evaluation) -- HOLD. This is
+    # not an un-drill: the user's selection is still latched block-side, and
+    # the target keeps whatever was last pushed. Clearing here wiped the
+    # cohort the moment the user navigated to the view that consumes it.
+    # `last_sent` deliberately stays as it is, so coming back on screen
+    # re-evaluates to the same claim and the identical()-skip below swallows
+    # the redundant re-send.
+    if (is.null(claims)) {
+      return()
+    }
+
+    payload <- list(columns = claims)
 
     if (identical(payload, last_sent)) {
       return()
