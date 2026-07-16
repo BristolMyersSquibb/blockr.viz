@@ -176,10 +176,13 @@ test_that("restored filter state renders the status line and active stamp", {
     status <- as.character(output$dt_status$html)
     expect_true(grepl("Filtered: region = North", status))
     expect_true(grepl("dd-status-reset", status))
-    # The table body carries the active stamp for the JS row highlight.
-    tbl <- as.character(output$dt_table$html)
-    expect_true(grepl("data-dt-active=", tbl))
-    expect_true(grepl("data-raw=\"North\"", tbl))
+    # The body payload carries the active stamp (on the <table> head) and
+    # the drill column's raw values, for the JS row highlight.
+    p <- jsonlite::fromJSON(r_body_payload(), simplifyVector = FALSE)
+    expect_identical(p$kind, "flat")
+    expect_true(grepl("data-dt-active=", p$head))
+    raws <- unlist(lapply(p$cols, function(cc) unlist(cc$raw)))
+    expect_true("North" %in% raws)
   })
 })
 

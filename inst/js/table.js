@@ -13,6 +13,34 @@
     return parseFloat(m[0].replace(/,/g, ""));
   }
 
+  // Escapers matching htmltools::htmlEscape byte-for-byte, so the rows this
+  // script assembles from the data-push cell model are identical to what
+  // dt_flat_assemble_tag() pastes server-side: text escapes & < > (quotes
+  // stay literal), attributes additionally escape both quote kinds.
+  /** @param {string} s */
+  function escHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  /** @param {string} s */
+  function escAttr(s) {
+    return escHtml(s).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  // Latest body payload per block (data-dt-elem-id), kept for the block's
+  // lifetime -- NOT a one-shot queue. A payload can arrive before the chrome
+  // renders (the container is a renderUI output), and dock panels tear down
+  // and re-create the chrome on re-mounts: in both cases the fresh container
+  // re-renders from here with no R round trip (wireRoot checks the store).
+  /** @type {Record<string, { rev: number, payload: VizTablePayload }>} */
+  var payloadStore = {};
+
+  // Windowed ("virtual") rendering bounds for flat cell-model tables: above
+  // VIRT_MIN rows only the viewport's rows (plus OVERSCAN each side) enter
+  // the DOM, between two spacer rows. Below it the same code path renders
+  // every row -- small tables gain nothing from windowing.
+  var VIRT_MIN = 400;
+  var OVERSCAN = 40;
+
   // Column widths are computed server-side (blockr.ui::column_widths_px,
   // carried by each table's <colgroup>) and the table renders with
   // table-layout: fixed from the first paint, so nothing in this script
@@ -21,6 +49,30 @@
   // lockTableWidths() measured the DOM lazily before the first reflow -
   // it skipped hidden tables and never covered the search path at all, so
   // filtering reflowed columns live while typing.)
+
+  // Sort-state header feedback (aria-sort + arrow icon), shared by the DOM
+  // sorter below and the cell-model sorter: reset every sortable header,
+  // then mark `idx` with `dir` (0 = no sort).
+  /** @param {HTMLElement} scope @param {number | null} idx @param {number} dir */
+  function updateSortIndicators(scope, idx, dir) {
+    scope.querySelectorAll("th.blockr-sortable").forEach(function (h) {
+      h.setAttribute("aria-sort", "none");
+      var i = h.querySelector(".blockr-sort-icon");
+      if (i) i.classList.remove("blockr-sort-icon-asc", "blockr-sort-icon-desc");
+    });
+    if (idx == null || dir === 0) return;
+    var th = scope.querySelector(
+      'th.blockr-sortable[data-col-index="' + idx + '"]'
+    );
+    if (!th) return;
+    th.setAttribute("aria-sort", dir === 1 ? "ascending" : "descending");
+    var ic = th.querySelector(".blockr-sort-icon");
+    if (ic) {
+      ic.classList.add(
+        dir === 1 ? "blockr-sort-icon-asc" : "blockr-sort-icon-desc"
+      );
+    }
+  }
 
   /** @param {HTMLElement} root @param {HTMLElement} table @param {HTMLElement} tbody */
   function wireSort(root, table, tbody) {
@@ -105,26 +157,13 @@
       } else {
         state.col = idx; state.dir = 1;
       }
-      root.querySelectorAll("th.blockr-sortable").forEach(function (h) {
-        h.setAttribute("aria-sort", "none");
-        var i = h.querySelector(".blockr-sort-icon");
-        if (i) i.classList.remove("blockr-sort-icon-asc", "blockr-sort-icon-desc");
-      });
-      if (state.dir === 0) { state.col = null; reset(); return; }
-      var th = root.querySelector(
-        'th.blockr-sortable[data-col-index="' + idx + '"]'
-      );
-      if (th) {
-        th.setAttribute(
-          "aria-sort", state.dir === 1 ? "ascending" : "descending"
-        );
-        var ic = th.querySelector(".blockr-sort-icon");
-        if (ic) {
-          ic.classList.add(
-            state.dir === 1 ? "blockr-sort-icon-asc" : "blockr-sort-icon-desc"
-          );
-        }
+      if (state.dir === 0) {
+        state.col = null;
+        updateSortIndicators(root, null, 0);
+        reset();
+        return;
       }
+      updateSortIndicators(root, idx, state.dir);
       if (structured) sortStructured(idx, state.dir);
       else sortFlat(idx, state.dir);
     }
@@ -320,6 +359,15 @@
   // re-apply an active query to freshly rendered rows, skipping the debounce).
   /** @param {HTMLElement} root */
   function applySearch(root) {
+    // Cell-model table: search filters the model's index view and re-renders
+    // the window — O(matches) DOM work instead of class-toggling every row.
+    var m = getModel(root);
+    if (m) {
+      m.query = currentQuery(root);
+      computeView(m);
+      renderWindow(root, m);
+      return;
+    }
     var inp = /** @type {HTMLInputElement | null} */ (root.querySelector("input.blockr-search"));
     // The <table>/<tbody> re-renders on each filter while the input (in the
     // chrome) persists, so query them live rather than closing over them.
@@ -996,10 +1044,488 @@
     if (inp && inp.value.trim()) applySearch(root);
   }
 
+  // ==========================================================================
+  // Data-push body (dev/table-data-push-design.md). The block server ships
+  // the table body over the "blockr-viz-table-data" custom message instead
+  // of rendering it through Shiny. Small tables (structured "Table 1",
+  // message/error states) arrive as ready HTML and take the pre-existing
+  // DOM wiring path above; flat tables arrive as a column-oriented cell
+  // model, are assembled here (same markup bytes as the R renderer) and are
+  // WINDOWED: above VIRT_MIN rows only the viewport's rows live in the DOM,
+  // and sort/search operate on the model arrays instead of walking rows.
+  // ==========================================================================
+
+  /**
+   * Client-side state for one flat cell-model table.
+   * @typedef {{
+   *   p: VizTablePayload,
+   *   nodrill: Set<number>,
+   *   activeSet: Set<number>,
+   *   query: string,
+   *   sortCol: number | null,
+   *   sortDir: number,
+   *   view: number[],
+   *   searchCache: string[] | null,
+   *   keys: Record<number, { num: (number|null)[], str: string[] }>,
+   *   groupIdx: Array<{ column: string, idx: number }>,
+   *   onclickIdx: number,
+   *   onclickCol: string | null,
+   *   rowH: number,
+   *   measured: boolean,
+   *   winStart: number,
+   *   winEnd: number
+   * }} DtModel
+   */
+
+  /** @param {HTMLElement} root @returns {DtModel | null} */
+  function getModel(root) {
+    return /** @type {any} */ (root)._dtModel || null;
+  }
+
+  /** @param {HTMLElement} root */
+  function currentQuery(root) {
+    var inp = /** @type {HTMLInputElement | null} */ (
+      root.querySelector("input.blockr-search"));
+    return inp ? inp.value.trim().toLowerCase() : "";
+  }
+
+  // Per-row lowercase search text over the model's display strings — the
+  // cell-model twin of rowText()'s textContent cache (NA cells contribute
+  // nothing here; in the DOM they contribute the em-dash glyph).
+  /** @param {DtModel} model */
+  function ensureSearchCache(model) {
+    if (model.searchCache) return;
+    var cols = model.p.cols || [];
+    var n = model.p.n || 0;
+    var out = new Array(n);
+    for (var i = 0; i < n; i++) {
+      var txt = "";
+      for (var j = 0; j < cols.length; j++) {
+        var d = cols[j].disp[i];
+        if (d != null) txt += d;
+      }
+      out[i] = txt.toLowerCase();
+    }
+    model.searchCache = out;
+  }
+
+  // Sort keys for one column, computed once from the display strings —
+  // decorate-sort-undecorate over the model, with wireSort's comparator
+  // semantics (displayed values: numeric when both keys parse, else locale
+  // compare; stable sort keeps ties in row order).
+  /** @param {DtModel} model @param {number} idx */
+  function ensureKeys(model, idx) {
+    var have = model.keys[idx];
+    if (have) return have;
+    var col = (model.p.cols || [])[idx];
+    var n = model.p.n || 0;
+    /** @type {{ num: (number|null)[], str: string[] }} */
+    var k = { num: new Array(n), str: new Array(n) };
+    for (var i = 0; i < n; i++) {
+      var d = col && col.disp[i] != null ? String(col.disp[i]) : "";
+      var s = d.trim();
+      k.str[i] = s;
+      k.num[i] = parseNum(s);
+    }
+    model.keys[idx] = k;
+    return k;
+  }
+
+  // The display order: search filter first, then the active sort. Row
+  // indexes, not DOM nodes — renderWindow() materializes a slice of this.
+  /** @param {DtModel} model */
+  function computeView(model) {
+    var n = model.p.n || 0;
+    /** @type {number[]} */
+    var idxs = [];
+    var i;
+    if (model.query) {
+      ensureSearchCache(model);
+      var sc = /** @type {string[]} */ (model.searchCache);
+      for (i = 0; i < n; i++) {
+        if (sc[i].indexOf(model.query) !== -1) idxs.push(i);
+      }
+    } else {
+      for (i = 0; i < n; i++) idxs.push(i);
+    }
+    if (model.sortCol != null && model.sortDir !== 0) {
+      var keys = ensureKeys(model, model.sortCol);
+      var dir = model.sortDir;
+      idxs.sort(function (a, b) {
+        var an = keys.num[a];
+        var bn = keys.num[b];
+        var cmp;
+        if (an !== null && bn !== null) cmp = an - bn;
+        else cmp = keys.str[a].localeCompare(keys.str[b]);
+        return dir * cmp;
+      });
+    }
+    model.view = idxs;
+  }
+
+  // One <tr> from the cell model. The markup must stay byte-compatible with
+  // dt_flat_assemble_tag() (classes, data-raw, style chunks, the em-dash NA
+  // cell) — everything downstream (CSS, the click handlers, the gear) reads
+  // the same shapes off both.
+  /** @param {DtModel} model @param {number} i */
+  function rowHtml(model, i) {
+    var cols = /** @type {VizTableCol[]} */ (model.p.cols);
+    var cls = "blockr-data-row";
+    if (model.nodrill.has(i)) cls += " dt-row-nodrill";
+    if (model.activeSet.has(i)) cls += " dt-row-active";
+    var out = '<tr class="' + cls + '" data-i="' + i + '">';
+    for (var j = 0; j < cols.length; j++) {
+      var c = cols[j];
+      var d = c.disp[i];
+      if (d == null) {
+        out += '<td class="' + c.cls + '">&mdash;</td>';
+        continue;
+      }
+      out += '<td class="' + c.cls + '"';
+      var rv = c.raw ? c.raw[i] : null;
+      if (rv != null) out += ' data-raw="' + escAttr(rv) + '"';
+      var st = c.style ? c.style[i] : null;
+      if (st) out += st;
+      out += ">" + escHtml(d) + "</td>";
+    }
+    return out + "</tr>";
+  }
+
+  /** @param {number} h @param {number} ncols */
+  function spacerRow(h, ncols) {
+    return '<tr class="dt-vspacer" aria-hidden="true"><td colspan="' + ncols +
+      '" style="padding:0;border:0;height:' + h + 'px"></td></tr>';
+  }
+
+  // Materialize the window of `view` around the wrapper's scrollTop into the
+  // tbody, between two spacer rows that keep the scrollbar geometry. Under
+  // VIRT_MIN rows this renders everything (start=0, end=n, no spacers).
+  /** @param {HTMLElement} root @param {DtModel} model */
+  function renderWindow(root, model) {
+    var table = /** @type {HTMLElement | null} */ (
+      root.querySelector("table.blockr-table"));
+    var tbody = table && /** @type {HTMLElement | null} */ (
+      table.querySelector("tbody"));
+    if (!table || !tbody) return;
+    var wrapper = /** @type {HTMLElement | null} */ (
+      root.querySelector(".blockr-table-wrapper"));
+    var view = model.view;
+    var n = view.length;
+    var ncols = (model.p.cols || []).length;
+    var virt = n > VIRT_MIN;
+    var start = 0;
+    var end = n;
+    var rh = model.rowH;
+    if (virt) {
+      var st = wrapper ? wrapper.scrollTop : 0;
+      var vh = wrapper ? wrapper.clientHeight : 600;
+      var vis = Math.max(1, Math.ceil(vh / rh));
+      start = Math.max(0, Math.floor(st / rh) - OVERSCAN);
+      end = Math.min(n, start + vis + 2 * OVERSCAN);
+    }
+    var parts = [];
+    if (virt && start > 0) parts.push(spacerRow(Math.round(start * rh), ncols));
+    for (var k = start; k < end; k++) parts.push(rowHtml(model, view[k]));
+    if (virt && end < n) {
+      parts.push(spacerRow(Math.round((n - end) * rh), ncols));
+    }
+    tbody.innerHTML = parts.join("");
+    model.winStart = start;
+    model.winEnd = end;
+    updateNoMatch(table, !!model.query && n === 0);
+    // Measure the real row height off the first rendered window, once per
+    // payload: the spacer heights (scrollbar geometry) use it. A wrong
+    // estimate only mis-sizes the scrollbar — the window itself always
+    // follows scrollTop.
+    if (virt && !model.measured) {
+      model.measured = true;
+      var r0 = /** @type {HTMLElement | null} */ (
+        tbody.querySelector("tr.blockr-data-row"));
+      if (r0 && r0.offsetHeight > 0 && Math.abs(r0.offsetHeight - rh) > 0.5) {
+        model.rowH = r0.offsetHeight;
+        renderWindow(root, model);
+      }
+    }
+  }
+
+  // Scroll -> re-window, wired ONCE per container (the wrapper lives in the
+  // chrome and survives payload updates; a chrome rebuild mints a new
+  // container element and re-enters here). rAF-coalesced, and inert while
+  // the model is small enough to be fully rendered.
+  /** @param {HTMLElement} root */
+  function wireModelScroll(root) {
+    if (root.getAttribute("data-dt-vscroll") === "1") return;
+    root.setAttribute("data-dt-vscroll", "1");
+    var wrapper = /** @type {HTMLElement | null} */ (
+      root.querySelector(".blockr-table-wrapper"));
+    if (!wrapper) return;
+    // const (not var) so the post-guard non-null narrowing holds below.
+    const sc = wrapper;
+    var ticking = false;
+    sc.addEventListener("scroll", function () {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(function () {
+        ticking = false;
+        var m = getModel(root);
+        if (!m || m.view.length <= VIRT_MIN) return;
+        // Re-render once scrolling nears the rendered window's edge.
+        var first = Math.floor(sc.scrollTop / m.rowH);
+        var last = first + Math.ceil(sc.clientHeight / m.rowH);
+        if ((first - m.winStart < OVERSCAN / 2 && m.winStart > 0) ||
+            (m.winEnd - last < OVERSCAN / 2 && m.winEnd < m.view.length)) {
+          renderWindow(root, m);
+        }
+      });
+    }, { passive: true });
+  }
+
+  /** @param {HTMLElement} root @param {DtModel} model */
+  function repaintActive(root, model) {
+    root.querySelectorAll("tbody tr[data-i]").forEach(function (r) {
+      var i = parseInt(r.getAttribute("data-i") || "", 10);
+      if (!isNaN(i) && model.activeSet.has(i)) {
+        r.classList.add("dt-row-active");
+      } else {
+        r.classList.remove("dt-row-active");
+      }
+    });
+  }
+
+  // Restored / re-built active filter -> model row set (the cell-model twin
+  // of wireClick's data-dt-active restore walk): match rows by their RAW
+  // values so a restored board highlights the row that drives the
+  // downstream filter — applied at every window render, so it survives
+  // scrolling, search and sort.
+  /** @param {HTMLElement} table @param {DtModel} model */
+  function seedActive(table, model) {
+    var activeJson = table.getAttribute("data-dt-active");
+    if (!activeJson) return;
+    /** @type {any} */
+    var af = null;
+    try { af = JSON.parse(activeJson); } catch (e) { af = null; }
+    if (!af) return;
+    var cols = model.p.cols || [];
+    var n = model.p.n || 0;
+    var i;
+    if (af.filters && af.filters.length && model.groupIdx.length) {
+      for (i = 0; i < n; i++) {
+        var row = i;
+        var hit = af.filters.every(function (/** @type {any} */ f) {
+          var g = model.groupIdx.filter(function (x) {
+            return x.column === f.column;
+          })[0];
+          var raw = g && cols[g.idx] ? cols[g.idx].raw : null;
+          var rv = raw ? raw[row] : null;
+          return rv != null && rv === String(f.value);
+        });
+        if (hit) model.activeSet.add(i);
+      }
+    } else if (af.column && af.values && af.column === model.onclickCol &&
+               !isNaN(model.onclickIdx) && cols[model.onclickIdx] &&
+               cols[model.onclickIdx].raw) {
+      var rawCol = /** @type {(string|null)[]} */ (cols[model.onclickIdx].raw);
+      for (i = 0; i < n; i++) {
+        var v = rawCol[i];
+        if (v != null && af.values.indexOf(v) !== -1) model.activeSet.add(i);
+      }
+    }
+  }
+
+  // Header sort for cell-model tables: same tri-state cycle and indicators
+  // as wireSort, but the order lives in the model and only the window
+  // re-renders — no data-dt-o stamping, no DOM reads.
+  /** @param {HTMLElement} root @param {HTMLElement} table @param {DtModel} model */
+  function wireFlatSort(root, table, model) {
+    table.querySelectorAll("th.blockr-sortable").forEach(function (th) {
+      th.setAttribute("tabindex", "0");
+      th.setAttribute("aria-sort", "none");
+      /** @param {Event} e */
+      var activate = function (e) {
+        e.stopPropagation();
+        var idx = parseInt(th.getAttribute("data-col-index") || "", 10);
+        if (isNaN(idx)) return;
+        if (model.sortCol === idx) {
+          model.sortDir =
+            model.sortDir === 1 ? -1 : (model.sortDir === -1 ? 0 : 1);
+        } else {
+          model.sortCol = idx;
+          model.sortDir = 1;
+        }
+        if (model.sortDir === 0) model.sortCol = null;
+        updateSortIndicators(root, model.sortCol, model.sortDir);
+        computeView(model);
+        renderWindow(root, model);
+      };
+      th.addEventListener("click", activate);
+      th.addEventListener("keydown", function (e) {
+        var k = /** @type {KeyboardEvent} */ (e).key;
+        if (k !== "Enter" && k !== " ") return;
+        e.preventDefault();   // Space must sort, not scroll the panel
+        activate(e);
+      });
+    });
+  }
+
+  // Row-click drill for cell-model tables: wireClick's contract (toggle,
+  // grouped keys, NA no-ops, the `_action` payload shapes) with the raw
+  // values read from the model instead of cell attributes.
+  /** @param {HTMLElement} root @param {HTMLElement} table @param {DtModel} model */
+  function wireFlatClick(root, table, model) {
+    var elemIdAttr = root.getAttribute("data-dt-elem-id");
+    if (!elemIdAttr) return;
+    // Rebound after the guard so the closures below see a plain string.
+    const elemId = elemIdAttr;
+    var tbody = /** @type {HTMLElement | null} */ (
+      table.querySelector("tbody"));
+    if (!tbody) return;
+    var grouped = model.groupIdx.length > 0;
+    var single = !!model.onclickCol && !isNaN(model.onclickIdx);
+    if (!grouped && !single) return;
+    var cols = /** @type {VizTableCol[]} */ (model.p.cols);
+
+    tbody.addEventListener("click", function (e) {
+      var t = /** @type {Element | null} */ (e.target);
+      var tr = t && t.closest("tr[data-i]");
+      if (!tr) return;
+      if (!window.Shiny || !Shiny.setInputValue) return;
+      var i = parseInt(tr.getAttribute("data-i") || "", 10);
+      if (isNaN(i)) return;
+      // Click-to-toggle (chart parity): re-clicking the active row clears
+      // the filter and the highlight.
+      if (tr.classList.contains("dt-row-active")) {
+        model.activeSet.clear();
+        sendClearFilter(elemId);
+        repaintActive(root, model);
+        return;
+      }
+      if (grouped) {
+        /** @type {Array<{ column: string, value: string }>} */
+        var filters = [];
+        var incomplete = false;
+        model.groupIdx.forEach(function (g) {
+          var raw = cols[g.idx] ? cols[g.idx].raw : null;
+          var rv = raw ? raw[i] : null;
+          if (rv == null) { incomplete = true; return; }
+          filters.push({ column: g.column, value: rv });
+        });
+        if (incomplete || !filters.length) return;   // NA group key -> no-op
+        Shiny.setInputValue(elemId + "_action",
+          { action: "filter", filters: filters, filter_type: "categorical" },
+          { priority: "event" });
+      } else {
+        var rawCol = cols[model.onclickIdx] ? cols[model.onclickIdx].raw : null;
+        var val = rawCol ? rawCol[i] : null;
+        if (val == null) return;                     // NA drill cell -> no-op
+        Shiny.setInputValue(elemId + "_action",
+          { action: "filter", column: model.onclickCol, values: [val],
+            filter_type: "categorical" },
+          { priority: "event" });
+      }
+      model.activeSet.clear();
+      model.activeSet.add(i);
+      repaintActive(root, model);
+    });
+  }
+
+  // Apply one payload to its container: inject, wire, render. Runs on every
+  // payload arrival AND whenever a payload-less container turns up with a
+  // stored payload (chrome after payload, dock re-mounts — see wireRoot).
+  /** @param {HTMLElement} root @param {VizTablePayload} p */
+  function applyPayload(root, p) {
+    var slot = /** @type {HTMLElement | null} */ (
+      root.querySelector(".dt-table-slot") ||
+      root.querySelector(".blockr-table-wrapper"));
+    if (!slot) return;
+    root.setAttribute("data-dt-body-applied", "1");
+    // Structured promotion is re-derived per payload: upstream can flip a
+    // block between structured and flat.
+    root.removeAttribute("data-dt-structured");
+    root.classList.remove("drilldown-table-structured");
+    /** @type {any} */ (root)._dtModel = null;
+
+    if (p.kind === "html") {
+      // Structured "Table 1" / message / error markup, rendered whole by R:
+      // inject and take the pre-existing DOM wiring path.
+      slot.innerHTML = p.html || "";
+      wireRoot(root);
+      return;
+    }
+    if (!p.head || !p.cols) return;
+    slot.innerHTML = p.head;
+    var table = /** @type {HTMLElement | null} */ (
+      slot.querySelector("table.blockr-table"));
+    if (!table) return;
+    // The cell model owns this table: block the DOM wiring path.
+    table.setAttribute("data-dt-table-wired", "1");
+    initContainer(root, table);
+
+    /** @type {DtModel} */
+    var model = {
+      p: p,
+      nodrill: new Set(p.nodrill || []),
+      activeSet: new Set(),
+      query: currentQuery(root),
+      sortCol: null,
+      sortDir: 0,
+      view: [],
+      searchCache: null,
+      keys: {},
+      groupIdx: [],
+      onclickIdx: parseInt(
+        table.getAttribute("data-dt-onclick-idx") || "", 10),
+      onclickCol: table.getAttribute("data-dt-onclick-col"),
+      rowH: 33,
+      measured: false,
+      winStart: 0,
+      winEnd: 0
+    };
+    /** @type {any} */ (root)._dtModel = model;
+
+    // Grouped drill: map each group column name to its rendered column
+    // index (header order == cell order; the stub is column 0) — the same
+    // lookup the DOM path does in wireClick.
+    var groupCols = (table.getAttribute("data-dt-group-cols") || "")
+      .split(",").filter(function (n) { return !!n; });
+    if (groupCols.length) {
+      /** @type {string[]} */
+      var names = [];
+      table.querySelectorAll("thead th .blockr-col-name")
+        .forEach(function (s) { names.push((s.textContent || "").trim()); });
+      groupCols.forEach(function (gc) {
+        var gi = names.indexOf(gc);
+        if (gi >= 0) model.groupIdx.push({ column: gc, idx: gi });
+      });
+    }
+    seedActive(table, model);
+    root.classList.toggle(
+      "dt-clickable",
+      model.groupIdx.length > 0 ||
+        (!!model.onclickCol && !isNaN(model.onclickIdx))
+    );
+    wireFlatSort(root, table, model);
+    wireFlatClick(root, table, model);
+    wireModelScroll(root);
+    computeView(model);
+    renderWindow(root, model);
+  }
+
   /** @param {HTMLElement} root */
   function wireRoot(root) {
     var table = /** @type {HTMLElement | null} */ (root.querySelector("table.blockr-table"));
-    if (!table) return;
+    if (!table) {
+      // A data-push container whose payload arrived before the chrome, or a
+      // re-created chrome (dock re-mount, search-toggle rebuild): render
+      // from the payload store, with no R round trip. The applied-flag
+      // keeps the html-kind error/empty case (which leaves no <table>) from
+      // re-entering through the wireRoot call inside applyPayload.
+      var eid = root.getAttribute("data-dt-elem-id");
+      var stored = eid ? payloadStore[eid] : null;
+      if (stored && !root.hasAttribute("data-dt-body-applied")) {
+        applyPayload(root, stored.payload);
+      }
+      return;
+    }
     // The chrome can be rendered before the data is known (the block server
     // paints it immediately so the control section does not wait on the
     // pipeline), so it may lack the structured class. The <table> always
@@ -1061,6 +1587,33 @@
     document.addEventListener("DOMContentLoaded", function () { scan(); });
   } else {
     scan();
+  }
+
+  // R -> JS: the block body (see applyPayload). The payload travels as ONE
+  // pre-serialized JSON string; parses are cached by rev, so a re-send of an
+  // unchanged rev (session reconnect) skips JSON.parse. A message with no
+  // container yet just parks in the store — wireRoot delivers it when the
+  // chrome turns up (no timers, no delivery window that can expire).
+  if (window.Shiny && Shiny.addCustomMessageHandler) {
+    Shiny.addCustomMessageHandler("blockr-viz-table-data",
+      function (/** @type {any} */ msg) {
+        var entry = payloadStore[msg.id];
+        /** @type {VizTablePayload | null} */
+        var payload = null;
+        if (entry && entry.rev === msg.rev) {
+          payload = entry.payload;
+        } else {
+          try { payload = JSON.parse(msg.payload); } catch (err) { payload = null; }
+          if (!payload) return;
+          payloadStore[msg.id] = { rev: msg.rev, payload: payload };
+        }
+        var eid = (window.CSS && CSS.escape)
+          ? CSS.escape(msg.id)
+          : String(msg.id).replace(/"/g, '\\"');
+        var root = /** @type {HTMLElement | null} */ (document.querySelector(
+          '.drilldown-table-container[data-dt-elem-id="' + eid + '"]'));
+        if (root) applyPayload(root, payload);
+      });
   }
 
   // Primary wiring path: shiny:value / shiny:bound fire on the output element
