@@ -373,25 +373,82 @@ test_that("drill and label round-trip through state and config", {
 test_that("identity_line round-trips through state and config", {
   blk <- new_chart_block(
     chart_type = "scatter", x = "base", y = "post", value = ".count",
-    identity_line = "on"
+    identity_line = TRUE
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
       session$flushReact()
-      expect_equal(session$returned$state$identity_line(), "on")
-      # Gear checkbox sends the new value via the config action.
+      # State is a LOGICAL, never the gear's "on"/"off" transport string.
+      expect_true(session$returned$state$identity_line())
+      # Gear checkbox sends "off" (the control's wire format) via the config
+      # action; the block coerces it to FALSE rather than storing the string.
       expr_scope <- session$makeScope("expr")
       expr_scope$setInputs(drilldown_block_action = list(
         action = "config", identity_line = "off"
       ))
       session$flushReact()
-      expect_equal(session$returned$state$identity_line(), "off")
+      expect_false(session$returned$state$identity_line())
     },
     args = list(x = blk, data = list(data = function() {
       data.frame(base = c(1, 2, 3), post = c(1.5, 1.8, 3.2))
     }))
   )
+})
+
+# Read one state field off a constructed chart block. The ctor normalizes
+# (legacy aliases, "on"/"off" -> logical), but state only materializes in the
+# server, so a round-trip through testServer is the honest way to read it.
+chart_state_field <- function(blk, field) {
+  out <- NULL
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      out <<- session$returned$state[[field]]()
+    },
+    args = list(x = blk, data = list(data = function() {
+      data.frame(a = c(1, 2, 3), b = c(1.5, 1.8, 3.2))
+    }))
+  )
+  out
+}
+
+chart_state <- function(blk) chart_state_field(blk, "identity_line")
+vline_state <- function(blk) chart_state_field(blk, "vlines")
+hline_state <- function(blk) chart_state_field(blk, "hlines")
+
+test_that("identity_line accepts the legacy \"on\"/\"off\" strings", {
+  # Every chart board saved before identity_line became logical stored the
+  # gear's transport string verbatim -- 90 of them across the example JSONs,
+  # all "off". Block state restores through the CONSTRUCTOR, so this is the
+  # path that keeps those boards working.
+  expect_false(chart_state(new_chart_block(identity_line = "off")))
+  expect_true(chart_state(new_chart_block(identity_line = "on")))
+  expect_false(chart_state(new_chart_block()))
+  expect_true(chart_state(new_chart_block(identity_line = TRUE)))
+})
+
+test_that("ref_x/ref_y are legacy aliases for vlines/hlines", {
+  # Same reason as above: a board saved before the rename carries ref_x/ref_y
+  # in its state and hands them to the ctor.
+  b <- new_chart_block(chart_type = "scatter", x = "a", y = "b",
+                       ref_x = 3, ref_y = 2)
+  expect_equal(vline_state(b), 3)
+  expect_equal(hline_state(b), 2)
+
+  # The new name wins when both are present: a board that already saved
+  # `vlines` is newer than any ref_x it may still carry alongside it.
+  both <- new_chart_block(chart_type = "scatter", x = "a", y = "b",
+                          vlines = 9, ref_x = 1)
+  expect_equal(vline_state(both), 9)
+
+  # Several lines per axis, and the gear's comma-separated text.
+  expect_equal(vline_state(new_chart_block(vlines = c(2, 5))), c(2, 5))
+  expect_equal(vline_state(new_chart_block(vlines = "2, 5")), c(2, 5))
+
+  # A typo yields NO line rather than a line at NA.
+  expect_null(vline_state(new_chart_block(vlines = "junk")))
 })
 
 test_that("unset drill emits no downstream filter (inert)", {

@@ -91,14 +91,24 @@
 #' @param step Step-line mode for line charts. `NULL` (default) draws a
 #'   straight line; a step mode (e.g. `"start"`/`"middle"`/`"end"`) draws a
 #'   stepped line. Consumed by the JS renderer.
-#' @param ref_x,ref_y Optional reference-line overlays at a fixed x or y
-#'   value (vertical / horizontal guide line). Default `NULL` (no overlay).
+#' @param vlines,hlines Helper lines at fixed positions: numeric vectors,
+#'   each entry drawing one dashed guide line -- `vlines` VERTICAL (at that x),
+#'   `hlines` HORIZONTAL (at that y). Plain numbers, never column names (a
+#'   Hy's-Law eDish cross is `vlines = 3, hlines = 2`). Default `NULL` (none).
+#' @param ref_x,ref_y LEGACY aliases for `vlines` / `hlines`, mapped on
+#'   construction. Kept as formals so boards saved before the rename restore
+#'   (block state restores through the constructor). Do not use in new code:
+#'   the names said neither "line" nor which way it ran, and they were the only
+#'   array-valued args in the registry that were not plural.
 #' @param smoother Trend overlay for scatter charts: one of `"none"`
 #'   (default), `"lm"`, or `"loess"`. Fit per `color`/`series` group via
 #'   [compute_smoother_series()].
-#' @param identity_line Identity-line overlay for scatter charts: `"off"`
-#'   (default) or `"on"` draws a dashed 45-degree y = x guide line across
-#'   the overlap of the x and y ranges (shift / agreement plots).
+#' @param identity_line Identity-line overlay for scatter charts: `TRUE` draws
+#'   a dashed 45-degree y = x guide line across the overlap of the x and y
+#'   ranges (shift / agreement plots), `FALSE` (default) omits it. The legacy
+#'   `"on"` / `"off"` strings still restore -- the gear's segmented control
+#'   transports "on"/"off" over the wire, but that is a UI detail and the R
+#'   value is a plain logical, as for the table block's `sortable` et al.
 #' @param box_points Observation overlay for boxplots: one of `"none"`
 #'   (default, box only), `"outliers"` (plot only the points beyond the
 #'   1.5x IQR whiskers) or `"all"` (jittered strip of every observation on
@@ -159,10 +169,12 @@ new_chart_block <- function(
     line_width_mult = 1.0,
     dot_size_mult = 1.0,
     step = NULL,
+    vlines = NULL,
+    hlines = NULL,
     ref_x = NULL,
     ref_y = NULL,
     smoother = "none",
-    identity_line = "off",
+    identity_line = FALSE,
     # Boxplot observation overlay: "none" (box only), "outliers" (only the
     # points past the 1.5x IQR whiskers) or "all" (jittered strip of every
     # observation). No-op for non-boxplot charts.
@@ -221,8 +233,30 @@ new_chart_block <- function(
   step <- chr_state(step)
   tt_fields <- chr_vec_state(tt_fields)
   waterfall_totals <- chr_vec_state(waterfall_totals)
-  ref_x <- null_state(ref_x)
-  ref_y <- null_state(ref_y)
+  # Legacy aliases mapped on construction (old saved boards restore through the
+  # ctor, and every chart saved before the rename carries ref_x / ref_y). The
+  # new name wins when both are given: a board that already saved `vlines` is
+  # newer than whatever ref_x it may also still carry.
+  if (is.null(vlines)) vlines <- ref_x
+  if (is.null(hlines)) hlines <- ref_y
+
+  vlines <- num_vec_state(vlines)
+  hlines <- num_vec_state(hlines)
+
+  # The alias is CONSUMED here: the block stores only the new names, so a board
+  # restored from the old ones is migrated on load and re-saves as
+  # vlines/hlines. Leaving the legacy value in place would serialize it forever
+  # (and a pre-#144 DAG paste hands us list(), which must heal to NULL like
+  # every other slot -- see state-normalize.R).
+  ref_x <- NULL
+  ref_y <- NULL
+
+  # `identity_line` is a LOGICAL. The gear's segmented control sends the
+  # strings "on"/"off" (that is the control's transport, see chart.js ROLES),
+  # and every board saved before this change stored that string verbatim --
+  # 90 of them, all "off". Coerce both shapes to a plain logical here, the way
+  # table-block's as_toggle() already does for sortable/collapsible/search.
+  identity_line <- bool_state(identity_line)
   filter_values <- null_state(filter_values)
   filter_range <- null_state(filter_range)
   filter_point <- null_state(filter_point)
@@ -280,13 +314,13 @@ new_chart_block <- function(
         # Theming state
         r_line_width_mult <- shiny::reactiveVal(line_width_mult)
         r_dot_size_mult <- shiny::reactiveVal(dot_size_mult)
-        # Overlay options. `step`, `ref_x`, `ref_y` have no gear-popover
-        # control but ARE consumed by the JS renderer (step-mode line, and
-        # vertical/horizontal reference-line overlays). They flow through the
-        # config payload below and via external_ctrl, so leave them wired.
+        # Overlay options. `step` still has no gear-popover control but IS
+        # consumed by the JS renderer (step-mode line); it flows through the
+        # config payload below and via external_ctrl, so leave it wired.
+        # `vlines` / `hlines` now have one (the Helper lines gear section).
         r_step <- shiny::reactiveVal(step)
-        r_ref_x <- shiny::reactiveVal(ref_x)
-        r_ref_y <- shiny::reactiveVal(ref_y)
+        r_vlines <- shiny::reactiveVal(vlines)
+        r_hlines <- shiny::reactiveVal(hlines)
         r_smoother <- shiny::reactiveVal(smoother)
         r_identity_line <- shiny::reactiveVal(identity_line)
         r_box_points <- shiny::reactiveVal(box_points)
@@ -458,9 +492,12 @@ new_chart_block <- function(
               bar_mode = r_bar_mode(),
               line_width_mult = r_line_width_mult(),
               dot_size_mult = r_dot_size_mult(), step = r_step(),
-              ref_x = as.list(r_ref_x()), ref_y = as.list(r_ref_y()),
+              vlines = as.list(r_vlines()), hlines = as.list(r_hlines()),
               smoother = r_smoother(),
-              identity_line = r_identity_line(),
+              # The gear's segmented control speaks "on"/"off"; the R state is
+              # a logical (bool_state). Convert on the way OUT so the control
+              # shows the right pill, and back again in the observer below.
+              identity_line = if (isTRUE(r_identity_line())) "on" else "off",
               box_points = r_box_points(),
               # Bar baseline mode. chart_type "waterfall" implies "cumulative"
               # on the JS side (sugar); also send the flag explicitly so a plain
@@ -550,8 +587,19 @@ new_chart_block <- function(
             if (!is.null(msg$bar_mode))   upd(r_bar_mode, msg$bar_mode)
             if (!is.null(msg$baseline))   upd(r_baseline, msg$baseline)
             if (!is.null(msg$smoother))   upd(r_smoother, msg$smoother)
+            # "on"/"off" from the gear -> logical in state (see bool_state).
             if (!is.null(msg$identity_line)) {
-              upd(r_identity_line, msg$identity_line)
+              upd(r_identity_line, bool_state(msg$identity_line))
+            }
+            # Helper lines: the numlist control sends a comma-separated string
+            # ("2, 5"); num_vec_state parses it and drops non-numeric junk. ""
+            # is a real value here (clearing every line), so it must reach the
+            # slot as NULL rather than being skipped -- hence no nn() guard.
+            if (!is.null(msg$vlines)) {
+              upd(r_vlines, num_vec_state(msg$vlines))
+            }
+            if (!is.null(msg$hlines)) {
+              upd(r_hlines, num_vec_state(msg$hlines))
             }
             if (!is.null(msg$box_points)) upd(r_box_points, msg$box_points)
             if (!is.null(msg$lo))         upd(r_lo, nn(msg$lo))
@@ -804,8 +852,13 @@ new_chart_block <- function(
             line_width_mult = r_line_width_mult,
             dot_size_mult = r_dot_size_mult,
             step = r_step,
-            ref_x = r_ref_x,
-            ref_y = r_ref_y,
+            vlines = r_vlines,
+            hlines = r_hlines,
+            # Legacy alias formals (mapped on construction): serialized as
+            # NULL so restored boards re-enter through the new names;
+            # blockr.core requires every ctor formal in the state.
+            ref_x = function() NULL,
+            ref_y = function() NULL,
             smoother = r_smoother,
             identity_line = r_identity_line,
             box_points = r_box_points,
@@ -842,15 +895,20 @@ new_chart_block <- function(
     allow_empty_state = c("group", "color", "facet", "filter_column",
       "filter_values", "value", "x", "y", "xend", "series", "label",
       "tt_fields", "drill", "sort_by", "sort_dir", "filter_range",
-      "filter_point", "step", "ref_x", "ref_y", "smoother", "identity_line",
+      "filter_point", "step", "vlines", "hlines", "smoother", "identity_line",
       "box_points", "lo", "hi", "waterfall_totals",
+      # Legacy alias formals: permanently NULL in state (mapped onto
+      # vlines/hlines at construction), so they MUST be allowed to be empty --
+      # a non-allow_empty_state field holding NULL wedges the whole block
+      # (state_ready never goes TRUE and result() stays NULL).
+      "ref_x", "ref_y",
       "ctrl_target", "ctrl_table"),
     external_ctrl = c("group", "color", "facet", "value", "func",
       "chart_type", "x", "y", "xend", "series", "label", "tt_fields", "drill",
       "sort_by", "sort_dir", "orientation", "bar_mode", "filter_type",
       "filter_column",
       "filter_values", "filter_range", "filter_point", "line_width_mult",
-      "dot_size_mult", "step", "ref_x", "ref_y", "smoother", "identity_line",
+      "dot_size_mult", "step", "vlines", "hlines", "smoother", "identity_line",
       "box_points", "lo", "hi", "baseline", "waterfall_totals",
       "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",

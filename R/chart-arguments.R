@@ -178,12 +178,12 @@ chart_arguments <- function() {
     ),
     identity_line = new_block_arg(
       paste0(
-        "Identity-line overlay for scatter charts: \"off\" (default) or ",
-        "\"on\" draws a dashed 45-degree y = x guide line. Use for shift ",
-        "or agreement plots (e.g. baseline vs post-baseline)."
+        "Identity-line overlay for scatter charts: true draws a dashed ",
+        "45-degree y = x guide line, false (default) omits it. Use for ",
+        "shift or agreement plots (e.g. baseline vs post-baseline)."
       ),
-      example = "off",
-      type = arg_enum(c("off", "on"))
+      example = FALSE,
+      type = arg_boolean()
     ),
     box_points = new_block_arg(
       paste0(
@@ -224,22 +224,21 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_enum(c("start", "middle", "end"))
     ),
-    ref_x = new_block_arg(
+    vlines = new_block_arg(
       paste0(
-        "Numeric reference-line value(s): each entry draws a dashed ",
-        "VERTICAL guide line at that x position. LITERAL numbers (e.g. a ",
-        "threshold like 5), never column names. Empty = no vertical ",
-        "reference line. Scatter/line charts."
+        "Helper lines: each number draws one dashed VERTICAL guide line at ",
+        "that x position (e.g. a threshold like 5). Plain numbers, never ",
+        "column names. Empty = no vertical lines. Scatter/line charts."
       ),
       example = NULL,
       type = arg_array(arg_number())
     ),
-    ref_y = new_block_arg(
+    hlines = new_block_arg(
       paste0(
-        "Numeric reference-line value(s): each entry draws a dashed ",
-        "HORIZONTAL guide line at that y position (e.g. a normal-range ",
-        "limit). LITERAL numbers, never column names. Empty = no ",
-        "horizontal reference line. Scatter/line charts."
+        "Helper lines: each number draws one dashed HORIZONTAL guide line ",
+        "at that y position (e.g. a normal-range limit). Plain numbers, ",
+        "never column names. Empty = no horizontal lines. Scatter/line ",
+        "charts."
       ),
       example = NULL,
       type = arg_array(arg_number())
@@ -403,7 +402,10 @@ chart_guidance <- function() {
       "\n\nMap common requests:",
       "\n- \"scatter of X vs Y\" -> chart_type=\"scatter\", x=\"X\", y=\"Y\"",
       "\n- \"shift plot of X vs Y\" (baseline vs post-baseline, agreement)",
-      "-> chart_type=\"scatter\", x=\"X\", y=\"Y\", identity_line=\"on\"",
+      "-> chart_type=\"scatter\", x=\"X\", y=\"Y\", identity_line=true",
+      "\n- \"line at x = 3\" / \"threshold at 3\" -> vlines=[3];",
+      "\"line at y = 2\" -> hlines=[2]. Several per axis is fine",
+      "(vlines=[2, 5]). An eDish / Hy's-Law cross is vlines=[3], hlines=[2].",
       "\n- \"coloured by Z\" -> color=\"Z\"",
       "\n- \"faceted by Z\" -> facet=\"Z\"",
       "\n- \"bar of counts by X, click filters X\" -> chart_type=\"bar\",",
