@@ -10,8 +10,8 @@
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
-# Column-valued roles, in display order, for the chart block. ref_x / ref_y
-# are NOT roles: they hold numeric reference-line values, not column names
+# Column-valued roles, in display order, for the chart block. vlines / hlines
+# are NOT roles: they hold numeric helper-line positions, not column names
 # (reported separately below, never validated against the columns).
 dd_chart_roles <- c("group", "x", "y", "xend", "value", "color", "facet",
                     "series", "label", "drill", "lo", "hi")
@@ -33,9 +33,9 @@ config_effect.chart_block <- function(block, args, data = NULL, ...) {
       bad <- c(bad, paste0(r, " references '", v, "'"))
     }
   }
-  # Reference-line overlays: plain numeric values (possibly several per
-  # axis), echoed verbatim so the model sees them configured.
-  for (r in c("ref_x", "ref_y")) {
+  # Helper lines: plain numeric values (possibly several per axis), echoed
+  # verbatim so the model sees them configured.
+  for (r in c("vlines", "hlines")) {
     v <- unlist(args[[r]])
     if (length(v)) parts <- c(parts, paste0(r, "=", paste(v, collapse = ",")))
   }

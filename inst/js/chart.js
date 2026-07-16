@@ -212,10 +212,24 @@
                 options: [{ value: 'zero', label: 'Standard' },
                           { value: 'cumulative', label: 'Waterfall' }] },
     smoother: { label: 'Smoother', kind: 'select', options: ['none', 'lm', 'loess'] },
+    // Helper lines. `identity_line` is the computed diagonal; vlines/hlines are
+    // fixed positions the user types. All three draw a dashed guide, so the
+    // gear groups them in one "Helper lines" section (see SECTIONS below).
+    //
     // Boolean on/off segmented -> rendered as a checkbox (see _isBoolSegmented).
+    // The "on"/"off" strings are THIS CONTROL's wire format, not the block's
+    // API: R stores a logical and converts at the boundary (bool_state), the
+    // same split the table block's sortable/collapsible already use.
     identity_line: { label: 'Identity', kind: 'segmented',
                      options: [{ value: 'on', label: 'Identity line (y = x)' },
                                { value: 'off', label: 'Off' }] },
+    // Free numeric entry: one line per number, comma-separated. `text` (not a
+    // bespoke numeric kind) because the engine's text control already has the
+    // commit model we want (Enter/blur to apply, Escape to revert) and R parses
+    // the string with num_vec_state() -- which drops junk, so a typo yields no
+    // line rather than a line at NA.
+    vlines: { label: 'Vertical', kind: 'text', ph: 'e.g. 3 or 2, 5' },
+    hlines: { label: 'Horizontal', kind: 'text', ph: 'e.g. 2 or 1, 4' },
     // Boxplot observation overlay. "none" = box only; "outliers" = only the
     // points past the 1.5x IQR whiskers; "all" = jittered strip of every
     // observation over the box.
@@ -280,7 +294,15 @@
       mapping: [],
       presentation: [
         { role: 'smoother', types: ['scatter'] },
+        // Helper lines, kept adjacent so they read as one group: the computed
+        // diagonal, then the fixed positions. They are NOT a titled section --
+        // `presentation` is a flat list and a real header needs a change to the
+        // shared engine (drilldown-config.js), which is a follow-up.
+        // vlines/hlines are offered on line charts too: a normal-range or
+        // threshold marker on a trajectory is the same need as on a scatter.
         { role: 'identity_line', types: ['scatter'] },
+        { role: 'vlines', types: ['scatter', 'line'] },
+        { role: 'hlines', types: ['scatter', 'line'] },
         { role: 'lo', types: ['line'] },
         { role: 'hi', types: ['line'] },
         'line_width_mult', 'dot_size_mult'
@@ -2383,12 +2405,15 @@
         const smootherSeries = this.config.smoother_series || null;
         const loCol = this.config.lo;
         const hiCol = this.config.hi;
-        const refX = Array.isArray(this.config.ref_x) ? this.config.ref_x : [];
-        const refY = Array.isArray(this.config.ref_y) ? this.config.ref_y : [];
+        const refX = Array.isArray(this.config.vlines) ? this.config.vlines : [];
+        const refY = Array.isArray(this.config.hlines) ? this.config.hlines : [];
         // Identity line (y = x): scatter with numeric axes only — a 45°
         // guide is meaningless against a categorical axis.
-        const identityOn = this.config.identity_line === 'on' && !isLine &&
-          xAxisType !== 'category' && yAxisType !== 'category';
+        // R sends "on"/"off" (this control's wire format, see ROLES); accept a
+        // raw boolean too, so a payload built straight from block state works.
+        const identityRaw = this.config.identity_line;
+        const identityOn = (identityRaw === 'on' || identityRaw === true) &&
+          !isLine && xAxisType !== 'category' && yAxisType !== 'category';
 
         const mkSeries = (/** @type {any} */ name, /** @type {any} */ data, /** @type {any} */ clr) => ({
           type: isLine ? 'line' : 'scatter',
@@ -2501,9 +2526,16 @@
           }
         }
 
-        // Reference-line overlays (ref_x vertical, ref_y horizontal) and the
-        // identity line share one markLine on series[0] (echarts allows one
-        // markLine per series).
+        // Helper lines (vlines vertical, hlines horizontal) and the identity
+        // line share one markLine on series[0] (echarts allows one markLine
+        // per series).
+        //
+        // They honour `line_width_mult`: a guide IS a line, so the chart's line
+        // width lever should move it. This also gives the slider a job on a
+        // scatter, where `lineStyle` is undefined for the data series (see
+        // mkSeries) and the control was previously inert -- it rendered, and
+        // moving it changed nothing.
+        const guideW = 1.5 * lm;
         /** @type {any[]} */
         const refData = [];
         for (const v of refX) refData.push({ xAxis: Number(v) });
@@ -2524,7 +2556,7 @@
           const lo = Math.max(xLo, yLo), hi = Math.min(xHi, yHi);
           if (lo < hi) refData.push([
             { coord: [lo, lo],
-              lineStyle: { color: '#64748b', type: 'dashed', width: 1.5 } },
+              lineStyle: { color: '#64748b', type: 'dashed', width: guideW } },
             { coord: [hi, hi] }
           ]);
         }
@@ -2532,7 +2564,7 @@
           series[0].markLine = {
             silent: true,
             symbol: 'none',
-            lineStyle: { color: '#dc2626', type: 'dashed', width: 1.5 },
+            lineStyle: { color: '#dc2626', type: 'dashed', width: guideW },
             label: { show: false },
             data: refData
           };
@@ -3381,6 +3413,13 @@
         drill: this.config.drill || '',
         smoother: this.config.smoother || 'none',
         identity_line: this.config.identity_line || 'off',
+        // Helper lines. Sent as the raw text the user typed; R parses it with
+        // num_vec_state(). "" is a real value (clear every line), so these are
+        // always sent rather than omitted when empty -- same rule as ctrl_target
+        // below. String() flattens the array R sent us ([2,5] -> "2,5") so the
+        // round-trip is stable when nothing was edited.
+        vlines: this.config.vlines == null ? '' : String(this.config.vlines),
+        hlines: this.config.hlines == null ? '' : String(this.config.hlines),
         box_points: this.config.box_points || 'none',
         lo: this.config.lo || '',
         hi: this.config.hi || '',

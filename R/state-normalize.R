@@ -42,3 +42,62 @@ chr_vec_state <- function(x) {
   x <- x[!is.na(x)]
   if (!length(x)) NULL else x
 }
+
+# A boolean toggle slot: always a length-1 logical, never a string.
+#
+# The JS gear renders a two-option segmented control and transports its value
+# as the strings "on" / "off" (chart.js ROLES, table.js SORTABLE_OPT). That is
+# the CONTROL's wire format, not the block's API: table-block already coerces
+# it at the boundary (`as_toggle()`), so `sortable` et al. are plain logicals.
+# `identity_line` did not, and let the transport string leak into block state --
+# every chart board saved before that fix carries the literal "off".
+#
+# So accept every shape the value can arrive in: a logical (the API), "on" /
+# "off" (the gear + legacy state), "true" / "false" (a JSON round-trip), 1 / 0.
+# Total and idempotent -- feeding it its own output changes nothing.
+bool_state <- function(x, default = FALSE) {
+
+  if (is.null(x)) return(default)
+
+  x <- unlist(x, use.names = FALSE)
+  x <- x[!is.na(x)]
+
+  if (!length(x)) return(default)
+
+  x <- x[[1L]]
+
+  if (is.logical(x)) return(isTRUE(x))
+
+  if (is.character(x)) {
+    v <- tolower(trimws(x))
+    if (identical(v, "on")) return(TRUE)
+    if (identical(v, "off")) return(FALSE)
+    return(isTRUE(as.logical(v)))
+  }
+
+  isTRUE(as.logical(x))
+}
+
+# A numeric multi-value slot (helper-line positions): NULL or a numeric vector.
+#
+# Values reach the ctor as a bare numeric (code), a list of numbers (a JSON
+# round-trip through saved state), or a comma-separated string (the gear's
+# numlist control, and whatever the assistant hands over as text). Non-numeric
+# junk drops rather than poisoning the slot with NA -- a guide line at NA is not
+# a line, and the renderer would silently skip it anyway.
+num_vec_state <- function(x) {
+
+  if (is.null(x)) return(NULL)
+
+  x <- unlist(x, use.names = FALSE)
+
+  if (is.character(x)) {
+    x <- unlist(strsplit(x, "[,;[:space:]]+"), use.names = FALSE)
+    x <- x[nzchar(x)]
+  }
+
+  x <- suppressWarnings(as.numeric(x))
+  x <- x[!is.na(x)]
+
+  if (!length(x)) NULL else x
+}

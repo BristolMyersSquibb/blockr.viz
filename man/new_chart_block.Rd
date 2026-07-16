@@ -30,10 +30,12 @@ new_chart_block(
   line_width_mult = 1,
   dot_size_mult = 1,
   step = NULL,
+  vlines = NULL,
+  hlines = NULL,
   ref_x = NULL,
   ref_y = NULL,
   smoother = "none",
-  identity_line = "off",
+  identity_line = FALSE,
   box_points = "none",
   lo = NULL,
   hi = NULL,
@@ -126,16 +128,27 @@ charts. Default \code{1.0}. Range \code{0.5}-\code{3.0}. Individual family only.
 straight line; a step mode (e.g. \code{"start"}/\code{"middle"}/\code{"end"}) draws a
 stepped line. Consumed by the JS renderer.}
 
-\item{ref_x, ref_y}{Optional reference-line overlays at a fixed x or y
-value (vertical / horizontal guide line). Default \code{NULL} (no overlay).}
+\item{vlines, hlines}{Helper lines at fixed positions: numeric vectors,
+each entry drawing one dashed guide line -- \code{vlines} VERTICAL (at that x),
+\code{hlines} HORIZONTAL (at that y). Plain numbers, never column names (a
+Hy's-Law eDish cross is \verb{vlines = 3, hlines = 2}). Default \code{NULL} (none).}
+
+\item{ref_x, ref_y}{LEGACY aliases for \code{vlines} / \code{hlines}, mapped on
+construction. Kept as formals so boards saved before the rename restore
+(block state restores through the constructor). Do not use in new code:
+the names said neither "line" nor which way it ran, and they were the only
+array-valued args in the registry that were not plural.}
 
 \item{smoother}{Trend overlay for scatter charts: one of \code{"none"}
 (default), \code{"lm"}, or \code{"loess"}. Fit per \code{color}/\code{series} group via
 \code{\link[=compute_smoother_series]{compute_smoother_series()}}.}
 
-\item{identity_line}{Identity-line overlay for scatter charts: \code{"off"}
-(default) or \code{"on"} draws a dashed 45-degree y = x guide line across
-the overlap of the x and y ranges (shift / agreement plots).}
+\item{identity_line}{Identity-line overlay for scatter charts: \code{TRUE} draws
+a dashed 45-degree y = x guide line across the overlap of the x and y
+ranges (shift / agreement plots), \code{FALSE} (default) omits it. The legacy
+\code{"on"} / \code{"off"} strings still restore -- the gear's segmented control
+transports "on"/"off" over the wire, but that is a UI detail and the R
+value is a plain logical, as for the table block's \code{sortable} et al.}
 
 \item{box_points}{Observation overlay for boxplots: one of \code{"none"}
 (default, box only), \code{"outliers"} (plot only the points beyond the
