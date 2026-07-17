@@ -59,13 +59,17 @@ test_that("aggregated display keeps the RAW input schema on data-dt-cols", {
                                                cols = list())))
   testServer(blk$expr_server, args = list(data = reactive(df)), {
     session$flushReact()
-    html <- as.character(output$dt_table$html)
+    # The body ships as the data-push payload (not a renderUI output); the
+    # gear attributes ride on the payload's <table> head.
+    p <- jsonlite::fromJSON(r_body_payload(), simplifyVector = FALSE)
+    expect_identical(p$kind, "flat")
     # The displayed frame is the aggregate: group + the "Count" metric column
     # (and 2 group rows, not 3 raw rows).
-    expect_true(grepl("Count", html))
+    expect_true(grepl("Count", p$head))
+    expect_identical(p$n, 2L)
     # ... but the gear's pickable columns stay the raw input schema: revenue
     # (not displayed) is offered, the synthetic Count column is not.
-    m <- regmatches(html, regexpr("data-dt-cols=\"[^\"]*\"", html))
+    m <- regmatches(p$head, regexpr("data-dt-cols=\"[^\"]*\"", p$head))
     expect_length(m, 1L)
     expect_true(grepl("region", m))
     expect_true(grepl("revenue", m))

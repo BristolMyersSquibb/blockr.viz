@@ -106,190 +106,26 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
     return(dt_table_tag_structured(data, drill, digits, toggles,
                                    active = active))
   }
-  # Pickable columns for the gear (data-dt-cols). `data` here is the raw
-  # input except in the block server's aggregated branch, which displays a
-  # projection and passes the raw schema in explicitly.
-  if (is.null(gear_cols)) gear_cols <- dt_gear_cols_json(data)
-
-  value_cols_raw <- value_cols
-  if (is.null(label_col)) label_col <- names(data)[1L]
-  if (is.null(value_cols)) value_cols <- setdiff(names(data), label_col)
-  value_cols <- intersect(value_cols, names(data))
-
-  # Differentiated non-renderable states (chart-empty-state parity): a
-  # configured column that vanished upstream, a required mapping still
-  # unconfigured, and a genuinely 0-row frame are three different problems
-  # with three different fixes -- one generic "No data" hid all of them.
-  msg <- dt_state_message(data, label_col, value_cols, value_cols_raw)
-  if (!is.null(msg)) {
-    # The gear must still offer the (current) input columns on a message
-    # table -- fixing a vanished-column config happens through it.
-    return(dt_table_attrs(dt_message_table(msg), NULL, NULL, digits,
-                          color = color, toggles = toggles,
-                          gear_cols = gear_cols))
-  }
-
-  # ---- cell visuals: value-encoding `shadings` rules ------------------
-  # Repeatable rules `list(list(mode, cols))` resolved to per-column visuals
-  # (see dd_shading_visuals): explicit cols claim; empty cols = all numeric
-  # minus claimed (override rule, re-resolved per render so it survives
-  # upstream schema changes); diverging/sequential pool one domain per rule,
-  # bars normalize per column.
-  shading_vis <- dd_shading_visuals(shadings, data, value_cols)
-
-  # ---- thead ----------------------------------------------------------
-  # Per-column numeric flag drives type-based alignment for both the header
-  # and the body cells (numeric right, text left).
-  num_flag <- vapply(data[value_cols], is.numeric, logical(1L))
-  th_cells <- list(dt_th(label_col, 0L, stub = TRUE,
-                         label = dt_col_label(data[[label_col]], label_col),
-                         sortable = sortable))
-  for (i in seq_along(value_cols)) {
-    th_cells[[length(th_cells) + 1L]] <- dt_th(
-      value_cols[i], i,
-      label = dt_col_label(data[[value_cols[i]]], value_cols[i]),
-      numeric = num_flag[i],
-      sortable = sortable
-    )
-  }
-  thead <- htmltools::tags$thead(htmltools::tags$tr(th_cells))
-
-  # ---- tbody (vectorized) ---------------------------------------------
-  # Build the body as a single HTML string instead of one htmltools tag
-  # object per cell. For a wide preview (e.g. ADaM ADSL, ~48 columns) the
-  # per-cell `tags$td()` construction plus the `renderTags()` tree walk
-  # dominated render time -- ~1 s for the full frame, the source of the
-  # "drilldown filter takes ~2 s" lag. Column-vectorized string assembly
-  # is ~100x faster and emits identical markup (inter-tag whitespace
-  # aside). Numeric columns are formatted with a single vectorized
-  # `formatC(format = "fg", drop0trailing = TRUE)` call: `"fg"` formats
-  # each value independently (no decimal alignment across the column, so
-  # 1.5 stays "1.5" while a sibling 2.25 stays "2.25") and `drop0trailing`
-  # trims padding -- byte-identical to the old per-element
-  # `format(round(v), nsmall = 0, trim = TRUE)` but ~11x faster (the
-  # per-cell `vapply(format())` was ~72% of the build time on a
-  # numeric-heavy frame).
-  # Text content uses htmltools' own escaper (the same one `tags$td()`
-  # applies to a text child), so escaping is byte-identical: & < > are
-  # escaped, quotes are not.
-  esc <- function(x) htmltools::htmlEscape(as.character(x), attribute = FALSE)
-
-  # Drill-relevant columns carry each cell's RAW value on a data-raw
-  # attribute (read by wireClick in table.js instead of the displayed text):
-  # numeric cells display rounded and NA renders as an em-dash, so a filter
-  # built from textContent would match zero rows and silently empty
-  # downstream. `as.character(raw)` round-trips exactly -- comparing a
-  # numeric column to a character value in the filter expr coerces through
-  # the same as.character(). NA cells get NO data-raw (the click is a no-op;
-  # see the dt-row-nodrill class below).
-  raw_cols <- intersect(unique(c(drill %||% character(),
-                                 group_cols %||% character())),
-                        c(label_col, value_cols))
-  raw_attr <- function(x) {
-    ifelse(is.na(x), "", paste0(
-      " data-raw=\"",
-      htmltools::htmlEscape(as.character(x), attribute = TRUE), "\""
-    ))
-  }
-
-  col_cells <- vector("list", length(value_cols))
-  # Display strings per column, kept for the server-side width estimation
-  # below (same strings the cells render, no second formatting pass).
-  disp_by_col <- rep(list(character(0L)), length(value_cols))
-  for (j in seq_along(value_cols)) {
-    col   <- data[[value_cols[j]]]
-    keep  <- !is.na(col)
-    # Type-based cell alignment matches the header (numeric right, text left).
-    td_cls  <- if (num_flag[j]) "blockr-data dt-num" else "blockr-data dt-txt"
-    na_cell <- paste0("<td class=\"", td_cls, "\">&mdash;</td>")
-    out_j   <- rep(na_cell, length(col))
-    if (any(keep)) {
-      vk <- col[keep]
-      disp <- if (num_flag[j]) {
-        formatC(round(as.numeric(vk), digits), format = "f", digits = digits,
-                drop0trailing = TRUE, big.mark = "")
-      } else {
-        as.character(vk)
-      }
-      disp_by_col[[j]] <- disp
-      style <- ""
-      sv <- shading_vis[[value_cols[j]]]
-      if (num_flag[j] && !is.null(sv)) {
-        if (identical(sv$kind, "bar")) {
-          # Data bar: left-anchored gradient, width = |v| / column-abs-max.
-          # A CSS gradient string keeps the vectorized single-HTML() render
-          # (no per-cell DOM node). Text reads on top of the fill.
-          style <- dt_bar_style(as.numeric(vk), sv$max, sv$fill)
-        } else {
-          # Heatmap: sv$fun is vectorized (see dt_color_fun) -- one call
-          # styles the whole column, like dt_bar_style above.
-          bg <- sv$fun(as.numeric(vk))
-          style <- paste0(" style=\"background:", bg$bg, ";color:", bg$fg,
-                          ";\"")
-        }
-      }
-      raw <- if (value_cols[j] %in% raw_cols) raw_attr(vk) else ""
-      out_j[keep] <- paste0("<td class=\"", td_cls, "\"", raw, style, ">",
-                            esc(disp), "</td>")
-    }
-    col_cells[[j]] <- out_j
-  }
-
-  # Categorical scale-map row color (e.g. SEX: F = teal, M = orange) drawn as a
-  # subtle accent bar on the left of the row, matching the chart's legend and
-  # reading like a selected-row indicator. `row_hex` is a per-row vector (the
-  # `row_color` column resolved through the scale map); NA rows get no bar.
-  # Drawn with an inset box-shadow so it adds no width (no layout shift) and is
-  # independent of the numeric `cell_bg` heatmap above.
-  # NOTE (follow-up): to keep the bar visible when scrolling a wide table
-  # horizontally, this stub cell's bar should become a dedicated left:0 sticky
-  # indicator cell -- which needs the sort/drill column-index map to skip it.
-  stub_lbl <- esc(data[[label_col]])
-  stub_raw <- if (label_col %in% raw_cols) raw_attr(data[[label_col]]) else ""
-  if (!is.null(row_hex) && length(row_hex) == nrow(data)) {
-    bar <- ifelse(
-      is.na(row_hex), "",
-      paste0(" style=\"box-shadow:inset 3px 0 0 0 ", row_hex, ";\"")
-    )
-    stub_cells <- paste0("<td class=\"blockr-stub blockr-row-bar\"", stub_raw,
-                         bar, ">", stub_lbl, "</td>")
-  } else {
-    stub_cells <- paste0("<td class=\"blockr-stub\"", stub_raw, ">",
-                         stub_lbl, "</td>")
-  }
-  # A row whose drill value(s) include an NA cannot emit a filter (no data-raw
-  # -> the click is a no-op); mark it so it doesn't LOOK clickable.
-  row_cls <- rep("blockr-data-row", nrow(data))
-  if (length(raw_cols)) {
-    nodrill <- Reduce(`|`, lapply(raw_cols, function(cn) is.na(data[[cn]])))
-    row_cls[nodrill] <- "blockr-data-row dt-row-nodrill"
-  }
-  row_inner  <- do.call(paste0, c(list(stub_cells), col_cells))
-  rows_html  <- paste0("<tr class=\"", row_cls, "\">", row_inner, "</tr>",
-                       collapse = "")
-  tbody <- htmltools::tags$tbody(htmltools::HTML(rows_html))
-
-  flat_labels <- c(
-    dt_col_label(data[[label_col]], label_col) %||% "",
-    vapply(value_cols, function(vc) {
-      dt_col_label(data[[vc]], vc) %||% ""
-    }, character(1L))
-  )
-  table_tag <- dt_fixed_table_tag(
-    thead, tbody,
-    dt_colgroup(
-      c(label_col, value_cols),
-      c(list(as.character(data[[label_col]])), disp_by_col),
-      labels = flat_labels
-    )
-  )
-  onclick <- dt_onclick(drill, c(label_col, value_cols))
-  dt_table_attrs(table_tag, onclick$col, onclick$idx, digits,
-                 color = color, shadings = shadings,
-                 num_cols = value_cols[num_flag],
-                 toggles = toggles, group_cols = group_cols,
-                 group = group, summaries = summaries, active = active,
-                 gear_cols = gear_cols)
+  # Flat path: the cell model (display / shading / raw vectors) is computed
+  # by dt_flat_build() -- ONE builder shared with the block server's
+  # data-push payload (dt_flat_payload), so the pasted HTML here and the
+  # rows table.js assembles client-side cannot drift. See R/table-push.R and
+  # dev/table-data-push-design.md. Numeric columns are formatted with a
+  # single vectorized `formatC(format = "f", drop0trailing = TRUE)` call --
+  # each value formats independently (no decimal alignment across the
+  # column, so 1.5 stays "1.5" while a sibling 2.25 stays "2.25"),
+  # byte-identical to the old per-element `format(round(v), nsmall = 0,
+  # trim = TRUE)` but ~11x faster (the per-cell `vapply(format())` was ~72%
+  # of the build time on a numeric-heavy frame).
+  # NOTE (follow-up): to keep the row-color bar visible when scrolling a
+  # wide table horizontally, the stub cell's bar should become a dedicated
+  # left:0 sticky indicator cell -- which needs the sort/drill column-index
+  # map to skip it.
+  b <- dt_flat_build(data, label_col, value_cols, shadings, drill, digits,
+                     row_hex, color, toggles, group_cols, group, summaries,
+                     active, gear_cols)
+  if (identical(b$kind, "message")) return(b$tag)
+  dt_flat_assemble_tag(b)
 }
 
 # ---------------------------------------------------------------------------
@@ -1612,7 +1448,11 @@ new_table_block <- function(rowname = NULL,
             elem_id    = ns("drilldown_table_block"),
             structured = NULL,
             max_height = shiny::isolate(r_max_height()),
-            inner      = shiny::uiOutput(ns("dt_table")),
+            # The body no longer renders through Shiny: table.js fills this
+            # slot from the "blockr-viz-table-data" payload (see the push
+            # observer below). An empty div, not a uiOutput -- there is no
+            # output to bind.
+            inner      = htmltools::tags$div(class = "dt-table-slot"),
             search     = isTRUE(r_search()),
             download_slot = shiny::uiOutput(ns("dt_download"), inline = TRUE),
             status_slot   = shiny::uiOutput(ns("dt_status"))
@@ -1742,13 +1582,18 @@ new_table_block <- function(rowname = NULL,
           )
         }
 
-        output$dt_table <- shiny::renderUI({
+        # Body payload (a pre-serialized JSON string), cached as a reactive:
+        # it recomputes only when the data or a config it reads changes, and
+        # it is read exclusively from the push observer below -- a reactive
+        # is pull-based, so it stays suspended with the observer for hidden
+        # panels (the chart block's r_data_json pattern).
+        r_body_payload <- shiny::reactive({
           d <- tryCatch(ann_data(), error = function(e) NULL)
           shiny::req(is.data.frame(d))
-          # Filter state at render time, ISOLATED: the table body must never
+          # Filter state at build time, ISOLATED: the table body must never
           # re-render on a click (the split-render perf contract) -- the JS
           # keeps the row highlight live between renders, and any fresh
-          # render (restore, config edit, new data) re-reads the then-current
+          # build (restore, config edit, new data) re-reads the then-current
           # state here, so the highlight survives those too.
           act <- shiny::isolate(list(
             col   = r_filter_column(),  vals  = r_filter_values(),
@@ -1788,8 +1633,9 @@ new_table_block <- function(rowname = NULL,
               NULL
             }
             return(tryCatch(
-              stamp_ctrl(dt_table_tag(
+              dt_payload_json(dt_build_payload(
                 ad,
+                stamp      = stamp_ctrl,
                 # The displayed frame is a projection; the gear's pickers
                 # must keep offering the RAW input schema (group / value /
                 # drill choices act on `d`, not on the aggregate).
@@ -1826,10 +1672,13 @@ new_table_block <- function(rowname = NULL,
                 active     = act
               )),
               error = function(e) {
-                shiny::tags$div(
-                  class = "blockr-error", role = "alert",
-                  paste0("Table could not be rendered: ", conditionMessage(e))
-                )
+                dt_payload_json(list(kind = "html", html = as.character(
+                  shiny::tags$div(
+                    class = "blockr-error", role = "alert",
+                    paste0("Table could not be rendered: ",
+                           conditionMessage(e))
+                  )
+                )))
               }
             ))
           }
@@ -1845,7 +1694,7 @@ new_table_block <- function(rowname = NULL,
           } else {
             NULL
           }
-          # Contain any render-time failure (formatting/spread/colour) and
+          # Contain any build-time failure (formatting/spread/colour) and
           # show it ON THE PAGE as a red in-block bar instead of letting it
           # escape -- reusing the `blockr-error` style of the framework's
           # condition bar so it reads like an ordinary block error, never a
@@ -1853,8 +1702,9 @@ new_table_block <- function(rowname = NULL,
           # motivation for the first-class side-effect-render seam that would
           # route this through server$conditions() automatically.)
           tryCatch(
-            stamp_ctrl(dt_table_tag(
+            dt_payload_json(dt_build_payload(
               d,
+              stamp      = stamp_ctrl,
               label_col  = r_rowname(),
               value_cols = r_value(),
               shadings   = r_shadings(),
@@ -1880,12 +1730,36 @@ new_table_block <- function(rowname = NULL,
               active     = act
             )),
             error = function(e) {
-              shiny::tags$div(
-                class = "blockr-error", role = "alert",
-                paste0("Table could not be rendered: ", conditionMessage(e))
-              )
+              dt_payload_json(list(kind = "html", html = as.character(
+                shiny::tags$div(
+                  class = "blockr-error", role = "alert",
+                  paste0("Table could not be rendered: ", conditionMessage(e))
+                )
+              )))
             }
           )
+        })
+
+        # Ship the payload. A single plain observe, NOT observeEvent or a
+        # split channel: this exact shape is what the blockr.dock lazy-eval
+        # card-probe pairing suspends for hidden panels (see the chart
+        # block's push observer). The string-identity guard replaces the
+        # renderUI-era duplicate-render problem at the source: blockr.core's
+        # data() re-delivers identical frames at startup, and an identical
+        # payload is simply not sent. `rev` lets the browser skip JSON.parse
+        # when a re-send does arrive (e.g. after a reconnect).
+        payload_rev  <- 0L
+        last_payload <- NULL
+        shiny::observe({
+          pj <- r_body_payload()
+          if (identical(pj, last_payload)) return()
+          last_payload <<- pj
+          payload_rev  <<- payload_rev + 1L
+          session$sendCustomMessage("blockr-viz-table-data", list(
+            id = ns("drilldown_table_block"),
+            rev = payload_rev,
+            payload = pj
+          ))
         })
 
         list(
@@ -1974,7 +1848,15 @@ new_table_block <- function(rowname = NULL,
     },
     ui = function(id) {
       ns <- shiny::NS(id)
-      shiny::tagList(shiny::uiOutput(ns("dt_result")))
+      shiny::tagList(
+        # The table dep must ship with the STATIC UI (chart-block parity),
+        # not only with the chrome renderUI: the first body payload rides
+        # the same flush batch as the chrome HTML, and a handler registered
+        # by an async-loading script arrives too late -- Shiny drops custom
+        # messages that have no registered handler.
+        drilldown_table_dep(),
+        shiny::uiOutput(ns("dt_result"))
+      )
     },
     # Shared input contract (see validate_annotated_df_input): contract
     # check only -- dispatch lookup, never the (possibly costly) coercion

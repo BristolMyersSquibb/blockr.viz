@@ -25,6 +25,41 @@ interface VizColumn {
   levels?: string[];
 }
 
+/* --- Table data-push payload (table-block.R -> table.js) ---
+   Sent as ONE pre-serialized JSON string over the "blockr-table-data"
+   custom message ({id, rev, payload}); pre-serializing dodges Shiny's
+   auto_unbox scalar-collapse and lets `rev` gate re-parsing. See
+   dev/table-data-push-design.md. */
+
+/** One rendered column of a flat table (entry 0 is the row stub). */
+interface VizTableCol {
+  /** Constant td class for the column ("blockr-data dt-num", "blockr-stub", ...). */
+  cls: string;
+  /** PLAIN display strings; null = NA (JS renders the em-dash cell). */
+  disp: (string | null)[];
+  /** PLAIN raw values for data-raw (drill/group columns only); null = NA. */
+  raw?: (string | null)[];
+  /** Pre-built ' style="..."' chunks (shading/bar; generated, attr-safe). */
+  style?: (string | null)[];
+}
+
+interface VizTablePayload {
+  /** "flat" = cell model + windowed render; "html" = inject + legacy wire
+      (structured tables, message tables, render errors — all small). */
+  kind: 'flat' | 'html';
+  /** kind "html": the complete <table> (or error <div>) HTML. */
+  html?: string;
+  /** kind "flat": <table ...data-dt-*><colgroup/><thead/><tbody/></table>
+      with an EMPTY tbody; the gear reads its state off these attributes. */
+  head?: string;
+  /** kind "flat": row count. */
+  n?: number;
+  /** kind "flat": stub + value columns, rendered order. */
+  cols?: VizTableCol[];
+  /** kind "flat": row indexes (0-based) rendered with dt-row-nodrill. */
+  nodrill?: number[];
+}
+
 /* --- Drilldown gear-popover engine (drilldown-config.js) ---
    The engine is host-agnostic: chart.js, table.js and tile-block.js each build
    a `host` object and do `new Blockr.DrilldownConfig(host)`. Role keys are the

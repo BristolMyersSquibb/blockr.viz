@@ -240,17 +240,21 @@ test_that("table search box filters rows in the browser (JS)", {
   skip_if_no_app()
 
   scope <- dt_result("table")
-  count_hidden <- function() {
+  # Visible data rows, mechanism-agnostic: the flat cell-model table removes
+  # non-matching rows from the DOM (model search), while the DOM path
+  # (structured / static tables) class-hides them.
+  count_visible <- function() {
     app$get_js(sprintf(
-      "document.querySelectorAll('%s tbody tr.blockr-hidden-search').length",
+      "document.querySelectorAll(
+         '%s tbody tr.blockr-data-row:not(.blockr-hidden-search)').length",
       scope
     ))
   }
 
-  # Nothing hidden initially.
-  expect_equal(count_hidden(), 0)
+  # All 6 rows visible initially.
+  expect_equal(count_visible(), 6)
 
-  # Type a query matching exactly one region -> the others get JS-hidden.
+  # Type a query matching exactly one region -> only that row stays visible.
   app$run_js(sprintf(
     "var i = document.querySelector('%s input.blockr-search');
      i.value = 'East';
@@ -258,10 +262,11 @@ test_that("table search box filters rows in the browser (JS)", {
     scope
   ))
   app$wait_for_js(sprintf(
-    "document.querySelectorAll('%s tbody tr.blockr-hidden-search').length > 0",
+    "document.querySelectorAll(
+       '%s tbody tr.blockr-data-row:not(.blockr-hidden-search)').length === 1",
     scope
   ), timeout = 5000)
-  expect_gt(count_hidden(), 0)
+  expect_equal(count_visible(), 1)
 
   # Clearing the box restores every row.
   app$run_js(sprintf(
@@ -271,10 +276,11 @@ test_that("table search box filters rows in the browser (JS)", {
     scope
   ))
   app$wait_for_js(sprintf(
-    "document.querySelectorAll('%s tbody tr.blockr-hidden-search').length === 0",
+    "document.querySelectorAll(
+       '%s tbody tr.blockr-data-row:not(.blockr-hidden-search)').length === 6",
     scope
   ), timeout = 5000)
-  expect_equal(count_hidden(), 0)
+  expect_equal(count_visible(), 6)
 })
 
 # ===========================================================================
