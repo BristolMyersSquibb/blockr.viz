@@ -697,6 +697,58 @@
       return col;
     }
 
+    // Name the color dimension in the legend, the way an axis names its
+    // column: a bare row of chips ("1 2 3 4 5") never says WHICH variable it
+    // splits on. ECharts has no legend title, so the name rides as the FIRST
+    // legend entry — inline with the chips, wrapping with them.
+    //
+    // Two things this needs from callers, both easy to miss:
+    //  - pass the _withLegendTitle RESULT to _legendRows / __legendFit, not
+    //    the bare level list, or the wrap math under-reserves by one item;
+    //  - append _legendTitleSeries() to the series array. ECharts DROPS a
+    //    legend.data name that matches no series, so without the empty
+    //    carrier series the heading silently never paints (the same trick
+    //    the individual builder already uses to bind color-level chips).
+    //
+    // Returns null / the list unchanged when there is nothing to add: no
+    // color column, or a level already carries that exact name (echarts
+    // would merge the heading into that chip).
+    /** @param {any[]} items legend entries (strings or {name} objects)
+     *  @param {string} col the color column @returns {string|null} */
+    _legendTitleName(items, col) {
+      const title = this._axisTitle(col);
+      if (!title || !items || !items.length) return null;
+      const taken = items.some(
+        it => String(it != null && typeof it === 'object' ? it.name : it) === title
+      );
+      return taken ? null : title;
+    }
+
+    /** @param {any[]} items @param {string} col @returns {any[]} */
+    _withLegendTitle(items, col) {
+      const title = this._legendTitleName(items, col);
+      if (!title) return items;
+      return [{
+        name: title,
+        icon: 'none',
+        textStyle: { fontSize: 11, fontWeight: 600, color: AXIS_LABEL_COLOR }
+      }, ...items];
+    }
+
+    // The carrier for the heading chip: a series that exists only so echarts
+    // keeps the legend entry. Empty data means it never draws, never hit-tests
+    // and never shapes an axis; APPENDED (not prepended) so it can't shift the
+    // palette index of any real series. Radar binds legend items to the
+    // series' data names instead, so that builder adds an empty shape itself.
+    /** @param {string|null} title @param {string} [type] @returns {any[]} */
+    _legendTitleSeries(title, type) {
+      if (!title) return [];
+      return [{
+        name: title, type: type || 'scatter', data: [],
+        silent: true, tooltip: { show: false }, legendHoverLink: false
+      }];
+    }
+
     // Escape the HTML-special characters so a data value (which can contain
     // <, >, & — e.g. a verbatim term or a comment column pulled into the
     // tooltip) is shown as text, never injected as markup.
@@ -1278,6 +1330,18 @@
       // nothing (no series is named "F") and the user couldn't toggle.
       // slot.seriesByColorByVal is rebuilt per render (null = plain legend).
       chart.on('legendselectchanged', (/** @type {any} */ params) => {
+        // The first chip may be the color variable's NAME (_withLegendTitle),
+        // not a level: it carries only an empty series, so a click toggles
+        // nothing while greying the heading out. Identify it off the live
+        // option (icon:'none' marks it) rather than re-deriving the label —
+        // a level that happens to match the label keeps its own toggle.
+        const lgd = (chart.getOption().legend || [])[0];
+        const head = lgd && lgd.data && lgd.data[0];
+        if (head && typeof head === 'object' && head.icon === 'none' &&
+            params.name === head.name) {
+          chart.dispatchAction({ type: 'legendSelect', name: head.name });
+          return;
+        }
         const fanout = slot.seriesByColorByVal;
         if (!fanout) return;
         const cv = params.name;
@@ -1834,27 +1898,29 @@
         };
       }
       const legendOn = colors.length > 0;
-      const leg = legendOn ? this._legendRows(colors, plotW || 0) : { extra: 0, scroll: false };
+      const legTitle = legendOn ? this._legendTitleName(colors, this.config.color) : null;
+      const legItems = this._withLegendTitle(colors, this.config.color);
+      const leg = legendOn ? this._legendRows(legItems, plotW || 0) : { extra: 0, scroll: false };
       const bottomBase = vertical
         ? (legendOn ? 55 : 40) + 26 + (xlab ? xlab.bottom : 0)
         : (legendOn ? 55 : 20) + 26;
       return {
         __legendFit: legendOn
-          ? { items: colors, base: bottomBase, key: leg.extra + (leg.scroll ? 'S' : '') }
+          ? { items: legItems, base: bottomBase, key: leg.extra + (leg.scroll ? 'S' : '') }
           : undefined,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip,
         toolbox: TOOLBOX,
         legend: legendOn
-          ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, ...(leg.scroll ? { type: 'scroll' } : {}) }
+          ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, data: legItems, ...(leg.scroll ? { type: 'scroll' } : {}) }
           : undefined,
         grid: vertical
           ? { left: 55, right: 10, top: 30, bottom: bottomBase + leg.extra }
           : { left: gut.gridLeft, right: 5, top: 30, bottom: bottomBase + leg.extra },
         xAxis: vertical ? catAxis : valAxis,
         yAxis: vertical ? valAxis : catAxis,
-        series
+        series: [...series, ...this._legendTitleSeries(legTitle, 'bar')]
       };
     }
 
@@ -2038,11 +2104,16 @@
             (colorScale && colorScale.color && colorScale.color[c])
               || palette[ci % palette.length]));
       const showLegend = colors.length > 0;
-      const leg = showLegend ? this._legendRows(colors, plotW) : { extra: 0, scroll: false };
+      const legTitle = showLegend ? this._legendTitleName(colors, this.config.color) : null;
+      const legItems = this._withLegendTitle(colors, this.config.color);
+      // Radar legend chips bind to shape names, so the heading is an extra
+      // shape with an all-null value: no polygon, no effect on maxVal.
+      if (legTitle) data.push({ name: legTitle, value: groups.map(() => null) });
+      const leg = showLegend ? this._legendRows(legItems, plotW) : { extra: 0, scroll: false };
       const rl = this._radarLayout(leg.extra, plotW, showLegend);
       return {
         __legendFit: showLegend
-          ? { items: colors, radar: true, key: leg.extra + (leg.scroll ? 'S' : '') }
+          ? { items: legItems, radar: true, key: leg.extra + (leg.scroll ? 'S' : '') }
           : undefined,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
@@ -2059,7 +2130,7 @@
             }).join('<br>')
         },
         legend: showLegend
-          ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, ...(leg.scroll ? { type: 'scroll' } : {}) }
+          ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, data: legItems, ...(leg.scroll ? { type: 'scroll' } : {}) }
           : { show: false },
         radar: {
           indicator,
@@ -2245,23 +2316,25 @@
           '<br/>Whiskers: ' + ddNum(lo) + ' \u2013 ' + ddNum(hi);
       };
       const legendOn = split;
-      const leg = legendOn ? this._legendRows(levels, plotW || 0) : { extra: 0, scroll: false };
+      const legTitle = legendOn ? this._legendTitleName(levels, colorCol) : null;
+      const legItems = this._withLegendTitle(levels, colorCol);
+      const leg = legendOn ? this._legendRows(legItems, plotW || 0) : { extra: 0, scroll: false };
       const bottomBase = 46 + (legendOn ? 29 : 0);
       return {
         __legendFit: legendOn
-          ? { items: levels, base: bottomBase, key: leg.extra + (leg.scroll ? 'S' : '') }
+          ? { items: legItems, base: bottomBase, key: leg.extra + (leg.scroll ? 'S' : '') }
           : undefined,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         toolbox: TOOLBOX,
         tooltip: { trigger: 'item', confine: true, formatter: boxTooltipFmt },
         legend: legendOn
-          ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, ...(leg.scroll ? { type: 'scroll' } : {}) }
+          ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, data: legItems, ...(leg.scroll ? { type: 'scroll' } : {}) }
           : undefined,
         grid: { left: gut.gridLeft, right: 5, top: 30, bottom: bottomBase + leg.extra },
         xAxis: { type: 'value', name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } },
         yAxis: { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(split ? { formatter: (/** @type {string} */ v) => String(v).split(BOX_CAT_SEP)[0] } : {}) }, axisLine: { show: false } },
-        series: [...series, ...pointSeries]
+        series: [...series, ...pointSeries, ...this._legendTitleSeries(legTitle)]
       };
     }
 
@@ -2736,11 +2809,19 @@
         };
         // Legend entries are the color levels either way (explicit data when
         // series ≠ color, series names — one per color level — otherwise).
-        const legendItems = useColorByLegend
+        const legendLevels = useColorByLegend
           ? colorByLegendData
           : showLegend
             ? [...new Set(this.data.map(r => String(r[color] ?? '')))]
             : null;
+        // Heading first, so the chips say which variable they split on.
+        const legTitle = legendLevels
+          ? this._legendTitleName(legendLevels, color)
+          : null;
+        const legendItems = legendLevels
+          ? this._withLegendTitle(legendLevels, color)
+          : null;
+        if (legTitle) series.push(...this._legendTitleSeries(legTitle));
         const leg = legendItems
           ? this._legendRows(legendItems, chartDiv.clientWidth)
           : { extra: 0, scroll: false };
@@ -2773,14 +2854,11 @@
           // Always set explicitly; leaving legend undefined lets echarts
           // auto-render one per series, which eats the plot area when
           // series is high-cardinality (e.g. USUBJID).
-          legend: useColorByLegend
+          legend: legendItems
             ? { show: true, bottom: 0, textStyle: { fontSize: 11 },
-                data: colorByLegendData,
+                data: legendItems,
                 ...(leg.scroll ? { type: 'scroll' } : {}) }
-            : showLegend
-              ? { show: true, bottom: 0, textStyle: { fontSize: 11 },
-                  ...(leg.scroll ? { type: 'scroll' } : {}) }
-              : { show: false },
+            : { show: false },
           // left / bottom widened so the rotated Y title and the X title
           // (nameGap above) clear the tick labels and the legend; rotated
           // categorical x labels add their text height on top.
@@ -2988,7 +3066,12 @@
         const showLegend = !!color && colorLevels.length > 0;
         // Names only — echarts derives each chip's color from the matching
         // series via option.color cycling.
-        const legendData = showLegend ? colorLevels.slice() : null;
+        const legTitle = showLegend
+          ? this._legendTitleName(colorLevels, color)
+          : null;
+        const legendData = showLegend
+          ? this._withLegendTitle(colorLevels.slice(), color)
+          : null;
 
         const renderItemFn = (/** @type {any} */ params, /** @type {any} */ api) => {
           const start = api.coord([api.value(0), api.value(2)]);
@@ -3057,6 +3140,7 @@
             renderItem: renderItemFn
           }];
         }
+        seriesArray = [...seriesArray, ...this._legendTitleSeries(legTitle)];
 
         const gut = this._yGutter(terms);
         const option = {
