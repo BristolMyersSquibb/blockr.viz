@@ -805,7 +805,13 @@ new_chart_block <- function(
 
         list(
           expr = shiny::reactive({
-            d <- data()
+            # tryCatch, not a bare read: while upstream is still evaluating
+            # its data reactive req()s, and that silent error (message "")
+            # escapes through lang() into core's render-phase condition
+            # capture -- surfacing as an EMPTY red error band on the chart
+            # until the first full upstream eval clears it. Same guard as
+            # the tile block's expr.
+            d <- tryCatch(data(), error = function(e) NULL)
             # Non-data-frame input under the shared contract (a composer
             # table et al.): the emitted code must coerce the same way the
             # renderer does, so downstream receives the same plain frame the
