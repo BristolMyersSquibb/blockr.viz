@@ -7,7 +7,7 @@
 #' @examplesIf interactive()
 #' register_viz_blocks()
 #' @export
-#' @importFrom blockr.core register_blocks new_block_args new_block_arg
+#' @importFrom blockr.core register_blocks new_arg_specs new_arg_spec
 #'   arg_string arg_number arg_integer arg_boolean arg_enum arg_array arg_object
 register_viz_blocks <- function() {
   # Registered separately at the end (own arg specs + guidance in its file):

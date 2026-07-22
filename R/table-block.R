@@ -997,12 +997,12 @@ drilldown_table_dep <- memoise0(function() {
 #' block (the chart block has this; the table was previously invisible).
 #' @noRd
 table_arguments <- function() {
-  new_block_args(
+  new_arg_specs(
     # Aggregation: group by column(s), then one or more summaries. Same vocabulary
     # as the chart, but the table carries a LIST of summaries (mean of AGE AND sum
     # of DOSE at once), so it takes `summaries` rather than the chart's single
     # `metric` + `func`.
-    group = new_block_arg(
+    group = new_arg_spec(
       paste0(
         "Grouping column(s) to aggregate over. One or more categorical columns ",
         "(nested from outer to inner). Empty = no grouping (a raw row-level ",
@@ -1011,7 +1011,7 @@ table_arguments <- function() {
       example = list("SEX", "ARM"),
       type = arg_array(arg_string())
     ),
-    summaries = new_block_arg(
+    summaries = new_arg_spec(
       paste0(
         "The aggregations shown: a list, each entry `{func, cols}`. ",
         "`func` is one of \"count\", \"count_distinct\", \"mean\", ",
@@ -1030,7 +1030,7 @@ table_arguments <- function() {
         list(func = "sum", cols = list("DOSE"))
       )
     ),
-    rowname = new_block_arg(
+    rowname = new_arg_spec(
       paste0(
         "The single column shown as the row labels (the left-hand stub). Names ",
         "a data column; defaults to the first column."
@@ -1040,7 +1040,7 @@ table_arguments <- function() {
     ),
     # Populated (explicit value columns array) so the model anchors on setting
     # these to named columns, not leaving them null.
-    value = new_block_arg(
+    value = new_arg_spec(
       paste0(
         "The columns rendered as the table body (the data cells). When the user ",
         "names specific value/measure columns, set this to EXACTLY those ",
@@ -1053,7 +1053,7 @@ table_arguments <- function() {
     # A `drilldown_table_color()` SPEC object (not a column name); its shape is
     # an author-only nested structure, so the type is left unset and the NULL
     # example (a plain table) is dropped.
-    color = new_block_arg(
+    color = new_arg_spec(
       paste0(
         "Categorical identity color (\"Color by\") -- the SAME argument as the ",
         "chart's `color`, applied to rows: names one categorical column whose ",
@@ -1065,7 +1065,7 @@ table_arguments <- function() {
       example = "SEX",
       type = arg_string()
     ),
-    shadings = new_block_arg(
+    shadings = new_arg_spec(
       paste0(
         "Cell value-encoding rules: a list, each entry `{mode, cols}` (same ",
         "shape family as `summaries`). `mode` is \"diverging\" (correlation ",
@@ -1080,7 +1080,7 @@ table_arguments <- function() {
         list(mode = "diverging", cols = list())
       )
     ),
-    drill = new_block_arg(
+    drill = new_arg_spec(
       paste0(
         "Row-click drill-down. Optional; default null = a click is inert ",
         "(drill is opt-in everywhere). RAW table: a column name \u2014 clicking a ",
@@ -1097,12 +1097,12 @@ table_arguments <- function() {
       example = "Region",
       type = arg_string()
     ),
-    digits = new_block_arg(
+    digits = new_arg_spec(
       "Decimal places for numeric display. Default 2.",
       example = 2L,
       type = arg_integer()
     ),
-    ctrl_target = new_block_arg(
+    ctrl_target = new_arg_spec(
       paste0(
         "BETA. Block id of a value filter block on the SAME board: the ",
         "drill's claim (e.g. SEX = F) is also pushed into that block over ",
@@ -1114,7 +1114,7 @@ table_arguments <- function() {
       example = "cohort_filter",
       type = arg_string()
     ),
-    ctrl_table = new_block_arg(
+    ctrl_table = new_arg_spec(
       paste0(
         "BETA. Only with `ctrl_target`: the table in the target's dm the ",
         "pushed conditions apply to (e.g. \"adsl\"). Leave empty when the ",

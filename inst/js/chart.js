@@ -2089,7 +2089,7 @@
           : facetData.find(a => a.group === g && a.color === c);
         return d ? d.value : gapVal;
       };
-      /** @param {any} name @param {any} vals @param {any} col */
+      /** @param {any} name @param {any} vals @param {any} col @returns {any} */
       const mkShape = (name, vals, col) => ({
         name: name,
         value: vals,

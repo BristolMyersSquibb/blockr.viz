@@ -9,8 +9,8 @@
 #' creation-time defaults.
 #' @noRd
 chart_arguments <- function() {
-  new_block_args(
-    chart_type = new_block_arg(
+  new_arg_specs(
+    chart_type = new_arg_spec(
       paste0(
         "Chart type. One of \"bar\", \"waterfall\", \"pie\", \"treemap\", ",
         "\"boxplot\", \"radar\" (aggregated \u2014 use group + value + func), ",
@@ -28,7 +28,7 @@ chart_arguments <- function() {
           "scatter", "line", "gantt")
       )
     ),
-    group = new_block_arg(
+    group = new_arg_spec(
       paste0(
         "Column for the categorical axis (aggregated charts). Names a ",
         "data column, never a literal."
@@ -36,7 +36,7 @@ chart_arguments <- function() {
       example = "Species",
       type = arg_string()
     ),
-    color = new_block_arg(
+    color = new_arg_spec(
       paste0(
         "Column mapped to colour. All families. Names a data column, ",
         "never a literal colour. null for no colour mapping."
@@ -44,14 +44,14 @@ chart_arguments <- function() {
       example = "Species",
       type = arg_string()
     ),
-    facet = new_block_arg(
+    facet = new_arg_spec(
       paste0(
         "Column to facet by \u2014 one small panel per level. Optional."
       ),
       example = NULL,
       type = arg_string()
     ),
-    value = new_block_arg(
+    value = new_arg_spec(
       paste0(
         "Column to aggregate (aggregated charts only). Must match `func`: ",
         "\".count\" with func \"count\" (row counts; the value is ignored ",
@@ -62,7 +62,7 @@ chart_arguments <- function() {
       example = ".count",
       type = arg_string()
     ),
-    func = new_block_arg(
+    func = new_arg_spec(
       paste0(
         "Aggregation function for `value` (aggregated charts only). ",
         "One of \"count\", \"count_distinct\", \"mean\", \"median\", ",
@@ -75,7 +75,7 @@ chart_arguments <- function() {
       example = "count",
       type = arg_enum(AGG_FNS)
     ),
-    x = new_block_arg(
+    x = new_arg_spec(
       paste0(
         "X-axis column (individual: scatter/line; timeline: interval ",
         "start). Names a data column."
@@ -83,7 +83,7 @@ chart_arguments <- function() {
       example = "Sepal.Length",
       type = arg_string()
     ),
-    y = new_block_arg(
+    y = new_arg_spec(
       paste0(
         "Y-axis column (individual: scatter/line; timeline: the lane, ",
         "e.g. USUBJID). Names a data column."
@@ -91,7 +91,7 @@ chart_arguments <- function() {
       example = "Sepal.Width",
       type = arg_string()
     ),
-    series = new_block_arg(
+    series = new_arg_spec(
       paste0(
         "Column whose distinct values split rows into separate series ",
         "(individual: one line/scatter group per value; timeline: per-bar ",
@@ -101,7 +101,7 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_string()
     ),
-    xend = new_block_arg(
+    xend = new_arg_spec(
       paste0(
         "Interval end column (timeline only). Rows with no end render as ",
         "a dot at x."
@@ -109,7 +109,7 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_string()
     ),
-    label = new_block_arg(
+    label = new_arg_spec(
       paste0(
         "Column written as on-mark text. Optional; default null = no ",
         "on-mark text. For pie/treemap, null falls back to `group` ",
@@ -119,7 +119,7 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_string()
     ),
-    tt_fields = new_block_arg(
+    tt_fields = new_arg_spec(
       paste0(
         "Extra column names appended to each mark's hover tooltip, beyond ",
         "the mapped roles (timeline/gantt). Display-only \u2014 never affects ",
@@ -129,7 +129,7 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_array(arg_string())
     ),
-    drill = new_block_arg(
+    drill = new_arg_spec(
       paste0(
         "Drill-down: what a SELECTION (click or brush) filters downstream on. ",
         "Tri-state: null/\"\" = OFF (the chart is a static display \u2014 no filter, ",
@@ -145,7 +145,7 @@ chart_arguments <- function() {
       example = "Species",
       type = arg_string()
     ),
-    ctrl_target = new_block_arg(
+    ctrl_target = new_arg_spec(
       paste0(
         "BETA. Block id of a value filter block on the SAME board: a ",
         "categorical drill click's claim (e.g. SEX = F) is also pushed into ",
@@ -159,7 +159,7 @@ chart_arguments <- function() {
       example = "cohort_filter",
       type = arg_string()
     ),
-    ctrl_table = new_block_arg(
+    ctrl_table = new_arg_spec(
       paste0(
         "BETA. Only with `ctrl_target`: the table in the target's dm the ",
         "pushed conditions apply to (e.g. \"adsl\"). Leave empty when the ",
@@ -168,7 +168,7 @@ chart_arguments <- function() {
       example = "adsl",
       type = arg_string()
     ),
-    smoother = new_block_arg(
+    smoother = new_arg_spec(
       paste0(
         "Trend overlay for scatter charts. One of \"none\" (default), ",
         "\"lm\" (linear fit) or \"loess\" (local regression)."
@@ -176,7 +176,7 @@ chart_arguments <- function() {
       example = "none",
       type = arg_enum(c("none", "lm", "loess"))
     ),
-    identity_line = new_block_arg(
+    identity_line = new_arg_spec(
       paste0(
         "Identity-line overlay for scatter charts: true draws a dashed ",
         "45-degree y = x guide line, false (default) omits it. Use for ",
@@ -185,7 +185,7 @@ chart_arguments <- function() {
       example = FALSE,
       type = arg_boolean()
     ),
-    box_points = new_block_arg(
+    box_points = new_arg_spec(
       paste0(
         "Observation overlay for boxplots (chart_type=\"boxplot\"): ",
         "\"none\" (default, box only), \"outliers\" (plot only the points ",
@@ -197,7 +197,7 @@ chart_arguments <- function() {
       example = "none",
       type = arg_enum(c("none", "outliers", "all"))
     ),
-    lo = new_block_arg(
+    lo = new_arg_spec(
       paste0(
         "Lower error-band column (individual line only). Set together ",
         "with hi to draw a band; numeric only."
@@ -205,7 +205,7 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_string()
     ),
-    hi = new_block_arg(
+    hi = new_arg_spec(
       paste0(
         "Upper error-band column (individual line only). Set together ",
         "with lo to draw a band; numeric only."
@@ -213,7 +213,7 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_string()
     ),
-    step = new_block_arg(
+    step = new_arg_spec(
       paste0(
         "Step-line mode for line charts. null (default) draws straight ",
         "segments; \"start\", \"middle\" or \"end\" draw a stepped line ",
@@ -224,7 +224,7 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_enum(c("start", "middle", "end"))
     ),
-    vlines = new_block_arg(
+    vlines = new_arg_spec(
       paste0(
         "Helper lines: each number draws one dashed VERTICAL guide line at ",
         "that x position (e.g. a threshold like 5). Plain numbers, never ",
@@ -233,7 +233,7 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_array(arg_number())
     ),
-    hlines = new_block_arg(
+    hlines = new_arg_spec(
       paste0(
         "Helper lines: each number draws one dashed HORIZONTAL guide line ",
         "at that y position (e.g. a normal-range limit). Plain numbers, ",
@@ -243,7 +243,7 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_array(arg_number())
     ),
-    line_width_mult = new_block_arg(
+    line_width_mult = new_arg_spec(
       paste0(
         "Line width multiplier for line charts (individual only). 1.0\u00d7 ",
         "is the default look; range 0.5\u00d7\u20133.0\u00d7."
@@ -251,7 +251,7 @@ chart_arguments <- function() {
       example = 1,
       type = arg_number()
     ),
-    dot_size_mult = new_block_arg(
+    dot_size_mult = new_arg_spec(
       paste0(
         "Marker size multiplier for scatter points and line markers ",
         "(individual only). 1.0\u00d7 is the default; range 0.5\u00d7\u20133.0\u00d7."
@@ -259,7 +259,7 @@ chart_arguments <- function() {
       example = 1,
       type = arg_number()
     ),
-    filter_type = new_block_arg(
+    filter_type = new_arg_spec(
       paste0(
         "Runtime filter-transport state. Normally left at default ",
         "\"categorical\"; set by interaction, not at creation."
@@ -269,28 +269,28 @@ chart_arguments <- function() {
     ),
     # Runtime filter-transport slots: NULL examples (dropped) and their type
     # varies (column name / value array / range object) -> left untyped.
-    filter_column = new_block_arg(
+    filter_column = new_arg_spec(
       paste0(
         "Runtime filter-transport state. The column the last click ",
         "filtered on. Usually null at creation."
       ),
       example = NULL
     ),
-    filter_values = new_block_arg(
+    filter_values = new_arg_spec(
       paste0(
         "Runtime filter-transport state. Values kept after the last ",
         "click. Usually null at creation."
       ),
       example = NULL
     ),
-    filter_range = new_block_arg(
+    filter_range = new_arg_spec(
       paste0(
         "Runtime filter-transport state for brush/drag on scatter/line ",
         "(x_col, y_col, x_range, y_range). Usually null at creation."
       ),
       example = NULL
     ),
-    filter_point = new_block_arg(
+    filter_point = new_arg_spec(
       paste0(
         "Runtime filter-transport state for a single-point click on a ",
         "scatter with no drill column (x_col, y_col, x_val, y_val). ",
@@ -298,7 +298,7 @@ chart_arguments <- function() {
       ),
       example = NULL
     ),
-    sort_by = new_block_arg(
+    sort_by = new_arg_spec(
       paste0(
         "Category-axis ordering for aggregated charts. \"value\" ",
         "(default), \"alpha\", or a column name. For timeline: ",
@@ -308,7 +308,7 @@ chart_arguments <- function() {
       example = "value",
       type = arg_string()
     ),
-    sort_dir = new_block_arg(
+    sort_dir = new_arg_spec(
       paste0(
         "Direction for `sort_by`. One of \"asc\" or \"desc\". Ignored ",
         "for individual (scatter/line) charts."
@@ -316,7 +316,7 @@ chart_arguments <- function() {
       example = "desc",
       type = arg_enum(c("asc", "desc"))
     ),
-    orientation = new_block_arg(
+    orientation = new_arg_spec(
       paste0(
         "Bar orientation: \"horizontal\" (default; category on the y-axis, ",
         "best for long labels) or \"vertical\". Presentation only \u2014 the ",
@@ -325,7 +325,7 @@ chart_arguments <- function() {
       example = "horizontal",
       type = arg_enum(c("horizontal", "vertical"))
     ),
-    bar_mode = new_block_arg(
+    bar_mode = new_arg_spec(
       paste0(
         "Layout for a color-split bar: \"stacked\" (default \u2014 color ",
         "segments stack into one bar per group), \"grouped\" (segments sit ",
@@ -337,7 +337,7 @@ chart_arguments <- function() {
       example = "stacked",
       type = arg_enum(c("stacked", "grouped", "percent"))
     ),
-    baseline = new_block_arg(
+    baseline = new_arg_spec(
       paste0(
         "Bar baseline mode: \"zero\" (default \u2014 every bar starts at 0) or ",
         "\"cumulative\" (a waterfall/bridge \u2014 each bar floats from the ",
@@ -348,7 +348,7 @@ chart_arguments <- function() {
       example = "zero",
       type = arg_enum(c("zero", "cumulative"))
     ),
-    waterfall_totals = new_block_arg(
+    waterfall_totals = new_arg_spec(
       paste0(
         "Group (step) values rendered as total/subtotal bars in a ",
         "cumulative-baseline bar: their baseline resets to 0 and they show ",

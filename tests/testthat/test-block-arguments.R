@@ -1,5 +1,5 @@
 # Guard the AI-facing `*_arguments()` descriptors against drift from the
-# block constructors. Each descriptor (now a `new_block_args()` structure)
+# block constructors. Each descriptor (now a `new_arg_specs()` structure)
 # must only advertise arguments that actually exist on the constructor, and
 # every advertised arg must carry a description and an example slot.
 
@@ -8,7 +8,7 @@ ctor_formals <- function(ctor) {
 }
 
 arg_descriptions <- function(args) {
-  vapply(args, blockr.core::block_arg_description, character(1))
+  vapply(args, blockr.core::arg_spec_description, character(1))
 }
 
 # summary_table + gt_table are pure descriptors whose surface must match the
@@ -32,7 +32,7 @@ test_that("summary_table_arguments() names match new_summary_table_block() forma
 # surface (runtime-transport reactiveVals such as the filter_* fields). The
 # invariant on the *constructor* side is therefore weaker (descriptor args are
 # a subset of the ctor formals). Each advertised arg carries an example slot
-# in the `new_block_args()` structure, so the assistant always has a value to
+# in the `new_arg_specs()` structure, so the assistant always has a value to
 # mirror; we still require every descriptor to have a non-empty description.
 test_that("every *_arguments() descriptor is consistent with its constructor", {
   pairs <- list(
@@ -47,8 +47,8 @@ test_that("every *_arguments() descriptor is consistent with its constructor", {
     args <- p$args()
     ctor <- ctor_formals(p$ctor)
 
-    # new_block_args() structure keyed by arg name
-    expect_s3_class(args, "block_args")
+    # new_arg_specs() structure keyed by arg name
+    expect_s3_class(args, "arg_specs")
     # no phantom arguments advertised to the assistant
     expect_true(all(names(args) %in% ctor))
     # every advertised arg carries a worked example slot (possibly NULL)

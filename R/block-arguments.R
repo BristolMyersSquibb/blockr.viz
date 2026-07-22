@@ -1,10 +1,10 @@
 # Argument metadata helpers for blockr.viz blocks.
 #
-# Each helper returns a `new_block_args()` structure (one `new_block_arg()`
+# Each helper returns a `new_arg_specs()` structure (one `new_arg_spec()`
 # per constructor param, carrying a description, a worked `example`, and an
 # optional `arg_*()` type descriptor). blockr.core stores these in the
 # registry; the assistant / MCP server read them via the
-# `block_meta_arguments()` / `block_arg_type()` accessors to surface typed
+# `block_meta_arguments()` / `arg_spec_type()` accessors to surface typed
 # parameter documentation to the AI. Per-block construction guidance (the old
 # `prompt` attribute) now lives in the `guidance` vector of the
 # `register_blocks()` call in registry.R.
@@ -32,7 +32,7 @@ AGG_WORDS <- c(
 #' @noRd
 agg_block_args <- function(group_multiple = FALSE) {
   list(
-    group = new_block_arg(
+    group = new_arg_spec(
       paste0(
         "Grouping column", if (group_multiple) "(s)" else "", " for the ",
         "aggregation (the categorical dimension). ",
@@ -46,7 +46,7 @@ agg_block_args <- function(group_multiple = FALSE) {
       example = if (group_multiple) list("region") else "region",
       type = if (group_multiple) arg_array(arg_string()) else arg_string()
     ),
-    value = new_block_arg(
+    value = new_arg_spec(
       paste0(
         "Column to aggregate. Must match `func`: \".count\" with func ",
         "\"count\" (row counts; the value is ignored otherwise), any column ",
@@ -57,7 +57,7 @@ agg_block_args <- function(group_multiple = FALSE) {
       example = ".count",
       type = arg_string()
     ),
-    func = new_block_arg(
+    func = new_arg_spec(
       paste0(
         "Aggregation function for `value`. One of \"count\", ",
         "\"count_distinct\", \"mean\", \"median\", \"sum\", \"min\", \"max\". ",
@@ -93,8 +93,8 @@ agg_block_args <- function(group_multiple = FALSE) {
 #' Build arguments metadata for the pivot table block
 #' @noRd
 pivot_table_arguments <- function() {
-  new_block_args(
-    rows = new_block_arg(
+  new_arg_specs(
+    rows = new_arg_spec(
       paste0(
         "Character vector of column names used as row headers (vertical axis). ",
         "Multiple values nest rows from outer to inner. Empty vector = no row grouping."
@@ -102,7 +102,7 @@ pivot_table_arguments <- function() {
       example = list("Region"),
       type = arg_array(arg_string())
     ),
-    cols = new_block_arg(
+    cols = new_arg_spec(
       paste0(
         "Character vector of column names pivoted into column headers (horizontal axis). ",
         "If empty and multiple `measures` are selected, the measures become the columns instead."
@@ -110,7 +110,7 @@ pivot_table_arguments <- function() {
       example = list("Category"),
       type = arg_array(arg_string())
     ),
-    measures = new_block_arg(
+    measures = new_arg_spec(
       paste0(
         "Character vector of numeric column names to aggregate. ",
         "Multiple measures produce multiple output columns (nested under `cols` if present). ",
@@ -119,7 +119,7 @@ pivot_table_arguments <- function() {
       example = list("Revenue"),
       type = arg_array(arg_string())
     ),
-    agg_fun = new_block_arg(
+    agg_fun = new_arg_spec(
       paste0(
         "Aggregation function applied to each measure. ",
         "One of \"sum\", \"mean\", \"median\", \"min\", \"max\", \"n\". Default \"sum\"."
@@ -129,7 +129,7 @@ pivot_table_arguments <- function() {
     ),
     # Decimal places given as a string OR integer -> polymorphic scalar, so
     # the type is left unset and inferred from the worked example.
-    digits = new_block_arg(
+    digits = new_arg_spec(
       paste0(
         "Decimal places for numeric rounding as a string (e.g. \"2\") or integer. ",
         "Empty string \"\" (default) means no rounding."
@@ -142,8 +142,8 @@ pivot_table_arguments <- function() {
 #' Build arguments metadata for the summary table block
 #' @noRd
 summary_table_arguments <- function() {
-  new_block_args(
-    vars = new_block_arg(
+  new_arg_specs(
+    vars = new_arg_spec(
       paste0(
         "Character, variables to summarise \u2014 each becomes a row-section. ",
         "Handles numeric, categorical, and logical columns; logicals are ",
@@ -152,7 +152,7 @@ summary_table_arguments <- function() {
       example = list("AEDECOD"),
       type = arg_array(arg_string())
     ),
-    sections = new_block_arg(
+    sections = new_arg_spec(
       paste0(
         "Character, OUTER grouping columns that CONTAIN the `vars`, 0..N \u2014 ",
         "use ONLY for a true nesting hierarchy such as SOC containing PT; ",
@@ -161,12 +161,12 @@ summary_table_arguments <- function() {
       example = list("AEBODSYS"),
       type = arg_array(arg_string())
     ),
-    by = new_block_arg(
+    by = new_arg_spec(
       "Character, column-split dimensions, 0..2.",
       example = list("TRT01A"),
       type = arg_array(arg_string())
     ),
-    stats = new_block_arg(
+    stats = new_arg_spec(
       paste0(
         "Statistics emitted for each NUMERIC variable, any combination of: ",
         "\"n\", \"n_pct\" (non-missing n and % of group rows), \"mean\", ",
@@ -179,17 +179,17 @@ summary_table_arguments <- function() {
       example = list("mean_sd"),
       type = arg_array(arg_enum(names(SUMMARY_STATS_CATALOG)))
     ),
-    add_overall = new_block_arg(
+    add_overall = new_arg_spec(
       "Logical, append an overall column across all `by` levels.",
       example = TRUE,
       type = arg_boolean()
     ),
-    overall_label = new_block_arg(
+    overall_label = new_arg_spec(
       "Label for the overall column, default \"Total\".",
       example = "Total",
       type = arg_string()
     ),
-    indent_details = new_block_arg(
+    indent_details = new_arg_spec(
       paste0(
         "Logical, default TRUE \u2014 indent detail rows under their variable ",
         "header; rarely changed."
@@ -197,7 +197,7 @@ summary_table_arguments <- function() {
       example = TRUE,
       type = arg_boolean()
     ),
-    nest_hierarchies = new_block_arg(
+    nest_hierarchies = new_arg_spec(
       paste0(
         "Logical, default FALSE \u2014 advanced row-side drill-down for adjacent ",
         "functionally-dependent categorical vars; leave FALSE unless asked."
@@ -205,7 +205,7 @@ summary_table_arguments <- function() {
       example = FALSE,
       type = arg_boolean()
     ),
-    id_var = new_block_arg(
+    id_var = new_arg_spec(
       paste0(
         "OPTIONAL subject-identifier column name, e.g. \"USUBJID\": when set, ",
         "counts and percentages are over DISTINCT values of this column instead ",
@@ -265,23 +265,23 @@ summary_table_guidance <- function() {
 #' Build arguments metadata for the gt table block
 #' @noRd
 gt_table_arguments <- function() {
-  new_block_args(
-    title = new_block_arg(
+  new_arg_specs(
+    title = new_arg_spec(
       "Table title rendered above the table. Empty string for no title.",
       example = "Baseline Characteristics",
       type = arg_string()
     ),
-    subtitle = new_block_arg(
+    subtitle = new_arg_spec(
       "Subtitle rendered under the title. Empty string for no subtitle.",
       example = "ITT population",
       type = arg_string()
     ),
-    full_width = new_block_arg(
+    full_width = new_arg_spec(
       "Logical. TRUE (default) makes the table span the container width.",
       example = TRUE,
       type = arg_boolean()
     ),
-    borders = new_block_arg(
+    borders = new_arg_spec(
       paste0(
         "Logical. TRUE (default) draws 2px top/bottom/heading borders in the ",
         "pharma SAP style."
@@ -289,7 +289,7 @@ gt_table_arguments <- function() {
       example = TRUE,
       type = arg_boolean()
     ),
-    na_rep = new_block_arg(
+    na_rep = new_arg_spec(
       paste0(
         "String used to render missing (NA) cells. Default is an em dash."
       ),
