@@ -426,8 +426,8 @@ tile_block_dep <- memoise0(function() {
 #' the AI surface.
 #' @noRd
 tile_arguments <- function() {
-  new_block_args(
-    value = new_block_arg(
+  new_arg_specs(
+    value = new_arg_spec(
       paste0(
         "Numeric column(s) shown as the big number. One column for a long ",
         "tile frame; MULTIPLE columns for wide input (each column becomes a ",
@@ -436,7 +436,7 @@ tile_arguments <- function() {
       example = list("revenue"),
       type = arg_array(arg_string())
     ),
-    group = new_block_arg(
+    group = new_arg_spec(
       paste0(
         "Grouping column: clusters cards / drives the matrix rows, and is the ",
         "dplyr::group_by column when `summaries` aggregate the input in place. ",
@@ -447,7 +447,7 @@ tile_arguments <- function() {
       example = "region",
       type = arg_string()
     ),
-    name = new_block_arg(
+    name = new_arg_spec(
       paste0(
         "The column NAMING each KPI, for LONG input (one row per group x ",
         "measure); the name shows above the value and drives per-KPI number ",
@@ -457,7 +457,7 @@ tile_arguments <- function() {
       example = "",
       type = arg_string()
     ),
-    color = new_block_arg(
+    color = new_arg_spec(
       paste0(
         "Categorical identity color (\"Color by\") -- the SAME argument as ",
         "the chart's `color`, applied to cards: the tile's `group` column or ",
@@ -468,7 +468,7 @@ tile_arguments <- function() {
       example = "SEX",
       type = arg_string()
     ),
-    summaries = new_block_arg(
+    summaries = new_arg_spec(
       paste0(
         "In-block aggregations shown as cards: a list, each entry ",
         "`{func, cols}`. `func` is one of \"count\", \"count_distinct\", ",
@@ -487,12 +487,12 @@ tile_arguments <- function() {
         list(func = "count", cols = list())
       )
     ),
-    layout = new_block_arg(
+    layout = new_arg_spec(
       "Layout: \"cards\" (grid of cards) or \"table\" (aligned matrix).",
       example = "cards",
       type = arg_enum(c("cards", "table"))
     ),
-    secondary = new_block_arg(
+    secondary = new_arg_spec(
       paste0(
         "A PRECOMPUTED reference column drawn beside the value (a delta, a ",
         "fraction, a status). The renderer does no arithmetic \u2014 compute the ",
@@ -501,7 +501,7 @@ tile_arguments <- function() {
       example = "rev_delta",
       type = arg_string()
     ),
-    style = new_block_arg(
+    style = new_arg_spec(
       paste0(
         "How to draw the secondary: \"plain\" (show the reference), \"delta\" ",
         "(arrow + %, colored by sign), \"fill\" (progress bar to a fraction), ",
@@ -510,7 +510,7 @@ tile_arguments <- function() {
       example = "delta",
       type = arg_enum(c("plain", "delta", "fill", "pill"))
     ),
-    format = new_block_arg(
+    format = new_arg_spec(
       paste0(
         "How the NUMBER is formatted (never a currency guess): \"number\" ",
         "(separators + smart decimals, default), \"compact\" (1.2M / 38.4K), ",
@@ -519,7 +519,7 @@ tile_arguments <- function() {
       example = "compact",
       type = arg_enum(c("number", "compact", "percent"))
     ),
-    unit = new_block_arg(
+    unit = new_arg_spec(
       paste0(
         "Free-text unit label shown next to the value / in the matrix header ",
         "(e.g. \"USD\", \"CHF\", \"apples\", \"kg\"). This is how you label a ",
@@ -528,12 +528,12 @@ tile_arguments <- function() {
       example = "USD",
       type = arg_string()
     ),
-    caption = new_block_arg(
+    caption = new_arg_spec(
       "Subtext below the value: a column name (per-cell) or a literal.",
       example = "",
       type = arg_string()
     ),
-    drill = new_block_arg(
+    drill = new_arg_spec(
       paste0(
         "When TRUE, clicking a card / matrix row emits a categorical filter ",
         "downstream (the same contract as the chart / table). The filter ",
@@ -545,7 +545,7 @@ tile_arguments <- function() {
       example = TRUE,
       type = arg_boolean()
     ),
-    ctrl_target = new_block_arg(
+    ctrl_target = new_arg_spec(
       paste0(
         "BETA. Block id of a value filter block on the SAME board: the ",
         "drill's claim (e.g. SEX = F) is also pushed into that block over ",
@@ -557,7 +557,7 @@ tile_arguments <- function() {
       example = "cohort_filter",
       type = arg_string()
     ),
-    ctrl_table = new_block_arg(
+    ctrl_table = new_arg_spec(
       paste0(
         "BETA. Only with `ctrl_target`: the table in the target's dm the ",
         "pushed conditions apply to (e.g. \"adsl\"). Leave empty when the ",
