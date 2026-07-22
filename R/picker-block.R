@@ -23,7 +23,11 @@
 #' UI follows the blockr design system: `Blockr.Select` controls on the
 #' block face (one per picker, labelled by `into`), and the picker
 #' definitions in the gear-toggled settings band, like the value filter's
-#' filter list.
+#' filter list. Every column qualifies as a candidate -- a picker can just
+#' as well drive a grouping or color dimension as a measure; only the
+#' auto-fill default is numeric-only. Clearing a picker's offer list is
+#' allowed while editing: the picker goes inert (no output column) until
+#' it has choices again.
 #'
 #' Design records: blockr.docs design-system/target select-controls.html
 #' (control style) and measure-switch-proposals.html (schema; the picker
@@ -99,14 +103,16 @@ new_picker_block <- function(
         })
 
         # Push the full control state. Length-1 vectors unbox to scalars over
-        # the wire; the JS side re-wraps them.
+        # the wire; the JS side re-wraps them. ALL columns are offered (a
+        # picker may drive a grouping/color dimension, not just a measure);
+        # numeric-only is just the auto-fill default above.
         shiny::observe({
           shiny::req(data())
           labs <- col_labels()
           session$sendCustomMessage(
             session$ns("pk_update"),
             list(
-              cfg_options = lapply(numeric_cols(), function(nm) {
+              cfg_options = lapply(colnames(data()), function(nm) {
                 list(value = nm, label = labs[[nm]])
               }),
               pickers = r_pickers()
@@ -159,11 +165,14 @@ new_picker_block <- function(
             class = "blockr-settings blockr-settings--beak",
             shiny::div(class = "blockr-settings__title", "Pickers"),
             shiny::div(id = ns("rows")),
-            shiny::tags$button(
-              id = ns("add"),
-              type = "button",
-              class = "pk-add",
-              "+ Add picker"
+            shiny::div(
+              class = "blockr-add-row",
+              shiny::tags$span(
+                id = ns("add"),
+                class = "blockr-add-link",
+                shiny::tags$span(class = "blockr-add-icon"),
+                "Add picker"
+              )
             )
           ),
           shiny::div(id = ns("face"))
@@ -194,11 +203,10 @@ normalize_pickers <- function(pickers, cols) {
   multi_seen <- FALSE
   for (p in pickers) {
     ch <- intersect(as.character(unlist(p$choices)), cols)
-    if (!length(ch)) {
-      next
-    }
+    # An empty-choices picker is kept, inert: the builder may have just
+    # cleared the offer list to refill it (expr skips it meanwhile).
     sel <- intersect(as.character(unlist(p$selected)), ch)
-    if (!length(sel)) {
+    if (!length(sel) && length(ch)) {
       sel <- ch[[1L]]
     }
     mult <- isTRUE(p$multiple) && !multi_seen
@@ -229,6 +237,11 @@ normalize_pickers <- function(pickers, cols) {
 # Build the transform expression: per picker a labelled copy, or (multiple)
 # a pivot into `into` + `<into>_measure`. `data` stays a free symbol.
 make_picker_expr <- function(pickers) {
+  if (!length(pickers)) {
+    return(quote(identity(data)))
+  }
+  # Inert pickers (choices cleared mid-edit) contribute nothing.
+  pickers <- Filter(function(p) length(p$selected) > 0L, pickers)
   if (!length(pickers)) {
     return(quote(identity(data)))
   }
@@ -354,7 +367,7 @@ picker_block_assets <- function(ns) {
         host.innerHTML = '';
         state.pickers.forEach(function (p, i) {
           var row = document.createElement('div');
-          row.className = 'pk-row';
+          row.className = 'pk-row blockr-row';
 
           var intoWrap = document.createElement('div');
           intoWrap.className = 'pk-into-wrap';
@@ -390,13 +403,14 @@ picker_block_assets <- function(ns) {
             placeholder: 'Columns offered to the viewer\\u2026',
             reorderable: true,
             onChange: function (sel) {
+              // May go empty mid-edit (clear, then refill): the picker
+              // goes inert until it has choices again.
               var vals = toArr(sel).filter(Boolean);
-              if (!vals.length) { renderBand(); return; }
               p.choices = vals;
               p.selected = p.selected.filter(function (v) {
                 return vals.indexOf(v) >= 0;
               });
-              if (!p.selected.length) p.selected = [vals[0]];
+              if (!p.selected.length && vals.length) p.selected = [vals[0]];
               renderFace();
               send();
             }
@@ -421,9 +435,9 @@ picker_block_assets <- function(ns) {
 
           var rm = document.createElement('button');
           rm.type = 'button';
-          rm.className = 'pk-remove';
+          rm.className = 'blockr-row-remove';
           rm.title = 'Remove picker';
-          rm.textContent = '\\u00d7';
+          rm.innerHTML = Blockr.icons.x;
           rm.addEventListener('click', function () {
             if (state.pickers.length <= 1) return;
             state.pickers.splice(i, 1);
@@ -478,6 +492,8 @@ picker_block_assets <- function(ns) {
         var gear = el(NS.gear), band = el(NS.band), add = el(NS.add);
         if (!gear || !band || !add) { setTimeout(init, 50); return; }
         gear.innerHTML = Blockr.icons.gear;
+        var addIcon = add.querySelector('.blockr-add-icon');
+        if (addIcon) addIcon.innerHTML = Blockr.icons.plus;
         gear.addEventListener('click', function () {
           var open = band.classList.toggle('blockr-settings--open');
           gear.classList.toggle('blockr-gear-active', open);
@@ -513,15 +529,7 @@ picker_block_assets <- function(ns) {
        .blockr-picker .pk-into { width: 140px; }
        .blockr-picker .pk-choices { flex: 1; min-width: 220px; }
        .blockr-picker .pk-multiple { padding-bottom: 10px; }
-       .blockr-picker .pk-remove { border: none; background: none; cursor: pointer;
-         color: var(--blockr-grey-400, #9ca3af); font-size: 16px; line-height: 1;
-         padding: 0 2px 12px; }
-       .blockr-picker .pk-remove:hover { color: var(--blockr-color-danger, #dc3545); }
-       .blockr-picker .pk-add { border: 1px dashed var(--blockr-color-border, #e5e7eb);
-         background: none; border-radius: 999px; padding: 3px 12px; cursor: pointer;
-         font-size: 0.75rem; color: var(--blockr-color-text-muted, #6b7280); }
-       .blockr-picker .pk-add:hover { border-color: var(--blockr-color-primary, #2563eb);
-         color: var(--blockr-color-primary, #2563eb); }"
+       .blockr-picker .pk-row .blockr-row-remove { margin-bottom: 8px; }"
     )),
     shiny::tags$script(shiny::HTML(js))
   )
