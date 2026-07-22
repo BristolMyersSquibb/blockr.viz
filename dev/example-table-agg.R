@@ -4,7 +4,7 @@
 # host Mac where 3838 is held by the VS Code container forward).
 options(shiny.port = as.integer(Sys.getenv("BLOCKR_PORT", "3838")),
         shiny.host = "0.0.0.0")
-options(blockr.html_table_preview = TRUE)
+options(blockr.tabular_display = blockr.ui::html_table_display)
 options(blockr.dock_is_locked = FALSE)
 
 pkgload::load_all("blockr.core")

@@ -4,7 +4,7 @@
 #  - pie / bar: aggregation label + n
 # Serve on 3838.
 options(shiny.port = 3838L, shiny.host = "0.0.0.0")
-options(blockr.html_table_preview = TRUE)
+options(blockr.tabular_display = blockr.ui::html_table_display)
 
 pkgload::load_all("blockr.core", quiet = TRUE)
 pkgload::load_all("blockr.viz", quiet = TRUE)
