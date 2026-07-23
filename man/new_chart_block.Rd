@@ -60,10 +60,13 @@ patients instead of records), a numeric column for the numeric
 aggregations. (Was \code{metric}.)}
 
 \item{func}{Aggregation function: \code{"count"}, \code{"count_distinct"}, \code{"mean"},
-\code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"}. With a \code{color} split,
+\code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"}, \code{"identity"}. With a \code{color} split,
 \code{"count_distinct"} counts an entity once per colour level it appears
 under; deduplicate upstream if segments must sum to the per-group
-distinct count. (Was \code{agg_fn}.)}
+distinct count. \code{"identity"} ("None (as is)") does NOT aggregate -- it
+plots \code{value} directly, one bar per row when \code{group} is unique (for bar
+heights already computed upstream); duplicate categories collapse to the
+first row. (Was \code{agg_fn}.)}
 
 \item{chart_type}{Chart type: "bar", "waterfall", "scatter", "line",
 "pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with
@@ -85,9 +88,11 @@ dots at \code{x})}
 back to \code{group} (a label-less pie is unusable).}
 
 \item{tt_fields}{Character vector of extra column names appended to each
-mark's hover tooltip, beyond the mapped roles (gantt). Default \code{NULL}
-(none). Display-only -- does not affect the plot; a listed column dropped
-upstream is silently omitted.}
+mark's hover tooltip, beyond the mapped roles (gantt, scatter, line, bar).
+On a bar the value shown is the group's representative (first row) -- exact
+for a \code{"None (as is)"} bar, a representative for an aggregation. Default
+\code{NULL} (none). Display-only -- does not affect the plot; a listed column
+dropped upstream is silently omitted.}
 
 \item{drill}{Column a click filters downstream on. Default unset (a
 click is inert). When set, clicking a mark emits a categorical

@@ -159,6 +159,14 @@
       else if (func === 'sum') out = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
       else if (func === 'min') out = g.values.length ? Math.min.apply(null, g.values) : null;
       else if (func === 'max') out = g.values.length ? Math.max.apply(null, g.values) : null;
+      // identity: the value AS-IS — no aggregation. Returns the cell's first
+      // usable numeric value; with one row per (group, color) cell (the
+      // intended use: precomputed bar heights) that IS the row's value. A cell
+      // with no usable value stays null (a gap, like mean/min). Chart-only:
+      // offered solely in the chart's `func` picker (chart.js), never in the
+      // shared AGG_FNS, so the table/tile and the drift/golden tests are
+      // unaffected. Duplicate categories collapse to the first row (documented).
+      else if (func === 'identity') out = g.values.length ? g.values[0] : null;
       // n = rows behind this (group, color) cell, for the tooltip's
       // "n = ..." line (how many observations the mark aggregates).
       result.push({ facet: g.facet, group: g.group, color: g.color, value: out, n: g.rows.length });

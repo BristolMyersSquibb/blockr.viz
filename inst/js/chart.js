@@ -254,6 +254,20 @@
     label: (/** @type {any} */ cfg) => cfg.chart_type === 'boxplot' ? 'Value' : 'Aggregate'
   });
 
+  // "None (as is)" — a chart-only aggregation that plots the value column
+  // directly (one bar per row when the category is unique), for data whose
+  // bar heights are already computed upstream (a summary table, a precomputed
+  // metric). Appended HERE, to the chart's func picker, rather than to the
+  // shared DrilldownAgg.AGG_FNS: the chart aggregates client-side, so identity
+  // can live entirely on this side and leave the table/tile pickers — and the
+  // R AGG_FNS drift + golden cross-tests — untouched. The engine branch that
+  // reads it is in drilldown-agg.js aggregate() (dormant for table/tile, which
+  // never send func='identity').
+  ROLES.func = /** @type {any} */ ({
+    ...ROLES.func,
+    options: [...ROLES.func.options, { value: 'identity', label: 'None (as is)' }]
+  });
+
   // FAMILY_ROLES — per family, ordered. A section entry is either a role key
   // (always shown for the family) or { role, types:[...] } (shown only for
   // those chart types). requiredMap rows render immediately; optionalMap rows
@@ -274,7 +288,14 @@
       // inert and misleading).
       optionalMap: [
         { role: 'color', types: ['bar', 'boxplot', 'radar'] },
-        'facet'
+        'facet',
+        // Bar only: a bar is a GROUP of rows, so an extra tooltip column has no
+        // single value — the bar tooltip shows the group's representative (its
+        // first row). Unambiguous for a "None (as is)" bar (one row per bar);
+        // for a real aggregation it is a representative, not a per-row value.
+        // Offered only on bar because only the bar tooltip formatter consumes
+        // it (pie/treemap/boxplot/radar/waterfall have their own).
+        { role: 'tt_fields', types: ['bar'] }
       ],
       mapping: ['value', { role: 'func', types: ['bar', 'waterfall', 'pie', 'treemap', 'radar'] }],
       aggTitle: 'Aggregation',
@@ -289,8 +310,10 @@
     individual: {
       requiredMap: ['x', 'y'],
       // `label` is timeline-only (gantt on-bar text); scatter/line have no
-      // on-mark text renderer.
-      optionalMap: ['series', 'color', 'facet'],
+      // on-mark text renderer. `tt_fields` surfaces extra columns on hover:
+      // one row per mark (scatter) / per series at the hovered x (line), so
+      // each value is unambiguous (unlike an aggregated bar, a group of rows).
+      optionalMap: ['series', 'color', 'facet', 'tt_fields'],
       mapping: [],
       presentation: [
         { role: 'smoother', types: ['scatter'] },
@@ -766,6 +789,9 @@
       const fn = this.config.func || 'count';
       const col = this._axisTitle(this.config.value);
       if (fn === 'count') return 'Count';
+      // identity ("None (as is)"): the bar IS the value, so name it by the
+      // column alone — no "Sum of" / "Mean of" prefix.
+      if (fn === 'identity') return col || 'Value';
       if (fn === 'count_distinct') return 'Distinct ' + col;
       return (DAgg.AGG_WORDS[fn] || fn) + ' of ' + col;
     }
@@ -778,7 +804,10 @@
       /** @type {Array<[string, any]>} */
       const pairs = [[this._aggLabel(), ddNum(value)]];
       if (percent != null) pairs.push(['Share', Math.round(percent) + '%']);
-      if (this.config.func !== 'count' && n != null) pairs.push(['n', n]);
+      // n (rows behind the mark) adds nothing for a plain count (value IS n)
+      // nor for identity (the value is the row itself, n is trivially 1).
+      if (this.config.func !== 'count' && this.config.func !== 'identity' &&
+          n != null) pairs.push(['n', n]);
       return pairs;
     }
 
@@ -1745,6 +1774,42 @@
         return this._buildWaterfall(facetData, groups, valueTitle, ax, plotW);
       }
 
+      // Extra tooltip dimensions (bar only): the first raw row per group in
+      // this facet supplies the representative values, keyed by the group label
+      // the axis tooltip hands us (String(row[group])). Computed once here, read
+      // by ttExtraRows() in the tooltip formatters below. Empty unless the user
+      // added Tooltip fields.
+      const ttFields = [].concat(this.config.tt_fields || [])
+        .map(String).filter(c => c && c !== 'null' && c !== '(none)');
+      /** @type {Record<string, any[]>} */
+      const ttRepVals = {};
+      if (ttFields.length) {
+        const facetCol = this.config.facet;
+        const groupCol = this.config.group;
+        for (const r of this.data) {
+          if (facet !== '__all__' && facetCol &&
+              String(r[facetCol] ?? '') !== facet) continue;
+          const g = groupCol ? String(r[groupCol] ?? '') : 'Total';
+          if (!(g in ttRepVals)) ttRepVals[g] = ttFields.map(c => r[c] ?? '');
+        }
+      }
+      // Rows (label: value) for the hovered group's tooltip, appended after the
+      // series rows. `head` is the axis category = the group label.
+      const ttExtraRows = (/** @type {any} */ head) => {
+        const extra = ttRepVals[head];
+        if (!extra) return [];
+        /** @type {string[]} */
+        const out = [];
+        for (let i = 0; i < ttFields.length; i++) {
+          const v = extra[i];
+          if (v != null && v !== '') {
+            out.push(this._esc(this._axisTitle(ttFields[i]) || ttFields[i]) +
+              ': ' + this._esc(v));
+          }
+        }
+        return out;
+      };
+
       // Color-split bar layout. "grouped" drops the shared stack so ECharts
       // dodges the series side-by-side; "percent" keeps the stack but feeds
       // each segment as a share (0..1) of its group total (ECharts has no
@@ -1865,7 +1930,7 @@
               return p.marker + p.seriesName + ': ' + pct + '%' +
                 (raw != null ? ' (' + raw + ')' : '');
             });
-          return head + '<br/>' + rows.join('<br/>');
+          return head + '<br/>' + rows.concat(ttExtraRows(head)).join('<br/>');
         };
       } else {
         // Non-percent bar: name the value by the aggregation (a bare number
@@ -1876,7 +1941,7 @@
         const nOf = {};
         for (const a of facetData) nOf[a.group + '|||' + a.color] = a.n;
         const aggLabel = this._aggLabel();
-        const showN = this.config.func !== 'count';
+        const showN = this.config.func !== 'count' && this.config.func !== 'identity';
         tooltip.formatter = (/** @type {any[]} */ ps) => {
           if (!ps || !ps.length) return '';
           const head = ps[0].axisValueLabel || ps[0].name || '';
@@ -1894,7 +1959,7 @@
               return p.marker + this._esc(nm) + ': ' + fmtRaw(Number(p.value)) +
                 (withN && n != null ? '  (n=' + n + ')' : '');
             });
-          return this._esc(head) + '<br/>' + rows.join('<br/>');
+          return this._esc(head) + '<br/>' + rows.concat(ttExtraRows(head)).join('<br/>');
         };
       }
       const legendOn = colors.length > 0;
@@ -2352,6 +2417,14 @@
         return;
       }
 
+      // Extra columns the user chose to surface on hover (optional "+" role,
+      // shared with the gantt family). Their raw values are packed onto each
+      // point tuple at slot 2+ (ECharts ignores dims beyond x/y for rendering
+      // but keeps them on params.value) and listed after the mapped roles in
+      // the tooltip. Bounded to the picked columns — never the whole row.
+      const ttFields = [].concat(this.config.tt_fields || [])
+        .map(String).filter(c => c && c !== 'null' && c !== '(none)');
+
       const ct = this.config.chart_type;
       const isLine = ct === 'line';
       const isScatter = ct === 'scatter';
@@ -2442,6 +2515,14 @@
 
       const encodeX = (/** @type {any} */ v) => xAxisType === 'category' ? String(v ?? '') : Number(v);
       const encodeY = (/** @type {any} */ v) => yAxisType === 'category' ? String(v ?? '') : Number(v);
+      // A point tuple: [x, y] plus the tt_fields' raw values (slot 2+), so a
+      // hovered mark can report them. sortLinePts / the identity-line scan read
+      // only [0]/[1], so the trailing values ride along harmlessly.
+      const packPt = (/** @type {any} */ r) => {
+        const p = [encodeX(r[x]), encodeY(r[y])];
+        for (const c of ttFields) p.push(r[c] ?? '');
+        return p;
+      };
 
       this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
       this._syncShape('individual', facets.length);
@@ -2583,7 +2664,7 @@
 
         if (seriesLevels.length === 0) {
           const grpRows = rows.filter(r => r[x] != null && r[y] != null);
-          const pts = grpRows.map(r => [encodeX(r[x]), encodeY(r[y])]);
+          const pts = grpRows.map(packPt);
           sortLinePts(pts);
           series.push(mkSeries(undefined, pts, palette[0]));
           pushOverlays(undefined, pts, palette[0], grpRows);
@@ -2591,7 +2672,7 @@
           for (let ci = 0; ci < seriesLevels.length; ci++) {
             const cl = seriesLevels[ci];
             const grpRows = rows.filter(r => String(r[splitCol]) === cl && r[x] != null && r[y] != null);
-            const pts = grpRows.map(r => [encodeX(r[x]), encodeY(r[y])]);
+            const pts = grpRows.map(packPt);
             sortLinePts(pts);
             const clr = colorForLevel(cl, ci);
             series.push(mkSeries(cl, pts, clr));
@@ -2766,6 +2847,20 @@
         // matching the emphasis/blur highlight.
         const TT_ROW_CAP = 12;
         const hover = slot.hover;
+        // Extra tooltip dimensions as a compact "(col: v, col2: v2)" suffix on
+        // a series' row (values packed at slot 2+). Escaped; empties dropped.
+        const ttSuffix = (/** @type {any} */ val) => {
+          if (!ttFields.length || !Array.isArray(val)) return '';
+          const parts = [];
+          for (let i = 0; i < ttFields.length; i++) {
+            const v = val[2 + i];
+            if (v != null && v !== '') {
+              parts.push(this._esc(this._axisTitle(ttFields[i]) || ttFields[i]) +
+                ': ' + this._esc(v));
+            }
+          }
+          return parts.length ? '  (' + parts.join(', ') + ')' : '';
+        };
         const lineTooltip = {
           trigger: 'axis',
           axisPointer: { type: 'line' },
@@ -2799,7 +2894,7 @@
               // Without a series split there is one unnamed series and
               // ECharts invents "series0" — label the y column instead.
               const nm = splitCol ? p.seriesName : this._axisTitle(y);
-              return p.marker + nm + ': ' + ddNum(p.value[1]);
+              return p.marker + nm + ': ' + ddNum(p.value[1]) + ttSuffix(p.value);
             });
             if (ttRows.length > TT_ROW_CAP) {
               lines.push('… +' + (ttRows.length - TT_ROW_CAP) + ' more');
@@ -2849,6 +2944,10 @@
                     [this._axisTitle(y) || 'Y', ddNum(p.value[1])]
                   ];
                   if (lvl) pairs.push([this._axisTitle(splitCol) || 'Series', lvl]);
+                  // Extra tooltip dimensions (packed at slot 2+), listed after
+                  // the mapped roles. _rowTooltip drops empties.
+                  ttFields.forEach((c, i) =>
+                    pairs.push([this._axisTitle(c) || c, p.value[2 + i]]));
                   return this._rowTooltip(headline, pairs);
                 } },
           // Always set explicitly; leaving legend undefined lets echarts

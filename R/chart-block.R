@@ -32,10 +32,13 @@
 #'   patients instead of records), a numeric column for the numeric
 #'   aggregations. (Was `metric`.)
 #' @param func Aggregation function: `"count"`, `"count_distinct"`, `"mean"`,
-#'   `"median"`, `"sum"`, `"min"`, `"max"`. With a `color` split,
+#'   `"median"`, `"sum"`, `"min"`, `"max"`, `"identity"`. With a `color` split,
 #'   `"count_distinct"` counts an entity once per colour level it appears
 #'   under; deduplicate upstream if segments must sum to the per-group
-#'   distinct count. (Was `agg_fn`.)
+#'   distinct count. `"identity"` ("None (as is)") does NOT aggregate -- it
+#'   plots `value` directly, one bar per row when `group` is unique (for bar
+#'   heights already computed upstream); duplicate categories collapse to the
+#'   first row. (Was `agg_fn`.)
 #' @param chart_type Chart type: "bar", "waterfall", "scatter", "line",
 #'   "pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with
 #'   a cumulative baseline (sugar for `bar` + `baseline = "cumulative"`).
@@ -50,9 +53,11 @@
 #'   (no on-mark text). For `pie`/`treemap`, when unset the label falls
 #'   back to `group` (a label-less pie is unusable).
 #' @param tt_fields Character vector of extra column names appended to each
-#'   mark's hover tooltip, beyond the mapped roles (gantt). Default `NULL`
-#'   (none). Display-only -- does not affect the plot; a listed column dropped
-#'   upstream is silently omitted.
+#'   mark's hover tooltip, beyond the mapped roles (gantt, scatter, line, bar).
+#'   On a bar the value shown is the group's representative (first row) -- exact
+#'   for a `"None (as is)"` bar, a representative for an aggregation. Default
+#'   `NULL` (none). Display-only -- does not affect the plot; a listed column
+#'   dropped upstream is silently omitted.
 #' @param drill Column a click filters downstream on. Default unset (a
 #'   click is inert). When set, clicking a mark emits a categorical
 #'   filter on this column's value(s) for the clicked mark. For an

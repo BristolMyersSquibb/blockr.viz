@@ -66,14 +66,20 @@ chart_arguments <- function() {
       paste0(
         "Aggregation function for `value` (aggregated charts only). ",
         "One of \"count\", \"count_distinct\", \"mean\", \"median\", ",
-        "\"sum\", \"min\", \"max\". Default \"count\" (row count; ignores ",
-        "`value`). \"count_distinct\" counts distinct `value` values per ",
-        "group -- note that with a `color` split an entity appearing ",
+        "\"sum\", \"min\", \"max\", \"identity\". Default \"count\" (row count; ",
+        "ignores `value`). \"count_distinct\" counts distinct `value` values ",
+        "per group -- note that with a `color` split an entity appearing ",
         "under several color levels is counted once per level; deduplicate ",
-        "upstream if segments must sum to the per-group distinct count."
+        "upstream if segments must sum to the per-group distinct count. ",
+        "\"identity\" does NOT aggregate: it plots `value` as-is (one bar per ",
+        "row when the `group` category is unique -- for precomputed heights); ",
+        "duplicate categories collapse to the first row. Chart-only (not a ",
+        "table/tile aggregation)."
       ),
       example = "count",
-      type = arg_enum(AGG_FNS)
+      # identity is chart-only, so it widens the chart's enum here rather than
+      # the shared AGG_FNS (the table/tile vocabulary, drift-tested against JS).
+      type = arg_enum(c(AGG_FNS, "identity"))
     ),
     x = new_arg_spec(
       paste0(
@@ -122,9 +128,11 @@ chart_arguments <- function() {
     tt_fields = new_arg_spec(
       paste0(
         "Extra column names appended to each mark's hover tooltip, beyond ",
-        "the mapped roles (timeline/gantt). Display-only \u2014 never affects ",
-        "the plot; a listed column dropped upstream is silently omitted. ",
-        "Empty = no extra tooltip fields."
+        "the mapped roles (timeline/gantt, scatter, line, bar). On a bar the ",
+        "value shown is the group's representative (its first row) -- exact for ",
+        "a \"None (as is)\" bar (one row per bar), a representative for an ",
+        "aggregation. Display-only \u2014 never affects the plot; a listed column ",
+        "dropped upstream is silently omitted. Empty = no extra tooltip fields."
       ),
       example = NULL,
       type = arg_array(arg_string())

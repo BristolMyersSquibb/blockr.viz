@@ -46,7 +46,7 @@ settings_band_dep <- memoise0(function() {
 drilldown_shared_dep <- memoise0(function() {
   htmltools::htmlDependency(
     name = "blockr-viz-drilldown-shared",
-    version = paste0(utils::packageVersion("blockr.viz"), ".13"),
+    version = paste0(utils::packageVersion("blockr.viz"), ".14"),
     src = system.file("js", package = "blockr.viz"),
     script = c("drilldown-agg.js", "drilldown-config.js")
   )
