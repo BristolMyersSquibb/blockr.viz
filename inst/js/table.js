@@ -1043,7 +1043,8 @@
     var toolbar = root.querySelector(".blockr-html-table-toolbar");
     if (toolbar) {
       header.insertBefore(toolbar, btn);
-      var hdrRow = root.querySelector(".blockr-html-table-header");
+      var hdrRow = /** @type {HTMLElement | null} */ (
+        root.querySelector(".blockr-html-table-header"));
       if (hdrRow) hdrRow.style.display = "none";
     }
     // Restore the remembered open state across chrome rebuilds (the state

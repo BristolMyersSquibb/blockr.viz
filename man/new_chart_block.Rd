@@ -194,6 +194,16 @@ the pick), \code{{n}} -> row count, \code{{n_distinct(col)}} -> distinct count.
 Tokens are data lookups, never evaluated code; a token naming a missing
 column resolves to "".}
 
+\item{count_on}{Which label surfaces carry an observation count in
+parentheses ("Female (12)"): \code{"off"} (default), \code{"axis"} (the category
+axis ticks), \code{"facet"} (the facet strip labels), or \code{"both"}.}
+
+\item{count_col}{Column counted DISTINCT for those labels (e.g.
+\code{"USUBJID"} -> unique subjects). \code{NULL} (default) or \code{""} falls back to
+the raw row count. Counts are computed per label group in the browser and
+do NOT sum from the per-cell n: one subject can span several color /
+facet cells.}
+
 \item{ctrl_target}{Character(1), beta. Block id of a value filter block on
 the board: a categorical drill click's claim is ALSO pushed there over
 the board's control channel (\code{\link[=ctrl_send]{ctrl_send()}}; the board needs the channel
