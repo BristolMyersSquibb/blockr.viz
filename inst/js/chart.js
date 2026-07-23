@@ -2087,29 +2087,33 @@
           (!singleFacet && facet !== '__all__') ? facet : null, singleFacet);
         slot.facetVal = facet;
 
-        const ct = this.config.chart_type;
-        // Waterfall is vertical (category on the x-axis), so it takes the fixed
-        // height like pie/radar — not the per-row horizontal-bar height.
-        const hChanged = this._setSlotHeight(slot, (ct === 'pie' ||
-            ct === 'treemap' || ct === 'radar' ||
-            this._baselineMode() === 'cumulative')
-          ? '350px'
-          : Math.max(350, groups.length * 28 + 60) + 'px');
-
         const option = this._buildAggregatedOption(facetData, groups, colors, palette, slot.chartDiv.clientWidth, facet, sharedLegend);
         if (!option) {
           // No chart to draw in this slot (boxplot without a numeric value):
           // drop the instance so the empty-state markup can own the div.
           if (slot.chart) { slot.chart.dispose(); slot.chart = null; }
+          this._setSlotHeight(slot, '350px');
           slot.chartDiv.innerHTML = '<div class="vd-empty-state"><p class="vd-empty-text">Pick a numeric Value to plot its distribution</p></div>';
           continue;
         }
+        const anyOption = /** @type {any} */ (option);
+        // Fixed row geometry: horizontal builders (bar, boxplot) stash the
+        // exact panel height (rows * band + axis/legend chrome) on the
+        // option as __panelH, so a category row is ALWAYS the same height —
+        // the chart gets longer with more bars, the bars never get fatter.
+        // (The old Math.max(350, ...) floor stretched low-count panels into
+        // slab bars while 11+-bar panels sat at exactly 28px/row.) Builders
+        // without __panelH (pie/treemap/radar/waterfall/vertical bar) keep
+        // the fixed 350px canvas — category-on-x doesn't scale with rows.
+        const hChanged = this._setSlotHeight(slot, anyOption.__panelH != null
+          ? Math.max(120, Math.round(anyOption.__panelH)) + 'px'
+          : '350px');
+        delete anyOption.__panelH;
         const existed = !!slot.chart;
         const chart = this._ensureSlotChart(slot, 'aggregated');
         // Legend-fit metadata rides on the option (the builders have no chart
         // handle); move it onto the instance for _refitLegend before ECharts
         // sees the option.
-        const anyOption = /** @type {any} */ (option);
         /** @type {any} */ (chart).__legendFit = anyOption.__legendFit;
         delete anyOption.__legendFit;
         chart.setOption(this._applyDrillEmphasis(option), true);
@@ -2223,18 +2227,32 @@
       const isGrouped = barMode === 'grouped';
       const isPercent = barMode === 'percent';
 
-      // Bar sizing. Stacked/percent/single = one bar per category at a fixed
-      // 60% width. Grouped = several bars per category: DON'T force a per-series
-      // width (two 60% bars overflow the band and let the default barGap wedge a
-      // gap inside the group). Instead let ECharts auto-size the series equally
-      // (same width for every color) with barGap:0 so they touch, and a category
-      // gap so groups stay separated. barMaxWidth (higher priority than both
-      // auto and percentage sizing) caps the thickness — with FEW categories
-      // (the degenerate case: a facet panel holding a single group) the band
-      // is huge and unclamped bars render as giant slabs.
+      // Orientation is a presentation property (the ggplot coord_flip model):
+      // horizontal (default) keeps the category on the y-axis — best for long
+      // labels (AE terms, arms); vertical puts it on the x-axis. The mapping
+      // is unchanged (Group=category, Metric=value) — flipping re-maps nothing.
+      // Declared before the bar sizing: horizontal and vertical size bars
+      // from opposite constraints (fixed row band vs container width).
+      const vertical = this.config.orientation === 'vertical';
+
+      // Bar sizing.
+      // HORIZONTAL: the panel height fixes every category band (__panelH
+      // below), so bars are sized off that constant band — 60% of a 28px row
+      // stacked/percent/single, an explicit GROUP_BAR px per series when
+      // grouped (barGap:0 so a group's bars touch). Thickness is therefore
+      // identical whatever the row count.
+      // VERTICAL: bands come from the container width, so the old rules
+      // stay — auto-size with barMaxWidth capping the degenerate few-
+      // category case where an unclamped band renders bars as giant slabs.
       const BAR_MAX = 48;
+      const ROW_BAND = 28;        // horizontal row height, one bar per row
+      const GROUP_BAR = 14;       // horizontal grouped: px per series bar
+      const GROUP_PAD = 12;       // horizontal grouped: gap between groups
+      const hGrouped = isGrouped && colors.length > 0;
       const barLayout = isGrouped
-        ? { barGap: 0, barCategoryGap: '30%', barMaxWidth: BAR_MAX }
+        ? (vertical
+            ? { barGap: 0, barCategoryGap: '30%', barMaxWidth: BAR_MAX }
+            : { barGap: 0, barWidth: GROUP_BAR })
         : { barWidth: '60%', barMaxWidth: BAR_MAX };
 
       /** @type {any[]} */
@@ -2287,11 +2305,6 @@
         }
       }
 
-      // Orientation is a presentation property (the ggplot coord_flip model):
-      // horizontal (default) keeps the category on the y-axis \u2014 best for long
-      // labels (AE terms, arms); vertical puts it on the x-axis. The mapping
-      // is unchanged (Group=category, Metric=value) \u2014 flipping re-maps nothing.
-      const vertical = this.config.orientation === 'vertical';
       const gut = this._yGutter(groups);
       // Vertical bars put categories on the x-axis: horizontal-or-vertical
       // labels (never diagonal), all shown. Grid bottom grows for rotated text.
@@ -2382,6 +2395,13 @@
         __legendFit: nativeLegend
           ? { items: legItems, base: bottomBase, key: leg.extra + (leg.scroll ? 'S' : '') }
           : undefined,
+        // Horizontal: exact panel height for a constant category band —
+        // grid.top + rows * band + grid.bottom, band = one 28px row
+        // (stacked/percent/single) or the grouped series fan + padding.
+        __panelH: vertical ? undefined
+          : 30 + groups.length *
+              (hGrouped ? colors.length * GROUP_BAR + GROUP_PAD : ROW_BAND) +
+            bottomBase + leg.extra,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip,
@@ -2797,6 +2817,10 @@
         __legendFit: nativeLegend
           ? { items: legItems, base: bottomBase, key: leg.extra + (leg.scroll ? 'S' : '') }
           : undefined,
+        // One 28px row per DRAWN slot — cats, not groups: a color-split
+        // boxplot draws a (group x level) row each, so sizing off the group
+        // count alone squeezed split boxplots into overlapping slivers.
+        __panelH: 30 + cats.length * 28 + bottomBase + leg.extra,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip: { trigger: 'item', confine: true, formatter: boxTooltipFmt },
