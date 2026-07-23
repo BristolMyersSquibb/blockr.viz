@@ -240,8 +240,13 @@
                           { value: 'axis',  label: 'On category axis' },
                           { value: 'facet', label: 'On facet labels' },
                           { value: 'both',  label: 'On axis + facets' }] },
-    count_col: { label: 'Count distinct of', kind: 'column', colType: 'any',
-                 ph: 'id column, e.g. USUBJID (blank = row count)' },
+    // Aggregating funcs count DISTINCT ids; identity ("None (as is)") plots
+    // pre-summarised rows, so the picked column is shown AS-IS (the group's
+    // row value) — relabel accordingly. Blank = row count either way.
+    count_col: { label: (/** @type {any} */ cfg) =>
+                   cfg.func === 'identity' ? 'Count column' : 'Count distinct of',
+                 kind: 'column', colType: 'any',
+                 ph: 'column to count (blank = row count)' },
     lo:       { label: 'Lo', kind: 'column', colType: 'num' },
     hi:       { label: 'Hi', kind: 'column', colType: 'num' },
     line_width_mult: { label: 'Line width', kind: 'slider' },
@@ -1356,8 +1361,27 @@
      *  @param {any} [facetVal] */
     _labelCounts(dimCol, facetCol, facetVal) {
       const idCol = this.config.count_col;
-      const distinct = !!idCol;
       const restrict = !!facetCol && facetVal != null && facetVal !== '__all__';
+      // Identity ("None (as is)") plots pre-summarised rows (one row per group,
+      // often no subject-level rows), so a distinct/row count is meaningless —
+      // the count is already a column. Show the picked column's value AS-IS:
+      // the group's first row value (identity itself takes the first row's
+      // value for the bar). A blank picker falls through to the row-count path
+      // below ("just show n").
+      if (idCol && this.config.func === 'identity') {
+        /** @type {Map<string, any>} */
+        const asis = new Map();
+        for (const r of this.data) {
+          if (restrict && String(r[/** @type {string} */(facetCol)] ?? '') !== String(facetVal)) continue;
+          const dv = dimCol ? String(r[dimCol] ?? '') : 'Total';
+          if (!asis.has(dv)) {
+            const v = r[/** @type {string} */(idCol)];
+            if (v != null) asis.set(dv, v);
+          }
+        }
+        return asis;
+      }
+      const distinct = !!idCol;
       /** @type {Map<string, Set<any> | number>} */
       const acc = new Map();
       for (const r of this.data) {
@@ -1381,11 +1405,17 @@
     }
 
     /** Append " (n)" to a label from a counts map (identity when no count).
-     *  @param {any} label @param {Map<string, number> | null | undefined} counts */
+     *  The value is a count (integer) or, for an identity chart, a column
+     *  value shown as-is (number or string) — round only long floats.
+     *  @param {any} label @param {Map<string, any> | null | undefined} counts */
     _withCount(label, counts) {
       const s = String(label ?? '');
-      const n = counts ? counts.get(s) : undefined;
-      return n == null ? s : s + ' (' + n + ')';
+      if (!counts) return s;
+      const v = counts.get(s);
+      if (v == null) return s;
+      const disp = (typeof v === 'number' && !Number.isInteger(v))
+        ? Math.round(v * 100) / 100 : v;
+      return s + ' (' + disp + ')';
     }
 
     // Facet value -> display label, appending counts when count_on covers the

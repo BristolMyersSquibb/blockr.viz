@@ -218,9 +218,12 @@ chart_arguments <- function() {
     ),
     count_col = new_arg_spec(
       paste0(
-        "Id column counted DISTINCT for the count labels (see count_on), ",
-        "e.g. \"USUBJID\" to label groups by unique subject count. Empty ",
-        "(default) counts raw rows instead. No-op when count_on=\"off\"."
+        "Column driving the count labels (see count_on). For an aggregating ",
+        "func (count/mean/...) it is an id counted DISTINCT, e.g. \"USUBJID\" ",
+        "to label groups by unique subject count. For func=\"identity\" ",
+        "(\"None (as is)\", pre-summarised bars) the column is shown AS-IS ",
+        "(the group's row value), e.g. a precomputed \"N\" column. Empty ",
+        "(default) shows the raw row count. No-op when count_on=\"off\"."
       ),
       example = NULL,
       type = arg_string()
