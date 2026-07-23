@@ -8,9 +8,9 @@ new_picker_block(state = list(pickers = list()), ...)
 }
 \arguments{
 \item{state}{List with \code{pickers} -- a list of picker entries, each
-\code{list(into, choices, selected, multiple)}. Empty (default) auto-fills
-on first data arrival with one picker over all numeric columns,
-\code{into = "value"}.}
+\code{list(into, choices, selected, multiple, optional)}. Empty (default)
+seeds one empty, inert picker (\code{into = "value"}) on first data arrival
+for the builder to fill.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
 }
@@ -39,16 +39,22 @@ values into \code{into}, the measure identity into \verb{<into>_measure} (a
 factor of column \emph{labels}, ready for facetting). Offered-but-unpicked
 columns of this picker are dropped so the schema never depends on the
 pick.
+\item \code{optional = TRUE} (single pickers only): the face gains a leading
+\code{(none)} entry. Selecting it leaves the picker inert -- no output
+column -- so a downstream chart mapped to \code{into} drops that aesthetic
+(no legend / no facet strip) rather than showing a single phantom
+group. Use it for optional roles like colour or facet; leave it off for
+required roles (x/y axes).
 }
 
 UI follows the blockr design system: \code{Blockr.Select} controls on the
 block face (one per picker, labelled by \code{into}), and the picker
 definitions in the gear-toggled settings band, like the value filter's
 filter list. Every column qualifies as a candidate -- a picker can just
-as well drive a grouping or color dimension as a measure; only the
-auto-fill default is numeric-only. Clearing a picker's offer list is
-allowed while editing: the picker goes inert (no output column) until
-it has choices again.
+as well drive a grouping or color dimension as a measure. A picker's
+offer list starts empty: the builder curates which columns the viewer
+sees. An empty offer list is inert (no output column) until it has
+choices, which also covers clearing it mid-edit to refill.
 
 Design records: blockr.docs design-system/target select-controls.html
 (control style) and measure-switch-proposals.html (schema; the picker

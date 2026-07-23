@@ -19,6 +19,12 @@
 #'   factor of column *labels*, ready for facetting). Offered-but-unpicked
 #'   columns of this picker are dropped so the schema never depends on the
 #'   pick.
+#' * `optional = TRUE` (single pickers only): the face gains a leading
+#'   `(none)` entry. Selecting it leaves the picker inert -- no output
+#'   column -- so a downstream chart mapped to `into` drops that aesthetic
+#'   (no legend / no facet strip) rather than showing a single phantom
+#'   group. Use it for optional roles like colour or facet; leave it off for
+#'   required roles (x/y axes).
 #'
 #' UI follows the blockr design system: `Blockr.Select` controls on the
 #' block face (one per picker, labelled by `into`), and the picker
@@ -34,9 +40,9 @@
 #' generalizes the measure switch to n pickers with editable output names).
 #'
 #' @param state List with `pickers` -- a list of picker entries, each
-#'   `list(into, choices, selected, multiple)`. Empty (default) seeds one
-#'   empty, inert picker (`into = "value"`) on first data arrival for the
-#'   builder to fill.
+#'   `list(into, choices, selected, multiple, optional)`. Empty (default)
+#'   seeds one empty, inert picker (`into = "value"`) on first data arrival
+#'   for the builder to fill.
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
 #' @examples
@@ -162,7 +168,7 @@ new_picker_block <- function(
             id = ns("band"),
             class = "blockr-settings blockr-settings--beak",
             shiny::div(class = "blockr-settings__title", "Pickers"),
-            shiny::div(id = ns("rows")),
+            shiny::div(id = ns("rows"), class = "pk-rows"),
             shiny::div(
               class = "blockr-add-row",
               shiny::tags$span(
@@ -209,14 +215,20 @@ normalize_pickers <- function(pickers) {
   multi_seen <- FALSE
   for (p in pickers) {
     ch <- as.character(unlist(p$choices))
-    # An empty-choices picker is kept, inert: the builder may have just
-    # cleared the offer list to refill it (expr skips it meanwhile).
     sel <- intersect(as.character(unlist(p$selected)), ch)
-    if (!length(sel) && length(ch)) {
-      sel <- ch[[1L]]
-    }
     mult <- isTRUE(p$multiple) && !multi_seen
     multi_seen <- multi_seen || mult
+    # `optional` (single pickers only): the viewer may pick "(none)", leaving
+    # the picker inert so it emits no output column -- the downstream chart
+    # then drops that aesthetic (no legend / no facet). For an OPTIONAL picker
+    # an empty selection is a legitimate "(none)", so it is NOT auto-filled to
+    # the first choice; a required picker keeps the >=1 backstop.
+    opt <- isTRUE(p$optional) && !mult
+    # An empty-choices picker is kept, inert: the builder may have just
+    # cleared the offer list to refill it (expr skips it meanwhile).
+    if (!length(sel) && length(ch) && !opt) {
+      sel <- ch[[1L]]
+    }
     if (!mult && length(sel) > 1L) {
       sel <- sel[[1L]]
     }
@@ -228,7 +240,8 @@ normalize_pickers <- function(pickers) {
       into = into,
       choices = ch,
       selected = sel,
-      multiple = mult
+      multiple = mult,
+      optional = opt
     )
   }
   if (length(out)) {
@@ -314,14 +327,27 @@ make_picker_expr <- function(pickers) {
 # the Blockr namespace is ready. Inline while the block settles -- then this
 # becomes an inst/js asset behind htmlDependency.
 picker_block_assets <- function(ns) {
-  js <- sprintf(
-    "(function() {
-      var NS = { gear: '%s', band: '%s', rows: '%s', add: '%s', face: '%s' };
+  # Only the ns() substitution goes through sprintf; the JS body is a plain
+  # string appended via paste0. sprintf caps its format string at 8192 chars
+  # and the full script exceeds that.
+  head_js <- sprintf(
+    "var NS = { gear: '%s', band: '%s', rows: '%s', add: '%s', face: '%s' };
       var IN = { pickers: '%s' };
-      var MSG = '%s';
+      var MSG = '%s';",
+    ns("gear"), ns("band"), ns("rows"), ns("add"), ns("face"),
+    ns("pickers"), ns("pk_update")
+  )
+  js <- paste0(
+    "(function() {
+      ", head_js, "
 
       var state = { cfgOptions: [], pickers: [] };
       var pending = null, ready = false;
+      // Sentinel for the viewer-facing '(none)' choice of an OPTIONAL picker.
+      // Never sent to R: selecting it clears the pick (selected = []), which
+      // makes the picker inert -- no output column -- so a downstream chart
+      // drops the aesthetic. Distinctive so it cannot collide with a column.
+      var NONE = '__blockr_picker_none__';
 
       function toArr(x) {
         if (x === null || x === undefined) return [];
@@ -332,7 +358,8 @@ picker_block_assets <- function(ns) {
           into: String(p.into || ''),
           choices: toArr(p.choices).map(String),
           selected: toArr(p.selected).map(String),
-          multiple: !!p.multiple
+          multiple: !!p.multiple,
+          optional: !!p.optional
         };
       }
       function sig(pks) { return JSON.stringify(pks); }
@@ -440,11 +467,35 @@ picker_block_assets <- function(ns) {
             }
             p.multiple = checked;
             if (!checked && p.selected.length > 1) p.selected = [p.selected[0]];
+            // Optional is single-picker only; turning Multiple on retires it.
+            if (checked) p.optional = false;
+            renderBand();
             renderFace();
             send();
           });
           boxWrap.appendChild(box.el);
           row.appendChild(boxWrap);
+
+          // Optional: lets the viewer pick '(none)' to turn the aesthetic off.
+          // Meaningless for a multiple picker (deselecting all already yields
+          // no pivot), so it is only offered on single pickers.
+          if (!p.multiple) {
+            var optWrap = document.createElement('div');
+            optWrap.className = 'pk-optional blockr-checkbox-row';
+            var optBox = Blockr.checkbox('Optional', p.optional,
+              function (checked) {
+                p.optional = checked;
+                // Leaving optional while on '(none)': restore a real pick so a
+                // now-required picker is not stuck inert.
+                if (!checked && !p.selected.length && p.choices.length) {
+                  p.selected = [p.choices[0]];
+                }
+                renderFace();
+                send();
+              });
+            optWrap.appendChild(optBox.el);
+            row.appendChild(optWrap);
+          }
 
           var rm = document.createElement('button');
           rm.type = 'button';
@@ -479,19 +530,33 @@ picker_block_assets <- function(ns) {
           field.appendChild(selHost);
           host.appendChild(field);
           var mode = p.multiple ? 'multi' : 'single';
+          var isOpt = !!p.optional && !p.multiple;
+          // Optional single pickers offer a leading '(none)' entry; picking it
+          // (or clearing) commits an empty selection = inert = aesthetic off.
+          var opts = p.choices.map(optionFor);
+          if (isOpt) opts = [{ value: NONE, label: '(none)' }].concat(opts);
+          function faceSel() {
+            if (p.multiple) return p.selected;
+            return p.selected[0] || (isOpt ? NONE : null);
+          }
           var handle = Blockr.Select[mode](selHost, {
-            options: p.choices.map(optionFor),
-            selected: p.multiple ? p.selected : (p.selected[0] || null),
+            options: opts,
+            selected: faceSel(),
             placeholder: 'Select\\u2026',
             onChange: function (sel) {
               var vals = toArr(sel).filter(Boolean);
-              if (!vals.length) {
-                // The last pick stays: restore instead of committing empty.
-                handle.setOptions(p.choices.map(optionFor),
-                  p.multiple ? p.selected : (p.selected[0] || null));
+              if (isOpt && (!vals.length || vals[0] === NONE)) {
+                // '(none)' or cleared: commit the empty pick (no restore).
+                p.selected = [];
+                send();
                 return;
               }
-              p.selected = vals;
+              if (!vals.length) {
+                // Required picker: the last pick stays -- restore, don't commit.
+                handle.setOptions(opts, faceSel());
+                return;
+              }
+              p.selected = vals.filter(function (v) { return v !== NONE; });
               send();
             }
           });
@@ -517,7 +582,8 @@ picker_block_assets <- function(ns) {
             into: defaultInto(),
             choices: [],
             selected: [],
-            multiple: false
+            multiple: false,
+            optional: false
           });
           renderBand();
           renderFace();
@@ -527,21 +593,30 @@ picker_block_assets <- function(ns) {
         if (pending) { apply(pending); pending = null; }
       }
       init();
-    })();",
-    ns("gear"), ns("band"), ns("rows"), ns("add"), ns("face"),
-    ns("pickers"),
-    ns("pk_update")
+    })();"
   )
   shiny::tagList(
     shiny::tags$style(shiny::HTML(
       ".blockr-picker .pk-field { margin: 2px 0 8px; }
        .blockr-picker .blockr-label { display: block; margin-bottom: 4px; }
-       .blockr-picker .pk-row { display: flex; gap: 12px; align-items: flex-end;
-         width: 100%; margin-bottom: 8px; }
-       .blockr-picker .pk-into { width: 140px; }
-       .blockr-picker .pk-choices { flex: 1; min-width: 220px; }
-       .blockr-picker .pk-multiple { padding-bottom: 10px; }
-       .blockr-picker .pk-row .blockr-row-remove { margin-bottom: 8px; }"
+       /* The rows host must own the full band width in the flex settings band
+          (the band is display:flex;flex-wrap:wrap), else it sizes to content
+          and each picker card sits in a cramped flex track. */
+       .blockr-picker .pk-rows { flex: 1 1 100%; min-width: 0; }
+       /* Each picker is a vertical card (was a horizontal row that overflowed
+          narrow blocks): fields stack full width and shrink to fit, mirroring
+          blockr.dm's value filter. .blockr-row supplies the card border +
+          hover-reveal remove; we only flip its axis to column. */
+       .blockr-picker .pk-row { flex-direction: column; align-items: stretch;
+         gap: 8px; min-height: 0; padding: 10px 12px; position: relative; }
+       .blockr-picker .pk-into-wrap { width: 100%; min-width: 0; }
+       .blockr-picker .pk-into { width: 100%; box-sizing: border-box; }
+       .blockr-picker .pk-choices { width: 100%; min-width: 0; }
+       .blockr-picker .pk-choices .blockr-select--bordered { min-width: 0; }
+       .blockr-picker .pk-multiple,
+       .blockr-picker .pk-optional { padding-bottom: 0; }
+       .blockr-picker .pk-row .blockr-row-remove { position: absolute; top: 6px;
+         right: 6px; margin: 0; }"
     )),
     shiny::tags$script(shiny::HTML(js))
   )
@@ -579,7 +654,8 @@ register_picker_block <- function() {
           into = "value",
           choices = list("Sepal.Length", "Sepal.Width"),
           selected = list("Sepal.Length"),
-          multiple = FALSE
+          multiple = FALSE,
+          optional = FALSE
         ))),
         type = blockr.core::arg_object(
           pickers = blockr.core::arg_array(
@@ -587,7 +663,8 @@ register_picker_block <- function() {
               into = blockr.core::arg_string(),
               choices = blockr.core::arg_array(blockr.core::arg_string()),
               selected = blockr.core::arg_array(blockr.core::arg_string()),
-              multiple = blockr.core::arg_boolean()
+              multiple = blockr.core::arg_boolean(),
+              optional = blockr.core::arg_boolean()
             )
           )
         )

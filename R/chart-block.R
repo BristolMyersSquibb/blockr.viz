@@ -528,16 +528,36 @@ new_chart_block <- function(
           # same data() and was duplicated here.
           col_meta <- r_col_meta()
           payload <- r_data_json()
+          # An OPTIONAL aesthetic mapped to a column not present in the current
+          # data is sent as unmapped, so the chart draws no legend / no facet
+          # strip instead of a single phantom "undefined" group. This is what
+          # makes an upstream picker's "(none)" (which emits no such column)
+          # actually turn the aesthetic off -- the picker changes data, never
+          # this block's config, so the config must self-heal against the data.
+          # It also drops phantom legends from a color/facet whose column was
+          # removed upstream or typo'd. Mirrors needed_cols() and the scale-map
+          # presence guard; REQUIRED roles (group/x/y/value) are left untouched
+          # -- their absence is a broken chart, not an intentional "off".
+          present_role <- function(v) {
+            if (!is.null(v) && length(v) && nzchar(v) && v %in% names(d)) {
+              v
+            } else {
+              NULL
+            }
+          }
           session$sendCustomMessage("drilldown-data", list(
             id = ns("drilldown_block"),
             columns = col_meta,
             data = payload$json,
             data_rev = payload$rev,
             config = list(
-              group = r_group(), color = r_color(), facet = r_facet(),
+              group = r_group(),
+              color = present_role(r_color()),
+              facet = present_role(r_facet()),
               value = r_value(), func = r_func(),
               chart_type = r_chart_type(), x = r_x(), y = r_y(),
-              xend = r_xend(), series = r_series(), label = r_label(),
+              xend = r_xend(), series = present_role(r_series()),
+              label = r_label(),
               # Extra tooltip columns. as.list() keeps a length-1 vector a JSON
               # array; NULL when empty so the JS "+" role stays hidden until the
               # user adds it (an empty [] would read as "present").

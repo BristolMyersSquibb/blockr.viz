@@ -108,12 +108,35 @@ board <- new_dock_board(
       chart_type = "scatter", x = "x_value", y = "y_value",
       color = "Species",
       block_name = "Picked measure vs picked measure"
+    ),
+
+    # 4. OPTIONAL — an optional "Color" picker: the face offers "(none)".
+    #    Picking (none) leaves the picker inert, so no Color column is
+    #    emitted and the chart drops the colour legend entirely (instead of
+    #    a single phantom group). Toggle in the gear via "Optional".
+    pick_opt = new_picker_block(
+      state = list(pickers = list(
+        list(
+          into = "Color",
+          choices = c("Species"),
+          selected = "Species",
+          multiple = FALSE,
+          optional = TRUE
+        )
+      )),
+      block_name = "Colour (optional)"
+    ),
+    chart_opt = new_chart_block(
+      chart_type = "scatter", x = "Petal.Length", y = "Sepal.Length",
+      color = "Color",
+      block_name = "Coloured by picked column (or none)"
     )
   ),
   links = links(
-    from = c("data", "pick_one", "data", "pick_multi", "data", "pick_xy"),
+    from = c("data", "pick_one", "data", "pick_multi", "data", "pick_xy",
+             "data", "pick_opt"),
     to   = c("pick_one", "chart_one", "pick_multi", "chart_multi",
-             "pick_xy", "chart_xy")
+             "pick_xy", "chart_xy", "pick_opt", "chart_opt")
   ),
   grids = list(
     single = dock_grid(
@@ -126,6 +149,10 @@ board <- new_dock_board(
     ),
     xy = dock_grid(
       "pick_xy", "chart_xy",
+      orientation = "vertical", sizes = c(1, 2)
+    ),
+    optional = dock_grid(
+      "pick_opt", "chart_opt",
       orientation = "vertical", sizes = c(1, 2)
     )
   ),

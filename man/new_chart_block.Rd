@@ -44,6 +44,8 @@ new_chart_block(
   title = NULL,
   subtitle = NULL,
   caption = NULL,
+  count_on = "off",
+  count_col = NULL,
   ctrl_target = "",
   ctrl_table = "",
   ...
