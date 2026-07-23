@@ -134,6 +134,14 @@
 #'   top of the box). No-op for other chart types.
 #' @param lo,hi Optional lower / upper value bounds used by the renderer to
 #'   clamp or annotate the value axis. Default `NULL` (auto).
+#' @param count_on Which label surfaces carry an observation count in
+#'   parentheses ("Female (12)"): `"off"` (default), `"axis"` (the category
+#'   axis ticks), `"facet"` (the facet strip labels), or `"both"`.
+#' @param count_col Column counted DISTINCT for those labels (e.g.
+#'   `"USUBJID"` -> unique subjects). `NULL` (default) or `""` falls back to
+#'   the raw row count. Counts are computed per label group in the browser and
+#'   do NOT sum from the per-cell n: one subject can span several color /
+#'   facet cells.
 #' @param ctrl_target Character(1), beta. Block id of a value filter block on
 #'   the board: a categorical drill click's claim is ALSO pushed there over
 #'   the board's control channel ([ctrl_send()]; the board needs the channel

@@ -88,7 +88,9 @@ resolve_title_token <- function(token, data) {
   }
   if (!length(vals)) return("")
   if (length(vals) > TITLE_MAX_VALUES) {
-    vals <- c(vals[seq_len(TITLE_MAX_VALUES)], "…")
+    # Horizontal ellipsis, \u-escaped rather than literal: R sources must
+    # stay ASCII (R CMD check "non-ASCII characters" warning).
+    vals <- c(vals[seq_len(TITLE_MAX_VALUES)], "\u2026")
   }
   paste(vals, collapse = ", ")
 }
