@@ -359,6 +359,13 @@
       // looks, what it can do.
       this._renderSection('Presentation', spec.presentation);
 
+      // Titles — chart/table text (title, subtitle, caption). Its own titled
+      // section so the free-text rows don't read as layout options; hosts
+      // opt in via spec.titles.
+      if (spec.titles && spec.titles.length) {
+        this._renderSection('Titles', spec.titles);
+      }
+
       // Aggregation as a checkbox capability (Variant A). Activation is
       // DECOUPLED from the group: checking seeds a default value (a count) so
       // the box reads "on" before any group is picked, and unchecking clears
@@ -1243,7 +1250,14 @@
         const inp = document.createElement('input');
         inp.type = 'text';
         inp.className = 'blockr-popover-input';
-        inp.value = (cfg[key] == null) ? '' : String(cfg[key]);
+        // `autoValue` (optional role hook): when the stored value is null, a
+        // host-computed inherited value shows as the input's CONTENT, not its
+        // placeholder — so the user can see it and delete it, which commits ""
+        // (explicitly off). Used by the chart's auto title (data-label tier).
+        // Untouched, nothing commits and null (auto) survives.
+        const autoVal = (cfg[key] == null && typeof role.autoValue === 'function')
+          ? String(role.autoValue(cfg) || '') : '';
+        inp.value = (cfg[key] == null) ? autoVal : String(cfg[key]);
         if (role.ph) inp.placeholder = role.ph;
         const wrap = document.createElement('div');
         wrap.className = 'dd-text-wrap';

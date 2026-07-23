@@ -44,7 +44,11 @@ pick.
 UI follows the blockr design system: \code{Blockr.Select} controls on the
 block face (one per picker, labelled by \code{into}), and the picker
 definitions in the gear-toggled settings band, like the value filter's
-filter list.
+filter list. Every column qualifies as a candidate -- a picker can just
+as well drive a grouping or color dimension as a measure; only the
+auto-fill default is numeric-only. Clearing a picker's offer list is
+allowed while editing: the picker goes inert (no output column) until
+it has choices again.
 
 Design records: blockr.docs design-system/target select-controls.html
 (control style) and measure-switch-proposals.html (schema; the picker

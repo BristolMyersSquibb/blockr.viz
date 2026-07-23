@@ -1122,6 +1122,37 @@ table_arguments <- function() {
       ),
       example = "adsl",
       type = arg_string()
+    ),
+    title = new_arg_spec(
+      paste0(
+        "Table title shown above the table. Unset = auto (inherits the ",
+        "input data frame's label attribute when present); \"\" = ",
+        "explicitly no title. Supports {...} tokens resolved against the ",
+        "CURRENT data on every render, so the title follows upstream ",
+        "filters and pickers: {col} = the distinct values of that column ",
+        "collapsed with \", \" (with a value filter upstream, {ARM} reads ",
+        "the selected arm), {label(col)} = the column's variable label, ",
+        "{n} = row count, {n_distinct(col)} = distinct count. Tokens are ",
+        "data lookups, never code."
+      ),
+      example = "Adverse events by {ARM}",
+      type = arg_string()
+    ),
+    subtitle = new_arg_spec(
+      paste0(
+        "Subtitle under the title, same {...} tokens as `title` (no auto ",
+        "tier; unset = none)."
+      ),
+      example = "Treatment: {ARM}",
+      type = arg_string()
+    ),
+    caption = new_arg_spec(
+      paste0(
+        "Caption under the table (source / footnote line), same {...} ",
+        "tokens as `title` (no auto tier; unset = none)."
+      ),
+      example = "N = {n_distinct(USUBJID)} subjects",
+      type = arg_string()
     )
   )
 }
@@ -1212,6 +1243,13 @@ table_guidance <- function() {
 #'   download button appears on the table toolbar; it writes the rendered
 #'   (annotated) frame to a styled `.xlsx` via [write_annotated_xlsx()]. Needs
 #'   the `openxlsx` package.
+#' @param title,subtitle,caption Table text, rendered above (title, subtitle)
+#'   and below (caption) the table. Same three-tier contract as the chart
+#'   block (see [new_chart_block()]): `NULL` (default) = auto -- the title
+#'   falls back to the input's `label` attribute (subtitle/caption have no
+#'   auto tier); `""` = explicitly none; any other string is shown with
+#'   `{...}` tokens resolved against the CURRENT data on every render
+#'   (`{col}`, `{label(col)}`, `{n}`, `{n_distinct(col)}`).
 #' @param ctrl_target Character(1), beta. Block id of a value filter block on
 #'   the board: the drill's claim is ALSO pushed there over the board's
 #'   control channel ([ctrl_send()]; the board needs the channel installed,
@@ -1249,6 +1287,14 @@ new_table_block <- function(rowname = NULL,
                                       collapsible = TRUE,
                                       search = TRUE,
                                       excel_download = FALSE,
+                                      # Table text (R/title-template.R): NULL
+                                      # = auto (title falls back to the data
+                                      # frame's label attribute), "" =
+                                      # explicitly none, else a template
+                                      # resolved against the current data.
+                                      title = NULL,
+                                      subtitle = NULL,
+                                      caption = NULL,
                                       ctrl_target = "",
                                       ctrl_table = "",
                                       ...) {
@@ -1272,6 +1318,11 @@ new_table_block <- function(rowname = NULL,
   filter_range <- null_state(filter_range)
   filter_group_vals <- null_state(filter_group_vals)
   filter_spread_from <- null_state(filter_spread_from)
+  # NOT chr_state: "" is a real value on these (explicitly no title), the
+  # same NULL-vs-"" split as `color` above. See R/title-template.R.
+  title <- title_state(title)
+  subtitle <- title_state(subtitle)
+  caption <- title_state(caption)
 
   # Legacy args mapped on construction (old saved boards restore through
   # these formals): a cell_color spec reads as one `shadings` rule; row_color
@@ -1307,6 +1358,9 @@ new_table_block <- function(rowname = NULL,
         r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
         r_search         <- shiny::reactiveVal(isTRUE(search))
         r_excel_download <- shiny::reactiveVal(isTRUE(excel_download))
+        r_title    <- shiny::reactiveVal(title)
+        r_subtitle <- shiny::reactiveVal(subtitle)
+        r_caption  <- shiny::reactiveVal(caption)
         # External-control send (beta): the drill also pushes its claim into
         # a value filter block (gear section "Send to filter"). Empty target
         # = off, today's behaviour.
@@ -1335,6 +1389,13 @@ new_table_block <- function(rowname = NULL,
         # render silently and the block condition (from dat_valid / the
         # block expr, which coerces the same way) does the explaining.
         ann_data <- shiny::reactive(as_annotated_df(data()))
+
+        # Auto-title source: the input's label attribute (as_annotated_df is
+        # a passthrough for plain data frames, so their attributes survive;
+        # composer tables carry the label on the coerced frame).
+        r_data_label <- shiny::reactive({
+          input_data_label(tryCatch(ann_data(), error = function(e) NULL))
+        })
 
         shiny::observeEvent(input$drilldown_table_block_action, {
           msg <- input$drilldown_table_block_action
@@ -1389,6 +1450,14 @@ new_table_block <- function(rowname = NULL,
               upd(r_ctrl_target, trimws(as.character(v %||% "")))
             } else if (identical(p, "ctrl_table")) {
               upd(r_ctrl_table, trimws(as.character(v %||% "")))
+            } else if (identical(p, "title")) {
+              # "" is a real value on the title slots (explicitly none --
+              # it suppresses the auto/data-label tier), so store verbatim.
+              upd(r_title, title_state(v))
+            } else if (identical(p, "subtitle")) {
+              upd(r_subtitle, title_state(v))
+            } else if (identical(p, "caption")) {
+              upd(r_caption, title_state(v))
             }
           }
         })
@@ -1559,7 +1628,13 @@ new_table_block <- function(rowname = NULL,
         output$dl_xlsx <- shiny::downloadHandler(
           filename = function() "table.xlsx",
           content  = function(file) {
-            write_annotated_xlsx(ann_data(), file)
+            d <- ann_data()
+            # The Excel artifact carries the same resolved title the on-screen
+            # band shows -- the point of a clinical title is the export.
+            write_annotated_xlsx(
+              d, file,
+              title = resolve_block_title(r_title(), d, auto = r_data_label())
+            )
           }
         )
 
@@ -1590,6 +1665,27 @@ new_table_block <- function(rowname = NULL,
         r_body_payload <- shiny::reactive({
           d <- tryCatch(ann_data(), error = function(e) NULL)
           shiny::req(is.data.frame(d))
+          # Chart-parity table text, riding on the payload (title band + gear
+          # state): the resolved display strings plus the raw state -- the
+          # gear needs the NULL-vs-"" distinction (auto vs explicitly none),
+          # which a table data-attribute cannot carry. NULL entries are
+          # DROPPED before serializing: dt_payload_json has no null="null",
+          # so a NULL would arrive as {} and break the JS null checks.
+          titled <- function(p) {
+            tl <- list(
+              title    = resolve_block_title(r_title(), d, auto = r_data_label()),
+              subtitle = resolve_block_title(r_subtitle(), d),
+              caption  = resolve_block_title(r_caption(), d),
+              title_state    = r_title(),
+              subtitle_state = r_subtitle(),
+              caption_state  = r_caption(),
+              # What the gear shows (and lets the user clear) while the
+              # title state is auto: the inherited data label.
+              title_auto = resolve_block_title(NULL, d, auto = r_data_label())
+            )
+            p$titles <- tl[!vapply(tl, is.null, logical(1L))]
+            p
+          }
           # Filter state at build time, ISOLATED: the table body must never
           # re-render on a click (the split-render perf contract) -- the JS
           # keeps the row highlight live between renders, and any fresh
@@ -1633,7 +1729,7 @@ new_table_block <- function(rowname = NULL,
               NULL
             }
             return(tryCatch(
-              dt_payload_json(dt_build_payload(
+              dt_payload_json(titled(dt_build_payload(
                 ad,
                 stamp      = stamp_ctrl,
                 # The displayed frame is a projection; the gear's pickers
@@ -1670,7 +1766,7 @@ new_table_block <- function(rowname = NULL,
                 search      = isTRUE(r_search()),
                 excel_download = isTRUE(r_excel_download()),
                 active     = act
-              )),
+              ))),
               error = function(e) {
                 dt_payload_json(list(kind = "html", html = as.character(
                   shiny::tags$div(
@@ -1702,7 +1798,7 @@ new_table_block <- function(rowname = NULL,
           # motivation for the first-class side-effect-render seam that would
           # route this through server$conditions() automatically.)
           tryCatch(
-            dt_payload_json(dt_build_payload(
+            dt_payload_json(titled(dt_build_payload(
               d,
               stamp      = stamp_ctrl,
               label_col  = r_rowname(),
@@ -1728,7 +1824,7 @@ new_table_block <- function(rowname = NULL,
               search      = isTRUE(r_search()),
               excel_download = isTRUE(r_excel_download()),
               active     = act
-            )),
+            ))),
             error = function(e) {
               dt_payload_json(list(kind = "html", html = as.character(
                 shiny::tags$div(
@@ -1840,6 +1936,9 @@ new_table_block <- function(rowname = NULL,
             collapsible    = r_collapsible,
             search         = r_search,
             excel_download = r_excel_download,
+            title          = r_title,
+            subtitle       = r_subtitle,
+            caption        = r_caption,
             ctrl_target    = r_ctrl_target,
             ctrl_table     = r_ctrl_table
           )
@@ -1868,6 +1967,7 @@ new_table_block <- function(rowname = NULL,
       "filter_values", "filter_type", "filter_range",
       "filter_group_cols", "filter_group_vals",
       "filter_spread_col", "filter_spread_from",
+      "title", "subtitle", "caption",
       "ctrl_target", "ctrl_table"),
     external_ctrl = c("rowname", "value", "group", "summaries",
       "color", "shadings", "drill",
@@ -1875,6 +1975,7 @@ new_table_block <- function(rowname = NULL,
       "filter_column", "filter_values",
       "filter_group_cols", "filter_group_vals",
       "sortable", "collapsible", "search", "excel_download",
+      "title", "subtitle", "caption",
       "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",
     class = "table_block",

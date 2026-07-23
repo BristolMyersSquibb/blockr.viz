@@ -357,6 +357,38 @@ chart_arguments <- function() {
       ),
       example = NULL,
       type = arg_array(arg_string())
+    ),
+    title = new_arg_spec(
+      paste0(
+        "Chart title shown above the chart. Unset = auto (inherits the ",
+        "input data frame's label attribute when present); \"\" = ",
+        "explicitly no title. Supports {...} tokens resolved against the ",
+        "CURRENT data on every render, so the title follows upstream ",
+        "filters and pickers: {col} = the distinct values of that column ",
+        "collapsed with \", \" (with a value filter upstream, {ARM} reads ",
+        "the selected arm), {label(col)} = the column's variable label ",
+        "(after a picker block, {label(value)} names the picked measure), ",
+        "{n} = row count, {n_distinct(col)} = distinct count. Tokens are ",
+        "data lookups, never code."
+      ),
+      example = "Adverse events by {ARM}",
+      type = arg_string()
+    ),
+    subtitle = new_arg_spec(
+      paste0(
+        "Subtitle under the title, same {...} tokens as `title` (no auto ",
+        "tier; unset = none)."
+      ),
+      example = "Treatment: {ARM}",
+      type = arg_string()
+    ),
+    caption = new_arg_spec(
+      paste0(
+        "Caption under the chart (source / footnote line), same {...} ",
+        "tokens as `title` (no auto tier; unset = none)."
+      ),
+      example = "N = {n_distinct(USUBJID)} subjects",
+      type = arg_string()
     )
   )
 }

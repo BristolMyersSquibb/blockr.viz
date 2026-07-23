@@ -84,6 +84,19 @@
 #'   as total/subtotal bars in a cumulative-baseline bar: their baseline resets
 #'   to 0 and they draw the absolute running cumulative. Default `NULL` (every
 #'   bar is a relative delta).
+#' @param title,subtitle,caption Chart text, rendered above (title, subtitle)
+#'   and below (caption) the chart. Each is one of three tiers: `NULL`
+#'   (default) = auto -- the title falls back to the input data frame's
+#'   `label` attribute when one is present (subtitle/caption have no auto
+#'   tier); `""` = explicitly none (suppresses the auto title); any other
+#'   string = shown, with `{...}` tokens resolved against the CURRENT data on
+#'   every render: `{col}` -> the distinct values of that column collapsed
+#'   with ", " (an upstream value filter on ARM makes `{ARM}` read the
+#'   selected arm), `{label(col)}` -> the column's variable label (the picker
+#'   block carries the picked measure's label, so `{label(value)}` follows
+#'   the pick), `{n}` -> row count, `{n_distinct(col)}` -> distinct count.
+#'   Tokens are data lookups, never evaluated code; a token naming a missing
+#'   column resolves to "".
 #' @param line_width_mult Multiplier on the default line width for line
 #'   charts. Default `1.0`. Range `0.5`-`3.0`. Individual family only.
 #' @param dot_size_mult Multiplier on the default marker size. Default
@@ -188,6 +201,13 @@ new_chart_block <- function(
     # (baseline reset to 0, drawn as the absolute running cumulative).
     baseline = "zero",
     waterfall_totals = NULL,
+    # Chart text (see R/title-template.R): NULL = auto (title falls back to
+    # the data frame's label attribute, the gt block's existing rule), "" =
+    # explicitly none, else a template resolved against the current data
+    # ("{ARM}" = the distinct values, "{label(value)}" = the column's label).
+    title = NULL,
+    subtitle = NULL,
+    caption = NULL,
     ctrl_target = "",
     ctrl_table = "",
     ...) {
@@ -233,6 +253,11 @@ new_chart_block <- function(
   step <- chr_state(step)
   tt_fields <- chr_vec_state(tt_fields)
   waterfall_totals <- chr_vec_state(waterfall_totals)
+  # NOT chr_state: "" is a real value on these (explicitly no title, as
+  # against NULL = auto) and chr_state would drop it. See title-template.R.
+  title <- title_state(title)
+  subtitle <- title_state(subtitle)
+  caption <- title_state(caption)
   # Legacy aliases mapped on construction (old saved boards restore through the
   # ctor, and every chart saved before the rename carries ref_x / ref_y). The
   # new name wins when both are given: a board that already saved `vlines` is
@@ -274,6 +299,13 @@ new_chart_block <- function(
         # of principle 6 belongs to the table). Mirrors the table block's
         # ann_data reactive.
         plain_data <- shiny::reactive(coerce_plain_df(data()))
+
+        # Auto-title source: the input's label attribute, read from the RAW
+        # data -- as_plain_df() subsets columns and base subsetting drops
+        # data-frame-level attributes (see input_data_label).
+        r_data_label <- shiny::reactive({
+          input_data_label(tryCatch(data(), error = function(e) NULL))
+        })
 
         # Config state (orthogonal aesthetics)
         r_group <- shiny::reactiveVal(group)
@@ -329,6 +361,9 @@ new_chart_block <- function(
         # Bar baseline mode + waterfall total-bar steps (see constructor args).
         r_baseline <- shiny::reactiveVal(baseline)
         r_waterfall_totals <- shiny::reactiveVal(waterfall_totals)
+        r_title <- shiny::reactiveVal(title)
+        r_subtitle <- shiny::reactiveVal(subtitle)
+        r_caption <- shiny::reactiveVal(caption)
         r_board_theme <- setup_drilldown_theme_sync(session)
         # Board scale map (NULL when the board has no "scale_map" option);
         # resolved per data push, never stored in block state.
@@ -506,6 +541,18 @@ new_chart_block <- function(
               # serializes as a JSON array.
               baseline = r_baseline(),
               waterfall_totals = as.list(r_waterfall_totals()),
+              # Chart text. Raw state feeds the gear's inputs (the template
+              # the user typed, or null = auto / "" = none); *_resolved is
+              # what the browser renders (tokens substituted against the
+              # current data, auto tier applied -- title-template.R).
+              title = r_title(),
+              subtitle = r_subtitle(),
+              caption = r_caption(),
+              title_resolved = resolve_block_title(
+                r_title(), d, auto = r_data_label()
+              ),
+              subtitle_resolved = resolve_block_title(r_subtitle(), d),
+              caption_resolved = resolve_block_title(r_caption(), d),
               smoother_series = r_smoother_series(),
               lo = r_lo(), hi = r_hi(),
               # Board scale map, resolved for the chart type's colored role
@@ -604,6 +651,12 @@ new_chart_block <- function(
             if (!is.null(msg$box_points)) upd(r_box_points, msg$box_points)
             if (!is.null(msg$lo))         upd(r_lo, nn(msg$lo))
             if (!is.null(msg$hi))         upd(r_hi, nn(msg$hi))
+            # Chart text: "" is a real value (explicitly no title -- it
+            # suppresses the auto/data-label tier), so no nn(). null = auto
+            # is preserved because JS sends null, which skips the guard.
+            if (!is.null(msg$title))    upd(r_title, title_state(msg$title))
+            if (!is.null(msg$subtitle)) upd(r_subtitle, title_state(msg$subtitle))
+            if (!is.null(msg$caption))  upd(r_caption, title_state(msg$caption))
             # "" is a real value here (un-targeting the sender), so no nn().
             if (!is.null(msg$ctrl_target)) {
               upd(r_ctrl_target, trimws(as.character(msg$ctrl_target)))
@@ -866,6 +919,9 @@ new_chart_block <- function(
             hi = r_hi,
             baseline = r_baseline,
             waterfall_totals = r_waterfall_totals,
+            title = r_title,
+            subtitle = r_subtitle,
+            caption = r_caption,
             ctrl_target = r_ctrl_target,
             ctrl_table = r_ctrl_table
           )
@@ -897,6 +953,7 @@ new_chart_block <- function(
       "tt_fields", "drill", "sort_by", "sort_dir", "filter_range",
       "filter_point", "step", "vlines", "hlines", "smoother", "identity_line",
       "box_points", "lo", "hi", "waterfall_totals",
+      "title", "subtitle", "caption",
       # Legacy alias formals: permanently NULL in state (mapped onto
       # vlines/hlines at construction), so they MUST be allowed to be empty --
       # a non-allow_empty_state field holding NULL wedges the whole block
@@ -910,6 +967,7 @@ new_chart_block <- function(
       "filter_values", "filter_range", "filter_point", "line_width_mult",
       "dot_size_mult", "step", "vlines", "hlines", "smoother", "identity_line",
       "box_points", "lo", "hi", "baseline", "waterfall_totals",
+      "title", "subtitle", "caption",
       "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",
     class = "chart_block",

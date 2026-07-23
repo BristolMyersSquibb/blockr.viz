@@ -240,7 +240,18 @@
     lo:       { label: 'Lo', kind: 'column', colType: 'num' },
     hi:       { label: 'Hi', kind: 'column', colType: 'num' },
     line_width_mult: { label: 'Line width', kind: 'slider' },
-    dot_size_mult:   { label: 'Dot size',   kind: 'slider' }
+    dot_size_mult:   { label: 'Dot size',   kind: 'slider' },
+    // Chart text (three-tier contract, R side R/title-template.R): null =
+    // auto — the title inherits the data frame's label attribute; "" =
+    // explicitly none; other text renders with {...} tokens resolved against
+    // the current data BY R ({ARM}, {label(value)}, {n}, {n_distinct(col)}).
+    // `autoValue` surfaces the inherited auto title as the input's value, so
+    // clearing the field is how the auto title is turned OFF (commits "").
+    title:    { label: 'Title', kind: 'text', ph: 'e.g. AEs by {ARM}',
+                autoValue: (/** @type {any} */ cfg) =>
+                  (cfg.title == null && cfg.title_resolved) ? cfg.title_resolved : '' },
+    subtitle: { label: 'Subtitle', kind: 'text', ph: 'e.g. Treatment: {ARM}' },
+    caption:  { label: 'Caption', kind: 'text', ph: 'e.g. N = {n} records' }
   };
 
   // The value is one shared slot across every chart: the numeric variable the
@@ -284,7 +295,8 @@
       presentation: ['sort_by', 'sort_dir', { role: 'orientation', types: ['bar'] },
         { role: 'bar_mode', types: ['bar'] },
         { role: 'baseline', types: ['bar'] },
-        { role: 'box_points', types: ['boxplot'] }]
+        { role: 'box_points', types: ['boxplot'] }],
+      titles: ['title', 'subtitle', 'caption']
     },
     individual: {
       requiredMap: ['x', 'y'],
@@ -306,13 +318,15 @@
         { role: 'lo', types: ['line'] },
         { role: 'hi', types: ['line'] },
         'line_width_mult', 'dot_size_mult'
-      ]
+      ],
+      titles: ['title', 'subtitle', 'caption']
     },
     timeline: {
       requiredMap: ['x', 'xend', 'y'],
       optionalMap: ['series', 'color', 'facet', 'label', 'tt_fields'],
       mapping: [],
-      presentation: ['sort_by', 'sort_dir']
+      presentation: ['sort_by', 'sort_dir'],
+      titles: ['title', 'subtitle', 'caption']
     }
   };
 
@@ -674,16 +688,55 @@
         this.gearBtn.setAttribute('aria-expanded', 'true');
       }
 
+      // Title band (above the chart, below the settings band). Rendered as
+      // HTML, not the ECharts title option: it must sit ONCE above a facet
+      // grid (per-canvas titles would repeat), and it never fights the grid
+      // layout math. Hidden while empty, so a title-less chart is untouched.
+      this.titleWrap = document.createElement('div');
+      this.titleWrap.className = 'dd-chart-titles';
+      this.titleEl = document.createElement('div');
+      this.titleEl.className = 'dd-chart-title';
+      this.subtitleEl = document.createElement('div');
+      this.subtitleEl.className = 'dd-chart-subtitle';
+      this.titleWrap.appendChild(this.titleEl);
+      this.titleWrap.appendChild(this.subtitleEl);
+      this.card.appendChild(this.titleWrap);
+
       // Chart area
       this.chartGrid = document.createElement('div');
       this.chartGrid.className = 'dd-chart-grid';
       this.card.appendChild(this.chartGrid);
+
+      // Caption band (below the chart, above the status footer)
+      this.captionEl = document.createElement('div');
+      this.captionEl.className = 'dd-chart-caption';
+      this.card.appendChild(this.captionEl);
 
       // Status footer (always present, below chart)
       this.statusEl = document.createElement('div');
       this.statusEl.className = 'dd-status-footer';
       this.card.appendChild(this.statusEl);
       this._updateStatus();
+      this._updateTitles();
+    }
+
+    // Fill / hide the title and caption bands from the RESOLVED text (R
+    // substitutes the {...} tokens against the current data and applies the
+    // auto tier; see the config payload in chart-block.R). textContent, never
+    // innerHTML -- titles are data-derived text.
+    _updateTitles() {
+      if (!this.titleWrap) return;
+      const cfg = this.config || {};
+      const t = cfg.title_resolved || '';
+      const s = cfg.subtitle_resolved || '';
+      const cap = cfg.caption_resolved || '';
+      this.titleEl.textContent = t;
+      this.subtitleEl.textContent = s;
+      this.titleEl.style.display = t ? '' : 'none';
+      this.subtitleEl.style.display = s ? '' : 'none';
+      this.titleWrap.style.display = (t || s) ? '' : 'none';
+      this.captionEl.textContent = cap;
+      this.captionEl.style.display = cap ? '' : 'none';
     }
 
     // Axis title for a mapped column: its variable label when present,
@@ -1124,6 +1177,7 @@
       }
 
       this._renderConfig();
+      this._updateTitles();
       this._render();
     }
 
@@ -3510,6 +3564,13 @@
         // Extra tooltip columns (gantt): always an array so R can tell an
         // empty selection ([] -> NULL) from an unchanged one.
         tt_fields: Array.isArray(this.config.tt_fields) ? this.config.tt_fields : [],
+        // Chart text. VERBATIM, not `|| ''`: null (auto) and "" (explicitly
+        // none) are different values -- coercing null to "" would turn every
+        // unrelated gear edit into "title off". R skips null (is.null guard)
+        // and stores "" as the off tier.
+        title: this.config.title ?? null,
+        subtitle: this.config.subtitle ?? null,
+        caption: this.config.caption ?? null,
         // External-control send (beta). "" is a real value on both (un-targeting
         // the sender / a plain-data target that names no table), so they are
         // always sent rather than omitted when empty.

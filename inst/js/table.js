@@ -666,7 +666,19 @@
     sortable:    { label: "Sorting",  kind: "segmented", options: SORTABLE_OPT },
     collapsible: { label: "Sections", kind: "segmented", options: COLLAPSIBLE_OPT },
     search:      { label: "Search",   kind: "segmented", options: SEARCH_OPT },
-    excel_download: { label: "Export", kind: "segmented", options: EXPORT_OPT }
+    excel_download: { label: "Export", kind: "segmented", options: EXPORT_OPT },
+    // Table text (chart parity; three-tier contract, R side
+    // R/title-template.R): null = auto — the title inherits the data frame's
+    // label attribute; "" = explicitly none; other text renders with {...}
+    // tokens resolved against the current data BY R. `autoValue` surfaces the
+    // inherited auto title as the input's content, so clearing the field
+    // turns the auto title off (commits "").
+    title:    { label: "Title", kind: "text", ph: "e.g. AEs by {ARM}",
+                autoValue: function (/** @type {any} */ cfg) {
+                  return (cfg.title == null && cfg.title_auto) ? cfg.title_auto : "";
+                } },
+    subtitle: { label: "Subtitle", kind: "text", ph: "e.g. Treatment: {ARM}" },
+    caption:  { label: "Caption", kind: "text", ph: "e.g. N = {n} records" }
   });
   // Variant A: Aggregation, Drill-down, Coloring and Row color are each a
   // checkbox capability section (off by default, revealing their controls when
@@ -713,7 +725,11 @@
                  // the structured ("Table 1") frame is the prime sender (its
                  // drilled output carries the ARD identity the claim reads).
                  ctrlSection: true,
-                 presentation: pres });
+                 presentation: pres,
+                 // Table text (title / subtitle / caption) — applies to every
+                 // table, structured included (a "Table 1" wants its title
+                 // most of all).
+                 titles: ["title", "subtitle", "caption"] });
     // Structured ("Table 1") input is an already-summarized annotated data
     // frame with no pickable columns, so grouping / aggregation / drill / colour
     // don't apply. A small badge names it; the tooltip carries the why.
@@ -808,6 +824,18 @@
         catch (e) { return []; }
       })()
     };
+    // Table text state rides on the PAYLOAD, not the table attributes: the
+    // gear needs null (auto) vs "" (explicitly none), and an HTML attribute
+    // cannot say null. Absent keys (R drops NULLs before serializing) read
+    // back as null via the undefined check.
+    var rootEl = table.closest ? table.closest("[data-dt-elem-id]") : null;
+    var eid = rootEl ? rootEl.getAttribute("data-dt-elem-id") : null;
+    var stored = (eid && payloadStore[eid] && payloadStore[eid].payload) || null;
+    var tl = (stored && stored.titles) || {};
+    cfg.title    = (tl.title_state    === undefined) ? null : tl.title_state;
+    cfg.subtitle = (tl.subtitle_state === undefined) ? null : tl.subtitle_state;
+    cfg.caption  = (tl.caption_state  === undefined) ? null : tl.caption_state;
+    cfg.title_auto = tl.title_auto || "";
     return { cols: cols, cfg: cfg };
   }
 
@@ -1428,6 +1456,51 @@
     });
   }
 
+  // Title / caption bands (chart parity). Filled from the RESOLVED text on
+  // the payload (R substitutes the {...} tokens and applies the auto tier);
+  // ensured lazily around the scroll wrapper so the chrome — which outlives
+  // payloads — needs no rebuild. Hidden while empty: a title-less table is
+  // pixel-identical to before. textContent, never innerHTML.
+  /** @param {HTMLElement} root @param {VizTablePayload} p */
+  function applyTitles(root, p) {
+    var wrap = /** @type {HTMLElement | null} */ (
+      root.querySelector(".blockr-table-wrapper"));
+    if (!wrap || !wrap.parentNode) return;
+    var tl = /** @type {any} */ (p).titles || {};
+    var band = /** @type {HTMLElement | null} */ (
+      root.querySelector(".dd-table-titles"));
+    if (!band) {
+      band = document.createElement("div");
+      band.className = "dd-table-titles";
+      var te = document.createElement("div");
+      te.className = "dd-table-title";
+      var se = document.createElement("div");
+      se.className = "dd-table-subtitle";
+      band.appendChild(te);
+      band.appendChild(se);
+      wrap.parentNode.insertBefore(band, wrap);
+    }
+    var capEl = /** @type {HTMLElement | null} */ (
+      root.querySelector(".dd-table-caption"));
+    if (!capEl) {
+      capEl = document.createElement("div");
+      capEl.className = "dd-table-caption";
+      wrap.parentNode.insertBefore(capEl, wrap.nextSibling);
+    }
+    var t = tl.title || "";
+    var s = tl.subtitle || "";
+    var cap = tl.caption || "";
+    var tEl = /** @type {HTMLElement} */ (band.children[0]);
+    var sEl = /** @type {HTMLElement} */ (band.children[1]);
+    tEl.textContent = t;
+    sEl.textContent = s;
+    tEl.style.display = t ? "" : "none";
+    sEl.style.display = s ? "" : "none";
+    band.style.display = (t || s) ? "" : "none";
+    capEl.textContent = cap;
+    capEl.style.display = cap ? "" : "none";
+  }
+
   // Apply one payload to its container: inject, wire, render. Runs on every
   // payload arrival AND whenever a payload-less container turns up with a
   // stored payload (chrome after payload, dock re-mounts — see wireRoot).
@@ -1437,6 +1510,7 @@
       root.querySelector(".dt-table-slot") ||
       root.querySelector(".blockr-table-wrapper"));
     if (!slot) return;
+    applyTitles(root, p);
     root.setAttribute("data-dt-body-applied", "1");
     // Structured promotion is re-derived per payload: upstream can flip a
     // block between structured and flat.

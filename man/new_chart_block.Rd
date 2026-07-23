@@ -41,6 +41,9 @@ new_chart_block(
   hi = NULL,
   baseline = "zero",
   waterfall_totals = NULL,
+  title = NULL,
+  subtitle = NULL,
+  caption = NULL,
   ctrl_target = "",
   ctrl_table = "",
   ...
@@ -168,6 +171,20 @@ each \code{metric} value is a delta). \code{chart_type = "waterfall"} implies
 as total/subtotal bars in a cumulative-baseline bar: their baseline resets
 to 0 and they draw the absolute running cumulative. Default \code{NULL} (every
 bar is a relative delta).}
+
+\item{title, subtitle, caption}{Chart text, rendered above (title, subtitle)
+and below (caption) the chart. Each is one of three tiers: \code{NULL}
+(default) = auto -- the title falls back to the input data frame's
+\code{label} attribute when one is present (subtitle/caption have no auto
+tier); \code{""} = explicitly none (suppresses the auto title); any other
+string = shown, with \code{{...}} tokens resolved against the CURRENT data on
+every render: \code{{col}} -> the distinct values of that column collapsed
+with ", " (an upstream value filter on ARM makes \code{{ARM}} read the
+selected arm), \code{{label(col)}} -> the column's variable label (the picker
+block carries the picked measure's label, so \code{{label(value)}} follows
+the pick), \code{{n}} -> row count, \code{{n_distinct(col)}} -> distinct count.
+Tokens are data lookups, never evaluated code; a token naming a missing
+column resolves to "".}
 
 \item{ctrl_target}{Character(1), beta. Block id of a value filter block on
 the board: a categorical drill click's claim is ALSO pushed there over

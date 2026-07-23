@@ -28,6 +28,9 @@ new_table_block(
   collapsible = TRUE,
   search = TRUE,
   excel_download = FALSE,
+  title = NULL,
+  subtitle = NULL,
+  caption = NULL,
   ctrl_target = "",
   ctrl_table = "",
   ...
@@ -89,6 +92,14 @@ the toolbar search box. Exposed in the block's gear menu.}
 download button appears on the table toolbar; it writes the rendered
 (annotated) frame to a styled \code{.xlsx} via \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}. Needs
 the \code{openxlsx} package.}
+
+\item{title, subtitle, caption}{Table text, rendered above (title, subtitle)
+and below (caption) the table. Same three-tier contract as the chart
+block (see \code{\link[=new_chart_block]{new_chart_block()}}): \code{NULL} (default) = auto -- the title
+falls back to the input's \code{label} attribute (subtitle/caption have no
+auto tier); \code{""} = explicitly none; any other string is shown with
+\code{{...}} tokens resolved against the CURRENT data on every render
+(\code{{col}}, \code{{label(col)}}, \code{{n}}, \code{{n_distinct(col)}}).}
 
 \item{ctrl_target}{Character(1), beta. Block id of a value filter block on
 the board: the drill's claim is ALSO pushed there over the board's

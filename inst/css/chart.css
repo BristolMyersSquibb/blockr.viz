@@ -487,6 +487,33 @@
   width: 100%;
 }
 
+/* ===== Title / caption bands ===== */
+/* Rendered by chart.js _updateTitles() from the RESOLVED title text; the
+   whole band hides while empty so a title-less chart is pixel-identical to
+   before. Muted-secondary text mirrors ggplot's title/subtitle hierarchy. */
+.dd-chart-titles {
+  padding: 2px 2px 6px;
+}
+
+.dd-chart-title {
+  font-size: var(--blockr-font-size-md, 0.9375rem);
+  font-weight: 600;
+  color: var(--blockr-grey-800, #1f2937);
+}
+
+.dd-chart-subtitle {
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-grey-500, #6b7280);
+  margin-top: 1px;
+}
+
+.dd-chart-caption {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-500, #6b7280);
+  font-style: italic;
+  padding: 4px 2px 0;
+}
+
 /* ===== Status footer ===== */
 .dd-status-footer {
   display: flex;
