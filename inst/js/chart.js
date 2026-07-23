@@ -71,6 +71,14 @@
   const TRAJ_REDUCED_MAX = 500;
   const TRAJ_HARD_CAP = 1000;
 
+  // Ceiling for the fixed-row-geometry plot area (CSS px). rows x band is
+  // unbounded in groups x series, and a canvas taller than the browser's
+  // limit (Safari: ~16.7M device px² -> ~5k CSS px at dpr 2 for a full-width
+  // panel) renders a SILENT BLANK. Past the cap, bands auto-squeeze into the
+  // capped height — thin bars beat an invisible chart (same philosophy as
+  // TRAJ_HARD_CAP); the real fix is filtering upstream.
+  const PANEL_H_CAP = 4000;
+
   // blockr echarts design system. Okabe-Ito categorical palette —
   // colorblind-safe and well-tested for general categorical encoding.
   const BLOCKR_PALETTE = ['#0072B2', '#D55E00', '#F0E442', '#009E73', '#56B4E9', '#E69F00', '#CC79A7'];
@@ -84,8 +92,21 @@
   // Display-only number formatting. Data is now sent at full precision
   // (so click-to-filter equality round-trips), so trim noisy decimals
   // for tooltips / status text without touching the underlying value.
+  // 6 significant digits: enough that an aggregate like 45678.9 prints
+  // as-is on treemap labels / boxplot summaries.
   /** @param {any} v */
   const ddNum = (v) => {
+    if (typeof v !== 'number' || !isFinite(v)) return v;
+    if (Number.isInteger(v)) return v.toLocaleString();
+    return Number(v.toPrecision(6)).toLocaleString(undefined, {
+      maximumFractionDigits: 4
+    });
+  };
+  // Tighter 3-significant-digit variant for line/scatter hover text (the
+  // 27c03a9 tooltip tidy-up), where raw observation values are glanced at,
+  // not read off — aggregated surfaces keep the 6-digit ddNum.
+  /** @param {any} v */
+  const ddNum3 = (v) => {
     if (typeof v !== 'number' || !isFinite(v)) return v;
     if (Number.isInteger(v)) return v.toLocaleString();
     return Number(v.toPrecision(3)).toLocaleString(undefined, {
@@ -375,7 +396,9 @@
         { role: 'baseline', types: ['bar'] },
         { role: 'box_points', types: ['boxplot'] },
         // Count labels: the axis surface applies to the category-axis charts
-        // (bar/boxplot/waterfall); facet applies to any faceted family.
+        // (bar and waterfall per group/step; boxplot per drawn box slot);
+        // facet applies to any faceted family. Pie/treemap/radar have no
+        // category axis, so "axis" no-ops there (the tooltip n covers it).
         'count_on', 'count_col'],
       titles: ['title', 'subtitle', 'caption']
     },
@@ -414,6 +437,7 @@
       requiredMap: ['x', 'xend', 'y'],
       optionalMap: ['series', 'color', 'facet', 'label', 'tt_fields'],
       mapping: [],
+      // Count labels: "axis" counts events (or distinct count_col) per lane.
       presentation: ['sort_by', 'sort_dir', 'count_on', 'count_col'],
       titles: ['title', 'subtitle', 'caption']
     }
@@ -435,7 +459,8 @@
    *             chartDiv: HTMLDivElement, chart: any, facetVal: any,
    *             hover: { si: number | null },
    *             seriesByColorByVal: Record<string, any[]> | null,
-   *             brushable: boolean, zoomArmed: boolean }} ChartSlot
+   *             brushable: boolean, zoomArmed: boolean,
+   *             zoom: any }} ChartSlot
    */
 
   class DrilldownChart {
@@ -471,6 +496,15 @@
       this._legendOff = new Set();
       /** @type {string | null} */
       this._legendKey = null;
+      // Per-render one-pass caches for the per-panel raw-data scans (axis
+      // counts / tooltip representative values); reset in _renderAggregated.
+      /** @type {Map<string, Map<string, any>> | null} */
+      this._axisCountCache = null;
+      /** @type {Map<string, Record<string, any[]>> | null} */
+      this._ttRepCache = null;
+      // Pending deferred line click (canceled by the dblclick zoom-reset).
+      /** @type {any} */
+      this._lineClickTimer = null;
       /** @type {any} */
       this.theme = null;  // null -> echarts default theme
       // DOM fields are populated by _buildDOM() (called below); declared here so
@@ -1140,24 +1174,37 @@
       }
       el.style.display = '';
       // A re-render rebuilt the panels with every series visible; replay the
-      // surviving off-toggles onto the fresh instances.
-      for (const name of this._legendOff) this._legendApply(name, false);
+      // surviving off-toggles onto the fresh instances — batched, so the
+      // replay costs one dispatch per panel however many levels are off.
+      this._legendApply([...this._legendOff], false);
     }
 
-    // Show/hide one legend level on every facet panel. Levels map to series
+    // Show/hide legend levels on every facet panel. Levels map to series
     // names directly, except when the legend shows color levels distinct from
     // the series split (scatter/line with series != color): there
     // slot.seriesByColorByVal lists the member series to toggle — the same
-    // fan-out the native legendselectchanged handler uses.
-    /** @param {string} name @param {boolean} on */
-    _legendApply(name, on) {
+    // fan-out the native legendselectchanged handler uses. All member series
+    // for all requested levels go into ONE batched dispatchAction per panel:
+    // a per-series dispatch re-runs the full ECharts update pipeline each
+    // time (up to TRAJ_HARD_CAP members with series != color), which stalls
+    // for seconds per toggle and again per replay on every data push.
+    /** @param {string|string[]} names @param {boolean} on */
+    _legendApply(names, on) {
+      const list = Array.isArray(names) ? names : [names];
+      if (!list.length) return;
       const action = on ? 'legendSelect' : 'legendUnSelect';
       for (const s of this._slots) {
         if (!s || !s.chart) continue;
-        const targets = (s.seriesByColorByVal && s.seriesByColorByVal[name]) ||
-          [name];
-        for (const n of targets) {
-          s.chart.dispatchAction({ type: action, name: n });
+        const batch = [];
+        for (const name of list) {
+          const targets = (s.seriesByColorByVal && s.seriesByColorByVal[name]) ||
+            [name];
+          for (const n of targets) batch.push({ name: n });
+        }
+        if (batch.length === 1) {
+          s.chart.dispatchAction({ type: action, name: batch[0].name });
+        } else if (batch.length) {
+          s.chart.dispatchAction({ type: action, batch: batch });
         }
       }
     }
@@ -1454,6 +1501,94 @@
       const out = new Map();
       for (const [k, v] of acc) out.set(k, v instanceof Set ? v.size : v);
       return out;
+    }
+
+    // One pass over this.data building EVERY facet's counts map at once —
+    // the per-panel _labelCounts(dim, facetCol, facetVal) form rescanned the
+    // full data once per panel. Same semantics per facet as _labelCounts,
+    // including the identity as-is branch. Returns
+    // Map<String(facetVal), Map<String(dimValue), count-or-asis>>.
+    /** @param {string|null|undefined} dimCol @param {string} facetCol */
+    _labelCountsByFacet(dimCol, facetCol) {
+      const idCol = this.config.count_col;
+      const identity = !!idCol && this.config.func === 'identity';
+      const distinct = !!idCol && !identity;
+      /** @type {Map<string, Map<string, any>>} */
+      const byFacet = new Map();
+      for (const r of this.data) {
+        const fv = String(r[facetCol] ?? '');
+        let m = byFacet.get(fv);
+        if (!m) { m = new Map(); byFacet.set(fv, m); }
+        const dv = dimCol ? String(r[dimCol] ?? '') : 'Total';
+        if (identity) {
+          if (!m.has(dv)) {
+            const v = r[/** @type {string} */(idCol)];
+            if (v != null) m.set(dv, v);
+          }
+        } else if (distinct) {
+          const id = r[/** @type {string} */(idCol)];
+          if (id == null) continue;
+          let s = m.get(dv);
+          if (!(s instanceof Set)) { s = new Set(); m.set(dv, s); }
+          s.add(id);
+        } else {
+          const cur = m.get(dv);
+          m.set(dv, (typeof cur === 'number' ? cur : 0) + 1);
+        }
+      }
+      if (distinct) {
+        for (const m of byFacet.values()) {
+          for (const [k, v] of m) m.set(k, v instanceof Set ? v.size : v);
+        }
+      }
+      return byFacet;
+    }
+
+    // Representative tooltip-field values (first raw row per group), per
+    // facet, built in one pass and cached for the render — was a full-data
+    // scan per panel. The '__all__' key holds the unrestricted map for the
+    // single-panel case.
+    /** @param {any} facet @param {string[]} ttFields
+     *  @returns {Record<string, any[]>} */
+    _ttRepValsFor(facet, ttFields) {
+      const facetCol = this.config.facet;
+      const restrict = facet !== '__all__' && !!facetCol;
+      if (!this._ttRepCache) {
+        const groupCol = this.config.group;
+        /** @type {Map<string, Record<string, any[]>>} */
+        const byFacet = new Map();
+        /** @type {Record<string, any[]>} */
+        const all = {};
+        byFacet.set('__all__', all);
+        for (const r of this.data) {
+          const g = groupCol ? String(r[groupCol] ?? '') : 'Total';
+          if (!(g in all)) all[g] = ttFields.map(c => r[c] ?? '');
+          if (facetCol) {
+            const fv = String(r[facetCol] ?? '');
+            let rec = byFacet.get(fv);
+            if (!rec) { rec = {}; byFacet.set(fv, rec); }
+            if (!(g in rec)) rec[g] = ttFields.map(c => r[c] ?? '');
+          }
+        }
+        this._ttRepCache = byFacet;
+      }
+      return this._ttRepCache.get(restrict ? String(facet) : '__all__') || {};
+    }
+
+    // Axis counts for one panel, via the per-render one-pass cache above.
+    // The unfaceted ('__all__') panel needs no restriction, so it uses the
+    // plain single-map scan (at most once per render — there is only one
+    // such panel).
+    /** @param {any} [facet] @returns {Map<string, any>} */
+    _axisCounts(facet) {
+      const facetCol = this.config.facet;
+      const restrict = !!facetCol && facet != null && facet !== '__all__';
+      if (!restrict) return this._labelCounts(this.config.group, null, null);
+      if (!this._axisCountCache) {
+        this._axisCountCache = this._labelCountsByFacet(
+          this.config.group, /** @type {string} */ (facetCol));
+      }
+      return this._axisCountCache.get(String(facet)) || new Map();
     }
 
     /** Append " (n)" to a label from a counts map (identity when no count).
@@ -1784,7 +1919,7 @@
         container.appendChild(chartDiv);
         slot = { container, labelEl, chartDiv, chart: null, facetVal: null,
                  hover: { si: null }, seriesByColorByVal: null,
-                 brushable: false, zoomArmed: false };
+                 brushable: false, zoomArmed: false, zoom: null };
         this._slots[i] = slot;
       }
       if (slot.labelEl) {
@@ -1823,6 +1958,45 @@
     // duplicate listeners. Everything a handler needs is read LIVE
     // (this.config / this.data / this._drillColumn() / slot.*): under
     // instance reuse, render-time captures would go stale.
+    // Body of the individual-family (scatter/line) click: identifies the
+    // clicked mark, updates the selection, and emits the filter. Split out
+    // of the handler so a line click can be deferred (and canceled by the
+    // dblclick zoom-reset) without duplicating the logic.
+    /** @param {ChartSlot} slot @param {any} params */
+    _individualClick(slot, params) {
+      const { x, y } = this.config;
+      const splitCol = this.config.series || this.config.color;
+      const inFacet = this._facetTest(slot);
+      const isLine = this.config.chart_type === 'line';
+      let hitRows, pointVal = null;
+      if (isLine && splitCol && params.seriesName) {
+        hitRows = (this.data || []).filter(
+          r => inFacet(r) &&
+               String(r[splitCol]) === String(params.seriesName));
+        this._selected = params.seriesName;
+      } else {
+        const v = params.value;
+        if (!Array.isArray(v) || v.length < 2 || !x || !y) return;
+        hitRows = (this.data || []).filter(
+          r => inFacet(r) &&
+               (!splitCol || !params.seriesName ||
+                 String(r[splitCol]) === String(params.seriesName)) &&
+               String(r[x]) === String(v[0]) &&
+               String(r[y]) === String(v[1]));
+        this._selected = `${ddNum3(v[0])}, ${ddNum3(v[1])}`;
+        pointVal = v;
+      }
+      this._updateStatus();
+      if (this._drillColumn()) {
+        this._emitDrill(hitRows);
+      } else if (pointVal) {
+        // scatter auto: a click is a one-point selection -> a zero-width
+        // x/y range (between(x,v,v) & between(y,v,v) = the observation).
+        this._hasBrushFilter = true;
+        this._sendRangeFilter([pointVal[0], pointVal[0]], [pointVal[1], pointVal[1]]);
+      }
+    }
+
     /** @param {ChartSlot} slot @param {string} family */
     _attachHandlers(slot, family) {
       const chart = slot.chart;
@@ -1907,7 +2081,31 @@
       // (start:0/end:100 is already the full extent).
       chart.getZr().on('dblclick', () => {
         if (this.config.chart_type !== 'line') return;
+        // The gesture's two clicks each queued a deferred drill click
+        // (see the click handler): cancel the survivor — a double-click
+        // means "reset the zoom", not "filter the board twice".
+        if (this._lineClickTimer) {
+          clearTimeout(this._lineClickTimer);
+          this._lineClickTimer = null;
+        }
         chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
+      });
+
+      // Track the zoom window so a re-render can restore it (setOption with
+      // notMerge rebuilds the select-zoom component at full range — without
+      // this, every data push on a live board popped the user back out).
+      // The drag-select action carries startValue/endValue in a batch; our
+      // reset paths (dblclick above, toolbox back) arrive as start:0/end:100
+      // with no values -> stored as null = not zoomed.
+      chart.on('datazoom', (/** @type {any} */ e) => {
+        const p = (e && e.batch && e.batch[0]) || e || {};
+        const reset = p.startValue == null && p.endValue == null &&
+          (p.start == null || p.start === 0) &&
+          (p.end == null || p.end === 100);
+        slot.zoom = reset ? null : {
+          start: p.start, end: p.end,
+          startValue: p.startValue, endValue: p.endValue
+        };
       });
 
       // When the legend shows color levels (not series), intercept
@@ -1955,42 +2153,28 @@
       chart.on('click', (/** @type {any} */ params) => {
         if (this._drillState() === 'off') return;
         if (params.componentType !== 'series') return;
+        const isLineCt = this.config.chart_type === 'line';
         // Clicking a point in brush mode also fires brushSelected/brush
         // "cleared" events that would call _sendClearFilter and wipe this
-        // click's filter. Suppress those for a short window after a click.
+        // click's filter. Suppress those for a short window after a click
+        // (long enough to cover the deferred line click below).
         this._suppressBrushClear = true;
-        setTimeout(() => { this._suppressBrushClear = false; }, 150);
-        const { x, y } = this.config;
-        const splitCol = this.config.series || this.config.color;
-        const inFacet = this._facetTest(slot);
-        const isLine = this.config.chart_type === 'line';
-        let hitRows, pointVal = null;
-        if (isLine && splitCol && params.seriesName) {
-          hitRows = (this.data || []).filter(
-            r => inFacet(r) &&
-                 String(r[splitCol]) === String(params.seriesName));
-          this._selected = params.seriesName;
-        } else {
-          const v = params.value;
-          if (!Array.isArray(v) || v.length < 2 || !x || !y) return;
-          hitRows = (this.data || []).filter(
-            r => inFacet(r) &&
-                 (!splitCol || !params.seriesName ||
-                   String(r[splitCol]) === String(params.seriesName)) &&
-                 String(r[x]) === String(v[0]) &&
-                 String(r[y]) === String(v[1]));
-          this._selected = `${ddNum(v[0])}, ${ddNum(v[1])}`;
-          pointVal = v;
+        setTimeout(() => { this._suppressBrushClear = false; }, isLineCt ? 450 : 150);
+        // A line double-click is the zoom-reset gesture (zr dblclick above),
+        // and triggerLineEvent makes the whole line path its click target —
+        // undeferred, each of its two clicks would emit a drill filter and
+        // recompute the board before the zoom even resets. Hold a line click
+        // briefly; the dblclick handler cancels the pending one. Scatter
+        // keeps the instant click (no zoom gesture there).
+        if (isLineCt) {
+          if (this._lineClickTimer) clearTimeout(this._lineClickTimer);
+          this._lineClickTimer = setTimeout(() => {
+            this._lineClickTimer = null;
+            this._individualClick(slot, params);
+          }, 275);
+          return;
         }
-        this._updateStatus();
-        if (this._drillColumn()) {
-          this._emitDrill(hitRows);
-        } else if (pointVal) {
-          // scatter auto: a click is a one-point selection -> a zero-width
-          // x/y range (between(x,v,v) & between(y,v,v) = the observation).
-          this._hasBrushFilter = true;
-          this._sendRangeFilter([pointVal[0], pointVal[0]], [pointVal[1], pointVal[1]]);
-        }
+        this._individualClick(slot, params);
       });
 
       chart.on('brushSelected', (/** @type {any} */ params) => {
@@ -2181,6 +2365,12 @@
     // -- Aggregated rendering -------------------------------------------------
 
     _renderAggregated() {
+      // Per-render caches for the per-panel raw-data scans (axis counts,
+      // tooltip representative values). Data and config are fixed within a
+      // render, so each is built in ONE pass on first use instead of once
+      // per facet panel (which was O(facets x rows) per render).
+      this._axisCountCache = null;
+      this._ttRepCache = null;
       // Multi-value bar: one series per planned value, riding the color
       const agg = this._aggregate();
       if (agg.length === 0) {
@@ -2389,7 +2579,8 @@
       // contract (group=step axis, value+func=value) and the same bar option
       // shell — only the bars' baseline is shifted.
       if (this._baselineMode() === 'cumulative') {
-        return this._buildWaterfall(facetData, groups, valueTitle, ax, plotW);
+        return this._buildWaterfall(facetData, groups, valueTitle, ax, plotW,
+          facet);
       }
 
       // Extra tooltip dimensions (bar only): the first raw row per group in
@@ -2399,18 +2590,9 @@
       // added Tooltip fields.
       const ttFields = [].concat(this.config.tt_fields || [])
         .map(String).filter(c => c && c !== 'null' && c !== '(none)');
-      /** @type {Record<string, any[]>} */
-      const ttRepVals = {};
-      if (ttFields.length) {
-        const facetCol = this.config.facet;
-        const groupCol = this.config.group;
-        for (const r of this.data) {
-          if (facet !== '__all__' && facetCol &&
-              String(r[facetCol] ?? '') !== facet) continue;
-          const g = groupCol ? String(r[groupCol] ?? '') : 'Total';
-          if (!(g in ttRepVals)) ttRepVals[g] = ttFields.map(c => r[c] ?? '');
-        }
-      }
+      const ttRepVals = ttFields.length
+        ? this._ttRepValsFor(facet, ttFields)
+        : /** @type {Record<string, any[]>} */ ({});
       // Rows (label: value) for the hovered group's tooltip, appended after the
       // series rows. `head` is the axis category = the group label.
       const ttExtraRows = (/** @type {any} */ head) => {
@@ -2458,10 +2640,20 @@
       const GROUP_BAR = 14;       // horizontal grouped: px per series bar
       const GROUP_PAD = 12;       // horizontal grouped: gap between groups
       const hGrouped = isGrouped && colors.length > 0;
+      // Fixed-geometry plot height (horizontal only) and its PANEL_H_CAP
+      // guard: past the cap the grouped fixed-px bar width is dropped so the
+      // fan auto-squeezes into its (now smaller) band instead of overflowing
+      // an over-limit canvas. Percent widths ('60%') scale with the band and
+      // need no override.
+      const rowBand = hGrouped ? colors.length * GROUP_BAR + GROUP_PAD : ROW_BAND;
+      const rowsH = groups.length * rowBand;
+      const hCapped = !vertical && rowsH > PANEL_H_CAP;
       const barLayout = isGrouped
         ? (vertical
             ? { barGap: 0, barCategoryGap: '30%', barMaxWidth: BAR_MAX }
-            : { barGap: 0, barWidth: GROUP_BAR })
+            : (hCapped
+                ? { barGap: 0, barCategoryGap: '20%' }
+                : { barGap: 0, barWidth: GROUP_BAR }))
         : { barWidth: '60%', barMaxWidth: BAR_MAX };
 
       /** @type {any[]} */
@@ -2520,7 +2712,7 @@
       // strings so the wider labels don't truncate. Counts are DISTINCT ids per
       // group within THIS facet (a subject can span facets).
       const axisCounts = this._countOn('axis')
-        ? this._labelCounts(this.config.group, this.config.facet, facet) : null;
+        ? this._axisCounts(facet) : null;
       const catLabels = axisCounts
         ? groups.map(g => this._withCount(g, axisCounts)) : groups;
       const catFmt = axisCounts
@@ -2618,10 +2810,9 @@
         // Horizontal: exact panel height for a constant category band —
         // grid.top + rows * band + grid.bottom, band = one 28px row
         // (stacked/percent/single) or the grouped series fan + padding.
+        // Clamped at PANEL_H_CAP (see hCapped above).
         __panelH: vertical ? undefined
-          : 30 + groups.length *
-              (hGrouped ? colors.length * GROUP_BAR + GROUP_PAD : ROW_BAND) +
-            bottomBase + leg.extra,
+          : 30 + Math.min(PANEL_H_CAP, rowsH) + bottomBase + leg.extra,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip,
@@ -2648,8 +2839,8 @@
     // floating offset, and a visible "delta" series carrying the bar height,
     // each datum colored per sign. (vertical orientation only — a bridge reads
     // left-to-right.)
-    /** @param {any[]} facetData @param {any[]} groups @param {any} valueTitle @param {any} ax @param {number} [plotW] container width in px */
-    _buildWaterfall(facetData, groups, valueTitle, ax, plotW) {
+    /** @param {any[]} facetData @param {any[]} groups @param {any} valueTitle @param {any} ax @param {number} [plotW] container width in px @param {string} [facet] current facet value */
+    _buildWaterfall(facetData, groups, valueTitle, ax, plotW, facet) {
       // One value per step (sum across any color split — waterfall is a single
       // series along the step axis, color does not stack here). A step whose
       // cells are ALL null (no usable value) is null, not 0.
@@ -2703,10 +2894,21 @@
 
       // Step labels on the x-axis: horizontal-or-vertical (never diagonal),
       // every step shown (a waterfall with a hidden step label is unreadable).
-      const xlab = this._xAxisLabels(groups, (plotW || 0) - 65);
+      // Axis counts ("Screened (120)") apply here the same as on a bar — the
+      // step axis IS the category axis. Size the layout on the display
+      // strings so counted labels don't truncate.
+      const axisCounts = this._countOn('axis') ? this._axisCounts(facet) : null;
+      const stepLabels = axisCounts
+        ? groups.map(g => this._withCount(g, axisCounts)) : groups;
+      const xlab = this._xAxisLabels(stepLabels, (plotW || 0) - 65);
       const catAxis = {
         type: 'category', data: groups,
-        axisLabel: xlab.axisLabel,
+        axisLabel: {
+          ...xlab.axisLabel,
+          ...(axisCounts
+            ? { formatter: (/** @type {any} */ v) => this._withCount(v, axisCounts) }
+            : {})
+        },
         axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
         axisTick: { show: false }, splitLine: { show: false }
       };
@@ -2921,6 +3123,24 @@
           r[value] != null &&
           (lv === '__all__' || String(r[colorCol] ?? '') === lv));
 
+      // Axis counts ("F (12)") when count_on covers the axis surface: per
+      // DRAWN slot, over that slot's own rows — a split boxplot draws one box
+      // per (group x level), so the truthful count is the box's, not the
+      // group total (which the facet surface / tooltip n already cover).
+      // Distinct of count_col when set, else raw rows; identity has no
+      // meaning here (a boxplot always plots raw values).
+      const axisOn = this._countOn('axis');
+      const slotCount = (/** @type {any[]} */ rows) => {
+        const idCol = this.config.count_col;
+        if (!idCol) return rows.length;
+        const s = new Set();
+        for (const r of rows) {
+          const id = r[idCol];
+          if (id != null) s.add(id);
+        }
+        return s.size;
+      };
+
       // Category axis. Plain boxplot: one slot per group. Color-split: one slot
       // per (group, level) that has data, group-major so a group's per-color
       // boxes sit together; the slot value carries the level (BOX_CAT_SEP) so
@@ -2930,14 +3150,20 @@
       const cats = [];
       /** @type {{group: string, level: string}[]} */
       const catMeta = [];
+      /** @type {Map<string, string> | null} */
+      const catLabelMap = axisOn ? new Map() : null;
       for (const g of groups) {
         for (const lv of (split ? levels : ['__all__'])) {
           // Split path: drop empty (group, level) combos so there is no blank
           // slot. Plain path: keep the slot (null box) to preserve index/label
           // alignment, matching the pre-color behavior.
           if (split && rowsFor(g, lv).length === 0) continue;
-          cats.push(split ? g + BOX_CAT_SEP + lv : g);
+          const cat = split ? g + BOX_CAT_SEP + lv : g;
+          cats.push(cat);
           catMeta.push({ group: g, level: lv });
+          if (catLabelMap) {
+            catLabelMap.set(cat, g + ' (' + slotCount(rowsFor(g, lv)) + ')');
+          }
         }
       }
 
@@ -3008,7 +3234,9 @@
         };
       }).filter(s => s.data.length > 0);
 
-      const gut = this._yGutter(cats.map(c => split ? c.split(BOX_CAT_SEP)[0] : c));
+      const gut = this._yGutter(cats.map(c => catLabelMap
+        ? /** @type {string} */ (catLabelMap.get(c))
+        : (split ? c.split(BOX_CAT_SEP)[0] : c)));
       // p.data is our {value, n} datum; whiskers are 1.5*IQR-capped, so
       // they're labeled as whiskers rather than min/max.
       const boxTooltipFmt = (/** @type {any} */ p) => {
@@ -3040,7 +3268,11 @@
         // One 28px row per DRAWN slot — cats, not groups: a color-split
         // boxplot draws a (group x level) row each, so sizing off the group
         // count alone squeezed split boxplots into overlapping slivers.
-        __panelH: 30 + cats.length * 28 + bottomBase + leg.extra,
+        // Clamped at PANEL_H_CAP: cats is groups x levels for a split
+        // boxplot, so an unbounded height can exceed the browser's canvas
+        // limit (silent blank). Past the cap the slots squeeze; boxWidth's
+        // 7px floor keeps boxes visible.
+        __panelH: 30 + Math.min(PANEL_H_CAP, cats.length * 28) + bottomBase + leg.extra,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip: { trigger: 'item', confine: true, formatter: boxTooltipFmt },
@@ -3053,7 +3285,7 @@
         // bar), so pinning 0 just squashes boxes of values far from 0. Matches
         // scatter/line; bars/waterfall keep the default (0-anchored) baseline.
         xAxis: { type: 'value', scale: true, name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } },
-        yAxis: { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(split ? { formatter: (/** @type {string} */ v) => String(v).split(BOX_CAT_SEP)[0] } : {}) }, axisLine: { show: false } },
+        yAxis: { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(catLabelMap ? { formatter: (/** @type {string} */ v) => catLabelMap.get(v) || String(v).split(BOX_CAT_SEP)[0] } : (split ? { formatter: (/** @type {string} */ v) => String(v).split(BOX_CAT_SEP)[0] } : {})) }, axisLine: { show: false } },
         series: [...series, ...pointSeries, ...this._legendTitleSeries(legTitle)]
       };
     }
@@ -3088,7 +3320,7 @@
       // Round numeric tt_field values so they match the y/x formatting instead
       // of dumping full-precision floats; strings/dates pass through.
       const ttVal = (/** @type {any} */ v) =>
-        (typeof v === 'number' ? ddNum(v) : v);
+        (typeof v === 'number' ? ddNum3(v) : v);
 
       const ct = this.config.chart_type;
       const isLine = ct === 'line';
@@ -3608,12 +3840,12 @@
             // the value ("Day: 30"), else it reads as a bare number.
             const head = xCats
               ? (ttRows[0].axisValueLabel ?? String(ttRows[0].value[0]))
-              : this._axisTitle(x) + ': ' + ddNum(ttRows[0].value[0]);
+              : this._axisTitle(x) + ': ' + ddNum3(ttRows[0].value[0]);
             const lines = ttRows.slice(0, TT_ROW_CAP).map((/** @type {any} */ p) => {
               // Without a series split there is one unnamed series and
               // ECharts invents "series0" — label the y column instead.
               const nm = splitCol ? p.seriesName : this._axisTitle(y);
-              return p.marker + nm + ': ' + ddNum(p.value[1]) + ttSuffix(p.value);
+              return p.marker + nm + ': ' + ddNum3(p.value[1]) + ttSuffix(p.value);
             });
             if (ttRows.length > TT_ROW_CAP) {
               lines.push('… +' + (ttRows.length - TT_ROW_CAP) + ' more');
@@ -3669,7 +3901,7 @@
                   /** @type {Array<[string, any]>} */
                   const pairs = [
                     [this._axisTitle(x) || 'X', this._fmtXVal(p.value[0], xAxisType, null)],
-                    [this._axisTitle(y) || 'Y', ddNum(p.value[1])]
+                    [this._axisTitle(y) || 'Y', ddNum3(p.value[1])]
                   ];
                   if (lvl) pairs.push([this._axisTitle(splitCol) || 'Series', lvl]);
                   // Extra tooltip dimensions (packed at slot 2+), listed after
@@ -3748,6 +3980,18 @@
           });
         }
         slot.zoomArmed = armZoom;
+
+        // Restore the surviving drag-zoom window (value-anchored when the
+        // drag carried startValue/endValue, so it stays on the same x range
+        // as new points stream in). Persisting through config was considered
+        // and rejected: a zoom is a viewing gesture, not board state — same
+        // reasoning as the click-filter, opposite of step (9ae1b0e). A slot
+        // that stopped being zoomable (type switch) forgets its window.
+        if (armZoom && slot.zoom) {
+          chart.dispatchAction({ type: 'dataZoom', ...slot.zoom });
+        } else if (!armZoom) {
+          slot.zoom = null;
+        }
       }
 
       this.charts = this._slots.map(s => s.chart).filter(Boolean);
@@ -3864,13 +4108,40 @@
 
         const terms = sortTerms(rows);
 
+        // Lane counts ("Nausea (3)") when count_on covers the axis surface:
+        // distinct count_col per lane when set, else raw event rows. One pass
+        // over THIS panel's rows (already facet-filtered), so no cross-panel
+        // rescan.
+        /** @type {Map<string, any> | null} */
+        let laneCounts = null;
+        if (this._countOn('axis')) {
+          const idCol = this.config.count_col;
+          /** @type {Map<string, any>} */
+          const m = new Map();
+          for (const r of rows) {
+            const t = String(r[y] ?? '');
+            if (idCol) {
+              const id = r[idCol];
+              if (id == null) continue;
+              let s = m.get(t);
+              if (!(s instanceof Set)) { s = new Set(); m.set(t, s); }
+              s.add(id);
+            } else {
+              m.set(t, (m.get(t) || 0) + 1);
+            }
+          }
+          if (idCol) for (const [k, v] of m) m.set(k, v instanceof Set ? v.size : v);
+          laneCounts = m;
+        }
+
         // Extra 20px when the (native, per-panel) legend is on, to keep it
         // visually separated from the x-axis labels. The shared band draws
         // outside the canvas, so faceted panels take the compact height.
         const heightExtra = (color && colorLevels.length > 0 && !sharedLegend)
           ? 100 : 80;
         const hChanged = this._setSlotHeight(slot,
-          Math.max(200, terms.length * 28 + heightExtra) + 'px');
+          Math.max(200,
+            Math.min(PANEL_H_CAP, terms.length * 28) + heightExtra) + 'px');
         const existed = !!slot.chart;
         const chart = this._ensureSlotChart(slot, 'timeline');
 
@@ -4001,7 +4272,8 @@
         }
         seriesArray = [...seriesArray, ...this._legendTitleSeries(legTitle)];
 
-        const gut = this._yGutter(terms);
+        const gut = this._yGutter(laneCounts
+          ? terms.map(t => this._withCount(t, laneCounts)) : terms);
         const option = {
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
           color: (colorScale && colorScale.color && colorLevels.length)
@@ -4067,7 +4339,10 @@
             axisLabel: {
               color: ax.labelColor, fontSize: ax.fontSize,
               align: 'left', margin: gut.margin, width: gut.width,
-              overflow: 'truncate', ellipsis: '\u2026'
+              overflow: 'truncate', ellipsis: '\u2026',
+              ...(laneCounts
+                ? { formatter: (/** @type {any} */ v) => this._withCount(v, laneCounts) }
+                : {})
             },
             axisLine: { show: false },
             axisTick: { show: false },
