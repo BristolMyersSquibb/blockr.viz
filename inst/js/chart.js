@@ -88,7 +88,7 @@
   const ddNum = (v) => {
     if (typeof v !== 'number' || !isFinite(v)) return v;
     if (Number.isInteger(v)) return v.toLocaleString();
-    return Number(v.toPrecision(6)).toLocaleString(undefined, {
+    return Number(v.toPrecision(3)).toLocaleString(undefined, {
       maximumFractionDigits: 4
     });
   };
@@ -3011,8 +3011,18 @@
       // point tuple at slot 2+ (ECharts ignores dims beyond x/y for rendering
       // but keeps them on params.value) and listed after the mapped roles in
       // the tooltip. Bounded to the picked columns — never the whole row.
+      // Drop fields already rendered in the tooltip row itself — x is the
+      // header, y is the value, the split column is the series name — so a
+      // field mapped to one of them isn't printed a second time.
+      const ttShown = new Set(
+        [x, y, seriesCol || color].filter(Boolean).map(String));
       const ttFields = [].concat(this.config.tt_fields || [])
-        .map(String).filter(c => c && c !== 'null' && c !== '(none)');
+        .map(String)
+        .filter(c => c && c !== 'null' && c !== '(none)' && !ttShown.has(c));
+      // Round numeric tt_field values so they match the y/x formatting instead
+      // of dumping full-precision floats; strings/dates pass through.
+      const ttVal = (/** @type {any} */ v) =>
+        (typeof v === 'number' ? ddNum(v) : v);
 
       const ct = this.config.chart_type;
       const isLine = ct === 'line';
@@ -3453,7 +3463,7 @@
             const v = val[2 + i];
             if (v != null && v !== '') {
               parts.push(this._esc(this._axisTitle(ttFields[i]) || ttFields[i]) +
-                ': ' + this._esc(v));
+                ': ' + this._esc(ttVal(v)));
             }
           }
           return parts.length ? '  (' + parts.join(', ') + ')' : '';
@@ -3553,7 +3563,7 @@
                   // Extra tooltip dimensions (packed at slot 2+), listed after
                   // the mapped roles. _rowTooltip drops empties.
                   ttFields.forEach((c, i) =>
-                    pairs.push([this._axisTitle(c) || c, p.value[2 + i]]));
+                    pairs.push([this._axisTitle(c) || c, ttVal(p.value[2 + i])]));
                   return this._rowTooltip(headline, pairs);
                 } },
           // Always set explicitly; leaving legend undefined lets echarts
