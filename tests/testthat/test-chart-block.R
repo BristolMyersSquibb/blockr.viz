@@ -541,3 +541,31 @@ test_that("empty-list state from a pre-#144 DAG paste normalizes back to NULL", 
     "TRT01A"
   )
 })
+
+test_that("a missing aesthetic column leaves the expr a valid pass-through filter", {
+  # An aesthetic (group/color/x/y/...) that was renamed or dropped upstream is
+  # a PRESENTATION problem, surfaced by the JS renderer's in-canvas message --
+  # never an expr-level failure. The emitted expr is only the click/brush
+  # filter, which stays valid and passes the data through; the block must NOT
+  # error, validate() or stop() just because a mapped column is gone. (A broken
+  # *filter* column, by contrast, fails hard on its own at eval time.)
+  df <- data.frame(
+    arm = c("A", "B"), sex = c("F", "M"), age = c(40, 50),
+    stringsAsFactors = FALSE
+  )
+  blk <- new_chart_block(
+    chart_type = "bar", group = "NOPE", value = ".count", func = "count"
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      # Reading the expr must not raise (the old shiny::validate() did).
+      lang <- session$returned$expr()
+      code <- paste(deparse(lang), collapse = " ")
+      expect_match(code, "dplyr::filter", fixed = TRUE)
+      expect_false(grepl("stop(", code, fixed = TRUE))
+    },
+    args = list(x = blk, data = list(data = function() df))
+  )
+})
