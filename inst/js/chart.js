@@ -391,6 +391,12 @@
       this._lastDataRev = null;
       /** @type {any} */
       this._selected = null;
+      // Shared facet legend state: levels toggled off in the HTML band, plus
+      // the item-list key that decides when a re-render resets the toggles.
+      /** @type {Set<string>} */
+      this._legendOff = new Set();
+      /** @type {string | null} */
+      this._legendKey = null;
       /** @type {any} */
       this.theme = null;  // null -> echarts default theme
       // DOM fields are populated by _buildDOM() (called below); declared here so
@@ -404,6 +410,8 @@
       this.popoverEl;
       /** @type {HTMLDivElement} */
       this.chartGrid;
+      /** @type {HTMLDivElement} */
+      this.legendEl;
       /** @type {HTMLDivElement} */
       this.statusEl;
       /** @type {((e: MouseEvent) => void) | null | undefined} */
@@ -750,6 +758,16 @@
       this.chartGrid.className = 'dd-chart-grid';
       this.card.appendChild(this.chartGrid);
 
+      // Shared facet legend band (below the grid, above the caption). Like
+      // the title bands: block-level chrome must sit ONCE outside the facet
+      // grid, or every panel repeats it. Filled by _updateLegendBand();
+      // hidden while empty, so single-facet charts (which keep the native
+      // per-canvas ECharts legend) are untouched.
+      this.legendEl = document.createElement('div');
+      this.legendEl.className = 'dd-legend-band';
+      this.legendEl.style.display = 'none';
+      this.card.appendChild(this.legendEl);
+
       // Caption band (below the chart, above the status footer)
       this.captionEl = document.createElement('div');
       this.captionEl.className = 'dd-chart-caption';
@@ -836,7 +854,12 @@
       const topH = top.length ?
         pad + top.reduce((a, b) => a + b.lines.length * b.lineH, 0) + 6 : pad / 2;
       const capH = cap ? 6 + cap.lines.length * cap.lineH + pad : pad;
-      const H = Math.round(topH + gridR.height + capH);
+      // Shared facet legend band: like the facet labels it lives in the DOM,
+      // so the export replays its on-screen geometry below the grid.
+      const legR = (this.legendEl && this.legendEl.offsetParent !== null)
+        ? this.legendEl.getBoundingClientRect() : null;
+      const legH = legR ? legR.height : 0;
+      const H = Math.round(topH + gridR.height + legH + capH);
 
       // Background: the card's own (theme-following); transparent computed
       // backgrounds fall back to white so the PNG never has holes.
@@ -895,11 +918,44 @@
           ctx.drawImage(p.im, x0, y0, r.width, r.height);
         }
 
+        // Legend band chips at their on-screen positions (x shares the grid's
+        // origin; y is translated below the panels). Off-toggled chips carry
+        // their dimmed opacity into the export.
+        if (legR) {
+          const bandY = topH + gridR.height;
+          /** @param {Element} el2 */
+          const drawLabel = (el2) => {
+            const r2 = el2.getBoundingClientRect();
+            ctx.font = fontOf(el2, '11px');
+            ctx.fillStyle = colorOf(el2, '#333');
+            ctx.textBaseline = 'middle';
+            ctx.fillText(el2.textContent || '',
+                         r2.left - gridR.left,
+                         bandY + (r2.top - legR.top) + r2.height / 2);
+          };
+          for (const child of Array.from(this.legendEl.children)) {
+            const alpha = parseFloat(getComputedStyle(child).opacity || '1');
+            ctx.globalAlpha = Number.isFinite(alpha) ? alpha : 1;
+            const sw = child.querySelector('.dd-legend-swatch');
+            if (sw) {
+              const sr = sw.getBoundingClientRect();
+              ctx.fillStyle = getComputedStyle(sw).backgroundColor || '#999';
+              ctx.fillRect(sr.left - gridR.left, bandY + (sr.top - legR.top),
+                           sr.width, sr.height);
+              if (sw.nextElementSibling) drawLabel(sw.nextElementSibling);
+            } else {
+              drawLabel(child);
+            }
+          }
+          ctx.globalAlpha = 1;
+          ctx.textBaseline = 'top';
+        }
+
         if (cap) {
           ctx.font = cap.font;
           ctx.fillStyle = cap.color;
           ctx.textBaseline = 'top';
-          let cy = topH + gridR.height + 6;
+          let cy = topH + gridR.height + legH + 6;
           for (const ln of cap.lines) { ctx.fillText(ln, pad, cy); cy += cap.lineH; }
         }
 
@@ -927,6 +983,93 @@
       this.titleWrap.style.display = (t || s) ? '' : 'none';
       this.captionEl.textContent = cap;
       this.captionEl.style.display = cap ? '' : 'none';
+    }
+
+    // -- Shared facet legend ---------------------------------------------------
+    //
+    // With several facet panels, a per-canvas ECharts legend repeats under
+    // every subplot — N identical chip rows for ONE color scale. The scale is
+    // global (levels + colors are computed once across facets), so the guide
+    // belongs to the block, not the panel: faceted renders suppress the
+    // per-panel legend (each option keeps a HIDDEN legend component, whose
+    // selection model still drives series visibility) and this band under the
+    // grid shows the chips once, like the title/caption bands. A chip click
+    // fans the toggle out to every panel — so a toggle hides the level in ALL
+    // facets (the ggplot semantics; the native per-panel legend only toggled
+    // its own panel).
+    //
+    // spec.items carry the resolved chip colors (board scale or palette) —
+    // the same lookup every builder uses, so band chips and marks agree.
+    /** @param {{col: string, items: Array<{name: string, color: string}>} | null} spec */
+    _updateLegendBand(spec) {
+      const el = this.legendEl;
+      if (!el) return;
+      if (!spec || !spec.items.length) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        this._legendKey = null;
+        this._legendOff.clear();
+        return;
+      }
+      // Same items -> keep the user's toggles across data pushes; a new
+      // level list is a different legend, so toggles reset.
+      const key = spec.col + '|' + spec.items.map(i => i.name).join('');
+      if (key !== this._legendKey) this._legendOff.clear();
+      this._legendKey = key;
+
+      el.innerHTML = '';
+      // The color variable's name heads the chips, same as the native
+      // legend's title chip (_withLegendTitle) — plain text here.
+      const title = this._legendTitleName(spec.items, spec.col);
+      if (title) {
+        const t = document.createElement('span');
+        t.className = 'dd-legend-title';
+        t.textContent = title;
+        el.appendChild(t);
+      }
+      for (const it of spec.items) {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'dd-legend-chip';
+        chip.classList.toggle('dd-legend-chip-off', this._legendOff.has(it.name));
+        const sw = document.createElement('span');
+        sw.className = 'dd-legend-swatch';
+        sw.style.background = it.color;
+        const lb = document.createElement('span');
+        lb.textContent = it.name;  // textContent: level names are data
+        chip.appendChild(sw);
+        chip.appendChild(lb);
+        chip.addEventListener('click', () => {
+          const off = !this._legendOff.has(it.name);
+          if (off) this._legendOff.add(it.name);
+          else this._legendOff.delete(it.name);
+          chip.classList.toggle('dd-legend-chip-off', off);
+          this._legendApply(it.name, !off);
+        });
+        el.appendChild(chip);
+      }
+      el.style.display = '';
+      // A re-render rebuilt the panels with every series visible; replay the
+      // surviving off-toggles onto the fresh instances.
+      for (const name of this._legendOff) this._legendApply(name, false);
+    }
+
+    // Show/hide one legend level on every facet panel. Levels map to series
+    // names directly, except when the legend shows color levels distinct from
+    // the series split (scatter/line with series != color): there
+    // slot.seriesByColorByVal lists the member series to toggle — the same
+    // fan-out the native legendselectchanged handler uses.
+    /** @param {string} name @param {boolean} on */
+    _legendApply(name, on) {
+      const action = on ? 'legendSelect' : 'legendUnSelect';
+      for (const s of this._slots) {
+        if (!s || !s.chart) continue;
+        const targets = (s.seriesByColorByVal && s.seriesByColorByVal[name]) ||
+          [name];
+        for (const n of targets) {
+          s.chart.dispatchAction({ type: action, name: n });
+        }
+      }
     }
 
     // Axis title for a mapped column: its variable label when present,
@@ -1414,6 +1557,7 @@
     /** Tear down and show a grid-wide empty-state. @param {string} html */
     _showEmpty(html) {
       this._teardownCharts();
+      this._updateLegendBand(null);
       this.chartGrid.innerHTML = html;
       // The status footer lives OUTSIDE the grid, so it survives the empty
       // state — but the family renders that normally refresh it are skipped.
@@ -1844,6 +1988,9 @@
         colorScale, this.config.color);
       const palette = BLOCKR_PALETTE;
       const singleFacet = facets.length === 1;
+      // Faceted: one shared HTML legend under the grid instead of a repeated
+      // per-panel one (see _updateLegendBand).
+      const sharedLegend = !singleFacet;
 
       // Switch grid off for single facet
       this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
@@ -1945,7 +2092,7 @@
           ? '350px'
           : Math.max(350, groups.length * 28 + 60) + 'px');
 
-        const option = this._buildAggregatedOption(facetData, groups, colors, palette, slot.chartDiv.clientWidth, facet);
+        const option = this._buildAggregatedOption(facetData, groups, colors, palette, slot.chartDiv.clientWidth, facet, sharedLegend);
         if (!option) {
           // No chart to draw in this slot (boxplot without a numeric value):
           // drop the instance so the empty-state markup can own the div.
@@ -1965,11 +2112,44 @@
         if (existed && hChanged) chart.resize();
       }
       this.charts = this._slots.map(s => s.chart).filter(Boolean);
+
+      // Shared legend band items. Bar/radar legends show the color levels
+      // (`colors`); a boxplot derives its split levels from the raw data the
+      // same way its builder does. Pie/treemap/waterfall have no legend.
+      /** @type {Array<{name: string, color: string}> | null} */
+      let bandItems = null;
+      if (sharedLegend) {
+        const ct = this.config.chart_type;
+        if (ct === 'boxplot') {
+          const colorCol = this.config.color;
+          const cs = this._scaleFor(colorCol);
+          const levels = colorCol
+            ? this._orderLevels(
+                [...new Set(this.data.map(r => String(r[colorCol] ?? '')))].filter(l => l !== ''),
+                cs, colorCol)
+            : [];
+          bandItems = levels.map((lv, i) => ({
+            name: lv,
+            color: (cs && cs.color && cs.color[lv]) || palette[i % palette.length]
+          }));
+        } else if (ct !== 'pie' && ct !== 'treemap' &&
+                   this._baselineMode() !== 'cumulative' && colors.length) {
+          bandItems = colors.map((c, i) => ({
+            name: c,
+            color: (colorScale && colorScale.color && colorScale.color[c]) ||
+              palette[i % palette.length]
+          }));
+        }
+      }
+      this._updateLegendBand(bandItems && bandItems.length
+        ? { col: this.config.color, items: bandItems }
+        : null);
+
       this._updateHighlight();
     }
 
-    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {number} [plotW] container width in px @param {string} [facet] current facet value ('__all__' when unfaceted) */
-    _buildAggregatedOption(facetData, groups, colors, palette, plotW, facet) {
+    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {number} [plotW] container width in px @param {string} [facet] current facet value ('__all__' when unfaceted) @param {boolean} [sharedLegend] facet grid shows ONE HTML legend band — build a hidden legend (selection model only) and reclaim its grid space */
+    _buildAggregatedOption(facetData, groups, colors, palette, plotW, facet, sharedLegend) {
       const ct = this.config.chart_type;
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
 
@@ -1983,9 +2163,9 @@
         ? 'Count' : this._axisTitle(this.config.value);
 
       if (ct === 'pie') return this._buildPie(facetData, groups, palette);
-      if (ct === 'boxplot') return this._buildBoxplot(groups, palette, ax, plotW, facet);
+      if (ct === 'boxplot') return this._buildBoxplot(groups, palette, ax, plotW, facet, sharedLegend);
       if (ct === 'treemap') return this._buildTreemap(facetData, groups, palette);
-      if (ct === 'radar') return this._buildRadar(facetData, groups, colors, palette, valueTitle, plotW || 0);
+      if (ct === 'radar') return this._buildRadar(facetData, groups, colors, palette, valueTitle, plotW || 0, sharedLegend);
       // Waterfall = a bar with baseline "cumulative": each bar floats from the
       // running cumulative of the bars before it. Sugar for bar +
       // baseline="cumulative" (see _baselineMode). It reuses the same aggregated
@@ -2184,22 +2364,26 @@
         };
       }
       const legendOn = colors.length > 0;
-      const legTitle = legendOn ? this._legendTitleName(colors, this.config.color) : null;
+      // Shared band mode: the HTML band shows the chips, so the panel keeps
+      // only a HIDDEN legend (its selection model is what legendSelect/
+      // UnSelect toggles) and reclaims the reserved bottom row.
+      const nativeLegend = legendOn && !sharedLegend;
+      const legTitle = nativeLegend ? this._legendTitleName(colors, this.config.color) : null;
       const legItems = this._withLegendTitle(colors, this.config.color);
-      const leg = legendOn ? this._legendRows(legItems, plotW || 0) : { extra: 0, scroll: false };
+      const leg = nativeLegend ? this._legendRows(legItems, plotW || 0) : { extra: 0, scroll: false };
       const bottomBase = vertical
-        ? (legendOn ? 55 : 40) + 26 + (xlab ? xlab.bottom : 0)
-        : (legendOn ? 55 : 20) + 26;
+        ? (nativeLegend ? 55 : 40) + 26 + (xlab ? xlab.bottom : 0)
+        : (nativeLegend ? 55 : 20) + 26;
       return {
-        __legendFit: legendOn
+        __legendFit: nativeLegend
           ? { items: legItems, base: bottomBase, key: leg.extra + (leg.scroll ? 'S' : '') }
           : undefined,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip,
-        legend: legendOn
+        legend: nativeLegend
           ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, data: legItems, ...(leg.scroll ? { type: 'scroll' } : {}) }
-          : undefined,
+          : (legendOn ? { show: false, data: colors } : undefined),
         grid: vertical
           ? { left: 55, right: 10, top: 30, bottom: bottomBase + leg.extra }
           : { left: gut.gridLeft, right: 5, top: 30, bottom: bottomBase + leg.extra },
@@ -2352,8 +2536,8 @@
     // output the bar chart stacks. Multi-column spokes (the blockr.echarts
     // radar's `summaries`) are expressed by pivoting longer upstream and
     // mapping the name column to `group`.
-    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {any} valueTitle @param {number} plotW */
-    _buildRadar(facetData, groups, colors, palette, valueTitle, plotW) {
+    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {any} valueTitle @param {number} plotW @param {boolean} [sharedLegend] hidden legend + full-height polygon (see _buildAggregatedOption) */
+    _buildRadar(facetData, groups, colors, palette, valueTitle, plotW, sharedLegend) {
       const colorScale = this._scaleFor(this.config.color);
       // One shared max across spokes keeps shapes comparable (same contract
       // as the blockr.echarts radar). Null cells (no usable value) don't
@@ -2387,16 +2571,17 @@
             c, groups.map(g => cellVal(g, c)),
             (colorScale && colorScale.color && colorScale.color[c])
               || palette[ci % palette.length]));
-      const showLegend = colors.length > 0;
-      const legTitle = showLegend ? this._legendTitleName(colors, this.config.color) : null;
+      const legendOn = colors.length > 0;
+      const nativeLegend = legendOn && !sharedLegend;
+      const legTitle = nativeLegend ? this._legendTitleName(colors, this.config.color) : null;
       const legItems = this._withLegendTitle(colors, this.config.color);
       // Radar legend chips bind to shape names, so the heading is an extra
       // shape with an all-null value: no polygon, no effect on maxVal.
       if (legTitle) data.push({ name: legTitle, value: groups.map(() => null) });
-      const leg = showLegend ? this._legendRows(legItems, plotW) : { extra: 0, scroll: false };
-      const rl = this._radarLayout(leg.extra, plotW, showLegend);
+      const leg = nativeLegend ? this._legendRows(legItems, plotW) : { extra: 0, scroll: false };
+      const rl = this._radarLayout(leg.extra, plotW, nativeLegend);
       return {
-        __legendFit: showLegend
+        __legendFit: nativeLegend
           ? { items: legItems, radar: true, key: leg.extra + (leg.scroll ? 'S' : '') }
           : undefined,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
@@ -2412,9 +2597,9 @@
               return this._esc(g) + ': ' + (v == null ? '–' : ddNum(v));
             }).join('<br>')
         },
-        legend: showLegend
+        legend: nativeLegend
           ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, data: legItems, ...(leg.scroll ? { type: 'scroll' } : {}) }
-          : { show: false },
+          : (legendOn ? { show: false, data: colors } : { show: false }),
         radar: {
           indicator,
           radius: rl.radius,
@@ -2437,8 +2622,8 @@
       };
     }
 
-    /** @param {any[]} groups @param {any[]} palette @param {any} ax @param {number} [plotW] container width in px @param {string} [facet] current facet value ('__all__' when unfaceted) */
-    _buildBoxplot(groups, palette, ax, plotW, facet) {
+    /** @param {any[]} groups @param {any[]} palette @param {any} ax @param {number} [plotW] container width in px @param {string} [facet] current facet value ('__all__' when unfaceted) @param {boolean} [sharedLegend] hidden legend, no bottom reservation (see _buildAggregatedOption) */
+    _buildBoxplot(groups, palette, ax, plotW, facet, sharedLegend) {
       const groupBy = this.config.group;
       const colorCol = this.config.color;
       const facetCol = this.config.facet;
@@ -2599,20 +2784,21 @@
           '<br/>Whiskers: ' + ddNum(lo) + ' \u2013 ' + ddNum(hi);
       };
       const legendOn = split;
-      const legTitle = legendOn ? this._legendTitleName(levels, colorCol) : null;
+      const nativeLegend = legendOn && !sharedLegend;
+      const legTitle = nativeLegend ? this._legendTitleName(levels, colorCol) : null;
       const legItems = this._withLegendTitle(levels, colorCol);
-      const leg = legendOn ? this._legendRows(legItems, plotW || 0) : { extra: 0, scroll: false };
-      const bottomBase = 46 + (legendOn ? 29 : 0);
+      const leg = nativeLegend ? this._legendRows(legItems, plotW || 0) : { extra: 0, scroll: false };
+      const bottomBase = 46 + (nativeLegend ? 29 : 0);
       return {
-        __legendFit: legendOn
+        __legendFit: nativeLegend
           ? { items: legItems, base: bottomBase, key: leg.extra + (leg.scroll ? 'S' : '') }
           : undefined,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip: { trigger: 'item', confine: true, formatter: boxTooltipFmt },
-        legend: legendOn
+        legend: nativeLegend
           ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, data: legItems, ...(leg.scroll ? { type: 'scroll' } : {}) }
-          : undefined,
+          : (legendOn ? { show: false, data: levels } : undefined),
         grid: { left: gut.gridLeft, right: 5, top: 30, bottom: bottomBase + leg.extra },
         xAxis: { type: 'value', name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } },
         yAxis: { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(split ? { formatter: (/** @type {string} */ v) => String(v).split(BOX_CAT_SEP)[0] } : {}) }, axisLine: { show: false } },
@@ -2664,6 +2850,12 @@
             this._scaleFor(splitCol), splitCol)
         : [];
       const singleFacet = facets.length === 1;
+      // Faceted: one shared HTML legend under the grid (see _updateLegendBand).
+      const sharedLegend = !singleFacet;
+      // Band chips, filled inside the facet loop (identical every iteration —
+      // legend levels/colors are data-wide, not per-facet).
+      /** @type {Array<{name: string, color: string}> | null} */
+      let bandItems = null;
 
       // Hard-cap and messaging for trajectory overlays at very high series
       // count (spec §2). Only applies to line charts — scatter stays uncapped.
@@ -3121,9 +3313,13 @@
         };
         // Legend entries are the color levels either way (explicit data when
         // series ≠ color, series names — one per color level — otherwise).
-        const legendLevels = useColorByLegend
+        // In shared-band mode the panel draws no legend at all: the option
+        // keeps a hidden legend component (auto data = every series name)
+        // whose selection model the band's fan-out toggles.
+        const nativeLegend = showLegend && !sharedLegend;
+        const legendLevels = (useColorByLegend && nativeLegend)
           ? colorByLegendData
-          : showLegend
+          : nativeLegend
             ? [...new Set(this.data.map(r => String(r[color] ?? '')))]
             : null;
         // Heading first, so the chips say which variable they split on.
@@ -3139,9 +3335,14 @@
           : { extra: 0, scroll: false };
         /** @type {any} */ (chart).__legendFit = legendItems
           ? { items: legendItems,
-              base: (showLegend ? 78 : 52) + (xlab ? xlab.bottom : 0),
+              base: (nativeLegend ? 78 : 52) + (xlab ? xlab.bottom : 0),
               key: leg.extra + (leg.scroll ? 'S' : '') }
           : undefined;
+        if (sharedLegend && showLegend) {
+          bandItems = (useColorByLegend && colorByLegendData)
+            ? colorByLegendData.map(d => ({ name: d.name, color: d.itemStyle.color }))
+            : seriesLevels.map((lv, i) => ({ name: lv, color: colorForLevel(lv, i) }));
+        }
 
         const option = {
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
@@ -3178,7 +3379,7 @@
           // left / bottom widened so the rotated Y title and the X title
           // (nameGap above) clear the tick labels and the legend; rotated
           // categorical x labels add their text height on top.
-          grid: { left: 66, right: 5, top: 30, bottom: (showLegend ? 78 : 52) + leg.extra + (xlab ? xlab.bottom : 0) },
+          grid: { left: 66, right: 5, top: 30, bottom: (nativeLegend ? 78 : 52) + leg.extra + (xlab ? xlab.bottom : 0) },
           xAxis: xAxisSpec,
           yAxis: yAxisSpec,
           toolbox: mkToolbox(brushable),
@@ -3218,6 +3419,9 @@
       }
 
       this.charts = this._slots.map(s => s.chart).filter(Boolean);
+      this._updateLegendBand(bandItems && bandItems.length
+        ? { col: color, items: bandItems }
+        : null);
       this._capMessage = capMessage;
       this._updateStatus();
     }
@@ -3250,6 +3454,8 @@
         ? [...new Set(this.data.map(r => String(r[facet] ?? '')))].sort()
         : ['__all__'];
       const singleFacet = facets.length === 1;
+      // Faceted: one shared HTML legend under the grid (see _updateLegendBand).
+      const sharedLegend = !singleFacet;
       this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
 
       // Distinct color levels (scale/factor/alpha order). With one named
@@ -3324,9 +3530,11 @@
 
         const terms = sortTerms(rows);
 
-        // Extra 20px when the legend is on, to keep the legend visually
-        // separated from the x-axis labels.
-        const heightExtra = (color && colorLevels.length > 0) ? 100 : 80;
+        // Extra 20px when the (native, per-panel) legend is on, to keep it
+        // visually separated from the x-axis labels. The shared band draws
+        // outside the canvas, so faceted panels take the compact height.
+        const heightExtra = (color && colorLevels.length > 0 && !sharedLegend)
+          ? 100 : 80;
         const hChanged = this._setSlotHeight(slot,
           Math.max(200, terms.length * 28 + heightExtra) + 'px');
         const existed = !!slot.chart;
@@ -3380,12 +3588,13 @@
         // per color level so echarts has a real series to bind each
         // legend chip to — without that, legend items never paint.
         const showLegend = !!color && colorLevels.length > 0;
+        const nativeLegend = showLegend && !sharedLegend;
         // Names only — echarts derives each chip's color from the matching
         // series via option.color cycling.
-        const legTitle = showLegend
+        const legTitle = nativeLegend
           ? this._legendTitleName(colorLevels, color)
           : null;
-        const legendData = showLegend
+        const legendData = nativeLegend
           ? this._withLegendTitle(colorLevels.slice(), color)
           : null;
 
@@ -3512,10 +3721,10 @@
               return this._rowTooltip(headline, pairs);
             }
           },
-          legend: showLegend
+          legend: nativeLegend
             ? { show: true, bottom: 8, type: 'scroll', textStyle: { fontSize: 11 }, data: legendData }
-            : { show: false },
-          grid: { left: gut.gridLeft, right: 10, top: 20, bottom: showLegend ? 78 : 48 },
+            : (showLegend ? { show: false, data: colorLevels } : { show: false }),
+          grid: { left: gut.gridLeft, right: 10, top: 20, bottom: nativeLegend ? 78 : 48 },
           xAxis: xAxisSpec,
           yAxis: {
             type: 'category',
@@ -3538,6 +3747,16 @@
       }
 
       this.charts = this._slots.map(s => s.chart).filter(Boolean);
+      // Chip colors mirror option.color above: board scale, else palette
+      // cycling in level order.
+      this._updateLegendBand((sharedLegend && color && colorLevels.length)
+        ? { col: color,
+            items: colorLevels.map((/** @type {any} */ lvl, /** @type {number} */ i) => ({
+              name: String(lvl),
+              color: (colorScale && colorScale.color && colorScale.color[lvl]) ||
+                palette[i % palette.length]
+            })) }
+        : null);
       this._capMessage = null;
       this._updateStatus();
     }

@@ -514,6 +514,61 @@
   padding: 4px 2px 0;
 }
 
+/* ===== Shared facet legend band ===== */
+/* One legend for the whole facet grid (chart.js _updateLegendBand): faceted
+   renders hide the per-panel ECharts legends and show the color scale's
+   chips ONCE here. Sizes mirror the ECharts legend defaults (25x14 round-
+   rect chip, 11px text) so toggling the facet column on/off doesn't change
+   the legend's look. A chip click toggles its level across every panel. */
+.dd-legend-band {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 4px;
+  padding: 6px 2px 2px;
+}
+
+.dd-legend-title {
+  font-size: 11px;
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-grey-500, #6b7280);
+}
+
+.dd-legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--blockr-grey-700, #333);
+  cursor: pointer;
+}
+
+.dd-legend-chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--blockr-color-focus, rgba(37, 99, 235, 0.45));
+  border-radius: var(--blockr-radius-sm, 4px);
+}
+
+.dd-legend-swatch {
+  width: 25px;
+  height: 14px;
+  border-radius: 4px;
+  flex: none;
+}
+
+/* Toggled-off level: dimmed chip (ECharts greys inactive entries the same
+   way); the dim rides computed opacity so the PNG export inherits it. */
+.dd-legend-chip-off {
+  opacity: 0.35;
+}
+
 /* ===== Status footer ===== */
 .dd-status-footer {
   display: flex;
