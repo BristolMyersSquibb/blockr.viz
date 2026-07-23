@@ -4,7 +4,14 @@
 \alias{write_annotated_xlsx}
 \title{Write an annotated data frame to a styled Excel (.xlsx) file}
 \usage{
-write_annotated_xlsx(x, file, title = NULL, sheet = "Table")
+write_annotated_xlsx(
+  x,
+  file,
+  title = NULL,
+  subtitle = NULL,
+  caption = NULL,
+  sheet = "Table"
+)
 }
 \arguments{
 \item{x}{An annotated data frame, or any object with an \code{\link[=as_annotated_df]{as_annotated_df()}}
@@ -13,6 +20,12 @@ method (e.g. a composer \code{composed_table}), which is coerced first.}
 \item{file}{Path to write the \code{.xlsx} to.}
 
 \item{title}{Optional title, written merged-and-bold above the table.}
+
+\item{subtitle}{Optional subtitle, written merged-and-italic under the
+title (or where the title would sit, when only a subtitle is given).}
+
+\item{caption}{Optional caption / footnote line, written italic below the
+table.}
 
 \item{sheet}{Worksheet name.}
 }

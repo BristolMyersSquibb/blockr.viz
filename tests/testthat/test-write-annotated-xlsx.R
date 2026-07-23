@@ -155,3 +155,39 @@ test_that("write_annotated_xlsx() merges spanner cells for || columns", {
   merges <- regmatches(sheet, gregexpr("<mergeCell ref=\"[^\"]+\"", sheet))[[1]]
   expect_true(any(grepl(":", merges)))   # at least one spanner merge
 })
+
+test_that("write_annotated_xlsx() writes subtitle and caption rows", {
+  skip_if_not_installed("openxlsx")
+  df <- data.frame(
+    .label  = c("Age (years)", "Mean (SD)"),
+    .indent = c(0L, 1L),
+    Placebo = c("", "75.2 (8.6)"),
+    check.names = FALSE
+  )
+  f <- tempfile(fileext = ".xlsx")
+  on.exit(unlink(f), add = TRUE)
+  write_annotated_xlsx(
+    df, f,
+    title = "Demographics", subtitle = "Treatment: Placebo",
+    caption = "N = 86 subjects"
+  )
+  flat <- unlist(openxlsx::read.xlsx(f, colNames = FALSE), use.names = FALSE)
+  expect_true("Demographics" %in% flat)
+  expect_true("Treatment: Placebo" %in% flat)
+  expect_true("N = 86 subjects" %in% flat)
+  # Order: title above subtitle above body; caption after the body.
+  idx <- match(c("Demographics", "Treatment: Placebo", "Mean (SD)",
+                 "N = 86 subjects"), flat)
+  expect_false(anyNA(idx))
+  expect_true(all(diff(idx) > 0))
+})
+
+test_that("subtitle alone and caption alone still write", {
+  skip_if_not_installed("openxlsx")
+  df <- data.frame(.label = "Age", Placebo = "75", check.names = FALSE)
+  f <- tempfile(fileext = ".xlsx")
+  on.exit(unlink(f), add = TRUE)
+  write_annotated_xlsx(df, f, subtitle = "Sub only", caption = "Cap only")
+  flat <- unlist(openxlsx::read.xlsx(f, colNames = FALSE), use.names = FALSE)
+  expect_true(all(c("Sub only", "Cap only") %in% flat))
+})

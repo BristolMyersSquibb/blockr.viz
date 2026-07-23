@@ -1629,11 +1629,13 @@ new_table_block <- function(rowname = NULL,
           filename = function() "table.xlsx",
           content  = function(file) {
             d <- ann_data()
-            # The Excel artifact carries the same resolved title the on-screen
-            # band shows -- the point of a clinical title is the export.
+            # The Excel artifact carries the same resolved text the on-screen
+            # bands show -- the point of a clinical title is the export.
             write_annotated_xlsx(
               d, file,
-              title = resolve_block_title(r_title(), d, auto = r_data_label())
+              title = resolve_block_title(r_title(), d, auto = r_data_label()),
+              subtitle = resolve_block_title(r_subtitle(), d),
+              caption = resolve_block_title(r_caption(), d)
             )
           }
         )
