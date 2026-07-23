@@ -120,15 +120,25 @@ title_state <- function(x) {
   as.character(x)[[1L]]
 }
 
-# The data frame label attribute used for the auto title tier. Read from the
-# block's RAW input: as_plain_df() subsets columns, and base subsetting drops
-# data-frame-level attributes, so the label must be captured before coercion.
-# Non-data-frame inputs (composer tables) are coerced through the annotated-df
-# generic, which is where their label lives.
-input_data_label <- function(d) {
+# The table-level display attributes used for the auto tiers: `label` (the
+# title -- the established display-name attribute), `subtitle` and `caption`.
+# Producers stamp them on the annotated df (e.g. the composer methods recover
+# them from the gt heading / source notes). Read from the block's RAW input:
+# as_plain_df() subsets columns, and base subsetting drops data-frame-level
+# attributes, so they must be captured before that coercion. Non-data-frame
+# inputs (composer tables) are coerced once through the annotated-df generic,
+# which is where their attributes live.
+input_display_attrs <- function(d) {
   if (!is.data.frame(d)) {
     d <- tryCatch(as_annotated_df(d), error = function(e) NULL)
   }
-  lbl <- attr(d, "label", exact = TRUE)
-  if (is.character(lbl) && length(lbl) && nzchar(lbl[[1L]])) lbl[[1L]] else NULL
+  one <- function(which) {
+    v <- attr(d, which, exact = TRUE)
+    if (is.character(v) && length(v) && nzchar(v[[1L]])) v[[1L]] else NULL
+  }
+  list(
+    label    = one("label"),
+    subtitle = one("subtitle"),
+    caption  = one("caption")
+  )
 }

@@ -242,8 +242,12 @@
     title:    { label: 'Title', kind: 'text', ph: 'e.g. AEs by {ARM}',
                 autoValue: (/** @type {any} */ cfg) =>
                   (cfg.title == null && cfg.title_resolved) ? cfg.title_resolved : '' },
-    subtitle: { label: 'Subtitle', kind: 'text', ph: 'e.g. Treatment: {ARM}' },
-    caption:  { label: 'Caption', kind: 'text', ph: 'e.g. N = {n} records' }
+    subtitle: { label: 'Subtitle', kind: 'text', ph: 'e.g. Treatment: {ARM}',
+                autoValue: (/** @type {any} */ cfg) =>
+                  (cfg.subtitle == null && cfg.subtitle_resolved) ? cfg.subtitle_resolved : '' },
+    caption:  { label: 'Caption', kind: 'text', ph: 'e.g. N = {n} records',
+                autoValue: (/** @type {any} */ cfg) =>
+                  (cfg.caption == null && cfg.caption_resolved) ? cfg.caption_resolved : '' }
   };
 
   // The value is one shared slot across every chart: the numeric variable the

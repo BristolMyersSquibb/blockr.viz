@@ -1245,9 +1245,10 @@ table_guidance <- function() {
 #'   the `openxlsx` package.
 #' @param title,subtitle,caption Table text, rendered above (title, subtitle)
 #'   and below (caption) the table. Same three-tier contract as the chart
-#'   block (see [new_chart_block()]): `NULL` (default) = auto -- the title
-#'   falls back to the input's `label` attribute (subtitle/caption have no
-#'   auto tier); `""` = explicitly none; any other string is shown with
+#'   block (see [new_chart_block()]): `NULL` (default) = auto -- each slot
+#'   falls back to the input's table-level display attribute (`label` /
+#'   `subtitle` / `caption`; composer tables carry the gt heading and source
+#'   notes there); `""` = explicitly none; any other string is shown with
 #'   `{...}` tokens resolved against the CURRENT data on every render
 #'   (`{col}`, `{label(col)}`, `{n}`, `{n_distinct(col)}`).
 #' @param ctrl_target Character(1), beta. Block id of a value filter block on
@@ -1390,11 +1391,12 @@ new_table_block <- function(rowname = NULL,
         # block expr, which coerces the same way) does the explaining.
         ann_data <- shiny::reactive(as_annotated_df(data()))
 
-        # Auto-title source: the input's label attribute (as_annotated_df is
-        # a passthrough for plain data frames, so their attributes survive;
-        # composer tables carry the label on the coerced frame).
-        r_data_label <- shiny::reactive({
-          input_data_label(tryCatch(ann_data(), error = function(e) NULL))
+        # Auto-tier sources: the input's label / subtitle / caption attributes
+        # (as_annotated_df is a passthrough for plain data frames, so their
+        # attributes survive; composer tables carry them on the coerced frame,
+        # recovered from the gt heading + source notes).
+        r_data_titles <- shiny::reactive({
+          input_display_attrs(tryCatch(ann_data(), error = function(e) NULL))
         })
 
         shiny::observeEvent(input$drilldown_table_block_action, {
@@ -1629,13 +1631,14 @@ new_table_block <- function(rowname = NULL,
           filename = function() "table.xlsx",
           content  = function(file) {
             d <- ann_data()
+            auto <- r_data_titles()
             # The Excel artifact carries the same resolved text the on-screen
             # bands show -- the point of a clinical title is the export.
             write_annotated_xlsx(
               d, file,
-              title = resolve_block_title(r_title(), d, auto = r_data_label()),
-              subtitle = resolve_block_title(r_subtitle(), d),
-              caption = resolve_block_title(r_caption(), d)
+              title = resolve_block_title(r_title(), d, auto = auto$label),
+              subtitle = resolve_block_title(r_subtitle(), d, auto = auto$subtitle),
+              caption = resolve_block_title(r_caption(), d, auto = auto$caption)
             )
           }
         )
@@ -1674,16 +1677,17 @@ new_table_block <- function(rowname = NULL,
           # DROPPED before serializing: dt_payload_json has no null="null",
           # so a NULL would arrive as {} and break the JS null checks.
           titled <- function(p) {
+            auto <- r_data_titles()
             tl <- list(
-              title    = resolve_block_title(r_title(), d, auto = r_data_label()),
-              subtitle = resolve_block_title(r_subtitle(), d),
-              caption  = resolve_block_title(r_caption(), d),
+              title    = resolve_block_title(r_title(), d, auto = auto$label),
+              subtitle = resolve_block_title(r_subtitle(), d, auto = auto$subtitle),
+              caption  = resolve_block_title(r_caption(), d, auto = auto$caption),
               title_state    = r_title(),
               subtitle_state = r_subtitle(),
-              caption_state  = r_caption(),
-              # What the gear shows (and lets the user clear) while the
-              # title state is auto: the inherited data label.
-              title_auto = resolve_block_title(NULL, d, auto = r_data_label())
+              caption_state  = r_caption()
+              # No *_auto fields: while a slot's state is null (auto), its
+              # resolved value above IS the inherited text -- the gear derives
+              # the clearable auto content from exactly that (readGearState).
             )
             p$titles <- tl[!vapply(tl, is.null, logical(1L))]
             p

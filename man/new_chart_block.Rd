@@ -179,9 +179,10 @@ bar is a relative delta).}
 
 \item{title, subtitle, caption}{Chart text, rendered above (title, subtitle)
 and below (caption) the chart. Each is one of three tiers: \code{NULL}
-(default) = auto -- the title falls back to the input data frame's
-\code{label} attribute when one is present (subtitle/caption have no auto
-tier); \code{""} = explicitly none (suppresses the auto title); any other
+(default) = auto -- each slot falls back to the input data frame's
+table-level display attribute (\code{label} for the title, \code{subtitle},
+\code{caption}) when one is present; \code{""} = explicitly none (suppresses the
+auto text); any other
 string = shown, with \code{{...}} tokens resolved against the CURRENT data on
 every render: \code{{col}} -> the distinct values of that column collapsed
 with ", " (an upstream value filter on ARM makes \code{{ARM}} read the

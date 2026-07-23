@@ -77,12 +77,27 @@ test_that("title_state keeps '' (off) and heals list() to NULL", {
   expect_equal(title_state("x {y}"), "x {y}")
 })
 
-test_that("input_data_label reads the label attribute from raw input", {
+test_that("input_display_attrs reads label, subtitle and caption from raw input", {
   d <- data.frame(x = 1)
-  expect_null(input_data_label(d))
+  expect_equal(
+    input_display_attrs(d),
+    list(label = NULL, subtitle = NULL, caption = NULL)
+  )
   attr(d, "label") <- "Demographics"
-  expect_equal(input_data_label(d), "Demographics")
-  expect_null(input_data_label(NULL))
+  attr(d, "subtitle") <- "Safety population"
+  attr(d, "caption") <- "Source: ADSL"
+  expect_equal(
+    input_display_attrs(d),
+    list(label = "Demographics", subtitle = "Safety population",
+         caption = "Source: ADSL")
+  )
+  expect_equal(
+    input_display_attrs(NULL),
+    list(label = NULL, subtitle = NULL, caption = NULL)
+  )
+  # Empty strings do not count as present.
+  attr(d, "subtitle") <- ""
+  expect_null(input_display_attrs(d)$subtitle)
 })
 
 test_that("chart block round-trips the three title tiers through state", {

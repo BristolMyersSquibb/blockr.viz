@@ -91,9 +91,10 @@
 #'   bar is a relative delta).
 #' @param title,subtitle,caption Chart text, rendered above (title, subtitle)
 #'   and below (caption) the chart. Each is one of three tiers: `NULL`
-#'   (default) = auto -- the title falls back to the input data frame's
-#'   `label` attribute when one is present (subtitle/caption have no auto
-#'   tier); `""` = explicitly none (suppresses the auto title); any other
+#'   (default) = auto -- each slot falls back to the input data frame's
+#'   table-level display attribute (`label` for the title, `subtitle`,
+#'   `caption`) when one is present; `""` = explicitly none (suppresses the
+#'   auto text); any other
 #'   string = shown, with `{...}` tokens resolved against the CURRENT data on
 #'   every render: `{col}` -> the distinct values of that column collapsed
 #'   with ", " (an upstream value filter on ARM makes `{ARM}` read the
@@ -305,11 +306,12 @@ new_chart_block <- function(
         # ann_data reactive.
         plain_data <- shiny::reactive(coerce_plain_df(data()))
 
-        # Auto-title source: the input's label attribute, read from the RAW
-        # data -- as_plain_df() subsets columns and base subsetting drops
-        # data-frame-level attributes (see input_data_label).
-        r_data_label <- shiny::reactive({
-          input_data_label(tryCatch(data(), error = function(e) NULL))
+        # Auto-tier sources: the input's label / subtitle / caption
+        # attributes, read from the RAW data -- as_plain_df() subsets columns
+        # and base subsetting drops data-frame-level attributes (see
+        # input_display_attrs).
+        r_data_titles <- shiny::reactive({
+          input_display_attrs(tryCatch(data(), error = function(e) NULL))
         })
 
         # Config state (orthogonal aesthetics)
@@ -554,10 +556,14 @@ new_chart_block <- function(
               subtitle = r_subtitle(),
               caption = r_caption(),
               title_resolved = resolve_block_title(
-                r_title(), d, auto = r_data_label()
+                r_title(), d, auto = r_data_titles()$label
               ),
-              subtitle_resolved = resolve_block_title(r_subtitle(), d),
-              caption_resolved = resolve_block_title(r_caption(), d),
+              subtitle_resolved = resolve_block_title(
+                r_subtitle(), d, auto = r_data_titles()$subtitle
+              ),
+              caption_resolved = resolve_block_title(
+                r_caption(), d, auto = r_data_titles()$caption
+              ),
               smoother_series = r_smoother_series(),
               lo = r_lo(), hi = r_hi(),
               # Board scale map, resolved for the chart type's colored role

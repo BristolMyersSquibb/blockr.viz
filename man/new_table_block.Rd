@@ -95,9 +95,10 @@ the \code{openxlsx} package.}
 
 \item{title, subtitle, caption}{Table text, rendered above (title, subtitle)
 and below (caption) the table. Same three-tier contract as the chart
-block (see \code{\link[=new_chart_block]{new_chart_block()}}): \code{NULL} (default) = auto -- the title
-falls back to the input's \code{label} attribute (subtitle/caption have no
-auto tier); \code{""} = explicitly none; any other string is shown with
+block (see \code{\link[=new_chart_block]{new_chart_block()}}): \code{NULL} (default) = auto -- each slot
+falls back to the input's table-level display attribute (\code{label} /
+\code{subtitle} / \code{caption}; composer tables carry the gt heading and source
+notes there); \code{""} = explicitly none; any other string is shown with
 \code{{...}} tokens resolved against the CURRENT data on every render
 (\code{{col}}, \code{{label(col)}}, \code{{n}}, \code{{n_distinct(col)}}).}
 

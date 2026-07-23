@@ -677,8 +677,14 @@
                 autoValue: function (/** @type {any} */ cfg) {
                   return (cfg.title == null && cfg.title_auto) ? cfg.title_auto : "";
                 } },
-    subtitle: { label: "Subtitle", kind: "text", ph: "e.g. Treatment: {ARM}" },
-    caption:  { label: "Caption", kind: "text", ph: "e.g. N = {n} records" }
+    subtitle: { label: "Subtitle", kind: "text", ph: "e.g. Treatment: {ARM}",
+                autoValue: function (/** @type {any} */ cfg) {
+                  return (cfg.subtitle == null && cfg.subtitle_auto) ? cfg.subtitle_auto : "";
+                } },
+    caption:  { label: "Caption", kind: "text", ph: "e.g. N = {n} records",
+                autoValue: function (/** @type {any} */ cfg) {
+                  return (cfg.caption == null && cfg.caption_auto) ? cfg.caption_auto : "";
+                } }
   });
   // Variant A: Aggregation, Drill-down, Coloring and Row color are each a
   // checkbox capability section (off by default, revealing their controls when
@@ -827,15 +833,23 @@
     // Table text state rides on the PAYLOAD, not the table attributes: the
     // gear needs null (auto) vs "" (explicitly none), and an HTML attribute
     // cannot say null. Absent keys (R drops NULLs before serializing) read
-    // back as null via the undefined check.
+    // back as null via the undefined check. While a slot's state is null,
+    // its RESOLVED value is by construction the inherited auto text (the
+    // data's label/subtitle/caption attribute) — that becomes the gear
+    // input's clearable content (role autoValue).
     var rootEl = table.closest ? table.closest("[data-dt-elem-id]") : null;
     var eid = rootEl ? rootEl.getAttribute("data-dt-elem-id") : null;
     var stored = (eid && payloadStore[eid] && payloadStore[eid].payload) || null;
     var tl = (stored && stored.titles) || {};
-    cfg.title    = (tl.title_state    === undefined) ? null : tl.title_state;
-    cfg.subtitle = (tl.subtitle_state === undefined) ? null : tl.subtitle_state;
-    cfg.caption  = (tl.caption_state  === undefined) ? null : tl.caption_state;
-    cfg.title_auto = tl.title_auto || "";
+    /** @param {string} slot */
+    function tlState(slot) {
+      var v = tl[slot + "_state"];
+      cfg[slot] = (v === undefined) ? null : v;
+      cfg[slot + "_auto"] = (v === undefined && tl[slot]) ? tl[slot] : "";
+    }
+    tlState("title");
+    tlState("subtitle");
+    tlState("caption");
     return { cols: cols, cfg: cfg };
   }
 

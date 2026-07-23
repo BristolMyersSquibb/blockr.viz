@@ -8,8 +8,15 @@
 #' optional `_label` display companions, `.indent` (extra display depth,
 #' fallback dialect), `.strong` / `.emph` (emphasis); two-level column
 #' spanners are encoded in the column name as `Top||Leaf`, and the column /
-#' table labels carry the headers / title. Section headers are synthesized by
-#' the renderer from grouping-value runs -- they are never rows of the frame.
+#' table labels carry the headers / title. Three optional table-level
+#' attributes carry display text: `label` (the title -- the established R
+#' display-name attribute), `subtitle` and `caption`. Producers stamp them
+#' (the composer methods recover them from the gt heading and source notes)
+#' and the table / chart blocks use them as the auto tier of their
+#' `title` / `subtitle` / `caption` state -- shown until the user overrides
+#' or suppresses each per block, and carried into the Excel export. Section
+#' headers are synthesized by the renderer from grouping-value runs -- they
+#' are never rows of the frame.
 #' It is what the blockr.viz table renderer ([new_table_block()] /
 #' [html_table()]) consumes and what [summary_table()] produces. The full
 #' contract lives in the blockr.design spec
