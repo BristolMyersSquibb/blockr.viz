@@ -3027,7 +3027,11 @@
           ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, data: legItems, ...(leg.scroll ? { type: 'scroll' } : {}) }
           : (legendOn ? { show: false, data: levels } : undefined),
         grid: { left: gut.gridLeft, right: 5, top: 30, bottom: bottomBase + leg.extra },
-        xAxis: { type: 'value', name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } },
+        // scale:true fits the axis to the data instead of forcing 0 in: a
+        // boxplot reads by position/spread, not length-from-zero (unlike a
+        // bar), so pinning 0 just squashes boxes of values far from 0. Matches
+        // scatter/line; bars/waterfall keep the default (0-anchored) baseline.
+        xAxis: { type: 'value', scale: true, name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } },
         yAxis: { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(split ? { formatter: (/** @type {string} */ v) => String(v).split(BOX_CAT_SEP)[0] } : {}) }, axisLine: { show: false } },
         series: [...series, ...pointSeries, ...this._legendTitleSeries(legTitle)]
       };
