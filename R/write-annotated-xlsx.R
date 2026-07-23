@@ -29,12 +29,17 @@
 #'   method (e.g. a composer `composed_table`), which is coerced first.
 #' @param file Path to write the `.xlsx` to.
 #' @param title Optional title, written merged-and-bold above the table.
+#' @param subtitle Optional subtitle, written merged-and-italic under the
+#'   title (or where the title would sit, when only a subtitle is given).
+#' @param caption Optional caption / footnote line, written italic below the
+#'   table.
 #' @param sheet Worksheet name.
 #'
 #' @return `file`, invisibly.
 #' @seealso [as_annotated_df()], [new_table_block()]
 #' @export
-write_annotated_xlsx <- function(x, file, title = NULL, sheet = "Table") {
+write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
+                                 caption = NULL, sheet = "Table") {
   if (!requireNamespace("openxlsx", quietly = TRUE)) {
     stop("write_annotated_xlsx() needs the 'openxlsx' package.", call. = FALSE)
   }
@@ -81,15 +86,30 @@ write_annotated_xlsx <- function(x, file, title = NULL, sheet = "Table") {
   openxlsx::addWorksheet(wb, sheet)
 
   r <- 1L
-  # Title (optional): merged across the table, bold, centred.
+  # Title / subtitle (optional): each merged across the table, title bold and
+  # centred, subtitle italic under it; one blank spacer row after the pair
+  # (title alone keeps the historical title-row + spacer layout).
+  head_rows <- 0L
   if (!is.null(title) && nzchar(title)) {
     openxlsx::writeData(wb, sheet, title, startRow = r, startCol = 1L)
     openxlsx::mergeCells(wb, sheet, cols = seq_len(n_col), rows = r)
     openxlsx::addStyle(wb, sheet, openxlsx::createStyle(
       textDecoration = "bold", halign = "center", fontSize = 12),
       rows = r, cols = 1L)
-    r <- r + 2L
+    r <- r + 1L
+    head_rows <- head_rows + 1L
   }
+  if (!is.null(subtitle) && nzchar(subtitle)) {
+    openxlsx::writeData(wb, sheet, subtitle, startRow = r, startCol = 1L)
+    openxlsx::mergeCells(wb, sheet, cols = seq_len(n_col), rows = r)
+    openxlsx::addStyle(wb, sheet, openxlsx::createStyle(
+      textDecoration = "italic", halign = "center", fontSize = 11,
+      fontColour = "#6b7280"),
+      rows = r, cols = 1L)
+    r <- r + 1L
+    head_rows <- head_rows + 1L
+  }
+  if (head_rows > 0L) r <- r + 1L
 
   header_style <- openxlsx::createStyle(
     textDecoration = "bold", halign = "center", valign = "bottom",
@@ -218,6 +238,19 @@ write_annotated_xlsx <- function(x, file, title = NULL, sheet = "Table") {
       openxlsx::addStyle(wb, sheet, num_bold, rows = data_xl[bold_row],
                          cols = data_cols_xl, gridExpand = TRUE)
     }
+  }
+
+  # Caption (optional): an italic footnote line one blank row below the body,
+  # left-aligned in the stub column (a footnote reads from the margin, unlike
+  # the centred title).
+  if (!is.null(caption) && nzchar(caption)) {
+    cap_r <- r + total_out + 1L
+    openxlsx::writeData(wb, sheet, caption, startRow = cap_r, startCol = 1L)
+    openxlsx::mergeCells(wb, sheet, cols = seq_len(n_col), rows = cap_r)
+    openxlsx::addStyle(wb, sheet, openxlsx::createStyle(
+      textDecoration = "italic", halign = "left", fontSize = 9,
+      fontColour = "#6b7280"),
+      rows = cap_r, cols = 1L)
   }
 
   openxlsx::setColWidths(wb, sheet, cols = 1L, widths = 34)

@@ -109,30 +109,22 @@
   // mode silently fails to engage and drag-to-filter doesn't work. The
   // brush icons only render on charts that actually have a `brush`
   // component, so this is inert for bar/pie/treemap/boxplot/gantt.
-  // Base toolbox WITHOUT brush — bar/pie/treemap/boxplot/gantt and any
-  // non-brushable scatter/line (categorical x, or series set) get no
-  // brush icon, so the button is never a dead control.
-  const TOOLBOX = {
-    show: true,
-    right: 8,
-    top: 4,
-    itemSize: 11,
-    feature: {
-      saveAsImage: { title: 'Save', pixelRatio: 2 }
-    },
-    iconStyle: { borderColor: '#bbb' }
-  };
-
-  // Toolbox WITH the brush feature — only used when the chart actually
-  // wires a `brush` component + brushSelected handler (brushable).
+  // The toolbox now carries ONLY the brush icons (image download moved to a
+  // design-system button in the gear header — see _buildDOM/_downloadImage;
+  // the in-canvas save could neither include the HTML title bands nor be a
+  // single control on a facet grid). Non-brushable charts get no toolbox at
+  // all, so the corner is empty instead of holding a dead control.
   /** @param {boolean} withBrush */
   const mkToolbox = (withBrush) => withBrush
     ? {
-        ...TOOLBOX,
-        feature: { ...TOOLBOX.feature,
-          brush: { type: ['rect', 'lineX', 'clear'] } }
+        show: true,
+        right: 8,
+        top: 4,
+        itemSize: 11,
+        feature: { brush: { type: ['rect', 'lineX', 'clear'] } },
+        iconStyle: { borderColor: '#bbb' }
       }
-    : TOOLBOX;
+    : undefined;
 
   // Aggregation vocabulary + the group/value/func role triple + the
   // value-follows-agg reconcile now live in the shared drilldown-agg.js so the
@@ -665,6 +657,34 @@
         e.stopPropagation();
         this._togglePopover();
       });
+      // Image download: the table's design-system download chrome
+      // (.blockr-dl-xlsx — quiet icon button, same inline SVG), one per
+      // BLOCK so a facet grid gets a single control. An <a role=button>
+      // because the shared styles are element-qualified on the anchor.
+      this.dlBtn = document.createElement('a');
+      this.dlBtn.className = 'blockr-dl-xlsx dd-chart-dl';
+      this.dlBtn.setAttribute('role', 'button');
+      this.dlBtn.setAttribute('tabindex', '0');
+      this.dlBtn.title = 'Download as image';
+      this.dlBtn.setAttribute('aria-label', 'Download as image');
+      this.dlBtn.innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
+        'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" ' +
+        'stroke-linejoin="round">' +
+        '<path d="M8 2.5 V10 M4.8 7 L8 10.2 L11.2 7"/>' +
+        '<path d="M2.5 11.5 V12.8 A1.2 1.2 0 0 0 3.7 14 H12.3 ' +
+        'A1.2 1.2 0 0 0 13.5 12.8 V11.5"/></svg>';
+      this.dlBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this._downloadImage();
+      });
+      this.dlBtn.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        this._downloadImage();
+      });
+      gearHeader.appendChild(this.dlBtn);
       gearHeader.appendChild(this.gearBtn);
       this.card.appendChild(gearHeader);
 
@@ -718,6 +738,153 @@
       this.card.appendChild(this.statusEl);
       this._updateStatus();
       this._updateTitles();
+    }
+
+    // -- Image download -------------------------------------------------------
+    //
+    // The stock toolbox saveAsImage snapshots only the ECharts canvas, so the
+    // HTML title / subtitle / caption bands (and the facet labels) would be
+    // missing from the artifact — and a facet grid would offer one dead-end
+    // button per panel. Instead ONE design-system button in the gear header
+    // (the table's .blockr-dl-xlsx chrome) composes the full block on an
+    // offscreen canvas: title block, every facet panel at its on-screen grid
+    // position (facet labels redrawn), caption. Purely download-time — reads
+    // the canvases via getDataURL and never touches the chart option, config
+    // wire or state.
+    _downloadImage() {
+      const slots = (this._slots || []).filter(s => s && s.chart);
+      if (!slots.length || !this.chartGrid) return;
+      const gridR = this.chartGrid.getBoundingClientRect();
+      if (!gridR.width || !gridR.height) return;
+      const pr = 2;
+      const pad = 12;
+
+      // Text styles come from the live band elements' computed styles, so the
+      // export matches the on-screen typography and follows the theme (the
+      // values resolve even while a band is display:none).
+      const fontOf = (el, fb) => {
+        const cs = el ? getComputedStyle(el) : null;
+        if (!cs || !cs.fontSize) return fb + ' ' + BLOCKR_FONT;
+        const style = cs.fontStyle === 'italic' ? 'italic ' : '';
+        return style + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+      };
+      const colorOf = (el, fb) => {
+        const cs = el ? getComputedStyle(el) : null;
+        return (cs && cs.color) || fb;
+      };
+      const cfg = this.config || {};
+      const blocksTop = [
+        { text: cfg.title_resolved || '',
+          font: fontOf(this.titleEl, '600 15px'),
+          color: colorOf(this.titleEl, '#1f2937') },
+        { text: cfg.subtitle_resolved || '',
+          font: fontOf(this.subtitleEl, '13px'),
+          color: colorOf(this.subtitleEl, '#6b7280') }
+      ].filter(b => b.text);
+      const capBlock = (cfg.caption_resolved || '') && {
+        text: cfg.caption_resolved,
+        font: fontOf(this.captionEl, 'italic 11px'),
+        color: colorOf(this.captionEl, '#6b7280')
+      };
+
+      const W = Math.round(gridR.width);
+      const DC = /** @type {any} */ (DrilldownChart);
+      const meas = DC._measureCtx ||
+        (DC._measureCtx = document.createElement('canvas').getContext('2d'));
+      const wrapLines = (b) => {
+        meas.font = b.font;
+        const words = String(b.text).split(/\s+/);
+        const lines = [];
+        let cur = '';
+        for (const w of words) {
+          const cand = cur ? cur + ' ' + w : w;
+          if (meas.measureText(cand).width > W - 2 * pad && cur) {
+            lines.push(cur); cur = w;
+          } else {
+            cur = cand;
+          }
+        }
+        if (cur) lines.push(cur);
+        const px = parseFloat((b.font.match(/(\d+(?:\.\d+)?)px/) || [0, 13])[1]);
+        return { lines, lineH: Math.round(px * 1.4) };
+      };
+      const top = blocksTop.map(b => ({ ...b, ...wrapLines(b) }));
+      const cap = capBlock ? { ...capBlock, ...wrapLines(capBlock) } : null;
+      const topH = top.length ?
+        pad + top.reduce((a, b) => a + b.lines.length * b.lineH, 0) + 6 : pad / 2;
+      const capH = cap ? 6 + cap.lines.length * cap.lineH + pad : pad;
+      const H = Math.round(topH + gridR.height + capH);
+
+      // Background: the card's own (theme-following); transparent computed
+      // backgrounds fall back to white so the PNG never has holes.
+      let bg = getComputedStyle(this.card).backgroundColor;
+      if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') bg = '#ffffff';
+
+      // Panel bitmaps load async (Image from data URL); compose when all are in.
+      const jobs = slots.map(s => new Promise((resolve) => {
+        const im = new Image();
+        im.onload = () => resolve({ im, slot: s });
+        im.onerror = () => resolve(null);
+        im.src = s.chart.getDataURL({
+          pixelRatio: pr,
+          backgroundColor: 'transparent',
+          // The button must not appear in its own artifact (the stock
+          // saveAsImage excludes itself the same way).
+          excludeComponents: ['toolbox']
+        });
+      }));
+      Promise.all(jobs).then(panels => {
+        const canvas = document.createElement('canvas');
+        canvas.width = W * pr;
+        canvas.height = H * pr;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.scale(pr, pr);
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+
+        let y = pad;
+        for (const b of top) {
+          ctx.font = b.font;
+          ctx.fillStyle = b.color;
+          ctx.textBaseline = 'top';
+          for (const ln of b.lines) { ctx.fillText(ln, pad, y); y += b.lineH; }
+        }
+        y = topH;
+
+        for (const p of panels) {
+          if (!p) continue;
+          const r = p.slot.chartDiv.getBoundingClientRect();
+          const x0 = r.left - gridR.left;
+          const y0 = y + (r.top - gridR.top);
+          // Facet label: redraw the DOM label's text at its on-screen spot.
+          if (p.slot.labelEl) {
+            const lr = p.slot.labelEl.getBoundingClientRect();
+            ctx.font = fontOf(p.slot.labelEl, '600 11px');
+            ctx.fillStyle = colorOf(p.slot.labelEl, '#6b7280');
+            ctx.textBaseline = 'top';
+            ctx.textAlign = 'center';
+            ctx.fillText(p.slot.labelEl.textContent || '',
+                         lr.left - gridR.left + lr.width / 2,
+                         y + (lr.top - gridR.top) + 2);
+            ctx.textAlign = 'left';
+          }
+          ctx.drawImage(p.im, x0, y0, r.width, r.height);
+        }
+
+        if (cap) {
+          ctx.font = cap.font;
+          ctx.fillStyle = cap.color;
+          ctx.textBaseline = 'top';
+          let cy = topH + gridR.height + 6;
+          for (const ln of cap.lines) { ctx.fillText(ln, pad, cy); cy += cap.lineH; }
+        }
+
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = 'chart.png';
+        a.click();
+      });
     }
 
     // Fill / hide the title and caption bands from the RESOLVED text (R
@@ -1965,7 +2132,6 @@
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip,
-        toolbox: TOOLBOX,
         legend: legendOn
           ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, data: legItems, ...(leg.scroll ? { type: 'scroll' } : {}) }
           : undefined,
@@ -2073,7 +2239,6 @@
               (p.value == null ? '–' : ddNum(p.value));
           }
         },
-        toolbox: TOOLBOX,
         legend: { show: false },
         grid: { left: 55, right: 10, top: 30, bottom: 40 + 26 + xlab.bottom },
         xAxis: catAxis,
@@ -2101,7 +2266,7 @@
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n, p.percent)) }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: 10, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n, p.percent)) }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: 10, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
     }
 
     /** @param {any[]} facetData @param {any[]} groups @param {any[]} palette */
@@ -2113,7 +2278,7 @@
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: TOOLBOX, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: (/** @type {any} */ p) => p.name + '\n' + ddNum(Number(p.value)) }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: (/** @type {any} */ p) => p.name + '\n' + ddNum(Number(p.value)) }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
     }
 
     // Radar = an aggregated chart in polar coords: the group levels are the
@@ -2171,7 +2336,6 @@
           : undefined,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
-        toolbox: TOOLBOX,
         tooltip: {
           trigger: 'item',
           confine: true,
@@ -2380,7 +2544,6 @@
           : undefined,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
-        toolbox: TOOLBOX,
         tooltip: { trigger: 'item', confine: true, formatter: boxTooltipFmt },
         legend: legendOn
           ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, data: legItems, ...(leg.scroll ? { type: 'scroll' } : {}) }
@@ -3253,7 +3416,6 @@
           legend: showLegend
             ? { show: true, bottom: 8, type: 'scroll', textStyle: { fontSize: 11 }, data: legendData }
             : { show: false },
-          toolbox: TOOLBOX,
           grid: { left: gut.gridLeft, right: 10, top: 20, bottom: showLegend ? 78 : 48 },
           xAxis: xAxisSpec,
           yAxis: {

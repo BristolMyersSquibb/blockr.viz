@@ -1020,6 +1020,18 @@
 
     root.insertBefore(header, root.firstChild);
     root.insertBefore(pop, header.nextSibling);
+    // One control row, chart-style: the chrome's search + download MOVE UP
+    // into the gear row, sitting LEFT of the gear. The gear itself stays in
+    // its canonical top-right spot (the cross-block anchor — every block
+    // puts its gear there), which is why the toolbar comes to the gear and
+    // not the other way around. The vacated chrome header row would leave a
+    // stray padded border, so it is hidden once emptied.
+    var toolbar = root.querySelector(".blockr-html-table-toolbar");
+    if (toolbar) {
+      header.insertBefore(toolbar, btn);
+      var hdrRow = root.querySelector(".blockr-html-table-header");
+      if (hdrRow) hdrRow.style.display = "none";
+    }
     // Restore the remembered open state across chrome rebuilds (the state
     // was parsed just above, so no refresh needed here).
     if (bandOpen[elemId]) openPop();

@@ -594,3 +594,51 @@
   box-shadow: 0 0 0 3px var(--blockr-color-focus, rgba(37, 99, 235, 0.45));
   border-radius: 6px;
 }
+
+/* ===== Image download button (gear header) ===== */
+/* The table's .blockr-dl-xlsx download chrome, restated here because a
+   chart-only board never loads the table dep's CSS (html-table.R). The
+   .dd-chart-dl compound selector also outranks the table rules where both
+   sheets load, so the 26px sizing (matching the gear button beside it)
+   wins over the table toolbar's 30px. */
+.dd-card .blockr-gear-header {
+  gap: 6px;
+}
+
+.dd-card a.blockr-dl-xlsx.dd-chart-dl {
+  appearance: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 4px;
+  background-color: var(--blockr-color-bg-input, #f9fafb);
+  color: var(--blockr-grey-500, #6b7280);
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: none;
+  transition: border-color 0.12s, background-color 0.12s, color 0.12s;
+}
+
+.dd-card a.blockr-dl-xlsx.dd-chart-dl:hover {
+  background-color: #ffffff;
+  border-color: var(--blockr-grey-300, #d1d5db);
+  color: var(--blockr-color-text-primary, #374151);
+  text-decoration: none;
+}
+
+.dd-card a.blockr-dl-xlsx.dd-chart-dl:focus-visible {
+  outline: none;
+  border-color: var(--blockr-color-primary, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.dd-card a.blockr-dl-xlsx.dd-chart-dl svg {
+  display: block;
+}
