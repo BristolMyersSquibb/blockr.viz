@@ -716,22 +716,6 @@ new_chart_block <- function(
         # substituted by blockr.core with the upstream block's id at eval
         # time -- so the no-filter branch passes the upstream data frame
         # straight through, keeping the lazy eval chain intact.
-        # Configured aesthetic columns that must exist in the upstream data.
-        # If an upstream block renames/drops a mapped column, the chart would
-        # otherwise read NA silently and mis-render -- surface a clear invalid
-        # state instead. `.count` is the synthetic count metric (no column),
-        # `drill = "auto"` is a sentinel resolved at click time from the clicked
-        # shape (not a literal column), and the runtime sort_by sentinels are
-        # not data columns either. The data passes through unchanged, so this
-        # only guards the JS-side mapping.
-        mapped_cols <- function(d) {
-          drill <- r_drill()
-          if (identical(drill, "auto")) drill <- NULL
-          cols <- c(r_group(), r_color(), r_facet(), r_value(),
-            r_x(), r_y(), r_xend(), r_series(), r_label(), drill)
-          cols <- unique(cols[!is.null(cols) & nzchar(cols) & cols != ".count"])
-          cols[!cols %in% names(d)]
-        }
 
         # The click/brush filter expr, over `.(data)` as-is. Kept in its own
         # function so the expr reactive below can wrap the data slot in an
@@ -805,24 +789,23 @@ new_chart_block <- function(
 
         list(
           expr = shiny::reactive({
+            # The expr's only job is the data transform: the click/brush
+            # filter. Aesthetic mappings (group/color/x/y/...) are NOT part of
+            # it -- they are presentation config the JS renderer consumes, so a
+            # mapped column that was renamed or dropped upstream leaves the
+            # filter (and the downstream data) perfectly valid. That is a
+            # presentation concern, surfaced by the renderer's own in-canvas
+            # message (see chart.js: "Mapped column not in data ... re-pick it
+            # in the gear"), NOT an expr-level failure. Validating aesthetics
+            # here would fail a correct expression; a broken *filter* column,
+            # by contrast, fails hard on its own when the emitted filter is
+            # evaluated (caught by core's capture_conditions("eval")).
             d <- data()
             # Non-data-frame input under the shared contract (a composer
             # table et al.): the emitted code must coerce the same way the
             # renderer does, so downstream receives the same plain frame the
             # chart draws. NULL input (no upstream yet) stays unwrapped.
             coerce <- !is.null(d) && !is.data.frame(d)
-            if (coerce) d <- coerce_plain_df(d)
-            if (is.data.frame(d)) {
-              missing_cols <- mapped_cols(d)
-              shiny::validate(shiny::need(
-                length(missing_cols) == 0,
-                paste0(
-                  "Column", if (length(missing_cols) > 1) "s" else "", " not found: ",
-                  paste(missing_cols, collapse = ", "),
-                  " (renamed or dropped upstream?)"
-                )
-              ))
-            }
             ex <- build_filter_expr()
             if (coerce) wrap_plain_df_input(ex) else ex
           }),
