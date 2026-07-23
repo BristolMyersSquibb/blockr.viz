@@ -121,3 +121,38 @@ test_that("a JS-sent selection updates the stored state", {
     expect_equal(st[[1]]$selected, "Sepal.Width")
   })
 })
+
+test_that("chained pickers keep the ORIGINAL source column in blockr_source", {
+  # Upstream picker already copied Sepal.Width into `mid`; a second picker
+  # copying `mid` must claim Sepal.Width, not the intermediate copy (which
+  # the source table does not have -- the drill send would silently no-op).
+  df <- datasets::iris
+  df$mid <- df$Sepal.Width
+  attr(df$mid, "blockr_source") <- "Sepal.Width"
+
+  blk <- new_picker_block(
+    state = list(pickers = list(
+      list(into = "value", choices = "mid", selected = "mid",
+           multiple = FALSE)
+    ))
+  )
+  testServer(blk$expr_server, args = list(data = reactive(df)), {
+    session$flushReact()
+    out <- eval_picker_expr(session$returned$expr(), df)
+    expect_equal(attr(out$value, "blockr_source"), "Sepal.Width")
+  })
+
+  # Same through the multiple/pivot path with a single pick (the only case
+  # where the pivot records provenance).
+  blk2 <- new_picker_block(
+    state = list(pickers = list(
+      list(into = "value", choices = "mid", selected = "mid",
+           multiple = TRUE)
+    ))
+  )
+  testServer(blk2$expr_server, args = list(data = reactive(df)), {
+    session$flushReact()
+    out <- eval_picker_expr(session$returned$expr(), df)
+    expect_equal(attr(out$value, "blockr_source"), "Sepal.Width")
+  })
+})

@@ -291,9 +291,22 @@ make_picker_expr <- function(pickers) {
           },
           character(1)
         )
+        # Provenance for drill claims: a drill on the copy must claim the
+        # ORIGINAL source column (dd_ctrl_claims resolves this attribute), or
+        # a cross-block send names a column the source table does not have.
+        # When the picked column is itself a picker copy (chained pickers),
+        # keep ITS recorded source rather than the intermediate copy's name.
+        chain_src <- function(v, fallback) {
+          cs <- attr(v, "blockr_source", exact = TRUE)
+          if (is.character(cs) && length(cs) == 1L && nzchar(cs)) cs
+          else fallback
+        }
         if (isTRUE(p$multiple)) {
           # Offered-but-unpicked columns of a multiple picker are dropped:
           # the output schema must not depend on which choices are picked.
+          # Read the provenance BEFORE the pivot: pivot_longer rebuilds the
+          # value column and drops its attributes.
+          src1 <- if (length(sel) == 1L) chain_src(out[[sel]], unname(sel))
           measure_col <- paste0(p$into, "_measure")
           drop <- setdiff(present, sel)
           out <- tidyr::pivot_longer(
@@ -308,16 +321,13 @@ make_picker_expr <- function(pickers) {
           )
           if (length(sel) == 1L) {
             attr(out[[p$into]], "label") <- unname(labs[sel])
-            attr(out[[p$into]], "blockr_source") <- unname(sel)
+            attr(out[[p$into]], "blockr_source") <- src1
           }
         } else {
           s1 <- sel[[1L]]
           out[[p$into]] <- out[[s1]]
           attr(out[[p$into]], "label") <- unname(labs[[s1]])
-          # Provenance for drill claims: a drill on the copy must claim the
-          # source column (dd_ctrl_claims resolves this attribute), or a
-          # cross-block send names a column the source table does not have.
-          attr(out[[p$into]], "blockr_source") <- s1
+          attr(out[[p$into]], "blockr_source") <- chain_src(out[[s1]], s1)
         }
       }
       out
