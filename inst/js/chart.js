@@ -126,6 +126,36 @@
       }
     : undefined;
 
+  // Line charts get a dataseries.org-style x-range zoom: drag on the plot to
+  // select a horizontal window (y auto-rescales to it via filterMode 'filter'),
+  // a reset icon to pop back out. `yAxisIndex: false` locks the drag to x, so
+  // it reads as "zoom the range", not a 2-D box. The drag cursor is armed by
+  // default in _renderIndividual (takeGlobalCursor key 'dataZoomSelect') when
+  // the chart has no drill; with drill on, click-to-drill stays the default and
+  // the magnifier icon opts into zoom. Shape mirrors mkToolbox (same corner /
+  // size / muted border); excluded from the PNG export (excludeComponents).
+  // The dataZoom FEATURE is load-bearing for the drag-select mechanism: it
+  // registers the 'dataZoomSelect' roam controller that the armed cursor
+  // drives, and echarts only builds that controller when the toolbox is
+  // rendered (show:false at init never builds it, so drag silently dies). So
+  // the toolbox stays visible on every line chart — the two icons (drag-zoom
+  // magnifier + reset) double as the discoverability hint and a reset for
+  // users who don't know the double-click gesture.
+  const mkZoomToolbox = () => ({
+    show: true,
+    right: 8,
+    top: 4,
+    itemSize: 11,
+    feature: {
+      dataZoom: {
+        yAxisIndex: false,
+        filterMode: 'filter',
+        title: { zoom: 'Zoom to range', back: 'Reset zoom' }
+      }
+    },
+    iconStyle: { borderColor: '#bbb' }
+  });
+
   // Aggregation vocabulary + the group/value/func role triple + the
   // value-follows-agg reconcile now live in the shared drilldown-agg.js so the
   // table and tile render the identical control. Loaded before chart.js.
@@ -1863,6 +1893,17 @@
       });
       chart.on('globalout', () => { slot.hover.si = null; });
 
+      // Double-click anywhere on the plot zooms back out to full range — the
+      // dataseries.org gesture that pairs with drag-to-zoom. Line charts only
+      // (the family's zoomable member; scatter uses brush, not zoom). Bound to
+      // the zrender so it fires on empty plot area too, not just on a mark, and
+      // once per instance like the other handlers. A no-op when not zoomed
+      // (start:0/end:100 is already the full extent).
+      chart.getZr().on('dblclick', () => {
+        if (this.config.chart_type !== 'line') return;
+        chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
+      });
+
       // When the legend shows color levels (not series), intercept
       // legend clicks and fan them out to every series that belongs to
       // the clicked color group. Otherwise a click on "F" would do
@@ -3443,6 +3484,15 @@
         // (x == click_x & y == click_y), matching at most one row.
         const brushable = xAxisType !== 'category' && !isLine && !seriesCol;
 
+        // dataseries.org-style zoom: line charts let the reader drag a
+        // horizontal window on the plot to zoom the x-range. Any x kind
+        // (time / numeric / category-by-index) works; scatter keeps brush.
+        const zoomable = isLine;
+        // Arm the drag cursor by default only when there is no click-drill to
+        // protect (an armed cursor swallows the click) — see the takeGlobalCursor
+        // below. With drill on the toolbox magnifier is the opt-in instead.
+        const armZoom = zoomable && this._drillState() === 'off';
+
 
         // Line charts hover per x-position (axis trigger): item trigger
         // only fires on symbols, and high series counts render with
@@ -3580,7 +3630,9 @@
           grid: { left: 66, right: 5, top: 30, bottom: (nativeLegend ? 78 : 52) + leg.extra + (xlab ? xlab.bottom : 0) },
           xAxis: xAxisSpec,
           yAxis: yAxisSpec,
-          toolbox: mkToolbox(brushable),
+          toolbox: brushable
+            ? mkToolbox(true)
+            : (zoomable ? mkZoomToolbox() : undefined),
           // brush.toolbox lists the brush types REGISTERED for use. Must
           // include the types we activate (rect for scatter, lineX for line)
           // and the types referenced by toolbox.feature.brush.type, otherwise
@@ -3614,6 +3666,26 @@
           });
         }
         slot.brushable = brushable;
+
+        // Arm dataseries-style drag-to-zoom by default (no toolbox click
+        // first) — but ONLY when there is no click-drill to protect. An armed
+        // drag cursor swallows the click, so with drill on we leave click-drill
+        // as the default gesture and let the magnifier icon opt into zoom.
+        // Re-armed / released each render (retained instances), same as brush.
+        if (armZoom) {
+          chart.dispatchAction({
+            type: 'takeGlobalCursor',
+            key: 'dataZoomSelect',
+            dataZoomSelectActive: true
+          });
+        } else if (slot.zoomArmed) {
+          chart.dispatchAction({
+            type: 'takeGlobalCursor',
+            key: 'dataZoomSelect',
+            dataZoomSelectActive: false
+          });
+        }
+        slot.zoomArmed = armZoom;
       }
 
       this.charts = this._slots.map(s => s.chart).filter(Boolean);
