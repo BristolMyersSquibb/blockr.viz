@@ -4302,6 +4302,7 @@
         label: this.config.label || '',
         drill: this.config.drill || '',
         smoother: this.config.smoother || 'none',
+        step: this.config.step || '',
         identity_line: this.config.identity_line || 'off',
         // Helper lines. Sent as the raw text the user typed; R parses it with
         // num_vec_state(). "" is a real value (clear every line), so these are
