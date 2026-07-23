@@ -229,6 +229,19 @@
                   options: [{ value: 'none', label: 'None' },
                             { value: 'outliers', label: 'Outliers' },
                             { value: 'all', label: 'All' }] },
+    // Step-line mode (line charts only). The wire "" is the OFF/straight state:
+    // it round-trips to the block's NULL default (chr_state drops ""), and the
+    // renderer treats any falsy step as straight segments (see mkSeries's
+    // `stepMode ? stepMode : undefined`). "start"/"middle"/"end" place the
+    // vertical jump along the interval -- for values that hold between
+    // observations (dose levels, on/off states). The placeholder shows
+    // "Straight" when off, since Blockr.Select renders the placeholder for a
+    // "" selection rather than the option label.
+    step: { label: 'Step line', kind: 'select', ph: 'Straight',
+            options: [{ value: '',       label: 'Straight' },
+                      { value: 'start',  label: 'Step at start' },
+                      { value: 'middle', label: 'Step at middle' },
+                      { value: 'end',    label: 'Step at end' }] },
     // Observation counts appended to labels ("Female (12)"). `count_on` picks
     // the surface: the category axis, the facet strip, or both. `count_col` is
     // the id column counted DISTINCT per label group (blank = raw row count) —
@@ -355,6 +368,9 @@
         { role: 'identity_line', types: ['scatter'] },
         { role: 'vlines', types: ['scatter', 'line'] },
         { role: 'hlines', types: ['scatter', 'line'] },
+        // Step-line mode: line-only, so it sits with the other line presentation
+        // options. "" (Straight) is the block's NULL default; the rest step.
+        { role: 'step', types: ['line'] },
         { role: 'lo', types: ['line'] },
         { role: 'hi', types: ['line'] },
         'line_width_mult', 'dot_size_mult',

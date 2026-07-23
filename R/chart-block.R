@@ -367,10 +367,10 @@ new_chart_block <- function(
         # Theming state
         r_line_width_mult <- shiny::reactiveVal(line_width_mult)
         r_dot_size_mult <- shiny::reactiveVal(dot_size_mult)
-        # Overlay options. `step` still has no gear-popover control but IS
-        # consumed by the JS renderer (step-mode line); it flows through the
-        # config payload below and via external_ctrl, so leave it wired.
-        # `vlines` / `hlines` now have one (the Helper lines gear section).
+        # Overlay options. `step` now has a gear-popover control (the "Step line"
+        # select in the line-chart presentation section); its OFF wire value is
+        # "", which chr_state() heals back to this NULL default. It flows through
+        # the config payload below and via external_ctrl.
         r_step <- shiny::reactiveVal(step)
         r_vlines <- shiny::reactiveVal(vlines)
         r_hlines <- shiny::reactiveVal(hlines)
