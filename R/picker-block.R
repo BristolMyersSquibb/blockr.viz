@@ -24,19 +24,19 @@
 #' block face (one per picker, labelled by `into`), and the picker
 #' definitions in the gear-toggled settings band, like the value filter's
 #' filter list. Every column qualifies as a candidate -- a picker can just
-#' as well drive a grouping or color dimension as a measure; only the
-#' auto-fill default is numeric-only. Clearing a picker's offer list is
-#' allowed while editing: the picker goes inert (no output column) until
-#' it has choices again.
+#' as well drive a grouping or color dimension as a measure. A picker's
+#' offer list starts empty: the builder curates which columns the viewer
+#' sees. An empty offer list is inert (no output column) until it has
+#' choices, which also covers clearing it mid-edit to refill.
 #'
 #' Design records: blockr.docs design-system/target select-controls.html
 #' (control style) and measure-switch-proposals.html (schema; the picker
 #' generalizes the measure switch to n pickers with editable output names).
 #'
 #' @param state List with `pickers` -- a list of picker entries, each
-#'   `list(into, choices, selected, multiple)`. Empty (default) auto-fills
-#'   on first data arrival with one picker over all numeric columns,
-#'   `into = "value"`.
+#'   `list(into, choices, selected, multiple)`. Empty (default) seeds one
+#'   empty, inert picker (`into = "value"`) on first data arrival for the
+#'   builder to fill.
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
 #' @examples
@@ -83,19 +83,17 @@ new_picker_block <- function(
           )
         })
 
-        numeric_cols <- shiny::reactive({
-          d <- data()
-          colnames(d)[vapply(d, is.numeric, logical(1))]
-        })
-
-        # Reconcile with incoming data; auto-fill one picker on first arrival.
+        # Reconcile with incoming data; seed one EMPTY picker on first arrival
+        # so the builder has a row to fill. The offer list starts empty on
+        # purpose -- the builder curates which columns the viewer sees; the
+        # block does nothing until at least one column is offered.
         shiny::observeEvent(data(), {
           pks <- normalize_pickers(r_pickers())
-          if (!length(pks) && length(numeric_cols())) {
+          if (!length(pks) && ncol(data())) {
             pks <- list(list(
               into = "value",
-              choices = numeric_cols(),
-              selected = numeric_cols()[[1L]],
+              choices = character(),
+              selected = character(),
               multiple = FALSE
             ))
           }
@@ -103,9 +101,9 @@ new_picker_block <- function(
         })
 
         # Push the full control state. Length-1 vectors unbox to scalars over
-        # the wire; the JS side re-wraps them. ALL columns are offered (a
-        # picker may drive a grouping/color dimension, not just a measure);
-        # numeric-only is just the auto-fill default above.
+        # the wire; the JS side re-wraps them. ALL columns are candidates in
+        # the gear's "Columns offered" pool (a picker may drive a grouping or
+        # color dimension, not just a measure); the builder chooses from it.
         shiny::observe({
           shiny::req(data())
           labs <- col_labels()
@@ -514,12 +512,11 @@ picker_block_assets <- function(ns) {
           gear.classList.toggle('blockr-gear-active', open);
         });
         add.addEventListener('click', function () {
-          var first = state.cfgOptions.length ? state.cfgOptions[0].value : null;
-          if (!first) return;
+          // Start empty: the builder curates which columns this picker offers.
           state.pickers.push({
             into: defaultInto(),
-            choices: state.cfgOptions.map(function (o) { return o.value; }),
-            selected: [first],
+            choices: [],
+            selected: [],
             multiple: false
           });
           renderBand();
