@@ -2105,8 +2105,12 @@
         // slab bars while 11+-bar panels sat at exactly 28px/row.) Builders
         // without __panelH (pie/treemap/radar/waterfall/vertical bar) keep
         // the fixed 350px canvas — category-on-x doesn't scale with rows.
+        // NO usable minimum here: any clamp above __panelH feeds the excess
+        // into the plot area and re-fattens the band — a 1-row panel is 104px
+        // and that is the correct height. The 64px floor is a pure safety net
+        // for degenerate options (e.g. a boxplot whose facet has 0 rows).
         const hChanged = this._setSlotHeight(slot, anyOption.__panelH != null
-          ? Math.max(120, Math.round(anyOption.__panelH)) + 'px'
+          ? Math.max(64, Math.round(anyOption.__panelH)) + 'px'
           : '350px');
         delete anyOption.__panelH;
         const existed = !!slot.chart;
