@@ -214,6 +214,15 @@ new_chart_block <- function(
     title = NULL,
     subtitle = NULL,
     caption = NULL,
+    # Observation counts appended to category-axis ticks and/or facet strip
+    # labels ("Female (12)"). `count_on` picks the surface(s): "off" (default),
+    # "axis" (the category axis), "facet", or "both". `count_col` is the id
+    # column counted DISTINCT (e.g. USUBJID -> unique subjects); NULL / "" falls
+    # back to the raw row count. The distinct counts are computed per label
+    # group in the browser -- they do NOT sum from the per-cell n, since one
+    # subject can span several colour / facet cells (see chart.js _labelCounts).
+    count_on = "off",
+    count_col = NULL,
     ctrl_target = "",
     ctrl_table = "",
     ...) {
@@ -264,6 +273,11 @@ new_chart_block <- function(
   title <- title_state(title)
   subtitle <- title_state(subtitle)
   caption <- title_state(caption)
+  # `count_col` is an optional column role (heal a DAG-poisoned list() to NULL,
+  # coerce to character); `count_on` is a fixed-option select, backfilled to
+  # "off" when absent.
+  count_col <- chr_state(count_col)
+  count_on <- count_on %||% "off"
   # Legacy aliases mapped on construction (old saved boards restore through the
   # ctor, and every chart saved before the rename carries ref_x / ref_y). The
   # new name wins when both are given: a board that already saved `vlines` is
@@ -371,6 +385,10 @@ new_chart_block <- function(
         r_title <- shiny::reactiveVal(title)
         r_subtitle <- shiny::reactiveVal(subtitle)
         r_caption <- shiny::reactiveVal(caption)
+        # Observation-count labels (see constructor args). `count_col` is the
+        # DISTINCT id column; the browser does the counting per label group.
+        r_count_on <- shiny::reactiveVal(count_on)
+        r_count_col <- shiny::reactiveVal(count_col)
         r_board_theme <- setup_drilldown_theme_sync(session)
         # Board scale map (NULL when the board has no "scale_map" option);
         # resolved per data push, never stored in block state.
@@ -414,7 +432,10 @@ new_chart_block <- function(
           needed <- as.character(unlist(c(
             r_group(), r_color(), r_facet(), r_value(),
             r_x(), r_y(), r_xend(), r_series(),
-            r_label(), r_tt_fields(), r_drill(), r_lo(), r_hi()
+            r_label(), r_tt_fields(), r_drill(), r_lo(), r_hi(),
+            # Count-label id column: not a mapped aesthetic, but the browser
+            # needs its values to count distinct ids per label group.
+            r_count_col()
           )))
           sb <- as.character(unlist(r_sort_by()))
           if (length(sb) && !sb %in% c("onset", "alpha")) {
@@ -541,6 +562,9 @@ new_chart_block <- function(
               # shows the right pill, and back again in the observer below.
               identity_line = if (isTRUE(r_identity_line())) "on" else "off",
               box_points = r_box_points(),
+              # Observation-count labels: which surface(s) get the "(n)" and the
+              # DISTINCT id column to count (browser-side, per label group).
+              count_on = r_count_on(), count_col = r_count_col(),
               # Bar baseline mode. chart_type "waterfall" implies "cumulative"
               # on the JS side (sugar); also send the flag explicitly so a plain
               # bar can opt into the cumulative bridge, and pass the optional
@@ -660,6 +684,9 @@ new_chart_block <- function(
               upd(r_hlines, num_vec_state(msg$hlines))
             }
             if (!is.null(msg$box_points)) upd(r_box_points, msg$box_points)
+            if (!is.null(msg$count_on))   upd(r_count_on, msg$count_on)
+            # nn(): "" (picker cleared) means "no id column" -> row count.
+            if (!is.null(msg$count_col))  upd(r_count_col, nn(msg$count_col))
             if (!is.null(msg$lo))         upd(r_lo, nn(msg$lo))
             if (!is.null(msg$hi))         upd(r_hi, nn(msg$hi))
             # Chart text: "" is a real value (explicitly no title -- it
@@ -909,6 +936,8 @@ new_chart_block <- function(
             smoother = r_smoother,
             identity_line = r_identity_line,
             box_points = r_box_points,
+            count_on = r_count_on,
+            count_col = r_count_col,
             lo = r_lo,
             hi = r_hi,
             baseline = r_baseline,
@@ -947,6 +976,9 @@ new_chart_block <- function(
       "tt_fields", "drill", "sort_by", "sort_dir", "filter_range",
       "filter_point", "step", "vlines", "hlines", "smoother", "identity_line",
       "box_points", "lo", "hi", "waterfall_totals",
+      # count_col is optional (blank = row count); count_on is a fixed-option
+      # select (always "off"/"axis"/"facet"/"both"), so it is not listed here.
+      "count_col",
       "title", "subtitle", "caption",
       # Legacy alias formals: permanently NULL in state (mapped onto
       # vlines/hlines at construction), so they MUST be allowed to be empty --
@@ -961,6 +993,7 @@ new_chart_block <- function(
       "filter_values", "filter_range", "filter_point", "line_width_mult",
       "dot_size_mult", "step", "vlines", "hlines", "smoother", "identity_line",
       "box_points", "lo", "hi", "baseline", "waterfall_totals",
+      "count_on", "count_col",
       "title", "subtitle", "caption",
       "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",

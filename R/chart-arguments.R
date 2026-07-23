@@ -205,6 +205,26 @@ chart_arguments <- function() {
       example = "none",
       type = arg_enum(c("none", "outliers", "all"))
     ),
+    count_on = new_arg_spec(
+      paste0(
+        "Append observation counts to labels, e.g. \"Female (12)\": \"off\" ",
+        "(default), \"axis\" (on the category-axis ticks of bar/boxplot ",
+        "charts), \"facet\" (on the facet strip labels) or \"both\". Pair ",
+        "with count_col to count distinct subjects; leave count_col empty to ",
+        "count raw rows."
+      ),
+      example = "off",
+      type = arg_enum(c("off", "axis", "facet", "both"))
+    ),
+    count_col = new_arg_spec(
+      paste0(
+        "Id column counted DISTINCT for the count labels (see count_on), ",
+        "e.g. \"USUBJID\" to label groups by unique subject count. Empty ",
+        "(default) counts raw rows instead. No-op when count_on=\"off\"."
+      ),
+      example = NULL,
+      type = arg_string()
+    ),
     lo = new_arg_spec(
       paste0(
         "Lower error-band column (individual line only). Set together ",

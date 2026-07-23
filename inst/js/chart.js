@@ -229,6 +229,19 @@
                   options: [{ value: 'none', label: 'None' },
                             { value: 'outliers', label: 'Outliers' },
                             { value: 'all', label: 'All' }] },
+    // Observation counts appended to labels ("Female (12)"). `count_on` picks
+    // the surface: the category axis, the facet strip, or both. `count_col` is
+    // the id column counted DISTINCT per label group (blank = raw row count) —
+    // distinct counts CANNOT sum from the per-cell n (a subject can appear in
+    // several colour/facet cells), so _labelCounts recomputes over the raw
+    // rows. `rerender:true` so clearing count_on hides the id picker live.
+    count_on: { label: 'Group counts', kind: 'select', rerender: true,
+                options: [{ value: 'off',   label: 'Off' },
+                          { value: 'axis',  label: 'On category axis' },
+                          { value: 'facet', label: 'On facet labels' },
+                          { value: 'both',  label: 'On axis + facets' }] },
+    count_col: { label: 'Count distinct of', kind: 'column', colType: 'any',
+                 ph: 'id column, e.g. USUBJID (blank = row count)' },
     lo:       { label: 'Lo', kind: 'column', colType: 'num' },
     hi:       { label: 'Hi', kind: 'column', colType: 'num' },
     line_width_mult: { label: 'Line width', kind: 'slider' },
@@ -312,7 +325,10 @@
       presentation: ['sort_by', 'sort_dir', { role: 'orientation', types: ['bar'] },
         { role: 'bar_mode', types: ['bar'] },
         { role: 'baseline', types: ['bar'] },
-        { role: 'box_points', types: ['boxplot'] }],
+        { role: 'box_points', types: ['boxplot'] },
+        // Count labels: the axis surface applies to the category-axis charts
+        // (bar/boxplot/waterfall); facet applies to any faceted family.
+        'count_on', 'count_col'],
       titles: ['title', 'subtitle', 'caption']
     },
     individual: {
@@ -336,7 +352,10 @@
         { role: 'hlines', types: ['scatter', 'line'] },
         { role: 'lo', types: ['line'] },
         { role: 'hi', types: ['line'] },
-        'line_width_mult', 'dot_size_mult'
+        'line_width_mult', 'dot_size_mult',
+        // Count labels: scatter/line have numeric axes, so only facet counts
+        // apply here (the "axis" choice no-ops); shown for faceted charts.
+        'count_on', 'count_col'
       ],
       titles: ['title', 'subtitle', 'caption']
     },
@@ -344,7 +363,7 @@
       requiredMap: ['x', 'xend', 'y'],
       optionalMap: ['series', 'color', 'facet', 'label', 'tt_fields'],
       mapping: [],
-      presentation: ['sort_by', 'sort_dir'],
+      presentation: ['sort_by', 'sort_dir', 'count_on', 'count_col'],
       titles: ['title', 'subtitle', 'caption']
     }
   };
@@ -530,13 +549,23 @@
     // excluded by type. Everything else keeps the family spec unchanged.
     _sectionsSpec() {
       const base = FAMILY_ROLES[this._family()];
+      // Hide the count id-column picker until a count surface is chosen
+      // (count_on has rerender:true, so toggling it re-runs this).
+      const countOff = !this.config.count_on || this.config.count_on === 'off';
+      /** @param {any} spec */
+      const dropCountCol = (spec) => {
+        if (!countOff || !spec.presentation) return spec;
+        return { ...spec, presentation: spec.presentation.filter(
+          (/** @type {any} */ e) =>
+            (typeof e === 'string' ? e : e.role) !== 'count_col') };
+      };
       // External-control send (beta) on every family: push the drilled value
       // into a value filter block. cfg.ctrl_* rides in the drilldown-data
       // config from R.
       if (this.config.chart_type === 'boxplot') {
-        return /** @type {any} */ ({ ...base, aggTitle: null, ctrlSection: true });
+        return /** @type {any} */ (dropCountCol({ ...base, aggTitle: null, ctrlSection: true }));
       }
-      return /** @type {any} */ ({ ...base, ctrlSection: true });
+      return /** @type {any} */ (dropCountCol({ ...base, ctrlSection: true }));
     }
 
     // Keep the value consistent when the aggregation changes (shared with the
@@ -1303,6 +1332,72 @@
           width: len, ellipsis: '…' },
         bottom: len
       };
+    }
+
+    // --- Observation-count labels ("Female (12)") --------------------------
+    // config.count_on ∈ {off, axis, facet, both} picks the surface; config
+    // .count_col is the id column counted DISTINCT per label group (blank =
+    // raw row count). See the ROLES / R chart-block.R notes.
+
+    /** True when counts should annotate `surface` ('axis' | 'facet').
+     *  @param {string} surface */
+    _countOn(surface) {
+      const v = this.config.count_on || 'off';
+      return v === surface || v === 'both';
+    }
+
+    // Count per value of `dimCol`, optionally restricted to one facet. With a
+    // count_col set the count is DISTINCT of that id; blank counts raw rows.
+    // Distinct counts are recomputed here rather than summed from the per-cell
+    // n because one id can span several colour / facet cells. Returns a
+    // Map<string(dimValue), number>.
+    /** @param {string|null|undefined} dimCol
+     *  @param {string|null|undefined} facetCol
+     *  @param {any} [facetVal] */
+    _labelCounts(dimCol, facetCol, facetVal) {
+      const idCol = this.config.count_col;
+      const distinct = !!idCol;
+      const restrict = !!facetCol && facetVal != null && facetVal !== '__all__';
+      /** @type {Map<string, Set<any> | number>} */
+      const acc = new Map();
+      for (const r of this.data) {
+        if (restrict && String(r[/** @type {string} */(facetCol)] ?? '') !== String(facetVal)) continue;
+        const dv = dimCol ? String(r[dimCol] ?? '') : 'Total';
+        if (distinct) {
+          const id = r[/** @type {string} */(idCol)];
+          if (id == null) continue;
+          let s = acc.get(dv);
+          if (!(s instanceof Set)) { s = new Set(); acc.set(dv, s); }
+          s.add(id);
+        } else {
+          const cur = acc.get(dv);
+          acc.set(dv, (typeof cur === 'number' ? cur : 0) + 1);
+        }
+      }
+      /** @type {Map<string, number>} */
+      const out = new Map();
+      for (const [k, v] of acc) out.set(k, v instanceof Set ? v.size : v);
+      return out;
+    }
+
+    /** Append " (n)" to a label from a counts map (identity when no count).
+     *  @param {any} label @param {Map<string, number> | null | undefined} counts */
+    _withCount(label, counts) {
+      const s = String(label ?? '');
+      const n = counts ? counts.get(s) : undefined;
+      return n == null ? s : s + ' (' + n + ')';
+    }
+
+    // Facet value -> display label, appending counts when count_on covers the
+    // facet surface. Computed once per family render (the map scans all rows).
+    /** @param {any[]} facets */
+    _facetLabelMap(facets) {
+      /** @type {Map<string, any>} */
+      const m = new Map();
+      const counts = this._countOn('facet')
+        ? this._labelCounts(this.config.facet, null, null) : null;
+      for (const f of facets) m.set(f, counts ? this._withCount(f, counts) : f);
+      return m;
     }
 
     // Bottom-anchored legends wrap onto extra rows when the chip labels
@@ -2078,13 +2173,15 @@
         });
       };
 
+      // Facet strip labels, with optional "(n)" counts (see _facetLabelMap).
+      const facetLabels = this._facetLabelMap(facets);
       for (let fi = 0; fi < facets.length; fi++) {
         const facet = facets[fi];
         const facetData = agg.filter(a => a.facet === facet);
         const groups = orderGroups(facetData);
 
         const slot = this._ensureSlot(fi,
-          (!singleFacet && facet !== '__all__') ? facet : null, singleFacet);
+          (!singleFacet && facet !== '__all__') ? facetLabels.get(facet) : null, singleFacet);
         slot.facetVal = facet;
 
         const option = this._buildAggregatedOption(facetData, groups, colors, palette, slot.chartDiv.clientWidth, facet, sharedLegend);
@@ -2309,13 +2406,24 @@
         }
       }
 
-      const gut = this._yGutter(groups);
+      // Observation counts on the category axis: keep `data: groups` clean (the
+      // click/brush filter and tooltips key off the bare group value) and paint
+      // the "(n)" via an axisLabel formatter. Size the gutter on the DISPLAY
+      // strings so the wider labels don't truncate. Counts are DISTINCT ids per
+      // group within THIS facet (a subject can span facets).
+      const axisCounts = this._countOn('axis')
+        ? this._labelCounts(this.config.group, this.config.facet, facet) : null;
+      const catLabels = axisCounts
+        ? groups.map(g => this._withCount(g, axisCounts)) : groups;
+      const catFmt = axisCounts
+        ? (/** @type {any} */ v) => this._withCount(v, axisCounts) : null;
+      const gut = this._yGutter(catLabels);
       // Vertical bars put categories on the x-axis: horizontal-or-vertical
       // labels (never diagonal), all shown. Grid bottom grows for rotated text.
-      const xlab = vertical ? this._xAxisLabels(groups, (plotW || 0) - 65) : null;
+      const xlab = vertical ? this._xAxisLabels(catLabels, (plotW || 0) - 65) : null;
       const catAxis = vertical
-        ? { type: 'category', data: groups, axisLabel: xlab?.axisLabel, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
-        : { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026' }, axisLine: { show: false }, axisTick: { show: false } };
+        ? { type: 'category', data: groups, axisLabel: { ...xlab?.axisLabel, ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
+        : { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false }, axisTick: { show: false } };
       // Percent display only applies when a color split is actually present
       // (a single series is trivially 100% of itself).
       const showPercent = isPercent && colors.length > 0;
@@ -2968,6 +3076,8 @@
       this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
       this._syncShape('individual', facets.length);
 
+      // Facet strip labels, with optional "(n)" counts (see _facetLabelMap).
+      const facetLabels = this._facetLabelMap(facets);
       // `fv` (not `facet`) — `facet` is the config's facet COLUMN name; a
       // loop-local `facet` would shadow it and turn the row filter into
       // r[<level>] (a column named e.g. "Female" — every panel empty).
@@ -2976,7 +3086,7 @@
         const rows = fv === '__all__' ? this.data : this.data.filter(r => String(r[facet]) === fv);
 
         const slot = this._ensureSlot(fi,
-          (!singleFacet && fv !== '__all__') ? fv : null, singleFacet);
+          (!singleFacet && fv !== '__all__') ? facetLabels.get(fv) : null, singleFacet);
         slot.facetVal = fv;
         this._setSlotHeight(slot, '400px');
         const chartDiv = slot.chartDiv;
@@ -3553,11 +3663,13 @@
       }
       this._syncShape('timeline', panels.length);
 
+      // Facet strip labels, with optional "(n)" counts (see _facetLabelMap).
+      const facetLabels = this._facetLabelMap(panels.map(p => p.fv));
       for (let fi = 0; fi < panels.length; fi++) {
         const { fv, rows } = panels[fi];
 
         const slot = this._ensureSlot(fi,
-          (!singleFacet && fv !== '__all__') ? fv : null, singleFacet);
+          (!singleFacet && fv !== '__all__') ? facetLabels.get(fv) : null, singleFacet);
         slot.facetVal = fv;
 
         const terms = sortTerms(rows);
@@ -4071,6 +4183,10 @@
         vlines: this.config.vlines == null ? '' : String(this.config.vlines),
         hlines: this.config.hlines == null ? '' : String(this.config.hlines),
         box_points: this.config.box_points || 'none',
+        // Observation-count labels: the surface picker + the DISTINCT id column
+        // ('' = blank picker -> row count).
+        count_on: this.config.count_on || 'off',
+        count_col: this.config.count_col || '',
         lo: this.config.lo || '',
         hi: this.config.hi || '',
         // Extra tooltip columns (gantt): always an array so R can tell an
