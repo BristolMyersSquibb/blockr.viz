@@ -1945,6 +1945,13 @@
       // for line = series, or an override) it emits a categorical filter;
       // for a scatter under 'auto' (no categorical key) it filters the exact
       // observation (point filter on x&y). Brush is the same rule at range.
+      //
+      // The clickable ENTITY differs by type: a line's mark is the whole
+      // series (a trajectory is one thing), a scatter's mark is the DOT —
+      // even under a color/series split, where the clicked dot resolves to
+      // its exact rows (series AND x&y), not the whole color group. Hit
+      // rows are restricted to the slot's facet either way: another panel's
+      // point at identical coordinates is a different mark.
       chart.on('click', (/** @type {any} */ params) => {
         if (this._drillState() === 'off') return;
         if (params.componentType !== 'series') return;
@@ -1955,16 +1962,22 @@
         setTimeout(() => { this._suppressBrushClear = false; }, 150);
         const { x, y } = this.config;
         const splitCol = this.config.series || this.config.color;
+        const inFacet = this._facetTest(slot);
+        const isLine = this.config.chart_type === 'line';
         let hitRows, pointVal = null;
-        if (splitCol && params.seriesName) {
+        if (isLine && splitCol && params.seriesName) {
           hitRows = (this.data || []).filter(
-            r => String(r[splitCol]) === String(params.seriesName));
+            r => inFacet(r) &&
+                 String(r[splitCol]) === String(params.seriesName));
           this._selected = params.seriesName;
         } else {
           const v = params.value;
           if (!Array.isArray(v) || v.length < 2 || !x || !y) return;
           hitRows = (this.data || []).filter(
-            r => String(r[x]) === String(v[0]) &&
+            r => inFacet(r) &&
+                 (!splitCol || !params.seriesName ||
+                   String(r[splitCol]) === String(params.seriesName)) &&
+                 String(r[x]) === String(v[0]) &&
                  String(r[y]) === String(v[1]));
           this._selected = `${ddNum(v[0])}, ${ddNum(v[1])}`;
           pointVal = v;
@@ -2039,7 +2052,9 @@
         if (drillCol) {
           rowIndex = new Map();
           const xc = this.config.x, yc = this.config.y;
+          const inFacet = this._facetTest(slot);
           for (const r of (this.data || [])) {
+            if (!inFacet(r)) continue;
             const k = String(r[xc]) + '|||' + String(r[yc]);
             if (!rowIndex.has(k)) rowIndex.set(k, []);
             rowIndex.get(k).push(r);
@@ -4230,6 +4245,18 @@
         column: column,
         values: vals
       }, { priority: 'event' });
+    }
+
+    // Row predicate for a slot's facet panel. A selection made in one panel
+    // must resolve against that panel's rows only — a row from another
+    // facet at identical coordinates is a different mark (the aggregated
+    // family applies the same restriction in its click handler).
+    /** @param {ChartSlot | null | undefined} slot */
+    _facetTest(slot) {
+      const fc = this.config.facet;
+      const fv = slot ? slot.facetVal : null;
+      if (!fc || fv == null || fv === '__all__') return () => true;
+      return (/** @type {any} */ r) => String(r[fc]) === String(fv);
     }
 
     // The one drill rule (see blockr.design/open/drilldown-chart-roles).
