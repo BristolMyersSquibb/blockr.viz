@@ -346,8 +346,10 @@ picker_block_assets <- function(ns) {
       // Sentinel for the viewer-facing '(none)' choice of an OPTIONAL picker.
       // Never sent to R: selecting it clears the pick (selected = []), which
       // makes the picker inert -- no output column -- so a downstream chart
-      // drops the aesthetic. Distinctive so it cannot collide with a column.
-      var NONE = '__blockr_picker_none__';
+      // drops the aesthetic. Blockr.Select shows an option's VALUE as its
+      // primary text, so the sentinel IS the label the viewer reads; a real
+      // column literally named '(none)' is not a concern for chart data.
+      var NONE = '(none)';
 
       function toArr(x) {
         if (x === null || x === undefined) return [];
@@ -534,7 +536,7 @@ picker_block_assets <- function(ns) {
           // Optional single pickers offer a leading '(none)' entry; picking it
           // (or clearing) commits an empty selection = inert = aesthetic off.
           var opts = p.choices.map(optionFor);
-          if (isOpt) opts = [{ value: NONE, label: '(none)' }].concat(opts);
+          if (isOpt) opts = [{ value: NONE, label: '' }].concat(opts);
           function faceSel() {
             if (p.multiple) return p.selected;
             return p.selected[0] || (isOpt ? NONE : null);
