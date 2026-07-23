@@ -109,30 +109,22 @@
   // mode silently fails to engage and drag-to-filter doesn't work. The
   // brush icons only render on charts that actually have a `brush`
   // component, so this is inert for bar/pie/treemap/boxplot/gantt.
-  // Base toolbox WITHOUT brush — bar/pie/treemap/boxplot/gantt and any
-  // non-brushable scatter/line (categorical x, or series set) get no
-  // brush icon, so the button is never a dead control.
-  const TOOLBOX = {
-    show: true,
-    right: 8,
-    top: 4,
-    itemSize: 11,
-    feature: {
-      saveAsImage: { title: 'Save', pixelRatio: 2 }
-    },
-    iconStyle: { borderColor: '#bbb' }
-  };
-
-  // Toolbox WITH the brush feature — only used when the chart actually
-  // wires a `brush` component + brushSelected handler (brushable).
+  // The toolbox now carries ONLY the brush icons (image download moved to a
+  // design-system button in the gear header — see _buildDOM/_downloadImage;
+  // the in-canvas save could neither include the HTML title bands nor be a
+  // single control on a facet grid). Non-brushable charts get no toolbox at
+  // all, so the corner is empty instead of holding a dead control.
   /** @param {boolean} withBrush */
   const mkToolbox = (withBrush) => withBrush
     ? {
-        ...TOOLBOX,
-        feature: { ...TOOLBOX.feature,
-          brush: { type: ['rect', 'lineX', 'clear'] } }
+        show: true,
+        right: 8,
+        top: 4,
+        itemSize: 11,
+        feature: { brush: { type: ['rect', 'lineX', 'clear'] } },
+        iconStyle: { borderColor: '#bbb' }
       }
-    : TOOLBOX;
+    : undefined;
 
   // Aggregation vocabulary + the group/value/func role triple + the
   // value-follows-agg reconcile now live in the shared drilldown-agg.js so the
@@ -665,6 +657,34 @@
         e.stopPropagation();
         this._togglePopover();
       });
+      // Image download: the table's design-system download chrome
+      // (.blockr-dl-xlsx — quiet icon button, same inline SVG), one per
+      // BLOCK so a facet grid gets a single control. An <a role=button>
+      // because the shared styles are element-qualified on the anchor.
+      this.dlBtn = document.createElement('a');
+      this.dlBtn.className = 'blockr-dl-xlsx dd-chart-dl';
+      this.dlBtn.setAttribute('role', 'button');
+      this.dlBtn.setAttribute('tabindex', '0');
+      this.dlBtn.title = 'Download as image';
+      this.dlBtn.setAttribute('aria-label', 'Download as image');
+      this.dlBtn.innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
+        'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" ' +
+        'stroke-linejoin="round">' +
+        '<path d="M8 2.5 V10 M4.8 7 L8 10.2 L11.2 7"/>' +
+        '<path d="M2.5 11.5 V12.8 A1.2 1.2 0 0 0 3.7 14 H12.3 ' +
+        'A1.2 1.2 0 0 0 13.5 12.8 V11.5"/></svg>';
+      this.dlBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this._downloadImage();
+      });
+      this.dlBtn.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        this._downloadImage();
+      });
+      gearHeader.appendChild(this.dlBtn);
       gearHeader.appendChild(this.gearBtn);
       this.card.appendChild(gearHeader);
 
@@ -724,28 +744,13 @@
     //
     // The stock toolbox saveAsImage snapshots only the ECharts canvas, so the
     // HTML title / subtitle / caption bands (and the facet labels) would be
-    // missing from the artifact. Replace it with a custom tool that composes
-    // the full block on an offscreen canvas: title block, every facet panel at
-    // its on-screen grid position (facet labels redrawn), caption. Purely
-    // download-time — reads the canvases via getDataURL and never touches the
-    // chart option, config wire or state; on any facet panel the button saves
-    // the WHOLE chart (the block is the chart; facets are internal layout).
-    _toolbox() {
-      return {
-        ...TOOLBOX,
-        feature: {
-          mySaveImage: {
-            show: true,
-            title: 'Save',
-            // A download glyph — custom tools cannot reference the built-in
-            // saveAsImage icon path.
-            icon: 'path://M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z',
-            onclick: () => { this._downloadImage(); }
-          }
-        }
-      };
-    }
-
+    // missing from the artifact — and a facet grid would offer one dead-end
+    // button per panel. Instead ONE design-system button in the gear header
+    // (the table's .blockr-dl-xlsx chrome) composes the full block on an
+    // offscreen canvas: title block, every facet panel at its on-screen grid
+    // position (facet labels redrawn), caption. Purely download-time — reads
+    // the canvases via getDataURL and never touches the chart option, config
+    // wire or state.
     _downloadImage() {
       const slots = (this._slots || []).filter(s => s && s.chart);
       if (!slots.length || !this.chartGrid) return;
@@ -2127,7 +2132,6 @@
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip,
-        toolbox: this._toolbox(),
         legend: legendOn
           ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, data: legItems, ...(leg.scroll ? { type: 'scroll' } : {}) }
           : undefined,
@@ -2235,7 +2239,6 @@
               (p.value == null ? '–' : ddNum(p.value));
           }
         },
-        toolbox: this._toolbox(),
         legend: { show: false },
         grid: { left: 55, right: 10, top: 30, bottom: 40 + 26 + xlab.bottom },
         xAxis: catAxis,
@@ -2263,7 +2266,7 @@
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: this._toolbox(), tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n, p.percent)) }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: 10, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n, p.percent)) }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: 10, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
     }
 
     /** @param {any[]} facetData @param {any[]} groups @param {any[]} palette */
@@ -2275,7 +2278,7 @@
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, toolbox: this._toolbox(), tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: (/** @type {any} */ p) => p.name + '\n' + ddNum(Number(p.value)) }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: (/** @type {any} */ p) => p.name + '\n' + ddNum(Number(p.value)) }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
     }
 
     // Radar = an aggregated chart in polar coords: the group levels are the
@@ -2333,7 +2336,6 @@
           : undefined,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
-        toolbox: this._toolbox(),
         tooltip: {
           trigger: 'item',
           confine: true,
@@ -2542,7 +2544,6 @@
           : undefined,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
-        toolbox: this._toolbox(),
         tooltip: { trigger: 'item', confine: true, formatter: boxTooltipFmt },
         legend: legendOn
           ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, data: legItems, ...(leg.scroll ? { type: 'scroll' } : {}) }
@@ -3415,7 +3416,6 @@
           legend: showLegend
             ? { show: true, bottom: 8, type: 'scroll', textStyle: { fontSize: 11 }, data: legendData }
             : { show: false },
-          toolbox: this._toolbox(),
           grid: { left: gut.gridLeft, right: 10, top: 20, bottom: showLegend ? 78 : 48 },
           xAxis: xAxisSpec,
           yAxis: {
