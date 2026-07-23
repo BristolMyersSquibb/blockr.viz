@@ -78,6 +78,7 @@ test_that("single picker copies the column and carries its label", {
     out <- eval_picker_expr(session$returned$expr(), df)
     expect_equal(as.numeric(out$value), as.numeric(df$Sepal.Width))
     expect_equal(attr(out$value, "label"), "Sepal width")
+    expect_equal(attr(out$value, "blockr_source"), "Sepal.Width")
   })
 })
 

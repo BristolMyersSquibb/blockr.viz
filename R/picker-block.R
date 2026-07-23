@@ -11,9 +11,11 @@
 #'
 #' Semantics per picker:
 #' * single (default): the picked column is *copied* into `into`, with its
-#'   label attribute carried along (a chart's axis title follows the pick).
-#'   Copies, not renames, so two pickers may pick the same source column
-#'   (e.g. a measure against itself).
+#'   label attribute carried along (a chart's axis title follows the pick)
+#'   and a `blockr_source` attribute naming the source column -- a drill on
+#'   the copy claims the *original* column, so a cross-block send still hits
+#'   a value filter sitting on the source table. Copies, not renames, so two
+#'   pickers may pick the same source column (e.g. a measure against itself).
 #' * `multiple = TRUE` (at most one picker): the picked columns pivot long --
 #'   values into `into`, the measure identity into `<into>_measure` (a
 #'   factor of column *labels*, ready for facetting). Offered-but-unpicked
@@ -306,11 +308,16 @@ make_picker_expr <- function(pickers) {
           )
           if (length(sel) == 1L) {
             attr(out[[p$into]], "label") <- unname(labs[sel])
+            attr(out[[p$into]], "blockr_source") <- unname(sel)
           }
         } else {
           s1 <- sel[[1L]]
           out[[p$into]] <- out[[s1]]
           attr(out[[p$into]], "label") <- unname(labs[[s1]])
+          # Provenance for drill claims: a drill on the copy must claim the
+          # source column (dd_ctrl_claims resolves this attribute), or a
+          # cross-block send names a column the source table does not have.
+          attr(out[[p$into]], "blockr_source") <- s1
         }
       }
       out

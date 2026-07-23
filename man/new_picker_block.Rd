@@ -31,9 +31,11 @@ pick never requires reconfiguration.
 Semantics per picker:
 \itemize{
 \item single (default): the picked column is \emph{copied} into \code{into}, with its
-label attribute carried along (a chart's axis title follows the pick).
-Copies, not renames, so two pickers may pick the same source column
-(e.g. a measure against itself).
+label attribute carried along (a chart's axis title follows the pick)
+and a \code{blockr_source} attribute naming the source column -- a drill on
+the copy claims the \emph{original} column, so a cross-block send still hits
+a value filter sitting on the source table. Copies, not renames, so two
+pickers may pick the same source column (e.g. a measure against itself).
 \item \code{multiple = TRUE} (at most one picker): the picked columns pivot long --
 values into \code{into}, the measure identity into \verb{<into>_measure} (a
 factor of column \emph{labels}, ready for facetting). Offered-but-unpicked

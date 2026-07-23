@@ -649,6 +649,27 @@ dd_ctrl_claims <- function(data, table, filters) {
 
   cols <- names(filters)[!startsWith(names(filters), ".")]
 
+  # A drilled column may be a picker-made copy (`Color` <- `RACE`). The copy
+  # carries its origin in a `blockr_source` attribute, and the claim must name
+  # the ORIGINAL column: the target value filter sits on the source table,
+  # which has no `Color`. The source column travels alongside the copy, so it
+  # is present in the subset and single-valued whenever the copy is; a copy
+  # whose source was dropped upstream keeps claiming under its own name.
+  cols <- unique(vapply(
+    cols,
+    function(col) {
+      src <- attr(data[[col]], "blockr_source", exact = TRUE)
+      if (is.character(src) && length(src) == 1L && nzchar(src) &&
+            src %in% names(data)) {
+        src
+      } else {
+        col
+      }
+    },
+    character(1),
+    USE.NAMES = FALSE
+  ))
+
   drill_claim_columns(
     data[keep, , drop = FALSE],
     table = table %||% "",
