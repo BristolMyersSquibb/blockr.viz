@@ -90,7 +90,7 @@ new_picker_block <- function(
 
         # Reconcile with incoming data; auto-fill one picker on first arrival.
         shiny::observeEvent(data(), {
-          pks <- normalize_pickers(r_pickers(), colnames(data()))
+          pks <- normalize_pickers(r_pickers())
           if (!length(pks) && length(numeric_cols())) {
             pks <- list(list(
               into = "value",
@@ -128,7 +128,7 @@ new_picker_block <- function(
             jsonlite::fromJSON(input$pickers, simplifyVector = FALSE),
             error = function(e) NULL
           )
-          pks <- normalize_pickers(raw, colnames(data()))
+          pks <- normalize_pickers(raw)
           if (length(pks)) {
             set_if_changed(r_pickers, pks)
           }
@@ -190,19 +190,27 @@ new_picker_block <- function(
   )
 }
 
-# Coerce a client- or ctor-supplied picker list into canonical form against
-# the current columns: choices restricted to existing columns, selected
-# restricted to choices (first choice as fallback), single pick unless
-# multiple, at most ONE multiple picker (a second pivot would cross-multiply
-# rows), output names non-empty and unique.
-normalize_pickers <- function(pickers, cols) {
+# Coerce a client- or ctor-supplied picker list into canonical form. This is a
+# STRUCTURAL normalization only -- it deliberately does NOT prune choices
+# against the data columns. The authored picker definition is the source of
+# truth and must survive a data frame that transiently lacks its columns (e.g.
+# on board restore, while an upstream block is still restoring its own state and
+# briefly emits a frame without them). Pruning here was destructive: intersect
+# against such a transient frame wiped the offer/selection permanently, so the
+# gear's "Columns offered" and the face pick came back empty after loading.
+# Restriction to the columns actually present happens instead in
+# make_picker_expr() at eval time, so a picker self-heals when its columns
+# return. Rules: selected is a subset of choices (first choice as fallback when
+# empty), single pick unless multiple, at most ONE multiple picker (a second
+# pivot would cross-multiply rows), output names non-empty and unique.
+normalize_pickers <- function(pickers) {
   if (is.null(pickers) || !length(pickers)) {
     return(list())
   }
   out <- list()
   multi_seen <- FALSE
   for (p in pickers) {
-    ch <- intersect(as.character(unlist(p$choices)), cols)
+    ch <- as.character(unlist(p$choices))
     # An empty-choices picker is kept, inert: the builder may have just
     # cleared the offer list to refill it (expr skips it meanwhile).
     sel <- intersect(as.character(unlist(p$selected)), ch)
@@ -255,8 +263,15 @@ make_picker_expr <- function(pickers) {
       pks <- .(pks)
       out <- data
       for (p in pks) {
+        # Restrict to columns actually present in the data at eval time. A
+        # picker whose columns are temporarily absent (an upstream block still
+        # settling on restore) is skipped and recovers on its own once they
+        # return -- the stored definition is never mutated.
+        present <- intersect(p$choices, names(data))
+        sel <- intersect(p$selected, present)
+        if (!length(sel)) next
         labs <- vapply(
-          p$choices,
+          present,
           function(nm) {
             lb <- attr(data[[nm]], "label", exact = TRUE)
             if (is.null(lb) || !nzchar(lb)) nm else as.character(lb)
@@ -267,24 +282,24 @@ make_picker_expr <- function(pickers) {
           # Offered-but-unpicked columns of a multiple picker are dropped:
           # the output schema must not depend on which choices are picked.
           measure_col <- paste0(p$into, "_measure")
-          drop <- setdiff(p$choices, p$selected)
+          drop <- setdiff(present, sel)
           out <- tidyr::pivot_longer(
             out[setdiff(names(out), drop)],
-            cols = tidyr::all_of(p$selected),
+            cols = tidyr::all_of(sel),
             names_to = measure_col,
             values_to = p$into
           )
           out[[measure_col]] <- factor(
             labs[out[[measure_col]]],
-            levels = unname(labs[p$selected])
+            levels = unname(labs[sel])
           )
-          if (length(p$selected) == 1L) {
-            attr(out[[p$into]], "label") <- unname(labs[p$selected])
+          if (length(sel) == 1L) {
+            attr(out[[p$into]], "label") <- unname(labs[sel])
           }
         } else {
-          sel <- p$selected[[1L]]
-          out[[p$into]] <- out[[sel]]
-          attr(out[[p$into]], "label") <- unname(labs[[sel]])
+          s1 <- sel[[1L]]
+          out[[p$into]] <- out[[s1]]
+          attr(out[[p$into]], "label") <- unname(labs[[s1]])
         }
       }
       out
