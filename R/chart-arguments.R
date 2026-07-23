@@ -407,8 +407,9 @@ chart_arguments <- function() {
     ),
     subtitle = new_arg_spec(
       paste0(
-        "Subtitle under the title, same {...} tokens as `title` (no auto ",
-        "tier; unset = none)."
+        "Subtitle under the title, same {...} tokens as `title`. Unset = ",
+        "auto (inherits the input data's subtitle attribute when present, ",
+        "e.g. from a composer table); \"\" = explicitly none."
       ),
       example = "Treatment: {ARM}",
       type = arg_string()
@@ -416,7 +417,8 @@ chart_arguments <- function() {
     caption = new_arg_spec(
       paste0(
         "Caption under the chart (source / footnote line), same {...} ",
-        "tokens as `title` (no auto tier; unset = none)."
+        "tokens as `title`. Unset = auto (inherits the input data's ",
+        "caption attribute when present); \"\" = explicitly none."
       ),
       example = "N = {n_distinct(USUBJID)} subjects",
       type = arg_string()

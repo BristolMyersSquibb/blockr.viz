@@ -23,16 +23,26 @@ drilldown_chart_dep <- memoise0(function() {
     drilldown_shared_dep(),
     htmltools::htmlDependency(
       name = "chart-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".88"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".89"),
       src = system.file("js", package = "blockr.viz"),
       script = c("drilldown-theme-register.js", "chart.js")
     ),
-    htmltools::htmlDependency(
-      name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.viz"), ".35"),
-      src = system.file("css", package = "blockr.viz"),
-      stylesheet = "chart.css"
-    )
+    chart_css_dep()
+  )
+})
+
+# chart.css, shared by the chart block and the table block (which reuses the
+# chart's gear/popover styling). ONE definition so the cache-busting suffix
+# cannot drift between the two: htmltools dedupes same-name dependencies by
+# highest version, so a table-only page with a stale copy of this dep would
+# serve chart.css under an old version string and hit the browser cache.
+# Suffix bumped when inst/css/chart.css changes.
+chart_css_dep <- memoise0(function() {
+  htmltools::htmlDependency(
+    name = "chart-css",
+    version = paste0(utils::packageVersion("blockr.viz"), ".35"),
+    src = system.file("css", package = "blockr.viz"),
+    stylesheet = "chart.css"
   )
 })
 

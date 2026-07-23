@@ -319,21 +319,49 @@ new_chart_block <- function(
       shiny::moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
-        # What the render paths consume: a plain data frame passes through
-        # untouched; a table-producing object (composer et al., per the
-        # shared input contract) is coerced via as_plain_df(), which drops
-        # the reserved `.`-annotation columns -- a chart of a structured
-        # frame charts its data columns (the read-only-structure rendering
-        # of principle 6 belongs to the table). Mirrors the table block's
-        # ann_data reactive.
-        plain_data <- shiny::reactive(coerce_plain_df(data()))
+        # Input coercion, ONCE per upstream change, shared by the render
+        # path and the title auto tier: a plain data frame is kept verbatim
+        # (byte-identical passthrough, dotted columns included); a
+        # table-producing object (composer et al., per the shared input
+        # contract) is coerced via as_annotated_df(), with coercion failures
+        # mapped to NULL so reader reactives park on their
+        # `req(is.data.frame(d))` guards. The `coerced` flag records which
+        # branch ran -- only coerced inputs get the reserved `.`-annotation
+        # columns stripped below (a chart of a structured frame charts its
+        # data columns; the row-structure rendering of principle 6 belongs
+        # to the table).
+        r_input <- shiny::reactive({
+          d <- data()
+          if (is.data.frame(d)) {
+            list(df = d, coerced = FALSE)
+          } else {
+            list(
+              df = tryCatch(as_annotated_df(d), error = function(e) NULL),
+              coerced = TRUE
+            )
+          }
+        })
+
+        # What the render paths consume (same contract as coerce_plain_df,
+        # minus the second coercion). Mirrors the table block's ann_data
+        # reactive.
+        plain_data <- shiny::reactive({
+          inp <- r_input()
+          d <- inp$df
+          if (!is.data.frame(d)) return(NULL)
+          if (!inp$coerced) return(d)
+          drop <- names(d) %in% annotation_cols_in(d)
+          d[, !drop, drop = FALSE]
+        })
 
         # Auto-tier sources: the input's label / subtitle / caption
-        # attributes, read from the RAW data -- as_plain_df() subsets columns
-        # and base subsetting drops data-frame-level attributes (see
-        # input_display_attrs).
+        # attributes, read from the shared coercion above (NOT plain_data:
+        # its column subset is base subsetting, which drops data-frame-level
+        # attributes -- see input_display_attrs). Previously this re-ran
+        # as_annotated_df() a second time for every non-df input.
         r_data_titles <- shiny::reactive({
-          input_display_attrs(tryCatch(data(), error = function(e) NULL))
+          inp <- tryCatch(r_input(), error = function(e) NULL)
+          input_display_attrs(if (is.list(inp)) inp$df else NULL)
         })
 
         # Config state (orthogonal aesthetics)
@@ -515,6 +543,26 @@ new_chart_block <- function(
           })
         })
 
+        # Resolved chart text, cached on exactly its inputs: the three
+        # template states, the data, and the data-driven auto tier. Token
+        # resolution walks whole columns (unique over as.character), so it
+        # must not re-run on every unrelated gear edit -- the push observer
+        # below fires per edit, and an uncached call there re-paid 3 column
+        # scans per sort/step/width tweak. Same pattern as r_data_json /
+        # r_smoother_series above.
+        r_titles_resolved <- shiny::reactive({
+          d <- plain_data()
+          shiny::req(is.data.frame(d))
+          auto <- r_data_titles()
+          list(
+            title = resolve_block_title(r_title(), d, auto = auto$label),
+            subtitle = resolve_block_title(r_subtitle(), d,
+                                           auto = auto$subtitle),
+            caption = resolve_block_title(r_caption(), d,
+                                          auto = auto$caption)
+          )
+        })
+
         # Push data + config to JS. Single observe, exactly as before the
         # roles refactor: this shape is what the blockr.dock lazy-eval
         # card-probe pairing correctly suspends for hidden panels, so
@@ -607,15 +655,9 @@ new_chart_block <- function(
               title = r_title(),
               subtitle = r_subtitle(),
               caption = r_caption(),
-              title_resolved = resolve_block_title(
-                r_title(), d, auto = r_data_titles()$label
-              ),
-              subtitle_resolved = resolve_block_title(
-                r_subtitle(), d, auto = r_data_titles()$subtitle
-              ),
-              caption_resolved = resolve_block_title(
-                r_caption(), d, auto = r_data_titles()$caption
-              ),
+              title_resolved = r_titles_resolved()$title,
+              subtitle_resolved = r_titles_resolved()$subtitle,
+              caption_resolved = r_titles_resolved()$caption,
               smoother_series = r_smoother_series(),
               lo = r_lo(), hi = r_hi(),
               # Board scale map, resolved for the chart type's colored role
@@ -665,6 +707,25 @@ new_chart_block <- function(
           if (!identical(shiny::isolate(rv()), v)) rv(v)
         }
         nn <- function(v) if (is.null(v) || identical(v, "")) NULL else v
+        # OPTIONAL healed roles (color/facet/series): the data push sends
+        # them through present_role(), so when the mapped column is absent
+        # from the current data JS holds NULL -- and `_sendConfig()` echoes
+        # that back as "". Committing that echo would erase the user's pick
+        # from state (and from any board saved afterwards) on the first
+        # unrelated gear edit. Skip the clear while the stored column is
+        # absent (it is the heal's echo, not a user action); a genuine gear
+        # clear of a present column still lands.
+        upd_healed <- function(rv, msg_val) {
+          v <- nn(msg_val)
+          if (is.null(v)) {
+            cur <- shiny::isolate(rv())
+            d <- shiny::isolate(plain_data())
+            if (!is.null(cur) && is.data.frame(d) && !(cur %in% names(d))) {
+              return(invisible(NULL))
+            }
+          }
+          upd(rv, v)
+        }
 
         shiny::observeEvent(input$drilldown_block_action, {
           msg <- input$drilldown_block_action
@@ -673,15 +734,15 @@ new_chart_block <- function(
           action <- msg$action
           if (action == "config") {
             if (!is.null(msg$group))      upd(r_group, nn(msg$group))
-            if (!is.null(msg$color))      upd(r_color, nn(msg$color))
-            if (!is.null(msg$facet))      upd(r_facet, nn(msg$facet))
+            if (!is.null(msg$color))      upd_healed(r_color, msg$color)
+            if (!is.null(msg$facet))      upd_healed(r_facet, msg$facet)
             if (!is.null(msg$value))     upd(r_value, msg$value)
             if (!is.null(msg$func))     upd(r_func, msg$func)
             if (!is.null(msg$chart_type)) upd(r_chart_type, msg$chart_type)
             if (!is.null(msg$x))          upd(r_x, msg$x)
             if (!is.null(msg$y))          upd(r_y, msg$y)
             if (!is.null(msg$xend))       upd(r_xend, nn(msg$xend))
-            if (!is.null(msg$series))     upd(r_series, nn(msg$series))
+            if (!is.null(msg$series))     upd_healed(r_series, msg$series)
             if (!is.null(msg$label))      upd(r_label, nn(msg$label))
             if (!is.null(msg$tt_fields)) {
               # Arrives as a JSON array (possibly empty). Flatten to a

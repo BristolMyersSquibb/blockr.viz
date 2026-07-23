@@ -966,13 +966,9 @@ drilldown_table_dep <- memoise0(function() {
       script = c("blockr-core.js", "blockr-select.js")
     ),
     # Shared popover CSS (the dd-* section/row/segmented/add classes) lives in
-    # chart.css; the table's gear popover reuses it (de-dups by dep name).
-    htmltools::htmlDependency(
-      name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.viz"), ".33"),
-      src = system.file("css", package = "blockr.viz"),
-      stylesheet = "chart.css"
-    ),
+    # chart.css; the table's gear popover reuses it. ONE definition
+    # (chart-dep.R) so the cache-busting suffix cannot drift from the chart's.
+    chart_css_dep(),
     settings_band_dep(),
     # Shared aggregation vocabulary + gear engine (one dep, one version -- see
     # drilldown_shared_dep()). Before the table JS, which reads both globals.
@@ -1140,8 +1136,9 @@ table_arguments <- function() {
     ),
     subtitle = new_arg_spec(
       paste0(
-        "Subtitle under the title, same {...} tokens as `title` (no auto ",
-        "tier; unset = none)."
+        "Subtitle under the title, same {...} tokens as `title`. Unset = ",
+        "auto (inherits the input data's subtitle attribute when present, ",
+        "e.g. from a composer table); \"\" = explicitly none."
       ),
       example = "Treatment: {ARM}",
       type = arg_string()
@@ -1149,7 +1146,8 @@ table_arguments <- function() {
     caption = new_arg_spec(
       paste0(
         "Caption under the table (source / footnote line), same {...} ",
-        "tokens as `title` (no auto tier; unset = none)."
+        "tokens as `title`. Unset = auto (inherits the input data's ",
+        "caption attribute when present); \"\" = explicitly none."
       ),
       example = "N = {n_distinct(USUBJID)} subjects",
       type = arg_string()

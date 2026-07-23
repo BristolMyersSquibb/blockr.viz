@@ -569,3 +569,37 @@ test_that("a missing aesthetic column leaves the expr a valid pass-through filte
     args = list(x = blk, data = list(data = function() df))
   )
 })
+
+test_that("config echo of a healed optional role does not erase state", {
+  # color maps a column ABSENT from the current data (an upstream picker set
+  # to "(none)"): the data push heals it to null for JS, and _sendConfig
+  # echoes that back as "" on any unrelated gear edit. The echo must NOT
+  # clear the stored mapping -- only a genuine clear of a PRESENT column may.
+  df <- data.frame(g = c("a", "b"), v = c(1, 2), SEX = c("F", "M"))
+  blk <- new_chart_block(group = "g", value = "v", func = "sum",
+                         color = "MISSING_COL")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      expr_scope <- session$makeScope("expr")
+      # Echo of the heal: color absent from data arrives as "".
+      expr_scope$setInputs(drilldown_block_action = list(
+        action = "config", color = "", sort_dir = "desc"
+      ))
+      session$flushReact()
+      expect_equal(session$returned$state$color(), "MISSING_COL")
+      # A clear for a PRESENT column is a real user action and lands.
+      expr_scope$setInputs(drilldown_block_action = list(
+        action = "config", color = "SEX"
+      ))
+      session$flushReact()
+      expect_equal(session$returned$state$color(), "SEX")
+      expr_scope$setInputs(drilldown_block_action = list(
+        action = "config", color = ""
+      ))
+      session$flushReact()
+      expect_null(session$returned$state$color())
+    },
+    args = list(x = blk, data = list(data = function() df))
+  )
+})
