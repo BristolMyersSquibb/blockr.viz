@@ -173,13 +173,22 @@ test_that("chart expr coerces a table-producing input to the plain df", {
   })
 })
 
-test_that("chart missing-column validation runs on the coerced frame", {
+test_that("chart mapped to a coercion-dropped column still emits a valid expr", {
   blk <- new_chart_block(chart_type = "bar", group = ".label")
   obj <- new_contract_composed(ann_df)
   testServer(blk$expr_server, args = list(data = reactive(obj)), {
-    # `.label` is an annotation column, dropped by the coercion -- the
-    # invalid-mapping guard must see the plain frame.
-    expect_error(session$returned$expr(), class = "shiny.silent.error")
+    # `.label` is an annotation column, dropped by the coercion -- so the
+    # chart is mapped to a column the plain frame does not carry. That is a
+    # PRESENTATION problem, surfaced by the JS renderer's in-canvas message,
+    # never an expr-level failure (the expr-level aesthetic guard used to
+    # validate() here and leaked its message into the dock header). The
+    # emitted expr is only the click/brush filter: still valid, passes the
+    # data through. See test-chart-block.R for the plain-df counterpart.
+    ex <- session$returned$expr()
+    expect_match(paste(deparse(ex), collapse = " "), "dplyr::filter",
+                 fixed = TRUE)
+    out <- eval_block_expr(ex, obj)
+    expect_s3_class(out, "data.frame")
   })
 })
 

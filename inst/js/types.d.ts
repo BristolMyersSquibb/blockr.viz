@@ -58,6 +58,9 @@ interface VizTablePayload {
   cols?: VizTableCol[];
   /** kind "flat": row indexes (0-based) rendered with dt-row-nodrill. */
   nodrill?: number[];
+  /** Resolved title/subtitle/caption text plus the raw `*_state` the gear
+      inputs echo back (null = auto, "" = none, else the template). */
+  titles?: Record<string, string | null | undefined>;
 }
 
 /* --- Drilldown gear-popover engine (drilldown-config.js) ---

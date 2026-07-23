@@ -435,7 +435,7 @@
    *             chartDiv: HTMLDivElement, chart: any, facetVal: any,
    *             hover: { si: number | null },
    *             seriesByColorByVal: Record<string, any[]> | null,
-   *             brushable: boolean }} ChartSlot
+   *             brushable: boolean, zoomArmed: boolean }} ChartSlot
    */
 
   class DrilldownChart {
@@ -887,12 +887,14 @@
       // Text styles come from the live band elements' computed styles, so the
       // export matches the on-screen typography and follows the theme (the
       // values resolve even while a band is display:none).
+      /** @param {Element | undefined} el @param {string} fb */
       const fontOf = (el, fb) => {
         const cs = el ? getComputedStyle(el) : null;
         if (!cs || !cs.fontSize) return fb + ' ' + BLOCKR_FONT;
         const style = cs.fontStyle === 'italic' ? 'italic ' : '';
         return style + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
       };
+      /** @param {Element | undefined} el @param {string} fb */
       const colorOf = (el, fb) => {
         const cs = el ? getComputedStyle(el) : null;
         return (cs && cs.color) || fb;
@@ -916,6 +918,7 @@
       const DC = /** @type {any} */ (DrilldownChart);
       const meas = DC._measureCtx ||
         (DC._measureCtx = document.createElement('canvas').getContext('2d'));
+      /** @param {{ text: string, font: string, color: string }} b */
       const wrapLines = (b) => {
         meas.font = b.font;
         const words = String(b.text).split(/\s+/);
@@ -930,7 +933,7 @@
           }
         }
         if (cur) lines.push(cur);
-        const px = parseFloat((b.font.match(/(\d+(?:\.\d+)?)px/) || [0, 13])[1]);
+        const px = parseFloat((b.font.match(/(\d+(?:\.\d+)?)px/) || ['', '13'])[1]);
         return { lines, lineH: Math.round(px * 1.4) };
       };
       const top = blocksTop.map(b => ({ ...b, ...wrapLines(b) }));
@@ -1055,7 +1058,10 @@
     // auto tier; see the config payload in chart-block.R). textContent, never
     // innerHTML -- titles are data-derived text.
     _updateTitles() {
-      if (!this.titleWrap) return;
+      // The four band elements are built together with the rest of the card
+      // chrome; one guard covers the pre-chrome call and narrows all of them.
+      if (!this.titleWrap || !this.titleEl || !this.subtitleEl ||
+          !this.captionEl) return;
       const cfg = this.config || {};
       const t = cfg.title_resolved || '';
       const s = cfg.subtitle_resolved || '';
@@ -1778,7 +1784,7 @@
         container.appendChild(chartDiv);
         slot = { container, labelEl, chartDiv, chart: null, facetVal: null,
                  hover: { si: null }, seriesByColorByVal: null,
-                 brushable: false };
+                 brushable: false, zoomArmed: false };
         this._slots[i] = slot;
       }
       if (slot.labelEl) {
