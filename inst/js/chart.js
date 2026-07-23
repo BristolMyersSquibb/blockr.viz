@@ -130,10 +130,10 @@
   // select a horizontal window (y auto-rescales to it via filterMode 'filter'),
   // a reset icon to pop back out. `yAxisIndex: false` locks the drag to x, so
   // it reads as "zoom the range", not a 2-D box. The drag cursor is armed by
-  // default in _renderIndividual (takeGlobalCursor key 'dataZoomSelect') when
-  // the chart has no drill; with drill on, click-to-drill stays the default and
-  // the magnifier icon opts into zoom. Shape mirrors mkToolbox (same corner /
-  // size / muted border); excluded from the PNG export (excludeComponents).
+  // default in _renderIndividual (takeGlobalCursor key 'dataZoomSelect') on
+  // EVERY line chart — an armed dataZoomSelect does not swallow series clicks,
+  // so click-to-drill still works alongside it. Shape mirrors mkToolbox (same
+  // corner / size / muted border); excluded from the PNG export.
   // The dataZoom FEATURE is load-bearing for the drag-select mechanism: it
   // registers the 'dataZoomSelect' roam controller that the armed cursor
   // drives, and echarts only builds that controller when the toolbox is
@@ -3346,10 +3346,12 @@
         const refData = [];
         for (const v of refX) refData.push({ xAxis: Number(v) });
         for (const v of refY) refData.push({ yAxis: Number(v) });
+        // When the identity line is on, both axes get ONE shared domain (filled
+        // here, applied to the axis specs below) so y=x is a true corner-to-
+        // corner diagonal and vertical distance from it reads as the real x-y
+        // difference. null = leave the axes independent (scale:true).
+        let idMin = null, idMax = null;
         if (identityOn) {
-          // Span the overlap of the x and y data ranges: both endpoints then
-          // sit inside both axes whatever padding echarts adds, so the
-          // segment never leaks outside the grid (markLine is not clipped).
           let xLo = Infinity, xHi = -Infinity, yLo = Infinity, yHi = -Infinity;
           for (const s of series) {
             if (s.type !== 'scatter' || !Array.isArray(s.data)) continue;
@@ -3359,12 +3361,28 @@
               if (Number.isFinite(py)) { if (py < yLo) yLo = py; if (py > yHi) yHi = py; }
             }
           }
-          const lo = Math.max(xLo, yLo), hi = Math.min(xHi, yHi);
-          if (lo < hi) refData.push([
-            { coord: [lo, lo],
-              lineStyle: { color: '#64748b', type: 'dashed', width: guideW } },
-            { coord: [hi, hi] }
-          ]);
+          // Union of both ranges -> the shared domain. (A category/time axis
+          // yields NaN here, leaving the axes independent -- identity only makes
+          // sense on two numeric axes.)
+          const rLo = Math.min(xLo, yLo), rHi = Math.max(xHi, yHi);
+          if (Number.isFinite(rLo) && Number.isFinite(rHi) && rLo < rHi) {
+            // Round the domain OUTWARD to a nice step. Explicit min/max turns
+            // off echarts' own nice-bounds pass, so a raw padded range would
+            // print endpoints like 92.10959059275304 as axis labels; rounding
+            // both pads the extremes off the axis edge and keeps ticks clean.
+            const span = rHi - rLo;
+            const mag = Math.pow(10, Math.floor(Math.log10(span)));
+            const rel = span / mag;
+            const step = rel >= 5 ? mag : (rel >= 2 ? mag / 2 : mag / 5);
+            idMin = Math.floor(rLo / step) * step;
+            idMax = Math.ceil(rHi / step) * step;
+            // Diagonal now spans the full shared domain, corner to corner.
+            refData.push([
+              { coord: [idMin, idMin],
+                lineStyle: { color: '#64748b', type: 'dashed', width: guideW } },
+              { coord: [idMax, idMax] }
+            ]);
+          }
         }
         if (series.length > 0 && refData.length) {
           series[0].markLine = {
@@ -3460,6 +3478,12 @@
           scale: true
         };
         if (xCats) /** @type {any} */ (xAxisSpec).data = xCats;
+        // Identity line: match this axis to the shared x/y domain (value axes
+        // only) so the diagonal is a true 45deg reference.
+        if (idMin != null && xAxisType === 'value') {
+          /** @type {any} */ (xAxisSpec).min = idMin;
+          /** @type {any} */ (xAxisSpec).max = idMax;
+        }
 
         const yAxisSpec = {
           type: yAxisType,
@@ -3474,6 +3498,10 @@
           scale: true
         };
         if (yCats) /** @type {any} */ (yAxisSpec).data = yCats;
+        if (idMin != null && yAxisType === 'value') {
+          /** @type {any} */ (yAxisSpec).min = idMin;
+          /** @type {any} */ (yAxisSpec).max = idMax;
+        }
 
         // Brushing is skipped when the x-axis is categorical (echarts' brush
         // needs continuous coords), for line charts — on a per-patient
@@ -3492,10 +3520,13 @@
         // horizontal window on the plot to zoom the x-range. Any x kind
         // (time / numeric / category-by-index) works; scatter keeps brush.
         const zoomable = isLine;
-        // Arm the drag cursor by default only when there is no click-drill to
-        // protect (an armed cursor swallows the click) — see the takeGlobalCursor
-        // below. With drill on the toolbox magnifier is the opt-in instead.
-        const armZoom = zoomable && this._drillState() === 'off';
+        // Armed on EVERY line chart, drill or not. Unlike brush — which fires a
+        // competing brushSelected on the click point and races the click handler
+        // (the reason line charts are not brushable, see above) — an armed
+        // dataZoomSelect cursor does NOT swallow series clicks: a click with no
+        // movement still reaches click-to-drill, and a drag zooms without firing
+        // a spurious drill. Verified both directions, so the two coexist.
+        const armZoom = zoomable;
 
 
         // Line charts hover per x-position (axis trigger): item trigger
@@ -3546,6 +3577,12 @@
               seen.add(p.seriesIndex);
               return true;
             });
+            // Away from any line, an axis tooltip lists EVERY series at this x —
+            // a tower that reads as noise and sits on top of the drag-to-zoom
+            // area, obscuring the gesture. Show it only when the cursor is on a
+            // specific line (hover.si), or when there is a single line to report
+            // (a lone series stays hoverable anywhere along x).
+            if (hover.si == null && ttRows.length > 1) return '';
             // Category x: the visit label is the header. Numeric x: name
             // the value ("Day: 30"), else it reads as a bare number.
             const head = xCats
@@ -3672,9 +3709,9 @@
         slot.brushable = brushable;
 
         // Arm dataseries-style drag-to-zoom by default (no toolbox click
-        // first) — but ONLY when there is no click-drill to protect. An armed
-        // drag cursor swallows the click, so with drill on we leave click-drill
-        // as the default gesture and let the magnifier icon opt into zoom.
+        // first) on every line chart — see armZoom: the cursor coexists with
+        // click-to-drill. The release branch matters when a slot stops being a
+        // line (e.g. type switched to scatter), which is why it is not dead.
         // Re-armed / released each render (retained instances), same as brush.
         if (armZoom) {
           chart.dispatchAction({
