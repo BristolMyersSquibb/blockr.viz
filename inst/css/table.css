@@ -159,9 +159,14 @@
 /* ===== Title / caption bands (chart parity) ===== */
 /* Rendered by table.js applyTitles() from the RESOLVED title text on the
    payload; the whole band hides while empty so a title-less table is
-   pixel-identical to before. Mirrors chart.css .dd-chart-titles. */
+   pixel-identical to before. Mirrors chart.css .dd-chart-titles.
+   The separator line lives UNDER the band: it divides the title from the
+   table's column headers (not the control row from the title), so it only
+   exists while a title/subtitle shows. */
 .dd-table-titles {
-  padding: 2px 2px 6px;
+  padding: 2px 2px 8px;
+  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+  margin-bottom: 6px;
 }
 
 .dd-table-title {
@@ -181,4 +186,21 @@
   color: var(--blockr-grey-500, #6b7280);
   font-style: italic;
   padding: 4px 2px 0;
+}
+
+/* ===== Control row (search · download · gear) ===== */
+/* The chrome's toolbar moves INTO the gear row (table.js buildCogwheel), so
+   search and download sit left of the gear — the chart's cluster — while
+   the gear keeps its canonical top-right position. Scoped to the block
+   container: the shared .blockr-html-table-* chrome is also the plain
+   preview's, which has no gear and keeps its own layout. */
+.drilldown-table-container .blockr-gear-header {
+  gap: 6px;
+}
+
+/* Beside the 30px toolbar controls (search, download) the gear adopts the
+   control height instead of its stand-alone 26px. */
+.drilldown-table-container .blockr-gear-header .blockr-gear-btn {
+  width: var(--blockr-control-h-sm, 30px);
+  height: var(--blockr-control-h-sm, 30px);
 }
