@@ -520,7 +520,7 @@ test_that("empty-list state from a pre-#144 DAG paste normalizes back to NULL", 
     value = "AVAL", func = "mean", lo = "AVAL_LOW", hi = "AVAL_UP",
     sort_by = "value",
     group = list(), color = list(), xend = list(), series = list(),
-    label = list(), tt_fields = list(), drill = list(), step = list(),
+    label = list(), tt_fields = list(), drill = list(),
     ref_x = list(), ref_y = list(), waterfall_totals = list(),
     filter_column = list(), filter_values = list(), filter_range = list(),
     filter_point = list()

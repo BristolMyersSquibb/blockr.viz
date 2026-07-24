@@ -302,33 +302,22 @@
                   options: [{ value: 'none', label: 'None' },
                             { value: 'outliers', label: 'Outliers' },
                             { value: 'all', label: 'All' }] },
-    // Step-line mode (line charts only). The wire "" is the OFF/straight state:
-    // it round-trips to the block's NULL default (chr_state drops ""), and the
-    // renderer treats any falsy step as straight segments (see mkSeries's
-    // `stepMode ? stepMode : undefined`). "start"/"middle"/"end" place the
-    // vertical jump along the interval -- for values that hold between
-    // observations (dose levels, on/off states). The placeholder shows
-    // "Straight" when off, since Blockr.Select renders the placeholder for a
-    // "" selection rather than the option label.
-    step: { label: 'Step line', kind: 'select', ph: 'Straight',
-            options: [{ value: '',       label: 'Straight' },
-                      { value: 'start',  label: 'Step at start' },
-                      { value: 'middle', label: 'Step at middle' },
-                      { value: 'end',    label: 'Step at end' }] },
-    // Line smoothing (line charts only). 'auto' (default) draws monotone-
-    // smoothed lines (smoothMonotone 'x': no overshoot, so the curve never
-    // implies values outside the measured range) at EVERY density -- the
-    // line character does not change when a filter changes the series count,
-    // so the crowd never silently flips between curved and straight. Markers
-    // still drop at high N, and honesty on a dense curve is served by
-    // hover-to-promote (the focused line is redrawn with its measured
-    // points). 'off' always draws straight segments. A step mode wins over
-    // smoothing (step is a semantic choice, not a look). Not a bool segmented
-    // (values are auto/off, not on/off), so it renders as a cycling pill
-    // whose label IS the value.
-    smooth: { label: 'Smoothing', kind: 'segmented',
-              options: [{ value: 'auto', label: 'Monotone' },
-                        { value: 'off',  label: 'Straight' }] },
+    // How the line connects its points (line charts only) -- one control that
+    // replaces the old separate `step` + `smooth` selects, since they were two
+    // ways of saying the same thing (how to get from point to point) and
+    // "straight" appeared in both. `monotone` (default) draws monotone-smoothed
+    // lines (smoothMonotone 'x': no overshoot, so the curve never implies values
+    // outside the measured range) at every density; `straight` draws plain
+    // segments; `step-start`/`step-middle`/`step-end` hold the value between
+    // observations and place the vertical jump along the interval (dose levels,
+    // on/off states). Legacy boards that saved `step` + `smooth` map to this on
+    // construction (see new_chart_block).
+    connect: { label: 'Line', kind: 'select', ph: 'Monotone',
+               options: [{ value: 'monotone',    label: 'Monotone' },
+                         { value: 'straight',    label: 'Straight' },
+                         { value: 'step-start',  label: 'Step at start' },
+                         { value: 'step-middle', label: 'Step at middle' },
+                         { value: 'step-end',    label: 'Step at end' }] },
     // Observation counts appended to labels ("Female (12)"). `count_on` picks
     // the surface: the category axis, the facet strip, or both. `count_col` is
     // the id column counted DISTINCT per label group (blank = raw row count) —
@@ -457,10 +446,9 @@
         { role: 'identity_line', types: ['scatter'] },
         { role: 'vlines', types: ['scatter', 'line'] },
         { role: 'hlines', types: ['scatter', 'line'] },
-        // Step-line mode: line-only, so it sits with the other line presentation
-        // options. "" (Straight) is the block's NULL default; the rest step.
-        { role: 'step', types: ['line'] },
-        { role: 'smooth', types: ['line'] },
+        // Line-connect mode (straight / monotone / step-*): line-only, so it
+        // sits with the other line presentation options.
+        { role: 'connect', types: ['line'] },
         { role: 'lo', types: ['line'] },
         { role: 'hi', types: ['line'] },
         'line_width_mult', 'dot_size_mult',
@@ -3509,17 +3497,17 @@
         const lineHoverW = BASE_LINE_WIDTH * 1.7 * lm;
         const scatterPx  = BASE_SCATTER_SIZE * dm;
 
-        const stepMode = this.config.step;  // null | 'start' | 'end' | 'middle'
-        // Monotone smoothing: on unless the user opted out ('off') or a step
-        // mode is set. Density-independent by design -- the line character
-        // stays the same whether a filter leaves 8 subjects or 800, so the
-        // crowd never silently flips between curved and straight. Markers
-        // still drop at high N (symbol handling below), and honesty on a
-        // dense curve is served by hover-to-promote, which redraws the
-        // focused line WITH its measured points. "off" gives straight at
-        // every density for anyone who wants the crisp/angular crowd.
-        const smoothOn = isLine && !stepMode &&
-          (this.config.smooth || 'auto') !== 'off';
+        // Line-connect mode: one select drives both step and smoothing.
+        //   monotone (default) -> smoothMonotone, density-independent
+        //   straight           -> plain segments
+        //   step-start/middle/end -> stepped (value held between observations)
+        const connect = this.config.connect || 'monotone';
+        const stepMode = connect.indexOf('step-') === 0 ? connect.slice(5) : null;
+        // Monotone is on only in that mode. Density-independent by design -- the
+        // line character does not change with the series count. Markers still
+        // drop at high N (symbol handling below); a hovered line is redrawn WITH
+        // its points by the hover overlay.
+        const smoothOn = isLine && connect === 'monotone';
         const smoother = this.config.smoother || 'none';
         const smootherSeries = this.config.smoother_series || null;
         const loCol = this.config.lo;
@@ -4855,8 +4843,7 @@
         label: this.config.label || '',
         drill: this.config.drill || '',
         smoother: this.config.smoother || 'none',
-        step: this.config.step || '',
-        smooth: this.config.smooth || 'auto',
+        connect: this.config.connect || 'monotone',
         identity_line: this.config.identity_line || 'off',
         // Helper lines. Sent as the raw text the user typed; R parses it with
         // num_vec_state(). "" is a real value (clear every line), so these are
