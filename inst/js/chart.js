@@ -3962,7 +3962,13 @@
             data: [],
             silent: true,
             legendHoverLink: false,
-            z: 9
+            z: 9,
+            // No animation on the overlay: line and markers must appear together
+            // in one atomic render. A fade / draw-on staged them, and under heavy
+            // CPU throttling the line showed a frame (or several) before the dots
+            // — the "highlight, no dots yet" state. Instant is also what removes
+            // the confusing shape-morph between lines.
+            animation: false
           });
         }
         // Render-scoped registry for the mousemove picker + promote: the final
@@ -4783,10 +4789,6 @@
       const s = f.series[si];
       if (!s || s.id === '__focus__' || s.type !== 'line' ||
           !Array.isArray(s.data) || !s.data.length) return;
-      // "Fresh" = coming from a cleared overlay -> fade the line in. A line ->
-      // line switch is NOT fresh: it swaps instantly (see animationDurationUpdate
-      // below), so the highlight tracks the cursor without lag.
-      const fresh = slot.focusSi == null;
       slot.focusSi = si;
       const clr = (s.itemStyle && s.itemStyle.color) || null;
       // Gradient fill, line color 15% -> 0 top-to-bottom. Non-hex -> no fill.
@@ -4794,15 +4796,14 @@
       const n = m ? parseInt(m[1], 16) : null;
       const rgba = (/** @type {number} */ a) => n == null ? 'rgba(0,0,0,0)'
         : 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
-      const op = fresh ? 0 : 1;
+      // One atomic, animation-free setOption: line + markers + fill appear
+      // together at full opacity. The overlay series carries `animation: false`
+      // (see the push in _renderIndividual), so there is no fade and no shape
+      // morph — the highlight snaps to the nearest line, dots and all, even
+      // under heavy CPU throttling.
       chart.setOption({
         series: [{
           id: '__focus__',
-          // No shape morph: a line -> line switch changes the data, and with
-          // update animation on ECharts would tween one polyline into the other
-          // (the "shape adjusting from one form to another" that read as
-          // confusing). 0 makes the new line appear at its true shape instantly.
-          animationDurationUpdate: 0,
           data: s.data,
           step: f.stepMode || undefined,
           smooth: f.smoothOn,
@@ -4810,49 +4811,26 @@
           showSymbol: true,
           symbol: 'circle',
           symbolSize: f.markerPx,
-          itemStyle: { color: clr, borderColor: '#fff', borderWidth: 2, opacity: op },
-          lineStyle: { color: clr, width: f.focusW, opacity: op },
+          itemStyle: { color: clr, borderColor: '#fff', borderWidth: 2 },
+          lineStyle: { color: clr, width: f.focusW, opacity: 1 },
           areaStyle: n == null ? undefined : {
-            origin: 'start', opacity: op,
+            origin: 'start',
             color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
                      colorStops: [{ offset: 0.05, color: rgba(0.15) },
                                   { offset: 0.95, color: rgba(0) }] }
           }
         }]
       });
-      // Quick opacity fade-in on first appearance. A second setOption that only
-      // changes opacity (data unchanged) tweens the fade with NO position morph.
-      if (fresh && typeof requestAnimationFrame === 'function') {
-        if (slot.fadeRaf) cancelAnimationFrame(slot.fadeRaf);
-        slot.fadeRaf = requestAnimationFrame(() => {
-          slot.fadeRaf = null;
-          if (slot.focusSi == null) return;   // cleared before the fade ran
-          chart.setOption({
-            series: [{
-              id: '__focus__',
-              // Very fast — a soft pop, not a slow reveal.
-              animationDurationUpdate: 70,
-              animationEasingUpdate: 'linear',
-              itemStyle: { opacity: 1 },
-              lineStyle: { opacity: 1 },
-              areaStyle: n == null ? undefined : { opacity: 1 }
-            }]
-          });
-        });
-      }
     }
 
     /** @param {any} slot @param {any} chart */
     _demoteFocus(slot, chart) {
       if (!slot.focus || slot.focusSi == null) return;
       slot.focusSi = null;
-      if (slot.fadeRaf && typeof cancelAnimationFrame === 'function') {
-        cancelAnimationFrame(slot.fadeRaf); slot.fadeRaf = null;
-      }
-      // Emptying the data is the whole demotion; instant (no morph), and every
-      // re-render rebuilds the overlay from scratch (setOption notMerge), so
-      // nothing can leak across renders.
-      chart.setOption({ series: [{ id: '__focus__', animationDurationUpdate: 0, data: [] }] });
+      // Emptying the data is the whole demotion; instant, and every re-render
+      // rebuilds the overlay from scratch (setOption notMerge), so nothing can
+      // leak across renders.
+      chart.setOption({ series: [{ id: '__focus__', data: [] }] });
     }
 
     _sendConfig() {
