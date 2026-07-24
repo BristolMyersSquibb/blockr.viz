@@ -50,14 +50,22 @@
 #' @param auto_width Logical. `TRUE` runs [flextable::autofit()] instead of
 #'   the manual widths. flextable never fits to the slide on its own, so
 #'   manual widths (the default) are the safe choice for pptx.
-#' @param header_bg Header band colors. `"bms"` (default) derives the BMS
-#'   palette from the column-group structure: each two-level spanner group
-#'   (or each flat data column) becomes one colored band, cycling
-#'   dark-gray / blue / orange / green / purple, with a light-gray stub --
-#'   the topline deck look, read off the annotated df instead of hand-listed.
-#'   A character vector sets explicit colors per data column (hex or the
-#'   palette names `"white"`, `"gray"`, `"dark_gray"`, `"blue"`, `"orange"`,
-#'   `"green"`, `"purple"`). `"none"` (or `NULL`) leaves the header unfilled.
+#' @param header_bg Header band colors, keyed on the column-group structure
+#'   the annotated df carries. A color vector (hex or R color names):
+#'   \itemize{
+#'     \item **Named** entries pin a group -- the name is a by-level value
+#'       (the spanner top for a nested `by`, else the data-column name), and
+#'       `".stub"` pins the row-stub header. `c(Placebo = "grey",
+#'       Drug = "#33D6F1")` colors those arms explicitly, whatever their
+#'       position.
+#'     \item **Unnamed** entries are the cycle pool for the remaining,
+#'       unpinned groups, in order -- `c("#A59F9F", "#33D6F1")` bands them.
+#'     \item The two mix: `c(.stub = "#EEE", Placebo = "grey", "#33D6F1")`.
+#'   }
+#'   Defaults from `getOption("blockr.viz.ft_header_bg")`; unset (or `NULL` /
+#'   `"none"`) leaves the header unfilled. blockr.viz ships no palette of its
+#'   own -- the app supplies the colors (a deck sets the option to its house
+#'   style), so nothing house-specific lives in the renderer.
 #' @param pptx_left,pptx_top Slide placement in inches, stashed as
 #'   `pptx_left` / `pptx_top` attributes on the result (consumed by an
 #'   officer-based pptx pipeline; inert under the quarto render, where the
@@ -78,7 +86,7 @@ ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
                      first_col_width = 5.65, other_cols_width = 3.5,
                      fit_width = getOption("blockr.viz.ft_fit_width", NULL),
                      auto_width = FALSE,
-                     header_bg = "bms",
+                     header_bg = getOption("blockr.viz.ft_header_bg", NULL),
                      pptx_left = 0.4, pptx_top = 1.1) {
   if (!requireNamespace("flextable", quietly = TRUE)) {
     stop("ft_table() needs the 'flextable' package.", call. = FALSE)
@@ -261,30 +269,34 @@ ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   }
 
   # Column header styling: leaf + spanner rows bold and centered (stub
-  # header cell stays left), colored bands per data column. The BMS default
-  # ("bms") derives the palette from the column-group structure (each
-  # spanner group / by-level column a band); an explicit vector overrides
-  # it; "none" / NULL leaves the header unfilled.
+  # header cell stays left), colored bands per column group. Colors come
+  # from `header_bg` (see resolve_header_bands): a named/unnamed color map,
+  # keyed on the by-level values the annotated df already carries. blockr.viz
+  # knows no palette of its own -- the app supplies the colors (option or
+  # argument), so nothing house-specific lives here.
   hdr_rows <- c(spanner_i, leaf_i)
   ft <- flextable::bold(ft, i = hdr_rows, part = "header")
-  band <- resolve_header_bands(header_bg, top, n_data)
+  band <- resolve_header_bands(header_bg, top, data_cols)
   if (!is.null(band)) {
     # Bands span BOTH the spanner and leaf rows: within a spanner group every
     # leaf shares one color, so the merged spanner cell reads as one band,
-    # not a stripe.
+    # not a stripe. A column whose group has no color (NA) is left unfilled.
     for (j in seq_len(n_data)) {
+      if (is.na(band$bg[j])) next
       ft <- ft |>
         flextable::bg(bg = band$bg[j], i = hdr_rows, j = j + 1L,
                       part = "header") |>
         flextable::color(color = band$text[j], i = hdr_rows, j = j + 1L,
                          part = "header")
     }
-    # Stub header a light gray band, so the whole header row reads as one
-    # colored strip (the topline look).
-    ft <- ft |>
-      flextable::bg(bg = "#EEEEEE", i = hdr_rows, j = 1L, part = "header") |>
-      flextable::color(color = "#595454", i = hdr_rows, j = 1L,
-                       part = "header")
+    # Stub header: colored only when the map pins it via a ".stub" entry.
+    if (!is.na(band$stub_bg)) {
+      ft <- ft |>
+        flextable::bg(bg = band$stub_bg, i = hdr_rows, j = 1L,
+                      part = "header") |>
+        flextable::color(color = band$stub_text, i = hdr_rows, j = 1L,
+                         part = "header")
+    }
   }
 
   # Title / subtitle lines: add_header_lines already merges them across the
@@ -369,74 +381,69 @@ ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   ft
 }
 
-# The BMS header palette (the topline `get_bms_colors()` values). Vivid bands
-# for the data columns; the stub gets the light gray separately.
-BMS_HEADER_PALETTE <- c(
-  dark_gray = "#A59F9F", blue = "#33D6F1", orange = "#FDA97C",
-  green = "#C8E6C9", purple = "#E1BEE7"
-)
-
-# Header contrast text for a fill: white on the dark gray, else the BMS body
-# gray. Keeps the palette readable without a per-color table.
-ft_header_text <- function(bg) {
-  ifelse(toupper(bg) == "#A59F9F", "#FFFFFF", "#595454")
+# Readable text color for a fill, by luminance (Rec. 601). Any hex or R
+# color name; NA in -> NA out (no fill, no text override). blockr.viz carries
+# no house palette, so this is the only color knowledge here.
+ft_contrast_text <- function(bg) {
+  vapply(bg, function(col) {
+    if (is.na(col)) return(NA_character_)
+    lum <- tryCatch(
+      sum(grDevices::col2rgb(col)[, 1L] * c(0.299, 0.587, 0.114)),
+      error = function(e) 255
+    )
+    if (lum < 140) "#FFFFFF" else "#333333"
+  }, character(1L), USE.NAMES = FALSE)
 }
 
-# Resolve the `header_bg` argument to per-data-column bg / text vectors.
-#   "bms" / TRUE -> auto palette by column GROUP (spanner top, or the column
-#     itself when flat): each treatment arm / by-level a band, cycling the
-#     BMS palette -- the same look topline gets from an explicit col_colors,
-#     but read off the annotated df's structure.
-#   character vector -> explicit per-column colors / palette names.
-#   "none" / NULL / FALSE -> no fill.
-resolve_header_bands <- function(header_bg, top, n) {
+# Resolve `header_bg` to per-data-column fills, keyed on the column-group
+# structure the annotated df carries. `header_bg` is a color vector:
+#   * NAMED entries PIN a group: the name is a by-level value (the spanner
+#     top for nested `by`, else the data-column name); ".stub" pins the row-
+#     stub header. So `c(Placebo = "grey", "Drug" = "#33D6F1")` colours those
+#     arms explicitly (placebo grey, treatment blue) whatever their position.
+#   * UNNAMED entries are the cycle pool for the remaining, unpinned groups
+#     (in order of first appearance) -- `c("#A59F9F", "#33D6F1")` bands them.
+#   * The two mix: `c(.stub = "#EEE", Placebo = "grey", "#33D6F1", "#FDA97C")`.
+# Colors are hex or R color names -- NO palette-name lookup, so no house
+# style lives in blockr.viz; the app supplies the actual values (typically via
+# getOption("blockr.viz.ft_header_bg")). `NULL` / `FALSE` / `"none"` -> no
+# fill. Returns per-column bg/text (length = n data cols; NA = unfilled) plus
+# stub_bg/stub_text, or NULL when there is nothing to fill.
+resolve_header_bands <- function(header_bg, top, data_cols) {
+  n <- length(data_cols)
   if (n == 0L) return(NULL)
   if (is.null(header_bg) || isFALSE(header_bg) ||
         identical(header_bg, "none")) {
     return(NULL)
   }
-  if (isTRUE(header_bg) || identical(header_bg, "bms")) {
-    # Group columns by their spanner top (flat columns are each their own
-    # group); assign palette colors in order of first appearance.
-    keys <- ifelse(nzchar(top), top, as.character(seq_len(n)))
-    grp <- match(keys, unique(keys))
-    bg <- unname(BMS_HEADER_PALETTE[
-      ((grp - 1L) %% length(BMS_HEADER_PALETTE)) + 1L])
-    return(list(bg = bg, text = ft_header_text(bg)))
-  }
-  ft_header_band_colors(header_bg, n)
-}
 
-# Resolve `header_bg` into aligned bg / text vectors of length `n`. Accepts
-# the topline palette names or any color; text color falls back to
-# white-on-dark by luminance when a raw color is given. NULL in, NULL out.
-ft_header_band_colors <- function(header_bg, n) {
-  if (is.null(header_bg) || n == 0L) return(NULL)
-  palette <- list(
-    white     = list(bg = "#FFFFFF", text = "#595454"),
-    gray      = list(bg = "#EEEEEE", text = "#595454"),
-    dark_gray = list(bg = "#A59F9F", text = "#FFFFFF"),
-    blue      = list(bg = "#33D6F1", text = "#595454"),
-    orange    = list(bg = "#FDA97C", text = "#595454"),
-    green     = list(bg = "#C8E6C9", text = "#595454"),
-    purple    = list(bg = "#E1BEE7", text = "#595454")
-  )
-  header_bg <- rep_len(as.character(header_bg), n)
-  bg <- character(n)
-  text <- character(n)
-  for (j in seq_len(n)) {
-    key <- tolower(trimws(header_bg[j]))
-    if (key %in% names(palette)) {
-      bg[j] <- palette[[key]]$bg
-      text[j] <- palette[[key]]$text
-    } else {
-      bg[j] <- header_bg[j]
-      lum <- tryCatch(
-        sum(grDevices::col2rgb(header_bg[j])[, 1L] * c(0.299, 0.587, 0.114)),
-        error = function(e) 255
-      )
-      text[j] <- if (lum < 128) "#FFFFFF" else "#595454"
+  nm <- names(header_bg)
+  header_bg <- as.character(header_bg)   # (drops names -- captured above)
+  if (is.null(nm)) nm <- rep("", length(header_bg))
+  pins <- header_bg[nzchar(nm)]
+  names(pins) <- nm[nzchar(nm)]
+  pool <- header_bg[!nzchar(nm)]
+
+  # Group key per data column: the spanner top when nested, else the column
+  # name itself. Unpinned groups draw from the cycle pool in appearance order.
+  keys <- ifelse(nzchar(top), top, data_cols)
+  groups <- unique(keys)
+  gcol <- setNames(rep(NA_character_, length(groups)), groups)
+  taken <- 0L
+  for (g in groups) {
+    if (g %in% names(pins)) {
+      gcol[[g]] <- pins[[g]]
+    } else if (length(pool)) {
+      taken <- taken + 1L
+      gcol[[g]] <- pool[[((taken - 1L) %% length(pool)) + 1L]]
     }
   }
-  list(bg = bg, text = text)
+
+  bg <- unname(gcol[keys])
+  stub_bg <- if (".stub" %in% names(pins)) pins[[".stub"]] else NA_character_
+
+  list(
+    bg = bg, text = ft_contrast_text(bg),
+    stub_bg = stub_bg, stub_text = ft_contrast_text(stub_bg)
+  )
 }

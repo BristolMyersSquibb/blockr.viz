@@ -96,36 +96,41 @@ test_that("plain data frames render without annotations", {
   expect_equal(flextable::nrow_part(ft, "body"), 6L)
 })
 
-test_that("bms auto-bands derive palette from column-group structure", {
-  # Flat columns: each is its own group -> palette in order.
-  b <- resolve_header_bands("bms", c("", "", ""), 3L)
-  expect_equal(b$bg, c("#A59F9F", "#33D6F1", "#FDA97C"))
-  expect_equal(b$text, c("#FFFFFF", "#595454", "#595454"))
+test_that("unnamed header_bg cycles the pool by column group", {
+  # Flat columns: each its own group -> pool in order, cycling.
+  b <- resolve_header_bands(c("#A59F9F", "#33D6F1"), c("", "", ""),
+                            c("a", "b", "c"))
+  expect_equal(b$bg, c("#A59F9F", "#33D6F1", "#A59F9F"))
+  # contrast text is a readable hex chosen by luminance
+  expect_match(b$text[[1L]], "^#")
+  expect_true(is.na(b$stub_bg))
 
-  # Spanner groups: leaves under one top share a color (arm = band).
-  b2 <- resolve_header_bands("bms", c("4", "4", "6", "6"), 4L)
+  # Spanner groups: leaves under one top share one pool color (arm = band).
+  b2 <- resolve_header_bands(c("#A59F9F", "#33D6F1", "#FDA97C"),
+                             c("4", "4", "6", "6"), c("c1", "c2", "c3", "c4"))
   expect_equal(b2$bg, c("#A59F9F", "#A59F9F", "#33D6F1", "#33D6F1"))
-
-  # Palette cycles past its length.
-  b3 <- resolve_header_bands("bms", rep("", 6L), 6L)
-  expect_equal(b3$bg[[6L]], "#A59F9F")
-
-  # "none" / NULL / FALSE / zero cols -> no fill.
-  expect_null(resolve_header_bands("none", c("", ""), 2L))
-  expect_null(resolve_header_bands(NULL, c("", ""), 2L))
-  expect_null(resolve_header_bands("bms", character(), 0L))
-
-  # An explicit vector still routes to the manual resolver.
-  b4 <- resolve_header_bands(c("blue", "orange"), c("", ""), 2L)
-  expect_equal(b4$bg, c("#33D6F1", "#FDA97C"))
 })
 
-test_that("header band palette resolves names and raw colors", {
-  band <- ft_header_band_colors(c("dark_gray", "#112233"), 3L)
-  expect_equal(band$bg, c("#A59F9F", "#112233", "#A59F9F"))
-  expect_equal(band$text[1L], "#FFFFFF")
-  # #112233 is dark -> white text by luminance
-  expect_equal(band$text[2L], "#FFFFFF")
-  expect_null(ft_header_band_colors(NULL, 3L))
-  expect_null(ft_header_band_colors("blue", 0L))
+test_that("named header_bg pins arms; unnamed fill the rest; .stub pins stub", {
+  # Placebo pinned grey whatever its position; the other arm draws the pool.
+  b <- resolve_header_bands(
+    c(.stub = "#EEEEEE", Placebo = "grey", "#33D6F1"),
+    c("", ""), c("Placebo", "Drug 6 mg")
+  )
+  expect_equal(b$bg[[1L]], "grey")        # Placebo pinned
+  expect_equal(b$bg[[2L]], "#33D6F1")     # Drug from the pool
+  expect_equal(b$stub_bg, "#EEEEEE")
+
+  # An arm with no pin and no pool -> NA (unfilled), not an error.
+  b2 <- resolve_header_bands(c(Placebo = "grey"), c("", ""),
+                             c("Placebo", "Drug"))
+  expect_equal(b2$bg[[1L]], "grey")
+  expect_true(is.na(b2$bg[[2L]]))
+})
+
+test_that("header_bg off / empty resolves to no bands", {
+  expect_null(resolve_header_bands("none", c("", ""), c("a", "b")))
+  expect_null(resolve_header_bands(NULL, c("", ""), c("a", "b")))
+  expect_null(resolve_header_bands(FALSE, c("", ""), c("a", "b")))
+  expect_null(resolve_header_bands("#A59F9F", character(), character()))
 })

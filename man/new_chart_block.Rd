@@ -141,10 +141,10 @@ stepped line. Consumed by the JS renderer.}
 
 \item{smooth}{Line smoothing for line charts: \code{"auto"} (default) draws
 monotone-smoothed lines (no overshoot -- local extrema stay exactly at
-the measured points) while the series count keeps point markers
-visible (up to 50 series); denser charts fall back to straight
-segments. \code{"off"} always draws straight segments. A \code{step} mode takes
-precedence over smoothing. Consumed by the JS renderer.}
+the measured points) at every density, so the line character does not
+change with the series count. \code{"off"} always draws straight segments.
+A \code{step} mode takes precedence over smoothing. Consumed by the JS
+renderer.}
 
 \item{vlines, hlines}{Helper lines at fixed positions: numeric vectors,
 each entry drawing one dashed guide line -- \code{vlines} VERTICAL (at that x),
