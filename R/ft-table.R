@@ -35,9 +35,18 @@
 #' @param indent_width Points of left padding per `.indent` level (section
 #'   headers indent at their nesting depth with the same step).
 #' @param first_col_width,other_cols_width Column widths in inches, used
-#'   unless `auto_width` is set. Defaults fit the 13.33in widescreen
-#'   template the topline decks use; pass smaller values for the 10in
-#'   quarto default reference doc.
+#'   unless `fit_width` or `auto_width` is set. Defaults fit the 13.33in
+#'   widescreen template the topline decks use; pass smaller values for the
+#'   10in quarto default reference doc.
+#' @param fit_width Optional total table width in inches (usually the
+#'   slide's usable content width). When set, the columns are distributed to
+#'   fill it exactly -- the stub keeps `first_col_width` (capped at half the
+#'   budget), the data columns share the rest -- so a wide table fits the
+#'   slide instead of overflowing. Defaults from
+#'   `getOption("blockr.viz.ft_fit_width")`, which the blockr.outline pptx /
+#'   docx render sets from the reference template's slide size, so a table
+#'   printed in a deck fits without the caller sizing it. Unset for html /
+#'   pdf, where the natural widths apply.
 #' @param auto_width Logical. `TRUE` runs [flextable::autofit()] instead of
 #'   the manual widths. flextable never fits to the slide on its own, so
 #'   manual widths (the default) are the safe choice for pptx.
@@ -47,8 +56,9 @@
 #'   `"green"`, `"purple"`). Header text color is chosen per band for
 #'   contrast. `NULL` (default) leaves the header unfilled.
 #' @param pptx_left,pptx_top Slide placement in inches, stashed as
-#'   `pptx_left` / `pptx_top` attributes on the result (consumed by the
-#'   blockr.md pptx pipeline; inert elsewhere).
+#'   `pptx_left` / `pptx_top` attributes on the result (consumed by an
+#'   officer-based pptx pipeline; inert under the quarto render, where the
+#'   reference template's content placeholder sets the table position).
 #'
 #' @return A `flextable` object (with `pptx_left` / `pptx_top` attributes).
 #'
@@ -63,9 +73,10 @@ ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
                      font_color = "#444444",
                      indent_width = 20,
                      first_col_width = 5.65, other_cols_width = 3.5,
+                     fit_width = getOption("blockr.viz.ft_fit_width", NULL),
                      auto_width = FALSE,
                      header_bg = NULL,
-                     pptx_left = 0.325, pptx_top = 1) {
+                     pptx_left = 0.4, pptx_top = 1.1) {
   if (!requireNamespace("flextable", quietly = TRUE)) {
     stop("ft_table() needs the 'flextable' package.", call. = FALSE)
   }
@@ -313,10 +324,18 @@ ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
 
   # ---- widths -----------------------------------------------------------
   # PowerPoint never autofits a flextable; manual widths sized for the slide
-  # are the default (the topline lesson).
+  # are the default (the topline lesson). `fit_width` (inches, usually the
+  # slide's usable content width) distributes columns to exactly fill it:
+  # the stub keeps its width (capped at half the budget so data columns stay
+  # legible), the data columns share the remainder equally. Unset -> the raw
+  # first/other widths, which can exceed the slide (the caller's problem).
   if (isTRUE(auto_width)) {
     ft <- flextable::autofit(ft)
   } else {
+    if (!is.null(fit_width) && n_data > 0L) {
+      first_col_width <- min(first_col_width, fit_width * 0.5)
+      other_cols_width <- (fit_width - first_col_width) / n_data
+    }
     ft <- flextable::width(ft, j = 1L, width = first_col_width)
     if (n_data > 0L) {
       ft <- flextable::width(ft, j = 1L + seq_len(n_data),

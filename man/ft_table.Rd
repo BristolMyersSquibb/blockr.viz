@@ -16,10 +16,11 @@ ft_table(
   indent_width = 20,
   first_col_width = 5.65,
   other_cols_width = 3.5,
+  fit_width = getOption("blockr.viz.ft_fit_width", NULL),
   auto_width = FALSE,
   header_bg = NULL,
-  pptx_left = 0.325,
-  pptx_top = 1
+  pptx_left = 0.4,
+  pptx_top = 1.1
 )
 }
 \arguments{
@@ -39,9 +40,19 @@ df's \code{label} / \code{subtitle} / \code{caption} attributes; \code{""} suppr
 headers indent at their nesting depth with the same step).}
 
 \item{first_col_width, other_cols_width}{Column widths in inches, used
-unless \code{auto_width} is set. Defaults fit the 13.33in widescreen
-template the topline decks use; pass smaller values for the 10in
-quarto default reference doc.}
+unless \code{fit_width} or \code{auto_width} is set. Defaults fit the 13.33in
+widescreen template the topline decks use; pass smaller values for the
+10in quarto default reference doc.}
+
+\item{fit_width}{Optional total table width in inches (usually the
+slide's usable content width). When set, the columns are distributed to
+fill it exactly -- the stub keeps \code{first_col_width} (capped at half the
+budget), the data columns share the rest -- so a wide table fits the
+slide instead of overflowing. Defaults from
+\code{getOption("blockr.viz.ft_fit_width")}, which the blockr.outline pptx /
+docx render sets from the reference template's slide size, so a table
+printed in a deck fits without the caller sizing it. Unset for html /
+pdf, where the natural widths apply.}
 
 \item{auto_width}{Logical. \code{TRUE} runs \code{\link[flextable:autofit]{flextable::autofit()}} instead of
 the manual widths. flextable never fits to the slide on its own, so
@@ -54,8 +65,9 @@ names (\code{"white"}, \code{"gray"}, \code{"dark_gray"}, \code{"blue"}, \code{"
 contrast. \code{NULL} (default) leaves the header unfilled.}
 
 \item{pptx_left, pptx_top}{Slide placement in inches, stashed as
-\code{pptx_left} / \code{pptx_top} attributes on the result (consumed by the
-blockr.md pptx pipeline; inert elsewhere).}
+\code{pptx_left} / \code{pptx_top} attributes on the result (consumed by an
+officer-based pptx pipeline; inert under the quarto render, where the
+reference template's content placeholder sets the table position).}
 }
 \value{
 A \code{flextable} object (with \code{pptx_left} / \code{pptx_top} attributes).
