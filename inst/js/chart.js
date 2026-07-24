@@ -3973,7 +3973,10 @@
           series,
           stepMode: stepMode || null,
           smoothOn: smoothOn,
-          markerPx: 7 * dm,
+          // Match the patient profile's marker + line sizing (symbolSize 8,
+          // 2px white ring, 2.5px line) so a hovered crowd line reads as the
+          // same object the profile shows for the drilled patient.
+          markerPx: 8 * dm,
           focusW: 2.5 * lm
         } : null;
 
@@ -4807,7 +4810,7 @@
           showSymbol: true,
           symbol: 'circle',
           symbolSize: f.markerPx,
-          itemStyle: { color: clr, borderColor: '#fff', borderWidth: 1.5, opacity: op },
+          itemStyle: { color: clr, borderColor: '#fff', borderWidth: 2, opacity: op },
           lineStyle: { color: clr, width: f.focusW, opacity: op },
           areaStyle: n == null ? undefined : {
             origin: 'start', opacity: op,
@@ -4827,8 +4830,9 @@
           chart.setOption({
             series: [{
               id: '__focus__',
-              animationDurationUpdate: 150,
-              animationEasingUpdate: 'cubicOut',
+              // Very fast — a soft pop, not a slow reveal.
+              animationDurationUpdate: 70,
+              animationEasingUpdate: 'linear',
               itemStyle: { opacity: 1 },
               lineStyle: { opacity: 1 },
               areaStyle: n == null ? undefined : { opacity: 1 }
