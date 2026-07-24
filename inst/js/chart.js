@@ -71,6 +71,28 @@
   const TRAJ_REDUCED_MAX = 500;
   const TRAJ_HARD_CAP = 1000;
 
+  // How near (CSS px, vertical) the cursor must be to a line for it to count as
+  // "hovered" by the self-healing mousemove picker (see _nearestLineSeries).
+  const HOVER_PX = 14;
+
+  // Linear-interpolated y of a sorted [[x, y, ...], ...] polyline at data-x `x`,
+  // or null when x is outside the line's range. Used by the mousemove hover
+  // picker to measure how far each line is from the cursor. The drawn line may
+  // be monotone-curved; a straight interpolation between the same points is
+  // close enough to decide which line is nearest.
+  function interpYAtX(/** @type {any[]} */ data, /** @type {number} */ x) {
+    const n = data.length;
+    if (!n || x < data[0][0] || x > data[n - 1][0]) return null;
+    for (let k = 1; k < n; k++) {
+      const x0 = data[k - 1][0], x1 = data[k][0];
+      if (x >= x0 && x <= x1) {
+        const y0 = data[k - 1][1], y1 = data[k][1];
+        return x1 === x0 ? y0 : y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+      }
+    }
+    return null;
+  }
+
   // Ceiling for the fixed-row-geometry plot area (CSS px). rows x band is
   // unbounded in groups x series, and a canvas taller than the browser's
   // limit (Safari: ~16.7M device px² -> ~5k CSS px at dpr 2 for a full-width
@@ -2072,23 +2094,28 @@
 
       // -- individual (scatter/line) --
 
-      // Track which line the cursor is on (triggerLineEvent makes bare
-      // line segments fire series mouseover/mouseout) so the axis
-      // tooltip can narrow to the hovered series. Inert for scatter
-      // (seriesType never 'line').
-      chart.on('mouseover', (/** @type {any} */ p) => {
-        if (p.componentType === 'series' && p.seriesType === 'line') {
-          slot.hover.si = p.seriesIndex;
-          this._promoteFocus(slot, chart, p.seriesIndex);
-        }
+      // Hover highlight (line charts) is driven off zrender 'mousemove' — a
+      // continuous, self-healing signal — rather than per-series mouseover /
+      // mouseout. Those enter/leave pairs are what broke: ECharts drops them
+      // under fast movement across overlapping lines (and the on-top overlay can
+      // starve the next line's mouseover), leaving a previously-hovered line
+      // stuck-highlighted. The picker below instead recomputes the nearest line
+      // PURELY from the cursor pixel every move — no dependency on ECharts
+      // hit-testing or on the overlay — so it can never get stuck: each move it
+      // points at exactly one line or clears. It also sets slot.hover.si so the
+      // axis tooltip narrows to the same line. Scatter keeps ECharts' own
+      // per-point emphasis (the picker no-ops when slot.focus is null).
+      const zr = chart.getZr();
+      zr.on('mousemove', (/** @type {any} */ e) => {
+        if (!slot.focus) return;
+        const si = this._nearestLineSeries(slot, chart, e.offsetX, e.offsetY);
+        if (si === slot.focusSi) return;
+        slot.hover.si = si;
+        if (si == null) this._demoteFocus(slot, chart);
+        else this._promoteFocus(slot, chart, si);
       });
-      chart.on('mouseout', (/** @type {any} */ p) => {
-        if (p.componentType === 'series' && p.seriesType === 'line') {
-          slot.hover.si = null;
-          this._demoteFocus(slot, chart);
-        }
-      });
-      chart.on('globalout', () => {
+      zr.on('globalout', () => {
+        if (!slot.focus) return;
         slot.hover.si = null;
         this._demoteFocus(slot, chart);
       });
@@ -3466,9 +3493,9 @@
         const chartDiv = slot.chartDiv;
         const chart = this._ensureSlotChart(slot, 'individual');
         // Per-slot hover tracker (which line the cursor is on) — persistent
-        // so the once-attached mouseover/out handlers and the per-render
-        // tooltip formatter share it. Reset on re-render, together with the
-        // focus-promotion guard (the notMerge setOption below empties the
+        // so the once-attached mousemove handler and the per-render tooltip
+        // formatter share it. Reset on re-render, together with the overlay's
+        // current-series guard (the notMerge setOption below empties the
         // overlay, so a stale index would wrongly no-op the next hover).
         slot.hover.si = null;
         slot.focusSi = null;
@@ -3917,16 +3944,16 @@
           : null;
         if (legTitle) series.push(...this._legendTitleSeries(legTitle));
 
-        // Focus-promotion overlay (line charts). On hover of a line, the
-        // once-attached handlers (_promoteFocus / _demoteFocus, wired in
-        // _ensureSlotChart) fill this permanently-mounted series with the
-        // hovered patient's points in the "N = 1" treatment: monotone (or
-        // the chart's step mode), profile weight, ringed markers, a gradient
-        // running down from the line — while the emphasis blur fades the
-        // crowd. A permanent series updated by id, not add/remove, so a
-        // hover never restructures the option. Its blur state is pinned
-        // opaque: hovering the original puts every OTHER series (this one
-        // included) into blur.
+        // Hover-highlight overlay (line charts). ECharts' own emphasis does
+        // nothing useful here — the crowd lines carry `symbol: 'none'`, and
+        // `focus: 'series'` blur is item-driven, so hovering a symbol-less line
+        // neither thickens it nor dims the crowd. So we draw the highlight
+        // ourselves: this permanently-mounted series is filled on hover with the
+        // nearest line's points in the "N = 1" treatment (thick line, ringed
+        // markers, gradient) and emptied when the cursor leaves. It is UPDATED
+        // BY ID, never added/removed, and driven off a self-healing mousemove
+        // (see the zr handler in _ensureSlotChart), so it cannot get stuck the
+        // way the old mouseover/mouseout version did.
         if (isLine) {
           series.push({
             id: '__focus__',
@@ -3935,20 +3962,13 @@
             data: [],
             silent: true,
             legendHoverLink: false,
-            z: 9,
-            emphasis: { disabled: true },
-            blur: { lineStyle: { opacity: 1 }, itemStyle: { opacity: 1 },
-                    areaStyle: { opacity: 1 } }
+            z: 9
           });
         }
-        // Render-scoped promotion registry for the once-attached handlers:
-        // the final series array (event seriesIndex indexes it) + the
-        // styling the overlay should wear. Null on scatter -> promotion off.
-        // `smoothOn` is the SAME resolved flag the crowd lines use (false in
-        // a dense crowd past TRAJ_FULL_MAX or when smooth = "off"), so a
-        // promoted line curves only when its neighbours do — a monotone
-        // highlight over a straight crowd would read as a different kind of
-        // line, not the same one emphasized.
+        // Render-scoped registry for the mousemove picker + promote: the final
+        // series array (the picker indexes it) and the styling the overlay
+        // wears. `smoothOn` is the SAME resolved flag the crowd lines use, so a
+        // promoted line curves only when its neighbours do. Null on scatter.
         slot.focus = isLine ? {
           series,
           stepMode: stepMode || null,
@@ -4714,28 +4734,72 @@
       }, { priority: 'event' });
     }
 
-    // Fill the permanent '__focus__' overlay with the hovered line's points
-    // in the profile ("N = 1") treatment. Idempotent per series (repeated
-    // mouseovers along the same line are no-ops). See the overlay comment in
-    // _renderIndividual for the design.
+    // Nearest line series to a cursor pixel, or null when the cursor is not
+    // near any line. Works in DATA space (immune to the on-top overlay and to
+    // ECharts hover hit-testing): convert the cursor to data coords, linearly
+    // interpolate each line's y at the cursor's x, pick the smallest |Δy|, then
+    // confirm it is within HOVER_PX vertically. This is what makes the hover
+    // self-healing — it depends only on where the cursor is, never on enter /
+    // leave events that can be dropped.
+    /** @param {any} slot @param {any} chart @param {number} px @param {number} py */
+    _nearestLineSeries(slot, chart, px, py) {
+      const f = slot.focus;
+      if (!f) return null;
+      let cd;
+      try { cd = chart.convertFromPixel({ gridIndex: 0 }, [px, py]); } catch (e) { return null; }
+      if (!cd || cd[0] == null || cd[1] == null) return null;
+      const cx = +cd[0], cy = +cd[1];
+      const series = f.series;
+      let bestSi = null, bestY = null, bestDy = Infinity;
+      for (let i = 0; i < series.length; i++) {
+        const s = series[i];
+        if (!s || s.id === '__focus__' || s.type !== 'line' ||
+            !Array.isArray(s.data) || !s.data.length) continue;
+        const y = interpYAtX(s.data, cx);
+        if (y == null) continue;
+        const dy = Math.abs(y - cy);
+        if (dy < bestDy) { bestDy = dy; bestSi = i; bestY = y; }
+      }
+      if (bestSi == null) return null;
+      // Reject when the nearest line is still far in PIXELS (data-space Δy near
+      // a compressed axis can be tiny while the pixel gap is large).
+      let bp;
+      try { bp = chart.convertToPixel({ seriesIndex: bestSi }, [cx, bestY]); } catch (e) { return bestSi; }
+      if (bp && Math.abs(bp[1] - py) > HOVER_PX) return null;
+      return bestSi;
+    }
+
+    // Fill the permanent '__focus__' overlay with a line's points in the profile
+    // ("N = 1") treatment: thick line, ringed markers, gradient fill, matching
+    // the chart's own interpolation. Idempotent per series (guarded by the
+    // caller on slot.focusSi). See the overlay comment in _renderIndividual.
     /** @param {any} slot @param {any} chart @param {number} si */
     _promoteFocus(slot, chart, si) {
       const f = slot.focus;
-      if (!f || slot.focusSi === si) return;
+      if (!f) return;
       const s = f.series[si];
       if (!s || s.id === '__focus__' || s.type !== 'line' ||
           !Array.isArray(s.data) || !s.data.length) return;
+      // "Fresh" = coming from a cleared overlay -> fade the line in. A line ->
+      // line switch is NOT fresh: it swaps instantly (see animationDurationUpdate
+      // below), so the highlight tracks the cursor without lag.
+      const fresh = slot.focusSi == null;
       slot.focusSi = si;
       const clr = (s.itemStyle && s.itemStyle.color) || null;
-      // Gradient fill, line color 15% -> 0 top-to-bottom (the patient
-      // profile's treatment). Non-hex colors fall back to no fill.
+      // Gradient fill, line color 15% -> 0 top-to-bottom. Non-hex -> no fill.
       const m = /^#([0-9a-f]{6})$/i.exec(String(clr || ''));
       const n = m ? parseInt(m[1], 16) : null;
       const rgba = (/** @type {number} */ a) => n == null ? 'rgba(0,0,0,0)'
         : 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
+      const op = fresh ? 0 : 1;
       chart.setOption({
         series: [{
           id: '__focus__',
+          // No shape morph: a line -> line switch changes the data, and with
+          // update animation on ECharts would tween one polyline into the other
+          // (the "shape adjusting from one form to another" that read as
+          // confusing). 0 makes the new line appear at its true shape instantly.
+          animationDurationUpdate: 0,
           data: s.data,
           step: f.stepMode || undefined,
           smooth: f.smoothOn,
@@ -4743,26 +4807,48 @@
           showSymbol: true,
           symbol: 'circle',
           symbolSize: f.markerPx,
-          itemStyle: { color: clr, borderColor: '#fff', borderWidth: 1.5 },
-          lineStyle: { color: clr, width: f.focusW, opacity: 1 },
+          itemStyle: { color: clr, borderColor: '#fff', borderWidth: 1.5, opacity: op },
+          lineStyle: { color: clr, width: f.focusW, opacity: op },
           areaStyle: n == null ? undefined : {
-            origin: 'start',
+            origin: 'start', opacity: op,
             color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
                      colorStops: [{ offset: 0.05, color: rgba(0.15) },
                                   { offset: 0.95, color: rgba(0) }] }
           }
         }]
       });
+      // Quick opacity fade-in on first appearance. A second setOption that only
+      // changes opacity (data unchanged) tweens the fade with NO position morph.
+      if (fresh && typeof requestAnimationFrame === 'function') {
+        if (slot.fadeRaf) cancelAnimationFrame(slot.fadeRaf);
+        slot.fadeRaf = requestAnimationFrame(() => {
+          slot.fadeRaf = null;
+          if (slot.focusSi == null) return;   // cleared before the fade ran
+          chart.setOption({
+            series: [{
+              id: '__focus__',
+              animationDurationUpdate: 150,
+              animationEasingUpdate: 'cubicOut',
+              itemStyle: { opacity: 1 },
+              lineStyle: { opacity: 1 },
+              areaStyle: n == null ? undefined : { opacity: 1 }
+            }]
+          });
+        });
+      }
     }
 
     /** @param {any} slot @param {any} chart */
     _demoteFocus(slot, chart) {
       if (!slot.focus || slot.focusSi == null) return;
       slot.focusSi = null;
-      // Emptying the data is the whole demotion: stale styling on an empty
-      // series draws nothing, and every re-render rebuilds the overlay from
-      // scratch (setOption notMerge), so nothing can leak across renders.
-      chart.setOption({ series: [{ id: '__focus__', data: [] }] });
+      if (slot.fadeRaf && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(slot.fadeRaf); slot.fadeRaf = null;
+      }
+      // Emptying the data is the whole demotion; instant (no morph), and every
+      // re-render rebuilds the overlay from scratch (setOption notMerge), so
+      // nothing can leak across renders.
+      chart.setOption({ series: [{ id: '__focus__', animationDurationUpdate: 0, data: [] }] });
     }
 
     _sendConfig() {
