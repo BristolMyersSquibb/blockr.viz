@@ -244,27 +244,20 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_string()
     ),
-    step = new_arg_spec(
+    connect = new_arg_spec(
       paste0(
-        "Step-line mode for line charts. null (default) draws straight ",
-        "segments; \"start\", \"middle\" or \"end\" draw a stepped line ",
-        "(where along the interval the vertical jump happens). Use for ",
-        "values that hold between observations (dose levels, states). ",
-        "Line charts only."
-      ),
-      example = NULL,
-      type = arg_enum(c("start", "middle", "end"))
-    ),
-    smooth = new_arg_spec(
-      paste0(
-        "Line smoothing for line charts. \"auto\" (default) draws ",
+        "How a line chart connects its points. \"monotone\" (default) draws ",
         "monotone-smoothed lines (no overshoot; local extrema stay at the ",
-        "measured points) at every density, so the line character does not ",
-        "change with the series count. \"off\" always draws straight ",
-        "segments. A step mode takes precedence. Line charts only."
+        "measured points) at every density; \"straight\" draws plain ",
+        "segments; \"step-start\", \"step-middle\", \"step-end\" hold the ",
+        "value between observations and place the vertical jump along the ",
+        "interval (dose levels, on/off states). One control replacing the ",
+        "old step + smooth pair. Line charts only."
       ),
       example = NULL,
-      type = arg_enum(c("auto", "off"))
+      type = arg_enum(
+        c("monotone", "straight", "step-start", "step-middle", "step-end")
+      )
     ),
     vlines = new_arg_spec(
       paste0(
