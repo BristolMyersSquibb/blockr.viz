@@ -50,11 +50,14 @@
 #' @param auto_width Logical. `TRUE` runs [flextable::autofit()] instead of
 #'   the manual widths. flextable never fits to the slide on its own, so
 #'   manual widths (the default) are the safe choice for pptx.
-#' @param header_bg Optional character vector of header band colors, one
-#'   per data column (recycled). Accepts hex colors or the topline palette
-#'   names (`"white"`, `"gray"`, `"dark_gray"`, `"blue"`, `"orange"`,
-#'   `"green"`, `"purple"`). Header text color is chosen per band for
-#'   contrast. `NULL` (default) leaves the header unfilled.
+#' @param header_bg Header band colors. `"bms"` (default) derives the BMS
+#'   palette from the column-group structure: each two-level spanner group
+#'   (or each flat data column) becomes one colored band, cycling
+#'   dark-gray / blue / orange / green / purple, with a light-gray stub --
+#'   the topline deck look, read off the annotated df instead of hand-listed.
+#'   A character vector sets explicit colors per data column (hex or the
+#'   palette names `"white"`, `"gray"`, `"dark_gray"`, `"blue"`, `"orange"`,
+#'   `"green"`, `"purple"`). `"none"` (or `NULL`) leaves the header unfilled.
 #' @param pptx_left,pptx_top Slide placement in inches, stashed as
 #'   `pptx_left` / `pptx_top` attributes on the result (consumed by an
 #'   officer-based pptx pipeline; inert under the quarto render, where the
@@ -75,7 +78,7 @@ ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
                      first_col_width = 5.65, other_cols_width = 3.5,
                      fit_width = getOption("blockr.viz.ft_fit_width", NULL),
                      auto_width = FALSE,
-                     header_bg = NULL,
+                     header_bg = "bms",
                      pptx_left = 0.4, pptx_top = 1.1) {
   if (!requireNamespace("flextable", quietly = TRUE)) {
     stop("ft_table() needs the 'flextable' package.", call. = FALSE)
@@ -204,8 +207,16 @@ ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   # ---- header rows ------------------------------------------------------
   # Bottom-up: leaf labels, then the merged spanner row on top, then
   # subtitle / title lines (add_header_lines prepends, so subtitle first).
+  # The stub header uses the stub column's `label` attribute when the
+  # producer set one (the topline block's `first_column_label`), else blank.
+  stub_label <- attr(df[[stub_col]], "label")
+  stub_label <- if (is.character(stub_label) && length(stub_label) == 1L) {
+    stub_label
+  } else {
+    ""
+  }
   ft <- do.call(flextable::set_header_labels,
-                c(list(ft), stats::setNames(as.list(c("", leaf)),
+                c(list(ft), stats::setNames(as.list(c(stub_label, leaf)),
                                             c(stub_col, data_cols))))
   if (has_spanner) {
     runs <- rle(top)
@@ -250,20 +261,30 @@ ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   }
 
   # Column header styling: leaf + spanner rows bold and centered (stub
-  # header cell stays left), optional colored bands per data column.
+  # header cell stays left), colored bands per data column. The BMS default
+  # ("bms") derives the palette from the column-group structure (each
+  # spanner group / by-level column a band); an explicit vector overrides
+  # it; "none" / NULL leaves the header unfilled.
   hdr_rows <- c(spanner_i, leaf_i)
   ft <- flextable::bold(ft, i = hdr_rows, part = "header")
-  # Bands color the leaf row only -- a merged spanner cell striped by its
-  # children's colors reads as broken.
-  band <- ft_header_band_colors(header_bg, n_data)
+  band <- resolve_header_bands(header_bg, top, n_data)
   if (!is.null(band)) {
+    # Bands span BOTH the spanner and leaf rows: within a spanner group every
+    # leaf shares one color, so the merged spanner cell reads as one band,
+    # not a stripe.
     for (j in seq_len(n_data)) {
       ft <- ft |>
-        flextable::bg(bg = band$bg[j], i = leaf_i, j = j + 1L,
+        flextable::bg(bg = band$bg[j], i = hdr_rows, j = j + 1L,
                       part = "header") |>
-        flextable::color(color = band$text[j], i = leaf_i, j = j + 1L,
+        flextable::color(color = band$text[j], i = hdr_rows, j = j + 1L,
                          part = "header")
     }
+    # Stub header a light gray band, so the whole header row reads as one
+    # colored strip (the topline look).
+    ft <- ft |>
+      flextable::bg(bg = "#EEEEEE", i = hdr_rows, j = 1L, part = "header") |>
+      flextable::color(color = "#595454", i = hdr_rows, j = 1L,
+                       part = "header")
   }
 
   # Title / subtitle lines: add_header_lines already merges them across the
@@ -346,6 +367,44 @@ ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   attr(ft, "pptx_left") <- pptx_left
   attr(ft, "pptx_top") <- pptx_top
   ft
+}
+
+# The BMS header palette (the topline `get_bms_colors()` values). Vivid bands
+# for the data columns; the stub gets the light gray separately.
+BMS_HEADER_PALETTE <- c(
+  dark_gray = "#A59F9F", blue = "#33D6F1", orange = "#FDA97C",
+  green = "#C8E6C9", purple = "#E1BEE7"
+)
+
+# Header contrast text for a fill: white on the dark gray, else the BMS body
+# gray. Keeps the palette readable without a per-color table.
+ft_header_text <- function(bg) {
+  ifelse(toupper(bg) == "#A59F9F", "#FFFFFF", "#595454")
+}
+
+# Resolve the `header_bg` argument to per-data-column bg / text vectors.
+#   "bms" / TRUE -> auto palette by column GROUP (spanner top, or the column
+#     itself when flat): each treatment arm / by-level a band, cycling the
+#     BMS palette -- the same look topline gets from an explicit col_colors,
+#     but read off the annotated df's structure.
+#   character vector -> explicit per-column colors / palette names.
+#   "none" / NULL / FALSE -> no fill.
+resolve_header_bands <- function(header_bg, top, n) {
+  if (n == 0L) return(NULL)
+  if (is.null(header_bg) || isFALSE(header_bg) ||
+        identical(header_bg, "none")) {
+    return(NULL)
+  }
+  if (isTRUE(header_bg) || identical(header_bg, "bms")) {
+    # Group columns by their spanner top (flat columns are each their own
+    # group); assign palette colors in order of first appearance.
+    keys <- ifelse(nzchar(top), top, as.character(seq_len(n)))
+    grp <- match(keys, unique(keys))
+    bg <- unname(BMS_HEADER_PALETTE[
+      ((grp - 1L) %% length(BMS_HEADER_PALETTE)) + 1L])
+    return(list(bg = bg, text = ft_header_text(bg)))
+  }
+  ft_header_band_colors(header_bg, n)
 }
 
 # Resolve `header_bg` into aligned bg / text vectors of length `n`. Accepts

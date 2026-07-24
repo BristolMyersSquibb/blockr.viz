@@ -18,7 +18,7 @@ ft_table(
   other_cols_width = 3.5,
   fit_width = getOption("blockr.viz.ft_fit_width", NULL),
   auto_width = FALSE,
-  header_bg = NULL,
+  header_bg = "bms",
   pptx_left = 0.4,
   pptx_top = 1.1
 )
@@ -58,11 +58,14 @@ pdf, where the natural widths apply.}
 the manual widths. flextable never fits to the slide on its own, so
 manual widths (the default) are the safe choice for pptx.}
 
-\item{header_bg}{Optional character vector of header band colors, one
-per data column (recycled). Accepts hex colors or the topline palette
-names (\code{"white"}, \code{"gray"}, \code{"dark_gray"}, \code{"blue"}, \code{"orange"},
-\code{"green"}, \code{"purple"}). Header text color is chosen per band for
-contrast. \code{NULL} (default) leaves the header unfilled.}
+\item{header_bg}{Header band colors. \code{"bms"} (default) derives the BMS
+palette from the column-group structure: each two-level spanner group
+(or each flat data column) becomes one colored band, cycling
+dark-gray / blue / orange / green / purple, with a light-gray stub --
+the topline deck look, read off the annotated df instead of hand-listed.
+A character vector sets explicit colors per data column (hex or the
+palette names \code{"white"}, \code{"gray"}, \code{"dark_gray"}, \code{"blue"}, \code{"orange"},
+\code{"green"}, \code{"purple"}). \code{"none"} (or \code{NULL}) leaves the header unfilled.}
 
 \item{pptx_left, pptx_top}{Slide placement in inches, stashed as
 \code{pptx_left} / \code{pptx_top} attributes on the result (consumed by an
