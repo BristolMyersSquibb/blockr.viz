@@ -102,6 +102,13 @@ leaf header text (\code{"\\n"} renders as a line break -- the Big-N
 convention). The identity columns (\verb{.variable*}, raw \verb{.group<k>} pairs)
 drive interactive drilling only and are ignored here.
 
+Columns can carry emphasis, the column analogue of the row \code{.strong} /
+\code{.emph} flags: \code{attr(col, "strong")} / \code{attr(col, "emph")}. When any
+column is flagged, the header band follows an emphasis ramp -- normal
+light gray, \code{emph} dark gray (and italic), \code{strong} an accent -- so a
+treatment arm stands out against a reference arm the same way row
+emphasis works. This overrides the identity palette (\code{header_bg}).
+
 The look is the blockr.topline flextable theme: dense bordered grid,
 first column left-aligned and wide, data columns centered, optional
 colored header bands, manual column widths (PowerPoint never autofits --
