@@ -128,6 +128,39 @@ test_that("named header_bg pins arms; unnamed fill the rest; .stub pins stub", {
   expect_true(is.na(b2$bg[[2L]]))
 })
 
+test_that("column .strong / .emph drive the header emphasis ramp", {
+  b <- ft_emphasis_bands(c(FALSE, TRUE, FALSE), c(FALSE, FALSE, TRUE))
+  # strong -> accent, emph -> dark gray, normal -> light gray
+  expect_equal(b$bg, c("#EEEEEE", "#2563EB", "#9AA3B0"))
+  expect_equal(b$stub_bg, "#EEEEEE")
+
+  # overridable via option, no house palette baked in
+  withr::local_options(
+    blockr.viz.ft_emphasis_colors = c(normal = "#FFF", emph = "#888",
+                                      strong = "#0A0")
+  )
+  b2 <- ft_emphasis_bands(c(TRUE, FALSE), c(FALSE, TRUE))
+  expect_equal(b2$bg, c("#0A0", "#888"))
+})
+
+test_that("a column .strong attribute switches ft_table into emphasis mode", {
+  skip_if_not_installed("flextable")
+
+  df <- data.frame(
+    .label = c("A", "B"), .strong = c(TRUE, FALSE),
+    Placebo = c("1", "2"), Drug = c("3", "4"),
+    check.names = FALSE, stringsAsFactors = FALSE
+  )
+  attr(df[["Drug"]], "strong") <- TRUE
+
+  # header_bg would otherwise band by identity; the column attr wins.
+  ft <- ft_table(df, header_bg = c("#A59F9F", "#33D6F1"), title = "")
+  fills <- ft$header$styles$cells$background.color$data
+  # the Drug column header (col 3) carries the strong accent, not the palette
+  expect_true(any(toupper(as.vector(fills)) == "#2563EB"))
+  expect_false(any(toupper(as.vector(fills)) == "#33D6F1"))
+})
+
 test_that("header_bg off / empty resolves to no bands", {
   expect_null(resolve_header_bands("none", c("", ""), c("a", "b")))
   expect_null(resolve_header_bands(NULL, c("", ""), c("a", "b")))

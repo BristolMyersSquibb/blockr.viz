@@ -18,6 +18,13 @@
 #' convention). The identity columns (`.variable*`, raw `.group<k>` pairs)
 #' drive interactive drilling only and are ignored here.
 #'
+#' Columns can carry emphasis, the column analogue of the row `.strong` /
+#' `.emph` flags: `attr(col, "strong")` / `attr(col, "emph")`. When any
+#' column is flagged, the header band follows an emphasis ramp -- normal
+#' light gray, `emph` dark gray (and italic), `strong` an accent -- so a
+#' treatment arm stands out against a reference arm the same way row
+#' emphasis works. This overrides the identity palette (`header_bg`).
+#'
 #' The look is the blockr.topline flextable theme: dense bordered grid,
 #' first column left-aligned and wide, data columns centered, optional
 #' colored header bands, manual column widths (PowerPoint never autofits --
@@ -274,9 +281,30 @@ ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   # keyed on the by-level values the annotated df already carries. blockr.viz
   # knows no palette of its own -- the app supplies the colors (option or
   # argument), so nothing house-specific lives here.
+  # Per-column emphasis, the column analogue of the row .strong / .emph
+  # flags: `attr(df[[col]], "strong")` / `"emph"`. When any column carries
+  # one, the header band is driven by an emphasis ramp (normal light gray /
+  # emph dark gray / strong accent) instead of the identity palette, and emph
+  # columns render italic -- so "reference recedes, treatment stands out"
+  # reads the same as the row emphasis it mirrors.
+  col_strong <- vapply(
+    data_cols, function(cn) isTRUE(as.logical(attr(df[[cn]], "strong"))),
+    logical(1L)
+  )
+  col_emph <- vapply(
+    data_cols, function(cn) isTRUE(as.logical(attr(df[[cn]], "emph"))),
+    logical(1L)
+  )
+  emphasis_mode <- any(col_strong | col_emph)
+
   hdr_rows <- c(spanner_i, leaf_i)
   ft <- flextable::bold(ft, i = hdr_rows, part = "header")
-  band <- resolve_header_bands(header_bg, top, data_cols)
+
+  band <- if (emphasis_mode) {
+    ft_emphasis_bands(col_strong, col_emph)
+  } else {
+    resolve_header_bands(header_bg, top, data_cols)
+  }
   if (!is.null(band)) {
     # Bands span BOTH the spanner and leaf rows: within a spanner group every
     # leaf shares one color, so the merged spanner cell reads as one band,
@@ -289,13 +317,19 @@ ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
         flextable::color(color = band$text[j], i = hdr_rows, j = j + 1L,
                          part = "header")
     }
-    # Stub header: colored only when the map pins it via a ".stub" entry.
+    # Stub header: colored when the emphasis ramp fills it, or when the map
+    # pins it via a ".stub" entry.
     if (!is.na(band$stub_bg)) {
       ft <- ft |>
         flextable::bg(bg = band$stub_bg, i = hdr_rows, j = 1L,
                       part = "header") |>
         flextable::color(color = band$stub_text, i = hdr_rows, j = 1L,
                          part = "header")
+    }
+  }
+  if (emphasis_mode) {
+    for (j in which(col_emph)) {
+      ft <- flextable::italic(ft, i = hdr_rows, j = j + 1L, part = "header")
     }
   }
 
@@ -393,6 +427,29 @@ ft_contrast_text <- function(bg) {
     )
     if (lum < 140) "#FFFFFF" else "#333333"
   }, character(1L), USE.NAMES = FALSE)
+}
+
+# The emphasis ramp for column .strong / .emph: normal / emph / strong ->
+# light gray / dark gray / accent. Generic UI values (not a house palette),
+# overridable via option -- the same guarded-fallback shape the chart uses
+# for its palette (blockr.theme has no R-side token API, so these are local
+# defaults; the accent doubles as the chart's first series color feel).
+FT_EMPHASIS_DEFAULT <- c(normal = "#EEEEEE", emph = "#9AA3B0",
+                         strong = "#2563EB")
+
+# Per-column bg / text for emphasis mode. strong -> accent, emph -> dark gray,
+# normal -> light gray; the stub takes the normal (light) band so the header
+# reads as one strip. Contrast text by luminance.
+ft_emphasis_bands <- function(col_strong, col_emph) {
+  cols <- getOption("blockr.viz.ft_emphasis_colors", FT_EMPHASIS_DEFAULT)
+  pick <- function(key) cols[[key]]
+  bg <- ifelse(col_strong, pick("strong"),
+               ifelse(col_emph, pick("emph"), pick("normal")))
+  list(
+    bg = unname(bg), text = ft_contrast_text(unname(bg)),
+    stub_bg = unname(pick("normal")),
+    stub_text = ft_contrast_text(unname(pick("normal")))
+  )
 }
 
 # Resolve `header_bg` to per-data-column fills, keyed on the column-group
