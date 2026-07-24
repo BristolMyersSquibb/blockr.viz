@@ -96,6 +96,30 @@ test_that("plain data frames render without annotations", {
   expect_equal(flextable::nrow_part(ft, "body"), 6L)
 })
 
+test_that("bms auto-bands derive palette from column-group structure", {
+  # Flat columns: each is its own group -> palette in order.
+  b <- resolve_header_bands("bms", c("", "", ""), 3L)
+  expect_equal(b$bg, c("#A59F9F", "#33D6F1", "#FDA97C"))
+  expect_equal(b$text, c("#FFFFFF", "#595454", "#595454"))
+
+  # Spanner groups: leaves under one top share a color (arm = band).
+  b2 <- resolve_header_bands("bms", c("4", "4", "6", "6"), 4L)
+  expect_equal(b2$bg, c("#A59F9F", "#A59F9F", "#33D6F1", "#33D6F1"))
+
+  # Palette cycles past its length.
+  b3 <- resolve_header_bands("bms", rep("", 6L), 6L)
+  expect_equal(b3$bg[[6L]], "#A59F9F")
+
+  # "none" / NULL / FALSE / zero cols -> no fill.
+  expect_null(resolve_header_bands("none", c("", ""), 2L))
+  expect_null(resolve_header_bands(NULL, c("", ""), 2L))
+  expect_null(resolve_header_bands("bms", character(), 0L))
+
+  # An explicit vector still routes to the manual resolver.
+  b4 <- resolve_header_bands(c("blue", "orange"), c("", ""), 2L)
+  expect_equal(b4$bg, c("#33D6F1", "#FDA97C"))
+})
+
 test_that("header band palette resolves names and raw colors", {
   band <- ft_header_band_colors(c("dark_gray", "#112233"), 3L)
   expect_equal(band$bg, c("#A59F9F", "#112233", "#A59F9F"))
