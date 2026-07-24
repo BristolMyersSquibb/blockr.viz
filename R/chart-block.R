@@ -110,6 +110,12 @@
 #' @param step Step-line mode for line charts. `NULL` (default) draws a
 #'   straight line; a step mode (e.g. `"start"`/`"middle"`/`"end"`) draws a
 #'   stepped line. Consumed by the JS renderer.
+#' @param smooth Line smoothing for line charts: `"auto"` (default) draws
+#'   monotone-smoothed lines (no overshoot -- local extrema stay exactly at
+#'   the measured points) while the series count keeps point markers
+#'   visible (up to 50 series); denser charts fall back to straight
+#'   segments. `"off"` always draws straight segments. A `step` mode takes
+#'   precedence over smoothing. Consumed by the JS renderer.
 #' @param vlines,hlines Helper lines at fixed positions: numeric vectors,
 #'   each entry drawing one dashed guide line -- `vlines` VERTICAL (at that x),
 #'   `hlines` HORIZONTAL (at that y). Plain numbers, never column names (a
@@ -196,6 +202,7 @@ new_chart_block <- function(
     line_width_mult = 1.0,
     dot_size_mult = 1.0,
     step = NULL,
+    smooth = "auto",
     vlines = NULL,
     hlines = NULL,
     ref_x = NULL,
@@ -408,6 +415,9 @@ new_chart_block <- function(
         # "", which chr_state() heals back to this NULL default. It flows through
         # the config payload below and via external_ctrl.
         r_step <- shiny::reactiveVal(step)
+        # Monotone smoothing mode ("auto"/"off") -- a fixed-option pill like
+        # box_points, so its wire value is never empty.
+        r_smooth <- shiny::reactiveVal(smooth)
         r_vlines <- shiny::reactiveVal(vlines)
         r_hlines <- shiny::reactiveVal(hlines)
         r_smoother <- shiny::reactiveVal(smoother)
@@ -631,6 +641,7 @@ new_chart_block <- function(
               bar_mode = r_bar_mode(),
               line_width_mult = r_line_width_mult(),
               dot_size_mult = r_dot_size_mult(), step = r_step(),
+              smooth = r_smooth(),
               vlines = as.list(r_vlines()), hlines = as.list(r_hlines()),
               smoother = r_smoother(),
               # The gear's segmented control speaks "on"/"off"; the R state is
@@ -758,6 +769,7 @@ new_chart_block <- function(
             if (!is.null(msg$bar_mode))   upd(r_bar_mode, msg$bar_mode)
             if (!is.null(msg$baseline))   upd(r_baseline, msg$baseline)
             if (!is.null(msg$step))       upd(r_step, nn(msg$step))
+            if (!is.null(msg$smooth))     upd(r_smooth, msg$smooth)
             if (!is.null(msg$smoother))   upd(r_smoother, msg$smoother)
             # "on"/"off" from the gear -> logical in state (see bool_state).
             if (!is.null(msg$identity_line)) {
@@ -1016,6 +1028,7 @@ new_chart_block <- function(
             line_width_mult = r_line_width_mult,
             dot_size_mult = r_dot_size_mult,
             step = r_step,
+            smooth = r_smooth,
             vlines = r_vlines,
             hlines = r_hlines,
             # Legacy alias formals (mapped on construction): serialized as
@@ -1081,7 +1094,8 @@ new_chart_block <- function(
       "sort_by", "sort_dir", "orientation", "bar_mode", "filter_type",
       "filter_column",
       "filter_values", "filter_range", "filter_point", "line_width_mult",
-      "dot_size_mult", "step", "vlines", "hlines", "smoother", "identity_line",
+      "dot_size_mult", "step", "smooth", "vlines", "hlines", "smoother",
+      "identity_line",
       "box_points", "lo", "hi", "baseline", "waterfall_totals",
       "count_on", "count_col",
       "title", "subtitle", "caption",

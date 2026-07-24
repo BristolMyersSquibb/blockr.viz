@@ -293,6 +293,18 @@
                       { value: 'start',  label: 'Step at start' },
                       { value: 'middle', label: 'Step at middle' },
                       { value: 'end',    label: 'Step at end' }] },
+    // Line smoothing (line charts only). 'auto' (default) draws monotone-
+    // smoothed lines (smoothMonotone 'x': no overshoot, so the curve never
+    // implies values outside the measured range) while every series still
+    // shows its point markers, i.e. up to TRAJ_FULL_MAX series -- a smooth
+    // curve without visible measurements claims more than the data, so dots
+    // and smoothing leave the chart together. 'off' always draws straight
+    // segments. A step mode wins over smoothing (step is a semantic choice,
+    // not a look). Not a bool segmented (values are auto/off, not on/off),
+    // so it renders as a cycling pill whose label IS the value.
+    smooth: { label: 'Smoothing', kind: 'segmented',
+              options: [{ value: 'auto', label: 'Monotone' },
+                        { value: 'off',  label: 'Straight' }] },
     // Observation counts appended to labels ("Female (12)"). `count_on` picks
     // the surface: the category axis, the facet strip, or both. `count_col` is
     // the id column counted DISTINCT per label group (blank = raw row count) —
@@ -424,6 +436,7 @@
         // Step-line mode: line-only, so it sits with the other line presentation
         // options. "" (Straight) is the block's NULL default; the rest step.
         { role: 'step', types: ['line'] },
+        { role: 'smooth', types: ['line'] },
         { role: 'lo', types: ['line'] },
         { role: 'hi', types: ['line'] },
         'line_width_mult', 'dot_size_mult',
@@ -3460,6 +3473,13 @@
         const scatterPx  = BASE_SCATTER_SIZE * dm;
 
         const stepMode = this.config.step;  // null | 'start' | 'end' | 'middle'
+        // Monotone smoothing: on unless the user opted out ('off'), a step
+        // mode is set, or the series count is past the marker-visibility
+        // threshold -- dots and smoothing leave the chart together (see the
+        // smooth ROLE comment).
+        const smoothOn = isLine && !stepMode &&
+          (this.config.smooth || 'auto') !== 'off' &&
+          seriesCount <= TRAJ_FULL_MAX;
         const smoother = this.config.smoother || 'none';
         const smootherSeries = this.config.smoother_series || null;
         const loCol = this.config.lo;
@@ -3479,6 +3499,8 @@
           name: name,
           data: data,
           step: isLine && stepMode ? stepMode : undefined,
+          smooth: smoothOn ? true : undefined,
+          smoothMonotone: smoothOn ? 'x' : undefined,
           // `triggerLineEvent: true` makes click/hover fire when the
           // cursor is on the line itself, not only on symbols. Without
           // it, click on a symbol-less thin line never registers.
@@ -4652,6 +4674,7 @@
         drill: this.config.drill || '',
         smoother: this.config.smoother || 'none',
         step: this.config.step || '',
+        smooth: this.config.smooth || 'auto',
         identity_line: this.config.identity_line || 'off',
         // Helper lines. Sent as the raw text the user typed; R parses it with
         // num_vec_state(). "" is a real value (clear every line), so these are

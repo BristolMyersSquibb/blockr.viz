@@ -10,9 +10,9 @@ test_that("ft_table renders an annotated frame as a themed flextable", {
   ft <- ft_table(tbl)
   expect_s3_class(ft, "flextable")
 
-  # pptx placement attributes (blockr.md pipeline contract)
-  expect_equal(attr(ft, "pptx_left"), 0.325)
-  expect_equal(attr(ft, "pptx_top"), 1)
+  # pptx placement attributes (the officer deck renderer reads these)
+  expect_equal(attr(ft, "pptx_left"), 0.4)
+  expect_equal(attr(ft, "pptx_top"), 1.1)
 
   # 2 variable blocks -> 2 interleaved section-header rows + 2 stat rows
   expect_equal(flextable::nrow_part(ft, "body"), 4L)
@@ -68,6 +68,24 @@ test_that("row styling flags map onto the flextable", {
   expect_true(all(ft$body$styles$text$bold$data[1L, ]))
   expect_true(all(ft$body$styles$text$italic$data[3L, ]))
   expect_false(any(ft$body$styles$text$bold$data[2L, ]))
+})
+
+test_that("fit_width distributes columns to fill the slide width", {
+  skip_if_not_installed("flextable")
+
+  tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
+  ft <- ft_table(tbl, title = "", fit_width = 12,
+                 first_col_width = 6, other_cols_width = 3)
+  w <- ft$body$colwidths
+  expect_equal(sum(w), 12, tolerance = 1e-6)
+  # stub capped at half the budget; three data cols share the rest
+  expect_equal(w[[1L]], 6)
+  expect_equal(unname(w[-1L]), rep(2, 3), tolerance = 1e-6)
+
+  # option default is read when the argument is omitted
+  withr::local_options(blockr.viz.ft_fit_width = 9)
+  ft2 <- ft_table(tbl, title = "", first_col_width = 6)
+  expect_equal(sum(ft2$body$colwidths), 9, tolerance = 1e-6)
 })
 
 test_that("plain data frames render without annotations", {

@@ -255,6 +255,18 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_enum(c("start", "middle", "end"))
     ),
+    smooth = new_arg_spec(
+      paste0(
+        "Line smoothing for line charts. \"auto\" (default) draws ",
+        "monotone-smoothed lines (no overshoot; local extrema stay at the ",
+        "measured points) while every series still shows its point markers ",
+        "(up to 50 series); denser charts fall back to straight segments ",
+        "automatically. \"off\" always draws straight segments. A step ",
+        "mode takes precedence. Line charts only."
+      ),
+      example = NULL,
+      type = arg_enum(c("auto", "off"))
+    ),
     vlines = new_arg_spec(
       paste0(
         "Helper lines: each number draws one dashed VERTICAL guide line at ",

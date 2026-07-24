@@ -30,6 +30,7 @@ new_chart_block(
   line_width_mult = 1,
   dot_size_mult = 1,
   step = NULL,
+  smooth = "auto",
   vlines = NULL,
   hlines = NULL,
   ref_x = NULL,
@@ -137,6 +138,13 @@ charts. Default \code{1.0}. Range \code{0.5}-\code{3.0}. Individual family only.
 \item{step}{Step-line mode for line charts. \code{NULL} (default) draws a
 straight line; a step mode (e.g. \code{"start"}/\code{"middle"}/\code{"end"}) draws a
 stepped line. Consumed by the JS renderer.}
+
+\item{smooth}{Line smoothing for line charts: \code{"auto"} (default) draws
+monotone-smoothed lines (no overshoot -- local extrema stay exactly at
+the measured points) while the series count keeps point markers
+visible (up to 50 series); denser charts fall back to straight
+segments. \code{"off"} always draws straight segments. A \code{step} mode takes
+precedence over smoothing. Consumed by the JS renderer.}
 
 \item{vlines, hlines}{Helper lines at fixed positions: numeric vectors,
 each entry drawing one dashed guide line -- \code{vlines} VERTICAL (at that x),
