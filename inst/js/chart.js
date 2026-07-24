@@ -2077,14 +2077,19 @@
       chart.on('mouseover', (/** @type {any} */ p) => {
         if (p.componentType === 'series' && p.seriesType === 'line') {
           slot.hover.si = p.seriesIndex;
+          this._promoteFocus(slot, chart, p.seriesIndex);
         }
       });
       chart.on('mouseout', (/** @type {any} */ p) => {
         if (p.componentType === 'series' && p.seriesType === 'line') {
           slot.hover.si = null;
+          this._demoteFocus(slot, chart);
         }
       });
-      chart.on('globalout', () => { slot.hover.si = null; });
+      chart.on('globalout', () => {
+        slot.hover.si = null;
+        this._demoteFocus(slot, chart);
+      });
 
       // Double-click anywhere on the plot zooms back out to full range — the
       // dataseries.org gesture that pairs with drag-to-zoom. Line charts only
@@ -3460,8 +3465,11 @@
         const chart = this._ensureSlotChart(slot, 'individual');
         // Per-slot hover tracker (which line the cursor is on) — persistent
         // so the once-attached mouseover/out handlers and the per-render
-        // tooltip formatter share it. Reset on re-render.
+        // tooltip formatter share it. Reset on re-render, together with the
+        // focus-promotion guard (the notMerge setOption below empties the
+        // overlay, so a stale index would wrongly no-op the next hover).
         slot.hover.si = null;
+        slot.focusSi = null;
 
         const dm = this.config.dot_size_mult   ?? 1.0;
         const lm = this.config.line_width_mult ?? 1.0;
@@ -3837,12 +3845,27 @@
             // Only real line series: drop error-bar overlays (custom) and
             // the empty legend-binding series (no data -> never present).
             let ttRows = ps.filter((/** @type {any} */ p) =>
-              p && p.seriesType === 'line' && Array.isArray(p.value));
+              p && p.seriesType === 'line' && Array.isArray(p.value) &&
+              p.seriesName !== '__focus__');
             if (!ttRows.length) return '';
             if (hover.si != null) {
-              const own = ttRows.filter((/** @type {any} */ p) =>
+              // ONLY the hovered line's own row. The axis pointer snaps to
+              // the union of every series' x values, so at an x where the
+              // hovered subject was not measured `ps` holds only OTHER
+              // series — the old fallback then showed strangers' values
+              // (and their dates) while the cursor was visibly on one line.
+              ttRows = ttRows.filter((/** @type {any} */ p) =>
                 p.seriesIndex === hover.si);
-              if (own.length) ttRows = own;
+              if (!ttRows.length) return '';
+            } else if (seriesCount > 1) {
+              // Away from any line in a multi-series chart: no tooltip. An
+              // axis tooltip here lists whichever series happen to have a
+              // point at the snapped x — noise that also sits on top of the
+              // drag-to-zoom area. (Keyed on the chart's series count, not
+              // rows-at-this-x: an x where exactly one of hundreds of
+              // subjects had a visit must not pop a lone random row. A
+              // single-series chart stays hoverable anywhere along x.)
+              return '';
             }
             // One row per series: data with several observations per x
             // (replicates) yields one param per datum — keep the first.
@@ -3852,12 +3875,6 @@
               seen.add(p.seriesIndex);
               return true;
             });
-            // Away from any line, an axis tooltip lists EVERY series at this x —
-            // a tower that reads as noise and sits on top of the drag-to-zoom
-            // area, obscuring the gesture. Show it only when the cursor is on a
-            // specific line (hover.si), or when there is a single line to report
-            // (a lone series stays hoverable anywhere along x).
-            if (hover.si == null && ttRows.length > 1) return '';
             // Category x: the visit label is the header. Numeric x: name
             // the value ("Day: 30"), else it reads as a bare number.
             const head = xCats
@@ -3894,6 +3911,47 @@
           ? this._withLegendTitle(legendLevels, color)
           : null;
         if (legTitle) series.push(...this._legendTitleSeries(legTitle));
+
+        // Focus-promotion overlay (line charts). On hover of a line, the
+        // once-attached handlers (_promoteFocus / _demoteFocus, wired in
+        // _ensureSlotChart) fill this permanently-mounted series with the
+        // hovered patient's points in the "N = 1" treatment: monotone (or
+        // the chart's step mode), profile weight, ringed markers, a gradient
+        // running down from the line — while the emphasis blur fades the
+        // crowd. A permanent series updated by id, not add/remove, so a
+        // hover never restructures the option. Its blur state is pinned
+        // opaque: hovering the original puts every OTHER series (this one
+        // included) into blur.
+        if (isLine) {
+          series.push({
+            id: '__focus__',
+            name: '__focus__',
+            type: 'line',
+            data: [],
+            silent: true,
+            legendHoverLink: false,
+            z: 9,
+            emphasis: { disabled: true },
+            blur: { lineStyle: { opacity: 1 }, itemStyle: { opacity: 1 },
+                    areaStyle: { opacity: 1 } }
+          });
+        }
+        // Render-scoped promotion registry for the once-attached handlers:
+        // the final series array (event seriesIndex indexes it) + the
+        // styling the overlay should wear. Null on scatter -> promotion off.
+        // `smoothOn` is the SAME resolved flag the crowd lines use (false in
+        // a dense crowd past TRAJ_FULL_MAX or when smooth = "off"), so a
+        // promoted line curves only when its neighbours do — a monotone
+        // highlight over a straight crowd would read as a different kind of
+        // line, not the same one emphasized.
+        slot.focus = isLine ? {
+          series,
+          stepMode: stepMode || null,
+          smoothOn: smoothOn,
+          markerPx: 7 * dm,
+          focusW: 2.5 * lm
+        } : null;
+
         const leg = legendItems
           ? this._legendRows(legendItems, chartDiv.clientWidth)
           : { extra: 0, scroll: false };
@@ -4649,6 +4707,57 @@
         column: null, values: null,
         x_col: null, y_col: null, x_range: null, y_range: null
       }, { priority: 'event' });
+    }
+
+    // Fill the permanent '__focus__' overlay with the hovered line's points
+    // in the profile ("N = 1") treatment. Idempotent per series (repeated
+    // mouseovers along the same line are no-ops). See the overlay comment in
+    // _renderIndividual for the design.
+    /** @param {any} slot @param {any} chart @param {number} si */
+    _promoteFocus(slot, chart, si) {
+      const f = slot.focus;
+      if (!f || slot.focusSi === si) return;
+      const s = f.series[si];
+      if (!s || s.id === '__focus__' || s.type !== 'line' ||
+          !Array.isArray(s.data) || !s.data.length) return;
+      slot.focusSi = si;
+      const clr = (s.itemStyle && s.itemStyle.color) || null;
+      // Gradient fill, line color 15% -> 0 top-to-bottom (the patient
+      // profile's treatment). Non-hex colors fall back to no fill.
+      const m = /^#([0-9a-f]{6})$/i.exec(String(clr || ''));
+      const n = m ? parseInt(m[1], 16) : null;
+      const rgba = (/** @type {number} */ a) => n == null ? 'rgba(0,0,0,0)'
+        : 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
+      chart.setOption({
+        series: [{
+          id: '__focus__',
+          data: s.data,
+          step: f.stepMode || undefined,
+          smooth: f.smoothOn,
+          smoothMonotone: f.smoothOn ? 'x' : undefined,
+          showSymbol: true,
+          symbol: 'circle',
+          symbolSize: f.markerPx,
+          itemStyle: { color: clr, borderColor: '#fff', borderWidth: 1.5 },
+          lineStyle: { color: clr, width: f.focusW, opacity: 1 },
+          areaStyle: n == null ? undefined : {
+            origin: 'start',
+            color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                     colorStops: [{ offset: 0.05, color: rgba(0.15) },
+                                  { offset: 0.95, color: rgba(0) }] }
+          }
+        }]
+      });
+    }
+
+    /** @param {any} slot @param {any} chart */
+    _demoteFocus(slot, chart) {
+      if (!slot.focus || slot.focusSi == null) return;
+      slot.focusSi = null;
+      // Emptying the data is the whole demotion: stale styling on an empty
+      // series draws nothing, and every re-render rebuilds the overlay from
+      // scratch (setOption notMerge), so nothing can leak across renders.
+      chart.setOption({ series: [{ id: '__focus__', data: [] }] });
     }
 
     _sendConfig() {

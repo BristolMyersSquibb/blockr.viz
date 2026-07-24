@@ -33,6 +33,9 @@ options(
   shiny.host = "0.0.0.0"
 )
 
+# Clickable URL (shiny's own "Listening on http://0.0.0.0:..." is not).
+cat(sprintf("\nOpen: http://127.0.0.1:%d/\n\n", getOption("shiny.port")))
+
 # ALT trajectories from public CDISC ADaM data — sparse clinical visits, the
 # case monotone-vs-spline is about. (pharmaverseadam ships one `adlb`; the dm
 # below aliases it to `adlbc` for the profile's chemistry panel.)
