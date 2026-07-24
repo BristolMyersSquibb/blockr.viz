@@ -112,10 +112,10 @@
 #'   stepped line. Consumed by the JS renderer.
 #' @param smooth Line smoothing for line charts: `"auto"` (default) draws
 #'   monotone-smoothed lines (no overshoot -- local extrema stay exactly at
-#'   the measured points) while the series count keeps point markers
-#'   visible (up to 50 series); denser charts fall back to straight
-#'   segments. `"off"` always draws straight segments. A `step` mode takes
-#'   precedence over smoothing. Consumed by the JS renderer.
+#'   the measured points) at every density, so the line character does not
+#'   change with the series count. `"off"` always draws straight segments.
+#'   A `step` mode takes precedence over smoothing. Consumed by the JS
+#'   renderer.
 #' @param vlines,hlines Helper lines at fixed positions: numeric vectors,
 #'   each entry drawing one dashed guide line -- `vlines` VERTICAL (at that x),
 #'   `hlines` HORIZONTAL (at that y). Plain numbers, never column names (a

@@ -295,13 +295,15 @@
                       { value: 'end',    label: 'Step at end' }] },
     // Line smoothing (line charts only). 'auto' (default) draws monotone-
     // smoothed lines (smoothMonotone 'x': no overshoot, so the curve never
-    // implies values outside the measured range) while every series still
-    // shows its point markers, i.e. up to TRAJ_FULL_MAX series -- a smooth
-    // curve without visible measurements claims more than the data, so dots
-    // and smoothing leave the chart together. 'off' always draws straight
-    // segments. A step mode wins over smoothing (step is a semantic choice,
-    // not a look). Not a bool segmented (values are auto/off, not on/off),
-    // so it renders as a cycling pill whose label IS the value.
+    // implies values outside the measured range) at EVERY density -- the
+    // line character does not change when a filter changes the series count,
+    // so the crowd never silently flips between curved and straight. Markers
+    // still drop at high N, and honesty on a dense curve is served by
+    // hover-to-promote (the focused line is redrawn with its measured
+    // points). 'off' always draws straight segments. A step mode wins over
+    // smoothing (step is a semantic choice, not a look). Not a bool segmented
+    // (values are auto/off, not on/off), so it renders as a cycling pill
+    // whose label IS the value.
     smooth: { label: 'Smoothing', kind: 'segmented',
               options: [{ value: 'auto', label: 'Monotone' },
                         { value: 'off',  label: 'Straight' }] },
@@ -3481,13 +3483,16 @@
         const scatterPx  = BASE_SCATTER_SIZE * dm;
 
         const stepMode = this.config.step;  // null | 'start' | 'end' | 'middle'
-        // Monotone smoothing: on unless the user opted out ('off'), a step
-        // mode is set, or the series count is past the marker-visibility
-        // threshold -- dots and smoothing leave the chart together (see the
-        // smooth ROLE comment).
+        // Monotone smoothing: on unless the user opted out ('off') or a step
+        // mode is set. Density-independent by design -- the line character
+        // stays the same whether a filter leaves 8 subjects or 800, so the
+        // crowd never silently flips between curved and straight. Markers
+        // still drop at high N (symbol handling below), and honesty on a
+        // dense curve is served by hover-to-promote, which redraws the
+        // focused line WITH its measured points. "off" gives straight at
+        // every density for anyone who wants the crisp/angular crowd.
         const smoothOn = isLine && !stepMode &&
-          (this.config.smooth || 'auto') !== 'off' &&
-          seriesCount <= TRAJ_FULL_MAX;
+          (this.config.smooth || 'auto') !== 'off';
         const smoother = this.config.smoother || 'none';
         const smootherSeries = this.config.smoother_series || null;
         const loCol = this.config.lo;

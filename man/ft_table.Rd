@@ -18,7 +18,7 @@ ft_table(
   other_cols_width = 3.5,
   fit_width = getOption("blockr.viz.ft_fit_width", NULL),
   auto_width = FALSE,
-  header_bg = "bms",
+  header_bg = getOption("blockr.viz.ft_header_bg", NULL),
   pptx_left = 0.4,
   pptx_top = 1.1
 )
@@ -58,14 +58,21 @@ pdf, where the natural widths apply.}
 the manual widths. flextable never fits to the slide on its own, so
 manual widths (the default) are the safe choice for pptx.}
 
-\item{header_bg}{Header band colors. \code{"bms"} (default) derives the BMS
-palette from the column-group structure: each two-level spanner group
-(or each flat data column) becomes one colored band, cycling
-dark-gray / blue / orange / green / purple, with a light-gray stub --
-the topline deck look, read off the annotated df instead of hand-listed.
-A character vector sets explicit colors per data column (hex or the
-palette names \code{"white"}, \code{"gray"}, \code{"dark_gray"}, \code{"blue"}, \code{"orange"},
-\code{"green"}, \code{"purple"}). \code{"none"} (or \code{NULL}) leaves the header unfilled.}
+\item{header_bg}{Header band colors, keyed on the column-group structure
+the annotated df carries. A color vector (hex or R color names):
+\itemize{
+\item \strong{Named} entries pin a group -- the name is a by-level value
+(the spanner top for a nested \code{by}, else the data-column name), and
+\code{".stub"} pins the row-stub header. \code{c(Placebo = "grey", Drug = "#33D6F1")} colors those arms explicitly, whatever their
+position.
+\item \strong{Unnamed} entries are the cycle pool for the remaining,
+unpinned groups, in order -- \code{c("#A59F9F", "#33D6F1")} bands them.
+\item The two mix: \code{c(.stub = "#EEE", Placebo = "grey", "#33D6F1")}.
+}
+Defaults from \code{getOption("blockr.viz.ft_header_bg")}; unset (or \code{NULL} /
+\code{"none"}) leaves the header unfilled. blockr.viz ships no palette of its
+own -- the app supplies the colors (a deck sets the option to its house
+style), so nothing house-specific lives in the renderer.}
 
 \item{pptx_left, pptx_top}{Slide placement in inches, stashed as
 \code{pptx_left} / \code{pptx_top} attributes on the result (consumed by an
