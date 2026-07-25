@@ -204,6 +204,10 @@
     itemSize: 11,
     feature: {
       dataZoom: {
+        // Pinned to the DATA x axis. Line charts carry a second, hidden axis
+        // pair for the hover scrim (see scrimAxis); left to its default this
+        // would zoom that one too and filter the scrim's datum away.
+        xAxisIndex: 0,
         yAxisIndex: false,
         filterMode: 'filter',
         title: { zoom: 'Zoom to range', back: 'Reset zoom' }
@@ -3848,6 +3852,16 @@
           /** @type {any} */ (yAxisSpec).max = idMax;
         }
 
+        // Hidden 0..1 axis pair (index 1) in the SAME grid, carrying only the
+        // hover scrim -- see the '__scrim__' push below. Fixed min/max so it
+        // never rescales, `show:false` so it draws nothing, and axisPointer off
+        // so the axis-trigger tooltip keeps pointing at the real x alone. Line
+        // charts only; other families have no scrim and keep a single axis.
+        const scrimAxis = {
+          type: 'value', min: 0, max: 1, show: false,
+          axisPointer: { show: false }
+        };
+
         // Brushing is skipped when the x-axis is categorical (echarts' brush
         // needs continuous coords), for line charts — on a per-patient
         // trajectory overlay, clicking a line to filter by USUBJID is the
@@ -3993,11 +4007,23 @@
           // rect rather than via ECharts' `focus: 'series'` blur -- that blur is
           // the coupled mechanism whose stuck downplay caused the orphan-line
           // bug. z:8 sits above the crowd (z~2) and below the overlay (z 9/10).
+          // It rides its OWN hidden 0..1 axis pair (index 1, same grid), NOT the
+          // data axes: a custom series is still a data series, so on the shared
+          // x it inherited two behaviours we never wanted. Its trigger datum
+          // landed in the y extent (the axis snapped on hover), and drag-zoom's
+          // `filterMode: 'filter'` dropped that datum whenever it fell outside
+          // the window -- renderItem never fired and the dimming silently
+          // vanished while the highlight kept working. Off the data axes the
+          // datum is a constant that nothing filters and nothing rescales, and
+          // renderItem still gets the grid rect because both axis pairs share
+          // grid 0.
           const scrimFill = /dark/i.test(this.theme || '')
             ? 'rgba(20,20,20,0.55)' : 'rgba(255,255,255,0.6)';
           series.push({
             id: '__scrim__',
             type: 'custom',
+            xAxisIndex: 1,
+            yAxisIndex: 1,
             data: [],
             silent: true,
             legendHoverLink: false,
@@ -4101,8 +4127,8 @@
           // (nameGap above) clear the tick labels and the legend; rotated
           // categorical x labels add their text height on top.
           grid: { left: 66, right: 5, top: 30, bottom: (nativeLegend ? 78 : 52) + leg.extra + (xlab ? xlab.bottom : 0) },
-          xAxis: xAxisSpec,
-          yAxis: yAxisSpec,
+          xAxis: isLine ? [xAxisSpec, scrimAxis] : xAxisSpec,
+          yAxis: isLine ? [yAxisSpec, scrimAxis] : yAxisSpec,
           toolbox: brushable
             ? mkToolbox(true)
             : (zoomable ? mkZoomToolbox() : undefined),
@@ -4820,7 +4846,10 @@
       const f = slot.focus;
       if (!f) return null;
       let cd;
-      try { cd = chart.convertFromPixel({ gridIndex: 0 }, [px, py]); } catch (e) { return null; }
+      // Address the DATA cartesian by its axis indices, not by `gridIndex`:
+      // grid 0 now holds two axis pairs (the hidden scrim axes are index 1) and
+      // a bare gridIndex is ambiguous once more than one cartesian lives there.
+      try { cd = chart.convertFromPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [px, py]); } catch (e) { return null; }
       if (!cd || cd[0] == null || cd[1] == null) return null;
       // cx is the numeric x position -- the value on a numeric/time axis, or the
       // category INDEX on a category axis (AVISIT). `xOrder` maps a line's
@@ -4868,7 +4897,7 @@
       const n = m ? parseInt(m[1], 16) : null;
       const rgba = (/** @type {number} */ a) => n == null ? 'rgba(0,0,0,0)'
         : 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
-      // One atomic, animation-free setOption raises the scrim (data:[0] ->
+      // One atomic, animation-free setOption raises the scrim (one datum ->
       // renderItem draws the veil once) and fills BOTH overlay series -- the
       // line (thick, gradient, no symbols) and the scatter (the dots). All carry
       // `animation: false` (see the push in _renderIndividual), so the crowd
@@ -4879,11 +4908,13 @@
         series: [{
           id: '__scrim__',
           // One datum to trigger renderItem (which ignores the value and draws
-          // from the grid bounds). It MUST be inside the current range, or
-          // ECharts folds it into the axis extent -- `[0]` made the y-axis snap
-          // to include zero on hover. A point from the hovered line is always
-          // in range, so the axis is identical with and without the scrim.
-          data: [s.data[0]]
+          // from the grid bounds). It sits on the hidden 0..1 axis pair, so a
+          // CONSTANT works: nothing rescales the data axes because of it, and
+          // drag-zoom cannot filter it out of range. Earlier versions borrowed
+          // a point from the hovered line to dodge the first problem, which
+          // left the second one -- the veil disappeared once you zoomed past
+          // that line's first x.
+          data: [[0.5, 0.5]]
         }, {
           id: '__focus__',
           data: s.data,
