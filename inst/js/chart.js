@@ -1988,17 +1988,23 @@
     // of the handler so a line click can be deferred (and canceled by the
     // dblclick zoom-reset) without duplicating the logic.
     /** @param {ChartSlot} slot @param {any} params */
-    _individualClick(slot, params) {
+    /** @param {ChartSlot} slot @param {any} params @param {string} [focusName] */
+    _individualClick(slot, params, focusName) {
       const { x, y } = this.config;
       const splitCol = this.config.series || this.config.color;
       const inFacet = this._facetTest(slot);
       const isLine = this.config.chart_type === 'line';
+      // For a split line chart, drill the line the cursor is HOVERING (the
+      // picker's focus, passed as focusName), not the one ECharts' click
+      // hit-test reports: the two use different nearest-line logic and can
+      // disagree, so a click would otherwise select a different line than the
+      // highlighted one. Fall back to the hit-test when the picker has no focus.
+      const lineName = (isLine && splitCol) ? (focusName || params.seriesName) : null;
       let hitRows, pointVal = null;
-      if (isLine && splitCol && params.seriesName) {
+      if (lineName) {
         hitRows = (this.data || []).filter(
-          r => inFacet(r) &&
-               String(r[splitCol]) === String(params.seriesName));
-        this._selected = params.seriesName;
+          r => inFacet(r) && String(r[splitCol]) === String(lineName));
+        this._selected = lineName;
       } else {
         const v = params.value;
         if (!Array.isArray(v) || v.length < 2 || !x || !y) return;
@@ -2202,10 +2208,16 @@
         // briefly; the dblclick handler cancels the pending one. Scatter
         // keeps the instant click (no zoom gesture there).
         if (isLineCt) {
+          // Capture the hovered line NOW (at click time), before the defer:
+          // the drill must target what was under the cursor when clicked, even
+          // if the cursor drifts during the 275ms hold.
+          const f = slot.focus;
+          const focusName = (f && slot.focusSi != null && f.series[slot.focusSi])
+            ? f.series[slot.focusSi].name : undefined;
           if (this._lineClickTimer) clearTimeout(this._lineClickTimer);
           this._lineClickTimer = setTimeout(() => {
             this._lineClickTimer = null;
-            this._individualClick(slot, params);
+            this._individualClick(slot, params, focusName);
           }, 275);
           return;
         }
