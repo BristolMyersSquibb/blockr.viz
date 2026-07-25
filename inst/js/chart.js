@@ -3952,6 +3952,29 @@
         // together in one atomic render, no fade staging. No `blur` guard is
         // needed: with base-line emphasis disabled nothing ever enters blur.
         if (isLine) {
+          // Scrim: a single semi-transparent veil over the whole plot, shown
+          // while a line is focused so the crowd recedes and the hovered line
+          // (drawn on top) pops. We dim the crowd OURSELVES with this one custom
+          // rect rather than via ECharts' `focus: 'series'` blur -- that blur is
+          // the coupled mechanism whose stuck downplay caused the orphan-line
+          // bug. z:8 sits above the crowd (z~2) and below the overlay (z 9/10).
+          const scrimFill = /dark/i.test(this.theme || '')
+            ? 'rgba(20,20,20,0.55)' : 'rgba(255,255,255,0.6)';
+          series.push({
+            id: '__scrim__',
+            type: 'custom',
+            data: [],
+            silent: true,
+            legendHoverLink: false,
+            z: 8,
+            animation: false,
+            renderItem: (/** @type {any} */ params, /** @type {any} */ _api) => {
+              const cs = params.coordSys;   // { x, y, width, height } of the grid
+              return { type: 'rect',
+                shape: { x: cs.x, y: cs.y, width: cs.width, height: cs.height },
+                style: { fill: scrimFill } };
+            }
+          });
           series.push({
             id: '__focus__',
             name: '__focus__',
@@ -4799,14 +4822,18 @@
       const n = m ? parseInt(m[1], 16) : null;
       const rgba = (/** @type {number} */ a) => n == null ? 'rgba(0,0,0,0)'
         : 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
-      // One atomic, animation-free setOption fills BOTH overlay series -- the
-      // line (thick, gradient, no symbols) and the scatter (the dots). Both
-      // carry `animation: false` (see the push in _renderIndividual), so line
-      // and dots appear together with no fade or shape morph. The dots are a
-      // scatter series, not line symbols, so they render on the managed
-      // Edge/Windows setups where line symbols did not.
+      // One atomic, animation-free setOption raises the scrim (data:[0] ->
+      // renderItem draws the veil once) and fills BOTH overlay series -- the
+      // line (thick, gradient, no symbols) and the scatter (the dots). All carry
+      // `animation: false` (see the push in _renderIndividual), so the crowd
+      // dims and the line + dots appear together in one frame, no fade or shape
+      // morph. The dots are a scatter series, not line symbols, so they render
+      // on the managed Edge/Windows setups where line symbols did not.
       chart.setOption({
         series: [{
+          id: '__scrim__',
+          data: [0]
+        }, {
           id: '__focus__',
           data: s.data,
           step: f.stepMode || undefined,
@@ -4838,7 +4865,8 @@
       // rebuilds the overlay from scratch (setOption notMerge), so nothing can
       // leak across renders.
       chart.setOption({
-        series: [{ id: '__focus__', data: [] }, { id: '__focus_dots__', data: [] }]
+        series: [{ id: '__scrim__', data: [] },
+                 { id: '__focus__', data: [] }, { id: '__focus_dots__', data: [] }]
       });
     }
 
