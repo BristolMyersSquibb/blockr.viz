@@ -480,12 +480,20 @@
    * so a gear edit no longer rebuilds every canvas. Event handlers are
    * attached once per instance lifetime and read live state via `slot`
    * (facetVal, hover, seriesByColorByVal) rather than render-time locals.
+   * `focus` is the render-scoped registry the mousemove picker and the
+   * '__focus__' overlay read (final series array + the styling a promoted line
+   * wears); null on scatter, where there is no line to promote. `focusSi` is
+   * the series index currently promoted, or null when nothing is.
    * @typedef {{ container: HTMLElement, labelEl: HTMLElement | null,
    *             chartDiv: HTMLDivElement, chart: any, facetVal: any,
    *             hover: { si: number | null },
    *             seriesByColorByVal: Record<string, any[]> | null,
    *             brushable: boolean, zoomArmed: boolean,
-   *             zoom: any }} ChartSlot
+   *             zoom: any,
+   *             focus: { series: any[], stepMode: string | null,
+   *                      smoothOn: boolean, markerPx: number,
+   *                      focusW: number } | null,
+   *             focusSi: number | null }} ChartSlot
    */
 
   class DrilldownChart {
@@ -1944,7 +1952,8 @@
         container.appendChild(chartDiv);
         slot = { container, labelEl, chartDiv, chart: null, facetVal: null,
                  hover: { si: null }, seriesByColorByVal: null,
-                 brushable: false, zoomArmed: false, zoom: null };
+                 brushable: false, zoomArmed: false, zoom: null,
+                 focus: null, focusSi: null };
         this._slots[i] = slot;
       }
       if (slot.labelEl) {
