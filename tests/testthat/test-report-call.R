@@ -1,6 +1,6 @@
 # R/report-call.R :: how a block states its printed form for a document.
 
-test_that("chart blocks emit a self-qualified gg_chart call", {
+test_that("chart blocks emit a self-qualified static_chart call", {
   b <- new_chart_block(
     chart_type = "bar", group = "AGEGR1", color = "ARM", facet = "SEX",
     func = "count_distinct", value = "USUBJID",
@@ -12,7 +12,7 @@ test_that("chart blocks emit a self-qualified gg_chart call", {
   expect_true(is.call(cl))
 
   txt <- paste(deparse(cl), collapse = " ")
-  expect_match(txt, "^blockr.viz::gg_chart\\(chart1", perl = TRUE)
+  expect_match(txt, "^blockr.viz::static_chart\\(chart1", perl = TRUE)
   expect_match(txt, "group = \"AGEGR1\"", fixed = TRUE)
   expect_match(txt, "func = \"count_distinct\"", fixed = TRUE)
   expect_match(txt, "title = \"Enrollment: {n} records\"", fixed = TRUE)
@@ -23,10 +23,12 @@ test_that("chart blocks emit a self-qualified gg_chart call", {
 
 test_that("defaults are omitted so the call stays readable", {
   b <- new_chart_block(chart_type = "scatter", x = "AGE", y = "BMIBL")
-  txt <- paste(deparse(report_call(b, "sc")), collapse = " ")
+  # deparse() wraps long calls; the emitted chunk keeps the line breaks
+  # (blockr.outline joins with "\n"), so compare the squished form.
+  txt <- gsub("\\s+", " ", paste(deparse(report_call(b, "sc")), collapse = " "))
   expect_identical(
     txt,
-    "blockr.viz::gg_chart(sc, chart_type = \"scatter\", x = \"AGE\", y = \"BMIBL\")"
+    "blockr.viz::static_chart(sc, chart_type = \"scatter\", x = \"AGE\", y = \"BMIBL\")"
   )
 })
 

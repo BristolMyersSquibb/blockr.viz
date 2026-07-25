@@ -18,7 +18,7 @@
 #' headers are synthesized by the renderer from grouping-value runs -- they
 #' are never rows of the frame.
 #' It is what the blockr.viz table renderer ([new_table_block()] /
-#' [html_table()]) consumes and what [summary_table()] produces. The full
+#' `html_table()`) consumes and what [summary_table()] produces. The full
 #' contract lives in the blockr.design spec
 #' (`open/annotated-data-frame/format.md`).
 #'

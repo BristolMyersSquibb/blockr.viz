@@ -44,10 +44,12 @@
 #'   `<table>` element, and the initialisation script. Drop into any
 #'   `shiny::renderUI()` / `shiny::htmlOutput()` slot.
 #'
-#' @examples
-#' tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
-#' html_table(tbl)
-#' @export
+#' Not exported: the package's only consumer of this contract is the
+#' interactive table block, which calls the `build_html_thead()` /
+#' `build_html_tbody()` builders below directly. Kept (and tested) as the
+#' reference assembly of those builders; re-export if a caller appears.
+#'
+#' @noRd
 html_table <- function(data,
                        title = NULL,
                        caption = NULL,
@@ -401,7 +403,7 @@ leaf_header_content <- function(data, col_name, fallback_text, span,
 #' "(missing)" header. Drop those so the table renders flat (or indent-only)
 #' instead. A *partially* empty column is kept: its gaps still render as
 #' "(missing)", which is the right label for a genuine orphan bucket. Shared by
-#' [html_table()] and the table block's structured path.
+#' `html_table()` and the table block's structured path.
 #' @noRd
 nonempty_section_cols <- function(data, section_cols) {
   section_cols[vapply(section_cols, function(sc) {
@@ -423,7 +425,7 @@ nonempty_section_cols <- function(data, section_cols) {
 #'
 #' Returns `list(data, section_cols, reserved_cols)`; `reserved_cols` is every
 #' annotation column (including the synthetic one) that must stay out of the
-#' data cells. Shared by [html_table()], the table block's structured path,
+#' data cells. Shared by `html_table()`, the table block's structured path,
 #' the gt renderer, and the Excel writer.
 #' @noRd
 annotated_structure_view <- function(data) {
@@ -770,7 +772,7 @@ section_chevron_svg <- function() {
 #'
 #' `scope` is the container class the table-body / header-cell rules hang off.
 #' It defaults to `.blockr-html-table-container` (used by standalone
-#' [html_table()], whose container carries that class). The drilldown table
+#' `html_table()`, whose container carries that class). The drilldown table
 #' block passes the narrower `.drilldown-table-structured` so the Table-1
 #' typography (medium 500 stat values, the 450 stub, the 13.5px size) is gated
 #' to STRUCTURED output only -- a `<style>` tag is page-global, and a flat table

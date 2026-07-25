@@ -27,14 +27,14 @@ A call, or \code{NULL} for the bare print.
 How a block's result should be printed in a rendered document (a
 blockr.outline report or deck). Returns a call object over \code{var}, the
 variable the generated script binds the block's result to -- e.g.
-\code{blockr.viz::gg_chart(chart1, chart_type = "bar", group = "ARM")} -- or
+\code{blockr.viz::static_chart(chart1, chart_type = "bar", group = "ARM")} -- or
 \code{NULL} when the bare result prints fine as-is. Consumers (blockr.outline)
 deparse the call into the document, so it must be self-qualified and
 contain only literal values.
 }
 \details{
 The chart block's method rebuilds the chart server-side through
-\code{\link[=gg_chart]{gg_chart()}}: the interactive chart draws client-side, so its result is
+\code{\link[=static_chart]{static_chart()}}: the interactive chart draws client-side, so its result is
 the (filtered) data and a rendered document would otherwise print a bare
 data frame. Only print-relevant state is emitted (mappings, layout,
 titles, helper lines); interaction-only state (tooltips, drill, zoom,

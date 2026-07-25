@@ -1,4 +1,4 @@
-test_that("ft_table renders an annotated frame as a themed flextable", {
+test_that("static_table renders an annotated frame as a themed flextable", {
   skip_if_not_installed("flextable")
 
   tbl <- summary_table(iris, vars = c("Sepal.Length", "Sepal.Width"),
@@ -7,7 +7,7 @@ test_that("ft_table renders an annotated frame as a themed flextable", {
   attr(tbl, "subtitle") <- "Sepal measures"
   attr(tbl, "caption") <- "Source: iris"
 
-  ft <- ft_table(tbl)
+  ft <- static_table(tbl)
   expect_s3_class(ft, "flextable")
 
   # pptx placement attributes (the officer deck renderer reads these)
@@ -31,18 +31,18 @@ test_that("title/subtitle/caption: NULL = auto from attrs, '' = off", {
   attr(tbl, "label") <- "Auto title"
 
   # auto: label attr becomes a title line
-  expect_equal(flextable::nrow_part(ft_table(tbl), "header"), 2L)
+  expect_equal(flextable::nrow_part(static_table(tbl), "header"), 2L)
   # "" suppresses it
-  expect_equal(flextable::nrow_part(ft_table(tbl, title = ""), "header"), 1L)
+  expect_equal(flextable::nrow_part(static_table(tbl, title = ""), "header"), 1L)
   # no caption -> no footer part rows
-  expect_equal(flextable::nrow_part(ft_table(tbl), "footer"), 0L)
+  expect_equal(flextable::nrow_part(static_table(tbl), "footer"), 0L)
 })
 
 test_that("two-level by produces a merged spanner header row", {
   skip_if_not_installed("flextable")
 
   tbl <- summary_table(mtcars, vars = "mpg", by = c("cyl", "am"))
-  ft <- ft_table(tbl, title = "")
+  ft <- static_table(tbl, title = "")
   # spanner row + leaf-label row
   expect_equal(flextable::nrow_part(ft, "header"), 2L)
   expect_true(any(grepl("||", names(ft$body$dataset), fixed = TRUE)))
@@ -59,7 +59,7 @@ test_that("row styling flags map onto the flextable", {
     Value = c("10", NA, "3"),
     check.names = FALSE, stringsAsFactors = FALSE
   )
-  ft <- ft_table(df)
+  ft <- static_table(df)
 
   expect_equal(flextable::nrow_part(ft, "body"), 3L)
   # NA cell -> na_rep em dash
@@ -74,7 +74,7 @@ test_that("fit_width distributes columns to fill the slide width", {
   skip_if_not_installed("flextable")
 
   tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
-  ft <- ft_table(tbl, title = "", fit_width = 12,
+  ft <- static_table(tbl, title = "", fit_width = 12,
                  first_col_width = 6, other_cols_width = 3)
   w <- ft$body$colwidths
   expect_equal(sum(w), 12, tolerance = 1e-6)
@@ -84,14 +84,14 @@ test_that("fit_width distributes columns to fill the slide width", {
 
   # option default is read when the argument is omitted
   withr::local_options(blockr.viz.ft_fit_width = 9)
-  ft2 <- ft_table(tbl, title = "", first_col_width = 6)
+  ft2 <- static_table(tbl, title = "", first_col_width = 6)
   expect_equal(sum(ft2$body$colwidths), 9, tolerance = 1e-6)
 })
 
 test_that("plain data frames render without annotations", {
   skip_if_not_installed("flextable")
 
-  ft <- ft_table(head(mtcars[, 1:3]), title = "Plain")
+  ft <- static_table(head(mtcars[, 1:3]), title = "Plain")
   expect_s3_class(ft, "flextable")
   expect_equal(flextable::nrow_part(ft, "body"), 6L)
 })
@@ -143,7 +143,7 @@ test_that("column .strong / .emph drive the header emphasis ramp", {
   expect_equal(b2$bg, c("#0A0", "#888"))
 })
 
-test_that("a column .strong attribute switches ft_table into emphasis mode", {
+test_that("a column .strong attribute switches static_table into emphasis mode", {
   skip_if_not_installed("flextable")
 
   df <- data.frame(
@@ -154,7 +154,7 @@ test_that("a column .strong attribute switches ft_table into emphasis mode", {
   attr(df[["Drug"]], "strong") <- TRUE
 
   # header_bg would otherwise band by identity; the column attr wins.
-  ft <- ft_table(df, header_bg = c("#A59F9F", "#33D6F1"), title = "")
+  ft <- static_table(df, header_bg = c("#A59F9F", "#33D6F1"), title = "")
   fills <- ft$header$styles$cells$background.color$data
   # the Drug column header (col 3) carries the strong accent, not the palette
   expect_true(any(toupper(as.vector(fills)) == "#2563EB"))

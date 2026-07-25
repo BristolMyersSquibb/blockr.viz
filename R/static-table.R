@@ -8,7 +8,7 @@
 #' table-kind blocks; [gt_table()] remains the HTML-oriented sibling.
 #'
 #' Structure comes from the annotated-df contract (shared with
-#' [html_table()], [gt_table()] and [write_annotated_xlsx()]): `.label` is
+#' `html_table()`, [gt_table()] and [write_annotated_xlsx()]): `.label` is
 #' the row stub, `.group<k>_level` runs and `.variable_label` blocks become
 #' bold section-header rows interleaved into the body (merged across the
 #' table width, exactly where the HTML renderer puts its colspan rows),
@@ -82,10 +82,10 @@
 #'
 #' @examplesIf requireNamespace("flextable", quietly = TRUE)
 #' tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
-#' ft_table(tbl, title = "Sepal length by species")
+#' static_table(tbl, title = "Sepal length by species")
 #' @seealso [as_annotated_df()], [gt_table()], [write_annotated_xlsx()]
 #' @export
-ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
+static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
                      na_rep = "\u2014",
                      font = "Trebuchet MS", font_size = 14,
                      font_color = "#444444",
@@ -96,7 +96,7 @@ ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
                      header_bg = getOption("blockr.viz.ft_header_bg", NULL),
                      pptx_left = 0.4, pptx_top = 1.1) {
   if (!requireNamespace("flextable", quietly = TRUE)) {
-    stop("ft_table() needs the 'flextable' package.", call. = FALSE)
+    stop("static_table() needs the 'flextable' package.", call. = FALSE)
   }
 
   # Shared input contract: a data frame passes through untouched; a

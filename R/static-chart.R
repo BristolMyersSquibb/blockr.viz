@@ -2,9 +2,9 @@
 #'
 #' Renders the chart block's configuration as a ggplot -- the static chart
 #' output for report / deck rendering, the plot-side sibling of
-#' [ft_table()]. The interactive chart draws client-side (canvas); a
+#' [static_table()]. The interactive chart draws client-side (canvas); a
 #' rendered document has no browser, so blockr.outline emits
-#' `gg_chart(<result>, <state...>)` for chart blocks and this function
+#' `static_chart(<result>, <state...>)` for chart blocks and this function
 #' rebuilds the chart server-side from the same vocabulary.
 #'
 #' Numbers match the app by construction: aggregation goes through the same
@@ -56,7 +56,7 @@
 #'
 #' @importFrom rlang .data
 #' @export
-gg_chart <- function(data,
+static_chart <- function(data,
                      chart_type = "bar",
                      group = NULL,
                      color = NULL,
@@ -104,8 +104,8 @@ gg_chart <- function(data,
   }
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    warning("gg_chart() needs ggplot2; returning the data instead.")
-    return(gg_chart_fallback(data, chart_type, group, color, facet,
+    warning("static_chart() needs ggplot2; returning the data instead.")
+    return(gg_fallback(data, chart_type, group, color, facet,
                              value_col, func))
   }
 
@@ -120,19 +120,19 @@ gg_chart <- function(data,
 
   p <- switch(
     chart_type,
-    bar = gg_chart_bar(
+    bar = gg_bar(
       data, group, color, facet, value_col, func, bar_mode, orientation,
       sort_by, sort_dir, count_on, count_col, scale_map
     ),
-    boxplot = gg_chart_boxplot(
+    boxplot = gg_boxplot(
       data, group, color, facet, value_col, box_points, sort_by, sort_dir,
       count_on, count_col, scale_map
     ),
-    scatter = gg_chart_scatter(
+    scatter = gg_scatter(
       data, x, y, color, facet, smoother, identity_line, vlines, hlines,
       dot_size_mult, scale_map
     ),
-    line = gg_chart_line(
+    line = gg_line(
       data, x, y, series, color, facet, lo, hi, step, vlines, hlines,
       line_width_mult, dot_size_mult, scale_map
     ),
@@ -143,10 +143,10 @@ gg_chart <- function(data,
     # Either an uncovered chart type, or covered but undrawable from the
     # current state + data (a mapped column dropped upstream, say).
     warning(
-      "gg_chart() cannot draw chart_type = \"", chart_type,
+      "static_chart() cannot draw chart_type = \"", chart_type,
       "\" from this state; returning the chart's data instead."
     )
-    return(gg_chart_fallback(data, chart_type, group, color, facet,
+    return(gg_fallback(data, chart_type, group, color, facet,
                              value_col, func))
   }
 
@@ -169,7 +169,7 @@ gg_chart <- function(data,
     auto = gg_auto_title(chart_type, group, color, value_col, func, x, y)
   )
 
-  p <- p + gg_chart_theme()
+  p <- p + gg_theme()
 
   gg_attach_pptx_size(p, data, chart_type, orientation, group, color,
                       facet, bar_mode)
@@ -192,7 +192,7 @@ gg_col <- function(col, data) {
 # (dd_table_aggregate -> golden-tested against the JS chart), plus the
 # chart-only `identity` mode: no aggregation, the cell's FIRST row wins
 # (precomputed heights; duplicate categories collapse, as in the app).
-gg_chart_agg <- function(data, group, color, facet, value_col, func) {
+gg_agg <- function(data, group, color, facet, value_col, func) {
 
   cells <- c(facet, group, color)
 
@@ -235,12 +235,12 @@ gg_chart_agg <- function(data, group, color, facet, value_col, func) {
 
 # The fallback exhibit for uncovered types: the aggregated frame when the
 # chart aggregates, the raw frame otherwise. In the officer deck this
-# becomes an ft_table slide; in the quarto document it prints as a table.
-gg_chart_fallback <- function(data, chart_type, group, color, facet,
+# becomes an static_table slide; in the quarto document it prints as a table.
+gg_fallback <- function(data, chart_type, group, color, facet,
                               value_col, func) {
 
   if (!is.null(group)) {
-    agg <- gg_chart_agg(data, group, color, facet, value_col, func)
+    agg <- gg_agg(data, group, color, facet, value_col, func)
     if (!is.null(agg)) {
       return(agg)
     }
@@ -348,7 +348,7 @@ gg_scale_color <- function(map, col, data) {
 
 # -- families ----------------------------------------------------------------
 
-gg_chart_bar <- function(data, group, color, facet, value_col, func,
+gg_bar <- function(data, group, color, facet, value_col, func,
                          bar_mode, orientation, sort_by, sort_dir,
                          count_on, count_col, scale_map) {
 
@@ -356,7 +356,7 @@ gg_chart_bar <- function(data, group, color, facet, value_col, func,
     return(NULL)
   }
 
-  agg <- gg_chart_agg(data, group, color, facet, value_col, func)
+  agg <- gg_agg(data, group, color, facet, value_col, func)
 
   if (is.null(agg)) {
     return(NULL)
@@ -425,7 +425,7 @@ gg_chart_bar <- function(data, group, color, facet, value_col, func,
   p
 }
 
-gg_chart_boxplot <- function(data, group, color, facet, value_col,
+gg_boxplot <- function(data, group, color, facet, value_col,
                              box_points, sort_by, sort_dir, count_on,
                              count_col, scale_map) {
 
@@ -494,7 +494,7 @@ gg_chart_boxplot <- function(data, group, color, facet, value_col,
     ggplot2::labs(x = value_col, y = NULL)
 }
 
-gg_chart_scatter <- function(data, x, y, color, facet, smoother,
+gg_scatter <- function(data, x, y, color, facet, smoother,
                              identity_line, vlines, hlines, dot_size_mult,
                              scale_map) {
 
@@ -549,7 +549,7 @@ gg_aes <- function(...) {
   structure(out, class = "uneval")
 }
 
-gg_chart_line <- function(data, x, y, series, color, facet, lo, hi, step,
+gg_line <- function(data, x, y, series, color, facet, lo, hi, step,
                           vlines, hlines, line_width_mult, dot_size_mult,
                           scale_map) {
 
@@ -713,7 +713,7 @@ gg_apply_titles <- function(p, title, subtitle, caption, data, auto) {
 
 # Print typography over the app's text palette: dark #333 body text, grey
 # #6b7280 subtitle / caption (the canvas band colors), light grid.
-gg_chart_theme <- function() {
+gg_theme <- function() {
   ggplot2::theme_minimal(base_size = 11) +
     ggplot2::theme(
       text = ggplot2::element_text(color = "#333333"),

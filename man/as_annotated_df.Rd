@@ -39,7 +39,7 @@ or suppresses each per block, and carried into the Excel export. Section
 headers are synthesized by the renderer from grouping-value runs -- they
 are never rows of the frame.
 It is what the blockr.viz table renderer (\code{\link[=new_table_block]{new_table_block()}} /
-\code{\link[=html_table]{html_table()}}) consumes and what \code{\link[=summary_table]{summary_table()}} produces. The full
+\code{html_table()}) consumes and what \code{\link[=summary_table]{summary_table()}} produces. The full
 contract lives in the blockr.design spec
 (\code{open/annotated-data-frame/format.md}).
 }
