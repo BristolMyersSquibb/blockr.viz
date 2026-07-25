@@ -70,7 +70,7 @@ headers synthesized from grouping-value runs with collapse/expand
 toggles, \code{.indent} row stubs, and
 multi-level column spanners parsed from \code{|}-delimited column names (each
 leaf carries its header text in \code{attr(col, "label")}). This is the same
-structure \code{\link[=html_table]{html_table()}} renders, folded into the interactive table so
+structure \code{html_table()} renders, folded into the interactive table so
 one renderer covers flat \emph{and} structured tables (drill / cell colour
 still apply to the flat path). A plain rectangular frame renders exactly
 as before.

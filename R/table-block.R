@@ -38,7 +38,7 @@
 #' toggles, `.indent` row stubs, and
 #' multi-level column spanners parsed from `|`-delimited column names (each
 #' leaf carries its header text in `attr(col, "label")`). This is the same
-#' structure [html_table()] renders, folded into the interactive table so
+#' structure `html_table()` renders, folded into the interactive table so
 #' one renderer covers flat *and* structured tables (drill / cell colour
 #' still apply to the flat path). A plain rectangular frame renders exactly
 #' as before.
@@ -140,7 +140,7 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
 #' True when it has any row-side grouping / identity column (the ARD-named
 #' `.group<k>*` / `.variable*` pairs) OR a `.label` stub OR an `.indent` /
 #' `.strong` column (the positional fallback dialect) -- the signals
-#' [summary_table()] and coercing producers emit and [html_table()] renders.
+#' [summary_table()] and coercing producers emit and `html_table()` renders.
 #' @noRd
 dt_is_structured <- function(data) {
   any(grepl("^\\.(group\\d+(_level|_label)?|variable(_level|_label)?|label|indent|strong)$",
@@ -151,7 +151,7 @@ dt_is_structured <- function(data) {
 #'
 #' Builds the section-aware `<tbody>` and multi-level `<thead>` with
 #' `build_html_tbody()` / `build_html_thead()` (the very builders
-#' [html_table()] uses) and tags it with the drill onclick attributes. The
+#' `html_table()` uses) and tags it with the drill onclick attributes. The
 #' surrounding chrome (search bar, gear, scroll container, the
 #' `drilldown-table-structured` class that gates the Table-1 CSS) is added once
 #' by `dt_chrome()`. Cell colour over `.fmt` strings is not meaningful, so

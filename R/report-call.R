@@ -3,13 +3,13 @@
 #' How a block's result should be printed in a rendered document (a
 #' blockr.outline report or deck). Returns a call object over `var`, the
 #' variable the generated script binds the block's result to -- e.g.
-#' `blockr.viz::gg_chart(chart1, chart_type = "bar", group = "ARM")` -- or
+#' `blockr.viz::static_chart(chart1, chart_type = "bar", group = "ARM")` -- or
 #' `NULL` when the bare result prints fine as-is. Consumers (blockr.outline)
 #' deparse the call into the document, so it must be self-qualified and
 #' contain only literal values.
 #'
 #' The chart block's method rebuilds the chart server-side through
-#' [gg_chart()]: the interactive chart draws client-side, so its result is
+#' [static_chart()]: the interactive chart draws client-side, so its result is
 #' the (filtered) data and a rendered document would otherwise print a bare
 #' data frame. Only print-relevant state is emitted (mappings, layout,
 #' titles, helper lines); interaction-only state (tooltips, drill, zoom,
@@ -47,8 +47,8 @@ report_call.chart_block <- function(x, var, ...) {
     if (is.function(v)) NULL else v
   }
 
-  # Print-relevant surface, in gg_chart() signature order. Defaults mirror
-  # gg_chart()'s formals: a value equal to its default is dropped.
+  # Print-relevant surface, in static_chart() signature order. Defaults mirror
+  # static_chart()'s formals: a value equal to its default is dropped.
   spec <- list(
     chart_type = "bar",
     group = NULL,
@@ -108,7 +108,7 @@ report_call.chart_block <- function(x, var, ...) {
   }
 
   as.call(c(
-    list(call("::", as.name("blockr.viz"), as.name("gg_chart")),
+    list(call("::", as.name("blockr.viz"), as.name("static_chart")),
          as.name(var)),
     args
   ))

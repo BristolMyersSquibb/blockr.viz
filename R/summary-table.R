@@ -366,7 +366,7 @@ summary_table_long <- function(data,
 #' @return A wide annotated data frame: dotted identity / structure columns
 #'   plus one formatted character column per by-group level, each carrying a
 #'   `label` attribute holding its `"<group>\nN = <n>"` header. Consumed by
-#'   [new_table_block()] / [html_table()] and any renderer that understands the
+#'   [new_table_block()] / `html_table()` and any renderer that understands the
 #'   annotated-data-frame convention.
 #' @seealso [as_annotated_df()]
 #' @examples

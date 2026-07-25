@@ -106,9 +106,8 @@ With `drill` unset, a click emits nothing.
 
 `new_table_block()` renders flat rectangular frames, with optional cell coloring
 and drill, and structured "Table 1" input: nested row-side section headers,
-multi-level column spanners, and collapse/expand. Both use the same builders as
-the static `html_table()` path, so one renderer covers flat and structured
-tables.
+multi-level column spanners, and collapse/expand. Both go through the same
+internal HTML builders, so one renderer covers flat and structured tables.
 
 ### What a renderer does and does not do
 
