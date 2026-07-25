@@ -3943,19 +3943,32 @@
         // (see the zr handler in _ensureSlotChart), so it cannot get stuck the
         // way the old mouseover/mouseout version did.
         if (isLine) {
+          // Two series, mirroring the patient profile: a LINE (thick, gradient,
+          // no symbols) and a separate SCATTER for the markers. The markers were
+          // line-series symbols before, which did not render on some managed
+          // Edge/Windows setups even though the line did ("highlight, no dots") --
+          // the profile shows its dots reliably there precisely because they are
+          // a scatter series, so the overlay now does the same. animation:false so
+          // line + dots appear together in one atomic render (no fade staging).
           series.push({
             id: '__focus__',
             name: '__focus__',
             type: 'line',
             data: [],
             silent: true,
+            showSymbol: false,
             legendHoverLink: false,
             z: 9,
-            // No animation on the overlay: line and markers must appear together
-            // in one atomic render. A fade / draw-on staged them, and under heavy
-            // CPU throttling the line showed a frame (or several) before the dots
-            // — the "highlight, no dots yet" state. Instant is also what removes
-            // the confusing shape-morph between lines.
+            animation: false
+          });
+          series.push({
+            id: '__focus_dots__',
+            name: '__focus_dots__',
+            type: 'scatter',
+            data: [],
+            silent: true,
+            legendHoverLink: false,
+            z: 10,
             animation: false
           });
         }
@@ -4784,11 +4797,12 @@
       const n = m ? parseInt(m[1], 16) : null;
       const rgba = (/** @type {number} */ a) => n == null ? 'rgba(0,0,0,0)'
         : 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
-      // One atomic, animation-free setOption: line + markers + fill appear
-      // together at full opacity. The overlay series carries `animation: false`
-      // (see the push in _renderIndividual), so there is no fade and no shape
-      // morph — the highlight snaps to the nearest line, dots and all, even
-      // under heavy CPU throttling.
+      // One atomic, animation-free setOption fills BOTH overlay series -- the
+      // line (thick, gradient, no symbols) and the scatter (the dots). Both
+      // carry `animation: false` (see the push in _renderIndividual), so line
+      // and dots appear together with no fade or shape morph. The dots are a
+      // scatter series, not line symbols, so they render on the managed
+      // Edge/Windows setups where line symbols did not.
       chart.setOption({
         series: [{
           id: '__focus__',
@@ -4796,10 +4810,7 @@
           step: f.stepMode || undefined,
           smooth: f.smoothOn,
           smoothMonotone: f.smoothOn ? 'x' : undefined,
-          showSymbol: true,
-          symbol: 'circle',
-          symbolSize: f.markerPx,
-          itemStyle: { color: clr, borderColor: '#fff', borderWidth: 2 },
+          showSymbol: false,
           lineStyle: { color: clr, width: f.focusW, opacity: 1 },
           areaStyle: n == null ? undefined : {
             origin: 'start',
@@ -4807,6 +4818,12 @@
                      colorStops: [{ offset: 0.05, color: rgba(0.15) },
                                   { offset: 0.95, color: rgba(0) }] }
           }
+        }, {
+          id: '__focus_dots__',
+          data: s.data,
+          symbol: 'circle',
+          symbolSize: f.markerPx,
+          itemStyle: { color: clr, borderColor: '#fff', borderWidth: 2 }
         }]
       });
     }
@@ -4818,7 +4835,9 @@
       // Emptying the data is the whole demotion; instant, and every re-render
       // rebuilds the overlay from scratch (setOption notMerge), so nothing can
       // leak across renders.
-      chart.setOption({ series: [{ id: '__focus__', data: [] }] });
+      chart.setOption({
+        series: [{ id: '__focus__', data: [] }, { id: '__focus_dots__', data: [] }]
+      });
     }
 
     _sendConfig() {
