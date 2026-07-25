@@ -4832,7 +4832,12 @@
       chart.setOption({
         series: [{
           id: '__scrim__',
-          data: [0]
+          // One datum to trigger renderItem (which ignores the value and draws
+          // from the grid bounds). It MUST be inside the current range, or
+          // ECharts folds it into the axis extent -- `[0]` made the y-axis snap
+          // to include zero on hover. A point from the hovered line is always
+          // in range, so the axis is identical with and without the scrim.
+          data: [s.data[0]]
         }, {
           id: '__focus__',
           data: s.data,
