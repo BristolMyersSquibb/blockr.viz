@@ -36,8 +36,8 @@
 #' @param title,subtitle,caption Table title / subtitle (header lines) and
 #'   caption (footer line). `NULL` (default) auto-fills from the annotated
 #'   df's `label` / `subtitle` / `caption` attributes; `""` suppresses.
-#' @param na_rep Character. Text for missing (`NA`) cells. Default
-#'   `"—"` (em dash), the clinical-table convention.
+#' @param na_rep Character. Text for missing (`NA`) cells. Defaults to an em
+#'   dash, the clinical-table convention.
 #' @param font,font_size,font_color Base typography, applied to all parts.
 #' @param indent_width Points of left padding per `.indent` level (section
 #'   headers indent at their nesting depth with the same step).
@@ -86,7 +86,7 @@
 #' @seealso [as_annotated_df()], [gt_table()], [write_annotated_xlsx()]
 #' @export
 ft_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
-                     na_rep = "—",
+                     na_rep = "\u2014",
                      font = "Trebuchet MS", font_size = 14,
                      font_color = "#444444",
                      indent_width = 20,
@@ -485,7 +485,7 @@ resolve_header_bands <- function(header_bg, top, data_cols) {
   # name itself. Unpinned groups draw from the cycle pool in appearance order.
   keys <- ifelse(nzchar(top), top, data_cols)
   groups <- unique(keys)
-  gcol <- setNames(rep(NA_character_, length(groups)), groups)
+  gcol <- stats::setNames(rep(NA_character_, length(groups)), groups)
   taken <- 0L
   for (g in groups) {
     if (g %in% names(pins)) {

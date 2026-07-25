@@ -31,6 +31,8 @@ test_that("defaults are omitted so the call stays readable", {
 })
 
 test_that("the emitted call evaluates to the same plot as direct state", {
+  skip_if_not_installed("ggplot2")
+
   d <- transform(datasets::iris, Grp = rep(c("A", "B"), 75))
   b <- new_chart_block(chart_type = "bar", group = "Species", color = "Grp")
 

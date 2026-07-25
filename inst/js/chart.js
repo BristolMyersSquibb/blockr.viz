@@ -504,8 +504,9 @@
    *             brushable: boolean, zoomArmed: boolean,
    *             zoom: any,
    *             focus: { series: any[], stepMode: string | null,
-   *                      smoothOn: boolean, markerPx: number,
-   *                      focusW: number } | null,
+   *                      smoothOn: boolean, xAxisType: string,
+   *                      xOrder: Map<string, number> | null,
+   *                      markerPx: number, focusW: number } | null,
    *             focusSi: number | null }} ChartSlot
    */
 
