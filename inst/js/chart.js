@@ -3537,8 +3537,16 @@
           symbolSize: isLine ? lineMarkerPx : scatterPx,
           itemStyle: { color: clr, cursor: 'pointer' },
           lineStyle: isLine ? { width: lineBaseW, opacity: lineOpacity } : undefined,
-          emphasis: isLine ? { focus: 'series', lineStyle: { width: lineHoverW, opacity: 1 } } : { focus: 'self' },
-          blur: isLine ? { lineStyle: { opacity: 0.05 } } : undefined
+          // Line charts: native emphasis is DISABLED -- the hover highlight is
+          // the __focus__ overlay (line + scatter dots), which we drive off the
+          // mousemove picker. ECharts' own `focus: 'series'` thickens the hovered
+          // base line and blurs the rest, but it is (a) redundant with the
+          // overlay and (b) the source of the stuck "previously hovered line,
+          // no dots": ECharts drops the downplay under fast movement and the old
+          // line stays thick. Turning it off removes the second, conflicting
+          // highlight system entirely. Scatter keeps its per-point emphasis.
+          emphasis: isLine ? { disabled: true } : { focus: 'self' },
+          blur: undefined
         });
 
         // R precomputes the smoother (lm or loess) per group and sends the
