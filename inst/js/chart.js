@@ -80,11 +80,24 @@
   // picker to measure how far each line is from the cursor. The drawn line may
   // be monotone-curved; a straight interpolation between the same points is
   // close enough to decide which line is nearest.
-  function interpYAtX(/** @type {any[]} */ data, /** @type {number} */ x) {
+  //
+  // `xOrder` (a Map<categoryString, index>) is passed for a CATEGORY x-axis:
+  // the point x-values are then category strings, so we compare on their axis
+  // INDEX instead -- which is also what convertFromPixel returns for a category
+  // axis. Without this the picker silently fails on a category x (e.g. AVISIT).
+  function interpYAtX(/** @type {any[]} */ data, /** @type {number} */ x,
+                      /** @type {Map<string, number>|null} */ xOrder) {
     const n = data.length;
-    if (!n || x < data[0][0] || x > data[n - 1][0]) return null;
+    if (!n) return null;
+    const xat = xOrder
+      ? (/** @type {number} */ i) => {
+          const v = xOrder.get(String(data[i][0]));
+          return v == null ? NaN : v;
+        }
+      : (/** @type {number} */ i) => data[i][0];
+    if (x < xat(0) || x > xat(n - 1)) return null;
     for (let k = 1; k < n; k++) {
-      const x0 = data[k - 1][0], x1 = data[k][0];
+      const x0 = xat(k - 1), x1 = xat(k);
       if (x >= x0 && x <= x1) {
         const y0 = data[k - 1][1], y1 = data[k][1];
         return x1 === x0 ? y0 : y0 + (y1 - y0) * (x - x0) / (x1 - x0);
@@ -4026,6 +4039,10 @@
           series,
           stepMode: stepMode || null,
           smoothOn: smoothOn,
+          // Axis kind + category->index map, so the mousemove picker can locate
+          // the nearest line on a CATEGORY x (AVISIT) as well as numeric/time.
+          xAxisType: xAxisType,
+          xOrder: xOrder,
           // Match the patient profile's marker + line sizing (symbolSize 8,
           // 2px white ring, 2.5px line) so a hovered crowd line reads as the
           // same object the profile shows for the drilled patient.
@@ -4804,23 +4821,30 @@
       let cd;
       try { cd = chart.convertFromPixel({ gridIndex: 0 }, [px, py]); } catch (e) { return null; }
       if (!cd || cd[0] == null || cd[1] == null) return null;
+      // cx is the numeric x position -- the value on a numeric/time axis, or the
+      // category INDEX on a category axis (AVISIT). `xOrder` maps a line's
+      // category strings to that index so interpYAtX can compare like-for-like.
       const cx = +cd[0], cy = +cd[1];
+      const xOrder = (f.xAxisType === 'category') ? f.xOrder : null;
       const series = f.series;
-      let bestSi = null, bestY = null, bestDy = Infinity;
+      let bestSi = null, bestY = null, bestX = null, bestDy = Infinity;
       for (let i = 0; i < series.length; i++) {
         const s = series[i];
         if (!s || s.id === '__focus__' || s.type !== 'line' ||
             !Array.isArray(s.data) || !s.data.length) continue;
-        const y = interpYAtX(s.data, cx);
+        const y = interpYAtX(s.data, cx, xOrder);
         if (y == null) continue;
         const dy = Math.abs(y - cy);
-        if (dy < bestDy) { bestDy = dy; bestSi = i; bestY = y; }
+        if (dy < bestDy) { bestDy = dy; bestSi = i; bestY = y; bestX = s.data[0][0]; }
       }
       if (bestSi == null) return null;
       // Reject when the nearest line is still far in PIXELS (data-space Δy near
-      // a compressed axis can be tiny while the pixel gap is large).
+      // a compressed axis can be tiny while the pixel gap is large). Use the
+      // series' own first x (a real category value / number) for the convert --
+      // the y-pixel is what we compare, and cx alone is a bare index on a
+      // category axis, which convertToPixel does not accept as an x.
       let bp;
-      try { bp = chart.convertToPixel({ seriesIndex: bestSi }, [cx, bestY]); } catch (e) { return bestSi; }
+      try { bp = chart.convertToPixel({ seriesIndex: bestSi }, [bestX, bestY]); } catch (e) { return bestSi; }
       if (bp && Math.abs(bp[1] - py) > HOVER_PX) return null;
       return bestSi;
     }
