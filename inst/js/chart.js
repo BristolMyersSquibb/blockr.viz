@@ -3950,6 +3950,15 @@
           // the profile shows its dots reliably there precisely because they are
           // a scatter series, so the overlay now does the same. animation:false so
           // line + dots appear together in one atomic render (no fade staging).
+          // `blur` is pinned OPAQUE on both: a real mouse (esp. Edge/Windows)
+          // can trigger the base lines' native `focus: 'series'` emphasis, which
+          // blurs every OTHER series to ~5% opacity -- including this overlay.
+          // A thick line stays faintly visible at 5% but the dots vanish, which
+          // is the intermittent "sometimes no dots" (it depends on whether the
+          // cursor landed on a data item). Pinning blur keeps the overlay fully
+          // visible regardless.
+          const focusBlur = { itemStyle: { opacity: 1 }, lineStyle: { opacity: 1 },
+                              areaStyle: { opacity: 1 } };
           series.push({
             id: '__focus__',
             name: '__focus__',
@@ -3959,7 +3968,8 @@
             showSymbol: false,
             legendHoverLink: false,
             z: 9,
-            animation: false
+            animation: false,
+            blur: focusBlur
           });
           series.push({
             id: '__focus_dots__',
@@ -3969,7 +3979,8 @@
             silent: true,
             legendHoverLink: false,
             z: 10,
-            animation: false
+            animation: false,
+            blur: focusBlur
           });
         }
         // Render-scoped registry for the mousemove picker + promote: the final
