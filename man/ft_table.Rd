@@ -31,8 +31,8 @@ method, e.g. a composer table -- coerced on entry).}
 caption (footer line). \code{NULL} (default) auto-fills from the annotated
 df's \code{label} / \code{subtitle} / \code{caption} attributes; \code{""} suppresses.}
 
-\item{na_rep}{Character. Text for missing (\code{NA}) cells. Default
-\code{"—"} (em dash), the clinical-table convention.}
+\item{na_rep}{Character. Text for missing (\code{NA}) cells. Defaults to an em
+dash, the clinical-table convention.}
 
 \item{font, font_size, font_color}{Base typography, applied to all parts.}
 

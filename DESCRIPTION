@@ -45,6 +45,7 @@ Suggests:
     blockr.theme,
     chromote,
     flextable,
+    ggplot2,
     knitr,
     openxlsx,
     rmarkdown,
