@@ -3494,7 +3494,6 @@
           ? BASE_LINE_MARKER
           : BASE_LINE_MARKER * dm);
         const lineBaseW  = BASE_LINE_WIDTH * lm;
-        const lineHoverW = BASE_LINE_WIDTH * 1.7 * lm;
         const scatterPx  = BASE_SCATTER_SIZE * dm;
 
         // Line-connect mode: one select drives both step and smoothing.
@@ -3539,14 +3538,14 @@
           lineStyle: isLine ? { width: lineBaseW, opacity: lineOpacity } : undefined,
           // Line charts: native emphasis is DISABLED -- the hover highlight is
           // the __focus__ overlay (line + scatter dots), which we drive off the
-          // mousemove picker. ECharts' own `focus: 'series'` thickens the hovered
-          // base line and blurs the rest, but it is (a) redundant with the
-          // overlay and (b) the source of the stuck "previously hovered line,
-          // no dots": ECharts drops the downplay under fast movement and the old
-          // line stays thick. Turning it off removes the second, conflicting
-          // highlight system entirely. Scatter keeps its per-point emphasis.
-          emphasis: isLine ? { disabled: true } : { focus: 'self' },
-          blur: undefined
+          // mousemove picker. ECharts' own `focus: 'series'` would be a SECOND
+          // highlight system: it thickens the hovered base line and blurs the
+          // rest, but it drops the downplay under fast movement, so a
+          // previously-hovered line stays thick (and, being symbol:none, has no
+          // dots -- the stuck "previous line without dots"). With it off there is
+          // exactly one highlight system and nothing that can blur the overlay.
+          // Scatter keeps its per-point emphasis.
+          emphasis: isLine ? { disabled: true } : { focus: 'self' }
         });
 
         // R precomputes the smoother (lm or loess) per group and sends the
@@ -3940,33 +3939,19 @@
           : null;
         if (legTitle) series.push(...this._legendTitleSeries(legTitle));
 
-        // Hover-highlight overlay (line charts). ECharts' own emphasis does
-        // nothing useful here — the crowd lines carry `symbol: 'none'`, and
-        // `focus: 'series'` blur is item-driven, so hovering a symbol-less line
-        // neither thickens it nor dims the crowd. So we draw the highlight
-        // ourselves: this permanently-mounted series is filled on hover with the
-        // nearest line's points in the "N = 1" treatment (thick line, ringed
-        // markers, gradient) and emptied when the cursor leaves. It is UPDATED
-        // BY ID, never added/removed, and driven off a self-healing mousemove
-        // (see the zr handler in _ensureSlotChart), so it cannot get stuck the
-        // way the old mouseover/mouseout version did.
+        // Hover-highlight overlay (line charts). ECharts' native emphasis is off
+        // on the base lines (see mkSeries), so we ARE the highlight: two
+        // permanently-mounted series, mirroring the patient profile -- a LINE
+        // (thick, gradient, no symbols) and a separate SCATTER for the markers.
+        // Both are filled on hover with the nearest line's points and emptied
+        // when the cursor leaves; UPDATED BY ID, never added/removed, driven off
+        // the self-healing mousemove picker (see the zr handler in
+        // _ensureSlotChart), so the highlight cannot get stuck. Markers are a
+        // scatter (not line symbols) because line symbols did not render on some
+        // managed Edge/Windows setups; animation:false so line + dots appear
+        // together in one atomic render, no fade staging. No `blur` guard is
+        // needed: with base-line emphasis disabled nothing ever enters blur.
         if (isLine) {
-          // Two series, mirroring the patient profile: a LINE (thick, gradient,
-          // no symbols) and a separate SCATTER for the markers. The markers were
-          // line-series symbols before, which did not render on some managed
-          // Edge/Windows setups even though the line did ("highlight, no dots") --
-          // the profile shows its dots reliably there precisely because they are
-          // a scatter series, so the overlay now does the same. animation:false so
-          // line + dots appear together in one atomic render (no fade staging).
-          // `blur` is pinned OPAQUE on both: a real mouse (esp. Edge/Windows)
-          // can trigger the base lines' native `focus: 'series'` emphasis, which
-          // blurs every OTHER series to ~5% opacity -- including this overlay.
-          // A thick line stays faintly visible at 5% but the dots vanish, which
-          // is the intermittent "sometimes no dots" (it depends on whether the
-          // cursor landed on a data item). Pinning blur keeps the overlay fully
-          // visible regardless.
-          const focusBlur = { itemStyle: { opacity: 1 }, lineStyle: { opacity: 1 },
-                              areaStyle: { opacity: 1 } };
           series.push({
             id: '__focus__',
             name: '__focus__',
@@ -3976,8 +3961,7 @@
             showSymbol: false,
             legendHoverLink: false,
             z: 9,
-            animation: false,
-            blur: focusBlur
+            animation: false
           });
           series.push({
             id: '__focus_dots__',
@@ -3987,8 +3971,7 @@
             silent: true,
             legendHoverLink: false,
             z: 10,
-            animation: false,
-            blur: focusBlur
+            animation: false
           });
         }
         // Render-scoped registry for the mousemove picker + promote: the final
