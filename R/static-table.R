@@ -93,7 +93,8 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
                      first_col_width = 5.65, other_cols_width = 3.5,
                      fit_width = getOption("blockr.viz.ft_fit_width", NULL),
                      auto_width = FALSE,
-                     header_bg = getOption("blockr.viz.ft_header_bg", NULL),
+                     header_bg = getOption("blockr.viz.ft_header_bg",
+                                           viz_palette("bands")),
                      pptx_left = 0.4, pptx_top = 1.1) {
   if (!requireNamespace("flextable", quietly = TRUE)) {
     stop("static_table() needs the 'flextable' package.", call. = FALSE)
@@ -437,11 +438,33 @@ ft_contrast_text <- function(bg) {
 FT_EMPHASIS_DEFAULT <- c(normal = "#EEEEEE", emph = "#9AA3B0",
                          strong = "#2563EB")
 
+# A theme's `bands` role, read as the emphasis triple. Themes state bands the
+# way header fills want them (a `.stub` light grey then a cycle pool), which is
+# the same vocabulary: the stub is the `normal` band and the first pool entry
+# is the accent. Returns NULL unless the theme supplies both, so a partial
+# answer falls through to FT_EMPHASIS_DEFAULT rather than half-applying.
+ft_emphasis_from_theme <- function() {
+  bands <- viz_palette("bands")
+  if (is.null(bands)) {
+    return(NULL)
+  }
+  nm <- names(bands) %||% rep("", length(bands))
+  stub <- bands[nm == ".stub"]
+  pool <- unname(bands[nm != ".stub"])
+  if (!length(stub) || !length(pool)) {
+    return(NULL)
+  }
+  c(normal = unname(stub[[1L]]),
+    emph = pool[[min(2L, length(pool))]],
+    strong = pool[[1L]])
+}
+
 # Per-column bg / text for emphasis mode. strong -> accent, emph -> dark gray,
 # normal -> light gray; the stub takes the normal (light) band so the header
 # reads as one strip. Contrast text by luminance.
 ft_emphasis_bands <- function(col_strong, col_emph) {
-  cols <- getOption("blockr.viz.ft_emphasis_colors", FT_EMPHASIS_DEFAULT)
+  cols <- getOption("blockr.viz.ft_emphasis_colors", NULL) %||%
+    ft_emphasis_from_theme() %||% FT_EMPHASIS_DEFAULT
   pick <- function(key) cols[[key]]
   bg <- ifelse(col_strong, pick("strong"),
                ifelse(col_emph, pick("emph"), pick("normal")))

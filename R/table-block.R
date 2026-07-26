@@ -916,7 +916,7 @@ dt_color_fun <- function(type, domain, palette) {
   }
 
   if (identical(type, "diverging")) {
-    pal <- palette %||% c("#99000d", "#ffffff", "#08306b")
+    pal <- palette %||% viz_palette("diverging", 3L, DT_DIVERGING_FALLBACK)
     c1 <- hex2rgb(pal[1L])
     c2 <- hex2rgb(pal[2L])
     c3 <- hex2rgb(pal[3L])
@@ -936,7 +936,7 @@ dt_color_fun <- function(type, domain, palette) {
       bg_fg(ch(1L), ch(2L), ch(3L))
     }
   } else {
-    pal <- palette %||% c("#eef2ff", "#1d4ed8")
+    pal <- palette %||% viz_palette("sequential", 2L, DT_SEQUENTIAL_FALLBACK)
     c1 <- hex2rgb(pal[1L])
     c2 <- hex2rgb(pal[2L])
     function(v) {

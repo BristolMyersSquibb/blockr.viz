@@ -116,6 +116,9 @@
 
   // blockr echarts design system. Okabe-Ito categorical palette —
   // colorblind-safe and well-tested for general categorical encoding.
+  // FALLBACK only: the board theme's `categorical` role arrives on the chart
+  // config as `palette` (see _palette()), so a themed board recolours both
+  // engines from one place instead of this list being hand-synced to R.
   const BLOCKR_PALETTE = ['#0072B2', '#D55E00', '#F0E442', '#009E73', '#56B4E9', '#E69F00', '#CC79A7'];
   const BLOCKR_FONT = "'Open Sans', system-ui, sans-serif";
   // A color-split boxplot dodges its boxes by giving each (group, color) box
@@ -753,6 +756,14 @@
     _scaleFor(varName) {
       const sc = this.config && this.config.scales;
       return (sc && varName && sc.var === varName) ? sc : null;
+    }
+
+    // The series pool: the board theme's `categorical` role when R sent one,
+    // else the built-in. Read per call rather than cached at construction —
+    // the config is re-sent on theme and gear changes.
+    _palette() {
+      const p = this.config && this.config.palette;
+      return (Array.isArray(p) && p.length) ? p : BLOCKR_PALETTE;
     }
 
     // Order a set of levels: by the scale's order when one applies, else by
@@ -2457,7 +2468,7 @@
       const colors = this._orderLevels(
         [...new Set(agg.map(a => a.color))].filter(c => c !== '__all__'),
         colorScale, this.config.color);
-      const palette = BLOCKR_PALETTE;
+      const palette = this._palette();
       const singleFacet = facets.length === 1;
       // Faceted: one shared HTML legend under the grid instead of a repeated
       // per-panel one (see _updateLegendBand).
@@ -3399,7 +3410,7 @@
       const ct = this.config.chart_type;
       const isLine = ct === 'line';
       const isScatter = ct === 'scatter';
-      const palette = BLOCKR_PALETTE;
+      const palette = this._palette();
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
 
       const facets = facet
@@ -4227,7 +4238,7 @@
       }
 
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
-      const palette = BLOCKR_PALETTE;
+      const palette = this._palette();
       const xAxisType = this._axisTypeFor(x);
       const xCats = xAxisType === 'category' ? this._orderedCategories(x) : null;
 

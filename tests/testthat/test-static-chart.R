@@ -87,7 +87,7 @@ test_that("level colors cycle the shared palette over sorted levels", {
   d <- gg_iris()
   cols <- gg_level_colors(NULL, "Species", d)
   expect_identical(names(cols), c("setosa", "versicolor", "virginica"))
-  expect_identical(unname(cols), DD_BLOCKR_PALETTE[1:3])
+  expect_identical(unname(cols), dd_palette()[1:3])
 })
 
 test_that("titles resolve templates, auto-compose and suppress", {

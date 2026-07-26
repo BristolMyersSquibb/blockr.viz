@@ -672,6 +672,12 @@ new_chart_block <- function(
                 r_scale_map(), r_chart_type(),
                 color = r_color(), group = r_group(), data = d
               ),
+              # The series pool, resolved through the board theme. Rides the
+              # config rather than its own custom message: an unhandled
+              # message is dropped silently, and this one has to arrive before
+              # the first render. JS keeps its own copy as the fallback, so an
+              # older R side that omits the field still draws.
+              palette = as.list(dd_palette()),
               # External-control send (beta): current target/table + the
               # board's candidate targets for the gear's picker. The choices
               # reactiveVal skips identical sets, so this re-pumps only when

@@ -51,12 +51,6 @@ dd_levels <- function(col) {
   }
 }
 
-# Mirrors the JS BLOCKR_PALETTE (inst/js/chart.js) -- the pool the
-# chart cycles when no scale applies, so hash assignment draws from the same
-# colors.
-DD_BLOCKR_PALETTE <- c(
-  "#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00", "#CC79A7"
-)
 
 # Build the `scales` entry of the drilldown config payload, or NULL when no
 # map / no colored role / no binding / no blockr.theme installed. Named
@@ -77,7 +71,7 @@ dd_scales_config <- function(map, chart_type, color, group, data) {
   res <- blockr.theme::resolve_scales(
     map, var,
     levels = dd_levels(data[[var]]),
-    palette = DD_BLOCKR_PALETTE
+    palette = dd_palette()
   )
 
   if (is.null(res)) {
@@ -111,7 +105,7 @@ dd_row_hex <- function(map, col, data) {
   res <- blockr.theme::resolve_scales(
     map, col,
     levels = dd_levels(data[[col]]),
-    palette = DD_BLOCKR_PALETTE
+    palette = dd_palette()
   )
 
   pal <- res$color
@@ -145,6 +139,6 @@ dd_ident_hex <- function(map, col, data) {
   if (!length(lv)) {
     return(NULL)
   }
-  pal <- stats::setNames(rep_len(DD_BLOCKR_PALETTE, length(lv)), lv)
+  pal <- stats::setNames(rep_len(dd_palette(), length(lv)), lv)
   unname(pal[as.character(x)])
 }

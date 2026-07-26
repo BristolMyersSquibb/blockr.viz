@@ -9,7 +9,7 @@
 #'
 #' Numbers match the app by construction: aggregation goes through the same
 #' engine the table/tile renderers use (`dd_table_aggregate`, golden-tested
-#' against the JS engine), colors cycle the same `DD_BLOCKR_PALETTE` with
+#' against the JS engine), colors cycle the same `dd_palette()` with
 #' the same level ordering (factor levels, else sorted unique), and a board
 #' scale map (arm colors) resolves through the same blockr.theme resolver.
 #' The look is print typography, not a pixel copy of the canvas.
@@ -326,16 +326,16 @@ gg_level_colors <- function(map, col, data) {
     res <- blockr.theme::resolve_scales(
       map, col,
       levels = dd_levels(x),
-      palette = DD_BLOCKR_PALETTE
+      palette = dd_palette()
     )
     if (!is.null(res$color)) {
       hex <- res$color[lv]
-      hex[is.na(hex)] <- rep_len(DD_BLOCKR_PALETTE, length(lv))[is.na(hex)]
+      hex[is.na(hex)] <- rep_len(dd_palette(), length(lv))[is.na(hex)]
       return(stats::setNames(unname(hex), lv))
     }
   }
 
-  stats::setNames(rep_len(DD_BLOCKR_PALETTE, length(lv)), lv)
+  stats::setNames(rep_len(dd_palette(), length(lv)), lv)
 }
 
 gg_scale_fill <- function(map, col, data) {
@@ -393,7 +393,7 @@ gg_bar <- function(data, group, color, facet, value_col, func,
     ) + gg_scale_fill(scale_map, color, data)
   } else {
     p + ggplot2::geom_col(
-      fill = DD_BLOCKR_PALETTE[[1L]], width = 0.6
+      fill = dd_palette(1L), width = 0.6
     )
   }
 
@@ -474,7 +474,7 @@ gg_boxplot <- function(data, group, color, facet, value_col,
     ) + gg_scale_fill(scale_map, color, data)
   } else {
     p + ggplot2::geom_boxplot(
-      fill = DD_BLOCKR_PALETTE[[1L]],
+      fill = dd_palette(1L),
       outlier.shape = outlier_shape, outlier.size = 1, alpha = 0.85
     )
   }
@@ -514,7 +514,7 @@ gg_scatter <- function(data, x, y, color, facet, smoother,
     ) + gg_scale_color(scale_map, color, data)
   } else {
     p + ggplot2::geom_point(
-      color = DD_BLOCKR_PALETTE[[1L]], size = size, alpha = 0.8
+      color = dd_palette(1L), size = size, alpha = 0.8
     )
   }
 
@@ -583,7 +583,7 @@ gg_line <- function(data, x, y, series, color, facet, lo, hi, step,
   if (!is.null(lo) && !is.null(hi)) {
     p <- p + ggplot2::geom_ribbon(
       gg_aes(ggplot2::aes(ymin = .data[[lo]], ymax = .data[[hi]]), aes_grp),
-      alpha = 0.15, fill = DD_BLOCKR_PALETTE[[1L]]
+      alpha = 0.15, fill = dd_palette(1L)
     )
   }
 
