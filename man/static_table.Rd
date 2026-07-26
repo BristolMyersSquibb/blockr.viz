@@ -10,7 +10,7 @@ static_table(
   subtitle = NULL,
   caption = NULL,
   na_rep = "—",
-  font = "Trebuchet MS",
+  font = "Inter",
   font_size = 14,
   font_color = "#444444",
   indent_width = 20,
