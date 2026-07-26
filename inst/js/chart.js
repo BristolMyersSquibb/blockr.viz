@@ -155,6 +155,15 @@
   const AXIS_LINE_COLOR = '#ccc';
   const SPLIT_LINE_COLOR = '#f3f4f6';
 
+  // Identity of a category-axis label LAYOUT (see _xAxisLabels): orientation,
+  // how many labels are skipped, and the truncation width. Everything else in
+  // the axisLabel is width-independent. _refitXLabels compares this after a
+  // resize to decide whether the axis has to be re-laid-out at all — a resize
+  // that keeps all three is the common case and must stay free.
+  /** @param {any} axisLabel @returns {string} */
+  const xLabelKey = (axisLabel) =>
+    `${axisLabel.rotate}|${axisLabel.interval}|${axisLabel.width}`;
+
   // Waterfall sign colors (mirrors new_waterfall_block's defaults): increase =
   // Okabe-Ito green, decrease = red, total/subtotal = grey. Semantic, so they
   // override palette cycling for this mode.
@@ -1472,6 +1481,11 @@
     // for line/scatter, where x is an ordered run (visits, cycles) and the
     // reader interpolates a skipped tick the way they do on a numeric axis.
     // Reading every label at any density is what the zoom toolbox is for.
+    //
+    // Every decision here is a function of the CURRENT width and none of it is
+    // one-way: _refitXLabels re-runs this after a container resize, so widening
+    // the panel puts the skipped labels back (and un-rotates them once they
+    // fit flat), and narrowing it thins them again.
     /** @param {any[]} labels @param {number} availW plot width minus grid margins @param {boolean} [decimate] thin rotated labels to whatever fits (ordered axes only) */
     _xAxisLabels(labels, availW, decimate) {
       const DC = /** @type {any} */ (DrilldownChart);
@@ -1498,11 +1512,9 @@
       const base = { color: AXIS_LABEL_COLOR, fontSize: 11, interval: 0 };
       if (widest + PAD <= slot) {
         // Fits horizontally — keep flat, truncate only as a safety net.
-        return {
-          axisLabel: { ...base, rotate: 0, overflow: 'truncate',
-            width: Math.max(10, Math.floor(slot - PAD)), ellipsis: '…' },
-          bottom: 0
-        };
+        const axisLabel = { ...base, rotate: 0, overflow: 'truncate',
+          width: Math.max(10, Math.floor(slot - PAD)), ellipsis: '…' };
+        return { axisLabel, bottom: 0, key: xLabelKey(axisLabel) };
       }
       // Doesn't fit — rotate to vertical and truncate long labels at a cap.
       // The cap is a HEIGHT cost, not a width one: rotated text spends its
@@ -1523,11 +1535,9 @@
       const interval = decimate
         ? Math.max(0, Math.ceil(LABEL_ROOM / slot) - 1)
         : 0;
-      return {
-        axisLabel: { ...base, rotate: 90, overflow: 'truncate',
-          width: len, ellipsis: '…', interval },
-        bottom: len
-      };
+      const axisLabel = { ...base, rotate: 90, overflow: 'truncate',
+        width: len, ellipsis: '…', interval };
+      return { axisLabel, bottom: len, key: xLabelKey(axisLabel) };
     }
 
     // --- Observation-count labels ("Female (12)") --------------------------
@@ -2621,6 +2631,7 @@
         // into the plot area and re-fattens the band — a 1-row panel is 104px
         // and that is the correct height. The 64px floor is a pure safety net
         // for degenerate options (e.g. a boxplot whose facet has 0 rows).
+        const panelH = anyOption.__panelH != null ? anyOption.__panelH : 350;
         const hChanged = this._setSlotHeight(slot, anyOption.__panelH != null
           ? Math.max(64, Math.round(anyOption.__panelH)) + 'px'
           : '350px');
@@ -2632,6 +2643,13 @@
         // sees the option.
         /** @type {any} */ (chart).__legendFit = anyOption.__legendFit;
         delete anyOption.__legendFit;
+        // Same for the x-label fit, plus the two things only the loop knows:
+        // the slot whose height the gutter drives, and that height WITHOUT the
+        // gutter, so _refitXLabels can re-derive it at any other gutter.
+        /** @type {any} */ (chart).__xFit = anyOption.__xFit
+          ? { ...anyOption.__xFit, slot, baseH: panelH - anyOption.__xFit.gutter }
+          : undefined;
+        delete anyOption.__xFit;
         chart.setOption(this._applyDrillEmphasis(option), true);
         if (existed && hChanged) chart.resize();
       }
@@ -2924,6 +2942,12 @@
         __legendFit: nativeLegend
           ? { items: legItems, base: bottomBase, key: leg.extra + (leg.scroll ? 'S' : '') }
           : undefined,
+        // Inputs for _refitXLabels — the same labels and the same width inset
+        // measured above, so a resize can redo the decision from scratch.
+        __xFit: xlab
+          ? { labels: catLabels, inset: 65, decimate: false,
+              gutter: xlab.bottom, key: xlab.key }
+          : undefined,
         // Horizontal: exact panel height for a constant category band —
         // grid.top + rows * band + grid.bottom, band = one 28px row
         // (stacked/percent/single) or the grouped series fan + padding.
@@ -3044,6 +3068,8 @@
         // Default canvas plus the rotated step-label gutter that grid.bottom
         // above already reserves — same rule as the vertical bar.
         __panelH: 350 + xlab.bottom,
+        __xFit: { labels: stepLabels, inset: 65, decimate: false,
+                  gutter: xlab.bottom, key: xlab.key },
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip: {
@@ -3583,6 +3609,13 @@
           (400 + (xlab ? xlab.bottom : 0)) + 'px');
         const existed = !!slot.chart;
         const chart = this._ensureSlotChart(slot, 'individual');
+        // Inputs for _refitXLabels: this is the family that DECIMATES, so it
+        // is the one that most needs a widened panel to give the skipped
+        // labels back. baseH is the 400px canvas without the label gutter.
+        /** @type {any} */ (chart).__xFit = xlab
+          ? { labels: xCats, inset: 71, decimate: true, nameGap: true,
+              gutter: xlab.bottom, key: xlab.key, slot, baseH: 400 }
+          : undefined;
         // Per-slot hover tracker (which line the cursor is on) — persistent
         // so the once-attached mousemove handler and the per-render tooltip
         // formatter share it. Reset on re-render, together with the overlay's
@@ -5086,7 +5119,58 @@
     _resizeCharts() {
       if (!this.chartGrid || this.chartGrid.offsetParent === null) return;
       if (!this.chartGrid.clientWidth || !this.chartGrid.clientHeight) return;
-      for (const c of this.charts) { c.resize(); this._refitLegend(c); }
+      for (const c of this.charts) {
+        c.resize();
+        // Before the legend: the x-label gutter is part of grid.bottom, and
+        // _refitXLabels hands _refitLegend the corrected base to add its
+        // wrap rows to.
+        this._refitXLabels(c);
+        this._refitLegend(c);
+      }
+    }
+
+    // Re-fit the category x-axis labels after a container resize — the reason
+    // widening a chart UNDOES the rotation and thinning it needed while it was
+    // narrow. chart.resize() re-lays-out with the option BUILT AT THE OLD
+    // WIDTH, so `rotate`, the truncation width and the `interval` decimation
+    // stay frozen at whatever the first (possibly narrow, possibly hidden)
+    // render decided. Builders stash the measurement inputs on the instance
+    // (__xFit); this re-measures at the new width and merges the corrected
+    // axisLabel, grid gutter and canvas height in.
+    /** @param {any} chart */
+    _refitXLabels(chart) {
+      const fit = chart.__xFit;
+      if (!fit) return;
+      const lab = this._xAxisLabels(fit.labels, chart.getWidth() - fit.inset,
+                                    fit.decimate);
+      if (fit.key === lab.key) return;
+      fit.key = lab.key;
+      // The gutter is a HEIGHT: rotated labels spend their pixel width on
+      // grid.bottom and the canvas grows by the same amount (see the builders'
+      // __panelH). Everything downstream is applied as a DELTA so this
+      // composes with _refitLegend, which patches the same grid.bottom from
+      // its own base — that base carries the gutter too, so it moves with us.
+      const delta = lab.bottom - fit.gutter;
+      fit.gutter = lab.bottom;
+      const lf = chart.__legendFit;
+      if (lf) lf.base += delta;
+      const grid = (chart.getOption().grid || [])[0] || {};
+      /** @type {any} */
+      const xPatch = { axisLabel: lab.axisLabel };
+      // Families that title the x-axis drop the title below the rotated text
+      // via nameGap; families whose category axis is untitled (bar, waterfall)
+      // have no nameGap to move.
+      if (fit.nameGap) xPatch.nameGap = lab.bottom ? lab.bottom + 16 : 28;
+      chart.setOption({ xAxis: [xPatch],
+                        grid: { bottom: (Number(grid.bottom) || 0) + delta } });
+      // Height last: the canvas grows/shrinks by the gutter delta, and a
+      // retained instance needs the extra resize to pick the new box up. The
+      // ResizeObserver sees that height change and re-enters here once more,
+      // where the key now matches and it costs nothing.
+      if (delta && fit.slot &&
+          this._setSlotHeight(fit.slot, Math.round(fit.baseH + lab.bottom) + 'px')) {
+        chart.resize();
+      }
     }
 
     // Re-fit the bottom-legend reservation after a container resize.
