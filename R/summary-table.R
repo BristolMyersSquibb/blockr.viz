@@ -225,7 +225,37 @@ summary_table_long <- function(data,
   # Flag lists (all-logical vars) render flat -- no `.variable_label`.
   all_logical <- all(vapply(vars, function(v) is.logical(data[[v]]),
                             logical(1)))
-  if (length(per_var) > 1L && !all_logical) {
+
+  # Compact shape: every variable resolves to exactly ONE row, which is what
+  # compute_one_var() already aims at for a single statistic ("the old compact
+  # shape", indent 0). Heading each of those single rows with its own variable
+  # name doubles the table's height to say nothing -- with twenty variables it
+  # is forty rows carrying twenty numbers -- so keep the variable in the row's
+  # own stub and let the statistic be named once, in the subtitle.
+  #
+  # Restricted to numeric variables on purpose: a categorical that happens to
+  # have one level also yields one row, but there the label IS the level, and
+  # replacing it with the variable name would lose which level was counted.
+  all_numeric <- all(vapply(vars, function(v) is.numeric(data[[v]]),
+                            logical(1)))
+  # Count DISPLAY rows, not frame rows: at this point a frame still holds one
+  # long row per by-group, and the group dimension only becomes columns in the
+  # wide pivot further down.
+  display_rows <- function(df) {
+    id <- intersect(c(sections, ".variable", ".variable_level", ".label"),
+                    names(df))
+    nrow(unique(df[, id, drop = FALSE]))
+  }
+  compact <- all_numeric &&
+    all(vapply(per_var, display_rows, integer(1)) == 1L)
+
+  if (compact) {
+    for (i in seq_along(per_var)) {
+      head_var <- runs[[i]][1]
+      per_var[[i]]$.label <- var_header_label(data[[head_var]], head_var)
+      per_var[[i]]$.indent <- 0L
+    }
+  } else if (length(per_var) > 1L && !all_logical) {
     for (i in seq_along(per_var)) {
       head_var <- if (length(runs[[i]]) == 1L) runs[[i]] else runs[[i]][1]
       hdr_label <- var_header_label(data[[head_var]], head_var)
@@ -303,6 +333,18 @@ summary_table_long <- function(data,
 
   out <- tibble::as_tibble(out)
   attr(out, "group_n") <- group_n
+
+  # The statistic is constant down a compact table, so it is named once here
+  # rather than repeated in every stub. This is the auto tier the table block
+  # already reads (`input_display_attrs()`): a subtitle the user types wins,
+  # and being an attribute on the frame it follows the table into gt, the
+  # Excel export and a report exhibit.
+  if (compact && length(stats) == 1L) {
+    stat_label <- SUMMARY_STATS_CATALOG[[stats[[1L]]]]$label
+    if (is.character(stat_label) && nzchar(stat_label)) {
+      attr(out, "subtitle") <- stat_label
+    }
+  }
   out
 }
 

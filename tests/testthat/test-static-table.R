@@ -14,10 +14,11 @@ test_that("static_table renders an annotated frame as a themed flextable", {
   expect_equal(attr(ft, "pptx_left"), 0.4)
   expect_equal(attr(ft, "pptx_top"), 1.1)
 
-  # 2 variable blocks -> 2 interleaved section-header rows + 2 stat rows
-  expect_equal(flextable::nrow_part(ft, "body"), 4L)
+  # One statistic, so each variable is a single row and the stub names the
+  # variable: 2 rows, not 2 headers each with one child under it.
+  expect_equal(flextable::nrow_part(ft, "body"), 2L)
   stub <- ft$body$dataset[[1L]]
-  expect_equal(stub, c("Sepal.Length", "Mean (SD)", "Sepal.Width", "Mean (SD)"))
+  expect_equal(stub, c("Sepal.Length", "Sepal.Width"))
 
   # title + subtitle header lines above the leaf-label row, caption footer
   expect_equal(flextable::nrow_part(ft, "header"), 3L)
@@ -29,11 +30,19 @@ test_that("title/subtitle/caption: NULL = auto from attrs, '' = off", {
 
   tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
   attr(tbl, "label") <- "Auto title"
+  # a single-statistic summary also stamps its own subtitle: with the stat
+  # gone from the stubs, this line is the only thing naming what the numbers
+  # are, so it is part of the auto tier too
+  expect_equal(attr(tbl, "subtitle"), "Mean (SD)")
 
-  # auto: label attr becomes a title line
-  expect_equal(flextable::nrow_part(static_table(tbl), "header"), 2L)
-  # "" suppresses it
-  expect_equal(flextable::nrow_part(static_table(tbl, title = ""), "header"), 1L)
+  # auto: label + subtitle attrs become header lines above the leaf-label row
+  expect_equal(flextable::nrow_part(static_table(tbl), "header"), 3L)
+  # "" suppresses each of them independently
+  expect_equal(flextable::nrow_part(static_table(tbl, title = ""), "header"), 2L)
+  expect_equal(
+    flextable::nrow_part(static_table(tbl, title = "", subtitle = ""), "header"),
+    1L
+  )
   # no caption -> no footer part rows
   expect_equal(flextable::nrow_part(static_table(tbl), "footer"), 0L)
 })
@@ -42,7 +51,7 @@ test_that("two-level by produces a merged spanner header row", {
   skip_if_not_installed("flextable")
 
   tbl <- summary_table(mtcars, vars = "mpg", by = c("cyl", "am"))
-  ft <- static_table(tbl, title = "")
+  ft <- static_table(tbl, title = "", subtitle = "")
   # spanner row + leaf-label row
   expect_equal(flextable::nrow_part(ft, "header"), 2L)
   expect_true(any(grepl("||", names(ft$body$dataset), fixed = TRUE)))

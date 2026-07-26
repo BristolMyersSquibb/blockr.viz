@@ -27,9 +27,59 @@ test_that("legacy presets map to catalog keys", {
 test_that("a single stat key emits one un-indented row per variable", {
   out <- summary_table_long(mtcars, vars = "mpg", stats = "median_q1_q3")
   expect_identical(nrow(out), 1L)
-  expect_identical(out$.label, "Median (Q1, Q3)")
   expect_identical(out$.indent, 0L)
   expect_identical(out$.fmt, "{median:1} ({q1:1}, {q3:1})")
+  # The row IS the variable, so the stub names the variable; the statistic is
+  # constant down the table and is named once, in the subtitle.
+  expect_identical(out$.label, "mpg")
+  expect_identical(attr(out, "subtitle"), "Median (Q1, Q3)")
+})
+
+test_that("one row per variable renders flat, with no variable headers", {
+  out <- summary_table(
+    mtcars, vars = c("mpg", "hp", "wt"), by = "cyl", stats = "mean"
+  )
+  # three variables, three rows -- not three headers and three children
+  expect_identical(nrow(out), 3L)
+  expect_identical(out$.label, c("mpg", "hp", "wt"))
+  expect_false(".variable_label" %in% names(out))
+  expect_identical(attr(out, "subtitle"), "Mean")
+  # the drill identity is untouched by the display collapse
+  expect_identical(out$.variable, c("mpg", "hp", "wt"))
+  expect_true(".variable_level" %in% names(out))
+})
+
+test_that("a column label wins over the column name in the flat stub", {
+  d <- mtcars
+  attr(d$mpg, "label") <- "Miles per gallon"
+  out <- summary_table(d, vars = c("mpg", "hp"), stats = "mean")
+  expect_identical(out$.label, c("Miles per gallon", "hp"))
+})
+
+test_that("several rows per variable keep their variable headers", {
+  # two statistics: each variable really is a block of rows
+  two <- summary_table(mtcars, vars = c("mpg", "hp"), stats = c("mean", "sd"))
+  expect_true(".variable_label" %in% names(two))
+  expect_identical(two$.label, c("Mean", "SD", "Mean", "SD"))
+  expect_null(attr(two, "subtitle"))
+
+  # a categorical contributes several level rows, so the table keeps blocks
+  # even though the numeric variable alone would have collapsed
+  d <- mtcars
+  d$gearf <- factor(d$gear)
+  mixed <- summary_table(d, vars = c("mpg", "gearf"), stats = "mean")
+  expect_true(".variable_label" %in% names(mixed))
+  expect_null(attr(mixed, "subtitle"))
+})
+
+test_that("a one-level categorical keeps its level as the stub", {
+  d <- mtcars
+  d$only <- factor("yes")
+  # one display row per variable, but the label of a categorical row is the
+  # LEVEL: collapsing would lose which level was counted, so it does not
+  out <- summary_table(d, vars = c("only"), stats = "n_pct")
+  expect_identical(out$.label, "yes")
+  expect_null(attr(out, "subtitle"))
 })
 
 test_that("several stat keys emit one indented row each", {

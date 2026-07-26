@@ -209,5 +209,15 @@ fmt_to_wide <- function(df) {
       }
     }
   }
+
+  # Display attributes describe the TABLE, not its layout, so they survive the
+  # long -> wide pivot. `input_display_attrs()` reads these as the auto tier
+  # behind the table block's title / subtitle / caption fields, and a producer
+  # that has something to say (e.g. summary_table() naming the one statistic a
+  # compact table shows) would otherwise lose it here.
+  for (a in c("label", "subtitle", "caption")) {
+    v <- attr(df, a, exact = TRUE)
+    if (!is.null(v)) attr(wide, a) <- v
+  }
   wide
 }

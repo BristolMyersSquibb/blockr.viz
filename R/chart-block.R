@@ -577,6 +577,10 @@ new_chart_block <- function(
         # shipped, never the whole wide flatten. The expensive pieces
         # (toJSON, smoother fit) live in the cached reactives above -- read
         # only from in here, so they inherit this observer's suspension.
+        # Last payload sent, for the ready-handshake re-send below.
+        last_push <- new.env(parent = emptyenv())
+        last_push$msg <- NULL
+
         shiny::observe({
           d <- plain_data()
           # No nrow gate: an upstream filter emptying the frame MUST push,
@@ -606,7 +610,7 @@ new_chart_block <- function(
               NULL
             }
           }
-          session$sendCustomMessage("drilldown-data", list(
+          chart_msg <- list(
             id = ns("drilldown_block"),
             columns = col_meta,
             data = payload$json,
@@ -690,7 +694,24 @@ new_chart_block <- function(
             # the browser. LLM prompts live in the registry only; popover help
             # is a UI-layer concern (terse labels + the live `name (label)`
             # convention). See blockr.design/open/block-config-ui.
-          ))
+          )
+          last_push$msg <- chart_msg
+          session$sendCustomMessage("drilldown-data", chart_msg)
+        })
+
+        # The client announces itself when it binds with no payload waiting.
+        # chart.js's `pendingData` only catches a message that arrived while the
+        # SCRIPT was already loaded; Shiny drops a custom message that has no
+        # registered handler at all, and chart.js only loads with the first
+        # chart block UI in the page. On a board whose opening view carries no
+        # chart -- a config or population view, which is how CDEx boards open --
+        # every chart's startup payload was dropped and nothing re-sent it, so
+        # the chart stayed blank until an unrelated edit re-pumped it. Re-send
+        # the last payload; JS's data_rev guard makes a duplicate a no-op.
+        shiny::observeEvent(input$drilldown_block_ready, {
+          if (!is.null(last_push$msg)) {
+            session$sendCustomMessage("drilldown-data", last_push$msg)
+          }
         })
 
         # Send board theme to JS (separate observer so theme changes don't
