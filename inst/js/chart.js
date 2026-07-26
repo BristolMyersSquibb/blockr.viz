@@ -1458,15 +1458,22 @@
     }
 
     // Category labels for an x-axis (vertical bars, waterfall) — the transpose
-    // of _yGutter. Always shows every label (interval:0; decimation would drop
-    // steps of a waterfall). Renders labels HORIZONTAL when each fits its
+    // of _yGutter. Renders labels HORIZONTAL when each fits its
     // per-category column, else VERTICAL (90deg) — never diagonal. Long
     // vertical labels truncate with an ellipsis at a height cap, recoverable
     // via the bar/axis tooltip (which carries the full category name). Returns
     // { axisLabel, bottom } where `bottom` is the extra grid gutter the rotated
     // text needs (0 when horizontal).
-    /** @param {any[]} labels @param {number} availW plot width minus grid margins */
-    _xAxisLabels(labels, availW) {
+    //
+    // `decimate` opts into thinning ROTATED labels when they would collide.
+    // OFF by default, and it must stay off for the two callers whose axis is a
+    // set rather than a sequence: a waterfall with a missing step is broken,
+    // and an unlabelled bar over unordered categories is unidentifiable. ON
+    // for line/scatter, where x is an ordered run (visits, cycles) and the
+    // reader interpolates a skipped tick the way they do on a numeric axis.
+    // Reading every label at any density is what the zoom toolbox is for.
+    /** @param {any[]} labels @param {number} availW plot width minus grid margins @param {boolean} [decimate] thin rotated labels to whatever fits (ordered axes only) */
+    _xAxisLabels(labels, availW, decimate) {
       const DC = /** @type {any} */ (DrilldownChart);
       const ctx = DC._measureCtx ||
         (DC._measureCtx = document.createElement('canvas').getContext('2d'));
@@ -1480,7 +1487,14 @@
       const n = Math.max(1, labels.length);
       // Width is unknown when the panel is hidden (clientWidth 0); fall back to
       // a typical panel width so we don't wrongly rotate short labels.
-      const slot = (availW > 0 ? availW : 600) / n;
+      // SCROLLBAR is reserved whether or not one is currently showing: rotating
+      // grows the panel height (see the callers' __panelH), which can bring up
+      // the dock panel's vertical scrollbar, which shrinks clientWidth by ~15px
+      // on the NEXT render and would flip a borderline label. Measuring against
+      // the pessimistic width costs one label that would just barely have fit
+      // and buys a layout that never depends on its own height.
+      const SCROLLBAR = 16;
+      const slot = ((availW > 0 ? availW : 600) - SCROLLBAR) / n;
       const base = { color: AXIS_LABEL_COLOR, fontSize: 11, interval: 0 };
       if (widest + PAD <= slot) {
         // Fits horizontally — keep flat, truncate only as a safety net.
@@ -1491,11 +1505,27 @@
         };
       }
       // Doesn't fit — rotate to vertical and truncate long labels at a cap.
-      const CAP = 120;
+      // The cap is a HEIGHT cost, not a width one: rotated text spends its
+      // pixel width on the grid's bottom gutter, and every caller adds
+      // `bottom` to the panel height so the plot area stays put. 160px is
+      // ~27 characters at 11px; past that the category axis is the wrong
+      // home for the label and the ellipsis is the honest signal.
+      const CAP = 160;
       const len = Math.min(Math.ceil(widest) + PAD, CAP);
+      // Rotated text needs about its line-height of HORIZONTAL room, so labels
+      // collide once the per-category slot drops under ~13px however long they
+      // are. `interval: n` draws one label then skips n, putting the drawn ones
+      // (n + 1) * slot apart — solve that for LABEL_ROOM. A fixed "every
+      // second" would only fix 2x overcrowding; this degrades smoothly at any
+      // density. The gutter is unaffected: `len` measures the WIDEST label,
+      // not how many are drawn, so thinning never changes the panel height.
+      const LABEL_ROOM = 13;
+      const interval = decimate
+        ? Math.max(0, Math.ceil(LABEL_ROOM / slot) - 1)
+        : 0;
       return {
         axisLabel: { ...base, rotate: 90, overflow: 'truncate',
-          width: len, ellipsis: '…' },
+          width: len, ellipsis: '…', interval },
         bottom: len
       };
     }
@@ -2583,8 +2613,10 @@
         // the chart gets longer with more bars, the bars never get fatter.
         // (The old Math.max(350, ...) floor stretched low-count panels into
         // slab bars while 11+-bar panels sat at exactly 28px/row.) Builders
-        // without __panelH (pie/treemap/radar/waterfall/vertical bar) keep
-        // the fixed 350px canvas — category-on-x doesn't scale with rows.
+        // without __panelH (pie/treemap/radar) keep the fixed 350px canvas —
+        // they have no category axis to scale against. Category-on-x builders
+        // (vertical bar, waterfall) report 350 PLUS their rotated x-label
+        // gutter, so the labels lengthen the canvas instead of eating the plot.
         // NO usable minimum here: any clamp above __panelH feeds the excess
         // into the plot area and re-fattens the band — a 1-row panel is 104px
         // and that is the correct height. The 64px floor is a pure safety net
@@ -2896,7 +2928,11 @@
         // grid.top + rows * band + grid.bottom, band = one 28px row
         // (stacked/percent/single) or the grouped series fan + padding.
         // Clamped at PANEL_H_CAP (see hCapped above).
-        __panelH: vertical ? undefined
+        // Vertical: the 350px default canvas PLUS the rotated x-label gutter,
+        // which bottomBase already carries. Without the addition the gutter is
+        // taken out of the plot area instead, so a long-label chart silently
+        // loses a third of its height (and still truncates).
+        __panelH: vertical ? 350 + (xlab ? xlab.bottom : 0)
           : 30 + Math.min(PANEL_H_CAP, rowsH) + bottomBase + leg.extra,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
@@ -3005,6 +3041,9 @@
         splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } }
       };
       return {
+        // Default canvas plus the rotated step-label gutter that grid.bottom
+        // above already reserves — same rule as the vertical bar.
+        __panelH: 350 + xlab.bottom,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip: {
@@ -3527,8 +3566,22 @@
         const slot = this._ensureSlot(fi,
           (!singleFacet && fv !== '__all__') ? facetLabels.get(fv) : null, singleFacet);
         slot.facetVal = fv;
-        this._setSlotHeight(slot, '400px');
         const chartDiv = slot.chartDiv;
+        // Categorical x (visits): reuse the bar-chart label policy — every
+        // label shown (no auto-interval decimation), horizontal when it fits
+        // its per-category slot, else vertical with an ellipsis cap. The x
+        // title drops below the rotated text via nameGap (see xAxisSpec).
+        // Measured HERE, ahead of the slot height, because rotated labels
+        // spend their pixel width on the grid's bottom gutter and the canvas
+        // has to grow by that much — otherwise the gutter is taken out of a
+        // fixed 400px box and the plot area shrinks to ~240px. Only
+        // clientWidth is read, and width never depends on height.
+        const xlab = xCats
+          ? this._xAxisLabels(xCats, chartDiv.clientWidth - 71, true)
+          : null;
+        const hChanged = this._setSlotHeight(slot,
+          (400 + (xlab ? xlab.bottom : 0)) + 'px');
+        const existed = !!slot.chart;
         const chart = this._ensureSlotChart(slot, 'individual');
         // Per-slot hover tracker (which line the cursor is on) — persistent
         // so the once-attached mousemove handler and the per-render tooltip
@@ -3817,13 +3870,8 @@
         // the chart itself is now the only place the reader can see what
         // the axes stand for. Use the variable label (else the column
         // name); the grid margins below leave room for them.
-        // Categorical x (visits): reuse the bar-chart label policy — every
-        // label shown (no auto-interval decimation), horizontal when it
-        // fits its per-category slot, else vertical with an ellipsis cap.
-        // The x title drops below the rotated text via nameGap.
-        const xlab = xCats
-          ? this._xAxisLabels(xCats, chartDiv.clientWidth - 71)
-          : null;
+        // (`xlab` is computed at the top of the loop — the slot height
+        // depends on it.)
         const xAxisSpec = {
           type: xAxisType,
           name: this._axisTitle(x),
@@ -4157,6 +4205,9 @@
           (useColorByLegend && seriesByColorByVal) ? seriesByColorByVal : null;
 
         chart.setOption(this._applyDrillEmphasis(option), true);
+        // A RETAINED instance measured the old height at init; a fresh one
+        // already measured the new one (set above _ensureSlotChart).
+        if (existed && hChanged) chart.resize();
 
         // Activate brush mode by default (no need to click toolbox first).
         // With retained instances this runs after every setOption, and the
