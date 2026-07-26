@@ -37,6 +37,7 @@ stays small enough to be a good block. Anything else is the chart block.
 | File | What |
 |---|---|
 | `R/rank-table.R` | the data half: `rank_prepare()` → rows + a column plan |
+| `R/rank-push.R` | the cell model + the data-push payload (one builder, two consumers) |
 | `R/rank-table-html.R` | the HTML half: chrome, marks, `rank_table()` |
 | `R/rank-table-css.R` | the CSS delta on top of `html_table_shared_css_fallback()` |
 | `R/rank-block.R` | `new_rank_block()`, arg specs, guidance |
@@ -139,6 +140,56 @@ so the shared rotation rule applies. Those four CSS rules live in
 `html_table_delta_css()`, which the rank chrome deliberately does NOT inject (it
 is the structured Table-1 typography and would restyle every cell), so they are
 mirrored in `rank_table_css()` with a keep-in-sync note.
+
+## The body ships as JSON, not HTML
+
+Christoph: "why don't we have the same send data via json, that I think is also
+used by the table block?" — right question; the rank block was built on the
+`renderUI` shape the table block itself left behind in 21da370. It now uses the
+same transport (dev/table-data-push-design.md).
+
+One builder, two consumers: `rank_cells()` computes every per-column vector
+(widths, display strings, fills, row meta), `rank_cells_html()` pastes them into
+the historical `<table>` (the exported `rank_table()`, the report path, the
+tests), and `rank_flat_payload()` emits them as the JSON cell model
+`rank-table.js` assembles client-side. A non-renderable state still ships as
+`kind = "html"` — those are small, and reusing the existing builder means zero
+markup duplication.
+
+Measured at 790 preferred terms (200k events):
+
+| | HTML | payload |
+|---|---|---|
+| plain | 374 KB | 36 KB |
+| split by severity | 532 KB | 51 KB |
+| facet by arm | 776 KB | 81 KB |
+| hierarchy | 492 KB | 58 KB |
+| compare vs placebo | 724 KB | 102 KB |
+
+86–90% smaller, and three behavioural wins beyond size: the chrome is a
+one-shot render, so a gear edit no longer rebuilds the container (search text,
+scroll position and the open settings band all survive); the payload is cached
+per elem id, so a re-mounted dock panel re-renders with no R round trip; and the
+gear reads its state off the pushed `<table>`'s data attributes exactly as
+before.
+
+Getting the last 60% of that saving was measurement, not guesswork. Two things
+dominated and neither was obvious: the `n (%)` columns were shipping the
+`<span class="blockr-rank-pct">` markup per cell (127 KB of a 197 KB faceted
+payload — the payload now carries the two parts as data and each consumer wraps
+them), and constant vectors were being shipped in full (`sub` / `on` /
+`parent_row` / `level` are all-false on a flat table, ~28 KB; they are omitted
+now, and an absent vector reads as all-false).
+
+**The drift guard is the price of admission.** Two renderers that must agree
+byte for byte will not stay agreed by good intentions, so
+`test-rank-push.R` runs the REAL `rank-table.js` assembler in a headless browser
+across all eight bar shapes and compares it to `rank_cells_html()`. It earned
+its keep immediately, catching three genuine divergences: R's `format()` aligns
+decimals across a vector ("100.00" beside "57.14") where JS prints "100", a
+`NULL` in the payload serializes as `{}` and reads as truthy in JS (the trap
+`dt_payload_json` documents), and a logical vector where an integer was expected
+printed `data-rank-level="true"`.
 
 ## The bar mark is the chart's, not a local invention
 

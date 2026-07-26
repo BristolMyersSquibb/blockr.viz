@@ -40,7 +40,7 @@
 #' @param max_height CSS max-height of the scroll container.
 #' @param search Show the search input.
 #' @param title,subtitle,caption Display text, already resolved (see
-#'   [resolve_block_title()]).
+#'   `resolve_block_title()`).
 #' @param drill Column a row click filters on, or `NULL` for a display-only
 #'   table.
 #' @param scale_map Board scale map, for palette agreement with the charts.
@@ -123,10 +123,11 @@ rank_message_table <- function(msg = "No data") {
 # status line. Mirrors dt_chrome() -- same classes, so the shared table CSS
 # and the design tokens apply unchanged -- plus the rank delta CSS and JS.
 #' @noRd
-rank_chrome <- function(inner, prep, max_height = "600px", search = TRUE,
+rank_chrome <- function(inner, prep = NULL, max_height = "600px", search = TRUE,
                         title = NULL, subtitle = NULL, caption = NULL,
-                        drill = NULL, elem_id = NULL, active = NULL) {
-  legend <- rank_legend(prep)
+                        drill = NULL, elem_id = NULL, active = NULL,
+                        shell = FALSE) {
+  legend <- if (isTRUE(shell)) rank_legend_tag(NULL) else rank_legend(prep)
 
   # The control row holds the search only; rank-table.js hoists it into the gear
   # row so search sits left of the gear (table-block parity), which keeps that
@@ -138,7 +139,7 @@ rank_chrome <- function(inner, prep, max_height = "600px", search = TRUE,
         class = "blockr-html-table-toolbar",
         htmltools::tags$input(
           type = "search", class = "blockr-search",
-          placeholder = "Search…", `aria-label` = "Search table"
+          placeholder = "Search\u2026", `aria-label` = "Search table"
         )
       )
     }
@@ -147,7 +148,15 @@ rank_chrome <- function(inner, prep, max_height = "600px", search = TRUE,
   # Title band: the canonical .dd-table-titles the chart and table blocks use
   # (inst/css/table.css) -- title over subtitle, a hairline under the band
   # dividing it from the column headers. Hidden entirely when both are empty.
-  titles <- if (rank_nz(title) || rank_nz(subtitle)) {
+  titles <- if (isTRUE(shell)) {
+    # Always present, hidden while empty: table.js's applyTitles() rule, so the
+    # band can be filled from a payload without touching the container.
+    htmltools::tags$div(
+      class = "dd-table-titles", style = "display:none",
+      htmltools::tags$div(class = "dd-table-title"),
+      htmltools::tags$div(class = "dd-table-subtitle")
+    )
+  } else if (rank_nz(title) || rank_nz(subtitle)) {
     htmltools::tags$div(
       class = "dd-table-titles",
       if (rank_nz(title)) {
@@ -181,89 +190,146 @@ rank_chrome <- function(inner, prep, max_height = "600px", search = TRUE,
       htmltools::tags$div(
         class = "blockr-table-wrapper", style = scroll_style, inner
       ),
-      if (rank_nz(caption)) {
+      if (isTRUE(shell)) {
+        htmltools::tags$div(class = "dd-table-caption", style = "display:none")
+      } else if (rank_nz(caption)) {
         htmltools::tags$div(class = "dd-table-caption", caption)
       },
-      rank_footer(prep, drill = drill, active = active)
-    )
-  )
-}
-
-# Footer: the row count (with what was folded, if anything), the note when a
-# config had to be reinterpreted, and the active-filter status + Reset.
-#' @noRd
-rank_footer <- function(prep, drill = NULL, active = NULL) {
-  if (!is.null(prep$err)) return(NULL)
-  n_shown <- if (is.null(prep$parent)) {
-    sum(!prep$rows$.is_parent)
-  } else {
-    sum(prep$rows$.is_parent)
-  }
-  bits <- paste0(
-    n_shown, " of ", prep$n_total, " ",
-    if (is.null(prep$parent)) "rows" else "groups",
-    if (prep$folded > 0L) {
-      paste0(", ", prep$folded, " folded")
-    } else {
-      ", all rendered"
-    }
-  )
-  act_vals <- as.character(unlist(active$vals %||% character()))
-  htmltools::tags$div(
-    class = "blockr-rank-footer",
-    htmltools::tags$span(class = "blockr-rank-count", bits),
-    if (!is.null(prep$note)) {
-      htmltools::tags$span(class = "blockr-rank-note", prep$note)
-    },
-    htmltools::tags$span(
-      class = "blockr-rank-status",
-      style = if (!length(act_vals)) "display:none" else NULL,
-      htmltools::tags$span(class = "blockr-rank-dot"),
-      htmltools::tags$span(
-        class = "blockr-rank-status-text",
-        if (length(act_vals)) {
-          paste0("Filtering downstream: ", paste(act_vals, collapse = ", "))
-        }
-      ),
-      if (!is.null(drill)) {
-        htmltools::tags$button(
-          type = "button", class = "blockr-rank-reset", "Reset"
-        )
+      if (isTRUE(shell)) {
+        rank_footer_tag(NULL)
+      } else {
+        rank_footer(prep, drill = drill, active = active)
       }
     )
   )
 }
 
-# Legend: always present for two or more series, since colour alone must not
-# carry identity.
+# The footer's content as DATA: the count line, the note a reinterpreted config
+# leaves, and the active drill filter. One definition, two consumers -- the
+# chrome renders it server-side, and rank-table.js refreshes it from the
+# payload without re-rendering the container.
 #' @noRd
-rank_legend <- function(prep) {
+rank_foot_spec <- function(prep, drill = NULL, active = NULL) {
+  if (!is.null(prep$err)) {
+    return(list(count = "", note = NULL, filter = NULL, reset = FALSE))
+  }
+  n_shown <- if (is.null(prep$parent)) {
+    sum(!prep$rows$.is_parent)
+  } else {
+    sum(prep$rows$.is_parent)
+  }
+  act <- as.character(unlist(active$vals %||% character()))
+  list(
+    count = paste0(
+      n_shown, " of ", prep$n_total, " ",
+      if (is.null(prep$parent)) "rows" else "groups",
+      if (prep$folded > 0L) {
+        paste0(", ", prep$folded, " folded")
+      } else {
+        ", all rendered"
+      }
+    ),
+    note = prep$note,
+    filter = if (length(act)) paste(act, collapse = ", ") else NULL,
+    reset = !is.null(drill)
+  )
+}
+
+# The legend as DATA. Always present for two or more series -- colour alone must
+# not carry identity.
+#' @noRd
+rank_legend_spec <- function(prep) {
   if (!is.null(prep$err)) return(NULL)
   if (identical(prep$layout, "compare")) {
-    items <- list(
-      list(label = paste0("More than ", prep$compare), color = "var(--blockr-rank-pos, #d03b3b)"),
-      list(label = paste0("Less than ", prep$compare), color = "var(--blockr-rank-neg, #2a78d6)")
-    )
-    ttl <- "Direction"
-  } else {
-    lv <- if (identical(prep$layout, "split")) prep$series else prep$facet_levels
-    if (length(lv) < 2L) return(NULL)
-    items <- lapply(lv, function(l) {
-      list(label = l, color = prep$palette[[l]])
-    })
-    ttl <- if (identical(prep$layout, "split")) prep$color else prep$facet
-  }
-  htmltools::tags$div(
-    class = "blockr-rank-legend",
-    htmltools::tags$span(class = "blockr-rank-legend-title", ttl),
-    lapply(items, function(it) {
-      htmltools::tags$span(
-        class = "blockr-rank-legend-item",
-        htmltools::tags$i(style = paste0("background:", it$color)),
-        it$label
+    return(list(
+      title = "Direction",
+      items = list(
+        list(label = paste0("More than ", prep$compare),
+             color = "var(--blockr-rank-pos, #d03b3b)"),
+        list(label = paste0("Less than ", prep$compare),
+             color = "var(--blockr-rank-neg, #2a78d6)")
       )
+    ))
+  }
+  lv <- if (identical(prep$layout, "split")) prep$series else prep$facet_levels
+  if (length(lv) < 2L) return(NULL)
+  list(
+    title = if (identical(prep$layout, "split")) prep$color else prep$facet,
+    items = lapply(lv, function(l) {
+      list(label = l, color = unname(prep$palette[[l]]))
     })
   )
+}
+
+#' @noRd
+rank_footer <- function(prep, drill = NULL, active = NULL) {
+  rank_footer_tag(rank_foot_spec(prep, drill = drill, active = active))
+}
+
+#' @noRd
+rank_footer_tag <- function(spec) {
+  if (is.null(spec)) spec <- list(count = "", reset = FALSE)
+  htmltools::tags$div(
+    class = "blockr-rank-footer",
+    htmltools::tags$span(class = "blockr-rank-count", spec$count %||% ""),
+    htmltools::tags$span(class = "blockr-rank-note", spec$note %||% ""),
+    htmltools::tags$span(
+      class = "blockr-rank-status",
+      style = if (is.null(spec$filter)) "display:none" else NULL,
+      htmltools::tags$span(class = "blockr-rank-dot"),
+      htmltools::tags$span(
+        class = "blockr-rank-status-text",
+        if (!is.null(spec$filter)) paste0("Filtering downstream: ", spec$filter)
+      ),
+      if (isTRUE(spec$reset)) {
+        htmltools::tags$button(type = "button", class = "blockr-rank-reset",
+                               "Reset")
+      }
+    )
+  )
+}
+
+#' @noRd
+rank_legend <- function(prep) {
+  rank_legend_tag(rank_legend_spec(prep))
+}
+
+#' @noRd
+rank_legend_tag <- function(spec) {
+  htmltools::tags$div(
+    class = "blockr-rank-legend",
+    style = if (is.null(spec)) "display:none" else NULL,
+    if (!is.null(spec)) {
+      htmltools::tagList(
+        htmltools::tags$span(class = "blockr-rank-legend-title", spec$title),
+        lapply(spec$items, function(it) {
+          htmltools::tags$span(
+            class = "blockr-rank-legend-item",
+            htmltools::tags$i(style = paste0("background:", it$color)),
+            it$label
+          )
+        })
+      )
+    }
+  )
+}
+
+#' @noRd
+rank_nz <- function(x) {
+  !is.null(x) && length(x) == 1L && !is.na(x) && nzchar(x)
+}
+
+# Escape exactly as htmltools does for a text child -- & < > and the attribute
+# quote -- because the JS row assembler applies the same rules and the two
+# outputs must not drift.
+#' @noRd
+rank_esc <- function(x) {
+  x <- as.character(x)
+  x[is.na(x)] <- ""
+  x <- gsub("&", "&amp;", x, fixed = TRUE)
+  x <- gsub("<", "&lt;", x, fixed = TRUE)
+  x <- gsub(">", "&gt;", x, fixed = TRUE)
+  gsub("\"", "&quot;", x, fixed = TRUE)
 }
 
 # A data-frame-level display attribute, or NULL when absent / not a string.
@@ -272,124 +338,17 @@ rank_attr <- function(data, nm) {
   v <- attr(data, nm, exact = TRUE)
   if (is.character(v) && length(v) == 1L && nzchar(v)) v else NULL
 }
-
+#' The two parts of a numeric cell: the value string, and the percent string
+#' when the column shows both. Data, never markup -- the consumers wrap it.
 #' @noRd
-rank_nz <- function(x) {
-  !is.null(x) && length(x) == 1L && !is.na(x) && nzchar(x)
-}
-
-#' @noRd
-rank_esc <- function(x) {
-  x <- as.character(x)
-  x <- gsub("&", "&amp;", x, fixed = TRUE)
-  x <- gsub("<", "&lt;", x, fixed = TRUE)
-  x <- gsub(">", "&gt;", x, fixed = TRUE)
-  gsub("\"", "&quot;", x, fixed = TRUE)
-}
-
-# --- marks -------------------------------------------------------------------
-# One fill, rounded data-end, square at the baseline. Vectorised over the
-# column so a whole bar column is one paste0 (the table block's fast path --
-# see dt_bar_style).
-#' @noRd
-rank_bar_div <- function(v, mx, fill = NULL, sub = FALSE) {
-  w <- if (is.finite(mx) && mx > 0) {
-    pmax(0, pmin(100, abs(v) / mx * 100))
-  } else {
-    rep(0, length(v))
-  }
-  w[!is.finite(w)] <- 0
-  # `sub` is vectorised over the column: in a nested table the child rows draw
-  # a lighter step of the same hue, so depth reads without a second colour.
-  sub <- rep_len(isTRUE(sub) | (is.logical(sub) & !is.na(sub) & sub), length(v))
-  paste0(
-    "<div class=\"blockr-rank-track", ifelse(sub, " is-sub", ""), "\">",
-    "<div class=\"blockr-rank-fill\" style=\"width:",
-    format(round(w, 2), trim = TRUE, scientific = FALSE), "%",
-    if (!is.null(fill)) paste0(";background:", fill) else "", "\"></div></div>"
-  )
-}
-
-# A split bar. stacked = segments to scale; percent = segments to 100% of the
-# row; grouped = one thin track per series, shared scale. A 2px surface gap
-# separates touching segments (the CSS supplies it), never a stroke.
-#' @noRd
-rank_bar_split <- function(mat, mx, series, pal, mode = "stacked",
-                           labels = NULL) {
-  n <- nrow(mat)
-  k <- length(series)
-  if (!n || !k) return(rep("<div class=\"blockr-rank-track\"></div>", n))
-  mat[!is.finite(mat)] <- 0
-  tot <- rowSums(mat)
-  fmt <- function(x) format(round(x, 2), trim = TRUE, scientific = FALSE)
-  # Vectorised over the WHOLE column, one paste0 per series (never per row):
-  # the per-row loop this replaced cost 277ms on a 5k-row table, which is the
-  # same fast-path rule dt_bar_style() follows for the table block's data bars.
-  if (identical(mode, "grouped")) {
-    w <- if (is.finite(mx) && mx > 0) pmin(mat / mx * 100, 100) else mat * 0
-    seg <- vapply(seq_len(k), function(j) {
-      paste0(
-        "<div class=\"blockr-rank-row3\"><div class=\"blockr-rank-fill\"",
-        " style=\"width:", fmt(w[, j]), "%;background:", pal[[series[[j]]]],
-        "\" title=\"", rank_esc(series[[j]]), ": ", mat[, j],
-        "\"></div></div>"
-      )
-    }, character(n))
-    seg <- matrix(seg, nrow = n)
-    return(paste0("<div class=\"blockr-rank-track is-tall\">",
-                  apply(seg, 1L, paste0, collapse = ""), "</div>"))
-  }
-  # stacked = segments to scale; percent = each row normalised to 100%.
-  scale <- if (identical(mode, "percent")) {
-    ifelse(tot > 0, 100, 0)
-  } else if (is.finite(mx) && mx > 0) {
-    tot / mx * 100
-  } else {
-    tot * 0
-  }
-  share <- ifelse(tot > 0, 1, 0) * mat / ifelse(tot > 0, tot, 1)
-  w <- share * scale
-  seg <- vapply(seq_len(k), function(j) {
-    # A zero segment emits nothing at all, so an absent level adds no markup.
-    ifelse(
-      mat[, j] > 0,
-      paste0(
-        "<div class=\"blockr-rank-fill\" style=\"width:", fmt(w[, j]),
-        "%;background:", pal[[series[[j]]]], "\" title=\"",
-        rank_esc(series[[j]]), ": ", mat[, j], "\"></div>"
-      ),
-      ""
-    )
-  }, character(n))
-  seg <- matrix(seg, nrow = n)
-  paste0("<div class=\"blockr-rank-track\">",
-         apply(seg, 1L, paste0, collapse = ""), "</div>")
-}
-
-# Zero-centred bar: colour is polarity, not identity, so the pair is
-# warm/cool with a neutral tick at zero.
-#' @noRd
-rank_bar_diverge <- function(v, mx) {
-  w <- if (is.finite(mx) && mx > 0) pmin(50, abs(v) / mx * 50) else rep(0, length(v))
-  w[!is.finite(w)] <- 0
-  pos <- !is.na(v) & v >= 0
-  paste0(
-    "<div class=\"blockr-rank-dv\"><div class=\"blockr-rank-fill ",
-    ifelse(pos, "is-pos", "is-neg"), "\" style=\"width:",
-    format(round(w, 2), trim = TRUE), "%\"></div></div>"
-  )
-}
-
-#' @noRd
-rank_fmt_num <- function(v, denom = NULL, combined = FALSE, signed = FALSE,
-                         pct_only = FALSE) {
+rank_num_parts <- function(v, denom = NULL, combined = FALSE, signed = FALSE,
+                           pct_only = FALSE) {
   if (isTRUE(signed)) {
-    out <- ifelse(
+    return(list(disp = ifelse(
       is.na(v), "",
-      paste0(ifelse(v > 0, "+", ifelse(v < 0, "−", "")),
+      paste0(ifelse(v > 0, "+", ifelse(v < 0, "\u2212", "")),
              formatC(abs(v), format = "f", digits = 1L))
-    )
-    return(out)
+    )))
   }
   pct <- if (!is.null(denom) && is.finite(denom) && denom > 0) {
     v / denom * 100
@@ -397,150 +356,26 @@ rank_fmt_num <- function(v, denom = NULL, combined = FALSE, signed = FALSE,
     NULL
   }
   if (isTRUE(pct_only)) {
-    if (is.null(pct)) return(rep("", length(v)))
-    return(ifelse(is.na(v), "",
-                  paste0(formatC(pct, format = "f", digits = 1L), "%")))
+    if (is.null(pct)) return(list(disp = rep("", length(v))))
+    return(list(disp = ifelse(
+      is.na(v), "", paste0(formatC(pct, format = "f", digits = 1L), "%")
+    )))
   }
-  n <- ifelse(is.na(v), "", formatC(v, format = "fg", digits = 6L, big.mark = ""))
+  n <- ifelse(is.na(v), "",
+              formatC(v, format = "fg", digits = 6L, big.mark = ""))
   if (isTRUE(combined) && !is.null(pct)) {
-    return(paste0(
-      n, " <span class=\"blockr-rank-pct\">(",
-      formatC(pct, format = "f", digits = 0L), "%)</span>"
+    return(list(
+      disp = n,
+      pct = paste0("(", formatC(pct, format = "f", digits = 0L), "%)")
     ))
   }
-  n
+  list(disp = n)
 }
 
 # --- the table ---------------------------------------------------------------
 #' @noRd
 rank_table_html <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
-  rows <- prep$rows
-  plan <- prep$plan
-  n <- nrow(rows)
-
-  # Header cells come from the TABLE BLOCK's own builder (dt_th), so a rank
-  # table's header is the same object as a table block's: the same classes, the
-  # same name-over-label two-tier cell, the same sort-arrow slot. Every column
-  # is a sort hook -- a bar cell carries `data-v` too, so sorting the bar
-  # column means sorting its value.
-  th <- c(
-    as.character(dt_th(
-      rank_label_header(prep), 0L, stub = TRUE,
-      label = prep$group_label, sortable = TRUE
-    )),
-    vapply(seq_along(plan), function(i) {
-      p <- plan[[i]]
-      as.character(dt_th(
-        p$label, i, label = p$sub_label,
-        numeric = identical(p$kind, "num"), sortable = TRUE
-      ))
-    }, character(1L))
-  )
-  thead <- paste0("<thead><tr>", paste(th, collapse = ""), "</tr></thead>")
-
-  # Body. Each plan entry contributes one column, built for all rows at once.
-  cells <- lapply(seq_along(plan), function(i) {
-    p <- plan[[i]]
-    if (identical(p$kind, "bar")) {
-      v <- rows[[p$key]]
-      if (!is.null(p$denom) && is.finite(p$denom) && p$denom > 0) {
-        v <- v / p$denom * 100
-      }
-      inner <- rank_bar_div(v, prep$bar_max, fill = p$fill,
-                            sub = rows$.level > 0L)
-      paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(v), ">",
-             inner, "</td>")
-    } else if (identical(p$kind, "barsplit")) {
-      mat <- vapply(p$series, function(lv) {
-        x <- rows[[paste0(".s_", lv)]]
-        if (is.null(x)) rep(0, n) else as.numeric(x)
-      }, numeric(n))
-      mat <- matrix(mat, nrow = n, dimnames = list(NULL, p$series))
-      mat[is.na(mat)] <- 0
-      paste0("<td class=\"blockr-rank-bar-col\"",
-             rank_data_v(rowSums(mat, na.rm = TRUE)), ">",
-             rank_bar_split(mat, prep$bar_max, p$series, prep$palette, p$mode),
-             "</td>")
-    } else if (identical(p$kind, "bardiv")) {
-      paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(rows[[p$key]]),
-             ">", rank_bar_diverge(rows[[p$key]], prep$bar_max), "</td>")
-    } else {
-      v <- rows[[p$key]]
-      txt <- rank_fmt_num(v, denom = p$denom, combined = isTRUE(p$combined),
-                          signed = isTRUE(p$signed),
-                          pct_only = isTRUE(p$pct_only))
-      # data-v carries the number the client sorts on, so sorting never has
-      # to parse a formatted string.
-      paste0("<td class=\"blockr-rank-num dt-col-num\"", rank_data_v(v), ">",
-             txt, "</td>")
-    }
-  })
-
-  is_par <- rows$.is_parent
-  chev <- paste0(
-    "<button class=\"blockr-indent-btn\" type=\"button\" tabindex=\"-1\"",
-    " aria-expanded=\"false\">", as.character(section_chevron_svg()), "</button>"
-  )
-  # Child rows are indented on the same 24 + 16px step the structured table
-  # uses, and the chevron hangs into that gutter (margin-left:-18px).
-  lbl_cell <- paste0(
-    "<td class=\"blockr-rank-label-col blockr-stub",
-    ifelse(is_par, " blockr-has-toggle", ""), "\"",
-    ifelse(rows$.level > 0L, " style=\"padding-left:40px;\"", ""), ">",
-    ifelse(is_par, chev, ""),
-    "<span class=\"blockr-rank-label\">", rank_esc(rows$.label), "</span></td>"
-  )
-
-  act_col <- rank_chr1(active$col)
-  act_vals <- as.character(unlist(active$vals %||% character()))
-  on <- if (length(act_vals) && !is.null(act_col)) {
-    rows$.label %in% act_vals
-  } else {
-    rep(FALSE, n)
-  }
-
-  tr_open <- paste0(
-    "<tr class=\"blockr-rank-row",
-    ifelse(is_par, " is-parent blockr-indent-toggle collapsed", ""),
-    ifelse(rows$.level > 0L, " is-child collapsed-hidden", ""),
-    ifelse(!is.null(drill), " is-pick", ""),
-    ifelse(on, " is-on", ""),
-    "\" data-rank-label=\"", rank_esc(rows$.label), "\"",
-    ifelse(rows$.level > 0L,
-           paste0(" data-rank-parent=\"", rank_esc(rows$.parent), "\""), ""),
-    " data-rank-level=\"", rows$.level, "\">"
-  )
-
-  body <- paste0(
-    tr_open, lbl_cell,
-    do.call(paste0, cells),
-    "</tr>"
-  )
-
-  fold <- if (prep$folded > 0L) {
-    paste0(
-      "<tr class=\"blockr-rank-fold\"><td colspan=\"", length(plan) + 1L,
-      "\">Other — ", prep$folded, " ",
-      if (is.null(prep$parent)) "rows" else "groups",
-      " below the cut",
-      if (is.finite(prep$fold_max)) {
-        paste0(", each with a value ≤ ",
-               format(prep$fold_max, scientific = FALSE, trim = TRUE))
-      } else {
-        ""
-      },
-      "</td></tr>"
-    )
-  } else {
-    ""
-  }
-
-  paste0(
-    "<table class=\"blockr-table blockr-rank-table\"",
-    " data-rank-nested=\"", if (is.null(prep$parent)) "0" else "1", "\"",
-    rank_table_attrs(prep, cfg), ">",
-    thead, "<tbody>", paste(body, collapse = ""), fold, "</tbody></table>"
-  )
+  rank_cells_html(rank_cells(prep, drill = drill, active = active, cfg = cfg))
 }
 
 #' @noRd
@@ -602,4 +437,22 @@ rank_table_attrs <- function(prep, cfg) {
   cfg$search <- if (isTRUE(cfg$search)) "on" else "off"
   json <- as.character(jsonlite::toJSON(cfg, auto_unbox = TRUE, null = "null"))
   paste0(" data-rank-cfg=\"", rank_esc(json), "\"")
+}
+
+#' The chrome alone: container, control row, empty bands, empty scroll wrapper.
+#'
+#' Rendered ONCE by the block (a one-shot `renderUI`, like the table block's
+#' chrome) so the gear, the search text and the scroll position outlive every
+#' body update. rank-table.js fills the body and the bands from each pushed
+#' payload.
+#'
+#' @param max_height,search,drill,elem_id Same meaning as in [rank_table()].
+#' @return An [htmltools::tagList()].
+#' @noRd
+rank_chrome_shell <- function(max_height = "600px", search = TRUE,
+                              drill = NULL, elem_id = NULL) {
+  rank_chrome(
+    inner = htmltools::HTML(""), prep = NULL, max_height = max_height,
+    search = search, drill = drill, elem_id = elem_id, shell = TRUE
+  )
 }

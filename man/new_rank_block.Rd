@@ -69,7 +69,7 @@ facet level name, and \code{"desc"} / \code{"asc"}.}
 \item{title, subtitle, caption}{Display text. \code{NULL} = auto (inherits the
 input's label / subtitle / caption attribute), \code{""} = explicitly none,
 else a template with the same \code{{...}} tokens as the chart and table
-blocks (see \code{\link[=resolve_title_template]{resolve_title_template()}}).}
+blocks (see \code{resolve_title_template()}).}
 
 \item{drill}{Column a row click filters on. The emitted filter is the same
 categorical contract as \code{\link[=new_chart_block]{new_chart_block()}}, so existing filter links

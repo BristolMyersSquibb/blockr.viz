@@ -49,46 +49,52 @@
   // Row text read once per row (the body is static between renders), and a
   // parent stays visible when any of its children match -- the same rule the
   // table block's search follows.
+  function rowText(root, r) {
+    if (!root._rankCache) root._rankCache = new WeakMap();
+    var t = root._rankCache.get(r);
+    if (t == null) {
+      t = r.textContent.toLowerCase();
+      root._rankCache.set(r, t);
+    }
+    return t;
+  }
+
+  /** Re-apply the search box's current query to the rows now in the DOM. */
+  function runSearch(root) {
+    var input = root.querySelector("input.blockr-search");
+    var q = input ? (input.value || "").trim().toLowerCase() : "";
+    var all = rows(root);
+    var matched = {};
+    all.forEach(function (r) {
+      var hit = !q || rowText(root, r).indexOf(q) !== -1;
+      if (hit) {
+        r.classList.remove("blockr-rank-hidden-search");
+        var pr = r.getAttribute("data-rank-parent");
+        if (pr) matched[pr] = true;
+      } else {
+        r.classList.add("blockr-rank-hidden-search");
+      }
+    });
+    // A matching child keeps its parent on screen, and auto-expands it, so
+    // searching a leaf never returns an empty-looking table.
+    all.forEach(function (r) {
+      if (!r.classList.contains("is-parent")) return;
+      if (matched[r.getAttribute("data-rank-label")]) {
+        r.classList.remove("blockr-rank-hidden-search");
+        if (q) setOpen(r, true);
+      }
+    });
+    applyVisibility(root);
+    var foldRow = root.querySelector("tr.blockr-rank-fold");
+    if (foldRow) foldRow.style.display = q ? "none" : "";
+  }
+
   function bindSearch(root) {
     var input = root.querySelector("input.blockr-search");
     if (!input) return;
-    var cache = new WeakMap();
-    function text(r) {
-      var t = cache.get(r);
-      if (t == null) {
-        t = r.textContent.toLowerCase();
-        cache.set(r, t);
-      }
-      return t;
-    }
     var timer = null;
     function run() {
-      var q = (input.value || "").trim().toLowerCase();
-      var all = rows(root);
-      var matched = {};
-      all.forEach(function (r) {
-        var hit = !q || text(r).indexOf(q) !== -1;
-        if (hit) {
-          r.classList.remove("blockr-rank-hidden-search");
-          var p = r.getAttribute("data-rank-parent");
-          if (p) matched[p] = true;
-        } else {
-          r.classList.add("blockr-rank-hidden-search");
-        }
-      });
-      // A matching child keeps its parent on screen, and auto-expands it, so
-      // searching a leaf never returns an empty-looking table.
-      all.forEach(function (r) {
-        if (!r.classList.contains("is-parent")) return;
-        var label = r.getAttribute("data-rank-label");
-        if (matched[label]) {
-          r.classList.remove("blockr-rank-hidden-search");
-          if (q) setOpen(r, true);
-        }
-      });
-      applyVisibility(root);
-      var foldRow = root.querySelector("tr.blockr-rank-fold");
-      if (foldRow) foldRow.style.display = q ? "none" : "";
+      runSearch(root);
     }
     input.addEventListener("input", function () {
       if (timer) clearTimeout(timer);
@@ -101,11 +107,9 @@
   // nested table only whole parent blocks move, so a child never leaves its
   // parent; within a block the children sort too.
   function bindSort(root) {
-    var table = root.querySelector("table.blockr-rank-table");
-    if (!table) return;
-    var tbody = table.querySelector("tbody");
-    if (!tbody) return;
-    var nested = table.getAttribute("data-rank-nested") === "1";
+    // Looked up per interaction: with the data-push transport the <table> is
+    // replaced on every payload, so nothing may be captured here.
+    var tbl = function () { return root.querySelector("table.blockr-rank-table"); };
     var state = { key: null, dir: 0 };
 
     // Same contract as the table block's wireSort(): the header carries
@@ -134,7 +138,7 @@
       return dir * (av - bv);
     }
 
-    function blocks() {
+    function blocks(nested) {
       var out = [];
       var current = null;
       rows(root).forEach(function (r) {
@@ -149,6 +153,11 @@
     }
 
     function sortBy(th) {
+      var table = tbl();
+      if (!table) return;
+      var tbody = table.querySelector("tbody");
+      if (!tbody) return;
+      var nested = table.getAttribute("data-rank-nested") === "1";
       var key = th.getAttribute("data-col-index");
       if (state.key === key) {
         state.dir = state.dir === -1 ? 1 : -1;
@@ -167,7 +176,7 @@
           ? "blockr-sort-icon-asc" : "blockr-sort-icon-desc");
       }
 
-      var bs = blocks();
+      var bs = blocks(nested);
       bs.sort(function (x, y) { return cmp(x.head, y.head, th, state.dir); });
       var frag = document.createDocumentFragment();
       bs.forEach(function (b) {
@@ -180,13 +189,12 @@
       if (fold) tbody.appendChild(fold);
     }
 
-    table.querySelectorAll("th.blockr-sortable[data-col-index]")
-      .forEach(function (th) {
-        th.addEventListener("click", function (e) {
-          e.stopPropagation();
-          sortBy(th);
-        });
-      });
+    root.addEventListener("click", function (e) {
+      var th = e.target.closest("th.blockr-sortable[data-col-index]");
+      if (!th || !root.contains(th)) return;
+      e.stopPropagation();
+      sortBy(th);
+    });
   }
 
   // ---------- expand / collapse ----------
@@ -269,6 +277,215 @@
     }
   }
 
+
+
+  // ==========================================================================
+  // Data-push body (dev/table-data-push-design.md, the table block's shape).
+  // The server ships the body as a column-oriented cell model over the
+  // "blockr-viz-rank-data" custom message instead of rendering it through
+  // Shiny: ~93-95% smaller than the equivalent HTML at 790 rows, and a payload
+  // cached per elem id re-renders a re-mounted dock panel with no R round trip.
+  //
+  // The markup assembled here must match R/rank-push.R's rank_cells_html()
+  // byte for byte (test-rank-push.R pins them), including the escaping rules
+  // htmltools applies: & < > and the attribute quote.
+  // ==========================================================================
+
+  /** @type {Record<string, {rev: number, payload: any}>} */
+  var payloadStore = {};
+
+  function esc(x) {
+    return String(x == null ? "" : x)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  // R prints widths with format(trim=TRUE): an integral value has no decimals,
+  // so match that rather than emitting "57.00".
+  function w(x) {
+    var n = Number(x) || 0;
+    return String(n);
+  }
+  function dataV(v) {
+    return " data-v=\"" + (v == null || v === "" ? "" : String(v)) + "\"";
+  }
+
+  var CHEV = '<svg class="blockr-chev" viewBox="0 0 24 24" fill="none"' +
+    ' stroke="currentColor" stroke-width="2.4" stroke-linecap="round"' +
+    ' stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+
+  function trackHtml(width, fill, sub) {
+    return '<div class="blockr-rank-track' + (sub ? " is-sub" : "") + '">' +
+      '<div class="blockr-rank-fill" style="width:' + w(width) + "%" +
+      (fill ? ";background:" + fill : "") + '"></div></div>';
+  }
+
+  function splitHtml(c, i) {
+    var grouped = c.mode === "grouped";
+    var out = "";
+    for (var j = 0; j < c.names.length; j++) {
+      var body = '<div class="blockr-rank-fill" style="width:' +
+        w(c.seg[j][i]) + "%;background:" + c.fills[j] + '" title="' +
+        esc(c.names[j]) + ": " + c.segv[j][i] + '"></div>';
+      if (grouped) out += '<div class="blockr-rank-row3">' + body + "</div>";
+      else if (c.segv[j][i] > 0) out += body;
+    }
+    return '<div class="blockr-rank-track' + (grouped ? " is-tall" : "") +
+      '">' + out + "</div>";
+  }
+
+  function dvHtml(width, pos) {
+    return '<div class="blockr-rank-dv"><div class="blockr-rank-fill ' +
+      (pos ? "is-pos" : "is-neg") + '" style="width:' + w(width) +
+      '%"></div></div>';
+  }
+
+  /** Assemble the whole tbody from the cell model. */
+  function assembleBody(p) {
+    var out = [];
+    for (var i = 0; i < p.n; i++) {
+      var parent = !!(p.parent_row && p.parent_row[i]);
+      var child = !!(p.level && p.level[i] > 0);
+      var cls = "blockr-rank-row" +
+        (parent ? " is-parent blockr-indent-toggle collapsed" : "") +
+        (child ? " is-child collapsed-hidden" : "") +
+        (p.pick ? " is-pick" : "") +
+        (p.on && p.on[i] ? " is-on" : "");
+      var row = '<tr class="' + cls + '" data-rank-label="' +
+        esc(p.label[i]) + '"' +
+        (child ? ' data-rank-parent="' + esc(p.parent[i]) + '"' : "") +
+        ' data-rank-level="' + (child ? p.level[i] : 0) + '">';
+      row += '<td class="blockr-rank-label-col blockr-stub' +
+        (parent ? " blockr-has-toggle" : "") + '"' +
+        (child ? ' style="padding-left:40px;"' : "") + ">" +
+        (parent ? '<button class="blockr-indent-btn" type="button"' +
+          ' tabindex="-1" aria-expanded="false">' + CHEV + "</button>" : "") +
+        '<span class="blockr-rank-label">' + esc(p.label[i]) + "</span></td>";
+      for (var k = 0; k < p.cols.length; k++) {
+        var c = p.cols[k];
+        if (c.kind === "num") {
+          row += '<td class="blockr-rank-num dt-col-num"' + dataV(c.v[i]) +
+            ">" + c.disp[i] +
+            (c.pct ? ' <span class="blockr-rank-pct">' + c.pct[i] + "</span>" : "") +
+            "</td>";
+        } else if (c.kind === "barsplit") {
+          row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
+            splitHtml(c, i) + "</td>";
+        } else if (c.kind === "bardiv") {
+          row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
+            dvHtml(c.w[i], c.pos[i]) + "</td>";
+        } else {
+          row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
+            trackHtml(c.w[i], c.fill, c.sub && c.sub[i]) + "</td>";
+        }
+      }
+      out.push(row + "</tr>");
+    }
+    if (p.fold) {
+      out.push('<tr class="blockr-rank-fold"><td colspan="' + p.ncol + '">' +
+        esc(p.fold) + "</td></tr>");
+    }
+    return out.join("");
+  }
+
+  /** Title / subtitle / caption / legend / footer, refreshed in place. */
+  function applyChrome(root, ch) {
+    if (!ch) return;
+    var band = root.querySelector(".dd-table-titles");
+    if (band) {
+      var t = ch.title || "";
+      var st = ch.subtitle || "";
+      var tEl = band.querySelector(".dd-table-title");
+      var sEl = band.querySelector(".dd-table-subtitle");
+      if (tEl) { tEl.textContent = t; tEl.style.display = t ? "" : "none"; }
+      if (sEl) { sEl.textContent = st; sEl.style.display = st ? "" : "none"; }
+      band.style.display = (t || st) ? "" : "none";
+    }
+    var cap = root.querySelector(".dd-table-caption");
+    if (cap) {
+      cap.textContent = ch.caption || "";
+      cap.style.display = ch.caption ? "" : "none";
+    }
+    var lg = root.querySelector(".blockr-rank-legend");
+    if (lg) {
+      if (!ch.legend) {
+        lg.style.display = "none";
+        lg.innerHTML = "";
+      } else {
+        var h = '<span class="blockr-rank-legend-title">' +
+          esc(ch.legend.title) + "</span>";
+        (ch.legend.items || []).forEach(function (it) {
+          h += '<span class="blockr-rank-legend-item"><i style="background:' +
+            it.color + '"></i>' + esc(it.label) + "</span>";
+        });
+        lg.innerHTML = h;
+        lg.style.display = "";
+      }
+    }
+    var f = ch.foot || {};
+    var cnt = root.querySelector(".blockr-rank-count");
+    if (cnt) cnt.textContent = f.count || "";
+    var note = root.querySelector(".blockr-rank-note");
+    if (note) note.textContent = f.note || "";
+    var st2 = root.querySelector(".blockr-rank-status");
+    if (st2) {
+      var txt = st2.querySelector(".blockr-rank-status-text");
+      if (txt) {
+        txt.textContent = f.filter ? "Filtering downstream: " + f.filter : "";
+      }
+      st2.style.display = f.filter ? "" : "none";
+    }
+  }
+
+  /** Apply one payload: inject the body, refresh the bands, re-arm the JS. */
+  function applyPayload(root, p) {
+    var wrap = root.querySelector(".blockr-table-wrapper");
+    if (!wrap) return;
+    if (p.kind === "html") {
+      wrap.innerHTML = p.html;
+    } else {
+      wrap.innerHTML = p.head;
+      var tb = wrap.querySelector("tbody");
+      if (tb) tb.innerHTML = assembleBody(p);
+    }
+    applyChrome(root, p.chrome);
+    // The row set changed: drop the search text cache and re-apply the current
+    // query + collapse state to the fresh rows.
+    root._rankCache = null;
+    var input = root.querySelector("input.blockr-search");
+    if (input && input.value) runSearch(root);
+    else applyVisibility(root);
+    refreshGear(root);
+  }
+
+  if (window.Shiny && Shiny.addCustomMessageHandler) {
+    Shiny.addCustomMessageHandler("blockr-viz-rank-data",
+      function (msg) {
+        var entry = payloadStore[msg.id];
+        var payload = null;
+        if (entry && entry.rev === msg.rev) {
+          payload = entry.payload;
+        } else {
+          try { payload = JSON.parse(msg.payload); } catch (e) { payload = null; }
+          if (!payload) return;
+          payloadStore[msg.id] = { rev: msg.rev, payload: payload };
+        }
+        var eid = (window.CSS && CSS.escape)
+          ? CSS.escape(msg.id)
+          : String(msg.id).replace(/"/g, '\\"');
+        var root = document.querySelector(
+          '.blockr-rank-container[data-rank-elem-id="' + eid + '"]');
+        // No container yet: the payload waits in the store, and bind() picks it
+        // up when the chrome turns up (no timers, no expiring delivery window).
+        if (root) applyPayload(root, payload);
+      });
+  }
+
+  /** A stored payload for this container, or null. */
+  function storedFor(root) {
+    var id = root.getAttribute("data-rank-elem-id");
+    var e = id ? payloadStore[id] : null;
+    return e ? e.payload : null;
+  }
 
   // ---------- gear ----------
   // Same engine, same structure, same vocabulary as the chart and table blocks:
@@ -397,14 +614,27 @@
     );
   }
 
+  function refreshGear(root) {
+    if (typeof root._rankGearRefresh === "function") root._rankGearRefresh();
+  }
+
   function buildGear(root) {
     var elemId = root.getAttribute("data-rank-elem-id");
+    if (!elemId) return;
+    // The table arrives with the first payload, after this chrome: start from
+    // whatever is there (possibly nothing) and re-read on every payload and on
+    // every popover open.
     var table = root.querySelector("table.blockr-rank-table");
-    if (!elemId || !table) return;
-
-    var st = readGearState(table);
+    var st = table ? readGearState(table) : { cfg: {}, cols: [] };
     var cfg = st.cfg;
     var cols = st.cols;
+    root._rankGearRefresh = function () {
+      var t = root.querySelector("table.blockr-rank-table");
+      if (!t) return;
+      var s2 = readGearState(t);
+      cfg = s2.cfg;
+      cols = s2.cols;
+    };
 
     var header = document.createElement("div");
     header.className = "blockr-gear-header";
@@ -506,7 +736,12 @@
     bindToggle(root);
     bindDrill(root);
     buildGear(root);
-    applyVisibility(root);
+    // A payload that arrived before this container existed waits in the store;
+    // a container re-created later (dock panel re-mount, view switch) renders
+    // from it with no R round trip.
+    var stored = storedFor(root);
+    if (stored) applyPayload(root, stored);
+    else applyVisibility(root);
   }
 
   function scan(scope) {

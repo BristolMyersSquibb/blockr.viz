@@ -273,7 +273,7 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
           list(kind = "bardiv", label = "Difference (pp)",
                key = paste0(".d_", lv), compare = compare, level = lv,
                sub_label = paste0("vs ", compare)),
-          list(kind = "num", label = "Δ", key = paste0(".d_", lv),
+          list(kind = "num", label = "\u0394", key = paste0(".d_", lv),
                signed = TRUE)
         ))
       }

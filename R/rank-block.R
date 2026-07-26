@@ -41,7 +41,7 @@
 #' @param title,subtitle,caption Display text. `NULL` = auto (inherits the
 #'   input's label / subtitle / caption attribute), `""` = explicitly none,
 #'   else a template with the same `{...}` tokens as the chart and table
-#'   blocks (see [resolve_title_template()]).
+#'   blocks (see `resolve_title_template()`).
 #' @param drill Column a row click filters on. The emitted filter is the same
 #'   categorical contract as [new_chart_block()], so existing filter links
 #'   compose.
@@ -224,32 +224,82 @@ new_rank_block <- function(group = NULL,
           r_filter_values(vals)
         })
 
-        output$rank_table <- shiny::renderUI({
-          d <- ann_data()
+        # The chrome is a ONE-SHOT render: container, control row, empty title
+        # bands, empty scroll wrapper. It reads only what shapes the chrome, so
+        # a data or mapping change never rebuilds it -- the gear, the search
+        # text and the scroll position survive every body update.
+        output$rank_chrome <- shiny::renderUI({
+          rank_chrome_shell(
+            max_height = r_max_height(), search = r_search(),
+            drill = r_drill(), elem_id = ns("rank_block")
+          )
+        })
+
+        # The body ships as a column-oriented cell model over a custom message
+        # (dev/table-data-push-design.md), not through Shiny's renderUI: ~93-95%
+        # smaller than the equivalent HTML at 790 rows, and the payload is
+        # cached client-side per elem id, so a re-mounted dock panel re-renders
+        # with no R round trip.
+        #
+        # A single plain `observe`, NOT observeEvent + channels: that exact
+        # shape is what blockr.dock's lazy-eval card probe suspends for hidden
+        # panels (see the chart block's push observer).
+        last_msg <- new.env(parent = emptyenv())
+        last_msg$json <- NULL
+        last_msg$rev <- 0L
+        shiny::observe({
+          d <- tryCatch(ann_data(), error = function(e) NULL)
           shiny::req(is.data.frame(d))
           auto <- r_data_titles()
-          rank_table(
+          p <- rank_build_payload(
             d,
+            chrome = list(
+              title = resolve_block_title(r_title(), d, auto = auto$label),
+              subtitle = resolve_block_title(r_subtitle(), d,
+                                             auto = auto$subtitle),
+              caption = resolve_block_title(r_caption(), d, auto = auto$caption)
+            ),
+            drill = r_drill(),
+            # Isolated: a click must not rebuild the body (the JS keeps the
+            # highlight live), but any fresh build -- restore, config edit, new
+            # data -- re-reads the then-current state, so the highlight
+            # survives those too.
+            active = shiny::isolate(
+              list(col = r_filter_column(), vals = r_filter_values())
+            ),
+            cfg = list(
+              group = r_group(), parent = r_parent(), color = r_color(),
+              facet = r_facet(), compare = r_compare(), func = r_func(),
+              value = r_value(), id_var = r_id_var(),
+              bar_mode = r_bar_mode(), cols = r_cols(),
+              sort_by = r_sort_by(), sort_dir = r_sort_dir(),
+              top_n = r_top_n(), search = r_search(), drill = r_drill(),
+              titles = list(
+                title = resolve_block_title(r_title(), d, auto = auto$label),
+                subtitle = resolve_block_title(r_subtitle(), d,
+                                               auto = auto$subtitle),
+                caption = resolve_block_title(r_caption(), d,
+                                              auto = auto$caption),
+                title_state = r_title(), subtitle_state = r_subtitle(),
+                caption_state = r_caption()
+              ),
+              columns = rank_gear_cols(d)
+            ),
             group = r_group(), value = r_value(), func = r_func(),
             id_var = r_id_var(), parent = r_parent(), color = r_color(),
             bar_mode = r_bar_mode(), facet = r_facet(), compare = r_compare(),
             cols = r_cols(), sort_by = r_sort_by(), sort_dir = r_sort_dir(),
-            top_n = r_top_n(), max_height = r_max_height(),
-            search = r_search(),
-            title = resolve_block_title(r_title(), d, auto = auto$label),
-            subtitle = resolve_block_title(r_subtitle(), d,
-                                           auto = auto$subtitle),
-            caption = resolve_block_title(r_caption(), d, auto = auto$caption),
-            drill = r_drill(), scale_map = board_scale_map(),
-            elem_id = ns("rank_block"),
-            # Isolated: a click must not rebuild the table (the JS keeps the
-            # highlight live), but a fresh build -- restore, config edit, new
-            # data -- re-reads the then-current state here so the highlight
-            # survives those too.
-            active = shiny::isolate(
-              list(col = r_filter_column(), vals = r_filter_values())
-            )
+            top_n = r_top_n(), scale_map = board_scale_map()
           )
+          json <- rank_payload_json(p)
+          # String-identity guard: an unchanged payload is never re-sent, and
+          # `rev` ticks only on real change so the browser can skip the parse.
+          if (identical(json, last_msg$json)) return()
+          last_msg$json <- json
+          last_msg$rev <- last_msg$rev + 1L
+          session$sendCustomMessage("blockr-viz-rank-data", list(
+            id = ns("rank_block"), rev = last_msg$rev, payload = json
+          ))
         })
 
         list(
@@ -285,7 +335,7 @@ new_rank_block <- function(group = NULL,
         # (table / chart block parity): a script that arrives with the first
         # rendered body is too late to have bound before it.
         rank_table_dep(),
-        shiny::uiOutput(ns("rank_table"))
+        shiny::uiOutput(ns("rank_chrome"))
       )
     },
     class = c("rank_block", "transform_block", "block"),
@@ -445,7 +495,7 @@ rank_arguments <- function() {
         "the column's variable label, {n} = row count, {n_distinct(col)} = ",
         "distinct count. Tokens are data lookups, never code."
       ),
-      example = "Most frequent adverse events — {STUDYID}",
+      example = "Most frequent adverse events \u2014 {STUDYID}",
       type = arg_string()
     ),
     subtitle = new_arg_spec(
@@ -465,7 +515,7 @@ rank_arguments <- function() {
 #' @noRd
 rank_guidance <- function() {
   paste(
-    "Ranked horizontal bars as an HTML table — the third sibling of the",
+    "Ranked horizontal bars as an HTML table \u2014 the third sibling of the",
     "chart and table blocks. Use it whenever the answer is \"which levels",
     "are the biggest\": most frequent adverse events, top products, worst",
     "sites. It beats a bar chart there because the table form carries",
@@ -479,14 +529,14 @@ rank_guidance <- function() {
     "its children.",
     "\n- `color` splits each bar into segments (severity); `facet` gives one",
     "bar column per level (treatment arm) on a shared scale. Set one or the",
-    "other — facet wins if both are set.",
+    "other \u2014 facet wins if both are set.",
     "\n- `facet` + `compare` gives a zero-centred difference bar in",
     "percentage points against the comparator level (risk difference).",
     "\n- `drill` makes a row click filter downstream blocks.",
     "\n- Do NOT set `top_n` for an interactive board: the table renders every",
     "row and scrolls, like the table block. It is for report exhibits only.",
     "\nFor vertical columns, lines, scatter or anything with two measures on",
-    "axes, use the chart block instead — this block is horizontal bars",
+    "axes, use the chart block instead \u2014 this block is horizontal bars",
     "only."
   )
 }

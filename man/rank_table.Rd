@@ -68,7 +68,7 @@ When set, the rows below the cut are reported in a visible fold row.}
 \item{search}{Show the search input.}
 
 \item{title, subtitle, caption}{Display text, already resolved (see
-\code{\link[=resolve_block_title]{resolve_block_title()}}).}
+\code{resolve_block_title()}).}
 
 \item{drill}{Column a row click filters on, or \code{NULL} for a display-only
 table.}
