@@ -238,12 +238,14 @@ summary_table_long <- function(data,
   # replacing it with the variable name would lose which level was counted.
   all_numeric <- all(vapply(vars, function(v) is.numeric(data[[v]]),
                             logical(1)))
-  # Count DISPLAY rows, not frame rows: at this point a frame still holds one
-  # long row per by-group, and the group dimension only becomes columns in the
-  # wide pivot further down.
+  # Count DISPLAY rows per variable, and count them WITHIN a section: a frame
+  # still holds one long row per by-group (the group dimension only becomes
+  # columns in the wide pivot further down) and one per section value. Neither
+  # multiplies the rows a variable contributes to its own block -- with
+  # sections = "species" each species still shows one row per variable, which
+  # is exactly the shape worth collapsing.
   display_rows <- function(df) {
-    id <- intersect(c(sections, ".variable", ".variable_level", ".label"),
-                    names(df))
+    id <- intersect(c(".variable", ".variable_level", ".label"), names(df))
     nrow(unique(df[, id, drop = FALSE]))
   }
   compact <- all_numeric &&
@@ -892,7 +894,28 @@ bind_per_var_frames <- function(per_var, sections) {
     df[, all_names, drop = FALSE]
   })
 
-  do.call(rbind, per_var)
+  bound <- do.call(rbind, per_var)
+
+  # Section-major order. The frames arrive one per VARIABLE, each carrying
+  # every section value, so a plain rbind interleaves them: with sections =
+  # "species" and three variables the outer level reads Adelie, Chinstrap,
+  # Gentoo, Adelie, ... and the renderer -- which synthesizes headers from
+  # runs of equal values -- emits the same section header three times.
+  # `sections` is documented as the OUTER row hierarchy above the summarized
+  # variables, so it has to be the outermost sort key; the row index breaks
+  # ties, which keeps variable order within a section and parent/child order
+  # within a variable.
+  if (length(sections) > 0L && nrow(bound) > 0L) {
+    keys <- lapply(sections, function(s) {
+      v <- as.character(bound[[s]])
+      factor(v, levels = unique(v), exclude = NULL)
+    })
+    ord <- do.call(order, c(keys, list(seq_len(nrow(bound)))))
+    bound <- bound[ord, , drop = FALSE]
+    rownames(bound) <- NULL
+  }
+
+  bound
 }
 
 # =============================================================================

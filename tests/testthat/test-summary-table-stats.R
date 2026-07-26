@@ -168,3 +168,42 @@ test_that("block constructor normalizes legacy stats into state", {
     }
   )
 })
+
+test_that("sections order the rows, not just the columns", {
+  d <- mtcars
+  d$grp <- factor(rep(c("A", "B"), length.out = nrow(d)))
+
+  out <- summary_table(d, vars = c("mpg", "hp", "wt"),
+                       sections = "grp", stats = "mean")
+
+  # `sections` is the OUTER row hierarchy, so each section's rows are
+  # contiguous. Binding per-variable frames without reordering used to
+  # interleave them (A, B, A, B, ...), and the renderer -- which synthesizes
+  # section headers from runs of equal values -- then repeated the same
+  # section header once per variable.
+  # the section column carries its display label as an attribute, which is
+  # not what this test is about
+  lvl <- as.character(out$.group1_level)
+  expect_identical(lvl, c("A", "A", "A", "B", "B", "B"))
+  expect_identical(rle(lvl)$lengths, c(3L, 3L))
+  # variable order is preserved inside each section
+  expect_identical(out$.label, rep(c("mpg", "hp", "wt"), 2L))
+})
+
+test_that("a sectioned table collapses per section, not across it", {
+  d <- mtcars
+  d$grp <- factor(rep(c("A", "B"), length.out = nrow(d)))
+
+  # three section values do not make a variable a multi-row block: within a
+  # section each variable is still one row, which is the shape that collapses
+  flat <- summary_table(d, vars = c("mpg", "hp"), sections = "grp",
+                        stats = "mean")
+  expect_false(".variable_label" %in% names(flat))
+  expect_identical(attr(flat, "subtitle"), "Mean")
+
+  # two statistics per variable is a real block, sections or not
+  blocks <- summary_table(d, vars = c("mpg", "hp"), sections = "grp",
+                          stats = c("mean", "sd"))
+  expect_true(".variable_label" %in% names(blocks))
+  expect_null(attr(blocks, "subtitle"))
+})
