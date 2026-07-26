@@ -29,21 +29,24 @@ register_viz_blocks <- function() {
       "new_gt_table_block",
       "new_tile_block",
       "new_chart_block",
-      "new_table_block"
+      "new_table_block",
+      "new_rank_block"
     ),
     name = c(
       "Summary Table",
       "gt Table",
       "Tile",
       "Chart",
-      "Table"
+      "Table",
+      "Rank"
     ),
     description = c(
       "Wide, display-shaped multi-variable summary (list of variables by Y pattern). Successor to tidy_summary_block.",
       "Render wide-format tables (from summary_table) as styled gt tables \u2014 static / print / CSR output.",
       "Scorecard of bold KPI numbers \u2014 cards or an aligned matrix, with deltas / fills / status pills and click-to-filter drill. A pure renderer (shape upstream).",
       "Configurable chart with click-to-filter drill-down",
-      "Interactive table (sticky header, sort, search) with optional cell coloring and click-to-filter drill-down"
+      "Interactive table (sticky header, sort, search) with optional cell coloring and click-to-filter drill-down",
+      "Ranked horizontal bars as an HTML table \u2014 search, sort and exact values, with optional colour split, one bar column per facet level, or a zero-centred difference against a comparator"
     ),
     # Categories come from blockr.core::suggested_categories() (a fixed
     # vocabulary the pickers group by; anything else warns as discouraged).
@@ -58,6 +61,7 @@ register_viz_blocks <- function() {
       "table",
       "plot",
       "plot",
+      "table",
       "table"
     ),
     icon = c(
@@ -65,21 +69,24 @@ register_viz_blocks <- function() {
       "table",
       "speedometer2",
       "funnel",
-      "table"
+      "table",
+      "bar-chart-steps"
     ),
     arguments = list(
       summary_table_arguments(),
       gt_table_arguments(),
       tile_arguments(),
       chart_arguments(),
-      table_arguments()
+      table_arguments(),
+      rank_arguments()
     ),
     guidance = c(
       summary_table_guidance(),
       gt_table_guidance(),
       tile_guidance(),
       chart_guidance(),
-      table_guidance()
+      table_guidance(),
+      rank_guidance()
     ),
     package = utils::packageName(),
     overwrite = TRUE

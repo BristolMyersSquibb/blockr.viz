@@ -1,0 +1,206 @@
+# Ranked bar table: the CSS delta on top of the shared html-table rules.
+#
+# Only what the bars, the legend, the expand caret and the footer add. Type,
+# padding, hover, sticky header and the scroll shadow all come from
+# html_table_shared_css_fallback(), so a rank table and a table block are the
+# same object with a different cell.
+#
+# Colors read blockr.theme's --blockr-* tokens with a fallback, so a themed
+# board restyles the bars without touching this file. The diverging pair is a
+# warm/cool pair with a neutral zero tick (polarity, not identity).
+
+#' @noRd
+rank_table_css <- function() {
+  "
+.blockr-rank-container {
+  --blockr-rank-fill: var(--blockr-color-primary, #2a78d6);
+  --blockr-rank-sub: color-mix(in srgb, var(--blockr-rank-fill) 45%, transparent);
+  --blockr-rank-track: var(--blockr-color-bg-subtle, #eeeeea);
+  --blockr-rank-pos: var(--blockr-color-danger, #d03b3b);
+  --blockr-rank-neg: var(--blockr-color-primary, #2a78d6);
+  --blockr-rank-tick: var(--blockr-color-border, #c3c2b7);
+}
+/* Title / subtitle / caption: the canonical .dd-table-* bands, styled by
+   inst/css/table.css (shipped with the table dep). Nothing to add here. */
+.blockr-rank-table { width: 100%; }
+/* Column widths ride on the CELLS: the header cells come from the table
+   block's dt_th(), so they carry its classes, not ours. */
+.blockr-rank-table td.blockr-rank-bar-col {
+  width: 26%;
+  min-width: 110px;
+}
+.blockr-rank-table td.blockr-rank-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.blockr-rank-table td.blockr-rank-label-col { white-space: nowrap; }
+.blockr-rank-table .blockr-rank-pct {
+  color: var(--blockr-color-text-subtle, #898781);
+}
+/* Sorting affordance: none of our own. The header cells are dt_th()'s, so the
+   .blockr-sortable cursor and the .blockr-sort-icon arrow come from the shared
+   table CSS and read exactly like a table block's. */
+
+/* Bars: SQUARE, and segments TOUCH -- the house bar style, taken from the chart
+   block rather than invented here. echarts sets no borderRadius on any bar
+   series (chart.js even records dropping a lone rounded override, which had
+   made the waterfall the only rounded chart), stacks
+   with `stack:'stack'` and no separating border, and groups with `barGap: 0` so
+   a group's bars touch. A rank table sitting next to a chart of the same data
+   has to read as the same mark, so: no rounded data-end, no surface gap between
+   segments, no gap between grouped bars.
+
+   The grey track stays: it is a table-cell affordance (it says what the row's
+   share is against the column max) with no echarts equivalent, and the
+   crossfilter block in blockr.dm already draws track + fill. */
+.blockr-rank-track {
+  display: flex;
+  gap: 0;
+  height: 10px;
+  background: var(--blockr-rank-track);
+}
+.blockr-rank-track.is-tall {
+  height: auto;
+  flex-direction: column;
+  gap: 2px;
+  background: none;
+}
+.blockr-rank-track.is-tall .blockr-rank-row3 {
+  height: 6px;
+  background: var(--blockr-rank-track);
+}
+.blockr-rank-fill {
+  height: 100%;
+  min-width: 2px;
+  border-radius: 0;
+  background: var(--blockr-rank-fill);
+}
+.blockr-rank-track.is-sub .blockr-rank-fill { background: var(--blockr-rank-sub); }
+
+/* Zero-centred difference bar. */
+.blockr-rank-dv {
+  position: relative;
+  height: 12px;
+  background: var(--blockr-rank-track);
+}
+.blockr-rank-dv::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--blockr-rank-tick);
+}
+.blockr-rank-dv .blockr-rank-fill { position: absolute; top: 0; }
+.blockr-rank-dv .blockr-rank-fill.is-pos {
+  left: 50%;
+  background: var(--blockr-rank-pos);
+}
+.blockr-rank-dv .blockr-rank-fill.is-neg {
+  right: 50%;
+  background: var(--blockr-rank-neg);
+}
+
+/* Hierarchy. The chevron itself is the table block's -- same button, same svg
+   (section_chevron_svg()), same rotation contract (the ROW carries `collapsed`).
+   These four rules are the ONLY part of html_table_delta_css() the rank table
+   needs; the rest of that delta is the structured Table-1 typography, which
+   would restyle every cell, so it is deliberately not injected. Keep in sync
+   with the .blockr-indent-btn / .blockr-chev block in R/html-table.R. */
+.blockr-rank-container .blockr-indent-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin-right: 5px;
+  margin-left: -18px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: baseline;
+}
+.blockr-rank-container .blockr-chev {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  color: var(--blockr-color-text-muted, #9aa3b0);
+  transition: transform 0.2s ease, color 0.15s ease;
+}
+.blockr-rank-container .blockr-indent-btn:hover .blockr-chev {
+  color: var(--blockr-color-text-primary, #111827);
+}
+.blockr-rank-container tr.blockr-indent-toggle.collapsed .blockr-chev {
+  transform: rotate(-90deg);
+}
+
+/* Hierarchy. */
+.blockr-rank-table tr.is-child td.blockr-rank-label-col {
+  color: var(--blockr-color-text-muted, #52514e);
+}
+.blockr-rank-table tr.is-child.collapsed-hidden { display: none; }
+.blockr-rank-table tr.is-parent .blockr-rank-label { font-weight: 600; }
+.blockr-rank-table tr.is-pick { cursor: pointer; }
+.blockr-rank-table tr.is-on {
+  background: color-mix(in srgb, var(--blockr-rank-fill) 10%, transparent);
+}
+.blockr-rank-table tr.blockr-rank-fold td {
+  font-style: italic;
+  color: var(--blockr-color-text-subtle, #898781);
+}
+.blockr-rank-table tr.blockr-rank-hidden-search { display: none; }
+
+/* Legend + footer. */
+/* The legend is its own row under the control row (search + gear), so a long
+   legend can never push the search box around. */
+.blockr-rank-legend {
+  padding: 0.35rem 0.25rem 0.15rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--blockr-color-text-muted, #52514e);
+}
+.blockr-rank-legend-title {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--blockr-color-text-subtle, #898781);
+}
+.blockr-rank-legend-item { display: inline-flex; gap: 0.3rem; align-items: center; }
+.blockr-rank-legend-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.blockr-rank-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.1rem 0;
+  font-size: 0.75rem;
+  color: var(--blockr-color-text-subtle, #898781);
+}
+.blockr-rank-note { color: var(--blockr-color-warning, #b45309); }
+.blockr-rank-status { display: inline-flex; gap: 0.4rem; align-items: center; }
+.blockr-rank-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--blockr-rank-fill);
+}
+.blockr-rank-reset {
+  font: inherit;
+  cursor: pointer;
+  background: none;
+  border: 1px solid var(--blockr-color-border, #e1e0d9);
+  border-radius: 2px;
+  padding: 0.1rem 0.4rem;
+  color: inherit;
+}
+"
+}

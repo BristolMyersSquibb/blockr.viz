@@ -1,7 +1,17 @@
+/* Scope note (2026-07-26): every rule below applies to EITHER blockr table
+   container -- the drilldown table (`.drilldown-table-container`, managed by
+   table.js) or the rank table (`.blockr-rank-container`, server-rendered HTML,
+   R/rank-table-html.R). They are the same chrome: one control row, one header
+   cell, one set of body alignments. Written as `:is(...)` so there is ONE
+   definition to keep, not two that drift -- the rank block's header spacing
+   silently diverged (84px header against 59px) while these were table-only.
+   `.drilldown-table-structured` rules stay table-only: a rank table is never a
+   structured Table-1 frame. */
+
 /* Type-based body alignment: numeric cells right (tabular figures), text
    cells left — matching the header, like the structured table and the
    canonical html preview. */
-.drilldown-table-container .blockr-table tbody td.blockr-data {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.blockr-data {
   font-variant-numeric: tabular-nums;
 }
 /* Type-based body alignment for the flat table: numeric cells right, text
@@ -9,32 +19,32 @@
    `.drilldown-table-structured` (see html_table_delta_css()), so it no longer
    leaks its `td.blockr-data` weight/size/alignment onto the flat table — these
    rules stand on their own as the flat table's intended alignment. */
-.drilldown-table-container .blockr-table tbody td.blockr-data.dt-num {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.blockr-data.dt-num {
   text-align: right;
 }
-.drilldown-table-container .blockr-table tbody td.blockr-data.dt-txt {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.blockr-data.dt-txt {
   text-align: left;
 }
-.drilldown-table-container .blockr-table tbody td.blockr-stub {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.blockr-stub {
   text-align: left;
 }
-.drilldown-table-container.dt-clickable .blockr-table tbody tr.blockr-data-row {
+:is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table tbody tr.blockr-data-row {
   cursor: pointer;
 }
 /* A drill row with an NA drill value emits nothing (no data-raw -> the click
    is a no-op), so it must not look clickable: default cursor + the neutral
    reading-aid hover instead of the accent-blue "actionable" tint. */
-.drilldown-table-container.dt-clickable .blockr-table tbody tr.blockr-data-row.dt-row-nodrill {
+:is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table tbody tr.blockr-data-row.dt-row-nodrill {
   cursor: default;
 }
-.drilldown-table-container.dt-clickable .blockr-table tbody tr.blockr-data-row.dt-row-nodrill:hover td {
+:is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table tbody tr.blockr-data-row.dt-row-nodrill:hover td {
   background: var(--blockr-color-bg-subtle, #f9fafb);
 }
 /* Section headers: only those that ARE an identity claim (row-group headers,
    e.g. a SOC over its PTs -- they carry data-dd-keys) read as clickable.
    Variable-block headers ("Sex", "Age") are labels, not claims: no keys, no
    pointer, click is a no-op. */
-.drilldown-table-container.dt-clickable .blockr-table tbody tr.blockr-section-header[data-dd-keys] .blockr-section-value {
+:is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table tbody tr.blockr-section-header[data-dd-keys] .blockr-section-value {
   cursor: pointer;
 }
 /* No drill: the row is inert. The html-table base paints an accent-blue hover
@@ -42,40 +52,40 @@
    it also carries .blockr-html-table-container. When drill is off, swap that for
    a neutral grey reading-aid tint so hover signals "readable", not "actionable".
    The accent-blue hover + cursor:pointer above stay for the .dt-clickable case. */
-.drilldown-table-container:not(.dt-clickable) .blockr-table tbody tr.blockr-data-row:hover td {
+:is(.drilldown-table-container, .blockr-rank-container):not(.dt-clickable) .blockr-table tbody tr.blockr-data-row:hover td {
   background: var(--blockr-color-bg-subtle, #f9fafb);
 }
 /* Drill selection — a soft primary tint across the row plus a left accent
    bar, instead of a hard per-cell outline (which boxed every cell). */
-.drilldown-table-container .blockr-table tbody tr.dt-row-active td {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-row-active td {
   background-color: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
 }
-.drilldown-table-container .blockr-table tbody tr.dt-row-active td:first-child {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-row-active td:first-child {
   box-shadow: inset 3px 0 0 0 var(--blockr-color-primary, #2563eb);
 }
 /* Flat-table header alignment, driven by the column's data type so the name,
    sub-label and sort arrow all agree with the body cells: numeric right, text
    left (the structured table does the same for its arm columns). The type
    class beats the inherited html-table delta, which right-aligns every header. */
-.drilldown-table-container .blockr-table thead th.blockr-col-header.dt-col-num {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.blockr-col-header.dt-col-num {
   text-align: right;
 }
-.drilldown-table-container .blockr-table thead th.blockr-col-header.dt-col-txt {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.blockr-col-header.dt-col-txt {
   text-align: left;
 }
-.drilldown-table-container .blockr-table thead th.dt-col-num .dt-th-namerow,
-.drilldown-table-container .blockr-table thead th.dt-col-num .dt-th-subrow {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-col-num .dt-th-namerow,
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-col-num .dt-th-subrow {
   justify-content: flex-end;
 }
-.drilldown-table-container .blockr-table thead th.dt-col-txt .dt-th-namerow,
-.drilldown-table-container .blockr-table thead th.dt-col-txt .dt-th-subrow {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-col-txt .dt-th-namerow,
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-col-txt .dt-th-subrow {
   justify-content: flex-start;
 }
 /* Sticky header for the scrollable table. The structured-Table-1 delta CSS
    provides its own sticky + scroll-shadow, but that delta is injected only for
    structured tables — so cover the flat path here (the flat table scrolls,
    unlike the paginated preview, and benefits from a pinned header). */
-.drilldown-table-container .blockr-table thead th {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -86,13 +96,13 @@
    preview's type-row) rather than on its own line.
    - labelled column:   name on top, [label arrow] below
    - unlabelled column: [name arrow] on the single row */
-.drilldown-table-container .blockr-table thead th .dt-th-namerow,
-.drilldown-table-container .blockr-table thead th .dt-th-subrow {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .dt-th-namerow,
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .dt-th-subrow {
   display: flex;
   align-items: center;
   gap: 4px;
 }
-.drilldown-table-container .blockr-table thead th .dt-th-subrow {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .dt-th-subrow {
   margin-top: 1px;
 }
 /* Right-aligned (structured Table-1) arm headers anchor the subtext + arrow
@@ -103,29 +113,29 @@
 }
 /* The structured arm sub-line carries its own top margin for the stacked
    layout; inside the flex subrow the subrow owns the spacing. */
-.drilldown-table-container .blockr-table thead th .dt-th-subrow .arm__n {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .dt-th-subrow .arm__n {
   margin-top: 0;
 }
-.drilldown-table-container .blockr-table thead th .dt-th-namerow .blockr-sort-icon,
-.drilldown-table-container .blockr-table thead th .dt-th-subrow .blockr-sort-icon {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .dt-th-namerow .blockr-sort-icon,
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .dt-th-subrow .blockr-sort-icon {
   flex: 0 0 auto;
 }
 /* The unsorted arrow reserves no space, so a right-aligned header stays
    flush-right; the arrow only appears — and nudges the subtext left — once a
    sort direction is set. (The shared base rule gives it a fixed 12px box,
    which would otherwise push the subtext off the right edge.) */
-.drilldown-table-container .blockr-table thead th .blockr-sort-icon {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .blockr-sort-icon {
   display: none;
 }
-.drilldown-table-container .blockr-table thead th .blockr-sort-icon-asc,
-.drilldown-table-container .blockr-table thead th .blockr-sort-icon-desc {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .blockr-sort-icon-asc,
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .blockr-sort-icon-desc {
   display: inline-block;
 }
-.drilldown-table-container .blockr-table thead th .blockr-col-name,
-.drilldown-table-container .blockr-table thead th .arm__name {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .blockr-col-name,
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .arm__name {
   display: block;
 }
-.drilldown-table-container .blockr-table thead th .blockr-col-label {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .blockr-col-label {
   font-weight: var(--blockr-font-weight-normal, 400);
   font-size: 11px;   /* match the canonical html preview's column sub-label */
   color: var(--blockr-color-text-muted, #6b7280);
@@ -137,19 +147,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.drilldown-table-container {
+:is(.drilldown-table-container, .blockr-rank-container) {
   position: relative;
 }
-.drilldown-table-container .blockr-html-table-header {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-html-table-header {
   padding-right: 36px;
 }
-.drilldown-table-container .blockr-hidden-search {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-hidden-search {
   display: none !important;
 }
 
 /* Zero-match search feedback (table.js updateNoMatch): shown under the
    header when an active query hides every data row, removed with matches. */
-.drilldown-table-container .blockr-search-empty {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-search-empty {
   padding: 16px 12px;
   text-align: center;
   font-size: 12px;
@@ -194,13 +204,13 @@
    the gear keeps its canonical top-right position. Scoped to the block
    container: the shared .blockr-html-table-* chrome is also the plain
    preview's, which has no gear and keeps its own layout. */
-.drilldown-table-container .blockr-gear-header {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-gear-header {
   gap: 6px;
 }
 
 /* Beside the 30px toolbar controls (search, download) the gear adopts the
    control height instead of its stand-alone 26px. */
-.drilldown-table-container .blockr-gear-header .blockr-gear-btn {
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-gear-header .blockr-gear-btn {
   width: var(--blockr-control-h-sm, 30px);
   height: var(--blockr-control-h-sm, 30px);
 }
