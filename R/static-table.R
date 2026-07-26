@@ -87,7 +87,7 @@
 #' @export
 static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
                      na_rep = "\u2014",
-                     font = "Trebuchet MS", font_size = 14,
+                     font = "Inter", font_size = 14,
                      font_color = "#444444",
                      indent_width = 20,
                      first_col_width = 5.65, other_cols_width = 3.5,
