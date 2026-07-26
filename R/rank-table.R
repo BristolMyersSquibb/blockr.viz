@@ -293,7 +293,12 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   # The plain n / % columns ride after the bar on the non-faceted layouts.
   if (layout %in% c("simple", "split")) {
     if ("n" %in% cols) {
-      plan <- c(plan, list(list(kind = "num", label = "n", key = ".v")))
+      # "n" only reads as n for a COUNT: a max or a mean in a column headed "n"
+      # is a lie, so a non-counting measure gets a neutral "Value" (the bar
+      # column's header already names the statistic).
+      plan <- c(plan, list(list(
+        kind = "num", label = if (pct_ok) "n" else "Value", key = ".v"
+      )))
     }
     if ("pct" %in% cols) {
       plan <- c(plan, list(list(kind = "num", label = "%", key = ".v",

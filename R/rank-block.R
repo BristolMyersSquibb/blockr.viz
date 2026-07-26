@@ -247,6 +247,21 @@ new_rank_block <- function(group = NULL,
         last_msg <- new.env(parent = emptyenv())
         last_msg$json <- NULL
         last_msg$rev <- 0L
+
+        push <- function(json) {
+          session$sendCustomMessage("blockr-viz-rank-data", list(
+            id = ns("rank_block"), rev = last_msg$rev, payload = json
+          ))
+        }
+
+        # The client announces itself when it binds with nothing to render.
+        # Shiny DROPS a custom message that has no registered handler yet, and
+        # rank-table.js only loads with the first rank block UI in the page --
+        # on a board whose opening view carries none, the startup payload is
+        # lost and the identity guard below would never re-send it.
+        shiny::observeEvent(input$rank_block_ready, {
+          if (!is.null(last_msg$json)) push(last_msg$json)
+        })
         shiny::observe({
           d <- tryCatch(ann_data(), error = function(e) NULL)
           shiny::req(is.data.frame(d))
@@ -297,9 +312,7 @@ new_rank_block <- function(group = NULL,
           if (identical(json, last_msg$json)) return()
           last_msg$json <- json
           last_msg$rev <- last_msg$rev + 1L
-          session$sendCustomMessage("blockr-viz-rank-data", list(
-            id = ns("rank_block"), rev = last_msg$rev, payload = json
-          ))
+          push(json)
         })
 
         list(

@@ -740,8 +740,18 @@
     // a container re-created later (dock panel re-mount, view switch) renders
     // from it with no R round trip.
     var stored = storedFor(root);
-    if (stored) applyPayload(root, stored);
-    else applyVisibility(root);
+    if (stored) {
+      applyPayload(root, stored);
+    } else {
+      applyVisibility(root);
+      // Nothing for us yet: either the payload has not been built, or it was
+      // pushed before this script existed (Shiny drops a custom message with
+      // no registered handler). Announce, and let R re-send.
+      var id = root.getAttribute("data-rank-elem-id");
+      if (id && window.Shiny && Shiny.setInputValue) {
+        Shiny.setInputValue(id + "_ready", Date.now(), { priority: "event" });
+      }
+    }
   }
 
   function scan(scope) {
