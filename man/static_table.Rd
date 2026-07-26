@@ -18,7 +18,7 @@ static_table(
   other_cols_width = 3.5,
   fit_width = getOption("blockr.viz.ft_fit_width", NULL),
   auto_width = FALSE,
-  header_bg = getOption("blockr.viz.ft_header_bg", NULL),
+  header_bg = getOption("blockr.viz.ft_header_bg", viz_palette("bands")),
   pptx_left = 0.4,
   pptx_top = 1.1
 )

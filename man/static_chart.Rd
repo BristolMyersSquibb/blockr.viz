@@ -83,7 +83,7 @@ rebuilds the chart server-side from the same vocabulary.
 \details{
 Numbers match the app by construction: aggregation goes through the same
 engine the table/tile renderers use (\code{dd_table_aggregate}, golden-tested
-against the JS engine), colors cycle the same \code{DD_BLOCKR_PALETTE} with
+against the JS engine), colors cycle the same \code{dd_palette()} with
 the same level ordering (factor levels, else sorted unique), and a board
 scale map (arm colors) resolves through the same blockr.theme resolver.
 The look is print typography, not a pixel copy of the canvas.
