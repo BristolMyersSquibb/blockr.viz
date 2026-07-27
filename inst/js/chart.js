@@ -520,7 +520,7 @@
    *             brushable: boolean, zoomArmed: boolean,
    *             zoom: any,
    *             focus: { series: any[], stepMode: string | null,
-   *                      smoothOn: boolean, xAxisType: string,
+   *                      smoothOn: boolean, scrim: boolean, xAxisType: string,
    *                      xOrder: Map<string, number> | null,
    *                      markerPx: number, focusW: number } | null,
    *             focusSi: number | null }} ChartSlot
@@ -2175,8 +2175,8 @@
       // PURELY from the cursor pixel every move — no dependency on ECharts
       // hit-testing or on the overlay — so it can never get stuck: each move it
       // points at exactly one line or clears. It also sets slot.hover.si so the
-      // axis tooltip narrows to the same line. Scatter keeps ECharts' own
-      // per-point emphasis (the picker no-ops when slot.focus is null).
+      // axis tooltip narrows to the same line. Scatter has no hover highlight at
+      // all (see mkSeries) and the picker no-ops there, slot.focus being null.
       const zr = chart.getZr();
       zr.on('mousemove', (/** @type {any} */ e) => {
         if (!slot.focus) return;
@@ -3643,6 +3643,15 @@
         // drop at high N (symbol handling below); a hovered line is redrawn WITH
         // its points by the hover overlay.
         const smoothOn = isLine && connect === 'monotone';
+        // The scrim veils the CROWD so the one hovered trajectory pops out of it.
+        // With a single line there IS no crowd: the veil would grey the plot, the
+        // gridlines and the line's own CI whiskers (the error bars are a z:1
+        // custom series, so they sit under the z:8 veil) in order to spotlight the
+        // only thing on screen. So: crowd -> veil, lone line -> no veil. The
+        // __focus__ overlay still promotes the line on hover either way; that part
+        // is a local "you are on this, here are its points" affordance and it
+        // reads fine without anything to contrast against.
+        const showScrim = isLine && seriesLevels.length > 1;
         const smoother = this.config.smoother || 'none';
         const smootherSeries = this.config.smoother_series || null;
         const loCol = this.config.lo;
@@ -3672,16 +3681,25 @@
           symbolSize: isLine ? lineMarkerPx : scatterPx,
           itemStyle: { color: clr, cursor: 'pointer' },
           lineStyle: isLine ? { width: lineBaseW, opacity: lineOpacity } : undefined,
-          // Line charts: native emphasis is DISABLED -- the hover highlight is
-          // the __focus__ overlay (line + scatter dots), which we drive off the
-          // mousemove picker. ECharts' own `focus: 'series'` would be a SECOND
-          // highlight system: it thickens the hovered base line and blurs the
-          // rest, but it drops the downplay under fast movement, so a
-          // previously-hovered line stays thick (and, being symbol:none, has no
-          // dots -- the stuck "previous line without dots"). With it off there is
-          // exactly one highlight system and nothing that can blur the overlay.
-          // Scatter keeps its per-point emphasis.
-          emphasis: isLine ? { disabled: true } : { focus: 'self' }
+          // Native emphasis is DISABLED on BOTH families, for different reasons.
+          //
+          // Lines: the hover highlight is the __focus__ overlay (line + scatter
+          // dots), which we drive off the mousemove picker. ECharts' own
+          // `focus: 'series'` would be a SECOND highlight system: it thickens the
+          // hovered base line and blurs the rest, but it drops the downplay under
+          // fast movement, so a previously-hovered line stays thick (and, being
+          // symbol:none, has no dots -- the stuck "previous line without dots").
+          // With it off there is exactly one highlight system and nothing that
+          // can blur the overlay.
+          //
+          // Scatter: `focus: 'self'` blurred every OTHER point in the coordinate
+          // system (blurScope defaults to 'coordinateSystem'). On a dense cloud
+          // the cursor re-picks a different point every few pixels of travel, so
+          // the whole cloud strobed full/dim -- an enormous visual change to say
+          // the one thing the tooltip and the pointer cursor already say. Both of
+          // those are independent of emphasis state, so the point under the
+          // cursor stays fully identified without it.
+          emphasis: { disabled: true }
         });
 
         // R precomputes the smoother (lm or loess) per group and sends the
@@ -4158,6 +4176,11 @@
           series,
           stepMode: stepMode || null,
           smoothOn: smoothOn,
+          // Whether a promote raises the veil (see showScrim). The '__scrim__'
+          // series stays MOUNTED either way: the picker indexes slot.focus.series
+          // by position and _promoteFocus updates by id, so a stable series array
+          // is what keeps both safe. We simply withhold its trigger datum.
+          scrim: showScrim,
           // Axis kind + category->index map, so the mousemove picker can locate
           // the nearest line on a CATEGORY x (AVISIT) as well as numeric/time.
           xAxisType: xAxisType,
@@ -5009,7 +5032,11 @@
           // a point from the hovered line to dodge the first problem, which
           // left the second one -- the veil disappeared once you zoomed past
           // that line's first x.
-          data: [[0.5, 0.5]]
+          //
+          // No datum when this chart draws a single line (f.scrim false):
+          // renderItem never fires, so there is no veil, and the promote below
+          // still runs. Nothing else keys off the scrim.
+          data: f.scrim ? [[0.5, 0.5]] : []
         }, {
           id: '__focus__',
           data: s.data,
