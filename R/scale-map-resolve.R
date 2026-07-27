@@ -54,27 +54,24 @@ dd_levels <- function(col) {
 }
 
 # The ONE scale-resolution seam for this package's renderers: resolve `var`'s
-# binding for the actual data `column`, following provenance. A column copied
-# by the picker block (SEX picked into "color") carries its origin in a
-# `blockr_source` attribute; when the copy's own name is not bound in the map,
-# the source's binding applies -- so the fixed SEX colors survive the rename.
-# Mirrors blockr.theme::resolve_scales_col (the canonical cross-package API);
-# implemented locally so an installed blockr.theme that predates that export
-# still resolves (same reason test-theme-palette skips exist).
+# binding for the actual data `column` via blockr.theme's canonical
+# provenance-aware resolver -- a column copied by the picker block (SEX
+# picked into "color") carries its origin in `blockr_source` and inherits
+# the source's binding, so the fixed SEX colors survive the rename. On an
+# installed blockr.theme that predates resolve_scales_col() the provenance
+# hop is simply absent (plain name lookup), the pre-feature behavior.
 dd_resolve_scales <- function(map, var, column) {
   if (is.null(map) || is.null(var)) {
     return(NULL)
   }
-  bind_var <- var
-  if (!var %in% names(map)) {
-    src <- attr(column, "blockr_source", exact = TRUE)
-    if (is.character(src) && length(src) == 1L && nzchar(src) &&
-          src %in% names(map)) {
-      bind_var <- src
-    }
+  if ("resolve_scales_col" %in% getNamespaceExports("blockr.theme")) {
+    return(blockr.theme::resolve_scales_col(
+      map, var, column,
+      palette = dd_palette()
+    ))
   }
   blockr.theme::resolve_scales(
-    map, bind_var,
+    map, var,
     levels = dd_levels(column),
     palette = dd_palette()
   )

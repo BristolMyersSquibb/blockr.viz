@@ -4,6 +4,10 @@
 # one seam every renderer in this package routes through.
 
 skip_if_not_installed("blockr.theme")
+skip_if_not(
+  "resolve_scales_col" %in% getNamespaceExports("blockr.theme"),
+  "installed blockr.theme predates resolve_scales_col()"
+)
 
 sex_map <- list(
   SEX = list(color = c(F = "#0072B2", M = "#E69F00", U = "#999999"))
