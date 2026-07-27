@@ -212,7 +212,7 @@ chart_arguments <- function() {
         "range's interval, or the boxplot's BODY. One of \"median_q1_q3\", ",
         "\"mean_sd\", \"mean_2sd\", \"mean_se\", \"p5_p95\", \"min_max\". ",
         "Computed in the browser from the raw `value` column per `group` ",
-        "(x `color`) slot — no upstream summarize block, no lo/hi ",
+        "(x `color`) slot \u2014 no upstream summarize block, no lo/hi ",
         "mapping. Default per mark: \"median_q1_q3\" (boxplot), ",
         "\"mean_se\" (pointrange). No-op for other chart types."
       ),
@@ -222,7 +222,7 @@ chart_arguments <- function() {
     ),
     whiskers = new_arg_spec(
       paste0(
-        "Boxplot whisker rule — the box's OUTER interval: \"tukey\" ",
+        "Boxplot whisker rule \u2014 the box's OUTER interval: \"tukey\" ",
         "(default, 1.5x IQR fences clipped to the data; the textbook ",
         "boxplot) or any `summary` value, e.g. \"min_max\" for range ",
         "whiskers or \"p5_p95\" for the clinical percentile convention. ",
@@ -235,7 +235,7 @@ chart_arguments <- function() {
     connect_centers = new_arg_spec(
       paste0(
         "Pointrange only: true draws a line through the interval centers ",
-        "in group order — the over-visits trajectory reading (e.g. mean ",
+        "in group order \u2014 the over-visits trajectory reading (e.g. mean ",
         "AVAL by AVISIT per treatment arm). Default false."
       ),
       example = TRUE,
@@ -373,7 +373,7 @@ chart_arguments <- function() {
       paste0(
         "Category-axis ordering for aggregated charts. \"value\" (default ",
         "for bar/pie/treemap/radar), \"data\" (default for boxplot/",
-        "pointrange: the data's own order — factor levels when present, ",
+        "pointrange: the data's own order \u2014 factor levels when present, ",
         "else first appearance in the rows, so visits/dose groups keep ",
         "their order), \"alpha\", or a column name (per-group minimum of ",
         "that column, e.g. \"AVISITN\"). For timeline: \"onset\" (default), ",

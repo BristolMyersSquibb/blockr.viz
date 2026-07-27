@@ -209,10 +209,10 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         # Whisker segments live OUTSIDE the body; a degenerate side (whisker
         # meets the box) ships NA and draws nothing.
         tip <- ifelse(is.na(bc), "", rank_esc(paste0(
-          "n=", nn, " · ", wd$center, " ", lane_fmt(bc),
-          " · ", wd$range, " ", lane_fmt(bl), "–", lane_fmt(bh),
-          " · ", wd$whisk %||% "Whiskers", " ",
-          lane_fmt(wl), "–", lane_fmt(wh)
+          "n=", nn, " \u00b7 ", wd$center, " ", lane_fmt(bc),
+          " \u00b7 ", wd$range, " ", lane_fmt(bl), "\u2013", lane_fmt(bh),
+          " \u00b7 ", wd$whisk %||% "Whiskers", " ",
+          lane_fmt(wl), "\u2013", lane_fmt(wh)
         )))
         list(kind = "box",
              wl = pos_w(wl), w1 = span_w(wl, bl),
@@ -222,12 +222,12 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       } else {
         # The dot (words$range NULL) has no interval clause and no n.
         tip <- ifelse(is.na(bc), "", rank_esc(paste0(
-          ifelse(is.na(nn), "", paste0("n=", nn, " · ")),
+          ifelse(is.na(nn), "", paste0("n=", nn, " \u00b7 ")),
           wd$center, " ", lane_fmt(bc),
           if (!is.null(wd$range)) {
-            paste0(" · ", wd$range, " ",
+            paste0(" \u00b7 ", wd$range, " ",
                    ifelse(is.na(bl) | is.na(bh), "undefined (n < 2)",
-                          paste0(lane_fmt(bl), "–", lane_fmt(bh))))
+                          paste0(lane_fmt(bl), "\u2013", lane_fmt(bh))))
           } else {
             ""
           }
@@ -263,11 +263,11 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       out_tips <- lapply(segs, function(ss) {
         vapply(ss, function(sg) {
           rank_esc(paste0(
-            if (!is.null(sg$lb)) paste0(sg$lb, " · "),
-            if (!is.null(lv)) paste0(lv[[sg$f]], " · "),
-            fmt_d(sg$s), "–", fmt_d(sg$e),
+            if (!is.null(sg$lb)) paste0(sg$lb, " \u00b7 "),
+            if (!is.null(lv)) paste0(lv[[sg$f]], " \u00b7 "),
+            fmt_d(sg$s), "\u2013", fmt_d(sg$e),
             if (length(tf) && !is.null(sg$fv)) {
-              paste0(" · ", paste0(tf, ": ", sg$fv, collapse = " · "))
+              paste0(" \u00b7 ", paste0(tf, ": ", sg$fv, collapse = " \u00b7 "))
             } else {
               ""
             }
@@ -370,7 +370,7 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         is.na(cc), "",
         paste0(lane_fmt(cc),
                ifelse(is.na(ll) | is.na(hh), "",
-                      paste0(" (", lane_fmt(ll), "–", lane_fmt(hh), ")")))
+                      paste0(" (", lane_fmt(ll), "\u2013", lane_fmt(hh), ")")))
       )
       list(kind = "num", v = sortv(cc), disp = disp)
     } else if (!is.null(p$alt_text) && is.null(rows[[p$key]])) {
@@ -468,10 +468,10 @@ rank_thead <- function(prep, sortable = TRUE) {
 rank_fold_text <- function(prep) {
   if (!isTRUE(prep$folded > 0L)) return(NULL)
   paste0(
-    "Other — ", prep$folded, " ",
+    "Other \u2014 ", prep$folded, " ",
     if (is.null(prep$parent)) "rows" else "groups", " below the cut",
     if (is.finite(prep$fold_max)) {
-      paste0(", each with a value ≤ ",
+      paste0(", each with a value \u2264 ",
              format(prep$fold_max, scientific = FALSE, trim = TRUE))
     } else {
       ""

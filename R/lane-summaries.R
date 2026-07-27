@@ -98,7 +98,7 @@ lane_summary_auto_name <- function(s) {
     dist = rank_chr1(s$col),
     field = rank_chr1(s$col),
     series = rank_chr1(s$col),
-    spans = paste0(rank_chr1(s$x), " → ", rank_chr1(s$xend)),
+    spans = paste0(rank_chr1(s$x), " \u2192 ", rank_chr1(s$xend)),
     expr = "Value",
     "Value"
   )

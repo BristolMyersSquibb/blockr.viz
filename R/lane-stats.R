@@ -24,15 +24,53 @@ LANE_WHISKERS <- c("tukey", LANE_STATS)
 # Display metadata, one row per statistic: the select label, and the words the
 # tooltip uses for the center and the interval. Mirrors chart.js's
 # SUMMARY_STATS labels where the values overlap (drift-tested).
+#
+# The labels are typeset, not plain ASCII, and R CMD check forbids non-ASCII
+# bytes in code (comments are exempt, string literals are not). The glyphs are
+# therefore \u-escaped: · MIDDLE DOT, – EN DASH, ± PLUS-MINUS,
+# × MULTIPLICATION SIGN. One field per line only because the escapes are
+# too wide to keep the old aligned single-line rows under 80 columns.
 LANE_STAT_META <- list(
-  median_q1_q3 = list(label = "Median · Q1–Q3", center = "Median", range = "Q1–Q3"),
-  mean_sd      = list(label = "Mean ± SD",           center = "Mean",   range = "±1 SD"),
-  mean_2sd     = list(label = "Mean ± 2 SD",         center = "Mean",   range = "±2 SD"),
-  mean_se      = list(label = "Mean ± SE",           center = "Mean",   range = "±1 SE"),
-  mean_ci95    = list(label = "Mean · 95% CI",       center = "Mean",   range = "95% CI"),
-  p5_p95       = list(label = "5th–95th percentile", center = "Median", range = "P5–P95"),
-  min_max      = list(label = "Min–Max",             center = "Median", range = "Min–Max"),
-  tukey        = list(label = "Tukey (1.5×IQR)",     center = "Median", range = "1.5×IQR")
+  median_q1_q3 = list(
+    label = "Median \u00b7 Q1\u2013Q3",
+    center = "Median",
+    range = "Q1\u2013Q3"
+  ),
+  mean_sd = list(
+    label = "Mean \u00b1 SD",
+    center = "Mean",
+    range = "\u00b11 SD"
+  ),
+  mean_2sd = list(
+    label = "Mean \u00b1 2 SD",
+    center = "Mean",
+    range = "\u00b12 SD"
+  ),
+  mean_se = list(
+    label = "Mean \u00b1 SE",
+    center = "Mean",
+    range = "\u00b11 SE"
+  ),
+  mean_ci95 = list(
+    label = "Mean \u00b7 95% CI",
+    center = "Mean",
+    range = "95% CI"
+  ),
+  p5_p95 = list(
+    label = "5th\u201395th percentile",
+    center = "Median",
+    range = "P5\u2013P95"
+  ),
+  min_max = list(
+    label = "Min\u2013Max",
+    center = "Median",
+    range = "Min\u2013Max"
+  ),
+  tukey = list(
+    label = "Tukey (1.5\u00d7IQR)",
+    center = "Median",
+    range = "1.5\u00d7IQR"
+  )
 )
 
 #' One statistic over a numeric vector: center, lo, hi and n.
