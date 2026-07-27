@@ -412,3 +412,29 @@ test_that("the colour split takes the board's fixed colours", {
   )
   expect_identical(p$plan[[1L]]$fills, c("#123456", "#654321"))
 })
+
+test_that("colour is a table-level dimension every glyph column inherits", {
+  ae <- sum_fixture()
+  S <- list(
+    list(type = "dist", name = "Duration", col = "DUR", show = "box"),
+    list(type = "dist", name = "Mean", col = "DUR", stat = "mean_ci95",
+         show = "pointrange"),
+    list(type = "spans", name = "Episodes", x = "ASTDY", xend = "AENDY",
+         color = "SEV")
+  )
+  p <- lane_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  # One pick splits every glyph column that can carry it...
+  expect_identical(p$plan[[1L]]$levels, c("Active", "Placebo"))
+  expect_identical(p$plan[[2L]]$levels, c("Active", "Placebo"))
+  # ...but a summary naming its own colour keeps it: on a swimlane the
+  # colour describes the events, not the table's series.
+  expect_identical(p$plan[[3L]]$levels, c("MILD", "MOD"))
+  # One legend, for the table's dimension.
+  expect_identical(p$color, "ARM")
+  expect_identical(p$series, c("Active", "Placebo"))
+
+  # The role reaches the preparer through the block's own `color` slot.
+  p2 <- rank_prepare(ae, group = "TERM", by = "TERM", summaries = S[1],
+                     color = "ARM")
+  expect_identical(p2$plan[[1L]]$levels, c("Active", "Placebo"))
+})

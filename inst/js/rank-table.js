@@ -844,7 +844,7 @@
         (s.col ? "(" + s.col + ")" : "()") + " · " + (s.show || "bar");
       case "dist": return (s.stat || "median_q1_q3") + "(" + (s.col || "?") +
         ")" + (s.show === "box" ? ", " + (s.whiskers || "tukey") + " whiskers" : "") +
-        (s.color ? ", by " + s.color : "") +
+
         " · " + (s.show || "box");
       case "field": return (s.col || "?") + " (distinct values)";
       case "series": return (s.col || "?") + " over " + (s.x || "?") +
@@ -1060,16 +1060,6 @@
           if ((s.show || "box") === "box") {
             selectCtl(body, "Whiskers", LANE_WHISKERS, s.whiskers || "tukey",
               function (v) { s.whiskers = v; commit(); ctx.rerender(); });
-          }
-          // The colour dimension (chart parity): one glyph per level inside
-          // the cell, sharing the column's scale. Text display has no glyph
-          // to split.
-          if ((s.show || "box") !== "text") {
-            selectCtl(body, "Color", "cat", s.color, function (v) {
-              s.color = v;
-              commit();
-              ctx.rerender();
-            });
           }
         } else if (t === "field") {
           selectCtl(body, "Column", "any", s.col, function (v) {
@@ -1290,7 +1280,12 @@
     if (Array.isArray(cfg.summaries) && cfg.summaries.length) {
       return {
         requiredMap: ["by"],
-        optionalMap: ["facet"],
+        // Colour is a TABLE-level dimension, like the chart's: one pick
+        // splits every glyph column that can carry it, and one legend
+        // names the levels. A swimlane that names its own colour (events
+        // by severity) keeps it -- there the colour describes the segments,
+        // not the table's series.
+        optionalMap: ["color", "facet"],
         mapping: [],
         aggTitle: null,
         customSections: ctx ? [{

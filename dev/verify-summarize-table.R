@@ -22,8 +22,8 @@
 #           (factor levels, else first appearance) puts End of Treatment
 #           mid-table here, because one subject discontinued early. Both
 #           live in the gear's Sort select. The two distribution columns
-#           also carry a COLOUR dimension (SEX): one glyph per level in the
-#           same cell, one shared scale per column, legend above the table.
+#           are split by the block's COLOUR dimension (SEX): one glyph per
+#           level in the same cell, one shared scale per column, one legend.
 # Nested view
 #   nested — subjects collapsed under SEX (by = c(SEX, USUBJID)): parents
 #           are expandable rows aggregated in their own pass (a parent's
@@ -112,12 +112,12 @@ serve(
           list(type = "simple", name = "Subjects", func = "count_distinct",
                col = "USUBJID", show = "bar"),
           list(type = "dist", name = "DBP (mmHg)", col = "AVAL",
-               stat = "median_q1_q3", whiskers = "tukey", show = "box",
-               color = "SEX"),
+               stat = "median_q1_q3", whiskers = "tukey", show = "box"),
           list(type = "dist", name = "Change from baseline", col = "CHG",
-               stat = "mean_ci95", show = "pointrange", color = "SEX"),
+               stat = "mean_ci95", show = "pointrange"),
           list(type = "field", name = "Arms", col = "TRT01A")
         ),
+        color = "SEX",
         sort_by = "AVISITN", sort_dir = "asc", drill = "AVISIT",
         title = "Diastolic BP by visit, in visit order",
         block_name = "Visits"

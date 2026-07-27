@@ -169,6 +169,7 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
     return(lane_prepare_summaries(
       data, eby, summaries, facet = rank_chr1(facet),
       facet_layout = rank_chr1(facet_layout) %||% "by_summary",
+      color = rank_chr1(color),
       sort_by = sort_by,
       sort_dir = sort_dir, top_n = top_n, scale_map = scale_map
     ))

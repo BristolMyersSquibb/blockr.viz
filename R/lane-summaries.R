@@ -136,6 +136,7 @@ lane_field_join <- function(x) {
 #' @noRd
 lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
                                    facet_layout = "by_summary",
+                                   color = NULL,
                                    sort_by = "value", sort_dir = "desc",
                                    top_n = NULL, scale_map = NULL) {
   bad <- function(msg) list(err = msg)
@@ -165,6 +166,12 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     if (is.null(col) || !col %in% names(data)) NULL else col
   }
   facet <- present(facet)
+  # The block's colour dimension: ONE pick for the whole table, the way the
+  # chart block has it. Every glyph that can carry a colour inherits it; a
+  # summary that names its own (the swimlane coloured by severity) keeps
+  # that one, because there the colour is an attribute of the events, not
+  # the table's series dimension.
+  color <- present(color)
   facet_levels <- character()
   if (!is.null(facet)) {
     facet_levels <- rank_levels(data[[facet]])
@@ -324,7 +331,8 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     # Level order and date-ness come from the FULL data, never a facet
     # slice: fills and formats must agree across a summary's copies.
     if (identical(s$type, "spans")) {
-      cc <- present(s$color)
+      cc <- present(s$color) %||% color
+      s$color <- cc
       s$.levels <- if (!is.null(cc)) rank_levels(data[[cc]])
       s$.date <- inherits(data[[rank_chr1(s$x)]], "Date")
     }
@@ -332,7 +340,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     # level inside the cell. Levels come from the FULL data so every copy
     # (and every row) assigns the same colour to the same level.
     if (identical(s$type, "dist") && !identical(s$show, "text")) {
-      cc <- present(s$color)
+      cc <- present(s$color) %||% color
       s$.color <- cc
       s$.levels <- if (!is.null(cc)) rank_levels(data[[cc]])
     }
@@ -426,17 +434,18 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   # split by colour. Colour identity must not ride on colour alone, and the
   # legend is where it is spelled out (the per-glyph tooltip names the level
   # too).
-  legend_s <- NULL
-  for (s in summaries) {
-    if (s$type %in% c("spans", "dist") && !is.null(present(s$color))) {
-      legend_s <- s
-      break
+  legend_col <- color
+  if (is.null(legend_col)) {
+    for (s in summaries) {
+      if (s$type %in% c("spans", "dist") && !is.null(present(s$color))) {
+        legend_col <- present(s$color)
+        break
+      }
     }
   }
-  series_lv <- if (!is.null(legend_s)) rank_levels(data[[legend_s$color]])
-  pal <- if (!is.null(legend_s)) {
-    rank_level_colors(scale_map, legend_s$color, series_lv,
-                      data[[present(legend_s$color)]])
+  series_lv <- if (!is.null(legend_col)) rank_levels(data[[legend_col]])
+  pal <- if (!is.null(legend_col)) {
+    rank_level_colors(scale_map, legend_col, series_lv, data[[legend_col]])
   } else {
     character()
   }
@@ -448,7 +457,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     series = if (length(series_lv) >= 2L) series_lv,
     palette = pal, facet_levels = facet_levels,
     denoms = c(all = nrow(data)), group = group, parent = parent,
-    color = if (length(series_lv) >= 2L) legend_s$color,
+    color = if (length(series_lv) >= 2L) legend_col,
     facet = facet, compare = NULL,
     folded = asm$folded, fold_max = asm$fold_max,
     n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows),
