@@ -176,15 +176,18 @@ rank_table_css <- function() {
   min-width: 320px;
 }
 /* Same-event emphasis, from hover (seg-hover + is-same) or from a live
-   search query (seg-search + is-hit): everything else drops to near-
-   invisible so ONLY the matched event carries colour. */
-.blockr-rank-container.seg-hover .lane-seg,
-.blockr-rank-container.seg-search .lane-seg {
-  opacity: 0.08;
-  transition: opacity 0.1s ease;
+   search query (seg-search + is-hit). NOT opacity: translucency stacks
+   multiplicatively, so a subject with many overlapping events re-darkens
+   however low the alpha. Instead the non-matches are repainted with ONE
+   flat opaque near-track shade (!important beats the inline fill) --
+   identical opaque rectangles overlap invisibly, so only the matched
+   event carries colour no matter how dense the timeline is. */
+.blockr-rank-container.seg-hover .lane-seg:not(.is-same),
+.blockr-rank-container.seg-search .lane-seg:not(.is-hit) {
+  background: color-mix(in srgb, var(--blockr-rank-track) 88%,
+                        var(--blockr-rank-tick)) !important;
+  transition: background 0.1s ease;
 }
-.blockr-rank-container.seg-hover .lane-seg.is-same,
-.blockr-rank-container.seg-search .lane-seg.is-hit { opacity: 1; }
 /* Sparkline: one inline SVG per cell, band under line, last-value dot.
    Taller than the other lanes: the trajectory's amplitude is the point. */
 .blockr-rank-spcell {
