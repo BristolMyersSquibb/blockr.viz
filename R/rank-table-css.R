@@ -15,7 +15,14 @@ rank_table_css <- function() {
 .blockr-rank-container {
   --blockr-rank-fill: var(--blockr-color-primary, #2a78d6);
   --blockr-rank-sub: color-mix(in srgb, var(--blockr-rank-fill) 45%, transparent);
-  --blockr-rank-track: var(--blockr-color-bg-subtle, #eeeeea);
+  /* The lane track. The design token alone (#eeeeea) is so close to the
+     surface that an empty lane reads as nothing at all -- and on a box or a
+     dot range the track IS the axis the glyph is read against, so it has to
+     be visible. Mixed toward the border token: still recessive, no longer
+     invisible. */
+  --blockr-rank-track: color-mix(in srgb,
+                                 var(--blockr-color-bg-subtle, #eeeeea) 80%,
+                                 var(--blockr-color-text-subtle, #898781));
   --blockr-rank-pos: var(--blockr-color-danger, #d03b3b);
   --blockr-rank-neg: var(--blockr-color-primary, #2a78d6);
   --blockr-rank-tick: var(--blockr-color-border, #c3c2b7);
@@ -38,6 +45,22 @@ rank_table_css <- function() {
    left-aligned like the label column, never numeric-formatted. */
 .blockr-rank-table td.blockr-rank-txt { white-space: nowrap; }
 .blockr-rank-table td.blockr-rank-label-col { white-space: nowrap; }
+/* The GLYPH columns own the slack. Auto table layout hands leftover width to
+   the unconstrained cells, which meant a wide panel only stretched the label
+   column while the bars and boxes stayed at their 26%. width:1% is the
+   shrink-to-fit idiom (with nowrap, the cell takes its content width and no
+   more), so widening the block lengthens the visuals instead. Label and text
+   cells still cap out and ellipsis rather than pushing the glyphs off. */
+.blockr-rank-table th.blockr-stub-header,
+.blockr-rank-table td.blockr-rank-label-col,
+.blockr-rank-table td.blockr-rank-txt,
+.blockr-rank-table td.blockr-rank-num { width: 1%; }
+.blockr-rank-table td.blockr-rank-label-col,
+.blockr-rank-table td.blockr-rank-txt {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 /* The in-bar value label: track left, value right in a FIXED slot (one width
    per column, in ch) so every row's track spans the same range -- a varying
    label width would silently rescale the bars against each other. */
@@ -120,6 +143,28 @@ rank_table_css <- function() {
   background: var(--blockr-rank-track);
 }
 .blockr-rank-lane i { position: absolute; }
+/* Colour-split distribution cell: the levels stack INSIDE the cell, so the
+   column stays one column and the row keeps its height (two 12px lanes plus
+   the gap still fit the 40px the sparkline already claims). Three or more
+   levels share the same budget by thinning. */
+.blockr-rank-multi {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.blockr-rank-multi .blockr-rank-lv {
+  min-width: 0;
+  /* The level's colour arrives as --blockr-rank-fill on this element. The
+     TRANSLUCENT token is derived from the fill, so it has to be re-derived
+     here as well -- otherwise every level's box body keeps the column
+     default and only the whiskers and the median tick take the colour. */
+  --blockr-rank-sub: color-mix(in srgb, var(--blockr-rank-fill) 45%,
+                               transparent);
+}
+.blockr-rank-multi .blockr-rank-lv:nth-child(n+3) .blockr-rank-lane,
+.blockr-rank-multi .blockr-rank-lv:nth-child(n+3) ~ .blockr-rank-lv
+  .blockr-rank-lane { height: 8px; }
 /* Box: whiskers OUTSIDE the body only (two segments), caps, a translucent
    body, a solid median tick. */
 .blockr-rank-boxcell .lane-wh {

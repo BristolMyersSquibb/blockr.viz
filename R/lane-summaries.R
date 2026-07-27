@@ -233,10 +233,28 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         if (identical(s$show, "box")) {
           stats$.w <- rank_chr1(s$whiskers) %||% "tukey"
         }
-        agg <- lane_stat_agg(slice, tkeys, rank_chr1(s$col), stats)
-        for (nm in setdiff(names(agg), tkeys)) {
-          target[[paste0(sid, "_", sub("^\\.", "", nm))]] <-
-            rank_match_col(target, agg, tkeys, nm)
+        put <- function(target, slice, prefix) {
+          agg <- lane_stat_agg(slice, tkeys, rank_chr1(s$col), stats)
+          for (nm in setdiff(names(agg), tkeys)) {
+            target[[paste0(prefix, "_", sub("^\\.", "", nm))]] <-
+              rank_match_col(target, agg, tkeys, nm)
+          }
+          target
+        }
+        # The pooled glyph is computed either way: it is the column's sort
+        # key and its fallback when no colour splits it.
+        target <- put(target, slice, sid)
+        # The colour dimension (chart parity: colour splits a distribution
+        # into one glyph per level). Each level gets its own stat columns;
+        # a level with no rows in this group stays NA and draws no lane.
+        cc <- s$.color
+        if (!is.null(cc)) {
+          for (j in seq_along(s$.levels)) {
+            lv <- s$.levels[[j]]
+            target <- put(target, slice[as.character(slice[[cc]]) == lv, ,
+                                        drop = FALSE],
+                          paste0(sid, "_L", j))
+          }
         }
         target
       },
@@ -309,6 +327,14 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       cc <- present(s$color)
       s$.levels <- if (!is.null(cc)) rank_levels(data[[cc]])
       s$.date <- inherits(data[[rank_chr1(s$x)]], "Date")
+    }
+    # A distribution can carry the same colour dimension: one glyph per
+    # level inside the cell. Levels come from the FULL data so every copy
+    # (and every row) assigns the same colour to the same level.
+    if (identical(s$type, "dist") && !identical(s$show, "text")) {
+      cc <- present(s$color)
+      s$.color <- cc
+      s$.levels <- if (!is.null(cc)) rank_levels(data[[cc]])
     }
     if (identical(s$type, "series")) {
       s$.date <- inherits(data[[rank_chr1(s$x)]], "Date")
@@ -396,11 +422,13 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     )
   }
 
-  # Legend: the first colour-mapped spans summary (colour identity must not
-  # ride on colour alone).
+  # Legend: the first colour-mapped summary -- a swimlane, or a distribution
+  # split by colour. Colour identity must not ride on colour alone, and the
+  # legend is where it is spelled out (the per-glyph tooltip names the level
+  # too).
   legend_s <- NULL
   for (s in summaries) {
-    if (identical(s$type, "spans") && !is.null(present(s$color))) {
+    if (s$type %in% c("spans", "dist") && !is.null(present(s$color))) {
       legend_s <- s
       break
     }
@@ -426,6 +454,28 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows),
     note = note, pct_ok = FALSE, func = "identity",
     facet_spans = facet_spans
+  )
+}
+
+#' The colour dimension of a distribution column: the per-level statistic
+#' columns, the level names and their colours. Empty (no extra plan fields)
+#' when the summary has no colour, so an uncoloured column is untouched.
+#'
+#' Colours come from the same resolver as every other mark
+#' (`rank_level_colors`: board scale map -> theme -> palette), so a box
+#' split by SEX matches the chart's boxplot split by SEX.
+#' @noRd
+lane_color_split <- function(s, sid, stats, data, scale_map) {
+  lv <- s$.levels
+  if (is.null(s$.color) || !length(lv)) return(list())
+  list(
+    levels = lv,
+    lcols = lapply(seq_along(lv), function(j) {
+      stats::setNames(paste0(sid, "_L", j, "_", stats), stats)
+    }),
+    fills = unname(rank_level_colors(scale_map, s$.color, lv,
+                                     data[[s$.color]])[lv]),
+    cvar = s$.color
   )
 }
 
@@ -468,7 +518,8 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                    cols = c(bc = paste0(sid, "_bc"), bl = paste0(sid, "_bl"),
                             bh = paste0(sid, "_bh"), n = paste0(sid, "_n")),
                    words = list(center = meta$center, range = meta$range),
-                   sub_label = sub %||% meta$label, show_val = TRUE))
+                   sub_label = sub %||% meta$label, show_val = TRUE),
+        lane_color_split(s, sid, c("bc", "bl", "bh", "n"), data, scale_map))
     } else {
       wstat <- rank_chr1(s$whiskers) %||% "tukey"
       wmeta <- LANE_STAT_META[[wstat]] %||% LANE_STAT_META$tukey
@@ -478,7 +529,9 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                             wl = paste0(sid, "_wl"), wh = paste0(sid, "_wh")),
                    words = list(center = meta$center, range = meta$range,
                                 whisk = wmeta$range),
-                   sub_label = sub %||% meta$label, show_val = TRUE))
+                   sub_label = sub %||% meta$label, show_val = TRUE),
+        lane_color_split(s, sid, c("bc", "bl", "bh", "n", "wl", "wh"), data,
+                         scale_map))
     }
   } else if (identical(s$type, "field")) {
     c(base, list(kind = "num", key = paste0(sid, "_t"), raw = TRUE,
@@ -649,7 +702,10 @@ lane_summary_domains <- function(plan, rows) {
         cols <- if (identical(kind, "bar")) {
           p$key
         } else {
-          unname(p$cols[setdiff(names(p$cols), "n")])
+          pos <- function(cm) unname(cm[setdiff(names(cm), "n")])
+          # A colour-split column's levels share ONE scale: every level's
+          # glyph is read against the same axis, or the split lies.
+          c(pos(p$cols), unlist(lapply(p$lcols %||% list(), pos)))
         }
         for (cn in cols) vals <- c(vals, rows[[cn]])
       }

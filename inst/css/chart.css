@@ -654,10 +654,20 @@
 /* The table's .blockr-dl-xlsx download chrome, restated here because a
    chart-only board never loads the table dep's CSS (html-table.R). The
    .dd-chart-dl compound selector also outranks the table rules where both
-   sheets load, so the 26px sizing (matching the gear button beside it)
-   wins over the table toolbar's 30px. */
+   sheets load, so this block -- not the table sheet -- decides the size. */
 .dd-card .blockr-gear-header {
   gap: 6px;
+}
+
+/* Both header controls take the design-system control height, the same
+   30px the table/rank gear header uses (table.css, "Control row"). The
+   pair was formerly pinned to the gear's stand-alone 26px, which read as
+   undersized beside every other block's header -- and where the table
+   sheet also loads it split the pair, sizing the download at 30 and
+   leaving the gear at 26. */
+.dd-card .blockr-gear-header .blockr-gear-btn {
+  width: var(--blockr-control-h-sm, 30px);
+  height: var(--blockr-control-h-sm, 30px);
 }
 
 .dd-card a.blockr-dl-xlsx.dd-chart-dl {
@@ -666,8 +676,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: var(--blockr-control-h-sm, 30px);
+  height: var(--blockr-control-h-sm, 30px);
   flex: 0 0 auto;
   padding: 0;
   margin: 0;

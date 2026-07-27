@@ -501,6 +501,24 @@
     return s + "</div>";
   }
 
+  // A colour-split distribution cell: one lane per level, in level order,
+  // each in the level's colour. A level with no rows in this group draws no
+  // lane at all (a table grouped by subject reads as one coloured glyph per
+  // row). The colour rides as a CSS custom property on the wrapper, so the
+  // glyph emitters are reused untouched. Byte-identical to rank_multi_html.
+  function multiHtml(c, i) {
+    var s = '<div class="blockr-rank-multi">';
+    for (var j = 0; j < c.lv.length; j++) {
+      var g = c.lv[j];
+      var key = c.kind === "box" ? g.bc[i] : g.c[i];
+      if (key == null) continue;
+      s += '<div class="blockr-rank-lv" style="--blockr-rank-fill:' +
+        c.fills[j] + '">' +
+        (c.kind === "box" ? boxHtml(g, i) : prHtml(g, i)) + "</div>";
+    }
+    return s + "</div>";
+  }
+
   /** Assemble the whole tbody from the cell model. */
   function assembleBody(p) {
     var out = [];
@@ -539,12 +557,12 @@
         } else if (c.kind === "bardiv") {
           row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
             barWrap(dvHtml(c.w[i], c.pos[i]), c, i) + "</td>";
-        } else if (c.kind === "box") {
+        } else if (c.kind === "box" || c.kind === "pointrange") {
+          var glyph = c.multi
+            ? multiHtml(c, i)
+            : (c.kind === "box" ? boxHtml(c, i) : prHtml(c, i));
           row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(boxHtml(c, i), c, i) + "</td>";
-        } else if (c.kind === "pointrange") {
-          row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(prHtml(c, i), c, i) + "</td>";
+            barWrap(glyph, c, i) + "</td>";
         } else if (c.kind === "interval") {
           row += '<td class="blockr-rank-bar-col' +
             (c.lg ? " blockr-rank-wide" : "") + '"' + dataV(c.v[i]) + ">" +
@@ -826,6 +844,7 @@
         (s.col ? "(" + s.col + ")" : "()") + " · " + (s.show || "bar");
       case "dist": return (s.stat || "median_q1_q3") + "(" + (s.col || "?") +
         ")" + (s.show === "box" ? ", " + (s.whiskers || "tukey") + " whiskers" : "") +
+        (s.color ? ", by " + s.color : "") +
         " · " + (s.show || "box");
       case "field": return (s.col || "?") + " (distinct values)";
       case "series": return (s.col || "?") + " over " + (s.x || "?") +
@@ -1041,6 +1060,16 @@
           if ((s.show || "box") === "box") {
             selectCtl(body, "Whiskers", LANE_WHISKERS, s.whiskers || "tukey",
               function (v) { s.whiskers = v; commit(); ctx.rerender(); });
+          }
+          // The colour dimension (chart parity): one glyph per level inside
+          // the cell, sharing the column's scale. Text display has no glyph
+          // to split.
+          if ((s.show || "box") !== "text") {
+            selectCtl(body, "Color", "cat", s.color, function (v) {
+              s.color = v;
+              commit();
+              ctx.rerender();
+            });
           }
         } else if (t === "field") {
           selectCtl(body, "Column", "any", s.col, function (v) {
