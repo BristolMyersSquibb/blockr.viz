@@ -410,12 +410,15 @@
                 optionsBy: {
                   aggregated: [
                     { value: 'value', label: 'By value' },
-                    { value: 'alpha', label: 'Alphabetical' },
+                    // Factor levels, else first-appearance in the rows — the
+                    // order the data itself carries (visits, dose groups).
+                    { value: 'data', label: 'Data order' },
+                    { value: 'alpha', label: 'A–Z' },
                     '#num'
                   ],
                   timeline: [
                     { value: 'onset', label: 'By onset' },
-                    { value: 'alpha', label: 'Alphabetical' },
+                    { value: 'alpha', label: 'A–Z' },
                     '#num'
                   ]
                 } },
@@ -913,6 +916,12 @@
       // left-to-right. Bar keeps its horizontal default (long AE-term
       // labels); boards that explicitly saved an orientation keep it.
       if (!cfg.orientation) cfg.orientation = 'vertical';
+      // ...and default to the data's own group order, ascending. A box /
+      // point range over visits, dose groups or arms almost never wants a
+      // value sort (bar keeps "value" — the top-N reading). Boards that
+      // saved a sort keep it.
+      if (!cfg.sort_by) cfg.sort_by = 'data';
+      if (!cfg.sort_dir) cfg.sort_dir = 'asc';
       return true;
     }
 
@@ -2704,13 +2713,20 @@
       // the raw data. This overrides sort_by for this mode.
       const cumulative = this._baselineMode() === 'cumulative';
 
-      // Ordering for the category axis. "alpha" = group name;
-      // "value" = total of the computed value across color stacks;
-      // otherwise, a raw-data column whose minimum per group orders the axis.
+      // Ordering for the category axis. "data" = the data's own order;
+      // "alpha" = group name; "value" = total of the computed value across
+      // color stacks; otherwise, a raw-data column whose minimum per group
+      // orders the axis.
       /** @param {any[]} facetData */
       const orderGroups = (facetData) => {
         const groups = [...new Set(facetData.map(a => a.group))];
-        if (cumulative) {
+        // Data order: factor levels of the group column when present (the
+        // data-level "order lives in factors" contract), else first-seen
+        // order in the raw rows — ADaM arrives visit-sorted, so a character
+        // AVISIT still reads chronologically without an upstream factor
+        // mutate. Used by the cumulative bridge (always: a value sort would
+        // scramble the running path) and by sort_by = "data".
+        const dataOrder = () => {
           const meta = /** @type {any} */ ((this.columns || []).find(c => c.name === this.config.group));
           if (meta && Array.isArray(meta.levels) && meta.levels.length) {
             const idx = new Map(meta.levels.map((/** @type {any} */ l, /** @type {number} */ i) => [String(l), i]));
@@ -2718,7 +2734,6 @@
             return meta.levels.map(String).filter((/** @type {string} */ l) => present.has(l))
               .concat(groups.filter(g => !idx.has(g)));
           }
-          // First-seen order in the raw data (stable bridge ordering).
           /** @type {string[]} */
           const seen = [];
           const seenSet = new Set();
@@ -2730,6 +2745,11 @@
           const present = new Set(groups);
           return seen.filter(g => present.has(g))
             .concat(groups.filter(g => !seenSet.has(g)));
+        };
+        if (cumulative) return dataOrder();
+        if (sortBy === 'data') {
+          const ord = dataOrder();
+          return sortDir < 0 ? ord.reverse() : ord;
         }
         if (sortBy === 'alpha') {
           // Factor columns: "alpha" means level order (data-level contract).

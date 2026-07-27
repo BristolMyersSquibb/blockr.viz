@@ -371,10 +371,14 @@ chart_arguments <- function() {
     ),
     sort_by = new_arg_spec(
       paste0(
-        "Category-axis ordering for aggregated charts. \"value\" ",
-        "(default), \"alpha\", or a column name. For timeline: ",
-        "\"onset\" (default), \"alpha\", or a column name. Ignored for ",
-        "individual (scatter/line) charts."
+        "Category-axis ordering for aggregated charts. \"value\" (default ",
+        "for bar/pie/treemap/radar), \"data\" (default for boxplot/",
+        "pointrange: the data's own order — factor levels when present, ",
+        "else first appearance in the rows, so visits/dose groups keep ",
+        "their order), \"alpha\", or a column name (per-group minimum of ",
+        "that column, e.g. \"AVISITN\"). For timeline: \"onset\" (default), ",
+        "\"alpha\", or a column name. Ignored for individual (scatter/line) ",
+        "charts."
       ),
       example = "value",
       type = arg_string()

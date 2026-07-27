@@ -114,7 +114,11 @@ aggregated chart this should be a column constant within a group.}
 \item{sort_by}{Category ordering on the axis. Allowed values depend on
 the chart family:
 \itemize{
-\item Aggregated: \code{"value"} (default), \code{"alpha"}, or a column name.
+\item Aggregated: \code{"value"} (default for bar/pie/treemap/radar), \code{"data"}
+(default for the distribution marks; factor levels when the group
+column carries them, else first appearance in the rows -- visits and
+dose groups keep their own order), \code{"alpha"}, or a column name (order
+groups by that column's per-group minimum, e.g. \code{"AVISITN"}).
 \item Timeline: \code{"onset"} (default), \code{"alpha"}, or a column name.
 \item Individual: ignored.
 }}

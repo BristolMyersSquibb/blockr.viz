@@ -68,7 +68,11 @@
 #'   aggregated chart this should be a column constant within a group.
 #' @param sort_by Category ordering on the axis. Allowed values depend on
 #'   the chart family:
-#'   * Aggregated: `"value"` (default), `"alpha"`, or a column name.
+#'   * Aggregated: `"value"` (default for bar/pie/treemap/radar), `"data"`
+#'     (default for the distribution marks; factor levels when the group
+#'     column carries them, else first appearance in the rows -- visits and
+#'     dose groups keep their own order), `"alpha"`, or a column name (order
+#'     groups by that column's per-group minimum, e.g. `"AVISITN"`).
 #'   * Timeline: `"onset"` (default), `"alpha"`, or a column name.
 #'   * Individual: ignored.
 #' @param sort_dir `"asc"` or `"desc"`. Reverses the `sort_by` ordering.
