@@ -17,6 +17,9 @@ new_lane_chart_block(
   xend = NULL,
   lo = NULL,
   hi = NULL,
+  summaries = list(),
+  by = NULL,
+  facet_layout = "by_summary",
   parent = NULL,
   color = NULL,
   bar_mode = "stacked",
@@ -78,6 +81,28 @@ range), drawn under the line. For the sparkline, \code{func} set to one of
 companion bar of that reduction beside the trajectory and RANKS the
 rows by it ("highest mean, plus the trajectory"); any other \code{func}
 means no bar, rows ranked by last value.}
+
+\item{summaries}{The summarize-table path
+(\verb{_blockr.design/open/summarize-table/}): an ordered list of typed
+summary rows, each a \code{list(type =, ...)}. Non-empty, it takes over
+from \code{mark} (which stays as sugar for the one-glyph case). Types:
+\code{simple} (\code{func}, \code{col}; show \code{"bar"} or \code{"number"}), \code{dist} (\code{col},
+\code{stat}, box-only \code{whiskers}; show \code{"box"}, \code{"pointrange"} or
+\code{"text"}), \code{field} (\code{col}; the group's distinct values joined, with a
+fold cap -- never an arbitrary first row), \code{series} (\code{x}, \code{col},
+optional \code{band = c(lo, hi)}; a sparkline), \code{spans} (\code{x}, \code{xend},
+optional \code{color}; a swimlane), \code{expr} (free R code over the group's
+rows; text). Each row takes \code{name}, \code{show} and
+\code{scope = "cell"} (repeats per facet level) or \code{"pooled"} (computed
+over all the group's rows, rendered once -- the "Overall" column).}
+
+\item{by}{Grouping columns for the summaries path, outer to inner (at
+most two; the outer becomes the expandable parent). Unset, \code{group} /
+\code{parent} fill in.}
+
+\item{facet_layout}{Facet column order on the summaries path:
+\code{"by_summary"} (each summary's level copies adjacent, the default).
+\code{"by_level"} is reserved.}
 
 \item{parent}{Optional outer grouping column (e.g. system organ class over
 preferred term): parents become expandable rows with children indented

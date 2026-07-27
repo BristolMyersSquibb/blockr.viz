@@ -181,6 +181,138 @@ rank_table_css <- function() {
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 2px var(--blockr-color-bg, #fff);
 }
+/* The summarize-table columns editor (the gear's custom section): one row
+   per summary, expand to edit. Chips are categorical identity of the ROW
+   TYPE (muted pastels, not the data palette). */
+.lane-summaries { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+.lane-sum-row {
+  border: 1px solid var(--blockr-color-border, #e1e0d9);
+  border-radius: 5px;
+  background: var(--blockr-color-bg, #fff);
+}
+.lane-sum-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  cursor: pointer;
+  min-width: 0;
+}
+.lane-sum-chip {
+  font-size: 0.64rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  padding: 2px 6px;
+  flex: none;
+}
+.lane-sum-chip-simple { background: #e3edfa; color: #1d5cab; }
+.lane-sum-chip-dist { background: #ece5f7; color: #5b3b9e; }
+.lane-sum-chip-field { background: #efeee8; color: #6b6a63; }
+.lane-sum-chip-series { background: #e0f0ee; color: #17635a; }
+.lane-sum-chip-spans { background: #fbeadd; color: #9a5416; }
+.lane-sum-chip-expr { background: #f6e8ec; color: #93314f; }
+.lane-sum-name { font-weight: 500; font-size: 0.82rem; flex: none; }
+.lane-sum-line {
+  color: var(--blockr-color-text-subtle, #898781);
+  font-size: 0.76rem;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lane-sum-rm, .lane-sum-move {
+  border: 0;
+  background: none;
+  color: #b6b4aa;
+  cursor: pointer;
+  padding: 0 3px;
+  flex: none;
+}
+.lane-sum-rm:hover { color: var(--blockr-color-danger, #d03b3b); }
+.lane-sum-move:hover { color: var(--blockr-color-text-primary, #111827); }
+.lane-sum-move:disabled { opacity: 0.3; cursor: default; }
+.lane-sum-body {
+  border-top: 1px solid var(--blockr-color-bg-subtle, #f0efe9);
+  padding: 9px 11px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+.lane-sum-ctl { display: flex; flex-direction: column; gap: 3px; }
+.lane-sum-ctl-wide { flex: 1 1 100%; }
+.lane-sum-name-input {
+  height: 28px;
+  border: 1px solid var(--blockr-color-border, #e1e0d9);
+  border-radius: 4px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 0.8rem;
+  background: var(--blockr-color-bg-input, #f9fafb);
+}
+.lane-sum-seg {
+  display: inline-flex;
+  border: 1px solid var(--blockr-color-border, #e1e0d9);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.lane-sum-seg-btn {
+  border: 0;
+  background: var(--blockr-color-bg, #fff);
+  color: var(--blockr-color-text-muted, #52514e);
+  font-size: 0.76rem;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-left: 1px solid var(--blockr-color-border, #e1e0d9);
+}
+.lane-sum-seg-btn:first-child { border-left: 0; }
+.lane-sum-seg-btn.is-on {
+  background: var(--blockr-color-primary, #2a78d6);
+  color: #fff;
+}
+.lane-sum-tiles { display: flex; gap: 5px; }
+.lane-sum-addrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 7px;
+  justify-content: space-between;
+}
+.lane-sum-add-types { display: flex; flex-wrap: wrap; gap: 5px; }
+.lane-sum-add {
+  border: 1px solid var(--blockr-color-border, #e1e0d9);
+  border-radius: 4px;
+  background: var(--blockr-color-bg, #fff);
+  color: var(--blockr-color-text-muted, #52514e);
+  font-size: 0.76rem;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.lane-sum-add:hover {
+  border-color: var(--blockr-color-primary, #2a78d6);
+  color: var(--blockr-color-primary, #2a78d6);
+}
+.lane-sum-presets { display: flex; flex-wrap: wrap; gap: 5px; }
+.lane-sum-preset {
+  border: 1px dashed var(--blockr-color-border, #e1e0d9);
+  border-radius: 4px;
+  background: none;
+  color: var(--blockr-color-text-subtle, #898781);
+  font-size: 0.76rem;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+.lane-sum-preset:hover {
+  border-color: var(--blockr-color-primary, #2a78d6);
+  color: var(--blockr-color-primary, #2a78d6);
+}
+.lane-sum-hint {
+  font-size: 0.74rem;
+  color: var(--blockr-color-text-subtle, #898781);
+  margin-top: 5px;
+}
+
 /* The cursor readout (interval track / sparkline points): one fixed element
    per page, positioned by rank-table.js. */
 .blockr-lane-tip {

@@ -49,16 +49,22 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
 
   # NA stays NA: a no-value cell (the identity measure's absent facet) draws
   # NO fill at all, where 0 draws the visible zero-width sliver.
-  pct_w <- function(v) {
-    w <- if (is.finite(mx) && mx > 0) {
-      pmax(0, pmin(100, abs(v) / mx * 100))
-    } else {
-      rep(0, length(v))
+  # Parametric over the scale: summaries-path plan entries carry their own
+  # domain (mixed marks must not share one), single-mark paths use the
+  # prep-level scale.
+  mk_pct_w <- function(e_mx) {
+    function(v) {
+      w <- if (is.finite(e_mx) && e_mx > 0) {
+        pmax(0, pmin(100, abs(v) / e_mx * 100))
+      } else {
+        rep(0, length(v))
+      }
+      w[!is.finite(w)] <- 0
+      w[is.na(v)] <- NA_real_
+      round(w, 2L)
     }
-    w[!is.finite(w)] <- 0
-    w[is.na(v)] <- NA_real_
-    round(w, 2L)
   }
+  pct_w <- mk_pct_w(mx)
 
   # The in-bar value label: the raw measure (never the width percentage),
   # with the counting measures' "(43%)" tail when the plan carries a base.
@@ -82,22 +88,34 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
   # two consumers never subtract floats themselves (String(24.13 - 10.5) in
   # JS is not "13.63").
   mn <- prep$bar_min %||% 0
-  rng <- if (is.finite(mx) && is.finite(mn) && mx > mn) mx - mn else NA_real_
-  pos_w <- function(v) {
-    w <- if (is.finite(rng)) (v - mn) / rng * 100 else rep(0, length(v))
-    w[!is.finite(w) & !is.na(v)] <- 0
-    w[is.na(v)] <- NA_real_
-    round(pmax(0, pmin(100, w)), 2L)
-  }
-  span_w <- function(a, b) {
-    w <- if (is.finite(rng)) (b - a) / rng * 100 else rep(0, length(a))
-    w[!is.finite(w) & !(is.na(a) | is.na(b))] <- 0
-    w[is.na(a) | is.na(b)] <- NA_real_
-    round(pmax(0, pmin(100, w)), 2L)
+  mk_bounds <- function(e_mn, e_mx) {
+    rng <- if (is.finite(e_mx) && is.finite(e_mn) && e_mx > e_mn) {
+      e_mx - e_mn
+    } else {
+      NA_real_
+    }
+    list(
+      pos = function(v) {
+        w <- if (is.finite(rng)) (v - e_mn) / rng * 100 else rep(0, length(v))
+        w[!is.finite(w) & !is.na(v)] <- 0
+        w[is.na(v)] <- NA_real_
+        round(pmax(0, pmin(100, w)), 2L)
+      },
+      span = function(a, b) {
+        w <- if (is.finite(rng)) (b - a) / rng * 100 else rep(0, length(a))
+        w[!is.finite(w) & !(is.na(a) | is.na(b))] <- 0
+        w[is.na(a) | is.na(b)] <- NA_real_
+        round(pmax(0, pmin(100, w)), 2L)
+      }
+    )
   }
 
   cols <- lapply(seq_along(plan), function(i) {
     p <- plan[[i]]
+    # Per-entry scale, falling back to the prep-level one.
+    b <- mk_bounds(p$dmin %||% mn, p$dmax %||% mx)
+    pos_w <- b$pos
+    span_w <- b$span
     if (identical(p$kind, "bar")) {
       vraw <- rows[[p$key]]
       lab <- val_parts(p, vraw)
@@ -105,8 +123,8 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       if (!is.null(p$denom) && is.finite(p$denom) && p$denom > 0) {
         v <- v / p$denom * 100
       }
-      c(list(kind = "bar", w = pct_w(v), v = sortv(v), fill = p$fill,
-             sub = rows$.level > 0L), lab)
+      c(list(kind = "bar", w = mk_pct_w(p$dmax %||% mx)(v), v = sortv(v),
+             fill = p$fill, sub = rows$.level > 0L), lab)
     } else if (identical(p$kind, "barsplit")) {
       prefix <- p$prefix %||% ".s_"
       mat <- vapply(p$series, function(lv) {
@@ -206,19 +224,19 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     } else if (identical(p$kind, "interval")) {
       # Swimlane segments: [left, width, fill-index] triples per row, plus a
       # pre-escaped tooltip per segment. The domain is the observed x/xend
-      # range (prep$dom), not zero-based.
-      segs <- rows$.segs
+      # range (per entry on the summaries path, prep-level otherwise),
+      # not zero-based.
+      segs <- rows[[p$segs %||% ".segs"]]
+      dom <- p$dom %||% prep$dom
+      dd <- isTRUE(p$dom_date %||% prep$dom_date)
+      bb <- mk_bounds(dom[[1L]], dom[[2L]])
       fmt_d <- function(v) {
-        if (isTRUE(prep$dom_date)) {
-          format(as.Date(v, origin = "1970-01-01"))
-        } else {
-          lane_fmt(v)
-        }
+        if (dd) format(as.Date(v, origin = "1970-01-01")) else lane_fmt(v)
       }
-      lv <- prep$series
+      lv <- p$levels %||% prep$series
       out_segs <- lapply(segs, function(ss) {
         lapply(ss, function(sg) {
-          list(pos_w(sg$s)[[1L]], span_w(sg$s, sg$e)[[1L]], sg$f)
+          list(bb$pos(sg$s)[[1L]], bb$span(sg$s, sg$e)[[1L]], sg$f)
         })
       })
       out_tips <- lapply(segs, function(ss) {
@@ -230,30 +248,30 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         }, character(1L))
       })
       list(kind = "interval", segs = out_segs, tips = out_tips,
-           fills = as.character(prep$fills),
-           d0 = round(prep$dom[[1L]], 4L), d1 = round(prep$dom[[2L]], 4L),
-           dd = isTRUE(prep$dom_date), v = sortv(rows$.v))
+           fills = as.character(p$fills %||% prep$fills),
+           d0 = round(dom[[1L]], 4L), d1 = round(dom[[2L]], 4L),
+           dd = dd, v = sortv(rows[[p$key]] %||% rows$.v))
     } else if (identical(p$kind, "sparkline")) {
       # One inline SVG per cell, geometry PRE-PRINTED as point strings so the
       # emitters paste rather than format floats. viewBox 0 0 100 28, 2px of
       # vertical padding; y grows downward.
       H <- 28
       PAD <- 2
-      xd <- prep$dom
-      yd <- prep$ydom
+      xd <- p$dom %||% prep$dom
+      yd <- p$ydom %||% prep$ydom
       xf <- function(v) round((v - xd[[1L]]) / (xd[[2L]] - xd[[1L]]) * 100, 2L)
       yf <- function(v) {
         round(PAD + (H - 2 * PAD) *
                 (1 - (v - yd[[1L]]) / (yd[[2L]] - yd[[1L]])), 2L)
       }
       fmt_x <- function(v) {
-        if (isTRUE(prep$dom_date)) {
+        if (isTRUE(p$dom_date %||% prep$dom_date)) {
           format(as.Date(v, origin = "1970-01-01"))
         } else {
           lane_fmt(v)
         }
       }
-      pts <- rows$.pts
+      pts <- rows[[p$pts %||% ".pts"]]
       one_row <- function(p1) {
         n1 <- length(p1$y)
         if (!n1) {
@@ -282,18 +300,39 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       pull <- function(nm) unlist(lapply(per, `[[`, nm), use.names = FALSE)
       # The sparkline column always sorts (and labels) by the LAST value;
       # with a companion rank bar, `.v` carries that bar's aggregate instead.
-      last_y <- rows$.last %||% rows$.v
+      last_y <- rows[[p$key %||% ".last"]] %||% rows$.last %||% rows$.v
       lab <- if (isTRUE(p$show_val)) {
         disp <- lane_fmt(last_y)
         list(disp = disp, dw = max(c(1L, nchar(disp))))
       }
       list(kind = "sparkline", pl = pull("pl"), bd = pull("bd"),
            dx = pull("dx"), dy = pull("dy"), xs = pull("xs"),
-           ys = pull("ys"), nn = rows$.n, v = sortv(last_y)) |> c(lab)
+           ys = pull("ys"),
+           nn = vapply(pts, function(p1) length(p1$y), integer(1L)),
+           v = sortv(last_y)) |> c(lab)
     } else if (isTRUE(p$raw) && isTRUE(p$text)) {
       # A raw text field: the value IS the display (escaped once, here, so
       # both consumers paste it as-is), and the sort key is the text itself.
       v <- as.character(rows[[p$key]])
+      v[is.na(v)] <- ""
+      list(kind = "num", text = TRUE, v = v, disp = rank_esc(v))
+    } else if (identical(p$dispkey, "dist_text")) {
+      # A distribution shown as TEXT: "10.4 (7.6–13.2)". Sorts numerically
+      # by the center (a text sort would rank "9" above "10").
+      cc <- rows[[p$key]]
+      ll <- rows[[p$lo]]
+      hh <- rows[[p$hi]]
+      disp <- ifelse(
+        is.na(cc), "",
+        paste0(lane_fmt(cc),
+               ifelse(is.na(ll) | is.na(hh), "",
+                      paste0(" (", lane_fmt(ll), "–", lane_fmt(hh), ")")))
+      )
+      list(kind = "num", v = sortv(cc), disp = disp)
+    } else if (!is.null(p$alt_text) && is.null(rows[[p$key]])) {
+      # An expr summary that evaluated to text: fall back to the text
+      # column, sorted as text.
+      v <- as.character(rows[[p$alt_text]])
       v[is.na(v)] <- ""
       list(kind = "num", text = TRUE, v = v, disp = rank_esc(v))
     } else {

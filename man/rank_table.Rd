@@ -17,6 +17,9 @@ rank_table(
   xend = NULL,
   lo = NULL,
   hi = NULL,
+  summaries = list(),
+  by = NULL,
+  facet_layout = "by_summary",
   parent = NULL,
   color = NULL,
   bar_mode = "stacked",
@@ -59,6 +62,11 @@ marks (see \code{\link[=new_lane_chart_block]{new_lane_chart_block()}}).}
 \code{x} alone is the within-row order.}
 
 \item{lo, hi}{Sparkline mark: optional band columns.}
+
+\item{summaries, by, facet_layout}{The summarize-table path: \code{summaries} is
+an ordered list of typed summary rows (see \code{\link[=new_lane_chart_block]{new_lane_chart_block()}});
+non-empty, it takes over from \code{mark}. \code{by} is the grouping vector
+(outer -> inner, at most two).}
 
 \item{parent}{Optional outer grouping column: parents become expandable
 rows with their children indented under them. A parent is aggregated in

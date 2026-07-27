@@ -127,11 +127,27 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
                          cols = NULL, fields = NULL, sort_by = "value",
                          sort_dir = "desc", top_n = NULL, scale_map = NULL,
                          mark = "bar", summary = NULL, whiskers = "tukey",
-                         x = NULL, xend = NULL, lo = NULL, hi = NULL) {
+                         x = NULL, xend = NULL, lo = NULL, hi = NULL,
+                         summaries = list(), by = NULL,
+                         facet_layout = "by_summary") {
   bad <- function(msg) list(err = msg)
 
   if (!is.data.frame(data)) return(bad("No data"))
   if (!nrow(data)) return(bad("No rows to display"))
+
+  # The summarize-table path (_blockr.design/open/summarize-table/): a
+  # non-empty `summaries` list takes over, `mark` and the flat mappings
+  # stay as sugar for the one-glyph case. `by` (outer -> inner) wins over
+  # group/parent; unset, they fill in.
+  if (is.list(summaries) && length(summaries)) {
+    eby <- as.character(by %||% character())
+    eby <- eby[nzchar(eby)]
+    if (!length(eby)) eby <- c(rank_chr1(parent), rank_chr1(group))
+    return(lane_prepare_summaries(
+      data, eby, summaries, facet = rank_chr1(facet), sort_by = sort_by,
+      sort_dir = sort_dir, top_n = top_n, scale_map = scale_map
+    ))
+  }
 
   group <- rank_chr1(group)
   if (is.null(group)) return(bad("Pick a Group column in the gear"))

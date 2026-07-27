@@ -320,6 +320,15 @@
         pop.appendChild(chip);
       }
 
+      // Host-owned custom sections (e.g. the lane chart's summarize-table
+      // column list): the engine provides the section chrome, the host
+      // renders the body. Rendered ABOVE Mapping — the summaries ARE the
+      // block's substance; grouping follows them.
+      for (const cs of (spec.customSections || [])) {
+        const sec = this._sectionEl(cs.title);
+        cs.render(sec);
+      }
+
       // Mapping: required rows, then any always-on mapping controls (the
       // chart's value + aggregation), shown-optional rows, add menu. Skipped
       // whole if the block has no mapping roles at all (e.g. the table).

@@ -41,6 +41,25 @@
 #'   companion bar of that reduction beside the trajectory and RANKS the
 #'   rows by it ("highest mean, plus the trajectory"); any other `func`
 #'   means no bar, rows ranked by last value.
+#' @param summaries The summarize-table path
+#'   (`_blockr.design/open/summarize-table/`): an ordered list of typed
+#'   summary rows, each a `list(type =, ...)`. Non-empty, it takes over
+#'   from `mark` (which stays as sugar for the one-glyph case). Types:
+#'   `simple` (`func`, `col`; show `"bar"` or `"number"`), `dist` (`col`,
+#'   `stat`, box-only `whiskers`; show `"box"`, `"pointrange"` or
+#'   `"text"`), `field` (`col`; the group's distinct values joined, with a
+#'   fold cap -- never an arbitrary first row), `series` (`x`, `col`,
+#'   optional `band = c(lo, hi)`; a sparkline), `spans` (`x`, `xend`,
+#'   optional `color`; a swimlane), `expr` (free R code over the group's
+#'   rows; text). Each row takes `name`, `show` and
+#'   `scope = "cell"` (repeats per facet level) or `"pooled"` (computed
+#'   over all the group's rows, rendered once -- the "Overall" column).
+#' @param by Grouping columns for the summaries path, outer to inner (at
+#'   most two; the outer becomes the expandable parent). Unset, `group` /
+#'   `parent` fill in.
+#' @param facet_layout Facet column order on the summaries path:
+#'   `"by_summary"` (each summary's level copies adjacent, the default).
+#'   `"by_level"` is reserved.
 #' @param group Column to rank by: one row per level, ordered by the measure.
 #' @param value,func,id_var The measure. `func` is one of `"count"`,
 #'   `"count_distinct"`, `"sum"`, `"mean"`, `"median"`, `"min"`, `"max"`, or
@@ -108,6 +127,9 @@ new_lane_chart_block <- function(group = NULL,
                                  xend = NULL,
                                  lo = NULL,
                                  hi = NULL,
+                                 summaries = list(),
+                                 by = NULL,
+                                 facet_layout = "by_summary",
                                  parent = NULL,
                                  color = NULL,
                                  bar_mode = "stacked",
@@ -148,6 +170,9 @@ new_lane_chart_block <- function(group = NULL,
   xend <- chr_state(xend)
   lo <- chr_state(lo)
   hi <- chr_state(hi)
+  summaries <- if (is.list(summaries)) summaries else list()
+  by <- chr_vec_state(by)
+  facet_layout <- chr_state(facet_layout)
   parent <- chr_state(parent)
   color <- chr_state(color)
   facet <- chr_state(facet)
@@ -179,6 +204,9 @@ new_lane_chart_block <- function(group = NULL,
         r_xend    <- shiny::reactiveVal(xend)
         r_lo      <- shiny::reactiveVal(lo)
         r_hi      <- shiny::reactiveVal(hi)
+        r_summaries <- shiny::reactiveVal(summaries)
+        r_by      <- shiny::reactiveVal(as.character(by %||% character()))
+        r_facet_layout <- shiny::reactiveVal(facet_layout %||% "by_summary")
         r_parent  <- shiny::reactiveVal(parent)
         r_color   <- shiny::reactiveVal(color)
         r_bar_mode <- shiny::reactiveVal(bar_mode %||% "stacked")
@@ -237,6 +265,8 @@ new_lane_chart_block <- function(group = NULL,
           value = r_value, id_var = r_id_var, bar_mode = r_bar_mode,
           mark = r_mark, summary = r_summary, whiskers = r_whiskers,
           x = r_x, xend = r_xend, lo = r_lo, hi = r_hi,
+          summaries = r_summaries, by = r_by,
+          facet_layout = r_facet_layout,
           cols = r_cols, fields = r_fields, sort_by = r_sort_by,
           sort_dir = r_sort_dir, top_n = r_top_n, drill = r_drill,
           ctrl_target = r_ctrl_target, ctrl_table = r_ctrl_table,
@@ -264,7 +294,11 @@ new_lane_chart_block <- function(group = NULL,
             if (key %in% c("title", "subtitle", "caption")) {
               # NULL = auto, "" = explicitly none, else the template text.
               setters[[key]](if (is.null(val)) NULL else as.character(val)[[1L]])
-            } else if (key %in% c("cols", "fields")) {
+            } else if (identical(key, "summaries")) {
+              # The whole column list travels as one JSON array; an empty
+              # list switches back to the single-mark path.
+              setters[[key]](if (is.list(val)) val else list())
+            } else if (key %in% c("cols", "fields", "by")) {
               setters[[key]](as.character(unlist(val %||% character())))
             } else if (key %in% c("ctrl_target", "ctrl_table")) {
               v <- trimws(as.character(unlist(val %||% "")))
@@ -275,7 +309,8 @@ new_lane_chart_block <- function(group = NULL,
               n <- suppressWarnings(as.integer(as.character(val)[[1L]]))
               setters[[key]](if (is.na(n) || n <= 0L) NULL else n)
             } else if (key %in% c("func", "bar_mode", "sort_by", "sort_dir",
-                                  "mark", "summary", "whiskers")) {
+                                  "mark", "summary", "whiskers",
+                                  "facet_layout")) {
               v <- as.character(unlist(val %||% character()))
               if (length(v) && nzchar(v[[1L]])) setters[[key]](v[[1L]])
             } else {
@@ -398,6 +433,8 @@ new_lane_chart_block <- function(group = NULL,
               mark = r_mark(), summary = r_summary(),
               whiskers = r_whiskers(), x = r_x(), xend = r_xend(),
               lo = r_lo(), hi = r_hi(),
+              summaries = r_summaries(), by = r_by(),
+              facet_layout = r_facet_layout(),
               bar_mode = r_bar_mode(), cols = r_cols(), fields = r_fields(),
               sort_by = r_sort_by(), sort_dir = r_sort_dir(),
               top_n = r_top_n(), search = r_search(), drill = r_drill(),
@@ -419,6 +456,8 @@ new_lane_chart_block <- function(group = NULL,
             bar_mode = r_bar_mode(), facet = r_facet(), compare = r_compare(),
             mark = r_mark(), summary = r_summary(), whiskers = r_whiskers(),
             x = r_x(), xend = r_xend(), lo = r_lo(), hi = r_hi(),
+            summaries = r_summaries(), by = r_by(),
+            facet_layout = r_facet_layout(),
             cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
             sort_dir = r_sort_dir(), top_n = r_top_n(),
             scale_map = board_scale_map()
@@ -453,7 +492,9 @@ new_lane_chart_block <- function(group = NULL,
             group = r_group, value = r_value, func = r_func,
             id_var = r_id_var, mark = r_mark, summary = r_summary,
             whiskers = r_whiskers, x = r_x, xend = r_xend, lo = r_lo,
-            hi = r_hi, parent = r_parent, color = r_color,
+            hi = r_hi, summaries = r_summaries, by = r_by,
+            facet_layout = r_facet_layout, parent = r_parent,
+            color = r_color,
             bar_mode = r_bar_mode, facet = r_facet, compare = r_compare,
             cols = r_cols, fields = r_fields, sort_by = r_sort_by,
             sort_dir = r_sort_dir, top_n = r_top_n,
@@ -488,13 +529,15 @@ new_lane_chart_block <- function(group = NULL,
     # reference: allow_empty_state wedge).
     allow_empty_state = c(
       "group", "value", "id_var", "summary", "x", "xend", "lo", "hi",
+      "summaries", "by",
       "parent", "color", "facet", "compare",
       "cols", "fields", "top_n", "title", "subtitle", "caption", "drill",
       "ctrl_target", "ctrl_table", "filter_column", "filter_values"
     ),
     external_ctrl = c(
       "group", "value", "func", "id_var", "mark", "summary", "whiskers",
-      "x", "xend", "lo", "hi", "parent", "color", "bar_mode",
+      "x", "xend", "lo", "hi", "summaries", "by", "facet_layout",
+      "parent", "color", "bar_mode",
       "facet", "compare", "cols", "fields", "sort_by", "sort_dir", "top_n",
       "max_height", "search", "title", "subtitle", "caption", "drill",
       "ctrl_target", "ctrl_table"
@@ -588,6 +631,53 @@ rank_arguments <- function() {
       "Sparkline mark only: upper band column (e.g. a reference range high).",
       example = "A1HI",
       type = arg_string()
+    ),
+    summaries = new_arg_spec(
+      paste0(
+        "The summarize-table mode: an ordered list of summary columns, one ",
+        "object per column; non-empty it REPLACES `mark` and the flat ",
+        "mappings. Each object: type = simple (func + col, shown as bar or ",
+        "number), dist (col + stat, optional whiskers, shown as box / ",
+        "pointrange / text), field (col: the group's distinct values ",
+        "joined, a group-level fact), series (x + col + optional ",
+        "band = [lo, hi]: a sparkline), spans (x + xend + optional color: ",
+        "a swimlane), expr (free R code over the group's rows, text). ",
+        "Optional per object: name (the column header), show, and scope = ",
+        "cell (repeats per facet level, default) or pooled (computed over ",
+        "all the group's rows, rendered once -- the Overall column)."
+      ),
+      example = list(
+        list(type = "simple", name = "Subjects", func = "count_distinct",
+             col = "USUBJID", show = "bar"),
+        list(type = "dist", name = "Duration", col = "DUR",
+             stat = "median_q1_q3", show = "box"),
+        list(type = "field", name = "Arm", col = "TRT01A")
+      ),
+      type = arg_array(arg_object(
+        type = arg_enum(c("simple", "dist", "field", "series", "spans",
+                          "expr")),
+        name = arg_string(required = FALSE),
+        show = arg_string(required = FALSE),
+        scope = arg_enum(c("cell", "pooled"), required = FALSE),
+        func = arg_string(required = FALSE),
+        col = arg_string(required = FALSE),
+        stat = arg_string(required = FALSE),
+        whiskers = arg_string(required = FALSE),
+        x = arg_string(required = FALSE),
+        xend = arg_string(required = FALSE),
+        color = arg_string(required = FALSE),
+        band = arg_array(arg_string(), required = FALSE),
+        expr = arg_string(required = FALSE)
+      ))
+    ),
+    by = new_arg_spec(
+      paste0(
+        "Grouping columns for the summaries mode, outer to inner (at most ",
+        "two; the outer becomes the expandable parent). One table row per ",
+        "key combination."
+      ),
+      example = list("AEBODSYS", "AEDECOD"),
+      type = arg_array(arg_string())
     ),
     func = new_arg_spec(
       paste0(
@@ -786,6 +876,10 @@ rank_guidance <- function() {
     "server-side, `summary` picks which; mean_ci95 is exact, qt-based).",
     "interval needs `x` + `xend`. sparkline needs `x` (the within-row",
     "order) + `value`.",
+    "\n- For MULTIPLE columns in one table (a bar beside a box beside a",
+    "sparkline), use `summaries` + `by` instead of `mark`: an ordered list",
+    "of typed summary columns over one grouping. This is the general form;",
+    "`mark` is its one-column sugar.",
     "\n- `group` is the only required argument. `func = \"count_distinct\"`",
     "with `id_var` is the clinical default (subjects, not events).",
     "\n- `func = \"identity\"` ranks a pre-computed value as-is (one row per",

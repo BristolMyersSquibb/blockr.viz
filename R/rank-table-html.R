@@ -26,6 +26,10 @@
 #' @param x,xend Interval mark: span start / end columns. Sparkline mark:
 #'   `x` alone is the within-row order.
 #' @param lo,hi Sparkline mark: optional band columns.
+#' @param summaries,by,facet_layout The summarize-table path: `summaries` is
+#'   an ordered list of typed summary rows (see [new_lane_chart_block()]);
+#'   non-empty, it takes over from `mark`. `by` is the grouping vector
+#'   (outer -> inner, at most two).
 #' @param value,func,id_var The measure. `func` is one of `"count"`,
 #'   `"count_distinct"`, `"sum"`, `"mean"`, `"median"`, `"min"`, `"max"`;
 #'   `value` names the column it reduces (ignored by `"count"`), `id_var` the
@@ -68,7 +72,9 @@
 rank_table <- function(data, group = NULL, value = ".count", func = "count",
                        id_var = NULL, mark = "bar", summary = NULL,
                        whiskers = "tukey", x = NULL, xend = NULL, lo = NULL,
-                       hi = NULL, parent = NULL, color = NULL,
+                       hi = NULL, summaries = list(), by = NULL,
+                       facet_layout = "by_summary", parent = NULL,
+                       color = NULL,
                        bar_mode = "stacked", facet = NULL, compare = NULL,
                        cols = NULL, fields = NULL, sort_by = "value",
                        sort_dir = "desc", top_n = NULL, max_height = "600px",
@@ -78,7 +84,8 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
   prep <- rank_prepare(
     data, group = group, value = value, func = func, id_var = id_var,
     mark = mark, summary = summary, whiskers = whiskers, x = x, xend = xend,
-    lo = lo, hi = hi,
+    lo = lo, hi = hi, summaries = summaries, by = by,
+    facet_layout = facet_layout,
     parent = parent, color = color, bar_mode = bar_mode, facet = facet,
     compare = compare, cols = cols, fields = fields, sort_by = sort_by,
     sort_dir = sort_dir, top_n = top_n, scale_map = scale_map
@@ -104,6 +111,7 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
     compare = compare, func = func, value = value, id_var = id_var,
     mark = mark, summary = summary, whiskers = whiskers, x = x,
     xend = xend, lo = lo, hi = hi,
+    summaries = summaries, by = by, facet_layout = facet_layout,
     bar_mode = bar_mode, cols = cols, fields = fields, sort_by = sort_by,
     sort_dir = sort_dir, top_n = top_n, search = search, drill = drill,
     titles = list(
@@ -415,7 +423,7 @@ rank_table_dep <- memoise0(function() {
     drilldown_table_dep(),
     htmltools::htmlDependency(
       name = "blockr-viz-rank",
-      version = paste0(utils::packageVersion("blockr.viz"), ".8"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".9"),
       src = system.file("js", package = "blockr.viz"),
       script = "rank-table.js"
     )

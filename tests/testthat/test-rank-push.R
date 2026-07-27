@@ -299,7 +299,29 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
     sparkline = list(group = "TERM", mark = "sparkline", x = "AVAL",
                      value = "DUR", lo = "LO", hi = "HI"),
     sparkline_bar = list(group = "TERM", mark = "sparkline", x = "AVAL",
-                         value = "DUR", func = "mean")
+                         value = "DUR", func = "mean"),
+    # The summarize-table path: every row type in one heterogeneous table,
+    # and the facet + pooled + field composition.
+    summaries_mixed = list(by = "TERM", summaries = list(
+      list(type = "simple", name = "Subjects", func = "count_distinct",
+           col = "USUBJID", show = "bar"),
+      list(type = "dist", name = "Duration", col = "DUR", show = "box"),
+      list(type = "dist", name = "Mean", col = "DUR", stat = "mean_ci95",
+           show = "text"),
+      list(type = "field", name = "Arms", col = "ARM"),
+      list(type = "spans", name = "Episodes", x = "SDY", xend = "EDY",
+           color = "SEV"),
+      list(type = "series", name = "Traj", x = "AVAL", col = "DUR",
+           band = c("LO", "HI")),
+      list(type = "expr", name = "CV", expr = "round(sd(DUR)/mean(DUR), 2)")
+    )),
+    summaries_facet = list(by = "TERM", facet = "ARM", summaries = list(
+      list(type = "simple", name = "Subjects", func = "count_distinct",
+           col = "USUBJID", show = "bar"),
+      list(type = "dist", name = "Overall", col = "DUR", stat = "mean_se",
+           show = "text", scope = "pooled"),
+      list(type = "field", name = "Arms", col = "ARM")
+    ))
   )
 
   js_path <- system.file("js", "rank-table.js", package = "blockr.viz")

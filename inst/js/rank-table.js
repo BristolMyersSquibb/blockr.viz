@@ -682,6 +682,10 @@
     // Mapping — the chart block's labels verbatim (Group / Color / Facet), so
     // the two gears read as the same system. `parent` is the rank-only extra.
     group:  { label: "Group", kind: "column", colType: "cat" },
+    // The summarize-table path's grouping vector (outer -> inner, at most
+    // two): one row per key combo, the outer becomes the expandable parent.
+    by:     { label: "Group by", kind: "columns", colType: "cat",
+              placeholder: "add columns…" },
     parent: { label: "Nest under", kind: "column", colType: "cat" },
     color:  { label: "Color", kind: "column", colType: "cat" },
     facet:  { label: "Facet", kind: "column", colType: "cat" },
@@ -741,16 +745,436 @@
                 } }
   };
 
+  // ==========================================================================
+  // The summarize-table columns editor (_blockr.design/open/summarize-table/):
+  // one row per summary, typed (simple / dist / field / series / spans /
+  // expr), each with its own display and scope. Rendered into the engine's
+  // customSections seam; every edit sends the FULL array as one config
+  // value. Presets reproduce the single-mark blocks in one click.
+  // ==========================================================================
+
+  var SUMMARY_TYPES = {
+    simple: { label: "simple", shows: ["bar", "number"] },
+    dist:   { label: "dist", shows: ["box", "pointrange", "text"] },
+    field:  { label: "field", shows: ["text"] },
+    series: { label: "series", shows: ["sparkline"] },
+    spans:  { label: "spans", shows: ["interval"] },
+    expr:   { label: "expr", shows: ["text"] }
+  };
+  var SHOW_ICONS = {
+    number: '<svg width="14" height="14" viewBox="0 0 16 16">' +
+      '<text x="1" y="12" font-size="9" fill="currentColor">123</text></svg>',
+    text: '<svg width="14" height="14" viewBox="0 0 16 16">' +
+      '<text x="0" y="12" font-size="8" fill="currentColor">1 (2)</text></svg>',
+    bar: TYPE_ICONS.bar,
+    box: TYPE_ICONS.box,
+    pointrange: TYPE_ICONS.pointrange,
+    interval: TYPE_ICONS.interval,
+    sparkline: TYPE_ICONS.sparkline
+  };
+
+  function summaryLine(s) {
+    switch (s.type) {
+      case "simple": return (s.func || "count") +
+        (s.col ? "(" + s.col + ")" : "()") + " · " + (s.show || "bar");
+      case "dist": return (s.stat || "median_q1_q3") + "(" + (s.col || "?") +
+        ")" + (s.show === "box" ? ", " + (s.whiskers || "tukey") + " whiskers" : "") +
+        " · " + (s.show || "box");
+      case "field": return (s.col || "?") + " (distinct values)";
+      case "series": return (s.col || "?") + " over " + (s.x || "?") +
+        (s.band && s.band.length === 2 ? ", band " + s.band[0] + "–" + s.band[1] : "");
+      case "spans": return (s.x || "?") + " → " + (s.xend || "?") +
+        (s.color ? ", color " + s.color : "");
+      case "expr": return s.expr || "";
+      default: return "";
+    }
+  }
+
+  /** First column of a type, for preset seeds. */
+  function firstCol(cols, want, skip) {
+    for (var i = 0; i < cols.length; i++) {
+      var ok = want === "any" || (want === "num"
+        ? cols[i].type === "numeric" : cols[i].type !== "numeric");
+      if (ok && (!skip || skip.indexOf(cols[i].name) === -1)) return cols[i].name;
+    }
+    return "";
+  }
+
+  var SUMMARY_PRESETS = {
+    Rank: function (cols) {
+      return { type: "simple", name: "Rows", func: "count", show: "bar" };
+    },
+    Distribution: function (cols) {
+      var c = firstCol(cols, "num");
+      return { type: "dist", name: c || "Value", col: c,
+               stat: "median_q1_q3", whiskers: "tukey", show: "box" };
+    },
+    Trajectory: function (cols) {
+      var x = firstCol(cols, "num");
+      var c = firstCol(cols, "num", [x]);
+      return { type: "series", name: c || "Value", x: x, col: c || x };
+    },
+    Swimlane: function (cols) {
+      var x = firstCol(cols, "num");
+      var e = firstCol(cols, "num", [x]);
+      return { type: "spans", name: "Spans", x: x, xend: e || x };
+    }
+  };
+
+  /** The editor body. ctx: { cfg(), cols(), send(list), rerender(), open:Set } */
+  function renderSummariesEditor(sec, ctx) {
+    var cfg = ctx.cfg();
+    var cols = ctx.cols();
+    var list = Array.isArray(cfg.summaries) ? cfg.summaries : (cfg.summaries = []);
+    var S = (typeof Blockr !== "undefined" && Blockr.Select) || null;
+    var commit = function () { ctx.send(list.slice()); };
+
+    function colOpts(want) {
+      return cols.filter(function (c) {
+        return want === "any" ||
+          (want === "num" ? c.type === "numeric" : c.type !== "numeric");
+      }).map(function (c) { return { value: c.name, label: c.label || c.name }; });
+    }
+    function selectCtl(parent, label, want, selected, onChange) {
+      var ctl = document.createElement("div");
+      ctl.className = "lane-sum-ctl";
+      var l = document.createElement("span");
+      l.className = "blockr-popover-label";
+      l.textContent = label;
+      ctl.appendChild(l);
+      var wrap = document.createElement("div");
+      wrap.className = "blockr-popover-select-wrap dd-picker-wrap";
+      var opts = typeof want === "string" ? colOpts(want) : want;
+      if (S && S.single) {
+        S.single(wrap, { options: opts, selected: selected || "",
+                         onChange: onChange });
+      }
+      ctl.appendChild(wrap);
+      parent.appendChild(ctl);
+    }
+    function segCtl(parent, label, options, selected, onChange) {
+      var ctl = document.createElement("div");
+      ctl.className = "lane-sum-ctl";
+      var l = document.createElement("span");
+      l.className = "blockr-popover-label";
+      l.textContent = label;
+      ctl.appendChild(l);
+      var seg = document.createElement("div");
+      seg.className = "lane-sum-seg";
+      options.forEach(function (o) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "lane-sum-seg-btn" + (o.value === selected ? " is-on" : "");
+        b.textContent = o.label;
+        b.addEventListener("click", function () {
+          onChange(o.value);
+        });
+        seg.appendChild(b);
+      });
+      ctl.appendChild(seg);
+      parent.appendChild(ctl);
+    }
+
+    // dd-summaries: the engine's full-width escape from the section's
+    // narrow grid cells (the metrics editor's own trick).
+    var wrap = document.createElement("div");
+    wrap.className = "dd-summaries lane-summaries";
+
+    list.forEach(function (s, i) {
+      var row = document.createElement("div");
+      row.className = "lane-sum-row" + (ctx.open.has(i) ? " is-open" : "");
+
+      var head = document.createElement("div");
+      head.className = "lane-sum-head";
+      head.innerHTML =
+        '<span class="lane-sum-chip lane-sum-chip-' + (s.type || "simple") +
+        '">' + (SUMMARY_TYPES[s.type] || SUMMARY_TYPES.simple).label + "</span>" +
+        '<span class="lane-sum-name">' + esc(s.name || "") + "</span>" +
+        '<span class="lane-sum-line">' + esc(summaryLine(s)) + "</span>";
+      var rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "dd-role-remove lane-sum-rm";
+      rm.title = "Remove column";
+      rm.innerHTML = "✕";
+      rm.addEventListener("click", function (e) {
+        e.stopPropagation();
+        list.splice(i, 1);
+        ctx.open.delete(i);
+        commit();
+        ctx.rerender();
+      });
+      head.appendChild(rm);
+      var up = document.createElement("button");
+      up.type = "button";
+      up.className = "lane-sum-move";
+      up.title = "Move up";
+      up.innerHTML = "↑";
+      up.disabled = i === 0;
+      up.addEventListener("click", function (e) {
+        e.stopPropagation();
+        list.splice(i - 1, 0, list.splice(i, 1)[0]);
+        commit();
+        ctx.rerender();
+      });
+      head.appendChild(up);
+      head.addEventListener("click", function () {
+        if (ctx.open.has(i)) ctx.open.delete(i);
+        else ctx.open.add(i);
+        ctx.rerender();
+      });
+      row.appendChild(head);
+
+      if (ctx.open.has(i)) {
+        var body = document.createElement("div");
+        body.className = "lane-sum-body";
+        // Name.
+        var nameCtl = document.createElement("div");
+        nameCtl.className = "lane-sum-ctl";
+        nameCtl.innerHTML = '<span class="blockr-popover-label">Name</span>';
+        var nameIn = document.createElement("input");
+        nameIn.type = "text";
+        nameIn.className = "lane-sum-name-input";
+        nameIn.value = s.name || "";
+        nameIn.addEventListener("change", function () {
+          s.name = nameIn.value;
+          commit();
+          ctx.rerender();
+        });
+        nameCtl.appendChild(nameIn);
+        body.appendChild(nameCtl);
+
+        var t = s.type || "simple";
+        if (t === "simple") {
+          selectCtl(body, "Function", FUNC_OPT.filter(function (o) {
+            return (typeof o === "string" ? o : o.value) !== "identity";
+          }), s.func || "count", function (v) {
+            s.func = v;
+            commit();
+            ctx.rerender();
+          });
+          if ((s.func || "count") !== "count") {
+            selectCtl(body,
+              s.func === "count_distinct" ? "Distinct of" : "Of column",
+              s.func === "count_distinct" ? "any" : "num",
+              s.col, function (v) { s.col = v; commit(); ctx.rerender(); });
+          }
+        } else if (t === "dist") {
+          selectCtl(body, "Value", "num", s.col, function (v) {
+            s.col = v;
+            commit();
+            ctx.rerender();
+          });
+          selectCtl(body, "Statistic", LANE_STATS, s.stat || "median_q1_q3",
+            function (v) { s.stat = v; commit(); ctx.rerender(); });
+          if ((s.show || "box") === "box") {
+            selectCtl(body, "Whiskers", LANE_WHISKERS, s.whiskers || "tukey",
+              function (v) { s.whiskers = v; commit(); ctx.rerender(); });
+          }
+        } else if (t === "field") {
+          selectCtl(body, "Column", "any", s.col, function (v) {
+            s.col = v;
+            commit();
+            ctx.rerender();
+          });
+        } else if (t === "series") {
+          selectCtl(body, "Order (x)", "num", s.x, function (v) {
+            s.x = v;
+            commit();
+            ctx.rerender();
+          });
+          selectCtl(body, "Value (y)", "num", s.col, function (v) {
+            s.col = v;
+            commit();
+            ctx.rerender();
+          });
+          var band = (s.band && s.band.length === 2) ? s.band : ["", ""];
+          selectCtl(body, "Band low", "num", band[0], function (v) {
+            s.band = [v, band[1]];
+            commit();
+            ctx.rerender();
+          });
+          selectCtl(body, "Band high", "num", band[1], function (v) {
+            s.band = [band[0], v];
+            commit();
+            ctx.rerender();
+          });
+        } else if (t === "spans") {
+          selectCtl(body, "Start", "num", s.x, function (v) {
+            s.x = v;
+            commit();
+            ctx.rerender();
+          });
+          selectCtl(body, "End", "num", s.xend, function (v) {
+            s.xend = v;
+            commit();
+            ctx.rerender();
+          });
+          selectCtl(body, "Color", "cat", s.color, function (v) {
+            s.color = v;
+            commit();
+            ctx.rerender();
+          });
+        } else if (t === "expr") {
+          var exCtl = document.createElement("div");
+          exCtl.className = "lane-sum-ctl lane-sum-ctl-wide";
+          exCtl.innerHTML =
+            '<span class="blockr-popover-label">Expression</span>';
+          var exIn = document.createElement("input");
+          exIn.type = "text";
+          exIn.className = "lane-sum-name-input";
+          exIn.value = s.expr || "";
+          exIn.placeholder = "e.g. sd(DUR)/mean(DUR) * 100";
+          exIn.addEventListener("change", function () {
+            s.expr = exIn.value;
+            commit();
+            ctx.rerender();
+          });
+          exCtl.appendChild(exIn);
+          body.appendChild(exCtl);
+        }
+
+        // Display tiles (only where the type offers a choice).
+        var shows = (SUMMARY_TYPES[t] || {}).shows || [];
+        if (shows.length > 1) {
+          var dCtl = document.createElement("div");
+          dCtl.className = "lane-sum-ctl";
+          dCtl.innerHTML = '<span class="blockr-popover-label">Display</span>';
+          var tiles = document.createElement("div");
+          tiles.className = "dd-type-grid lane-sum-tiles";
+          shows.forEach(function (sh) {
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "dd-type-tile" +
+              ((s.show || shows[0]) === sh ? " dd-type-active" : "");
+            b.innerHTML = '<span class="dd-type-tile-icon">' +
+              (SHOW_ICONS[sh] || "") + '</span>' +
+              '<span class="dd-type-tile-label">' + sh + "</span>";
+            b.addEventListener("click", function () {
+              s.show = sh;
+              commit();
+              ctx.rerender();
+            });
+            tiles.appendChild(b);
+          });
+          dCtl.appendChild(tiles);
+          body.appendChild(dCtl);
+        }
+
+        // Scope: fields are group facts (always pooled), everything else
+        // picks. Inert without a facet, semantic with one.
+        if (t !== "field") {
+          segCtl(body, "Scope", [
+            { value: "cell", label: "Per level" },
+            { value: "pooled", label: "Overall" }
+          ], s.scope || "cell", function (v) {
+            s.scope = v;
+            commit();
+            ctx.rerender();
+          });
+        }
+        row.appendChild(body);
+      }
+      wrap.appendChild(row);
+    });
+
+    // Add + presets.
+    var addRow = document.createElement("div");
+    addRow.className = "lane-sum-addrow";
+    var addWrap = document.createElement("div");
+    addWrap.className = "lane-sum-add-types";
+    Object.keys(SUMMARY_TYPES).forEach(function (t) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "lane-sum-add";
+      b.textContent = "+ " + t;
+      b.addEventListener("click", function () {
+        var s = { type: t, name: "", scope: "cell",
+                  show: SUMMARY_TYPES[t].shows[0] };
+        if (t === "simple") s.func = "count";
+        if (t === "dist") {
+          s.col = firstCol(cols, "num");
+          s.stat = "median_q1_q3";
+          s.whiskers = "tukey";
+        }
+        if (t === "field") s.col = firstCol(cols, "cat");
+        if (t === "series") {
+          s.x = firstCol(cols, "num");
+          s.col = firstCol(cols, "num", [s.x]);
+        }
+        if (t === "spans") {
+          s.x = firstCol(cols, "num");
+          s.xend = firstCol(cols, "num", [s.x]);
+        }
+        list.push(s);
+        ctx.open.add(list.length - 1);
+        commit();
+        ctx.rerender();
+      });
+      addWrap.appendChild(b);
+    });
+    addRow.appendChild(addWrap);
+    var presets = document.createElement("div");
+    presets.className = "lane-sum-presets";
+    Object.keys(SUMMARY_PRESETS).forEach(function (nm) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "lane-sum-preset";
+      b.textContent = nm;
+      b.title = "Append a preconfigured " + nm.toLowerCase() + " column";
+      b.addEventListener("click", function () {
+        list.push(SUMMARY_PRESETS[nm](cols));
+        commit();
+        ctx.rerender();
+      });
+      presets.appendChild(b);
+    });
+    addRow.appendChild(presets);
+    wrap.appendChild(addRow);
+
+    if (!list.length) {
+      var hint = document.createElement("div");
+      hint.className = "lane-sum-hint";
+      hint.textContent = "Adding columns switches the block to the " +
+        "multi-column table and replaces the single mark above.";
+      wrap.appendChild(hint);
+    }
+    sec.appendChild(wrap);
+  }
+
   // Which controls apply depends on the picks: `Of column` only for the
   // aggregations that reduce a column, `Count distinct` only for
   // count_distinct, the split layout only with a colour split, Compare only
   // with a facet. Conditional rows beat a wall of inert ones.
-  function rankSections(cfg) {
+  function rankSections(cfg, ctx) {
     var mark = cfg.mark || "bar";
     var mapping = [];
     var optional = [];
     var pres = ["sort_by", "sort_dir"];
     var aggTitle = null;
+
+    // The summarize-table mode: the column list IS the config. Grouping
+    // (`by`) and facet below it; the flat mark mappings never render.
+    if (Array.isArray(cfg.summaries) && cfg.summaries.length) {
+      return {
+        requiredMap: ["by"],
+        optionalMap: ["facet"],
+        mapping: [],
+        aggTitle: null,
+        customSections: ctx ? [{
+          title: "Columns",
+          render: function (sec) { renderSummariesEditor(sec, ctx); }
+        }] : [],
+        presentation: ["sort_by", "sort_dir", "search"],
+        drillToggle: "drill",
+        drillDefault: (cfg.by && cfg.by.length)
+          ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),
+        ctrlSection: true,
+        drillHint: cfg.drill
+          ? "Clicking a row filters downstream on " + cfg.drill + "."
+          : "Clicking a row filters downstream blocks to that row.",
+        titles: ["title", "subtitle", "caption"]
+      };
+    }
 
     if (mark === "box" || mark === "pointrange") {
       // The distribution lanes: group + value, statistic pick(s), optional
@@ -794,6 +1218,13 @@
       optionalMap: optional,
       mapping: mapping,
       aggTitle: aggTitle,
+      // The entry point into the summarize-table mode: an empty column
+      // list with the add/preset row. Adding the first column commits a
+      // non-empty `summaries` and this spec switches to the branch above.
+      customSections: ctx ? [{
+        title: "Columns",
+        render: function (sec) { renderSummariesEditor(sec, ctx); }
+      }] : [],
       presentation: pres,
       drillToggle: "drill",
       drillDefault: cfg.group || "",
@@ -847,6 +1278,11 @@
      "drill", "x", "xend", "lo", "hi", "summary", "whiskers"]
       .forEach(function (k) { if (cfg[k] == null) cfg[k] = ""; });
     if (!cfg.mark) cfg.mark = "bar";
+    // The summarize-table config: the column list and the grouping vector.
+    if (!Array.isArray(cfg.summaries)) {
+      cfg.summaries = cfg.summaries ? [cfg.summaries] : [];
+    }
+    if (!Array.isArray(cfg.by)) cfg.by = cfg.by ? [String(cfg.by)] : [];
     // The multi-column picker wants an array.
     if (!Array.isArray(cfg.fields)) {
       cfg.fields = cfg.fields ? [String(cfg.fields)] : [];
@@ -855,10 +1291,16 @@
     if (cfg.ctrl_target == null) cfg.ctrl_target = "";
     if (!Array.isArray(cfg.ctrl_choices)) cfg.ctrl_choices = [];
     RANK_ROLES.compare.options = levels;
+    // Sort targets: the measure / the name, plus facet levels, plus (in the
+    // summarize-table mode) each summary column by its name.
+    var sumNames = (cfg.summaries || []).map(function (s) {
+      return s && s.name ? { value: s.name, label: s.name } : null;
+    }).filter(Boolean);
     RANK_ROLES.sort_by.options = [
       { value: "value", label: "Measure" },
       { value: "label", label: "Name" }
-    ].concat(levels.map(function (lv) { return { value: lv, label: lv }; }));
+    ].concat(sumNames)
+      .concat(levels.map(function (lv) { return { value: lv, label: lv }; }));
     return { cfg: cfg, cols: cols };
   }
 
@@ -888,6 +1330,17 @@
     var cfg = st.cfg;
     var cols = st.cols;
 
+    // Context for the summaries editor (the customSections seam): live
+    // accessors, the transport, a re-render hook (assigned after the
+    // engine exists) and the per-row expansion memory.
+    var ctx = {
+      cfg: function () { return cfg; },
+      cols: function () { return cols; },
+      send: function (list) { sendConfig(elemId, "summaries", list); },
+      rerender: function () {},
+      open: new Set()
+    };
+
     var header = document.createElement("div");
     header.className = "blockr-gear-header";
     var btn = document.createElement("button");
@@ -910,7 +1363,8 @@
     var DDC = (typeof Blockr !== "undefined" && Blockr.DrilldownConfig) ||
       window.DrilldownConfig;
     if (!DDC) return;
-    var engine = new DDC({
+    var engine;
+    engine = new DDC({
       popoverEl: function () { return pop; },
       roles: RANK_ROLES,
       config: function () { return cfg; },
@@ -921,20 +1375,26 @@
         return cfg.mark === "sparkline" ? "spark" : "all";
       },
       currentType: function () { return cfg.mark || "bar"; },
-      sections: function () { return rankSections(cfg); },
-      sectionsForFamily: function () { return rankSections(cfg); },
+      sections: function () { return rankSections(cfg, ctx); },
+      sectionsForFamily: function () { return rankSections(cfg, ctx); },
       secondary: new Set(),
-      mappingTitle: "Mapping",
+      mappingTitle: function () {
+        return (cfg.summaries && cfg.summaries.length) ? "Grouping" : "Mapping";
+      },
       // The mark picker: same engine fields the chart fills in
       // (chart.js _makeConfig), same tile idiom, so the two gears read as
-      // one system.
+      // one system. In the summarize-table mode the column list replaces
+      // it (each column carries its own type), so the picker hides.
       typeKey: "mark",
       typeTiles: true,
       typeIcon: function (t) { return TYPE_ICONS[t] || ""; },
-      typeGroups: [
-        { label: "Aggregated", types: LANE_AGG_MARKS },
-        { label: "Individual", types: LANE_ROW_MARKS }
-      ],
+      get typeGroups() {
+        if (cfg.summaries && cfg.summaries.length) return null;
+        return [
+          { label: "Aggregated", types: LANE_AGG_MARKS },
+          { label: "Individual", types: LANE_ROW_MARKS }
+        ];
+      },
       familyFor: function (t) {
         return LANE_ROW_MARKS.indexOf(t) > -1 ? "individual" : "aggregated";
       },
@@ -944,6 +1404,7 @@
       carryKeep: ["drill", "value", "group"],
       entryRequired: function (role) {
         var mark = cfg.mark || "bar";
+        if (role === "by") return true;
         if (role === "group") return true;
         if (role === "value") {
           return mark === "box" || mark === "pointrange" ||
@@ -968,6 +1429,7 @@
       },
       reopen: function () { openPop(); }
     });
+    ctx.rerender = function () { engine.render(); };
     engine.render();
 
     function openPop() {
