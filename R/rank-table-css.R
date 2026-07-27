@@ -47,7 +47,8 @@ rank_table_css <- function() {
   gap: 8px;
 }
 .blockr-rank-barwrap .blockr-rank-track,
-.blockr-rank-barwrap .blockr-rank-dv { flex: 1 1 auto; min-width: 0; }
+.blockr-rank-barwrap .blockr-rank-dv,
+.blockr-rank-barwrap .blockr-rank-lane { flex: 1 1 auto; min-width: 0; }
 .blockr-rank-barval {
   flex: 0 0 auto;
   text-align: right;
@@ -96,6 +97,104 @@ rank_table_css <- function() {
   background: var(--blockr-rank-fill);
 }
 .blockr-rank-track.is-sub .blockr-rank-fill { background: var(--blockr-rank-sub); }
+
+/* Lane marks (box / point range / interval / sparkline): absolutely
+   positioned glyphs inside a track-coloured lane, percentage geometry
+   computed in R. Same fill/track/sub tokens as the bars, so a themed board
+   restyles every mark together. */
+.blockr-rank-lane {
+  position: relative;
+  height: 16px;
+  background: var(--blockr-rank-track);
+}
+.blockr-rank-lane i { position: absolute; }
+/* Box: whiskers OUTSIDE the body only (two segments), caps, a translucent
+   body, a solid median tick. */
+.blockr-rank-boxcell .lane-wh {
+  top: 50%;
+  height: 1px;
+  margin-top: -0.5px;
+  background: var(--blockr-rank-fill);
+}
+.blockr-rank-boxcell .lane-cap {
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--blockr-rank-fill);
+}
+.blockr-rank-boxcell .lane-box {
+  top: 1px;
+  bottom: 1px;
+  background: var(--blockr-rank-sub);
+}
+.blockr-rank-boxcell .lane-med {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--blockr-rank-fill);
+}
+/* Point range: a 2px interval line and a ringed center dot (the ring
+   separates the dot from its own line). */
+.blockr-rank-prcell .lane-rng {
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--blockr-rank-fill);
+}
+.blockr-rank-prcell .lane-ctr {
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--blockr-rank-fill);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--blockr-color-bg, #fff);
+}
+/* Interval: the swimlane. Square segments, colour = the mapped level. */
+.blockr-rank-ivcell { height: 12px; }
+.blockr-rank-ivcell .lane-seg {
+  top: 0;
+  bottom: 0;
+  min-width: 2px;
+}
+/* Sparkline: one inline SVG per cell, band under line, last-value dot. */
+.blockr-rank-spcell {
+  height: 28px;
+  background: none;
+}
+.blockr-rank-spcell svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.blockr-rank-spcell .lane-band { fill: var(--blockr-rank-track); }
+.blockr-rank-spcell .lane-ln {
+  fill: none;
+  stroke: var(--blockr-rank-fill);
+  stroke-width: 1.6;
+}
+.blockr-rank-spcell .lane-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blockr-rank-fill);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--blockr-color-bg, #fff);
+}
+/* The cursor readout (interval track / sparkline points): one fixed element
+   per page, positioned by rank-table.js. */
+.blockr-lane-tip {
+  position: fixed;
+  z-index: 1070;
+  pointer-events: none;
+  background: var(--blockr-color-text-primary, #111827);
+  color: #fff;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
 
 /* Zero-centred difference bar. */
 .blockr-rank-dv {

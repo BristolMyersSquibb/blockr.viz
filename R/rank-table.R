@@ -125,7 +125,9 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
                          id_var = NULL, parent = NULL, color = NULL,
                          bar_mode = "stacked", facet = NULL, compare = NULL,
                          cols = NULL, fields = NULL, sort_by = "value",
-                         sort_dir = "desc", top_n = NULL, scale_map = NULL) {
+                         sort_dir = "desc", top_n = NULL, scale_map = NULL,
+                         mark = "bar", summary = NULL, whiskers = "tukey",
+                         x = NULL, xend = NULL, lo = NULL, hi = NULL) {
   bad <- function(msg) list(err = msg)
 
   if (!is.data.frame(data)) return(bad("No data"))
@@ -133,6 +135,36 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
 
   group <- rank_chr1(group)
   if (is.null(group)) return(bad("Pick a Group column in the gear"))
+  if (!group %in% names(data)) {
+    return(bad(paste0("Mapped column not in data: Group = \"", group,
+                      "\". Re-pick it in the gear.")))
+  }
+
+  # Every non-bar mark prepares in lane-prepare.R; an unknown value (a saved
+  # board from a future version) falls back to the bar rather than erroring.
+  mark <- rank_chr1(mark) %||% "bar"
+  if (identical(mark, "box") || identical(mark, "pointrange")) {
+    return(lane_prepare_dist(
+      mark, data, group = group, value = value, summary = summary,
+      whiskers = whiskers, parent = parent, color = color, facet = facet,
+      compare = compare, fields = fields, sort_by = sort_by,
+      sort_dir = sort_dir, top_n = top_n, scale_map = scale_map
+    ))
+  }
+  if (identical(mark, "interval")) {
+    return(lane_prepare_interval(
+      data, group = group, x = x, xend = xend, color = color,
+      parent = parent, fields = fields, sort_by = sort_by,
+      sort_dir = sort_dir, top_n = top_n, scale_map = scale_map
+    ))
+  }
+  if (identical(mark, "sparkline")) {
+    return(lane_prepare_sparkline(
+      data, group = group, x = x, value = value, lo = lo, hi = hi,
+      func = func, parent = parent, fields = fields, sort_by = sort_by,
+      sort_dir = sort_dir, top_n = top_n, scale_map = scale_map
+    ))
+  }
 
   # Every mapped column must exist. A rename or pivot upstream is the usual
   # cause, and naming the column beats a stack trace.
@@ -469,65 +501,16 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
     }
   }
 
-  # --- ordering ------------------------------------------------------------
-  sort_key <- rank_sort_key(sort_by, plan)
-  ord <- function(df) {
-    if (is.null(df) || !nrow(df)) return(df)
-    v <- if (identical(sort_key, ".label")) df$.label else df[[sort_key]]
-    if (is.null(v)) v <- df$.v
-    if (is.character(v)) {
-      df[order(v, decreasing = identical(sort_dir, "desc")), , drop = FALSE]
-    } else {
-      df[order(v, decreasing = identical(sort_dir, "desc"), na.last = TRUE), ,
-         drop = FALSE]
-    }
-  }
-
-  # --- row list ------------------------------------------------------------
+  # --- ordering + row list ---------------------------------------------------
   # Flat: leaves in rank order, optionally capped. Nested: parents in rank
   # order, each followed by its own children in rank order (a cap applies to
   # parents, since capping inside a class would hide a class's own drivers).
-  folded <- 0L
-  fold_max <- NA_real_
-  if (is.null(parent)) {
-    rows <- ord(leaf)
-    if (!is.null(top_n) && is.finite(top_n) && top_n > 0 && nrow(rows) > top_n) {
-      rest <- rows[seq.int(top_n + 1L, nrow(rows)), , drop = FALSE]
-      folded <- nrow(rest)
-      fold_max <- suppressWarnings(max(rest$.v, na.rm = TRUE))
-      rows <- rows[seq_len(top_n), , drop = FALSE]
-    }
-    rows$.level <- 0L
-    rows$.is_parent <- FALSE
-  } else {
-    par_rows <- ord(par_rows)
-    if (!is.null(top_n) && is.finite(top_n) && top_n > 0 &&
-          nrow(par_rows) > top_n) {
-      rest <- par_rows[seq.int(top_n + 1L, nrow(par_rows)), , drop = FALSE]
-      folded <- nrow(rest)
-      fold_max <- suppressWarnings(max(rest$.v, na.rm = TRUE))
-      par_rows <- par_rows[seq_len(top_n), , drop = FALSE]
-    }
-    par_rows$.level <- 0L
-    par_rows$.is_parent <- TRUE
-    leaf$.level <- 1L
-    leaf$.is_parent <- FALSE
-    keep <- c(".label", ".parent", ".level", ".is_parent", ".v",
-              grep("^\\.(s_|f_|d_|x_)|^\\.f[0-9]+s_", names(leaf),
-                   value = TRUE))
-    pieces <- list()
-    for (i in seq_len(nrow(par_rows))) {
-      p <- par_rows[i, , drop = FALSE]
-      kids <- ord(leaf[!is.na(leaf$.parent) & leaf$.parent == p$.label, ,
-                       drop = FALSE])
-      pieces[[length(pieces) + 1L]] <- p[, intersect(keep, names(p)), drop = FALSE]
-      if (nrow(kids)) {
-        pieces[[length(pieces) + 1L]] <- kids[, intersect(keep, names(kids)),
-                                              drop = FALSE]
-      }
-    }
-    rows <- do.call(rbind, pieces)
-  }
+  # One shared implementation for every mark: rank_assemble_rows().
+  sort_key <- rank_sort_key(sort_by, plan)
+  asm <- rank_assemble_rows(leaf, par_rows, parent, sort_key, sort_dir, top_n)
+  rows <- asm$rows
+  folded <- asm$folded
+  fold_max <- asm$fold_max
 
   # --- bar scale -----------------------------------------------------------
   # ONE scale over the whole column (parents included), computed here and
@@ -536,12 +519,15 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   bar_max <- rank_bar_max(rows, plan, denoms)
 
   list(
-    rows = rows, plan = plan, layout = layout, bar_max = bar_max,
+    rows = rows, plan = plan, layout = layout, mark = "bar",
+    bar_max = bar_max, bar_min = 0,
     group_label = rank_group_label(data, group, parent),
     series = series, palette = pal, facet_levels = facet_levels,
     denoms = denoms, group = group, parent = parent, color = color,
     facet = facet, compare = compare, folded = folded, fold_max = fold_max,
-    n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows) + folded,
+    # par_rows is the UNCAPPED frame here (rank_assemble_rows caps a copy),
+    # so its row count already is the group total.
+    n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows),
     note = note, pct_ok = pct_ok, func = func
   )
 }

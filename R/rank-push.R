@@ -75,6 +75,27 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     c(parts, list(dw = max(c(1L, len))))
   }
 
+  # Position/width on the lane marks' shared domain [bar_min, bar_max]: the
+  # bar's pct_w() generalized to a domain that need not start at zero (a
+  # box of change-from-baseline values has a negative lo). Positions and
+  # widths are BOTH computed from raw values here and shipped rounded, so the
+  # two consumers never subtract floats themselves (String(24.13 - 10.5) in
+  # JS is not "13.63").
+  mn <- prep$bar_min %||% 0
+  rng <- if (is.finite(mx) && is.finite(mn) && mx > mn) mx - mn else NA_real_
+  pos_w <- function(v) {
+    w <- if (is.finite(rng)) (v - mn) / rng * 100 else rep(0, length(v))
+    w[!is.finite(w) & !is.na(v)] <- 0
+    w[is.na(v)] <- NA_real_
+    round(pmax(0, pmin(100, w)), 2L)
+  }
+  span_w <- function(a, b) {
+    w <- if (is.finite(rng)) (b - a) / rng * 100 else rep(0, length(a))
+    w[!is.finite(w) & !(is.na(a) | is.na(b))] <- 0
+    w[is.na(a) | is.na(b)] <- NA_real_
+    round(pmax(0, pmin(100, w)), 2L)
+  }
+
   cols <- lapply(seq_along(plan), function(i) {
     p <- plan[[i]]
     if (identical(p$kind, "bar")) {
@@ -140,6 +161,135 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       w[!is.finite(w)] <- 0
       c(list(kind = "bardiv", w = round(w, 2L), v = sortv(v),
              pos = !is.na(v) & v >= 0), lab)
+    } else if (p$kind %in% c("box", "pointrange")) {
+      # The distribution lanes: every geometric number (positions AND widths)
+      # rounded here; the emitters only print. See lane-prepare.R for the
+      # cell's statistics and _blockr.design/open/lane-chart/spec.md for the
+      # glyph.
+      cn <- p$cols
+      wd <- p$words %||% list(center = "Center", range = "Range")
+      bc <- rows[[cn[["bc"]]]]
+      bl <- rows[[cn[["bl"]]]]
+      bh <- rows[[cn[["bh"]]]]
+      nn <- rows[[cn[["n"]]]]
+      lab <- if (isTRUE(p$show_val)) {
+        disp <- lane_fmt(bc)
+        list(disp = disp, dw = max(c(1L, nchar(disp))))
+      }
+      if (identical(p$kind, "box")) {
+        wl <- rows[[cn[["wl"]]]]
+        wh <- rows[[cn[["wh"]]]]
+        # Whisker segments live OUTSIDE the body; a degenerate side (whisker
+        # meets the box) ships NA and draws nothing.
+        tip <- ifelse(is.na(bc), "", rank_esc(paste0(
+          "n=", nn, " · ", wd$center, " ", lane_fmt(bc),
+          " · ", wd$range, " ", lane_fmt(bl), "–", lane_fmt(bh),
+          " · ", wd$whisk %||% "Whiskers", " ",
+          lane_fmt(wl), "–", lane_fmt(wh)
+        )))
+        list(kind = "box",
+             wl = pos_w(wl), w1 = span_w(wl, bl),
+             bl = pos_w(bl), bw = span_w(bl, bh), bc = pos_w(bc),
+             b2 = pos_w(bh), w2 = span_w(bh, wh), wh = pos_w(wh),
+             nn = nn, tip = tip, v = sortv(bc)) |> c(lab)
+      } else {
+        tip <- ifelse(is.na(bc), "", rank_esc(paste0(
+          "n=", nn, " · ", wd$center, " ", lane_fmt(bc), " · ",
+          wd$range, " ",
+          ifelse(is.na(bl) | is.na(bh), "undefined (n < 2)",
+                 paste0(lane_fmt(bl), "–", lane_fmt(bh)))
+        )))
+        list(kind = "pointrange",
+             c = pos_w(bc), l = pos_w(bl), rw = span_w(bl, bh),
+             nn = nn, tip = tip, v = sortv(bc)) |> c(lab)
+      }
+    } else if (identical(p$kind, "interval")) {
+      # Swimlane segments: [left, width, fill-index] triples per row, plus a
+      # pre-escaped tooltip per segment. The domain is the observed x/xend
+      # range (prep$dom), not zero-based.
+      segs <- rows$.segs
+      fmt_d <- function(v) {
+        if (isTRUE(prep$dom_date)) {
+          format(as.Date(v, origin = "1970-01-01"))
+        } else {
+          lane_fmt(v)
+        }
+      }
+      lv <- prep$series
+      out_segs <- lapply(segs, function(ss) {
+        lapply(ss, function(sg) {
+          list(pos_w(sg$s)[[1L]], span_w(sg$s, sg$e)[[1L]], sg$f)
+        })
+      })
+      out_tips <- lapply(segs, function(ss) {
+        vapply(ss, function(sg) {
+          rank_esc(paste0(
+            if (!is.null(lv)) paste0(lv[[sg$f]], " · "),
+            fmt_d(sg$s), "–", fmt_d(sg$e)
+          ))
+        }, character(1L))
+      })
+      list(kind = "interval", segs = out_segs, tips = out_tips,
+           fills = as.character(prep$fills),
+           d0 = round(prep$dom[[1L]], 4L), d1 = round(prep$dom[[2L]], 4L),
+           dd = isTRUE(prep$dom_date), v = sortv(rows$.v))
+    } else if (identical(p$kind, "sparkline")) {
+      # One inline SVG per cell, geometry PRE-PRINTED as point strings so the
+      # emitters paste rather than format floats. viewBox 0 0 100 28, 2px of
+      # vertical padding; y grows downward.
+      H <- 28
+      PAD <- 2
+      xd <- prep$dom
+      yd <- prep$ydom
+      xf <- function(v) round((v - xd[[1L]]) / (xd[[2L]] - xd[[1L]]) * 100, 2L)
+      yf <- function(v) {
+        round(PAD + (H - 2 * PAD) *
+                (1 - (v - yd[[1L]]) / (yd[[2L]] - yd[[1L]])), 2L)
+      }
+      fmt_x <- function(v) {
+        if (isTRUE(prep$dom_date)) {
+          format(as.Date(v, origin = "1970-01-01"))
+        } else {
+          lane_fmt(v)
+        }
+      }
+      pts <- rows$.pts
+      one_row <- function(p1) {
+        n1 <- length(p1$y)
+        if (!n1) {
+          return(list(pl = "", bd = NA_character_, dx = NA_real_,
+                      dy = NA_real_, xs = "", ys = ""))
+        }
+        xs <- xf(p1$x)
+        ys <- yf(p1$y)
+        bd <- if (!is.null(p1$lo) && !is.null(p1$hi) &&
+                    all(is.finite(p1$lo)) && all(is.finite(p1$hi))) {
+          paste0(
+            paste0(xs, ",", yf(p1$lo), collapse = " "), " ",
+            paste0(rev(xs), ",", rev(yf(p1$hi)), collapse = " ")
+          )
+        } else {
+          NA_character_
+        }
+        list(
+          pl = paste0(xs, ",", ys, collapse = " "), bd = bd,
+          dx = xs[[n1]], dy = round(ys[[n1]] / H * 100, 2L),
+          xs = paste(fmt_x(p1$x), collapse = ","),
+          ys = paste(lane_fmt(p1$y), collapse = ",")
+        )
+      }
+      per <- lapply(pts, one_row)
+      pull <- function(nm) unlist(lapply(per, `[[`, nm), use.names = FALSE)
+      # The sparkline column always sorts (and labels) by the LAST value;
+      # with a companion rank bar, `.v` carries that bar's aggregate instead.
+      last_y <- rows$.last %||% rows$.v
+      lab <- if (isTRUE(p$show_val)) {
+        disp <- lane_fmt(last_y)
+        list(disp = disp, dw = max(c(1L, nchar(disp))))
+      }
+      list(kind = "sparkline", pl = pull("pl"), bd = pull("bd"),
+           dx = pull("dx"), dy = pull("dy"), xs = pull("xs"),
+           ys = pull("ys"), nn = rows$.n, v = sortv(last_y)) |> c(lab)
     } else if (isTRUE(p$raw) && isTRUE(p$text)) {
       # A raw text field: the value IS the display (escaped once, here, so
       # both consumers paste it as-is), and the sort key is the text itself.
@@ -231,6 +381,18 @@ rank_cells_html <- function(m) {
     } else if (identical(c$kind, "bardiv")) {
       paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
              rank_barwrap(rank_dv_html(c$w, c$pos), c), "</td>")
+    } else if (identical(c$kind, "box")) {
+      paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
+             rank_barwrap(rank_box_html(c), c), "</td>")
+    } else if (identical(c$kind, "pointrange")) {
+      paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
+             rank_barwrap(rank_pr_html(c), c), "</td>")
+    } else if (identical(c$kind, "interval")) {
+      paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
+             rank_iv_html(c), "</td>")
+    } else if (identical(c$kind, "sparkline")) {
+      paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
+             rank_barwrap(rank_sp_html(c), c), "</td>")
     } else if (isTRUE(c$text)) {
       paste0("<td class=\"blockr-rank-txt\"", rank_data_v(c$v), ">",
              c$disp, "</td>")
@@ -354,6 +516,126 @@ rank_dv_html <- function(w, pos) {
   )
 }
 
+# --- lane mark emitters -------------------------------------------------------
+# Each of these has a byte-identical twin in rank-table.js (boxHtml / prHtml /
+# ivHtml / spHtml); test-rank-push.R pins the pair. Emission conditions key on
+# shipped NA/null values, never on re-derived arithmetic, so the two consumers
+# cannot disagree about what to draw.
+
+#' Box cell: two whisker segments (never through the body), caps, IQR body,
+#' median tick, all absolutely positioned in a track-coloured lane.
+#' @noRd
+rank_box_html <- function(c) {
+  n <- length(c$v)
+  vapply(seq_len(n), function(i) {
+    if (is.na(c$bc[[i]])) {
+      return("<div class=\"blockr-rank-lane blockr-rank-boxcell\"></div>")
+    }
+    paste0(
+      "<div class=\"blockr-rank-lane blockr-rank-boxcell\" title=\"",
+      c$tip[[i]], "\">",
+      if (!is.na(c$w1[[i]])) {
+        paste0("<i class=\"lane-wh\" style=\"left:", rank_fmt_w(c$wl[[i]]),
+               "%;width:", rank_fmt_w(c$w1[[i]]), "%\"></i>")
+      } else "",
+      if (!is.na(c$w2[[i]])) {
+        paste0("<i class=\"lane-wh\" style=\"left:", rank_fmt_w(c$b2[[i]]),
+               "%;width:", rank_fmt_w(c$w2[[i]]), "%\"></i>")
+      } else "",
+      if (!is.na(c$w1[[i]])) {
+        paste0("<i class=\"lane-cap\" style=\"left:", rank_fmt_w(c$wl[[i]]),
+               "%\"></i>")
+      } else "",
+      if (!is.na(c$w2[[i]])) {
+        paste0("<i class=\"lane-cap\" style=\"left:", rank_fmt_w(c$wh[[i]]),
+               "%\"></i>")
+      } else "",
+      if (!is.na(c$bw[[i]])) {
+        paste0("<i class=\"lane-box\" style=\"left:", rank_fmt_w(c$bl[[i]]),
+               "%;width:", rank_fmt_w(c$bw[[i]]), "%\"></i>")
+      } else "",
+      "<i class=\"lane-med\" style=\"left:", rank_fmt_w(c$bc[[i]]),
+      "%\"></i></div>"
+    )
+  }, character(1L))
+}
+
+#' Point range cell: interval line plus a ringed center dot. NA bounds (the
+#' n < 2 CI) draw the center alone -- never a zero-width interval, which
+#' would read as certainty.
+#' @noRd
+rank_pr_html <- function(c) {
+  n <- length(c$v)
+  vapply(seq_len(n), function(i) {
+    if (is.na(c$c[[i]])) {
+      return("<div class=\"blockr-rank-lane blockr-rank-prcell\"></div>")
+    }
+    paste0(
+      "<div class=\"blockr-rank-lane blockr-rank-prcell\" title=\"",
+      c$tip[[i]], "\">",
+      if (!is.na(c$rw[[i]])) {
+        paste0("<i class=\"lane-rng\" style=\"left:", rank_fmt_w(c$l[[i]]),
+               "%;width:", rank_fmt_w(c$rw[[i]]), "%\"></i>")
+      } else "",
+      "<i class=\"lane-ctr\" style=\"left:", rank_fmt_w(c$c[[i]]),
+      "%\"></i></div>"
+    )
+  }, character(1L))
+}
+
+#' Interval cell: the swimlane. One segment per (x, xend) span, coloured by
+#' fill index; the domain bounds ride as data attributes for the hover
+#' readout (approximate day under the cursor).
+#' @noRd
+rank_iv_html <- function(c) {
+  n <- length(c$v)
+  vapply(seq_len(n), function(i) {
+    segs <- c$segs[[i]]
+    paste0(
+      "<div class=\"blockr-rank-lane blockr-rank-ivcell\" data-d0=\"",
+      rank_fmt_n(c$d0), "\" data-d1=\"", rank_fmt_n(c$d1), "\"",
+      if (isTRUE(c$dd)) " data-dd=\"1\"" else "", ">",
+      paste0(vapply(seq_along(segs), function(j) {
+        sg <- segs[[j]]
+        paste0("<i class=\"lane-seg\" style=\"left:", rank_fmt_w(sg[[1L]]),
+               "%;width:", rank_fmt_w(sg[[2L]]), "%;background:",
+               c$fills[[sg[[3L]]]], "\" data-tip=\"", c$tips[[i]][[j]],
+               "\"></i>")
+      }, character(1L)), collapse = ""),
+      "</div>"
+    )
+  }, character(1L))
+}
+
+#' Sparkline cell: one inline SVG (band polygon under a polyline) plus a
+#' last-value dot. The geometry arrives as pre-printed point strings; the raw
+#' x/y display values ride as data attributes for the hover readout.
+#' @noRd
+rank_sp_html <- function(c) {
+  n <- length(c$v)
+  vapply(seq_len(n), function(i) {
+    paste0(
+      "<div class=\"blockr-rank-lane blockr-rank-spcell\" data-xs=\"",
+      c$xs[[i]], "\" data-ys=\"", c$ys[[i]], "\">",
+      "<svg viewBox=\"0 0 100 28\" preserveAspectRatio=\"none\">",
+      if (!is.na(c$bd[[i]])) {
+        paste0("<polygon class=\"lane-band\" points=\"", c$bd[[i]],
+               "\"></polygon>")
+      } else "",
+      if (nzchar(c$pl[[i]])) {
+        paste0("<polyline class=\"lane-ln\" points=\"", c$pl[[i]],
+               "\" vector-effect=\"non-scaling-stroke\"></polyline>")
+      } else "",
+      "</svg>",
+      if (!is.na(c$dx[[i]])) {
+        paste0("<i class=\"lane-dot\" style=\"left:", rank_fmt_w(c$dx[[i]]),
+               "%;top:", rank_fmt_w(c$dy[[i]]), "%\"></i>")
+      } else "",
+      "</div>"
+    )
+  }, character(1L))
+}
+
 # Per-element formatting: format() would align decimals across the vector
 # ("100.00" beside "57.14"), while the JS assembler prints String(n) = "100".
 # as.character() on a rounded value matches it exactly -- the same reason
@@ -361,6 +643,15 @@ rank_dv_html <- function(w, pos) {
 #' @noRd
 rank_fmt_w <- function(w) {
   as.character(w)
+}
+
+# Large-magnitude numbers (the interval domain: dates as days or seconds):
+# as.character() goes scientific at 1e5 where JS String() never does. Values
+# are rounded to <= 4 decimals at the source, so digits = 15 prints them
+# exactly, matching String(n).
+#' @noRd
+rank_fmt_n <- function(x) {
+  format(x, scientific = FALSE, trim = TRUE, digits = 15L)
 }
 
 # --- consumer 2: JSON payload ------------------------------------------------
@@ -392,6 +683,31 @@ rank_flat_payload <- function(m) {
     } else if (identical(c$kind, "bardiv")) {
       out$w <- arr(c$w)
       out$pos <- arr(c$pos)
+    } else if (identical(c$kind, "box")) {
+      for (nm in c("wl", "w1", "bl", "bw", "bc", "b2", "w2", "wh", "nn")) {
+        out[[nm]] <- arr(c[[nm]])
+      }
+      out$tip <- arr(as.character(c$tip))
+    } else if (identical(c$kind, "pointrange")) {
+      for (nm in c("c", "l", "rw", "nn")) out[[nm]] <- arr(c[[nm]])
+      out$tip <- arr(as.character(c$tip))
+    } else if (identical(c$kind, "interval")) {
+      # Per-row lists stay arrays even at length one: a collapsed tips vector
+      # would index as characters in JS (the auto_unbox trap).
+      out$segs <- lapply(c$segs, function(ss) if (length(ss)) ss else arr(list()))
+      out$tips <- lapply(c$tips, function(tt) arr(as.character(tt)))
+      out$fills <- arr(as.character(c$fills))
+      out$d0 <- c$d0
+      out$d1 <- c$d1
+      if (isTRUE(c$dd)) out$dd <- TRUE
+    } else if (identical(c$kind, "sparkline")) {
+      out$pl <- arr(as.character(c$pl))
+      out$bd <- arr(c$bd)
+      out$dx <- arr(c$dx)
+      out$dy <- arr(c$dy)
+      out$xs <- arr(as.character(c$xs))
+      out$ys <- arr(as.character(c$ys))
+      out$nn <- arr(c$nn)
     } else {
       out$w <- arr(c$w)
       out$sub <- arr_if(c$sub)

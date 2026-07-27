@@ -22,6 +22,13 @@ push_fixture <- function() {
   rows$ARM <- factor(rep(c("Placebo", "Active"), length.out = nrow(rows)),
                      levels = c("Placebo", "Active"))
   rows$SEV <- factor(rows$SEV, levels = c("MILD", "MODERATE"))
+  # Lane-mark columns: a duration with decimals (box / pointrange /
+  # sparkline value), interval start/end spans, and a band around DUR.
+  rows$DUR <- rows$AVAL * 1.5 + 0.25
+  rows$SDY <- rows$AVAL * 3L
+  rows$EDY <- rows$AVAL * 3L + 5L
+  rows$LO <- rows$DUR - 1
+  rows$HI <- rows$DUR + 1
   rows
 }
 
@@ -136,6 +143,121 @@ test_that("json keeps single-row columns as arrays", {
   expect_match(j, '"w":\\[')
 })
 
+# --- the lane marks ----------------------------------------------------------
+
+test_that("a box column ships pre-rounded positions AND widths", {
+  ae <- push_fixture()
+  p <- rank_build_payload(ae, group = "TERM", mark = "box", value = "DUR")
+  c1 <- p$cols[[1]]
+  expect_identical(c1$kind, "box")
+  for (nm in c("wl", "w1", "bl", "bw", "bc", "b2", "w2", "wh", "nn", "tip")) {
+    expect_length(c1[[nm]], 4L)
+  }
+  # The trap the spec calls out: the domain runs to the widest WHISKER, so
+  # the global max whisker sits exactly at the track edge and nothing ever
+  # renders past it.
+  expect_equal(max(as.numeric(c1$wh)), 100)
+  for (nm in c("wl", "bl", "bc", "b2", "wh")) {
+    expect_true(all(as.numeric(c1[[nm]]) <= 100))
+  }
+  # Widths are shipped, never re-derived: left whisker ends where the box
+  # starts (within the 2dp rounding the payload carries).
+  expect_true(all(abs(as.numeric(c1$wl) + as.numeric(c1$w1) -
+                        as.numeric(c1$bl)) <= 0.02))
+  # The tooltip carries the statistic's own words.
+  expect_match(c1$tip[[1]], "Median .* Q1–Q3 .* 1\\.5×IQR")
+})
+
+test_that("a pointrange with n = 1 ships NA bounds and a center-only cell", {
+  ae <- push_fixture()
+  one <- ae[!duplicated(ae$TERM), , drop = FALSE]   # one row per term
+  p <- rank_build_payload(one, group = "TERM", mark = "pointrange",
+                          value = "DUR", summary = "mean_ci95")
+  c1 <- p$cols[[1]]
+  expect_identical(c1$kind, "pointrange")
+  expect_true(all(is.na(as.numeric(c1$rw))))
+  expect_false(anyNA(as.numeric(c1$c)))
+  # Tips ship pre-escaped (both consumers paste them into an attribute).
+  expect_match(c1$tip[[1]], "undefined (n &lt; 2)", fixed = TRUE)
+  # And the emitter draws the dot alone.
+  html <- rank_cells_html(rank_cells(rank_prepare(
+    one, group = "TERM", mark = "pointrange", value = "DUR",
+    summary = "mean_ci95"
+  )))
+  expect_match(html, "lane-ctr")
+  expect_false(grepl("lane-rng", html))
+})
+
+test_that("an interval column ships per-row segments on the observed domain", {
+  ae <- push_fixture()
+  p <- rank_build_payload(ae, group = "USUBJID", mark = "interval",
+                          x = "SDY", xend = "EDY", color = "SEV")
+  c1 <- p$cols[[1]]
+  expect_identical(c1$kind, "interval")
+  expect_length(c1$segs, p$n)
+  expect_length(c1$tips, p$n)
+  # Subjects appearing in all four terms carry four spans.
+  expect_true(any(lengths(c1$segs) > 1L))
+  # Fill index points into the level fills; tips carry the level name.
+  expect_identical(as.character(c1$fills),
+                   unname(rank_level_colors(NULL, "SEV",
+                                            c("MILD", "MODERATE"))))
+  expect_match(c1$tips[[1]][[1]], "^(MILD|MODERATE) · ")
+  # The domain is the observed span range, not zero-based.
+  expect_equal(c1$d0, min(ae$SDY))
+  expect_equal(c1$d1, max(ae$EDY))
+  # An Events count column rides beside the lane.
+  expect_identical(p$cols[[2]]$kind, "num")
+})
+
+test_that("a sparkline column ships pre-printed geometry plus hover values", {
+  ae <- push_fixture()
+  p <- rank_build_payload(ae, group = "TERM", mark = "sparkline",
+                          x = "AVAL", value = "DUR", lo = "LO", hi = "HI")
+  c1 <- p$cols[[1]]
+  expect_identical(c1$kind, "sparkline")
+  expect_length(c1$pl, 4L)
+  expect_match(c1$pl[[1]], "^[0-9.,]+( [0-9.,]+)+$")
+  expect_false(anyNA(c1$bd))          # the band columns are complete
+  expect_match(c1$xs[[1]], ",")       # hover snap data
+  # Sort value = the last y per row.
+  expect_equal(as.numeric(c1$v),
+               round(unname(vapply(split(ae, ae$TERM), function(d) {
+                 d$DUR[order(d$AVAL)][nrow(d)]
+               }, numeric(1))[p$label]), 4))
+})
+
+test_that("a sparkline with func gains a companion rank bar", {
+  ae <- push_fixture()
+  p <- rank_build_payload(ae, group = "TERM", mark = "sparkline",
+                          x = "AVAL", value = "DUR", func = "mean")
+  expect_identical(vapply(p$cols, function(c) c$kind, ""),
+                   c("bar", "sparkline"))
+  # The bar ranks the rows: row order = mean(DUR) per term, descending.
+  means <- vapply(split(ae$DUR, ae$TERM), mean, numeric(1))
+  expect_identical(as.character(p$label),
+                   names(sort(means, decreasing = TRUE)))
+  # The sparkline column itself still sorts by LAST value, not the mean.
+  expect_false(identical(as.numeric(p$cols[[2]]$v),
+                         as.numeric(p$cols[[1]]$v)))
+  # A counting func means no bar (the constructor's bar-era default).
+  p2 <- rank_build_payload(ae, group = "TERM", mark = "sparkline",
+                           x = "AVAL", value = "DUR", func = "count")
+  expect_identical(vapply(p2$cols, function(c) c$kind, ""), "sparkline")
+})
+
+test_that("negative lows extend the distribution domain below zero", {
+  d <- data.frame(g = rep(c("a", "b"), each = 6),
+                  v = c(-5, -2, 0, 1, 2, 3, 1, 2, 3, 4, 5, 6))
+  prep <- rank_prepare(d, group = "g", mark = "box", value = "v")
+  expect_lt(prep$bar_min, 0)
+  m <- rank_cells(prep)
+  c1 <- m$cols[[1]]
+  # Everything still renders inside the track.
+  expect_true(all(as.numeric(c1$wl) >= 0, na.rm = TRUE))
+  expect_true(all(as.numeric(c1$wh) <= 100, na.rm = TRUE))
+})
+
 # --- the drift guard --------------------------------------------------------
 
 test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
@@ -161,7 +283,23 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
                     fields = c("SOC", "AVAL")),
     sep_cols = list(group = "TERM", func = "count", cols = c("n", "pct")),
     nested = list(group = "TERM", parent = "SOC", func = "count"),
-    capped = list(group = "TERM", func = "count", top_n = 2L)
+    capped = list(group = "TERM", func = "count", top_n = 2L),
+    # One case per lane mark, so their emitters are byte-compared too.
+    box = list(group = "TERM", mark = "box", value = "DUR"),
+    box_facet = list(group = "TERM", mark = "box", value = "DUR",
+                     facet = "ARM"),
+    box_nested = list(group = "TERM", parent = "SOC", mark = "box",
+                      value = "DUR"),
+    pointrange = list(group = "TERM", mark = "pointrange", value = "DUR",
+                      summary = "mean_ci95"),
+    pr_n1 = list(group = "USUBJID", mark = "pointrange", value = "DUR",
+                 summary = "mean_ci95"),
+    interval = list(group = "USUBJID", mark = "interval", x = "SDY",
+                    xend = "EDY", color = "SEV"),
+    sparkline = list(group = "TERM", mark = "sparkline", x = "AVAL",
+                     value = "DUR", lo = "LO", hi = "HI"),
+    sparkline_bar = list(group = "TERM", mark = "sparkline", x = "AVAL",
+                         value = "DUR", func = "mean")
   )
 
   js_path <- system.file("js", "rank-table.js", package = "blockr.viz")

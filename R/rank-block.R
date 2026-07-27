@@ -1,20 +1,46 @@
-#' Rank Block
+#' Lane Chart Block
 #'
-#' Ranked horizontal bars rendered as an HTML table: the third sibling of
+#' Horizontal marks rendered as an HTML table: the third sibling of
 #' [new_chart_block()] and [new_table_block()]. It takes the chart's
 #' vocabulary (`group` / `color` / `facet` / `bar_mode` / `sort_by` / `drill`)
 #' and the table's rendering (sticky header, client-side search and sort,
 #' scroll at `max_height`, exact values in their own columns).
 #'
-#' Horizontal bars only. That constraint is what keeps the argument surface
-#' small: for anything else -- vertical columns, lines, scatter, a second
-#' measure on an axis -- use [new_chart_block()].
+#' One row is one category, and the mark is a horizontal glyph on a shared
+#' linear domain confined to a cell. `mark` picks the glyph: ranked `"bar"`s
+#' (the original surface, with colour split / facet / comparison), a `"box"`
+#' or `"pointrange"` distribution summary per row (statistics computed in R,
+#' see `summary` / `whiskers`), an `"interval"` swimlane (`x` / `xend` spans
+#' per underlying row -- e.g. adverse-event episodes per subject), or a
+#' `"sparkline"` per row (`value` over the within-row order `x`, with an
+#' optional `lo` / `hi` band). For anything else -- vertical columns, lines,
+#' scatter, a second measure on an axis -- use [new_chart_block()].
 #'
 #' Large inputs behave exactly like the table block: every row is rendered and
 #' the container scrolls. `top_n` is opt-in, for report exhibits where there is
 #' no scrollbar (a pptx slide wants ten bars, not a hundred), and always draws
 #' a visible fold row.
 #'
+#' @param mark The glyph per row: `"bar"` (default), `"box"`, `"pointrange"`,
+#'   `"interval"` or `"sparkline"`.
+#' @param summary Distribution statistic for `mark = "box"` (the body) and
+#'   `mark = "pointrange"` (the interval): one of `"median_q1_q3"`,
+#'   `"mean_sd"`, `"mean_2sd"`, `"mean_se"`, `"mean_ci95"`, `"p5_p95"`,
+#'   `"min_max"`. `NULL` = the per-mark default (`"median_q1_q3"` for the
+#'   box, `"mean_se"` for the point range). `mean_ci95` uses
+#'   `qt(0.975, n - 1)` and reports NA bounds below n = 2 (the cell then
+#'   draws the center alone).
+#' @param whiskers Box whisker rule: `"tukey"` (1.5 x IQR fences clamped to
+#'   the observed extremes, the textbook default) or any `summary` value.
+#' @param x,xend Interval mark: the span's start and end columns (numeric or
+#'   dates), the chart gantt's names. For the sparkline, `x` alone is the
+#'   within-row order column.
+#' @param lo,hi Sparkline only: optional band columns (e.g. a reference
+#'   range), drawn under the line. For the sparkline, `func` set to one of
+#'   `"mean"`, `"median"`, `"sum"`, `"min"`, `"max"` additionally draws a
+#'   companion bar of that reduction beside the trajectory and RANKS the
+#'   rows by it ("highest mean, plus the trajectory"); any other `func`
+#'   means no bar, rows ranked by last value.
 #' @param group Column to rank by: one row per level, ordered by the measure.
 #' @param value,func,id_var The measure. `func` is one of `"count"`,
 #'   `"count_distinct"`, `"sum"`, `"mean"`, `"median"`, `"min"`, `"max"`, or
@@ -67,46 +93,61 @@
 #'   board save and restore.
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #'
-#' @return A blockr transform block of class `rank_block`.
+#' @return A blockr transform block of class `lane_chart_block`.
 #' @examplesIf interactive()
-#' new_rank_block(group = "cyl")
+#' new_lane_chart_block(group = "cyl")
 #' @export
-new_rank_block <- function(group = NULL,
-                           value = ".count",
-                           func = "count",
-                           id_var = NULL,
-                           parent = NULL,
-                           color = NULL,
-                           bar_mode = "stacked",
-                           facet = NULL,
-                           compare = NULL,
-                           cols = NULL,
-                           fields = NULL,
-                           sort_by = "value",
-                           sort_dir = "desc",
-                           top_n = NULL,
-                           max_height = "600px",
-                           search = TRUE,
-                           title = NULL,
-                           subtitle = NULL,
-                           caption = NULL,
-                           drill = NULL,
-                           ctrl_target = "",
-                           ctrl_table = "",
-                           # Runtime filter transport (NOT creation-time
-                           # config). MUST stay in the signature: blockr.core
-                           # serializes a block from its constructor formals
-                           # and restores by re-calling the constructor, so
-                           # dropping these breaks filter-state round-trip.
-                           filter_type = "categorical",
-                           filter_column = NULL,
-                           filter_values = NULL,
-                           ...) {
+new_lane_chart_block <- function(group = NULL,
+                                 value = ".count",
+                                 func = "count",
+                                 id_var = NULL,
+                                 mark = "bar",
+                                 summary = NULL,
+                                 whiskers = "tukey",
+                                 x = NULL,
+                                 xend = NULL,
+                                 lo = NULL,
+                                 hi = NULL,
+                                 parent = NULL,
+                                 color = NULL,
+                                 bar_mode = "stacked",
+                                 facet = NULL,
+                                 compare = NULL,
+                                 cols = NULL,
+                                 fields = NULL,
+                                 sort_by = "value",
+                                 sort_dir = "desc",
+                                 top_n = NULL,
+                                 max_height = "600px",
+                                 search = TRUE,
+                                 title = NULL,
+                                 subtitle = NULL,
+                                 caption = NULL,
+                                 drill = NULL,
+                                 ctrl_target = "",
+                                 ctrl_table = "",
+                                 # Runtime filter transport (NOT creation-time
+                                 # config). MUST stay in the signature:
+                                 # blockr.core serializes a block from its
+                                 # constructor formals and restores by
+                                 # re-calling the constructor, so dropping
+                                 # these breaks filter-state round-trip.
+                                 filter_type = "categorical",
+                                 filter_column = NULL,
+                                 filter_values = NULL,
+                                 ...) {
   # Heal state poisoned by a pre-#144 DAG copy/paste (a NULL slot returning as
   # list()); see R/state-normalize.R.
   group <- chr_state(group)
   value <- chr_state(value)
   id_var <- chr_state(id_var)
+  mark <- chr_state(mark)
+  summary <- chr_state(summary)
+  whiskers <- chr_state(whiskers)
+  x <- chr_state(x)
+  xend <- chr_state(xend)
+  lo <- chr_state(lo)
+  hi <- chr_state(hi)
   parent <- chr_state(parent)
   color <- chr_state(color)
   facet <- chr_state(facet)
@@ -131,6 +172,13 @@ new_rank_block <- function(group = NULL,
         r_value   <- shiny::reactiveVal(value %||% ".count")
         r_func    <- shiny::reactiveVal(func %||% "count")
         r_id_var  <- shiny::reactiveVal(id_var)
+        r_mark    <- shiny::reactiveVal(mark %||% "bar")
+        r_summary <- shiny::reactiveVal(summary)
+        r_whiskers <- shiny::reactiveVal(whiskers %||% "tukey")
+        r_x       <- shiny::reactiveVal(x)
+        r_xend    <- shiny::reactiveVal(xend)
+        r_lo      <- shiny::reactiveVal(lo)
+        r_hi      <- shiny::reactiveVal(hi)
         r_parent  <- shiny::reactiveVal(parent)
         r_color   <- shiny::reactiveVal(color)
         r_bar_mode <- shiny::reactiveVal(bar_mode %||% "stacked")
@@ -187,6 +235,8 @@ new_rank_block <- function(group = NULL,
           group = r_group, parent = r_parent, color = r_color,
           facet = r_facet, compare = r_compare, func = r_func,
           value = r_value, id_var = r_id_var, bar_mode = r_bar_mode,
+          mark = r_mark, summary = r_summary, whiskers = r_whiskers,
+          x = r_x, xend = r_xend, lo = r_lo, hi = r_hi,
           cols = r_cols, fields = r_fields, sort_by = r_sort_by,
           sort_dir = r_sort_dir, top_n = r_top_n, drill = r_drill,
           ctrl_target = r_ctrl_target, ctrl_table = r_ctrl_table,
@@ -224,7 +274,8 @@ new_rank_block <- function(group = NULL,
             } else if (identical(key, "top_n")) {
               n <- suppressWarnings(as.integer(as.character(val)[[1L]]))
               setters[[key]](if (is.na(n) || n <= 0L) NULL else n)
-            } else if (key %in% c("func", "bar_mode", "sort_by", "sort_dir")) {
+            } else if (key %in% c("func", "bar_mode", "sort_by", "sort_dir",
+                                  "mark", "summary", "whiskers")) {
               v <- as.character(unlist(val %||% character()))
               if (length(v) && nzchar(v[[1L]])) setters[[key]](v[[1L]])
             } else {
@@ -344,6 +395,9 @@ new_rank_block <- function(group = NULL,
               group = r_group(), parent = r_parent(), color = r_color(),
               facet = r_facet(), compare = r_compare(), func = r_func(),
               value = r_value(), id_var = r_id_var(),
+              mark = r_mark(), summary = r_summary(),
+              whiskers = r_whiskers(), x = r_x(), xend = r_xend(),
+              lo = r_lo(), hi = r_hi(),
               bar_mode = r_bar_mode(), cols = r_cols(), fields = r_fields(),
               sort_by = r_sort_by(), sort_dir = r_sort_dir(),
               top_n = r_top_n(), search = r_search(), drill = r_drill(),
@@ -363,6 +417,8 @@ new_rank_block <- function(group = NULL,
             group = r_group(), value = r_value(), func = r_func(),
             id_var = r_id_var(), parent = r_parent(), color = r_color(),
             bar_mode = r_bar_mode(), facet = r_facet(), compare = r_compare(),
+            mark = r_mark(), summary = r_summary(), whiskers = r_whiskers(),
+            x = r_x(), xend = r_xend(), lo = r_lo(), hi = r_hi(),
             cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
             sort_dir = r_sort_dir(), top_n = r_top_n(),
             scale_map = board_scale_map()
@@ -389,9 +445,15 @@ new_rank_block <- function(group = NULL,
               dplyr::filter(data, .data[[.(col)]] %in% .(as.character(vals)))
             )
           }),
+          # Every constructor formal needs a state entry: blockr.core
+          # serializes from formals and restores by re-calling the
+          # constructor, so a formal without one silently loses its value
+          # across save/restore (the same warning as the filter_* args).
           state = list(
             group = r_group, value = r_value, func = r_func,
-            id_var = r_id_var, parent = r_parent, color = r_color,
+            id_var = r_id_var, mark = r_mark, summary = r_summary,
+            whiskers = r_whiskers, x = r_x, xend = r_xend, lo = r_lo,
+            hi = r_hi, parent = r_parent, color = r_color,
             bar_mode = r_bar_mode, facet = r_facet, compare = r_compare,
             cols = r_cols, fields = r_fields, sort_by = r_sort_by,
             sort_dir = r_sort_dir, top_n = r_top_n,
@@ -414,7 +476,9 @@ new_rank_block <- function(group = NULL,
         shiny::uiOutput(ns("rank_chrome"))
       )
     },
-    class = c("rank_block", "transform_block", "block"),
+    # `rank_block` stays in the class vector so S3 usage and saved boards
+    # from the rank era keep dispatching.
+    class = c("lane_chart_block", "rank_block", "transform_block", "block"),
     # Same input contract as the table block: a dispatch check only, so a
     # composer table (or anything with an as_annotated_df method) connects
     # directly, and a value the method refuses errors at eval time.
@@ -423,12 +487,14 @@ new_rank_block <- function(group = NULL,
     # picks yet, and clearing a pick must not wedge the block -- see
     # reference: allow_empty_state wedge).
     allow_empty_state = c(
-      "group", "value", "id_var", "parent", "color", "facet", "compare",
+      "group", "value", "id_var", "summary", "x", "xend", "lo", "hi",
+      "parent", "color", "facet", "compare",
       "cols", "fields", "top_n", "title", "subtitle", "caption", "drill",
       "ctrl_target", "ctrl_table", "filter_column", "filter_values"
     ),
     external_ctrl = c(
-      "group", "value", "func", "id_var", "parent", "color", "bar_mode",
+      "group", "value", "func", "id_var", "mark", "summary", "whiskers",
+      "x", "xend", "lo", "hi", "parent", "color", "bar_mode",
       "facet", "compare", "cols", "fields", "sort_by", "sort_dir", "top_n",
       "max_height", "search", "title", "subtitle", "caption", "drill",
       "ctrl_target", "ctrl_table"
@@ -437,17 +503,90 @@ new_rank_block <- function(group = NULL,
   )
 }
 
-#' Argument specs for the rank block
+#' @rdname new_lane_chart_block
+#' @description `new_rank_block()` is the block's former name, kept as a
+#'   deprecated alias so saved boards restore: it constructs the same
+#'   `lane_chart_block` (and records the new constructor on the next save).
+#' @export
+new_rank_block <- function(...) {
+  new_lane_chart_block(...)
+}
+
+#' Argument specs for the lane chart block
 #' @noRd
 rank_arguments <- function() {
   blockr.core::new_arg_specs(
     group = new_arg_spec(
       paste0(
-        "Column to rank by: one row per level, ordered by the measure. The ",
-        "one required argument (e.g. AEDECOD for most-frequent adverse ",
-        "events)."
+        "Column giving the rows: one row per level. The one required ",
+        "argument (e.g. AEDECOD for most-frequent adverse events, USUBJID ",
+        "for a per-subject swimlane)."
       ),
       example = "AEDECOD",
+      type = arg_string()
+    ),
+    mark = new_arg_spec(
+      paste0(
+        "The glyph per row. bar = ranked bars (the default; supports color ",
+        "split, facet columns and a comparison). box / pointrange = a ",
+        "distribution summary of `value` per row, statistics computed ",
+        "server-side (see `summary`). interval = a swimlane of x/xend ",
+        "spans per underlying row (e.g. AE episodes per subject, colored ",
+        "by `color`). sparkline = one small line per row: `value` over the ",
+        "within-row order `x`, with an optional lo/hi band; `func` = mean / ",
+        "median / sum / min / max adds a companion rank bar of that ",
+        "reduction beside the trajectory and sorts the rows by it."
+      ),
+      example = "box",
+      type = arg_enum(c("bar", "box", "pointrange", "interval", "sparkline"))
+    ),
+    summary = new_arg_spec(
+      paste0(
+        "Distribution statistic for mark = box (the body) or pointrange ",
+        "(the interval). Unset = the per-mark default (median_q1_q3 for ",
+        "the box, mean_se for the point range). mean_ci95 is a t-based 95% ",
+        "confidence interval (undefined below n = 2: the cell then draws ",
+        "the center alone)."
+      ),
+      example = "mean_ci95",
+      type = arg_enum(c("median_q1_q3", "mean_sd", "mean_2sd", "mean_se",
+                        "mean_ci95", "p5_p95", "min_max"))
+    ),
+    whiskers = new_arg_spec(
+      paste0(
+        "Box whisker rule: tukey (1.5 x IQR fences clamped to the observed ",
+        "extremes, the textbook default) or any `summary` value (e.g. ",
+        "min_max for range whiskers)."
+      ),
+      example = "tukey",
+      type = arg_enum(c("tukey", "median_q1_q3", "mean_sd", "mean_2sd",
+                        "mean_se", "mean_ci95", "p5_p95", "min_max"))
+    ),
+    x = new_arg_spec(
+      paste0(
+        "Interval mark: the span start column (study day or date, e.g. ",
+        "ASTDY). Sparkline mark: the within-row order column (e.g. visit ",
+        "number or date)."
+      ),
+      example = "ASTDY",
+      type = arg_string()
+    ),
+    xend = new_arg_spec(
+      "Interval mark only: the span end column (e.g. AENDY).",
+      example = "AENDY",
+      type = arg_string()
+    ),
+    lo = new_arg_spec(
+      paste0(
+        "Sparkline mark only: lower band column (e.g. a reference range ",
+        "low), drawn as a shaded band under the line."
+      ),
+      example = "A1LO",
+      type = arg_string()
+    ),
+    hi = new_arg_spec(
+      "Sparkline mark only: upper band column (e.g. a reference range high).",
+      example = "A1HI",
       type = arg_string()
     ),
     func = new_arg_spec(
@@ -628,17 +767,25 @@ rank_arguments <- function() {
   )
 }
 
-#' Construction guidance for the rank block
+#' Construction guidance for the lane chart block
 #' @noRd
 rank_guidance <- function() {
   paste(
-    "Ranked horizontal bars as an HTML table \u2014 the third sibling of the",
-    "chart and table blocks. Use it whenever the answer is \"which levels",
-    "are the biggest\": most frequent adverse events, top products, worst",
-    "sites. It beats a bar chart there because the table form carries",
-    "search, click-to-sort, exact values and an arbitrary row count, and it",
-    "beats the plain table because the bar makes the ranking readable at a",
-    "glance.",
+    "Horizontal marks as an HTML table \u2014 the third sibling of the",
+    "chart and table blocks. Use it whenever one row is one category and",
+    "the mark is a horizontal glyph on a shared scale: most frequent",
+    "adverse events (bar), AE duration by term (box / pointrange), an",
+    "AE-episode swimlane per subject (interval: x/xend, color = severity),",
+    "or a lab trajectory per subject (sparkline: value over x, lo/hi band).",
+    "It beats the canvas chart for many-category cases because the table",
+    "form carries search, click-to-sort, exact values and an arbitrary row",
+    "count, and it beats the plain table because the mark makes the",
+    "pattern readable at a glance.",
+    "\n- `mark` picks the glyph; everything below describes the default",
+    "bar. box / pointrange need `value` (statistics are computed",
+    "server-side, `summary` picks which; mean_ci95 is exact, qt-based).",
+    "interval needs `x` + `xend`. sparkline needs `x` (the within-row",
+    "order) + `value`.",
     "\n- `group` is the only required argument. `func = \"count_distinct\"`",
     "with `id_var` is the clinical default (subjects, not events).",
     "\n- `func = \"identity\"` ranks a pre-computed value as-is (one row per",
@@ -658,7 +805,7 @@ rank_guidance <- function() {
     "\n- Do NOT set `top_n` for an interactive board: the table renders every",
     "row and scrolls, like the table block. It is for report exhibits only.",
     "\nFor vertical columns, lines, scatter or anything with two measures on",
-    "axes, use the chart block instead \u2014 this block is horizontal bars",
-    "only."
+    "axes, use the chart block instead \u2014 this block is horizontal",
+    "glyphs in table cells only."
   )
 }

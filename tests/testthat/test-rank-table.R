@@ -409,21 +409,29 @@ test_that("a config that cannot be honored renders a message table", {
 })
 
 test_that("the block constructs, registers and round-trips its state", {
-  blk <- new_rank_block(group = "TERM", func = "count_distinct",
-                        id_var = "USUBJID", drill = "TERM")
+  blk <- new_lane_chart_block(group = "TERM", func = "count_distinct",
+                              id_var = "USUBJID", drill = "TERM")
+  expect_s3_class(blk, "lane_chart_block")
+  # The rank era stays in the class vector so old dispatch keeps working.
   expect_s3_class(blk, "rank_block")
   expect_s3_class(blk, "transform_block")
 
+  # The deprecated alias must remain exported and construct the SAME block,
+  # or saved boards from the rank era cannot restore.
+  old <- new_rank_block(group = "TERM", mark = "box", value = "AVAL")
+  expect_s3_class(old, "lane_chart_block")
+
   # blockr.core serializes a block from its constructor formals and restores by
   # re-calling the constructor, so the runtime filter transport has to stay in
-  # the signature or a saved click cannot come back.
-  fmls <- names(formals(new_rank_block))
+  # the signature or a saved click cannot come back -- as do the mark args.
+  fmls <- names(formals(new_lane_chart_block))
   expect_true(all(c("group", "func", "id_var", "drill", "ctrl_target",
                     "ctrl_table", "filter_type", "filter_column",
-                    "filter_values") %in% fmls))
+                    "filter_values", "mark", "summary", "whiskers",
+                    "x", "xend", "lo", "hi") %in% fmls))
 
   # Registered, so it shows up in the block-adder and the assistant universe.
-  expect_true("rank_block" %in% names(blockr.core::available_blocks()))
+  expect_true("lane_chart_block" %in% names(blockr.core::available_blocks()))
 })
 
 test_that("html escaping survives a label with markup in it", {

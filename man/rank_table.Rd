@@ -10,6 +10,13 @@ rank_table(
   value = ".count",
   func = "count",
   id_var = NULL,
+  mark = "bar",
+  summary = NULL,
+  whiskers = "tukey",
+  x = NULL,
+  xend = NULL,
+  lo = NULL,
+  hi = NULL,
   parent = NULL,
   color = NULL,
   bar_mode = "stacked",
@@ -40,6 +47,18 @@ rank_table(
 \code{"count_distinct"}, \code{"sum"}, \code{"mean"}, \code{"median"}, \code{"min"}, \code{"max"};
 \code{value} names the column it reduces (ignored by \code{"count"}), \code{id_var} the
 subject identifier \code{"count_distinct"} counts.}
+
+\item{mark}{The glyph per row: \code{"bar"} (default), \code{"box"},
+\code{"pointrange"}, \code{"interval"} or \code{"sparkline"}. See
+\code{\link[=new_lane_chart_block]{new_lane_chart_block()}}.}
+
+\item{summary, whiskers}{Distribution statistics for the box / point range
+marks (see \code{\link[=new_lane_chart_block]{new_lane_chart_block()}}).}
+
+\item{x, xend}{Interval mark: span start / end columns. Sparkline mark:
+\code{x} alone is the within-row order.}
+
+\item{lo, hi}{Sparkline mark: optional band columns.}
 
 \item{parent}{Optional outer grouping column: parents become expandable
 rows with their children indented under them. A parent is aggregated in
