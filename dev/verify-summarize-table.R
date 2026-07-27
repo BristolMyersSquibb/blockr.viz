@@ -15,6 +15,11 @@
 # Facet view
 #   facet — Subjects bar per arm (copies adjacent, one shared scale),
 #           pooled Overall column and the Arms field rendered ONCE.
+# Nested view
+#   nested — subjects collapsed under SEX (by = c(SEX, USUBJID)): parents
+#           are expandable rows aggregated in their own pass (a parent's
+#           swimlane pools every episode of that sex), chevron expands the
+#           subjects beneath.
 #
 # load_all EVERYTHING before touching any blockr namespace.
 pkgload::load_all("blockr.core")
@@ -43,7 +48,7 @@ adae$DUR <- adae$AENDY - adae$ASTDY + 1
 counts <- sort(table(adae$AEDECOD), decreasing = TRUE)
 ae <- adae[adae$AEDECOD %in% names(counts)[1:15],
            c("USUBJID", "AEBODSYS", "AEDECOD", "AESEV", "AESER", "TRT01A",
-             "ASTDY", "AENDY", "DUR")]
+             "SEX", "ASTDY", "AENDY", "DUR")]
 
 mixed_summaries <- list(
   list(type = "simple", name = "Subjects", func = "count_distinct",
@@ -82,16 +87,32 @@ serve(
         drill = "AEDECOD",
         title = "Faceted by arm, with a pooled Overall column",
         block_name = "Faceted + pooled"
+      ),
+      nested = new_summarize_table_block(
+        by = c("SEX", "USUBJID"),
+        summaries = list(
+          list(type = "simple", name = "Events", func = "count",
+               show = "number"),
+          list(type = "dist", name = "Duration", col = "DUR", show = "box"),
+          list(type = "spans", name = "Episodes", x = "ASTDY",
+               xend = "AENDY", color = "AESEV", label = "AEDECOD",
+               size = "lg")
+        ),
+        drill = "USUBJID", sort_dir = "asc", sort_by = "label",
+        title = "Subjects collapsed under sex",
+        block_name = "Nested"
       )
     ),
     links = list(
       list(from = "ae_data", to = "mixed", input = "data"),
-      list(from = "ae_data", to = "facet", input = "data")
+      list(from = "ae_data", to = "facet", input = "data"),
+      list(from = "ae_data", to = "nested", input = "data")
     ),
     extensions = new_dag_extension(),
     grids = list(
       Mixed = dock_grid("mixed"),
-      Facet = dock_grid("facet")
+      Facet = dock_grid("facet"),
+      Nested = dock_grid("nested")
     ),
     active = Sys.getenv("BLOCKR_VIEW", "Mixed")
   )
