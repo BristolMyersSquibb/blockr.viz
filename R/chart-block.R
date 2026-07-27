@@ -40,8 +40,12 @@
 #'   heights already computed upstream); duplicate categories collapse to the
 #'   first row. (Was `agg_fn`.)
 #' @param chart_type Chart type: "bar", "waterfall", "scatter", "line",
-#'   "pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with
-#'   a cumulative baseline (sugar for `bar` + `baseline = "cumulative"`).
+#'   "pie", "treemap", "boxplot", "pointrange", "radar", "gantt". "waterfall"
+#'   is a bar with a cumulative baseline (sugar for `bar` +
+#'   `baseline = "cumulative"`). "boxplot" and "pointrange" are the
+#'   distribution marks: both summarize the raw `value` within each `group`
+#'   (x `color`) slot in the browser (see `summary`) -- no upstream summarize
+#'   block, and the block's export stays the drill-filtered raw rows.
 #' @param x X-axis column (individual / timeline charts)
 #' @param y Y-axis column (individual / timeline charts)
 #' @param series Column whose distinct values split rows into separate
@@ -68,9 +72,12 @@
 #'   * Timeline: `"onset"` (default), `"alpha"`, or a column name.
 #'   * Individual: ignored.
 #' @param sort_dir `"asc"` or `"desc"`. Reverses the `sort_by` ordering.
-#' @param orientation Bar orientation: `"horizontal"` (default; category on the
-#'   y-axis, best for long labels) or `"vertical"`. Presentation property -- the
-#'   mapping (Group/Metric) is unchanged. Bar charts only.
+#' @param orientation Category-axis orientation: `"horizontal"` (category on
+#'   the y-axis, best for long labels) or `"vertical"` (category on the
+#'   x-axis). Presentation property -- the mapping (Group/Value) is unchanged.
+#'   Bar and the distribution marks (boxplot / pointrange). `NULL` (default)
+#'   resolves per type: `"horizontal"` for bar, `"vertical"` for the
+#'   distribution marks (visits/arms read left-to-right).
 #' @param bar_mode Layout for a color-split bar: `"stacked"` (default -- color
 #'   segments stack into one bar per group), `"grouped"` (segments sit
 #'   side-by-side / dodged, for comparing absolute values), or `"percent"`
@@ -133,9 +140,24 @@
 #'   transports "on"/"off" over the wire, but that is a UI detail and the R
 #'   value is a plain logical, as for the table block's `sortable` et al.
 #' @param box_points Observation overlay for boxplots: one of `"none"`
-#'   (default, box only), `"outliers"` (plot only the points beyond the
-#'   1.5x IQR whiskers) or `"all"` (jittered strip of every observation on
-#'   top of the box). No-op for other chart types.
+#'   (default, box only) or `"outliers"` (plot only the points beyond the
+#'   whisker extent). The former `"all"` strip was removed; boards carrying
+#'   it degrade to `"none"`. No-op for other chart types.
+#' @param summary Distribution statistic (boxplot / pointrange): the point
+#'   range's interval, or the box's body. One of `"median_q1_q3"`,
+#'   `"mean_sd"`, `"mean_2sd"`, `"mean_se"`, `"p5_p95"`, `"min_max"`,
+#'   computed in the browser from the raw `value` column. `NULL` (default)
+#'   resolves per mark: `"median_q1_q3"` for boxplot, `"mean_se"` for
+#'   pointrange. No-op for other chart types.
+#' @param whiskers Boxplot whisker rule (the box's outer interval):
+#'   `"tukey"` (default, 1.5x IQR fences clipped to the data -- the textbook
+#'   boxplot) or any `summary` value (e.g. `"min_max"` for range whiskers,
+#'   `"p5_p95"` for the clinical percentile convention). No-op for
+#'   non-boxplot charts.
+#' @param connect_centers Pointrange only: `TRUE` draws a line through the
+#'   interval centers in group order (the over-visits trajectory reading).
+#'   Default `FALSE`. Like `identity_line`, the gear's control speaks
+#'   "on"/"off" over the wire; the R state is a plain logical.
 #' @param lo,hi Optional lower / upper value bounds used by the renderer to
 #'   clamp or annotate the value axis. Default `NULL` (auto).
 #' @param count_on Which label surfaces carry an observation count in
@@ -177,7 +199,9 @@ new_chart_block <- function(
     drill = NULL,
     sort_by = NULL,
     sort_dir = NULL,
-    orientation = "horizontal",
+    # NULL = per-type default resolved in the browser: "horizontal" for bar,
+    # "vertical" for the distribution marks (see _ensureDistributionMetric).
+    orientation = NULL,
     # Color-split bar layout. "stacked" (default) = segments stack into one
     # bar per group; "grouped" = segments sit side-by-side (dodged); "percent"
     # = stacked but each group normalized to 100% (composition view). No-op
@@ -206,10 +230,17 @@ new_chart_block <- function(
     ref_y = NULL,
     smoother = "none",
     identity_line = FALSE,
-    # Boxplot observation overlay: "none" (box only), "outliers" (only the
-    # points past the 1.5x IQR whiskers) or "all" (jittered strip of every
-    # observation). No-op for non-boxplot charts.
+    # Boxplot observation overlay: "none" (box only) or "outliers" (only the
+    # points past the whisker extent). No-op for non-boxplot charts.
     box_points = "none",
+    # Distribution statistics (boxplot / pointrange, see SUMMARY_STATS in
+    # chart.js): `summary` is the box body / point-range interval (NULL =
+    # per-mark default, resolved JS-side in _ensureDistributionMetric);
+    # `whiskers` is the box's outer rule; `connect_centers` joins the
+    # point-range centers in slot order.
+    summary = NULL,
+    whiskers = "tukey",
+    connect_centers = FALSE,
     lo = NULL,
     hi = NULL,
     # Bar baseline mode. "zero" (default) = a normal bar (every bar starts at
@@ -317,6 +348,15 @@ new_chart_block <- function(
   # 90 of them, all "off". Coerce both shapes to a plain logical here, the way
   # table-block's as_toggle() already does for sortable/collapsible/search.
   identity_line <- bool_state(identity_line)
+  # box_points lost its "all" option; anything outside the enum (old saved
+  # boards) degrades to "none" -- no crash, no behaviour preservation.
+  box_points <- if (identical(box_points, "outliers")) "outliers" else "none"
+  # Distribution statistics: optional select (NULL = per-mark default) /
+  # fixed-option select / logical with the same "on"/"off" wire format as
+  # identity_line. chr_state heals a DAG-poisoned list() to NULL.
+  summary <- chr_state(summary)
+  whiskers <- chr_state(whiskers) %||% "tukey"
+  connect_centers <- bool_state(connect_centers)
   filter_values <- null_state(filter_values)
   filter_range <- null_state(filter_range)
   filter_point <- null_state(filter_point)
@@ -418,6 +458,10 @@ new_chart_block <- function(
         r_smoother <- shiny::reactiveVal(smoother)
         r_identity_line <- shiny::reactiveVal(identity_line)
         r_box_points <- shiny::reactiveVal(box_points)
+        # Distribution statistics (see constructor args).
+        r_summary <- shiny::reactiveVal(summary)
+        r_whiskers <- shiny::reactiveVal(whiskers)
+        r_connect_centers <- shiny::reactiveVal(connect_centers)
         r_lo <- shiny::reactiveVal(lo)
         r_hi <- shiny::reactiveVal(hi)
         # Bar baseline mode + waterfall total-bar steps (see constructor args).
@@ -647,6 +691,12 @@ new_chart_block <- function(
               # shows the right pill, and back again in the observer below.
               identity_line = if (isTRUE(r_identity_line())) "on" else "off",
               box_points = r_box_points(),
+              # Distribution statistics: NULL summary = per-mark default
+              # (resolved JS-side); connect_centers speaks the segmented
+              # control's "on"/"off", like identity_line above.
+              summary = r_summary(),
+              whiskers = r_whiskers(),
+              connect_centers = if (isTRUE(r_connect_centers())) "on" else "off",
               # Observation-count labels: which surface(s) get the "(n)" and the
               # DISTINCT id column to count (browser-side, per label group).
               count_on = r_count_on(), count_col = r_count_col(),
@@ -806,6 +856,12 @@ new_chart_block <- function(
               upd(r_hlines, num_vec_state(msg$hlines))
             }
             if (!is.null(msg$box_points)) upd(r_box_points, msg$box_points)
+            if (!is.null(msg$summary))    upd(r_summary, msg$summary)
+            if (!is.null(msg$whiskers))   upd(r_whiskers, msg$whiskers)
+            # "on"/"off" from the gear -> logical in state (see bool_state).
+            if (!is.null(msg$connect_centers)) {
+              upd(r_connect_centers, bool_state(msg$connect_centers))
+            }
             if (!is.null(msg$count_on))   upd(r_count_on, msg$count_on)
             # nn(): "" (picker cleared) means "no id column" -> row count.
             if (!is.null(msg$count_col))  upd(r_count_col, nn(msg$count_col))
@@ -1058,6 +1114,9 @@ new_chart_block <- function(
             smoother = r_smoother,
             identity_line = r_identity_line,
             box_points = r_box_points,
+            summary = r_summary,
+            whiskers = r_whiskers,
+            connect_centers = r_connect_centers,
             count_on = r_count_on,
             count_col = r_count_col,
             lo = r_lo,
@@ -1087,7 +1146,7 @@ new_chart_block <- function(
     # then charts the coerced frame's data columns (as_plain_df()).
     dat_valid = validate_annotated_df_input,
     # `value` must stay listed: the gear legitimately empties it mid-config
-    # (reconcileValue in drilldown-agg.js / _ensureBoxplotMetric in chart.js
+    # (reconcileValue in drilldown-agg.js / _ensureDistributionMetric in chart.js
     # set value = '' when the aggregation changes and the old column no longer
     # fits) and the observer stores that verbatim -- without the entry the
     # block silently wedges (reference_blockr_allow_empty_state_wedge).
@@ -1097,7 +1156,10 @@ new_chart_block <- function(
       "filter_values", "value", "x", "y", "xend", "series", "label",
       "tt_fields", "drill", "sort_by", "sort_dir", "filter_range",
       "filter_point", "vlines", "hlines", "smoother", "identity_line",
-      "box_points", "lo", "hi", "waterfall_totals",
+      # `summary` and `orientation` are NULL until the browser resolves their
+      # per-mark defaults; whiskers / connect_centers are never empty (fixed
+      # default), so they are not listed.
+      "box_points", "summary", "orientation", "lo", "hi", "waterfall_totals",
       # count_col is optional (blank = row count); count_on is a fixed-option
       # select (always "off"/"axis"/"facet"/"both"), so it is not listed here.
       "count_col",
@@ -1115,7 +1177,8 @@ new_chart_block <- function(
       "filter_values", "filter_range", "filter_point", "line_width_mult",
       "dot_size_mult", "connect", "vlines", "hlines", "smoother",
       "identity_line",
-      "box_points", "lo", "hi", "baseline", "waterfall_totals",
+      "box_points", "summary", "whiskers", "connect_centers",
+      "lo", "hi", "baseline", "waterfall_totals",
       "count_on", "count_col",
       "title", "subtitle", "caption",
       "ctrl_target", "ctrl_table"),

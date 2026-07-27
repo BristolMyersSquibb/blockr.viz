@@ -16,11 +16,12 @@ dd_board_scale_map <- function() {
 }
 
 # Which drilldown role drives coloring, per chart type (pinned against the
-# JS render paths in inst/js/chart.js): stacked bar, radar, boxplot and the
-# individual/timeline families color by the `color` role (boxplot splits each
-# group into one colored box per level); pie and treemap color their `group`
-# slices. The x-axis/category role never auto-colors -- coloring by a variable
-# means mapping it to the colored role, like ggplot.
+# JS render paths in inst/js/chart.js): stacked bar, radar, the distribution
+# marks (boxplot/pointrange) and the individual/timeline families color by
+# the `color` role (a distribution mark splits each group into one colored
+# slot per level); pie and treemap color their `group` slices. The
+# x-axis/category role never auto-colors -- coloring by a variable means
+# mapping it to the colored role, like ggplot.
 dd_colored_var <- function(chart_type, color, group) {
   role <- switch(
     chart_type %||% "bar",
@@ -29,6 +30,7 @@ dd_colored_var <- function(chart_type, color, group) {
     line = ,
     radar = ,
     boxplot = ,
+    pointrange = ,
     gantt = "color",
     pie = ,
     treemap = "group",

@@ -39,6 +39,20 @@ config_effect.chart_block <- function(block, args, data = NULL, ...) {
     v <- unlist(args[[r]])
     if (length(v)) parts <- c(parts, paste0(r, "=", paste(v, collapse = ",")))
   }
+  # Distribution statistics (boxplot/pointrange), echoed so the model sees
+  # which convention is configured.
+  if (ct %in% c("boxplot", "pointrange")) {
+    s <- as.character(args$summary %||% "")[1]
+    if (nzchar(s)) parts <- c(parts, paste0("summary=", s))
+    w <- as.character(args$whiskers %||% "")[1]
+    if (identical(ct, "boxplot") && nzchar(w)) {
+      parts <- c(parts, paste0("whiskers=", w))
+    }
+    if (isTRUE(args$connect_centers) ||
+          identical(args$connect_centers, "on")) {
+      parts <- c(parts, "connect_centers=on")
+    }
+  }
   agg <- args$func
   agg_txt <- if (!is.null(agg) && nzchar(as.character(agg)[1])) {
     paste0(" agg=", as.character(agg)[1])

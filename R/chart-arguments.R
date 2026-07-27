@@ -13,19 +13,22 @@ chart_arguments <- function() {
     chart_type = new_arg_spec(
       paste0(
         "Chart type. One of \"bar\", \"waterfall\", \"pie\", \"treemap\", ",
-        "\"boxplot\", \"radar\" (aggregated \u2014 use group + value + func), ",
-        "\"scatter\", \"line\" (individual \u2014 use x + y), or \"gantt\" ",
-        "(timeline \u2014 use x + xend + y). Default \"bar\". Radar: group levels ",
-        "are the spokes, one shape per color level. Waterfall: a bar with a ",
-        "cumulative baseline \u2014 each step's value value is a DELTA and bars ",
-        "float from the running total (group = step axis, honored in data ",
-        "order). Use for P&L / bridge charts; reshape wide measures with ",
-        "pivot_longer to (step, value) upstream first."
+        "\"boxplot\", \"pointrange\", \"radar\" (aggregated \u2014 use group + ",
+        "value + func), \"scatter\", \"line\" (individual \u2014 use x + y), or ",
+        "\"gantt\" (timeline \u2014 use x + xend + y). Default \"bar\". Radar: ",
+        "group levels are the spokes, one shape per color level. Waterfall: ",
+        "a bar with a cumulative baseline \u2014 each step's value is a DELTA ",
+        "and bars float from the running total (group = step axis, honored ",
+        "in data order). Use for P&L / bridge charts; reshape wide measures ",
+        "with pivot_longer to (step, value) upstream first. Boxplot / ",
+        "pointrange: the distribution marks \u2014 they summarize the raw ",
+        "`value` within each `group` in the browser (see `summary`); no ",
+        "upstream summarize block, no aggregating func."
       ),
       example = "scatter",
       type = arg_enum(
-        c("bar", "waterfall", "pie", "treemap", "boxplot", "radar",
-          "scatter", "line", "gantt")
+        c("bar", "waterfall", "pie", "treemap", "boxplot", "pointrange",
+          "radar", "scatter", "line", "gantt")
       )
     ),
     group = new_arg_spec(
@@ -196,14 +199,47 @@ chart_arguments <- function() {
     box_points = new_arg_spec(
       paste0(
         "Observation overlay for boxplots (chart_type=\"boxplot\"): ",
-        "\"none\" (default, box only), \"outliers\" (plot only the points ",
-        "beyond the 1.5x IQR whiskers) or \"all\" (a jittered strip of ",
-        "every observation drawn over the box). Use \"outliers\" to flag ",
-        "extreme values, \"all\" to show the full distribution / sample ",
-        "size. No-op for non-boxplot charts."
+        "\"none\" (default, box only) or \"outliers\" (plot only the ",
+        "points beyond the whisker extent). Use \"outliers\" to flag ",
+        "extreme values. No-op for non-boxplot charts."
       ),
       example = "none",
-      type = arg_enum(c("none", "outliers", "all"))
+      type = arg_enum(c("none", "outliers"))
+    ),
+    summary = new_arg_spec(
+      paste0(
+        "Distribution statistic for the distribution marks: the point ",
+        "range's interval, or the boxplot's BODY. One of \"median_q1_q3\", ",
+        "\"mean_sd\", \"mean_2sd\", \"mean_se\", \"p5_p95\", \"min_max\". ",
+        "Computed in the browser from the raw `value` column per `group` ",
+        "(x `color`) slot — no upstream summarize block, no lo/hi ",
+        "mapping. Default per mark: \"median_q1_q3\" (boxplot), ",
+        "\"mean_se\" (pointrange). No-op for other chart types."
+      ),
+      example = "mean_se",
+      type = arg_enum(c("median_q1_q3", "mean_sd", "mean_2sd", "mean_se",
+                        "p5_p95", "min_max"))
+    ),
+    whiskers = new_arg_spec(
+      paste0(
+        "Boxplot whisker rule — the box's OUTER interval: \"tukey\" ",
+        "(default, 1.5x IQR fences clipped to the data; the textbook ",
+        "boxplot) or any `summary` value, e.g. \"min_max\" for range ",
+        "whiskers or \"p5_p95\" for the clinical percentile convention. ",
+        "No-op for non-boxplot charts."
+      ),
+      example = "tukey",
+      type = arg_enum(c("tukey", "median_q1_q3", "mean_sd", "mean_2sd",
+                        "mean_se", "p5_p95", "min_max"))
+    ),
+    connect_centers = new_arg_spec(
+      paste0(
+        "Pointrange only: true draws a line through the interval centers ",
+        "in group order — the over-visits trajectory reading (e.g. mean ",
+        "AVAL by AVISIT per treatment arm). Default false."
+      ),
+      example = TRUE,
+      type = arg_boolean()
     ),
     count_on = new_arg_spec(
       paste0(
@@ -353,9 +389,11 @@ chart_arguments <- function() {
     ),
     orientation = new_arg_spec(
       paste0(
-        "Bar orientation: \"horizontal\" (default; category on the y-axis, ",
-        "best for long labels) or \"vertical\". Presentation only \u2014 the ",
-        "group/value mapping is unchanged. Bar charts only."
+        "Category-axis orientation: \"horizontal\" (category on the y-axis, ",
+        "best for long labels) or \"vertical\" (category on the x-axis). ",
+        "Presentation only \u2014 the group/value mapping is unchanged. Bar and ",
+        "the distribution marks (boxplot/pointrange). Omit for the per-type ",
+        "default: horizontal for bar, vertical for the distribution marks."
       ),
       example = "horizontal",
       type = arg_enum(c("horizontal", "vertical"))
@@ -447,7 +485,7 @@ chart_guidance <- function() {
       "and `series` never drive drill.",
       "\n\nThree chart families share the block (an internal detail that",
       "never changes what an argument means):",
-      "\n- Aggregated (bar/pie/treemap/boxplot/radar): set `group`,",
+      "\n- Aggregated (bar/pie/treemap/boxplot/pointrange/radar): set `group`,",
       "`func`, and `value` (\".count\" for row counts). To make clicking",
       "a bar filter to that group, set `drill=\"<the group column>\"`.",
       "A radar puts the `group` levels on the spokes and draws one shape",
@@ -490,13 +528,19 @@ chart_guidance <- function() {
       "from the running cumulative and the step axis is shown in DATA ORDER",
       "(make S an ordered factor, or arrange upstream). Wide measures-as-",
       "columns data must be pivot_longer'd to (step, value) first.",
-      "\n- \"mean Y trend over time T by group G\" (e.g. mean",
-      "ADAS-Cog over visits by treatment arm) -> requires an",
-      "UPSTREAM summarize_block first (group_by=[T,G], compute",
-      "mean_Y = mean(Y)). Then on THIS block: chart_type=\"line\",",
-      "x=T, y=\"mean_Y\", series=G. There is no aggregated-line",
-      "family; raw rows would be drawn in row order and produce",
-      "tangles or empty plots.",
+      "\n- \"mean Y with an interval (SE/SD/CI-like) over visits/groups",
+      "T by arm G\" (e.g. mean AVAL by AVISIT per treatment) ->",
+      "chart_type=\"pointrange\", group=T, value=\"Y\", color=G,",
+      "summary=\"mean_se\", connect_centers=true. NO upstream",
+      "summarize block and NO lo/hi mapping \u2014 the chart summarizes",
+      "the raw rows itself.",
+      "\n- \"mean Y trend over time T by group G\" as a plain LINE",
+      "(no interval) -> requires an UPSTREAM summarize_block first",
+      "(group_by=[T,G], compute mean_Y = mean(Y)). Then on THIS block:",
+      "chart_type=\"line\", x=T, y=\"mean_Y\", series=G. There is no",
+      "aggregated-line family; raw rows would be drawn in row order",
+      "and produce tangles or empty plots. Prefer pointrange (above)",
+      "when an interval is wanted.",
       "\n- \"distribution / spread / boxplot of Y by X\" ->",
       "chart_type=\"boxplot\", group=\"X\", value=\"Y\". A boxplot",
       "shows the SPREAD of `value` within each `group` \u2014 do NOT set",
@@ -504,8 +548,9 @@ chart_guidance <- function() {
       "each group to one value and the plot renders EMPTY. Use `color`",
       "or `facet` to split the boxes (e.g. by treatment arm). To show",
       "the underlying observations set `box_points`: \"outliers\" flags",
-      "the extreme points past the whiskers, \"all\" draws a jittered",
-      "strip of every point over the box.",
+      "the extreme points past the whiskers. The default box is the",
+      "textbook Tukey boxplot; `summary` / `whiskers` swap the body /",
+      "whisker statistic when a different convention is asked for.",
       "\n- \"label bars with W\" -> label=\"W\"",
       "\n\nLeave filter_type/filter_column/filter_values/filter_range at",
       "defaults \u2014 they are runtime transport for the emitted filter, not",
@@ -513,7 +558,7 @@ chart_guidance <- function() {
       "\n\nWhen picking `color`, check the data: if all visible rows",
       "share one value the colour channel is wasted \u2014 drop `color` or",
       "pick a column with real variation.",
-      "\n\nBar/pie/treemap/boxplot ordering is `sort_by` + `sort_dir` on",
+      "\n\nBar/pie/treemap/boxplot/pointrange ordering is `sort_by` + `sort_dir` on",
       "THIS block, not an upstream arrange_block. \"value\"+\"desc\" for",
       "top-N by value. For 'top N by value' workflows prefer slice_block",
       "(type=\"max\", order_by=COL, n=N).",

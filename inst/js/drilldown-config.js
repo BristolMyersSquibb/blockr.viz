@@ -212,6 +212,19 @@
       }
       this._selects = {};
 
+      // The band renders IN-FLOW inside the block panel, so emptying it
+      // shrinks the panel's content for the duration of the rebuild and the
+      // scroll container clamps scrollTop to 0. Every gear edit round-trips
+      // through R (config echo -> setData -> render), so without a restore
+      // each edit jumped the scrolled block back to its top. Capture the
+      // nearest scrolled ancestor now, put its position back once the DOM
+      // has its full height again (end of this method).
+      let scroller = null;
+      let scrollPos = 0;
+      for (let el = pop.parentElement; el; el = el.parentElement) {
+        if (el.scrollTop > 0) { scroller = el; scrollPos = el.scrollTop; break; }
+      }
+
       pop.innerHTML = '';
 
       // a11y: the gear popover is a configuration dialog. Label it so screen
@@ -436,6 +449,10 @@
       }
 
       if (this.h.afterTypeChange) this.h.afterTypeChange();
+
+      // Rebuild done, content height is back — restore the scroll position
+      // captured before the wipe (see above).
+      if (scroller) scroller.scrollTop = scrollPos;
     }
 
     /**

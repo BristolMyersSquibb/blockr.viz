@@ -14,9 +14,135 @@
 (() => {
   'use strict';
 
-  const AGGREGATED_TYPES = ['bar', 'waterfall', 'pie', 'treemap', 'boxplot', 'radar'];
+  const AGGREGATED_TYPES = ['bar', 'waterfall', 'pie', 'treemap', 'boxplot', 'pointrange', 'radar'];
   const INDIVIDUAL_TYPES = ['scatter', 'line'];
   const TIMELINE_TYPES = ['gantt'];
+  // The distribution marks: both summarize RAW values of `value` per group
+  // slot in the browser (never in the expr — the export stays the drill-
+  // filtered rows). A box is a point range with one more nested interval:
+  // pointrange picks one SUMMARY_STATS interval, boxplot picks two (body +
+  // whiskers). Membership here gates the shared machinery: the Value label,
+  // the metric guard, the gear's dropped Aggregation section, the composite
+  // slot drill, the raw-data legend band and the shared builder.
+  const DISTRIBUTION_TYPES = ['boxplot', 'pointrange'];
+
+  // The distribution statistic vocabulary: center + interval pairs computed
+  // from the raw values client-side. Deliberately its OWN enum, separate from
+  // DrilldownAgg.AGG_FNS (single numbers, drift-tested against R) — see
+  // test-agg-fns-drift.R. Names follow summary_table's presets where they
+  // overlap (median_q1_q3, mean_sd, min_max). NO mean_ci95: a 95% CI needs a
+  // t quantile JS does not have, and the normal approximation is materially
+  // wrong at the group sizes this feature targets — a follow-up moves this
+  // computation to R and adds it there (NOTE-confidence-intervals.md in the
+  // distribution-marks spec folder). Everything below is arithmetic or an
+  // order statistic, which JS computes exactly.
+  /** @type {Array<{value: string, label: string, center: string, range: string}>} */
+  const SUMMARY_STATS = [
+    { value: 'median_q1_q3', label: 'Median · Q1–Q3', center: 'Median', range: 'Q1–Q3' },
+    { value: 'mean_sd',      label: 'Mean ± SD',           center: 'Mean',   range: '±1 SD' },
+    { value: 'mean_2sd',     label: 'Mean ± 2 SD',         center: 'Mean',   range: '±2 SD' },
+    { value: 'mean_se',      label: 'Mean ± SE',           center: 'Mean',   range: '±1 SE' },
+    { value: 'p5_p95',       label: '5th–95th percentile', center: 'Median', range: 'P5–P95' },
+    { value: 'min_max',      label: 'Min–Max',             center: 'Median', range: 'Min–Max' }
+  ];
+  // Whisker rules = the same vocabulary plus Tukey fences (whisker-only:
+  // fences are defined off the data's quartiles, whatever the body shows).
+  const WHISKER_STATS = [
+    { value: 'tukey', label: 'Tukey (1.5×IQR)', center: '', range: '1.5×IQR' },
+    ...SUMMARY_STATS
+  ];
+  /** @param {string} stat */
+  const statMeta = (stat) =>
+    WHISKER_STATS.find(s => s.value === stat) || WHISKER_STATS[0];
+
+  // {center, lo, hi} of a SUMMARY_STATS / 'tukey' statistic over an ASCENDING
+  // sorted numeric array (empty -> null). One shared implementation so the
+  // box body, box whiskers and the point range can never disagree on what a
+  // statistic means. sd is the sample sd (n-1), 0 for a single observation.
+  /** @param {number[]} vals @param {string} stat
+   *  @returns {{center: number, lo: number, hi: number} | null} */
+  function summarizeStat(vals, stat) {
+    const n = vals.length;
+    if (n === 0) return null;
+    const q = (/** @type {number} */ p) => {
+      const i = p * (n - 1); const lo = Math.floor(i);
+      return lo === i ? vals[lo] : vals[lo] + (vals[lo + 1] - vals[lo]) * (i - lo);
+    };
+    const mean = vals.reduce((a, b) => a + b, 0) / n;
+    const sd = n > 1
+      ? Math.sqrt(vals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (n - 1))
+      : 0;
+    const se = sd / Math.sqrt(n);
+    switch (stat) {
+      case 'mean_sd':   return { center: mean, lo: mean - sd, hi: mean + sd };
+      case 'mean_2sd':  return { center: mean, lo: mean - 2 * sd, hi: mean + 2 * sd };
+      case 'mean_se':   return { center: mean, lo: mean - se, hi: mean + se };
+      case 'p5_p95':    return { center: q(0.5), lo: q(0.05), hi: q(0.95) };
+      case 'min_max':   return { center: q(0.5), lo: vals[0], hi: vals[n - 1] };
+      case 'tukey': {
+        // Tukey fences clipped to the data — the classic whisker rule.
+        const q1 = q(0.25), q3 = q(0.75), iqr = q3 - q1;
+        return {
+          center: q(0.5),
+          lo: Math.max(vals[0], q1 - 1.5 * iqr),
+          hi: Math.min(vals[n - 1], q3 + 1.5 * iqr)
+        };
+      }
+      case 'median_q1_q3':
+      default:          return { center: q(0.5), lo: q(0.25), hi: q(0.75) };
+    }
+  }
+
+  // Whisker (interval) custom-series builder, shared by the individual
+  // family's lo/hi error bars (vertical: value on y) and the distribution
+  // builder's point range (horizontal: value on x). `pts` is
+  // [[base, lo, hi], ...] — base on the category/base axis, lo/hi on the
+  // value axis. Overlay series share their parent's `name` so ECharts
+  // collapses them into a single legend entry; legendHoverLink off so legend
+  // hover doesn't try to emphasize these (silent) overlays.
+  //
+  // encode: BOTH whisker ends map to the VALUE axis. Without this, a custom
+  // series' default dimension mapping is dim0 -> x, dim1 -> y and dim2+ ->
+  // nothing, so `hi` never entered the value extent: the axis was sized to
+  // the centers and the LOW ends only, and every upper whisker that reached
+  // past it was drawn outside the grid (clipped over the toolbox). Invisible
+  // on a wide axis, blatant once drag-zoom rescales to the window — which is
+  // how this surfaced (fixed for the error bar in 6f66186; the pointrange
+  // mark must not reintroduce it). renderItem still reads the raw dims by
+  // index (api.value(1) / api.value(2)); encode only tells the axis what to
+  // measure.
+  /** @param {any} name @param {any[]} pts @param {string} clr
+   *  @param {boolean} horizontal */
+  function mkWhiskerSeries(name, pts, clr, horizontal) {
+    return {
+      type: 'custom',
+      name: name,
+      legendHoverLink: false,
+      silent: true,
+      z: 1,
+      data: pts,
+      encode: horizontal ? { y: 0, x: [1, 2] } : { x: 0, y: [1, 2] },
+      renderItem: (/** @type {any} */ params, /** @type {any} */ api) => {
+        const base = api.value(0), lo = api.value(1), hi = api.value(2);
+        const pLo = horizontal ? api.coord([lo, base]) : api.coord([base, lo]);
+        const pHi = horizontal ? api.coord([hi, base]) : api.coord([base, hi]);
+        const w = 4;
+        // Caps run across the whisker: vertical ticks on a horizontal
+        // whisker, horizontal ticks on a vertical one.
+        const cap = (/** @type {number[]} */ p) => horizontal
+          ? { x1: p[0], y1: p[1] - w, x2: p[0], y2: p[1] + w }
+          : { x1: p[0] - w, y1: p[1], x2: p[0] + w, y2: p[1] };
+        return {
+          type: 'group',
+          children: [
+            { type: 'line', shape: { x1: pLo[0], y1: pLo[1], x2: pHi[0], y2: pHi[1] }, style: { stroke: clr, lineWidth: 1 } },
+            { type: 'line', shape: cap(pLo), style: { stroke: clr, lineWidth: 1 } },
+            { type: 'line', shape: cap(pHi), style: { stroke: clr, lineWidth: 1 } }
+          ]
+        };
+      }
+    };
+  }
 
   // Subtle inline chart-type glyphs for the tile picker (design-system
   // type-picker proposal B; hand-drawn 14px, currentColor, dimmed via CSS
@@ -40,6 +166,12 @@
       'stroke="currentColor" stroke-width="1.4">' +
       '<rect x="4" y="5" width="8" height="6"/>' +
       '<path d="M4 8 h8 M8 2 v3 M8 11 v3 M6 2 h4 M6 14 h4"/></svg>',
+    pointrange:
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.4">' +
+      '<path d="M5 3 v10 M3.5 3 h3 M3.5 13 h3 M11 5.5 v7 M9.5 5.5 h3 M9.5 12.5 h3"/>' +
+      '<circle cx="5" cy="8" r="1.7" fill="currentColor" stroke="none"/>' +
+      '<circle cx="11" cy="9" r="1.7" fill="currentColor" stroke="none"/></svg>',
     radar:
       '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
       'stroke="currentColor" stroke-width="1.2">' +
@@ -325,12 +457,30 @@
     vlines: { label: 'Vertical', kind: 'text', ph: 'e.g. 3 or 2, 5' },
     hlines: { label: 'Horizontal', kind: 'text', ph: 'e.g. 2 or 1, 4' },
     // Boxplot observation overlay. "none" = box only; "outliers" = only the
-    // points past the 1.5x IQR whiskers; "all" = jittered strip of every
-    // observation over the box.
+    // points beyond the whisker extent. (A former "all" strip was dropped:
+    // on a category axis every point sat on the box's centre line, an opaque
+    // smear at clinical N that stopped discriminating — saved boards carrying
+    // it degrade to "none".)
     box_points: { label: 'Points', kind: 'segmented',
                   options: [{ value: 'none', label: 'None' },
-                            { value: 'outliers', label: 'Outliers' },
-                            { value: 'all', label: 'All' }] },
+                            { value: 'outliers', label: 'Outliers' }] },
+    // Distribution statistic (boxplot + pointrange, browser-computed from the
+    // raw value column). One shared vocabulary, picked once or twice: the
+    // point range's single interval, or the box's body — with `whiskers` as
+    // the box's second, outer pick. Defaults per mark (mean_se / Tukey box)
+    // resolve in _ensureDistributionMetric, so the roles carry none.
+    summary: { label: (/** @type {any} */ cfg) =>
+                 cfg.chart_type === 'boxplot' ? 'Box' : 'Interval',
+               kind: 'select',
+               options: SUMMARY_STATS.map(s => ({ value: s.value, label: s.label })) },
+    whiskers: { label: 'Whiskers', kind: 'select',
+                options: WHISKER_STATS.map(s => ({ value: s.value, label: s.label })) },
+    // Line through the point-range centers in slot order (the over-visits
+    // reading). Boolean segmented -> checkbox, "on"/"off" wire format like
+    // identity_line; R stores a logical (bool_state).
+    connect_centers: { label: 'Centers', kind: 'segmented',
+                       options: [{ value: 'on', label: 'Connect centers' },
+                                 { value: 'off', label: 'Off' }] },
     // How the line connects its points (line charts only) -- one control that
     // replaces the old separate `step` + `smooth` selects, since they were two
     // ways of saying the same thing (how to get from point to point) and
@@ -388,13 +538,14 @@
 
   // The value is one shared slot across every chart: the numeric variable the
   // chart is about. Bar/pie/etc. wrap it in an aggregation, so it reads as part
-  // of "mean of AGE" under the Aggregation section. A boxplot does NOT
-  // aggregate — it shows the raw distribution of that same variable — so there
-  // the very same slot is just the "Value" to plot. Same argument, different
-  // framing. (Label is a function of config; the config engine resolves it.)
+  // of "mean of AGE" under the Aggregation section. The distribution marks do
+  // NOT aggregate — they show the raw distribution of that same variable — so
+  // there the very same slot is just the "Value" to plot. Same argument,
+  // different framing. (Label is a function of config; the engine resolves it.)
   ROLES.value = /** @type {any} */ ({
     ...ROLES.value,
-    label: (/** @type {any} */ cfg) => cfg.chart_type === 'boxplot' ? 'Value' : 'Aggregate'
+    label: (/** @type {any} */ cfg) =>
+      DISTRIBUTION_TYPES.includes(cfg.chart_type) ? 'Value' : 'Aggregate'
   });
 
   // "None (as is)" — a chart-only aggregation that plots the value column
@@ -430,7 +581,7 @@
       // group (their builders sum across color cells — the mapping would be
       // inert and misleading).
       optionalMap: [
-        { role: 'color', types: ['bar', 'boxplot', 'radar'] },
+        { role: 'color', types: ['bar', 'boxplot', 'pointrange', 'radar'] },
         'facet',
         // Bar only: a bar is a GROUP of rows, so an extra tooltip column has no
         // single value — the bar tooltip shows the group's representative (its
@@ -442,12 +593,21 @@
       ],
       mapping: ['value', { role: 'func', types: ['bar', 'waterfall', 'pie', 'treemap', 'radar'] }],
       aggTitle: 'Aggregation',
-      // orientation: bar only for v1 (boxplot swap is a follow-up). Waterfall
-      // is vertical-only (a bridge reads left-to-right along the value axis), so
-      // it does not expose orientation.
-      presentation: ['sort_by', 'sort_dir', { role: 'orientation', types: ['bar'] },
+      // orientation: bar + the distribution marks (which default vertical —
+      // groups on x — while bar defaults horizontal; see
+      // _ensureDistributionMetric). Waterfall is vertical-only (a bridge
+      // reads left-to-right along the value axis), so it does not expose
+      // orientation.
+      presentation: ['sort_by', 'sort_dir',
+        { role: 'orientation', types: ['bar', 'boxplot', 'pointrange'] },
         { role: 'bar_mode', types: ['bar'] },
         { role: 'baseline', types: ['bar'] },
+        // Distribution statistics: the shared interval pick (box body /
+        // point-range interval), the box's outer whisker rule, and the
+        // point-range center line. See SUMMARY_STATS.
+        { role: 'summary', types: ['boxplot', 'pointrange'] },
+        { role: 'whiskers', types: ['boxplot'] },
+        { role: 'connect_centers', types: ['pointrange'] },
         { role: 'box_points', types: ['boxplot'] },
         // Count labels: the axis surface applies to the category-axis charts
         // (bar and waterfall per group/step; boxplot per drawn box slot);
@@ -691,11 +851,12 @@
       return 'individual';
     }
 
-    // Section spec for the gear, per chart type. A boxplot uses the aggregated
-    // machinery (group + value on a category axis, group drill) but does NOT
-    // aggregate, so it drops the trailing "Aggregation" section: with aggTitle
-    // cleared the value slot renders under Mapping, and its func is already
-    // excluded by type. Everything else keeps the family spec unchanged.
+    // Section spec for the gear, per chart type. The distribution marks
+    // (boxplot, pointrange) use the aggregated machinery (group + value on a
+    // category axis, group drill) but do NOT aggregate, so they drop the
+    // trailing "Aggregation" section: with aggTitle cleared the value slot
+    // renders under Mapping, and their func is already excluded by type.
+    // Everything else keeps the family spec unchanged.
     _sectionsSpec() {
       const base = FAMILY_ROLES[this._family()];
       // Hide the count id-column picker until a count surface is chosen
@@ -711,7 +872,7 @@
       // External-control send (beta) on every family: push the drilled value
       // into a value filter block. cfg.ctrl_* rides in the drilldown-data
       // config from R.
-      if (this.config.chart_type === 'boxplot') {
+      if (DISTRIBUTION_TYPES.includes(this.config.chart_type)) {
         return /** @type {any} */ (dropCountCol({ ...base, aggTitle: null, ctrlSection: true }));
       }
       return /** @type {any} */ (dropCountCol({ ...base, ctrlSection: true }));
@@ -723,24 +884,35 @@
       DAgg.reconcileValue(this.config, this.columns);
     }
 
-    // Boxplot summarizes RAW numeric values (its box = the five-number summary
-    // of the value within a group) and ignores func entirely, so it needs a
+    // The distribution marks summarize RAW numeric values (box = two nested
+    // intervals, pointrange = one) and ignore func entirely, so they need a
     // numeric value and never the synthetic '.count'. The shared value
-    // machinery gates pickability on func, and func is not shown for
-    // boxplot — left at the aggregated default 'count' it forces value to
-    // '.count', which the boxplot can't plot ("needs a numeric value"). Drive
-    // it into numeric mode: swap a count aggregation for 'mean' (inert for the
-    // boxplot, but makes the picker offer numeric columns) and pick / keep a
-    // numeric column. Returns true when it handled a boxplot config.
+    // machinery gates pickability on func, and func is not shown for these
+    // types — left at the aggregated default 'count' it forces value to
+    // '.count', which they can't plot ("needs a numeric value"). Drive it
+    // into numeric mode: swap a count aggregation for 'mean' (inert for the
+    // mark, but makes the picker offer numeric columns) and pick / keep a
+    // numeric column. Also resolves the per-mark statistic defaults (the
+    // `summary` role carries none): Tukey box, mean ± SE point range.
+    // Returns true when it handled a distribution config.
     /** @param {any} cfg */
-    _ensureBoxplotMetric(cfg) {
-      if (cfg.chart_type !== 'boxplot') return false;
+    _ensureDistributionMetric(cfg) {
+      if (!DISTRIBUTION_TYPES.includes(cfg.chart_type)) return false;
       if (!cfg.func || cfg.func === 'count') cfg.func = 'mean';
-      // Never carry the synthetic row count into a boxplot. Leave the value
-      // empty (required) rather than auto-guessing a numeric column: the first
-      // numeric is often a code (e.g. a treatment number) that plots as a flat
-      // line, which reads as broken. An empty "Value *" prompts a real choice.
+      // Never carry the synthetic row count into a distribution mark. Leave
+      // the value empty (required) rather than auto-guessing a numeric column:
+      // the first numeric is often a code (e.g. a treatment number) that plots
+      // as a flat line, which reads as broken. An empty "Value *" prompts a
+      // real choice.
       if (cfg.value === '.count') cfg.value = '';
+      if (!cfg.summary) {
+        cfg.summary = cfg.chart_type === 'boxplot' ? 'median_q1_q3' : 'mean_se';
+      }
+      if (cfg.chart_type === 'boxplot' && !cfg.whiskers) cfg.whiskers = 'tukey';
+      // Distribution marks default VERTICAL (groups on x): visits/arms read
+      // left-to-right. Bar keeps its horizontal default (long AE-term
+      // labels); boards that explicitly saved an orientation keep it.
+      if (!cfg.orientation) cfg.orientation = 'vertical';
       return true;
     }
 
@@ -1795,7 +1967,7 @@
           const cat = cols.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique <= 30);
           cfg.group = cat ? cat.name : cols[0].name;
         }
-        if (!this._ensureBoxplotMetric(cfg)) {
+        if (!this._ensureDistributionMetric(cfg)) {
           if (!cfg.func) cfg.func = 'count';
           // '.count' only fits the "count" aggregation; under any other agg an
           // unset value stays empty (required-empty picker) rather than
@@ -1893,7 +2065,7 @@
           const cat = this.columns.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique <= 30);
           this.config.group = cat ? cat.name : this.columns[0].name;
         }
-        if (!this._ensureBoxplotMetric(this.config)) {
+        if (!this._ensureDistributionMetric(this.config)) {
           if (!this.config.func) this.config.func = 'count';
           // '.count' only fits the "count" aggregation (see _ensureFamilyDefaults)
           if (!this.config.value && this.config.func === 'count') this.config.value = '.count';
@@ -2123,10 +2295,12 @@
           if (isRadar && !this.config.color) return;
           let clickedGroup = params.name || (params.value && params.value[0]);
           if (!clickedGroup) return;
-          // A color-split boxplot slot is `group + BOX_CAT_SEP + level`; drill
-          // (like a color-split bar) targets the whole group, so strip the
-          // level suffix back to the group name.
-          if (ct === 'boxplot' && this.config.color && typeof clickedGroup === 'string') {
+          // A color-split distribution slot (boxplot / pointrange) is
+          // `group + BOX_CAT_SEP + level`; drill (like a color-split bar)
+          // targets the whole group, so strip the level suffix back to the
+          // group name.
+          if (DISTRIBUTION_TYPES.includes(ct) && this.config.color &&
+              typeof clickedGroup === 'string') {
             clickedGroup = clickedGroup.split(BOX_CAT_SEP)[0];
           }
           this._selected = this._selected === clickedGroup ? null : clickedGroup;
@@ -2658,13 +2832,14 @@
       this.charts = this._slots.map(s => s.chart).filter(Boolean);
 
       // Shared legend band items. Bar/radar legends show the color levels
-      // (`colors`); a boxplot derives its split levels from the raw data the
-      // same way its builder does. Pie/treemap/waterfall have no legend.
+      // (`colors`); the distribution marks derive their split levels from the
+      // raw data the same way their builder does. Pie/treemap/waterfall have
+      // no legend.
       /** @type {Array<{name: string, color: string}> | null} */
       let bandItems = null;
       if (sharedLegend) {
         const ct = this.config.chart_type;
-        if (ct === 'boxplot') {
+        if (DISTRIBUTION_TYPES.includes(ct)) {
           const colorCol = this.config.color;
           const cs = this._scaleFor(colorCol);
           const levels = colorCol
@@ -2707,7 +2882,7 @@
         ? 'Count' : this._axisTitle(this.config.value);
 
       if (ct === 'pie') return this._buildPie(facetData, groups, palette);
-      if (ct === 'boxplot') return this._buildBoxplot(groups, palette, ax, plotW, facet, sharedLegend);
+      if (DISTRIBUTION_TYPES.includes(ct)) return this._buildDistribution(groups, palette, ax, plotW, facet, sharedLegend);
       if (ct === 'treemap') return this._buildTreemap(facetData, groups, palette);
       if (ct === 'radar') return this._buildRadar(facetData, groups, colors, palette, valueTitle, plotW || 0, sharedLegend);
       // Waterfall = a bar with baseline "cumulative": each bar floats from the
@@ -3220,37 +3395,69 @@
       };
     }
 
+    // Shared builder for the distribution marks (boxplot + pointrange). The
+    // mark-independent machinery lives here once — cats/catMeta slots (one per
+    // group, or per group×color when split), BOX_CAT_SEP dodging, legend,
+    // per-slot counts, facet row filtering, empty-slot handling — and only the
+    // final series emission differs per mark.
     /** @param {any[]} groups @param {any[]} palette @param {any} ax @param {number} [plotW] container width in px @param {string} [facet] current facet value ('__all__' when unfaceted) @param {boolean} [sharedLegend] hidden legend, no bottom reservation (see _buildAggregatedOption) */
-    _buildBoxplot(groups, palette, ax, plotW, facet, sharedLegend) {
+    _buildDistribution(groups, palette, ax, plotW, facet, sharedLegend) {
       const groupBy = this.config.group;
       const colorCol = this.config.color;
       const facetCol = this.config.facet;
       const value = this.config.value;
+      const isBox = this.config.chart_type === 'boxplot';
+      // Orientation (the ggplot coord_flip model, same control as bar).
+      // Distribution marks default VERTICAL — groups on the x axis, so
+      // visits/arms read left-to-right — unlike bar's horizontal default;
+      // _ensureDistributionMetric resolves the default into the config, and
+      // the `!== 'horizontal'` form keeps a config that skipped it vertical.
+      const vertical = this.config.orientation !== 'horizontal';
+      // Statistic picks (see SUMMARY_STATS): the box body / point-range
+      // interval, plus the box's outer whisker rule. Defaults mirror
+      // _ensureDistributionMetric (belt and braces — a restored config may
+      // not have passed through it before the first render).
+      const bodyStat = this.config.summary ||
+        (isBox ? 'median_q1_q3' : 'mean_se');
+      const whiskerStat = this.config.whiskers || 'tukey';
       // No numeric value (unset or the synthetic row count) -> nothing to
       // summarize; the caller shows the "pick a numeric Value" empty state.
       if (!value || value === '.count') return null;
 
       // This facet's raw rows. Unlike bar/pie (which read pre-aggregated
-      // facetData), boxplot needs the raw values, so it filters this.data
-      // itself — including by the facet column, else every facet panel would
-      // draw the whole dataset.
+      // facetData), the distribution marks need the raw values, so they
+      // filter this.data themselves — including by the facet column, else
+      // every facet panel would draw the whole dataset.
       const facetRows = (facetCol && facet && facet !== '__all__')
         ? this.data.filter(r => String(r[facetCol]) === String(facet))
         : this.data;
 
-      // Five-number summary (whiskers capped at 1.5*IQR) over the raw value
-      // values of a set of rows. Returns null for an empty / all-NA set so the
-      // caller can drop that category slot rather than draw a misleading flat
-      // box at zero. Datum is an object (not a bare array) so the tooltip can
-      // report the observation count alongside the summary.
+      // Ascending numeric values of a set of rows (empty for an all-NA set).
+      const valsOf = (/** @type {any[]} */ rows) =>
+        rows.map(r => Number(r[value])).filter(v => !Number.isNaN(v)).sort((a, b) => a - b);
+
+      // Box: the five ECharts boxplot values [wLo, bLo, center, bHi, wHi] + n,
+      // assembled from TWO summarizeStat calls (body + whiskers) — the default
+      // median_q1_q3 + tukey pair is exactly the classic five-number path this
+      // replaces. Returns null for an empty / all-NA set so the caller can
+      // drop that category slot rather than draw a misleading flat box at
+      // zero. Datum is an object (not a bare array) so the tooltip can report
+      // the observation count alongside the summary.
       const summarize = (/** @type {any[]} */ rows) => {
-        const vals = rows.map(r => Number(r[value])).filter(v => !Number.isNaN(v)).sort((a, b) => a - b);
-        if (vals.length === 0) return null;
-        const q = (/** @type {number} */ p) => { const i = p * (vals.length - 1); const lo = Math.floor(i); return lo === i ? vals[lo] : vals[lo] + (vals[lo + 1] - vals[lo]) * (i - lo); };
-        const q1 = q(0.25), q3 = q(0.75), iqr = q3 - q1;
-        const lo = Math.max(vals[0], q1 - 1.5 * iqr);
-        const hi = Math.min(vals[vals.length - 1], q3 + 1.5 * iqr);
-        return { value: [lo, q1, q(0.5), q3, hi], n: vals.length };
+        const vals = valsOf(rows);
+        const body = summarizeStat(vals, bodyStat);
+        if (!body) return null;
+        const whisk = /** @type {any} */ (summarizeStat(vals, whiskerStat));
+        return {
+          value: [whisk.lo, body.lo, body.center, body.hi, whisk.hi],
+          n: vals.length
+        };
+      };
+      // Pointrange: {center, lo, hi, n} of the single interval, or null.
+      const summarizeRange = (/** @type {any[]} */ rows) => {
+        const vals = valsOf(rows);
+        const s = summarizeStat(vals, bodyStat);
+        return s ? { ...s, n: vals.length } : null;
       };
 
       // Color levels, in scale / factor order. Levels with no rows drop out.
@@ -3319,125 +3526,222 @@
         }
       }
 
-      // One boxplot series per color level so the legend and per-series color
-      // come for free; each series only carries data at its own slots (null
-      // elsewhere), which also dodges the boxes since one slot = one box.
+      // One series (set) per color level so the legend and per-series color
+      // come for free; each series only carries data at its own slots, which
+      // also dodges the marks since one slot = one box / point range.
       const seriesLevels = split ? levels : ['__all__'];
-      const series = seriesLevels.map((lv, li) => {
-        const hex = split ? hexFor(lv, li) : palette[0];
-        // ECharts 6's boxplot data parser reads `datum.value` unconditionally,
-        // so a bare null datum (another series' slot, or an empty group)
-        // CRASHES getInitialData and blanks the whole chart. The canonical
-        // empty slot is a NaN five-tuple: nothing draws there, but the
-        // slot/index/label alignment is kept.
-        const EMPTY_BOX = () => ({ value: [NaN, NaN, NaN, NaN, NaN], n: 0 });
-        const data = catMeta.map(cm => cm.level === lv
-          ? (summarize(rowsFor(cm.group, lv)) || EMPTY_BOX())
-          : EMPTY_BOX());
-        return { type: 'boxplot', name: split ? lv : undefined, data, itemStyle: { color: hex + '22', borderColor: hex } };
-      });
+      /** @type {any[]} */
+      let series;
+      if (isBox) {
+        series = seriesLevels.map((lv, li) => {
+          const hex = split ? hexFor(lv, li) : palette[0];
+          // ECharts 6's boxplot data parser reads `datum.value` unconditionally,
+          // so a bare null datum (another series' slot, or an empty group)
+          // CRASHES getInitialData and blanks the whole chart. The canonical
+          // empty slot is a NaN five-tuple: nothing draws there, but the
+          // slot/index/label alignment is kept.
+          const EMPTY_BOX = () => ({ value: [NaN, NaN, NaN, NaN, NaN], n: 0 });
+          const data = catMeta.map(cm => cm.level === lv
+            ? (summarize(rowsFor(cm.group, lv)) || EMPTY_BOX())
+            : EMPTY_BOX());
+          return { type: 'boxplot', name: split ? lv : undefined, data, itemStyle: { color: hex + '22', borderColor: hex } };
+        });
+      } else {
+        // Pointrange: per level, a silent whisker custom series under a
+        // clickable center scatter, plus an optional line through the centers
+        // in slot order (connect_centers — the over-visits reading). All
+        // three share the level `name` so ECharts collapses them into one
+        // legend entry and a legend toggle hides them together (the same
+        // trick the individual-family CI overlays use).
+        const connect = this.config.connect_centers === 'on' ||
+          this.config.connect_centers === true;
+        series = [];
+        seriesLevels.forEach((lv, li) => {
+          const hex = split ? hexFor(lv, li) : palette[0];
+          /** @type {any[]} */
+          const centers = [];
+          /** @type {any[]} */
+          const whisks = [];
+          catMeta.forEach((cm, ci) => {
+            if (cm.level !== lv) return;
+            const s = summarizeRange(rowsFor(cm.group, lv));
+            // Empty slot: skip the datum, keep the slot (index alignment).
+            if (!s) return;
+            // The slot's cat rides as the datum NAME: the aggregated click
+            // handler drills on params.name (the composite cat, level suffix
+            // stripped), exactly as it does for a box datum. `center` is
+            // carried explicitly so the tooltip reads it without knowing
+            // which value slot the orientation put it in.
+            centers.push({
+              value: vertical ? [ci, s.center] : [s.center, ci],
+              name: cats[ci], center: s.center,
+              n: s.n, lo: s.lo, hi: s.hi
+            });
+            whisks.push([ci, s.lo, s.hi]);
+          });
+          if (connect && centers.length > 1) {
+            series.push({
+              type: 'line', name: split ? lv : undefined,
+              legendHoverLink: false, silent: true, z: 2,
+              data: centers.map(c => c.value),
+              showSymbol: false,
+              lineStyle: { color: hex, width: 1.4 },
+              itemStyle: { color: hex },
+              emphasis: { disabled: true },
+              tooltip: { show: false }
+            });
+          }
+          if (whisks.length) {
+            // Whisker datum is [slot, lo, hi] either way; the helper's
+            // orientation flag decides which axis the interval measures on
+            // (and carries the value-extent encode fix for both).
+            series.push(mkWhiskerSeries(split ? lv : undefined, whisks, hex, !vertical));
+          }
+          series.push({
+            type: 'scatter', name: split ? lv : undefined,
+            data: centers, z: 4, symbolSize: 7,
+            itemStyle: { color: hex, cursor: 'pointer' },
+            emphasis: { disabled: true }
+          });
+        });
+      }
 
-      // Observation overlay (box_points). "outliers" plots only the points
-      // beyond the 1.5*IQR whiskers; "all" plots every observation as a
-      // strip over the box. Every point sits ON the box's centre line (same
-      // category index as the box, no vertical jitter), so "all" reads as a
-      // rug over the box and outliers sit on the axis exactly where a classic
-      // boxplot draws them. Points are `silent` so the box below keeps
-      // click-to-drill and the summary tooltip (a silent series is skipped in
-      // hit-testing), and share their box's color / legend name so toggling a
-      // legend level hides its box and its points together. One scatter series
-      // per level mirrors the boxplot series above.
-      const boxPoints = this.config.box_points || 'none';
+      // Observation overlay (box_points, boxplot only). "outliers" plots the
+      // points beyond the box's own whisker extent — whatever the whisker
+      // rule, the box defines its outliers, so the two cannot disagree (and
+      // min_max whiskers have none by construction). Points sit ON the box's
+      // centre line (same category index, no vertical jitter), exactly where
+      // a classic boxplot draws them. They are `silent` so the box below
+      // keeps click-to-drill and the summary tooltip (a silent series is
+      // skipped in hit-testing), and share their box's color / legend name so
+      // toggling a legend level hides its box and its points together. One
+      // scatter series per level mirrors the boxplot series above. Any other
+      // value (including the retired "all" strip) degrades to no overlay.
+      const boxPoints = (isBox && this.config.box_points === 'outliers')
+        ? 'outliers' : 'none';
       const pointSeries = (boxPoints === 'none') ? [] : seriesLevels.map((lv, li) => {
         const hex = split ? hexFor(lv, li) : palette[0];
-        // Cap per box so a huge group can't stall the render; even stride
-        // sample keeps the shape. Outliers are never capped (always few).
-        const MAX_PTS = 1500;
         /** @type {[number, number][]} */
         const pts = [];
         catMeta.forEach((cm, ci) => {
           if (cm.level !== lv) return;
           const rows = rowsFor(cm.group, lv);
-          let vals = rows.map(r => Number(r[value])).filter(v => !Number.isNaN(v));
-          if (boxPoints === 'outliers') {
-            // Outliers = points past the box's own whiskers (Q1/Q3 ± 1.5*IQR).
-            // Same lo/hi the box draws, so the box defines the outliers.
-            const s = summarize(rows);
-            if (!s) return;
-            const wlo = s.value[0], whi = s.value[4];
-            vals = vals.filter(v => v < wlo || v > whi);
-          } else if (vals.length > MAX_PTS) {
-            const stride = vals.length / MAX_PTS;
-            const keep = [];
-            for (let i = 0; i < MAX_PTS; i++) keep.push(vals[Math.floor(i * stride)]);
-            vals = keep;
-          }
-          vals.forEach((v) => pts.push([v, ci]));
+          // Outliers = points past the box's own whiskers (never capped:
+          // few by construction).
+          const s = summarize(rows);
+          if (!s) return;
+          const wlo = s.value[0], whi = s.value[4];
+          rows.map(r => Number(r[value]))
+            .filter(v => !Number.isNaN(v) && (v < wlo || v > whi))
+            .forEach((v) => pts.push(vertical ? [ci, v] : [v, ci]));
         });
         return {
           type: 'scatter', name: split ? lv : undefined, data: pts, silent: true,
-          symbolSize: boxPoints === 'all' ? 4 : 5, z: 3,
+          symbolSize: 5, z: 3,
           large: true, largeThreshold: 800,
-          itemStyle: {
-            color: hex,
-            opacity: boxPoints === 'all' ? 0.45 : 0.85,
-            ...(boxPoints === 'outliers' ? { borderColor: hex, borderWidth: 1 } : {})
-          }
+          itemStyle: { color: hex, opacity: 0.85, borderColor: hex, borderWidth: 1 }
         };
       }).filter(s => s.data.length > 0);
 
-      const gut = this._yGutter(cats.map(c => catLabelMap
+      // Display strings for the category labels: the "(n)" counted form, or
+      // the composite cat with its level suffix stripped.
+      const catLabels = cats.map(c => catLabelMap
         ? /** @type {string} */ (catLabelMap.get(c))
-        : (split ? c.split(BOX_CAT_SEP)[0] : c)));
-      // p.data is our {value, n} datum; whiskers are 1.5*IQR-capped, so
-      // they're labeled as whiskers rather than min/max.
+        : (split ? c.split(BOX_CAT_SEP)[0] : c));
+      const gut = this._yGutter(catLabels);
+      // Vertical: categories on x — horizontal-or-vertical labels via the
+      // shared fitter, same as the vertical bar (the formatter below still
+      // resolves the display string per tick).
+      const xlab = vertical ? this._xAxisLabels(catLabels, (plotW || 0) - 65) : null;
+      const catFmt = catLabelMap
+        ? (/** @type {string} */ v) => catLabelMap.get(v) || String(v).split(BOX_CAT_SEP)[0]
+        : (split ? (/** @type {string} */ v) => String(v).split(BOX_CAT_SEP)[0] : null);
+      // Stat-labeled tooltips: the lines say WHICH statistic they show — the
+      // body and whisker rule are configurable, so "Median / Q1, Q3" is only
+      // right for the default Tukey box.
+      const bodyMeta = statMeta(bodyStat);
+      const whiskMeta = statMeta(whiskerStat);
+      // p.name is the (possibly composite) category; show "group·level".
+      const ttHead = (/** @type {any} */ p) =>
+        split ? String(p.name).replace(BOX_CAT_SEP, ' · ') : p.name;
       const boxTooltipFmt = (/** @type {any} */ p) => {
         const d = p.data;
         // n = 0 marks the NaN empty-slot datum (nothing drawn, no tooltip).
         if (!d || !Array.isArray(d.value) || !d.n) return '';
         // ECharts normalizes boxplot datum values to
-        // [dataIndex, lo, q1, med, q3, hi] — read the last five.
+        // [dataIndex, wLo, bLo, center, bHi, wHi] — read the last five.
         const five = d.value.slice(-5);
-        const lo = five[0], q1 = five[1], med = five[2], q3 = five[3], hi = five[4];
-        // p.name is the (possibly composite) category; show "group \u00b7 level".
-        const head = split ? String(p.name).replace(BOX_CAT_SEP, ' \u00b7 ') : p.name;
-        return (head ? head + '<br/>' : '') +
+        const h = ttHead(p);
+        return (h ? h + '<br/>' : '') +
           'n: ' + d.n +
-          '<br/>Median: ' + ddNum(med) +
-          '<br/>Q1, Q3: ' + ddNum(q1) + ', ' + ddNum(q3) +
-          '<br/>Whiskers: ' + ddNum(lo) + ' \u2013 ' + ddNum(hi);
+          '<br/>' + bodyMeta.center + ': ' + ddNum(five[2]) +
+          '<br/>Box (' + bodyMeta.range + '): ' + ddNum(five[1]) + ', ' + ddNum(five[3]) +
+          '<br/>Whiskers (' + whiskMeta.range + '): ' + ddNum(five[0]) + ' \u2013 ' + ddNum(five[4]);
+      };
+      // Pointrange center datum: {value, center, n, lo, hi} (the whisker +
+      // connect series are silent, only the centers hit-test). `center` is
+      // read off the datum, not value[\u2026], so the formatter is orientation-
+      // agnostic.
+      const rangeTooltipFmt = (/** @type {any} */ p) => {
+        const d = p.data;
+        if (!d || !d.n) return '';
+        const h = ttHead(p);
+        return (h ? h + '<br/>' : '') +
+          'n: ' + d.n +
+          '<br/>' + bodyMeta.center + ': ' + ddNum(d.center) +
+          '<br/>' + bodyMeta.range + ': ' + ddNum(d.lo) + ' \u2013 ' + ddNum(d.hi);
       };
       const legendOn = split;
       const nativeLegend = legendOn && !sharedLegend;
       const legTitle = nativeLegend ? this._legendTitleName(levels, colorCol) : null;
       const legItems = this._withLegendTitle(levels, colorCol);
       const leg = nativeLegend ? this._legendRows(legItems, plotW || 0) : { extra: 0, scroll: false };
-      const bottomBase = 46 + (nativeLegend ? 29 : 0);
+      const bottomBase = 46 + (nativeLegend ? 29 : 0) +
+        (vertical && xlab ? xlab.bottom : 0);
+      // Shared value axis; nameGap widens vertically (y-axis title stands off
+      // the tick labels). scale:true fits the axis to the data instead of
+      // forcing 0 in: a distribution reads by position/spread, not
+      // length-from-zero (unlike a bar), so pinning 0 just squashes marks far
+      // from 0. Matches scatter/line; bars/waterfall keep the 0 baseline.
+      const valAxis = { type: 'value', scale: true, name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: vertical ? 45 : 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, ...(vertical ? { splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } } } : {}) };
+      const catAxis = vertical
+        ? { type: 'category', data: cats, axisLabel: { ...(xlab ? xlab.axisLabel : {}), ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
+        : { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '…', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false } };
       return {
         __legendFit: nativeLegend
           ? { items: legItems, base: bottomBase, key: leg.extra + (leg.scroll ? 'S' : '') }
           : undefined,
-        // One 28px row per DRAWN slot — cats, not groups: a color-split
+        // Horizontal sizing: one 28px row per DRAWN slot — cats, not groups: a color-split
         // boxplot draws a (group x level) row each, so sizing off the group
         // count alone squeezed split boxplots into overlapping slivers.
         // Clamped at PANEL_H_CAP: cats is groups x levels for a split
         // boxplot, so an unbounded height can exceed the browser's canvas
         // limit (silent blank). Past the cap the slots squeeze; boxWidth's
         // 7px floor keeps boxes visible.
-        __panelH: 30 + Math.min(PANEL_H_CAP, cats.length * 28) + bottomBase + leg.extra,
+        // Inputs for _refitXLabels (vertical only) — same labels and width
+        // inset as measured above, so a resize redoes the fit from scratch.
+        __xFit: (vertical && xlab)
+          ? { labels: catLabels, inset: 65, decimate: false,
+              gutter: xlab.bottom, key: xlab.key }
+          : undefined,
+        // Horizontal: exact panel height for a constant 28px category row
+        // (clamped at PANEL_H_CAP — see the bar builder for the rationale).
+        // Vertical: the 350px default canvas PLUS the rotated x-label
+        // gutter, which bottomBase already carries (same as vertical bar).
+        __panelH: vertical
+          ? 350 + (xlab ? xlab.bottom : 0)
+          : 30 + Math.min(PANEL_H_CAP, cats.length * 28) + bottomBase + leg.extra,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
-        tooltip: { trigger: 'item', confine: true, formatter: boxTooltipFmt },
+        tooltip: { trigger: 'item', confine: true, formatter: isBox ? boxTooltipFmt : rangeTooltipFmt },
         legend: nativeLegend
           ? { show: true, bottom: 0, textStyle: { fontSize: 11 }, data: legItems, ...(leg.scroll ? { type: 'scroll' } : {}) }
           : (legendOn ? { show: false, data: levels } : undefined),
-        grid: { left: gut.gridLeft, right: 5, top: 30, bottom: bottomBase + leg.extra },
-        // scale:true fits the axis to the data instead of forcing 0 in: a
-        // boxplot reads by position/spread, not length-from-zero (unlike a
-        // bar), so pinning 0 just squashes boxes of values far from 0. Matches
-        // scatter/line; bars/waterfall keep the default (0-anchored) baseline.
-        xAxis: { type: 'value', scale: true, name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } } },
-        yAxis: { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(catLabelMap ? { formatter: (/** @type {string} */ v) => catLabelMap.get(v) || String(v).split(BOX_CAT_SEP)[0] } : (split ? { formatter: (/** @type {string} */ v) => String(v).split(BOX_CAT_SEP)[0] } : {})) }, axisLine: { show: false } },
+        grid: vertical
+          ? { left: 55, right: 10, top: 30, bottom: bottomBase + leg.extra }
+          : { left: gut.gridLeft, right: 5, top: 30, bottom: bottomBase + leg.extra },
+        xAxis: vertical ? catAxis : valAxis,
+        yAxis: vertical ? valAxis : catAxis,
         series: [...series, ...pointSeries, ...this._legendTitleSeries(legTitle)]
       };
     }
@@ -3729,44 +4033,16 @@
         };
 
         // Helper: error-bar custom series builder. Renders vertical segments
-        // (loCol, hiCol) at each x for one group.
+        // (loCol, hiCol) at each x for one group — the shared mkWhiskerSeries
+        // in its vertical orientation (value on y; the y-extent encode fix
+        // lives there).
         // CI and smoother overlays share their parent line's `name` (not
         // "<name> (CI)" / "<name> (lm)") so ECharts collapses them into a
         // single legend entry per series — one click toggles line +
         // whiskers + fit together. legendHoverLink off so legend hover
         // doesn't try to emphasize these (silent) overlay series.
-        const mkErrBarSeries = (/** @type {any} */ name, /** @type {any} */ errPts, /** @type {any} */ clr) => ({
-          type: 'custom',
-          name: name,
-          legendHoverLink: false,
-          silent: true,
-          z: 1,
-          data: errPts,  // [[x, lo, hi], ...]
-          // BOTH whisker ends map to y. Without this, a custom series' default
-          // dimension mapping is dim0 -> x, dim1 -> y and dim2+ -> nothing, so
-          // `hi` never entered the y extent: the axis was sized to the line and
-          // the LOW ends only, and every upper whisker that reached past it was
-          // drawn outside the grid (clipped at the top, over the toolbox).
-          // Invisible on a wide axis, blatant once drag-zoom rescales y to the
-          // window -- which is how this surfaced. renderItem still reads the raw
-          // dims by index (api.value(1) / api.value(2)); encode only tells the
-          // axis what to measure.
-          encode: { x: 0, y: [1, 2] },
-          renderItem: (/** @type {any} */ params, /** @type {any} */ api) => {
-            const xv = api.value(0), lo = api.value(1), hi = api.value(2);
-            const pLo = api.coord([xv, lo]);
-            const pHi = api.coord([xv, hi]);
-            const w = 4;
-            return {
-              type: 'group',
-              children: [
-                { type: 'line', shape: { x1: pLo[0], y1: pLo[1], x2: pHi[0], y2: pHi[1] }, style: { stroke: clr, lineWidth: 1 } },
-                { type: 'line', shape: { x1: pLo[0]-w, y1: pLo[1], x2: pLo[0]+w, y2: pLo[1] }, style: { stroke: clr, lineWidth: 1 } },
-                { type: 'line', shape: { x1: pHi[0]-w, y1: pHi[1], x2: pHi[0]+w, y2: pHi[1] }, style: { stroke: clr, lineWidth: 1 } }
-              ]
-            };
-          }
-        });
+        const mkErrBarSeries = (/** @type {any} */ name, /** @type {any} */ errPts, /** @type {any} */ clr) =>
+          mkWhiskerSeries(name, errPts, clr, false);  // errPts: [[x, lo, hi], ...]
 
         /** @type {any[]} */
         const series = [];

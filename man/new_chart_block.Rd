@@ -20,7 +20,7 @@ new_chart_block(
   drill = NULL,
   sort_by = NULL,
   sort_dir = NULL,
-  orientation = "horizontal",
+  orientation = NULL,
   bar_mode = "stacked",
   filter_type = "categorical",
   filter_column = NULL,
@@ -37,6 +37,9 @@ new_chart_block(
   smoother = "none",
   identity_line = FALSE,
   box_points = "none",
+  summary = NULL,
+  whiskers = "tukey",
+  connect_centers = FALSE,
   lo = NULL,
   hi = NULL,
   baseline = "zero",
@@ -74,8 +77,12 @@ heights already computed upstream); duplicate categories collapse to the
 first row. (Was \code{agg_fn}.)}
 
 \item{chart_type}{Chart type: "bar", "waterfall", "scatter", "line",
-"pie", "treemap", "boxplot", "radar", "gantt". "waterfall" is a bar with
-a cumulative baseline (sugar for \code{bar} + \code{baseline = "cumulative"}).}
+"pie", "treemap", "boxplot", "pointrange", "radar", "gantt". "waterfall"
+is a bar with a cumulative baseline (sugar for \code{bar} +
+\code{baseline = "cumulative"}). "boxplot" and "pointrange" are the
+distribution marks: both summarize the raw \code{value} within each \code{group}
+(x \code{color}) slot in the browser (see \code{summary}) -- no upstream summarize
+block, and the block's export stays the drill-filtered raw rows.}
 
 \item{x}{X-axis column (individual / timeline charts)}
 
@@ -114,9 +121,12 @@ the chart family:
 
 \item{sort_dir}{\code{"asc"} or \code{"desc"}. Reverses the \code{sort_by} ordering.}
 
-\item{orientation}{Bar orientation: \code{"horizontal"} (default; category on the
-y-axis, best for long labels) or \code{"vertical"}. Presentation property -- the
-mapping (Group/Metric) is unchanged. Bar charts only.}
+\item{orientation}{Category-axis orientation: \code{"horizontal"} (category on
+the y-axis, best for long labels) or \code{"vertical"} (category on the
+x-axis). Presentation property -- the mapping (Group/Value) is unchanged.
+Bar and the distribution marks (boxplot / pointrange). \code{NULL} (default)
+resolves per type: \code{"horizontal"} for bar, \code{"vertical"} for the
+distribution marks (visits/arms read left-to-right).}
 
 \item{bar_mode}{Layout for a color-split bar: \code{"stacked"} (default -- color
 segments stack into one bar per group), \code{"grouped"} (segments sit
@@ -165,9 +175,27 @@ transports "on"/"off" over the wire, but that is a UI detail and the R
 value is a plain logical, as for the table block's \code{sortable} et al.}
 
 \item{box_points}{Observation overlay for boxplots: one of \code{"none"}
-(default, box only), \code{"outliers"} (plot only the points beyond the
-1.5x IQR whiskers) or \code{"all"} (jittered strip of every observation on
-top of the box). No-op for other chart types.}
+(default, box only) or \code{"outliers"} (plot only the points beyond the
+whisker extent). The former \code{"all"} strip was removed; boards carrying
+it degrade to \code{"none"}. No-op for other chart types.}
+
+\item{summary}{Distribution statistic (boxplot / pointrange): the point
+range's interval, or the box's body. One of \code{"median_q1_q3"},
+\code{"mean_sd"}, \code{"mean_2sd"}, \code{"mean_se"}, \code{"p5_p95"}, \code{"min_max"},
+computed in the browser from the raw \code{value} column. \code{NULL} (default)
+resolves per mark: \code{"median_q1_q3"} for boxplot, \code{"mean_se"} for
+pointrange. No-op for other chart types.}
+
+\item{whiskers}{Boxplot whisker rule (the box's outer interval):
+\code{"tukey"} (default, 1.5x IQR fences clipped to the data -- the textbook
+boxplot) or any \code{summary} value (e.g. \code{"min_max"} for range whiskers,
+\code{"p5_p95"} for the clinical percentile convention). No-op for
+non-boxplot charts.}
+
+\item{connect_centers}{Pointrange only: \code{TRUE} draws a line through the
+interval centers in group order (the over-visits trajectory reading).
+Default \code{FALSE}. Like \code{identity_line}, the gear's control speaks
+"on"/"off" over the wire; the R state is a plain logical.}
 
 \item{lo, hi}{Optional lower / upper value bounds used by the renderer to
 clamp or annotate the value axis. Default \code{NULL} (auto).}
