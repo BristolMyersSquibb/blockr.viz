@@ -46,11 +46,13 @@ test_that("the flat payload carries the head and the per-column vectors", {
   expect_null(p$parent)
   expect_null(p$parent_row)
   expect_null(p$on)
-  # One entry per plan column: the bar, then n, then %.
-  expect_identical(vapply(p$cols, function(c) c$kind, ""),
-                   c("bar", "num", "num"))
+  # One plan column by default: the bar, which carries its own value label
+  # (disp + pct + the column's ONE label-slot width).
+  expect_identical(vapply(p$cols, function(c) c$kind, ""), "bar")
   expect_length(p$cols[[1]]$w, 4L)
-  expect_length(p$cols[[2]]$disp, 4L)
+  expect_length(p$cols[[1]]$disp, 4L)
+  expect_length(p$cols[[1]]$pct, 4L)
+  expect_true(is.numeric(p$cols[[1]]$dw))
 })
 
 test_that("labels ship PLAIN and are escaped by each consumer, not the payload", {
@@ -89,7 +91,7 @@ test_that("a non-renderable state ships as kind html, not a cell model", {
   ae <- push_fixture()
   p <- rank_build_payload(ae, group = NULL)
   expect_identical(p$kind, "html")
-  expect_match(p$html, "Pick a Rank by column")
+  expect_match(p$html, "Pick a Group column")
   # The chrome still travels: the footer and legend slots get cleared.
   expect_true(!is.null(p$chrome))
 })
@@ -98,13 +100,19 @@ test_that("the chrome rides on the payload so the container is never rebuilt", {
   ae <- push_fixture()
   p <- rank_build_payload(
     ae, chrome = list(title = "Ranked", subtitle = "N = 30", caption = "src"),
-    group = "TERM", facet = "ARM", func = "count_distinct", id_var = "USUBJID"
+    group = "TERM", facet = "ARM", color = "SEV", func = "count_distinct",
+    id_var = "USUBJID"
   )
   expect_identical(p$chrome$title, "Ranked")
   expect_identical(p$chrome$caption, "src")
-  expect_identical(p$chrome$legend$title, "ARM")
+  # The legend maps the COLOUR levels; a plain facet carries none (its
+  # column headers already name the levels).
+  expect_identical(p$chrome$legend$title, "SEV")
   expect_length(p$chrome$legend$items, 2L)
   expect_match(p$chrome$foot$count, "of 4 rows")
+  plain <- rank_build_payload(ae, group = "TERM", facet = "ARM",
+                              func = "count_distinct", id_var = "USUBJID")
+  expect_null(plain$chrome$legend)
 })
 
 test_that("the payload is smaller than the markup it replaces", {
@@ -147,6 +155,11 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
                  id_var = "USUBJID"),
     compare = list(group = "TERM", facet = "ARM", compare = "Placebo",
                    func = "count_distinct", id_var = "USUBJID"),
+    facet_color = list(group = "TERM", facet = "ARM", color = "SEV",
+                       func = "count"),
+    identity = list(group = "USUBJID", func = "identity", value = "AVAL",
+                    fields = c("SOC", "AVAL")),
+    sep_cols = list(group = "TERM", func = "count", cols = c("n", "pct")),
     nested = list(group = "TERM", parent = "SOC", func = "count"),
     capped = list(group = "TERM", func = "count", top_n = 2L)
   )

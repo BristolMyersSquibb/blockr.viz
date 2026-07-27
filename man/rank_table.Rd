@@ -15,7 +15,8 @@ rank_table(
   bar_mode = "stacked",
   facet = NULL,
   compare = NULL,
-  cols = c("n", "pct"),
+  cols = NULL,
+  fields = NULL,
   sort_by = "value",
   sort_dir = "desc",
   top_n = NULL,
@@ -44,18 +45,23 @@ subject identifier \code{"count_distinct"} counts.}
 rows with their children indented under them. A parent is aggregated in
 its own pass, never summed from its children.}
 
-\item{color}{Optional column splitting each bar into segments.}
+\item{color}{Optional column splitting each bar into segments. Composes
+with \code{facet}.}
 
 \item{bar_mode}{\code{"stacked"}, \code{"grouped"} or \code{"percent"}. No-op without
 \code{color}.}
 
 \item{facet}{Optional column giving one bar column per level, all on one
-shared scale. Takes precedence over \code{color}.}
+shared scale.}
 
 \item{compare}{With \code{facet}, the level to treat as the comparator: each
 other level gets a zero-centred difference bar in percentage points.}
 
-\item{cols}{Numeric columns beside the bar: any of \code{"n"}, \code{"pct"}.}
+\item{cols}{Opt-in separate numeric columns beside the bar: any of \code{"n"},
+\code{"pct"}. By default the bar cell carries its own value label.}
+
+\item{fields}{Extra columns from the underlying row (identity measure
+only), shown as real columns beside the bar.}
 
 \item{sort_by, sort_dir}{Server-side ordering. \code{sort_by} is \code{"value"},
 \code{"label"} or a facet level name; \code{sort_dir} is \code{"desc"} or \code{"asc"}.}

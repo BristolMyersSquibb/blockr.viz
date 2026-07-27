@@ -23,12 +23,17 @@
 #' The cell model: everything both consumers need, computed once.
 #'
 #' Per-column entries carry `kind` plus only the vectors that kind uses:
-#'   bar      -> `w` (percent widths), `v` (sort values), `fill`, `sub`
+#'   bar      -> `w` (percent widths, NA = no value = no fill), `v` (sort
+#'               values), `fill`, `sub`, and the in-bar label (`disp`/`pct`/
+#'               `dw`) when the plan asks for one
 #'   barsplit -> `seg` (list of per-series width vectors), `segv`, `fills`,
-#'               `names`, `mode`
-#'   bardiv   -> `w`, `v`, `pos` (polarity)
-#'   num      -> `disp` (display strings), `v`
-#' Widths are already rounded to the 2dp both consumers print.
+#'               `names`, `mode`, plus the in-bar label
+#'   bardiv   -> `w`, `v`, `pos` (polarity), plus the signed in-bar label
+#'   num      -> `disp` (display strings), `v`; `text` marks a left-aligned
+#'               raw field column
+#' Widths are already rounded to the 2dp both consumers print. `dw` is the
+#' label slot's width in ch -- ONE number per column, computed here, so every
+#' row reserves the same slot and the tracks stay aligned.
 #' @noRd
 rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
   rows <- prep$rows
@@ -42,6 +47,8 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
   # print the same string and the drift guard stays green.
   sortv <- function(v) if (is.numeric(v)) round(v, 4L) else v
 
+  # NA stays NA: a no-value cell (the identity measure's absent facet) draws
+  # NO fill at all, where 0 draws the visible zero-width sliver.
   pct_w <- function(v) {
     w <- if (is.finite(mx) && mx > 0) {
       pmax(0, pmin(100, abs(v) / mx * 100))
@@ -49,25 +56,51 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       rep(0, length(v))
     }
     w[!is.finite(w)] <- 0
+    w[is.na(v)] <- NA_real_
     round(w, 2L)
+  }
+
+  # The in-bar value label: the raw measure (never the width percentage),
+  # with the counting measures' "(43%)" tail when the plan carries a base.
+  val_parts <- function(p, vraw, signed = FALSE) {
+    if (!isTRUE(p$show_val)) return(NULL)
+    parts <- rank_num_parts(vraw, denom = p$val_denom,
+                            combined = !is.null(p$val_denom), signed = signed)
+    # formatC pads "fg" output to a common width; harmless in a collapsing
+    # HTML cell but it would inflate the label slot -- trim before measuring.
+    parts$disp <- trimws(parts$disp)
+    len <- nchar(parts$disp) +
+      if (is.null(parts$pct)) 0L else ifelse(nzchar(parts$pct),
+                                             nchar(parts$pct) + 1L, 0L)
+    c(parts, list(dw = max(c(1L, len))))
   }
 
   cols <- lapply(seq_along(plan), function(i) {
     p <- plan[[i]]
     if (identical(p$kind, "bar")) {
-      v <- rows[[p$key]]
+      vraw <- rows[[p$key]]
+      lab <- val_parts(p, vraw)
+      v <- vraw
       if (!is.null(p$denom) && is.finite(p$denom) && p$denom > 0) {
         v <- v / p$denom * 100
       }
-      list(kind = "bar", w = pct_w(v), v = sortv(v), fill = p$fill,
-           sub = rows$.level > 0L)
+      c(list(kind = "bar", w = pct_w(v), v = sortv(v), fill = p$fill,
+             sub = rows$.level > 0L), lab)
     } else if (identical(p$kind, "barsplit")) {
+      prefix <- p$prefix %||% ".s_"
       mat <- vapply(p$series, function(lv) {
-        x <- rows[[paste0(".s_", lv)]]
+        x <- rows[[paste0(prefix, lv)]]
         if (is.null(x)) rep(0, n) else as.numeric(x)
       }, numeric(n))
       mat <- matrix(mat, nrow = n, dimnames = list(NULL, p$series))
       mat[!is.finite(mat)] <- 0
+      # `segv` (the segment tooltips) stays in the measure's own unit; only
+      # the WIDTHS are scaled -- against the column max, or the facet's own N
+      # when the plan carries a width denominator.
+      segv <- lapply(seq_along(p$series), function(j) mat[, j])
+      if (!is.null(p$denom) && is.finite(p$denom) && p$denom > 0) {
+        mat <- mat / p$denom * 100
+      }
       tot <- rowSums(mat)
       # Segment widths: stacked scales the row total against the column max,
       # percent normalises each row to 100, grouped scales each series
@@ -85,17 +118,34 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         share <- ifelse(tot > 0, 1, 0) * mat / ifelse(tot > 0, tot, 1)
         lapply(seq_along(p$series), function(j) round(share[, j] * scale, 2L))
       }
-      list(kind = "barsplit", mode = p$mode %||% "stacked",
-           names = as.character(p$series),
-           fills = unname(prep$palette[as.character(p$series)]),
-           seg = seg, segv = lapply(seq_along(p$series), function(j) mat[, j]),
-           v = sortv(tot))
+      vraw <- if (!is.null(p$key)) rows[[p$key]] else rowSums(
+        vapply(segv, identity, numeric(n)))
+      lab <- val_parts(p, vraw)
+      v <- if (is.null(p$key)) tot else {
+        if (!is.null(p$denom) && is.finite(p$denom) && p$denom > 0) {
+          vraw / p$denom * 100
+        } else {
+          vraw
+        }
+      }
+      c(list(kind = "barsplit", mode = p$mode %||% "stacked",
+             names = as.character(p$series),
+             fills = unname(prep$palette[as.character(p$series)]),
+             seg = seg, segv = segv,
+             v = sortv(v)), lab)
     } else if (identical(p$kind, "bardiv")) {
       v <- rows[[p$key]]
+      lab <- val_parts(p, v, signed = TRUE)
       w <- if (is.finite(mx) && mx > 0) pmin(50, abs(v) / mx * 50) else v * 0
       w[!is.finite(w)] <- 0
-      list(kind = "bardiv", w = round(w, 2L), v = sortv(v),
-           pos = !is.na(v) & v >= 0)
+      c(list(kind = "bardiv", w = round(w, 2L), v = sortv(v),
+             pos = !is.na(v) & v >= 0), lab)
+    } else if (isTRUE(p$raw) && isTRUE(p$text)) {
+      # A raw text field: the value IS the display (escaped once, here, so
+      # both consumers paste it as-is), and the sort key is the text itself.
+      v <- as.character(rows[[p$key]])
+      v[is.na(v)] <- ""
+      list(kind = "num", text = TRUE, v = v, disp = rank_esc(v))
     } else {
       v <- rows[[p$key]]
       parts <- rank_num_parts(v, denom = p$denom,
@@ -143,7 +193,7 @@ rank_thead <- function(prep) {
       p <- prep$plan[[i]]
       as.character(dt_th(
         p$label, i, label = p$sub_label,
-        numeric = identical(p$kind, "num"), sortable = TRUE
+        numeric = identical(p$kind, "num") && !isTRUE(p$text), sortable = TRUE
       ))
     }, character(1L))
   )
@@ -174,13 +224,16 @@ rank_cells_html <- function(m) {
   cells <- lapply(m$cols, function(c) {
     if (identical(c$kind, "bar")) {
       paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
-             rank_track_html(c$w, c$fill, c$sub), "</td>")
+             rank_barwrap(rank_track_html(c$w, c$fill, c$sub), c), "</td>")
     } else if (identical(c$kind, "barsplit")) {
       paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
-             rank_split_html(c), "</td>")
+             rank_barwrap(rank_split_html(c), c), "</td>")
     } else if (identical(c$kind, "bardiv")) {
       paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
-             rank_dv_html(c$w, c$pos), "</td>")
+             rank_barwrap(rank_dv_html(c$w, c$pos), c), "</td>")
+    } else if (isTRUE(c$text)) {
+      paste0("<td class=\"blockr-rank-txt\"", rank_data_v(c$v), ">",
+             c$disp, "</td>")
     } else {
       paste0("<td class=\"blockr-rank-num dt-col-num\"", rank_data_v(c$v), ">",
              c$disp,
@@ -231,14 +284,41 @@ rank_cells_html <- function(m) {
   )
 }
 
-#' One bar: a track div plus a fill div, vectorised over the column.
+#' The in-bar value label: track (or split / diff bar) left, the value in a
+#' fixed-width right-aligned slot -- ONE width per column (`dw`, in ch), so
+#' every row's track spans the same range and the bars stay comparable.
+#' Columns without a label (explicit separate cols) pass through untouched.
+#' @noRd
+rank_barwrap <- function(inner, c) {
+  if (is.null(c$disp)) return(inner)
+  paste0(
+    "<div class=\"blockr-rank-barwrap\">", inner,
+    "<span class=\"blockr-rank-barval\" style=\"width:", c$dw, "ch\">",
+    c$disp,
+    if (is.null(c$pct)) {
+      ""
+    } else {
+      ifelse(nzchar(c$pct),
+             paste0(" <span class=\"blockr-rank-pct\">", c$pct, "</span>"),
+             "")
+    },
+    "</span></div>"
+  )
+}
+
+#' One bar: a track div plus a fill div, vectorised over the column. An NA
+#' width is a cell with NO value (the identity measure's absent facet): the
+#' track renders empty -- no fill, no zero sliver.
 #' @noRd
 rank_track_html <- function(w, fill = NULL, sub = FALSE) {
   sub <- rep_len(isTRUE(sub) | (is.logical(sub) & !is.na(sub) & sub), length(w))
   paste0(
     "<div class=\"blockr-rank-track", ifelse(sub, " is-sub", ""), "\">",
-    "<div class=\"blockr-rank-fill\" style=\"width:", rank_fmt_w(w), "%",
-    if (!is.null(fill)) paste0(";background:", fill) else "", "\"></div></div>"
+    ifelse(is.na(w), "", paste0(
+      "<div class=\"blockr-rank-fill\" style=\"width:", rank_fmt_w(w), "%",
+      if (!is.null(fill)) paste0(";background:", fill) else "", "\"></div>"
+    )),
+    "</div>"
   )
 }
 
@@ -302,6 +382,7 @@ rank_flat_payload <- function(m) {
     if (identical(c$kind, "num")) {
       out$disp <- arr(as.character(c$disp))
       if (!is.null(c$pct)) out$pct <- arr(as.character(c$pct))
+      if (isTRUE(c$text)) out$text <- TRUE
     } else if (identical(c$kind, "barsplit")) {
       out$mode <- c$mode
       out$names <- arr(as.character(c$names))
@@ -315,6 +396,13 @@ rank_flat_payload <- function(m) {
       out$w <- arr(c$w)
       out$sub <- arr_if(c$sub)
       if (!is.null(c$fill)) out$fill <- c$fill
+    }
+    # The in-bar value label (any bar kind): the display strings plus the
+    # column's ONE label-slot width.
+    if (!identical(c$kind, "num") && !is.null(c$disp)) {
+      out$disp <- arr(as.character(c$disp))
+      if (!is.null(c$pct)) out$pct <- arr(as.character(c$pct))
+      out$dw <- c$dw
     }
     out$v <- arr(c$v)
     out

@@ -14,7 +14,8 @@ new_rank_block(
   bar_mode = "stacked",
   facet = NULL,
   compare = NULL,
-  cols = c("n", "pct"),
+  cols = NULL,
+  fields = NULL,
   sort_by = "value",
   sort_dir = "desc",
   top_n = NULL,
@@ -34,7 +35,9 @@ new_rank_block(
 \item{group}{Column to rank by: one row per level, ordered by the measure.}
 
 \item{value, func, id_var}{The measure. \code{func} is one of \code{"count"},
-\code{"count_distinct"}, \code{"sum"}, \code{"mean"}, \code{"median"}, \code{"min"}, \code{"max"};
+\code{"count_distinct"}, \code{"sum"}, \code{"mean"}, \code{"median"}, \code{"min"}, \code{"max"}, or
+\code{"identity"} (the chart block's "None (as is)": \code{value} untouched, for
+data already reduced upstream -- e.g. one value per subject);
 \code{value} is the column it reduces (unused by \code{"count"}); \code{id_var} is the
 subject identifier \code{"count_distinct"} counts, which is what makes a count
 read as "subjects with at least one event" rather than "events".}
@@ -44,18 +47,26 @@ preferred term): parents become expandable rows with children indented
 under them. Each level is aggregated in its own pass, so a parent is never
 the sum of its children.}
 
-\item{color}{Optional column splitting each bar into segments.}
+\item{color}{Optional column splitting each bar into segments. Composes
+with \code{facet} (the chart's two independent mappings): each facet column's
+bars are then split by \code{color}.}
 
 \item{bar_mode}{\code{"stacked"}, \code{"grouped"} or \code{"percent"}; no-op without
 \code{color}.}
 
 \item{facet}{Optional column giving one bar column per level on a shared
-scale (e.g. one column per treatment arm). Takes precedence over \code{color}.}
+scale (e.g. one column per treatment arm).}
 
 \item{compare}{With \code{facet}, the level to treat as the comparator: every
-other level gets a zero-centred difference bar in percentage points.}
+other level gets a zero-centred difference bar in percentage points.
+A comparison colours its bars by direction, so it ignores \code{color}.}
 
-\item{cols}{Numeric columns beside the bar: any of \code{"n"}, \code{"pct"}.}
+\item{cols}{Opt-in separate numeric columns beside the bar: any of \code{"n"},
+\code{"pct"}. By default the bar cell carries its own value label instead.}
+
+\item{fields}{Extra columns from the underlying row, shown as real columns
+beside the bar -- the chart's tooltip fields. Only meaningful with
+\code{func = "identity"}, where each group IS one row.}
 
 \item{sort_by, sort_dir}{Server-side ordering: \code{"value"}, \code{"label"} or a
 facet level name, and \code{"desc"} / \code{"asc"}.}

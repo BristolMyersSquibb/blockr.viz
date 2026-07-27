@@ -39,8 +39,9 @@ rank_level_colors <- function(map, col, levels) {
 }
 
 # The aggregation vocabulary, as a summarise expression over one group.
-# Mirrors the chart's AGG_FNS: `count` needs no value column, everything else
-# reduces `value` (count_distinct reduces `id_var`).
+# Mirrors the chart's AGG_FNS plus its chart-only "identity" ("None (as is)"):
+# `count` needs no value column, everything else reduces `value`
+# (count_distinct reduces `id_var`).
 #' @noRd
 rank_agg_expr <- function(func, value, id_var) {
   switch(
@@ -52,8 +53,20 @@ rank_agg_expr <- function(func, value, id_var) {
     median = bquote(stats::median(.data[[.(value)]], na.rm = TRUE)),
     min = bquote(dd_agg_min(.data[[.(value)]])),
     max = bquote(dd_agg_max(.data[[.(value)]])),
+    identity = bquote(rank_agg_first(.data[[.(value)]])),
     quote(dplyr::n())
   )
+}
+
+# identity ("None (as is)"): the group's value untouched, for data whose bar
+# lengths are already computed upstream (one row per group -- e.g. one value
+# per subject). Duplicate rows collapse to the first non-missing value and an
+# all-missing group stays NA, matching the chart engine's identity branch
+# (drilldown-agg.js aggregate()).
+#' @noRd
+rank_agg_first <- function(x) {
+  x <- x[!is.na(x)]
+  if (length(x)) as.numeric(x[[1L]]) else NA_real_
 }
 
 # Aggregate to one row per key combination. `keys` may be empty (a grand
@@ -111,7 +124,7 @@ rank_levels <- function(x) {
 rank_prepare <- function(data, group, value = ".count", func = "count",
                          id_var = NULL, parent = NULL, color = NULL,
                          bar_mode = "stacked", facet = NULL, compare = NULL,
-                         cols = c("n", "pct"), sort_by = "value",
+                         cols = NULL, fields = NULL, sort_by = "value",
                          sort_dir = "desc", top_n = NULL, scale_map = NULL) {
   bad <- function(msg) list(err = msg)
 
@@ -119,23 +132,27 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   if (!nrow(data)) return(bad("No rows to display"))
 
   group <- rank_chr1(group)
-  if (is.null(group)) return(bad("Pick a Rank by column in the gear"))
+  if (is.null(group)) return(bad("Pick a Group column in the gear"))
 
   # Every mapped column must exist. A rename or pivot upstream is the usual
   # cause, and naming the column beats a stack trace.
   # `value` is only a mapped column for the aggregations that reduce it --
   # count and count_distinct never touch it, so a stale ".count" default must
   # not be reported as missing.
-  needs_value <- func %in% c("sum", "mean", "median", "min", "max")
+  needs_value <- func %in% c("identity", "sum", "mean", "median", "min", "max")
   # ".count" is the unset sentinel for the value slot (the constructor default,
   # meaningful only for count): asking for a mean without picking a column is a
   # "pick one" prompt, not a missing-column report.
   if (needs_value && (is.null(rank_chr1(value)) ||
                         identical(rank_chr1(value), ".count"))) {
-    return(bad(paste0("Pick a Value column to ", func)))
+    return(bad(if (identical(func, "identity")) {
+      "Pick a Value column to show as is"
+    } else {
+      paste0("Pick a Value column to ", func)
+    }))
   }
   mapped <- c(
-    `Rank by` = group, Parent = rank_chr1(parent), Color = rank_chr1(color),
+    Group = group, `Nest under` = rank_chr1(parent), Color = rank_chr1(color),
     Facet = rank_chr1(facet), `Subject id` = rank_chr1(id_var),
     Value = if (needs_value) rank_chr1(value) else NULL
   )
@@ -156,18 +173,21 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   facet <- rank_chr1(facet)
   id_var <- rank_chr1(id_var)
 
-  # color and facet both claim the bar column. Rather than invent a two-way
-  # layout, facet wins and color is ignored -- reported, never silent.
+  # color and facet TOGETHER mirror the chart: one bar column per facet
+  # level, each bar split into colour segments. Only a comparison still owns
+  # the colour slot (its bars are coloured by direction) -- reported, never
+  # silent.
   note <- NULL
-  if (!is.null(color) && !is.null(facet)) {
+  compare <- if (is.null(facet)) NULL else rank_chr1(compare)
+  if (!is.null(color) && !is.null(compare)) {
     note <- paste0(
-      "Both Color and Facet are set; faceting by \"", facet,
-      "\" and ignoring the color split."
+      "A comparison colours its bars by direction; ignoring the colour ",
+      "split by \"", color, "\"."
     )
     color <- NULL
   }
   layout <- if (!is.null(facet)) {
-    if (!is.null(compare) && nzchar(compare)) "compare" else "facet"
+    if (!is.null(compare)) "compare" else "facet"
   } else if (!is.null(color)) {
     "split"
   } else {
@@ -176,9 +196,12 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
 
   keys <- c(parent, group)
   pct_ok <- rank_has_pct(func)
+  # Separate numeric columns beside the bar are OPT-IN: the bar cell carries
+  # its own value label (see `show_val` below), so the columns exist for
+  # boards that ask for them -- and asking for them mutes the in-bar label,
+  # never duplicates it.
   cols <- intersect(as.character(cols %||% character()), c("n", "pct"))
   if (!pct_ok) cols <- setdiff(cols, "pct")
-  if (!length(cols)) cols <- "n"
 
   # --- leaf rows -----------------------------------------------------------
   leaf <- rank_aggregate(data, keys, func, value, id_var)
@@ -187,6 +210,12 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   leaf$.parent <- if (is.null(parent)) NA_character_ else as.character(leaf[[parent]])
 
   denom <- rank_denom(data, func, id_var)
+
+  # What an ABSENT (group, level) cell is: zero for the additive measures
+  # (no rows = nothing to count or sum), no value at all for the rest -- a
+  # subject has no mean or as-is value in an arm they are not in. NA renders
+  # as a blank cell and a zero-width bar, the chart's null gap.
+  absent <- if (func %in% c("count", "count_distinct", "sum")) 0 else NA_real_
 
   # --- the column plan -----------------------------------------------------
   # Each entry: kind (bar / barsplit / bardiv / num), the per-row numeric
@@ -202,7 +231,11 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   # a rank table and a bar chart of the same data are then the same blue (and
   # follow a themed board's palette together).
   solo_fill <- dd_palette(1L)
-  measure_sub <- if (needs_value) {
+  measure_sub <- if (identical(func, "identity")) {
+    # The bar column header is the value column itself (rank_measure_label);
+    # the sub-line carries its variable label when it adds one.
+    dt_col_label(data[[value]], value)
+  } else if (needs_value) {
     lbl <- dt_col_label(data[[value]], value) %||% value
     paste0(AGG_WORDS[[func]] %||% func, ": ", lbl)
   } else if (identical(func, "count_distinct")) {
@@ -210,9 +243,16 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   } else {
     NULL
   }
+  # The bar cell carries its own value label ("26 (43%)" for a counting
+  # measure, the plain value otherwise) unless separate columns were asked
+  # for. `val_denom` is the LABEL's percentage base; `denom` (facet layouts)
+  # scales the bar WIDTHS.
+  show_val <- !length(cols)
   if (identical(layout, "simple")) {
     plan <- list(list(kind = "bar", label = rank_measure_label(func, value),
-                      key = ".v", sub_label = measure_sub, fill = solo_fill))
+                      key = ".v", sub_label = measure_sub, fill = solo_fill,
+                      show_val = show_val,
+                      val_denom = if (pct_ok) denom))
   } else if (identical(layout, "split")) {
     series <- rank_levels(data[[color]])
     pal <- rank_level_colors(scale_map, color, series)
@@ -220,11 +260,12 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
     # One column per level, joined onto the leaf rows in level order.
     for (lv in series) {
       s <- seg[as.character(seg[[color]]) == lv, , drop = FALSE]
-      leaf[[paste0(".s_", lv)]] <- rank_match(leaf, s, keys)
+      leaf[[paste0(".s_", lv)]] <- rank_match(leaf, s, keys, absent)
     }
     plan <- list(list(kind = "barsplit", label = rank_measure_label(func, value),
-                      series = series, mode = bar_mode,
-                      sub_label = measure_sub))
+                      key = ".v", series = series, mode = bar_mode,
+                      sub_label = measure_sub, show_val = show_val,
+                      val_denom = if (pct_ok) denom))
   } else {
     facet_levels <- rank_levels(data[[facet]])
     if (length(facet_levels) < 2L) {
@@ -233,11 +274,10 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
         "nothing to compare across columns."
       )))
     }
-    pal <- rank_level_colors(scale_map, facet, facet_levels)
     fac <- rank_aggregate(data, c(keys, facet), func, value, id_var)
     for (lv in facet_levels) {
       s <- fac[as.character(fac[[facet]]) == lv, , drop = FALSE]
-      leaf[[paste0(".f_", lv)]] <- rank_match(leaf, s, keys)
+      leaf[[paste0(".f_", lv)]] <- rank_match(leaf, s, keys, absent)
       # Per-facet denominator: a percentage within an arm is over that arm's
       # own N, never the pooled total.
       sub <- data[as.character(data[[facet]]) == lv, , drop = FALSE]
@@ -270,28 +310,59 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
           list(kind = "num", label = lv, key = paste0(".f_", lv),
                denom = denoms[[lv]], combined = TRUE,
                sub_label = paste0("N = ", denoms[[lv]])),
+          # The signed delta rides IN the difference bar's cell; a separate
+          # column would say the same number twice.
           list(kind = "bardiv", label = "Difference (pp)",
                key = paste0(".d_", lv), compare = compare, level = lv,
-               sub_label = paste0("vs ", compare)),
-          list(kind = "num", label = "\u0394", key = paste0(".d_", lv),
-               signed = TRUE)
+               sub_label = paste0("vs ", compare), show_val = TRUE)
         ))
       }
+    } else if (!is.null(color)) {
+      # Facet AND colour, the chart's two independent mappings: one bar
+      # column per facet level, each bar split into colour segments. Facet
+      # columns are keyed by INDEX (.f<i>s_<level>) so a facet level name can
+      # never collide with a colour level name.
+      series <- rank_levels(data[[color]])
+      pal <- rank_level_colors(scale_map, color, series)
+      seg <- rank_aggregate(data, c(keys, facet, color), func, value, id_var)
+      for (fi in seq_along(facet_levels)) {
+        fv <- facet_levels[[fi]]
+        sf <- seg[as.character(seg[[facet]]) == fv, , drop = FALSE]
+        for (cv in series) {
+          s <- sf[as.character(sf[[color]]) == cv, , drop = FALSE]
+          leaf[[paste0(".f", fi, "s_", cv)]] <-
+            rank_match(leaf, s, keys, absent)
+        }
+        plan <- c(plan, list(list(
+          kind = "barsplit", label = fv, key = paste0(".f_", fv),
+          prefix = paste0(".f", fi, "s_"), series = series, mode = bar_mode,
+          denom = if (pct_ok) denoms[[fv]],
+          sub_label = paste0("N = ", denoms[[fv]]),
+          show_val = TRUE, val_denom = if (pct_ok) denoms[[fv]]
+        )))
+      }
     } else {
+      # A denominator only exists for the counting measures: their faceted
+      # bars share a percentage scale (each arm over its own N). A mean or an
+      # as-is value has no percentage -- those bars share the raw scale.
+      # Facet bars are NOT hue-coded by level: the column header already
+      # names the level, and the colour slot stays free for a real `color`
+      # mapping (chart parity -- a facet never recolours the marks).
       for (lv in facet_levels) {
-        plan <- c(plan, list(
-          list(kind = "bar", label = lv, key = paste0(".f_", lv),
-               fill = pal[[lv]], denom = denoms[[lv]],
-               sub_label = paste0("N = ", denoms[[lv]])),
-          list(kind = "num", label = "n (%)", key = paste0(".f_", lv),
-               denom = denoms[[lv]], combined = TRUE)
-        ))
+        plan <- c(plan, list(list(
+          kind = "bar", label = lv, key = paste0(".f_", lv),
+          fill = solo_fill,
+          denom = if (pct_ok) denoms[[lv]],
+          sub_label = paste0("N = ", denoms[[lv]]),
+          show_val = TRUE, val_denom = if (pct_ok) denoms[[lv]]
+        )))
       }
     }
   }
 
-  # The plain n / % columns ride after the bar on the non-faceted layouts.
-  if (layout %in% c("simple", "split")) {
+  # The plain n / % columns ride after the bar on the non-faceted layouts,
+  # only when explicitly asked for (the in-bar label is the default).
+  if (layout %in% c("simple", "split") && length(cols)) {
     if ("n" %in% cols) {
       # "n" only reads as n for a COUNT: a max or a mean in a column headed "n"
       # is a lie, so a non-counting measure gets a neutral "Value" (the bar
@@ -307,6 +378,32 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
     }
   }
 
+  # Extra columns from the underlying row -- the chart's tooltip fields,
+  # shown as real (sortable, searchable) columns. Only the as-is measure has
+  # ONE underlying row per group; under any aggregation a row column would be
+  # an arbitrary representative, which a table must not present as data.
+  fields <- as.character(fields %||% character())
+  fields <- setdiff(fields[nzchar(fields)], group)
+  if (length(fields) && !identical(func, "identity")) {
+    note <- paste(c(note, paste0(
+      "Extra columns need the as-is measure; ignoring ",
+      paste0("\"", fields, "\"", collapse = ", "), "."
+    )), collapse = " ")
+    fields <- character()
+  }
+  fields <- intersect(fields, names(data))
+  if (length(fields)) {
+    fr <- data[!duplicated(data[keys]), , drop = FALSE]
+    for (fld in fields) {
+      leaf[[paste0(".x_", fld)]] <- rank_match_field(leaf, fr, keys, fld)
+      plan <- c(plan, list(list(
+        kind = "num", label = fld, key = paste0(".x_", fld),
+        raw = TRUE, text = !is.numeric(data[[fld]]),
+        sub_label = dt_col_label(data[[fld]], fld)
+      )))
+    }
+  }
+
   # --- parent rows ---------------------------------------------------------
   # A parent is NOT the sum of its children (the same subject appears under
   # several preferred terms), so it is aggregated in its own pass.
@@ -319,14 +416,27 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
       seg <- rank_aggregate(data, c(parent, color), func, value, id_var)
       for (lv in series) {
         s <- seg[as.character(seg[[color]]) == lv, , drop = FALSE]
-        par_rows[[paste0(".s_", lv)]] <- rank_match(par_rows, s, parent)
+        par_rows[[paste0(".s_", lv)]] <- rank_match(par_rows, s, parent, absent)
       }
     }
     if (layout %in% c("facet", "compare")) {
       fac <- rank_aggregate(data, c(parent, facet), func, value, id_var)
       for (lv in facet_levels) {
         s <- fac[as.character(fac[[facet]]) == lv, , drop = FALSE]
-        par_rows[[paste0(".f_", lv)]] <- rank_match(par_rows, s, parent)
+        par_rows[[paste0(".f_", lv)]] <- rank_match(par_rows, s, parent, absent)
+      }
+      if (identical(layout, "facet") && !is.null(color)) {
+        seg <- rank_aggregate(data, c(parent, facet, color), func, value,
+                              id_var)
+        for (fi in seq_along(facet_levels)) {
+          fv <- facet_levels[[fi]]
+          sf <- seg[as.character(seg[[facet]]) == fv, , drop = FALSE]
+          for (cv in series) {
+            s <- sf[as.character(sf[[color]]) == cv, , drop = FALSE]
+            par_rows[[paste0(".f", fi, "s_", cv)]] <-
+              rank_match(par_rows, s, parent, absent)
+          }
+        }
       }
       if (identical(layout, "compare")) {
         for (lv in setdiff(facet_levels, compare)) {
@@ -335,6 +445,11 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
             par_rows[[paste0(".f_", compare)]] / denoms[[compare]] * 100
         }
       }
+    }
+    # A parent aggregates many rows, so it has no single underlying row: its
+    # field cells stay blank.
+    for (fld in fields) {
+      par_rows[[paste0(".x_", fld)]] <- rep(NA, nrow(par_rows))
     }
   }
 
@@ -382,7 +497,8 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
     leaf$.level <- 1L
     leaf$.is_parent <- FALSE
     keep <- c(".label", ".parent", ".level", ".is_parent", ".v",
-              grep("^\\.(s|f|d)_", names(leaf), value = TRUE))
+              grep("^\\.(s_|f_|d_|x_)|^\\.f[0-9]+s_", names(leaf),
+                   value = TRUE))
     pieces <- list()
     for (i in seq_len(nrow(par_rows))) {
       p <- par_rows[i, , drop = FALSE]
@@ -439,12 +555,17 @@ rank_bar_max <- function(rows, plan, denoms) {
       }
       vals <- c(vals, v)
     } else if (identical(p$kind, "barsplit")) {
+      prefix <- p$prefix %||% ".s_"
       seg <- vapply(p$series, function(lv) {
-        v <- rows[[paste0(".s_", lv)]]
+        v <- rows[[paste0(prefix, lv)]]
         if (is.null(v)) rep(0, nrow(rows)) else v
       }, numeric(nrow(rows)))
       seg <- matrix(seg, nrow = nrow(rows))
-      vals <- c(vals, rowSums(seg, na.rm = TRUE))
+      tot <- rowSums(seg, na.rm = TRUE)
+      if (!is.null(p$denom) && is.finite(p$denom) && p$denom > 0) {
+        tot <- tot / p$denom * 100
+      }
+      vals <- c(vals, tot)
     } else if (identical(p$kind, "bardiv")) {
       vals <- c(vals, abs(rows[[p$key]]))
     }
@@ -456,15 +577,28 @@ rank_bar_max <- function(rows, plan, denoms) {
 # Percentages are shared across a faceted bar column set, so a bar's length
 # means the same thing in every column. Absolute counts share the raw scale.
 #' @noRd
-rank_match <- function(target, src, keys) {
-  if (!nrow(src)) return(rep(NA_real_, nrow(target)))
+rank_match <- function(target, src, keys, fill = 0) {
+  if (!nrow(src)) return(rep(fill, nrow(target)))
   tk <- do.call(paste, c(lapply(keys, function(k) as.character(target[[k]])),
                          list(sep = "\r")))
   sk <- do.call(paste, c(lapply(keys, function(k) as.character(src[[k]])),
                          list(sep = "\r")))
   out <- src$.v[match(tk, sk)]
-  out[is.na(out)] <- 0
+  out[is.na(out)] <- fill
   as.numeric(out)
+}
+
+# The first underlying row's value of `col` per key combination, ANY type
+# (a field column may be text). Absent keys are NA -- there is no row to
+# read. Only the as-is measure calls this, where one row per group is the
+# data's own contract.
+#' @noRd
+rank_match_field <- function(target, src, keys, col) {
+  tk <- do.call(paste, c(lapply(keys, function(k) as.character(target[[k]])),
+                         list(sep = "\r")))
+  sk <- do.call(paste, c(lapply(keys, function(k) as.character(src[[k]])),
+                         list(sep = "\r")))
+  src[[col]][match(tk, sk)]
 }
 
 #' @noRd
@@ -478,6 +612,8 @@ rank_measure_label <- function(func, value) {
     median = paste0("Median ", value),
     min = paste0("Min ", value),
     max = paste0("Max ", value),
+    # As-is: the column IS the measure, so it heads the bar column itself.
+    identity = value,
     "Value"
   )
 }

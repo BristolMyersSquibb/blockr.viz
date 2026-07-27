@@ -123,7 +123,8 @@
       var raw = td.getAttribute("data-v");
       if (raw === null || raw === "") return null;
       var n = parseFloat(raw);
-      return isNaN(n) ? null : n;
+      // A text field column carries its text in data-v: sort it as text.
+      return isNaN(n) ? raw : n;
     }
 
     function cmp(a, b, th, dir) {
@@ -306,17 +307,32 @@
     return String(n);
   }
   function dataV(v) {
-    return " data-v=\"" + (v == null || v === "" ? "" : String(v)) + "\"";
+    return " data-v=\"" + (v == null || v === "" ? "" : esc(String(v))) + "\"";
   }
 
   var CHEV = '<svg class="blockr-chev" viewBox="0 0 24 24" fill="none"' +
     ' stroke="currentColor" stroke-width="2.4" stroke-linecap="round"' +
     ' stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
+  // An NA width ships as null: a no-value cell renders an EMPTY track (no
+  // fill, no zero sliver), where 0 keeps the visible sliver.
   function trackHtml(width, fill, sub) {
     return '<div class="blockr-rank-track' + (sub ? " is-sub" : "") + '">' +
-      '<div class="blockr-rank-fill" style="width:' + w(width) + "%" +
-      (fill ? ";background:" + fill : "") + '"></div></div>';
+      (width == null ? "" :
+        '<div class="blockr-rank-fill" style="width:' + w(width) + "%" +
+        (fill ? ";background:" + fill : "") + '"></div>') +
+      "</div>";
+  }
+
+  // The in-bar value label (R: rank_barwrap): track left, the value in a
+  // fixed-width right-aligned slot -- one width per column so tracks align.
+  function barWrap(inner, c, i) {
+    if (!c.disp) return inner;
+    var pct = c.pct && c.pct[i] ?
+      ' <span class="blockr-rank-pct">' + c.pct[i] + "</span>" : "";
+    return '<div class="blockr-rank-barwrap">' + inner +
+      '<span class="blockr-rank-barval" style="width:' + c.dw + 'ch">' +
+      c.disp[i] + pct + "</span></div>";
   }
 
   function splitHtml(c, i) {
@@ -362,20 +378,24 @@
         '<span class="blockr-rank-label">' + esc(p.label[i]) + "</span></td>";
       for (var k = 0; k < p.cols.length; k++) {
         var c = p.cols[k];
-        if (c.kind === "num") {
+        if (c.kind === "num" && c.text) {
+          row += '<td class="blockr-rank-txt"' + dataV(c.v[i]) + ">" +
+            c.disp[i] + "</td>";
+        } else if (c.kind === "num") {
           row += '<td class="blockr-rank-num dt-col-num"' + dataV(c.v[i]) +
             ">" + c.disp[i] +
             (c.pct ? ' <span class="blockr-rank-pct">' + c.pct[i] + "</span>" : "") +
             "</td>";
         } else if (c.kind === "barsplit") {
           row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
-            splitHtml(c, i) + "</td>";
+            barWrap(splitHtml(c, i), c, i) + "</td>";
         } else if (c.kind === "bardiv") {
           row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
-            dvHtml(c.w[i], c.pos[i]) + "</td>";
+            barWrap(dvHtml(c.w[i], c.pos[i]), c, i) + "</td>";
         } else {
           row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
-            trackHtml(c.w[i], c.fill, c.sub && c.sub[i]) + "</td>";
+            barWrap(trackHtml(c.w[i], c.fill, c.sub && c.sub[i]), c, i) +
+            "</td>";
         }
       }
       out.push(row + "</tr>");
@@ -492,8 +512,14 @@
   // Blockr.DrilldownConfig renders the Mapping / Presentation sections plus the
   // Drill-down capability section from this role spec. Keys are the block's R
   // config params, so onChange(key) round-trips straight to the reactiveVals.
-  var FUNC_OPT = ["count", "count_distinct", "sum", "mean", "median",
-                  "min", "max"];
+  // The chart's aggregate picker verbatim: the shared labeled AGG_FNS plus the
+  // chart-only "None (as is)" identity (drilldown-agg.js documents it) -- for
+  // pre-aggregated data such as one value per subject.
+  var DAggR = (typeof Blockr !== "undefined" && Blockr.DrilldownAgg) ||
+    window.DrilldownAgg;
+  var FUNC_OPT = ((DAggR && DAggR.AGG_FNS) ||
+    ["count", "count_distinct", "sum", "mean", "median", "min", "max"])
+    .concat([{ value: "identity", label: "None (as is)" }]);
   var BAR_MODE_OPT = [{ value: "stacked", label: "Stacked" },
                       { value: "grouped", label: "Grouped" },
                       { value: "percent", label: "100%" }];
@@ -503,14 +529,20 @@
                     { value: "off", label: "No search bar" }];
 
   var RANK_ROLES = {
-    // Mapping — the chart's aesthetic vocabulary, one row per role.
-    group:  { label: "Rank by", kind: "column", colType: "cat" },
-    parent: { label: "Group into", kind: "column", colType: "cat" },
-    color:  { label: "Color by", kind: "column", colType: "cat" },
-    facet:  { label: "One column per", kind: "column", colType: "cat" },
+    // Mapping — the chart block's labels verbatim (Group / Color / Facet), so
+    // the two gears read as the same system. `parent` is the rank-only extra.
+    group:  { label: "Group", kind: "column", colType: "cat" },
+    parent: { label: "Nest under", kind: "column", colType: "cat" },
+    color:  { label: "Color", kind: "column", colType: "cat" },
+    facet:  { label: "Facet", kind: "column", colType: "cat" },
     // Compare offers LEVELS of the facet column, not columns, so it is a
     // plain select whose options are refreshed from data-rank-cfg.
     compare: { label: "Compare to", kind: "select", options: [] },
+    // Extra row columns beside the bar — the chart's tooltip fields, shown
+    // as real columns. Offered only for the as-is measure (rankSections):
+    // any aggregation has no underlying row to read a column from.
+    fields: { label: "More columns", kind: "columns", colType: "any",
+              placeholder: "add columns…" },
     func:   { label: "Aggregate", kind: "select", options: FUNC_OPT,
               rerender: true },
     value:  { label: "Of column", kind: "column", colType: "num" },
@@ -541,7 +573,7 @@
   // count_distinct, the split layout only with a colour split, Compare only
   // with a facet. Conditional rows beat a wall of inert ones.
   function rankSections(cfg) {
-    var needsValue = ["sum", "mean", "median", "min", "max"]
+    var needsValue = ["identity", "sum", "mean", "median", "min", "max"]
       .indexOf(cfg.func) > -1;
     var mapping = ["func"];
     if (needsValue) mapping.push("value");
@@ -549,9 +581,13 @@
 
     var optional = ["parent", "color", "facet"];
     if (cfg.facet) optional.push("compare");
+    if (cfg.func === "identity") optional.push("fields");
 
     var pres = ["sort_by", "sort_dir"];
-    if (cfg.color && !cfg.facet) pres.push("bar_mode");
+    // color + facet compose now (split bars inside each facet column), so
+    // the split layout applies whenever a colour split exists — except under
+    // a comparison, which owns the colour slot.
+    if (cfg.color && !cfg.compare) pres.push("bar_mode");
     pres.push("search");
 
     return {
@@ -597,6 +633,10 @@
     // A `null` column pick reads as "" for the pickers (the engine's no-value).
     ["group", "parent", "color", "facet", "compare", "value", "id_var", "drill"]
       .forEach(function (k) { if (cfg[k] == null) cfg[k] = ""; });
+    // The multi-column picker wants an array.
+    if (!Array.isArray(cfg.fields)) {
+      cfg.fields = cfg.fields ? [String(cfg.fields)] : [];
+    }
     RANK_ROLES.compare.options = levels;
     RANK_ROLES.sort_by.options = [
       { value: "value", label: "Measure" },

@@ -17,7 +17,9 @@
 #'
 #' @param group Column to rank by: one row per level, ordered by the measure.
 #' @param value,func,id_var The measure. `func` is one of `"count"`,
-#'   `"count_distinct"`, `"sum"`, `"mean"`, `"median"`, `"min"`, `"max"`;
+#'   `"count_distinct"`, `"sum"`, `"mean"`, `"median"`, `"min"`, `"max"`, or
+#'   `"identity"` (the chart block's "None (as is)": `value` untouched, for
+#'   data already reduced upstream -- e.g. one value per subject);
 #'   `value` is the column it reduces (unused by `"count"`); `id_var` is the
 #'   subject identifier `"count_distinct"` counts, which is what makes a count
 #'   read as "subjects with at least one event" rather than "events".
@@ -25,14 +27,21 @@
 #'   preferred term): parents become expandable rows with children indented
 #'   under them. Each level is aggregated in its own pass, so a parent is never
 #'   the sum of its children.
-#' @param color Optional column splitting each bar into segments.
+#' @param color Optional column splitting each bar into segments. Composes
+#'   with `facet` (the chart's two independent mappings): each facet column's
+#'   bars are then split by `color`.
 #' @param bar_mode `"stacked"`, `"grouped"` or `"percent"`; no-op without
 #'   `color`.
 #' @param facet Optional column giving one bar column per level on a shared
-#'   scale (e.g. one column per treatment arm). Takes precedence over `color`.
+#'   scale (e.g. one column per treatment arm).
 #' @param compare With `facet`, the level to treat as the comparator: every
 #'   other level gets a zero-centred difference bar in percentage points.
-#' @param cols Numeric columns beside the bar: any of `"n"`, `"pct"`.
+#'   A comparison colours its bars by direction, so it ignores `color`.
+#' @param cols Opt-in separate numeric columns beside the bar: any of `"n"`,
+#'   `"pct"`. By default the bar cell carries its own value label instead.
+#' @param fields Extra columns from the underlying row, shown as real columns
+#'   beside the bar -- the chart's tooltip fields. Only meaningful with
+#'   `func = "identity"`, where each group IS one row.
 #' @param sort_by,sort_dir Server-side ordering: `"value"`, `"label"` or a
 #'   facet level name, and `"desc"` / `"asc"`.
 #' @param top_n Optional cap (`NULL` = off, the table scrolls instead).
@@ -63,7 +72,8 @@ new_rank_block <- function(group = NULL,
                            bar_mode = "stacked",
                            facet = NULL,
                            compare = NULL,
-                           cols = c("n", "pct"),
+                           cols = NULL,
+                           fields = NULL,
                            sort_by = "value",
                            sort_dir = "desc",
                            top_n = NULL,
@@ -95,6 +105,7 @@ new_rank_block <- function(group = NULL,
   filter_column <- chr_state(filter_column)
   filter_values <- null_state(filter_values)
   cols <- chr_vec_state(cols)
+  fields <- chr_vec_state(fields)
   # NOT chr_state: "" is a real value (explicitly no title, as against NULL =
   # auto). See R/title-template.R.
   title <- title_state(title)
@@ -115,7 +126,8 @@ new_rank_block <- function(group = NULL,
         r_bar_mode <- shiny::reactiveVal(bar_mode %||% "stacked")
         r_facet   <- shiny::reactiveVal(facet)
         r_compare <- shiny::reactiveVal(compare)
-        r_cols    <- shiny::reactiveVal(as.character(cols %||% c("n", "pct")))
+        r_cols    <- shiny::reactiveVal(as.character(cols %||% character()))
+        r_fields  <- shiny::reactiveVal(as.character(fields %||% character()))
         r_sort_by <- shiny::reactiveVal(sort_by %||% "value")
         r_sort_dir <- shiny::reactiveVal(sort_dir %||% "desc")
         r_top_n   <- shiny::reactiveVal(top_n)
@@ -159,9 +171,9 @@ new_rank_block <- function(group = NULL,
           group = r_group, parent = r_parent, color = r_color,
           facet = r_facet, compare = r_compare, func = r_func,
           value = r_value, id_var = r_id_var, bar_mode = r_bar_mode,
-          cols = r_cols, sort_by = r_sort_by, sort_dir = r_sort_dir,
-          top_n = r_top_n, drill = r_drill, title = r_title,
-          subtitle = r_subtitle, caption = r_caption
+          cols = r_cols, fields = r_fields, sort_by = r_sort_by,
+          sort_dir = r_sort_dir, top_n = r_top_n, drill = r_drill,
+          title = r_title, subtitle = r_subtitle, caption = r_caption
         )
         # Column / select roles arrive as strings, and the engine sends "" (or
         # "(none)") for a cleared pick: those become NULL, which is what the
@@ -185,7 +197,7 @@ new_rank_block <- function(group = NULL,
             if (key %in% c("title", "subtitle", "caption")) {
               # NULL = auto, "" = explicitly none, else the template text.
               setters[[key]](if (is.null(val)) NULL else as.character(val)[[1L]])
-            } else if (identical(key, "cols")) {
+            } else if (key %in% c("cols", "fields")) {
               setters[[key]](as.character(unlist(val %||% character())))
             } else if (identical(key, "search")) {
               r_search(identical(as.character(val)[[1L]], "on"))
@@ -286,7 +298,7 @@ new_rank_block <- function(group = NULL,
               group = r_group(), parent = r_parent(), color = r_color(),
               facet = r_facet(), compare = r_compare(), func = r_func(),
               value = r_value(), id_var = r_id_var(),
-              bar_mode = r_bar_mode(), cols = r_cols(),
+              bar_mode = r_bar_mode(), cols = r_cols(), fields = r_fields(),
               sort_by = r_sort_by(), sort_dir = r_sort_dir(),
               top_n = r_top_n(), search = r_search(), drill = r_drill(),
               titles = list(
@@ -303,8 +315,9 @@ new_rank_block <- function(group = NULL,
             group = r_group(), value = r_value(), func = r_func(),
             id_var = r_id_var(), parent = r_parent(), color = r_color(),
             bar_mode = r_bar_mode(), facet = r_facet(), compare = r_compare(),
-            cols = r_cols(), sort_by = r_sort_by(), sort_dir = r_sort_dir(),
-            top_n = r_top_n(), scale_map = board_scale_map()
+            cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
+            sort_dir = r_sort_dir(), top_n = r_top_n(),
+            scale_map = board_scale_map()
           )
           json <- rank_payload_json(p)
           # String-identity guard: an unchanged payload is never re-sent, and
@@ -332,8 +345,9 @@ new_rank_block <- function(group = NULL,
             group = r_group, value = r_value, func = r_func,
             id_var = r_id_var, parent = r_parent, color = r_color,
             bar_mode = r_bar_mode, facet = r_facet, compare = r_compare,
-            cols = r_cols, sort_by = r_sort_by, sort_dir = r_sort_dir,
-            top_n = r_top_n, max_height = r_max_height, search = r_search,
+            cols = r_cols, fields = r_fields, sort_by = r_sort_by,
+            sort_dir = r_sort_dir, top_n = r_top_n,
+            max_height = r_max_height, search = r_search,
             title = r_title, subtitle = r_subtitle, caption = r_caption,
             drill = r_drill, filter_type = r_filter_type,
             filter_column = r_filter_column, filter_values = r_filter_values
@@ -361,12 +375,12 @@ new_rank_block <- function(group = NULL,
     # reference: allow_empty_state wedge).
     allow_empty_state = c(
       "group", "value", "id_var", "parent", "color", "facet", "compare",
-      "cols", "top_n", "title", "subtitle", "caption", "drill",
+      "cols", "fields", "top_n", "title", "subtitle", "caption", "drill",
       "filter_column", "filter_values"
     ),
     external_ctrl = c(
       "group", "value", "func", "id_var", "parent", "color", "bar_mode",
-      "facet", "compare", "cols", "sort_by", "sort_dir", "top_n",
+      "facet", "compare", "cols", "fields", "sort_by", "sort_dir", "top_n",
       "max_height", "search", "title", "subtitle", "caption", "drill"
     ),
     ...
@@ -390,15 +404,19 @@ rank_arguments <- function() {
       paste0(
         "How the measure is computed: count (rows), count_distinct ",
         "(distinct values of `id_var` -- use this for \"subjects with at ",
-        "least one event\", the clinical default), or sum / mean / median / ",
-        "min / max of `value`."
+        "least one event\", the clinical default), sum / mean / median / ",
+        "min / max of `value`, or identity (`value` as-is, no aggregation ",
+        "-- for data already reduced upstream, e.g. one value per subject)."
       ),
       example = "count_distinct",
       type = arg_enum(c("count", "count_distinct", "sum", "mean", "median",
-                        "min", "max"))
+                        "min", "max", "identity"))
     ),
     value = new_arg_spec(
-      "Numeric column reduced by sum / mean / median / min / max. Unused by count.",
+      paste0(
+        "Numeric column reduced by sum / mean / median / min / max, or shown ",
+        "as-is by identity. Unused by count."
+      ),
       example = "AVAL",
       type = arg_string()
     ),
@@ -423,7 +441,9 @@ rank_arguments <- function() {
     color = new_arg_spec(
       paste0(
         "Optional column splitting each bar into segments (e.g. AESEV). ",
-        "Ignored when `facet` is also set."
+        "Composes with `facet`: each facet column's bars are then split by ",
+        "this column. Ignored only under `compare`, which colours by ",
+        "direction."
       ),
       example = "AESEV",
       type = arg_string()
@@ -440,8 +460,8 @@ rank_arguments <- function() {
     facet = new_arg_spec(
       paste0(
         "Optional column giving one bar column per level, all on one shared ",
-        "scale (e.g. TRTA -- one column per treatment arm). Takes ",
-        "precedence over `color`."
+        "scale (e.g. TRTA -- one column per treatment arm). Composes with ",
+        "`color`."
       ),
       example = "TRTA",
       type = arg_string()
@@ -456,9 +476,22 @@ rank_arguments <- function() {
       type = arg_string()
     ),
     cols = new_arg_spec(
-      "Numeric columns beside the bar: n, pct, or both.",
+      paste0(
+        "Opt-in separate numeric columns beside the bar: n, pct, or both. ",
+        "Leave unset for the default -- the bar cell carries its own value ",
+        "label."
+      ),
       example = list("n", "pct"),
       type = arg_array(arg_enum(c("n", "pct")))
+    ),
+    fields = new_arg_spec(
+      paste0(
+        "Extra columns from the underlying row, shown as real columns ",
+        "beside the bar (the chart's tooltip fields). Only meaningful with ",
+        "func = \"identity\", where each group IS one row."
+      ),
+      example = list("ARM", "AGE"),
+      type = arg_array(arg_string())
     ),
     sort_by = new_arg_spec(
       "Ordering: value (the measure), label (alphabetical), or a facet level name.",
@@ -537,12 +570,17 @@ rank_guidance <- function() {
     "glance.",
     "\n- `group` is the only required argument. `func = \"count_distinct\"`",
     "with `id_var` is the clinical default (subjects, not events).",
+    "\n- `func = \"identity\"` ranks a pre-computed value as-is (one row per",
+    "group upstream, e.g. one value per subject with `group` the subject id),",
+    "exactly like the chart block's \"None (as is)\" aggregation. With it,",
+    "`fields` adds columns of the underlying row beside the bar (the chart's",
+    "tooltip fields, as real columns).",
     "\n- `parent` adds an expandable second level (AEBODSYS over AEDECOD).",
     "Each level is aggregated separately, so a parent is never the sum of",
     "its children.",
     "\n- `color` splits each bar into segments (severity); `facet` gives one",
-    "bar column per level (treatment arm) on a shared scale. Set one or the",
-    "other \u2014 facet wins if both are set.",
+    "bar column per level (treatment arm) on a shared scale. They COMPOSE:",
+    "both set = one column per facet level, each bar split by colour.",
     "\n- `facet` + `compare` gives a zero-centred difference bar in",
     "percentage points against the comparator level (risk difference).",
     "\n- `drill` makes a row click filter downstream blocks.",

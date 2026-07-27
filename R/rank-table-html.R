@@ -25,14 +25,18 @@
 #' @param parent Optional outer grouping column: parents become expandable
 #'   rows with their children indented under them. A parent is aggregated in
 #'   its own pass, never summed from its children.
-#' @param color Optional column splitting each bar into segments.
+#' @param color Optional column splitting each bar into segments. Composes
+#'   with `facet`.
 #' @param bar_mode `"stacked"`, `"grouped"` or `"percent"`. No-op without
 #'   `color`.
 #' @param facet Optional column giving one bar column per level, all on one
-#'   shared scale. Takes precedence over `color`.
+#'   shared scale.
 #' @param compare With `facet`, the level to treat as the comparator: each
 #'   other level gets a zero-centred difference bar in percentage points.
-#' @param cols Numeric columns beside the bar: any of `"n"`, `"pct"`.
+#' @param cols Opt-in separate numeric columns beside the bar: any of `"n"`,
+#'   `"pct"`. By default the bar cell carries its own value label.
+#' @param fields Extra columns from the underlying row (identity measure
+#'   only), shown as real columns beside the bar.
 #' @param sort_by,sort_dir Server-side ordering. `sort_by` is `"value"`,
 #'   `"label"` or a facet level name; `sort_dir` is `"desc"` or `"asc"`.
 #' @param top_n Optional cap. Off by default -- the table scrolls instead.
@@ -56,7 +60,7 @@
 rank_table <- function(data, group = NULL, value = ".count", func = "count",
                        id_var = NULL, parent = NULL, color = NULL,
                        bar_mode = "stacked", facet = NULL, compare = NULL,
-                       cols = c("n", "pct"), sort_by = "value",
+                       cols = NULL, fields = NULL, sort_by = "value",
                        sort_dir = "desc", top_n = NULL, max_height = "600px",
                        search = TRUE, title = NULL, subtitle = NULL,
                        caption = NULL, drill = NULL, scale_map = NULL,
@@ -64,8 +68,8 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
   prep <- rank_prepare(
     data, group = group, value = value, func = func, id_var = id_var,
     parent = parent, color = color, bar_mode = bar_mode, facet = facet,
-    compare = compare, cols = cols, sort_by = sort_by, sort_dir = sort_dir,
-    top_n = top_n, scale_map = scale_map
+    compare = compare, cols = cols, fields = fields, sort_by = sort_by,
+    sort_dir = sort_dir, top_n = top_n, scale_map = scale_map
   )
 
   # The three display slots follow the chart / table contract: NULL = auto
@@ -86,8 +90,8 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
   cfg <- list(
     group = group, parent = parent, color = color, facet = facet,
     compare = compare, func = func, value = value, id_var = id_var,
-    bar_mode = bar_mode, cols = cols, sort_by = sort_by, sort_dir = sort_dir,
-    top_n = top_n, search = search, drill = drill,
+    bar_mode = bar_mode, cols = cols, fields = fields, sort_by = sort_by,
+    sort_dir = sort_dir, top_n = top_n, search = search, drill = drill,
     titles = list(
       title = title, subtitle = subtitle, caption = caption,
       title_state = title_raw, subtitle_state = subtitle_raw,
@@ -251,10 +255,14 @@ rank_legend_spec <- function(prep) {
       )
     ))
   }
-  lv <- if (identical(prep$layout, "split")) prep$series else prep$facet_levels
+  # Colour identity lives in the COLOUR mapping only: a plain facet's bars are
+  # all the house blue and its column headers already name the levels, so it
+  # carries no legend (chart parity -- a facet never recolours the marks).
+  if (is.null(prep$color)) return(NULL)
+  lv <- prep$series
   if (length(lv) < 2L) return(NULL)
   list(
-    title = if (identical(prep$layout, "split")) prep$color else prep$facet,
+    title = prep$color,
     items = lapply(lv, function(l) {
       list(label = l, color = unname(prep$palette[[l]]))
     })
@@ -366,7 +374,8 @@ rank_num_parts <- function(v, denom = NULL, combined = FALSE, signed = FALSE,
   if (isTRUE(combined) && !is.null(pct)) {
     return(list(
       disp = n,
-      pct = paste0("(", formatC(pct, format = "f", digits = 0L), "%)")
+      pct = ifelse(is.na(v), "",
+                   paste0("(", formatC(pct, format = "f", digits = 0L), "%)"))
     ))
   }
   list(disp = n)
@@ -392,20 +401,22 @@ rank_table_dep <- memoise0(function() {
     drilldown_table_dep(),
     htmltools::htmlDependency(
       name = "blockr-viz-rank",
-      version = paste0(utils::packageVersion("blockr.viz"), ".3"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".5"),
       src = system.file("js", package = "blockr.viz"),
       script = "rank-table.js"
     )
   )
 })
 
-# The sort key for a cell: the raw number, so the client never parses a
-# formatted string (and a bar cell, which has no text at all, still sorts).
+# The sort key for a cell: the raw number (or, for a text field column, the
+# raw text -- escaped, it lives in an attribute), so the client never parses
+# a formatted string (and a bar cell, which has no text at all, still sorts).
 #' @noRd
 rank_data_v <- function(v) {
-  paste0(" data-v=\"",
-         ifelse(is.na(v), "", format(v, scientific = FALSE, trim = TRUE)),
-         "\"")
+  # format() common-width-pads a CHARACTER vector even with trim (trim only
+  # suppresses numeric left-padding) -- text sort keys pass through as-is.
+  s <- if (is.character(v)) v else format(v, scientific = FALSE, trim = TRUE)
+  paste0(" data-v=\"", rank_esc(ifelse(is.na(v), "", s)), "\"")
 }
 
 # Pickable input columns for the gear's column pickers, in the shape the shared

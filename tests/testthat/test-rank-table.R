@@ -91,12 +91,90 @@ test_that("faceting gives one bar column per level with its own denominator", {
   expect_true(p$bar_max <= 100)
 })
 
-test_that("facet takes precedence over colour, and says so", {
+test_that("facet and colour compose: split bars inside each facet column", {
   ae <- ae_fixture()
   p <- rank_prepare(ae, group = "TERM", facet = "ARM", color = "SEV",
                     func = "count")
   expect_identical(p$layout, "facet")
-  expect_match(p$note, "ignoring the color split")
+  expect_null(p$note)
+  splits <- Filter(function(x) identical(x$kind, "barsplit"), p$plan)
+  expect_length(splits, 3L)
+  expect_identical(splits[[1]]$label, "Placebo")
+  expect_identical(as.character(splits[[1]]$series), c("MILD", "MODERATE"))
+  # Column keys are facet-INDEXED so level names can never collide.
+  expect_identical(splits[[2]]$prefix, ".f2s_")
+  # Each facet cell's segments sum to that facet's own total.
+  segs <- p$rows[[".f1s_MILD"]] + p$rows[[".f1s_MODERATE"]]
+  expect_equal(unname(segs), p$rows$.f_Placebo)
+  # The palette encodes the COLOUR levels, and the legend says so.
+  expect_identical(names(p$palette), c("MILD", "MODERATE"))
+  expect_identical(rank_legend_spec(p)$title, "SEV")
+
+  # A comparison still owns the colour slot -- reported, never silent.
+  cmp <- rank_prepare(ae, group = "TERM", facet = "ARM", compare = "Placebo",
+                      color = "SEV", func = "count_distinct",
+                      id_var = "USUBJID")
+  expect_identical(cmp$layout, "compare")
+  expect_match(cmp$note, "colours its bars by direction")
+})
+
+test_that("a plain facet is colour-neutral: no per-level hues, no legend", {
+  ae <- ae_fixture()
+  p <- rank_prepare(ae, group = "TERM", facet = "ARM",
+                    func = "count_distinct", id_var = "USUBJID")
+  bars <- Filter(function(x) identical(x$kind, "bar"), p$plan)
+  expect_true(all(vapply(bars, function(x) identical(x$fill, dd_palette(1L)),
+                         logical(1L))))
+  expect_null(rank_legend_spec(p))
+})
+
+test_that("the bar cell carries its own value label unless cols asks for columns", {
+  ae <- ae_fixture()
+  # Default: no separate num columns; the bar plan entry wants its label.
+  p <- rank_prepare(ae, group = "TERM", func = "count")
+  expect_length(p$plan, 1L)
+  expect_true(isTRUE(p$plan[[1]]$show_val))
+  expect_identical(p$plan[[1]]$val_denom, unname(p$denoms[["all"]]))
+  m <- rank_cells(p)
+  expect_identical(m$cols[[1]]$disp[[1]], "26")
+  expect_match(m$cols[[1]]$pct[[1]], "^\\(\\d+%\\)$")
+  expect_true(m$cols[[1]]$dw >= nchar("26 (43%)") - 1L)
+
+  # Explicit cols: separate columns come back and the in-bar label mutes.
+  pc <- rank_prepare(ae, group = "TERM", func = "count", cols = c("n", "pct"))
+  expect_identical(
+    vapply(pc$plan, function(x) x$kind, ""), c("bar", "num", "num")
+  )
+  expect_false(isTRUE(pc$plan[[1]]$show_val))
+  expect_null(rank_cells(pc)$cols[[1]]$disp)
+})
+
+test_that("identity fields ride as raw columns, text sorting on the text", {
+  subj <- data.frame(
+    USUBJID = c("S1", "S2", "S3"),
+    AVAL = c(4, 2, 8),
+    AGE = c(61L, 70L, 55L),
+    ARM = c("Placebo", "High", "High"),
+    stringsAsFactors = FALSE
+  )
+  p <- rank_prepare(subj, group = "USUBJID", func = "identity", value = "AVAL",
+                    fields = c("ARM", "AGE"))
+  expect_null(p$err)
+  kinds <- vapply(p$plan, function(x) x$kind, "")
+  expect_identical(kinds, c("bar", "num", "num"))
+  expect_true(isTRUE(p$plan[[2]]$text))     # ARM is text
+  expect_false(isTRUE(p$plan[[3]]$text))    # AGE is numeric
+  expect_identical(p$rows$.x_ARM, c("High", "Placebo", "High"))
+  m <- rank_cells(p)
+  expect_identical(as.character(m$cols[[2]]$disp), c("High", "Placebo", "High"))
+  h <- rank_cells_html(m)
+  expect_match(h, "blockr-rank-txt")
+  expect_match(h, 'data-v="High"', fixed = TRUE)
+
+  # Fields need the as-is measure: anywhere else they are refused out loud.
+  pn <- rank_prepare(subj, group = "ARM", func = "count", fields = "AGE")
+  expect_match(pn$note, "as-is measure")
+  expect_identical(vapply(pn$plan, function(x) x$kind, ""), "bar")
 })
 
 test_that("compare gives a signed difference in points per non-comparator arm", {
@@ -140,7 +218,7 @@ test_that("top_n caps with a reported fold, and is off by default", {
 test_that("a bad config is a message, never an error", {
   ae <- ae_fixture()
   expect_identical(rank_prepare(ae, group = NULL)$err,
-                   "Pick a Rank by column in the gear")
+                   "Pick a Group column in the gear")
   expect_match(rank_prepare(ae, group = "GONE")$err, "GONE")
   expect_match(rank_prepare(ae, group = "TERM", func = "count_distinct")$err,
                "Subject id")
@@ -154,6 +232,53 @@ test_that("a bad config is a message, never an error", {
     rank_prepare(one_arm, group = "TERM", facet = "ARM", func = "count")$err,
     "fewer than two levels"
   )
+})
+
+test_that("identity ranks a per-group value as-is, like the chart's None (as is)", {
+  # The headline use: one pre-computed value per subject, stratified the same
+  # way the chart block does it (color split, facet columns).
+  subj <- data.frame(
+    USUBJID = c("S1", "S2", "S3", "S4"),
+    AVAL = c(4, NA, 2, 8),
+    SEX = factor(c("F", "M", "F", "M")),
+    ARM = factor(c("Placebo", "Placebo", "High", "High")),
+    stringsAsFactors = FALSE
+  )
+
+  p <- rank_prepare(subj, group = "USUBJID", func = "identity", value = "AVAL")
+  expect_null(p$err)
+  expect_identical(p$rows$.label, c("S4", "S1", "S3", "S2"))
+  expect_identical(p$rows$.v, c(8, 4, 2, NA))
+  # The value column heads the bar itself; no percentage exists.
+  expect_identical(p$plan[[1L]]$label, "AVAL")
+  expect_false(p$pct_ok)
+
+  # An all-NA group stays NA; duplicates collapse to the first non-missing.
+  dup <- rbind(subj, data.frame(USUBJID = "S2", AVAL = 6, SEX = factor("M"),
+                                ARM = factor("Placebo")))
+  pd <- rank_prepare(dup, group = "USUBJID", func = "identity", value = "AVAL")
+  expect_identical(pd$rows$.v[pd$rows$.label == "S2"], 6)
+
+  # Faceted identity: raw shared scale, no arm-N denominator, plain Value col.
+  pf <- rank_prepare(subj, group = "SEX", func = "identity", value = "AVAL",
+                     facet = "ARM")
+  expect_null(pf$err)
+  bars <- Filter(function(x) identical(x$kind, "bar"), pf$plan)
+  expect_true(all(vapply(bars, function(x) is.null(x$denom), logical(1L))))
+  # No separate value columns: the bar cells carry the values themselves.
+  expect_length(Filter(function(x) identical(x$kind, "num"), pf$plan), 0L)
+  expect_identical(pf$bar_max, 8)
+
+  # A subject has NO value in an arm they are not in: blank (NA), not the 0 a
+  # counting measure fills (the chart's null gap).
+  pp <- rank_prepare(subj, group = "USUBJID", func = "identity",
+                     value = "AVAL", facet = "ARM")
+  expect_true(is.na(pp$rows$.f_High[pp$rows$.label == "S1"]))
+  expect_identical(pp$rows$.f_Placebo[pp$rows$.label == "S1"], 4)
+
+  # No value picked is a prompt, not an error.
+  expect_identical(rank_prepare(subj, group = "USUBJID", func = "identity")$err,
+                   "Pick a Value column to show as is")
 })
 
 test_that("percentages are dropped for measures that have no denominator", {
@@ -253,7 +378,7 @@ test_that("title tiers follow the chart and table contract", {
 test_that("a config that cannot be honored renders a message table", {
   ae <- ae_fixture()
   h <- markup(ae)
-  expect_match(h, "Pick a Rank by column")
+  expect_match(h, "Pick a Group column")
   expect_false(grepl("blockr-rank-fill", h))
 })
 

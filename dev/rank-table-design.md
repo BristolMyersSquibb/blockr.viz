@@ -96,9 +96,9 @@ wraps inside a narrow column and inflates the whole header row.
 **The gear is the shared engine.** `Blockr.DrilldownConfig`
 (`inst/js/drilldown-config.js`) is host-agnostic; `rank-table.js` registers as a
 third host beside `chart.js` and `table.js`, so the menu has the chart's exact
-structure: Mapping (required `Rank by`, then `Measure` / `Of column` /
-`Count distinct` conditional on the measure, then `+ Add mapping` offering
-`Group into` / `Color by` / `One column per` as add-as-needed rows),
+structure AND labels: Mapping (required `Group`, then `Aggregate` / `Of column`
+/ `Count distinct` conditional on the measure, then `+ Add mapping` offering
+`Nest under` / `Color` / `Facet` as add-as-needed rows),
 Presentation (`Order` pill, `Search bar`, `Split layout` when a colour split is
 on), Titles, and a Drill-down section. Keys ARE the R config params, so
 `onChange(key)` round-trips through `input$rank_block_action` (action `config`)
@@ -125,8 +125,30 @@ both containers, since they ARE the same chrome. `.drilldown-table-structured`
 rules stay table-only. After that: control row 30px, header 59px, row 42px, cell
 padding identical in both blocks.
 
+**The value lives IN the bar cell.** Every bar-family cell (bar / barsplit /
+bardiv) renders its value in a fixed-width right-aligned slot after the track
+(`.blockr-rank-barwrap` / `.blockr-rank-barval`); the slot width is ONE number
+per column (`dw`, in ch, shipped in the payload) so every row's track spans the
+same range — a per-row label width would silently rescale the bars. Separate
+`n` / `%` columns are opt-in via `cols` and mute the in-bar label. The compare
+layout's signed Δ rides in the difference bar's cell.
+
+**color and facet compose (chart parity).** Both set = one bar column per facet
+level, each bar split into colour segments (column keys are facet-INDEXED,
+`.f<i>s_<level>`, so level names can never collide). A plain facet is
+colour-neutral — solo blue bars, no per-level hues, no legend (the column
+headers already name the levels); the legend belongs to the COLOUR mapping
+only. Only `compare` still owns the colour slot (bars coloured by direction).
+
+**`fields` = the chart's tooltip fields, as real columns.** Identity-only
+(each group IS one row; an aggregate has no row to read): extra row columns
+ride beside the bar, text columns left-aligned (`.blockr-rank-txt`) and sorted
+on their text via `data-v` (escaped — it can carry arbitrary text now).
+An absent (group, level) cell is NA for the non-additive measures and renders
+as a BLANK cell and an empty track (no zero sliver): the chart's null gap.
+
 **The gear structure mirrors the chart's, section for section.** Mapping
-(`Rank by *`, `+ Add mapping`) → Aggregation (`Aggregate`, and `Of column` /
+(`Group *`, `+ Add mapping`) → Aggregation (`Aggregate`, and `Of column` /
 `Count distinct` as the measure needs them) → Presentation (`Sort`, `Order`,
 `Search bar`, `Split layout`) → Titles → Drill-down. Two traps: the measure rows
 belong in a trailing `aggTitle` section (leaving them in `mapping` puts them

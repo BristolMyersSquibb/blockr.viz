@@ -34,7 +34,26 @@ rank_table_css <- function() {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+/* Raw field columns (the as-is measure's extra row columns): plain text,
+   left-aligned like the label column, never numeric-formatted. */
+.blockr-rank-table td.blockr-rank-txt { white-space: nowrap; }
 .blockr-rank-table td.blockr-rank-label-col { white-space: nowrap; }
+/* The in-bar value label: track left, value right in a FIXED slot (one width
+   per column, in ch) so every row's track spans the same range -- a varying
+   label width would silently rescale the bars against each other. */
+.blockr-rank-barwrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.blockr-rank-barwrap .blockr-rank-track,
+.blockr-rank-barwrap .blockr-rank-dv { flex: 1 1 auto; min-width: 0; }
+.blockr-rank-barval {
+  flex: 0 0 auto;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 .blockr-rank-table .blockr-rank-pct {
   color: var(--blockr-color-text-subtle, #898781);
 }
