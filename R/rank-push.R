@@ -268,10 +268,11 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
            dd = dd, v = sortv(rows[[p$key]] %||% rows$.v))
     } else if (identical(p$kind, "sparkline")) {
       # One inline SVG per cell, geometry PRE-PRINTED as point strings so the
-      # emitters paste rather than format floats. viewBox 0 0 100 28, 2px of
-      # vertical padding; y grows downward.
-      H <- 28
-      PAD <- 2
+      # emitters paste rather than format floats. viewBox 0 0 100 36 (taller
+      # than the 12px lanes: amplitude is the point), 3 units of vertical
+      # padding; y grows downward.
+      H <- 36
+      PAD <- 3
       xd <- p$dom %||% prep$dom
       yd <- p$ydom %||% prep$ydom
       xf <- function(v) round((v - xd[[1L]]) / (xd[[2L]] - xd[[1L]]) * 100, 2L)
@@ -313,6 +314,20 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       }
       per <- lapply(pts, one_row)
       pull <- function(nm) unlist(lapply(per, `[[`, nm), use.names = FALSE)
+      # The computed reference (p$ref, from the series row's `ref` option):
+      # ONE center line and optional dispersion band per COLUMN, printed
+      # here as scalar coordinates so every cell draws the same reference.
+      rc <- NA_real_
+      rby <- NA_real_
+      rbh <- NA_real_
+      if (!is.null(p$ref) && is.finite(p$ref$center)) {
+        rc <- yf(p$ref$center)
+        if (is.finite(p$ref$lo %||% NA_real_) &&
+              is.finite(p$ref$hi %||% NA_real_)) {
+          rby <- yf(p$ref$hi)
+          rbh <- round(yf(p$ref$lo) - yf(p$ref$hi), 2L)
+        }
+      }
       # The sparkline column always sorts (and labels) by the LAST value;
       # with a companion rank bar, `.v` carries that bar's aggregate instead.
       last_y <- rows[[p$key %||% ".last"]] %||% rows$.last %||% rows$.v
@@ -322,7 +337,7 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       }
       list(kind = "sparkline", pl = pull("pl"), bd = pull("bd"),
            dx = pull("dx"), dy = pull("dy"), xs = pull("xs"),
-           ys = pull("ys"),
+           ys = pull("ys"), rc = rc, rby = rby, rbh = rbh,
            nn = vapply(pts, function(p1) length(p1$y), integer(1L)),
            v = sortv(last_y)) |> c(lab)
     } else if (isTRUE(p$raw) && isTRUE(p$text)) {
@@ -699,10 +714,20 @@ rank_sp_html <- function(c) {
     paste0(
       "<div class=\"blockr-rank-lane blockr-rank-spcell\" data-xs=\"",
       c$xs[[i]], "\" data-ys=\"", c$ys[[i]], "\">",
-      "<svg viewBox=\"0 0 100 28\" preserveAspectRatio=\"none\">",
+      "<svg viewBox=\"0 0 100 36\" preserveAspectRatio=\"none\">",
+      if (!is.na(c$rby)) {
+        paste0("<rect class=\"lane-refband\" x=\"0\" y=\"",
+               rank_fmt_w(c$rby), "\" width=\"100\" height=\"",
+               rank_fmt_w(c$rbh), "\"></rect>")
+      } else "",
       if (!is.na(c$bd[[i]])) {
         paste0("<polygon class=\"lane-band\" points=\"", c$bd[[i]],
                "\"></polygon>")
+      } else "",
+      if (!is.na(c$rc)) {
+        paste0("<line class=\"lane-refline\" x1=\"0\" y1=\"",
+               rank_fmt_w(c$rc), "\" x2=\"100\" y2=\"", rank_fmt_w(c$rc),
+               "\" vector-effect=\"non-scaling-stroke\"></line>")
       } else "",
       if (nzchar(c$pl[[i]])) {
         paste0("<polyline class=\"lane-ln\" points=\"", c$pl[[i]],
@@ -790,6 +815,12 @@ rank_flat_payload <- function(m) {
       out$xs <- arr(as.character(c$xs))
       out$ys <- arr(as.character(c$ys))
       out$nn <- arr(c$nn)
+      # Column-level reference coordinates (scalars; NA drops to absent).
+      if (!is.na(c$rc)) out$rc <- c$rc
+      if (!is.na(c$rby)) {
+        out$rby <- c$rby
+        out$rbh <- c$rbh
+      }
     } else {
       out$w <- arr(c$w)
       out$sub <- arr_if(c$sub)

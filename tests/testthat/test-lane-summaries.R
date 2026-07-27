@@ -175,6 +175,29 @@ test_that("expr rows evaluate per group and fail as a cell, not a crash", {
   expect_true(all(as.character(p2$cols[[1]]$disp) == "(error)"))
 })
 
+test_that("a series ref computes a pooled line, mean_sd adds the band", {
+  ae <- sum_fixture()
+  p <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = list(
+    list(type = "series", x = "ASTDY", col = "DUR", ref = "mean")
+  ))
+  c1 <- p$cols[[1]]
+  expect_true(is.numeric(c1$rc))
+  expect_null(c1$rby)                      # mean = line only
+  p2 <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = list(
+    list(type = "series", x = "ASTDY", col = "DUR", ref = "mean_sd")
+  ))
+  c2 <- p2$cols[[1]]
+  expect_true(is.numeric(c2$rby) && is.numeric(c2$rbh) && c2$rbh > 0)
+  # The reference rides INSIDE the svg: band can exceed the observed range,
+  # so the y-domain must have grown to keep it on canvas.
+  expect_true(c2$rby >= 0)
+  # No ref -> no coordinates shipped.
+  p3 <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = list(
+    list(type = "series", x = "ASTDY", col = "DUR")
+  ))
+  expect_null(p3$cols[[1]]$rc)
+})
+
 test_that("identity rides through simple rows: the value as-is", {
   d <- data.frame(g = c("a", "b", "c"), v = c(3, 9, 6))
   p <- rank_build_payload(d, group = NULL, by = "g", summaries = list(

@@ -27,7 +27,10 @@
 #'   `stat`, box-only `whiskers`; show `"box"`, `"pointrange"` or
 #'   `"text"`), `field` (`col`; the group's distinct values joined, with a
 #'   fold cap -- never an arbitrary first row), `series` (`x`, `col`,
-#'   optional `band = c(lo, hi)`; a sparkline), `spans` (`x`, `xend`,
+#'   optional `band = c(lo, hi)` data columns, optional computed
+#'   `ref = "mean"` / `"mean_sd"` / `"median_iqr"` -- a pooled orientation
+#'   line/band over the column's values, per facet level under facet; a
+#'   sparkline), `spans` (`x`, `xend`,
 #'   optional `color`; a swimlane), `expr` (free R code over the group's
 #'   rows; text). Each row takes `name`, `show` and
 #'   `scope = "cell"` (repeats per facet level) or `"pooled"` (computed
@@ -534,7 +537,9 @@ rank_arguments <- function() {
         "number or dot), dist (col + stat, optional whiskers, shown as box / ",
         "pointrange / text), field (col: the group's distinct values ",
         "joined, a group-level fact), series (x + col + optional ",
-        "band = [lo, hi]: a sparkline), spans (x + xend + optional color: ",
+        "band = [lo, hi] data columns + optional computed ref = mean / ",
+        "mean_sd / median_iqr (a pooled orientation line/band): a ",
+        "sparkline), spans (x + xend + optional color: ",
         "a swimlane), expr (free R code over the group's rows, text). ",
         "Optional per object: name (the column header), show, and scope = ",
         "cell (repeats per facet level, default) or pooled (computed over ",
@@ -561,6 +566,8 @@ rank_arguments <- function() {
         xend = arg_string(required = FALSE),
         color = arg_string(required = FALSE),
         band = arg_array(arg_string(), required = FALSE),
+        ref = arg_enum(c("none", "mean", "mean_sd", "median_iqr"),
+                       required = FALSE),
         expr = arg_string(required = FALSE)
       ))
     ),

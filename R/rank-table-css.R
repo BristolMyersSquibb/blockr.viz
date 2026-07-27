@@ -85,7 +85,9 @@ rank_table_css <- function() {
 .blockr-rank-track {
   display: flex;
   gap: 0;
-  height: 10px;
+  /* 12px = the shared lane height: bars, boxes, dot ranges and swimlanes
+     line up across columns. */
+  height: 12px;
   background: var(--blockr-rank-track);
 }
 .blockr-rank-track.is-tall {
@@ -109,10 +111,12 @@ rank_table_css <- function() {
 /* Lane marks (box / point range / interval / sparkline): absolutely
    positioned glyphs inside a track-coloured lane, percentage geometry
    computed in R. Same fill/track/sub tokens as the bars, so a themed board
-   restyles every mark together. */
+   restyles every mark together. ONE height (matching the bar track) so a
+   bar column, a box column and a swimlane read as one system; only the
+   sparkline is taller (amplitude needs room). */
 .blockr-rank-lane {
   position: relative;
-  height: 16px;
+  height: 12px;
   background: var(--blockr-rank-track);
 }
 .blockr-rank-lane i { position: absolute; }
@@ -125,8 +129,8 @@ rank_table_css <- function() {
   background: var(--blockr-rank-fill);
 }
 .blockr-rank-boxcell .lane-cap {
-  top: 4px;
-  bottom: 4px;
+  top: 3px;
+  bottom: 3px;
   width: 1px;
   background: var(--blockr-rank-fill);
 }
@@ -159,15 +163,15 @@ rank_table_css <- function() {
   box-shadow: 0 0 0 2px var(--blockr-color-bg, #fff);
 }
 /* Interval: the swimlane. Square segments, colour = the mapped level. */
-.blockr-rank-ivcell { height: 12px; }
 .blockr-rank-ivcell .lane-seg {
   top: 0;
   bottom: 0;
   min-width: 2px;
 }
-/* Sparkline: one inline SVG per cell, band under line, last-value dot. */
+/* Sparkline: one inline SVG per cell, band under line, last-value dot.
+   Taller than the other lanes: the trajectory's amplitude is the point. */
 .blockr-rank-spcell {
-  height: 28px;
+  height: 36px;
   background: none;
 }
 .blockr-rank-spcell svg {
@@ -176,6 +180,16 @@ rank_table_css <- function() {
   height: 100%;
 }
 .blockr-rank-spcell .lane-band { fill: var(--blockr-rank-track); }
+/* The computed reference (a series row's `ref` option): a dashed pooled
+   center line, optionally a dispersion band under everything. */
+.blockr-rank-spcell .lane-refband {
+  fill: color-mix(in srgb, var(--blockr-rank-fill) 10%, transparent);
+}
+.blockr-rank-spcell .lane-refline {
+  stroke: var(--blockr-rank-tick);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
 .blockr-rank-spcell .lane-ln {
   fill: none;
   stroke: var(--blockr-rank-fill);

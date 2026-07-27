@@ -421,9 +421,18 @@
   function spHtml(c, i) {
     var s = '<div class="blockr-rank-lane blockr-rank-spcell" data-xs="' +
       c.xs[i] + '" data-ys="' + c.ys[i] + '">' +
-      '<svg viewBox="0 0 100 28" preserveAspectRatio="none">';
+      '<svg viewBox="0 0 100 36" preserveAspectRatio="none">';
+    if (c.rby != null) {
+      s += '<rect class="lane-refband" x="0" y="' + p(c.rby) +
+        '" width="100" height="' + p(c.rbh) + '"></rect>';
+    }
     if (c.bd[i] != null) {
       s += '<polygon class="lane-band" points="' + c.bd[i] + '"></polygon>';
+    }
+    if (c.rc != null) {
+      s += '<line class="lane-refline" x1="0" y1="' + p(c.rc) +
+        '" x2="100" y2="' + p(c.rc) +
+        '" vector-effect="non-scaling-stroke"></line>';
     }
     if (c.pl[i] !== "") {
       s += '<polyline class="lane-ln" points="' + c.pl[i] +
@@ -755,7 +764,8 @@
         " · " + (s.show || "box");
       case "field": return (s.col || "?") + " (distinct values)";
       case "series": return (s.col || "?") + " over " + (s.x || "?") +
-        (s.band && s.band.length === 2 ? ", band " + s.band[0] + "–" + s.band[1] : "");
+        (s.band && s.band.length === 2 ? ", band " + s.band[0] + "–" + s.band[1] : "") +
+        (s.ref && s.ref !== "none" ? ", ref " + s.ref : "");
       case "spans": return (s.x || "?") + " → " + (s.xend || "?") +
         (s.color ? ", color " + s.color : "");
       case "expr": return s.expr || "";
@@ -970,6 +980,18 @@
           });
           selectCtl(body, "Band high", "num", band[1], function (v) {
             s.band = [band[0], v];
+            commit();
+            ctx.rerender();
+          });
+          // The computed reference: pooled orientation line/band, computed
+          // in R over the column's values (per facet level under facet).
+          selectCtl(body, "Reference", [
+            { value: "none", label: "None" },
+            { value: "mean", label: "Mean" },
+            { value: "mean_sd", label: "Mean ± SD" },
+            { value: "median_iqr", label: "Median · IQR" }
+          ], s.ref || "none", function (v) {
+            s.ref = v;
             commit();
             ctx.rerender();
           });

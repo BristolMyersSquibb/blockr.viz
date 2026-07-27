@@ -65,6 +65,13 @@ lane_norm_summaries <- function(summaries) {
     s$type <- type
     s$show <- show
     s$scope <- scope
+    # The series row's computed reference: pooled orientation lines/bands,
+    # computed in R (never client-side). "none" = off.
+    if (identical(type, "series")) {
+      ref <- rank_chr1(s$ref) %||% "none"
+      if (!ref %in% c("none", "mean", "mean_sd", "median_iqr")) ref <- "none"
+      s$ref <- ref
+    }
     s$name <- rank_chr1(s$name) %||% lane_summary_auto_name(s)
     out[[i]] <- s
   }
@@ -308,6 +315,19 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       if (!is.null(par_rows)) {
         par_rows <- fill(par_rows, parent, cp$slice, s, cp$suffix)
       }
+      # The series reference is computed per COPY over the slice's values:
+      # every sparkline in the column is oriented against the same line
+      # (per facet level, its own level's line).
+      if (identical(s$type, "series") &&
+            !identical(s$ref %||% "none", "none")) {
+        ys <- as.numeric(cp$slice[[rank_chr1(s$col)]])
+        ys <- ys[is.finite(ys)]
+        cp$ref <- switch(s$ref,
+          mean = list(center = mean(ys)),
+          mean_sd = lane_summarize(ys, "mean_sd"),
+          median_iqr = lane_summarize(ys, "median_q1_q3")
+        )
+      }
       plan <- c(plan, list(lane_summary_plan(s, cp, data, scale_map)))
     }
     if (is.null(s_primary)) s_primary <- list(s = s, sid = copies[[1L]]$suffix)
@@ -453,7 +473,8 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
   } else if (identical(s$type, "series")) {
     c(base, list(kind = "sparkline", key = paste0(sid, "_last"),
                  pts = paste0(sid, "_pts"), x = rank_chr1(s$x),
-                 dom_date = isTRUE(s$.date), show_val = TRUE))
+                 dom_date = isTRUE(s$.date), ref = cp$ref,
+                 show_val = TRUE))
   } else {
     lv <- s$.levels
     c(base, list(kind = "interval", key = paste0(sid, "_start"),
@@ -602,6 +623,9 @@ lane_summary_domains <- function(plan, rows) {
           allx <- c(allx, p1$x)
           ally <- c(ally, p1$y, p1$lo, p1$hi)
         }
+        # A mean +/- sd reference can exceed the observed range.
+        r <- plan[[i]]$ref
+        if (!is.null(r)) ally <- c(ally, r$center, r$lo, r$hi)
       }
       allx <- allx[is.finite(allx)]
       ally <- ally[is.finite(ally)]

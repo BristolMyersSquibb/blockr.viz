@@ -327,6 +327,9 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
       list(type = "simple", func = "mean", col = "DUR", show = "bar"),
       list(type = "series", x = "AVAL", col = "DUR")
     )),
+    sparkline_ref = list(by = "TERM", summaries = list(
+      list(type = "series", x = "AVAL", col = "DUR", ref = "mean_sd")
+    )),
     # The summarize-table path: every row type in one heterogeneous table,
     # and the facet + pooled + field composition.
     summaries_mixed = list(by = "TERM", summaries = list(

@@ -60,7 +60,10 @@ summary rows, each a \code{list(type =, ...)}. Types:
 \code{stat}, box-only \code{whiskers}; show \code{"box"}, \code{"pointrange"} or
 \code{"text"}), \code{field} (\code{col}; the group's distinct values joined, with a
 fold cap -- never an arbitrary first row), \code{series} (\code{x}, \code{col},
-optional \code{band = c(lo, hi)}; a sparkline), \code{spans} (\code{x}, \code{xend},
+optional \code{band = c(lo, hi)} data columns, optional computed
+\code{ref = "mean"} / \code{"mean_sd"} / \code{"median_iqr"} -- a pooled orientation
+line/band over the column's values, per facet level under facet; a
+sparkline), \code{spans} (\code{x}, \code{xend},
 optional \code{color}; a swimlane), \code{expr} (free R code over the group's
 rows; text). Each row takes \code{name}, \code{show} and
 \code{scope = "cell"} (repeats per facet level) or \code{"pooled"} (computed

@@ -55,7 +55,8 @@ mixed_summaries <- list(
   list(type = "field", name = "Arms", col = "TRT01A"),
   list(type = "spans", name = "Episodes", x = "ASTDY", xend = "AENDY",
        color = "AESEV"),
-  list(type = "series", name = "Trajectory", x = "ASTDY", col = "DUR")
+  list(type = "series", name = "Trajectory", x = "ASTDY", col = "DUR",
+       ref = "mean_sd")
 )
 
 facet_summaries <- list(
