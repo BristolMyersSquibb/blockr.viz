@@ -326,3 +326,31 @@ test_that("sort_by a raw numeric column orders by the group minimum", {
                               sort_by = "N", sort_dir = "desc")
   expect_identical(p$rows$.label[[1L]], "Baseline")
 })
+
+test_that("a distribution's domain is its data, not zero and not n", {
+  d <- data.frame(
+    G = rep(c("a", "b"), each = 40L),
+    # Diastolic-BP-shaped: far from zero, narrow spread, and 80 rows -- the
+    # group size must never reach the value axis.
+    V = c(rnorm(40L, 76, 4), rnorm(40L, 72, 4)),
+    stringsAsFactors = FALSE
+  )
+  box <- lane_prepare_summaries(
+    d, by = "G",
+    summaries = list(list(type = "dist", name = "V", col = "V", show = "box"))
+  )$plan[[1L]]
+  expect_gt(box$dmin, 40)          # not anchored at zero
+  expect_lt(box$dmax, 100)         # and nowhere near n = 40
+  # The whiskers fit, with only the padding to spare.
+  span <- box$dmax - box$dmin
+  expect_lt(span, (max(d$V) - min(d$V)) * 1.2)
+
+  # A simple row's dot IS a length from zero (a bar with less ink), so it
+  # keeps the zero anchor.
+  dot <- lane_prepare_summaries(
+    d, by = "G",
+    summaries = list(list(type = "simple", name = "N", func = "count",
+                          show = "dot"))
+  )$plan[[1L]]
+  expect_identical(dot$dmin, 0)
+})

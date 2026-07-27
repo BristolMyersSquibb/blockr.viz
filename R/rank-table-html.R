@@ -415,7 +415,7 @@ rank_table_dep <- memoise0(function() {
     drilldown_table_dep(),
     htmltools::htmlDependency(
       name = "blockr-viz-rank",
-      version = paste0(utils::packageVersion("blockr.viz"), ".11"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".12"),
       src = system.file("js", package = "blockr.viz"),
       script = "rank-table.js"
     )

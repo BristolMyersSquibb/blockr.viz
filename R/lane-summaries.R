@@ -445,6 +445,9 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       # pointrange emitter with no interval. Less ink than a bar.
       c(base, list(kind = "pointrange", key = paste0(sid, "_v"),
                    cols = c(bc = paste0(sid, "_v")),
+                   # Length-from-zero semantics, like the bar it replaces:
+                   # the domain keeps its zero (lane_summary_domains).
+                   zero = TRUE,
                    words = list(center = s$name), show_val = TRUE))
     } else {
       kind <- if (identical(s$show, "bar")) "bar" else "num"
@@ -639,13 +642,40 @@ lane_summary_domains <- function(plan, rows) {
       vals <- numeric()
       for (i in idx) {
         p <- plan[[i]]
-        cols <- if (identical(kind, "bar")) p$key else unname(p$cols)
+        # POSITION columns only. A box also carries `n` (the group size, for
+        # the tooltip); it is not a point on the value axis, and letting it
+        # in stretched the domain to the sample size -- a 49-105 mmHg box on
+        # a 0-1012 track.
+        cols <- if (identical(kind, "bar")) {
+          p$key
+        } else {
+          unname(p$cols[setdiff(names(p$cols), "n")])
+        }
         for (cn in cols) vals <- c(vals, rows[[cn]])
       }
       vals <- vals[is.finite(vals)]
-      dmax <- if (length(vals)) max(c(0, vals)) else 0
-      dmin <- if (identical(kind, "bar")) 0 else {
-        if (length(vals)) min(c(0, vals)) else 0
+      # Zero belongs to marks that encode value as LENGTH from a baseline --
+      # the bar, and the simple row's dot, which is a bar's worth of meaning
+      # with less ink. A box or a mean CI encodes value as POSITION: it is
+      # read against the other rows, not against zero, so pinning zero only
+      # squashes data that lives far from it (chart parity: `scale: true` on
+      # the boxplot, blockr.viz d2dd210).
+      zero <- identical(kind, "bar") ||
+        any(vapply(plan[idx], function(p) isTRUE(p$zero), logical(1L)))
+      if (zero) {
+        dmax <- if (length(vals)) max(c(0, vals)) else 0
+        dmin <- if (identical(kind, "bar")) 0 else {
+          if (length(vals)) min(c(0, vals)) else 0
+        }
+      } else {
+        rng <- if (length(vals)) range(vals) else c(0, 1)
+        # A hair of padding so a glyph at the extreme is not flush against
+        # the cell edge, and a degenerate (all-equal) column still draws.
+        pad <- if (rng[[2L]] > rng[[1L]]) (rng[[2L]] - rng[[1L]]) * 0.04 else {
+          max(abs(rng[[1L]]) * 0.04, 0.5)
+        }
+        dmin <- rng[[1L]] - pad
+        dmax <- rng[[2L]] + pad
       }
       for (i in idx) {
         plan[[i]]$dmax <- dmax

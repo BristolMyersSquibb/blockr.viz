@@ -155,10 +155,12 @@ test_that("a box column ships pre-rounded positions AND widths", {
   for (nm in c("wl", "w1", "bl", "bw", "bc", "b2", "w2", "wh", "nn", "tip")) {
     expect_length(c1[[nm]], 4L)
   }
-  # The trap the spec calls out: the domain runs to the widest WHISKER, so
-  # the global max whisker sits exactly at the track edge and nothing ever
-  # renders past it.
-  expect_equal(max(as.numeric(c1$wh)), 100)
+  # The domain runs to the widest WHISKER (never to `n`, which the column
+  # also carries for the tooltip), plus a hair of padding so the extreme
+  # glyph is not flush against the cell edge -- so the widest whisker lands
+  # just inside the track and nothing ever renders past it.
+  expect_lt(max(as.numeric(c1$wh)), 100)
+  expect_gt(max(as.numeric(c1$wh)), 90)
   for (nm in c("wl", "bl", "bc", "b2", "wh")) {
     expect_true(all(as.numeric(c1[[nm]]) <= 100))
   }
