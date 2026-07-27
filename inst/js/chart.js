@@ -511,8 +511,9 @@
    * (facetVal, hover, seriesByColorByVal) rather than render-time locals.
    * `focus` is the render-scoped registry the mousemove picker and the
    * '__focus__' overlay read (final series array + the styling a promoted line
-   * wears); null on scatter, where there is no line to promote. `focusSi` is
-   * the series index currently promoted, or null when nothing is.
+   * wears). Null wherever there is no crowd to pick a line OUT of: on scatter,
+   * and on a line chart drawing a single line. `focusSi` is the series index
+   * currently promoted, or null when nothing is.
    * @typedef {{ container: HTMLElement, labelEl: HTMLElement | null,
    *             chartDiv: HTMLDivElement, chart: any, facetVal: any,
    *             hover: { si: number | null },
@@ -520,7 +521,7 @@
    *             brushable: boolean, zoomArmed: boolean,
    *             zoom: any,
    *             focus: { series: any[], stepMode: string | null,
-   *                      smoothOn: boolean, scrim: boolean, xAxisType: string,
+   *                      smoothOn: boolean, xAxisType: string,
    *                      xOrder: Map<string, number> | null,
    *                      markerPx: number, focusW: number } | null,
    *             focusSi: number | null }} ChartSlot
@@ -2175,8 +2176,9 @@
       // PURELY from the cursor pixel every move — no dependency on ECharts
       // hit-testing or on the overlay — so it can never get stuck: each move it
       // points at exactly one line or clears. It also sets slot.hover.si so the
-      // axis tooltip narrows to the same line. Scatter has no hover highlight at
-      // all (see mkSeries) and the picker no-ops there, slot.focus being null.
+      // axis tooltip narrows to the same line. The picker no-ops wherever
+      // slot.focus is null -- scatter (no hover highlight at all, see mkSeries)
+      // and single-line charts (nothing to disambiguate, see crowdLine).
       const zr = chart.getZr();
       zr.on('mousemove', (/** @type {any} */ e) => {
         if (!slot.focus) return;
@@ -3643,15 +3645,22 @@
         // drop at high N (symbol handling below); a hovered line is redrawn WITH
         // its points by the hover overlay.
         const smoothOn = isLine && connect === 'monotone';
-        // The scrim veils the CROWD so the one hovered trajectory pops out of it.
-        // With a single line there IS no crowd: the veil would grey the plot, the
-        // gridlines and the line's own CI whiskers (the error bars are a z:1
-        // custom series, so they sit under the z:8 veil) in order to spotlight the
-        // only thing on screen. So: crowd -> veil, lone line -> no veil. The
-        // __focus__ overlay still promotes the line on hover either way; that part
-        // is a local "you are on this, here are its points" affordance and it
-        // reads fine without anything to contrast against.
-        const showScrim = isLine && seriesLevels.length > 1;
+        // The whole hover-highlight apparatus (veil + promoted line) exists to
+        // pull ONE trajectory out of a crowd. With a single line there is no
+        // crowd and nothing to disambiguate: the veil greyed the plot, the
+        // gridlines and the line's own CI whiskers (error bars are a z:1 custom
+        // series, under the z:8 veil) to spotlight the only thing on screen, and
+        // the promote restyled that line -- thick, gradient-filled, dotted -- on
+        // every cursor pass. Same reasoning as the scatter's dropped emphasis:
+        // a highlight that says nothing is just movement. So the picker is armed
+        // for a crowd only; slot.focus stays null on a lone line and every
+        // handler that reads it no-ops.
+        //
+        // Safe for the two things that DO read focus: the axis tooltip already
+        // has an explicit single-series branch (it stays hoverable anywhere
+        // along x when seriesCount is 1), and _individualClick only consults
+        // focusName when a series split exists, falling back to the hit-test.
+        const crowdLine = isLine && seriesLevels.length > 1;
         const smoother = this.config.smoother || 'none';
         const smootherSeries = this.config.smoother_series || null;
         const loCol = this.config.lo;
@@ -3733,6 +3742,16 @@
           silent: true,
           z: 1,
           data: errPts,  // [[x, lo, hi], ...]
+          // BOTH whisker ends map to y. Without this, a custom series' default
+          // dimension mapping is dim0 -> x, dim1 -> y and dim2+ -> nothing, so
+          // `hi` never entered the y extent: the axis was sized to the line and
+          // the LOW ends only, and every upper whisker that reached past it was
+          // drawn outside the grid (clipped at the top, over the toolbox).
+          // Invisible on a wide axis, blatant once drag-zoom rescales y to the
+          // window -- which is how this surfaced. renderItem still reads the raw
+          // dims by index (api.value(1) / api.value(2)); encode only tells the
+          // axis what to measure.
+          encode: { x: 0, y: [1, 2] },
           renderItem: (/** @type {any} */ params, /** @type {any} */ api) => {
             const xv = api.value(0), lo = api.value(1), hi = api.value(2);
             const pLo = api.coord([xv, lo]);
@@ -4110,6 +4129,12 @@
         // managed Edge/Windows setups; animation:false so line + dots appear
         // together in one atomic render, no fade staging. No `blur` guard is
         // needed: with base-line emphasis disabled nothing ever enters blur.
+        //
+        // Mounted for every line chart, INCLUDING the single-line case where the
+        // picker is disarmed (crowdLine false) and they simply stay empty. That
+        // keeps one series-array shape per family, which the axis indices below
+        // (`isLine ? [xAxisSpec, scrimAxis] : ...`) and the by-id updates in
+        // _promoteFocus both depend on.
         if (isLine) {
           // Scrim: a single semi-transparent veil over the whole plot, shown
           // while a line is focused so the crowd recedes and the hovered line
@@ -4172,15 +4197,10 @@
         // series array (the picker indexes it) and the styling the overlay
         // wears. `smoothOn` is the SAME resolved flag the crowd lines use, so a
         // promoted line curves only when its neighbours do. Null on scatter.
-        slot.focus = isLine ? {
+        slot.focus = crowdLine ? {
           series,
           stepMode: stepMode || null,
           smoothOn: smoothOn,
-          // Whether a promote raises the veil (see showScrim). The '__scrim__'
-          // series stays MOUNTED either way: the picker indexes slot.focus.series
-          // by position and _promoteFocus updates by id, so a stable series array
-          // is what keeps both safe. We simply withhold its trigger datum.
-          scrim: showScrim,
           // Axis kind + category->index map, so the mousemove picker can locate
           // the nearest line on a CATEGORY x (AVISIT) as well as numeric/time.
           xAxisType: xAxisType,
@@ -5032,11 +5052,7 @@
           // a point from the hovered line to dodge the first problem, which
           // left the second one -- the veil disappeared once you zoomed past
           // that line's first x.
-          //
-          // No datum when this chart draws a single line (f.scrim false):
-          // renderItem never fires, so there is no veil, and the promote below
-          // still runs. Nothing else keys off the scrim.
-          data: f.scrim ? [[0.5, 0.5]] : []
+          data: [[0.5, 0.5]]
         }, {
           id: '__focus__',
           data: s.data,
