@@ -64,7 +64,12 @@ optional \code{band = c(lo, hi)} data columns, optional computed
 \code{ref = "mean"} / \code{"mean_sd"} / \code{"median_iqr"} -- a pooled orientation
 line/band over the column's values, per facet level under facet; a
 sparkline), \code{spans} (\code{x}, \code{xend},
-optional \code{color}; a swimlane), \code{expr} (free R code over the group's
+optional \code{color}, optional \code{label} -- the event-identity column that
+headlines each segment's hover tooltip and keys the same-event
+highlight -- optional \code{fields} (extra tooltip columns) and
+\code{size = "md"} / \code{"lg"} (a WIDER column when the swimlane is the
+centerpiece); a swimlane), \code{expr}
+(free R code over the group's
 rows; text). Each row takes \code{name}, \code{show} and
 \code{scope = "cell"} (repeats per facet level) or \code{"pooled"} (computed
 over all the group's rows, rendered once -- the "Overall" column).}

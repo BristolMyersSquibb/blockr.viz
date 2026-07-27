@@ -498,7 +498,9 @@ rank_cells_html <- function(m) {
       paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
              rank_barwrap(rank_pr_html(c), c), "</td>")
     } else if (identical(c$kind, "interval")) {
-      paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
+      paste0("<td class=\"blockr-rank-bar-col",
+             if (isTRUE(c$lg)) " blockr-rank-wide" else "", "\"",
+             rank_data_v(c$v), ">",
              rank_iv_html(c), "</td>")
     } else if (identical(c$kind, "sparkline")) {
       paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
@@ -702,8 +704,7 @@ rank_iv_html <- function(c) {
   vapply(seq_len(n), function(i) {
     segs <- c$segs[[i]]
     paste0(
-      "<div class=\"blockr-rank-lane blockr-rank-ivcell",
-      if (isTRUE(c$lg)) " lane-lg" else "", "\" data-d0=\"",
+      "<div class=\"blockr-rank-lane blockr-rank-ivcell\" data-d0=\"",
       rank_fmt_n(c$d0), "\" data-d1=\"", rank_fmt_n(c$d1), "\"",
       if (isTRUE(c$dd)) " data-dd=\"1\"" else "", ">",
       paste0(vapply(seq_along(segs), function(j) {

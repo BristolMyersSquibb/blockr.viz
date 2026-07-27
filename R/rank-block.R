@@ -34,7 +34,8 @@
 #'   optional `color`, optional `label` -- the event-identity column that
 #'   headlines each segment's hover tooltip and keys the same-event
 #'   highlight -- optional `fields` (extra tooltip columns) and
-#'   `size = "md"` / `"lg"` (the tall exhibit lane); a swimlane), `expr`
+#'   `size = "md"` / `"lg"` (a WIDER column when the swimlane is the
+#'   centerpiece); a swimlane), `expr`
 #'   (free R code over the group's
 #'   rows; text). Each row takes `name`, `show` and
 #'   `scope = "cell"` (repeats per facet level) or `"pooled"` (computed
@@ -546,8 +547,9 @@ rank_arguments <- function() {
         "sparkline), spans (x + xend + optional color + optional label -- ",
         "the event-identity column, e.g. AEDECOD, headlining each ",
         "segment's hover tooltip and keying the same-event highlight -- + ",
-        "optional fields (extra tooltip columns) + size = md / lg (the ",
-        "tall exhibit lane): a swimlane), expr (free R code over the ",
+        "optional fields (extra tooltip columns) + size = md / lg (a ",
+        "wider column for the exhibit case): a swimlane), expr (free R ",
+        "code over the ",
         "group's rows, text). ",
         "Optional per object: name (the column header), show, and scope = ",
         "cell (repeats per facet level, default) or pooled (computed over ",

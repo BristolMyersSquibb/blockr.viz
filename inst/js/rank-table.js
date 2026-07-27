@@ -94,6 +94,19 @@
     applyVisibility(root);
     var foldRow = root.querySelector("tr.blockr-rank-fold");
     if (foldRow) foldRow.style.display = q ? "none" : "";
+    // Segment emphasis: a query that matches segment tooltips also LIGHTS
+    // the matching segments (same dimming as the hover highlight), so a
+    // term search shows WHERE in each timeline the event sits -- not just
+    // which rows survive. Only armed when at least one segment matches;
+    // a subject-id query must not dim everything.
+    var anyHit = false;
+    root.querySelectorAll(".lane-seg").forEach(function (s) {
+      var hit = !!q &&
+        (s.getAttribute("data-tip") || "").toLowerCase().indexOf(q) !== -1;
+      s.classList.toggle("is-hit", hit);
+      if (hit) anyHit = true;
+    });
+    root.classList.toggle("seg-search", anyHit);
   }
 
   function bindSearch(root) {
@@ -413,8 +426,7 @@
   }
 
   function ivHtml(c, i) {
-    var s = '<div class="blockr-rank-lane blockr-rank-ivcell' +
-      (c.lg ? " lane-lg" : "") + '" data-d0="' +
+    var s = '<div class="blockr-rank-lane blockr-rank-ivcell" data-d0="' +
       p(c.d0) + '" data-d1="' + p(c.d1) + '"' +
       (c.dd ? ' data-dd="1"' : "") + ">";
     var segs = c.segs[i] || [];
@@ -499,7 +511,8 @@
           row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
             barWrap(prHtml(c, i), c, i) + "</td>";
         } else if (c.kind === "interval") {
-          row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
+          row += '<td class="blockr-rank-bar-col' +
+            (c.lg ? " blockr-rank-wide" : "") + '"' + dataV(c.v[i]) + ">" +
             ivHtml(c, i) + "</td>";
         } else if (c.kind === "sparkline") {
           row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
@@ -778,7 +791,7 @@
       case "spans": return (s.x || "?") + " → " + (s.xend || "?") +
         (s.color ? ", color " + s.color : "") +
         (s.label ? ", label " + s.label : "") +
-        (s.size === "lg" ? ", tall" : "");
+        (s.size === "lg" ? ", wide" : "");
       case "expr": return s.expr || "";
       default: return "";
     }
@@ -1054,9 +1067,9 @@
             commit();
             ctx.rerender();
           });
-          segCtl(body, "Lane", [
+          segCtl(body, "Width", [
             { value: "md", label: "Regular" },
-            { value: "lg", label: "Tall" }
+            { value: "lg", label: "Wide" }
           ], s.size || "md", function (v) {
             s.size = v;
             commit();

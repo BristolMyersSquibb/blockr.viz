@@ -168,17 +168,23 @@ rank_table_css <- function() {
   bottom: 0;
   min-width: 2px;
 }
-/* The exhibit form (a spans row's size = lg): a taller lane for boards
-   where the swimlane IS the centerpiece. */
-.blockr-rank-ivcell.lane-lg { height: 22px; }
-/* Same-event hover highlight: hovering a labelled segment dims every
-   other segment in the table; the matches stay at full strength. Dimming
-   reads at a glance where brightening would not. */
-.blockr-rank-container.seg-hover .lane-seg {
-  opacity: 0.25;
+/* The exhibit form (a spans row's size = lg): a WIDER column for boards
+   where the swimlane is the centerpiece -- more horizontal resolution for
+   the spans, not more height. */
+.blockr-rank-table td.blockr-rank-wide {
+  width: 55%;
+  min-width: 320px;
+}
+/* Same-event emphasis, from hover (seg-hover + is-same) or from a live
+   search query (seg-search + is-hit): everything else drops to near-
+   invisible so ONLY the matched event carries colour. */
+.blockr-rank-container.seg-hover .lane-seg,
+.blockr-rank-container.seg-search .lane-seg {
+  opacity: 0.08;
   transition: opacity 0.1s ease;
 }
-.blockr-rank-container.seg-hover .lane-seg.is-same { opacity: 1; }
+.blockr-rank-container.seg-hover .lane-seg.is-same,
+.blockr-rank-container.seg-search .lane-seg.is-hit { opacity: 1; }
 /* Sparkline: one inline SVG per cell, band under line, last-value dot.
    Taller than the other lanes: the trajectory's amplitude is the point. */
 .blockr-rank-spcell {
