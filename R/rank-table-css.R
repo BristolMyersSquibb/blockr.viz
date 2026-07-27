@@ -189,9 +189,19 @@ rank_table_css <- function() {
   transition: background 0.1s ease;
 }
 /* Sparkline: one inline SVG per cell, band under line, last-value dot.
-   Taller than the other lanes: the trajectory's amplitude is the point. */
+   Taller than the other lanes -- and the trajectory USES the row: the
+   cell keeps a token 1px of vertical padding (a line rarely touches the
+   extremes), so a sparkline row stays close to a text row's height
+   instead of paying 36px plus full text padding. */
+.blockr-rank-table td:has(.blockr-rank-spcell) {
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
 .blockr-rank-spcell {
-  height: 36px;
+  /* Row height minus the two 1px paddings: the trajectory occupies the
+     WHOLE row (the svg stretches freely; viewBox geometry is
+     percentage-based and the stroke is non-scaling). */
+  height: 40px;
   background: none;
 }
 .blockr-rank-spcell svg {

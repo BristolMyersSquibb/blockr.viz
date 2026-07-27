@@ -282,10 +282,11 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     } else if (identical(p$kind, "sparkline")) {
       # One inline SVG per cell, geometry PRE-PRINTED as point strings so the
       # emitters paste rather than format floats. viewBox 0 0 100 36 (taller
-      # than the 12px lanes: amplitude is the point), 3 units of vertical
-      # padding; y grows downward.
+      # than the 12px lanes: amplitude is the point), a token 1 unit of
+      # vertical padding -- the trajectory uses the full row; y grows
+      # downward.
       H <- 36
-      PAD <- 3
+      PAD <- 1
       xd <- p$dom %||% prep$dom
       yd <- p$ydom %||% prep$ydom
       xf <- function(v) round((v - xd[[1L]]) / (xd[[2L]] - xd[[1L]]) * 100, 2L)
