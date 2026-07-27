@@ -42,7 +42,7 @@ adae <- adae[!is.na(adae$ASTDY) & !is.na(adae$AENDY), ]
 adae$DUR <- adae$AENDY - adae$ASTDY + 1
 counts <- sort(table(adae$AEDECOD), decreasing = TRUE)
 ae <- adae[adae$AEDECOD %in% names(counts)[1:15],
-           c("USUBJID", "AEBODSYS", "AEDECOD", "AESEV", "TRT01A",
+           c("USUBJID", "AEBODSYS", "AEDECOD", "AESEV", "AESER", "TRT01A",
              "ASTDY", "AENDY", "DUR")]
 
 mixed_summaries <- list(
@@ -54,7 +54,8 @@ mixed_summaries <- list(
        stat = "mean_ci95", show = "text"),
   list(type = "field", name = "Arms", col = "TRT01A"),
   list(type = "spans", name = "Episodes", x = "ASTDY", xend = "AENDY",
-       color = "AESEV"),
+       color = "AESEV", label = "AEDECOD", fields = "AESER",
+       size = "lg"),
   list(type = "series", name = "Trajectory", x = "ASTDY", col = "DUR",
        ref = "mean_sd")
 )

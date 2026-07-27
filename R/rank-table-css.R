@@ -168,6 +168,17 @@ rank_table_css <- function() {
   bottom: 0;
   min-width: 2px;
 }
+/* The exhibit form (a spans row's size = lg): a taller lane for boards
+   where the swimlane IS the centerpiece. */
+.blockr-rank-ivcell.lane-lg { height: 22px; }
+/* Same-event hover highlight: hovering a labelled segment dims every
+   other segment in the table; the matches stay at full strength. Dimming
+   reads at a glance where brightening would not. */
+.blockr-rank-container.seg-hover .lane-seg {
+  opacity: 0.25;
+  transition: opacity 0.1s ease;
+}
+.blockr-rank-container.seg-hover .lane-seg.is-same { opacity: 1; }
 /* Sparkline: one inline SVG per cell, band under line, last-value dot.
    Taller than the other lanes: the trajectory's amplitude is the point. */
 .blockr-rank-spcell {

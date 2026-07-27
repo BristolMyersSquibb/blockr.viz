@@ -72,6 +72,15 @@ lane_norm_summaries <- function(summaries) {
       if (!ref %in% c("none", "mean", "mean_sd", "median_iqr")) ref <- "none"
       s$ref <- ref
     }
+    # The spans row's event identity: `label` headlines each segment's
+    # tooltip (the chart gantt's label role), `fields` append extra columns,
+    # `size` opts the lane into the tall exhibit form.
+    if (identical(type, "spans")) {
+      s$fields <- as.character(s$fields %||% character())
+      size <- rank_chr1(s$size) %||% "md"
+      if (!size %in% c("md", "lg")) size <- "md"
+      s$size <- size
+    }
     s$name <- rank_chr1(s$name) %||% lane_summary_auto_name(s)
     out[[i]] <- s
   }
@@ -481,6 +490,9 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                  segs = paste0(sid, "_segs"), x = rank_chr1(s$x),
                  xend = rank_chr1(s$xend), levels = lv,
                  dom_date = isTRUE(s$.date),
+                 tfields = intersect(as.character(s$fields %||% character()),
+                                     names(data)),
+                 size = rank_chr1(s$size) %||% "md",
                  fills = if (!is.null(lv)) {
                    unname(rank_level_colors(scale_map, rank_chr1(s$color),
                                             lv)[lv])
@@ -563,6 +575,11 @@ lane_spans_split <- function(slice, target, tkeys, s) {
   # Full-data level order rides on the summary (s$.levels), so a facet
   # slice missing a level cannot renumber the fills.
   lv <- s$.levels
+  # Event identity: the label column headlines the segment tooltip and
+  # keys the same-event hover highlight; fields append extra columns.
+  lbcol <- rank_chr1(s$label)
+  lbcol <- if (!is.null(lbcol) && lbcol %in% names(slice)) lbcol
+  fcols <- intersect(as.character(s$fields %||% character()), names(slice))
   ok <- if (is.null(xs) || is.null(xe)) {
     rep(FALSE, nrow(slice))
   } else {
@@ -581,8 +598,18 @@ lane_spans_split <- function(slice, target, tkeys, s) {
         1L
       }
       if (is.na(f)) next
-      out[[length(out) + 1L]] <- list(s = xs[[r]],
-                                      e = max(xe[[r]], xs[[r]]), f = f)
+      sg <- list(s = xs[[r]], e = max(xe[[r]], xs[[r]]), f = f)
+      if (!is.null(lbcol)) {
+        lb <- as.character(slice[[lbcol]][[r]])
+        if (!is.na(lb) && nzchar(lb)) sg$lb <- lb
+      }
+      if (length(fcols)) {
+        sg$fv <- vapply(fcols, function(fc) {
+          v <- as.character(slice[[fc]][[r]])
+          if (is.na(v)) "" else v
+        }, character(1L))
+      }
+      out[[length(out) + 1L]] <- sg
     }
     out
   })

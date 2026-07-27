@@ -175,6 +175,30 @@ test_that("expr rows evaluate per group and fail as a cell, not a crash", {
   expect_true(all(as.character(p2$cols[[1]]$disp) == "(error)"))
 })
 
+test_that("spans label/fields enrich tips and key the highlight", {
+  ae <- sum_fixture()
+  ae$TERM2 <- ae$TERM   # the event label column
+  ae$SER <- rep(c("Y", "N"), length.out = nrow(ae))
+  p <- rank_build_payload(ae, group = NULL, by = "USUBJID", summaries = list(
+    list(type = "spans", x = "ASTDY", xend = "AENDY", color = "SEV",
+         label = "TERM2", fields = "SER", size = "lg")
+  ))
+  c1 <- p$cols[[1]]
+  # The tooltip headlines the event, then level, span, field pairs.
+  expect_match(c1$tips[[1]][[1]], "^Term[0-9] · (MILD|MOD) · ")
+  expect_match(c1$tips[[1]][[1]], "SER: (Y|N)")
+  # The 4th segment slot carries the escaped label (data-l, the highlight
+  # key); without `label` it is absent.
+  expect_length(c1$segs[[1]][[1]], 4L)
+  expect_match(c1$segs[[1]][[1]][[4L]], "^Term")
+  expect_true(isTRUE(c1$lg))
+  p2 <- rank_build_payload(ae, group = NULL, by = "USUBJID", summaries = list(
+    list(type = "spans", x = "ASTDY", xend = "AENDY", color = "SEV")
+  ))
+  expect_length(p2$cols[[1]]$segs[[1]][[1]], 3L)
+  expect_null(p2$cols[[1]]$lg)
+})
+
 test_that("a series ref computes a pooled line, mean_sd adds the band", {
   ae <- sum_fixture()
   p <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = list(

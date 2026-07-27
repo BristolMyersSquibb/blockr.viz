@@ -31,7 +31,11 @@
 #'   `ref = "mean"` / `"mean_sd"` / `"median_iqr"` -- a pooled orientation
 #'   line/band over the column's values, per facet level under facet; a
 #'   sparkline), `spans` (`x`, `xend`,
-#'   optional `color`; a swimlane), `expr` (free R code over the group's
+#'   optional `color`, optional `label` -- the event-identity column that
+#'   headlines each segment's hover tooltip and keys the same-event
+#'   highlight -- optional `fields` (extra tooltip columns) and
+#'   `size = "md"` / `"lg"` (the tall exhibit lane); a swimlane), `expr`
+#'   (free R code over the group's
 #'   rows; text). Each row takes `name`, `show` and
 #'   `scope = "cell"` (repeats per facet level) or `"pooled"` (computed
 #'   over all the group's rows, rendered once -- the "Overall" column).
@@ -539,8 +543,12 @@ rank_arguments <- function() {
         "joined, a group-level fact), series (x + col + optional ",
         "band = [lo, hi] data columns + optional computed ref = mean / ",
         "mean_sd / median_iqr (a pooled orientation line/band): a ",
-        "sparkline), spans (x + xend + optional color: ",
-        "a swimlane), expr (free R code over the group's rows, text). ",
+        "sparkline), spans (x + xend + optional color + optional label -- ",
+        "the event-identity column, e.g. AEDECOD, headlining each ",
+        "segment's hover tooltip and keying the same-event highlight -- + ",
+        "optional fields (extra tooltip columns) + size = md / lg (the ",
+        "tall exhibit lane): a swimlane), expr (free R code over the ",
+        "group's rows, text). ",
         "Optional per object: name (the column header), show, and scope = ",
         "cell (repeats per facet level, default) or pooled (computed over ",
         "all the group's rows, rendered once -- the Overall column)."
@@ -568,6 +576,9 @@ rank_arguments <- function() {
         band = arg_array(arg_string(), required = FALSE),
         ref = arg_enum(c("none", "mean", "mean_sd", "median_iqr"),
                        required = FALSE),
+        label = arg_string(required = FALSE),
+        fields = arg_array(arg_string(), required = FALSE),
+        size = arg_enum(c("md", "lg"), required = FALSE),
         expr = arg_string(required = FALSE)
       ))
     ),

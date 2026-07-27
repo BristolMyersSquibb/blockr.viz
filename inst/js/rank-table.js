@@ -53,7 +53,14 @@
     if (!root._rankCache) root._rankCache = new WeakMap();
     var t = root._rankCache.get(r);
     if (t == null) {
-      t = r.textContent.toLowerCase();
+      // Segment tooltips (the swimlane's event labels) live in attributes,
+      // not text -- fold them in so searching "pruritus" finds the
+      // subjects who had it.
+      var tips = [];
+      r.querySelectorAll("[data-tip]").forEach(function (e) {
+        tips.push(e.getAttribute("data-tip"));
+      });
+      t = (r.textContent + " " + tips.join(" ")).toLowerCase();
       root._rankCache.set(r, t);
     }
     return t;
@@ -406,14 +413,16 @@
   }
 
   function ivHtml(c, i) {
-    var s = '<div class="blockr-rank-lane blockr-rank-ivcell" data-d0="' +
+    var s = '<div class="blockr-rank-lane blockr-rank-ivcell' +
+      (c.lg ? " lane-lg" : "") + '" data-d0="' +
       p(c.d0) + '" data-d1="' + p(c.d1) + '"' +
       (c.dd ? ' data-dd="1"' : "") + ">";
     var segs = c.segs[i] || [];
     for (var j = 0; j < segs.length; j++) {
       s += '<i class="lane-seg" style="left:' + p(segs[j][0]) + "%;width:" +
-        p(segs[j][1]) + "%;background:" + c.fills[segs[j][2] - 1] +
-        '" data-tip="' + c.tips[i][j] + '"></i>';
+        p(segs[j][1]) + "%;background:" + c.fills[segs[j][2] - 1] + '"' +
+        (segs[j].length > 3 ? ' data-l="' + segs[j][3] + '"' : "") +
+        ' data-tip="' + c.tips[i][j] + '"></i>';
     }
     return s + "</div>";
   }
@@ -767,7 +776,9 @@
         (s.band && s.band.length === 2 ? ", band " + s.band[0] + "–" + s.band[1] : "") +
         (s.ref && s.ref !== "none" ? ", ref " + s.ref : "");
       case "spans": return (s.x || "?") + " → " + (s.xend || "?") +
-        (s.color ? ", color " + s.color : "");
+        (s.color ? ", color " + s.color : "") +
+        (s.label ? ", label " + s.label : "") +
+        (s.size === "lg" ? ", tall" : "");
       case "expr": return s.expr || "";
       default: return "";
     }
@@ -831,6 +842,26 @@
       if (S && S.single) {
         S.single(wrap, { options: opts, selected: selected || "",
                          onChange: onChange });
+      }
+      ctl.appendChild(wrap);
+      parent.appendChild(ctl);
+    }
+    function multiCtl(parent, label, selected, onChange) {
+      var ctl = document.createElement("div");
+      ctl.className = "lane-sum-ctl";
+      var l = document.createElement("span");
+      l.className = "blockr-popover-label";
+      l.textContent = label;
+      ctl.appendChild(l);
+      var wrap = document.createElement("div");
+      wrap.className = "blockr-popover-select-wrap dd-picker-wrap";
+      if (S && S.multi) {
+        S.multi(wrap, {
+          options: colOpts("any"),
+          selected: (selected || []).slice(),
+          placeholder: "add columns…",
+          onChange: onChange
+        });
       }
       ctl.appendChild(wrap);
       parent.appendChild(ctl);
@@ -1008,6 +1039,26 @@
           });
           selectCtl(body, "Color", "cat", s.color, function (v) {
             s.color = v;
+            commit();
+            ctx.rerender();
+          });
+          // Event identity on hover: label headlines the segment tooltip
+          // and keys the same-event highlight; fields append extras.
+          selectCtl(body, "Label (hover)", "any", s.label, function (v) {
+            s.label = v;
+            commit();
+            ctx.rerender();
+          });
+          multiCtl(body, "Tooltip fields", s.fields, function (vals) {
+            s.fields = vals;
+            commit();
+            ctx.rerender();
+          });
+          segCtl(body, "Lane", [
+            { value: "md", label: "Regular" },
+            { value: "lg", label: "Tall" }
+          ], s.size || "md", function (v) {
+            s.size = v;
             commit();
             ctx.rerender();
           });
@@ -1452,6 +1503,26 @@
   // Sparklines snap to the nearest point and read the shipped display
   // values. No per-row handlers, so cost is flat in the row count.
   var laneTip = null;
+  // Same-event hover state: the currently highlighted label, cleared when
+  // the cursor leaves the segments.
+  var laneHl = { root: null, label: null };
+  function laneHighlight(root, label) {
+    if (laneHl.label === label && laneHl.root === root) return;
+    if (laneHl.root) {
+      laneHl.root.classList.remove("seg-hover");
+      laneHl.root.querySelectorAll(".lane-seg.is-same").forEach(function (s) {
+        s.classList.remove("is-same");
+      });
+    }
+    laneHl = { root: null, label: null };
+    if (root && label) {
+      root.classList.add("seg-hover");
+      root.querySelectorAll(".lane-seg").forEach(function (s) {
+        if (s.getAttribute("data-l") === label) s.classList.add("is-same");
+      });
+      laneHl = { root: root, label: label };
+    }
+  }
   function tipEl() {
     if (!laneTip) {
       laneTip = document.createElement("div");
@@ -1473,13 +1544,22 @@
     if (!t || !t.closest) { return; }
     var lane = t.closest(".blockr-rank-ivcell, .blockr-rank-spcell");
     var tip = tipEl();
-    if (!lane) { tip.hidden = true; return; }
+    if (!lane) {
+      tip.hidden = true;
+      laneHighlight(null, null);
+      return;
+    }
     var r = lane.getBoundingClientRect();
     if (!r.width) { tip.hidden = true; return; }
     var fx = Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1);
     var txt = "";
     if (lane.classList.contains("blockr-rank-ivcell")) {
       var seg = t.closest(".lane-seg");
+      // Same-event highlight: hovering a labelled segment dims every other
+      // segment in the table and lifts the matches -- the table's answer
+      // to cross-lane identity emphasis, keyed on data-l.
+      laneHighlight(lane.closest(".blockr-rank-container"),
+                    seg ? seg.getAttribute("data-l") : null);
       if (seg) {
         txt = seg.getAttribute("data-tip") || "";
       } else {
@@ -1504,9 +1584,13 @@
       window.innerWidth - tip.offsetWidth - 8) + "px";
     tip.style.top = (e.clientY + 16) + "px";
   });
-  // Leaving the window (or scrolling the lane away) must not strand the tip.
+  // Leaving the window (or scrolling the lane away) must not strand the tip
+  // or the highlight.
   document.addEventListener("mouseout", function (e) {
-    if (!e.relatedTarget && laneTip) laneTip.hidden = true;
+    if (!e.relatedTarget) {
+      if (laneTip) laneTip.hidden = true;
+      laneHighlight(null, null);
+    }
   });
   document.addEventListener("scroll", function () {
     if (laneTip) laneTip.hidden = true;

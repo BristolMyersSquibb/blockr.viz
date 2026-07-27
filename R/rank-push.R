@@ -249,23 +249,36 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         if (dd) format(as.Date(v, origin = "1970-01-01")) else lane_fmt(v)
       }
       lv <- p$levels %||% prep$series
+      tf <- as.character(p$tfields %||% character())
+      # Segment tuples [left, width, fill-index (, escaped label)]: the
+      # optional 4th slot keys the same-event hover highlight (data-l).
       out_segs <- lapply(segs, function(ss) {
         lapply(ss, function(sg) {
-          list(bb$pos(sg$s)[[1L]], bb$span(sg$s, sg$e)[[1L]], sg$f)
+          base <- list(bb$pos(sg$s)[[1L]], bb$span(sg$s, sg$e)[[1L]], sg$f)
+          if (!is.null(sg$lb)) c(base, list(rank_esc(sg$lb))) else base
         })
       })
+      # Tooltip: the event label headlines (chart-gantt parity), then the
+      # colour level, the span, and any extra field pairs.
       out_tips <- lapply(segs, function(ss) {
         vapply(ss, function(sg) {
           rank_esc(paste0(
+            if (!is.null(sg$lb)) paste0(sg$lb, " · "),
             if (!is.null(lv)) paste0(lv[[sg$f]], " · "),
-            fmt_d(sg$s), "–", fmt_d(sg$e)
+            fmt_d(sg$s), "–", fmt_d(sg$e),
+            if (length(tf) && !is.null(sg$fv)) {
+              paste0(" · ", paste0(tf, ": ", sg$fv, collapse = " · "))
+            } else {
+              ""
+            }
           ))
         }, character(1L))
       })
       list(kind = "interval", segs = out_segs, tips = out_tips,
            fills = as.character(p$fills %||% prep$fills),
            d0 = round(dom[[1L]], 4L), d1 = round(dom[[2L]], 4L),
-           dd = dd, v = sortv(rows[[p$key]] %||% rows$.v))
+           dd = dd, lg = identical(p$size, "lg"),
+           v = sortv(rows[[p$key]] %||% rows$.v))
     } else if (identical(p$kind, "sparkline")) {
       # One inline SVG per cell, geometry PRE-PRINTED as point strings so the
       # emitters paste rather than format floats. viewBox 0 0 100 36 (taller
@@ -689,14 +702,21 @@ rank_iv_html <- function(c) {
   vapply(seq_len(n), function(i) {
     segs <- c$segs[[i]]
     paste0(
-      "<div class=\"blockr-rank-lane blockr-rank-ivcell\" data-d0=\"",
+      "<div class=\"blockr-rank-lane blockr-rank-ivcell",
+      if (isTRUE(c$lg)) " lane-lg" else "", "\" data-d0=\"",
       rank_fmt_n(c$d0), "\" data-d1=\"", rank_fmt_n(c$d1), "\"",
       if (isTRUE(c$dd)) " data-dd=\"1\"" else "", ">",
       paste0(vapply(seq_along(segs), function(j) {
         sg <- segs[[j]]
         paste0("<i class=\"lane-seg\" style=\"left:", rank_fmt_w(sg[[1L]]),
                "%;width:", rank_fmt_w(sg[[2L]]), "%;background:",
-               c$fills[[sg[[3L]]]], "\" data-tip=\"", c$tips[[i]][[j]],
+               c$fills[[sg[[3L]]]], "\"",
+               if (length(sg) >= 4L) {
+                 paste0(" data-l=\"", sg[[4L]], "\"")
+               } else {
+                 ""
+               },
+               " data-tip=\"", c$tips[[i]][[j]],
                "\"></i>")
       }, character(1L)), collapse = ""),
       "</div>"
@@ -807,6 +827,7 @@ rank_flat_payload <- function(m) {
       out$d0 <- c$d0
       out$d1 <- c$d1
       if (isTRUE(c$dd)) out$dd <- TRUE
+      if (isTRUE(c$lg)) out$lg <- TRUE
     } else if (identical(c$kind, "sparkline")) {
       out$pl <- arr(as.character(c$pl))
       out$bd <- arr(c$bd)
