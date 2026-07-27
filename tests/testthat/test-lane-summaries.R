@@ -117,6 +117,36 @@ test_that("the ground follows the mark: only a bare mark keeps a hairline", {
   expect_true(all(c("bl", "bh", "wl", "wh") %in% names(plan1()$cols)))
 })
 
+test_that("the colour dimension reaches every lane mark, dot included", {
+  ae <- sum_fixture()
+  S <- list(
+    list(type = "simple", name = "Subjects", func = "count_distinct",
+         col = "USUBJID", show = "dot"),
+    list(type = "simple", name = "Bar", func = "count_distinct",
+         col = "USUBJID", show = "bar"),
+    list(type = "dist", name = "Duration", col = "DUR")
+  )
+  p <- lane_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  lv <- rank_levels(ae$ARM)
+  # The dot splits like the distribution does: one glyph per level, named by
+  # the same geometry key the cell builder reads.
+  expect_identical(p$plan[[1L]]$levels, lv)
+  expect_length(p$plan[[1L]]$lcols, length(lv))
+  expect_identical(names(p$plan[[1L]]$lcols[[1L]]), "bc")
+  expect_true(all(unlist(p$plan[[1L]]$lcols) %in% names(p$rows)))
+  # A bar's colour means stacked/grouped segments, not a second glyph in the
+  # cell -- so it stays unsplit rather than half-adopting the dimension.
+  expect_null(p$plan[[2L]]$lcols)
+  expect_identical(p$plan[[3L]]$levels, lv)
+  # Every level of a split column is read against ONE scale.
+  m <- rank_cells(p)
+  expect_true(isTRUE(m$cols[[1L]]$multi))
+  expect_length(m$cols[[1L]]$lv, length(lv))
+  # Nothing spans the cell, so the dot keeps its hairline in every level.
+  expect_true(all(vapply(m$cols[[1L]]$lv, function(g) isTRUE(g$bare),
+                         logical(1L))))
+})
+
 test_that("the column axis prints the domain once, on glyph columns only", {
   # Nice steps, and never a tick outside the domain it labels.
   expect_identical(rank_axis_ticks(0, 100), c(0, 25, 50, 75, 100))

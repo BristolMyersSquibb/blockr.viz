@@ -133,6 +133,20 @@ lane_norm_summaries <- function(summaries) {
   out
 }
 
+#' Does this summary take the table's colour dimension as a split inside the
+#' cell? Every LANE MARK does -- a distribution in either style, and the
+#' simple row's dot, which is the same emitter carrying one number.
+#'
+#' A bar does not, and neither does a number: colour on a magnitude column
+#' means stacked or grouped segments (the `barsplit` mark on the single
+#' measure path), which is a different shape with its own mode, not a second
+#' glyph in the cell. A text cell has nothing to colour.
+#' @noRd
+lane_takes_color <- function(s) {
+  if (identical(s$type, "dist")) return(!identical(s$show, "text"))
+  identical(s$type, "simple") && identical(s$show, "dot")
+}
+
 #' The statistic that supplies a distribution glyph's CENTRE. The inner range
 #' names it when there is one; with the inner range off the outer range's
 #' centre stands in (every LANE_STATS entry is a centre plus a pair of
@@ -293,9 +307,29 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     switch(s$type,
       simple = {
         f <- rank_chr1(s$func) %||% "count"
-        agg <- rank_aggregate(slice, tkeys, f, rank_chr1(s$col),
-                              rank_chr1(s$col))
-        target[[paste0(sid, "_v")]] <- rank_match_col(target, agg, tkeys, ".v")
+        put <- function(target, slice, out) {
+          agg <- rank_aggregate(slice, tkeys, f, rank_chr1(s$col),
+                                rank_chr1(s$col))
+          target[[out]] <- rank_match_col(target, agg, tkeys, ".v")
+          target
+        }
+        target <- put(target, slice, paste0(sid, "_v"))
+        # The colour dimension, exactly as a distribution takes it: one dot
+        # per level in the same cell, on the column's one scale. The pooled
+        # value above still supplies the sort key. Only the dot splits --
+        # see lane_takes_color().
+        cc <- s$.color
+        if (!is.null(cc)) {
+          for (j in seq_along(s$.levels)) {
+            lv <- s$.levels[[j]]
+            # `bc` (not `v`): the level column names have to match the
+            # geometry keys lane_color_split() hands the cell builder.
+            target <- put(target,
+                          slice[as.character(slice[[cc]]) == lv, ,
+                                drop = FALSE],
+                          paste0(sid, "_L", j, "_bc"))
+          }
+        }
         target
       },
       dist = {
@@ -402,10 +436,10 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       s$.levels <- if (!is.null(cc)) rank_levels(data[[cc]])
       s$.date <- inherits(data[[rank_chr1(s$x)]], "Date")
     }
-    # A distribution can carry the same colour dimension: one glyph per
-    # level inside the cell. Levels come from the FULL data so every copy
-    # (and every row) assigns the same colour to the same level.
-    if (identical(s$type, "dist") && !identical(s$show, "text")) {
+    # A lane mark can carry the same colour dimension: one glyph per level
+    # inside the cell. Levels come from the FULL data so every copy (and
+    # every row) assigns the same colour to the same level.
+    if (lane_takes_color(s)) {
       cc <- present(s$color) %||% color
       s$.color <- cc
       s$.levels <- if (!is.null(cc)) rank_levels(data[[cc]])
@@ -573,7 +607,11 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                    # Length-from-zero semantics, like the bar it replaces:
                    # the domain keeps its zero (lane_summary_domains).
                    zero = TRUE,
-                   words = list(center = s$name), show_val = TRUE))
+                   # No range of any kind, so nothing spans the cell: this
+                   # is the mark that keeps its hairline.
+                   bare = TRUE,
+                   words = list(center = s$name), show_val = TRUE),
+        lane_color_split(s, sid, "bc", data, scale_map))
     } else {
       kind <- if (identical(s$show, "bar")) "bar" else "num"
       c(base, list(kind = kind, key = paste0(sid, "_v"),
