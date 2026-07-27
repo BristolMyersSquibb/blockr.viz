@@ -1,9 +1,9 @@
 # Summarize table: shared row assembly ----------------------------------------
 #
 # Helpers shared by the bar path (rank-table.R) and the summaries path
-# (lane-summaries.R). The single-mark preparers that used to live here were
-# canonicalized away: a non-bar `mark` is constructor sugar for a one-glyph
-# summaries list (lane_mark_summaries), so there is ONE prepare path.
+# (lane-summaries.R). The single-mark preparers that briefly lived here are
+# gone: the column list is the one config model, and only the ranked bar
+# keeps a dedicated path.
 #
 # The rule for what belongs on this surface: one row is one category, and the
 # mark is a horizontal glyph on a shared linear domain confined to a cell

@@ -210,21 +210,3 @@ test_that("the constructor round-trips the summaries list", {
   fmls <- names(formals(new_summarize_table_block))
   expect_true(all(c("summaries", "by", "facet_layout") %in% fmls))
 })
-
-test_that("a non-bar mark is sugar for a one-glyph summaries list", {
-  ae <- sum_fixture()
-  # box sugar: dist row plus field rows from `fields`.
-  p <- rank_build_payload(ae, group = "TERM", mark = "box", value = "DUR",
-                          fields = "ARM")
-  expect_identical(vapply(p$cols, function(c) c$kind, ""), c("box", "num"))
-  # interval sugar gains its Events count.
-  p2 <- rank_build_payload(ae, group = "USUBJID", mark = "interval",
-                           x = "ASTDY", xend = "AENDY", color = "SEV")
-  expect_identical(vapply(p2$cols, function(c) c$kind, ""),
-                   c("interval", "num"))
-  # sparkline + func: the companion bar leads and ranks.
-  p3 <- rank_build_payload(ae, group = "TERM", mark = "sparkline",
-                           x = "ASTDY", value = "DUR", func = "mean")
-  expect_identical(vapply(p3$cols, function(c) c$kind, ""),
-                   c("bar", "sparkline"))
-})

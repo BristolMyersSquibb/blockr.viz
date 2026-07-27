@@ -18,18 +18,11 @@
 #'
 #' @param data A data frame.
 #' @param group Column to rank by (one row per level).
-#' @param mark The glyph per row: `"bar"` (default), `"box"`,
-#'   `"pointrange"`, `"interval"` or `"sparkline"`. See
-#'   [new_lane_chart_block()].
-#' @param summary,whiskers Distribution statistics for the box / point range
-#'   marks (see [new_lane_chart_block()]).
-#' @param x,xend Interval mark: span start / end columns. Sparkline mark:
-#'   `x` alone is the within-row order.
-#' @param lo,hi Sparkline mark: optional band columns.
 #' @param summaries,by,facet_layout The summarize-table path: `summaries` is
-#'   an ordered list of typed summary rows (see [new_lane_chart_block()]);
-#'   non-empty, it takes over from `mark`. `by` is the grouping vector
-#'   (outer -> inner, at most two).
+#'   an ordered list of typed summary rows (see
+#'   [new_summarize_table_block()]); non-empty, it takes over from the flat
+#'   bar mappings. `by` is the grouping vector (outer -> inner, at most
+#'   two).
 #' @param value,func,id_var The measure. `func` is one of `"count"`,
 #'   `"count_distinct"`, `"sum"`, `"mean"`, `"median"`, `"min"`, `"max"`;
 #'   `value` names the column it reduces (ignored by `"count"`), `id_var` the
@@ -70,9 +63,7 @@
 #' rank_table(mtcars, group = "cyl", func = "count")
 #' @export
 rank_table <- function(data, group = NULL, value = ".count", func = "count",
-                       id_var = NULL, mark = "bar", summary = NULL,
-                       whiskers = "tukey", x = NULL, xend = NULL, lo = NULL,
-                       hi = NULL, summaries = list(), by = NULL,
+                       id_var = NULL, summaries = list(), by = NULL,
                        facet_layout = "by_summary", parent = NULL,
                        color = NULL,
                        bar_mode = "stacked", facet = NULL, compare = NULL,
@@ -83,8 +74,7 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
                        elem_id = NULL, active = NULL) {
   prep <- rank_prepare(
     data, group = group, value = value, func = func, id_var = id_var,
-    mark = mark, summary = summary, whiskers = whiskers, x = x, xend = xend,
-    lo = lo, hi = hi, summaries = summaries, by = by,
+    summaries = summaries, by = by,
     facet_layout = facet_layout,
     parent = parent, color = color, bar_mode = bar_mode, facet = facet,
     compare = compare, cols = cols, fields = fields, sort_by = sort_by,
@@ -109,8 +99,6 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
   cfg <- list(
     group = group, parent = parent, color = color, facet = facet,
     compare = compare, func = func, value = value, id_var = id_var,
-    mark = mark, summary = summary, whiskers = whiskers, x = x,
-    xend = xend, lo = lo, hi = hi,
     summaries = summaries, by = by, facet_layout = facet_layout,
     bar_mode = bar_mode, cols = cols, fields = fields, sort_by = sort_by,
     sort_dir = sort_dir, top_n = top_n, search = search, drill = drill,

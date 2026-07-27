@@ -126,8 +126,6 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
                          bar_mode = "stacked", facet = NULL, compare = NULL,
                          cols = NULL, fields = NULL, sort_by = "value",
                          sort_dir = "desc", top_n = NULL, scale_map = NULL,
-                         mark = "bar", summary = NULL, whiskers = "tukey",
-                         x = NULL, xend = NULL, lo = NULL, hi = NULL,
                          summaries = list(), by = NULL,
                          facet_layout = "by_summary") {
   bad <- function(msg) list(err = msg)
@@ -136,23 +134,10 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   if (!nrow(data)) return(bad("No rows to display"))
 
   # The summarize-table path (_blockr.design/open/summarize-table/): the
-  # column list is THE config model. A non-bar `mark` is pure constructor
-  # sugar, canonicalized into a one-glyph summaries list right here -- the
-  # single-mark preparers are gone. Only the bar keeps its own path (its
-  # colour split / comparison / percent machinery predates the list and
-  # ships in real boards). `by` (outer -> inner) wins over group/parent;
-  # unset, they fill in.
-  mark <- rank_chr1(mark) %||% "bar"
-  if ((!is.list(summaries) || !length(summaries)) &&
-        mark %in% c("box", "pointrange", "interval", "sparkline")) {
-    summaries <- lane_mark_summaries(
-      mark, value = rank_chr1(value), func = rank_chr1(func),
-      summary = rank_chr1(summary), whiskers = rank_chr1(whiskers),
-      x = rank_chr1(x), xend = rank_chr1(xend), lo = rank_chr1(lo),
-      hi = rank_chr1(hi), color = rank_chr1(color),
-      fields = as.character(fields %||% character())
-    )
-  }
+  # column list is THE config model. Only the ranked bar keeps its own
+  # path (its colour split / comparison / percent machinery predates the
+  # list and ships in real boards). `by` (outer -> inner) wins over
+  # group/parent; unset, they fill in.
   if (is.list(summaries) && length(summaries)) {
     eby <- as.character(by %||% character())
     eby <- eby[nzchar(eby)]

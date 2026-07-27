@@ -420,18 +420,16 @@ test_that("the block constructs, registers and round-trips its state", {
   # The deprecated aliases must remain exported and construct the SAME
   # block, or saved boards from the earlier eras cannot restore.
   expect_s3_class(new_rank_block(group = "TERM"), "summarize_table_block")
-  expect_s3_class(new_lane_chart_block(group = "TERM", mark = "box",
-                                       value = "AVAL"),
+  expect_s3_class(new_lane_chart_block(group = "TERM"),
                   "summarize_table_block")
 
   # blockr.core serializes a block from its constructor formals and restores by
   # re-calling the constructor, so the runtime filter transport has to stay in
-  # the signature or a saved click cannot come back -- as do the mark args.
+  # the signature or a saved click cannot come back.
   fmls <- names(formals(new_summarize_table_block))
   expect_true(all(c("group", "func", "id_var", "drill", "ctrl_target",
                     "ctrl_table", "filter_type", "filter_column",
-                    "filter_values", "mark", "summary", "whiskers",
-                    "x", "xend", "lo", "hi", "summaries", "by",
+                    "filter_values", "summaries", "by",
                     "facet_layout") %in% fmls))
 
   # Registered, so it shows up in the block-adder and the assistant universe.

@@ -234,8 +234,14 @@ rank_table_css <- function() {
   background: none;
   color: #b6b4aa;
   cursor: pointer;
-  padding: 0 3px;
+  padding: 0;
   flex: none;
+  /* A real hit target: the glyphs are small, the button must not be. */
+  min-width: 24px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .lane-sum-rm:hover { color: var(--blockr-color-danger, #d03b3b); }
 .lane-sum-move:hover { color: var(--blockr-color-text-primary, #111827); }
@@ -278,7 +284,10 @@ rank_table_css <- function() {
   background: var(--blockr-color-primary, #2a78d6);
   color: #fff;
 }
+/* Display tiles: outside the engine's type grid the tiles shrink to their
+   caption (bar collapsed to 30px), so give them the grid's footprint. */
 .lane-sum-tiles { display: flex; gap: 5px; }
+.lane-sum-tiles .dd-type-tile { min-width: 64px; }
 .lane-sum-addrow {
   display: flex;
   flex-wrap: wrap;
@@ -295,6 +304,7 @@ rank_table_css <- function() {
   color: var(--blockr-color-text-muted, #52514e);
   font-size: 0.76rem;
   padding: 3px 8px;
+  min-width: 58px;
   cursor: pointer;
 }
 .lane-sum-add:hover {

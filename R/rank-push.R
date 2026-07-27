@@ -186,10 +186,19 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       # glyph.
       cn <- p$cols
       wd <- p$words %||% list(center = "Center", range = "Range")
-      bc <- rows[[cn[["bc"]]]]
-      bl <- rows[[cn[["bl"]]]]
-      bh <- rows[[cn[["bh"]]]]
-      nn <- rows[[cn[["n"]]]]
+      # A missing stat column (the single-value "dot": a pointrange with no
+      # interval) reads as all-NA, which the emitters draw as center-only.
+      col_or_na <- function(nm) {
+        if (!is.na(cn[nm]) && !is.null(rows[[cn[[nm]]]])) {
+          rows[[cn[[nm]]]]
+        } else {
+          rep(NA_real_, nrow(rows))
+        }
+      }
+      bc <- col_or_na("bc")
+      bl <- col_or_na("bl")
+      bh <- col_or_na("bh")
+      nn <- col_or_na("n")
       lab <- if (isTRUE(p$show_val)) {
         disp <- lane_fmt(bc)
         list(disp = disp, dw = max(c(1L, nchar(disp))))
@@ -211,11 +220,17 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
              b2 = pos_w(bh), w2 = span_w(bh, wh), wh = pos_w(wh),
              nn = nn, tip = tip, v = sortv(bc)) |> c(lab)
       } else {
+        # The dot (words$range NULL) has no interval clause and no n.
         tip <- ifelse(is.na(bc), "", rank_esc(paste0(
-          "n=", nn, " · ", wd$center, " ", lane_fmt(bc), " · ",
-          wd$range, " ",
-          ifelse(is.na(bl) | is.na(bh), "undefined (n < 2)",
-                 paste0(lane_fmt(bl), "–", lane_fmt(bh)))
+          ifelse(is.na(nn), "", paste0("n=", nn, " · ")),
+          wd$center, " ", lane_fmt(bc),
+          if (!is.null(wd$range)) {
+            paste0(" · ", wd$range, " ",
+                   ifelse(is.na(bl) | is.na(bh), "undefined (n < 2)",
+                          paste0(lane_fmt(bl), "–", lane_fmt(bh))))
+          } else {
+            ""
+          }
         )))
         list(kind = "pointrange",
              c = pos_w(bc), l = pos_w(bl), rw = span_w(bl, bh),

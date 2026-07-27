@@ -8,59 +8,18 @@
 # contract the renderer already walks. Every row type maps onto an
 # EXISTING plan kind (bar / box / pointrange / interval / sparkline /
 # num), so the emitters and the R/JS drift guard are untouched.
-#
-# The single-mark path (rank_prepare's `mark`) stays as sugar for the
-# common one-glyph case; `summaries` non-empty takes this path instead.
 
 # Row types and the displays each allows. The first display is the type's
-# default.
+# default. "dot" is a single value as a positioned point on the zero-based
+# lane -- less ink than a bar when magnitude comparison is not the point.
 LANE_ROW_TYPES <- list(
-  simple = c("bar", "number"),
+  simple = c("bar", "number", "dot"),
   dist = c("box", "pointrange", "text"),
   field = "text",
   series = "sparkline",
   spans = "interval",
   expr = "text"
 )
-
-#' The single-mark constructor sugar, canonicalized: `mark = "box"` etc.
-#' build the equivalent one-glyph summaries list, so there is ONE config
-#' model and one prepare path. `fields` become field rows; the sparkline's
-#' `func` companion becomes an honest leading bar row; the interval gains
-#' its Events count as a number row.
-#' @noRd
-lane_mark_summaries <- function(mark, value = NULL, func = NULL,
-                                summary = NULL, whiskers = NULL, x = NULL,
-                                xend = NULL, lo = NULL, hi = NULL,
-                                color = NULL, fields = character()) {
-  val <- if (!is.null(value) && !identical(value, ".count")) value
-  field_rows <- lapply(fields[nzchar(fields)], function(f) {
-    list(type = "field", col = f)
-  })
-  main <- switch(mark,
-    box = list(list(type = "dist", col = val,
-                    stat = summary %||% "median_q1_q3",
-                    whiskers = whiskers %||% "tukey", show = "box")),
-    pointrange = list(list(type = "dist", col = val,
-                           stat = summary %||% "mean_se",
-                           show = "pointrange")),
-    interval = list(
-      list(type = "spans", x = x, xend = xend, color = color),
-      list(type = "simple", name = "Events", func = "count",
-           show = "number")
-    ),
-    sparkline = c(
-      if (!is.null(func) &&
-            func %in% c("mean", "median", "sum", "min", "max")) {
-        list(list(type = "simple", func = func, col = val, show = "bar"))
-      },
-      list(list(type = "series", x = x, col = val,
-                band = if (!is.null(lo) && !is.null(hi)) c(lo, hi)))
-    ),
-    list()
-  )
-  c(main, field_rows)
-}
 
 #' Normalize a summaries list: known types, per-type required fields,
 #' `show` within the type's set, `scope` cell/pooled, an auto `name`.
@@ -445,10 +404,18 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
   base <- list(label = label, sub_label = sub, sid = sid, stype = s$type,
                flevel = cp$level, sname = s$name)
   if (identical(s$type, "simple")) {
-    kind <- if (identical(s$show, "bar")) "bar" else "num"
-    c(base, list(kind = kind, key = paste0(sid, "_v"),
-                 fill = if (identical(kind, "bar")) dd_palette(1L),
-                 show_val = identical(kind, "bar")))
+    if (identical(s$show, "dot")) {
+      # A single value as a positioned point on the zero-based lane: the
+      # pointrange emitter with no interval. Less ink than a bar.
+      c(base, list(kind = "pointrange", key = paste0(sid, "_v"),
+                   cols = c(bc = paste0(sid, "_v")),
+                   words = list(center = s$name), show_val = TRUE))
+    } else {
+      kind <- if (identical(s$show, "bar")) "bar" else "num"
+      c(base, list(kind = kind, key = paste0(sid, "_v"),
+                   fill = if (identical(kind, "bar")) dd_palette(1L),
+                   show_val = identical(kind, "bar")))
+    }
   } else if (identical(s$type, "dist")) {
     stat <- rank_chr1(s$stat) %||% "median_q1_q3"
     meta <- LANE_STAT_META[[stat]] %||% LANE_STAT_META$median_q1_q3

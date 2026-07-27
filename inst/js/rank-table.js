@@ -723,7 +723,7 @@
   // ==========================================================================
 
   var SUMMARY_TYPES = {
-    simple: { label: "simple", shows: ["bar", "number"] },
+    simple: { label: "simple", shows: ["bar", "number", "dot"] },
     dist:   { label: "dist", shows: ["box", "pointrange", "text"] },
     field:  { label: "field", shows: ["text"] },
     series: { label: "series", shows: ["sparkline"] },
@@ -735,12 +735,16 @@
       '<text x="1" y="12" font-size="9" fill="currentColor">123</text></svg>',
     text: '<svg width="14" height="14" viewBox="0 0 16 16">' +
       '<text x="0" y="12" font-size="8" fill="currentColor">1 (2)</text></svg>',
+    dot: '<svg width="14" height="14" viewBox="0 0 16 16">' +
+      '<circle cx="8" cy="8" r="2.6" fill="currentColor"/></svg>',
     bar: TYPE_ICONS.bar,
     box: TYPE_ICONS.box,
     pointrange: TYPE_ICONS.pointrange,
     interval: TYPE_ICONS.interval,
     sparkline: TYPE_ICONS.sparkline
   };
+  // Tile captions: friendlier than the raw enum where it helps.
+  var SHOW_LABELS = { pointrange: "dot range", interval: "swimlane" };
 
   function summaryLine(s) {
     switch (s.type) {
@@ -1019,7 +1023,8 @@
               ((s.show || shows[0]) === sh ? " dd-type-active" : "");
             b.innerHTML = '<span class="dd-type-tile-icon">' +
               (SHOW_ICONS[sh] || "") + '</span>' +
-              '<span class="dd-type-tile-label">' + sh + "</span>";
+              '<span class="dd-type-tile-label">' +
+              (SHOW_LABELS[sh] || sh) + "</span>";
             b.addEventListener("click", function () {
               s.show = sh;
               commit();
@@ -1220,9 +1225,8 @@
     cfg.caption_auto = titles.caption || "";
     // A `null` column pick reads as "" for the pickers (the engine's no-value).
     ["group", "parent", "color", "facet", "compare", "value", "id_var",
-     "drill", "x", "xend", "lo", "hi", "summary", "whiskers"]
+     "drill"]
       .forEach(function (k) { if (cfg[k] == null) cfg[k] = ""; });
-    if (!cfg.mark) cfg.mark = "bar";
     // The summarize-table config: the column list and the grouping vector.
     if (!Array.isArray(cfg.summaries)) {
       cfg.summaries = cfg.summaries ? [cfg.summaries] : [];
@@ -1315,11 +1319,7 @@
       roles: RANK_ROLES,
       config: function () { return cfg; },
       columns: function () { return cols; },
-      context: function () {
-        // Keys optionsBy: the sparkline swaps the func select's options for
-        // the companion rank-bar set.
-        return cfg.mark === "sparkline" ? "spark" : "all";
-      },
+      context: function () { return "all"; },
       currentType: function () { return null; },
       sections: function () { return rankSections(cfg, ctx); },
       sectionsForFamily: function () { return rankSections(cfg, ctx); },

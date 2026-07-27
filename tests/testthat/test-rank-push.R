@@ -147,7 +147,9 @@ test_that("json keeps single-row columns as arrays", {
 
 test_that("a box column ships pre-rounded positions AND widths", {
   ae <- push_fixture()
-  p <- rank_build_payload(ae, group = "TERM", mark = "box", value = "DUR")
+  p <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = list(
+    list(type = "dist", col = "DUR", show = "box")
+  ))
   c1 <- p$cols[[1]]
   expect_identical(c1$kind, "box")
   for (nm in c("wl", "w1", "bl", "bw", "bc", "b2", "w2", "wh", "nn", "tip")) {
@@ -171,8 +173,10 @@ test_that("a box column ships pre-rounded positions AND widths", {
 test_that("a pointrange with n = 1 ships NA bounds and a center-only cell", {
   ae <- push_fixture()
   one <- ae[!duplicated(ae$TERM), , drop = FALSE]   # one row per term
-  p <- rank_build_payload(one, group = "TERM", mark = "pointrange",
-                          value = "DUR", summary = "mean_ci95")
+  p <- rank_build_payload(one, group = NULL, by = "TERM", summaries = list(
+    list(type = "dist", col = "DUR", stat = "mean_ci95",
+         show = "pointrange")
+  ))
   c1 <- p$cols[[1]]
   expect_identical(c1$kind, "pointrange")
   expect_true(all(is.na(as.numeric(c1$rw))))
@@ -181,8 +185,10 @@ test_that("a pointrange with n = 1 ships NA bounds and a center-only cell", {
   expect_match(c1$tip[[1]], "undefined (n &lt; 2)", fixed = TRUE)
   # And the emitter draws the dot alone.
   html <- rank_cells_html(rank_cells(rank_prepare(
-    one, group = "TERM", mark = "pointrange", value = "DUR",
-    summary = "mean_ci95"
+    one, group = NULL, by = "TERM", summaries = list(
+      list(type = "dist", col = "DUR", stat = "mean_ci95",
+           show = "pointrange")
+    )
   )))
   expect_match(html, "lane-ctr")
   expect_false(grepl("lane-rng", html))
@@ -190,8 +196,10 @@ test_that("a pointrange with n = 1 ships NA bounds and a center-only cell", {
 
 test_that("an interval column ships per-row segments on the observed domain", {
   ae <- push_fixture()
-  p <- rank_build_payload(ae, group = "USUBJID", mark = "interval",
-                          x = "SDY", xend = "EDY", color = "SEV")
+  p <- rank_build_payload(ae, group = NULL, by = "USUBJID", summaries = list(
+    list(type = "spans", x = "SDY", xend = "EDY", color = "SEV"),
+    list(type = "simple", name = "Events", func = "count", show = "number")
+  ))
   c1 <- p$cols[[1]]
   expect_identical(c1$kind, "interval")
   expect_length(c1$segs, p$n)
@@ -212,8 +220,9 @@ test_that("an interval column ships per-row segments on the observed domain", {
 
 test_that("a sparkline column ships pre-printed geometry plus hover values", {
   ae <- push_fixture()
-  p <- rank_build_payload(ae, group = "TERM", mark = "sparkline",
-                          x = "AVAL", value = "DUR", lo = "LO", hi = "HI")
+  p <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = list(
+    list(type = "series", x = "AVAL", col = "DUR", band = c("LO", "HI"))
+  ))
   c1 <- p$cols[[1]]
   expect_identical(c1$kind, "sparkline")
   expect_length(c1$pl, 4L)
@@ -227,10 +236,12 @@ test_that("a sparkline column ships pre-printed geometry plus hover values", {
                }, numeric(1))[p$label]), 4))
 })
 
-test_that("a sparkline with func gains a companion rank bar", {
+test_that("a leading rank bar beside a trajectory ranks the rows", {
   ae <- push_fixture()
-  p <- rank_build_payload(ae, group = "TERM", mark = "sparkline",
-                          x = "AVAL", value = "DUR", func = "mean")
+  p <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = list(
+    list(type = "simple", func = "mean", col = "DUR", show = "bar"),
+    list(type = "series", x = "AVAL", col = "DUR")
+  ))
   expect_identical(vapply(p$cols, function(c) c$kind, ""),
                    c("bar", "sparkline"))
   # The bar ranks the rows: row order = mean(DUR) per term, descending.
@@ -240,16 +251,14 @@ test_that("a sparkline with func gains a companion rank bar", {
   # The sparkline column itself still sorts by LAST value, not the mean.
   expect_false(identical(as.numeric(p$cols[[2]]$v),
                          as.numeric(p$cols[[1]]$v)))
-  # A counting func means no bar (the constructor's bar-era default).
-  p2 <- rank_build_payload(ae, group = "TERM", mark = "sparkline",
-                           x = "AVAL", value = "DUR", func = "count")
-  expect_identical(vapply(p2$cols, function(c) c$kind, ""), "sparkline")
 })
 
 test_that("negative lows extend the distribution domain below zero", {
   d <- data.frame(g = rep(c("a", "b"), each = 6),
                   v = c(-5, -2, 0, 1, 2, 3, 1, 2, 3, 4, 5, 6))
-  prep <- rank_prepare(d, group = "g", mark = "box", value = "v")
+  prep <- rank_prepare(d, group = NULL, by = "g", summaries = list(
+    list(type = "dist", col = "v", show = "box")
+  ))
   # The domain rides on the plan entry now (per-summary scales).
   expect_lt(prep$plan[[1]]$dmin, 0)
   m <- rank_cells(prep)
@@ -285,22 +294,39 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
     sep_cols = list(group = "TERM", func = "count", cols = c("n", "pct")),
     nested = list(group = "TERM", parent = "SOC", func = "count"),
     capped = list(group = "TERM", func = "count", top_n = 2L),
-    # One case per lane mark, so their emitters are byte-compared too.
-    box = list(group = "TERM", mark = "box", value = "DUR"),
-    box_facet = list(group = "TERM", mark = "box", value = "DUR",
-                     facet = "ARM"),
-    box_nested = list(group = "TERM", parent = "SOC", mark = "box",
-                      value = "DUR"),
-    pointrange = list(group = "TERM", mark = "pointrange", value = "DUR",
-                      summary = "mean_ci95"),
-    pr_n1 = list(group = "USUBJID", mark = "pointrange", value = "DUR",
-                 summary = "mean_ci95"),
-    interval = list(group = "USUBJID", mark = "interval", x = "SDY",
-                    xend = "EDY", color = "SEV"),
-    sparkline = list(group = "TERM", mark = "sparkline", x = "AVAL",
-                     value = "DUR", lo = "LO", hi = "HI"),
-    sparkline_bar = list(group = "TERM", mark = "sparkline", x = "AVAL",
-                         value = "DUR", func = "mean"),
+    # One case per glyph, so every emitter is byte-compared too.
+    box = list(by = "TERM", summaries = list(
+      list(type = "dist", col = "DUR", show = "box")
+    )),
+    box_facet = list(by = "TERM", facet = "ARM", summaries = list(
+      list(type = "dist", col = "DUR", show = "box")
+    )),
+    box_nested = list(by = c("SOC", "TERM"), summaries = list(
+      list(type = "dist", col = "DUR", show = "box")
+    )),
+    pointrange = list(by = "TERM", summaries = list(
+      list(type = "dist", col = "DUR", stat = "mean_ci95",
+           show = "pointrange")
+    )),
+    pr_n1 = list(by = "USUBJID", summaries = list(
+      list(type = "dist", col = "DUR", stat = "mean_ci95",
+           show = "pointrange")
+    )),
+    dot = list(by = "TERM", summaries = list(
+      list(type = "simple", func = "mean", col = "DUR", show = "dot")
+    )),
+    interval = list(by = "USUBJID", summaries = list(
+      list(type = "spans", x = "SDY", xend = "EDY", color = "SEV"),
+      list(type = "simple", name = "Events", func = "count",
+           show = "number")
+    )),
+    sparkline = list(by = "TERM", summaries = list(
+      list(type = "series", x = "AVAL", col = "DUR", band = c("LO", "HI"))
+    )),
+    sparkline_bar = list(by = "TERM", summaries = list(
+      list(type = "simple", func = "mean", col = "DUR", show = "bar"),
+      list(type = "series", x = "AVAL", col = "DUR")
+    )),
     # The summarize-table path: every row type in one heterogeneous table,
     # and the facet + pooled + field composition.
     summaries_mixed = list(by = "TERM", summaries = list(

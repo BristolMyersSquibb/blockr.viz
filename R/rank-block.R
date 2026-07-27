@@ -9,43 +9,21 @@
 #'
 #' `summaries` is the config model: an ordered list of typed summary rows
 #' (see below). One row is one group, and every glyph is a horizontal mark
-#' on a shared linear domain confined to a cell. The single-mark shorthand
-#' (`mark = "box"` etc. with the flat mappings) is constructor sugar for a
-#' one-column list; `mark = "bar"` (the default) keeps the ranked-bar
-#' surface with its colour split / facet / comparison machinery. For
-#' anything else -- vertical columns, lines, scatter, a second measure on
-#' an axis -- use [new_chart_block()].
+#' on a shared linear domain confined to a cell. With no `summaries`, the
+#' block is the original ranked-bar table (the flat `group` / `func` /
+#' `color` / `facet` / `compare` surface below). For anything else --
+#' vertical columns, lines, scatter, a second measure on an axis -- use
+#' [new_chart_block()].
 #'
 #' Large inputs behave exactly like the table block: every row is rendered and
 #' the container scrolls. `top_n` is opt-in, for report exhibits where there is
 #' no scrollbar (a pptx slide wants ten bars, not a hundred), and always draws
 #' a visible fold row.
 #'
-#' @param mark The glyph per row: `"bar"` (default), `"box"`, `"pointrange"`,
-#'   `"interval"` or `"sparkline"`.
-#' @param summary Distribution statistic for `mark = "box"` (the body) and
-#'   `mark = "pointrange"` (the interval): one of `"median_q1_q3"`,
-#'   `"mean_sd"`, `"mean_2sd"`, `"mean_se"`, `"mean_ci95"`, `"p5_p95"`,
-#'   `"min_max"`. `NULL` = the per-mark default (`"median_q1_q3"` for the
-#'   box, `"mean_se"` for the point range). `mean_ci95` uses
-#'   `qt(0.975, n - 1)` and reports NA bounds below n = 2 (the cell then
-#'   draws the center alone).
-#' @param whiskers Box whisker rule: `"tukey"` (1.5 x IQR fences clamped to
-#'   the observed extremes, the textbook default) or any `summary` value.
-#' @param x,xend Interval mark: the span's start and end columns (numeric or
-#'   dates), the chart gantt's names. For the sparkline, `x` alone is the
-#'   within-row order column.
-#' @param lo,hi Sparkline only: optional band columns (e.g. a reference
-#'   range), drawn under the line. For the sparkline, `func` set to one of
-#'   `"mean"`, `"median"`, `"sum"`, `"min"`, `"max"` additionally draws a
-#'   companion bar of that reduction beside the trajectory and RANKS the
-#'   rows by it ("highest mean, plus the trajectory"); any other `func`
-#'   means no bar, rows ranked by last value.
-#' @param summaries The summarize-table path
+#' @param summaries The column list
 #'   (`_blockr.design/open/summarize-table/`): an ordered list of typed
-#'   summary rows, each a `list(type =, ...)`. Non-empty, it takes over
-#'   from `mark` (which stays as sugar for the one-glyph case). Types:
-#'   `simple` (`func`, `col`; show `"bar"` or `"number"`), `dist` (`col`,
+#'   summary rows, each a `list(type =, ...)`. Types:
+#'   `simple` (`func`, `col`; show `"bar"`, `"number"` or `"dot"`), `dist` (`col`,
 #'   `stat`, box-only `whiskers`; show `"box"`, `"pointrange"` or
 #'   `"text"`), `field` (`col`; the group's distinct values joined, with a
 #'   fold cap -- never an arbitrary first row), `series` (`x`, `col`,
@@ -125,13 +103,6 @@ new_summarize_table_block <- function(group = NULL,
                                  value = ".count",
                                  func = "count",
                                  id_var = NULL,
-                                 mark = "bar",
-                                 summary = NULL,
-                                 whiskers = "tukey",
-                                 x = NULL,
-                                 xend = NULL,
-                                 lo = NULL,
-                                 hi = NULL,
                                  summaries = list(),
                                  by = NULL,
                                  facet_layout = "by_summary",
@@ -168,13 +139,6 @@ new_summarize_table_block <- function(group = NULL,
   group <- chr_state(group)
   value <- chr_state(value)
   id_var <- chr_state(id_var)
-  mark <- chr_state(mark)
-  summary <- chr_state(summary)
-  whiskers <- chr_state(whiskers)
-  x <- chr_state(x)
-  xend <- chr_state(xend)
-  lo <- chr_state(lo)
-  hi <- chr_state(hi)
   summaries <- if (is.list(summaries)) summaries else list()
   by <- chr_vec_state(by)
   facet_layout <- chr_state(facet_layout)
@@ -202,13 +166,6 @@ new_summarize_table_block <- function(group = NULL,
         r_value   <- shiny::reactiveVal(value %||% ".count")
         r_func    <- shiny::reactiveVal(func %||% "count")
         r_id_var  <- shiny::reactiveVal(id_var)
-        r_mark    <- shiny::reactiveVal(mark %||% "bar")
-        r_summary <- shiny::reactiveVal(summary)
-        r_whiskers <- shiny::reactiveVal(whiskers %||% "tukey")
-        r_x       <- shiny::reactiveVal(x)
-        r_xend    <- shiny::reactiveVal(xend)
-        r_lo      <- shiny::reactiveVal(lo)
-        r_hi      <- shiny::reactiveVal(hi)
         r_summaries <- shiny::reactiveVal(summaries)
         r_by      <- shiny::reactiveVal(as.character(by %||% character()))
         r_facet_layout <- shiny::reactiveVal(facet_layout %||% "by_summary")
@@ -268,8 +225,6 @@ new_summarize_table_block <- function(group = NULL,
           group = r_group, parent = r_parent, color = r_color,
           facet = r_facet, compare = r_compare, func = r_func,
           value = r_value, id_var = r_id_var, bar_mode = r_bar_mode,
-          mark = r_mark, summary = r_summary, whiskers = r_whiskers,
-          x = r_x, xend = r_xend, lo = r_lo, hi = r_hi,
           summaries = r_summaries, by = r_by,
           facet_layout = r_facet_layout,
           cols = r_cols, fields = r_fields, sort_by = r_sort_by,
@@ -314,7 +269,6 @@ new_summarize_table_block <- function(group = NULL,
               n <- suppressWarnings(as.integer(as.character(val)[[1L]]))
               setters[[key]](if (is.na(n) || n <= 0L) NULL else n)
             } else if (key %in% c("func", "bar_mode", "sort_by", "sort_dir",
-                                  "mark", "summary", "whiskers",
                                   "facet_layout")) {
               v <- as.character(unlist(val %||% character()))
               if (length(v) && nzchar(v[[1L]])) setters[[key]](v[[1L]])
@@ -435,9 +389,6 @@ new_summarize_table_block <- function(group = NULL,
               group = r_group(), parent = r_parent(), color = r_color(),
               facet = r_facet(), compare = r_compare(), func = r_func(),
               value = r_value(), id_var = r_id_var(),
-              mark = r_mark(), summary = r_summary(),
-              whiskers = r_whiskers(), x = r_x(), xend = r_xend(),
-              lo = r_lo(), hi = r_hi(),
               summaries = r_summaries(), by = r_by(),
               facet_layout = r_facet_layout(),
               bar_mode = r_bar_mode(), cols = r_cols(), fields = r_fields(),
@@ -459,8 +410,6 @@ new_summarize_table_block <- function(group = NULL,
             group = r_group(), value = r_value(), func = r_func(),
             id_var = r_id_var(), parent = r_parent(), color = r_color(),
             bar_mode = r_bar_mode(), facet = r_facet(), compare = r_compare(),
-            mark = r_mark(), summary = r_summary(), whiskers = r_whiskers(),
-            x = r_x(), xend = r_xend(), lo = r_lo(), hi = r_hi(),
             summaries = r_summaries(), by = r_by(),
             facet_layout = r_facet_layout(),
             cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
@@ -495,9 +444,7 @@ new_summarize_table_block <- function(group = NULL,
           # across save/restore (the same warning as the filter_* args).
           state = list(
             group = r_group, value = r_value, func = r_func,
-            id_var = r_id_var, mark = r_mark, summary = r_summary,
-            whiskers = r_whiskers, x = r_x, xend = r_xend, lo = r_lo,
-            hi = r_hi, summaries = r_summaries, by = r_by,
+            id_var = r_id_var, summaries = r_summaries, by = r_by,
             facet_layout = r_facet_layout, parent = r_parent,
             color = r_color,
             bar_mode = r_bar_mode, facet = r_facet, compare = r_compare,
@@ -534,15 +481,13 @@ new_summarize_table_block <- function(group = NULL,
     # picks yet, and clearing a pick must not wedge the block -- see
     # reference: allow_empty_state wedge).
     allow_empty_state = c(
-      "group", "value", "id_var", "summary", "x", "xend", "lo", "hi",
-      "summaries", "by",
+      "group", "value", "id_var", "summaries", "by",
       "parent", "color", "facet", "compare",
       "cols", "fields", "top_n", "title", "subtitle", "caption", "drill",
       "ctrl_target", "ctrl_table", "filter_column", "filter_values"
     ),
     external_ctrl = c(
-      "group", "value", "func", "id_var", "mark", "summary", "whiskers",
-      "x", "xend", "lo", "hi", "summaries", "by", "facet_layout",
+      "group", "value", "func", "id_var", "summaries", "by", "facet_layout",
       "parent", "color", "bar_mode",
       "facet", "compare", "cols", "fields", "sort_by", "sort_dir", "top_n",
       "max_height", "search", "title", "subtitle", "caption", "drill",
@@ -581,76 +526,12 @@ rank_arguments <- function() {
       example = "AEDECOD",
       type = arg_string()
     ),
-    mark = new_arg_spec(
-      paste0(
-        "The glyph per row. bar = ranked bars (the default; supports color ",
-        "split, facet columns and a comparison). box / pointrange = a ",
-        "distribution summary of `value` per row, statistics computed ",
-        "server-side (see `summary`). interval = a swimlane of x/xend ",
-        "spans per underlying row (e.g. AE episodes per subject, colored ",
-        "by `color`). sparkline = one small line per row: `value` over the ",
-        "within-row order `x`, with an optional lo/hi band; `func` = mean / ",
-        "median / sum / min / max adds a companion rank bar of that ",
-        "reduction beside the trajectory and sorts the rows by it."
-      ),
-      example = "box",
-      type = arg_enum(c("bar", "box", "pointrange", "interval", "sparkline"))
-    ),
-    summary = new_arg_spec(
-      paste0(
-        "Distribution statistic for mark = box (the body) or pointrange ",
-        "(the interval). Unset = the per-mark default (median_q1_q3 for ",
-        "the box, mean_se for the point range). mean_ci95 is a t-based 95% ",
-        "confidence interval (undefined below n = 2: the cell then draws ",
-        "the center alone)."
-      ),
-      example = "mean_ci95",
-      type = arg_enum(c("median_q1_q3", "mean_sd", "mean_2sd", "mean_se",
-                        "mean_ci95", "p5_p95", "min_max"))
-    ),
-    whiskers = new_arg_spec(
-      paste0(
-        "Box whisker rule: tukey (1.5 x IQR fences clamped to the observed ",
-        "extremes, the textbook default) or any `summary` value (e.g. ",
-        "min_max for range whiskers)."
-      ),
-      example = "tukey",
-      type = arg_enum(c("tukey", "median_q1_q3", "mean_sd", "mean_2sd",
-                        "mean_se", "mean_ci95", "p5_p95", "min_max"))
-    ),
-    x = new_arg_spec(
-      paste0(
-        "Interval mark: the span start column (study day or date, e.g. ",
-        "ASTDY). Sparkline mark: the within-row order column (e.g. visit ",
-        "number or date)."
-      ),
-      example = "ASTDY",
-      type = arg_string()
-    ),
-    xend = new_arg_spec(
-      "Interval mark only: the span end column (e.g. AENDY).",
-      example = "AENDY",
-      type = arg_string()
-    ),
-    lo = new_arg_spec(
-      paste0(
-        "Sparkline mark only: lower band column (e.g. a reference range ",
-        "low), drawn as a shaded band under the line."
-      ),
-      example = "A1LO",
-      type = arg_string()
-    ),
-    hi = new_arg_spec(
-      "Sparkline mark only: upper band column (e.g. a reference range high).",
-      example = "A1HI",
-      type = arg_string()
-    ),
     summaries = new_arg_spec(
       paste0(
         "The summarize-table mode: an ordered list of summary columns, one ",
-        "object per column; non-empty it REPLACES `mark` and the flat ",
-        "mappings. Each object: type = simple (func + col, shown as bar or ",
-        "number), dist (col + stat, optional whiskers, shown as box / ",
+        "object per column; non-empty it REPLACES the flat bar ",
+        "mappings. Each object: type = simple (func + col, shown as bar, ",
+        "number or dot), dist (col + stat, optional whiskers, shown as box / ",
         "pointrange / text), field (col: the group's distinct values ",
         "joined, a group-level fact), series (x + col + optional ",
         "band = [lo, hi]: a sparkline), spans (x + xend + optional color: ",
@@ -895,15 +776,13 @@ rank_guidance <- function() {
     "form carries search, click-to-sort, exact values and an arbitrary row",
     "count, and it beats the plain table because the mark makes the",
     "pattern readable at a glance.",
-    "\n- `mark` picks the glyph; everything below describes the default",
-    "bar. box / pointrange need `value` (statistics are computed",
-    "server-side, `summary` picks which; mean_ci95 is exact, qt-based).",
-    "interval needs `x` + `xend`. sparkline needs `x` (the within-row",
-    "order) + `value`.",
-    "\n- For MULTIPLE columns in one table (a bar beside a box beside a",
-    "sparkline), use `summaries` + `by` instead of `mark`: an ordered list",
-    "of typed summary columns over one grouping. This is the general form;",
-    "`mark` is its one-column sugar.",
+    "\n- `summaries` + `by` is the config model: an ordered list of typed",
+    "summary columns over one grouping (simple / dist / field / series /",
+    "spans / expr), each with its own display (bar, number, dot, box,",
+    "pointrange, text, swimlane, sparkline) and a cell-or-pooled scope.",
+    "Statistics are computed server-side; mean_ci95 is exact, qt-based.",
+    "\n- Without `summaries`, the flat arguments below give the original",
+    "ranked-bar table.",
     "\n- `group` is the only required argument. `func = \"count_distinct\"`",
     "with `id_var` is the clinical default (subjects, not events).",
     "\n- `func = \"identity\"` ranks a pre-computed value as-is (one row per",

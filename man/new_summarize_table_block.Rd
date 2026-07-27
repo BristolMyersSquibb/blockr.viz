@@ -11,13 +11,6 @@ new_summarize_table_block(
   value = ".count",
   func = "count",
   id_var = NULL,
-  mark = "bar",
-  summary = NULL,
-  whiskers = "tukey",
-  x = NULL,
-  xend = NULL,
-  lo = NULL,
-  hi = NULL,
   summaries = list(),
   by = NULL,
   facet_layout = "by_summary",
@@ -60,36 +53,10 @@ data already reduced upstream -- e.g. one value per subject);
 subject identifier \code{"count_distinct"} counts, which is what makes a count
 read as "subjects with at least one event" rather than "events".}
 
-\item{mark}{The glyph per row: \code{"bar"} (default), \code{"box"}, \code{"pointrange"},
-\code{"interval"} or \code{"sparkline"}.}
-
-\item{summary}{Distribution statistic for \code{mark = "box"} (the body) and
-\code{mark = "pointrange"} (the interval): one of \code{"median_q1_q3"},
-\code{"mean_sd"}, \code{"mean_2sd"}, \code{"mean_se"}, \code{"mean_ci95"}, \code{"p5_p95"},
-\code{"min_max"}. \code{NULL} = the per-mark default (\code{"median_q1_q3"} for the
-box, \code{"mean_se"} for the point range). \code{mean_ci95} uses
-\code{qt(0.975, n - 1)} and reports NA bounds below n = 2 (the cell then
-draws the center alone).}
-
-\item{whiskers}{Box whisker rule: \code{"tukey"} (1.5 x IQR fences clamped to
-the observed extremes, the textbook default) or any \code{summary} value.}
-
-\item{x, xend}{Interval mark: the span's start and end columns (numeric or
-dates), the chart gantt's names. For the sparkline, \code{x} alone is the
-within-row order column.}
-
-\item{lo, hi}{Sparkline only: optional band columns (e.g. a reference
-range), drawn under the line. For the sparkline, \code{func} set to one of
-\code{"mean"}, \code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"} additionally draws a
-companion bar of that reduction beside the trajectory and RANKS the
-rows by it ("highest mean, plus the trajectory"); any other \code{func}
-means no bar, rows ranked by last value.}
-
-\item{summaries}{The summarize-table path
+\item{summaries}{The column list
 (\verb{_blockr.design/open/summarize-table/}): an ordered list of typed
-summary rows, each a \code{list(type =, ...)}. Non-empty, it takes over
-from \code{mark} (which stays as sugar for the one-glyph case). Types:
-\code{simple} (\code{func}, \code{col}; show \code{"bar"} or \code{"number"}), \code{dist} (\code{col},
+summary rows, each a \code{list(type =, ...)}. Types:
+\code{simple} (\code{func}, \code{col}; show \code{"bar"}, \code{"number"} or \code{"dot"}), \code{dist} (\code{col},
 \code{stat}, box-only \code{whiskers}; show \code{"box"}, \code{"pointrange"} or
 \code{"text"}), \code{field} (\code{col}; the group's distinct values joined, with a
 fold cap -- never an arbitrary first row), \code{series} (\code{x}, \code{col},
@@ -188,12 +155,11 @@ the new constructor on the next save).
 \details{
 \code{summaries} is the config model: an ordered list of typed summary rows
 (see below). One row is one group, and every glyph is a horizontal mark
-on a shared linear domain confined to a cell. The single-mark shorthand
-(\code{mark = "box"} etc. with the flat mappings) is constructor sugar for a
-one-column list; \code{mark = "bar"} (the default) keeps the ranked-bar
-surface with its colour split / facet / comparison machinery. For
-anything else -- vertical columns, lines, scatter, a second measure on
-an axis -- use \code{\link[=new_chart_block]{new_chart_block()}}.
+on a shared linear domain confined to a cell. With no \code{summaries}, the
+block is the original ranked-bar table (the flat \code{group} / \code{func} /
+\code{color} / \code{facet} / \code{compare} surface below). For anything else --
+vertical columns, lines, scatter, a second measure on an axis -- use
+\code{\link[=new_chart_block]{new_chart_block()}}.
 
 Large inputs behave exactly like the table block: every row is rendered and
 the container scrolls. \code{top_n} is opt-in, for report exhibits where there is
