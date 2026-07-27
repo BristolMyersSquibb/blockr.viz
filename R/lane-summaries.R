@@ -664,14 +664,18 @@ lane_summary_domains <- function(plan, rows) {
         any(vapply(plan[idx], function(p) isTRUE(p$zero), logical(1L)))
       if (zero) {
         dmax <- if (length(vals)) max(c(0, vals)) else 0
-        dmin <- if (identical(kind, "bar")) 0 else {
+        dmin <- if (identical(kind, "bar")) {
+          0
+        } else {
           if (length(vals)) min(c(0, vals)) else 0
         }
       } else {
         rng <- if (length(vals)) range(vals) else c(0, 1)
         # A hair of padding so a glyph at the extreme is not flush against
         # the cell edge, and a degenerate (all-equal) column still draws.
-        pad <- if (rng[[2L]] > rng[[1L]]) (rng[[2L]] - rng[[1L]]) * 0.04 else {
+        pad <- if (rng[[2L]] > rng[[1L]]) {
+          (rng[[2L]] - rng[[1L]]) * 0.04
+        } else {
           max(abs(rng[[1L]]) * 0.04, 0.5)
         }
         dmin <- rng[[1L]] - pad

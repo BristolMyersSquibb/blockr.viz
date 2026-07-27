@@ -160,7 +160,9 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       vraw <- if (!is.null(p$key)) rows[[p$key]] else rowSums(
         vapply(segv, identity, numeric(n)))
       lab <- val_parts(p, vraw)
-      v <- if (is.null(p$key)) tot else {
+      v <- if (is.null(p$key)) {
+        tot
+      } else {
         if (!is.null(p$denom) && is.finite(p$denom) && p$denom > 0) {
           vraw / p$denom * 100
         } else {
@@ -655,23 +657,33 @@ rank_box_html <- function(c) {
       if (!is.na(c$w1[[i]])) {
         paste0("<i class=\"lane-wh\" style=\"left:", rank_fmt_w(c$wl[[i]]),
                "%;width:", rank_fmt_w(c$w1[[i]]), "%\"></i>")
-      } else "",
+      } else {
+        ""
+      },
       if (!is.na(c$w2[[i]])) {
         paste0("<i class=\"lane-wh\" style=\"left:", rank_fmt_w(c$b2[[i]]),
                "%;width:", rank_fmt_w(c$w2[[i]]), "%\"></i>")
-      } else "",
+      } else {
+        ""
+      },
       if (!is.na(c$w1[[i]])) {
         paste0("<i class=\"lane-cap\" style=\"left:", rank_fmt_w(c$wl[[i]]),
                "%\"></i>")
-      } else "",
+      } else {
+        ""
+      },
       if (!is.na(c$w2[[i]])) {
         paste0("<i class=\"lane-cap\" style=\"left:", rank_fmt_w(c$wh[[i]]),
                "%\"></i>")
-      } else "",
+      } else {
+        ""
+      },
       if (!is.na(c$bw[[i]])) {
         paste0("<i class=\"lane-box\" style=\"left:", rank_fmt_w(c$bl[[i]]),
                "%;width:", rank_fmt_w(c$bw[[i]]), "%\"></i>")
-      } else "",
+      } else {
+        ""
+      },
       "<i class=\"lane-med\" style=\"left:", rank_fmt_w(c$bc[[i]]),
       "%\"></i></div>"
     )
@@ -694,7 +706,9 @@ rank_pr_html <- function(c) {
       if (!is.na(c$rw[[i]])) {
         paste0("<i class=\"lane-rng\" style=\"left:", rank_fmt_w(c$l[[i]]),
                "%;width:", rank_fmt_w(c$rw[[i]]), "%\"></i>")
-      } else "",
+      } else {
+        ""
+      },
       "<i class=\"lane-ctr\" style=\"left:", rank_fmt_w(c$c[[i]]),
       "%\"></i></div>"
     )
@@ -746,25 +760,35 @@ rank_sp_html <- function(c) {
         paste0("<rect class=\"lane-refband\" x=\"0\" y=\"",
                rank_fmt_w(c$rby), "\" width=\"100\" height=\"",
                rank_fmt_w(c$rbh), "\"></rect>")
-      } else "",
+      } else {
+        ""
+      },
       if (!is.na(c$bd[[i]])) {
         paste0("<polygon class=\"lane-band\" points=\"", c$bd[[i]],
                "\"></polygon>")
-      } else "",
+      } else {
+        ""
+      },
       if (!is.na(c$rc)) {
         paste0("<line class=\"lane-refline\" x1=\"0\" y1=\"",
                rank_fmt_w(c$rc), "\" x2=\"100\" y2=\"", rank_fmt_w(c$rc),
                "\" vector-effect=\"non-scaling-stroke\"></line>")
-      } else "",
+      } else {
+        ""
+      },
       if (nzchar(c$pl[[i]])) {
         paste0("<polyline class=\"lane-ln\" points=\"", c$pl[[i]],
                "\" vector-effect=\"non-scaling-stroke\"></polyline>")
-      } else "",
+      } else {
+        ""
+      },
       "</svg>",
       if (!is.na(c$dx[[i]])) {
         paste0("<i class=\"lane-dot\" style=\"left:", rank_fmt_w(c$dx[[i]]),
                "%;top:", rank_fmt_w(c$dy[[i]]), "%\"></i>")
-      } else "",
+      } else {
+        ""
+      },
       "</div>"
     )
   }, character(1L))
