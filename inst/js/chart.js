@@ -4202,9 +4202,18 @@
           const cbLevels = [...new Set(this.data.map(
             r => String(r[color] ?? '')
           ))].sort();
+          // Chip colors resolve EXACTLY like the lines do: board scale map
+          // first, then the cycling lookup. colorForLevel returns early on a
+          // scale hit and never fills _colorLookup, so reading only the
+          // lookup left scale-mapped charts with palette-cycled legend chips
+          // while the lines wore the mapped colors (fixed SEX binding: blue/
+          // amber lines under a red/blue legend).
           colorByLegendData = cbLevels.map((lvl, i) => ({
             name: lvl,
-            itemStyle: { color: lookup[lvl] || palette[i % palette.length] }
+            itemStyle: { color:
+              (colorScale && colorScale.color && colorScale.color[lvl] != null)
+                ? colorScale.color[lvl]
+                : (lookup[lvl] || palette[i % palette.length]) }
           }));
           // Precompute series-name → color-value map used by the
           // legend click handler to toggle all series in a color group.
