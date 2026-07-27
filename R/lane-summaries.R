@@ -133,18 +133,25 @@ lane_norm_summaries <- function(summaries) {
   out
 }
 
-#' Does this summary take the table's colour dimension as a split inside the
-#' cell? Every LANE MARK does -- a distribution in either style, and the
-#' simple row's dot, which is the same emitter carrying one number.
+#' Does this summary read the table's colour dimension? Everything that draws
+#' a value does -- what CHANGES is the shape the split takes, which
+#' lane_summary_plan() decides:
 #'
-#' A bar does not, and neither does a number: colour on a magnitude column
-#' means stacked or grouped segments (the `barsplit` mark on the single
-#' measure path), which is a different shape with its own mode, not a second
-#' glyph in the cell. A text cell has nothing to colour.
+#'   dist (glyph), simple dot  one mark per level in the cell, on the
+#'                             column's one scale
+#'   simple bar                stacked segments (`barsplit`), because colour
+#'                             on a magnitude is its composition: the bar
+#'                             still means the group's total, and when a
+#'                             group has rows of ONE level (a table by
+#'                             subject) it degenerates to a single bar in
+#'                             that level's colour, which is the answer
+#'                             anyone looking at it expects
+#'
+#' A number and a text cell have nothing to colour.
 #' @noRd
 lane_takes_color <- function(s) {
   if (identical(s$type, "dist")) return(!identical(s$show, "text"))
-  identical(s$type, "simple") && identical(s$show, "dot")
+  identical(s$type, "simple") && s$show %in% c("dot", "bar")
 }
 
 #' The statistic that supplies a distribution glyph's CENTRE. The inner range
@@ -314,20 +321,23 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
           target
         }
         target <- put(target, slice, paste0(sid, "_v"))
-        # The colour dimension, exactly as a distribution takes it: one dot
-        # per level in the same cell, on the column's one scale. The pooled
-        # value above still supplies the sort key. Only the dot splits --
-        # see lane_takes_color().
+        # The pooled value above stays the sort key and the label either
+        # way; the per-level values are what the split draws. The dot names
+        # them for lane_color_split()'s geometry keys, the bar for the
+        # barsplit emitter's `prefix + level` lookup.
         cc <- s$.color
         if (!is.null(cc)) {
+          dot <- identical(s$show, "dot")
           for (j in seq_along(s$.levels)) {
             lv <- s$.levels[[j]]
-            # `bc` (not `v`): the level column names have to match the
-            # geometry keys lane_color_split() hands the cell builder.
+            out <- if (dot) {
+              paste0(sid, "_L", j, "_bc")
+            } else {
+              paste0(sid, "_S_", lv)
+            }
             target <- put(target,
                           slice[as.character(slice[[cc]]) == lv, ,
-                                drop = FALSE],
-                          paste0(sid, "_L", j, "_bc"))
+                                drop = FALSE], out)
           }
         }
         target
@@ -612,6 +622,17 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                    bare = TRUE,
                    words = list(center = s$name), show_val = TRUE),
         lane_color_split(s, sid, "bc", data, scale_map))
+    } else if (identical(s$show, "bar") && !is.null(s$.color) &&
+                 length(s$.levels)) {
+      # Colour on a magnitude is its composition: the bar keeps meaning the
+      # group's total and the segments say what it is made of. A group whose
+      # rows are all one level draws ONE segment, in that level's colour.
+      c(base, list(kind = "barsplit", key = paste0(sid, "_v"),
+                   prefix = paste0(sid, "_S_"), series = s$.levels,
+                   mode = "stacked", show_val = TRUE,
+                   fills = unname(rank_level_colors(
+                     scale_map, s$.color, s$.levels, data[[s$.color]]
+                   )[s$.levels])))
     } else {
       kind <- if (identical(s$show, "bar")) "bar" else "num"
       c(base, list(kind = kind, key = paste0(sid, "_v"),
@@ -833,7 +854,7 @@ lane_summary_domains <- function(plan, rows) {
   for (idx in groups) {
     kinds <- unique(vapply(plan[idx], function(p) p$kind, character(1L)))
     kind <- kinds[[1L]]
-    if (kind %in% c("bar", "box", "pointrange")) {
+    if (kind %in% c("bar", "barsplit", "box", "pointrange")) {
       vals <- numeric()
       for (i in idx) {
         p <- plan[[i]]
@@ -841,7 +862,9 @@ lane_summary_domains <- function(plan, rows) {
         # the tooltip); it is not a point on the value axis, and letting it
         # in stretched the domain to the sample size -- a 49-105 mmHg box on
         # a 0-1012 track.
-        cols <- if (identical(kind, "bar")) {
+        cols <- if (kind %in% c("bar", "barsplit")) {
+          # The split bar scales on its TOTAL, the same number the plain bar
+          # uses -- the segments are a share of it, so the two read alike.
           p$key
         } else {
           pos <- function(cm) unname(cm[setdiff(names(cm), "n")])
@@ -858,11 +881,11 @@ lane_summary_domains <- function(plan, rows) {
       # read against the other rows, not against zero, so pinning zero only
       # squashes data that lives far from it (chart parity: `scale: true` on
       # the boxplot, blockr.viz d2dd210).
-      zero <- identical(kind, "bar") ||
+      zero <- kind %in% c("bar", "barsplit") ||
         any(vapply(plan[idx], function(p) isTRUE(p$zero), logical(1L)))
       if (zero) {
         dmax <- if (length(vals)) max(c(0, vals)) else 0
-        dmin <- if (identical(kind, "bar")) {
+        dmin <- if (kind %in% c("bar", "barsplit")) {
           0
         } else {
           if (length(vals)) min(c(0, vals)) else 0

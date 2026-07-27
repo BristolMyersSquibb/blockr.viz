@@ -127,6 +127,9 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
              fill = p$fill, sub = rows$.level > 0L), lab)
     } else if (identical(p$kind, "barsplit")) {
       prefix <- p$prefix %||% ".s_"
+      # Per-entry scale, like the plain bar: on the summaries path every
+      # column owns its domain, and the prep-level bar_max is 0 there.
+      emx <- p$dmax %||% mx
       mat <- vapply(p$series, function(lv) {
         x <- rows[[paste0(prefix, lv)]]
         if (is.null(x)) rep(0, n) else as.numeric(x)
@@ -145,12 +148,12 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       # percent normalises each row to 100, grouped scales each series
       # independently. Computed here so both consumers print the same numbers.
       seg <- if (identical(p$mode, "grouped")) {
-        lapply(seq_along(p$series), function(j) pct_w(mat[, j]))
+        lapply(seq_along(p$series), function(j) mk_pct_w(emx)(mat[, j]))
       } else {
         scale <- if (identical(p$mode, "percent")) {
           ifelse(tot > 0, 100, 0)
-        } else if (is.finite(mx) && mx > 0) {
-          tot / mx * 100
+        } else if (is.finite(emx) && emx > 0) {
+          tot / emx * 100
         } else {
           tot * 0
         }
@@ -171,7 +174,12 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       }
       c(list(kind = "barsplit", mode = p$mode %||% "stacked",
              names = as.character(p$series),
-             fills = unname(prep$palette[as.character(p$series)]),
+             # The plan's own colours win: a summaries column resolves them
+             # through the same resolver as every other mark, so a split bar
+             # and a split box agree about which level is which.
+             fills = as.character(p$fills %||%
+                                    unname(prep$palette[
+                                      as.character(p$series)])),
              seg = seg, segv = segv,
              v = sortv(v)), lab)
     } else if (identical(p$kind, "bardiv")) {

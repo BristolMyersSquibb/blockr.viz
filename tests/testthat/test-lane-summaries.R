@@ -134,9 +134,13 @@ test_that("the colour dimension reaches every lane mark, dot included", {
   expect_length(p$plan[[1L]]$lcols, length(lv))
   expect_identical(names(p$plan[[1L]]$lcols[[1L]]), "bc")
   expect_true(all(unlist(p$plan[[1L]]$lcols) %in% names(p$rows)))
-  # A bar's colour means stacked/grouped segments, not a second glyph in the
-  # cell -- so it stays unsplit rather than half-adopting the dimension.
+  # A bar takes the same dimension as a COMPOSITION: stacked segments, one
+  # per level, still totalling the group's value -- not a second glyph in
+  # the cell.
+  expect_identical(p$plan[[2L]]$kind, "barsplit")
   expect_null(p$plan[[2L]]$lcols)
+  expect_identical(p$plan[[2L]]$series, lv)
+  expect_true(all(paste0(p$plan[[2L]]$prefix, lv) %in% names(p$rows)))
   expect_identical(p$plan[[3L]]$levels, lv)
   # Every level of a split column is read against ONE scale.
   m <- rank_cells(p)
@@ -145,6 +149,23 @@ test_that("the colour dimension reaches every lane mark, dot included", {
   # Nothing spans the cell, so the dot keeps its hairline in every level.
   expect_true(all(vapply(m$cols[[1L]]$lv, function(g) isTRUE(g$bare),
                          logical(1L))))
+  # The split bar scales on its own column max, not the prep-level bar_max
+  # (which is 0 on this path) -- otherwise every segment ships width 0.
+  expect_true(max(unlist(m$cols[[2L]]$seg), na.rm = TRUE) > 0)
+  # Segments carry the level colours, and they sum to the bar's value.
+  expect_identical(m$cols[[2L]]$fills, p$plan[[2L]]$fills)
+  expect_equal(Reduce(`+`, m$cols[[2L]]$segv), m$cols[[2L]]$v)
+
+  # A group whose rows are all ONE level draws that level alone: grouping by
+  # subject (every subject has one SEX) is a single bar in its own colour,
+  # not a stack with an empty half.
+  one <- lane_prepare_summaries(ae, by = "USUBJID", summaries = S,
+                                color = "ARM")
+  segv <- rank_cells(one)$cols[[2L]]$segv
+  nonzero <- vapply(seq_along(segv[[1L]]), function(i) {
+    sum(vapply(segv, function(x) x[[i]] > 0, logical(1L)))
+  }, integer(1L))
+  expect_true(all(nonzero <= 1L))
 })
 
 test_that("the column axis prints the domain once, on glyph columns only", {
