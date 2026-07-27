@@ -30,15 +30,18 @@ register_viz_blocks <- function() {
       "new_tile_block",
       "new_chart_block",
       "new_table_block",
-      "new_lane_chart_block"
+      "new_summarize_table_block"
     ),
     name = c(
-      "Summary Table",
+      # "Variable summary", not "Summary Table": its rows are VARIABLES
+      # (the display-shaped Table-1 producer), and the name must not
+      # collide with the summarize table, whose rows are groups.
+      "Variable summary (Table 1)",
       "gt Table",
       "Tile",
       "Chart",
       "Table",
-      "Lane chart"
+      "Summarize table"
     ),
     description = c(
       "Wide, display-shaped multi-variable summary (list of variables by Y pattern). Successor to tidy_summary_block.",
@@ -46,7 +49,7 @@ register_viz_blocks <- function() {
       "Scorecard of bold KPI numbers \u2014 cards or an aligned matrix, with deltas / fills / status pills and click-to-filter drill. A pure renderer (shape upstream).",
       "Configurable chart with click-to-filter drill-down",
       "Interactive table (sticky header, sort, search) with optional cell coloring and click-to-filter drill-down",
-      "Horizontal marks as an HTML table \u2014 ranked bars, box / point-range distribution summaries, x/xend interval swimlanes or per-row sparklines, with search, sort, exact values and click-to-filter drill-down"
+      "Grouped summary table with graphical cells \u2014 an ordered list of summary columns (count/mean bars, box / point-range distributions, interval swimlanes, sparklines, text stats, group facts) over one grouping, with facet, search, sort and click-to-filter drill-down"
     ),
     # Categories come from blockr.core::suggested_categories() (a fixed
     # vocabulary the pickers group by; anything else warns as discouraged).

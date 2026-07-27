@@ -1,20 +1,20 @@
-#' Lane Chart Block
+#' Summarize Table Block
 #'
-#' Horizontal marks rendered as an HTML table: the third sibling of
-#' [new_chart_block()] and [new_table_block()]. It takes the chart's
-#' vocabulary (`group` / `color` / `facet` / `bar_mode` / `sort_by` / `drill`)
-#' and the table's rendering (sticky header, client-side search and sort,
-#' scroll at `max_height`, exact values in their own columns).
+#' `group_by(by) |> summarise(...)` where every column is a summarising
+#' function over the group's rows, rendered as text or as a glyph -- a bar
+#' beside a box beside a sparkline in one interactive table. The third
+#' sibling of [new_chart_block()] and [new_table_block()]: the chart's
+#' vocabulary, the table's rendering (sticky header, client-side search and
+#' sort, scroll at `max_height`, exact values in their own columns).
 #'
-#' One row is one category, and the mark is a horizontal glyph on a shared
-#' linear domain confined to a cell. `mark` picks the glyph: ranked `"bar"`s
-#' (the original surface, with colour split / facet / comparison), a `"box"`
-#' or `"pointrange"` distribution summary per row (statistics computed in R,
-#' see `summary` / `whiskers`), an `"interval"` swimlane (`x` / `xend` spans
-#' per underlying row -- e.g. adverse-event episodes per subject), or a
-#' `"sparkline"` per row (`value` over the within-row order `x`, with an
-#' optional `lo` / `hi` band). For anything else -- vertical columns, lines,
-#' scatter, a second measure on an axis -- use [new_chart_block()].
+#' `summaries` is the config model: an ordered list of typed summary rows
+#' (see below). One row is one group, and every glyph is a horizontal mark
+#' on a shared linear domain confined to a cell. The single-mark shorthand
+#' (`mark = "box"` etc. with the flat mappings) is constructor sugar for a
+#' one-column list; `mark = "bar"` (the default) keeps the ranked-bar
+#' surface with its colour split / facet / comparison machinery. For
+#' anything else -- vertical columns, lines, scatter, a second measure on
+#' an axis -- use [new_chart_block()].
 #'
 #' Large inputs behave exactly like the table block: every row is rendered and
 #' the container scrolls. `top_n` is opt-in, for report exhibits where there is
@@ -114,11 +114,14 @@
 #'   board save and restore.
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #'
-#' @return A blockr transform block of class `lane_chart_block`.
+#' @return A blockr transform block of class `summarize_table_block`.
 #' @examplesIf interactive()
-#' new_lane_chart_block(group = "cyl")
+#' new_summarize_table_block(
+#'   by = "cyl",
+#'   summaries = list(list(type = "simple", func = "count", show = "bar"))
+#' )
 #' @export
-new_lane_chart_block <- function(group = NULL,
+new_summarize_table_block <- function(group = NULL,
                                  value = ".count",
                                  func = "count",
                                  id_var = NULL,
@@ -519,9 +522,10 @@ new_lane_chart_block <- function(group = NULL,
         shiny::uiOutput(ns("rank_chrome"))
       )
     },
-    # `rank_block` stays in the class vector so S3 usage and saved boards
-    # from the rank era keep dispatching.
-    class = c("lane_chart_block", "rank_block", "transform_block", "block"),
+    # `lane_chart_block` and `rank_block` stay in the class vector so S3
+    # usage and saved boards from the earlier eras keep dispatching.
+    class = c("summarize_table_block", "lane_chart_block", "rank_block",
+              "transform_block", "block"),
     # Same input contract as the table block: a dispatch check only, so a
     # composer table (or anything with an as_annotated_df method) connects
     # directly, and a value the method refuses errors at eval time.
@@ -548,13 +552,20 @@ new_lane_chart_block <- function(group = NULL,
   )
 }
 
-#' @rdname new_lane_chart_block
-#' @description `new_rank_block()` is the block's former name, kept as a
-#'   deprecated alias so saved boards restore: it constructs the same
-#'   `lane_chart_block` (and records the new constructor on the next save).
+#' @rdname new_summarize_table_block
+#' @description `new_lane_chart_block()` and `new_rank_block()` are the
+#'   block's former names, kept as deprecated aliases so saved boards
+#'   restore: they construct the same `summarize_table_block` (and record
+#'   the new constructor on the next save).
+#' @export
+new_lane_chart_block <- function(...) {
+  new_summarize_table_block(...)
+}
+
+#' @rdname new_summarize_table_block
 #' @export
 new_rank_block <- function(...) {
-  new_lane_chart_block(...)
+  new_summarize_table_block(...)
 }
 
 #' Argument specs for the lane chart block

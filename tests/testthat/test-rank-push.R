@@ -250,7 +250,8 @@ test_that("negative lows extend the distribution domain below zero", {
   d <- data.frame(g = rep(c("a", "b"), each = 6),
                   v = c(-5, -2, 0, 1, 2, 3, 1, 2, 3, 4, 5, 6))
   prep <- rank_prepare(d, group = "g", mark = "box", value = "v")
-  expect_lt(prep$bar_min, 0)
+  # The domain rides on the plan entry now (per-summary scales).
+  expect_lt(prep$plan[[1]]$dmin, 0)
   m <- rank_cells(prep)
   c1 <- m$cols[[1]]
   # Everything still renders inside the track.

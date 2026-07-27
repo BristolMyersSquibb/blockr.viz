@@ -23,6 +23,45 @@ LANE_ROW_TYPES <- list(
   expr = "text"
 )
 
+#' The single-mark constructor sugar, canonicalized: `mark = "box"` etc.
+#' build the equivalent one-glyph summaries list, so there is ONE config
+#' model and one prepare path. `fields` become field rows; the sparkline's
+#' `func` companion becomes an honest leading bar row; the interval gains
+#' its Events count as a number row.
+#' @noRd
+lane_mark_summaries <- function(mark, value = NULL, func = NULL,
+                                summary = NULL, whiskers = NULL, x = NULL,
+                                xend = NULL, lo = NULL, hi = NULL,
+                                color = NULL, fields = character()) {
+  val <- if (!is.null(value) && !identical(value, ".count")) value
+  field_rows <- lapply(fields[nzchar(fields)], function(f) {
+    list(type = "field", col = f)
+  })
+  main <- switch(mark,
+    box = list(list(type = "dist", col = val,
+                    stat = summary %||% "median_q1_q3",
+                    whiskers = whiskers %||% "tukey", show = "box")),
+    pointrange = list(list(type = "dist", col = val,
+                           stat = summary %||% "mean_se",
+                           show = "pointrange")),
+    interval = list(
+      list(type = "spans", x = x, xend = xend, color = color),
+      list(type = "simple", name = "Events", func = "count",
+           show = "number")
+    ),
+    sparkline = c(
+      if (!is.null(func) &&
+            func %in% c("mean", "median", "sum", "min", "max")) {
+        list(list(type = "simple", func = func, col = val, show = "bar"))
+      },
+      list(list(type = "series", x = x, col = val,
+                band = if (!is.null(lo) && !is.null(hi)) c(lo, hi)))
+    ),
+    list()
+  )
+  c(main, field_rows)
+}
+
 #' Normalize a summaries list: known types, per-type required fields,
 #' `show` within the type's set, `scope` cell/pooled, an auto `name`.
 #' Returns the normalized list, or `list(err =)` naming the first broken

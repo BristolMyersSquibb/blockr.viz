@@ -135,10 +135,24 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   if (!is.data.frame(data)) return(bad("No data"))
   if (!nrow(data)) return(bad("No rows to display"))
 
-  # The summarize-table path (_blockr.design/open/summarize-table/): a
-  # non-empty `summaries` list takes over, `mark` and the flat mappings
-  # stay as sugar for the one-glyph case. `by` (outer -> inner) wins over
-  # group/parent; unset, they fill in.
+  # The summarize-table path (_blockr.design/open/summarize-table/): the
+  # column list is THE config model. A non-bar `mark` is pure constructor
+  # sugar, canonicalized into a one-glyph summaries list right here -- the
+  # single-mark preparers are gone. Only the bar keeps its own path (its
+  # colour split / comparison / percent machinery predates the list and
+  # ships in real boards). `by` (outer -> inner) wins over group/parent;
+  # unset, they fill in.
+  mark <- rank_chr1(mark) %||% "bar"
+  if ((!is.list(summaries) || !length(summaries)) &&
+        mark %in% c("box", "pointrange", "interval", "sparkline")) {
+    summaries <- lane_mark_summaries(
+      mark, value = rank_chr1(value), func = rank_chr1(func),
+      summary = rank_chr1(summary), whiskers = rank_chr1(whiskers),
+      x = rank_chr1(x), xend = rank_chr1(xend), lo = rank_chr1(lo),
+      hi = rank_chr1(hi), color = rank_chr1(color),
+      fields = as.character(fields %||% character())
+    )
+  }
   if (is.list(summaries) && length(summaries)) {
     eby <- as.character(by %||% character())
     eby <- eby[nzchar(eby)]
@@ -158,31 +172,6 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
                       "\". Re-pick it in the gear.")))
   }
 
-  # Every non-bar mark prepares in lane-prepare.R; an unknown value (a saved
-  # board from a future version) falls back to the bar rather than erroring.
-  mark <- rank_chr1(mark) %||% "bar"
-  if (identical(mark, "box") || identical(mark, "pointrange")) {
-    return(lane_prepare_dist(
-      mark, data, group = group, value = value, summary = summary,
-      whiskers = whiskers, parent = parent, color = color, facet = facet,
-      compare = compare, fields = fields, sort_by = sort_by,
-      sort_dir = sort_dir, top_n = top_n, scale_map = scale_map
-    ))
-  }
-  if (identical(mark, "interval")) {
-    return(lane_prepare_interval(
-      data, group = group, x = x, xend = xend, color = color,
-      parent = parent, fields = fields, sort_by = sort_by,
-      sort_dir = sort_dir, top_n = top_n, scale_map = scale_map
-    ))
-  }
-  if (identical(mark, "sparkline")) {
-    return(lane_prepare_sparkline(
-      data, group = group, x = x, value = value, lo = lo, hi = hi,
-      func = func, parent = parent, fields = fields, sort_by = sort_by,
-      sort_dir = sort_dir, top_n = top_n, scale_map = scale_map
-    ))
-  }
 
   # Every mapped column must exist. A rename or pivot upstream is the usual
   # cause, and naming the column beats a stack trace.

@@ -613,14 +613,6 @@
   var FUNC_OPT = ((DAggR && DAggR.AGG_FNS) ||
     ["count", "count_distinct", "sum", "mean", "median", "min", "max"])
     .concat([{ value: "identity", label: "None (as is)" }]);
-  // The sparkline's companion rank bar: `func` reduced over the row's own
-  // values. Only the value-reducing funcs apply (a count is the Events
-  // column's job); "identity" = no bar, rank by last value.
-  var SPARK_RANK = ["mean", "median", "sum", "min", "max"];
-  var SPARK_FUNC_OPT = [{ value: "identity", label: "None — rank by last value" }]
-    .concat(FUNC_OPT.filter(function (o) {
-      return SPARK_RANK.indexOf(typeof o === "string" ? o : o.value) > -1;
-    }));
   var BAR_MODE_OPT = [{ value: "stacked", label: "Stacked" },
                       { value: "grouped", label: "Grouped" },
                       { value: "percent", label: "100%" }];
@@ -644,15 +636,8 @@
   var LANE_WHISKERS = [{ value: "tukey", label: "Tukey (1.5×IQR)" }]
     .concat(LANE_STATS);
 
-  // The marks, in their two families: the aggregated ones summarize rows per
-  // group (bar counts/reduces, box and point range summarize distributions);
-  // the row marks draw each group's underlying rows as-is (interval spans,
-  // sparkline series). Same duality the block always had via func.
-  var LANE_AGG_MARKS = ["bar", "box", "pointrange"];
-  var LANE_ROW_MARKS = ["interval", "sparkline"];
-
-  // Type-picker glyphs, the chart block's icon style (14px, viewBox 16,
-  // currentColor, stroke-width 1.4).
+  // Glyphs for the columns editor's display tiles, the chart block's icon
+  // style (14px, viewBox 16, currentColor, stroke-width 1.4).
   var TYPE_ICONS = {
     bar:
       '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
@@ -697,27 +682,10 @@
     // any aggregation has no underlying row to read a column from.
     fields: { label: "More columns", kind: "columns", colType: "any",
               placeholder: "add columns…" },
-    func:   { label: function (cfg) {
-                return cfg.mark === "sparkline" ? "Rank by" : "Aggregate";
-              }, kind: "select", rerender: true,
-              // Context-keyed options: the sparkline offers the companion
-              // rank-bar reductions, every other mark the full aggregate set.
-              optionsBy: { all: FUNC_OPT, spark: SPARK_FUNC_OPT } },
-    value:  { label: function (cfg) {
-                return cfg.mark === "sparkline" ? "Value (y)"
-                  : (cfg.mark === "box" || cfg.mark === "pointrange")
-                    ? "Value" : "Of column";
-              }, kind: "column", colType: "num" },
+    func:   { label: "Aggregate", kind: "select", options: FUNC_OPT,
+              rerender: true },
+    value:  { label: "Of column", kind: "column", colType: "num" },
     id_var: { label: "Count distinct", kind: "column", colType: "any" },
-    // The lane marks' extra slots. `x`/`xend` reuse the chart gantt's names
-    // (the same span vocabulary); for the sparkline `x` is the within-row
-    // order. `lo`/`hi` are the sparkline's optional band columns.
-    x:      { label: function (cfg) {
-                return cfg.mark === "sparkline" ? "Order (x)" : "Start";
-              }, kind: "column", colType: "num" },
-    xend:   { label: "End", kind: "column", colType: "num" },
-    lo:     { label: "Band low", kind: "column", colType: "num" },
-    hi:     { label: "Band high", kind: "column", colType: "num" },
     // Facet column order in the summarize-table mode: each summary's level
     // copies adjacent (the comparison affordance), or level groups spanning
     // the summaries (the Table-1 reading).
@@ -725,12 +693,6 @@
       { value: "by_summary", label: "By summary" },
       { value: "by_level", label: "By level" }
     ] },
-    // Distribution statistics (box body / point-range interval, box whisker
-    // rule): R computes, this only picks. See LANE_STATS.
-    summary:  { label: function (cfg) {
-                  return cfg.mark === "box" ? "Box" : "Interval";
-                }, kind: "select", options: LANE_STATS },
-    whiskers: { label: "Whiskers", kind: "select", options: LANE_WHISKERS },
     // Presentation.
     sort_by:  { label: "Sort", kind: "select", options: [] },
     bar_mode: { label: "Split layout", kind: "segmented", options: BAR_MODE_OPT },
@@ -1155,7 +1117,6 @@
   // count_distinct, the split layout only with a colour split, Compare only
   // with a facet. Conditional rows beat a wall of inert ones.
   function rankSections(cfg, ctx) {
-    var mark = cfg.mark || "bar";
     var mapping = [];
     var optional = [];
     var pres = ["sort_by", "sort_dir"];
@@ -1187,41 +1148,25 @@
       };
     }
 
-    if (mark === "box" || mark === "pointrange") {
-      // The distribution lanes: group + value, statistic pick(s), optional
-      // facet columns. bar_mode / compare / color are bar concepts (a
-      // zero-centred difference against a comparator has no meaning for a
-      // box), so they never render here.
-      mapping = ["value", "summary"];
-      if (mark === "box") mapping.push("whiskers");
-      optional = ["parent", "facet"];
-      aggTitle = "Statistic";
-    } else if (mark === "interval") {
-      // The swimlane: x/xend spans per underlying row, coloured segments.
-      mapping = ["x", "xend"];
-      optional = ["color", "fields"];
-    } else if (mark === "sparkline") {
-      // One series per row over a within-row order, with an optional band
-      // and an optional companion rank bar (func over the row's values).
-      mapping = ["x", "value", "func"];
-      optional = ["lo", "hi", "fields"];
-    } else {
-      var needsValue = ["identity", "sum", "mean", "median", "min", "max"]
-        .indexOf(cfg.func) > -1;
-      mapping = ["func"];
-      if (needsValue) mapping.push("value");
-      if (cfg.func === "count_distinct") mapping.push("id_var");
-      optional = ["parent", "color", "facet"];
-      if (cfg.facet) optional.push("compare");
-      if (cfg.func === "identity") optional.push("fields");
-      // color + facet compose now (split bars inside each facet column), so
-      // the split layout applies whenever a colour split exists — except
-      // under a comparison, which owns the colour slot.
-      if (cfg.color && !cfg.compare) pres.push("bar_mode");
-      // The measure is the aggregation step, so it gets the chart's trailing
-      // "Aggregation" section rather than sitting inside Mapping.
-      aggTitle = "Aggregation";
-    }
+    // The ranked-bar surface (the block's original form, kept for boards
+    // that never opt into the column list): func / value / id_var, colour
+    // split, facet, comparison. Every other glyph lives in the columns
+    // editor above -- the type belongs to the COLUMN.
+    var needsValue = ["identity", "sum", "mean", "median", "min", "max"]
+      .indexOf(cfg.func) > -1;
+    mapping = ["func"];
+    if (needsValue) mapping.push("value");
+    if (cfg.func === "count_distinct") mapping.push("id_var");
+    optional = ["parent", "color", "facet"];
+    if (cfg.facet) optional.push("compare");
+    if (cfg.func === "identity") optional.push("fields");
+    // color + facet compose (split bars inside each facet column), so the
+    // split layout applies whenever a colour split exists — except under a
+    // comparison, which owns the colour slot.
+    if (cfg.color && !cfg.compare) pres.push("bar_mode");
+    // The measure is the aggregation step, so it gets the chart's trailing
+    // "Aggregation" section rather than sitting inside Mapping.
+    aggTitle = "Aggregation";
     pres.push("search");
 
     return {
@@ -1252,17 +1197,6 @@
     };
   }
 
-  // Per-mark defaults the gear DISPLAYS: R resolves the same defaults
-  // server-side from an unset state, so nothing is transmitted here.
-  function rankEnsureDefaults(cfg) {
-    var mark = cfg.mark || "bar";
-    if (mark === "box" || mark === "pointrange") {
-      if (!cfg.summary) {
-        cfg.summary = mark === "box" ? "median_q1_q3" : "mean_se";
-      }
-      if (mark === "box" && !cfg.whiskers) cfg.whiskers = "tukey";
-    }
-  }
 
   /** Read the gear's working state off the rendered table. */
   function readGearState(table) {
@@ -1358,8 +1292,8 @@
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "blockr-gear-btn";
-    btn.title = "Lane chart settings";
-    btn.setAttribute("aria-label", "Lane chart settings");
+    btn.title = "Summarize table settings";
+    btn.setAttribute("aria-label", "Summarize table settings");
     btn.setAttribute("aria-haspopup", "dialog");
     btn.setAttribute("aria-expanded", "false");
     btn.innerHTML = (typeof Blockr !== "undefined" && Blockr.icons)
@@ -1386,55 +1320,30 @@
         // the companion rank-bar set.
         return cfg.mark === "sparkline" ? "spark" : "all";
       },
-      currentType: function () { return cfg.mark || "bar"; },
+      currentType: function () { return null; },
       sections: function () { return rankSections(cfg, ctx); },
       sectionsForFamily: function () { return rankSections(cfg, ctx); },
       secondary: new Set(),
       mappingTitle: function () {
         return (cfg.summaries && cfg.summaries.length) ? "Grouping" : "Mapping";
       },
-      // The mark picker: same engine fields the chart fills in
-      // (chart.js _makeConfig), same tile idiom, so the two gears read as
-      // one system. In the summarize-table mode the column list replaces
-      // it (each column carries its own type), so the picker hides.
-      typeKey: "mark",
-      typeTiles: true,
-      typeIcon: function (t) { return TYPE_ICONS[t] || ""; },
-      get typeGroups() {
-        if (cfg.summaries && cfg.summaries.length) return null;
-        return [
-          { label: "Aggregated", types: LANE_AGG_MARKS },
-          { label: "Individual", types: LANE_ROW_MARKS }
-        ];
-      },
-      familyFor: function (t) {
-        return LANE_ROW_MARKS.indexOf(t) > -1 ? "individual" : "aggregated";
-      },
-      // A mark switch must never wedge the block by clearing a required
-      // slot: drill is a capability, group is the row identity, value is
-      // shared by bar / box / pointrange / sparkline.
-      carryKeep: ["drill", "value", "group"],
+      // No block-level type picker: the type belongs to the COLUMN (the
+      // columns editor's row types + display tiles).
+      typeKey: null,
+      typeGroups: null,
+      familyFor: null,
       entryRequired: function (role) {
-        var mark = cfg.mark || "bar";
-        if (role === "by") return true;
-        if (role === "group") return true;
-        if (role === "value") {
-          return mark === "box" || mark === "pointrange" ||
-            mark === "sparkline";
-        }
-        if (role === "x") return mark === "interval" || mark === "sparkline";
-        if (role === "xend") return mark === "interval";
-        return false;
+        return role === "by" || role === "group";
       },
       drillAutoLabel: null,
-      title: "Lane chart settings",
+      title: "Summarize table settings",
       onChange: function (key) { sendConfig(elemId, key, cfg[key]); },
       onMults: function () {},
       onClearFilter: function () {
         rows(root).forEach(function (r) { r.classList.remove("is-on"); });
         sendConfig(elemId, "filter_values", null);
       },
-      ensureDefaults: function () { rankEnsureDefaults(cfg); },
+      ensureDefaults: function () {},
       afterTypeChange: function () {},
       isOpen: function () {
         return pop.classList.contains("blockr-settings--open");
