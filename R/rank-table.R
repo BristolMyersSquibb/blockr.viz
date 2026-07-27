@@ -16,20 +16,23 @@
 
 # One-hue-per-level pool, shared with the chart (dd_palette()) so a rank
 # table and a chart of the same split agree on colors.
+#
+# `column` is the actual data column behind `col`, and resolution always goes
+# through the package's one seam (dd_resolve_scales -> blockr.theme's
+# provenance-aware resolver), so a column the picker block copied (SEX picked
+# into "color") inherits the source column's binding and the board's fixed
+# colors survive the rename. A caller holding only the levels passes none;
+# the levels then stand in for the column, which resolves them by name (they
+# carry no provenance to follow).
 #' @noRd
-rank_level_colors <- function(map, col, levels) {
+rank_level_colors <- function(map, col, levels, column = NULL) {
   levels <- as.character(levels)
   if (!length(levels)) {
     return(character())
   }
   if (!is.null(map) && !is.null(col) &&
         requireNamespace("blockr.theme", quietly = TRUE)) {
-    res <- tryCatch(
-      blockr.theme::resolve_scales(
-        map, col, levels = levels, palette = dd_palette()
-      ),
-      error = function(e) NULL
-    )
+    res <- dd_resolve_scales(map, col, column %||% levels)
     pal <- res$color
     if (!is.null(pal) && all(levels %in% names(pal))) {
       return(stats::setNames(unname(pal[levels]), levels))
@@ -319,7 +322,7 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
                       val_denom = if (pct_ok) denom))
   } else if (identical(layout, "split")) {
     series <- rank_levels(data[[color]])
-    pal <- rank_level_colors(scale_map, color, series)
+    pal <- rank_level_colors(scale_map, color, series, data[[color]])
     seg <- rank_aggregate(data, c(keys, color), func, value, id_var)
     # One column per level, joined onto the leaf rows in level order.
     for (lv in series) {
@@ -387,7 +390,7 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
       # columns are keyed by INDEX (.f<i>s_<level>) so a facet level name can
       # never collide with a colour level name.
       series <- rank_levels(data[[color]])
-      pal <- rank_level_colors(scale_map, color, series)
+      pal <- rank_level_colors(scale_map, color, series, data[[color]])
       seg <- rank_aggregate(data, c(keys, facet, color), func, value, id_var)
       for (fi in seq_along(facet_levels)) {
         fv <- facet_levels[[fi]]

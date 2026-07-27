@@ -407,7 +407,8 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   }
   series_lv <- if (!is.null(legend_s)) rank_levels(data[[legend_s$color]])
   pal <- if (!is.null(legend_s)) {
-    rank_level_colors(scale_map, legend_s$color, series_lv)
+    rank_level_colors(scale_map, legend_s$color, series_lv,
+                      data[[present(legend_s$color)]])
   } else {
     character()
   }
@@ -500,8 +501,10 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                                      names(data)),
                  size = rank_chr1(s$size) %||% "md",
                  fills = if (!is.null(lv)) {
-                   unname(rank_level_colors(scale_map, rank_chr1(s$color),
-                                            lv)[lv])
+                   unname(rank_level_colors(
+                     scale_map, rank_chr1(s$color), lv,
+                     data[[rank_chr1(s$color)]]
+                   )[lv])
                  } else {
                    dd_palette(1L)
                  }))

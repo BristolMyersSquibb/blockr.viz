@@ -57,24 +57,14 @@ dd_levels <- function(col) {
 # binding for the actual data `column` via blockr.theme's canonical
 # provenance-aware resolver -- a column copied by the picker block (SEX
 # picked into "color") carries its origin in `blockr_source` and inherits
-# the source's binding, so the fixed SEX colors survive the rename. On an
-# installed blockr.theme that predates resolve_scales_col() the provenance
-# hop is simply absent (plain name lookup), the pre-feature behavior.
+# the source's binding, so the fixed SEX colors survive the rename. Requiring
+# that resolver is a DESCRIPTION matter (blockr.theme version), not a runtime
+# one: no renderer here decides for itself whether provenance applies.
 dd_resolve_scales <- function(map, var, column) {
   if (is.null(map) || is.null(var)) {
     return(NULL)
   }
-  if ("resolve_scales_col" %in% getNamespaceExports("blockr.theme")) {
-    return(blockr.theme::resolve_scales_col(
-      map, var, column,
-      palette = dd_palette()
-    ))
-  }
-  blockr.theme::resolve_scales(
-    map, var,
-    levels = dd_levels(column),
-    palette = dd_palette()
-  )
+  blockr.theme::resolve_scales_col(map, var, column, palette = dd_palette())
 }
 
 

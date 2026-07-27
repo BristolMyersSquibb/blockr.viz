@@ -1,9 +1,5 @@
 skip_if_no_theme <- function() {
   testthat::skip_if_not_installed("blockr.theme")
-  testthat::skip_if_not(
-    "theme_palette" %in% getNamespaceExports("blockr.theme"),
-    "installed blockr.theme predates theme_palette()"
-  )
 }
 
 test_that("vanilla is unchanged: no applied theme means the built-in colors", {

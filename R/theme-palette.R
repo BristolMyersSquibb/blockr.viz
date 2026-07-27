@@ -34,7 +34,6 @@ DT_DIVERGING_FALLBACK <- c("#99000d", "#ffffff", "#08306b")
 # only when an app calls use_theme().
 has_theme_palette <- function() {
   requireNamespace("blockr.theme", quietly = TRUE) &&
-    "theme_palette" %in% getNamespaceExports("blockr.theme") &&
     !is.null(blockr.theme::current_theme())
 }
 
@@ -49,10 +48,10 @@ has_theme_palette <- function() {
 #' @noRd
 viz_palette <- function(role, n = NULL, fallback = NULL) {
   if (has_theme_palette()) {
-    out <- tryCatch(
-      blockr.theme::theme_palette(role, n),
-      error = function(e) NULL
-    )
+    # Unguarded: theme_palette() answers NULL (with a warning) for anything a
+    # theme cannot supply, and errors only on an unknown ROLE -- a typo in the
+    # literal we passed, which must surface rather than silently fall back.
+    out <- blockr.theme::theme_palette(role, n)
     if (length(out)) {
       return(out)
     }
