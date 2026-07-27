@@ -474,7 +474,6 @@
     var input = root.querySelector("input.blockr-search");
     if (input && input.value) runSearch(root);
     else applyVisibility(root);
-    refreshGear(root);
   }
 
   if (window.Shiny && Shiny.addCustomMessageHandler) {
@@ -654,27 +653,22 @@
     );
   }
 
-  function refreshGear(root) {
-    if (typeof root._rankGearRefresh === "function") root._rankGearRefresh();
-  }
-
   function buildGear(root) {
     var elemId = root.getAttribute("data-rank-elem-id");
     if (!elemId) return;
     // The table arrives with the first payload, after this chrome: start from
-    // whatever is there (possibly nothing) and re-read on every payload and on
-    // every popover open.
+    // whatever is there (possibly nothing). State is re-read ONLY on popover
+    // open (followed by engine.refresh(), which rebuilds every control
+    // against the fresh objects) -- the table block's contract. NEVER on a
+    // payload: the engine's controls capture the cfg OBJECT at build time
+    // (drilldown-config.js `const cfg = this._cfg()`), so reassigning it
+    // between builds orphans them -- their edits then land in the old object
+    // while onChange reads the new one and transmits the STALE value (the
+    // second-gear-edit-after-a-render bug).
     var table = root.querySelector("table.blockr-rank-table");
     var st = table ? readGearState(table) : { cfg: {}, cols: [] };
     var cfg = st.cfg;
     var cols = st.cols;
-    root._rankGearRefresh = function () {
-      var t = root.querySelector("table.blockr-rank-table");
-      if (!t) return;
-      var s2 = readGearState(t);
-      cfg = s2.cfg;
-      cols = s2.cols;
-    };
 
     var header = document.createElement("div");
     header.className = "blockr-gear-header";
