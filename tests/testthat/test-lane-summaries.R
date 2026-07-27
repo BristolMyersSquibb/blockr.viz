@@ -354,3 +354,61 @@ test_that("a distribution's domain is its data, not zero and not n", {
   )$plan[[1L]]
   expect_identical(dot$dmin, 0)
 })
+
+test_that("a distribution splits by colour: one glyph per level, one scale", {
+  ae <- sum_fixture()
+  p <- lane_prepare_summaries(
+    ae, by = "TERM",
+    summaries = list(list(type = "dist", name = "Duration", col = "DUR",
+                          show = "box", color = "SEV"))
+  )
+  e <- p$plan[[1L]]
+  expect_identical(e$levels, c("MILD", "MOD"))
+  expect_length(e$lcols, 2L)
+  expect_length(e$fills, 2L)
+  # Every level is read against the SAME axis, or the split lies.
+  expect_true(is.finite(e$dmin) && is.finite(e$dmax))
+  lo <- min(p$rows[[e$lcols[[1L]][["wl"]]]], p$rows[[e$lcols[[2L]][["wl"]]]],
+            na.rm = TRUE)
+  hi <- max(p$rows[[e$lcols[[1L]][["wh"]]]], p$rows[[e$lcols[[2L]][["wh"]]]],
+            na.rm = TRUE)
+  expect_lte(e$dmin, lo)
+  expect_gte(e$dmax, hi)
+
+  # The pooled glyph survives as the sort value, and the colour dimension
+  # gets the legend (identity never rides on colour alone).
+  expect_true(all(is.finite(p$rows$.v)))
+  expect_identical(p$series, c("MILD", "MOD"))
+  expect_identical(p$color, "SEV")
+
+  m <- rank_cells(p)
+  cell <- m$cols[[1L]]
+  expect_true(isTRUE(cell$multi))
+  expect_length(cell$lv, 2L)
+  expect_match(cell$lv[[1L]]$tip[[1L]], "^MILD")
+
+  # A level with no rows in a group draws no lane at all -- the per-subject
+  # case ("this subject is female") is one coloured glyph, not one plus a gap.
+  one <- ae[ae$SEV == "MILD", , drop = FALSE]
+  p1 <- lane_prepare_summaries(
+    one, by = "TERM",
+    summaries = list(list(type = "dist", col = "DUR", show = "box",
+                          color = "SEV"))
+  )
+  html <- rank_cells_html(rank_cells(p1))
+  expect_equal(lengths(regmatches(html, gregexpr("blockr-rank-lv", html))),
+               nrow(p1$rows))
+})
+
+test_that("the colour split takes the board's fixed colours", {
+  skip_if_not_installed("blockr.theme")
+  ae <- sum_fixture()
+  map <- list(SEV = list(color = c(MILD = "#123456", MOD = "#654321")))
+  p <- lane_prepare_summaries(
+    ae, by = "TERM",
+    summaries = list(list(type = "dist", col = "DUR", show = "box",
+                          color = "SEV")),
+    scale_map = map
+  )
+  expect_identical(p$plan[[1L]]$fills, c("#123456", "#654321"))
+})

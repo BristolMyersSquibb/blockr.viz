@@ -186,8 +186,11 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       # rounded here; the emitters only print. See lane-prepare.R for the
       # cell's statistics and _blockr.design/open/lane-chart/spec.md for the
       # glyph.
-      cn <- p$cols
       wd <- p$words %||% list(center = "Center", range = "Range")
+      # One glyph from one set of stat columns. Called once for a plain
+      # column, once per level for a colour-split one (`p$lcols`), so both
+      # shapes ship exactly the same geometry per glyph.
+      glyph <- function(cn, lvl = NULL) {
       # A missing stat column (the single-value "dot": a pointrange with no
       # interval) reads as all-NA, which the emitters draw as center-only.
       col_or_na <- function(nm) {
@@ -205,13 +208,16 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         disp <- lane_fmt(bc)
         list(disp = disp, dw = max(c(1L, nchar(disp))))
       }
+      # A split glyph's tooltip names its level first: colour is never the
+      # only thing saying which level this is.
+      pre <- if (is.null(lvl)) "" else paste0(lvl, " \u00b7 ")
       if (identical(p$kind, "box")) {
-        wl <- rows[[cn[["wl"]]]]
-        wh <- rows[[cn[["wh"]]]]
+        wl <- col_or_na("wl")
+        wh <- col_or_na("wh")
         # Whisker segments live OUTSIDE the body; a degenerate side (whisker
         # meets the box) ships NA and draws nothing.
         tip <- ifelse(is.na(bc), "", rank_esc(paste0(
-          "n=", nn, " \u00b7 ", wd$center, " ", lane_fmt(bc),
+          pre, "n=", nn, " \u00b7 ", wd$center, " ", lane_fmt(bc),
           " \u00b7 ", wd$range, " ", lane_fmt(bl), "\u2013", lane_fmt(bh),
           " \u00b7 ", wd$whisk %||% "Whiskers", " ",
           lane_fmt(wl), "\u2013", lane_fmt(wh)
@@ -224,7 +230,7 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       } else {
         # The dot (words$range NULL) has no interval clause and no n.
         tip <- ifelse(is.na(bc), "", rank_esc(paste0(
-          ifelse(is.na(nn), "", paste0("n=", nn, " \u00b7 ")),
+          pre, ifelse(is.na(nn), "", paste0("n=", nn, " \u00b7 ")),
           wd$center, " ", lane_fmt(bc),
           if (!is.null(wd$range)) {
             paste0(" \u00b7 ", wd$range, " ",
@@ -237,6 +243,26 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         list(kind = "pointrange",
              c = pos_w(bc), l = pos_w(bl), rw = span_w(bl, bh),
              nn = nn, tip = tip, v = sortv(bc)) |> c(lab)
+      }
+      }
+      base <- glyph(p$cols)
+      if (is.null(p$lcols)) {
+        base
+      } else {
+        # Colour split: one lane per level inside the cell, in level order,
+        # sharing the column's scale. The pooled glyph still supplies the
+        # sort value; its own lane is not drawn, and neither is the value
+        # label (a single number beside two glyphs matches neither).
+        c(list(kind = p$kind, multi = TRUE, levels = as.character(p$levels),
+               fills = as.character(p$fills), v = base$v),
+          list(lv = lapply(seq_along(p$lcols), function(j) {
+            g <- glyph(p$lcols[[j]], p$levels[[j]])
+            g$disp <- NULL
+            g$dw <- NULL
+            g$kind <- NULL
+            g$v <- NULL
+            g
+          })))
       }
     } else if (identical(p$kind, "interval")) {
       # Swimlane segments: [left, width, fill-index] triples per row, plus a
@@ -495,12 +521,16 @@ rank_cells_html <- function(m) {
     } else if (identical(c$kind, "bardiv")) {
       paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
              rank_barwrap(rank_dv_html(c$w, c$pos), c), "</td>")
-    } else if (identical(c$kind, "box")) {
+    } else if (c$kind %in% c("box", "pointrange")) {
+      inner <- if (isTRUE(c$multi)) {
+        rank_multi_html(c)
+      } else if (identical(c$kind, "box")) {
+        rank_box_html(c)
+      } else {
+        rank_pr_html(c)
+      }
       paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
-             rank_barwrap(rank_box_html(c), c), "</td>")
-    } else if (identical(c$kind, "pointrange")) {
-      paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
-             rank_barwrap(rank_pr_html(c), c), "</td>")
+             rank_barwrap(inner, c), "</td>")
     } else if (identical(c$kind, "interval")) {
       paste0("<td class=\"blockr-rank-bar-col",
              if (isTRUE(c$lg)) " blockr-rank-wide" else "", "\"",
@@ -646,7 +676,7 @@ rank_dv_html <- function(w, pos) {
 #' median tick, all absolutely positioned in a track-coloured lane.
 #' @noRd
 rank_box_html <- function(c) {
-  n <- length(c$v)
+  n <- length(c$bc)
   vapply(seq_len(n), function(i) {
     if (is.na(c$bc[[i]])) {
       return("<div class=\"blockr-rank-lane blockr-rank-boxcell\"></div>")
@@ -695,7 +725,7 @@ rank_box_html <- function(c) {
 #' would read as certainty.
 #' @noRd
 rank_pr_html <- function(c) {
-  n <- length(c$v)
+  n <- length(c$c)
   vapply(seq_len(n), function(i) {
     if (is.na(c$c[[i]])) {
       return("<div class=\"blockr-rank-lane blockr-rank-prcell\"></div>")
@@ -713,6 +743,29 @@ rank_pr_html <- function(c) {
       "%\"></i></div>"
     )
   }, character(1L))
+}
+
+#' A colour-split distribution cell: one lane per level, in level order,
+#' each in the level's colour and each carrying its own tooltip. A level
+#' with no rows in this group draws NO lane, so a table grouped by subject
+#' (where every row belongs to exactly one level) reads as one coloured
+#' glyph per row rather than one glyph and a gap.
+#'
+#' The colour rides as a CSS custom property on the wrapper, so the glyph
+#' emitters are reused untouched -- every part of a box (whiskers, caps,
+#' body, median) already paints from `--blockr-rank-fill`.
+#' @noRd
+rank_multi_html <- function(c) {
+  parts <- lapply(seq_along(c$lv), function(j) {
+    g <- c$lv[[j]]
+    html <- if (identical(c$kind, "box")) rank_box_html(g) else rank_pr_html(g)
+    key <- if (identical(c$kind, "box")) g$bc else g$c
+    ifelse(is.na(key), "",
+           paste0("<div class=\"blockr-rank-lv\" style=\"--blockr-rank-fill:",
+                  c$fills[[j]], "\">", html, "</div>"))
+  })
+  paste0("<div class=\"blockr-rank-multi\">",
+         do.call(paste0, parts), "</div>")
 }
 
 #' Interval cell: the swimlane. One segment per (x, xend) span, coloured by
@@ -841,14 +894,28 @@ rank_flat_payload <- function(m) {
     } else if (identical(c$kind, "bardiv")) {
       out$w <- arr(c$w)
       out$pos <- arr(c$pos)
-    } else if (identical(c$kind, "box")) {
-      for (nm in c("wl", "w1", "bl", "bw", "bc", "b2", "w2", "wh", "nn")) {
-        out[[nm]] <- arr(c[[nm]])
+    } else if (c$kind %in% c("box", "pointrange")) {
+      geom <- if (identical(c$kind, "box")) {
+        c("wl", "w1", "bl", "bw", "bc", "b2", "w2", "wh", "nn")
+      } else {
+        c("c", "l", "rw", "nn")
       }
-      out$tip <- arr(as.character(c$tip))
-    } else if (identical(c$kind, "pointrange")) {
-      for (nm in c("c", "l", "rw", "nn")) out[[nm]] <- arr(c[[nm]])
-      out$tip <- arr(as.character(c$tip))
+      pack <- function(g) {
+        o <- list()
+        for (nm in geom) o[[nm]] <- arr(g[[nm]])
+        o$tip <- arr(as.character(g$tip))
+        o
+      }
+      if (isTRUE(c$multi)) {
+        # A colour-split column ships one geometry set per level plus the
+        # level names and their fills; the assembler walks them in order.
+        out$multi <- TRUE
+        out$levels <- arr(as.character(c$levels))
+        out$fills <- arr(as.character(c$fills))
+        out$lv <- lapply(c$lv, pack)
+      } else {
+        out <- c(out, pack(c))
+      }
     } else if (identical(c$kind, "interval")) {
       # Per-row lists stay arrays even at length one: a collapsed tips vector
       # would index as characters in JS (the auto_unbox trap).

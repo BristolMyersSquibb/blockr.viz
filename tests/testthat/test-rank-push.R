@@ -306,6 +306,15 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
     box_nested = list(by = c("SOC", "TERM"), summaries = list(
       list(type = "dist", col = "DUR", show = "box")
     )),
+    # The colour dimension: one glyph per level inside the cell. Both
+    # assemblers must skip an absent level identically, or the lanes drift.
+    box_color = list(by = "TERM", summaries = list(
+      list(type = "dist", col = "DUR", show = "box", color = "SEV")
+    )),
+    pointrange_color = list(by = "TERM", summaries = list(
+      list(type = "dist", col = "DUR", stat = "mean_ci95",
+           show = "pointrange", color = "ARM")
+    )),
     pointrange = list(by = "TERM", summaries = list(
       list(type = "dist", col = "DUR", stat = "mean_ci95",
            show = "pointrange")

@@ -21,7 +21,9 @@
 #           by the group minimum) is the reliable one; sort_by = "data"
 #           (factor levels, else first appearance) puts End of Treatment
 #           mid-table here, because one subject discontinued early. Both
-#           live in the gear's Sort select.
+#           live in the gear's Sort select. The two distribution columns
+#           also carry a COLOUR dimension (SEX): one glyph per level in the
+#           same cell, one shared scale per column, legend above the table.
 # Nested view
 #   nested — subjects collapsed under SEX (by = c(SEX, USUBJID)): parents
 #           are expandable rows aggregated in their own pass (a parent's
@@ -62,7 +64,7 @@ vs <- vs[!is.na(vs$AVISIT) &
            vs$PARAM %in% c("Diastolic Blood Pressure (mmHg)",
                            "Pulse Rate (beats/min)"),
          c("USUBJID", "AVISIT", "AVISITN", "PARAM", "PARAMCD", "AVAL", "CHG",
-           "TRT01A", "ADY")]
+           "TRT01A", "SEX", "ADY")]
 dbp <- vs[vs$PARAMCD == "DIABP", ]
 
 mixed_summaries <- list(
@@ -110,9 +112,10 @@ serve(
           list(type = "simple", name = "Subjects", func = "count_distinct",
                col = "USUBJID", show = "bar"),
           list(type = "dist", name = "DBP (mmHg)", col = "AVAL",
-               stat = "median_q1_q3", whiskers = "tukey", show = "box"),
+               stat = "median_q1_q3", whiskers = "tukey", show = "box",
+               color = "SEX"),
           list(type = "dist", name = "Change from baseline", col = "CHG",
-               stat = "mean_ci95", show = "pointrange"),
+               stat = "mean_ci95", show = "pointrange", color = "SEX"),
           list(type = "field", name = "Arms", col = "TRT01A")
         ),
         sort_by = "AVISITN", sort_dir = "asc", drill = "AVISIT",
