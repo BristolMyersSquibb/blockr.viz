@@ -73,7 +73,8 @@ other level gets a zero-centred difference bar in percentage points.}
 only), shown as real columns beside the bar.}
 
 \item{sort_by, sort_dir}{Server-side ordering. \code{sort_by} is \code{"value"},
-\code{"label"} or a facet level name; \code{sort_dir} is \code{"desc"} or \code{"asc"}.}
+\code{"data"} (the data's own order), \code{"label"}, a summary column name or a
+facet level name; \code{sort_dir} is \code{"desc"} or \code{"asc"}.}
 
 \item{top_n}{Optional cap. Off by default -- the table scrolls instead.
 When set, the rows below the cut are reported in a visible fold row.}

@@ -110,6 +110,27 @@ rank_levels <- function(x) {
   lv[!is.na(lv)]
 }
 
+# The DATA's own order for a grouping column -- the chart's dataOrder():
+# factor levels when the column carries them (order lives in factors), else
+# first-appearance in the rows. ADaM arrives visit-sorted, so a character
+# AVISIT still reads chronologically without an upstream factor mutate.
+# Alphabetical would put "Week 10" before "Week 2".
+#' @noRd
+rank_data_levels <- function(x) {
+  lv <- if (is.factor(x)) levels(x) else unique(as.character(x))
+  lv[!is.na(lv)]
+}
+
+# Rank of each label in the data's own order; labels the column no longer
+# carries (an upstream filter dropped them) sort last.
+#' @noRd
+rank_data_ord <- function(x, labels) {
+  lv <- rank_data_levels(x)
+  i <- match(as.character(labels), lv)
+  i[is.na(i)] <- length(lv) + 1L
+  as.numeric(i)
+}
+
 #' Prepare the ranked frame and its column plan.
 #'
 #' Everything the renderer needs, computed once server-side: the row list
@@ -248,6 +269,9 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   if (!nrow(leaf)) return(bad("No rows to display"))
   leaf$.label <- as.character(leaf[[group]])
   leaf$.parent <- if (is.null(parent)) NA_character_ else as.character(leaf[[parent]])
+  # The data's own order, kept alongside the measure so `sort_by = "data"`
+  # costs nothing when unused.
+  leaf$.ord <- rank_data_ord(data[[group]], leaf$.label)
 
   denom <- rank_denom(data, func, id_var)
 
@@ -451,6 +475,7 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   if (!is.null(parent)) {
     par_rows <- rank_aggregate(data, parent, func, value, id_var)
     par_rows$.label <- as.character(par_rows[[parent]])
+    par_rows$.ord <- rank_data_ord(data[[parent]], par_rows$.label)
     par_rows$.parent <- NA_character_
     if (identical(layout, "split")) {
       seg <- rank_aggregate(data, c(parent, color), func, value, id_var)
@@ -498,8 +523,9 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   # order, each followed by its own children in rank order (a cap applies to
   # parents, since capping inside a class would hide a class's own drivers).
   # One shared implementation for every mark: rank_assemble_rows().
-  sort_key <- rank_sort_key(sort_by, plan)
-  asm <- rank_assemble_rows(leaf, par_rows, parent, sort_key, sort_dir, top_n)
+  srt <- rank_resolve_sort(sort_by, plan, data, leaf, par_rows, group, parent)
+  asm <- rank_assemble_rows(srt$leaf, srt$par_rows, parent, srt$key, sort_dir,
+                            top_n)
   rows <- asm$rows
   folded <- asm$folded
   fold_max <- asm$fold_max
@@ -529,6 +555,7 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
 rank_sort_key <- function(sort_by, plan) {
   sb <- rank_chr1(sort_by) %||% "value"
   if (identical(sb, "label")) return(".label")
+  if (identical(sb, "data")) return(".ord")
   if (identical(sb, "value")) return(".v")
   hit <- vapply(plan, function(p) identical(p$label, sb), logical(1L))
   if (any(hit)) {
@@ -536,6 +563,40 @@ rank_sort_key <- function(sort_by, plan) {
     if (!is.null(key)) return(key)
   }
   ".v"
+}
+
+# A raw data column as the ordering key: the group's MINIMUM of that column
+# (chart parity: `mins` in chart.js orderGroups). AVISITN orders the visits
+# that a character AVISIT cannot -- first appearance breaks down as soon as
+# one subject discontinues early. Groups the column has nothing for keep NA
+# and sort last in both directions (na.last in rank_assemble_rows).
+#' @noRd
+rank_min_ord <- function(data, keycol, sortcol, labels) {
+  v <- suppressWarnings(as.numeric(data[[sortcol]]))
+  m <- tapply(v, as.character(data[[keycol]]), function(z) {
+    z <- z[is.finite(z)]
+    if (length(z)) min(z) else NA_real_
+  })
+  as.numeric(m[as.character(labels)])
+}
+
+# Resolve `sort_by` to a column that exists on the assembled frames. Keywords,
+# summary names and facet levels already name one; a raw data column is folded
+# into `.ord` here, so the assembler still sees a single key.
+#' @noRd
+rank_resolve_sort <- function(sort_by, plan, data, leaf, par_rows, group,
+                              parent) {
+  key <- rank_sort_key(sort_by, plan)
+  sb <- rank_chr1(sort_by) %||% "value"
+  if (identical(key, ".v") && !sb %in% c("value", "label", "data") &&
+        sb %in% names(data)) {
+    leaf$.ord <- rank_min_ord(data, group, sb, leaf$.label)
+    if (!is.null(par_rows)) {
+      par_rows$.ord <- rank_min_ord(data, parent, sb, par_rows$.label)
+    }
+    key <- ".ord"
+  }
+  list(key = key, leaf = leaf, par_rows = par_rows)
 }
 
 #' @noRd

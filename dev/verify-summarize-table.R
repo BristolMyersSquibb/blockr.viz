@@ -15,6 +15,13 @@
 # Facet view
 #   facet — Subjects bar per arm (copies adjacent, one shared scale),
 #           pooled Overall column and the Arms field rendered ONCE.
+# Visits view
+#   visits — vital signs by AVISIT: the row order comes from the DATA, not
+#           the alphabet. sort_by = "AVISITN" (a raw numeric column, ordered
+#           by the group minimum) is the reliable one; sort_by = "data"
+#           (factor levels, else first appearance) puts End of Treatment
+#           mid-table here, because one subject discontinued early. Both
+#           live in the gear's Sort select.
 # Nested view
 #   nested — subjects collapsed under SEX (by = c(SEX, USUBJID)): parents
 #           are expandable rows aggregated in their own pass (a parent's
@@ -49,6 +56,14 @@ counts <- sort(table(adae$AEDECOD), decreasing = TRUE)
 ae <- adae[adae$AEDECOD %in% names(counts)[1:15],
            c("USUBJID", "AEBODSYS", "AEDECOD", "AESEV", "AESER", "TRT01A",
              "SEX", "ASTDY", "AENDY", "DUR")]
+
+vs <- as.data.frame(pharmaverseadam::advs)
+vs <- vs[!is.na(vs$AVISIT) &
+           vs$PARAM %in% c("Diastolic Blood Pressure (mmHg)",
+                           "Pulse Rate (beats/min)"),
+         c("USUBJID", "AVISIT", "AVISITN", "PARAM", "PARAMCD", "AVAL", "CHG",
+           "TRT01A", "ADY")]
+dbp <- vs[vs$PARAMCD == "DIABP", ]
 
 mixed_summaries <- list(
   list(type = "simple", name = "Subjects", func = "count_distinct",
@@ -88,6 +103,22 @@ serve(
         title = "Faceted by arm, with a pooled Overall column",
         block_name = "Faceted + pooled"
       ),
+      vs_data = new_static_block(dbp, block_name = "Vital signs"),
+      visits = new_summarize_table_block(
+        by = "AVISIT",
+        summaries = list(
+          list(type = "simple", name = "Subjects", func = "count_distinct",
+               col = "USUBJID", show = "bar"),
+          list(type = "dist", name = "DBP (mmHg)", col = "AVAL",
+               stat = "median_q1_q3", whiskers = "tukey", show = "box"),
+          list(type = "dist", name = "Change from baseline", col = "CHG",
+               stat = "mean_ci95", show = "pointrange"),
+          list(type = "field", name = "Arms", col = "TRT01A")
+        ),
+        sort_by = "AVISITN", sort_dir = "asc", drill = "AVISIT",
+        title = "Diastolic BP by visit, in visit order",
+        block_name = "Visits"
+      ),
       nested = new_summarize_table_block(
         by = c("SEX", "USUBJID"),
         summaries = list(
@@ -106,12 +137,14 @@ serve(
     links = list(
       list(from = "ae_data", to = "mixed", input = "data"),
       list(from = "ae_data", to = "facet", input = "data"),
-      list(from = "ae_data", to = "nested", input = "data")
+      list(from = "ae_data", to = "nested", input = "data"),
+      list(from = "vs_data", to = "visits", input = "data")
     ),
     extensions = new_dag_extension(),
     grids = list(
       Mixed = dock_grid("mixed"),
       Facet = dock_grid("facet"),
+      Visits = dock_grid("visits"),
       Nested = dock_grid("nested")
     ),
     active = Sys.getenv("BLOCKR_VIEW", "Mixed")

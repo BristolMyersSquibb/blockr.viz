@@ -75,8 +75,10 @@
 #' @param fields Extra columns from the underlying row, shown as real columns
 #'   beside the bar -- the chart's tooltip fields. Only meaningful with
 #'   `func = "identity"`, where each group IS one row.
-#' @param sort_by,sort_dir Server-side ordering: `"value"`, `"label"` or a
-#'   facet level name, and `"desc"` / `"asc"`.
+#' @param sort_by,sort_dir Server-side ordering: `"value"` (the measure),
+#'   `"data"` (the data's own order -- factor levels, else first appearance),
+#'   `"label"`, a summary column name or a facet level name; and `"desc"` /
+#'   `"asc"`.
 #' @param top_n Optional cap (`NULL` = off, the table scrolls instead).
 #' @param max_height CSS max-height of the scroll container.
 #' @param search Show the search input.
@@ -698,7 +700,12 @@ rank_arguments <- function() {
       type = arg_array(arg_string())
     ),
     sort_by = new_arg_spec(
-      "Ordering: value (the measure), label (alphabetical), or a facet level name.",
+      paste0(
+        "Ordering: value (the measure), data (the data's own order -- factor ",
+        "levels, else first appearance in the rows: use it for visits and dose ",
+        "groups, which read wrong alphabetically), label (alphabetical), a ",
+        "summary column name, or a facet level name."
+      ),
       example = "value",
       type = arg_string()
     ),

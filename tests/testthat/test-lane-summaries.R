@@ -257,3 +257,72 @@ test_that("the constructor round-trips the summaries list", {
   fmls <- names(formals(new_summarize_table_block))
   expect_true(all(c("summaries", "by", "facet_layout") %in% fmls))
 })
+
+test_that("sort_by data honors factor levels, else first appearance", {
+  visits <- c("Baseline", "Week 2", "Week 10")
+  d <- data.frame(
+    AVISIT = factor(rep(rev(visits), each = 3L), levels = visits),
+    AVAL = 1:9,
+    stringsAsFactors = FALSE
+  )
+  S <- list(list(type = "simple", name = "N", func = "count", show = "bar"))
+
+  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+                              sort_by = "data", sort_dir = "asc")
+  expect_identical(p$rows$.label, visits)
+  # The direction still applies -- reverse chronological is a real ask.
+  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+                              sort_by = "data", sort_dir = "desc")
+  expect_identical(p$rows$.label, rev(visits))
+  # Alphabetical is what this exists to avoid.
+  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+                              sort_by = "label", sort_dir = "asc")
+  expect_identical(p$rows$.label, c("Baseline", "Week 10", "Week 2"))
+
+  # No factor: the order the rows arrive in (ADaM is visit-sorted).
+  d$AVISIT <- as.character(d$AVISIT)
+  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+                              sort_by = "data", sort_dir = "asc")
+  expect_identical(p$rows$.label, rev(visits))
+
+  # Nested: parents in data order, each parent's children too.
+  d$ARM <- rep(c("Placebo", "Active"), length.out = nrow(d))
+  p <- lane_prepare_summaries(d, by = c("ARM", "AVISIT"), summaries = S,
+                              sort_by = "data", sort_dir = "asc")
+  expect_identical(p$rows$.label[p$rows$.is_parent], c("Placebo", "Active"))
+  expect_identical(p$rows$.label[!p$rows$.is_parent], rep(rev(visits), 2L))
+})
+
+test_that("the bar path takes the same data order", {
+  ae <- sum_fixture()
+  ae$TERM <- factor(ae$TERM, levels = paste0("Term", 5:1))
+  p <- rank_prepare(ae, group = "TERM", func = "count", sort_by = "data",
+                    sort_dir = "asc")
+  expect_identical(p$rows$.label, paste0("Term", 5:1))
+})
+
+test_that("sort_by a raw numeric column orders by the group minimum", {
+  # The visit case first appearance cannot solve: one subject discontinues
+  # after Week 4, so "End of Treatment" appears in the rows before Week 8.
+  d <- data.frame(
+    AVISIT = c("Baseline", "Week 4", "End of Treatment",
+               "Baseline", "Week 4", "Week 8", "End of Treatment"),
+    AVISITN = c(0, 4, 99, 0, 4, 8, 99),
+    AVAL = c(1, 2, 3, 4, 5, 6, 7),
+    USUBJID = c("a", "a", "a", "b", "b", "b", "b"),
+    stringsAsFactors = FALSE
+  )
+  S <- list(list(type = "simple", name = "N", func = "count", show = "bar"))
+  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+                              sort_by = "data", sort_dir = "asc")
+  expect_identical(p$rows$.label,
+                   c("Baseline", "Week 4", "End of Treatment", "Week 8"))
+  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+                              sort_by = "AVISITN", sort_dir = "asc")
+  expect_identical(p$rows$.label,
+                   c("Baseline", "Week 4", "Week 8", "End of Treatment"))
+  # A summary column of the same name still wins the keyword race.
+  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+                              sort_by = "N", sort_dir = "desc")
+  expect_identical(p$rows$.label[[1L]], "Baseline")
+})

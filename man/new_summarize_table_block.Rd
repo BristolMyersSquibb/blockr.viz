@@ -110,8 +110,10 @@ A comparison colours its bars by direction, so it ignores \code{color}.}
 beside the bar -- the chart's tooltip fields. Only meaningful with
 \code{func = "identity"}, where each group IS one row.}
 
-\item{sort_by, sort_dir}{Server-side ordering: \code{"value"}, \code{"label"} or a
-facet level name, and \code{"desc"} / \code{"asc"}.}
+\item{sort_by, sort_dir}{Server-side ordering: \code{"value"} (the measure),
+\code{"data"} (the data's own order -- factor levels, else first appearance),
+\code{"label"}, a summary column name or a facet level name; and \code{"desc"} /
+\code{"asc"}.}
 
 \item{top_n}{Optional cap (\code{NULL} = off, the table scrolls instead).}
 

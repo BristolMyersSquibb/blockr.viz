@@ -1334,9 +1334,17 @@
     }).filter(Boolean);
     RANK_ROLES.sort_by.options = [
       { value: "value", label: "Measure" },
+      // The order the data itself carries -- factor levels, else
+      // first-appearance in the rows (chart parity: "Data order"). A visit
+      // or dose-group table reads wrong alphabetically.
+      { value: "data", label: "Data order" },
       { value: "label", label: "Name" }
     ].concat(sumNames)
-      .concat(levels.map(function (lv) { return { value: lv, label: lv }; }));
+      .concat(levels.map(function (lv) { return { value: lv, label: lv }; }))
+      // Numeric columns of the input (the engine expands "#num"): the row's
+      // MINIMUM of that column orders the table. AVISITN is the ordering a
+      // character AVISIT does not carry.
+      .concat(["#num"]);
     return { cfg: cfg, cols: cols };
   }
 
@@ -1423,7 +1431,20 @@
       },
       drillAutoLabel: null,
       title: "Summarize table settings",
-      onChange: function (key) { sendConfig(elemId, key, cfg[key]); },
+      onChange: function (key) {
+        sendConfig(elemId, key, cfg[key]);
+        // The ranked default is descending; the data's own order read
+        // backwards is exactly what "data order" is asked for to avoid, so
+        // the pick carries the direction with it. One control change, two
+        // params sent -- and the direction stays a control, so reverse
+        // chronological is still one click away.
+        if (key === "sort_by" && cfg.sort_by === "data" &&
+              cfg.sort_dir !== "asc") {
+          cfg.sort_dir = "asc";
+          sendConfig(elemId, "sort_dir", "asc");
+          engine.render();
+        }
+      },
       onMults: function () {},
       onClearFilter: function () {
         rows(root).forEach(function (r) { r.classList.remove("is-on"); });

@@ -43,7 +43,8 @@
 #' @param fields Extra columns from the underlying row (identity measure
 #'   only), shown as real columns beside the bar.
 #' @param sort_by,sort_dir Server-side ordering. `sort_by` is `"value"`,
-#'   `"label"` or a facet level name; `sort_dir` is `"desc"` or `"asc"`.
+#'   `"data"` (the data's own order), `"label"`, a summary column name or a
+#'   facet level name; `sort_dir` is `"desc"` or `"asc"`.
 #' @param top_n Optional cap. Off by default -- the table scrolls instead.
 #'   When set, the rows below the cut are reported in a visible fold row.
 #' @param max_height CSS max-height of the scroll container.
@@ -411,7 +412,7 @@ rank_table_dep <- memoise0(function() {
     drilldown_table_dep(),
     htmltools::htmlDependency(
       name = "blockr-viz-rank",
-      version = paste0(utils::packageVersion("blockr.viz"), ".9"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".10"),
       src = system.file("js", package = "blockr.viz"),
       script = "rank-table.js"
     )

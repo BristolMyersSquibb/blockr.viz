@@ -197,12 +197,17 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
                        as.character(skel[[parent]]),
                      stringsAsFactors = FALSE)
   for (k in keys) leaf[[k]] <- skel[[k]]
+  # The data's own order for the row labels (factor levels, else
+  # first-appearance): `sort_by = "data"` reads it, everything else ignores
+  # it. A visit-keyed table is unreadable alphabetically.
+  leaf$.ord <- rank_data_ord(data[[group]], leaf$.label)
   par_rows <- NULL
   if (!is.null(parent)) {
     pv <- rank_levels(data[[parent]])
     par_rows <- data.frame(.label = pv, .parent = NA_character_,
                            stringsAsFactors = FALSE)
     par_rows[[parent]] <- pv
+    par_rows$.ord <- rank_data_ord(data[[parent]], pv)
   }
 
   # --- per-summary build -----------------------------------------------------
@@ -350,8 +355,9 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     par_rows$.v <- lane_primary_value(par_rows, s_primary$s, primary_col)
   }
 
-  sort_key <- rank_sort_key(sort_by, plan)
-  asm <- rank_assemble_rows(leaf, par_rows, parent, sort_key, sort_dir, top_n)
+  srt <- rank_resolve_sort(sort_by, plan, data, leaf, par_rows, group, parent)
+  asm <- rank_assemble_rows(srt$leaf, srt$par_rows, parent, srt$key, sort_dir,
+                            top_n)
   rows <- asm$rows
 
   # --- per-entry domains ------------------------------------------------------
