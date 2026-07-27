@@ -106,10 +106,19 @@ rank_has_pct <- function(func) {
   isTRUE(func %in% c("count", "count_distinct"))
 }
 
-# Level order, matching the chart's _orderLevels: factor levels, else sorted.
+# Level order, matching the chart's _orderLevels: factor levels, else
+# sorted -- NUMERICALLY for a numeric or date column, which is the order
+# such a column carries. Sorting its labels as text puts day 10 before
+# day 2.
 #' @noRd
 rank_levels <- function(x) {
-  lv <- if (is.factor(x)) levels(x) else sort(unique(as.character(x)))
+  lv <- if (is.factor(x)) {
+    levels(x)
+  } else if (is.numeric(x) || inherits(x, c("Date", "POSIXct"))) {
+    as.character(sort(unique(x)))
+  } else {
+    sort(unique(as.character(x)))
+  }
   lv[!is.na(lv)]
 }
 
@@ -120,7 +129,16 @@ rank_levels <- function(x) {
 # Alphabetical would put "Week 10" before "Week 2".
 #' @noRd
 rank_data_levels <- function(x) {
-  lv <- if (is.factor(x)) levels(x) else unique(as.character(x))
+  lv <- if (is.factor(x)) {
+    levels(x)
+  } else if (is.numeric(x) || inherits(x, c("Date", "POSIXct"))) {
+    # A number IS its own order. First appearance is the fallback for a
+    # column that carries no order of its own -- a character one -- and
+    # applying it to study days scatters them (2, 10, 1, 100).
+    as.character(sort(unique(x)))
+  } else {
+    unique(as.character(x))
+  }
   lv[!is.na(lv)]
 }
 
@@ -592,6 +610,21 @@ rank_resolve_sort <- function(sort_by, plan, data, leaf, par_rows, group,
                               parent) {
   key <- rank_sort_key(sort_by, plan)
   sb <- rank_chr1(sort_by) %||% "value"
+  # Ordering by the row NAME when that name is a number: compare the
+  # numbers. `.label` is the display string, and as text "10" sorts before
+  # "2".
+  if (identical(key, ".label")) {
+    num <- function(df, col) {
+      if (is.null(df) || is.null(col) || !is.numeric(data[[col]])) return(df)
+      df$.labn <- suppressWarnings(as.numeric(df$.label))
+      df
+    }
+    if (is.numeric(data[[group]])) {
+      leaf <- num(leaf, group)
+      par_rows <- if (is.null(parent)) NULL else num(par_rows, parent)
+      if (!is.null(leaf$.labn)) key <- ".labn"
+    }
+  }
   if (identical(key, ".v") && !sb %in% c("value", "label", "data") &&
         sb %in% names(data)) {
     leaf$.ord <- rank_min_ord(data, group, sb, leaf$.label)

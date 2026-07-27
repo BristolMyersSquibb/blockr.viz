@@ -438,3 +438,28 @@ test_that("colour is a table-level dimension every glyph column inherits", {
                      color = "ARM")
   expect_identical(p2$plan[[1L]]$levels, c("Active", "Placebo"))
 })
+
+test_that("a numeric grouping column orders numerically, not as text", {
+  # Study days: no factor to carry the order, so first appearance used to
+  # scatter them (2, 10, 1, 100) and A-Z sorted the digits ("10" < "2").
+  d <- data.frame(ADY = c(2, 10, 1, 2, 10, 1, 100, 100), V = 1:8)
+  S <- list(list(type = "simple", name = "N", func = "count", show = "bar"))
+  for (sb in c("data", "label")) {
+    p <- lane_prepare_summaries(d, by = "ADY", summaries = S, sort_by = sb,
+                                sort_dir = "asc")
+    expect_identical(p$rows$.label, c("1", "2", "10", "100"), info = sb)
+    p <- lane_prepare_summaries(d, by = "ADY", summaries = S, sort_by = sb,
+                                sort_dir = "desc")
+    expect_identical(p$rows$.label, c("100", "10", "2", "1"), info = sb)
+  }
+
+  # The same for a numeric PARENT, a facet and a colour split: every level
+  # list runs through rank_levels().
+  d$G <- rep(c("b", "a"), 4)
+  p <- lane_prepare_summaries(d, by = c("ADY", "G"), summaries = S,
+                              sort_by = "data", sort_dir = "asc")
+  expect_identical(p$rows$.label[p$rows$.is_parent], c("1", "2", "10", "100"))
+  expect_identical(rank_levels(c(2, 10, 1, 100)), c("1", "2", "10", "100"))
+  expect_identical(rank_levels(as.Date(c("2024-01-10", "2024-01-02"))),
+                   c("2024-01-02", "2024-01-10"))
+})
