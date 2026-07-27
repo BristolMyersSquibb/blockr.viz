@@ -444,3 +444,32 @@ test_that("html escaping survives a label with markup in it", {
   expect_match(h, "&lt;b&gt;T1&lt;/b&gt;", fixed = TRUE)
   expect_false(grepl("<b>T1</b>", h, fixed = TRUE))
 })
+
+test_that("sorting can be turned off: no hook class, no arrow", {
+  d <- data.frame(AVISIT = c("Baseline", "Week 2", "Week 2"),
+                  AVAL = c(1, 2, 3), stringsAsFactors = FALSE)
+  prep <- rank_prepare(d, group = "AVISIT", func = "count")
+
+  on <- rank_thead(prep)
+  expect_match(on, "blockr-sortable")
+  expect_match(on, "blockr-sort-icon")
+
+  off <- rank_thead(prep, sortable = FALSE)
+  expect_false(grepl("blockr-sortable", off, fixed = TRUE))
+  expect_false(grepl("blockr-sort-icon", off, fixed = TRUE))
+
+  # The cell model carries the toggle through cfg, and so does the ctor.
+  m <- rank_cells(prep, cfg = list(sortable = FALSE))
+  expect_false(grepl("blockr-sortable", m$thead, fixed = TRUE))
+  expect_true("sortable" %in% names(formals(new_summarize_table_block)))
+})
+
+test_that("every row carries the order it arrived in", {
+  d <- data.frame(AVISIT = c("Baseline", "Week 2", "Week 10"),
+                  AVISITN = c(0, 2, 10), stringsAsFactors = FALSE)
+  prep <- rank_prepare(d, group = "AVISIT", func = "count",
+                       sort_by = "AVISITN", sort_dir = "asc")
+  html <- rank_cells_html(rank_cells(prep))
+  ord <- regmatches(html, gregexpr("data-rank-ord=\"[0-9]+\"", html))[[1L]]
+  expect_identical(ord, paste0("data-rank-ord=\"", 0:2, "\""))
+})

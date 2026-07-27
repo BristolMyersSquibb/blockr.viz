@@ -82,6 +82,10 @@
 #' @param top_n Optional cap (`NULL` = off, the table scrolls instead).
 #' @param max_height CSS max-height of the scroll container.
 #' @param search Show the search input.
+#' @param sortable Allow click-to-sort on the column headers. `FALSE` freezes
+#'   the table in the configured `sort_by` order -- for exhibits whose row
+#'   order carries meaning (visits, dose groups), where an accidental click
+#'   would scramble it.
 #' @param title,subtitle,caption Display text. `NULL` = auto (inherits the
 #'   input's label / subtitle / caption attribute), `""` = explicitly none,
 #'   else a template with the same `{...}` tokens as the chart and table
@@ -128,6 +132,7 @@ new_summarize_table_block <- function(group = NULL,
                                  top_n = NULL,
                                  max_height = "600px",
                                  search = TRUE,
+                                 sortable = TRUE,
                                  title = NULL,
                                  subtitle = NULL,
                                  caption = NULL,
@@ -191,6 +196,7 @@ new_summarize_table_block <- function(group = NULL,
         r_top_n   <- shiny::reactiveVal(top_n)
         r_max_height <- shiny::reactiveVal(max_height)
         r_search  <- shiny::reactiveVal(isTRUE(search))
+        r_sortable <- shiny::reactiveVal(isTRUE(sortable))
         r_title   <- shiny::reactiveVal(title)
         r_subtitle <- shiny::reactiveVal(subtitle)
         r_caption <- shiny::reactiveVal(caption)
@@ -259,7 +265,8 @@ new_summarize_table_block <- function(group = NULL,
           if (identical(act$action, "config")) {
             key <- as.character(act$param %||% "")[1L]
             if (!nzchar(key)) return()
-            if (!identical(key, "search") && is.null(setters[[key]])) return()
+            if (!key %in% c("search", "sortable") &&
+                  is.null(setters[[key]])) return()
             val <- act$value
             if (key %in% c("title", "subtitle", "caption")) {
               # NULL = auto, "" = explicitly none, else the template text.
@@ -275,6 +282,8 @@ new_summarize_table_block <- function(group = NULL,
               setters[[key]](if (length(v)) v[[1L]] else "")
             } else if (identical(key, "search")) {
               r_search(identical(as.character(val)[[1L]], "on"))
+            } else if (identical(key, "sortable")) {
+              r_sortable(identical(as.character(val)[[1L]], "on"))
             } else if (identical(key, "top_n")) {
               n <- suppressWarnings(as.integer(as.character(val)[[1L]]))
               setters[[key]](if (is.na(n) || n <= 0L) NULL else n)
@@ -403,7 +412,8 @@ new_summarize_table_block <- function(group = NULL,
               facet_layout = r_facet_layout(),
               bar_mode = r_bar_mode(), cols = r_cols(), fields = r_fields(),
               sort_by = r_sort_by(), sort_dir = r_sort_dir(),
-              top_n = r_top_n(), search = r_search(), drill = r_drill(),
+              top_n = r_top_n(), search = r_search(),
+              sortable = r_sortable(), drill = r_drill(),
               ctrl_target = r_ctrl_target(),
               ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices()),
               titles = list(
@@ -461,6 +471,7 @@ new_summarize_table_block <- function(group = NULL,
             cols = r_cols, fields = r_fields, sort_by = r_sort_by,
             sort_dir = r_sort_dir, top_n = r_top_n,
             max_height = r_max_height, search = r_search,
+            sortable = r_sortable,
             title = r_title, subtitle = r_subtitle, caption = r_caption,
             drill = r_drill, ctrl_target = r_ctrl_target,
             ctrl_table = r_ctrl_table, filter_type = r_filter_type,
@@ -500,7 +511,8 @@ new_summarize_table_block <- function(group = NULL,
       "group", "value", "func", "id_var", "summaries", "by", "facet_layout",
       "parent", "color", "bar_mode",
       "facet", "compare", "cols", "fields", "sort_by", "sort_dir", "top_n",
-      "max_height", "search", "title", "subtitle", "caption", "drill",
+      "max_height", "search", "sortable", "title", "subtitle", "caption",
+      "drill",
       "ctrl_target", "ctrl_table"
     ),
     ...
@@ -728,6 +740,15 @@ rank_arguments <- function() {
       "CSS max-height of the scroll container.",
       example = "600px",
       type = arg_string()
+    ),
+    sortable = new_arg_spec(
+      paste0(
+        "Allow click-to-sort on the column headers. FALSE freezes the ",
+        "configured order -- for exhibits whose row order carries meaning ",
+        "(visits, dose groups), where a stray click would scramble it."
+      ),
+      example = TRUE,
+      type = arg_boolean()
     ),
     search = new_arg_spec(
       "Show the search input above the table.",

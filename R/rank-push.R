@@ -398,7 +398,7 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
 
   list(
     n = n,
-    thead = rank_thead(prep),
+    thead = rank_thead(prep, sortable = isTRUE(cfg$sortable %||% TRUE)),
     ncol = length(plan) + 1L,
     nested = !is.null(prep$parent),
     label = as.character(rows$.label),      # PLAIN: each consumer escapes
@@ -422,16 +422,17 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
 #' cells move to the second row -- the Table-1 header. Everything else keeps
 #' the single row.
 #' @noRd
-rank_thead <- function(prep) {
+rank_thead <- function(prep, sortable = TRUE) {
   col_th <- function(p, i) {
     as.character(dt_th(
       p$label, i, label = p$sub_label,
-      numeric = identical(p$kind, "num") && !isTRUE(p$text), sortable = TRUE
+      numeric = identical(p$kind, "num") && !isTRUE(p$text),
+      sortable = sortable
     ))
   }
   stub <- as.character(dt_th(
     rank_label_header(prep), 0L, stub = TRUE,
-    label = prep$group_label, sortable = TRUE
+    label = prep$group_label, sortable = sortable
   ))
 
   fs <- prep$facet_spans
@@ -543,7 +544,11 @@ rank_cells_html <- function(m) {
     "\" data-rank-label=\"", rank_esc(m$label), "\"",
     ifelse(m$level > 0L,
            paste0(" data-rank-parent=\"", rank_esc(m$parent), "\""), ""),
-    " data-rank-level=\"", m$level, "\">"
+    " data-rank-level=\"", m$level,
+    # The order the row arrived in: the third header click sorts back to it,
+    # so the configured order (visits in visit order) is never lost to a
+    # stray click. Emitted by BOTH assemblers -- the drift test pins it.
+    "\" data-rank-ord=\"", seq_along(m$level) - 1L, "\">"
   )
   body <- paste0(tr, lbl, do.call(paste0, cells), "</tr>")
   fold <- if (is.null(m$fold)) {

@@ -25,6 +25,7 @@ rank_table(
   top_n = NULL,
   max_height = "600px",
   search = TRUE,
+  sortable = TRUE,
   title = NULL,
   subtitle = NULL,
   caption = NULL,
@@ -82,6 +83,8 @@ When set, the rows below the cut are reported in a visible fold row.}
 \item{max_height}{CSS max-height of the scroll container.}
 
 \item{search}{Show the search input.}
+
+\item{sortable}{Allow click-to-sort on the column headers.}
 
 \item{title, subtitle, caption}{Display text, already resolved (see
 \code{resolve_block_title()}).}

@@ -26,6 +26,7 @@ new_summarize_table_block(
   top_n = NULL,
   max_height = "600px",
   search = TRUE,
+  sortable = TRUE,
   title = NULL,
   subtitle = NULL,
   caption = NULL,
@@ -120,6 +121,11 @@ beside the bar -- the chart's tooltip fields. Only meaningful with
 \item{max_height}{CSS max-height of the scroll container.}
 
 \item{search}{Show the search input.}
+
+\item{sortable}{Allow click-to-sort on the column headers. \code{FALSE} freezes
+the table in the configured \code{sort_by} order -- for exhibits whose row
+order carries meaning (visits, dose groups), where an accidental click
+would scramble it.}
 
 \item{title, subtitle, caption}{Display text. \code{NULL} = auto (inherits the
 input's label / subtitle / caption attribute), \code{""} = explicitly none,

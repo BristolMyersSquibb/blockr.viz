@@ -126,11 +126,23 @@
   // Client-side, on `data-v` for numbers and the label text otherwise. In a
   // nested table only whole parent blocks move, so a child never leaves its
   // parent; within a block the children sort too.
+  //
+  // Every row carries data-rank-ord: the order it ARRIVED in. The server's
+  // order (sort_by / sort_dir, e.g. visits in visit order) is a real state,
+  // so header sorting cycles back to it on the third click instead of
+  // stranding the table in an alphabet it was configured out of.
+
   function bindSort(root) {
     // Looked up per interaction: with the data-push transport the <table> is
     // replaced on every payload, so nothing may be captured here.
     var tbl = function () { return root.querySelector("table.blockr-rank-table"); };
-    var state = { key: null, dir: 0 };
+    // The sort state lives on the CONTAINER, read fresh per click: a new
+    // payload replaces it (new columns, new server order), so the next header
+    // click starts at click 1 again.
+    function sortState() {
+      if (!root._rankSort) root._rankSort = { key: null, dir: 0 };
+      return root._rankSort;
+    }
 
     // Same contract as the table block's wireSort(): the header carries
     // data-col-index, the cell carries the raw number in data-v. Index 0 is
@@ -180,29 +192,51 @@
       if (!tbody) return;
       var nested = table.getAttribute("data-rank-nested") === "1";
       var key = th.getAttribute("data-col-index");
+      var state = sortState();
+      // Three states per column: the first click sorts, the second reverses,
+      // the third gives the server's order back (no icon, nothing claimed).
+      var first = key === "0" ? 1 : -1;
+      var restore = false;
       if (state.key === key) {
-        state.dir = state.dir === -1 ? 1 : -1;
+        if (state.dir === first) {
+          state.dir = -first;
+        } else {
+          state.key = null;
+          state.dir = 0;
+          restore = true;
+        }
       } else {
         state.key = key;
-        state.dir = key === "0" ? 1 : -1;
+        state.dir = first;
       }
       // The arrow is the table block's .blockr-sort-icon, driven by the same
       // asc/desc classes, so the two headers behave and read identically.
       table.querySelectorAll("th .blockr-sort-icon").forEach(function (ic) {
         ic.classList.remove("blockr-sort-icon-asc", "blockr-sort-icon-desc");
       });
-      var icon = th.querySelector(".blockr-sort-icon");
-      if (icon) {
-        icon.classList.add(state.dir === 1
-          ? "blockr-sort-icon-asc" : "blockr-sort-icon-desc");
+      if (!restore) {
+        var icon = th.querySelector(".blockr-sort-icon");
+        if (icon) {
+          icon.classList.add(state.dir === 1
+            ? "blockr-sort-icon-asc" : "blockr-sort-icon-desc");
+        }
       }
 
+      var ordOf = function (r) {
+        return parseInt(r.getAttribute("data-rank-ord"), 10) || 0;
+      };
       var bs = blocks(nested);
-      bs.sort(function (x, y) { return cmp(x.head, y.head, th, state.dir); });
+      bs.sort(function (x, y) {
+        return restore
+          ? ordOf(x.head) - ordOf(y.head)
+          : cmp(x.head, y.head, th, state.dir);
+      });
       var frag = document.createDocumentFragment();
       bs.forEach(function (b) {
         frag.appendChild(b.head);
-        b.kids.sort(function (x, y) { return cmp(x, y, th, state.dir); });
+        b.kids.sort(function (x, y) {
+          return restore ? ordOf(x) - ordOf(y) : cmp(x, y, th, state.dir);
+        });
         b.kids.forEach(function (k) { frag.appendChild(k); });
       });
       var fold = tbody.querySelector("tr.blockr-rank-fold");
@@ -481,7 +515,8 @@
       var row = '<tr class="' + cls + '" data-rank-label="' +
         esc(p.label[i]) + '"' +
         (child ? ' data-rank-parent="' + esc(p.parent[i]) + '"' : "") +
-        ' data-rank-level="' + (child ? p.level[i] : 0) + '">';
+        ' data-rank-level="' + (child ? p.level[i] : 0) +
+        '" data-rank-ord="' + i + '">';
       row += '<td class="blockr-rank-label-col blockr-stub' +
         (parent ? " blockr-has-toggle" : "") + '"' +
         (child ? ' style="padding-left:40px;"' : "") + ">" +
@@ -592,6 +627,8 @@
       var tb = wrap.querySelector("tbody");
       if (tb) tb.innerHTML = assembleBody(p);
     }
+    // Fresh rows, fresh server order: the next header click starts at click 1.
+    root._rankSort = { key: null, dir: 0 };
     applyChrome(root, p.chrome);
     // The row set changed: drop the search text cache and re-apply the current
     // query + collapse state to the fresh rows.
@@ -651,6 +688,10 @@
                       { value: "asc", label: "Smallest first" }];
   var SEARCH_OPT = [{ value: "on", label: "Search bar" },
                     { value: "off", label: "No search bar" }];
+  // Header sorting off: the configured order is the exhibit. A visit table
+  // ordered by AVISITN has nothing to gain from an accidental A-Z click.
+  var SORTABLE_OPT = [{ value: "on", label: "Header sorting" },
+                      { value: "off", label: "No header sorting" }];
 
   // The lane statistic vocabulary: MUST mirror R's LANE_STATS/LANE_STAT_META
   // (R/lane-stats.R, drift-tested) -- chart.js's SUMMARY_STATS plus
@@ -729,6 +770,8 @@
     bar_mode: { label: "Split layout", kind: "segmented", options: BAR_MODE_OPT },
     sort_dir: { label: "Order", kind: "segmented", options: SORT_DIR_OPT },
     search:   { label: "Search", kind: "segmented", options: SEARCH_OPT },
+    sortable: { label: "Header sorting", kind: "segmented",
+                options: SORTABLE_OPT },
     // Drill-down: a plain column role, like the table block's.
     drill:    { label: "Filter on", kind: "column", colType: "any" },
     title:    { label: "Title", kind: "text", ph: "e.g. AEs by {ARM}",
@@ -1226,8 +1269,8 @@
           render: function (sec) { renderSummariesEditor(sec, ctx); }
         }] : [],
         presentation: cfg.facet
-          ? ["sort_by", "sort_dir", "facet_layout", "search"]
-          : ["sort_by", "sort_dir", "search"],
+          ? ["sort_by", "sort_dir", "facet_layout", "search", "sortable"]
+          : ["sort_by", "sort_dir", "search", "sortable"],
         drillToggle: "drill",
         drillDefault: (cfg.by && cfg.by.length)
           ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),
@@ -1259,6 +1302,7 @@
     // "Aggregation" section rather than sitting inside Mapping.
     aggTitle = "Aggregation";
     pres.push("search");
+    pres.push("sortable");
 
     return {
       requiredMap: ["group"],

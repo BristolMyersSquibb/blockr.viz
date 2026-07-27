@@ -49,6 +49,7 @@
 #'   When set, the rows below the cut are reported in a visible fold row.
 #' @param max_height CSS max-height of the scroll container.
 #' @param search Show the search input.
+#' @param sortable Allow click-to-sort on the column headers.
 #' @param title,subtitle,caption Display text, already resolved (see
 #'   `resolve_block_title()`).
 #' @param drill Column a row click filters on, or `NULL` for a display-only
@@ -70,7 +71,8 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
                        bar_mode = "stacked", facet = NULL, compare = NULL,
                        cols = NULL, fields = NULL, sort_by = "value",
                        sort_dir = "desc", top_n = NULL, max_height = "600px",
-                       search = TRUE, title = NULL, subtitle = NULL,
+                       search = TRUE, sortable = TRUE,
+                       title = NULL, subtitle = NULL,
                        caption = NULL, drill = NULL, scale_map = NULL,
                        elem_id = NULL, active = NULL) {
   prep <- rank_prepare(
@@ -102,7 +104,8 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
     compare = compare, func = func, value = value, id_var = id_var,
     summaries = summaries, by = by, facet_layout = facet_layout,
     bar_mode = bar_mode, cols = cols, fields = fields, sort_by = sort_by,
-    sort_dir = sort_dir, top_n = top_n, search = search, drill = drill,
+    sort_dir = sort_dir, top_n = top_n, search = search,
+    sortable = sortable, drill = drill,
     titles = list(
       title = title, subtitle = subtitle, caption = caption,
       title_state = title_raw, subtitle_state = subtitle_raw,
@@ -412,7 +415,7 @@ rank_table_dep <- memoise0(function() {
     drilldown_table_dep(),
     htmltools::htmlDependency(
       name = "blockr-viz-rank",
-      version = paste0(utils::packageVersion("blockr.viz"), ".10"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".11"),
       src = system.file("js", package = "blockr.viz"),
       script = "rank-table.js"
     )
@@ -466,6 +469,7 @@ rank_table_attrs <- function(prep, cfg) {
   # Facet levels travel too: the Compare picker offers levels, not columns.
   cfg$facet_levels <- as.list(prep$facet_levels %||% character())
   cfg$search <- if (isTRUE(cfg$search)) "on" else "off"
+  cfg$sortable <- if (isTRUE(cfg$sortable %||% TRUE)) "on" else "off"
   json <- as.character(jsonlite::toJSON(cfg, auto_unbox = TRUE, null = "null"))
   paste0(" data-rank-cfg=\"", rank_esc(json), "\"")
 }
