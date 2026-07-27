@@ -599,6 +599,9 @@
       presentation: pres,
       drillToggle: "drill",
       drillDefault: cfg.group || "",
+      // "Send to filter (beta)" inside the open Drill-down section, chart /
+      // table parity: the engine reads cfg.ctrl_target / cfg.ctrl_choices.
+      ctrlSection: true,
       // Spec-level hint (the table block's shape). NOT a host-level drillHint:
       // that one triggers the chart/tile drill section too and rendered a
       // second, empty "Drill-down" heading.
@@ -636,6 +639,9 @@
     if (!Array.isArray(cfg.fields)) {
       cfg.fields = cfg.fields ? [String(cfg.fields)] : [];
     }
+    // The ctrl-send tail wants a string target and an array of choices.
+    if (cfg.ctrl_target == null) cfg.ctrl_target = "";
+    if (!Array.isArray(cfg.ctrl_choices)) cfg.ctrl_choices = [];
     RANK_ROLES.compare.options = levels;
     RANK_ROLES.sort_by.options = [
       { value: "value", label: "Measure" },

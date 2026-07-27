@@ -151,10 +151,15 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
       paste0("Pick a Value column to ", func)
     }))
   }
+  # A REQUIRED column that vanished upstream is a broken table, reported by
+  # name (a rename or pivot is the usual cause, and naming the column beats a
+  # stack trace).
   mapped <- c(
-    Group = group, `Nest under` = rank_chr1(parent), Color = rank_chr1(color),
-    Facet = rank_chr1(facet), `Subject id` = rank_chr1(id_var),
-    Value = if (needs_value) rank_chr1(value) else NULL
+    Group = group,
+    Value = if (needs_value) rank_chr1(value) else NULL,
+    `Subject id` = if (identical(func, "count_distinct")) {
+      rank_chr1(id_var)
+    }
   )
   miss <- mapped[!mapped %in% names(data)]
   if (length(miss)) {
@@ -168,9 +173,20 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
     return(bad("Pick a Subject id column to count distinct subjects"))
   }
 
-  parent <- rank_chr1(parent)
-  color <- rank_chr1(color)
-  facet <- rank_chr1(facet)
+  # An OPTIONAL dimension mapped to a column not present in the current data
+  # reads as unmapped -- the table renders without that dim (chart parity:
+  # present_role in chart-block.R). This is what makes an upstream picker's
+  # "(none)" (which emits no such column) actually turn the dim off: the
+  # picker changes DATA, never this block's config, so the config must
+  # self-heal against the data. The saved pick survives untouched, and the
+  # dim comes back the moment the column does.
+  present <- function(col) {
+    col <- rank_chr1(col)
+    if (is.null(col) || !col %in% names(data)) NULL else col
+  }
+  parent <- present(parent)
+  color <- present(color)
+  facet <- present(facet)
   id_var <- rank_chr1(id_var)
 
   # color and facet TOGETHER mirror the chart: one bar column per facet

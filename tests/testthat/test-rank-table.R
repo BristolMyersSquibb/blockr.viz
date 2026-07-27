@@ -215,6 +215,32 @@ test_that("top_n caps with a reported fold, and is off by default", {
   expect_identical(full$folded, 0L)
 })
 
+test_that("an optional dim whose column vanished reads as unmapped", {
+  ae <- ae_fixture()
+  # An upstream picker's "(none)" drops the column from the DATA; the saved
+  # mapping must self-heal (chart parity), not error the whole table.
+  p <- rank_prepare(ae, group = "TERM", facet = "GONE_FACET",
+                    color = "GONE_COLOR", parent = "GONE_PARENT",
+                    func = "count")
+  expect_null(p$err)
+  expect_identical(p$layout, "simple")
+  expect_null(p$facet)
+  expect_null(p$color)
+  expect_null(p$parent)
+
+  # One dim missing, the other present: only the missing one drops.
+  ph <- rank_prepare(ae, group = "TERM", facet = "GONE", color = "SEV",
+                     func = "count")
+  expect_identical(ph$layout, "split")
+
+  # REQUIRED columns still report by name.
+  expect_match(rank_prepare(ae, group = "GONE")$err, "GONE")
+  expect_match(
+    rank_prepare(ae, group = "TERM", func = "identity", value = "GONE")$err,
+    "Value = \"GONE\""
+  )
+})
+
 test_that("a bad config is a message, never an error", {
   ae <- ae_fixture()
   expect_identical(rank_prepare(ae, group = NULL)$err,
@@ -392,8 +418,9 @@ test_that("the block constructs, registers and round-trips its state", {
   # re-calling the constructor, so the runtime filter transport has to stay in
   # the signature or a saved click cannot come back.
   fmls <- names(formals(new_rank_block))
-  expect_true(all(c("group", "func", "id_var", "drill", "filter_type",
-                    "filter_column", "filter_values") %in% fmls))
+  expect_true(all(c("group", "func", "id_var", "drill", "ctrl_target",
+                    "ctrl_table", "filter_type", "filter_column",
+                    "filter_values") %in% fmls))
 
   # Registered, so it shows up in the block-adder and the assistant universe.
   expect_true("rank_block" %in% names(blockr.core::available_blocks()))

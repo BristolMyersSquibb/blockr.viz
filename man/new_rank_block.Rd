@@ -25,6 +25,8 @@ new_rank_block(
   subtitle = NULL,
   caption = NULL,
   drill = NULL,
+  ctrl_target = "",
+  ctrl_table = "",
   filter_type = "categorical",
   filter_column = NULL,
   filter_values = NULL,
@@ -85,6 +87,16 @@ blocks (see \code{resolve_title_template()}).}
 \item{drill}{Column a row click filters on. The emitted filter is the same
 categorical contract as \code{\link[=new_chart_block]{new_chart_block()}}, so existing filter links
 compose.}
+
+\item{ctrl_target}{Character(1), beta. Block id of a value filter block on
+the same board: the drill's claim is ALSO pushed into that block over
+the board's control channel (same feature as the chart and table
+blocks), so a row click can filter a pipeline this block has no data
+link to. Empty (default) = off.}
+
+\item{ctrl_table}{Character(1), beta. Only with \code{ctrl_target}: the table
+in the target's dm the pushed conditions apply to. Empty for a value
+filter fed a plain data frame.}
 
 \item{filter_type, filter_column, filter_values}{Runtime filter transport,
 normally left at defaults: they hold the click state so it survives a

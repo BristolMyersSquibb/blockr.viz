@@ -54,6 +54,14 @@
 #' @param drill Column a row click filters on. The emitted filter is the same
 #'   categorical contract as [new_chart_block()], so existing filter links
 #'   compose.
+#' @param ctrl_target Character(1), beta. Block id of a value filter block on
+#'   the same board: the drill's claim is ALSO pushed into that block over
+#'   the board's control channel (same feature as the chart and table
+#'   blocks), so a row click can filter a pipeline this block has no data
+#'   link to. Empty (default) = off.
+#' @param ctrl_table Character(1), beta. Only with `ctrl_target`: the table
+#'   in the target's dm the pushed conditions apply to. Empty for a value
+#'   filter fed a plain data frame.
 #' @param filter_type,filter_column,filter_values Runtime filter transport,
 #'   normally left at defaults: they hold the click state so it survives a
 #'   board save and restore.
@@ -83,6 +91,8 @@ new_rank_block <- function(group = NULL,
                            subtitle = NULL,
                            caption = NULL,
                            drill = NULL,
+                           ctrl_target = "",
+                           ctrl_table = "",
                            # Runtime filter transport (NOT creation-time
                            # config). MUST stay in the signature: blockr.core
                            # serializes a block from its constructor formals
@@ -137,6 +147,12 @@ new_rank_block <- function(group = NULL,
         r_subtitle <- shiny::reactiveVal(subtitle)
         r_caption <- shiny::reactiveVal(caption)
         r_drill   <- shiny::reactiveVal(drill)
+        r_ctrl_target <- shiny::reactiveVal(rank_chr1(ctrl_target) %||% "")
+        r_ctrl_table  <- shiny::reactiveVal(rank_chr1(ctrl_table) %||% "")
+        # Candidate targets for the gear's "Send to filter" select: the value
+        # filter blocks currently on the board (dd_ctrl_choices tracks the
+        # board reactively).
+        r_ctrl_choices <- dd_ctrl_choices()
         r_filter_type <- shiny::reactiveVal(filter_type %||% "categorical")
         r_filter_column <- shiny::reactiveVal(filter_column)
         r_filter_values <- shiny::reactiveVal(filter_values)
@@ -173,6 +189,7 @@ new_rank_block <- function(group = NULL,
           value = r_value, id_var = r_id_var, bar_mode = r_bar_mode,
           cols = r_cols, fields = r_fields, sort_by = r_sort_by,
           sort_dir = r_sort_dir, top_n = r_top_n, drill = r_drill,
+          ctrl_target = r_ctrl_target, ctrl_table = r_ctrl_table,
           title = r_title, subtitle = r_subtitle, caption = r_caption
         )
         # Column / select roles arrive as strings, and the engine sends "" (or
@@ -199,6 +216,9 @@ new_rank_block <- function(group = NULL,
               setters[[key]](if (is.null(val)) NULL else as.character(val)[[1L]])
             } else if (key %in% c("cols", "fields")) {
               setters[[key]](as.character(unlist(val %||% character())))
+            } else if (key %in% c("ctrl_target", "ctrl_table")) {
+              v <- trimws(as.character(unlist(val %||% "")))
+              setters[[key]](if (length(v)) v[[1L]] else "")
             } else if (identical(key, "search")) {
               r_search(identical(as.character(val)[[1L]], "on"))
             } else if (identical(key, "top_n")) {
@@ -235,6 +255,32 @@ new_rank_block <- function(group = NULL,
           r_filter_column(col)
           r_filter_values(vals)
         })
+
+        # External control (chart / table parity): with a ctrl_target set, the
+        # drill's claim is ALSO pushed into that value filter block over the
+        # board's control channel. Claims read off the block's own filter
+        # state; the pristine guard keeps a restored board from re-claiming a
+        # target it never touched this session.
+        r_ctrl_claims <- shiny::reactive({
+          d <- tryCatch(ann_data(), error = function(e) NULL)
+          col <- r_filter_column()
+          vals <- r_filter_values()
+          filters <- if (!is.null(col) && length(vals)) {
+            stats::setNames(list(vals), col)
+          } else {
+            list()
+          }
+          dd_ctrl_claims(d, r_ctrl_table(), filters)
+        })
+        dd_ctrl_sender(
+          r_ctrl_target,
+          r_ctrl_claims,
+          dd_ctrl_pristine(
+            function() list(r_filter_column(), r_filter_values()),
+            list(filter_column, filter_values)
+          ),
+          session
+        )
 
         # The chrome is a ONE-SHOT render: container, control row, empty title
         # bands, empty scroll wrapper. It reads only what shapes the chrome, so
@@ -301,6 +347,8 @@ new_rank_block <- function(group = NULL,
               bar_mode = r_bar_mode(), cols = r_cols(), fields = r_fields(),
               sort_by = r_sort_by(), sort_dir = r_sort_dir(),
               top_n = r_top_n(), search = r_search(), drill = r_drill(),
+              ctrl_target = r_ctrl_target(),
+              ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices()),
               titles = list(
                 title = resolve_block_title(r_title(), d, auto = auto$label),
                 subtitle = resolve_block_title(r_subtitle(), d,
@@ -349,7 +397,8 @@ new_rank_block <- function(group = NULL,
             sort_dir = r_sort_dir, top_n = r_top_n,
             max_height = r_max_height, search = r_search,
             title = r_title, subtitle = r_subtitle, caption = r_caption,
-            drill = r_drill, filter_type = r_filter_type,
+            drill = r_drill, ctrl_target = r_ctrl_target,
+            ctrl_table = r_ctrl_table, filter_type = r_filter_type,
             filter_column = r_filter_column, filter_values = r_filter_values
           )
         )
@@ -376,12 +425,13 @@ new_rank_block <- function(group = NULL,
     allow_empty_state = c(
       "group", "value", "id_var", "parent", "color", "facet", "compare",
       "cols", "fields", "top_n", "title", "subtitle", "caption", "drill",
-      "filter_column", "filter_values"
+      "ctrl_target", "ctrl_table", "filter_column", "filter_values"
     ),
     external_ctrl = c(
       "group", "value", "func", "id_var", "parent", "color", "bar_mode",
       "facet", "compare", "cols", "fields", "sort_by", "sort_dir", "top_n",
-      "max_height", "search", "title", "subtitle", "caption", "drill"
+      "max_height", "search", "title", "subtitle", "caption", "drill",
+      "ctrl_target", "ctrl_table"
     ),
     ...
   )
@@ -530,6 +580,27 @@ rank_arguments <- function() {
         "Empty = display only."
       ),
       example = "AEDECOD",
+      type = arg_string()
+    ),
+    ctrl_target = new_arg_spec(
+      paste0(
+        "BETA. Block id of a value filter block on the SAME board: the ",
+        "drill's claim (e.g. AEDECOD = PRURITUS) is also pushed into that ",
+        "block over the board's control channel, so a row click filters a ",
+        "pipeline this block has no data link to. Requires drill to be on ",
+        "and the board to carry the control bridge extension. Empty ",
+        "(default) = off."
+      ),
+      example = "cohort_filter",
+      type = arg_string()
+    ),
+    ctrl_table = new_arg_spec(
+      paste0(
+        "BETA. Only with `ctrl_target`: the table in the target's dm the ",
+        "pushed conditions apply to (e.g. \"adae\"). Leave empty when the ",
+        "target filters a plain data frame."
+      ),
+      example = "adae",
       type = arg_string()
     ),
     title = new_arg_spec(
