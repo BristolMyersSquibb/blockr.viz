@@ -323,11 +323,7 @@ gg_level_colors <- function(map, col, data) {
   lv <- lv[!is.na(lv)]
 
   if (!is.null(map) && requireNamespace("blockr.theme", quietly = TRUE)) {
-    res <- blockr.theme::resolve_scales(
-      map, col,
-      levels = dd_levels(x),
-      palette = dd_palette()
-    )
+    res <- dd_resolve_scales(map, col, x)
     if (!is.null(res$color)) {
       hex <- res$color[lv]
       hex[is.na(hex)] <- rep_len(dd_palette(), length(lv))[is.na(hex)]

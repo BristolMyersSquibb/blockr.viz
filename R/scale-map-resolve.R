@@ -53,6 +53,33 @@ dd_levels <- function(col) {
   }
 }
 
+# The ONE scale-resolution seam for this package's renderers: resolve `var`'s
+# binding for the actual data `column`, following provenance. A column copied
+# by the picker block (SEX picked into "color") carries its origin in a
+# `blockr_source` attribute; when the copy's own name is not bound in the map,
+# the source's binding applies -- so the fixed SEX colors survive the rename.
+# Mirrors blockr.theme::resolve_scales_col (the canonical cross-package API);
+# implemented locally so an installed blockr.theme that predates that export
+# still resolves (same reason test-theme-palette skips exist).
+dd_resolve_scales <- function(map, var, column) {
+  if (is.null(map) || is.null(var)) {
+    return(NULL)
+  }
+  bind_var <- var
+  if (!var %in% names(map)) {
+    src <- attr(column, "blockr_source", exact = TRUE)
+    if (is.character(src) && length(src) == 1L && nzchar(src) &&
+          src %in% names(map)) {
+      bind_var <- src
+    }
+  }
+  blockr.theme::resolve_scales(
+    map, bind_var,
+    levels = dd_levels(column),
+    palette = dd_palette()
+  )
+}
+
 
 # Build the `scales` entry of the drilldown config payload, or NULL when no
 # map / no colored role / no binding / no blockr.theme installed. Named
@@ -70,11 +97,9 @@ dd_scales_config <- function(map, chart_type, color, group, data) {
     return(NULL)
   }
 
-  res <- blockr.theme::resolve_scales(
-    map, var,
-    levels = dd_levels(data[[var]]),
-    palette = dd_palette()
-  )
+  # Resolve through provenance (picker copies), but emit the CHART's column
+  # name as `var`: the JS side matches `scales.var` against the mapped column.
+  res <- dd_resolve_scales(map, var, data[[var]])
 
   if (is.null(res)) {
     return(NULL)
@@ -104,11 +129,7 @@ dd_row_hex <- function(map, col, data) {
     return(NULL)
   }
 
-  res <- blockr.theme::resolve_scales(
-    map, col,
-    levels = dd_levels(data[[col]]),
-    palette = dd_palette()
-  )
+  res <- dd_resolve_scales(map, col, data[[col]])
 
   pal <- res$color
   if (is.null(pal)) {
