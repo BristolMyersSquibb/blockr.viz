@@ -718,6 +718,13 @@
     xend:   { label: "End", kind: "column", colType: "num" },
     lo:     { label: "Band low", kind: "column", colType: "num" },
     hi:     { label: "Band high", kind: "column", colType: "num" },
+    // Facet column order in the summarize-table mode: each summary's level
+    // copies adjacent (the comparison affordance), or level groups spanning
+    // the summaries (the Table-1 reading).
+    facet_layout: { label: "Facet layout", kind: "segmented", options: [
+      { value: "by_summary", label: "By summary" },
+      { value: "by_level", label: "By level" }
+    ] },
     // Distribution statistics (box body / point-range interval, box whisker
     // rule): R computes, this only picks. See LANE_STATS.
     summary:  { label: function (cfg) {
@@ -945,13 +952,15 @@
 
         var t = s.type || "simple";
         if (t === "simple") {
-          selectCtl(body, "Function", FUNC_OPT.filter(function (o) {
-            return (typeof o === "string" ? o : o.value) !== "identity";
-          }), s.func || "count", function (v) {
-            s.func = v;
-            commit();
-            ctx.rerender();
-          });
+          // The full aggregate set INCLUDING identity ("None (as is)"): a
+          // value already reduced upstream — one row per group — drawn
+          // as-is, as a bar or a number. The chart block's duality.
+          selectCtl(body, "Function", FUNC_OPT, s.func || "count",
+            function (v) {
+              s.func = v;
+              commit();
+              ctx.rerender();
+            });
           if ((s.func || "count") !== "count") {
             selectCtl(body,
               s.func === "count_distinct" ? "Distinct of" : "Of column",
@@ -1164,7 +1173,9 @@
           title: "Columns",
           render: function (sec) { renderSummariesEditor(sec, ctx); }
         }] : [],
-        presentation: ["sort_by", "sort_dir", "search"],
+        presentation: cfg.facet
+          ? ["sort_by", "sort_dir", "facet_layout", "search"]
+          : ["sort_by", "sort_dir", "search"],
         drillToggle: "drill",
         drillDefault: (cfg.by && cfg.by.length)
           ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),
@@ -1283,6 +1294,7 @@
       cfg.summaries = cfg.summaries ? [cfg.summaries] : [];
     }
     if (!Array.isArray(cfg.by)) cfg.by = cfg.by ? [String(cfg.by)] : [];
+    if (!cfg.facet_layout) cfg.facet_layout = "by_summary";
     // The multi-column picker wants an array.
     if (!Array.isArray(cfg.fields)) {
       cfg.fields = cfg.fields ? [String(cfg.fields)] : [];

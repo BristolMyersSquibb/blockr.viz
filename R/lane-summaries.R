@@ -121,6 +121,7 @@ lane_field_join <- function(x) {
 #' with different units must not share a scale.
 #' @noRd
 lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
+                                   facet_layout = "by_summary",
                                    sort_by = "value", sort_dir = "desc",
                                    top_n = NULL, scale_map = NULL) {
   bad <- function(msg) list(err = msg)
@@ -331,6 +332,37 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   # summary's facet copies: one scale per summary, never one scale per table.
   plan <- lane_summary_domains(plan, rows)
 
+  # --- facet layout -----------------------------------------------------------
+  # by_summary (default): each summary's level copies sit adjacent, in
+  # authored order (adjacency is the comparison affordance). by_level: the
+  # Table-1 reading -- pooled columns and fields lead, then one column
+  # group per facet level spanning the summaries; the header grows a
+  # spanning row (rank_thead) and each copy is re-labelled by its SUMMARY
+  # (the level moves up into the group header).
+  facet_spans <- NULL
+  has_cell <- any(vapply(plan, function(p) !is.null(p$flevel), logical(1L)))
+  if (identical(rank_chr1(facet_layout), "by_level") &&
+        length(facet_levels) && has_cell) {
+    lead <- Filter(function(p) is.null(p$flevel), plan)
+    groups <- lapply(facet_levels, function(lv) {
+      Filter(function(p) identical(p$flevel, lv), plan)
+    })
+    groups <- lapply(groups, function(g) {
+      lapply(g, function(p) {
+        p$label <- p$sname %||% p$label
+        p$sub_label <- NULL
+        p
+      })
+    })
+    plan <- c(lead, do.call(c, groups))
+    facet_spans <- list(
+      lead = length(lead),
+      groups = lapply(seq_along(facet_levels), function(j) {
+        list(label = facet_levels[[j]], n = length(groups[[j]]))
+      })
+    )
+  }
+
   # Legend: the first colour-mapped spans summary (colour identity must not
   # ride on colour alone).
   legend_s <- NULL
@@ -358,7 +390,8 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     facet = facet, compare = NULL,
     folded = asm$folded, fold_max = asm$fold_max,
     n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows),
-    note = note, pct_ok = FALSE, func = "identity"
+    note = note, pct_ok = FALSE, func = "identity",
+    facet_spans = facet_spans
   )
 }
 
@@ -370,7 +403,8 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
   sid <- cp$suffix
   label <- if (is.null(cp$level)) s$name else cp$level
   sub <- if (is.null(cp$level)) NULL else s$name
-  base <- list(label = label, sub_label = sub, sid = sid, stype = s$type)
+  base <- list(label = label, sub_label = sub, sid = sid, stype = s$type,
+               flevel = cp$level, sname = s$name)
   if (identical(s$type, "simple")) {
     kind <- if (identical(s$show, "bar")) "bar" else "num"
     c(base, list(kind = kind, key = paste0(sid, "_v"),

@@ -371,22 +371,50 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
 
 #' The `<thead>` tag: the table block's own header cells (dt_th), so the two
 #' blocks share one header object.
+#'
+#' The by_level facet layout (prep$facet_spans) grows a SPANNING first row:
+#' the label column and the leading (pooled / field) columns span both rows,
+#' each facet level spans its summary group, and the per-column sortable
+#' cells move to the second row -- the Table-1 header. Everything else keeps
+#' the single row.
 #' @noRd
 rank_thead <- function(prep) {
-  th <- c(
+  col_th <- function(p, i) {
     as.character(dt_th(
-      rank_label_header(prep), 0L, stub = TRUE,
-      label = prep$group_label, sortable = TRUE
-    )),
-    vapply(seq_along(prep$plan), function(i) {
-      p <- prep$plan[[i]]
-      as.character(dt_th(
-        p$label, i, label = p$sub_label,
-        numeric = identical(p$kind, "num") && !isTRUE(p$text), sortable = TRUE
-      ))
+      p$label, i, label = p$sub_label,
+      numeric = identical(p$kind, "num") && !isTRUE(p$text), sortable = TRUE
+    ))
+  }
+  stub <- as.character(dt_th(
+    rank_label_header(prep), 0L, stub = TRUE,
+    label = prep$group_label, sortable = TRUE
+  ))
+
+  fs <- prep$facet_spans
+  if (is.null(fs)) {
+    th <- c(stub, vapply(seq_along(prep$plan), function(i) {
+      col_th(prep$plan[[i]], i)
+    }, character(1L)))
+    return(paste0("<thead><tr>", paste(th, collapse = ""), "</tr></thead>"))
+  }
+
+  span2 <- function(th) sub("^<th ", "<th rowspan=\"2\" ", th)
+  lead_idx <- seq_len(fs$lead)
+  row1 <- c(
+    span2(stub),
+    vapply(lead_idx, function(i) span2(col_th(prep$plan[[i]], i)),
+           character(1L)),
+    vapply(fs$groups, function(g) {
+      paste0("<th class=\"blockr-col-header blockr-th-group\" colspan=\"",
+             g$n, "\"><span class=\"blockr-col-name\">",
+             rank_esc(g$label), "</span></th>")
     }, character(1L))
   )
-  paste0("<thead><tr>", paste(th, collapse = ""), "</tr></thead>")
+  row2 <- vapply(seq.int(fs$lead + 1L, length(prep$plan)), function(i) {
+    col_th(prep$plan[[i]], i)
+  }, character(1L))
+  paste0("<thead><tr>", paste(row1, collapse = ""), "</tr><tr>",
+         paste(row2, collapse = ""), "</tr></thead>")
 }
 
 #' The fold row's text, or NULL when nothing was capped. Never a silent

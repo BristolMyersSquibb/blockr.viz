@@ -119,6 +119,33 @@ test_that("facet repeats cell rows, pooled rows and fields render once", {
   expect_equal(max(w, na.rm = TRUE), 100)
 })
 
+test_that("by_level reorders into level groups with a two-row header", {
+  ae <- sum_fixture()
+  S <- list(
+    list(type = "simple", name = "Subjects", func = "count_distinct",
+         col = "USUBJID", show = "bar"),
+    list(type = "dist", name = "Duration", col = "DUR", stat = "mean_se",
+         show = "text"),
+    list(type = "field", name = "Arms", col = "ARM")
+  )
+  p <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = S,
+                          facet = "ARM", facet_layout = "by_level")
+  # Leading field first, then per-level groups of (bar, num): 5 columns.
+  expect_length(p$cols, 5L)
+  expect_identical(vapply(p$cols, function(c) c$kind, ""),
+                   c("num", "bar", "num", "bar", "num"))
+  # The spanning header row: one colspan cell per level, label + leading
+  # columns span both rows.
+  expect_match(p$head, "blockr-th-group\" colspan=\"2\"")
+  expect_match(p$head, "rowspan=\"2\"")
+  expect_match(p$head, ">Placebo<")
+  expect_match(p$head, ">Active<")
+  # by_summary (the default) keeps the single header row.
+  p2 <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = S,
+                           facet = "ARM")
+  expect_false(grepl("blockr-th-group", p2$head))
+})
+
 test_that("by nests one level: outer parent rows plus inner leaves", {
   ae <- sum_fixture()
   S <- list(list(type = "simple", name = "Rows", func = "count",
@@ -146,6 +173,21 @@ test_that("expr rows evaluate per group and fail as a cell, not a crash", {
     list(type = "expr", name = "boom", expr = "no_such_fn(DUR)")
   ))
   expect_true(all(as.character(p2$cols[[1]]$disp) == "(error)"))
+})
+
+test_that("identity rides through simple rows: the value as-is", {
+  d <- data.frame(g = c("a", "b", "c"), v = c(3, 9, 6))
+  p <- rank_build_payload(d, group = NULL, by = "g", summaries = list(
+    list(type = "simple", name = "V", func = "identity", col = "v",
+         show = "bar"),
+    list(type = "simple", name = "Vn", func = "identity", col = "v",
+         show = "number")
+  ))
+  expect_identical(vapply(p$cols, function(c) c$kind, ""), c("bar", "num"))
+  expect_identical(as.character(p$label), c("b", "c", "a"))   # ranked as-is
+  expect_equal(max(as.numeric(p$cols[[1]]$w)), 100)
+  expect_identical(trimws(as.character(p$cols[[2]]$disp)),
+                   c("9", "6", "3"))
 })
 
 test_that("sort_by a summary's name orders by that column", {

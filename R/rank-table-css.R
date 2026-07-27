@@ -62,6 +62,14 @@ rank_table_css <- function() {
    .blockr-sortable cursor and the .blockr-sort-icon arrow come from the shared
    table CSS and read exactly like a table block's. */
 
+/* The by_level facet layout's spanning header row (one cell per facet
+   level over its summary group) -- centred, with a hairline under the
+   span so the group reads as one unit. */
+.blockr-rank-table th.blockr-th-group {
+  text-align: center;
+  border-bottom: 1px solid var(--blockr-color-border, #e1e0d9);
+}
+
 /* Bars: SQUARE, and segments TOUCH -- the house bar style, taken from the chart
    block rather than invented here. echarts sets no borderRadius on any bar
    series (chart.js even records dropping a lone rounded override, which had

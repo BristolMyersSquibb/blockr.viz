@@ -58,8 +58,10 @@
 #'   most two; the outer becomes the expandable parent). Unset, `group` /
 #'   `parent` fill in.
 #' @param facet_layout Facet column order on the summaries path:
-#'   `"by_summary"` (each summary's level copies adjacent, the default).
-#'   `"by_level"` is reserved.
+#'   `"by_summary"` (each summary's level copies adjacent on their shared
+#'   scale -- the comparison reading, the default) or `"by_level"` (pooled
+#'   columns and fields lead, then one spanning column group per facet
+#'   level -- the Table-1 reading, with a two-row header).
 #' @param group Column to rank by: one row per level, ordered by the measure.
 #' @param value,func,id_var The measure. `func` is one of `"count"`,
 #'   `"count_distinct"`, `"sum"`, `"mean"`, `"median"`, `"min"`, `"max"`, or
@@ -678,6 +680,17 @@ rank_arguments <- function() {
       ),
       example = list("AEBODSYS", "AEDECOD"),
       type = arg_array(arg_string())
+    ),
+    facet_layout = new_arg_spec(
+      paste0(
+        "Facet column order in the summaries mode: by_summary = each ",
+        "summary's level copies adjacent on one shared scale (comparison ",
+        "reading, default); by_level = pooled columns and fields lead, ",
+        "then one spanning column group per facet level (the Table-1 / ",
+        "CSR reading)."
+      ),
+      example = "by_summary",
+      type = arg_enum(c("by_summary", "by_level"))
     ),
     func = new_arg_spec(
       paste0(

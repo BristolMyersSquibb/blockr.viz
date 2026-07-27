@@ -101,8 +101,10 @@ most two; the outer becomes the expandable parent). Unset, \code{group} /
 \code{parent} fill in.}
 
 \item{facet_layout}{Facet column order on the summaries path:
-\code{"by_summary"} (each summary's level copies adjacent, the default).
-\code{"by_level"} is reserved.}
+\code{"by_summary"} (each summary's level copies adjacent on their shared
+scale -- the comparison reading, the default) or \code{"by_level"} (pooled
+columns and fields lead, then one spanning column group per facet
+level -- the Table-1 reading, with a two-row header).}
 
 \item{parent}{Optional outer grouping column (e.g. system organ class over
 preferred term): parents become expandable rows with children indented
