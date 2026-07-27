@@ -187,6 +187,17 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       # cell's statistics and _blockr.design/open/lane-chart/spec.md for the
       # glyph.
       wd <- p$words %||% list(center = "Center", range = "Range")
+      # Column-level, not row-level: TRUE when this column's mark draws NO
+      # outer range, and so has nothing spanning the cell to be read
+      # against. Those lanes keep a hairline; every other lane is bare,
+      # because the whisker (or the dot style's fence band) IS the rail
+      # (see LANE_DIST_STYLES). Derived from the leaf columns when the plan
+      # does not say, so the lane chart's own marks follow the same rule.
+      bare <- if (is.null(p$bare)) {
+        !("wl" %in% names(p$cols %||% character()))
+      } else {
+        isTRUE(p$bare)
+      }
       # One glyph from one set of stat columns. Called once for a plain
       # column, once per level for a colour-split one (`p$lcols`), so both
       # shapes ship exactly the same geometry per glyph.
@@ -211,36 +222,37 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       # A split glyph's tooltip names its level first: colour is never the
       # only thing saying which level this is.
       pre <- if (is.null(lvl)) "" else paste0(lvl, " \u00b7 ")
+      wl <- col_or_na("wl")
+      wh <- col_or_na("wh")
+      # One tooltip for both styles: the pieces that are drawn, in the order
+      # they are drawn. A piece that is off is absent, never named as
+      # "none"; NA bounds (the n < 2 CI) say so rather than showing a
+      # zero-width interval, which would read as certainty.
+      clause <- function(word, lo, hi) {
+        if (is.null(word)) return("")
+        paste0(" \u00b7 ", word, " ",
+               ifelse(is.na(lo) | is.na(hi), "undefined (n < 2)",
+                      paste0(lane_fmt(lo), "\u2013", lane_fmt(hi))))
+      }
+      tip <- ifelse(is.na(bc), "", rank_esc(paste0(
+        pre, ifelse(is.na(nn), "", paste0("n=", nn, " \u00b7 ")),
+        wd$center, " ", lane_fmt(bc),
+        clause(wd$range, bl, bh), clause(wd$whisk, wl, wh)
+      )))
       if (identical(p$kind, "box")) {
-        wl <- col_or_na("wl")
-        wh <- col_or_na("wh")
         # Whisker segments live OUTSIDE the body; a degenerate side (whisker
         # meets the box) ships NA and draws nothing.
-        tip <- ifelse(is.na(bc), "", rank_esc(paste0(
-          pre, "n=", nn, " \u00b7 ", wd$center, " ", lane_fmt(bc),
-          " \u00b7 ", wd$range, " ", lane_fmt(bl), "\u2013", lane_fmt(bh),
-          " \u00b7 ", wd$whisk %||% "Whiskers", " ",
-          lane_fmt(wl), "\u2013", lane_fmt(wh)
-        )))
-        list(kind = "box",
+        list(kind = "box", bare = bare,
              wl = pos_w(wl), w1 = span_w(wl, bl),
              bl = pos_w(bl), bw = span_w(bl, bh), bc = pos_w(bc),
              b2 = pos_w(bh), w2 = span_w(bh, wh), wh = pos_w(wh),
              nn = nn, tip = tip, v = sortv(bc)) |> c(lab)
       } else {
-        # The dot (words$range NULL) has no interval clause and no n.
-        tip <- ifelse(is.na(bc), "", rank_esc(paste0(
-          pre, ifelse(is.na(nn), "", paste0("n=", nn, " \u00b7 ")),
-          wd$center, " ", lane_fmt(bc),
-          if (!is.null(wd$range)) {
-            paste0(" \u00b7 ", wd$range, " ",
-                   ifelse(is.na(bl) | is.na(bh), "undefined (n < 2)",
-                          paste0(lane_fmt(bl), "\u2013", lane_fmt(bh))))
-          } else {
-            ""
-          }
-        )))
-        list(kind = "pointrange",
+        # The dot style: the outer range as a fence band BEHIND the inner
+        # bar (ol/ow), the inner range as the bar (l/rw), the centre as the
+        # dot. Any of the three may be absent.
+        list(kind = "pointrange", bare = bare,
+             ol = pos_w(wl), ow = span_w(wl, wh),
              c = pos_w(bc), l = pos_w(bl), rw = span_w(bl, bh),
              nn = nn, tip = tip, v = sortv(bc)) |> c(lab)
       }
@@ -426,7 +438,8 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
 
   list(
     n = n,
-    thead = rank_thead(prep, sortable = isTRUE(cfg$sortable %||% TRUE)),
+    thead = rank_thead(prep, sortable = isTRUE(cfg$sortable %||% TRUE),
+                       cols = cols),
     ncol = length(plan) + 1L,
     nested = !is.null(prep$parent),
     label = as.character(rows$.label),      # PLAIN: each consumer escapes
@@ -450,12 +463,13 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
 #' cells move to the second row -- the Table-1 header. Everything else keeps
 #' the single row.
 #' @noRd
-rank_thead <- function(prep, sortable = TRUE) {
+rank_thead <- function(prep, sortable = TRUE, cols = NULL) {
   col_th <- function(p, i) {
     as.character(dt_th(
       p$label, i, label = p$sub_label,
       numeric = identical(p$kind, "num") && !isTRUE(p$text),
-      sortable = sortable
+      sortable = sortable,
+      extra = rank_axis_strip(p, cols[[i]])
     ))
   }
   stub <- as.character(dt_th(
@@ -488,6 +502,67 @@ rank_thead <- function(prep, sortable = TRUE) {
   }, character(1L))
   paste0("<thead><tr>", paste(row1, collapse = ""), "</tr><tr>",
          paste(row2, collapse = ""), "</tr></thead>")
+}
+
+#' The column axis: the distribution column's domain printed ONCE, in the
+#' header, instead of a track repeated on every row. Only the glyph columns
+#' get one -- a bar's domain is a share of the column max, which the value
+#' beside it already says.
+#'
+#' The strip mirrors `.blockr-rank-barwrap`'s flex geometry (a ticked span
+#' that flexes, then the same fixed value slot in ch), so a tick sits exactly
+#' over the position the mark uses: both are percentages of the SAME box.
+#' @noRd
+rank_axis_strip <- function(p, cl = NULL) {
+  if (!identical(p$kind, "box") && !identical(p$kind, "pointrange")) {
+    return(NULL)
+  }
+  d0 <- p$dmin
+  d1 <- p$dmax
+  if (!length(d0) || !length(d1) || !is.finite(d0) || !is.finite(d1) ||
+        d1 <= d0) {
+    return(NULL)
+  }
+  t <- rank_axis_ticks(d0, d1)
+  if (length(t) < 2L) return(NULL)
+  pct <- (t - d0) / (d1 - d0) * 100
+  last <- length(t)
+  ticks <- lapply(seq_along(t), function(k) {
+    # The end ticks anchor inward so a label never overhangs the column.
+    cls <- if (k == 1L) {
+      "is-first"
+    } else if (k == last) {
+      "is-last"
+    }
+    htmltools::tags$span(
+      class = cls, style = paste0("left:", round(pct[[k]], 2L), "%"),
+      lane_fmt(t[[k]])
+    )
+  })
+  htmltools::tags$div(
+    class = "blockr-rank-axis",
+    htmltools::tags$span(class = "blockr-rank-axis-in", ticks),
+    if (!is.null(cl$dw)) {
+      htmltools::tags$span(class = "blockr-rank-axis-pad",
+                           style = paste0("width:", cl$dw, "ch"))
+    }
+  )
+}
+
+#' Nice tick values across a domain: the 1 / 2 / 2.5 / 5 / 10 ladder, picking
+#' the step CLOSEST to an even split rather than the first one at least as
+#' big (which drops to half the ticks whenever the domain sits just above a
+#' rung). Ticks outside the padded domain are cut, never clamped onto the
+#' edge, so every printed number is where it says it is.
+#' @noRd
+rank_axis_ticks <- function(d0, d1, k = 4L) {
+  raw <- (d1 - d0) / max(1L, k - 1L)
+  if (!is.finite(raw) || raw <= 0) return(numeric())
+  mag <- 10^floor(log10(raw))
+  cand <- c(1, 2, 2.5, 5, 10) * mag
+  step <- cand[[which.min(abs(cand - raw))]]
+  t <- seq(ceiling(d0 / step) * step, d1, by = step)
+  t[t >= d0 & t <= d1]
 }
 
 #' The fold row's text, or NULL when nothing was capped. Never a silent
@@ -677,12 +752,14 @@ rank_dv_html <- function(w, pos) {
 #' @noRd
 rank_box_html <- function(c) {
   n <- length(c$bc)
+  cls <- if (isTRUE(c$bare)) " is-bare" else ""
   vapply(seq_len(n), function(i) {
     if (is.na(c$bc[[i]])) {
-      return("<div class=\"blockr-rank-lane blockr-rank-boxcell\"></div>")
+      return(paste0("<div class=\"blockr-rank-lane blockr-rank-boxcell", cls,
+                    "\"></div>"))
     }
     paste0(
-      "<div class=\"blockr-rank-lane blockr-rank-boxcell\" title=\"",
+      "<div class=\"blockr-rank-lane blockr-rank-boxcell", cls, "\" title=\"",
       c$tip[[i]], "\">",
       if (!is.na(c$w1[[i]])) {
         paste0("<i class=\"lane-wh\" style=\"left:", rank_fmt_w(c$wl[[i]]),
@@ -720,19 +797,30 @@ rank_box_html <- function(c) {
   }, character(1L))
 }
 
-#' Point range cell: interval line plus a ringed center dot. NA bounds (the
-#' n < 2 CI) draw the center alone -- never a zero-width interval, which
-#' would read as certainty.
+#' Dot-style distribution cell: the outer range as a pale fence band, the
+#' inner range as a rounded bar on top of it, the centre as a ringed dot.
+#' Each piece draws only when its columns arrived, so the same emitter
+#' covers the full dot range, the plain point range and the bare dot. NA
+#' bounds (the n < 2 CI) draw the centre alone -- never a zero-width
+#' interval, which would read as certainty.
 #' @noRd
 rank_pr_html <- function(c) {
   n <- length(c$c)
+  cls <- if (isTRUE(c$bare)) " is-bare" else ""
   vapply(seq_len(n), function(i) {
     if (is.na(c$c[[i]])) {
-      return("<div class=\"blockr-rank-lane blockr-rank-prcell\"></div>")
+      return(paste0("<div class=\"blockr-rank-lane blockr-rank-prcell", cls,
+                    "\"></div>"))
     }
     paste0(
-      "<div class=\"blockr-rank-lane blockr-rank-prcell\" title=\"",
+      "<div class=\"blockr-rank-lane blockr-rank-prcell", cls, "\" title=\"",
       c$tip[[i]], "\">",
+      if (!is.null(c$ow) && !is.na(c$ow[[i]])) {
+        paste0("<i class=\"lane-fence\" style=\"left:", rank_fmt_w(c$ol[[i]]),
+               "%;width:", rank_fmt_w(c$ow[[i]]), "%\"></i>")
+      } else {
+        ""
+      },
       if (!is.na(c$rw[[i]])) {
         paste0("<i class=\"lane-rng\" style=\"left:", rank_fmt_w(c$l[[i]]),
                "%;width:", rank_fmt_w(c$rw[[i]]), "%\"></i>")
@@ -903,7 +991,17 @@ rank_flat_payload <- function(m) {
       pack <- function(g) {
         o <- list()
         for (nm in geom) o[[nm]] <- arr(g[[nm]])
+        # The dot style's fence band: shipped only when the column HAS an
+        # outer range, so a mark without one (the plain point range, the
+        # single-value dot) keeps the payload it always had.
+        if (!identical(c$kind, "box") && any(!is.na(g$ow))) {
+          o$ol <- arr(g$ol)
+          o$ow <- arr(g$ow)
+        }
         o$tip <- arr(as.character(g$tip))
+        # Column-level, and only when true: the assembler reads an absent
+        # flag as "this mark draws its own rail".
+        if (isTRUE(g$bare)) o$bare <- TRUE
         o
       }
       if (isTRUE(c$multi)) {

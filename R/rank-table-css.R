@@ -81,6 +81,39 @@ rank_table_css <- function() {
 .blockr-rank-table .blockr-rank-pct {
   color: var(--blockr-color-text-subtle, #898781);
 }
+/* The column axis, under the header label. Printing the domain ONCE is what
+   pays for the empty lanes below it: with a scale named at the top of the
+   column, a cell only has to hold its mark. Geometry mirrors
+   .blockr-rank-barwrap exactly (flexed strip + the same value slot), so a
+   tick and the mark under it are percentages of one box. */
+.blockr-rank-axis {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 5px;
+  height: 12px;
+  font-size: 9.5px;
+  font-weight: var(--blockr-font-weight-normal, 400);
+  letter-spacing: 0;
+  color: var(--blockr-color-text-subtle, #898781);
+  font-variant-numeric: tabular-nums;
+}
+.blockr-rank-axis-in {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+}
+.blockr-rank-axis-pad { flex: 0 0 auto; }
+.blockr-rank-axis-in span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.blockr-rank-axis-in span.is-first { transform: none; }
+.blockr-rank-axis-in span.is-last { transform: translateX(-100%); }
+
 /* Sorting affordance: none of our own. The header cells are dt_th()'s, so the
    .blockr-sortable cursor and the .blockr-sort-icon arrow come from the shared
    table CSS and read exactly like a table block's. */
@@ -140,7 +173,24 @@ rank_table_css <- function() {
 .blockr-rank-lane {
   position: relative;
   height: 12px;
-  background: var(--blockr-rank-track);
+}
+/* The ground, decided by the MARK and not by taste: a glyph that draws an
+   outer range (a whisker, or the dot style's fence band) already spans the
+   cell, so that band IS the rail the row is read against and a track behind
+   it would be a second line saying the same thing. Only a mark with no outer
+   range -- an IQR bar, a plain point range, a bare dot -- has nothing
+   spanning the cell, and those keep a hairline so they do not float as chips.
+   The column axis in the header carries the domain either way
+   (_blockr.design/open/summarize-table/mock-box/, card D00). */
+.blockr-rank-lane.is-bare::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  margin-top: -0.5px;
+  background: var(--blockr-color-border, #e1e0d9);
 }
 .blockr-rank-lane i { position: absolute; }
 /* Colour-split distribution cell: the levels stack INSIDE the cell, so the
@@ -190,12 +240,24 @@ rank_table_css <- function() {
   width: 2px;
   background: var(--blockr-rank-fill);
 }
-/* Point range: a 2px interval line and a ringed center dot (the ring
-   separates the dot from its own line). */
+/* The dot style: three nested weights over one x. The fence band (outer
+   range) recedes to a tint, the inner range is a rounded bar, the centre is a
+   ringed dot -- so the eye reads centre first, spread second, extent third,
+   which is the order the numbers matter in. Both ends rounded because the
+   band is a soft boundary, unlike the box's hard fence caps. */
+.blockr-rank-prcell .lane-fence {
+  top: 50%;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 4px;
+  background: var(--blockr-rank-fill);
+  opacity: 0.16;
+}
 .blockr-rank-prcell .lane-rng {
   top: 50%;
-  height: 2px;
-  margin-top: -1px;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 2px;
   background: var(--blockr-rank-fill);
 }
 .blockr-rank-prcell .lane-ctr {

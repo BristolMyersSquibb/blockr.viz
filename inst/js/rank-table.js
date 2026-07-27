@@ -418,11 +418,13 @@
   function p(x) { return String(x); }
 
   function boxHtml(c, i) {
+    var cls = c.bare ? " is-bare" : "";
     if (c.bc[i] == null) {
-      return '<div class="blockr-rank-lane blockr-rank-boxcell"></div>';
+      return '<div class="blockr-rank-lane blockr-rank-boxcell' + cls +
+        '"></div>';
     }
-    var s = '<div class="blockr-rank-lane blockr-rank-boxcell" title="' +
-      c.tip[i] + '">';
+    var s = '<div class="blockr-rank-lane blockr-rank-boxcell' + cls +
+      '" title="' + c.tip[i] + '">';
     if (c.w1[i] != null) {
       s += '<i class="lane-wh" style="left:' + p(c.wl[i]) + "%;width:" +
         p(c.w1[i]) + '%"></i>';
@@ -446,11 +448,17 @@
   }
 
   function prHtml(c, i) {
+    var cls = c.bare ? " is-bare" : "";
     if (c.c[i] == null) {
-      return '<div class="blockr-rank-lane blockr-rank-prcell"></div>';
+      return '<div class="blockr-rank-lane blockr-rank-prcell' + cls +
+        '"></div>';
     }
-    var s = '<div class="blockr-rank-lane blockr-rank-prcell" title="' +
-      c.tip[i] + '">';
+    var s = '<div class="blockr-rank-lane blockr-rank-prcell' + cls +
+      '" title="' + c.tip[i] + '">';
+    if (c.ow && c.ow[i] != null) {
+      s += '<i class="lane-fence" style="left:' + p(c.ol[i]) + "%;width:" +
+        p(c.ow[i]) + '%"></i>';
+    }
     if (c.rw[i] != null) {
       s += '<i class="lane-rng" style="left:' + p(c.l[i]) + "%;width:" +
         p(c.rw[i]) + '%"></i>';
@@ -816,7 +824,7 @@
 
   var SUMMARY_TYPES = {
     simple: { label: "simple", shows: ["bar", "number", "dot"] },
-    dist:   { label: "dist", shows: ["box", "pointrange", "text"] },
+    dist:   { label: "dist", shows: ["pointrange", "box", "text"] },
     field:  { label: "field", shows: ["text"] },
     series: { label: "series", shows: ["sparkline"] },
     spans:  { label: "spans", shows: ["interval"] },
@@ -838,14 +846,37 @@
   // Tile captions: friendlier than the raw enum where it helps.
   var SHOW_LABELS = { pointrange: "dot range", interval: "swimlane" };
 
+  // A distribution glyph is ONE mark -- a centre, an inner range and an
+  // outer range -- and `show` picks the STYLE it is drawn in. "(none)" on a
+  // range is a first-class choice, not an absence: it is how the degenerate
+  // family (IQR bar, plain dot range, bare dot) is expressed. These mirror
+  // R's lane_norm_summaries(); the legacy `stat` / `whiskers` fields seed
+  // them so a saved board opens on what it drew.
+  var NONE_OPT = { value: "none", label: "(none)" };
+  var RANGE_OPT = [NONE_OPT].concat(LANE_STATS);
+  var OUTER_OPT = [NONE_OPT].concat(LANE_WHISKERS);
+  function distInner(s) { return s.inner || s.stat || "median_q1_q3"; }
+  function distOuter(s) {
+    if (s.outer) return s.outer;
+    if (s.whiskers) return s.whiskers;
+    return s.show === "pointrange" ? "none" : "tukey";
+  }
+  function rangeWord(v) { return v === "none" ? "" : v; }
+
   function summaryLine(s) {
     switch (s.type) {
       case "simple": return (s.func || "count") +
         (s.col ? "(" + s.col + ")" : "()") + " · " + (s.show || "bar");
-      case "dist": return (s.stat || "median_q1_q3") + "(" + (s.col || "?") +
-        ")" + (s.show === "box" ? ", " + (s.whiskers || "tukey") + " whiskers" : "") +
-
-        " · " + (s.show || "box");
+      case "dist": {
+        if (s.show === "text") {
+          return (s.stat || "median_q1_q3") + "(" + (s.col || "?") + ") · text";
+        }
+        // The pieces in the order they are drawn, then the style.
+        var pieces = [rangeWord(distInner(s)), rangeWord(distOuter(s))]
+          .filter(function (x) { return x; });
+        return (s.col || "?") + " · " + (pieces.join(" + ") || "centre only") +
+          " · " + (SHOW_LABELS[s.show] || s.show || "dot range");
+      }
       case "field": return (s.col || "?") + " (distinct values)";
       case "series": return (s.col || "?") + " over " + (s.x || "?") +
         (s.band && s.band.length === 2 ? ", band " + s.band[0] + "–" + s.band[1] : "") +
@@ -875,8 +906,8 @@
     },
     Distribution: function (cols) {
       var c = firstCol(cols, "num");
-      return { type: "dist", name: c || "Value", col: c,
-               stat: "median_q1_q3", whiskers: "tukey", show: "box" };
+      return { type: "dist", name: c || "Value", col: c, style: "dot",
+               inner: "median_q1_q3", outer: "tukey", show: "pointrange" };
     },
     Trajectory: function (cols) {
       var x = firstCol(cols, "num");
@@ -1055,11 +1086,18 @@
             commit();
             ctx.rerender();
           });
-          selectCtl(body, "Statistic", LANE_STATS, s.stat || "median_q1_q3",
-            function (v) { s.stat = v; commit(); ctx.rerender(); });
-          if ((s.show || "box") === "box") {
-            selectCtl(body, "Whiskers", LANE_WHISKERS, s.whiskers || "tukey",
-              function (v) { s.whiskers = v; commit(); ctx.rerender(); });
+          // The glyph is a centre plus two optional ranges; the Display
+          // tiles pick how they are drawn. Both ranges offer "(none)",
+          // which is where the IQR bar, the plain dot range and the bare
+          // dot live -- so the list never needs a mark per shape.
+          if (s.show !== "text") {
+            selectCtl(body, "Inner range", RANGE_OPT, distInner(s),
+              function (v) { s.inner = v; commit(); ctx.rerender(); });
+            selectCtl(body, "Outer range", OUTER_OPT, distOuter(s),
+              function (v) { s.outer = v; commit(); ctx.rerender(); });
+          } else {
+            selectCtl(body, "Statistic", LANE_STATS, s.stat || "median_q1_q3",
+              function (v) { s.stat = v; commit(); ctx.rerender(); });
           }
         } else if (t === "field") {
           selectCtl(body, "Column", "any", s.col, function (v) {
@@ -1175,6 +1213,15 @@
               (SHOW_LABELS[sh] || sh) + "</span>";
             b.addEventListener("click", function () {
               s.show = sh;
+              // For a distribution the tiles are the STYLE: switching does
+              // not change which numbers the column holds, so the ranges
+              // are pinned to what they already were rather than left to
+              // the legacy default the new `show` would imply.
+              if (t === "dist" && sh !== "text") {
+                s.style = sh === "box" ? "box" : "dot";
+                s.inner = distInner(s);
+                s.outer = distOuter(s);
+              }
               commit();
               ctx.rerender();
             });
@@ -1217,8 +1264,9 @@
         if (t === "simple") s.func = "count";
         if (t === "dist") {
           s.col = firstCol(cols, "num");
-          s.stat = "median_q1_q3";
-          s.whiskers = "tukey";
+          s.style = "dot";
+          s.inner = "median_q1_q3";
+          s.outer = "tukey";
         }
         if (t === "field") s.col = firstCol(cols, "cat");
         if (t === "series") {

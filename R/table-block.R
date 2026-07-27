@@ -257,7 +257,7 @@ drilldown_table_color <- function(type = c("diverging", "sequential", "bar"),
 
 #' @noRd
 dt_th <- function(name, idx, stub = FALSE, label = NULL, numeric = FALSE,
-                  sortable = TRUE) {
+                  sortable = TRUE, extra = NULL) {
   # `blockr-sortable` is the hook wireSort() binds to; drop it (and the sort
   # arrow) when sorting is turned off so the column is inert.
   base <- if (stub) "blockr-stub-header" else "blockr-col-header leaf"
@@ -282,7 +282,12 @@ dt_th <- function(name, idx, stub = FALSE, label = NULL, numeric = FALSE,
         class = "dt-th-subrow",
         htmltools::tags$span(class = "blockr-col-label", label),
         sort_span
-      )
+      ),
+      # `extra` is trailing header content the caller owns (the rank table's
+      # column axis). Inside the SAME cell rather than a second header row,
+      # so it inherits the sticky behaviour and the column's padding, which
+      # is what keeps a tick aligned with the mark below it.
+      extra
     )
   } else {
     # Unlabelled column: name and sort arrow share the single row.
@@ -293,7 +298,8 @@ dt_th <- function(name, idx, stub = FALSE, label = NULL, numeric = FALSE,
         class = "dt-th-namerow",
         name_span,
         sort_span
-      )
+      ),
+      extra
     )
   }
 }

@@ -25,7 +25,12 @@ sum_fixture <- function() {
 
 test_that("normalization fills defaults and names the broken row", {
   s <- lane_norm_summaries(list(list(type = "dist", col = "DUR")))
-  expect_identical(s[[1L]]$show, "box")
+  # The house default is the dot style with both ranges on; `show` is the
+  # legacy mirror of the style, not the axis itself.
+  expect_identical(s[[1L]]$style, "dot")
+  expect_identical(s[[1L]]$inner, "median_q1_q3")
+  expect_identical(s[[1L]]$outer, "tukey")
+  expect_identical(s[[1L]]$show, "pointrange")
   expect_identical(s[[1L]]$scope, "cell")
   expect_identical(s[[1L]]$name, "DUR")
 
@@ -42,6 +47,90 @@ test_that("normalization fills defaults and names the broken row", {
     lane_norm_summaries(list(list(type = "spans", x = "ASTDY")))$err,
     "`xend` is required"
   )
+})
+
+test_that("box and dot are ONE mark: style over centre + inner + outer", {
+  dist <- function(...) {
+    lane_norm_summaries(list(list(type = "dist", col = "DUR", ...)))[[1L]]
+  }
+  # The style picks the drawing, never which numbers exist: both carry the
+  # same three pieces.
+  for (st in LANE_DIST_STYLES) {
+    s <- dist(style = st)
+    expect_identical(s$inner, "median_q1_q3")
+    expect_identical(s$outer, "tukey")
+  }
+  # Either range switches off, which is where the degenerate family lives.
+  expect_identical(dist(outer = "none")$outer, "none")
+  expect_identical(dist(inner = "none")$inner, "none")
+  # A centre is never absent: with the inner range off, the outer range's
+  # centre stands in; with both off, the median.
+  expect_identical(lane_dist_centre_stat(dist(inner = "none",
+                                              outer = "min_max")),
+                   "min_max")
+  expect_identical(lane_dist_centre_stat(dist(inner = "none",
+                                              outer = "none")),
+                   "median_q1_q3")
+  # Unknown values fall back rather than throwing: a bad style is a dot.
+  expect_identical(dist(style = "banana")$style, "dot")
+  expect_identical(dist(inner = "banana")$inner, "median_q1_q3")
+  expect_identical(dist(outer = "banana")$outer, "tukey")
+})
+
+test_that("legacy `show` still restores the mark it always drew", {
+  dist <- function(...) {
+    lane_norm_summaries(list(list(type = "dist", col = "DUR", ...)))[[1L]]
+  }
+  # A saved board that said "pointrange" drew a centre and ONE range -- so it
+  # restores as the dot style with no outer, not as the new default.
+  pr <- dist(show = "pointrange")
+  expect_identical(pr$style, "dot")
+  expect_identical(pr$outer, "none")
+  # "box" kept its whiskers, and the legacy stat fields still seed the axes.
+  bx <- dist(show = "box", stat = "mean_sd", whiskers = "min_max")
+  expect_identical(bx$style, "box")
+  expect_identical(bx$inner, "mean_sd")
+  expect_identical(bx$outer, "min_max")
+  # An explicit axis wins over the sugar.
+  expect_identical(dist(show = "pointrange", outer = "tukey")$outer, "tukey")
+  expect_identical(dist(show = "box", style = "dot")$style, "dot")
+})
+
+test_that("the ground follows the mark: only a bare mark keeps a hairline", {
+  d <- sum_fixture()
+  plan1 <- function(...) {
+    p <- lane_prepare_summaries(
+      d, by = "TERM",
+      summaries = list(list(type = "dist", col = "DUR", ...))
+    )
+    p$plan[[1L]]
+  }
+  # An outer range IS the rail, so the lane is not bare -- in either style.
+  expect_false(plan1()$bare)
+  expect_false(plan1(style = "box")$bare)
+  # Nothing spanning the cell: the hairline comes back.
+  expect_true(plan1(outer = "none")$bare)
+  expect_true(plan1(inner = "none", outer = "none")$bare)
+  # The leaf columns follow the pieces that are on.
+  expect_false("wl" %in% names(plan1(outer = "none")$cols))
+  expect_false("bl" %in% names(plan1(inner = "none")$cols))
+  expect_true(all(c("bl", "bh", "wl", "wh") %in% names(plan1()$cols)))
+})
+
+test_that("the column axis prints the domain once, on glyph columns only", {
+  # Nice steps, and never a tick outside the domain it labels.
+  expect_identical(rank_axis_ticks(0, 100), c(0, 25, 50, 75, 100))
+  expect_identical(rank_axis_ticks(2, 9), c(2.5, 5, 7.5))
+  expect_length(rank_axis_ticks(1, 1), 0L)
+  expect_length(rank_axis_ticks(NA_real_, 1), 0L)
+
+  strip <- function(p) as.character(rank_axis_strip(p))
+  expect_match(strip(list(kind = "box", dmin = 0, dmax = 100)),
+               "blockr-rank-axis")
+  # A bar's domain is a share of the column max, which the value beside it
+  # already says: no axis.
+  expect_null(rank_axis_strip(list(kind = "bar", dmin = 0, dmax = 100)))
+  expect_null(rank_axis_strip(list(kind = "box", dmin = 1, dmax = 1)))
 })
 
 test_that("the field join is distinct values with a fold cap, never first()", {

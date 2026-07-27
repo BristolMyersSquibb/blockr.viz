@@ -12,14 +12,37 @@
 # Row types and the displays each allows. The first display is the type's
 # default. "dot" is a single value as a positioned point on the zero-based
 # lane -- less ink than a bar when magnitude comparison is not the point.
+#
+# `dist` keeps its legacy `show` values because saved boards carry them, but
+# they are now SUGAR over the real axes (`style` / `inner` / `outer`) --
+# see LANE_DIST_STYLES.
 LANE_ROW_TYPES <- list(
   simple = c("bar", "number", "dot"),
-  dist = c("box", "pointrange", "text"),
+  dist = c("pointrange", "box", "text"),
   field = "text",
   series = "sparkline",
   spans = "interval",
   expr = "text"
 )
+
+# A distribution glyph is ONE mark: a centre, an optional inner range and an
+# optional outer range, drawn in a style. Box plot and dot range are two
+# values of `style` over the same three numbers, not two marks
+# (_blockr.design/open/summarize-table/mock-box/index.html, sections A-C).
+#
+#   style = "dot"  outer as a pale rounded fence band, inner as a thick
+#                  rounded bar, centre as a ringed dot. The default: the band
+#                  is the mark's own rail, so the cell needs no ground.
+#   style = "box"  outer as a capped whisker, inner as a rectangle, centre as
+#                  a tick across it. The echarts read, for a reader who wants
+#                  a box.
+#
+# Both ranges take "none", which is where the degenerate family lives: an IQR
+# bar is a box with no outer, a plain pointrange is a dot with no outer, a
+# bare dot is a centre on its own. The statistic vocabulary is unchanged
+# (LANE_STATS / LANE_WHISKERS in lane-stats.R), so mean/CI/SD and
+# median/IQR/fences are the same glyph with different inputs.
+LANE_DIST_STYLES <- c("dot", "box")
 
 #' Normalize a summaries list: known types, per-type required fields,
 #' `show` within the type's set, `scope` cell/pooled, an auto `name`.
@@ -40,7 +63,8 @@ lane_norm_summaries <- function(summaries) {
                                "\"")))
     }
     shows <- LANE_ROW_TYPES[[type]]
-    show <- rank_chr1(s$show) %||% shows[[1L]]
+    show_given <- rank_chr1(s$show)
+    show <- show_given %||% shows[[1L]]
     if (!show %in% shows) show <- shows[[1L]]
     scope <- rank_chr1(s$scope) %||% "cell"
     if (!scope %in% c("cell", "pooled")) scope <- "cell"
@@ -65,6 +89,28 @@ lane_norm_summaries <- function(summaries) {
     s$type <- type
     s$show <- show
     s$scope <- scope
+    # The distribution glyph's three axes. `show` is legacy sugar: it seeds
+    # the style and, for "pointrange", the absent outer range -- so a saved
+    # board restores byte-identically while a new one configures the axes
+    # directly. An explicit `style` / `inner` / `outer` always wins.
+    if (identical(type, "dist") && !identical(show, "text")) {
+      style <- rank_chr1(s$style) %||%
+        if (identical(show_given, "box")) "box" else "dot"
+      if (!style %in% LANE_DIST_STYLES) style <- "dot"
+      inner <- rank_chr1(s$inner) %||% rank_chr1(s$stat) %||% "median_q1_q3"
+      if (!inner %in% c("none", LANE_STATS)) inner <- "median_q1_q3"
+      outer <- rank_chr1(s$outer) %||% rank_chr1(s$whiskers) %||%
+        if (identical(show_given, "pointrange")) "none" else "tukey"
+      if (!outer %in% c("none", LANE_WHISKERS)) outer <- "tukey"
+      s$style <- style
+      s$inner <- inner
+      s$outer <- outer
+      # Legacy mirrors, so the gear, the tooltips and any saved-state
+      # round-trip keep reading the fields they always read.
+      s$stat <- if (identical(inner, "none")) NULL else inner
+      s$whiskers <- if (identical(outer, "none")) NULL else outer
+      s$show <- if (identical(style, "box")) "box" else "pointrange"
+    }
     # The series row's computed reference: pooled orientation lines/bands,
     # computed in R (never client-side). "none" = off.
     if (identical(type, "series")) {
@@ -85,6 +131,23 @@ lane_norm_summaries <- function(summaries) {
     out[[i]] <- s
   }
   out
+}
+
+#' The statistic that supplies a distribution glyph's CENTRE. The inner range
+#' names it when there is one; with the inner range off the outer range's
+#' centre stands in (every LANE_STATS entry is a centre plus a pair of
+#' bounds), and with both off the median. A centre is never absent: a
+#' distribution cell that shows nothing is not a column.
+#' @noRd
+lane_dist_centre_stat <- function(s) {
+  inner <- rank_chr1(s$inner) %||% rank_chr1(s$stat)
+  if (!is.null(inner) && !identical(inner, "none")) return(inner)
+  outer <- rank_chr1(s$outer)
+  if (!is.null(outer) && !identical(outer, "none") &&
+        outer %in% LANE_STATS) {
+    return(outer)
+  }
+  "median_q1_q3"
 }
 
 #' @noRd
@@ -236,9 +299,12 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         target
       },
       dist = {
-        stats <- list(.b = rank_chr1(s$stat) %||% "median_q1_q3")
-        if (identical(s$show, "box")) {
-          stats$.w <- rank_chr1(s$whiskers) %||% "tukey"
+        # `.b` carries the centre and (unless inner is off) the inner range;
+        # `.w` the outer range. Both styles compute both -- the style decides
+        # how they are drawn, never which numbers exist.
+        stats <- list(.b = lane_dist_centre_stat(s))
+        if (!identical(s$outer %||% "none", "none")) {
+          stats$.w <- s$outer
         }
         put <- function(target, slice, prefix) {
           agg <- lane_stat_agg(slice, tkeys, rank_chr1(s$col), stats)
@@ -522,25 +588,37 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                    dispkey = "dist_text",
                    lo = paste0(sid, "_bl"), hi = paste0(sid, "_bh"),
                    sub_label = sub %||% meta$label))
-    } else if (identical(s$show, "pointrange")) {
-      c(base, list(kind = "pointrange", key = paste0(sid, "_bc"),
-                   cols = c(bc = paste0(sid, "_bc"), bl = paste0(sid, "_bl"),
-                            bh = paste0(sid, "_bh"), n = paste0(sid, "_n")),
-                   words = list(center = meta$center, range = meta$range),
-                   sub_label = sub %||% meta$label, show_val = TRUE),
-        lane_color_split(s, sid, c("bc", "bl", "bh", "n"), data, scale_map))
     } else {
-      wstat <- rank_chr1(s$whiskers) %||% "tukey"
-      wmeta <- LANE_STAT_META[[wstat]] %||% LANE_STAT_META$tukey
-      c(base, list(kind = "box", key = paste0(sid, "_bc"),
-                   cols = c(bc = paste0(sid, "_bc"), bl = paste0(sid, "_bl"),
-                            bh = paste0(sid, "_bh"), n = paste0(sid, "_n"),
-                            wl = paste0(sid, "_wl"), wh = paste0(sid, "_wh")),
-                   words = list(center = meta$center, range = meta$range,
-                                whisk = wmeta$range),
-                   sub_label = sub %||% meta$label, show_val = TRUE),
-        lane_color_split(s, sid, c("bc", "bl", "bh", "n", "wl", "wh"), data,
-                         scale_map))
+      # ONE glyph, two styles. The leaf columns follow the pieces that are
+      # switched on, so an absent range ships no columns at all and the
+      # emitter draws what it is given (never re-derived arithmetic).
+      inner <- rank_chr1(s$inner) %||% "median_q1_q3"
+      outer <- rank_chr1(s$outer) %||% "none"
+      cmeta <- LANE_STAT_META[[lane_dist_centre_stat(s)]] %||%
+        LANE_STAT_META$median_q1_q3
+      cols <- c(bc = paste0(sid, "_bc"), n = paste0(sid, "_n"))
+      if (!identical(inner, "none")) {
+        cols <- c(cols, bl = paste0(sid, "_bl"), bh = paste0(sid, "_bh"))
+      }
+      if (!identical(outer, "none")) {
+        cols <- c(cols, wl = paste0(sid, "_wl"), wh = paste0(sid, "_wh"))
+      }
+      wmeta <- LANE_STAT_META[[outer]] %||% LANE_STAT_META$tukey
+      c(base, list(kind = if (identical(s$style, "box")) "box" else
+                     "pointrange",
+                   key = paste0(sid, "_bc"), cols = cols,
+                   # The ground rule, decided here rather than in CSS: a mark
+                   # that draws an outer range brings its own rail, so its
+                   # lane is bare; one without gets the hairline back.
+                   bare = identical(outer, "none"),
+                   words = list(
+                     center = cmeta$center,
+                     range = if (!identical(inner, "none")) meta$range,
+                     whisk = if (!identical(outer, "none")) wmeta$range
+                   ),
+                   sub_label = sub %||% lane_dist_sub_label(s, meta, wmeta),
+                   show_val = TRUE),
+        lane_color_split(s, sid, names(cols), data, scale_map))
     }
   } else if (identical(s$type, "field")) {
     c(base, list(kind = "num", key = paste0(sid, "_t"), raw = TRUE,
@@ -574,6 +652,23 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                    dd_palette(1L)
                  }))
   }
+}
+
+#' The column's sub-label: what the glyph is made of, in the header, so the
+#' cell never has to explain itself. "Median . Q1-Q3 . 1.5xIQR" reads as the
+#' three pieces in the order they are drawn; a piece that is off is absent
+#' rather than named as "none".
+#' @noRd
+lane_dist_sub_label <- function(s, meta, wmeta) {
+  parts <- c(
+    if (identical(rank_chr1(s$inner) %||% "none", "none")) {
+      LANE_STAT_META[[lane_dist_centre_stat(s)]]$center
+    } else {
+      meta$label
+    },
+    if (!identical(rank_chr1(s$outer) %||% "none", "none")) wmeta$range
+  )
+  paste(parts, collapse = " \u00b7 ")
 }
 
 #' @noRd
