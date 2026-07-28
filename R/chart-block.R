@@ -1320,10 +1320,16 @@ new_chart_block <- function(
       "filter_values", "value", "x", "y", "xend", "series", "label",
       "tt_fields", "drill", "sort_by", "sort_dir", "filter_range",
       "filter_point", "vlines", "hlines", "smoother", "identity_line",
-      # `summary` and `orientation` are NULL until the browser resolves their
-      # per-mark defaults; whiskers / connect_centers are never empty (fixed
-      # default), so they are not listed.
-      "box_points", "summary", "orientation", "lo", "hi", "waterfall_totals",
+      # `summary`, `whiskers` and `orientation` are NULL until their per-mark
+      # default is resolved where it is consumed; `band_id` / `ref_hi` /
+      # `ref_lo` are optional band columns, empty on every chart that is not a
+      # band. All of them MUST be listed: a non-allow_empty_state field holding
+      # NULL wedges the block (state_ready never goes TRUE and result() stays
+      # NULL) -- reference_blockr_allow_empty_state_wedge, and the reason every
+      # chart block's result() was NULL before this line.
+      # `connect_centers` is never empty (fixed default), so it is not listed.
+      "box_points", "summary", "whiskers", "orientation",
+      "band_id", "ref_hi", "ref_lo", "lo", "hi", "waterfall_totals",
       # count_col is optional (blank = row count); count_on is a fixed-option
       # select (always "off"/"axis"/"facet"/"both"), so it is not listed here.
       "count_col",
