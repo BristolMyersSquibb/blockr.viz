@@ -22,6 +22,11 @@ alt <- adlb[adlb$PARAMCD == "ALT" &
 alt <- alt[, c("USUBJID", "TRTA", "SEX", "ADY", "AVAL", "PARAM",
                "ANRLO", "ANRHI"), drop = FALSE]
 
+# A limit the data never approaches, to exercise the off-scale path: the axis
+# refuses to stretch this far, so the line pins to the frame edge and says so
+# rather than being silently clipped out of view.
+alt$FARHI <- 500
+
 # Board scale map: the band must honour these instead of cycling the palette,
 # whether the column is mapped to colour OR only to facet.
 study_scale_map <- new_scale_map(

@@ -3915,8 +3915,11 @@
       const bandData = isBand ? (this.config.band_series || null) : null;
       // Series index the band's reference / helper lines hang off; -1 until a
       // centre line exists. Declared out here because the facet loop sets it
-      // and the markLine block below reads it.
+      // and the markLine block below reads it. `bandMany` is the PER-PANEL
+      // "more than one series here" verdict -- the same fact that decides
+      // whether the outer ribbon is drawn, so the axis has to size on it too.
       let bandMarkLineIdx = -1;
+      let bandMany = false;
       const palette = this._palette();
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
 
@@ -4390,6 +4393,7 @@
                 emphasis: { disabled: true }
               });
             }
+            bandMany = many;
             // Handed to the hover picker, which patches ribbon data only.
             slot.band = many
               ? { centerIdx: centerIdx, ribbonIdx: ribbonIdx, total: series.length }
@@ -4428,6 +4432,72 @@
         // mkSeries) and the control was previously inert -- it rendered, and
         // moving it changed nothing.
         const guideW = 1.5 * lm;
+
+        // Band value extent, computed before the reference lines so each can
+        // tell whether it lands inside the frame. A custom series contributes
+        // only its single placeholder datum to the axis, so without this
+        // ECharts sizes y to the centre lines and clips every ribbon.
+        // It must size on exactly what is DRAWN, which is the per-panel
+        // `bandMany` -- faceting and colouring on the same column gives each
+        // panel one series and therefore its full outer ribbon, even though
+        // the data-wide level count is greater than one.
+        let bandYLo = null, bandYHi = null;
+        if (isBand && yAxisType === 'value' && series.length) {
+          let lo = Infinity, hi = -Infinity;
+          const scan = (/** @type {any} */ v) => {
+            if (v == null) return;
+            const n = Number(v);
+            if (!Number.isFinite(n)) return;
+            if (n < lo) lo = n;
+            if (n > hi) hi = n;
+          };
+          const pb = bandData ? (bandData[fv] || bandData['__all__']) : null;
+          if (pb) {
+            const drawn = ['center', 'lo', 'hi'];
+            if (!bandMany) {
+              drawn.push('olo', 'ohi');
+              if (this.config.box_points === 'outliers') drawn.push('out_y');
+            }
+            for (const k of Object.keys(pb)) {
+              const b2 = pb[k];
+              if (!b2) continue;
+              for (const key of drawn) {
+                if (Array.isArray(b2[key])) for (const v of b2[key]) scan(v);
+              }
+            }
+          }
+          if (Number.isFinite(lo) && Number.isFinite(hi) && hi > lo) {
+            const span = hi - lo;
+            // A chosen limit pulls the frame open to show itself, but only so
+            // far: one the data never approaches would otherwise flatten every
+            // series to make room. Past 60% extra span it stays put.
+            if (bandRefs) {
+              for (const k of ['hi', 'lo']) {
+                const r = bandRefs[k];
+                if (!r) continue;
+                const v = Number(r.value);
+                if (!Number.isFinite(v)) continue;
+                const nlo = Math.min(lo, v), nhi = Math.max(hi, v);
+                if (nhi - nlo <= span * 1.6) { lo = nlo; hi = nhi; }
+              }
+            }
+            // Round OUTWARD to a nice step: an explicit min/max turns off
+            // echarts' own nice-bounds pass, so a raw padded range prints
+            // endpoints like 3.30000000000000003 as axis labels.
+            const pad = (hi - lo) * 0.06;
+            let aLo = lo - pad, aHi = hi + pad;
+            const aSpan = aHi - aLo;
+            if (aSpan > 0) {
+              const mag = Math.pow(10, Math.floor(Math.log10(aSpan)));
+              const rel = aSpan / mag;
+              const step = rel >= 5 ? mag : (rel >= 2 ? mag / 2 : mag / 5);
+              aLo = Math.floor(aLo / step) * step;
+              aHi = Math.ceil(aHi / step) * step;
+            }
+            bandYLo = aLo; bandYHi = aHi;
+          }
+        }
+
         /** @type {any[]} */
         const refData = [];
         for (const v of refX) refData.push({ xAxis: Number(v) });
@@ -4438,16 +4508,26 @@
           for (const k of ['hi', 'lo']) {
             const r = bandRefs[k];
             if (!r || !Number.isFinite(Number(r.value))) continue;
+            const v = Number(r.value);
+            let base = r.col + ' ' + ddNum3(v) +
+              (Number(r.n_distinct) > 1
+                ? ' (' + ddNum3(Number(r.lo)) + '–' + ddNum3(Number(r.hi)) + ')'
+                : '');
+            // Outside the frame (the 60% cap refused to stretch this far): a
+            // markLine there is simply clipped, so a limit the reader asked
+            // for would vanish with no explanation. Pin it to the edge and
+            // say which way it went, rather than dropping it silently.
+            let at = v, off = '';
+            if (bandYLo != null && v > bandYHi) { at = bandYHi; off = ' ↑ off scale'; }
+            else if (bandYLo != null && v < bandYLo) { at = bandYLo; off = ' ↓ off scale'; }
             refLabels.push({
-              yAxis: Number(r.value),
-              lineStyle: { color: REF_LINE_COLOR, type: 'dashed', width: guideW },
+              yAxis: at,
+              lineStyle: { color: REF_LINE_COLOR, width: guideW,
+                           type: off ? 'dotted' : 'dashed',
+                           opacity: off ? 0.7 : 1 },
               label: {
                 show: true, position: 'insideEndTop', color: REF_LINE_COLOR,
-                fontSize: 10, fontWeight: 600,
-                formatter: r.col + ' ' + ddNum3(Number(r.value)) +
-                  (Number(r.n_distinct) > 1
-                    ? ' (' + ddNum3(Number(r.lo)) + '–' + ddNum3(Number(r.hi)) + ')'
-                    : '')
+                fontSize: 10, fontWeight: 600, formatter: base + off
               }
             });
           }
@@ -4622,64 +4702,9 @@
         // lower limit at 6 that nothing approaches would otherwise flatten
         // every series to make room. Past 60% extra span the limit stays put
         // and gets clipped, which is the honest reading of "off scale".
-        if (isBand && yAxisType === 'value' && series.length) {
-          let lo = Infinity, hi = -Infinity;
-          const scan = (/** @type {any} */ v) => {
-            if (v == null) return;
-            const n = Number(v);
-            if (!Number.isFinite(n)) return;
-            if (n < lo) lo = n;
-            if (n > hi) hi = n;
-          };
-          const pb = bandData ? (bandData[fv] || bandData['__all__']) : null;
-          if (pb) {
-            for (const k of Object.keys(pb)) {
-              const b2 = pb[k];
-              if (!b2) continue;
-              const drawn = ['center', 'lo', 'hi'];
-              // seriesLevels.length > 1 is the overlay case: inner ribbon only.
-              if (seriesLevels.length <= 1) {
-                drawn.push('olo', 'ohi');
-                if (this.config.box_points === 'outliers') drawn.push('out_y');
-              }
-              for (const key of drawn) {
-                if (Array.isArray(b2[key])) for (const v of b2[key]) scan(v);
-              }
-            }
-          }
-          if (Number.isFinite(lo) && Number.isFinite(hi) && hi > lo) {
-            const span = hi - lo;
-            // A chosen limit pulls the frame open to show itself, but only so
-            // far: one the data never approaches would otherwise flatten every
-            // series to make room. Past 60% extra span it stays put and clips,
-            // which is the honest reading of "off scale".
-            if (bandRefs) {
-              for (const k of ['hi', 'lo']) {
-                const r = bandRefs[k];
-                if (!r) continue;
-                const v = Number(r.value);
-                if (!Number.isFinite(v)) continue;
-                const nlo = Math.min(lo, v), nhi = Math.max(hi, v);
-                if (nhi - nlo <= span * 1.6) { lo = nlo; hi = nhi; }
-              }
-            }
-            // Round the domain OUTWARD to a nice step, for the same reason
-            // the identity line does: an explicit min/max turns off echarts'
-            // own nice-bounds pass, so a raw padded range prints endpoints
-            // like 3.30000000000000003 as axis labels.
-            const pad = (hi - lo) * 0.06;
-            let aLo = lo - pad, aHi = hi + pad;
-            const aSpan = aHi - aLo;
-            if (aSpan > 0) {
-              const mag = Math.pow(10, Math.floor(Math.log10(aSpan)));
-              const rel = aSpan / mag;
-              const step = rel >= 5 ? mag : (rel >= 2 ? mag / 2 : mag / 5);
-              aLo = Math.floor(aLo / step) * step;
-              aHi = Math.ceil(aHi / step) * step;
-            }
-            /** @type {any} */ (yAxisSpec).min = aLo;
-            /** @type {any} */ (yAxisSpec).max = aHi;
-          }
+        if (bandYLo != null) {
+          /** @type {any} */ (yAxisSpec).min = bandYLo;
+          /** @type {any} */ (yAxisSpec).max = bandYHi;
         }
 
         // Hidden 0..1 axis pair (index 1) in the SAME grid, carrying only the
