@@ -326,6 +326,19 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_string()
     ),
+    facet_scales = new_arg_spec(
+      paste0(
+        "How the facet panels scale, like ggplot2's facet_wrap(scales=). ",
+        "\"fixed\" (default) shares ONE numeric domain and one category set / ",
+        "order across the panels, so equal bar lengths mean equal values. ",
+        "\"free\" lets each panel size itself — use it when the panels do ",
+        "not share a unit, e.g. facet=\"PARAM\" over labs with different ",
+        "ranges. \"free_y\" frees the value axis but keeps a shared x ",
+        "(scatter/line/band only). No-op without a facet."
+      ),
+      example = "fixed",
+      type = arg_enum(c("fixed", "free_y", "free"))
+    ),
     lo = new_arg_spec(
       paste0(
         "Lower error-band column (individual line only). Set together ",
@@ -580,7 +593,11 @@ chart_guidance <- function() {
       "\"line at y = 2\" -> hlines=[2]. Several per axis is fine",
       "(vlines=[2, 5]). An eDish / Hy's-Law cross is vlines=[3], hlines=[2].",
       "\n- \"coloured by Z\" -> color=\"Z\"",
-      "\n- \"faceted by Z\" -> facet=\"Z\"",
+      "\n- \"faceted by Z\" -> facet=\"Z\". The panels share one scale by",
+      "default, which is what makes them comparable. Set",
+      "facet_scales=\"free\" ONLY when the panels genuinely do not share a",
+      "unit (facet=\"PARAM\" over labs with different ranges), or when the",
+      "user asks for per-panel axes.",
       "\n- \"bar of counts by X, click filters X\" -> chart_type=\"bar\",",
       "group=\"X\", value=\".count\", func=\"count\", drill=\"X\"",
       "\n- \"mean Y by X\" -> chart_type=\"bar\", group=\"X\",",

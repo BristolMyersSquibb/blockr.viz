@@ -21,6 +21,7 @@ static_chart(
   sort_dir = NULL,
   count_on = "off",
   count_col = NULL,
+  facet_scales = "fixed",
   box_points = "none",
   smoother = "none",
   identity_line = FALSE,
@@ -49,6 +50,10 @@ ordering, as in \code{\link[=new_chart_block]{new_chart_block()}}.}
 
 \item{count_on, count_col}{Observation-count labels, as in
 \code{\link[=new_chart_block]{new_chart_block()}}.}
+
+\item{facet_scales}{Panel scales, passed straight to
+\code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}'s \code{scales}: \code{"fixed"} (default), \code{"free_y"},
+\code{"free_x"} or \code{"free"}. Same argument as in \code{\link[=new_chart_block]{new_chart_block()}}.}
 
 \item{box_points, smoother, identity_line, lo, hi, step}{Family-specific
 options, as in \code{\link[=new_chart_block]{new_chart_block()}}.}

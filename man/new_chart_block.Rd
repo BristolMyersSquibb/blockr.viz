@@ -38,8 +38,14 @@ new_chart_block(
   identity_line = FALSE,
   box_points = "none",
   summary = NULL,
-  whiskers = "tukey",
+  whiskers = NULL,
   connect_centers = FALSE,
+  band_window = "adaptive",
+  band_size = 45,
+  band_min_n = 12,
+  band_id = NULL,
+  ref_hi = NULL,
+  ref_lo = NULL,
   lo = NULL,
   hi = NULL,
   baseline = "zero",
@@ -49,6 +55,7 @@ new_chart_block(
   caption = NULL,
   count_on = "off",
   count_col = NULL,
+  facet_scales = "fixed",
   ctrl_target = "",
   ctrl_table = "",
   ...
@@ -190,16 +197,47 @@ computed in the browser from the raw \code{value} column. \code{NULL} (default)
 resolves per mark: \code{"median_q1_q3"} for boxplot, \code{"mean_se"} for
 pointrange. No-op for other chart types.}
 
-\item{whiskers}{Boxplot whisker rule (the box's outer interval):
-\code{"tukey"} (default, 1.5x IQR fences clipped to the data -- the textbook
-boxplot) or any \code{summary} value (e.g. \code{"min_max"} for range whiskers,
-\code{"p5_p95"} for the clinical percentile convention). No-op for
-non-boxplot charts.}
+\item{whiskers}{Whisker rule -- the mark's OUTER interval. \code{"tukey"}
+(1.5x IQR fences clipped to the data, the textbook boxplot) or any
+\code{summary} value (e.g. \code{"min_max"}, \code{"p5_p95"}, \code{"p10_p90"}). \code{NULL}
+(default) resolves per mark: \code{"tukey"} for the boxplot, \code{"p10_p90"} for
+the band. The band differs deliberately -- a fence is an extreme order
+statistic, so dragged into a continuous ribbon its edge lurches whenever
+one subject enters or leaves the window, while a fixed quantile moves
+only when the distribution does. No-op for other chart types.}
 
 \item{connect_centers}{Pointrange only: \code{TRUE} draws a line through the
 interval centers in group order (the over-visits trajectory reading).
 Default \code{FALSE}. Like \code{identity_line}, the gear's control speaks
 "on"/"off" over the wire; the R state is a plain logical.}
+
+\item{band_window}{Distribution band windowing: \code{"adaptive"} (default)
+grows the window at each grid point until it holds \code{band_size} distinct
+subjects, which keeps the band's stability constant as a cohort thins;
+\code{"fixed"} uses \code{band_size} as a half-width in x units. A fixed window is
+simpler to explain but goes empty wherever the design is sparse -- with
+scheduled visits 56 days apart, a narrow window lands in the gap between
+them and the band tears into pieces. No-op for other chart types.}
+
+\item{band_size}{Distinct subjects per window (\code{band_window = "adaptive"}, default 45) or the half-width in x units (\code{"fixed"}).}
+
+\item{band_min_n}{Minimum distinct subjects in a window; below it the band
+is cut rather than drawn through thin air. Default 12.}
+
+\item{band_id}{Subject id column counted DISTINCT for the window and for
+the reported n (e.g. \code{"USUBJID"}). \code{NULL} counts rows, which over-counts
+a cohort whenever one subject contributes several observations to the
+same window -- so set it for repeated-measures data.}
+
+\item{ref_hi, ref_lo}{Column names holding an upper / lower reference
+limit, drawn as dashed lines (e.g. \code{"ANRHI"} / \code{"ANRLO"}). Unlike
+\code{hlines}, which takes values, these name a COLUMN: an ADaM reference
+range is per-record and varies by lab, sex and age, so the block reduces
+the column to its median and the label carries the spread it reduced
+from ("ANRHI 34 (32-43)"). \code{NULL} (default) or \code{""} draws nothing. A
+limit the data never approaches only stretches the value axis so far
+before it pins to the frame edge, so one irrelevant limit cannot flatten
+the series.}
 
 \item{lo, hi}{Optional lower / upper value bounds used by the renderer to
 clamp or annotate the value axis. Default \code{NULL} (auto).}
@@ -239,6 +277,19 @@ axis ticks), \code{"facet"} (the facet strip labels), or \code{"both"}.}
 the raw row count. Counts are computed per label group in the browser and
 do NOT sum from the per-cell n: one subject can span several color /
 facet cells.}
+
+\item{facet_scales}{How the facet panels scale, as in ggplot2's
+\code{facet_wrap(scales = )}. \code{"fixed"} (default) gives every panel ONE
+numeric domain and one category set in one order: a bar of the same
+length, or a point at the same height, then means the same value in every
+panel -- the premise of a small-multiples grid. \code{"free"} lets each panel
+size itself off its own subset, which is the honest reading when the
+panels do not share a unit (faceting by \code{PARAM}, where ALT, bilirubin and
+heart rate cannot share a value axis); like ggplot2, it also drops
+categories a panel has no rows for. \code{"free_y"} frees the value axis and
+keeps a shared x. It is offered on scatter / line / band only, where the
+value axis IS y -- elsewhere the value axis follows \code{orientation}, so the
+name would lie, and a saved \code{"free_y"} reads as \code{"free"} there.}
 
 \item{ctrl_target}{Character(1), beta. Block id of a value filter block on
 the board: a categorical drill click's claim is ALSO pushed there over

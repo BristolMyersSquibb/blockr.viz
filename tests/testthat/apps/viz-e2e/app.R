@@ -80,6 +80,18 @@ serve(
         func     = "sum",
         drill      = "region"
       ),
+      # Faceted bar: the fixture for facet_scales. Every region has product
+      # A, only North/South also have B, and the revenue totals differ by
+      # panel (North 150, South 120, East 60, West 30) -- so free panels
+      # disagree on BOTH the value domain and the category set, and fixed
+      # panels must agree on both.
+      chart_facet = new_chart_block(
+        chart_type = "bar",
+        group      = "product",
+        value      = "revenue",
+        func       = "sum",
+        facet      = "region"
+      ),
       # KPI tile matrix, click-to-filter drill on the group.
       tile = new_tile_block(
         value = "revenue",
@@ -148,6 +160,7 @@ serve(
       new_link("data", "chart_scatter", "data"),
       new_link("data", "chart_brush", "data"),
       new_link("data", "chart_cfg", "data"),
+      new_link("data", "chart_facet", "data"),
       new_link("data", "tile", "data"),
       new_link("data", "tile_x", "data"),
       new_link("data", "table_num", "data"),

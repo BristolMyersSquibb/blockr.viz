@@ -394,6 +394,8 @@
   //               be a function of the current config
   //   maxUnique: cap a categorical picker (facet)
   //   pairedWith: render this role's control beside its pair in one row
+  //   when: (cfg) => bool — hide the row while the rest of the config makes
+  //         it inert (facet_scales without a facet)
   //   optionsBy / colTypeBy / phBy: per-family overrides (key = family)
   // Inlined here for v1; extract to a shared module when the table/ggplot
   // blocks adopt it (follow-up specs).
@@ -545,6 +547,36 @@
                    cfg.func === 'identity' ? 'Count column' : 'Count distinct of',
                  kind: 'column', colType: 'any',
                  ph: 'column to count (blank = row count)' },
+    // Panel scales for a facet grid. "fixed" (the default) gives every panel
+    // ONE numeric domain and one category set/order, so a position means the
+    // same thing in every panel — the premise of small multiples, and what
+    // static_chart()'s facet_wrap() has always done. "free" lets each panel
+    // size itself off its own subset (ggplot's free-scale semantics, which
+    // also drop unused discrete levels): the honest reading when the panels
+    // do not share a unit, e.g. faceting by PARAM, where ALT, bilirubin and
+    // heart rate cannot meaningfully share a value axis.
+    //
+    // Only the individual family offers "free_y". Elsewhere the value axis
+    // follows `orientation`, so a "free y" that silently meant "free x" on a
+    // horizontal bar would be a lie — those families get fixed/free, and a
+    // saved free_y reads as free (see _facetScales).
+    //
+    // `when` hides the control until a facet column is mapped: with one panel
+    // there is nothing to share a scale WITH.
+    facet_scales: { label: 'Panel scales', kind: 'select',
+                    when: (/** @type {any} */ cfg) => !!cfg.facet,
+                    optionsBy: {
+                      aggregated: [
+                        { value: 'fixed', label: 'Shared across panels' },
+                        { value: 'free',  label: 'Free per panel' }],
+                      individual: [
+                        { value: 'fixed',  label: 'Shared across panels' },
+                        { value: 'free_y', label: 'Free y per panel' },
+                        { value: 'free',   label: 'Free x and y per panel' }],
+                      timeline: [
+                        { value: 'fixed', label: 'Shared across panels' },
+                        { value: 'free',  label: 'Free per panel' }]
+                    } },
     // Distribution band. `band_window` picks how the window is sized;
     // `band_size` reads as subjects (adaptive) or x units (fixed), so its
     // label follows the mode rather than lying in one of them.
@@ -663,7 +695,9 @@
         // (bar and waterfall per group/step; boxplot per drawn box slot);
         // facet applies to any faceted family. Pie/treemap/radar have no
         // category axis, so "axis" no-ops there (the tooltip n covers it).
-        'count_on', 'count_col'],
+        'count_on', 'count_col',
+        // Facet-grid scales; hidden until a facet is mapped (role `when`).
+        'facet_scales'],
       titles: ['title', 'subtitle', 'caption']
     },
     individual: {
@@ -705,7 +739,9 @@
         'line_width_mult', 'dot_size_mult',
         // Count labels: scatter/line have numeric axes, so only facet counts
         // apply here (the "axis" choice no-ops); shown for faceted charts.
-        'count_on', 'count_col'
+        'count_on', 'count_col',
+        // Facet-grid scales; hidden until a facet is mapped (role `when`).
+        'facet_scales'
       ],
       titles: ['title', 'subtitle', 'caption']
     },
@@ -714,7 +750,9 @@
       optionalMap: ['series', 'color', 'facet', 'label', 'tt_fields'],
       mapping: [],
       // Count labels: "axis" counts events (or distinct count_col) per lane.
-      presentation: ['sort_by', 'sort_dir', 'count_on', 'count_col'],
+      presentation: ['sort_by', 'sort_dir', 'count_on', 'count_col',
+        // Facet-grid scales; hidden until a facet is mapped (role `when`).
+        'facet_scales'],
       titles: ['title', 'subtitle', 'caption']
     }
   };
@@ -1001,6 +1039,60 @@
       if (this.config.chart_type === 'bar' &&
           this.config.baseline === 'cumulative') return 'cumulative';
       return 'zero';
+    }
+
+    // Panel scales for a facet grid, normalised per family (see the
+    // facet_scales role). "free_y" only means something where the value axis
+    // IS y — the individual family; everywhere else the value axis follows
+    // `orientation`, so a saved free_y reads as free rather than silently
+    // freeing whichever axis happens to carry the category.
+    _facetScales() {
+      const m = this.config.facet_scales || 'fixed';
+      if (m !== 'fixed' && m !== 'free' && m !== 'free_y') return 'fixed';
+      if (m === 'free_y' && this._family() !== 'individual') return 'free';
+      return m;
+    }
+
+    // ONE numeric domain across the facet panels ("fixed"). Each panel is its
+    // own echarts instance, so their axes are otherwise sized on their own
+    // subsets: identical bar heights then mean different values, which is the
+    // one thing a small-multiples grid promises they do not.
+    //
+    // The domains are read back off the finalized scales rather than
+    // recomputed per family: whatever a panel actually drew is already in
+    // there — the bars, the boxes and their whiskers, the band's pinned
+    // limits, the identity-line domain — and any of them can pull the frame
+    // open. Those extents are also already nice-rounded by echarts, so the
+    // union needs no second rounding pass (a raw union WOULD: see the
+    // identity-line domain, where explicit min/max turns echarts' own
+    // nice-bounds off and prints endpoints like 92.10959059275304).
+    _harmoniseAxes() {
+      const mode = this._facetScales();
+      if (mode === 'free') return;
+      const charts = this._slots.map(s => s.chart).filter(Boolean);
+      if (charts.length < 2) return;
+      // free_y: x stays shared (the panels still read left-to-right against
+      // one another), y is each panel's own.
+      for (const key of (mode === 'free_y' ? ['xAxis'] : ['xAxis', 'yAxis'])) {
+        let lo = Infinity, hi = -Infinity, n = 0;
+        for (const c of charts) {
+          const comp = c.getModel().getComponent(key, 0);
+          // No such axis (pie / treemap / radar), or a category axis: nothing
+          // numeric to share. Categories are unioned at the source instead —
+          // see the shared `groups` / `terms` in the render paths.
+          if (!comp || comp.get('type') === 'category') continue;
+          const ext = comp.axis.scale.getExtent();
+          if (!Number.isFinite(ext[0]) || !Number.isFinite(ext[1])) continue;
+          if (ext[0] < lo) lo = ext[0];
+          if (ext[1] > hi) hi = ext[1];
+          n++;
+        }
+        if (n < 2 || !(lo < hi)) continue;
+        // Merge (not notMerge): only the domain is being pinned, everything
+        // else the render just set stays. Index 0 only — a line chart's
+        // second y axis is the hidden 0..1 hover scrim and must not move.
+        for (const c of charts) c.setOption({ [key]: [{ min: lo, max: hi }] });
+      }
     }
 
     // Pick an echarts axis type from column metadata. Returns 'category',
@@ -2896,18 +2988,35 @@
         });
       };
 
+      // Category axis across the panels. "fixed" (the default) draws ONE
+      // ordered set of categories in every panel: a category missing from a
+      // panel keeps its (empty) slot, and a value sort ranks over the whole
+      // grid instead of per panel. Per-panel sets and per-panel value sorts
+      // are the quieter half of free scales — the labels are all there, so it
+      // reads as legitimate while the same slot holds a different category in
+      // each panel. Pie and treemap are exempt: their slices label
+      // themselves, so a unioned set would only add empty wedges.
+      const aggCt = this.config.chart_type;
+      const sharedGroups =
+        (this._facetScales() !== 'free' && aggCt !== 'pie' && aggCt !== 'treemap')
+          ? orderGroups(agg) : null;
+      // Radar sizes its spokes on one shared max; with fixed scales that max
+      // spans the grid, so a shape means the same area in every panel.
+      const sharedMax = (sharedGroups && aggCt === 'radar')
+        ? (Math.max(...agg.map(a => a.value ?? 0), 0) || 1) : null;
+
       // Facet strip labels, with optional "(n)" counts (see _facetLabelMap).
       const facetLabels = this._facetLabelMap(facets);
       for (let fi = 0; fi < facets.length; fi++) {
         const facet = facets[fi];
         const facetData = agg.filter(a => a.facet === facet);
-        const groups = orderGroups(facetData);
+        const groups = sharedGroups || orderGroups(facetData);
 
         const slot = this._ensureSlot(fi,
           (!singleFacet && facet !== '__all__') ? facetLabels.get(facet) : null, singleFacet);
         slot.facetVal = facet;
 
-        const option = this._buildAggregatedOption(facetData, groups, colors, palette, slot.chartDiv.clientWidth, facet, sharedLegend);
+        const option = this._buildAggregatedOption(facetData, groups, colors, palette, slot.chartDiv.clientWidth, facet, sharedLegend, sharedMax);
         if (!option) {
           // No chart to draw in this slot (boxplot without a numeric value):
           // drop the instance so the empty-state markup can own the div.
@@ -2954,6 +3063,7 @@
         if (existed && hChanged) chart.resize();
       }
       this.charts = this._slots.map(s => s.chart).filter(Boolean);
+      this._harmoniseAxes();
 
       // Shared legend band items. Bar/radar legends show the color levels
       // (`colors`); the distribution marks derive their split levels from the
@@ -2991,8 +3101,8 @@
       this._updateHighlight();
     }
 
-    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {number} [plotW] container width in px @param {string} [facet] current facet value ('__all__' when unfaceted) @param {boolean} [sharedLegend] facet grid shows ONE HTML legend band — build a hidden legend (selection model only) and reclaim its grid space */
-    _buildAggregatedOption(facetData, groups, colors, palette, plotW, facet, sharedLegend) {
+    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {number} [plotW] container width in px @param {string} [facet] current facet value ('__all__' when unfaceted) @param {boolean} [sharedLegend] facet grid shows ONE HTML legend band — build a hidden legend (selection model only) and reclaim its grid space @param {number | null} [sharedMax] radar only: the grid-wide spoke max under fixed panel scales */
+    _buildAggregatedOption(facetData, groups, colors, palette, plotW, facet, sharedLegend, sharedMax) {
       const ct = this.config.chart_type;
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
 
@@ -3008,7 +3118,7 @@
       if (ct === 'pie') return this._buildPie(facetData, groups, palette);
       if (DISTRIBUTION_TYPES.includes(ct)) return this._buildDistribution(groups, palette, ax, plotW, facet, sharedLegend);
       if (ct === 'treemap') return this._buildTreemap(facetData, groups, palette);
-      if (ct === 'radar') return this._buildRadar(facetData, groups, colors, palette, valueTitle, plotW || 0, sharedLegend);
+      if (ct === 'radar') return this._buildRadar(facetData, groups, colors, palette, valueTitle, plotW || 0, sharedLegend, sharedMax);
       // Waterfall = a bar with baseline "cumulative": each bar floats from the
       // running cumulative of the bars before it. Sugar for bar +
       // baseline="cumulative" (see _baselineMode). It reuses the same aggregated
@@ -3433,13 +3543,15 @@
     // output the bar chart stacks. Multi-column spokes (the blockr.echarts
     // radar's `summaries`) are expressed by pivoting longer upstream and
     // mapping the name column to `group`.
-    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {any} valueTitle @param {number} plotW @param {boolean} [sharedLegend] hidden legend + full-height polygon (see _buildAggregatedOption) */
-    _buildRadar(facetData, groups, colors, palette, valueTitle, plotW, sharedLegend) {
+    /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {any} valueTitle @param {number} plotW @param {boolean} [sharedLegend] hidden legend + full-height polygon (see _buildAggregatedOption) @param {number | null} [sharedMax] grid-wide spoke max under fixed panel scales */
+    _buildRadar(facetData, groups, colors, palette, valueTitle, plotW, sharedLegend, sharedMax) {
       const colorScale = this._scaleFor(this.config.color);
       // One shared max across spokes keeps shapes comparable (same contract
       // as the blockr.echarts radar). Null cells (no usable value) don't
-      // shape the scale. Guard 0/negative-only data with 1.
-      const maxVal = Math.max(...facetData.map(a => a.value ?? 0), 0) || 1;
+      // shape the scale. Guard 0/negative-only data with 1. `sharedMax` (fixed
+      // panel scales) widens that from this panel to the whole facet grid.
+      const maxVal = sharedMax ||
+        (Math.max(...facetData.map(a => a.value ?? 0), 0) || 1);
       const indicator = groups.map(g => ({ name: g, max: maxVal }));
       // A missing (group, color) cell is a true zero for counting
       // aggregations; for mean/median/min/max there is no value — null
@@ -3636,12 +3748,17 @@
       const catMeta = [];
       /** @type {Map<string, string> | null} */
       const catLabelMap = axisOn ? new Map() : null;
+      // A facet grid on fixed scales keeps every slot in every panel, empty or
+      // not: dropping them per panel is what makes slot 3 a different (group,
+      // level) pair in each one. Unfaceted (or free), an empty combo is just
+      // dead width, so it goes.
+      const keepEmptySlots = !!facetCol && this._facetScales() !== 'free';
       for (const g of groups) {
         for (const lv of (split ? levels : ['__all__'])) {
           // Split path: drop empty (group, level) combos so there is no blank
           // slot. Plain path: keep the slot (null box) to preserve index/label
           // alignment, matching the pre-color behavior.
-          if (split && rowsFor(g, lv).length === 0) continue;
+          if (split && !keepEmptySlots && rowsFor(g, lv).length === 0) continue;
           const cat = split ? g + BOX_CAT_SEP + lv : g;
           cats.push(cat);
           catMeta.push({ group: g, level: lv });
@@ -4520,14 +4637,24 @@
             let at = v, off = '';
             if (bandYLo != null && v > bandYHi) { at = bandYHi; off = ' ↑ off scale'; }
             else if (bandYLo != null && v < bandYLo) { at = bandYLo; off = ' ↓ off scale'; }
+            // A reference limit is scaffolding you read the data against --
+            // the same job an axis tick does -- so it takes the axis label's
+            // colour and weight rather than a saturated status red. At full
+            // strength the pair of limits carried more ink than the band they
+            // annotate and read as the subject of the chart. The rule keeps
+            // the warm hue (it still means "limit", not "gridline") but drops
+            // to a hairline at 45%, below the outer ribbon's edge.
+            //
+            // Off-scale limits stay a little stronger and go dotted: they
+            // cannot be read positionally, so they have to be findable.
             refLabels.push({
               yAxis: at,
-              lineStyle: { color: REF_LINE_COLOR, width: guideW,
+              lineStyle: { color: REF_LINE_COLOR, width: 1 * lm,
                            type: off ? 'dotted' : 'dashed',
-                           opacity: off ? 0.7 : 1 },
+                           opacity: off ? 0.6 : 0.45 },
               label: {
-                show: true, position: 'insideEndTop', color: REF_LINE_COLOR,
-                fontSize: 10, fontWeight: 600, formatter: base + off
+                show: true, position: 'insideEndTop', color: AXIS_LABEL_COLOR,
+                fontSize: 10, fontWeight: 400, formatter: base + off
               }
             });
           }
@@ -5065,6 +5192,7 @@
       }
 
       this.charts = this._slots.map(s => s.chart).filter(Boolean);
+      this._harmoniseAxes();
       this._updateLegendBand(bandItems && bandItems.length
         ? { col: color, items: bandItems }
         : null);
@@ -5169,6 +5297,14 @@
 
       // Facet strip labels, with optional "(n)" counts (see _facetLabelMap).
       const facetLabels = this._facetLabelMap(panels.map(p => p.fv));
+      // Lanes across the panels. Fixed scales give every panel the same lane
+      // list in the same order, so a row of the grid is ONE term and the
+      // panels can be read against each other (a term with no events in an
+      // arm shows an empty lane, which is itself the finding). Free scales
+      // keep the per-panel lanes — shorter panels, but lane 4 is a different
+      // term in each.
+      const sharedTerms = this._facetScales() !== 'free'
+        ? sortTerms(this.data) : null;
       for (let fi = 0; fi < panels.length; fi++) {
         const { fv, rows } = panels[fi];
 
@@ -5176,7 +5312,7 @@
           (!singleFacet && fv !== '__all__') ? facetLabels.get(fv) : null, singleFacet);
         slot.facetVal = fv;
 
-        const terms = sortTerms(rows);
+        const terms = sharedTerms || sortTerms(rows);
 
         // Lane counts ("Nausea (3)") when count_on covers the axis surface:
         // distinct count_col per lane when set, else raw event rows. One pass
@@ -5426,6 +5562,7 @@
       }
 
       this.charts = this._slots.map(s => s.chart).filter(Boolean);
+      this._harmoniseAxes();
       // Chip colors mirror option.color above: board scale, else palette
       // cycling in level order.
       this._updateLegendBand((sharedLegend && color && colorLevels.length)
@@ -5923,6 +6060,8 @@
         // ('' = blank picker -> row count).
         count_on: this.config.count_on || 'off',
         count_col: this.config.count_col || '',
+        // Facet-grid panel scales ('fixed' | 'free_y' | 'free').
+        facet_scales: this.config.facet_scales || 'fixed',
         lo: this.config.lo || '',
         hi: this.config.hi || '',
         // Extra tooltip columns (gantt): always an array so R can tell an

@@ -50,3 +50,17 @@ test_that("the emitted call evaluates to the same plot as direct state", {
 test_that("non-viz blocks print bare", {
   expect_null(report_call(blockr.core::new_head_block(), "h"))
 })
+
+test_that("free panel scales reach the document; the fixed default does not", {
+  fixed <- new_chart_block(chart_type = "bar", group = "AGEGR1", facet = "SEX")
+  free <- new_chart_block(chart_type = "bar", group = "AGEGR1", facet = "SEX",
+                          facet_scales = "free")
+
+  expect_no_match(
+    paste(deparse(report_call(fixed, "c1")), collapse = " "), "facet_scales"
+  )
+  expect_match(
+    paste(deparse(report_call(free, "c1")), collapse = " "),
+    "facet_scales = \"free\"", fixed = TRUE
+  )
+})

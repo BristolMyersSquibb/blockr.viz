@@ -877,3 +877,72 @@ test_that("tile drill: unchecking the gear's Drill-down clears the filter", {
     scope
   )))
 })
+
+# ===========================================================================
+# FACET SCALES (chart.js _harmoniseAxes + the shared category set)
+# ===========================================================================
+
+# Per-panel value-axis extents and category sets, read off the LIVE echarts
+# models — the same objects the canvas draws from, so this asserts what the
+# reader actually sees rather than what the option said before layout. A
+# horizontal bar (the default) puts the value on x and the categories on y.
+facet_axes <- function(block_id) {
+  sel <- sprintf("#board-block_%s-expr-drilldown_block", block_id)
+  jsonlite::fromJSON(app$get_js(sprintf(
+    "JSON.stringify(Array.from(document.querySelectorAll('%s .dd-chart'))
+       .map(function(d) {
+         var c = echarts.getInstanceByDom(d);
+         var m = c.getModel();
+         return {
+           value: m.getComponent('xAxis', 0).axis.scale.getExtent(),
+           cats: m.getComponent('yAxis', 0).axis.scale.getTicks()
+                  .map(function(t) { return t.tickValue; }).length
+         };
+       }))", sel
+  )), simplifyVector = FALSE)
+}
+
+test_that("facet panels share one value domain and one category set", {
+  skip_if_no_app()
+  chart_settle("chart_facet")
+
+  panels <- facet_axes("chart_facet")
+  expect_length(panels, 4L) # North, South, East, West
+
+  # Fixed (the default): every panel reports the SAME value extent, wide
+  # enough for the biggest bar (North's product A, 100), and the same number
+  # of category slots — even East/West, which have no product B.
+  extents <- unique(lapply(panels, function(p) unlist(p$value)))
+  expect_length(extents, 1L)
+  expect_gte(extents[[1]][2], 100)
+  expect_equal(unique(vapply(panels, function(p) p$cats, numeric(1))), 2)
+})
+
+test_that("facet_scales = free hands every panel back its own axis", {
+  skip_if_no_app()
+
+  send_action(chart_action("chart_facet"), list(
+    action = "config", chart_type = "bar", group = "product",
+    value = "revenue", func = "sum", facet = "region",
+    facet_scales = "free"
+  ))
+  chart_settle("chart_facet")
+
+  panels <- facet_axes("chart_facet")
+  extents <- unique(lapply(panels, function(p) unlist(p$value)))
+  # West tops out at 30, North at 100: free panels cannot agree.
+  expect_gt(length(extents), 1L)
+  # ...and a panel with no product B drops that slot entirely.
+  expect_gt(length(unique(vapply(panels, function(p) p$cats, numeric(1)))), 1L)
+
+  # Back to fixed: the harmonised domain returns (no one-way state).
+  send_action(chart_action("chart_facet"), list(
+    action = "config", chart_type = "bar", group = "product",
+    value = "revenue", func = "sum", facet = "region",
+    facet_scales = "fixed"
+  ))
+  chart_settle("chart_facet")
+  expect_length(
+    unique(lapply(facet_axes("chart_facet"), function(p) unlist(p$value))), 1L
+  )
+})

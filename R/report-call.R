@@ -65,6 +65,7 @@ report_call.chart_block <- function(x, var, ...) {
     sort_dir = NULL,
     count_on = "off",
     count_col = NULL,
+    facet_scales = "fixed",
     box_points = "none",
     smoother = "none",
     identity_line = FALSE,

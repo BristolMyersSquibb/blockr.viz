@@ -131,3 +131,30 @@ test_that("a state column missing from the data degrades, not errors", {
   expect_warning(out <- static_chart(d, "bar", group = "GONE"), "cannot draw")
   expect_s3_class(out, "data.frame")
 })
+
+test_that("facet_scales reaches facet_wrap, fixed by default", {
+  d <- gg_iris()
+
+  fixed <- static_chart(d, "bar", group = "Species", facet = "Grp")
+  free <- static_chart(d, "bar", group = "Species", facet = "Grp",
+                       facet_scales = "free")
+
+  # facet_wrap() stores the pick on the facet params (free is a per-axis
+  # list, so "fixed" is both FALSE and "free" both TRUE).
+  expect_false(fixed$facet$params$free$x)
+  expect_false(fixed$facet$params$free$y)
+  expect_true(free$facet$params$free$x)
+  expect_true(free$facet$params$free$y)
+
+  # free_y frees the value axis only -- the canvas' meaning of the word.
+  free_y <- static_chart(d, "bar", group = "Species", facet = "Grp",
+                         facet_scales = "free_y")
+  expect_false(free_y$facet$params$free$x)
+  expect_true(free_y$facet$params$free$y)
+
+  # A bad value is a bug in the caller, not something to render around.
+  expect_error(
+    static_chart(d, "bar", group = "Species", facet = "Grp",
+                 facet_scales = "loose")
+  )
+})

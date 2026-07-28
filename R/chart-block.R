@@ -199,6 +199,18 @@
 #'   the raw row count. Counts are computed per label group in the browser and
 #'   do NOT sum from the per-cell n: one subject can span several color /
 #'   facet cells.
+#' @param facet_scales How the facet panels scale, as in ggplot2's
+#'   `facet_wrap(scales = )`. `"fixed"` (default) gives every panel ONE
+#'   numeric domain and one category set in one order: a bar of the same
+#'   length, or a point at the same height, then means the same value in every
+#'   panel -- the premise of a small-multiples grid. `"free"` lets each panel
+#'   size itself off its own subset, which is the honest reading when the
+#'   panels do not share a unit (faceting by `PARAM`, where ALT, bilirubin and
+#'   heart rate cannot share a value axis); like ggplot2, it also drops
+#'   categories a panel has no rows for. `"free_y"` frees the value axis and
+#'   keeps a shared x. It is offered on scatter / line / band only, where the
+#'   value axis IS y -- elsewhere the value axis follows `orientation`, so the
+#'   name would lie, and a saved `"free_y"` reads as `"free"` there.
 #' @param ctrl_target Character(1), beta. Block id of a value filter block on
 #'   the board: a categorical drill click's claim is ALSO pushed there over
 #'   the board's control channel ([ctrl_send()]; the board needs the channel
@@ -317,6 +329,16 @@ new_chart_block <- function(
     # subject can span several colour / facet cells (see chart.js _labelCounts).
     count_on = "off",
     count_col = NULL,
+    # Panel scales for a facet grid. "fixed" (default) = one shared numeric
+    # domain and one shared category set/order across the panels, so a
+    # position means the same thing in every one of them (and the canvas
+    # agrees with static_chart(), whose facet_wrap() has always been fixed).
+    # "free" = each panel sizes itself off its own subset, for panels that do
+    # not share a unit (faceting by PARAM). "free_y" frees the value axis but
+    # keeps a shared x; it is offered on scatter / line / band only, where the
+    # value axis IS y (elsewhere it follows `orientation`, so the name would
+    # lie) and reads as "free" there.
+    facet_scales = "fixed",
     ctrl_target = "",
     ctrl_table = "",
     ...) {
@@ -375,6 +397,12 @@ new_chart_block <- function(
   # "off" when absent.
   count_col <- chr_state(count_col)
   count_on <- count_on %||% "off"
+  # Fixed-option select; a saved board predating it (or a DAG-poisoned list())
+  # backfills to the shared-scale default.
+  facet_scales <- match.arg(
+    as.character(facet_scales %||% "fixed")[1L],
+    c("fixed", "free_y", "free")
+  )
   # Legacy aliases mapped on construction (old saved boards restore through the
   # ctor, and every chart saved before the rename carries ref_x / ref_y). The
   # new name wins when both are given: a board that already saved `vlines` is
@@ -535,6 +563,8 @@ new_chart_block <- function(
         # DISTINCT id column; the browser does the counting per label group.
         r_count_on <- shiny::reactiveVal(count_on)
         r_count_col <- shiny::reactiveVal(count_col)
+        # Facet-grid panel scales (see constructor args).
+        r_facet_scales <- shiny::reactiveVal(facet_scales)
         r_board_theme <- setup_drilldown_theme_sync(session)
         # Board scale map (NULL when the board has no "scale_map" option);
         # resolved per data push, never stored in block state.
@@ -840,6 +870,10 @@ new_chart_block <- function(
               # Observation-count labels: which surface(s) get the "(n)" and the
               # DISTINCT id column to count (browser-side, per label group).
               count_on = r_count_on(), count_col = r_count_col(),
+              # Facet-grid panel scales: shared numeric domain + shared
+              # category set across the panels ("fixed"), or per-panel
+              # ("free" / "free_y").
+              facet_scales = r_facet_scales(),
               # Bar baseline mode. chart_type "waterfall" implies "cumulative"
               # on the JS side (sugar); also send the flag explicitly so a plain
               # bar can opt into the cumulative bridge, and pass the optional
@@ -1023,6 +1057,9 @@ new_chart_block <- function(
             if (!is.null(msg$count_on))   upd(r_count_on, msg$count_on)
             # nn(): "" (picker cleared) means "no id column" -> row count.
             if (!is.null(msg$count_col))  upd(r_count_col, nn(msg$count_col))
+            if (!is.null(msg$facet_scales)) {
+              upd(r_facet_scales, msg$facet_scales)
+            }
             if (!is.null(msg$lo))         upd(r_lo, nn(msg$lo))
             if (!is.null(msg$hi))         upd(r_hi, nn(msg$hi))
             # Chart text: "" is a real value (explicitly no title -- it
@@ -1283,6 +1320,7 @@ new_chart_block <- function(
             ref_lo = r_ref_lo,
             count_on = r_count_on,
             count_col = r_count_col,
+            facet_scales = r_facet_scales,
             lo = r_lo,
             hi = r_hi,
             baseline = r_baseline,
@@ -1349,7 +1387,7 @@ new_chart_block <- function(
       "identity_line",
       "box_points", "summary", "whiskers", "connect_centers",
       "lo", "hi", "baseline", "waterfall_totals",
-      "count_on", "count_col",
+      "count_on", "count_col", "facet_scales",
       "title", "subtitle", "caption",
       "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",

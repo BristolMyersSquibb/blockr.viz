@@ -10,7 +10,10 @@
  *
  * A host provides (see DrilldownChart for the chart implementation):
  *   popoverEl()      -> the <body>-portaled popover element
- *   roles            -> the ROLES dict (key -> {label,kind,colType,...})
+ *   roles            -> the ROLES dict (key -> {label,kind,colType,...};
+ *                       an optional `when(cfg)` hides the row while the rest
+ *                       of the config makes it inert, e.g. facet_scales
+ *                       without a facet)
  *   config()         -> the mutable config object (mutated in place)
  *   columns()        -> column metadata array [{name,type,n_unique,label?}]
  *   context()        -> string key for colTypeBy/optionsBy/hintBy (chart=family)
@@ -176,6 +179,7 @@
       const all = [...(spec.mapping || []), ...spec.presentation];
       const e = all.find(x => (typeof x === 'string' ? x : x.role) === key);
       if (!e) return false;
+      if (!this._roleWhen(key)) return false;
       return typeof e === 'string' || !e.types || e.types.includes(this.h.currentType());
     }
 
@@ -594,7 +598,19 @@
       return entries
         .map(e => (typeof e === 'string' ? { role: e } : e))
         .filter(e => !e.types || e.types.includes(ct))
+        .filter(e => this._roleWhen(e.role))
         .filter(e => !this._SECONDARY.has(e.role));
+    }
+
+    // A role may gate itself on the rest of the config (`when(cfg) -> bool`):
+    // an option that cannot do anything yet is noise, not a discoverable
+    // feature. Type-conditional rows use `types` on the section entry; this is
+    // for the cases a type cannot express (facet_scales needs a facet MAPPED,
+    // whatever the chart type).
+    /** @param {string} key */
+    _roleWhen(key) {
+      const role = this.h.roles[key];
+      return !role || !role.when || !!role.when(this.h.config());
     }
 
     /** @param {HTMLElement} container @param {any[]} list */

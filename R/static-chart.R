@@ -38,6 +38,9 @@
 #'   ordering, as in [new_chart_block()].
 #' @param count_on,count_col Observation-count labels, as in
 #'   [new_chart_block()].
+#' @param facet_scales Panel scales, passed straight to
+#'   [ggplot2::facet_wrap()]'s `scales`: `"fixed"` (default), `"free_y"`,
+#'   `"free_x"` or `"free"`. Same argument as in [new_chart_block()].
 #' @param box_points,smoother,identity_line,lo,hi,step Family-specific
 #'   options, as in [new_chart_block()].
 #' @param vlines,hlines Numeric helper-line positions.
@@ -72,6 +75,7 @@ static_chart <- function(data,
                      sort_dir = NULL,
                      count_on = "off",
                      count_col = NULL,
+                     facet_scales = "fixed",
                      box_points = "none",
                      smoother = "none",
                      identity_line = FALSE,
@@ -156,6 +160,13 @@ static_chart <- function(data,
     }
     p <- p + ggplot2::facet_wrap(
       ggplot2::vars(.data[[facet]]),
+      # The block's `facet_scales` IS facet_wrap()'s `scales` (that is where
+      # the vocabulary comes from). The canvas' "free_y" only exists for the
+      # families whose value axis is y, and ggplot2 spells that the same way.
+      scales = match.arg(
+        as.character(facet_scales %||% "fixed")[1L],
+        c("fixed", "free_y", "free_x", "free")
+      ),
       labeller = if (!is.null(labs)) {
         ggplot2::as_labeller(labs)
       } else {
