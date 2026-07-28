@@ -1,16 +1,24 @@
 # COLOR concept verification: `color` (identity tint) + `shadings` (cell
 # value-encoding rules) on the table, `color` card tint on the tile.
-options(shiny.port = as.integer(Sys.getenv("BLOCKR_PORT", "3838")),
+# Package roots resolve from THIS script's location, so the same command runs
+# in the container (/workspace) and on a host clone. Port: command-line arg,
+# then BLOCKR_PORT, then the container's forwarded 3838.
+.self <- grep("^--file=", commandArgs(FALSE), value = TRUE)[1]
+.ws <- normalizePath(if (is.na(.self)) "." else
+  file.path(dirname(sub("^--file=", "", .self)), "..", ".."))
+.port <- as.integer(c(commandArgs(TRUE), Sys.getenv("BLOCKR_PORT"), "3838")[1])
+
+options(shiny.port = .port,
         shiny.host = "0.0.0.0")
-pkgload::load_all("/workspace/blockr.core")
-pkgload::load_all("/workspace/blockr.ui")
-pkgload::load_all("/workspace/blockr.dplyr")
-pkgload::load_all("/workspace/blockr.dock")
-pkgload::load_all("/workspace/blockr.dag")
-pkgload::load_all("/workspace/_scratch/worktrees/blockr.viz-color")
+pkgload::load_all(file.path(.ws, "blockr.core"))
+pkgload::load_all(file.path(.ws, "blockr.ui"))
+pkgload::load_all(file.path(.ws, "blockr.dplyr"))
+pkgload::load_all(file.path(.ws, "blockr.dock"))
+pkgload::load_all(file.path(.ws, "blockr.dag"))
+pkgload::load_all(file.path(.ws, "_scratch/worktrees/blockr.viz-color"))
 
 adsl <- safetyData::adam_adsl
-pkgload::load_all("/workspace/blockr.theme")
+pkgload::load_all(file.path(.ws, "blockr.theme"))
 
 study_scale_map <- new_scale_map(
   scale_binding("SEX", color = c(F = "#0EA5E9", M = "#E69F00")),

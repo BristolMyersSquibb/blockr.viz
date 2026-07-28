@@ -6,15 +6,23 @@
 # assumes one analyte, like every other chart).
 #
 # Port pinned via BLOCKR_PORT (3838 is the container's forwarded port).
-options(shiny.port = as.integer(Sys.getenv("BLOCKR_PORT", "3838")),
+# Package roots resolve from THIS script's location, so the same command runs
+# in the container (/workspace) and on a host clone. Port: command-line arg,
+# then BLOCKR_PORT, then the container's forwarded 3838.
+.self <- grep("^--file=", commandArgs(FALSE), value = TRUE)[1]
+.ws <- normalizePath(if (is.na(.self)) "." else
+  file.path(dirname(sub("^--file=", "", .self)), "..", ".."))
+.port <- as.integer(c(commandArgs(TRUE), Sys.getenv("BLOCKR_PORT"), "3838")[1])
+
+options(shiny.port = .port,
         shiny.host = "0.0.0.0")
 
-pkgload::load_all("/workspace/blockr.core")
-pkgload::load_all("/workspace/blockr.ui")
-pkgload::load_all("/workspace/blockr.dplyr")
-pkgload::load_all("/workspace/blockr.dock")
-pkgload::load_all("/workspace/blockr.viz")
-pkgload::load_all("/workspace/blockr.theme")
+pkgload::load_all(file.path(.ws, "blockr.core"))
+pkgload::load_all(file.path(.ws, "blockr.ui"))
+pkgload::load_all(file.path(.ws, "blockr.dplyr"))
+pkgload::load_all(file.path(.ws, "blockr.dock"))
+pkgload::load_all(file.path(.ws, "blockr.viz"))
+pkgload::load_all(file.path(.ws, "blockr.theme"))
 
 adlb <- pharmaverseadam::adlb
 alt <- adlb[adlb$PARAMCD == "ALT" &
@@ -101,6 +109,6 @@ board <- new_dock_board(
 )
 
 cat("\n  http://127.0.0.1:",
-    as.integer(Sys.getenv("BLOCKR_PORT", "3838")), "/\n\n", sep = "")
+    .port, "/\n\n", sep = "")
 
 serve(board)

@@ -1,15 +1,23 @@
 # Legend title verification: the color legend must name its variable the way
 # an axis names its column -- the attr `label` when set, else the column name.
 # One block per legend-building family (bar, boxplot, radar, scatter, gantt).
-options(shiny.port = as.integer(Sys.getenv("BLOCKR_PORT", "3838")),
+# Package roots resolve from THIS script's location, so the same command runs
+# in the container (/workspace) and on a host clone. Port: command-line arg,
+# then BLOCKR_PORT, then the container's forwarded 3838.
+.self <- grep("^--file=", commandArgs(FALSE), value = TRUE)[1]
+.ws <- normalizePath(if (is.na(.self)) "." else
+  file.path(dirname(sub("^--file=", "", .self)), "..", ".."))
+.port <- as.integer(c(commandArgs(TRUE), Sys.getenv("BLOCKR_PORT"), "3838")[1])
+
+options(shiny.port = .port,
         shiny.host = "0.0.0.0")
-pkgload::load_all("/workspace/blockr.core")
-pkgload::load_all("/workspace/blockr.ui")
-pkgload::load_all("/workspace/blockr.dplyr")
-pkgload::load_all("/workspace/blockr.dock")
-pkgload::load_all("/workspace/blockr.dag")
-pkgload::load_all("/workspace/blockr.theme")
-pkgload::load_all("/workspace/blockr.viz")
+pkgload::load_all(file.path(.ws, "blockr.core"))
+pkgload::load_all(file.path(.ws, "blockr.ui"))
+pkgload::load_all(file.path(.ws, "blockr.dplyr"))
+pkgload::load_all(file.path(.ws, "blockr.dock"))
+pkgload::load_all(file.path(.ws, "blockr.dag"))
+pkgload::load_all(file.path(.ws, "blockr.theme"))
+pkgload::load_all(file.path(.ws, "blockr.viz"))
 
 adae <- safetyData::adam_adae
 adsl <- safetyData::adam_adsl

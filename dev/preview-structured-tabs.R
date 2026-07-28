@@ -14,10 +14,18 @@
 #   Rscript /workspace/_scratch/wt-table-datapush/dev/preview-structured-tabs.R
 #   VIZ_DIR=/workspace/blockr.viz Rscript /workspace/_scratch/wt-table-datapush/dev/preview-structured-tabs.R
 
-port <- as.integer(Sys.getenv("BLOCKR_PORT", unset = "3838"))
+# Package roots resolve from THIS script's location, so the same command runs
+# in the container (/workspace) and on a host clone. Port: command-line arg,
+# then BLOCKR_PORT, then the container's forwarded 3838.
+.self <- grep("^--file=", commandArgs(FALSE), value = TRUE)[1]
+.ws <- normalizePath(if (is.na(.self)) "." else
+  file.path(dirname(sub("^--file=", "", .self)), "..", ".."))
+.port <- as.integer(c(commandArgs(TRUE), Sys.getenv("BLOCKR_PORT"), "3838")[1])
+
+port <- .port
 
 for (p in c("blockr.core", "blockr.dplyr", "blockr.dock", "blockr.ui")) {
-  pkgload::load_all(file.path("/workspace", p), quiet = TRUE)
+  pkgload::load_all(file.path(.ws, p), quiet = TRUE)
 }
 viz_default <- normalizePath(file.path(
   dirname(sub("--file=", "", grep("^--file=", commandArgs(), value = TRUE)[1])),

@@ -6,9 +6,17 @@
 #
 # Rscript dev/settings-band-demo.R  (serves on PORT, default 3838)
 
-pkgload::load_all("/workspace/blockr.viz", quiet = TRUE)
+# Package roots resolve from THIS script's location, so the same command runs
+# in the container (/workspace) and on a host clone. Port: command-line arg,
+# then BLOCKR_PORT, then the container's forwarded 3838.
+.self <- grep("^--file=", commandArgs(FALSE), value = TRUE)[1]
+.ws <- normalizePath(if (is.na(.self)) "." else
+  file.path(dirname(sub("^--file=", "", .self)), "..", ".."))
+.port <- as.integer(c(commandArgs(TRUE), Sys.getenv("BLOCKR_PORT"), "3838")[1])
 
-port <- as.integer(Sys.getenv("PORT", "3838"))
+pkgload::load_all(file.path(.ws, "blockr.viz"), quiet = TRUE)
+
+port <- .port
 
 board <- blockr.core::new_board(
   blocks = c(
