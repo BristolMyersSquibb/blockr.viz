@@ -406,6 +406,20 @@ rank_table_css <- function() {
 }
 .lane-sum-ctl { display: flex; flex-direction: column; gap: 3px; }
 .lane-sum-ctl-wide { flex: 1 1 100%; }
+/* The optional mappings (colour, facet): the add buttons sit on the label
+   line's baseline so the row reads as one band of controls, and an added
+   mapping carries its ✕ in the label, the way a grouping role does. */
+.lane-sum-addmaps { flex-direction: row; gap: 5px; align-self: flex-end; }
+.lane-sum-map-rm {
+  border: 0;
+  background: none;
+  padding: 0 0 0 4px;
+  font-size: 0.65rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--blockr-color-text-subtle, #898781);
+}
+.lane-sum-map-rm:hover { color: var(--blockr-color-danger, #d03b3b); }
 .lane-sum-name-input {
   height: 28px;
   border: 1px solid var(--blockr-color-border, #e1e0d9);
@@ -576,10 +590,19 @@ rank_table_css <- function() {
   padding: 0.35rem 0.25rem 0.15rem;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.35rem 1.4rem;
   align-items: center;
   font-size: 0.8rem;
   color: var(--blockr-color-text-muted, #52514e);
+}
+/* One group per colour column (a summarize table maps colour per column, so
+   it can carry several). The wider gap BETWEEN groups keeps a title bound to
+   the items it decodes. */
+.blockr-rank-legend-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
 }
 .blockr-rank-legend-title {
   font-size: 0.7rem;

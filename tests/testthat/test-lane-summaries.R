@@ -270,8 +270,9 @@ test_that("a mixed column list renders every row type through one table", {
   # The field sees both arms (subjects span arms in this fixture): the
   # broken-constancy case is VISIBLE, not silently truncated to one row.
   expect_match(p$cols[[4]]$disp[[1]], ", ")
-  # The legend comes from the spans colour.
-  expect_identical(p$chrome$legend$title, "SEV")
+  # The legend comes from the spans colour: one group, titled by its column.
+  expect_length(p$chrome$legend$groups, 1L)
+  expect_identical(p$chrome$legend$groups[[1L]]$title, "SEV")
 })
 
 test_that("per-column domains: mixed units never share a scale", {
@@ -335,6 +336,149 @@ test_that("by_level reorders into level groups with a two-row header", {
   p2 <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = S,
                            facet = "ARM")
   expect_false(grepl("blockr-th-group", p2$head))
+})
+
+test_that("colour is the SUMMARY's mapping: one column splits, the next does not", {
+  ae <- sum_fixture()
+  S <- list(
+    list(type = "dist", name = "Split", col = "DUR", color = "SEV"),
+    list(type = "dist", name = "Plain", col = "DUR")
+  )
+  p <- rank_prepare(ae, group = NULL, by = "TERM", summaries = S)
+  # Only the mapped column carries per-level geometry.
+  expect_identical(p$plan[[1L]]$levels, c("MILD", "MOD"))
+  expect_null(p$plan[[2L]]$levels)
+  # One legend group, titled by the column it decodes.
+  expect_length(p$color_groups, 1L)
+  expect_identical(p$color_groups[[1L]]$column, "SEV")
+})
+
+test_that("two colour columns give two titled legend groups", {
+  ae <- sum_fixture()
+  S <- list(
+    list(type = "dist", name = "By severity", col = "DUR", color = "SEV"),
+    list(type = "dist", name = "By arm", col = "DUR", color = "ARM")
+  )
+  p <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = S)
+  expect_identical(
+    vapply(p$chrome$legend$groups, function(g) g$title, ""),
+    c("SEV", "ARM")
+  )
+  expect_length(p$chrome$legend$groups[[1L]]$items, 2L)
+})
+
+test_that("facet is the SUMMARY's mapping: only mapped columns repeat", {
+  ae <- sum_fixture()
+  S <- list(
+    list(type = "simple", name = "Subjects", func = "count_distinct",
+         col = "USUBJID", show = "bar", facet = "ARM"),
+    list(type = "simple", name = "Rows", func = "count", show = "bar")
+  )
+  p <- rank_prepare(ae, group = NULL, by = "TERM", summaries = S)
+  # Two copies of the faceted column, one of the plain one.
+  expect_length(p$plan, 3L)
+  # With one facet column across the table the level alone labels a copy,
+  # the summary name moving to the sub-label.
+  expect_identical(vapply(p$plan, function(x) x$label, ""),
+                   c("Active", "Placebo", "Rows"))
+  expect_identical(p$plan[[1L]]$sub_label, "Subjects")
+  # One shared facet column, so the by-level reading is still available.
+  expect_identical(p$facet, "ARM")
+})
+
+test_that("columns may facet by DIFFERENT columns; the header names them", {
+  ae <- sum_fixture()
+  S <- list(
+    list(type = "simple", name = "Subjects", func = "count_distinct",
+         col = "USUBJID", show = "bar", facet = "ARM"),
+    list(type = "dist", name = "Duration", col = "DUR", stat = "mean_se",
+         show = "text", facet = "SEV")
+  )
+  p <- rank_prepare(ae, group = NULL, by = "TERM", summaries = S,
+                    facet_layout = "by_level")
+  expect_identical(vapply(p$plan, function(x) x$label, ""),
+                   c("ARM: Active", "ARM: Placebo", "SEV: MILD", "SEV: MOD"))
+  # No shared facet column, so the by-level reading has nothing to span and
+  # the layout stays by_summary.
+  expect_null(p$facet_spans)
+  expect_null(p$facet)
+  expect_identical(p$facet_levels, character())
+  expect_identical(p$layout, "facet")
+})
+
+test_that("a one-level facet column is an error naming the summary", {
+  ae <- sum_fixture()
+  ae$ONE <- "only"
+  S <- list(list(type = "simple", name = "Rows", func = "count",
+                 show = "bar", facet = "ONE"))
+  p <- rank_prepare(ae, group = NULL, by = "TERM", summaries = S)
+  expect_match(p$err, "Summary \"Rows\": facet column \"ONE\"")
+})
+
+test_that("the retired table-level pair fans down onto the rows it applied to", {
+  ae <- sum_fixture()
+  S <- lane_norm_summaries(list(
+    list(type = "dist", name = "Split", col = "DUR"),
+    list(type = "dist", name = "Text", col = "DUR", show = "text"),
+    list(type = "simple", name = "Overall", func = "count", show = "bar",
+         scope = "pooled"),
+    list(type = "field", name = "Arms", col = "ARM")
+  ))
+  m <- lane_migrate_globals(S, color = "SEV", facet = "ARM")
+  # Colour reaches every column that can draw a split, never a text cell;
+  # the facet reaches the cell-scoped rows, never a pooled one or a field.
+  expect_identical(vapply(m, function(s) s$color %||% "", ""),
+                   c("SEV", "", "SEV", ""))
+  expect_identical(vapply(m, function(s) s$facet %||% "", ""),
+                   c("ARM", "ARM", "", ""))
+  # A row that names its own keeps it.
+  own <- lane_migrate_globals(
+    lane_norm_summaries(list(list(type = "dist", col = "DUR",
+                                  color = "ARM", facet = "SEV"))),
+    color = "SEV", facet = "ARM"
+  )
+  expect_identical(own[[1L]]$color, "ARM")
+  expect_identical(own[[1L]]$facet, "SEV")
+})
+
+test_that("a high-cardinality colour or facet is refused, naming the column", {
+  ae <- sum_fixture()
+  p <- rank_prepare(ae, group = NULL, by = "TERM", summaries = list(
+    list(type = "dist", name = "Duration", col = "DUR", color = "USUBJID")
+  ))
+  expect_match(p$err, "colour column \"USUBJID\" has 19 levels")
+  # Facet has the same ceiling for a different reason: one column per level.
+  p <- rank_prepare(ae, group = NULL, by = "TERM", summaries = list(
+    list(type = "dist", name = "Duration", col = "DUR", facet = "USUBJID")
+  ))
+  expect_match(p$err, "would repeat 19 times")
+  # The gear seeds a mapping from the level counts it ships, so the pick it
+  # offers is one that passes.
+  cols <- rank_gear_cols(ae)
+  n <- vapply(cols, function(c) c$n_lev %||% NA_integer_, integer(1L))
+  expect_identical(vapply(cols, function(c) c$name, "")[!is.na(n) & n <= 15L],
+                   c("SOC", "TERM", "SEV", "ARM"))
+  # USUBJID is exactly the column the seed must skip.
+  expect_identical(n[vapply(cols, function(c) c$name, "") == "USUBJID"], 19L)
+})
+
+test_that("the ctor migrates the retired pair into the block's STATE", {
+  b <- new_rank_block(
+    by = "TERM", color = "SEV", facet = "ARM",
+    summaries = list(list(type = "dist", col = "DUR"),
+                     list(type = "simple", func = "count", show = "bar",
+                          scope = "pooled"))
+  )
+  st <- blockr.core::blockr_ser(b)$payload
+  expect_identical(st$summaries[[1L]]$color, "SEV")
+  expect_identical(st$summaries[[1L]]$facet, "ARM")
+  # The pooled row was the "Overall" column: colour, but no facet.
+  expect_identical(st$summaries[[2L]]$color, "SEV")
+  expect_null(st$summaries[[2L]]$facet)
+  # Cleared, so a mapping the user then removes from a column stays removed
+  # instead of being re-applied on the next render.
+  expect_null(st$color)
+  expect_null(st$facet)
 })
 
 test_that("by nests one level: outer parent rows plus inner leaves", {

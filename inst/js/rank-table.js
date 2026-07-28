@@ -617,11 +617,18 @@
         lg.style.display = "none";
         lg.innerHTML = "";
       } else {
-        var h = '<span class="blockr-rank-legend-title">' +
-          esc(ch.legend.title) + "</span>";
-        (ch.legend.items || []).forEach(function (it) {
-          h += '<span class="blockr-rank-legend-item"><i style="background:' +
-            it.color + '"></i>' + esc(it.label) + "</span>";
+        // One titled group per colour column: colour is mapped per summary
+        // column, so a table can decode more than one dimension at once.
+        var h = "";
+        (ch.legend.groups || []).forEach(function (g) {
+          h += '<span class="blockr-rank-legend-group">' +
+            '<span class="blockr-rank-legend-title">' + esc(g.title) +
+            "</span>";
+          (g.items || []).forEach(function (it) {
+            h += '<span class="blockr-rank-legend-item"><i style="background:' +
+              it.color + '"></i>' + esc(it.label) + "</span>";
+          });
+          h += "</span>";
         });
         lg.innerHTML = h;
         lg.style.display = "";
@@ -870,7 +877,39 @@
   }
   function rangeWord(v) { return v === "none" ? "" : v; }
 
+  // Colour and facet are the summary's OWN optional mappings: a column
+  // splits by one, repeats per level of the other, or carries neither.
+  // `ok` is the JS half of R's lane_color_capable() / the field rule.
+  var SUMMARY_MAPS = [
+    { key: "color", label: "Color",
+      hint: "Split this column by a column's levels",
+      ok: function (s) {
+        if (s.type === "dist") return (s.show || "pointrange") !== "text";
+        if (s.type === "simple") return (s.show || "bar") !== "number";
+        return s.type === "spans";
+      } },
+    { key: "facet",  label: "Facet",
+      hint: "Repeat this column once per level of a column",
+      ok: function (s) { return s.type !== "field"; } }
+  ];
+
+  // The mapped dimensions, appended to any type's line so a collapsed row
+  // still says what it is split by and what it repeats over.
+  function mapWords(s) {
+    var out = "";
+    SUMMARY_MAPS.forEach(function (m) {
+      if (s[m.key] && m.ok(s)) {
+        out += " · " + m.label.toLowerCase() + " " + s[m.key];
+      }
+    });
+    return out;
+  }
+
   function summaryLine(s) {
+    return summaryBody(s) + mapWords(s);
+  }
+
+  function summaryBody(s) {
     switch (s.type) {
       case "simple": return (s.func || "count") +
         (s.col ? "(" + s.col + ")" : "()") + " · " + (s.show || "bar");
@@ -889,12 +928,26 @@
         (s.band && s.band.length === 2 ? ", band " + s.band[0] + "–" + s.band[1] : "") +
         (s.ref && s.ref !== "none" ? ", ref " + s.ref : "");
       case "spans": return (s.x || "?") + " → " + (s.xend || "?") +
-        (s.color ? ", color " + s.color : "") +
         (s.label ? ", label " + s.label : "") +
         (s.size === "lg" ? ", wide" : "");
       case "expr": return s.expr || "";
       default: return "";
     }
+  }
+
+  /** The seed for a colour / facet mapping: the first categorical that a
+   *  reader can actually decode. `n_lev` rides on the gear's column list
+   *  (rank_gear_cols), so adding a mapping lands on AESEV rather than on
+   *  USUBJID, whose 200 levels R rejects outright (LANE_MAX_LEVELS). */
+  var MAX_MAP_LEVELS = 15;
+  function firstMapCol(cols) {
+    for (var i = 0; i < cols.length; i++) {
+      var c = cols[i];
+      if (c.type !== "numeric" && c.n_lev >= 2 && c.n_lev <= MAX_MAP_LEVELS) {
+        return c.name;
+      }
+    }
+    return "";
   }
 
   /** First column of a type, for preset seeds. */
@@ -942,12 +995,24 @@
           (want === "num" ? c.type === "numeric" : c.type !== "numeric");
       }).map(function (c) { return { value: c.name, label: c.label || c.name }; });
     }
-    function selectCtl(parent, label, want, selected, onChange) {
+    // `onRemove` makes the control an OPTIONAL mapping: the label grows the
+    // same ✕ the grouping roles carry, and clicking it drops the mapping
+    // rather than setting it to some empty value.
+    function selectCtl(parent, label, want, selected, onChange, onRemove) {
       var ctl = document.createElement("div");
       ctl.className = "lane-sum-ctl";
       var l = document.createElement("span");
       l.className = "blockr-popover-label";
       l.textContent = label;
+      if (onRemove) {
+        var x = document.createElement("button");
+        x.type = "button";
+        x.className = "dd-role-remove lane-sum-map-rm";
+        x.title = "Remove " + label.toLowerCase();
+        x.innerHTML = "✕";
+        x.addEventListener("click", onRemove);
+        l.appendChild(x);
+      }
       ctl.appendChild(l);
       var wrap = document.createElement("div");
       wrap.className = "blockr-popover-select-wrap dd-picker-wrap";
@@ -1157,11 +1222,6 @@
             commit();
             ctx.rerender();
           });
-          selectCtl(body, "Color", "cat", s.color, function (v) {
-            s.color = v;
-            commit();
-            ctx.rerender();
-          });
           // Event identity on hover: label headlines the segment tooltip
           // and keys the same-event highlight; fields append extras.
           selectCtl(body, "Label (hover)", "any", s.label, function (v) {
@@ -1238,17 +1298,43 @@
           body.appendChild(dCtl);
         }
 
-        // Scope: fields are group facts (always pooled), everything else
-        // picks. Inert without a facet, semantic with one.
-        if (t !== "field") {
-          segCtl(body, "Scope", [
-            { value: "cell", label: "Per level" },
-            { value: "pooled", label: "Overall" }
-          ], s.scope || "cell", function (v) {
-            s.scope = v;
+        // The column's own optional mappings. Nothing shows until one is
+        // added, so a plain column stays plain, and each is dropped from
+        // its own ✕ rather than through an inert "none" state.
+        var addable = [];
+        SUMMARY_MAPS.forEach(function (m) {
+          if (!m.ok(s)) return;
+          if (!s[m.key]) { addable.push(m); return; }
+          selectCtl(body, m.label, "cat", s[m.key], function (v) {
+            s[m.key] = v;
+            commit();
+            ctx.rerender();
+          }, function () {
+            delete s[m.key];
             commit();
             ctx.rerender();
           });
+        });
+        if (addable.length) {
+          var maps = document.createElement("div");
+          maps.className = "lane-sum-ctl lane-sum-addmaps";
+          addable.forEach(function (m) {
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "lane-sum-add";
+            b.textContent = "+ " + m.label.toLowerCase();
+            b.title = m.hint;
+            // Nothing decodable to map: the button would only produce an
+            // error message in the table.
+            b.disabled = !firstMapCol(cols);
+            b.addEventListener("click", function () {
+              s[m.key] = firstMapCol(cols);
+              commit();
+              ctx.rerender();
+            });
+            maps.appendChild(b);
+          });
+          body.appendChild(maps);
         }
         row.appendChild(body);
       }
@@ -1266,8 +1352,7 @@
       b.className = "lane-sum-add";
       b.textContent = "+ " + t;
       b.addEventListener("click", function () {
-        var s = { type: t, name: "", scope: "cell",
-                  show: SUMMARY_TYPES[t].shows[0] };
+        var s = { type: t, name: "", show: SUMMARY_TYPES[t].shows[0] };
         if (t === "simple") s.func = "count";
         if (t === "dist") {
           s.col = firstCol(cols, "num");
@@ -1333,21 +1418,27 @@
     // The summarize-table mode: the column list IS the config. Grouping
     // (`by`) and facet below it; the flat mark mappings never render.
     if (Array.isArray(cfg.summaries) && cfg.summaries.length) {
+      // Which facet columns the table uses: the by-level reading spans ONE
+      // column's groups across the summaries, so it is offered only when
+      // every faceted column agrees on it.
+      var fcols = [];
+      cfg.summaries.forEach(function (s) {
+        if (s && s.facet && fcols.indexOf(s.facet) === -1) fcols.push(s.facet);
+      });
       return {
         requiredMap: ["by"],
-        // Colour is a TABLE-level dimension, like the chart's: one pick
-        // splits every glyph column that can carry it, and one legend
-        // names the levels. A swimlane that names its own colour (events
-        // by severity) keeps it -- there the colour describes the segments,
-        // not the table's series.
-        optionalMap: ["color", "facet"],
+        // Colour and facet are the COLUMN's mappings, added per summary in
+        // the columns editor below: one column can split by severity while
+        // the next repeats per sex, and a column that maps neither is plain.
+        // Only the grouping is the whole table's.
+        optionalMap: [],
         mapping: [],
         aggTitle: null,
         customSections: ctx ? [{
           title: "Columns",
           render: function (sec) { renderSummariesEditor(sec, ctx); }
         }] : [],
-        presentation: cfg.facet
+        presentation: fcols.length === 1
           ? ["sort_by", "sort_dir", "facet_layout", "search", "sortable",
              "axis"]
           : ["sort_by", "sort_dir", "search", "sortable", "axis"],

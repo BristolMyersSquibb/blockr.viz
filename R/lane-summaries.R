@@ -44,10 +44,20 @@ LANE_ROW_TYPES <- list(
 # median/IQR/fences are the same glyph with different inputs.
 LANE_DIST_STYLES <- c("dot", "box")
 
+# The ceiling on a mapped dimension's levels, the chart block's exactly
+# (MAX_COLOR_LEVELS in inst/js/chart.js): a palette has about seven readable
+# colours and fifteen is the hard stop. Facet shares it for a different
+# reason -- a level is a COLUMN there, and a table sixty columns wide is not
+# a reading. Colour and facet are per column now, so pointing either at a
+# subject id is one click away; it must fail loudly, naming the column, not
+# render two hundred glyphs per cell.
+LANE_MAX_LEVELS <- 15L
+
 #' Normalize a summaries list: known types, per-type required fields,
-#' `show` within the type's set, `scope` cell/pooled, an auto `name`.
-#' Returns the normalized list, or `list(err =)` naming the first broken
-#' row (a config error must say which row, not throw a stack trace).
+#' `show` within the type's set, the optional `color` / `facet` mappings,
+#' an auto `name`. Returns the normalized list, or `list(err =)` naming the
+#' first broken row (a config error must say which row, not throw a stack
+#' trace).
 #' @noRd
 lane_norm_summaries <- function(summaries) {
   if (!is.list(summaries)) return(list(err = "`summaries` must be a list"))
@@ -89,6 +99,13 @@ lane_norm_summaries <- function(summaries) {
     s$type <- type
     s$show <- show
     s$scope <- scope
+    # Colour and facet are the summary's OWN optional mappings: absent means
+    # the column carries no such dimension, and two columns may map different
+    # ones. `scope` survives normalization only to seed `facet` when a board
+    # saved under the table-level pair opens (lane_migrate_globals()).
+    s$color <- rank_chr1(s$color)
+    # Fields are group facts: they stand outside faceting, as they always did.
+    s$facet <- if (identical(type, "field")) NULL else rank_chr1(s$facet)
     # The distribution glyph's three axes. `show` is legacy sugar: it seeds
     # the style and, for "pointrange", the absent outer range -- so a saved
     # board restores byte-identically while a new one configures the axes
@@ -133,8 +150,8 @@ lane_norm_summaries <- function(summaries) {
   out
 }
 
-#' Does this summary read the table's colour dimension? Everything that draws
-#' a value does -- what CHANGES is the shape the split takes, which
+#' Does this summary draw a colour SPLIT inside its cell? Everything that
+#' draws a value does -- what CHANGES is the shape the split takes, which
 #' lane_summary_plan() decides:
 #'
 #'   dist (glyph), simple dot  one mark per level in the cell, on the
@@ -152,6 +169,37 @@ lane_norm_summaries <- function(summaries) {
 lane_takes_color <- function(s) {
   if (identical(s$type, "dist")) return(!identical(s$show, "text"))
   identical(s$type, "simple") && s$show %in% c("dot", "bar")
+}
+
+#' Every summary a `color` mapping means something for: the ones that split
+#' their cell, plus the swimlane, whose segments are coloured by the event
+#' attribute rather than split into lanes.
+#' @noRd
+lane_color_capable <- function(s) {
+  lane_takes_color(s) || identical(s$type, "spans")
+}
+
+#' Boards saved before colour and facet moved onto the summary carry them as
+#' ONE table-level pair. Fan them down onto the rows they used to apply to,
+#' so an old board opens on exactly what it drew: the colour onto every
+#' column that could carry one, the facet onto every column whose legacy
+#' `scope` was "cell" (the others were the "Overall" columns, which is now
+#' simply a row with no facet). A row that names its own keeps it.
+#' @noRd
+lane_migrate_globals <- function(summaries, color = NULL, facet = NULL) {
+  if (is.null(color) && is.null(facet)) return(summaries)
+  for (i in seq_along(summaries)) {
+    s <- summaries[[i]]
+    if (!is.null(color) && is.null(s$color) && lane_color_capable(s)) {
+      s$color <- color
+    }
+    if (!is.null(facet) && is.null(s$facet) && !identical(s$type, "field") &&
+          !identical(s$scope, "pooled")) {
+      s$facet <- facet
+    }
+    summaries[[i]] <- s
+  }
+  summaries
 }
 
 #' The statistic that supplies a distribution glyph's CENTRE. The inner range
@@ -212,11 +260,18 @@ lane_field_join <- function(x) {
 #' The generic preparer: group_by(by) plus the summaries list.
 #'
 #' `by` is outer -> inner; the renderer nests one level, so at most two
-#' columns (the outer becomes the expandable parent). Facet repeats every
-#' cell-scoped summary per level (copies adjacent, by_summary layout);
-#' pooled summaries and fields render once. Each plan entry carries its
-#' own domain, shared across that summary's facet copies -- mixed marks
-#' with different units must not share a scale.
+#' columns (the outer becomes the expandable parent).
+#'
+#' Colour and facet are the SUMMARY's mappings, not the table's: a column
+#' carries a colour split, or repeats per level of a facet column, or
+#' neither, and two columns may map different ones. A summary that names a
+#' facet repeats per level (copies adjacent, by_summary layout); one that
+#' does not renders once. Each plan entry carries its own domain, shared
+#' across that summary's facet copies -- mixed marks with different units
+#' must not share a scale.
+#'
+#' `facet` / `color` are the legacy table-level pair: they are fanned down
+#' onto the rows (lane_migrate_globals()) and never read again.
 #' @noRd
 lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
                                    facet_layout = "by_summary",
@@ -249,23 +304,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     col <- rank_chr1(col)
     if (is.null(col) || !col %in% names(data)) NULL else col
   }
-  facet <- present(facet)
-  # The block's colour dimension: ONE pick for the whole table, the way the
-  # chart block has it. Every glyph that can carry a colour inherits it; a
-  # summary that names its own (the swimlane coloured by severity) keeps
-  # that one, because there the colour is an attribute of the events, not
-  # the table's series dimension.
-  color <- present(color)
-  facet_levels <- character()
-  if (!is.null(facet)) {
-    facet_levels <- rank_levels(data[[facet]])
-    if (length(facet_levels) < 2L) {
-      return(bad(paste0(
-        "Facet column \"", facet, "\" has fewer than two levels; ",
-        "nothing to compare across columns."
-      )))
-    }
-  }
+  summaries <- lane_migrate_globals(summaries, present(color), present(facet))
 
   # Every summary's mapped columns must exist -- reported by row name.
   for (s in summaries) {
@@ -278,6 +317,67 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         paste0("\"", miss, "\"", collapse = ", "), "."
       )))
     }
+  }
+
+  # --- per-summary colour and facet -----------------------------------------
+  # Both optional, both the summary's own. Levels come from the FULL data,
+  # never a facet slice: fills and formats must agree across a summary's
+  # copies and across every row.
+  for (i in seq_along(summaries)) {
+    s <- summaries[[i]]
+    cc <- present(s$color)
+    if (!is.null(cc) && lane_color_capable(s)) {
+      lv <- rank_levels(data[[cc]])
+      if (length(lv) > LANE_MAX_LEVELS) {
+        return(bad(paste0(
+          "Summary \"", s$name, "\": colour column \"", cc, "\" has ",
+          length(lv), " levels. Pick one with at most ", LANE_MAX_LEVELS,
+          " -- a palette has about seven readable colours."
+        )))
+      }
+      s$color <- cc
+      # A lane mark splits its cell (one glyph per level); the swimlane
+      # colours its segments instead, and reads `color` in the plan.
+      s$.color <- if (lane_takes_color(s)) cc
+      s$.levels <- lv
+    }
+    fc <- present(s$facet)
+    if (!is.null(fc)) {
+      lv <- rank_levels(data[[fc]])
+      if (length(lv) < 2L) {
+        return(bad(paste0(
+          "Summary \"", s$name, "\": facet column \"", fc, "\" has fewer ",
+          "than two levels; nothing to compare across columns."
+        )))
+      }
+      if (length(lv) > LANE_MAX_LEVELS) {
+        return(bad(paste0(
+          "Summary \"", s$name, "\": facet column \"", fc, "\" has ",
+          length(lv), " levels, so the column would repeat ", length(lv),
+          " times. Pick one with at most ", LANE_MAX_LEVELS, "."
+        )))
+      }
+      s$.facet <- fc
+      s$.flevels <- lv
+    }
+    if (s$type %in% c("series", "spans")) {
+      s$.date <- inherits(data[[rank_chr1(s$x)]], "Date")
+    }
+    summaries[[i]] <- s
+  }
+
+  # One facet column across the table is the ordinary case: the level alone
+  # labels a copy, and the by_level layout can span level groups across the
+  # summaries. With SEVERAL, adjacent column groups answer different
+  # questions, so each copy names its column ("SEX: F") and by_level has no
+  # shared groups to span -- the layout stays by_summary.
+  facet_cols <- unique(unlist(lapply(summaries, function(s) s$.facet)))
+  shared_facet <- if (length(facet_cols) == 1L) facet_cols else NULL
+  qualify <- length(facet_cols) > 1L
+  facet_levels <- if (is.null(shared_facet)) {
+    character()
+  } else {
+    rank_levels(data[[shared_facet]])
   }
 
   # --- leaf / parent skeletons ----------------------------------------------
@@ -438,34 +538,16 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
 
   for (i in seq_along(summaries)) {
     s <- summaries[[i]]
-    # Level order and date-ness come from the FULL data, never a facet
-    # slice: fills and formats must agree across a summary's copies.
-    if (identical(s$type, "spans")) {
-      cc <- present(s$color) %||% color
-      s$color <- cc
-      s$.levels <- if (!is.null(cc)) rank_levels(data[[cc]])
-      s$.date <- inherits(data[[rank_chr1(s$x)]], "Date")
-    }
-    # A lane mark can carry the same colour dimension: one glyph per level
-    # inside the cell. Levels come from the FULL data so every copy (and
-    # every row) assigns the same colour to the same level.
-    if (lane_takes_color(s)) {
-      cc <- present(s$color) %||% color
-      s$.color <- cc
-      s$.levels <- if (!is.null(cc)) rank_levels(data[[cc]])
-    }
-    if (identical(s$type, "series")) {
-      s$.date <- inherits(data[[rank_chr1(s$x)]], "Date")
-    }
-    pooled <- identical(s$scope, "pooled") || is.null(facet)
-    copies <- if (pooled) {
+    fl <- s$.flevels
+    copies <- if (is.null(fl)) {
       list(list(suffix = paste0(".s", i), slice = data, level = NULL))
     } else {
-      lapply(seq_along(facet_levels), function(j) {
-        lv <- facet_levels[[j]]
+      lapply(seq_along(fl), function(j) {
+        lv <- fl[[j]]
         list(suffix = paste0(".s", i, "f", j),
-             slice = data[as.character(data[[facet]]) == lv, , drop = FALSE],
-             level = lv)
+             slice = data[as.character(data[[s$.facet]]) == lv, ,
+                          drop = FALSE],
+             level = lv, fcol = s$.facet, qualify = qualify)
       })
     }
     for (cp in copies) {
@@ -512,10 +594,12 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   # --- facet layout -----------------------------------------------------------
   # by_summary (default): each summary's level copies sit adjacent, in
   # authored order (adjacency is the comparison affordance). by_level: the
-  # Table-1 reading -- pooled columns and fields lead, then one column
+  # Table-1 reading -- unfaceted columns and fields lead, then one column
   # group per facet level spanning the summaries; the header grows a
   # spanning row (rank_thead) and each copy is re-labelled by its SUMMARY
-  # (the level moves up into the group header).
+  # (the level moves up into the group header). That reading needs ONE facet
+  # column for the whole table (`facet_levels` is empty otherwise), because
+  # a group header spanning "F | M" and "Placebo | Active" is not a span.
   facet_spans <- NULL
   has_cell <- any(vapply(plan, function(p) !is.null(p$flevel), logical(1L)))
   if (identical(rank_chr1(facet_layout), "by_level") &&
@@ -540,35 +624,36 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     )
   }
 
-  # Legend: the first colour-mapped summary -- a swimlane, or a distribution
-  # split by colour. Colour identity must not ride on colour alone, and the
-  # legend is where it is spelled out (the per-glyph tooltip names the level
-  # too).
-  legend_col <- color
-  if (is.null(legend_col)) {
-    for (s in summaries) {
-      if (s$type %in% c("spans", "dist") && !is.null(present(s$color))) {
-        legend_col <- present(s$color)
-        break
-      }
-    }
-  }
-  series_lv <- if (!is.null(legend_col)) rank_levels(data[[legend_col]])
-  pal <- if (!is.null(legend_col)) {
-    rank_level_colors(scale_map, legend_col, series_lv, data[[legend_col]])
-  } else {
-    character()
-  }
+  # Legend: ONE group per colour column in use, in column order. Colour
+  # identity must not ride on colour alone, and with colour on the summary
+  # a table can carry more than one colour dimension -- which is exactly why
+  # each group is titled by its column rather than merged into one strip.
+  legend_cols <- unique(unlist(lapply(summaries, function(s) {
+    if (lane_color_capable(s)) present(s$color)
+  })))
+  color_groups <- Filter(Negate(is.null), lapply(legend_cols, function(cc) {
+    lv <- rank_levels(data[[cc]])
+    if (length(lv) < 2L) return(NULL)
+    list(column = cc, levels = lv,
+         palette = rank_level_colors(scale_map, cc, lv, data[[cc]]))
+  }))
+  # The first group also fills the single-dimension slots the rank path's
+  # emitters fall back on (a plan entry carries its own fills and levels, so
+  # these are a fallback, never the source of truth).
+  lead_group <- if (length(color_groups)) color_groups[[1L]]
+  series_lv <- lead_group$levels
+  pal <- lead_group$palette %||% character()
 
   list(
-    rows = rows, plan = plan, layout = if (is.null(facet)) "simple" else "facet",
+    rows = rows, plan = plan,
+    layout = if (!length(facet_cols)) "simple" else "facet",
     mark = "summaries", bar_max = 0, bar_min = 0,
     group_label = rank_group_label(data, group, parent),
-    series = if (length(series_lv) >= 2L) series_lv,
+    series = series_lv,
     palette = pal, facet_levels = facet_levels,
     denoms = c(all = nrow(data)), group = group, parent = parent,
-    color = if (length(series_lv) >= 2L) legend_col,
-    facet = facet, compare = NULL,
+    color = lead_group$column, color_groups = color_groups,
+    facet = shared_facet, compare = NULL,
     folded = asm$folded, fold_max = asm$fold_max,
     n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows),
     note = note, pct_ok = FALSE, func = "identity",
@@ -604,7 +689,16 @@ lane_color_split <- function(s, sid, stats, data, scale_map) {
 #' @noRd
 lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
   sid <- cp$suffix
-  label <- if (is.null(cp$level)) s$name else cp$level
+  # A facet copy is headed by its level, the summary name moving to the
+  # sub-label. Where the table faceted by SEVERAL columns the level alone is
+  # ambiguous next to another summary's groups, so it names its column too.
+  label <- if (is.null(cp$level)) {
+    s$name
+  } else if (isTRUE(cp$qualify)) {
+    paste0(cp$fcol, ": ", cp$level)
+  } else {
+    cp$level
+  }
   sub <- if (is.null(cp$level)) NULL else s$name
   base <- list(label = label, sub_label = sub, sid = sid, stype = s$type,
                flevel = cp$level, sname = s$name)

@@ -37,17 +37,26 @@
 #'   `size = "md"` / `"lg"` (a WIDER column when the swimlane is the
 #'   centerpiece); a swimlane), `expr`
 #'   (free R code over the group's
-#'   rows; text). Each row takes `name`, `show` and
-#'   `scope = "cell"` (repeats per facet level) or `"pooled"` (computed
-#'   over all the group's rows, rendered once -- the "Overall" column).
+#'   rows; text). Each row takes `name`, `show` and its OWN optional
+#'   `color` (a categorical column: the cell is split into one glyph per
+#'   level, a bar into segments, a swimlane's events tinted) and `facet`
+#'   (a categorical column: the column repeats once per level). Both are
+#'   per column, so one column may split by severity while the next
+#'   repeats per sex and a third carries neither. A `field` row never
+#'   facets: group facts stand outside it. (The block-level `color` /
+#'   `facet` below belong to the ranked-bar surface; a board saved when
+#'   the summarize table shared them opens with them fanned down onto the
+#'   rows they applied to, `scope = "pooled"` meaning "no facet".)
 #' @param by Grouping columns for the summaries path, outer to inner (at
 #'   most two; the outer becomes the expandable parent). Unset, `group` /
 #'   `parent` fill in.
 #' @param facet_layout Facet column order on the summaries path:
 #'   `"by_summary"` (each summary's level copies adjacent on their shared
-#'   scale -- the comparison reading, the default) or `"by_level"` (pooled
-#'   columns and fields lead, then one spanning column group per facet
-#'   level -- the Table-1 reading, with a two-row header).
+#'   scale -- the comparison reading, the default) or `"by_level"`
+#'   (unfaceted columns and fields lead, then one spanning column group per
+#'   facet level -- the Table-1 reading, with a two-row header). `"by_level"`
+#'   needs every faceted column to map the SAME facet column; with several
+#'   there are no shared groups to span and the layout stays `"by_summary"`.
 #' @param group Column to rank by: one row per level, ordered by the measure.
 #' @param value,func,id_var The measure. `func` is one of `"count"`,
 #'   `"count_distinct"`, `"sum"`, `"mean"`, `"median"`, `"min"`, `"max"`, or
@@ -175,6 +184,25 @@ new_summarize_table_block <- function(group = NULL,
   filter_values <- null_state(filter_values)
   cols <- chr_vec_state(cols)
   fields <- chr_vec_state(fields)
+  # Colour and facet used to be ONE table-level pair for the summarize table;
+  # they are the summary's own mappings now. Migrate a saved board here, at
+  # construction (which is also how a restore runs), so the fanned-down values
+  # become the block's STATE: migrating at render time instead would resurrect
+  # the table-level colour every time the user removed it from a column. Only
+  # the field values move -- the rows keep the shape they were saved in. The
+  # ranked-bar surface keeps the block-level pair.
+  if (length(summaries) && (!is.null(color) || !is.null(facet))) {
+    norm <- lane_norm_summaries(summaries)
+    if (is.null(norm$err)) {
+      mig <- lane_migrate_globals(norm, color, facet)
+      for (i in seq_along(summaries)) {
+        summaries[[i]]$color <- mig[[i]]$color
+        summaries[[i]]$facet <- mig[[i]]$facet
+      }
+      color <- NULL
+      facet <- NULL
+    }
+  }
   # NOT chr_state: "" is a real value (explicitly no title, as against NULL =
   # auto). See R/title-template.R.
   title <- title_state(title)
@@ -578,9 +606,15 @@ rank_arguments <- function() {
         "wider column for the exhibit case): a swimlane), expr (free R ",
         "code over the ",
         "group's rows, text). ",
-        "Optional per object: name (the column header), show, and scope = ",
-        "cell (repeats per facet level, default) or pooled (computed over ",
-        "all the group's rows, rendered once -- the Overall column)."
+        "Optional per object: name (the column header), show, color (a ",
+        "categorical column: the cell is split into one glyph per level, a ",
+        "bar into segments, a swimlane's events tinted) and facet (a ",
+        "categorical column: the column repeats once per level, on one ",
+        "shared scale). Colour and facet are per COLUMN, not per table, so ",
+        "one column may split by severity while the next repeats per sex ",
+        "and a third carries neither; map them only where they answer the ",
+        "question. A field column never facets. `scope` is the retired ",
+        "table-facet switch, accepted for saved boards only."
       ),
       example = list(
         list(type = "simple", name = "Subjects", func = "count_distinct",
@@ -602,6 +636,7 @@ rank_arguments <- function() {
         x = arg_string(required = FALSE),
         xend = arg_string(required = FALSE),
         color = arg_string(required = FALSE),
+        facet = arg_string(required = FALSE),
         band = arg_array(arg_string(), required = FALSE),
         ref = arg_enum(c("none", "mean", "mean_sd", "median_iqr"),
                        required = FALSE),
@@ -853,7 +888,8 @@ rank_guidance <- function() {
     "\n- `summaries` + `by` is the config model: an ordered list of typed",
     "summary columns over one grouping (simple / dist / field / series /",
     "spans / expr), each with its own display (bar, number, dot, box,",
-    "pointrange, text, swimlane, sparkline) and a cell-or-pooled scope.",
+    "pointrange, text, swimlane, sparkline) and its own optional `color`",
+    "and `facet` mappings -- both per column, never table-wide.",
     "Statistics are computed server-side; mean_ci95 is exact, qt-based.",
     "\n- Without `summaries`, the flat arguments below give the original",
     "ranked-bar table.",

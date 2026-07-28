@@ -13,8 +13,15 @@
 #           rows, expand to edit, add/remove/reorder, presets) instead of
 #           the mark picker; Grouping (by) and Facet sit below Columns.
 # Facet view
-#   facet — Subjects bar per arm (copies adjacent, one shared scale),
-#           pooled Overall column and the Arms field rendered ONCE.
+#   facet — a board SAVED under the retired table-level facet: the ctor
+#           migrates it onto the rows, so the Subjects bar still repeats per
+#           arm (copies adjacent, one shared scale) while the old pooled
+#           column and the Arms field render ONCE.
+# Per column view
+#   percol — colour and facet mapped PER COLUMN: Subjects split by severity,
+#           Time to onset carrying neither, Duration repeating per sex. Check
+#           the legend names only AESEV, the gear's column rows offer
+#           "+ color" / "+ facet" and each added mapping has its own ✕.
 # Visits view
 #   visits — vital signs by AVISIT: the row order comes from the DATA, not
 #           the alphabet. sort_by = "AVISITN" (a raw numeric column, ordered
@@ -122,6 +129,18 @@ serve(
         title = "Diastolic BP by visit, in visit order",
         block_name = "Visits"
       ),
+      percol = new_summarize_table_block(
+        by = "AEDECOD",
+        summaries = list(
+          list(type = "simple", name = "Subjects", func = "count_distinct",
+               col = "USUBJID", show = "bar", color = "AESEV"),
+          list(type = "dist", name = "Time to onset", col = "ASTDY"),
+          list(type = "dist", name = "Duration", col = "DUR", facet = "SEX")
+        ),
+        drill = "AEDECOD",
+        title = "Colour and facet, mapped per column",
+        block_name = "Per column"
+      ),
       nested = new_summarize_table_block(
         by = c("SEX", "USUBJID"),
         summaries = list(
@@ -140,6 +159,7 @@ serve(
     links = list(
       list(from = "ae_data", to = "mixed", input = "data"),
       list(from = "ae_data", to = "facet", input = "data"),
+      list(from = "ae_data", to = "percol", input = "data"),
       list(from = "ae_data", to = "nested", input = "data"),
       list(from = "vs_data", to = "visits", input = "data")
     ),
@@ -148,6 +168,7 @@ serve(
       Mixed = dock_grid("mixed"),
       Facet = dock_grid("facet"),
       Visits = dock_grid("visits"),
+      Per_column = dock_grid("percol"),
       Nested = dock_grid("nested")
     ),
     active = Sys.getenv("BLOCKR_VIEW", "Mixed")

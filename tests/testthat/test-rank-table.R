@@ -136,7 +136,7 @@ test_that("facet and colour compose: split bars inside each facet column", {
   expect_equal(unname(segs), p$rows$.f_Placebo)
   # The palette encodes the COLOUR levels, and the legend says so.
   expect_identical(names(p$palette), c("MILD", "MODERATE"))
-  expect_identical(rank_legend_spec(p)$title, "SEV")
+  expect_identical(rank_legend_spec(p)$groups[[1L]]$title, "SEV")
 
   # A comparison still owns the colour slot -- reported, never silent.
   cmp <- rank_prepare(ae, group = "TERM", facet = "ARM", compare = "Placebo",

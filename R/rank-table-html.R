@@ -256,13 +256,15 @@ rank_foot_spec <- function(prep, drill = NULL, active = NULL) {
   )
 }
 
-# The legend as DATA. Always present for two or more series -- colour alone must
-# not carry identity.
+# The legend as DATA: a list of titled groups, always present for two or more
+# series -- colour alone must not carry identity. One group is the ordinary
+# case; the summarize table maps colour PER COLUMN, so it can carry several,
+# and each is titled by the column it decodes.
 #' @noRd
 rank_legend_spec <- function(prep) {
   if (!is.null(prep$err)) return(NULL)
   if (identical(prep$layout, "compare")) {
-    return(list(
+    return(list(groups = list(list(
       title = "Direction",
       items = list(
         list(label = paste0("More than ", prep$compare),
@@ -270,20 +272,26 @@ rank_legend_spec <- function(prep) {
         list(label = paste0("Less than ", prep$compare),
              color = "var(--blockr-rank-neg, #2a78d6)")
       )
-    ))
+    ))))
   }
   # Colour identity lives in the COLOUR mapping only: a plain facet's bars are
   # all the house blue and its column headers already name the levels, so it
   # carries no legend (chart parity -- a facet never recolours the marks).
-  if (is.null(prep$color)) return(NULL)
-  lv <- prep$series
-  if (length(lv) < 2L) return(NULL)
-  list(
-    title = prep$color,
-    items = lapply(lv, function(l) {
-      list(label = l, color = unname(prep$palette[[l]]))
-    })
-  )
+  groups <- prep$color_groups
+  if (is.null(groups)) {
+    if (is.null(prep$color) || length(prep$series) < 2L) return(NULL)
+    groups <- list(list(column = prep$color, levels = prep$series,
+                        palette = prep$palette))
+  }
+  if (!length(groups)) return(NULL)
+  list(groups = lapply(groups, function(g) {
+    list(
+      title = g$column,
+      items = lapply(g$levels, function(l) {
+        list(label = l, color = unname(g$palette[[l]]))
+      })
+    )
+  }))
 }
 
 #' @noRd
@@ -324,10 +332,11 @@ rank_legend_tag <- function(spec) {
   htmltools::tags$div(
     class = "blockr-rank-legend",
     style = if (is.null(spec)) "display:none" else NULL,
-    if (!is.null(spec)) {
-      htmltools::tagList(
-        htmltools::tags$span(class = "blockr-rank-legend-title", spec$title),
-        lapply(spec$items, function(it) {
+    lapply(spec$groups, function(g) {
+      htmltools::tags$span(
+        class = "blockr-rank-legend-group",
+        htmltools::tags$span(class = "blockr-rank-legend-title", g$title),
+        lapply(g$items, function(it) {
           htmltools::tags$span(
             class = "blockr-rank-legend-item",
             htmltools::tags$i(style = paste0("background:", it$color)),
@@ -335,7 +344,7 @@ rank_legend_tag <- function(spec) {
           )
         })
       )
-    }
+    })
   )
 }
 
@@ -457,10 +466,16 @@ rank_data_v <- function(v) {
 rank_gear_cols <- function(data) {
   if (!is.data.frame(data)) return(list())
   lapply(names(data), function(nm) {
+    num <- is.numeric(data[[nm]])
     out <- list(
       name = nm,
-      type = if (is.numeric(data[[nm]])) "numeric" else "categorical"
+      type = if (num) "numeric" else "categorical"
     )
+    # Level count for the categoricals: the gear seeds a colour / facet
+    # mapping with a column that HAS few levels, so adding one lands on
+    # AESEV rather than on the first character column, which is usually a
+    # subject id (200 colours, or 200 column copies).
+    if (!num) out$n_lev <- length(unique(data[[nm]]))
     lbl <- dt_col_label(data[[nm]], nm)
     if (!is.null(lbl)) out$label <- lbl
     out

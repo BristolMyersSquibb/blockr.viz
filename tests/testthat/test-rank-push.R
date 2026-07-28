@@ -114,8 +114,8 @@ test_that("the chrome rides on the payload so the container is never rebuilt", {
   expect_identical(p$chrome$caption, "src")
   # The legend maps the COLOUR levels; a plain facet carries none (its
   # column headers already name the levels).
-  expect_identical(p$chrome$legend$title, "SEV")
-  expect_length(p$chrome$legend$items, 2L)
+  expect_identical(p$chrome$legend$groups[[1L]]$title, "SEV")
+  expect_length(p$chrome$legend$groups[[1L]]$items, 2L)
   expect_match(p$chrome$foot$count, "of 4 rows")
   plain <- rank_build_payload(ae, group = "TERM", facet = "ARM",
                               func = "count_distinct", id_var = "USUBJID")
