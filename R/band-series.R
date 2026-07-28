@@ -8,10 +8,18 @@
 #' sample sd (n - 1), `0` for a single observation -- again as in JS.
 #'
 #' `"p10_p90"` exists here and in `SUMMARY_STATS`; it is the band's default
-#' outer interval. The whisker ends (`"tukey"`) are the most extreme
-#' observations still INSIDE the 1.5x IQR fences, not the fence values -- the
-#' textbook boxplot rule, and the reason a fence-based ribbon wobbles with a
-#' single patient while a fixed quantile does not.
+#' outer interval. `"tukey"` returns the 1.5x IQR fences CLIPPED to the
+#' observed range (`min(max(x), Q3 + 1.5 IQR)`), which is what chart.js has
+#' always computed -- not the strict textbook whisker, which is the most
+#' extreme observation lying inside the fence. The two differ whenever no
+#' observation sits exactly at the fence. Mirrored deliberately: parity with
+#' the boxplot matters more than the finer definition, and changing it here
+#' alone would make a band and a boxplot of the same data disagree.
+#'
+#' Either way the value moves with the quartiles AND with the extremes, which
+#' is why a fence-based ribbon wobbles as one subject enters or leaves the
+#' window while a fixed quantile does not -- the reason the band defaults to
+#' `"p10_p90"`.
 #'
 #' @param vals Numeric vector; non-finite values are dropped.
 #' @param stat One of the `SUMMARY_STATS` values plus `"tukey"`.

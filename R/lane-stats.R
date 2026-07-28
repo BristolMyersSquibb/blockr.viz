@@ -15,7 +15,7 @@
 # MUST mirror chart.js SUMMARY_STATS values (drift-tested), plus mean_ci95.
 LANE_STATS <- c(
   "median_q1_q3", "mean_sd", "mean_2sd", "mean_se", "mean_ci95",
-  "p5_p95", "min_max"
+  "p5_p95", "p10_p90", "min_max"
 )
 
 # Whisker rules: the same vocabulary plus Tukey fences (chart.js WHISKER_STATS).
@@ -60,6 +60,11 @@ LANE_STAT_META <- list(
     label = "5th\u201395th percentile",
     center = "Median",
     range = "P5\u2013P95"
+  ),
+  p10_p90 = list(
+    label = "10th\u201390th percentile",
+    center = "Median",
+    range = "P10\u2013P90"
   ),
   min_max = list(
     label = "Min\u2013Max",
@@ -157,6 +162,7 @@ lane_summarize_at <- function(b, stat = "median_q1_q3") {
       c(m, m - stats::qt(0.975, n - 1) * se, m + stats::qt(0.975, n - 1) * se)
     },
     p5_p95 = c(q(0.5), q(0.05), q(0.95)),
+    p10_p90 = c(q(0.5), q(0.10), q(0.90)),
     # Sorted, so the extremes are the ends.
     min_max = c(q(0.5), b$x[[1L]], b$x[[n]]),
     tukey = {

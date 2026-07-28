@@ -734,6 +734,7 @@
     { value: "mean_se", label: "Mean ± SE" },
     { value: "mean_ci95", label: "Mean · 95% CI" },
     { value: "p5_p95", label: "5th–95th percentile" },
+    { value: "p10_p90", label: "10th–90th percentile" },
     { value: "min_max", label: "Min–Max" }
   ];
   var LANE_WHISKERS = [{ value: "tukey", label: "Tukey (1.5×IQR)" }]

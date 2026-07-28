@@ -32,12 +32,16 @@ test_that("distribution args restore through the constructor", {
   expect_true(dist_state(blk, "connect_centers"))
 })
 
-test_that("distribution args default: NULL summary, tukey whiskers, no line", {
+test_that("distribution args default: NULL summary and whiskers, no line", {
   blk <- new_chart_block(chart_type = "boxplot", group = "g", value = "v")
-  # NULL = per-mark default resolved in the browser (median_q1_q3 for the
-  # box, mean_se for pointrange) -- R must not pin one mark's default.
+  # NULL = per-mark default resolved where the mark is drawn (summary:
+  # median_q1_q3 for the box, mean_se for pointrange; whiskers: tukey for the
+  # box, p10_p90 for the band) -- R must not pin one mark's default. `whiskers`
+  # joined `summary` in this contract when the band arrived: a fence is an
+  # extreme order statistic, fine as a discrete whisker per category but
+  # jumpy dragged into a continuous ribbon.
   expect_null(dist_state(blk, "summary"))
-  expect_equal(dist_state(blk, "whiskers"), "tukey")
+  expect_null(dist_state(blk, "whiskers"))
   expect_false(dist_state(blk, "connect_centers"))
 })
 
