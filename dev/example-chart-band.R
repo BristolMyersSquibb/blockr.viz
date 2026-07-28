@@ -14,12 +14,24 @@ pkgload::load_all("/workspace/blockr.ui")
 pkgload::load_all("/workspace/blockr.dplyr")
 pkgload::load_all("/workspace/blockr.dock")
 pkgload::load_all("/workspace/blockr.viz")
+pkgload::load_all("/workspace/blockr.theme")
 
 adlb <- pharmaverseadam::adlb
 alt <- adlb[adlb$PARAMCD == "ALT" &
               !is.na(adlb$AVAL) & !is.na(adlb$ADY), , drop = FALSE]
-alt <- alt[, c("USUBJID", "TRTA", "ADY", "AVAL", "PARAM",
+alt <- alt[, c("USUBJID", "TRTA", "SEX", "ADY", "AVAL", "PARAM",
                "ANRLO", "ANRHI"), drop = FALSE]
+
+# Board scale map: the band must honour these instead of cycling the palette,
+# whether the column is mapped to colour OR only to facet.
+study_scale_map <- new_scale_map(
+  scale_binding("SEX", color = c(F = "#0EA5E9", M = "#E69F00")),
+  scale_binding("TRTA", color = c(
+    "Placebo" = "#999999",
+    "Xanomeline Low Dose" = "#56B4E9",
+    "Xanomeline High Dose" = "#0072B2"
+  ))
+)
 
 board <- new_dock_board(
   blocks = c(
@@ -52,13 +64,35 @@ board <- new_dock_board(
       band_id = "USUBJID", band_window = "fixed", band_size = 10,
       ref_hi = "ANRHI",
       title = "ALT - all patients, fixed +/-10 day window",
-      block_name = "Band - single series, fixed window")
+      block_name = "Band - single series, fixed window"),
+
+    # 4. Facet AND colour on the SAME column: every panel holds exactly one
+    #    series, so each keeps its ribbon -- "more than one series" is a
+    #    per-panel fact, not a property of the mapping.
+    band_same = new_chart_block(
+      chart_type = "band", x = "ADY", y = "AVAL",
+      facet = "SEX", color = "SEX", band_id = "USUBJID",
+      ref_hi = "ANRHI",
+      title = "ALT by sex - facet and colour on the same column",
+      block_name = "Band - facet == colour"),
+
+    # 5. Facet only, no colour mapping: the panels must still take their
+    #    colours from the board scale map, not palette slot 1.
+    band_facetonly = new_chart_block(
+      chart_type = "band", x = "ADY", y = "AVAL",
+      facet = "SEX", band_id = "USUBJID",
+      ref_hi = "ANRHI",
+      title = "ALT by sex - facet only, board colours",
+      block_name = "Band - facet only, scale map")
   ),
   links = c(
     new_link(from = "data", to = "band_facet", input = "data"),
     new_link(from = "data", to = "band_overlay", input = "data"),
-    new_link(from = "data", to = "band_single", input = "data")
-  )
+    new_link(from = "data", to = "band_single", input = "data"),
+    new_link(from = "data", to = "band_same", input = "data"),
+    new_link(from = "data", to = "band_facetonly", input = "data")
+  ),
+  options = new_board_options(new_scale_map_option(study_scale_map))
 )
 
 cat("\n  http://127.0.0.1:",

@@ -404,9 +404,13 @@
     // `x` accepts any column, but the useful one differs by family, and the
     // picker cannot show that. It belongs in the placeholder (the empty slot's
     // voice), not in a help line beneath the control.
-    x:      { label: 'X',      kind: 'column', colType: 'any',
+    x:      { label: (/** @type {any} */ cfg) =>
+                (cfg.chart_type === 'band' ? 'Timeline' : 'X'),
+              kind: 'column', colType: 'any',
               phBy: { individual: 'numeric column…', timeline: 'time / sequence…' } },
-    y:      { label: 'Y',      kind: 'column', colTypeBy: { individual: 'num', timeline: 'any' } },
+    y:      { label: (/** @type {any} */ cfg) =>
+                (cfg.chart_type === 'band' ? 'Value' : 'Y'),
+              kind: 'column', colTypeBy: { individual: 'num', timeline: 'any' } },
     xend:   { label: 'X end',  kind: 'column', colType: 'any', ph: 'interval end…' },
     series: { label: 'Series', kind: 'column', colType: 'any' },
     color:  { label: 'Color',  kind: 'column', colType: 'any' },
@@ -2686,7 +2690,13 @@
       if (unset.length) {
         this._showEmpty(
           '<div class="vd-empty-state"><p class="vd-empty-text">Pick ' +
-          unset.map(k => /** @type {Record<string, any>} */ (ROLES)[k].label).join(' and ') + ' to plot.</p></div>');
+          // A role.label may be a function of the config (see ROLES.x / .y,
+          // which rename for the band), so resolve it the way the gear does
+          // rather than concatenating the function source into the prompt.
+          unset.map(k => {
+            const l = /** @type {Record<string, any>} */ (ROLES)[k].label;
+            return (typeof l === 'function') ? l(this.config) : l;
+          }).join(' and ') + ' to plot.</p></div>');
         return;
       }
 
@@ -4275,7 +4285,9 @@
             // Facet tier first: each panel holds its own cohort, so it gets
             // its own band. Falls back to __all__ for an unfaceted chart.
             const panelBand = bandData[fv] || bandData['__all__'] || null;
-            const levels = seriesLevels.length ? seriesLevels : ['__all__'];
+            const allLevels = seriesLevels.length ? seriesLevels : ['__all__'];
+            const levels = allLevels.filter(cl => panelBand && (
+              panelBand[cl] || (allLevels.length === 1 && panelBand['__all__'])));
             const many = levels.length > 1;
             // Ribbons hide as soon as colour maps more than one series --
             // overlapping translucent fills invent a colour belonging to no
@@ -4292,7 +4304,19 @@
                 ? (panelBand[cl] || (levels.length === 1 ? panelBand['__all__'] : null))
                 : null;
               if (!b || !Array.isArray(b.x)) continue;
-              const clr = seriesLevels.length ? colorForLevel(cl, ci) : palette[0];
+              // Palette index comes from the DATA-WIDE level order, not this
+              // panel's filtered position -- otherwise every facet's first
+              // series takes palette[0] and the panels all come out the same
+              // colour (only visible once facet and colour map the same
+              // column, so each panel holds exactly one level).
+              //
+              // Facet alone does not colour: R only resolves a scale for the
+              // COLOUR role (dd_colored_var), deliberately -- "colouring by a
+              // variable means mapping it to the colored role, like ggplot".
+              // Map the column to colour as well to get the board's colours.
+              const clr = seriesLevels.length
+                ? colorForLevel(cl, allLevels.indexOf(cl))
+                : palette[0];
               const nm = cl === '__all__' ? undefined : cl;
               const live = !many || String(focus) === String(cl);
               if (!many) {
