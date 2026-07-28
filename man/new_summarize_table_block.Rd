@@ -27,6 +27,7 @@ new_summarize_table_block(
   max_height = "600px",
   search = TRUE,
   sortable = TRUE,
+  axis = TRUE,
   title = NULL,
   subtitle = NULL,
   caption = NULL,
@@ -126,6 +127,13 @@ beside the bar -- the chart's tooltip fields. Only meaningful with
 the table in the configured \code{sort_by} order -- for exhibits whose row
 order carries meaning (visits, dose groups), where an accidental click
 would scramble it.}
+
+\item{axis}{Print each glyph column's domain as a tick strip under its
+header (default \code{TRUE}). One strip per column, whatever the mark: the
+value domain for a box, a dot range or a bar, the zero-centred one for a
+difference bar, the x domain (dates as dates) for a swimlane or a
+sparkline. \code{FALSE} drops every strip, for a dense exhibit where the
+numbers beside the marks carry the scale.}
 
 \item{title, subtitle, caption}{Display text. \code{NULL} = auto (inherits the
 input's label / subtitle / caption attribute), \code{""} = explicitly none,

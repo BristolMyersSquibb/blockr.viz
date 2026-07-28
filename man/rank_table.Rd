@@ -26,6 +26,7 @@ rank_table(
   max_height = "600px",
   search = TRUE,
   sortable = TRUE,
+  axis = TRUE,
   title = NULL,
   subtitle = NULL,
   caption = NULL,
@@ -85,6 +86,10 @@ When set, the rows below the cut are reported in a visible fold row.}
 \item{search}{Show the search input.}
 
 \item{sortable}{Allow click-to-sort on the column headers.}
+
+\item{axis}{Print each glyph column's domain as a tick strip under its
+header (default \code{TRUE}): the value domain for bars, boxes and dot
+ranges, the x domain (dates as dates) for swimlanes and sparklines.}
 
 \item{title, subtitle, caption}{Display text, already resolved (see
 \code{resolve_block_title()}).}

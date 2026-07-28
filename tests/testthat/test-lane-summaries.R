@@ -175,13 +175,41 @@ test_that("the column axis prints the domain once, on glyph columns only", {
   expect_length(rank_axis_ticks(1, 1), 0L)
   expect_length(rank_axis_ticks(NA_real_, 1), 0L)
 
-  strip <- function(p) as.character(rank_axis_strip(p))
+  strip <- function(p, ...) as.character(rank_axis_strip(p, ...))
   expect_match(strip(list(kind = "box", dmin = 0, dmax = 100)),
                "blockr-rank-axis")
-  # A bar's domain is a share of the column max, which the value beside it
-  # already says: no axis.
-  expect_null(rank_axis_strip(list(kind = "bar", dmin = 0, dmax = 100)))
+  # EVERY mark on a scale gets one, each against the domain its own geometry
+  # was computed from: a bar from zero to the column max...
+  expect_match(strip(list(kind = "bar", dmin = 40, dmax = 100)),
+               "left:0%\">0</span>")
+  # ...a 100% split over the percentage itself, with the unit named once...
+  expect_match(strip(list(kind = "barsplit", mode = "percent", dmax = 7)),
+               "100%</span>")
+  # ...and a difference bar zero-centred, the comparator in the middle.
+  expect_match(strip(list(kind = "bardiv", dmax = 10)), "left:50%\">0</span>")
+  # A swimlane / sparkline axis is the x domain, printed as DATES when the x
+  # column is one (the tooltip's rule).
+  span <- as.numeric(as.Date(c("2023-02-11", "2023-06-02")))
+  expect_match(strip(list(kind = "interval", dom = span, dom_date = TRUE)),
+               "Mar 2023")
+  expect_match(strip(list(kind = "sparkline", dom = c(0, 90))),
+               "blockr-rank-axis")
+  # No scale, no strip -- and a degenerate domain draws nothing either.
+  expect_null(rank_axis_strip(list(kind = "num")))
   expect_null(rank_axis_strip(list(kind = "box", dmin = 1, dmax = 1)))
+  # The prep-level scale stands in where the plan entry carries none (the
+  # flat ranked-bar path, where one bar_max covers every bar column).
+  expect_match(strip(list(kind = "bar"), NULL, list(bar_max = 100)),
+               "blockr-rank-axis")
+})
+
+test_that("axis = FALSE drops every strip", {
+  ae <- sum_fixture()
+  S <- list(list(type = "dist", name = "Duration", col = "DUR", show = "box"))
+  prep <- lane_prepare_summaries(ae, by = "ARM", summaries = S)
+  expect_match(rank_cells(prep)$thead, "blockr-rank-axis")
+  expect_false(grepl("blockr-rank-axis",
+                     rank_cells(prep, cfg = list(axis = FALSE))$thead))
 })
 
 test_that("the field join is distinct values with a fold cap, never first()", {

@@ -86,6 +86,12 @@
 #'   the table in the configured `sort_by` order -- for exhibits whose row
 #'   order carries meaning (visits, dose groups), where an accidental click
 #'   would scramble it.
+#' @param axis Print each glyph column's domain as a tick strip under its
+#'   header (default `TRUE`). One strip per column, whatever the mark: the
+#'   value domain for a box, a dot range or a bar, the zero-centred one for a
+#'   difference bar, the x domain (dates as dates) for a swimlane or a
+#'   sparkline. `FALSE` drops every strip, for a dense exhibit where the
+#'   numbers beside the marks carry the scale.
 #' @param title,subtitle,caption Display text. `NULL` = auto (inherits the
 #'   input's label / subtitle / caption attribute), `""` = explicitly none,
 #'   else a template with the same `{...}` tokens as the chart and table
@@ -133,6 +139,7 @@ new_summarize_table_block <- function(group = NULL,
                                  max_height = "600px",
                                  search = TRUE,
                                  sortable = TRUE,
+                                 axis = TRUE,
                                  title = NULL,
                                  subtitle = NULL,
                                  caption = NULL,
@@ -197,6 +204,7 @@ new_summarize_table_block <- function(group = NULL,
         r_max_height <- shiny::reactiveVal(max_height)
         r_search  <- shiny::reactiveVal(isTRUE(search))
         r_sortable <- shiny::reactiveVal(isTRUE(sortable))
+        r_axis    <- shiny::reactiveVal(isTRUE(axis))
         r_title   <- shiny::reactiveVal(title)
         r_subtitle <- shiny::reactiveVal(subtitle)
         r_caption <- shiny::reactiveVal(caption)
@@ -265,7 +273,7 @@ new_summarize_table_block <- function(group = NULL,
           if (identical(act$action, "config")) {
             key <- as.character(act$param %||% "")[1L]
             if (!nzchar(key)) return()
-            if (!key %in% c("search", "sortable") &&
+            if (!key %in% c("search", "sortable", "axis") &&
                   is.null(setters[[key]])) return()
             val <- act$value
             if (key %in% c("title", "subtitle", "caption")) {
@@ -284,6 +292,8 @@ new_summarize_table_block <- function(group = NULL,
               r_search(identical(as.character(val)[[1L]], "on"))
             } else if (identical(key, "sortable")) {
               r_sortable(identical(as.character(val)[[1L]], "on"))
+            } else if (identical(key, "axis")) {
+              r_axis(identical(as.character(val)[[1L]], "on"))
             } else if (identical(key, "top_n")) {
               n <- suppressWarnings(as.integer(as.character(val)[[1L]]))
               setters[[key]](if (is.na(n) || n <= 0L) NULL else n)
@@ -413,7 +423,7 @@ new_summarize_table_block <- function(group = NULL,
               bar_mode = r_bar_mode(), cols = r_cols(), fields = r_fields(),
               sort_by = r_sort_by(), sort_dir = r_sort_dir(),
               top_n = r_top_n(), search = r_search(),
-              sortable = r_sortable(), drill = r_drill(),
+              sortable = r_sortable(), axis = r_axis(), drill = r_drill(),
               ctrl_target = r_ctrl_target(),
               ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices()),
               titles = list(
@@ -471,7 +481,7 @@ new_summarize_table_block <- function(group = NULL,
             cols = r_cols, fields = r_fields, sort_by = r_sort_by,
             sort_dir = r_sort_dir, top_n = r_top_n,
             max_height = r_max_height, search = r_search,
-            sortable = r_sortable,
+            sortable = r_sortable, axis = r_axis,
             title = r_title, subtitle = r_subtitle, caption = r_caption,
             drill = r_drill, ctrl_target = r_ctrl_target,
             ctrl_table = r_ctrl_table, filter_type = r_filter_type,
@@ -511,7 +521,8 @@ new_summarize_table_block <- function(group = NULL,
       "group", "value", "func", "id_var", "summaries", "by", "facet_layout",
       "parent", "color", "bar_mode",
       "facet", "compare", "cols", "fields", "sort_by", "sort_dir", "top_n",
-      "max_height", "search", "sortable", "title", "subtitle", "caption",
+      "max_height", "search", "sortable", "axis", "title", "subtitle",
+      "caption",
       "drill",
       "ctrl_target", "ctrl_table"
     ),
@@ -752,6 +763,17 @@ rank_arguments <- function() {
     ),
     search = new_arg_spec(
       "Show the search input above the table.",
+      example = TRUE,
+      type = arg_boolean()
+    ),
+    axis = new_arg_spec(
+      paste0(
+        "Print each glyph column's domain as a tick strip under its header ",
+        "(default TRUE) -- the scale named once at the top of the column ",
+        "instead of a track repeated on every row. Applies to every mark: ",
+        "value domain for bars, boxes and dot ranges, x domain (dates as ",
+        "dates) for swimlanes and sparklines. FALSE drops them all."
+      ),
       example = TRUE,
       type = arg_boolean()
     ),

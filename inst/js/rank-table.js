@@ -718,6 +718,11 @@
   // ordered by AVISITN has nothing to gain from an accidental A-Z click.
   var SORTABLE_OPT = [{ value: "on", label: "Header sorting" },
                       { value: "off", label: "No header sorting" }];
+  // The per-column tick strip under the header: the domain named ONCE, for
+  // every mark that sits on a scale. Off for a dense exhibit that carries its
+  // scale in the numbers beside the marks.
+  var AXIS_OPT = [{ value: "on", label: "Column axis" },
+                  { value: "off", label: "No column axis" }];
 
   // The lane statistic vocabulary: MUST mirror R's LANE_STATS/LANE_STAT_META
   // (R/lane-stats.R, drift-tested) -- chart.js's SUMMARY_STATS plus
@@ -798,6 +803,7 @@
     search:   { label: "Search", kind: "segmented", options: SEARCH_OPT },
     sortable: { label: "Header sorting", kind: "segmented",
                 options: SORTABLE_OPT },
+    axis:     { label: "Column axis", kind: "segmented", options: AXIS_OPT },
     // Drill-down: a plain column role, like the table block's.
     drill:    { label: "Filter on", kind: "column", colType: "any" },
     title:    { label: "Title", kind: "text", ph: "e.g. AEs by {ARM}",
@@ -1341,8 +1347,9 @@
           render: function (sec) { renderSummariesEditor(sec, ctx); }
         }] : [],
         presentation: cfg.facet
-          ? ["sort_by", "sort_dir", "facet_layout", "search", "sortable"]
-          : ["sort_by", "sort_dir", "search", "sortable"],
+          ? ["sort_by", "sort_dir", "facet_layout", "search", "sortable",
+             "axis"]
+          : ["sort_by", "sort_dir", "search", "sortable", "axis"],
         drillToggle: "drill",
         drillDefault: (cfg.by && cfg.by.length)
           ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),
@@ -1375,6 +1382,7 @@
     aggTitle = "Aggregation";
     pres.push("search");
     pres.push("sortable");
+    pres.push("axis");
 
     return {
       requiredMap: ["group"],

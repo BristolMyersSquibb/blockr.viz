@@ -50,6 +50,9 @@
 #' @param max_height CSS max-height of the scroll container.
 #' @param search Show the search input.
 #' @param sortable Allow click-to-sort on the column headers.
+#' @param axis Print each glyph column's domain as a tick strip under its
+#'   header (default `TRUE`): the value domain for bars, boxes and dot
+#'   ranges, the x domain (dates as dates) for swimlanes and sparklines.
 #' @param title,subtitle,caption Display text, already resolved (see
 #'   `resolve_block_title()`).
 #' @param drill Column a row click filters on, or `NULL` for a display-only
@@ -71,7 +74,7 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
                        bar_mode = "stacked", facet = NULL, compare = NULL,
                        cols = NULL, fields = NULL, sort_by = "value",
                        sort_dir = "desc", top_n = NULL, max_height = "600px",
-                       search = TRUE, sortable = TRUE,
+                       search = TRUE, sortable = TRUE, axis = TRUE,
                        title = NULL, subtitle = NULL,
                        caption = NULL, drill = NULL, scale_map = NULL,
                        elem_id = NULL, active = NULL) {
@@ -105,7 +108,7 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
     summaries = summaries, by = by, facet_layout = facet_layout,
     bar_mode = bar_mode, cols = cols, fields = fields, sort_by = sort_by,
     sort_dir = sort_dir, top_n = top_n, search = search,
-    sortable = sortable, drill = drill,
+    sortable = sortable, axis = axis, drill = drill,
     titles = list(
       title = title, subtitle = subtitle, caption = caption,
       title_state = title_raw, subtitle_state = subtitle_raw,
@@ -415,7 +418,7 @@ rank_table_dep <- memoise0(function() {
     drilldown_table_dep(),
     htmltools::htmlDependency(
       name = "blockr-viz-rank",
-      version = paste0(utils::packageVersion("blockr.viz"), ".16"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".17"),
       src = system.file("js", package = "blockr.viz"),
       script = "rank-table.js"
     )
@@ -470,6 +473,7 @@ rank_table_attrs <- function(prep, cfg) {
   cfg$facet_levels <- as.list(prep$facet_levels %||% character())
   cfg$search <- if (isTRUE(cfg$search)) "on" else "off"
   cfg$sortable <- if (isTRUE(cfg$sortable %||% TRUE)) "on" else "off"
+  cfg$axis <- if (isTRUE(cfg$axis %||% TRUE)) "on" else "off"
   json <- as.character(jsonlite::toJSON(cfg, auto_unbox = TRUE, null = "null"))
   paste0(" data-rank-cfg=\"", rank_esc(json), "\"")
 }

@@ -447,7 +447,7 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
   list(
     n = n,
     thead = rank_thead(prep, sortable = isTRUE(cfg$sortable %||% TRUE),
-                       cols = cols),
+                       cols = cols, axis = isTRUE(cfg$axis %||% TRUE)),
     ncol = length(plan) + 1L,
     nested = !is.null(prep$parent),
     label = as.character(rows$.label),      # PLAIN: each consumer escapes
@@ -471,13 +471,13 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
 #' cells move to the second row -- the Table-1 header. Everything else keeps
 #' the single row.
 #' @noRd
-rank_thead <- function(prep, sortable = TRUE, cols = NULL) {
+rank_thead <- function(prep, sortable = TRUE, cols = NULL, axis = TRUE) {
   col_th <- function(p, i) {
     as.character(dt_th(
       p$label, i, label = p$sub_label,
       numeric = identical(p$kind, "num") && !isTRUE(p$text),
       sortable = sortable,
-      extra = rank_axis_strip(p, cols[[i]])
+      extra = if (isTRUE(axis)) rank_axis_strip(p, cols[[i]], prep)
     ))
   }
   stub <- as.character(dt_th(
@@ -512,39 +512,50 @@ rank_thead <- function(prep, sortable = TRUE, cols = NULL) {
          paste(row2, collapse = ""), "</tr></thead>")
 }
 
-#' The column axis: the distribution column's domain printed ONCE, in the
-#' header, instead of a track repeated on every row. Only the glyph columns
-#' get one -- a bar's domain is a share of the column max, which the value
-#' beside it already says.
+#' The column axis: the glyph column's domain printed ONCE, in the header,
+#' instead of a track repeated on every row. EVERY mark that sits on a scale
+#' gets one, and they all read the same way: a box or a dot range against its
+#' value domain, a bar against its column max, a difference bar against its
+#' zero-centred one, a swimlane or a sparkline against its x domain (dates
+#' printed as dates). Text and number columns have no scale, so no strip.
 #'
 #' The strip mirrors `.blockr-rank-barwrap`'s flex geometry (a ticked span
 #' that flexes, then the same fixed value slot in ch), so a tick sits exactly
-#' over the position the mark uses: both are percentages of the SAME box.
+#' over the position the mark uses: both are percentages of the SAME box. A
+#' column whose cells carry no value label (the swimlane) has no slot to
+#' reserve, and the strip spans the cell.
 #' @noRd
-rank_axis_strip <- function(p, cl = NULL) {
-  if (!identical(p$kind, "box") && !identical(p$kind, "pointrange")) {
-    return(NULL)
+rank_axis_strip <- function(p, cl = NULL, prep = NULL) {
+  dom <- rank_axis_domain(p, prep)
+  if (is.null(dom)) return(NULL)
+  t <- if (isTRUE(dom$date)) {
+    rank_axis_date_ticks(dom$d0, dom$d1)
+  } else {
+    at <- rank_axis_ticks(dom$d0, dom$d1)
+    list(at = at, labels = lane_fmt(at))
   }
-  d0 <- p$dmin
-  d1 <- p$dmax
-  if (!length(d0) || !length(d1) || !is.finite(d0) || !is.finite(d1) ||
-        d1 <= d0) {
-    return(NULL)
+  if (length(t$at) < 2L) return(NULL)
+  last <- length(t$at)
+  # A percentage scale says so ONCE, on the last tick: "0 25 50 75 100%" is
+  # the unit named without repeating it four times.
+  if (isTRUE(dom$pct)) {
+    t$labels[[last]] <- paste0(t$labels[[last]], "%")
   }
-  t <- rank_axis_ticks(d0, d1)
-  if (length(t) < 2L) return(NULL)
-  pct <- (t - d0) / (d1 - d0) * 100
-  last <- length(t)
-  ticks <- lapply(seq_along(t), function(k) {
-    # The end ticks anchor inward so a label never overhangs the column.
-    cls <- if (k == 1L) {
+  pct <- (t$at - dom$d0) / (dom$d1 - dom$d0) * 100
+  ticks <- lapply(seq_len(last), function(k) {
+    # A label at the column EDGE anchors inward so it never overhangs; one
+    # anywhere else stays centred on its tick. Keyed on the position, not on
+    # the index: a domain whose last tick sits mid-column (a sparkline over
+    # study days padded to the right) would otherwise print that label a
+    # half-width left of where it means.
+    cls <- if (pct[[k]] <= 8) {
       "is-first"
-    } else if (k == last) {
+    } else if (pct[[k]] >= 92) {
       "is-last"
     }
     htmltools::tags$span(
       class = cls, style = paste0("left:", round(pct[[k]], 2L), "%"),
-      lane_fmt(t[[k]])
+      t$labels[[k]]
     )
   })
   htmltools::tags$div(
@@ -555,6 +566,47 @@ rank_axis_strip <- function(p, cl = NULL) {
                            style = paste0("width:", cl$dw, "ch"))
     }
   )
+}
+
+#' The domain a column's marks are drawn against, as the AXIS has to print it:
+#' the same numbers `rank_cells()` scales the geometry with, never re-derived
+#' from the data. `NULL` for a column with no scale.
+#' @noRd
+rank_axis_domain <- function(p, prep = NULL) {
+  ok <- function(a, b) {
+    length(a) && length(b) && is.finite(a) && is.finite(b) && b > a
+  }
+  kind <- p$kind %||% ""
+  if (kind %in% c("box", "pointrange")) {
+    if (!ok(p$dmin, p$dmax)) return(NULL)
+    return(list(d0 = p$dmin, d1 = p$dmax))
+  }
+  if (kind %in% c("bar", "barsplit")) {
+    # Length from a zero baseline: the width IS value / column max, so the
+    # domain starts at zero whatever the data's minimum is. A 100% split
+    # normalises every row, which makes the domain the percentage itself.
+    d1 <- if (identical(p$mode, "percent")) 100 else p$dmax %||% prep$bar_max
+    if (!ok(0, d1)) return(NULL)
+    list(d0 = 0, d1 = d1,
+         # A faceted percentage bar (`denom`) and the 100% split are read as
+         # percentages; a count column is read in its own unit.
+         pct = identical(p$mode, "percent") || !is.null(p$denom))
+  } else if (identical(kind, "bardiv")) {
+    # Zero-centred: the cell spans -max .. +max around the middle, which is
+    # where the comparator sits.
+    mx <- p$dmax %||% prep$bar_max
+    if (!ok(0, mx)) return(NULL)
+    list(d0 = -mx, d1 = mx)
+  } else if (kind %in% c("interval", "sparkline")) {
+    # The x domain, shared by the column: a swimlane's spans and a
+    # sparkline's trajectory are both positioned along it.
+    d <- p$dom %||% prep$dom
+    if (length(d) < 2L || !ok(d[[1L]], d[[2L]])) return(NULL)
+    list(d0 = d[[1L]], d1 = d[[2L]],
+         date = isTRUE(p$dom_date %||% prep$dom_date))
+  } else {
+    NULL
+  }
 }
 
 #' Nice tick values across a domain: the 1 / 2 / 2.5 / 5 / 10 ladder, picking
@@ -571,6 +623,66 @@ rank_axis_ticks <- function(d0, d1, k = 4L) {
   step <- cand[[which.min(abs(cand - raw))]]
   t <- seq(ceiling(d0 / step) * step, d1, by = step)
   t[t >= d0 & t <= d1]
+}
+
+# The calendar ladder: step, its length in days (for picking) and the format a
+# tick at that step is printed in. A date axis is only honest on calendar
+# boundaries -- "every 30 days" drifts through the months -- so the step is a
+# real unit and seq() walks it.
+RANK_DATE_STEPS <- list(
+  list(by = "1 day", days = 1, fmt = "%d %b", unit = "day"),
+  list(by = "2 days", days = 2, fmt = "%d %b", unit = "day"),
+  list(by = "1 week", days = 7, fmt = "%d %b", unit = "week"),
+  list(by = "2 weeks", days = 14, fmt = "%d %b", unit = "week"),
+  list(by = "1 month", days = 30.44, fmt = "%b %Y", unit = "month"),
+  list(by = "3 months", days = 91.3, fmt = "%b %Y", unit = "month"),
+  list(by = "6 months", days = 182.6, fmt = "%b %Y", unit = "month"),
+  list(by = "1 year", days = 365.25, fmt = "%Y", unit = "year"),
+  list(by = "2 years", days = 730.5, fmt = "%Y", unit = "year"),
+  list(by = "5 years", days = 1826.2, fmt = "%Y", unit = "year"),
+  list(by = "10 years", days = 3652.5, fmt = "%Y", unit = "year")
+)
+
+#' Nice tick DATES across a day-numbered domain (a swimlane or a sparkline
+#' over a Date column): the calendar ladder above, three ticks rather than
+#' four because a date label is three times the width of a number.
+#' @noRd
+rank_axis_date_ticks <- function(d0, d1, k = 3L) {
+  raw <- (d1 - d0) / max(1L, k - 1L)
+  if (!is.finite(raw) || raw <= 0) {
+    return(list(at = numeric(), labels = character()))
+  }
+  st <- RANK_DATE_STEPS[[which.min(abs(
+    vapply(RANK_DATE_STEPS, `[[`, numeric(1L), "days") - raw
+  ))]]
+  from <- rank_axis_date_start(as.Date(d0, origin = "1970-01-01"), st)
+  at <- seq(from, as.Date(ceiling(d1), origin = "1970-01-01"), by = st$by)
+  at <- at[as.numeric(at) >= d0 & as.numeric(at) <= d1]
+  list(at = as.numeric(at), labels = format(at, st$fmt))
+}
+
+#' The first tick: the earliest boundary of the step's unit at or after the
+#' domain start, so the labels land on month firsts and January 1sts rather
+#' than on whatever day the data happens to open.
+#' @noRd
+rank_axis_date_start <- function(d, st) {
+  if (identical(st$unit, "day")) return(d)
+  if (identical(st$unit, "week")) {
+    # Monday: the week boundary the ISO calendar (and every study calendar
+    # built on it) uses.
+    return(d + (8L - as.integer(format(d, "%u"))) %% 7L)
+  }
+  yr <- as.integer(format(d, "%Y"))
+  if (identical(st$unit, "month")) {
+    first <- as.Date(sprintf("%04d-%02d-01", yr, as.integer(format(d, "%m"))))
+    return(if (first >= d) {
+      first
+    } else {
+      seq(first, by = "1 month", length.out = 2L)[[2L]]
+    })
+  }
+  jan <- as.Date(sprintf("%04d-01-01", yr))
+  if (jan >= d) jan else as.Date(sprintf("%04d-01-01", yr + 1L))
 }
 
 #' The fold row's text, or NULL when nothing was capped. Never a silent
