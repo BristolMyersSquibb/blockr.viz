@@ -66,6 +66,38 @@ test_that("degenerate n: NA bounds below n = 2, sd 0 at n = 1, NA at n = 0", {
   expect_identical(s$n, 0L)
 })
 
+test_that("lane_q is BIT-identical to stats::quantile(type = 7)", {
+  # lane_q reads quantiles off the pre-sorted basis instead of calling
+  # stats::quantile once per probability. `expect_equal` is not enough here:
+  # an algebraically equal interpolation that differs in the last ULP flips a
+  # displayed digit (31.59 -> 31.6) on ~2.5% of a real AE table's cells, so
+  # this pins byte-for-byte identity, not tolerance.
+  set.seed(20260728)
+  probs <- c(0, 0.05, 0.25, 0.5, 0.75, 0.95, 1)
+  for (i in seq_len(200L)) {
+    n <- sample(1:60, 1L)
+    x <- stats::rnorm(n) * 10^sample(-3:3, 1L)
+    b <- lane_stat_basis(x)
+    for (p in probs) {
+      expect_identical(
+        lane_q(b, p),
+        unname(stats::quantile(sort(x), p, type = 7, names = FALSE))
+      )
+    }
+  }
+  expect_true(is.na(lane_q(lane_stat_basis(numeric()), 0.5)))
+})
+
+test_that("lane_stat_basis drops non-finite values and sorts", {
+  b <- lane_stat_basis(c(3, NA, 1, Inf, 2, -Inf, NaN))
+  expect_identical(b$x, c(1, 2, 3))
+  expect_identical(b$n, 3L)
+  expect_equal(b$mean, 2)
+  # sd: 0 at n = 1 (sample sd is undefined), NA only when there is nothing.
+  expect_equal(lane_stat_basis(5)$sd, 0)
+  expect_true(is.na(lane_stat_basis(numeric())$sd))
+})
+
 test_that("an unknown statistic falls back to median_q1_q3 (chart.js parity)", {
   x <- c(1, 2, 3, 4, 10)
   expect_equal(lane_summarize(x, "no_such_stat"),

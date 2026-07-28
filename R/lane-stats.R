@@ -73,30 +73,78 @@ LANE_STAT_META <- list(
   )
 )
 
-#' One statistic over a numeric vector: center, lo, hi and n.
+#' The shared, expensive half of every statistic, computed once.
+#'
+#' A box column asks for TWO statistics over the same values (the body and the
+#' whiskers) and then the row count, and each `stats::quantile()` call sorts
+#' the vector again -- seven sorts of one group's values where one will do.
+#' Sorting up front turns every quantile below into an indexed read, so the
+#' cost per group is one `sort()` instead of one per requested probability.
+#'
+#' @param x Numeric values (non-finite dropped).
+#' @return `list(x = sorted values, n =, mean =, sd =)`; `mean`/`sd` are NA at
+#'   n = 0 and `sd` is 0 at n = 1, matching the sample-sd convention.
+#' @noRd
+lane_stat_basis <- function(x) {
+  x <- as.numeric(x)
+  x <- sort(x[is.finite(x)])
+  n <- length(x)
+  list(
+    x = x,
+    n = n,
+    mean = if (n) mean(x) else NA_real_,
+    sd = if (n > 1L) stats::sd(x) else if (n) 0 else NA_real_
+  )
+}
+
+#' `stats::quantile(type = 7)` off an already-sorted vector.
+#'
+#' Type 7 IS `index = (n - 1)p + 1` plus linear interpolation between the
+#' bracketing order statistics -- the same formula chart.js uses. Reproduced
+#' here rather than called so the sort in [lane_stat_basis()] is paid once.
+#'
+#' The interpolation is written `(1 - h) * lo + h * hi`, NOT the algebraically
+#' equal `lo + h * (hi - lo)`, and the two guards below are `quantile.default`'s
+#' own: they make this bit-identical to `stats::quantile()` rather than merely
+#' equal to within float tolerance. It matters -- the second form moved ~2.5% of
+#' a real AE table's values by ~1e-12, which is invisible until it lands on a
+#' rounding boundary and flips a displayed digit (31.59 -> 31.6).
+#' test-lane-stats.R pins this against `stats::quantile()`.
+#' @noRd
+lane_q <- function(b, p) {
+  if (!b$n) return(NA_real_)
+  index <- 1 + (b$n - 1L) * p
+  lo <- floor(index)
+  qs <- b$x[[lo]]
+  hi <- b$x[[ceiling(index)]]
+  if (index > lo && hi != qs) {
+    h <- index - lo
+    qs <- (1 - h) * qs + h * hi
+  }
+  qs
+}
+
+#' One statistic off a prepared basis: center, lo, hi and n.
 #'
 #' Definitions identical to chart.js `summarizeStat()`: quantiles by linear
-#' interpolation (`stats::quantile(type = 7)` IS the JS formula
-#' `p * (n - 1)` + linear interpolation), sample sd (`n - 1`, 0 for a single
-#' observation), Tukey fences clipped to the observed extremes. `mean_ci95`
-#' uses `stats::qt(0.975, n - 1)` -- NEVER 1.96 (see the header) -- and is
+#' interpolation, sample sd (`n - 1`, 0 for a single observation), Tukey
+#' fences clipped to the observed extremes. `mean_ci95` uses
+#' `stats::qt(0.975, n - 1)` -- NEVER 1.96 (see the header) -- and is
 #' undefined below n = 2: NA bounds, so the cell renders the center alone
 #' rather than a zero-width interval, which would read as certainty.
 #'
-#' @param x Numeric values (non-finite dropped).
+#' @param b A [lane_stat_basis()].
 #' @param stat One of `LANE_WHISKERS` (`LANE_STATS` plus `"tukey"`).
 #' @return `list(center =, lo =, hi =, n =)`, all-NA center/bounds at n = 0.
 #' @noRd
-lane_summarize <- function(x, stat = "median_q1_q3") {
-  x <- as.numeric(x)
-  x <- x[is.finite(x)]
-  n <- length(x)
+lane_summarize_at <- function(b, stat = "median_q1_q3") {
+  n <- b$n
   if (n == 0L) {
     return(list(center = NA_real_, lo = NA_real_, hi = NA_real_, n = 0L))
   }
-  q <- function(p) unname(stats::quantile(x, p, type = 7, names = FALSE))
-  m <- mean(x)
-  s <- if (n > 1L) stats::sd(x) else 0
+  q <- function(p) lane_q(b, p)
+  m <- b$mean
+  s <- b$sd
   se <- s / sqrt(n)
   out <- switch(
     stat %||% "median_q1_q3",
@@ -109,17 +157,31 @@ lane_summarize <- function(x, stat = "median_q1_q3") {
       c(m, m - stats::qt(0.975, n - 1) * se, m + stats::qt(0.975, n - 1) * se)
     },
     p5_p95 = c(q(0.5), q(0.05), q(0.95)),
-    min_max = c(q(0.5), min(x), max(x)),
+    # Sorted, so the extremes are the ends.
+    min_max = c(q(0.5), b$x[[1L]], b$x[[n]]),
     tukey = {
       q1 <- q(0.25)
       q3 <- q(0.75)
       iqr <- q3 - q1
-      c(q(0.5), max(min(x), q1 - 1.5 * iqr), min(max(x), q3 + 1.5 * iqr))
+      c(q(0.5), max(b$x[[1L]], q1 - 1.5 * iqr), min(b$x[[n]], q3 + 1.5 * iqr))
     },
     # median_q1_q3, and the fallback for an unknown value (chart.js parity).
     c(q(0.5), q(0.25), q(0.75))
   )
   list(center = out[[1L]], lo = out[[2L]], hi = out[[3L]], n = n)
+}
+
+#' One statistic over a numeric vector: center, lo, hi and n.
+#'
+#' The single-statistic entry point. Callers wanting several statistics over
+#' the same values should build one [lane_stat_basis()] and call
+#' [lane_summarize_at()] per statistic instead.
+#'
+#' @inheritParams lane_summarize_at
+#' @param x Numeric values (non-finite dropped).
+#' @noRd
+lane_summarize <- function(x, stat = "median_q1_q3") {
+  lane_summarize_at(lane_stat_basis(x), stat)
 }
 
 #' Per-group statistics as a data frame: `keys` columns plus the requested
@@ -129,15 +191,24 @@ lane_summarize <- function(x, stat = "median_q1_q3") {
 #' @noRd
 lane_stat_agg <- function(data, keys, value, stats) {
   f <- function(v) {
+    # ONE basis per group: the sort every statistic needs, paid once, and the
+    # row count read straight off it (it used to come from a whole extra
+    # min_max summary, i.e. another sort to reach a length).
+    b <- lane_stat_basis(v)
     out <- list()
     for (nm in names(stats)) {
-      s <- lane_summarize(v, stats[[nm]])
+      s <- lane_summarize_at(b, stats[[nm]])
       out[[paste0(nm, "c")]] <- s$center
       out[[paste0(nm, "l")]] <- s$lo
       out[[paste0(nm, "h")]] <- s$hi
     }
-    out$.n <- lane_summarize(v, "min_max")$n
-    as.data.frame(out, check.names = FALSE)
+    out$.n <- b$n
+    # This runs once per group, so `as.data.frame()` spends more time
+    # validating and de-duplicating names than the statistics take to compute.
+    # Every element is a length-1 vector by construction -- build the one-row
+    # frame directly (the old call passed check.names = FALSE, so there was no
+    # name mangling to preserve either).
+    structure(out, class = "data.frame", row.names = .set_row_names(1L))
   }
   if (!length(keys)) {
     out <- dplyr::summarise(data, f(.data[[value]]))
