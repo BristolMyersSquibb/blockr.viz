@@ -106,6 +106,16 @@ rank_has_pct <- function(func) {
   isTRUE(func %in% c("count", "count_distinct"))
 }
 
+# The measures whose parts SUM to the whole: counting the mild rows plus
+# counting the severe rows IS the group's count, while the mean of each is not
+# its mean. Only these may be STACKED into a split bar -- everything else
+# splits side by side. Both split-bar producers (rank_table_prep() and the
+# summaries plan in lane-summaries.R) ask here.
+#' @noRd
+rank_additive <- function(func) {
+  isTRUE(func %in% c("count", "count_distinct", "sum"))
+}
+
 # Level order, matching the chart's _orderLevels: factor levels, else
 # sorted -- NUMERICALLY for a numeric or date column, which is the order
 # such a column carries. Sorting its labels as text puts day 10 before
@@ -297,11 +307,28 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
 
   denom <- rank_denom(data, func, id_var)
 
+  additive <- rank_additive(func)
+
   # What an ABSENT (group, level) cell is: zero for the additive measures
   # (no rows = nothing to count or sum), no value at all for the rest -- a
   # subject has no mean or as-is value in an arm they are not in. NA renders
   # as a blank cell and a zero-width bar, the chart's null gap.
-  absent <- if (func %in% c("count", "count_distinct", "sum")) 0 else NA_real_
+  absent <- if (additive) 0 else NA_real_
+
+  # And: a colour split of a NON-additive measure cannot stack. Stacking
+  # mean(mild) on mean(severe) draws a bar whose length is a number nothing
+  # computes -- and, because the axis scales to those totals, one that dwarfs
+  # the value the row actually reports (the group's own mean). Side by side,
+  # every segment is a real mean read against the shared axis.
+  bar_mode <- rank_chr1(bar_mode) %||% "stacked"
+  if (!is.null(color) && !additive && !identical(bar_mode, "grouped")) {
+    word <- unname(AGG_WORDS[func])
+    note <- paste(c(note, paste0(
+      "Segments of a ", tolower(if (is.na(word)) func else word),
+      " do not add up; showing the colour split side by side."
+    )), collapse = " ")
+    bar_mode <- "grouped"
+  }
 
   # --- the column plan -----------------------------------------------------
   # Each entry: kind (bar / barsplit / bardiv / num), the per-row numeric
@@ -653,7 +680,15 @@ rank_bar_max <- function(rows, plan, denoms) {
         if (is.null(v)) rep(0, nrow(rows)) else v
       }, numeric(nrow(rows)))
       seg <- matrix(seg, nrow = nrow(rows))
-      tot <- rowSums(seg, na.rm = TRUE)
+      # What the WIDEST thing in the column is, per mode: a stack runs to the
+      # row total, side-by-side bars only to the row's largest segment. Scaling
+      # grouped bars against the total would leave every one of them short.
+      tot <- if (identical(p$mode, "grouped")) {
+        do.call(pmax, c(lapply(seq_len(ncol(seg)), function(j) seg[, j]),
+                        list(na.rm = TRUE)))
+      } else {
+        rowSums(seg, na.rm = TRUE)
+      }
       if (!is.null(p$denom) && is.finite(p$denom) && p$denom > 0) {
         tot <- tot / p$denom * 100
       }

@@ -168,6 +168,29 @@ test_that("the colour dimension reaches every lane mark, dot included", {
   expect_true(all(nonzero <= 1L))
 })
 
+test_that("a split bar only stacks an additive measure", {
+  ae <- sum_fixture()
+  S <- list(list(type = "simple", name = "Mean duration", func = "mean",
+                 col = "DUR", show = "bar"))
+  p <- lane_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  e <- p$plan[[1L]]
+  # The parts of a mean are not a composition of it: they sit side by side,
+  # and the column's domain reaches the widest of them (scaling them against
+  # the pooled mean instead would clamp every larger arm at full width).
+  expect_identical(e$kind, "barsplit")
+  expect_identical(e$mode, "grouped")
+  segs <- unlist(p$rows[, paste0(e$prefix, e$series)])
+  expect_equal(e$dmax, max(c(p$rows[[e$key]], segs), na.rm = TRUE))
+  expect_true(max(unlist(rank_cells(p)$cols[[1L]]$seg), na.rm = TRUE) <= 100)
+
+  # A count is a composition, so it keeps stacking on the group's total.
+  cs <- list(list(type = "simple", name = "Events", func = "count",
+                  col = "DUR", show = "bar"))
+  pc <- lane_prepare_summaries(ae, by = "TERM", summaries = cs, color = "ARM")
+  expect_identical(pc$plan[[1L]]$mode, "stacked")
+  expect_equal(pc$plan[[1L]]$dmax, max(pc$rows[[pc$plan[[1L]]$key]]))
+})
+
 test_that("the column axis prints the domain once, on glyph columns only", {
   # Nice steps, and never a tick outside the domain it labels.
   expect_identical(rank_axis_ticks(0, 100), c(0, 25, 50, 75, 100))

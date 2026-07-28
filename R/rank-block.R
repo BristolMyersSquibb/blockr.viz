@@ -64,7 +64,9 @@
 #'   with `facet` (the chart's two independent mappings): each facet column's
 #'   bars are then split by `color`.
 #' @param bar_mode `"stacked"`, `"grouped"` or `"percent"`; no-op without
-#'   `color`.
+#'   `color`. Only a measure whose parts sum to the whole (count, count
+#'   distinct, sum) can stack: a mean / median / min / max splits side by
+#'   side whatever is asked for, and the table says so in its footer.
 #' @param facet Optional column giving one bar column per level on a shared
 #'   scale (e.g. one column per treatment arm).
 #' @param compare With `facet`, the level to treat as the comparator: every
@@ -681,7 +683,9 @@ rank_arguments <- function() {
       paste0(
         "Layout of a colour split: stacked (segments to scale), grouped ",
         "(one thin bar per level, side by side) or percent (each row ",
-        "normalized to 100%). No-op without `color`."
+        "normalized to 100%). No-op without `color`. Stacking needs an ",
+        "additive measure (count, count distinct, sum); a mean or median ",
+        "is always grouped, since its parts do not add up."
       ),
       example = "stacked",
       type = arg_enum(c("stacked", "grouped", "percent"))

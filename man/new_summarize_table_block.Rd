@@ -96,7 +96,9 @@ with \code{facet} (the chart's two independent mappings): each facet column's
 bars are then split by \code{color}.}
 
 \item{bar_mode}{\code{"stacked"}, \code{"grouped"} or \code{"percent"}; no-op without
-\code{color}.}
+\code{color}. Only a measure whose parts sum to the whole (count, count
+distinct, sum) can stack: a mean / median / min / max splits side by
+side whatever is asked for, and the table says so in its footer.}
 
 \item{facet}{Optional column giving one bar column per level on a shared
 scale (e.g. one column per treatment arm).}

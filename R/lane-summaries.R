@@ -627,9 +627,17 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       # Colour on a magnitude is its composition: the bar keeps meaning the
       # group's total and the segments say what it is made of. A group whose
       # rows are all one level draws ONE segment, in that level's colour.
+      # Only for an ADDITIVE measure, though: the parts of a mean do not add
+      # up to it, so those segments sit side by side (rank_additive()) rather
+      # than stacking into a length nothing computes.
       c(base, list(kind = "barsplit", key = paste0(sid, "_v"),
                    prefix = paste0(sid, "_S_"), series = s$.levels,
-                   mode = "stacked", show_val = TRUE,
+                   mode = if (rank_additive(rank_chr1(s$func) %||% "count")) {
+                     "stacked"
+                   } else {
+                     "grouped"
+                   },
+                   show_val = TRUE,
                    fills = unname(rank_level_colors(
                      scale_map, s$.color, s$.levels, data[[s$.color]]
                    )[s$.levels])))
@@ -865,7 +873,13 @@ lane_summary_domains <- function(plan, rows) {
         cols <- if (kind %in% c("bar", "barsplit")) {
           # The split bar scales on its TOTAL, the same number the plain bar
           # uses -- the segments are a share of it, so the two read alike.
-          p$key
+          # Side-by-side segments are read one at a time instead, so the axis
+          # has to reach the WIDEST of them, not just the pooled value.
+          if (identical(p$mode, "grouped")) {
+            c(p$key, paste0(p$prefix, p$series))
+          } else {
+            p$key
+          }
         } else {
           pos <- function(cm) unname(cm[setdiff(names(cm), "n")])
           # A colour-split column's levels share ONE scale: every level's

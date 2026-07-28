@@ -77,6 +77,34 @@ test_that("a colour split adds one series column per level, summing to the row",
   expect_identical(unname(p$palette[["MILD"]]), dd_palette(1L))
 })
 
+test_that("a split of a non-additive measure groups instead of stacking", {
+  ae <- ae_fixture()
+  # Stacking mean(MILD) on mean(MODERATE) would draw a bar nothing computes,
+  # and scale the axis to that non-number: the row's own mean then reads as
+  # half its bar. Side by side, each segment is a real mean.
+  p <- rank_prepare(ae, group = "TERM", value = "AVAL", func = "mean",
+                    color = "SEV")
+  expect_identical(p$plan[[1]]$mode, "grouped")
+  expect_match(p$note, "do not add up")
+  # The axis reaches the widest SEGMENT, never the sum of them.
+  cells <- unlist(p$rows[, c(".s_MILD", ".s_MODERATE")])
+  expect_equal(p$bar_max, max(cells))
+  # And the label is still the group's own mean, at four significant digits.
+  m <- rank_cells(p)
+  expect_identical(m$cols[[1]]$disp[[1]],
+                   trimws(formatC(p$rows$.v[[1]], format = "fg", digits = 4L)))
+
+  # An explicit grouped ask needs no note, and the additive measures keep
+  # stacking: their parts really do sum to the whole.
+  g <- rank_prepare(ae, group = "TERM", value = "AVAL", func = "mean",
+                    color = "SEV", bar_mode = "grouped")
+  expect_null(g$note)
+  cnt <- rank_prepare(ae, group = "TERM", color = "SEV", func = "count")
+  expect_identical(cnt$plan[[1]]$mode, "stacked")
+  expect_null(cnt$note)
+  expect_equal(cnt$bar_max, max(cnt$rows$.v))
+})
+
 test_that("faceting gives one bar column per level with its own denominator", {
   ae <- ae_fixture()
   p <- rank_prepare(ae, group = "TERM", facet = "ARM",

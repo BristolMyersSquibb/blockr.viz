@@ -386,8 +386,12 @@ rank_num_parts <- function(v, denom = NULL, combined = FALSE, signed = FALSE,
       is.na(v), "", paste0(formatC(pct, format = "f", digits = 1L), "%")
     )))
   }
+  # Four SIGNIFICANT digits, the same budget lane_fmt() prints a statistic at
+  # (R/lane-stats.R), so a split bar's label and a box's centre read alike. "fg"
+  # keeps whole numbers whole: a count of 12345 stays 12345, a mean of 155.625
+  # reads 155.6 rather than spelling out a precision the estimate has not got.
   n <- ifelse(is.na(v), "",
-              formatC(v, format = "fg", digits = 6L, big.mark = ""))
+              formatC(v, format = "fg", digits = 4L, big.mark = ""))
   if (isTRUE(combined) && !is.null(pct)) {
     return(list(
       disp = n,
