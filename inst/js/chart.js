@@ -406,7 +406,14 @@
     // voice), not in a help line beneath the control.
     x:      { label: (/** @type {any} */ cfg) =>
                 (cfg.chart_type === 'band' ? 'Timeline' : 'X'),
-              kind: 'column', colType: 'any',
+              kind: 'column',
+              // The band slides a window along its x, so a categorical column
+              // (AVISIT, PARAM, ...) cannot work -- offering one only lets the
+              // reader pick a mapping that renders nothing. Narrow the picker
+              // instead; band_empty_reason() still covers a saved board whose
+              // column changed type underneath it.
+              colType: (/** @type {any} */ cfg) =>
+                (cfg.chart_type === 'band' ? 'num' : 'any'),
               phBy: { individual: 'numeric column…', timeline: 'time / sequence…' } },
     y:      { label: (/** @type {any} */ cfg) =>
                 (cfg.chart_type === 'band' ? 'Value' : 'Y'),
@@ -2700,6 +2707,21 @@
         return;
       }
 
+      // A band whose series R could not compute: say why instead of drawing
+      // empty panels. The causes are ordinary (a non-numeric timeline, a
+      // cohort too thin for the cut-off, a filter that emptied the frame) and
+      // indistinguishable from here, so R names the one that fired.
+      if (this.config.chart_type === 'band' && !this.config.band_series) {
+        const note = this.config.band_note;
+        if (note) {
+          const esc = String(note)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          this._showEmpty('<div class="vd-empty-state">' +
+            '<p class="vd-empty-text">' + esc + '</p></div>');
+          return;
+        }
+      }
+
       // Guard: color with too many distinct levels renders an unreadable
       // legend. color means "map column values to colors" — a small
       // palette has ~7 readable colors, 15 is a hard ceiling. For splitting
@@ -4272,9 +4294,10 @@
 
         if (isBand) {
           if (!bandData) {
-            // R has not sent a band yet (first paint, or the window is
-            // mid-recompute). Draw nothing rather than falling through to the
-            // row-plotting path, which would dump a raw scatter on screen.
+            // Unreachable in practice -- the band_note gate above returns
+            // before this. Kept so a first paint that races the config
+            // (no band, no note yet) draws nothing rather than falling
+            // through to the row-plotting path and dumping a raw scatter.
             series.length = 0;
           } else {
             // The ribbons are hidden as soon as colour maps more than one

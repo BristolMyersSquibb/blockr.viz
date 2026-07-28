@@ -287,3 +287,55 @@ band_reference <- function(data, col) {
   list(col = col, value = stats::median(v), lo = min(v), hi = max(v),
        n_distinct = length(unique(v)))
 }
+
+#' Why a distribution band came back empty
+#'
+#' [compute_band_series()] returns `NULL` for a whole family of ordinary
+#' reasons -- a non-numeric timeline, a cohort too thin to clear `min_n`, a
+#' filter that emptied the frame. The renderer cannot tell them apart, so
+#' without this it draws an empty panel and the reader is left guessing. Call
+#' it only when the band IS `NULL`; it re-walks the same guards in order and
+#' names the first one that fires.
+#'
+#' @inheritParams compute_band_series
+#' @return A one-sentence explanation, or `NULL` when the required mappings
+#'   are simply unset (the renderer's own role gate covers that).
+#' @keywords internal
+#' @export
+band_empty_reason <- function(data, x_col, y_col, min_n = 12, id_col = NULL) {
+  if (is.null(x_col) || is.null(y_col) || !nzchar(x_col) || !nzchar(y_col)) {
+    return(NULL)
+  }
+  if (is.null(data) || nrow(data) == 0L) {
+    return("This block received no rows.")
+  }
+  for (col in c(x_col, y_col)) {
+    if (!col %in% names(data)) {
+      return(sprintf("Column \"%s\" is not in the data.", col))
+    }
+  }
+  if (!is.numeric(data[[x_col]])) {
+    return(sprintf(
+      "Timeline \"%s\" is not numeric — a band slides a window along a continuous axis, so it needs a numeric column (e.g. ADY).",
+      x_col))
+  }
+  if (!is.numeric(data[[y_col]])) {
+    return(sprintf("Value \"%s\" is not numeric.", y_col))
+  }
+  ok <- is.finite(data[[x_col]]) & is.finite(data[[y_col]])
+  if (!any(ok)) {
+    return(sprintf("Every row is missing \"%s\" or \"%s\".", x_col, y_col))
+  }
+  d <- data[ok, , drop = FALSE]
+  if (length(unique(d[[x_col]])) < 2L) {
+    return(sprintf(
+      "\"%s\" has only one distinct value, so there is no range to slide a window along.",
+      x_col))
+  }
+  by_id <- !is.null(id_col) && id_col %in% names(d)
+  n <- if (by_id) length(unique(d[[id_col]])) else nrow(d)
+  sprintf(
+    "No window reached the cut-off of %s: the whole series holds only %d. Lower \"Cut below n\", widen the window, or relax the upstream filter.",
+    if (by_id) sprintf("%d subjects", min_n) else sprintf("%d rows", min_n),
+    n)
+}

@@ -672,6 +672,16 @@ new_chart_block <- function(
           })
         })
 
+        r_band_note <- shiny::reactive({
+          if (!identical(r_chart_type(), "band")) return(NULL)
+          if (!is.null(r_band_series())) return(NULL)
+          d <- plain_data()
+          shiny::req(is.data.frame(d))
+          band_empty_reason(d, r_x(), r_y(),
+                            min_n = r_band_min_n() %||% 12,
+                            id_col = col_in(d, r_band_id()))
+        })
+
         # Reference lines reduced from their columns (see band_reference).
         r_band_refs <- shiny::reactive({
           if (!identical(r_chart_type(), "band")) return(NULL)
@@ -826,6 +836,7 @@ new_chart_block <- function(
               ref_lo = present_role(r_ref_lo()),
               band_series = r_band_series(),
               band_refs = r_band_refs(),
+              band_note = r_band_note(),
               # Observation-count labels: which surface(s) get the "(n)" and the
               # DISTINCT id column to count (browser-side, per label group).
               count_on = r_count_on(), count_col = r_count_col(),
