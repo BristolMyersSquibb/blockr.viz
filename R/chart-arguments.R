@@ -28,7 +28,7 @@ chart_arguments <- function() {
       example = "scatter",
       type = arg_enum(
         c("bar", "waterfall", "pie", "treemap", "boxplot", "pointrange",
-          "radar", "scatter", "line", "gantt")
+          "radar", "scatter", "line", "band", "gantt")
       )
     ),
     group = new_arg_spec(
@@ -218,7 +218,7 @@ chart_arguments <- function() {
       ),
       example = "mean_se",
       type = arg_enum(c("median_q1_q3", "mean_sd", "mean_2sd", "mean_se",
-                        "p5_p95", "min_max"))
+                        "p5_p95", "p10_p90", "min_max"))
     ),
     whiskers = new_arg_spec(
       paste0(
@@ -230,7 +230,69 @@ chart_arguments <- function() {
       ),
       example = "tukey",
       type = arg_enum(c("tukey", "median_q1_q3", "mean_sd", "mean_2sd",
-                        "mean_se", "p5_p95", "min_max"))
+                        "mean_se", "p5_p95", "p10_p90", "min_max"))
+    ),
+    band_window = new_arg_spec(
+      paste0(
+        "Distribution band (chart_type=\"band\") windowing: \"adaptive\" ",
+        "(default) grows the window at each grid point until it holds ",
+        "`band_size` distinct subjects, keeping the band's reliability ",
+        "constant as a cohort thins; \"fixed\" treats `band_size` as a ",
+        "half-width in x units. Prefer adaptive for studies with uneven ",
+        "visit spacing — a narrow fixed window lands in the gaps between ",
+        "late visits and tears the band into pieces. No-op for other charts."
+      ),
+      example = "adaptive",
+      type = arg_enum(c("adaptive", "fixed"))
+    ),
+    band_size = new_arg_spec(
+      paste0(
+        "Distribution band window size: distinct subjects per window when ",
+        "`band_window=\"adaptive\"` (default 45), or the half-width in x ",
+        "units when \"fixed\". No-op for other chart types."
+      ),
+      example = 45,
+      type = arg_number()
+    ),
+    band_min_n = new_arg_spec(
+      paste0(
+        "Distribution band cut-off: grid points holding fewer than this ",
+        "many distinct subjects draw nothing, so the band stops rather ",
+        "than running through a stretch with almost no data. Default 12. ",
+        "No-op for other chart types."
+      ),
+      example = 12,
+      type = arg_number()
+    ),
+    band_id = new_arg_spec(
+      paste0(
+        "Subject id column for the distribution band (e.g. \"USUBJID\"), ",
+        "counted DISTINCT for the window and the reported n, and carried ",
+        "on an outlier point's drill. Leave empty to count rows — which ",
+        "over-counts whenever one subject contributes several observations ",
+        "to the same window, so set it for repeated-measures data."
+      ),
+      example = "USUBJID",
+      type = arg_string()
+    ),
+    ref_hi = new_arg_spec(
+      paste0(
+        "Column holding an UPPER reference limit, drawn as a dashed line ",
+        "(e.g. \"ANRHI\"). Unlike `hlines`, which takes values, this ",
+        "names a column: a reference range is per-record and varies, so ",
+        "the block reduces it to its median and labels the line with the ",
+        "spread it reduced from. Empty (default) draws nothing."
+      ),
+      example = "ANRHI",
+      type = arg_string()
+    ),
+    ref_lo = new_arg_spec(
+      paste0(
+        "Column holding a LOWER reference limit, drawn as a dashed line ",
+        "(e.g. \"ANRLO\"). See `ref_hi`. Empty (default) draws nothing."
+      ),
+      example = "ANRLO",
+      type = arg_string()
     ),
     connect_centers = new_arg_spec(
       paste0(
