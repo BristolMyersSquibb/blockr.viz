@@ -27,14 +27,34 @@ DD_PALETTE_FALLBACK <- c(
 DT_SEQUENTIAL_FALLBACK <- c("#eef2ff", "#1d4ed8")
 DT_DIVERGING_FALLBACK <- c("#99000d", "#ffffff", "#08306b")
 
+# Keep in step with the blockr.theme version in DESCRIPTION's Suggests. The
+# constraint has to be restated at runtime because requireNamespace() does not
+# read Suggests: a stale install passes a bare presence check and then fails on
+# the first missing export -- a namespace error mid-render instead of the
+# documented fall back to blockr defaults.
+BLOCKR_THEME_MIN <- "0.0.0.9002"
+
+# The single presence guard for the whole package. Every blockr.theme entry
+# point we call (current_theme(), theme_palette(), resolve_scales_col()) landed
+# by BLOCKR_THEME_MIN, so one version gate covers them all and callers stay a
+# plain if().
+#
+# Compared by hand rather than through requireNamespace(versionCheck=), which
+# enforces the bound only while LOADING: once anything has loaded the namespace
+# -- use_theme() at app startup, say -- it short-circuits to TRUE and waves a
+# stale install straight through, i.e. it fails in exactly the case that bites.
+has_blockr_theme <- function() {
+  requireNamespace("blockr.theme", quietly = TRUE) &&
+    utils::packageVersion("blockr.theme") >= BLOCKR_THEME_MIN
+}
+
 # Gated on a theme having been APPLIED, not merely on blockr.theme being
 # installed. theme_palette() answers with the blockr defaults when no theme is
 # current, which is right for its own callers but would mean that installing
 # blockr.theme silently recoloured every existing board. Appearance changes
 # only when an app calls use_theme().
 has_theme_palette <- function() {
-  requireNamespace("blockr.theme", quietly = TRUE) &&
-    !is.null(blockr.theme::current_theme())
+  has_blockr_theme() && !is.null(blockr.theme::current_theme())
 }
 
 #' Resolve a colour role through the board theme

@@ -322,7 +322,7 @@ gg_level_colors <- function(map, col, data) {
   lv <- if (is.factor(x)) levels(x) else sort(unique(as.character(x)))
   lv <- lv[!is.na(lv)]
 
-  if (!is.null(map) && requireNamespace("blockr.theme", quietly = TRUE)) {
+  if (!is.null(map) && has_blockr_theme()) {
     res <- dd_resolve_scales(map, col, x)
     if (!is.null(res$color)) {
       hex <- res$color[lv]

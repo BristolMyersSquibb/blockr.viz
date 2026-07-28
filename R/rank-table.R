@@ -31,7 +31,7 @@ rank_level_colors <- function(map, col, levels, column = NULL) {
     return(character())
   }
   if (!is.null(map) && !is.null(col) &&
-        requireNamespace("blockr.theme", quietly = TRUE)) {
+        has_blockr_theme()) {
     res <- dd_resolve_scales(map, col, column %||% levels)
     pal <- res$color
     if (!is.null(pal) && all(levels %in% names(pal))) {
