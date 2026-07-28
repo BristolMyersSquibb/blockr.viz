@@ -15,7 +15,7 @@
   'use strict';
 
   const AGGREGATED_TYPES = ['bar', 'waterfall', 'pie', 'treemap', 'boxplot', 'pointrange', 'radar'];
-  const INDIVIDUAL_TYPES = ['scatter', 'line'];
+  const INDIVIDUAL_TYPES = ['scatter', 'line', 'band'];
   const TIMELINE_TYPES = ['gantt'];
   // The distribution marks: both summarize RAW values of `value` per group
   // slot in the browser (never in the expr — the export stays the drill-
@@ -43,6 +43,7 @@
     { value: 'mean_2sd',     label: 'Mean ± 2 SD',         center: 'Mean',   range: '±2 SD' },
     { value: 'mean_se',      label: 'Mean ± SE',           center: 'Mean',   range: '±1 SE' },
     { value: 'p5_p95',       label: '5th–95th percentile', center: 'Median', range: 'P5–P95' },
+    { value: 'p10_p90',      label: '10th–90th percentile', center: 'Median', range: 'P10–P90' },
     { value: 'min_max',      label: 'Min–Max',             center: 'Median', range: 'Min–Max' }
   ];
   // Whisker rules = the same vocabulary plus Tukey fences (whisker-only:
@@ -185,6 +186,12 @@
       '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
       'stroke="currentColor" stroke-width="1.6" stroke-linecap="round">' +
       '<path d="M2 12 L6 7 L10 9 L14 3"/></svg>',
+    band:
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.3" stroke-linejoin="round">' +
+      '<path d="M2 5 L6 3.5 L10 6 L14 4" opacity="0.55"/>' +
+      '<path d="M2 11 L6 9.5 L10 12 L14 10.5" opacity="0.55"/>' +
+      '<path d="M2 8 L6 6.5 L10 9 L14 7.2" stroke-width="1.8"/></svg>',
     gantt:
       '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
       '<rect x="2" y="3" width="8" height="2.6" rx="1"/><rect x="5" y="6.8" width="9" height="2.6" rx="1"/>' +
@@ -194,6 +201,15 @@
   // Individual-family render baselines. Multipliers (`line_width_mult`,
   // `dot_size_mult`) scale these so slider 1.0× matches echarts' default
   // look. Values mirror the literals previously hardcoded in mkSeries.
+  // Halo drawn under a band's centre line. The ribbons are translucent
+  // fills, so a light palette step laid straight over one is unreadable and
+  // crossing centre lines merge; a surface-coloured underlay separates them
+  // without inventing a second hue.
+  const SURFACE_HALO = '#ffffff';
+  // Reference limits wear the status-critical red, not a series hue: a normal
+  // range is a threshold, not another series, and must never be mistaken for
+  // one. Same red the vlines/hlines guides already use.
+  const REF_LINE_COLOR = '#dc2626';
   const BASE_LINE_WIDTH   = 1.4;
   const BASE_SCATTER_SIZE = 6;
   const BASE_LINE_MARKER  = 4;
@@ -518,6 +534,26 @@
                    cfg.func === 'identity' ? 'Count column' : 'Count distinct of',
                  kind: 'column', colType: 'any',
                  ph: 'column to count (blank = row count)' },
+    // Distribution band. `band_window` picks how the window is sized;
+    // `band_size` reads as subjects (adaptive) or x units (fixed), so its
+    // label follows the mode rather than lying in one of them.
+    band_window: { label: 'Window', kind: 'select', rerender: true,
+                   options: [{ value: 'adaptive', label: 'Adaptive (by subjects)' },
+                             { value: 'fixed', label: 'Fixed (x units)' }] },
+    band_size: { label: (/** @type {any} */ cfg) =>
+                   (cfg.band_window === 'fixed' ? 'Half-width (x units)'
+                                                : 'Subjects per window'),
+                 // `label` may be a function (see count_col); `ph` may not --
+                 // drilldown-config.js assigns role.ph straight to
+                 // input.placeholder, so a function would print its source.
+                 kind: 'text', ph: 'e.g. 45' },
+    band_min_n: { label: 'Cut below n', kind: 'text', ph: 'e.g. 12' },
+    band_id: { label: 'Subject id', kind: 'column', colType: 'any',
+               ph: 'id counted distinct (blank = rows)' },
+    ref_hi: { label: 'Upper limit', kind: 'column', colType: 'num',
+              ph: 'column, e.g. ANRHI (blank = none)' },
+    ref_lo: { label: 'Lower limit', kind: 'column', colType: 'num',
+              ph: 'column, e.g. ANRLO (blank = none)' },
     lo:       { label: 'Lo', kind: 'column', colType: 'num' },
     hi:       { label: 'Hi', kind: 'column', colType: 'num' },
     line_width_mult: { label: 'Line width', kind: 'slider' },
@@ -629,6 +665,18 @@
       mapping: [],
       presentation: [
         { role: 'smoother', types: ['scatter'] },
+        // Band: the window is the only new idea; `summary` / `whiskers`
+        // are the SAME distribution vocabulary the boxplot uses, so the
+        // two marks cannot disagree about what an interval means.
+        { role: 'band_window', types: ['band'] },
+        { role: 'band_size', types: ['band'] },
+        { role: 'band_min_n', types: ['band'] },
+        { role: 'band_id', types: ['band'] },
+        { role: 'summary', types: ['band'] },
+        { role: 'whiskers', types: ['band'] },
+        { role: 'box_points', types: ['band'] },
+        { role: 'ref_hi', types: ['band'] },
+        { role: 'ref_lo', types: ['band'] },
         // Helper lines, kept adjacent so they read as one group: the computed
         // diagonal, then the fixed positions. They are NOT a titled section --
         // `presentation` is a flat list and a real header needs a change to the
@@ -791,13 +839,20 @@
           // Waterfall is intentionally NOT a picker button — it is a bar option
           // (the `baseline` toggle). It stays in AGGREGATED_TYPES so saved boards
           // with chart_type="waterfall" still classify/render as aggregated bars.
-          { label: 'Aggregated', types: AGGREGATED_TYPES.filter(function (/** @type {string} */ t) { return t !== 'waterfall'; }) },
+          // Band lists under Aggregated next to boxplot / pointrange: it
+          // summarises rows into the same statistics they do, just along a
+          // continuous x instead of per category level, and the heading
+          // describes data handling. Presentation-only, exactly as for gantt
+          // below -- _family() still classifies band as INDIVIDUAL, because
+          // mechanically it takes x/y columns and a numeric axis, not
+          // group/value on a category axis.
+          { label: 'Aggregated', types: AGGREGATED_TYPES.filter(function (/** @type {string} */ t) { return t !== 'waterfall'; }).concat(['band']) },
           // Gantt lists under Individual: like scatter/line it plots rows
           // as-is (one bar per row) rather than self-aggregating — the picker
           // heading describes data handling, not chart shape. This grouping
           // is presentation-only; familyFor() still classifies gantt as the
           // timeline family (x/xend/y mappings, lane drill).
-          { label: 'Individual', types: INDIVIDUAL_TYPES.concat(TIMELINE_TYPES) }
+          { label: 'Individual', types: INDIVIDUAL_TYPES.filter(function (/** @type {string} */ t) { return t !== 'band'; }).concat(TIMELINE_TYPES) }
         ],
         familyFor: (/** @type {string} */ t) => AGGREGATED_TYPES.includes(t) ? 'aggregated'
           : TIMELINE_TYPES.includes(t) ? 'timeline' : 'individual',
@@ -2363,6 +2418,23 @@
       // slot.focus is null -- scatter (no hover highlight at all, see mkSeries)
       // and single-line charts (nothing to disambiguate, see crowdLine).
       const zr = chart.getZr();
+      // Band: reveal the nearest series' ribbon. Distinct from the line
+      // family's promote/demote overlay -- nothing is restyled, ribbons that
+      // were built at zero opacity are simply turned on -- so it rides on its
+      // own picker and leaves the line machinery untouched.
+      zr.on('mousemove', (/** @type {any} */ e) => {
+        if (this.config.chart_type !== 'band' || !slot.band) return;
+        const lvl = this._nearestBandLevel(slot, chart, e.offsetX, e.offsetY);
+        if (lvl === slot.bandFocus) return;
+        slot.bandFocus = lvl;
+        this._applyBandFocus(slot, chart);
+      });
+      zr.on('globalout', () => {
+        if (this.config.chart_type !== 'band' || !slot.band) return;
+        if (slot.bandFocus == null) return;
+        slot.bandFocus = null;
+        this._applyBandFocus(slot, chart);
+      });
       zr.on('mousemove', (/** @type {any} */ e) => {
         if (!slot.focus) return;
         const si = this._nearestLineSeries(slot, chart, e.offsetX, e.offsetY);
@@ -3439,7 +3511,8 @@
       // not have passed through it before the first render).
       const bodyStat = this.config.summary ||
         (isBox ? 'median_q1_q3' : 'mean_se');
-      const whiskerStat = this.config.whiskers || 'tukey';
+      const whiskerStat = this.config.whiskers ||
+        (this.config.chart_type === 'band' ? 'p10_p90' : 'tukey');
       // No numeric value (unset or the synthetic row count) -> nothing to
       // summarize; the caller shows the "pick a numeric Value" empty state.
       if (!value || value === '.count') return null;
@@ -3801,6 +3874,17 @@
       const ct = this.config.chart_type;
       const isLine = ct === 'line';
       const isScatter = ct === 'scatter';
+      // The distribution band. Unlike every other mark in this family it does
+      // NOT draw the rows it was given: R computes the windowed statistics
+      // (compute_band_series) and ships them in config.band_series, exactly as
+      // it does for the smoother. So the browser holds a renderer, not a
+      // statistics engine, and the canvas and static_chart cannot disagree.
+      const isBand = ct === 'band';
+      const bandData = isBand ? (this.config.band_series || null) : null;
+      // Series index the band's reference / helper lines hang off; -1 until a
+      // centre line exists. Declared out here because the facet loop sets it
+      // and the markLine block below reads it.
+      let bandMarkLineIdx = -1;
       const palette = this._palette();
       const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
 
@@ -3949,6 +4033,7 @@
         // overlay, so a stale index would wrongly no-op the next hover).
         slot.hover.si = null;
         slot.focusSi = null;
+        slot.band = null;
 
         const dm = this.config.dot_size_mult   ?? 1.0;
         const lm = this.config.line_width_mult ?? 1.0;
@@ -3991,6 +4076,11 @@
         const hiCol = this.config.hi;
         const refX = Array.isArray(this.config.vlines) ? this.config.vlines : [];
         const refY = Array.isArray(this.config.hlines) ? this.config.hlines : [];
+        // Band reference limits, reduced R-side from their columns. Labelled
+        // with the column name and, when the column is not constant, the range
+        // it was reduced from -- "ANRHI 34 (32–43)". Showing only the reduced
+        // number would quietly assert a precision the data does not have.
+        const bandRefs = (isBand && this.config.band_refs) || null;
         // Identity line (y = x): scatter with numeric axes only — a 45°
         // guide is meaningless against a categorical axis.
         // R sends "on"/"off" (this control's wire format, see ROLES); accept a
@@ -4093,13 +4183,183 @@
           }
         };
 
-        if (seriesLevels.length === 0) {
+        // ---- distribution band -------------------------------------------
+        // A ribbon is two stacked area series: an invisible one carrying the
+        // lower edge, then the band's own thickness on top of it. `stack`
+        // needs its own name per ribbon or ECharts folds unrelated bands
+        // together; `symbol:'none'` keeps the fill from sprouting markers.
+        // A null in either edge breaks the stack, which is exactly what a
+        // cut band should do -- hence the nulls out of compute_band_series
+        // rather than zeros.
+        const mkRibbon = (/** @type {any} */ name, /** @type {any} */ b,
+                          /** @type {string} */ loKey, /** @type {string} */ hiKey,
+                          /** @type {any} */ clr, /** @type {number} */ op) => {
+          const lo = b[loKey], hi = b[hiKey];
+          if (!Array.isArray(lo) || !Array.isArray(hi)) return null;
+          // Contiguous runs where BOTH edges exist. One polygon each, so a
+          // band cut for thin n breaks rather than bridging the gap with a
+          // straight edge that asserts data it does not have.
+          /** @type {number[][]} */
+          const runs = [];
+          /** @type {number[] | null} */
+          let cur = null;
+          for (let i = 0; i < b.x.length; i++) {
+            if (lo[i] != null && hi[i] != null) {
+              if (!cur) { cur = []; runs.push(cur); }
+              cur.push(i);
+            } else { cur = null; }
+          }
+          const solid = runs.filter(r => r.length > 1);
+          if (!solid.length) return null;
+          const item = [b.x[solid[0][0]], hi[solid[0][0]]];
+          return {
+            type: 'custom', name: name, legendHoverLink: false, silent: true,
+            itemStyle: { color: clr }, __bandItem: item,
+            z: 2, data: [item],
+            // Both edges must reach the value axis or ECharts sizes y to the
+            // single data item above and clips every ribbon that runs past it.
+            encode: { x: 0, y: 1 },
+            renderItem: (/** @type {any} */ params, /** @type {any} */ api) => {
+              /** @type {any[]} */
+              const kids = [];
+              for (const r of solid) {
+                /** @type {any[]} */
+                const pts = [];
+                for (const i of r) pts.push(api.coord([b.x[i], hi[i]]));
+                for (let k = r.length - 1; k >= 0; k--) {
+                  pts.push(api.coord([b.x[r[k]], lo[r[k]]]));
+                }
+                kids.push({ type: 'polygon', shape: { points: pts },
+                            style: { fill: clr, opacity: op } });
+              }
+              return { type: 'group', children: kids };
+            }
+          };
+        };
+
+        // Outlier points: the observations outside the LOCAL Tukey fence,
+        // classified R-side. Always the Tukey rule whatever `whiskers` draws
+        // -- a P10-P90 ribbon would otherwise flag a fifth of the data.
+        const mkBandPoints = (/** @type {any} */ name, /** @type {any} */ b,
+                              /** @type {any} */ clr) => {
+          if (!Array.isArray(b.out_x) || !b.out_x.length) return null;
+          /** @type {any[]} */
+          const pts = [];
+          for (let i = 0; i < b.out_x.length; i++) {
+            const p = [b.out_x[i], b.out_y[i]];
+            if (Array.isArray(b.out_id)) p.push(b.out_id[i]);
+            pts.push(p);
+          }
+          return {
+            type: 'scatter', name: name, data: pts, z: 5,
+            legendHoverLink: false,
+            symbolSize: Math.max(4, 6 * dm),
+            itemStyle: { color: 'transparent', borderColor: clr,
+                         borderWidth: 1.3, cursor: 'pointer' },
+            emphasis: { disabled: true }
+          };
+        };
+
+        if (isBand) {
+          if (!bandData) {
+            // R has not sent a band yet (first paint, or the window is
+            // mid-recompute). Draw nothing rather than falling through to the
+            // row-plotting path, which would dump a raw scatter on screen.
+            series.length = 0;
+          } else {
+            // The ribbons are hidden as soon as colour maps more than one
+            // series: overlapping translucent fills invent a colour that
+            // belongs to no series, and it gets worse with every level added.
+            // Hovering brings ONE back, so the reading stays available without
+            // the pile-up. A single series has nothing to collide with.
+            // Facet tier first: each panel holds its own cohort, so it gets
+            // its own band. Falls back to __all__ for an unfaceted chart.
+            const panelBand = bandData[fv] || bandData['__all__'] || null;
+            const levels = seriesLevels.length ? seriesLevels : ['__all__'];
+            const many = levels.length > 1;
+            // Ribbons hide as soon as colour maps more than one series --
+            // overlapping translucent fills invent a colour belonging to no
+            // series. Hover brings exactly one back (slot.bandFocus).
+            const focus = many ? slot.bandFocus : levels[0];
+            /** @type {Record<string, number>} */
+            const centerIdx = {};
+            /** @type {Record<string, {idx: number, item: any}>} */
+            const ribbonIdx = {};
+            let firstCenter = -1;
+            for (let ci = 0; ci < levels.length; ci++) {
+              const cl = levels[ci];
+              const b = panelBand
+                ? (panelBand[cl] || (levels.length === 1 ? panelBand['__all__'] : null))
+                : null;
+              if (!b || !Array.isArray(b.x)) continue;
+              const clr = seriesLevels.length ? colorForLevel(cl, ci) : palette[0];
+              const nm = cl === '__all__' ? undefined : cl;
+              const live = !many || String(focus) === String(cl);
+              if (!many) {
+                if (Array.isArray(b.olo)) {
+                  const rv = mkRibbon(nm, b, 'olo', 'ohi', clr, 0.13);
+                  if (rv) series.push(rv);
+                }
+                const ri = mkRibbon(nm, b, 'lo', 'hi', clr, 0.28);
+                if (ri) series.push(ri);
+                if (this.config.box_points === 'outliers') {
+                  const op = mkBandPoints(nm, b, clr);
+                  if (op) series.push(op);
+                }
+              } else {
+                // Overlay: the inner interval only, built for every level and
+                // emptied unless focused (see _applyBandFocus).
+                const ri = mkRibbon(nm, b, 'lo', 'hi', clr, 0.28);
+                if (ri) {
+                  ribbonIdx[cl] = { idx: series.length, item: ri.__bandItem };
+                  if (!live) ri.data = [];
+                  series.push(ri);
+                }
+              }
+              // A halo under every centre line: with a ribbon on screen the
+              // other series' lines cross it, and a light palette step over a
+              // fill is otherwise unreadable.
+              /** @type {any[]} */
+              const cpts = [];
+              for (let i = 0; i < b.x.length; i++) {
+                cpts.push([b.x[i], b.center[i] == null ? null : b.center[i]]);
+              }
+              series.push({
+                type: 'line', name: nm,
+                data: cpts, symbol: 'none', showSymbol: false,
+                z: 6, silent: true, legendHoverLink: false,
+                itemStyle: { color: clr },
+                lineStyle: { color: SURFACE_HALO, width: (BASE_LINE_WIDTH + 2) * lm },
+                emphasis: { disabled: true }
+              });
+              centerIdx[cl] = series.length;
+              if (firstCenter < 0) firstCenter = series.length;
+              series.push({
+                type: 'line', name: nm,
+                data: cpts, symbol: 'none', showSymbol: false,
+                z: 7, triggerLineEvent: true,
+                itemStyle: { color: clr, cursor: 'pointer' },
+                lineStyle: { color: clr, width: (BASE_LINE_WIDTH + 0.8) * lm },
+                emphasis: { disabled: true }
+              });
+            }
+            // Handed to the hover picker, which patches ribbon data only.
+            slot.band = many
+              ? { centerIdx: centerIdx, ribbonIdx: ribbonIdx, total: series.length }
+              : null;
+            // The helper/reference markLine hangs off series[0] further down.
+            // For a band that would be a ribbon, whose data the hover empties
+            // -- taking the reference line with it. Pin it to a centre line,
+            // which is never toggled.
+            bandMarkLineIdx = firstCenter;
+          }
+        } else if (seriesLevels.length === 0) {
           const grpRows = rows.filter(r => r[x] != null && r[y] != null);
           const pts = grpRows.map(packPt);
           sortLinePts(pts);
           series.push(mkSeries(undefined, pts, palette[0]));
           pushOverlays(undefined, pts, palette[0], grpRows);
-        } else {
+        } else if (!isBand) {
           for (let ci = 0; ci < seriesLevels.length; ci++) {
             const cl = seriesLevels[ci];
             const grpRows = rows.filter(r => String(r[splitCol]) === cl && r[x] != null && r[y] != null);
@@ -4125,6 +4385,27 @@
         const refData = [];
         for (const v of refX) refData.push({ xAxis: Number(v) });
         for (const v of refY) refData.push({ yAxis: Number(v) });
+        /** @type {any[]} */
+        const refLabels = [];
+        if (bandRefs) {
+          for (const k of ['hi', 'lo']) {
+            const r = bandRefs[k];
+            if (!r || !Number.isFinite(Number(r.value))) continue;
+            refLabels.push({
+              yAxis: Number(r.value),
+              lineStyle: { color: REF_LINE_COLOR, type: 'dashed', width: guideW },
+              label: {
+                show: true, position: 'insideEndTop', color: REF_LINE_COLOR,
+                fontSize: 10, fontWeight: 600,
+                formatter: r.col + ' ' + ddNum3(Number(r.value)) +
+                  (Number(r.n_distinct) > 1
+                    ? ' (' + ddNum3(Number(r.lo)) + '–' + ddNum3(Number(r.hi)) + ')'
+                    : '')
+              }
+            });
+          }
+        }
+        for (const rl of refLabels) refData.push(rl);
         // When the identity line is on, both axes get ONE shared domain (filled
         // here, applied to the axis specs below) so y=x is a true corner-to-
         // corner diagonal and vertical distance from it reads as the real x-y
@@ -4163,8 +4444,10 @@
             ]);
           }
         }
+        const mlTarget = (bandMarkLineIdx >= 0 && series[bandMarkLineIdx])
+          ? bandMarkLineIdx : 0;
         if (series.length > 0 && refData.length) {
-          series[0].markLine = {
+          series[mlTarget].markLine = {
             silent: true,
             symbol: 'none',
             lineStyle: { color: '#dc2626', type: 'dashed', width: guideW },
@@ -4174,7 +4457,7 @@
         }
 
         // Brush config: lineX for line charts, rect for scatter
-        const brushType = isLine ? ['lineX'] : ['rect'];
+        const brushType = (isLine || isBand) ? ['lineX'] : ['rect'];
 
         // Legend only when distinct *colors* are few enough to read. With
         // series ≠ color, legend reflects color cardinality, not
@@ -4284,6 +4567,72 @@
         if (idMin != null && yAxisType === 'value') {
           /** @type {any} */ (yAxisSpec).min = idMin;
           /** @type {any} */ (yAxisSpec).max = idMax;
+        }
+        // A reference limit must pull the frame open far enough to be seen --
+        // ECharts sizes the axis from series data only, so a markLine outside
+        // it is silently clipped, and a limit you asked for and cannot see is
+        // worse than none. But only so far: with the bands sitting at 12-22, a
+        // lower limit at 6 that nothing approaches would otherwise flatten
+        // every series to make room. Past 60% extra span the limit stays put
+        // and gets clipped, which is the honest reading of "off scale".
+        if (isBand && yAxisType === 'value' && series.length) {
+          let lo = Infinity, hi = -Infinity;
+          const scan = (/** @type {any} */ v) => {
+            if (v == null) return;
+            const n = Number(v);
+            if (!Number.isFinite(n)) return;
+            if (n < lo) lo = n;
+            if (n > hi) hi = n;
+          };
+          const pb = bandData ? (bandData[fv] || bandData['__all__']) : null;
+          if (pb) {
+            for (const k of Object.keys(pb)) {
+              const b2 = pb[k];
+              if (!b2) continue;
+              const drawn = ['center', 'lo', 'hi'];
+              // seriesLevels.length > 1 is the overlay case: inner ribbon only.
+              if (seriesLevels.length <= 1) {
+                drawn.push('olo', 'ohi');
+                if (this.config.box_points === 'outliers') drawn.push('out_y');
+              }
+              for (const key of drawn) {
+                if (Array.isArray(b2[key])) for (const v of b2[key]) scan(v);
+              }
+            }
+          }
+          if (Number.isFinite(lo) && Number.isFinite(hi) && hi > lo) {
+            const span = hi - lo;
+            // A chosen limit pulls the frame open to show itself, but only so
+            // far: one the data never approaches would otherwise flatten every
+            // series to make room. Past 60% extra span it stays put and clips,
+            // which is the honest reading of "off scale".
+            if (bandRefs) {
+              for (const k of ['hi', 'lo']) {
+                const r = bandRefs[k];
+                if (!r) continue;
+                const v = Number(r.value);
+                if (!Number.isFinite(v)) continue;
+                const nlo = Math.min(lo, v), nhi = Math.max(hi, v);
+                if (nhi - nlo <= span * 1.6) { lo = nlo; hi = nhi; }
+              }
+            }
+            // Round the domain OUTWARD to a nice step, for the same reason
+            // the identity line does: an explicit min/max turns off echarts'
+            // own nice-bounds pass, so a raw padded range prints endpoints
+            // like 3.30000000000000003 as axis labels.
+            const pad = (hi - lo) * 0.06;
+            let aLo = lo - pad, aHi = hi + pad;
+            const aSpan = aHi - aLo;
+            if (aSpan > 0) {
+              const mag = Math.pow(10, Math.floor(Math.log10(aSpan)));
+              const rel = aSpan / mag;
+              const step = rel >= 5 ? mag : (rel >= 2 ? mag / 2 : mag / 5);
+              aLo = Math.floor(aLo / step) * step;
+              aHi = Math.ceil(aHi / step) * step;
+            }
+            /** @type {any} */ (yAxisSpec).min = aLo;
+            /** @type {any} */ (yAxisSpec).max = aHi;
+          }
         }
 
         // Hidden 0..1 axis pair (index 1) in the SAME grid, carrying only the
@@ -5285,6 +5634,67 @@
     // self-healing — it depends only on where the cursor is, never on enter /
     // leave events that can be dropped.
     /** @param {any} slot @param {any} chart @param {number} px @param {number} py */
+    /**
+     * Level whose band centre line is nearest the cursor, or null when the
+     * cursor is outside the plot. Vertical distance at the cursor's x, which
+     * is what "the series I am pointing at" means for stacked trajectories.
+     * @param {any} slot @param {any} chart @param {number} px @param {number} py
+     * @returns {string | null}
+     */
+    _nearestBandLevel(slot, chart, px, py) {
+      const b = slot.band;
+      if (!b) return null;
+      if (!chart.containPixel({ gridIndex: 0 }, [px, py])) return null;
+      const opt = chart.getOption();
+      const all = (opt && opt.series) || [];
+      let best = null, bestD = Infinity;
+      for (const lvl of Object.keys(b.centerIdx)) {
+        const sv = all[b.centerIdx[lvl]];
+        if (!sv || !Array.isArray(sv.data)) continue;
+        // Nearest point by x, then the vertical gap to it. The grid is dense
+        // (100 points across the range), so the nearest point is a good
+        // stand-in for the interpolated line without walking segments.
+        let py2 = null, dx = Infinity;
+        for (const pt of sv.data) {
+          if (pt[1] == null) continue;
+          const q = chart.convertToPixel({ gridIndex: 0 }, [pt[0], pt[1]]);
+          if (!q) continue;
+          const d = Math.abs(q[0] - px);
+          if (d < dx) { dx = d; py2 = q[1]; }
+        }
+        if (py2 == null) continue;
+        const d = Math.abs(py2 - py);
+        if (d < bestD) { bestD = d; best = lvl; }
+      }
+      // Far from every line: treat as "not pointing at anything" rather than
+      // latching the least-far one, or the ribbon would never turn off while
+      // the cursor is anywhere in the panel.
+      return bestD <= 60 ? best : null;
+    }
+
+    /**
+     * Reveal the focused level's ribbon and empty the rest. A merge patch on
+     * the ribbon series' `data` only: re-rendering the whole chart instead
+     * rebuilt every series on each cursor move, which made the reference line
+     * visibly redraw. Nothing else in the option is touched, so the axis, the
+     * markLine and the centre lines stay exactly as they were.
+     * @param {any} slot @param {any} chart
+     */
+    _applyBandFocus(slot, chart) {
+      const b = slot.band;
+      if (!b || !b.ribbonIdx) return;
+      /** @type {any[]} */
+      const patch = new Array(b.total);
+      for (let i = 0; i < b.total; i++) patch[i] = {};
+      for (const lvl of Object.keys(b.ribbonIdx)) {
+        const r = b.ribbonIdx[lvl];
+        const on = slot.bandFocus != null &&
+          String(slot.bandFocus) === String(lvl);
+        patch[r.idx] = { data: on ? [r.item] : [] };
+      }
+      chart.setOption({ series: patch }, { lazyUpdate: true });
+    }
+
     _nearestLineSeries(slot, chart, px, py) {
       const f = slot.focus;
       if (!f) return null;
@@ -5427,6 +5837,15 @@
         vlines: this.config.vlines == null ? '' : String(this.config.vlines),
         hlines: this.config.hlines == null ? '' : String(this.config.hlines),
         box_points: this.config.box_points || 'none',
+        // Distribution band. band_series / band_refs are NOT sent back: they
+        // are R's output, not user config, and echoing them would round-trip a
+        // whole computed band through every gear edit.
+        band_window: this.config.band_window || 'adaptive',
+        band_size: this.config.band_size == null ? 45 : this.config.band_size,
+        band_min_n: this.config.band_min_n == null ? 12 : this.config.band_min_n,
+        band_id: this.config.band_id || '',
+        ref_hi: this.config.ref_hi || '',
+        ref_lo: this.config.ref_lo || '',
         // Observation-count labels: the surface picker + the DISTINCT id column
         // ('' = blank picker -> row count).
         count_on: this.config.count_on || 'off',

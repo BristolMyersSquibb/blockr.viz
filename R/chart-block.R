@@ -153,15 +153,42 @@
 #'   computed in the browser from the raw `value` column. `NULL` (default)
 #'   resolves per mark: `"median_q1_q3"` for boxplot, `"mean_se"` for
 #'   pointrange. No-op for other chart types.
-#' @param whiskers Boxplot whisker rule (the box's outer interval):
-#'   `"tukey"` (default, 1.5x IQR fences clipped to the data -- the textbook
-#'   boxplot) or any `summary` value (e.g. `"min_max"` for range whiskers,
-#'   `"p5_p95"` for the clinical percentile convention). No-op for
-#'   non-boxplot charts.
+#' @param whiskers Whisker rule -- the mark's OUTER interval. `"tukey"`
+#'   (1.5x IQR fences clipped to the data, the textbook boxplot) or any
+#'   `summary` value (e.g. `"min_max"`, `"p5_p95"`, `"p10_p90"`). `NULL`
+#'   (default) resolves per mark: `"tukey"` for the boxplot, `"p10_p90"` for
+#'   the band. The band differs deliberately -- a fence is an extreme order
+#'   statistic, so dragged into a continuous ribbon its edge lurches whenever
+#'   one subject enters or leaves the window, while a fixed quantile moves
+#'   only when the distribution does. No-op for other chart types.
 #' @param connect_centers Pointrange only: `TRUE` draws a line through the
 #'   interval centers in group order (the over-visits trajectory reading).
 #'   Default `FALSE`. Like `identity_line`, the gear's control speaks
 #'   "on"/"off" over the wire; the R state is a plain logical.
+#' @param band_window Distribution band windowing: `"adaptive"` (default)
+#'   grows the window at each grid point until it holds `band_size` distinct
+#'   subjects, which keeps the band's stability constant as a cohort thins;
+#'   `"fixed"` uses `band_size` as a half-width in x units. A fixed window is
+#'   simpler to explain but goes empty wherever the design is sparse -- with
+#'   scheduled visits 56 days apart, a narrow window lands in the gap between
+#'   them and the band tears into pieces. No-op for other chart types.
+#' @param band_size Distinct subjects per window (`band_window =
+#'   "adaptive"`, default 45) or the half-width in x units (`"fixed"`).
+#' @param band_min_n Minimum distinct subjects in a window; below it the band
+#'   is cut rather than drawn through thin air. Default 12.
+#' @param band_id Subject id column counted DISTINCT for the window and for
+#'   the reported n (e.g. `"USUBJID"`). `NULL` counts rows, which over-counts
+#'   a cohort whenever one subject contributes several observations to the
+#'   same window -- so set it for repeated-measures data.
+#' @param ref_hi,ref_lo Column names holding an upper / lower reference
+#'   limit, drawn as dashed lines (e.g. `"ANRHI"` / `"ANRLO"`). Unlike
+#'   `hlines`, which takes values, these name a COLUMN: an ADaM reference
+#'   range is per-record and varies by lab, sex and age, so the block reduces
+#'   the column to its median and the label carries the spread it reduced
+#'   from ("ANRHI 34 (32-43)"). `NULL` (default) or `""` draws nothing. A
+#'   limit the data never approaches only stretches the value axis so far
+#'   before it pins to the frame edge, so one irrelevant limit cannot flatten
+#'   the series.
 #' @param lo,hi Optional lower / upper value bounds used by the renderer to
 #'   clamp or annotate the value axis. Default `NULL` (auto).
 #' @param count_on Which label surfaces carry an observation count in
@@ -243,8 +270,28 @@ new_chart_block <- function(
     # `whiskers` is the box's outer rule; `connect_centers` joins the
     # point-range centers in slot order.
     summary = NULL,
-    whiskers = "tukey",
+    # NULL = per-mark default, like `summary` above: "tukey" for the boxplot
+    # (the textbook rule), "p10_p90" for the band. Saved boards carrying an
+    # explicit value are unaffected.
+    whiskers = NULL,
     connect_centers = FALSE,
+    # Distribution band (chart_type = "band"): the same statistics as the
+    # boxplot, computed in a window sliding along a CONTINUOUS x instead of
+    # per category level. The window is the only genuinely new idea here --
+    # `summary` / `whiskers` above carry over unchanged, so a band and a
+    # boxplot of the same data agree. Computed in R (compute_band_series),
+    # like the smoother, so the canvas and static_chart share one
+    # implementation. No-op for other chart types.
+    band_window = "adaptive",
+    band_size = 45,
+    band_min_n = 12,
+    band_id = NULL,
+    # Reference lines read from a COLUMN rather than given as values (which
+    # is what vlines/hlines take). An ADaM range (ANRHI, A1LO, ...) is
+    # per-record and genuinely varies, so the block reduces the column and
+    # the label admits it did. NULL / "" draws nothing.
+    ref_hi = NULL,
+    ref_lo = NULL,
     lo = NULL,
     hi = NULL,
     # Bar baseline mode. "zero" (default) = a normal bar (every bar starts at
@@ -359,7 +406,10 @@ new_chart_block <- function(
   # fixed-option select / logical with the same "on"/"off" wire format as
   # identity_line. chr_state heals a DAG-poisoned list() to NULL.
   summary <- chr_state(summary)
-  whiskers <- chr_state(whiskers) %||% "tukey"
+  # NULL stays NULL: the whisker rule is now a per-mark default like `summary`
+  # ("tukey" for the boxplot, "p10_p90" for the band), resolved where it is
+  # consumed. Pinning it to "tukey" here made the formal default unreachable.
+  whiskers <- chr_state(whiskers)
   connect_centers <- bool_state(connect_centers)
   filter_values <- null_state(filter_values)
   filter_range <- null_state(filter_range)
@@ -466,6 +516,13 @@ new_chart_block <- function(
         r_summary <- shiny::reactiveVal(summary)
         r_whiskers <- shiny::reactiveVal(whiskers)
         r_connect_centers <- shiny::reactiveVal(connect_centers)
+        # Distribution band (see constructor args).
+        r_band_window <- shiny::reactiveVal(band_window)
+        r_band_size <- shiny::reactiveVal(band_size)
+        r_band_min_n <- shiny::reactiveVal(band_min_n)
+        r_band_id <- shiny::reactiveVal(band_id)
+        r_ref_hi <- shiny::reactiveVal(ref_hi)
+        r_ref_lo <- shiny::reactiveVal(ref_lo)
         r_lo <- shiny::reactiveVal(lo)
         r_hi <- shiny::reactiveVal(hi)
         # Bar baseline mode + waterfall total-bar steps (see constructor args).
@@ -524,7 +581,11 @@ new_chart_block <- function(
             r_label(), r_tt_fields(), r_drill(), r_lo(), r_hi(),
             # Count-label id column: not a mapped aesthetic, but the browser
             # needs its values to count distinct ids per label group.
-            r_count_col()
+            r_count_col(),
+            # Band: the subject id backs the drill on an outlier point, and
+            # the reference columns are reduced R-side but shipped so the
+            # tooltip can quote them.
+            r_band_id(), r_ref_hi(), r_ref_lo()
           )))
           sb <- as.character(unlist(r_sort_by()))
           if (length(sb) && !sb %in% c("onset", "alpha")) {
@@ -575,6 +636,51 @@ new_chart_block <- function(
             json = jsonlite::toJSON(df_send, dataframe = "columns",
                                     digits = NA)
           )
+        })
+
+        # Distribution band, cached on exactly compute_band_series()'s
+        # inputs. Same reasoning as the smoother below: the windowed pass is
+        # the expensive part, so a presentation-only gear edit (title,
+        # dot size, ...) must not re-run it. The early return keeps the
+        # reactive off the data dependency entirely for every other chart
+        # type, so nothing changes for existing charts.
+        # A configured column name only counts when it is actually in the
+        # data: a stale mapping (upstream filter dropped the column, a
+        # restored board points at a renamed one) must degrade to "off"
+        # rather than error out of the whole chart.
+        col_in <- function(d, v) {
+          if (!is.null(v) && length(v) && nzchar(v) && v %in% names(d)) v
+          else NULL
+        }
+        r_band_series <- shiny::reactive({
+          if (!identical(r_chart_type(), "band")) return(NULL)
+          d <- plain_data()
+          shiny::req(is.data.frame(d))
+          tryCatch(compute_band_series(
+            d, r_x(), r_y(), r_color(), r_series(),
+            facet_by = col_in(d, r_facet()),
+            summary = r_summary() %||% "median_q1_q3",
+            whiskers = r_whiskers() %||% "p10_p90",
+            window = r_band_window() %||% "adaptive",
+            window_size = r_band_size() %||% 45,
+            min_n = r_band_min_n() %||% 12,
+            id_col = col_in(d, r_band_id())
+          ), error = function(e) {
+            warning("drilldown_chart band computation failed: ",
+                    conditionMessage(e), call. = FALSE)
+            NULL
+          })
+        })
+
+        # Reference lines reduced from their columns (see band_reference).
+        r_band_refs <- shiny::reactive({
+          if (!identical(r_chart_type(), "band")) return(NULL)
+          d <- plain_data()
+          shiny::req(is.data.frame(d))
+          refs <- list(hi = band_reference(d, col_in(d, r_ref_hi())),
+                       lo = band_reference(d, col_in(d, r_ref_lo())))
+          refs <- refs[!vapply(refs, is.null, logical(1L))]
+          if (length(refs) == 0L) NULL else refs
         })
 
         # Smoother overlay, cached on exactly compute_smoother_series()'s
@@ -699,8 +805,27 @@ new_chart_block <- function(
               # (resolved JS-side); connect_centers speaks the segmented
               # control's "on"/"off", like identity_line above.
               summary = r_summary(),
-              whiskers = r_whiskers(),
+              # Send the RESOLVED whisker rule, not the NULL. The gear's select
+              # falls back to its first option when the value is null, so an
+              # unset band would have shown "tukey" while R computed p10_p90 --
+              # a gear disagreeing with the canvas is worse than either alone.
+              # Same idea as _ensureDistributionMetric resolving `summary` into
+              # the config JS-side.
+              whiskers = r_whiskers() %||%
+                (if (identical(r_chart_type(), "band")) "p10_p90" else "tukey"),
               connect_centers = if (isTRUE(r_connect_centers())) "on" else "off",
+              # Distribution band. `band_series` carries the computed band
+              # itself (the JS side draws it, it does not derive it -- same
+              # split as `smoother_series` above); the four settings ride
+              # along so the gear controls show the right values.
+              band_window = r_band_window(),
+              band_size = r_band_size(),
+              band_min_n = r_band_min_n(),
+              band_id = present_role(r_band_id()),
+              ref_hi = present_role(r_ref_hi()),
+              ref_lo = present_role(r_ref_lo()),
+              band_series = r_band_series(),
+              band_refs = r_band_refs(),
               # Observation-count labels: which surface(s) get the "(n)" and the
               # DISTINCT id column to count (browser-side, per label group).
               count_on = r_count_on(), count_col = r_count_col(),
@@ -866,6 +991,24 @@ new_chart_block <- function(
             if (!is.null(msg$connect_centers)) {
               upd(r_connect_centers, bool_state(msg$connect_centers))
             }
+            # Distribution band. band_size / band_min_n arrive as strings
+            # from a number control; a non-numeric edit must not poison the
+            # window, so a failed parse keeps the current value.
+            if (!is.null(msg$band_window)) {
+              upd(r_band_window, msg$band_window)
+            }
+            if (!is.null(msg$band_size)) {
+              v <- suppressWarnings(as.numeric(msg$band_size))
+              if (is.finite(v) && v > 0) upd(r_band_size, v)
+            }
+            if (!is.null(msg$band_min_n)) {
+              v <- suppressWarnings(as.numeric(msg$band_min_n))
+              if (is.finite(v) && v >= 1) upd(r_band_min_n, v)
+            }
+            # nn(): "" (picker cleared) means "no id column" / "no line".
+            if (!is.null(msg$band_id)) upd(r_band_id, nn(msg$band_id))
+            if (!is.null(msg$ref_hi))  upd(r_ref_hi, nn(msg$ref_hi))
+            if (!is.null(msg$ref_lo))  upd(r_ref_lo, nn(msg$ref_lo))
             if (!is.null(msg$count_on))   upd(r_count_on, msg$count_on)
             # nn(): "" (picker cleared) means "no id column" -> row count.
             if (!is.null(msg$count_col))  upd(r_count_col, nn(msg$count_col))
@@ -1121,6 +1264,12 @@ new_chart_block <- function(
             summary = r_summary,
             whiskers = r_whiskers,
             connect_centers = r_connect_centers,
+            band_window = r_band_window,
+            band_size = r_band_size,
+            band_min_n = r_band_min_n,
+            band_id = r_band_id,
+            ref_hi = r_ref_hi,
+            ref_lo = r_ref_lo,
             count_on = r_count_on,
             count_col = r_count_col,
             lo = r_lo,
