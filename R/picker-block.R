@@ -267,23 +267,36 @@ normalize_pickers <- function(pickers) {
 # dependent fails with "no applicable method for 'filter' applied to an
 # object of class \"function\"" pointing at nothing. Bound once at the top of
 # the local() so the body below can keep reading `data`.
+#
+# The placeholder is built by hand rather than through blockr.core::bbquote,
+# which is what usually emits it. bbquote walks the expression for splices,
+# and that walk DELETES any NULL element of a call -- including the srcref
+# slot of a `function` definition, which is NULL exactly when the package
+# was installed (keep.source = FALSE) and a srcref under load_all(). This
+# body defines two functions, so bbquote crashed it on Connect while every
+# dev run passed: "'names' attribute [4] must be the same length as the
+# vector [3]", fatal on view switch. `.(data)` is a plain call, so base
+# bquote can splice it in verbatim.
+dot_slot <- function(nm) call(".", as.name(nm))
+
 make_picker_expr <- function(pickers) {
+  dot <- dot_slot("data")
   if (!length(pickers)) {
-    return(blockr.core::bbquote(identity(.(data))))
+    return(bquote(identity(.(dot)), list(dot = dot)))
   }
   # Inert pickers (choices cleared mid-edit) contribute nothing.
   pickers <- Filter(function(p) length(p$selected) > 0L, pickers)
   if (!length(pickers)) {
-    return(blockr.core::bbquote(identity(.(data))))
+    return(bquote(identity(.(dot)), list(dot = dot)))
   }
   # Copies run before the pivot: the multiple picker consumes (and drops)
   # source columns that a single picker may also offer, so singles must
   # read the still-wide data.
   is_mult <- vapply(pickers, function(p) isTRUE(p$multiple), logical(1))
   pickers <- c(pickers[!is_mult], pickers[is_mult])
-  blockr.core::bbquote(
+  bquote(
     local({
-      data <- .(data)
+      data <- .(dot)
       pks <- .(pks)
       out <- data
       for (p in pks) {
@@ -343,7 +356,7 @@ make_picker_expr <- function(pickers) {
       }
       out
     }),
-    list(pks = pickers)
+    list(pks = pickers, dot = dot)
   )
 }
 
