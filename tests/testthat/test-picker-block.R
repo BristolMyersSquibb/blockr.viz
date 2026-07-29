@@ -156,3 +156,30 @@ test_that("chained pickers keep the ORIGINAL source column in blockr_source", {
     expect_equal(attr(out$value, "blockr_source"), "Sepal.Width")
   })
 })
+
+test_that("the expr carries the data SLOT, not a free `data` symbol", {
+
+  # expr_type = "bquoted" means blockr.core substitutes `.()` placeholders
+  # and nothing else. A free `data` resolves at runtime (the block's eval env
+  # binds it) so the app looks fine, while the EXPORTED code carries the bare
+  # name and falls through to utils::data: the block evaluates to a FUNCTION
+  # and every dependent fails on an object of class "function".
+  df <- datasets::iris
+  pks <- list(
+    list(into = "value", choices = c("Sepal.Length", "Sepal.Width"),
+         selected = "Sepal.Width", multiple = FALSE)
+  )
+
+  for (ex in list(make_picker_expr(pks), make_picker_expr(list()))) {
+
+    # What export_code() does: substitute the slot with the upstream id.
+    sub <- do.call(bquote, list(ex, list(data = as.name("upstream"))))
+    e <- new.env(parent = globalenv())
+    e$upstream <- df
+    out <- eval(sub, e)
+    expect_s3_class(out, "data.frame")
+
+    # And unsubstituted it must FAIL, not quietly pick up utils::data.
+    expect_error(eval(ex, new.env(parent = globalenv())))
+  }
+})

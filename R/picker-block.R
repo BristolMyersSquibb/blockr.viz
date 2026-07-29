@@ -256,23 +256,34 @@ normalize_pickers <- function(pickers) {
 }
 
 # Build the transform expression: per picker a labelled copy, or (multiple)
-# a pivot into `into` + `<into>_measure`. `data` stays a free symbol.
+# a pivot into `into` + `<into>_measure`.
+#
+# The data slot is `.(data)`, NOT a free `data` symbol. The block is
+# expr_type = "bquoted", so blockr.core substitutes `.()` placeholders and
+# nothing else: a free `data` resolves at RUNTIME (the block's eval env
+# binds it) and so looks fine in the app, while the EXPORTED code carries
+# the bare name. In a generated script or report chunk it then falls
+# through to utils::data -- the block "evaluates" to a function, and every
+# dependent fails with "no applicable method for 'filter' applied to an
+# object of class \"function\"" pointing at nothing. Bound once at the top of
+# the local() so the body below can keep reading `data`.
 make_picker_expr <- function(pickers) {
   if (!length(pickers)) {
-    return(quote(identity(data)))
+    return(blockr.core::bbquote(identity(.(data))))
   }
   # Inert pickers (choices cleared mid-edit) contribute nothing.
   pickers <- Filter(function(p) length(p$selected) > 0L, pickers)
   if (!length(pickers)) {
-    return(quote(identity(data)))
+    return(blockr.core::bbquote(identity(.(data))))
   }
   # Copies run before the pivot: the multiple picker consumes (and drops)
   # source columns that a single picker may also offer, so singles must
   # read the still-wide data.
   is_mult <- vapply(pickers, function(p) isTRUE(p$multiple), logical(1))
   pickers <- c(pickers[!is_mult], pickers[is_mult])
-  bquote(
+  blockr.core::bbquote(
     local({
+      data <- .(data)
       pks <- .(pks)
       out <- data
       for (p in pks) {
