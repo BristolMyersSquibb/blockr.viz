@@ -39,6 +39,11 @@
 #' @param na_rep Character. Text for missing (`NA`) cells. Defaults to an em
 #'   dash, the clinical-table convention.
 #' @param font,font_size,font_color Base typography, applied to all parts.
+#'   `font` defaults from `getOption("blockr.viz.ft_font")`, which a theme
+#'   sets (`exhibits = list(ft_font = ...)`) and which the blockr.outline pptx
+#'   render sets from the reference deck's own font scheme -- so a table
+#'   printed into a house deck is set in that deck's face rather than in a
+#'   font the renderer picked. Unset, the blockr default applies.
 #' @param indent_width Points of left padding per `.indent` level (section
 #'   headers indent at their nesting depth with the same step).
 #' @param first_col_width,other_cols_width Column widths in inches, used
@@ -87,7 +92,8 @@
 #' @export
 static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
                      na_rep = "\u2014",
-                     font = "Inter", font_size = 14,
+                     font = getOption("blockr.viz.ft_font", "Inter"),
+                     font_size = 14,
                      font_color = "#444444",
                      indent_width = 20,
                      first_col_width = 5.65, other_cols_width = 3.5,
@@ -231,9 +237,17 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   } else {
     ""
   }
-  ft <- do.call(flextable::set_header_labels,
-                c(list(ft), stats::setNames(as.list(c(stub_label, leaf)),
-                                            c(stub_col, data_cols))))
+  # Through `values`, not through `...`: the labels are keyed by COLUMN NAME,
+  # and a column called `x` (or `values`) then matches set_header_labels()'s
+  # own formals instead of naming a column -- so `data.frame(x = ..)` failed
+  # with "supports only flextable objects", the label having been passed as
+  # the flextable. The list argument is the documented way to say the names
+  # are data, not arguments.
+  ft <- flextable::set_header_labels(
+    ft,
+    values = stats::setNames(as.list(c(stub_label, leaf)),
+                             c(stub_col, data_cols))
+  )
   if (has_spanner) {
     runs <- rle(top)
     ft <- flextable::add_header_row(

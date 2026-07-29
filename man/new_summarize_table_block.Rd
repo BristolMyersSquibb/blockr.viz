@@ -72,9 +72,16 @@ highlight -- optional \code{fields} (extra tooltip columns) and
 \code{size = "md"} / \code{"lg"} (a WIDER column when the swimlane is the
 centerpiece); a swimlane), \code{expr}
 (free R code over the group's
-rows; text). Each row takes \code{name}, \code{show} and
-\code{scope = "cell"} (repeats per facet level) or \code{"pooled"} (computed
-over all the group's rows, rendered once -- the "Overall" column).}
+rows; text). Each row takes \code{name}, \code{show} and its OWN optional
+\code{color} (a categorical column: the cell is split into one glyph per
+level, a bar into segments, a swimlane's events tinted) and \code{facet}
+(a categorical column: the column repeats once per level). Both are
+per column, so one column may split by severity while the next
+repeats per sex and a third carries neither. A \code{field} row never
+facets: group facts stand outside it. (The block-level \code{color} /
+\code{facet} below belong to the ranked-bar surface; a board saved when
+the summarize table shared them opens with them fanned down onto the
+rows they applied to, \code{scope = "pooled"} meaning "no facet".)}
 
 \item{by}{Grouping columns for the summaries path, outer to inner (at
 most two; the outer becomes the expandable parent). Unset, \code{group} /
@@ -82,9 +89,11 @@ most two; the outer becomes the expandable parent). Unset, \code{group} /
 
 \item{facet_layout}{Facet column order on the summaries path:
 \code{"by_summary"} (each summary's level copies adjacent on their shared
-scale -- the comparison reading, the default) or \code{"by_level"} (pooled
-columns and fields lead, then one spanning column group per facet
-level -- the Table-1 reading, with a two-row header).}
+scale -- the comparison reading, the default) or \code{"by_level"}
+(unfaceted columns and fields lead, then one spanning column group per
+facet level -- the Table-1 reading, with a two-row header). \code{"by_level"}
+needs every faceted column to map the SAME facet column; with several
+there are no shared groups to span and the layout stays \code{"by_summary"}.}
 
 \item{parent}{Optional outer grouping column (e.g. system organ class over
 preferred term): parents become expandable rows with children indented

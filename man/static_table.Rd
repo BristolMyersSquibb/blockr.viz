@@ -10,7 +10,7 @@ static_table(
   subtitle = NULL,
   caption = NULL,
   na_rep = "—",
-  font = "Inter",
+  font = getOption("blockr.viz.ft_font", "Inter"),
   font_size = 14,
   font_color = "#444444",
   indent_width = 20,
@@ -34,7 +34,12 @@ df's \code{label} / \code{subtitle} / \code{caption} attributes; \code{""} suppr
 \item{na_rep}{Character. Text for missing (\code{NA}) cells. Defaults to an em
 dash, the clinical-table convention.}
 
-\item{font, font_size, font_color}{Base typography, applied to all parts.}
+\item{font, font_size, font_color}{Base typography, applied to all parts.
+\code{font} defaults from \code{getOption("blockr.viz.ft_font")}, which a theme
+sets (\code{exhibits = list(ft_font = ...)}) and which the blockr.outline pptx
+render sets from the reference deck's own font scheme -- so a table
+printed into a house deck is set in that deck's face rather than in a
+font the renderer picked. Unset, the blockr default applies.}
 
 \item{indent_width}{Points of left padding per \code{.indent} level (section
 headers indent at their nesting depth with the same step).}
