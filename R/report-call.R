@@ -38,6 +38,44 @@ report_call.default <- function(x, var, ...) {
 #' @export
 report_call.chart_block <- function(x, var, ...) {
 
+  # Two styles of printed form:
+  #
+  # * "code" (the default): compile the state to a plain dplyr + ggplot2
+  #   pipeline via chart_expr() -- the document reproduces the chart with no
+  #   blockr dependency. A `data` snapshot passed by the caller (through
+  #   `...`) bakes data-dependent choices (colors, count labels, title
+  #   templates) into literals.
+  # * "static": the original blockr.viz::static_chart(<var>, <state...>)
+  #   call -- compact, but the document depends on blockr.viz.
+  #
+  # State chart_expr() cannot compile (an uncovered chart type) falls back
+  # to the static call, so a document never loses an exhibit.
+  style <- getOption("blockr.viz.report_style", "code")
+
+  if (identical(style, "code")) {
+    ex <- do.call(
+      chart_expr,
+      c(
+        list(
+          var = var,
+          data = list(...)[["data"]],
+          qualify = isTRUE(getOption("blockr.viz.report_qualify", TRUE))
+        ),
+        chart_report_state(x)
+      )
+    )
+    if (!is.null(ex)) {
+      return(ex)
+    }
+  }
+
+  static_chart_call(x, var)
+}
+
+# The original emission: a self-qualified static_chart() call over the
+# print-relevant state, defaults dropped.
+static_chart_call <- function(x, var) {
+
   # The committed block's state lives in its constructor closure (the same
   # values serialization reads); absent names simply fall away.
   env <- environment(x[["expr_server"]])
@@ -113,6 +151,29 @@ report_call.chart_block <- function(x, var, ...) {
          as.name(var)),
     args
   ))
+}
+
+# The chart block's full print-relevant state, as a named list for
+# chart_expr(). No default-dropping here: the compiler emits nothing for
+# state at its default anyway.
+chart_report_state <- function(x) {
+
+  env <- environment(x[["expr_server"]])
+
+  nms <- c(
+    "chart_type", "group", "color", "facet", "value", "func", "x", "y",
+    "series", "bar_mode", "orientation", "sort_by", "sort_dir", "count_on",
+    "count_col", "facet_scales", "box_points", "smoother", "identity_line",
+    "lo", "hi", "step", "vlines", "hlines", "line_width_mult",
+    "dot_size_mult", "title", "subtitle", "caption"
+  )
+
+  st <- lapply(stats::setNames(nms, nms), function(nm) {
+    v <- get0(nm, envir = env, ifnotfound = NULL)
+    if (is.function(v)) NULL else v
+  })
+
+  st[!vapply(st, is.null, logical(1L))]
 }
 
 # Default comparison that tolerates the length-1 / scalar and int / dbl
