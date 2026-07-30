@@ -63,15 +63,34 @@ test_that("identity plots values as-is, first row per category wins", {
   expect_setequal(bars$x, c(3, 9))
 })
 
-test_that("value sort puts the largest category on top of a horizontal bar", {
+test_that("category order mirrors the canvas orderGroups", {
   d <- data.frame(
     k = rep(c("small", "big", "mid"), c(1L, 5L, 3L))
   )
-  p <- static_chart(d, "bar", group = "k")
-  lv <- levels(built(p)$plot$data$k)
-  # ggplot draws the LAST level of a discrete y axis at the top.
-  expect_identical(lv[[length(lv)]], "big")
-  expect_identical(lv[[1L]], "small")
+
+  # An unset bar sort normalizes to value DESCENDING, largest at the TOP
+  # of a horizontal chart (_ensureFamilyDefaults; the canvas draws with
+  # inverse: true, ggplot puts the LAST level of a discrete y axis on top,
+  # so the level vector is reversed).
+  def <- static_chart(d, "bar", group = "k")
+  expect_identical(rev(levels(built(def)$plot$data$k)),
+                   c("big", "mid", "small"))
+
+  asc <- static_chart(d, "bar", group = "k", sort_by = "value",
+                  sort_dir = "asc")
+  expect_identical(rev(levels(built(asc)$plot$data$k)),
+                   c("small", "mid", "big"))
+
+  alpha <- static_chart(d, "bar", group = "k", sort_by = "alpha",
+                    sort_dir = "asc")
+  expect_identical(rev(levels(built(alpha)$plot$data$k)),
+                   c("big", "mid", "small"))
+
+  # "data" = first-seen order in the raw rows.
+  dat <- static_chart(d, "bar", group = "k", sort_by = "data",
+                  sort_dir = "asc")
+  expect_identical(rev(levels(built(dat)$plot$data$k)),
+                   c("small", "big", "mid"))
 })
 
 test_that("count labels annotate the category axis", {
@@ -90,11 +109,17 @@ test_that("level colors cycle the shared palette over sorted levels", {
   expect_identical(unname(cols), dd_palette()[1:3])
 })
 
-test_that("titles resolve templates, auto-compose and suppress", {
+test_that("titles resolve templates, auto tier and suppress", {
   d <- gg_iris()
 
+  # The auto tier (NULL) is the data's display attribute shown verbatim --
+  # the same contract the canvas receives; no attribute, no title band.
+  none <- static_chart(d, "bar", group = "Species", color = "Grp")
+  expect_null(none$labels$title)
+
+  attr(d, "label") <- "Iris rows"
   auto <- static_chart(d, "bar", group = "Species", color = "Grp")
-  expect_identical(auto$labels$title, "Count by Species and Grp")
+  expect_identical(auto$labels$title, "Iris rows")
 
   tpl <- static_chart(d, "bar", group = "Species", title = "All {n} rows")
   expect_identical(tpl$labels$title, "All 150 rows")

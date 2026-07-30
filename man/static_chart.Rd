@@ -16,17 +16,20 @@ static_chart(
   y = NULL,
   series = NULL,
   bar_mode = "stacked",
-  orientation = "horizontal",
-  sort_by = "value",
+  orientation = NULL,
+  sort_by = NULL,
   sort_dir = NULL,
   count_on = "off",
   count_col = NULL,
   facet_scales = "fixed",
   box_points = "none",
+  summary = NULL,
+  whiskers = NULL,
   smoother = "none",
   identity_line = FALSE,
   lo = NULL,
   hi = NULL,
+  connect = "monotone",
   step = NULL,
   vlines = NULL,
   hlines = NULL,
@@ -46,7 +49,9 @@ static_chart(
 as in \code{\link[=new_chart_block]{new_chart_block()}}.}
 
 \item{bar_mode, orientation, sort_by, sort_dir}{Bar layout and category
-ordering, as in \code{\link[=new_chart_block]{new_chart_block()}}.}
+ordering, as in \code{\link[=new_chart_block]{new_chart_block()}}. \code{orientation = NULL} resolves per
+type like the canvas: horizontal for bars, vertical for boxplots.
+\code{sort_by = NULL} means \code{"alpha"} (level order for factors).}
 
 \item{count_on, count_col}{Observation-count labels, as in
 \code{\link[=new_chart_block]{new_chart_block()}}.}
@@ -55,16 +60,28 @@ ordering, as in \code{\link[=new_chart_block]{new_chart_block()}}.}
 \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}'s \code{scales}: \code{"fixed"} (default), \code{"free_y"},
 \code{"free_x"} or \code{"free"}. Same argument as in \code{\link[=new_chart_block]{new_chart_block()}}.}
 
-\item{box_points, smoother, identity_line, lo, hi, step}{Family-specific
-options, as in \code{\link[=new_chart_block]{new_chart_block()}}.}
+\item{box_points, smoother, identity_line, lo, hi}{Family-specific options,
+as in \code{\link[=new_chart_block]{new_chart_block()}}.}
+
+\item{summary, whiskers}{Boxplot statistics, as in \code{\link[=new_chart_block]{new_chart_block()}}:
+\code{summary} is the box body (\code{NULL} = \code{"median_q1_q3"}), \code{whiskers} the
+outer rule (\code{NULL} = \code{"tukey"}; also \code{"min_max"}, \code{"p10_p90"}).}
+
+\item{connect}{Line interpolation, as in \code{\link[=new_chart_block]{new_chart_block()}}:
+\code{"monotone"} (default -- a monotone spline through the points),
+\code{"straight"}, or \code{"step-start"} / \code{"step-middle"} / \code{"step-end"}.}
+
+\item{step}{Deprecated spelling of the step modes (\code{"start"} /
+\code{"middle"} / \code{"end"}); folded into \code{connect} when that is unset.}
 
 \item{vlines, hlines}{Numeric helper-line positions.}
 
 \item{line_width_mult, dot_size_mult}{Size multipliers.}
 
 \item{title, subtitle, caption}{Title band text; \code{{token}} templates
-resolve against \code{data} (same resolver as the app), \code{NULL} composes an
-automatic title, \code{""} suppresses.}
+resolve against \code{data} (same resolver as the app), \code{NULL} falls back
+to the data's display attributes (\code{label} / \code{subtitle} / \code{caption},
+the canvas auto tier), \code{""} suppresses.}
 
 \item{scale_map}{A blockr.theme scale map binding columns to colors.
 Default \code{NULL} reads the board's \code{scale_map} option when called inside
@@ -91,7 +108,13 @@ engine the table/tile renderers use (\code{dd_table_aggregate}, golden-tested
 against the JS engine), colors cycle the same \code{dd_palette()} with
 the same level ordering (factor levels, else sorted unique), and a board
 scale map (arm colors) resolves through the same blockr.theme resolver.
-The look is print typography, not a pixel copy of the canvas.
+
+The look mirrors the canvas chart, constant for constant (chart.js is the
+source of truth): 11px \verb{#666} tick labels, dashed \verb{#f3f4f6} gridlines on
+the value axis only, \verb{#ccc} axis lines, the category-first-at-the-top
+horizontal layout, 60\%-band bars with no rounding and no value labels,
+boxes filled at the series color over a full-strength border, monotone
+interpolation on lines, and the bottom-centered legend band.
 
 Argument names mirror \code{\link[=new_chart_block]{new_chart_block()}} one to one, so the emitted call
 is literally the block's state. Interaction-only state (tooltips, drill,
@@ -105,7 +128,7 @@ uncovered chart type.
 
 For pptx decks the returned plot carries \code{pptx_width} / \code{pptx_height}
 attributes sized from the chart's fixed row geometry (28px per category
-row, 14px per series in grouped mode -- the canvas constants), so
-officer places each chart at its natural height instead of a one-size
-box.
+row, 14px per series + 12px gap in grouped mode -- the canvas
+constants), so officer places each chart at its natural height instead
+of a one-size box.
 }
