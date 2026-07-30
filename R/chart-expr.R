@@ -280,10 +280,10 @@ ce_col <- function(v, data) {
 # asked for -- one canonical form, one walker.
 ce_call <- function(fn, ...) {
   parts <- strsplit(fn, "::", fixed = TRUE)[[1L]]
-  head <- if (length(parts) == 2L) {
+  head <- if (length(parts) == 2L && !identical(parts[[1L]], "base")) {
     call("::", as.name(parts[[1L]]), as.name(parts[[2L]]))
   } else {
-    as.name(fn)
+    as.name(parts[[length(parts)]])
   }
   args <- list(...)
   as.call(c(list(head), args[!vapply(args, is.null, logical(1L))]))
