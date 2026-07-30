@@ -124,13 +124,17 @@ exhibit_html_output <- function() {
 #'   off -- the same title-tier convention as [static_table()].
 #' @param max_height CSS max-height of the scroll container, or `NULL`
 #'   (default) for none. A report exhibit is printed rather than scrolled.
+#' @param default_expanded Logical, or `NULL` (default) to decide from the
+#'   table's height: a table that fits opens expanded, one that does not opens
+#'   at its section rows. The threshold is
+#'   `getOption("blockr.viz.html_exhibit_expanded_max_rows")` (24).
 #' @param ... Passed to the underlying renderer.
 #'
 #' @return A [htmltools::tagList()].
 #' @seealso [static_exhibit()], [static_table()]
 #' @export
 html_exhibit <- function(x, title = NULL, caption = NULL, max_height = NULL,
-                         ...) {
+                         default_expanded = NULL, ...) {
 
   # Same entry sequence as static_table() and gt_table(): coerce, then spread
   # summary_table()'s long internals to the wide display grid (a no-op on
@@ -140,13 +144,85 @@ html_exhibit <- function(x, title = NULL, caption = NULL, max_height = NULL,
   if (is.null(title))   title   <- attr(data, "label")
   if (is.null(caption)) caption <- attr(data, "caption")
 
+  if (is.null(default_expanded)) {
+    default_expanded <- html_exhibit_expanded(data)
+  }
+
   html_table(
     data,
     title = title,
     caption = caption,
     max_height = max_height,
+    default_expanded = default_expanded,
     # A printed exhibit cannot be searched, so it does not offer to be.
     search = FALSE,
     ...
   )
+}
+
+# Should a printed table open expanded?
+#
+# The collapse script is inlined and Shiny-free, so it works in a standalone
+# file -- which makes "open collapsed" a real option for an exhibit rather
+# than a dashboard-only affordance. It earns its place on exactly one kind of
+# table: the deep one. An adverse-events table nested system organ class ->
+# preferred term runs to sixty rows and runs off the bottom of a slide;
+# opened at its class rows it IS the slide, and the reader expands the class
+# they asked about.
+#
+# It is decided from height, not from depth, because depth is not the problem.
+# A demographics table's level-1 sections are its variables (Age, Sex, Race):
+# collapsing those leaves three header rows and no numbers, which is worse
+# than a table that overflows. So a table that fits stays expanded whatever
+# its structure, and only one that cannot fit trades rows for reach.
+#
+# Height, not slide geometry: this renderer does not know whether it is
+# printing to a slide or to a scrolling document, and a table long enough to
+# need the treatment on a slide is long enough to benefit from it in a
+# document too.
+html_exhibit_expanded <- function(data) {
+
+  view <- tryCatch(annotated_structure_view(data), error = function(e) NULL)
+
+  if (is.null(view)) {
+    return(TRUE)
+  }
+
+  max_rows <- getOption("blockr.viz.html_exhibit_expanded_max_rows", 24L)
+
+  if (!is.numeric(max_rows) || !length(max_rows)) {
+    return(TRUE)
+  }
+
+  if (nrow(view$data) <= max_rows[[1L]]) {
+    return(TRUE)
+  }
+
+  # Tall enough to want collapsing -- but only if there is something to
+  # collapse INTO. A flat table stays expanded whatever its height, because
+  # "collapsed" would hide rows with nothing to click to get them back. Two
+  # structures are collapsible and BOTH have to count: synthesized section
+  # headers (section_cols) and rows that parent deeper rows through `.indent`,
+  # which is the dialect nest_hierarchies = TRUE produces. Reading only the
+  # first is why the flag looked inert on a nested AE table.
+  !html_table_collapsible(view$data, view$section_cols)
+}
+
+# Does this display grid render any collapsible row? Mirrors the two rules in
+# build_html_tbody(): a non-empty section axis, or a row immediately followed
+# by a more deeply indented one.
+html_table_collapsible <- function(data, section_cols = character()) {
+
+  if (length(section_cols)) {
+    return(TRUE)
+  }
+
+  if (!".indent" %in% names(data) || nrow(data) < 2L) {
+    return(FALSE)
+  }
+
+  ind <- suppressWarnings(as.integer(data[[".indent"]]))
+  ind[is.na(ind) | ind < 0L] <- 0L
+
+  any(ind[-1L] > ind[-length(ind)])
 }

@@ -1341,6 +1341,17 @@ html_table_js_template <- function() {
       h.classList.add('collapsed');
       syncAria(h);
     });
+    // Indent-derived groups too. A synthesized section header and a data row
+    // that parents deeper rows (system organ class over preferred term) are
+    // the same affordance to the reader and both collapse on click, so
+    // starting collapsed has to mean both -- this collapsed only the first,
+    // and a table whose nesting rides .indent opened fully expanded however
+    // the flag was set.
+    root.querySelectorAll('tr.blockr-indent-toggle').forEach(function(h){
+      h.classList.add('collapsed');
+      var btn = h.querySelector('.blockr-indent-btn');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    });
     recomputeCollapse();
   }
 

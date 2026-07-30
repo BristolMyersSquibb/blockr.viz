@@ -4,7 +4,14 @@
 \alias{html_exhibit}
 \title{Static HTML Renderer for a Display Table}
 \usage{
-html_exhibit(x, title = NULL, caption = NULL, max_height = NULL, ...)
+html_exhibit(
+  x,
+  title = NULL,
+  caption = NULL,
+  max_height = NULL,
+  default_expanded = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{A data frame or \code{\link[=as_annotated_df]{as_annotated_df()}}-coercible table object.}
@@ -15,6 +22,11 @@ off -- the same title-tier convention as \code{\link[=static_table]{static_table
 
 \item{max_height}{CSS max-height of the scroll container, or \code{NULL}
 (default) for none. A report exhibit is printed rather than scrolled.}
+
+\item{default_expanded}{Logical, or \code{NULL} (default) to decide from the
+table's height: a table that fits opens expanded, one that does not opens
+at its section rows. The threshold is
+\code{getOption("blockr.viz.html_exhibit_expanded_max_rows")} (24).}
 
 \item{...}{Passed to the underlying renderer.}
 }
