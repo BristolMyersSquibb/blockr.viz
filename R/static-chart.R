@@ -1256,10 +1256,14 @@ gg_helper_lines <- function(p, vlines, hlines, line_width_mult = 1) {
 
 # The value-axis title: the value column's label attribute (else its name),
 # "Count" for a row count -- chart.js valueTitle. The aggregation function
-# is NOT part of the axis title on the canvas.
-gg_value_label <- function(value_col, func, data) {
+# is NOT part of the axis title on the canvas. Callers without a data
+# frame at hand (chart_expr headless) fall back to the column name.
+gg_value_label <- function(value_col, func, data = NULL) {
   if (is.null(value_col)) {
     return("Count")
+  }
+  if (is.null(data)) {
+    return(value_col)
   }
   gg_axis_title(value_col, data)
 }

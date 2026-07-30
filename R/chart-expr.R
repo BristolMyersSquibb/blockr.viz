@@ -465,14 +465,20 @@ ce_labs <- function(axis_labs, st, chart_type, title, subtitle, caption) {
     if (nzchar(txt)) txt else NULL
   }
 
-  auto <- gg_auto_title(
-    chart_type, st$group, st$color, st$value_col, st$func, st$x, st$y
-  )
+  # The auto tier is the canvas contract: the data snapshot's display
+  # attributes (label / subtitle / caption) shown verbatim -- never a
+  # composed "Count by X" the on-screen chart would not show. No snapshot,
+  # no auto title.
+  attrs <- if (!is.null(st$data)) {
+    input_display_attrs(st$data)
+  } else {
+    list()
+  }
 
   band <- list(
-    title = resolve(title, auto),
-    subtitle = resolve(subtitle),
-    caption = resolve(caption)
+    title = resolve(title, attrs$label %||% ""),
+    subtitle = resolve(subtitle, attrs$subtitle %||% ""),
+    caption = resolve(caption, attrs$caption %||% "")
   )
   band <- band[!vapply(band, is.null, logical(1L))]
 

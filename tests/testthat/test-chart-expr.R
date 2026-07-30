@@ -137,7 +137,7 @@ test_that("count labels bake with a snapshot and recompute without", {
   expect_match(chart_code(live), "chart1$Grp", fixed = TRUE)
 })
 
-test_that("titles: templates bake with a snapshot, auto tier composes", {
+test_that("titles: templates bake with a snapshot, auto tier is the label", {
   d <- ce_iris()
 
   tpl <- ce_eval(chart_expr("chart1", "bar", group = "Species",
@@ -145,9 +145,18 @@ test_that("titles: templates bake with a snapshot, auto tier composes", {
                             qualify = TRUE), d)
   expect_identical(tpl$labels$title, "All 150 rows")
 
-  auto <- ce_eval(chart_expr("chart1", "bar", group = "Species",
+  # The auto tier (NULL) is the snapshot's display attribute shown
+  # verbatim, the same contract the canvas renders; no attribute (or no
+  # snapshot), no title band.
+  none <- ce_eval(chart_expr("chart1", "bar", group = "Species",
                              color = "Grp", qualify = TRUE), d)
-  expect_identical(auto$labels$title, "Count by Species and Grp")
+  expect_null(none$labels$title)
+
+  dl <- d
+  attr(dl, "label") <- "Iris rows"
+  auto <- ce_eval(chart_expr("chart1", "bar", group = "Species",
+                             color = "Grp", data = dl, qualify = TRUE), dl)
+  expect_identical(auto$labels$title, "Iris rows")
 
   off <- ce_eval(chart_expr("chart1", "bar", group = "Species", title = "",
                             qualify = TRUE), d)
