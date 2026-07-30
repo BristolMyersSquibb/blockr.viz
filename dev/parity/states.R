@@ -12,6 +12,17 @@ parity_datasets <- function() {
   )
 }
 
+# The same two datasets as dataset-block specs. A board feeding an outline
+# needs these rather than new_static_block(): the outline's Output view
+# EVALUATES the generated script, and a static block emits
+# `x <- get("data", envir = <environment>)`, which does not parse.
+parity_dataset_specs <- function() {
+  list(
+    adsl = list(dataset = "adam_adsl", package = "safetyData"),
+    orange = list(dataset = "Orange", package = "datasets")
+  )
+}
+
 parity_states <- list(
   bar_stack = list(
     data = "adsl",

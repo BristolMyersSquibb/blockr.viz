@@ -17,8 +17,13 @@ options(shiny.port = port, shiny.host = "0.0.0.0")
 options(blockr.dock_is_locked = FALSE)
 options(blockr.background_construction_delay = 0)
 
-root <- "/workspace"
-viz <- "/workspace/_worktrees/blockr.viz-static-charts"
+viz <- local({
+  a <- commandArgs(FALSE)
+  f <- sub("^--file=", "", a[grepl("^--file=", a)])
+  d <- if (length(f)) normalizePath(f[[1L]]) else "dev/parity/app.R"
+  dirname(dirname(dirname(d)))
+})
+root <- dirname(viz)
 
 for (d in c("blockr.core", "blockr.ui", "blockr.dplyr", "blockr.dock",
             "blockr.dag")) {

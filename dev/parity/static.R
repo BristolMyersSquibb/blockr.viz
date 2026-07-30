@@ -10,7 +10,12 @@ out <- if (length(args)) args[[1L]] else "/workspace/_scratch/static-chart-parit
 
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 
-viz <- "/workspace/_worktrees/blockr.viz-static-charts"
+viz <- local({
+  a <- commandArgs(FALSE)
+  f <- sub("^--file=", "", a[grepl("^--file=", a)])
+  d <- if (length(f)) normalizePath(f[[1L]]) else "dev/parity/static.R"
+  dirname(dirname(dirname(d)))
+})
 pkgload::load_all(viz, helpers = FALSE, attach_testthat = FALSE,
                   export_all = FALSE)
 

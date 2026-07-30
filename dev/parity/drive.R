@@ -12,7 +12,12 @@ out <- if (length(args) > 1L) args[[2L]] else "/workspace/_scratch/static-chart-
 
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 
-viz <- "/workspace/_worktrees/blockr.viz-static-charts"
+viz <- local({
+  a <- commandArgs(FALSE)
+  f <- sub("^--file=", "", a[grepl("^--file=", a)])
+  d <- if (length(f)) normalizePath(f[[1L]]) else "dev/parity/drive.R"
+  dirname(dirname(dirname(d)))
+})
 source(file.path(viz, "dev", "parity", "states.R"))
 
 library(chromote)
