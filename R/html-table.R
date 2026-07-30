@@ -39,6 +39,10 @@
 #'   collapsed and users click to reveal their contents.
 #' @param max_height CSS max-height of the scroll container. Default
 #'   `"600px"`. Set to `NULL` to disable scrolling.
+#' @param search Logical. Draw the search box (default `TRUE`). `FALSE` for a
+#'   table that cannot be typed into -- one printed into a report or a slide,
+#'   where an input the reader can never use is a promise the document does
+#'   not keep. With no search box and no title, the header bar goes too.
 #'
 #' @return A [htmltools::tagList()] containing the scoped style, the
 #'   `<table>` element, and the initialisation script. Drop into any
@@ -54,7 +58,8 @@ html_table <- function(data,
                        title = NULL,
                        caption = NULL,
                        default_expanded = TRUE,
-                       max_height = "600px") {
+                       max_height = "600px",
+                       search = TRUE) {
   stopifnot(is.data.frame(data))
 
   # The contract is the wide display grid; summary_table()'s internal long
@@ -102,22 +107,31 @@ html_table <- function(data,
     "overflow:auto;"
   }
 
-  header_div <- htmltools::tags$div(
-    class = "blockr-html-table-header",
+  has_title <- !is.null(title) && nzchar(title)
+
+  # The bar exists to hold the title and the search box. With neither there is
+  # nothing to hold, and an empty bar is a rule across the top of the table
+  # that reads as part of the design rather than as leftover chrome.
+  header_div <- if (has_title || isTRUE(search)) {
     htmltools::tags$div(
-      class = "blockr-html-table-title",
-      if (!is.null(title) && nzchar(title)) title else htmltools::HTML("&nbsp;")
-    ),
-    htmltools::tags$div(
-      class = "blockr-html-table-toolbar",
-      htmltools::tags$input(
-        type = "search",
-        class = "blockr-search",
-        placeholder = "Search\u2026",
-        `aria-label` = "Search table"
-      )
+      class = "blockr-html-table-header",
+      htmltools::tags$div(
+        class = "blockr-html-table-title",
+        if (has_title) title else htmltools::HTML("&nbsp;")
+      ),
+      if (isTRUE(search)) {
+        htmltools::tags$div(
+          class = "blockr-html-table-toolbar",
+          htmltools::tags$input(
+            type = "search",
+            class = "blockr-search",
+            placeholder = "Search\u2026",
+            `aria-label` = "Search table"
+          )
+        )
+      }
     )
-  )
+  }
 
   footer_div <- if (!is.null(caption) && nzchar(caption)) {
     htmltools::tags$div(class = "blockr-html-table-caption", caption)

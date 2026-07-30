@@ -55,12 +55,6 @@ static_exhibit <- function(x, ...) {
     return(x)
   }
 
-  # static_table() needs flextable; without it, the bare print (kable, under
-  # quarto's df-print) is the graceful outcome.
-  if (!requireNamespace("flextable", quietly = TRUE)) {
-    return(x)
-  }
-
   if (!can_coerce_annotated_df(x)) {
     return(x)
   }
@@ -71,10 +65,88 @@ static_exhibit <- function(x, ...) {
     return(x)
   }
 
+  # An HTML target gets the HTML table: same markup, same CSS, same column
+  # estimator as the app's own display table, whereas flextable exists here
+  # for the ONE thing HTML does not need (real OpenXML tables in pptx and
+  # docx). The route is decided from the output format rather than plumbed in
+  # from the caller, so a document that renders to both gets the right table
+  # in each without the report generator knowing this seam exists.
+  if (exhibit_html_output()) {
+    out <- tryCatch(html_exhibit(x, ...), error = function(e) NULL)
+    if (!is.null(out)) {
+      return(out)
+    }
+  }
+
+  # static_table() needs flextable; without it, the bare print (kable, under
+  # quarto's df-print) is the graceful outcome.
+  if (!requireNamespace("flextable", quietly = TRUE)) {
+    return(x)
+  }
+
   # A method that exists but refuses this particular value (composer's paged
   # listings, say) must not take the whole document down with it -- the bare
   # print still says something.
   out <- tryCatch(static_table(x, ...), error = function(e) NULL)
 
   if (is.null(out)) x else out
+}
+
+# TRUE when the exhibit is being printed into an HTML document. knitr is a
+# Suggests (and static_exhibit() is called outside knitr entirely by the
+# officer deck path, which evaluates the board's code in-process), so a
+# missing knitr means "not HTML" rather than an error. is_html_output() is
+# TRUE for html, revealjs and every other html-based format, FALSE for pptx,
+# docx and pdf -- exactly the split that matters here.
+exhibit_html_output <- function() {
+
+  if (!requireNamespace("knitr", quietly = TRUE)) {
+    return(FALSE)
+  }
+
+  isTRUE(tryCatch(knitr::is_html_output(), error = function(e) FALSE))
+}
+
+#' Static HTML Renderer for a Display Table
+#'
+#' The HTML counterpart of [static_table()]: the same annotated data frame,
+#' rendered as the hand-rolled HTML display table the app itself draws, with
+#' its styles and its collapse / search script inlined. Nothing in the
+#' output talks to Shiny, so the result is a self-contained exhibit that
+#' survives being written to a standalone HTML file.
+#'
+#' Called by [static_exhibit()] when the render target is HTML; exported so a
+#' document can ask for it explicitly.
+#'
+#' @param x A data frame or [as_annotated_df()]-coercible table object.
+#' @param title,caption Table title / footnote. `NULL` (default) takes them
+#'   from the annotated data frame's display attributes, `""` switches them
+#'   off -- the same title-tier convention as [static_table()].
+#' @param max_height CSS max-height of the scroll container, or `NULL`
+#'   (default) for none. A report exhibit is printed rather than scrolled.
+#' @param ... Passed to the underlying renderer.
+#'
+#' @return A [htmltools::tagList()].
+#' @seealso [static_exhibit()], [static_table()]
+#' @export
+html_exhibit <- function(x, title = NULL, caption = NULL, max_height = NULL,
+                         ...) {
+
+  # Same entry sequence as static_table() and gt_table(): coerce, then spread
+  # summary_table()'s long internals to the wide display grid (a no-op on
+  # already-wide input).
+  data <- fmt_to_wide(as_annotated_df(x))
+
+  if (is.null(title))   title   <- attr(data, "label")
+  if (is.null(caption)) caption <- attr(data, "caption")
+
+  html_table(
+    data,
+    title = title,
+    caption = caption,
+    max_height = max_height,
+    # A printed exhibit cannot be searched, so it does not offer to be.
+    search = FALSE,
+    ...
+  )
 }
