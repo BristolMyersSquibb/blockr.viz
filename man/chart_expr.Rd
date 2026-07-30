@@ -52,7 +52,9 @@ emitted code.}
 as in \code{\link[=new_chart_block]{new_chart_block()}}.}
 
 \item{bar_mode, orientation, sort_by, sort_dir}{Bar layout and category
-ordering, as in \code{\link[=new_chart_block]{new_chart_block()}}.}
+ordering, as in \code{\link[=new_chart_block]{new_chart_block()}}. \code{orientation = NULL} resolves per
+type like the canvas: horizontal for bars, vertical for boxplots.
+\code{sort_by = NULL} means \code{"alpha"} (level order for factors).}
 
 \item{count_on, count_col}{Observation-count labels, as in
 \code{\link[=new_chart_block]{new_chart_block()}}.}
@@ -61,16 +63,20 @@ ordering, as in \code{\link[=new_chart_block]{new_chart_block()}}.}
 \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}'s \code{scales}: \code{"fixed"} (default), \code{"free_y"},
 \code{"free_x"} or \code{"free"}. Same argument as in \code{\link[=new_chart_block]{new_chart_block()}}.}
 
-\item{box_points, smoother, identity_line, lo, hi, step}{Family-specific
-options, as in \code{\link[=new_chart_block]{new_chart_block()}}.}
+\item{box_points, smoother, identity_line, lo, hi}{Family-specific options,
+as in \code{\link[=new_chart_block]{new_chart_block()}}.}
+
+\item{step}{Deprecated spelling of the step modes (\code{"start"} /
+\code{"middle"} / \code{"end"}); folded into \code{connect} when that is unset.}
 
 \item{vlines, hlines}{Numeric helper-line positions.}
 
 \item{line_width_mult, dot_size_mult}{Size multipliers.}
 
 \item{title, subtitle, caption}{Title band text; \code{{token}} templates
-resolve against \code{data} (same resolver as the app), \code{NULL} composes an
-automatic title, \code{""} suppresses.}
+resolve against \code{data} (same resolver as the app), \code{NULL} falls back
+to the data's display attributes (\code{label} / \code{subtitle} / \code{caption},
+the canvas auto tier), \code{""} suppresses.}
 
 \item{data}{Optional data snapshot (the block's result). When supplied,
 data-dependent decisions are baked into the emitted code as literals;
