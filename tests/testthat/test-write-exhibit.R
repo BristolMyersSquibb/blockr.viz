@@ -260,6 +260,139 @@ test_that("an app-declared exhibit font beats the template's theme font", {
                fixed = TRUE)
 })
 
+# ---- pagination -----------------------------------------------------------
+
+# A table long enough that no font step saves it, in the sectioned shape, so
+# the section headers are there to be repeated.
+long_df <- function(n = 60L, sections = TRUE) {
+  out <- data.frame(
+    .label = sprintf("Preferred term %d", seq_len(n)),
+    .indent = 0L,
+    Placebo = sprintf("%d (%.1f%%)", seq_len(n), seq_len(n) / 2),
+    Drug = sprintf("%d (%.1f%%)", seq_len(n), seq_len(n) / 3),
+    check.names = FALSE
+  )
+  if (sections) {
+    out$.group1 <- "SOC"
+    out$.group1_level <- rep(c("Section one", "Section two", "Section three"),
+                             length.out = n)[order(rep(1:3, length.out = n))]
+  }
+  attr(out, "label") <- "A very long table"
+  out
+}
+
+test_that("a table too tall for one slide is carried onto the next", {
+  skip_if_not_installed("officer")
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  f <- tempfile(fileext = ".pptx")
+  on.exit(unlink(f), add = TRUE)
+
+  write_exhibit_pptx(long_df(), f, title = "Adverse events")
+  doc <- officer::read_pptx(f)
+  expect_gt(length(doc), 1L)
+
+  # Every slide repeats the header band, and says which page it is.
+  for (i in seq_len(length(doc))) {
+    xml <- pptx_part(f, sprintf("ppt/slides/slide%d.xml", i))
+    expect_match(xml, "Placebo", fixed = TRUE)
+    expect_match(xml, sprintf("(%d of %d)", i, length(doc)), fixed = TRUE)
+  }
+
+  # ... and no row is lost or printed twice.
+  seen <- unlist(lapply(seq_len(length(doc)), function(i) {
+    xml <- pptx_part(f, sprintf("ppt/slides/slide%d.xml", i))
+    grep("Preferred term", regmatches(
+      xml, gregexpr("Preferred term [0-9]+", xml)
+    )[[1L]], value = TRUE)
+  }))
+  expect_setequal(seen, long_df()$.label)
+})
+
+test_that("max_rows = NULL keeps the old one-slide overflow", {
+  skip_if_not_installed("officer")
+  skip_if_not_installed("flextable")
+
+  f <- tempfile(fileext = ".pptx")
+  on.exit(unlink(f), add = TRUE)
+
+  write_exhibit_pptx(long_df(), f, title = "Adverse events", max_rows = NULL)
+  expect_length(officer::read_pptx(f), 1L)
+})
+
+test_that("shrinking to fit beats splitting", {
+  skip_if_not_installed("officer")
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  f <- tempfile(fileext = ".pptx")
+  on.exit(unlink(f), add = TRUE)
+
+  # 21 rows overflow at 13pt and fit once the font steps down.
+  write_exhibit_pptx(long_df(21L, sections = FALSE), f, title = "AE")
+  expect_length(officer::read_pptx(f), 1L)
+  xml <- pptx_part(f, "ppt/slides/slide1.xml")
+  expect_false(grepl("sz=\"1300\"", xml, fixed = TRUE))
+  expect_match(xml, "sz=\"1200\"", fixed = TRUE)
+
+  # Denied the step, the same table splits instead.
+  g <- tempfile(fileext = ".pptx")
+  on.exit(unlink(g), add = TRUE)
+  write_exhibit_pptx(long_df(21L, sections = FALSE), g, title = "AE",
+                     min_font_size = 13)
+  expect_gt(length(officer::read_pptx(g)), 1L)
+})
+
+test_that("a section carried across a break repeats its heading", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  x <- long_df(60L)
+  ft <- static_table(x, title = "", fit_width = 12)
+  breaks <- pptx_page_breaks(ft, 6)
+  expect_gt(length(breaks), 1L)
+  expect_equal(utils::tail(breaks, 1L), nrow(x))
+  expect_true(all(diff(breaks) > 0))
+
+  # The continuation page opens with the section it is continuing, marked.
+  page <- pptx_slice_rows(x, (breaks[[1L]] + 1L):breaks[[2L]])
+  cont <- static_table(page, title = "", fit_width = 12, continued = TRUE)
+  expect_match(cont$body$dataset[[1L]][[1L]], "(continued)", fixed = TRUE)
+  # ... and the same page without the flag does not claim to be one.
+  plain <- static_table(page, title = "", fit_width = 12)
+  expect_false(grepl("(continued)", plain$body$dataset[[1L]][[1L]],
+                     fixed = TRUE))
+})
+
+test_that("breaks do not strand the tail of a section on the next slide", {
+  key <- rep(c("a", "b"), c(10L, 12L))
+  # A break at 21 would leave one row of "b" alone: the whole section moves.
+  expect_equal(pptx_hold_sections(c(21L, 22L), key), c(10L, 22L))
+  # A break with enough of the section left over is kept.
+  expect_equal(pptx_hold_sections(c(15L, 22L), key), c(15L, 22L))
+  # No sections, nothing to hold.
+  expect_equal(pptx_hold_sections(c(21L, 22L), NULL), c(21L, 22L))
+})
+
+test_that("row heights are measured, not counted", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  x <- demo_df()
+  x$.label[[1L]] <- paste(rep("A very long label indeed", 4L), collapse = " ")
+
+  wide <- static_table(x, title = "", fit_width = 12)
+  narrow <- static_table(x, title = "", col_widths = c(1, 1, 1))
+
+  # The same row is taller when its column cannot hold it on one line.
+  expect_gt(ft_part_heights(narrow)[[1L]], ft_part_heights(wide)[[1L]])
+  expect_equal(ft_line_count("one two three", 10, "Arial", 12), 1L)
+  expect_gt(ft_line_count("one two three", 0.4, "Arial", 12), 1L)
+  # A hard break is honoured.
+  expect_equal(ft_line_count("a\nb", 10, "Arial", 12), 2L)
+})
+
 # ---- template resolution --------------------------------------------------
 
 test_that("pptx_template() takes the first path that actually exists", {

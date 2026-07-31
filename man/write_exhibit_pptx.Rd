@@ -2,7 +2,7 @@
 % Please edit documentation in R/write-exhibit-pptx.R
 \name{write_exhibit_pptx}
 \alias{write_exhibit_pptx}
-\title{Write an Exhibit to a One-Slide PowerPoint Deck}
+\title{Write an Exhibit to a PowerPoint Deck}
 \usage{
 write_exhibit_pptx(
   x,
@@ -11,6 +11,8 @@ write_exhibit_pptx(
   subtitle = NULL,
   caption = NULL,
   template = NULL,
+  max_rows = "auto",
+  min_font_size = getOption("blockr.viz.ft_min_font_size", 11),
   ...
 )
 }
@@ -28,6 +30,27 @@ otherwise.}
 \item{template}{Path to a reference \code{.pptx}, or \code{NULL} (default) to resolve
 one as described above.}
 
+\item{max_rows}{How a table too tall for its slide is handled.
+\code{"auto"} (default) carries it onto further slides, cutting where the
+measured height of the rendered rows runs out of slide rather than at a
+row count, since a wrapped label costs a line that no row count knows
+about. A number cuts every \code{max_rows} input rows instead. \code{NULL} never
+splits, and a long table overflows the slide as it did before.
+
+Every page repeats the title, the column header band and the footnote,
+because a slide pulled out of the deck has to stand on its own; the title
+is marked \verb{(2 of 3)} and a section carried across a break repeats its
+heading marked \code{(continued)}. Column widths are measured once on the
+whole table and reused on every page, so the columns line up when the
+reader flips between slides. Breaks avoid stranding one or two rows of a
+section at the top of a slide by moving the whole section over.}
+
+\item{min_font_size}{Points. Before splitting, the table is asked to shrink:
+the font steps down to this floor and stops at the first size that fits
+one slide. One slide at 11pt beats two at 13pt. Defaults from
+\code{getOption("blockr.viz.ft_min_font_size")}. Ignored when \code{max_rows} is
+\code{NULL}.}
+
 \item{...}{Passed to \code{\link[=static_table]{static_table()}}.}
 }
 \value{
@@ -35,9 +58,10 @@ one as described above.}
 }
 \description{
 The pptx sibling of \code{\link[=write_exhibit_html]{write_exhibit_html()}} and \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}: the
-annotated data frame typeset by \code{\link[=static_table]{static_table()}} and placed on a single
-slide of the house template, at the same coordinates and in the same face
-the outline's deck export uses.
+annotated data frame typeset by \code{\link[=static_table]{static_table()}} and placed on a slide of
+the house template, at the same coordinates and in the same face the
+outline's deck export uses. A table too tall for one slide is carried over
+onto as many as it needs, each repeating the header (see \code{max_rows}).
 }
 \details{
 The table is a NATIVE PowerPoint table, not a picture: every cell is real

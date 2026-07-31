@@ -83,7 +83,7 @@ test_that("fit_width distributes columns to fill the slide width", {
   skip_if_not_installed("flextable")
 
   tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
-  ft <- static_table(tbl, title = "", fit_width = 12,
+  ft <- static_table(tbl, title = "", fit_width = 12, col_widths = "even",
                  first_col_width = 6, other_cols_width = 3)
   w <- ft$body$colwidths
   expect_equal(sum(w), 12, tolerance = 1e-6)
@@ -92,9 +92,84 @@ test_that("fit_width distributes columns to fill the slide width", {
   expect_equal(unname(w[-1L]), rep(2, 3), tolerance = 1e-6)
 
   # option default is read when the argument is omitted
-  withr::local_options(blockr.viz.ft_fit_width = 9)
+  withr::local_options(blockr.viz.ft_fit_width = 9,
+                       blockr.viz.ft_col_widths = "even")
   ft2 <- static_table(tbl, title = "", first_col_width = 6)
   expect_equal(sum(ft2$body$colwidths), 9, tolerance = 1e-6)
+})
+
+test_that("measured widths size every column to its own text", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  # Short stubs against wide count columns: the even split hands the stub
+  # half the slide anyway and starves the counts, the measured one does not.
+  tbl <- data.frame(
+    .label = c("Nausea", "Vomiting"),
+    `Placebo (N=143)` = c("143 (100.0%)", "12 (8.4%)"),
+    `Drug A (N=141)` = c("140 (99.3%)", "9 (6.4%)"),
+    check.names = FALSE
+  )
+
+  even <- static_table(tbl, title = "", fit_width = 5,
+                       col_widths = "even")$body$colwidths
+  meas <- static_table(tbl, title = "", fit_width = 5)$body$colwidths
+
+  expect_equal(sum(meas), 5, tolerance = 1e-6)
+  expect_length(meas, 3L)
+  expect_lt(meas[[1L]], even[[1L]] / 2)      # the stub gives width back
+  expect_gt(meas[[2L]], even[[2L]])          # the counts get it
+
+  # No data column is narrower than its own widest cell, which is the whole
+  # point: a wrapped count costs a row of height and a line of legibility.
+  pad <- ft_side_padding() / 72
+  need <- vapply(tbl[-1L], function(x) max(ft_text_widths(x, "Inter", 13)),
+                 numeric(1L)) + pad
+  expect_true(all(meas[-1L] >= need))
+
+  # A long stub is not capped at half the slide: it asks for what it needs.
+  long <- tbl
+  long$.label <- c("Subjects with at least one treatment emergent adverse event",
+                   "Nausea")
+  w <- static_table(long, title = "", fit_width = 10)$body$colwidths
+  expect_gt(w[[1L]], 5)
+  expect_true(all(w[-1L] >= need))
+})
+
+test_that("a table narrower than the slide keeps its natural width", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  tbl <- data.frame(.label = c("A", "B"), n = c("1", "2"))
+  w <- static_table(tbl, title = "", subtitle = "", fit_width = 12)
+  expect_lt(sum(w$body$colwidths), 12)
+
+  # ... but grows to hold a title, which is merged across the whole width
+  wide <- static_table(
+    tbl, subtitle = "",
+    title = "Subjects by treatment arm and analysis population",
+    fit_width = 12
+  )
+  expect_gt(sum(wide$body$colwidths), sum(w$body$colwidths))
+  expect_lte(sum(wide$body$colwidths), 12)
+})
+
+test_that("measured widths survive tables that cannot be measured", {
+  skip_if_not_installed("flextable")
+
+  # No data columns, no rows, and more columns than the slide can hold: none
+  # of these may error, and all of them must still fill the budget.
+  expect_s3_class(static_table(data.frame(.label = c("a", "b")),
+                               fit_width = 10), "flextable")
+
+  empty <- static_table(data.frame(.label = character(), n = character()),
+                        title = "", subtitle = "", fit_width = 10)
+  expect_true(all(empty$body$colwidths > 0))
+
+  many <- static_table(as.data.frame(matrix(1:60, 2L, 30L)), title = "",
+                       fit_width = 12)
+  expect_equal(sum(many$body$colwidths), 12, tolerance = 1e-6)
+  expect_true(all(many$body$colwidths > 0))
 })
 
 test_that("plain data frames render without annotations", {

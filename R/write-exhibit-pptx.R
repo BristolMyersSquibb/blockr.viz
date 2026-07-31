@@ -1,9 +1,10 @@
-#' Write an Exhibit to a One-Slide PowerPoint Deck
+#' Write an Exhibit to a PowerPoint Deck
 #'
 #' The pptx sibling of [write_exhibit_html()] and [write_annotated_xlsx()]: the
-#' annotated data frame typeset by [static_table()] and placed on a single
-#' slide of the house template, at the same coordinates and in the same face
-#' the outline's deck export uses.
+#' annotated data frame typeset by [static_table()] and placed on a slide of
+#' the house template, at the same coordinates and in the same face the
+#' outline's deck export uses. A table too tall for one slide is carried over
+#' onto as many as it needs, each repeating the header (see `max_rows`).
 #'
 #' The table is a NATIVE PowerPoint table, not a picture: every cell is real
 #' text an editor can retype, restyle and re-colour. That is what officer buys
@@ -34,6 +35,25 @@
 #'   otherwise.
 #' @param template Path to a reference `.pptx`, or `NULL` (default) to resolve
 #'   one as described above.
+#' @param max_rows How a table too tall for its slide is handled.
+#'   `"auto"` (default) carries it onto further slides, cutting where the
+#'   measured height of the rendered rows runs out of slide rather than at a
+#'   row count, since a wrapped label costs a line that no row count knows
+#'   about. A number cuts every `max_rows` input rows instead. `NULL` never
+#'   splits, and a long table overflows the slide as it did before.
+#'
+#'   Every page repeats the title, the column header band and the footnote,
+#'   because a slide pulled out of the deck has to stand on its own; the title
+#'   is marked `(2 of 3)` and a section carried across a break repeats its
+#'   heading marked `(continued)`. Column widths are measured once on the
+#'   whole table and reused on every page, so the columns line up when the
+#'   reader flips between slides. Breaks avoid stranding one or two rows of a
+#'   section at the top of a slide by moving the whole section over.
+#' @param min_font_size Points. Before splitting, the table is asked to shrink:
+#'   the font steps down to this floor and stops at the first size that fits
+#'   one slide. One slide at 11pt beats two at 13pt. Defaults from
+#'   `getOption("blockr.viz.ft_min_font_size")`. Ignored when `max_rows` is
+#'   `NULL`.
 #' @param ... Passed to [static_table()].
 #'
 #' @return `file`, invisibly.
@@ -48,7 +68,11 @@
 #' unlink(f)
 #' @export
 write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
-                               caption = NULL, template = NULL, ...) {
+                               caption = NULL, template = NULL,
+                               max_rows = "auto",
+                               min_font_size =
+                                 getOption("blockr.viz.ft_min_font_size", 11),
+                               ...) {
 
   if (!requireNamespace("officer", quietly = TRUE)) {
     stop("write_exhibit_pptx() needs the 'officer' package.", call. = FALSE)
@@ -97,22 +121,101 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
   # table when the placeholder IS there prints it twice.
   slide_title <- has_title && pptx_layout_has_title(doc, layout, master)
 
-  ft <- static_table(
-    x,
-    title = if (slide_title) "" else title,
-    subtitle = subtitle,
-    caption = caption,
-    ...
-  )
+  # Sliced from here on, so the table has to be a data frame: a producer
+  # object is coerced once, up front, rather than once per page.
+  x <- fmt_to_wide(as_annotated_df(x))
+
+  args <- list(...)
+  build <- function(rows = NULL, size = NULL, widths = NULL,
+                    continued = FALSE, page = NULL) {
+    do.call(static_table, c(
+      list(
+        if (is.null(rows)) x else pptx_slice_rows(x, rows),
+        title = if (slide_title) "" else pptx_page_title(title, page),
+        subtitle = subtitle,
+        caption = caption,
+        continued = continued
+      ),
+      if (!is.null(size)) list(font_size = size),
+      if (!is.null(widths)) list(col_widths = widths),
+      args
+    ))
+  }
+
+  slide_h <- tryCatch(officer::slide_size(doc)$height,
+                      error = function(e) 7.5)
+  slide_w <- tryCatch(officer::slide_size(doc)$width,
+                      error = function(e) 13.333)
+  top <- args$pptx_top %||% 1.1
+  budget <- slide_h - top - 0.4
+
+  ft <- build()
+  size <- args$font_size %||% getOption("blockr.viz.ft_font_size", 13)
+
+  # A table that does not fit is first asked to shrink, and only split when
+  # shrinking cannot save it: one slide at 11pt beats two at 13pt, and four
+  # slides at 9pt beat nothing at all.
+  if (!is.null(max_rows) && !pptx_fits(ft, budget) &&
+        size > min_font_size) {
+    for (s in seq(size - 1, min_font_size)) {
+      cand <- build(size = s)
+      if (pptx_fits(cand, budget)) {
+        ft <- cand
+        size <- s
+        break
+      }
+    }
+  }
+
+  pages <- list(ft)
+  if (!is.null(max_rows) && !pptx_fits(ft, budget)) {
+    breaks <- if (is.numeric(max_rows)) {
+      pptx_fixed_breaks(nrow(x), as.integer(max_rows))
+    } else {
+      pptx_page_breaks(ft, budget)
+    }
+    key <- pptx_section_key(x)
+    breaks <- pptx_hold_sections(breaks, key)
+    widths <- ft$body$colwidths
+    from <- c(1L, utils::head(breaks, -1L) + 1L)
+    # Only a page that opens INSIDE a section says "(continued)". One that
+    # opens on a fresh heading is not a continuation of anything, and saying
+    # so would be a lie the reader has no way to check.
+    cont <- vapply(from, function(a) {
+      !is.null(key) && a > 1L && identical(key[[a]], key[[a - 1L]])
+    }, logical(1L))
+    pages <- Map(
+      function(a, b, i) {
+        build(rows = a:b, size = size, widths = widths,
+              continued = cont[[i]], page = c(i, length(breaks)))
+      },
+      from, breaks, seq_along(breaks)
+    )
+  }
+
+  for (i in seq_along(pages)) {
+    doc <- pptx_add_table_slide(
+      doc, pages[[i]], layout, master, slide_w, top,
+      title = if (slide_title) {
+        pptx_page_title(title, if (length(pages) > 1L) c(i, length(pages)))
+      }
+    )
+  }
+
+  print(doc, target = file)
+  invisible(file)
+}
+
+# One slide carrying one (page of a) table, centred on the slide.
+pptx_add_table_slide <- function(doc, ft, layout, master, slide_w, top,
+                                 title = NULL) {
 
   doc <- officer::add_slide(doc, layout = layout, master = master)
 
-  if (slide_title) {
+  if (!is.null(title)) {
     doc <- tryCatch(
-      officer::ph_with(
-        doc, title,
-        location = officer::ph_location_type(type = "title")
-      ),
+      officer::ph_with(doc, title,
+                       location = officer::ph_location_type(type = "title")),
       error = function(e) doc
     )
   }
@@ -121,17 +224,151 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
     flextable::flextable_dim(ft),
     error = function(e) list(widths = 11.9, heights = 3)
   )
-  doc <- officer::ph_with(
+  # Centred rather than left-flush: a table sized to its own content (which is
+  # what col_widths = "measured" does when the table is narrower than the
+  # slide) reads as placed when it is centred and as fallen over when it is
+  # not. A full-width table lands back on the template's own left margin.
+  officer::ph_with(
     doc, ft,
     location = officer::ph_location(
-      left = attr(ft, "pptx_left") %||% 0.4,
-      top = attr(ft, "pptx_top") %||% 1.1,
+      left = max(0.25, (slide_w - dim$widths) / 2),
+      top = attr(ft, "pptx_top") %||% top,
       width = dim$widths, height = dim$heights
     )
   )
+}
 
-  print(doc, target = file)
-  invisible(file)
+# "Title (2 of 3)" on the continuation slides, plain on a table that fits.
+pptx_page_title <- function(title, page = NULL) {
+  if (is.null(page) || !is.character(title) || !length(title)) {
+    return(title)
+  }
+  sprintf("%s (%d of %d)", title, page[[1L]], page[[2L]])
+}
+
+# Does the whole thing clear the vertical budget, header band and footnote
+# included?
+pptx_fits <- function(ft, budget) {
+  h <- sum(ft_part_heights(ft, "header"), ft_part_heights(ft, "body"),
+           ft_part_heights(ft, "footer"))
+  !is.finite(h) || h <= budget
+}
+
+# Last input row of each page, decided on the measured height of the rendered
+# rows rather than on a row count. Every page re-emits the header band and the
+# footnote (that is the point of splitting rather than overflowing), and every
+# page after the first also re-emits the section headers it opens inside, so
+# the budget for a continuation page is smaller than for the first.
+pptx_page_breaks <- function(ft, budget) {
+
+  h <- ft_part_heights(ft, "body")
+  map <- attr(ft, "row_map")
+
+  if (!length(h) || !length(map) || length(h) != length(map) ||
+        !any(!is.na(map))) {
+    return(max(1L, sum(!is.na(map))))
+  }
+
+  avail <- budget - sum(ft_part_heights(ft, "header")) -
+    sum(ft_part_heights(ft, "footer"))
+  n_lvl <- which(!is.na(map))[[1L]] - 1L
+  sec_h <- if (any(is.na(map))) max(h[is.na(map)]) else 0
+  avail_cont <- avail - n_lvl * sec_h
+
+  n <- length(h)
+  out <- integer(0)
+  i <- 1L
+
+  while (i <= n) {
+    cap <- if (length(out)) avail_cont else avail
+    used <- 0
+    last <- NA_integer_
+    j <- i
+    while (j <= n) {
+      if (used + h[[j]] > cap && !is.na(last)) break
+      used <- used + h[[j]]
+      if (!is.na(map[[j]])) last <- map[[j]]
+      j <- j + 1L
+    }
+    if (is.na(last)) {
+      # A single row taller than the whole slide: take it anyway rather than
+      # loop forever, and let it overflow.
+      last <- min(map[!is.na(map) & seq_len(n) >= i])
+    }
+    out <- c(out, last)
+    nxt <- which(!is.na(map) & map > last)
+    if (!length(nxt)) break
+    i <- nxt[[1L]]
+  }
+
+  out
+}
+
+pptx_fixed_breaks <- function(n_row, per) {
+  per <- max(1L, per)
+  unique(c(seq(per, n_row, by = per), n_row))
+}
+
+# The section each input row belongs to, or NULL when the table has none.
+pptx_section_key <- function(x) {
+  cols <- tryCatch(annotated_structure_view(x)$section_cols,
+                   error = function(e) character())
+  if (!length(cols)) {
+    return(NULL)
+  }
+  do.call(paste, c(lapply(cols, function(cn) as.character(x[[cn]])),
+                   list(sep = "\r")))
+}
+
+# Move a break back when it would leave a section with one or two rows
+# stranded at the top of the next slide. The whole section goes over instead,
+# which is the same fix as not leaving a heading alone at the foot of a slide.
+pptx_hold_sections <- function(breaks, key, keep = 2L) {
+
+  if (is.null(key) || length(breaks) < 2L) {
+    return(breaks)
+  }
+
+  n <- length(key)
+  for (i in seq_len(length(breaks) - 1L)) {
+    at <- breaks[[i]]
+    if (at >= n) next
+    tail_n <- sum(key[(at + 1L):n] == key[[at]] &
+                    cumsum(key[(at + 1L):n] != key[[at]]) == 0L)
+    if (tail_n == 0L || tail_n >= keep) next
+    start <- at - sum(rev(key[seq_len(at)]) == key[[at]]) + 1L
+    lower <- if (i == 1L) 1L else breaks[[i - 1L]] + 1L
+    if (start > lower) breaks[[i]] <- start - 1L
+  }
+
+  # Trailing breaks can now repeat or run backwards; drop what is no longer a
+  # boundary.
+  breaks <- breaks[c(TRUE, diff(breaks) > 0)]
+  if (utils::tail(breaks, 1L) < n) breaks <- c(breaks, n)
+  breaks
+}
+
+# Row subset that keeps what `[.data.frame` throws away: the column labels the
+# annotated-df contract carries, and the table's own title / subtitle /
+# caption attributes.
+pptx_slice_rows <- function(x, i) {
+
+  out <- x[i, , drop = FALSE]
+
+  for (nm in names(x)) {
+    a <- attributes(x[[nm]])
+    for (k in setdiff(names(a), c("names", "dim", "dimnames", "class",
+                                  "levels", "row.names"))) {
+      attr(out[[nm]], k) <- a[[k]]
+    }
+  }
+  for (nm in setdiff(names(attributes(x)),
+                     c("names", "row.names", "class"))) {
+    attr(out, nm) <- attr(x, nm)
+  }
+
+  rownames(out) <- NULL
+  out
 }
 
 # The reference deck this export styles against: the caller's, the app's, the

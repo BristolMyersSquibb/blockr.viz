@@ -1,6 +1,6 @@
 Package: blockr.viz
 Title: Visualization and Render Blocks for Blockr
-Version: 0.2.42
+Version: 0.2.43
 Authors@R:
     person(given = "Christoph",
            family = "Sax",
@@ -52,6 +52,7 @@ Suggests:
     rmarkdown,
     scales,
     shinytest2,
+    systemfonts,
     testthat (>= 3.0.0),
     withr
 Remotes:

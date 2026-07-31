@@ -1281,9 +1281,9 @@ table_guidance <- function() {
 #'   [write_annotated_xlsx()] for a styled spreadsheet (needs `openxlsx`),
 #'   [write_exhibit_html()] for a self-contained page that keeps the table's
 #'   sorting and section collapse (opened out: a downloaded page scrolls, so
-#'   every section starts expanded), and [write_exhibit_pptx()] for a one-slide
-#'   deck carrying a native, editable PowerPoint table (needs `officer` and
-#'   `flextable`). One writable format renders a button, several render a menu;
+#'   every section starts expanded), and [write_exhibit_pptx()] for a deck
+#'   carrying a native, editable PowerPoint table, over as many slides as it
+#'   takes (needs `officer` and `flextable`). One writable format renders a button, several render a menu;
 #'   a format whose writer is not installed is left out.
 #' @param excel_download,html_download,pptx_download LEGACY per-format
 #'   toggles, folded on construction: downloads were three switches before they
@@ -1656,7 +1656,7 @@ new_table_block <- function(rowname = NULL,
         # formats the block turns on. Each one writes the SAME rendered
         # (annotated) frame the table shows, through the format's own writer --
         # write_annotated_xlsx() for the spreadsheet, write_exhibit_html() for
-        # a self-contained page, write_exhibit_pptx() for a one-slide deck (the
+        # a self-contained page, write_exhibit_pptx() for a deck (the
         # exhibit machinery blockr.outline's report and deck exports use, so a
         # table downloaded here and the same table in a deck are one artifact).
         #

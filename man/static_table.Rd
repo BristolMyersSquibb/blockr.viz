@@ -11,13 +11,15 @@ static_table(
   caption = NULL,
   na_rep = "—",
   font = getOption("blockr.viz.ft_font", "Inter"),
-  font_size = 14,
+  font_size = getOption("blockr.viz.ft_font_size", 13),
   font_color = "#444444",
   indent_width = 20,
   first_col_width = 5.65,
   other_cols_width = 3.5,
   fit_width = getOption("blockr.viz.ft_fit_width", NULL),
+  col_widths = getOption("blockr.viz.ft_col_widths", "measured"),
   auto_width = FALSE,
+  continued = FALSE,
   header_bg = getOption("blockr.viz.ft_header_bg", viz_palette("bands")),
   pptx_left = 0.4,
   pptx_top = 1.1
@@ -35,6 +37,10 @@ df's \code{label} / \code{subtitle} / \code{caption} attributes; \code{""} suppr
 dash, the clinical-table convention.}
 
 \item{font, font_size, font_color}{Base typography, applied to all parts.
+\code{font_size} is in points and defaults from
+\code{getOption("blockr.viz.ft_font_size")}, 13 unset: a deck table is read
+from a screen, and the two points under the old 14 are two more rows on
+the slide.
 \code{font} defaults from \code{getOption("blockr.viz.ft_font")}, which a theme
 sets (\code{exhibits = list(ft_font = ...)}) and which the blockr.outline pptx
 render sets from the reference deck's own font scheme -- so a table
@@ -51,13 +57,23 @@ widescreen template the topline decks use; pass smaller values for the
 
 \item{fit_width}{Optional total table width in inches (usually the
 slide's usable content width). When set, the columns are distributed to
-fill it exactly -- the stub keeps \code{first_col_width} (capped at half the
-budget), the data columns share the rest -- so a wide table fits the
-slide instead of overflowing. Defaults from
+fill it exactly, so a wide table fits the slide instead of overflowing
+(\code{col_widths} says how). Defaults from
 \code{getOption("blockr.viz.ft_fit_width")}, which the blockr.outline pptx /
 docx render sets from the reference template's slide size, so a table
 printed in a deck fits without the caller sizing it. Unset for html /
 pdf, where the natural widths apply.}
+
+\item{col_widths}{How \code{fit_width} is split, \code{"measured"} (default) or
+\code{"even"}. Measured asks every column what its own text needs at the
+current font and gives the data columns enough that a cell never wraps
+and a header never breaks inside a word, leaving the rest to the row
+stub, which is the one column whose text is prose and wraps gracefully.
+Even is the older positional rule (the stub takes \code{first_col_width}
+capped at half the slide, the data columns share the remainder equally),
+which is wrong whenever the stub is shorter or the data columns wider
+than those constants assume. Defaults from
+\code{getOption("blockr.viz.ft_col_widths")}.}
 
 \item{auto_width}{Logical. \code{TRUE} runs \code{\link[flextable:autofit]{flextable::autofit()}} instead of
 the manual widths. flextable never fits to the slide on its own, so
