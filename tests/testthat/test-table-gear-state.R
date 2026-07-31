@@ -77,36 +77,40 @@ test_that("aggregated display keeps the RAW input schema on data-dt-cols", {
   })
 })
 
-test_that("excel pill without openxlsx renders a disabled button + hint", {
+test_that("a format whose writer is missing is left out of the menu", {
   df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
-  blk <- new_table_block(excel_download = TRUE)
+  blk <- new_table_block(download = TRUE)
 
+  # Nobody asked for the spreadsheet specifically -- the download toggle did --
+  # so an entry that could only explain why it does not work is noise. (It was
+  # shown disabled while each format had its own pill: there, a toggle you had
+  # just switched on that rendered nothing read as broken.)
   local_mocked_bindings(dt_has_openxlsx = function() FALSE)
   testServer(blk$expr_server, args = list(data = reactive(df)), {
     session$flushReact()
     html <- as.character(output$dt_download$html)
-    expect_true(grepl("blockr-dl-xlsx--off", html))
-    expect_true(grepl("requires the openxlsx package", html))
-    expect_true(grepl("aria-disabled=\"true\"", html))
-    # No download binding: there is no handler to reach.
-    expect_false(grepl("shiny-download-link", html))
+    expect_false(grepl("Excel (.xlsx)", html, fixed = TRUE))
+    expect_false(grepl("--off", html, fixed = TRUE))
+    # HTML needs no package of its own, so the control never empties.
+    expect_true(grepl("dl_html", html))
   })
 })
 
-test_that("excel pill with openxlsx renders the live download link", {
+test_that("downloads on renders every format the machine can write", {
   skip_if_not_installed("openxlsx")
   df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
-  blk <- new_table_block(excel_download = TRUE)
+  blk <- new_table_block(download = TRUE)
 
   testServer(blk$expr_server, args = list(data = reactive(df)), {
     session$flushReact()
     html <- as.character(output$dt_download$html)
     expect_true(grepl("shiny-download-link", html))
-    expect_false(grepl("blockr-dl-xlsx--off", html))
+    expect_true(grepl("Excel (.xlsx)", html, fixed = TRUE))
+    expect_true(grepl("Web page (.html)", html, fixed = TRUE))
   })
 })
 
-test_that("no download format on renders no control at all", {
+test_that("downloads off renders no control at all", {
   df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
   blk <- new_table_block()
 
@@ -116,12 +120,16 @@ test_that("no download format on renders no control at all", {
   })
 })
 
-test_that("one format renders a button, several render a menu", {
+test_that("one writable format renders a button, several render a menu", {
   df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
 
-  # One format: the direct link, no menu -- so turning a second format on is
-  # what introduces the menu, and a single-format board keeps one click.
-  testServer(new_table_block(html_download = TRUE)$expr_server,
+  # A machine with neither writer can still hand back the page: one format,
+  # so the toolbar keeps the direct link and the reader keeps one click.
+  local_mocked_bindings(
+    dt_has_openxlsx = function() FALSE,
+    dt_has_officer  = function() FALSE
+  )
+  testServer(new_table_block(download = TRUE)$expr_server,
              args = list(data = reactive(df)), {
     session$flushReact()
     html <- as.character(output$dt_download$html)
@@ -129,41 +137,34 @@ test_that("one format renders a button, several render a menu", {
     expect_true(grepl("shiny-download-link", html))
     expect_true(grepl("dl_html", html))
   })
+})
 
-  testServer(new_table_block(html_download = TRUE, excel_download = TRUE)$expr_server,
+test_that("several formats render a menu in spec order", {
+  df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
+
+  local_mocked_bindings(
+    dt_has_openxlsx = function() TRUE,
+    dt_has_officer  = function() TRUE
+  )
+  testServer(new_table_block(download = TRUE)$expr_server,
              args = list(data = reactive(df)), {
     session$flushReact()
     html <- as.character(output$dt_download$html)
     expect_true(grepl("<details class=\"blockr-dl-menu\"", html))
-    expect_true(grepl("Web page (.html)", html, fixed = TRUE))
     expect_true(grepl("Excel (.xlsx)", html, fixed = TRUE))
-    # Menu order is the spec order, not the order the toggles were set.
+    expect_true(grepl("Web page (.html)", html, fixed = TRUE))
+    expect_true(grepl("PowerPoint (.pptx)", html, fixed = TRUE))
+    # Menu order is the spec order, never the order writers were probed in.
     expect_lt(regexpr("Excel (.xlsx)", html, fixed = TRUE),
               regexpr("Web page (.html)", html, fixed = TRUE))
-  })
-})
-
-test_that("a menu entry whose writer is missing is disabled, not hidden", {
-  df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
-  blk <- new_table_block(html_download = TRUE, pptx_download = TRUE)
-
-  local_mocked_bindings(dt_has_officer = function() FALSE)
-  testServer(blk$expr_server, args = list(data = reactive(df)), {
-    session$flushReact()
-    html <- as.character(output$dt_download$html)
-    # The user just switched that pill on; an entry that renders nothing
-    # reads as a broken toggle.
-    expect_true(grepl("PowerPoint (.pptx)", html, fixed = TRUE))
-    expect_true(grepl("blockr-dl-item--off", html))
-    expect_true(grepl("requires the officer and flextable packages", html))
-    # HTML needs no package of its own, so it stays live in the same menu.
-    expect_true(grepl("dl_html", html))
+    expect_lt(regexpr("Web page (.html)", html, fixed = TRUE),
+              regexpr("PowerPoint (.pptx)", html, fixed = TRUE))
   })
 })
 
 test_that("the html download writes a self-contained page", {
   df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
-  blk <- new_table_block(html_download = TRUE, title = "Groups")
+  blk <- new_table_block(download = TRUE, title = "Groups")
 
   testServer(blk$expr_server, args = list(data = reactive(df)), {
     session$flushReact()
@@ -176,9 +177,9 @@ test_that("the html download writes a self-contained page", {
 })
 
 test_that("the download control does not re-render when the data changes", {
-  # The control reads the format toggles and nothing else. If it read the data
+  # The control reads the download toggle and nothing else. If it read the data
   # it would rebuild -- and re-probe for the writers -- on every filter click,
-  # which is the cost that would make enabling a format something to think
+  # which is the cost that would make turning downloads on something to think
   # twice about. Counted through the probe seam.
   calls <- 0L
   local_mocked_bindings(
@@ -186,7 +187,7 @@ test_that("the download control does not re-render when the data changes", {
   )
 
   rv <- reactiveVal(data.frame(grp = c("A", "B"), val = c(1, 2)))
-  blk <- new_table_block(pptx_download = TRUE, html_download = TRUE)
+  blk <- new_table_block(download = TRUE)
 
   testServer(blk$expr_server, args = list(data = rv), {
     session$flushReact()

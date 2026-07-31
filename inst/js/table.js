@@ -647,12 +647,8 @@
                          { value: "off", label: "Not collapsible" }];
   var SEARCH_OPT      = [{ value: "on", label: "Search bar" },
                          { value: "off", label: "No search bar" }];
-  var EXPORT_OPT      = [{ value: "on", label: "Excel export" },
-                         { value: "off", label: "No Excel export" }];
-  var HTML_OPT        = [{ value: "on", label: "HTML export" },
-                         { value: "off", label: "No HTML export" }];
-  var PPTX_OPT        = [{ value: "on", label: "PowerPoint export" },
-                         { value: "off", label: "No PowerPoint export" }];
+  var DOWNLOAD_OPT    = [{ value: "on", label: "Download" },
+                         { value: "off", label: "No download" }];
   var TABLE_ROLES = Object.assign({}, DAgg.aggRoles({ multiple: true }), {
     // "Filter on" matches the chart's drill picker label (one vocabulary).
     drill:      { label: "Filter on", kind: "column", colType: "any" },
@@ -670,13 +666,11 @@
     sortable:    { label: "Sorting",  kind: "segmented", options: SORTABLE_OPT },
     collapsible: { label: "Sections", kind: "segmented", options: COLLAPSIBLE_OPT },
     search:      { label: "Search",   kind: "segmented", options: SEARCH_OPT },
-    // One row per download format rather than one "Export" row: the formats
-    // are independent (a board can want the spreadsheet and not the deck), and
-    // each pill states what its own format is currently doing. The toolbar
-    // shows a button for one format and a menu for several.
-    excel_download: { label: "Excel",      kind: "segmented", options: EXPORT_OPT },
-    html_download:  { label: "HTML",       kind: "segmented", options: HTML_OPT },
-    pptx_download:  { label: "PowerPoint", kind: "segmented", options: PPTX_OPT },
+    // One row, not one per format: "may the reader take this table away" is a
+    // single decision, and which file they want is theirs. R offers every
+    // format it can write (xlsx, html, pptx) -- a button for one, a menu for
+    // several.
+    download:    { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
     // Table text (chart parity; three-tier contract, R side
     // R/title-template.R): null = auto — the title inherits the data frame's
     // label attribute; "" = explicitly none; other text renders with {...}
@@ -716,7 +710,7 @@
     if (hasCols) pres.push("digits");
     pres.push("sortable");
     if (!hasCols) pres.push("collapsible");   // only sectioned tables collapse
-    pres.push("search", "excel_download", "html_download", "pptx_download");
+    pres.push("search", "download");
     var spec = /** @type {Record<string, any>} */ ({ requiredMap: [], optionalMap: [],
                  mapping: hasCols ? ["group"] : [],
                  summaries: hasCols,         // offer the summaries list whenever the box is on
@@ -826,13 +820,11 @@
         catch (e) { return []; }
       })(),
       digits:     table.getAttribute("data-dt-digits") || "2",
-      // Display toggles (segmented on/off). Default on, except export.
+      // Display toggles (segmented on/off). Default on, except download.
       sortable:    table.getAttribute("data-dt-sortable") || "on",
       collapsible: table.getAttribute("data-dt-collapsible") || "on",
       search:      table.getAttribute("data-dt-search") || "on",
-      excel_download: table.getAttribute("data-dt-excel") || "off",
-      html_download:  table.getAttribute("data-dt-html") || "off",
-      pptx_download:  table.getAttribute("data-dt-pptx") || "off",
+      download:    table.getAttribute("data-dt-download") || "off",
       // External-control send (beta): target value filter block + dm table,
       // and the board's candidate targets ([{value,label}] JSON, stamped by R).
       ctrl_target: table.getAttribute("data-dt-ctrl-target") || "",
@@ -899,10 +891,9 @@
     // section spanners, the cells are pre-formatted strings), so the column-based
     // controls (drill / colour / decimals) are no-ops and are dropped from the
     // section list below (`hasCols`). The gear still renders for the column-free
-    // display toggles (sortable / collapsible / search / Excel export) — keyed on
+    // display toggles (sortable / collapsible / search / download) — keyed on
     // "no columns" (not a hard-coded "structured" flag) so it covers any future
-    // no-column case too. (Display toggles = sortable / collapsible / search
-    // and the three download formats.)
+    // no-column case too.
     function hasCols() { return cols.length > 0; }
 
     var header = document.createElement("div");

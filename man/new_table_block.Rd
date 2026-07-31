@@ -27,6 +27,7 @@ new_table_block(
   sortable = TRUE,
   collapsible = TRUE,
   search = TRUE,
+  download = FALSE,
   excel_download = FALSE,
   html_download = FALSE,
   pptx_download = FALSE,
@@ -90,18 +91,23 @@ saved while the spread existed still restore; always serialized as
 \code{TRUE}): column sorting, indent-derived collapsible section headers, and
 the toolbar search box. Exposed in the block's gear menu.}
 
-\item{excel_download, html_download, pptx_download}{Logical display toggles
-(each default \code{FALSE}), exposed in the block's gear menu. Each one adds
-its format to a download control on the table toolbar, which writes the
-rendered (annotated) frame -- the same frame, the same resolved title /
-subtitle / caption -- through that format's writer:
+\item{download}{Logical display toggle (default \code{FALSE}), exposed in the
+block's gear menu: may the reader take this table away? On, a download
+control appears on the table toolbar offering every format the machine can
+write -- which file to take is the reader's choice, not the board
+author's. Each writes the same rendered (annotated) frame, with the same
+resolved title / subtitle / caption, through that format's writer:
 \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}} for a styled spreadsheet (needs \code{openxlsx}),
 \code{\link[=write_exhibit_html]{write_exhibit_html()}} for a self-contained page that keeps the table's
 sorting and section collapse (opened out: a downloaded page scrolls, so
 every section starts expanded), and \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}} for a one-slide
 deck carrying a native, editable PowerPoint table (needs \code{officer} and
-\code{flextable}). One format on renders a button, several render a menu; a
-format whose writer is not installed shows disabled with the reason.}
+\code{flextable}). One writable format renders a button, several render a menu;
+a format whose writer is not installed is left out.}
+
+\item{excel_download, html_download, pptx_download}{Legacy per-format toggles,
+kept as formals so boards saved before \code{download} still restore -- any of
+them \code{TRUE} reads as \code{download = TRUE}. Always serialized as \code{NULL}.}
 
 \item{title, subtitle, caption}{Table text, rendered above (title, subtitle)
 and below (caption) the table. Same three-tier contract as the chart

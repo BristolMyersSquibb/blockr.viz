@@ -90,21 +90,19 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                          shadings = list(), drill = NULL, digits = 2L,
                          row_hex = NULL, color = NULL,
                          sortable = TRUE, collapsible = TRUE, search = TRUE,
-                         excel_download = FALSE, html_download = FALSE,
-                         pptx_download = FALSE, group_cols = NULL,
+                         download = FALSE, group_cols = NULL,
                          group = character(), summaries = list(),
                          active = NULL, gear_cols = NULL) {
   # The inter-block currency is the wide annotated df; summary_table()'s
   # internal long dialect errors here instead of being silently pivoted.
   reject_long_form(data)
-  # Display-option states (sortable / collapsible / search / the three
-  # download formats) ride on the <table> as data-attributes so the gear
-  # popover reads their current value; the renderer honours `sortable` /
-  # `collapsible` here, while `search` and the downloads are realized by the
-  # chrome (dt_chrome / dt_download).
+  # Display-option states (sortable / collapsible / search / download) ride on
+  # the <table> as data-attributes so the gear popover reads their current
+  # value; the renderer honours `sortable` / `collapsible` here, while `search`
+  # and the download control are realized by the chrome (dt_chrome /
+  # dt_download).
   toggles <- list(sortable = sortable, collapsible = collapsible,
-                  search = search, excel_download = excel_download,
-                  html_download = html_download, pptx_download = pptx_download)
+                  search = search, download = download)
   if (dt_is_structured(data)) {
     return(dt_table_tag_structured(data, drill, digits, toggles,
                                    active = active))
@@ -777,9 +775,7 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
     `data-dt-sortable` = on_off(toggles$sortable %||% TRUE),
     `data-dt-collapsible` = on_off(toggles$collapsible %||% TRUE),
     `data-dt-search` = on_off(toggles$search %||% TRUE),
-    `data-dt-excel` = on_off(toggles$excel_download %||% FALSE),
-    `data-dt-html` = on_off(toggles$html_download %||% FALSE),
-    `data-dt-pptx` = on_off(toggles$pptx_download %||% FALSE)
+    `data-dt-download` = on_off(toggles$download %||% FALSE)
   )
 }
 
@@ -1276,18 +1272,22 @@ table_guidance <- function() {
 #' @param sortable,collapsible,search Logical display toggles (each default
 #'   `TRUE`): column sorting, indent-derived collapsible section headers, and
 #'   the toolbar search box. Exposed in the block's gear menu.
-#' @param excel_download,html_download,pptx_download Logical display toggles
-#'   (each default `FALSE`), exposed in the block's gear menu. Each one adds
-#'   its format to a download control on the table toolbar, which writes the
-#'   rendered (annotated) frame -- the same frame, the same resolved title /
-#'   subtitle / caption -- through that format's writer:
+#' @param download Logical display toggle (default `FALSE`), exposed in the
+#'   block's gear menu: may the reader take this table away? On, a download
+#'   control appears on the table toolbar offering every format the machine can
+#'   write -- which file to take is the reader's choice, not the board
+#'   author's. Each writes the same rendered (annotated) frame, with the same
+#'   resolved title / subtitle / caption, through that format's writer:
 #'   [write_annotated_xlsx()] for a styled spreadsheet (needs `openxlsx`),
 #'   [write_exhibit_html()] for a self-contained page that keeps the table's
 #'   sorting and section collapse (opened out: a downloaded page scrolls, so
 #'   every section starts expanded), and [write_exhibit_pptx()] for a one-slide
 #'   deck carrying a native, editable PowerPoint table (needs `officer` and
-#'   `flextable`). One format on renders a button, several render a menu; a
-#'   format whose writer is not installed shows disabled with the reason.
+#'   `flextable`). One writable format renders a button, several render a menu;
+#'   a format whose writer is not installed is left out.
+#' @param excel_download,html_download,pptx_download Legacy per-format toggles,
+#'   kept as formals so boards saved before `download` still restore -- any of
+#'   them `TRUE` reads as `download = TRUE`. Always serialized as `NULL`.
 #' @param title,subtitle,caption Table text, rendered above (title, subtitle)
 #'   and below (caption) the table. Same three-tier contract as the chart
 #'   block (see [new_chart_block()]): `NULL` (default) = auto -- each slot
@@ -1332,6 +1332,9 @@ new_table_block <- function(rowname = NULL,
                                       sortable = TRUE,
                                       collapsible = TRUE,
                                       search = TRUE,
+                                      download = FALSE,
+                                      # Legacy per-format toggles -- see the
+                                      # mapping below.
                                       excel_download = FALSE,
                                       html_download = FALSE,
                                       pptx_download = FALSE,
@@ -1379,6 +1382,13 @@ new_table_block <- function(rowname = NULL,
     shadings <- dd_parse_shadings(cell_color)
   }
   if (is.null(color) && !is.null(row_color)) color <- row_color
+  # Downloads were three per-format toggles before they became one. A board
+  # saved with ANY of them on wanted this table to be takeable, so it restores
+  # with downloads on -- and now offers every format the machine can write,
+  # which is more than it had, never less.
+  if (isTRUE(excel_download) || isTRUE(html_download) || isTRUE(pptx_download)) {
+    download <- TRUE
+  }
 
   blockr.core::new_transform_block(
     server = function(id, data) {
@@ -1405,9 +1415,7 @@ new_table_block <- function(rowname = NULL,
         r_sortable       <- shiny::reactiveVal(isTRUE(sortable))
         r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
         r_search         <- shiny::reactiveVal(isTRUE(search))
-        r_excel_download <- shiny::reactiveVal(isTRUE(excel_download))
-        r_html_download  <- shiny::reactiveVal(isTRUE(html_download))
-        r_pptx_download  <- shiny::reactiveVal(isTRUE(pptx_download))
+        r_download       <- shiny::reactiveVal(isTRUE(download))
         r_title    <- shiny::reactiveVal(title)
         r_subtitle <- shiny::reactiveVal(subtitle)
         r_caption  <- shiny::reactiveVal(caption)
@@ -1495,12 +1503,8 @@ new_table_block <- function(rowname = NULL,
               upd(r_collapsible, as_toggle(v))
             } else if (identical(p, "search")) {
               upd(r_search, as_toggle(v))
-            } else if (identical(p, "excel_download")) {
-              upd(r_excel_download, as_toggle(v))
-            } else if (identical(p, "html_download")) {
-              upd(r_html_download, as_toggle(v))
-            } else if (identical(p, "pptx_download")) {
-              upd(r_pptx_download, as_toggle(v))
+            } else if (identical(p, "download")) {
+              upd(r_download, as_toggle(v))
             } else if (identical(p, "ctrl_target")) {
               upd(r_ctrl_target, trimws(as.character(v %||% "")))
             } else if (identical(p, "ctrl_table")) {
@@ -1656,46 +1660,37 @@ new_table_block <- function(rowname = NULL,
           ))
         }
 
-        # The formats currently on, in menu order, each with what it needs to
-        # render: whether its writer is installed, and the sentence to show
-        # when it is not. HTML has no `needs` -- the renderer is this package's
-        # own, so it is available wherever the block is.
+        # Downloads on = every format this machine can write, in menu order.
+        # The formats are not a per-board choice: "can people take this table
+        # away" is one decision, and which file the reader wants is theirs.
+        #
+        # A format whose writer is missing is left out rather than shown
+        # disabled. Nobody asked for PowerPoint specifically -- the download
+        # toggle did -- so an entry that only ever explains itself is noise.
+        # (That was the right call while each format had its own pill: a toggle
+        # you just switched on and that rendered nothing read as broken.) HTML
+        # is always there: its renderer is this package's own.
         dl_formats <- shiny::reactive({
+          if (!isTRUE(r_download())) {
+            return(list())
+          }
           specs <- list(
             list(id = "dl_xlsx", ext = "xlsx", label = "Excel (.xlsx)",
-                 on = isTRUE(r_excel_download()), ok = dt_has_openxlsx(),
-                 needs = "the openxlsx package"),
+                 ok = dt_has_openxlsx()),
             list(id = "dl_html", ext = "html", label = "Web page (.html)",
-                 on = isTRUE(r_html_download()), ok = TRUE, needs = ""),
+                 ok = TRUE),
             list(id = "dl_pptx", ext = "pptx", label = "PowerPoint (.pptx)",
-                 on = isTRUE(r_pptx_download()), ok = dt_has_officer(),
-                 needs = "the officer and flextable packages")
+                 ok = dt_has_officer())
           )
-          Filter(function(s) isTRUE(s$on), specs)
+          Filter(function(s) isTRUE(s$ok), specs)
         })
 
-        # One enabled format is a button; several are a menu. Both are the same
-        # 30px icon control, so turning a second format on does not move the
-        # toolbar around -- it just gives the button somewhere to open.
-        #
-        # A format whose writer is missing renders DISABLED with the reason on
-        # it rather than vanishing: the user has just switched that pill on in
-        # the gear, and a toggle that renders nothing reads as broken.
-        # (blockr-dl-xlsx--off is muted + cursor not-allowed, and deliberately
-        # NOT pointer-events:none, so the tooltip still shows.) No
-        # shiny-download-link class either -- there is no handler to bind.
+        # One writable format is a button; several are a menu. Both are the
+        # same 30px icon control, so a machine with officer installed does not
+        # get a differently-shaped toolbar -- the button just gains somewhere
+        # to open.
         dl_link <- function(spec, menu = FALSE) {
           cls <- if (menu) "blockr-dl-item" else "blockr-dl-xlsx"
-          if (!isTRUE(spec$ok)) {
-            why <- paste0(spec$label, " export requires ", spec$needs)
-            return(htmltools::tags$a(
-              class = paste0(cls, " ", cls, "--off"),
-              title = why,
-              `aria-label` = paste0(why, " (unavailable)"),
-              `aria-disabled` = "true",
-              if (menu) spec$label else dl_icon()
-            ))
-          }
           htmltools::tags$a(
             id = ns(spec$id),
             class = paste(cls, "shiny-download-link"),
@@ -1912,9 +1907,7 @@ new_table_block <- function(rowname = NULL,
                 sortable    = isTRUE(r_sortable()),
                 collapsible = isTRUE(r_collapsible()),
                 search      = isTRUE(r_search()),
-                excel_download = isTRUE(r_excel_download()),
-                html_download  = isTRUE(r_html_download()),
-                pptx_download  = isTRUE(r_pptx_download()),
+                download    = isTRUE(r_download()),
                 active     = act
               ))),
               error = function(e) {
@@ -1972,9 +1965,7 @@ new_table_block <- function(rowname = NULL,
               sortable    = isTRUE(r_sortable()),
               collapsible = isTRUE(r_collapsible()),
               search      = isTRUE(r_search()),
-              excel_download = isTRUE(r_excel_download()),
-              html_download  = isTRUE(r_html_download()),
-              pptx_download  = isTRUE(r_pptx_download()),
+              download    = isTRUE(r_download()),
               active     = act
             ))),
             error = function(e) {
@@ -2087,9 +2078,13 @@ new_table_block <- function(rowname = NULL,
             sortable       = r_sortable,
             collapsible    = r_collapsible,
             search         = r_search,
-            excel_download = r_excel_download,
-            html_download  = r_html_download,
-            pptx_download  = r_pptx_download,
+            download       = r_download,
+            # Legacy per-format download formals (one `download` toggle now):
+            # serialized as NULL, kept as ctor formals so a board saved with
+            # `excel_download = TRUE` still restores -- as downloads on.
+            excel_download = function() NULL,
+            html_download  = function() NULL,
+            pptx_download  = function() NULL,
             title          = r_title,
             subtitle       = r_subtitle,
             caption        = r_caption,
@@ -2121,6 +2116,7 @@ new_table_block <- function(rowname = NULL,
       "filter_values", "filter_type", "filter_range",
       "filter_group_cols", "filter_group_vals",
       "filter_spread_col", "filter_spread_from",
+      "excel_download", "html_download", "pptx_download",
       "title", "subtitle", "caption",
       "ctrl_target", "ctrl_table"),
     external_ctrl = c("rowname", "value", "group", "summaries",
@@ -2128,8 +2124,7 @@ new_table_block <- function(rowname = NULL,
       "digits", "max_height",
       "filter_column", "filter_values",
       "filter_group_cols", "filter_group_vals",
-      "sortable", "collapsible", "search",
-      "excel_download", "html_download", "pptx_download",
+      "sortable", "collapsible", "search", "download",
       "title", "subtitle", "caption",
       "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",

@@ -64,16 +64,16 @@ test_that("collapsible off makes section headers static (no button)", {
   expect_true(grepl("blockr-section-btn-static", off))    # a static <span>
 })
 
-# --- renderer: data-dt-* mirror for search / excel ---------------------------
+# --- renderer: data-dt-* mirror for search / download ------------------------
 
 test_that("search / download states are mirrored onto the table", {
   df <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
-  h  <- render(dt_table_tag(df, search = FALSE, excel_download = TRUE,
-                            pptx_download = TRUE))
+  h  <- render(dt_table_tag(df, search = FALSE, download = TRUE))
   expect_true(grepl("data-dt-search=\"off\"", h))
-  expect_true(grepl("data-dt-excel=\"on\"", h))
-  expect_true(grepl("data-dt-html=\"off\"", h))
-  expect_true(grepl("data-dt-pptx=\"on\"", h))
+  expect_true(grepl("data-dt-download=\"on\"", h))
+
+  off <- render(dt_table_tag(df))
+  expect_true(grepl("data-dt-download=\"off\"", off))
 })
 
 # --- chrome: search input toggle --------------------------------------------
@@ -100,11 +100,11 @@ test_that("config toggle messages update state (on/off and logical back-compat)"
   }
 
   testServer(blk$expr_server, args = list(data = reactive(df)), {
-    # Defaults: display features on, export off.
+    # Defaults: display features on, download off.
     expect_true(session$returned$state$sortable())
     expect_true(session$returned$state$collapsible())
     expect_true(session$returned$state$search())
-    expect_false(session$returned$state$excel_download())
+    expect_false(session$returned$state$download())
 
     # Segmented pills emit "on"/"off".
     cfg(session, "sortable", "off")
@@ -113,8 +113,8 @@ test_that("config toggle messages update state (on/off and logical back-compat)"
     expect_false(session$returned$state$collapsible())
     cfg(session, "search", "off")
     expect_false(session$returned$state$search())
-    cfg(session, "excel_download", "on")
-    expect_true(session$returned$state$excel_download())
+    cfg(session, "download", "on")
+    expect_true(session$returned$state$download())
 
     cfg(session, "sortable", "on")
     expect_true(session$returned$state$sortable())
@@ -122,19 +122,38 @@ test_that("config toggle messages update state (on/off and logical back-compat)"
     # Restore / constructor path may pass a logical — accepted too.
     cfg(session, "search", TRUE)
     expect_true(session$returned$state$search())
-    cfg(session, "excel_download", FALSE)
-    expect_false(session$returned$state$excel_download())
+    cfg(session, "download", FALSE)
+    expect_false(session$returned$state$download())
 
-    # The download formats are independent toggles: a board can want the
-    # spreadsheet and not the deck.
-    expect_false(session$returned$state$html_download())
-    expect_false(session$returned$state$pptx_download())
-    cfg(session, "html_download", "on")
-    expect_true(session$returned$state$html_download())
-    expect_false(session$returned$state$pptx_download())
-    cfg(session, "pptx_download", "on")
-    expect_true(session$returned$state$pptx_download())
-    cfg(session, "html_download", FALSE)
-    expect_false(session$returned$state$html_download())
+    # The legacy per-format formals survive as serialized NULLs, so a board
+    # saved now carries the one toggle and nothing else.
+    expect_null(session$returned$state$excel_download())
+    expect_null(session$returned$state$html_download())
+    expect_null(session$returned$state$pptx_download())
+  })
+})
+
+test_that("a board saved with any per-format toggle restores as download on", {
+  df <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
+
+  # Called literally, never through do.call(): blockr.core reads the ctor out
+  # of the calling expression (see resolve_ctor), so a constructed call is not
+  # a block a board could reopen.
+  testServer(new_table_block(excel_download = TRUE)$expr_server,
+             args = list(data = reactive(df)), {
+    expect_true(session$returned$state$download())
+  })
+  testServer(new_table_block(html_download = TRUE)$expr_server,
+             args = list(data = reactive(df)), {
+    expect_true(session$returned$state$download())
+  })
+  testServer(new_table_block(pptx_download = TRUE)$expr_server,
+             args = list(data = reactive(df)), {
+    expect_true(session$returned$state$download())
+  })
+
+  # ... and one saved before downloads existed stays off.
+  testServer(new_table_block()$expr_server, args = list(data = reactive(df)), {
+    expect_false(session$returned$state$download())
   })
 })

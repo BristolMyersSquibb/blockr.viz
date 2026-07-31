@@ -34,10 +34,12 @@ registry_allowlist <- list(
     "filter_column", "filter_values",
     "filter_group_cols", "filter_group_vals",
     # Display-only gear toggles / sizing, deliberately off the AI surface
-    # (the download formats included: which artifacts a table offers is a
+    # (`download` included: whether a table can be taken away is a
     # dashboard-authoring choice, not something an intent describes).
-    "max_height", "sortable", "collapsible", "search",
-    "excel_download", "html_download", "pptx_download"
+    # (excel_download / html_download / pptx_download are LEGACY restore-only
+    # formals folding into `download`: no longer external_ctrl, so like the
+    # filter_spread_* pair above they are not listed here.)
+    "max_height", "sortable", "collapsible", "search", "download"
   ),
   tile = c(
     # Runtime filter transport (see the table's filter_* above).

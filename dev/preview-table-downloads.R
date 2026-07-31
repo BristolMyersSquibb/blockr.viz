@@ -10,9 +10,12 @@
 #   PowerPoint (.pptx) write_exhibit_pptx()    — one slide, a NATIVE editable
 #                                                table on the house template
 #
-# The two views are the two shapes of the control: one format enabled renders
-# a direct download button (the pre-existing behaviour), several render a
-# <details> menu. Toggle any of them live in the gear -> Presentation.
+# Downloads are ONE toggle (gear -> Presentation -> Download): on, the table
+# offers every format this machine can write -- which file to take is the
+# reader's choice. The control's shape follows from what is installed: several
+# writable formats render a <details> menu, one renders a direct download
+# button (uninstall openxlsx and officer to see that shape). The two views are
+# downloads on and off; flip either live in the gear.
 #
 # Run from the workspace root (inside or outside the dev container):
 #   Rscript blockr.viz/dev/preview-table-downloads.R
@@ -42,34 +45,33 @@ board <- new_dock_board(
       add_overall = TRUE,
       block_name = "Demographics by arm"),
 
-    # One format on: the toolbar shows the plain download button, exactly as
-    # it did when Excel was the only artifact.
-    one = new_table_block(
-      excel_download = TRUE,
+    # Downloads on: one control on the toolbar, offering every format this
+    # machine can write.
+    on = new_table_block(
+      download = TRUE,
       title = "Demographic Characteristics",
       subtitle = "Safety population",
       caption = "Percentages are of the column N.",
-      block_name = "One format (button)"),
+      block_name = "Downloads on"),
 
-    # All three on: the same 30px control, now opening a menu. Nothing in the
-    # toolbar moves when a format is added -- the button just gains a menu.
-    all = new_table_block(
-      excel_download = TRUE, html_download = TRUE, pptx_download = TRUE,
+    # Off (the default): no control at all -- nothing greyed out, nothing to
+    # explain. Switch it on in the gear and the control appears in place.
+    off = new_table_block(
       title = "Demographic Characteristics",
       subtitle = "Safety population",
       caption = "Percentages are of the column N.",
-      block_name = "Three formats (menu)")
+      block_name = "Downloads off")
   ),
   links = links(
     from = c("data", "summ", "summ"),
-    to   = c("summ", "one", "all")
+    to   = c("summ", "on", "off")
   ),
   views = list(
-    menu   = dock_view("all", name = "1. Three formats (menu)"),
-    button = dock_view("one", name = "2. One format (button)")
+    on  = dock_view("on",  name = "1. Downloads on"),
+    off = dock_view("off", name = "2. Downloads off")
   ),
   options = dock_board_options(),
-  active = "menu",
+  active = "on",
   extensions = list(blockr.dag::new_dag_extension())
 )
 
