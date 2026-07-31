@@ -28,9 +28,9 @@ new_table_block(
   collapsible = TRUE,
   search = TRUE,
   download = FALSE,
-  excel_download = FALSE,
-  html_download = FALSE,
-  pptx_download = FALSE,
+  excel_download = NULL,
+  html_download = NULL,
+  pptx_download = NULL,
   title = NULL,
   subtitle = NULL,
   caption = NULL,
@@ -82,8 +82,8 @@ a structured one). Default \code{NULL} (no drill filter active). The drilled
 output is a pure subset of the annotated df: the identity columns carry
 the selection, no synthetic column is added.}
 
-\item{filter_spread_col, filter_spread_from}{Defunct (the drill no longer
-spreads the selection into a synthetic column). Kept as formals so boards
+\item{filter_spread_col, filter_spread_from}{LEGACY, ignored (the drill no
+longer spreads the selection into a synthetic column). Kept as formals so boards
 saved while the spread existed still restore; always serialized as
 \code{NULL}, ignored.}
 
@@ -105,9 +105,11 @@ deck carrying a native, editable PowerPoint table (needs \code{officer} and
 \code{flextable}). One writable format renders a button, several render a menu;
 a format whose writer is not installed is left out.}
 
-\item{excel_download, html_download, pptx_download}{Legacy per-format toggles,
-kept as formals so boards saved before \code{download} still restore -- any of
-them \code{TRUE} reads as \code{download = TRUE}. Always serialized as \code{NULL}.}
+\item{excel_download, html_download, pptx_download}{LEGACY per-format
+toggles, folded on construction: downloads were three switches before they
+became one. Kept as formals so boards saved before \code{download} still
+restore -- any of them \code{TRUE} reads as \code{download = TRUE}, so such a board
+reopens offering every format. Always serialized as \code{NULL}.}
 
 \item{title, subtitle, caption}{Table text, rendered above (title, subtitle)
 and below (caption) the table. Same three-tier contract as the chart

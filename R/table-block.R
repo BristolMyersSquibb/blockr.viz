@@ -1265,8 +1265,8 @@ table_guidance <- function() {
 #'   a structured one). Default `NULL` (no drill filter active). The drilled
 #'   output is a pure subset of the annotated df: the identity columns carry
 #'   the selection, no synthetic column is added.
-#' @param filter_spread_col,filter_spread_from Defunct (the drill no longer
-#'   spreads the selection into a synthetic column). Kept as formals so boards
+#' @param filter_spread_col,filter_spread_from LEGACY, ignored (the drill no
+#'   longer spreads the selection into a synthetic column). Kept as formals so boards
 #'   saved while the spread existed still restore; always serialized as
 #'   `NULL`, ignored.
 #' @param sortable,collapsible,search Logical display toggles (each default
@@ -1285,9 +1285,11 @@ table_guidance <- function() {
 #'   deck carrying a native, editable PowerPoint table (needs `officer` and
 #'   `flextable`). One writable format renders a button, several render a menu;
 #'   a format whose writer is not installed is left out.
-#' @param excel_download,html_download,pptx_download Legacy per-format toggles,
-#'   kept as formals so boards saved before `download` still restore -- any of
-#'   them `TRUE` reads as `download = TRUE`. Always serialized as `NULL`.
+#' @param excel_download,html_download,pptx_download LEGACY per-format
+#'   toggles, folded on construction: downloads were three switches before they
+#'   became one. Kept as formals so boards saved before `download` still
+#'   restore -- any of them `TRUE` reads as `download = TRUE`, so such a board
+#'   reopens offering every format. Always serialized as `NULL`.
 #' @param title,subtitle,caption Table text, rendered above (title, subtitle)
 #'   and below (caption) the table. Same three-tier contract as the chart
 #'   block (see [new_chart_block()]): `NULL` (default) = auto -- each slot
@@ -1316,28 +1318,39 @@ new_table_block <- function(rowname = NULL,
                                       summaries = list(),
                                       color = NULL,
                                       shadings = list(),
+                                      # LEGACY (mapped below): read once at
+                                      # construction into `shadings` / `color`.
                                       cell_color = NULL,
                                       row_color = NULL,
                                       drill = NULL,
                                       digits = 2L,
                                       max_height = "600px",
-                                      filter_type = "categorical",
+                                      # LEGACY (dead) -- interleaved with the
+                                      # live filter_* formals to keep the
+                                      # argument ORDER old boards were written
+                                      # against. The block never writes these:
+                                      # the drill emits categorical filters and
+                                      # no synthetic spread column. Always
+                                      # serialized back as NULL.
+                                      filter_type = "categorical",       # LEGACY
                                       filter_column = NULL,
                                       filter_values = NULL,
-                                      filter_range = NULL,
+                                      filter_range = NULL,               # LEGACY
                                       filter_group_cols = NULL,
                                       filter_group_vals = NULL,
-                                      filter_spread_col = NULL,
-                                      filter_spread_from = NULL,
+                                      filter_spread_col = NULL,          # LEGACY
+                                      filter_spread_from = NULL,         # LEGACY
                                       sortable = TRUE,
                                       collapsible = TRUE,
                                       search = TRUE,
                                       download = FALSE,
-                                      # Legacy per-format toggles -- see the
-                                      # mapping below.
-                                      excel_download = FALSE,
-                                      html_download = FALSE,
-                                      pptx_download = FALSE,
+                                      # LEGACY (folded below): downloads were
+                                      # three per-format toggles before they
+                                      # became one. NULL default = not a
+                                      # setting; any TRUE means `download`.
+                                      excel_download = NULL,
+                                      html_download = NULL,
+                                      pptx_download = NULL,
                                       # Table text (R/title-template.R): NULL
                                       # = auto (title falls back to the data
                                       # frame's label attribute), "" =
@@ -1375,9 +1388,11 @@ new_table_block <- function(rowname = NULL,
   subtitle <- title_state(subtitle)
   caption <- title_state(caption)
 
-  # Legacy args mapped on construction (old saved boards restore through
-  # these formals): a cell_color spec reads as one `shadings` rule; row_color
-  # reads as `color`. New names win when both are given.
+  # LEGACY args, all mapped here and nowhere else -- the only place in the
+  # block that reads them, so everything downstream sees today's arguments
+  # only. Old saved boards restore through these formals; new names win when
+  # both are given. A cell_color spec reads as one `shadings` rule; row_color
+  # reads as `color`.
   if (!length(shadings) && !is.null(cell_color)) {
     shadings <- dd_parse_shadings(cell_color)
   }
@@ -2052,7 +2067,7 @@ new_table_block <- function(rowname = NULL,
             summaries       = r_summaries,
             color         = r_color,
             shadings      = r_shadings,
-            # Legacy formals (mapped into color/shadings on construction):
+            # LEGACY formals (mapped into color/shadings on construction):
             # serialized as NULL so restored boards re-enter through the new
             # args; blockr.core requires every ctor formal in the state.
             cell_color    = function() NULL,
@@ -2062,14 +2077,14 @@ new_table_block <- function(rowname = NULL,
             max_height    = r_max_height,
             filter_column = r_filter_column,
             filter_values = r_filter_values,
-            # Legacy formals (never set by the table's JS -- it only emits
+            # LEGACY formals (never set by the table's JS -- it only emits
             # categorical filters): serialized as NULL, kept as ctor formals
             # so old saved boards restore.
             filter_type   = function() NULL,
             filter_range  = function() NULL,
             filter_group_cols = r_filter_group_cols,
             filter_group_vals = r_filter_group_vals,
-            # Legacy spread formals (the drill no longer adds a synthetic
+            # LEGACY spread formals (the drill no longer adds a synthetic
             # column -- the output is a pure subset and the identity columns
             # are the interface): serialized as NULL, kept as ctor formals so
             # boards saved while the spread existed still restore.
@@ -2079,7 +2094,7 @@ new_table_block <- function(rowname = NULL,
             collapsible    = r_collapsible,
             search         = r_search,
             download       = r_download,
-            # Legacy per-format download formals (one `download` toggle now):
+            # LEGACY per-format download formals (one `download` toggle now):
             # serialized as NULL, kept as ctor formals so a board saved with
             # `excel_download = TRUE` still restores -- as downloads on.
             excel_download = function() NULL,
