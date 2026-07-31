@@ -303,6 +303,7 @@ dt_build_payload <- function(data, label_col = NULL, value_cols = NULL,
                              row_hex = NULL, color = NULL,
                              sortable = TRUE, collapsible = TRUE,
                              search = TRUE, excel_download = FALSE,
+                             html_download = FALSE, pptx_download = FALSE,
                              group_cols = NULL, group = character(),
                              summaries = list(), active = NULL,
                              gear_cols = NULL, stamp = identity) {
@@ -310,7 +311,8 @@ dt_build_payload <- function(data, label_col = NULL, value_cols = NULL,
   # internal long dialect errors here instead of being silently pivoted.
   reject_long_form(data)
   toggles <- list(sortable = sortable, collapsible = collapsible,
-                  search = search, excel_download = excel_download)
+                  search = search, excel_download = excel_download,
+                  html_download = html_download, pptx_download = pptx_download)
   if (dt_is_structured(data)) {
     tag <- stamp(dt_table_tag_structured(data, drill, digits, toggles,
                                          active = active))

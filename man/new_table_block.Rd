@@ -28,6 +28,8 @@ new_table_block(
   collapsible = TRUE,
   search = TRUE,
   excel_download = FALSE,
+  html_download = FALSE,
+  pptx_download = FALSE,
   title = NULL,
   subtitle = NULL,
   caption = NULL,
@@ -88,10 +90,17 @@ saved while the spread existed still restore; always serialized as
 \code{TRUE}): column sorting, indent-derived collapsible section headers, and
 the toolbar search box. Exposed in the block's gear menu.}
 
-\item{excel_download}{Logical (default \code{FALSE}). When \code{TRUE}, an "Excel"
-download button appears on the table toolbar; it writes the rendered
-(annotated) frame to a styled \code{.xlsx} via \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}. Needs
-the \code{openxlsx} package.}
+\item{excel_download, html_download, pptx_download}{Logical display toggles
+(each default \code{FALSE}), exposed in the block's gear menu. Each one adds
+its format to a download control on the table toolbar, which writes the
+rendered (annotated) frame -- the same frame, the same resolved title /
+subtitle / caption -- through that format's writer:
+\code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}} for a styled spreadsheet (needs \code{openxlsx}),
+\code{\link[=write_exhibit_html]{write_exhibit_html()}} for a self-contained page that keeps the table's
+sorting and section collapse, and \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}} for a one-slide
+deck carrying a native, editable PowerPoint table (needs \code{officer} and
+\code{flextable}). One format on renders a button, several render a menu; a
+format whose writer is not installed shows disabled with the reason.}
 
 \item{title, subtitle, caption}{Table text, rendered above (title, subtitle)
 and below (caption) the table. Same three-tier contract as the chart

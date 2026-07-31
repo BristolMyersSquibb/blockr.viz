@@ -105,3 +105,72 @@ test_that("excel pill with openxlsx renders the live download link", {
     expect_false(grepl("blockr-dl-xlsx--off", html))
   })
 })
+
+test_that("no download format on renders no control at all", {
+  df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
+  blk <- new_table_block()
+
+  testServer(blk$expr_server, args = list(data = reactive(df)), {
+    session$flushReact()
+    expect_null(output$dt_download)
+  })
+})
+
+test_that("one format renders a button, several render a menu", {
+  df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
+
+  # One format: the direct link, no menu -- so turning a second format on is
+  # what introduces the menu, and a single-format board keeps one click.
+  testServer(new_table_block(html_download = TRUE)$expr_server,
+             args = list(data = reactive(df)), {
+    session$flushReact()
+    html <- as.character(output$dt_download$html)
+    expect_false(grepl("blockr-dl-menu", html))
+    expect_true(grepl("shiny-download-link", html))
+    expect_true(grepl("dl_html", html))
+  })
+
+  testServer(new_table_block(html_download = TRUE, excel_download = TRUE)$expr_server,
+             args = list(data = reactive(df)), {
+    session$flushReact()
+    html <- as.character(output$dt_download$html)
+    expect_true(grepl("<details class=\"blockr-dl-menu\"", html))
+    expect_true(grepl("Web page (.html)", html, fixed = TRUE))
+    expect_true(grepl("Excel (.xlsx)", html, fixed = TRUE))
+    # Menu order is the spec order, not the order the toggles were set.
+    expect_lt(regexpr("Excel (.xlsx)", html, fixed = TRUE),
+              regexpr("Web page (.html)", html, fixed = TRUE))
+  })
+})
+
+test_that("a menu entry whose writer is missing is disabled, not hidden", {
+  df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
+  blk <- new_table_block(html_download = TRUE, pptx_download = TRUE)
+
+  local_mocked_bindings(dt_has_officer = function() FALSE)
+  testServer(blk$expr_server, args = list(data = reactive(df)), {
+    session$flushReact()
+    html <- as.character(output$dt_download$html)
+    # The user just switched that pill on; an entry that renders nothing
+    # reads as a broken toggle.
+    expect_true(grepl("PowerPoint (.pptx)", html, fixed = TRUE))
+    expect_true(grepl("blockr-dl-item--off", html))
+    expect_true(grepl("requires the officer and flextable packages", html))
+    # HTML needs no package of its own, so it stays live in the same menu.
+    expect_true(grepl("dl_html", html))
+  })
+})
+
+test_that("the html download writes a self-contained page", {
+  df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
+  blk <- new_table_block(html_download = TRUE, title = "Groups")
+
+  testServer(blk$expr_server, args = list(data = reactive(df)), {
+    session$flushReact()
+    # testServer runs the handler and hands back the path it wrote to.
+    html <- paste(readLines(output$dl_html, warn = FALSE), collapse = "\n")
+    expect_match(html, "<h1>Groups</h1>", fixed = TRUE)
+    expect_match(html, "<table", fixed = TRUE)
+    expect_false(grepl("<script[^>]+src=", html))
+  })
+})

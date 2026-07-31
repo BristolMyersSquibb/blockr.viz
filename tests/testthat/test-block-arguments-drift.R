@@ -33,8 +33,11 @@ registry_allowlist <- list(
     # external_ctrl, so not listed here.)
     "filter_column", "filter_values",
     "filter_group_cols", "filter_group_vals",
-    # Display-only gear toggles / sizing, deliberately off the AI surface.
-    "max_height", "sortable", "collapsible", "search", "excel_download"
+    # Display-only gear toggles / sizing, deliberately off the AI surface
+    # (the download formats included: which artifacts a table offers is a
+    # dashboard-authoring choice, not something an intent describes).
+    "max_height", "sortable", "collapsible", "search",
+    "excel_download", "html_download", "pptx_download"
   ),
   tile = c(
     # Runtime filter transport (see the table's filter_* above).

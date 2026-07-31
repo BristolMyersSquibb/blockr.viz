@@ -1,6 +1,6 @@
 Package: blockr.viz
 Title: Visualization and Render Blocks for Blockr
-Version: 0.2.38
+Version: 0.2.39
 Authors@R:
     person(given = "Christoph",
            family = "Sax",
@@ -47,6 +47,7 @@ Suggests:
     flextable,
     ggplot2,
     knitr,
+    officer,
     openxlsx,
     rmarkdown,
     scales,

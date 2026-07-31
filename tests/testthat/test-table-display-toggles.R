@@ -66,11 +66,14 @@ test_that("collapsible off makes section headers static (no button)", {
 
 # --- renderer: data-dt-* mirror for search / excel ---------------------------
 
-test_that("search / excel states are mirrored onto the table", {
+test_that("search / download states are mirrored onto the table", {
   df <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
-  h  <- render(dt_table_tag(df, search = FALSE, excel_download = TRUE))
+  h  <- render(dt_table_tag(df, search = FALSE, excel_download = TRUE,
+                            pptx_download = TRUE))
   expect_true(grepl("data-dt-search=\"off\"", h))
   expect_true(grepl("data-dt-excel=\"on\"", h))
+  expect_true(grepl("data-dt-html=\"off\"", h))
+  expect_true(grepl("data-dt-pptx=\"on\"", h))
 })
 
 # --- chrome: search input toggle --------------------------------------------
@@ -121,5 +124,17 @@ test_that("config toggle messages update state (on/off and logical back-compat)"
     expect_true(session$returned$state$search())
     cfg(session, "excel_download", FALSE)
     expect_false(session$returned$state$excel_download())
+
+    # The download formats are independent toggles: a board can want the
+    # spreadsheet and not the deck.
+    expect_false(session$returned$state$html_download())
+    expect_false(session$returned$state$pptx_download())
+    cfg(session, "html_download", "on")
+    expect_true(session$returned$state$html_download())
+    expect_false(session$returned$state$pptx_download())
+    cfg(session, "pptx_download", "on")
+    expect_true(session$returned$state$pptx_download())
+    cfg(session, "html_download", FALSE)
+    expect_false(session$returned$state$html_download())
   })
 })

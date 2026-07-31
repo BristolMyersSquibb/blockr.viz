@@ -1212,10 +1212,14 @@ input.blockr-search:focus {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   background-color: #ffffff;
 }
-/* Excel download: a quiet icon button matching the search input's chrome
+/* Download: a quiet icon button matching the search input's chrome
    (28px, radius 4, bg-input) - an inline-SVG anchor built by the block
-   server (no Bootstrap .btn, no icon font). */
-a.blockr-dl-xlsx {
+   server (no Bootstrap .btn, no icon font). It is an <a> when one format is
+   enabled and the <summary> of a <details> menu when several are, so both
+   carry the same rules and the toolbar does not shift when a second format
+   is turned on. */
+a.blockr-dl-xlsx,
+summary.blockr-dl-xlsx {
   appearance: none;
   box-sizing: border-box;
   display: inline-flex;
@@ -1235,13 +1239,15 @@ a.blockr-dl-xlsx {
   box-shadow: none;
   transition: border-color 0.12s, background-color 0.12s, color 0.12s;
 }
-a.blockr-dl-xlsx:hover {
+a.blockr-dl-xlsx:hover,
+summary.blockr-dl-xlsx:hover {
   background-color: #ffffff;
   border-color: var(--blockr-grey-300, #d1d5db);
   color: var(--blockr-color-text-primary, #374151);
   text-decoration: none;
 }
-a.blockr-dl-xlsx:focus-visible {
+a.blockr-dl-xlsx:focus-visible,
+summary.blockr-dl-xlsx:focus-visible {
   outline: none;
   border-color: var(--blockr-color-primary, #2563eb);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
@@ -1258,7 +1264,68 @@ a.blockr-dl-xlsx--off:hover {
   border-color: var(--blockr-color-border, #e5e7eb);
   color: var(--blockr-grey-500, #6b7280);
 }
-a.blockr-dl-xlsx svg { display: block; }"
+a.blockr-dl-xlsx svg, summary.blockr-dl-xlsx svg { display: block; }
+/* Two or more formats: the button becomes a <details> menu. The open/close,
+   the keyboard handling and the focus order are the browser's, so there is
+   no JS here to fall out of step with the table's own script. */
+details.blockr-dl-menu { position: relative; flex: 0 0 auto; }
+details.blockr-dl-menu > summary {
+  list-style: none;
+  user-select: none;
+}
+/* Both spellings: WebKit still wants the pseudo-element, everyone else takes
+   list-style. Without them the marker triangle sits inside the icon box. */
+details.blockr-dl-menu > summary::-webkit-details-marker { display: none; }
+details.blockr-dl-menu > summary::marker { content: \"\"; }
+details.blockr-dl-menu[open] > summary {
+  background-color: #ffffff;
+  border-color: var(--blockr-grey-300, #d1d5db);
+  color: var(--blockr-color-text-primary, #374151);
+}
+.blockr-dl-menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  min-width: 172px;
+  padding: 4px;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 6px;
+  background-color: #ffffff;
+  box-shadow: 0 6px 16px rgba(17, 24, 39, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+a.blockr-dl-item {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-primary, #111827);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+a.blockr-dl-item:hover {
+  background-color: var(--blockr-color-bg-input, #f9fafb);
+  text-decoration: none;
+}
+a.blockr-dl-item:focus-visible {
+  outline: none;
+  background-color: var(--blockr-color-bg-input, #f9fafb);
+  box-shadow: inset 0 0 0 2px var(--blockr-color-primary, #2563eb);
+}
+a.blockr-dl-item.disabled { opacity: 0.45; pointer-events: none; }
+/* Writer not installed: muted and not-allowed, but NOT pointer-events:none --
+   the tooltip carrying the reason has to stay reachable. */
+a.blockr-dl-item--off,
+a.blockr-dl-item--off:hover {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: transparent;
+  color: var(--blockr-grey-500, #6b7280);
+}"
 }
 
 # ---------------------------------------------------------------------------
