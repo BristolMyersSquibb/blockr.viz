@@ -72,6 +72,25 @@
 #'   which is wrong whenever the stub is shorter or the data columns wider
 #'   than those constants assume. Defaults from
 #'   `getOption("blockr.viz.ft_col_widths")`.
+#'
+#'   A numeric vector of widths (one per column, stub first) is also accepted
+#'   and used as given. That is how [write_exhibit_pptx()] gives every page of
+#'   a split table the widths measured on the whole of it.
+#' @param header_rotate What to do when the leaf headers do not fit their
+#'   columns flat. `"auto"` (default) turns them on their side only when they
+#'   would otherwise break inside a word, `"vertical"` always does, `"none"`
+#'   never does. A standing header asks for no width at all, which is what
+#'   lets a table of six arms times six toxicity grades hold 36 columns on one
+#'   slide; without it the columns end up narrower than a character and
+#'   PowerPoint stacks the letters one per line. Defaults from
+#'   `getOption("blockr.viz.ft_header_rotate")`.
+#' @param cell_padding Points of left and right padding per cell, or `NULL`
+#'   (default) for the flextable default of 5. Set automatically to a tighter
+#'   value when a table cannot fit any other way: across 36 columns the
+#'   default spends 5in of a widescreen slide on padding alone.
+#' @param continued Logical. `TRUE` marks the section headings this table
+#'   opens with as `(continued)`, for a page of a table split across slides
+#'   whose first rows carry on a section from the page before.
 #' @param auto_width Logical. `TRUE` runs [flextable::autofit()] instead of
 #'   the manual widths. flextable never fits to the slide on its own, so
 #'   manual widths (the default) are the safe choice for pptx.
@@ -113,6 +132,9 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
                      fit_width = getOption("blockr.viz.ft_fit_width", NULL),
                      col_widths = getOption("blockr.viz.ft_col_widths",
                                             "measured"),
+                     header_rotate = getOption("blockr.viz.ft_header_rotate",
+                                               "auto"),
+                     cell_padding = NULL,
                      auto_width = FALSE, continued = FALSE,
                      header_bg = getOption("blockr.viz.ft_header_bg",
                                            viz_palette("bands")),
@@ -435,6 +457,10 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   # `fit_width` -> the raw first/other widths, which can exceed the slide
   # (the caller's problem).
   widths <- NULL
+  # Stated up front so it holds however the widths are arrived at: a page of a
+  # split table is handed the widths AND the rotation the whole table settled
+  # on, and must not quietly drop half of them.
+  rotate_leaf <- identical(header_rotate, "vertical")
   if (isTRUE(auto_width)) {
     ft <- flextable::autofit(ft)
   } else {
@@ -445,15 +471,38 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
       widths <- col_widths
     } else if (!is.null(fit_width) && n_data > 0L &&
           identical(col_widths, "measured")) {
-      widths <- ft_measured_widths(
-        stub = body[data_pos, 1L],
-        stub_indent = indent * indent_width,
-        stub_label = stub_label,
-        cells = body[data_pos, -1L, drop = FALSE],
-        leaf = leaf, top = top,
-        font = font, font_size = font_size, total = fit_width,
-        banner = c(if (has_title) title, if (has_subtitle) subtitle)
-      )
+
+      measure <- function(rot, pad) {
+        ft_measured_widths(
+          stub = body[data_pos, 1L],
+          stub_indent = indent * indent_width,
+          stub_label = stub_label,
+          cells = body[data_pos, -1L, drop = FALSE],
+          leaf = leaf, top = top,
+          font = font, font_size = font_size, total = fit_width,
+          banner = c(if (has_title) title, if (has_subtitle) subtitle),
+          pad = pad, rotate_leaf = rot
+        )
+      }
+
+      # A slide that is not wide enough is answered in steps, cheapest first,
+      # because each step costs something: a rotated header is harder to read
+      # than a flat one, and tight padding is uglier than loose. Narrowing the
+      # columns instead is what produces a header stacked one character per
+      # line, which is not a trade at all.
+      pad <- ft_pad_width(cell_padding)
+      widths <- measure(rotate_leaf, pad)
+
+      if (isTRUE(attr(widths, "header_squeeze")) && !rotate_leaf &&
+            identical(header_rotate, "auto")) {
+        rotate_leaf <- TRUE
+        widths <- measure(rotate_leaf, pad)
+      }
+      if (isTRUE(attr(widths, "cell_squeeze")) && is.null(cell_padding)) {
+        cell_padding <- TIGHT_PAD
+        pad <- ft_pad_width(cell_padding)
+        widths <- measure(rotate_leaf, pad)
+      }
     }
     if (is.null(widths)) {
       if (!is.null(fit_width) && n_data > 0L) {
@@ -461,6 +510,30 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
         other_cols_width <- (fit_width - first_col_width) / n_data
       }
       widths <- c(first_col_width, rep(other_cols_width, n_data))
+    }
+    if (!is.null(cell_padding) && n_data > 0L) {
+      # Only the data columns and the stub's right edge: the stub's LEFT
+      # padding carries the row indents, and resetting it would flatten them.
+      ft <- ft |>
+        flextable::padding(j = 1L + seq_len(n_data),
+                           padding.left = cell_padding,
+                           padding.right = cell_padding, part = "all") |>
+        flextable::padding(j = 1L, padding.right = cell_padding, part = "all")
+    }
+    if (isTRUE(rotate_leaf) && n_data > 0L) {
+      # The leaf labels run bottom-to-top, and their row is made as tall as
+      # the longest of them: a rotated cell needs the height a flat one needed
+      # in width, and flextable will not work that out on its own.
+      ft <- ft |>
+        flextable::rotate(i = leaf_i, j = 1L + seq_len(n_data),
+                          rotation = "btlr", align = "bottom",
+                          part = "header") |>
+        flextable::height(
+          i = leaf_i,
+          height = max(ft_text_widths(leaf, font, font_size)) + 0.1,
+          part = "header"
+        ) |>
+        flextable::hrule(i = leaf_i, rule = "exact", part = "header")
     }
     for (j in seq_along(widths)) {
       ft <- flextable::width(ft, j = j, width = widths[[j]])
@@ -476,8 +549,40 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   row_map <- rep(NA_integer_, total_out)
   row_map[data_pos] <- seq_len(n_row)
   attr(ft, "row_map") <- row_map
+  # Whether the slide was wide enough after every escalation. `cell = TRUE`
+  # means the columns are narrower than their contents even so, which no
+  # amount of row splitting can help -- the pptx writer reads it and steps the
+  # font down instead.
+  attr(ft, "width_squeeze") <- c(
+    header = isTRUE(attr(widths, "header_squeeze")),
+    cell = isTRUE(attr(widths, "cell_squeeze"))
+  )
+  # Everything the width pass decided, so a caller rendering the SAME table in
+  # pieces (one page per slide) reproduces the layout instead of measuring
+  # each piece on its own and drifting.
+  attr(ft, "layout_plan") <- list(
+    col_widths = as.numeric(widths),
+    header_rotate = if (isTRUE(rotate_leaf)) "vertical" else "none",
+    cell_padding = cell_padding
+  )
+  # Which header row carries the leaf labels, counting the title and subtitle
+  # lines above it. The pptx writer needs it to find those cells again in the
+  # written file, where rotation has to be applied by hand.
+  attr(ft, "leaf_row") <- leaf_i
   ft
 }
+
+# Left plus right cell padding as a width in inches. `NULL` means the
+# flextable default, which is what static_table() leaves in place.
+ft_pad_width <- function(cell_padding) {
+  if (is.null(cell_padding)) ft_side_padding() / 72 else 2 * cell_padding / 72
+}
+
+# Cell padding, in points, for a table that cannot fit any other way. Two
+# points instead of the flextable default of five: on a 36-column table the
+# default spends 5in of a 12.5in slide on padding alone, which is the
+# difference between a legible table and stacked characters.
+TIGHT_PAD <- 2
 
 # ---- measured column widths ------------------------------------------------
 # Give every column the width its own text needs, in this priority: a data
@@ -495,8 +600,19 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
 # Returns widths in inches summing to `total`, or NULL when the table cannot
 # be measured -- the caller then falls back to the positional split, so a
 # missing measurement never fails an export.
+#
+# Two attributes come back with them, both saying the slide is not wide enough
+# and what would help:
+#   `header_squeeze` -- the headers will break inside a word. Rotating them is
+#     the escape, since a vertical header asks for no width at all.
+#   `cell_squeeze`   -- the DATA cells no longer fit. Below that the columns
+#     are narrower than a character and PowerPoint stacks them one per line,
+#     which is the 36-column grade table. Only less padding or a smaller font
+#     helps, because a digit and its padding is all that is left.
 ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
                                font, font_size, total, banner = character(),
+                               pad = ft_side_padding() / 72,
+                               rotate_leaf = FALSE,
                                slack = getOption("blockr.viz.ft_width_slack",
                                                  1.04),
                                stub_min = 1.2) {
@@ -509,7 +625,7 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
     return(NULL)
   }
 
-  pad <- ft_side_padding() / 72
+  squeeze <- c(header = FALSE, cell = FALSE)
 
   out <- tryCatch(
     {
@@ -537,14 +653,27 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
         function(j) max(c(ft_text_widths(cells[, j], font, font_size), 0)),
         numeric(1L)
       ) + pad
-      head_word <- vapply(leaf, ft_word_width, numeric(1L),
-                          font = font, size = font_size) + pad
-      head_full <- ft_text_widths(leaf, font, font_size) + pad
+      # A rotated leaf header runs down the column instead of across it, so it
+      # asks for no width at all (it asks for height instead, which is the
+      # trade that makes a 36-column table fit).
+      head_word <- if (rotate_leaf) {
+        rep(0, n_data)
+      } else {
+        vapply(leaf, ft_word_width, numeric(1L),
+               font = font, size = font_size) + pad
+      }
+      head_full <- if (rotate_leaf) {
+        rep(0, n_data)
+      } else {
+        ft_text_widths(leaf, font, font_size) + pad
+      }
 
       # A spanner sits over its whole group, so its demand is shared out: it
       # only widens columns when the group is narrower than the spanner.
       span_word <- rep(0, n_data)
       span_full <- rep(0, n_data)
+      # The spanner stays horizontal even when its leaves rotate: it has the
+      # whole group's width to sit across, so it is rarely the constraint.
       if (any(nzchar(top))) {
         runs <- rle(top)
         at <- 0L
@@ -577,7 +706,11 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
 
       if (sum(want) + stub_floor > total) {
         # Too wide even at the minimum: shrink the widest columns first and
-        # accept that something wraps.
+        # accept that something wraps. Which thing wraps is worth telling the
+        # caller apart, so it can rotate the headers or tighten the padding
+        # instead of narrowing the columns into stacked characters.
+        squeeze[["header"]] <- TRUE
+        squeeze[["cell"]] <- sum(need) + stub_floor > total
         data_w <- ft_water_fill(want, max(total - stub_floor, 0), need)
         stub_w <- total - sum(data_w)
       } else {
@@ -629,6 +762,8 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
     return(NULL)
   }
 
+  attr(out, "header_squeeze") <- unname(squeeze[["header"]])
+  attr(out, "cell_squeeze") <- unname(squeeze[["cell"]])
   out
 }
 
@@ -654,10 +789,9 @@ ft_part_heights <- function(ft, part = "body") {
     return(numeric(0))
   }
 
-  d <- p$dataset
   w <- ft$body$colwidths
   spans <- p$spans$rows
-  n_row <- nrow(d)
+  n_row <- nrow(p$dataset)
   n_col <- length(w)
 
   sz <- p$styles$text$font.size$data
@@ -667,12 +801,15 @@ ft_part_heights <- function(ft, part = "body") {
   pr <- p$styles$pars$padding.right$data
   pt <- p$styles$pars$padding.top$data
   pb <- p$styles$pars$padding.bottom$data
+  # A rotated cell runs its text down the row instead of across the column, so
+  # its height is the width the text would have taken. Measured as such, or a
+  # vertical header reads as a cell wrapped forty lines deep.
+  dir <- p$styles$cells$text.direction$data
 
   out <- rep(0, n_row)
 
   for (j in seq_len(n_col)) {
-    txt <- as.character(d[[j]])
-    txt[is.na(txt)] <- ""
+    txt <- ft_cell_text(p, j)
     span <- spans[, j]
     # A merged cell is measured across the columns it covers, and the cells
     # it swallowed are not measured at all.
@@ -685,9 +822,15 @@ ft_part_heights <- function(ft, part = "body") {
     for (i in seq_len(n_row)) {
       if (is.na(avail[[i]])) next
       size <- sz[i, j]
-      lines <- ft_line_count(txt[[i]], avail[[i]], fam[i, j], size,
-                             isTRUE(bold[i, j]))
-      h <- lines * size * 1.2 / 72 + (pt[i, j] + pb[i, j]) / 72
+      rot <- !is.null(dir) && dir[i, j] %in% c("btlr", "tbrl")
+      h <- if (rot) {
+        ft_text_widths(txt[[i]], fam[i, j], size) +
+          (pl[i, j] + pr[i, j]) / 72
+      } else {
+        lines <- ft_line_count(txt[[i]], avail[[i]], fam[i, j], size,
+                               isTRUE(bold[i, j]))
+        lines * size * 1.2 / 72 + (pt[i, j] + pb[i, j]) / 72
+      }
       if (h > out[[i]]) out[[i]] <- h
     }
   }
@@ -699,6 +842,35 @@ ft_part_heights <- function(ft, part = "body") {
   }
 
   out
+}
+
+# The text one column of a flextable part actually PRINTS, row by row.
+#
+# Not `part$dataset`, which for a header still holds the column keys the table
+# was built from ("Placebo (N=143)||n (%)"), never the labels
+# set_header_labels() put there. Measuring those would size the header band
+# against strings no reader ever sees. The rendered runs live in the chunk
+# structure; the dataset is the fallback for a flextable that has none.
+ft_cell_text <- function(p, j) {
+
+  n_row <- nrow(p$dataset)
+  chunks <- p$content$data
+
+  if (is.null(chunks) || ncol(chunks) < j) {
+    out <- as.character(p$dataset[[j]])
+    out[is.na(out)] <- ""
+    return(out)
+  }
+
+  vapply(seq_len(n_row), function(i) {
+    cell <- chunks[[i, j]]
+    if (is.null(cell) || is.null(cell$txt)) {
+      return("")
+    }
+    txt <- as.character(cell$txt)
+    txt[is.na(txt)] <- ""
+    paste(txt, collapse = "")
+  }, character(1L))
 }
 
 # Lines a string takes at a given width, wrapping greedily on whitespace and

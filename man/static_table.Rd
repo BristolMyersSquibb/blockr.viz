@@ -18,6 +18,8 @@ static_table(
   other_cols_width = 3.5,
   fit_width = getOption("blockr.viz.ft_fit_width", NULL),
   col_widths = getOption("blockr.viz.ft_col_widths", "measured"),
+  header_rotate = getOption("blockr.viz.ft_header_rotate", "auto"),
+  cell_padding = NULL,
   auto_width = FALSE,
   continued = FALSE,
   header_bg = getOption("blockr.viz.ft_header_bg", viz_palette("bands")),
@@ -73,11 +75,33 @@ Even is the older positional rule (the stub takes \code{first_col_width}
 capped at half the slide, the data columns share the remainder equally),
 which is wrong whenever the stub is shorter or the data columns wider
 than those constants assume. Defaults from
-\code{getOption("blockr.viz.ft_col_widths")}.}
+\code{getOption("blockr.viz.ft_col_widths")}.
+
+A numeric vector of widths (one per column, stub first) is also accepted
+and used as given. That is how \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}} gives every page of
+a split table the widths measured on the whole of it.}
+
+\item{header_rotate}{What to do when the leaf headers do not fit their
+columns flat. \code{"auto"} (default) turns them on their side only when they
+would otherwise break inside a word, \code{"vertical"} always does, \code{"none"}
+never does. A standing header asks for no width at all, which is what
+lets a table of six arms times six toxicity grades hold 36 columns on one
+slide; without it the columns end up narrower than a character and
+PowerPoint stacks the letters one per line. Defaults from
+\code{getOption("blockr.viz.ft_header_rotate")}.}
+
+\item{cell_padding}{Points of left and right padding per cell, or \code{NULL}
+(default) for the flextable default of 5. Set automatically to a tighter
+value when a table cannot fit any other way: across 36 columns the
+default spends 5in of a widescreen slide on padding alone.}
 
 \item{auto_width}{Logical. \code{TRUE} runs \code{\link[flextable:autofit]{flextable::autofit()}} instead of
 the manual widths. flextable never fits to the slide on its own, so
 manual widths (the default) are the safe choice for pptx.}
+
+\item{continued}{Logical. \code{TRUE} marks the section headings this table
+opens with as \code{(continued)}, for a page of a table split across slides
+whose first rows carry on a section from the page before.}
 
 \item{header_bg}{Header band colors, keyed on the column-group structure
 the annotated df carries. A color vector (hex or R color names):

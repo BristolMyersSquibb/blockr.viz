@@ -45,11 +45,14 @@ whole table and reused on every page, so the columns line up when the
 reader flips between slides. Breaks avoid stranding one or two rows of a
 section at the top of a slide by moving the whole section over.}
 
-\item{min_font_size}{Points. Before splitting, the table is asked to shrink:
-the font steps down to this floor and stops at the first size that fits
-one slide. One slide at 11pt beats two at 13pt. Defaults from
-\code{getOption("blockr.viz.ft_min_font_size")}. Ignored when \code{max_rows} is
-\code{NULL}.}
+\item{min_font_size}{Points. The floor for the two shrink passes, ignored
+when \code{max_rows} is \code{NULL} and defaulting from
+\code{getOption("blockr.viz.ft_min_font_size")}. Width first: a table with more
+columns than the slide can hold at the stated size steps down until its
+cells fit, because columns narrower than a character are illegible at any
+height and no amount of splitting helps. Height second: it steps down
+again if that avoids a split altogether, since one slide at 11pt beats
+two at 13pt.}
 
 \item{...}{Passed to \code{\link[=static_table]{static_table()}}.}
 }

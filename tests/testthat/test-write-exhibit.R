@@ -393,6 +393,109 @@ test_that("row heights are measured, not counted", {
   expect_equal(ft_line_count("a\nb", 10, "Arial", 12), 2L)
 })
 
+# ---- too many columns -----------------------------------------------------
+
+# The shape that broke in production: six arms times six toxicity grades, so
+# 36 data columns on a 12.5in slide.
+grade_df <- function(n_arm = 6L, n_row = 6L) {
+  arms <- paste0(c("Placebo", "300mg", "600mg", "900mg", "1500mg", "1200mg",
+                   "1800mg", "2400mg"), " (N=20)")
+  stats <- c("Any Grade\nN=20", paste0("Grade ", 1:5, "\nN=20"))
+  out <- data.frame(.label = paste("Dictionary derived term", seq_len(n_row)),
+                    .indent = 0L, check.names = FALSE)
+  for (a in arms[seq_len(n_arm)]) {
+    for (s in stats) {
+      out[[paste0(a, "||", s)]] <- structure(rep("1", n_row), label = s)
+    }
+  }
+  out
+}
+
+test_that("headers turn on their side rather than columns into stacked characters", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  wide <- static_table(grade_df(), title = "", fit_width = 12.53)
+  narrow <- static_table(grade_df(2L), title = "", fit_width = 12.53)
+
+  rot <- function(ft) {
+    unname(ft$header$styles$cells$text.direction$data[attr(ft, "leaf_row"), 2L])
+  }
+  # 36 columns cannot hold "Grade" flat, 12 can.
+  expect_equal(rot(wide), "btlr")
+  expect_equal(rot(narrow), "lrtb")
+  expect_equal(attr(wide, "layout_plan")$header_rotate, "vertical")
+
+  # Rotating buys width: no column is left narrower than its own contents.
+  pad <- ft_side_padding() / 72
+  expect_gt(min(wide$body$colwidths[-1L]),
+            max(ft_text_widths("1", "Inter", 13)) + pad)
+
+  # ... and the row it lives in is made tall enough to hold the standing text.
+  expect_gt(wide$header$rowheights[[attr(wide, "leaf_row")]], 0.5)
+
+  # Told not to, it does not.
+  flat <- static_table(grade_df(), title = "", fit_width = 12.53,
+                       header_rotate = "none")
+  expect_equal(unname(
+    flat$header$styles$cells$text.direction$data[attr(flat, "leaf_row"), 2L]
+  ), "lrtb")
+})
+
+test_that("a table that still will not fit gets tighter padding, then says so", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  ft <- static_table(grade_df(8L), title = "", fit_width = 12.53)
+  expect_equal(attr(ft, "layout_plan")$cell_padding, TIGHT_PAD)
+  expect_lt(ft$body$styles$pars$padding.left$data[[1L, 2L]], 5)
+})
+
+test_that("the pptx keeps the rotation officer drops", {
+  skip_if_not_installed("officer")
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+  skip_if_not_installed("xml2")
+
+  f <- tempfile(fileext = ".pptx")
+  on.exit(unlink(f), add = TRUE)
+
+  write_exhibit_pptx(grade_df(), f, title = "Grades")
+  xml <- pptx_part(f, "ppt/slides/slide1.xml")
+  # flextable's own rotation never reaches pptx, so the cells are turned in
+  # the written file: 36 data columns, stub left flat.
+  expect_equal(lengths(regmatches(xml, gregexpr("vert=\"vert270\"", xml))),
+               36L)
+})
+
+test_that("the table starts below the title, however many lines it takes", {
+  skip_if_not_installed("officer")
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  top_of <- function(file) {
+    xml <- pptx_part(file, "ppt/slides/slide1.xml")
+    off <- regmatches(xml, gregexpr("<a:off x=\"-?[0-9]+\" y=\"-?[0-9]+\"/>",
+                                    xml))[[1L]]
+    y <- as.numeric(sub(".*y=\"(-?[0-9]+)\".*", "\\1", off))
+    y[[length(y)]] / 914400
+  }
+
+  short <- tempfile(fileext = ".pptx")
+  long <- tempfile(fileext = ".pptx")
+  on.exit(unlink(c(short, long)), add = TRUE)
+
+  write_exhibit_pptx(demo_df(), short, title = "Demographics")
+  write_exhibit_pptx(demo_df(), long, title = paste(
+    "Number of Subjects with Treatment-Emergent Adverse Events by highest",
+    "Standard Toxicity Grade, System Organ Class, and Dictionary Derived Term"
+  ))
+
+  # Never above the exporter's own floor, and pushed down by the wrap.
+  expect_gte(top_of(short), 1.1)
+  expect_gt(top_of(long), top_of(short) + 0.3)
+})
+
 # ---- template resolution --------------------------------------------------
 
 test_that("pptx_template() takes the first path that actually exists", {

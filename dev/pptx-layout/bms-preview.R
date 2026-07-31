@@ -222,6 +222,71 @@ page <- tagList(
   )
 )
 
+# ---- too many columns -----------------------------------------------------
+# The shape that broke in production: six arms times six toxicity grades. At
+# 36 columns the slide runs out, and before the headers could turn on their
+# side each column ended up narrower than a character, so PowerPoint stacked
+# the letters one per line.
+GRADE <- "/workspace/_scratch/pptx-preview/grade-table-bms.pptx"
+
+all_soc <- names(sort(table(unique(adae2[, c("USUBJID", "AEBODSYS")])$AEBODSYS),
+                      decreasing = TRUE))
+
+grade_arms <- paste0(c("Placebo", "300mg", "600mg", "900mg", "1500mg",
+                       "1200mg"), " (N=20)")
+grade_stats <- c("Any Grade\nN=20", paste0("Grade ", 1:5, "\nN=20"))
+n_grade <- 120
+grade_tbl <- data.frame(
+  .label = sentence(rep(unique(adae2$AEDECOD), length.out = n_grade)),
+  .indent = 0L,
+  .group1 = "System organ class",
+  .group1_level = rep(sentence(all_soc[1:6]), each = n_grade / 6),
+  check.names = FALSE
+)
+set.seed(7)
+for (a in grade_arms) {
+  for (s in grade_stats) {
+    grade_tbl[[paste0(a, "||", s)]] <-
+      structure(as.character(rpois(n_grade, 2)), label = s)
+  }
+}
+attr(grade_tbl$.label, "label") <- "Dictionary derived term"
+attr(grade_tbl, "subtitle") <- "Safety Population"
+GRADE_TITLE <- paste(
+  "Number of Subjects with Treatment-Emergent Adverse Events by highest",
+  "Standard Toxicity Grade, System Organ Class, and Dictionary Derived Term"
+)
+
+write_exhibit_pptx(grade_tbl, GRADE, title = GRADE_TITLE, template = TEMPLATE)
+message("wrote ", GRADE, " (", length(officer::read_pptx(GRADE)),
+        " slides, ", n_grade, " rows x ", length(grade_arms) *
+          length(grade_stats), " columns)")
+
+page <- tagAppendChild(page, tags$main(
+  tags$section(
+    tags$h2("36 columns"),
+    tags$p(paste(
+      "Six arms times six toxicity grades. Flat, the word \"Grade\" alone",
+      "needs 23.5in across 36 columns, so every column is squeezed below the",
+      "width of a capital letter and the header comes out one character per",
+      "line. Turned on its side the header asks for no width at all, and the",
+      "columns are sized by their counts instead."
+    )),
+    tags$p(class = "q", paste(
+      "Read the shape here, not the width badge. A browser refuses to draw a",
+      "table narrower than its content, so both of these measure wider than",
+      "they are; PowerPoint honours the stated widths exactly, and the",
+      "written deck is 12.53in either way."
+    )),
+    tags$h3("header_rotate = \"none\" (what production did)"),
+    slide(static_table(grade_tbl[1:12, ], title = "", fit_width = fit,
+                       header_rotate = "none"), GRADE_TITLE),
+    tags$h3("header_rotate = \"auto\" (now)"),
+    slide(static_table(grade_tbl[1:12, ], title = "", fit_width = fit),
+          GRADE_TITLE)
+  )
+))
+
 # ---- the long one ---------------------------------------------------------
 # Every SOC and every preferred term, which is what a real AE table looks like
 # and what no slide can hold. Written through write_exhibit_pptx() itself, so
@@ -229,8 +294,6 @@ page <- tagList(
 # header band, the footnote and the section heading on every page.
 PAGED <- "/workspace/_scratch/pptx-preview/table-widths-bms-paged.pptx"
 
-all_soc <- names(sort(table(unique(adae2[, c("USUBJID", "AEBODSYS")])$AEBODSYS),
-                      decreasing = TRUE))
 # Sections, so the heading is the thing that repeats: the SOC drives the
 # grouping instead of being a row of the stub.
 long_ae <- do.call(rbind, lapply(all_soc, function(s) {

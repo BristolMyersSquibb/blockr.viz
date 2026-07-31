@@ -49,11 +49,14 @@
 #'   whole table and reused on every page, so the columns line up when the
 #'   reader flips between slides. Breaks avoid stranding one or two rows of a
 #'   section at the top of a slide by moving the whole section over.
-#' @param min_font_size Points. Before splitting, the table is asked to shrink:
-#'   the font steps down to this floor and stops at the first size that fits
-#'   one slide. One slide at 11pt beats two at 13pt. Defaults from
-#'   `getOption("blockr.viz.ft_min_font_size")`. Ignored when `max_rows` is
-#'   `NULL`.
+#' @param min_font_size Points. The floor for the two shrink passes, ignored
+#'   when `max_rows` is `NULL` and defaulting from
+#'   `getOption("blockr.viz.ft_min_font_size")`. Width first: a table with more
+#'   columns than the slide can hold at the stated size steps down until its
+#'   cells fit, because columns narrower than a character are illegible at any
+#'   height and no amount of splitting helps. Height second: it steps down
+#'   again if that avoids a split altogether, since one slide at 11pt beats
+#'   two at 13pt.
 #' @param ... Passed to [static_table()].
 #'
 #' @return `file`, invisibly.
@@ -126,7 +129,7 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
   x <- fmt_to_wide(as_annotated_df(x))
 
   args <- list(...)
-  build <- function(rows = NULL, size = NULL, widths = NULL,
+  build <- function(rows = NULL, size = NULL, plan = NULL,
                     continued = FALSE, page = NULL) {
     do.call(static_table, c(
       list(
@@ -137,7 +140,10 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
         continued = continued
       ),
       if (!is.null(size)) list(font_size = size),
-      if (!is.null(widths)) list(col_widths = widths),
+      # The whole table's layout decisions, not just its widths: a page
+      # measured on its own would rotate its headers when the others did not,
+      # or pad differently, and the slides would no longer match.
+      plan,
       args
     ))
   }
@@ -146,17 +152,40 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
                       error = function(e) 7.5)
   slide_w <- tryCatch(officer::slide_size(doc)$width,
                       error = function(e) 13.333)
-  top <- args$pptx_top %||% 1.1
+
+  # The table starts below the title's own text, not at a constant that may
+  # sit inside it. Measured on the LAST page's title, the longest of them, so
+  # the table does not shift as the reader flips.
+  top <- max(
+    args$pptx_top %||% 1.1,
+    if (slide_title) {
+      pptx_title_bottom(doc, layout, master, template,
+                        pptx_page_title(title, c(99L, 99L))) %||% 0
+    } else {
+      0
+    }
+  )
   budget <- slide_h - top - 0.4
 
   ft <- build()
   size <- args$font_size %||% getOption("blockr.viz.ft_font_size", 13)
 
-  # A table that does not fit is first asked to shrink, and only split when
-  # shrinking cannot save it: one slide at 11pt beats two at 13pt, and four
-  # slides at 9pt beat nothing at all.
-  if (!is.null(max_rows) && !pptx_fits(ft, budget) &&
-        size > min_font_size) {
+  # Width first. A table whose CELLS no longer fit their columns is illegible
+  # at any height -- past about 44 columns a count and its padding is wider
+  # than the slide can give, and PowerPoint stacks the characters one per
+  # line. Stepping the font down is the only thing that buys real width back,
+  # so it happens before anything else is decided.
+  if (!is.null(max_rows) && pptx_cell_squeezed(ft) && size > min_font_size) {
+    for (s in seq(size - 1, min_font_size)) {
+      ft <- build(size = s)
+      size <- s
+      if (!pptx_cell_squeezed(ft)) break
+    }
+  }
+
+  # Then height: shrink further if that avoids a split, since one slide at
+  # 11pt beats two at 13pt.
+  if (!is.null(max_rows) && !pptx_fits(ft, budget) && size > min_font_size) {
     for (s in seq(size - 1, min_font_size)) {
       cand <- build(size = s)
       if (pptx_fits(cand, budget)) {
@@ -176,7 +205,7 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
     }
     key <- pptx_section_key(x)
     breaks <- pptx_hold_sections(breaks, key)
-    widths <- ft$body$colwidths
+    plan <- attr(ft, "layout_plan")
     from <- c(1L, utils::head(breaks, -1L) + 1L)
     # Only a page that opens INSIDE a section says "(continued)". One that
     # opens on a fresh heading is not a continuation of anything, and saying
@@ -186,7 +215,7 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
     }, logical(1L))
     pages <- Map(
       function(a, b, i) {
-        build(rows = a:b, size = size, widths = widths,
+        build(rows = a:b, size = size, plan = plan,
               continued = cont[[i]], page = c(i, length(breaks)))
       },
       from, breaks, seq_along(breaks)
@@ -203,6 +232,13 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
   }
 
   print(doc, target = file)
+
+  # Rotation is the one styling decision flextable cannot carry into pptx, so
+  # it is applied to the file after officer has written it.
+  if (identical(attr(ft, "layout_plan")$header_rotate, "vertical")) {
+    pptx_rotate_header_cells(file, attr(ft, "leaf_row") %||% NA_integer_)
+  }
+
   invisible(file)
 }
 
@@ -228,11 +264,14 @@ pptx_add_table_slide <- function(doc, ft, layout, master, slide_w, top,
   # what col_widths = "measured" does when the table is narrower than the
   # slide) reads as placed when it is centred and as fallen over when it is
   # not. A full-width table lands back on the template's own left margin.
+  # `top` is the writer's, measured from the title actually on this layout,
+  # and it wins over static_table()'s own default: the renderer sizing the
+  # table does not know how far down the deck's title reaches.
   officer::ph_with(
     doc, ft,
     location = officer::ph_location(
       left = max(0.25, (slide_w - dim$widths) / 2),
-      top = attr(ft, "pptx_top") %||% top,
+      top = top,
       width = dim$widths, height = dim$heights
     )
   )
@@ -252,6 +291,12 @@ pptx_fits <- function(ft, budget) {
   h <- sum(ft_part_heights(ft, "header"), ft_part_heights(ft, "body"),
            ft_part_heights(ft, "footer"))
   !is.finite(h) || h <= budget
+}
+
+# Did the width allocator run out of slide for the DATA cells? Splitting rows
+# cannot help with this one, which is why it is asked separately.
+pptx_cell_squeezed <- function(ft) {
+  isTRUE(attr(ft, "width_squeeze")[["cell"]])
 }
 
 # Last input row of each page, decided on the measured height of the rendered
@@ -371,6 +416,68 @@ pptx_slice_rows <- function(x, i) {
   out
 }
 
+# Turn the leaf header cells on their side, in the written file.
+#
+# flextable::rotate() reaches Word and HTML but not PowerPoint: it emits a bare
+# `<a:bodyPr/>` and the text stays flat. In DrawingML a table cell states its
+# text direction on `<a:tcPr vert="vert270">`, so the rotation is set here,
+# afterwards, on the cells that need it. Best effort throughout -- a deck that
+# cannot be reopened is worse than one whose headers stayed horizontal.
+#
+# @param row 1-based index of the header row to rotate, counting the table's
+#   own rows from the top (title and subtitle lines included).
+pptx_rotate_header_cells <- function(file, row) {
+
+  if (!is.numeric(row) || length(row) != 1L || !is.finite(row) ||
+        !requireNamespace("xml2", quietly = TRUE) ||
+        !requireNamespace("zip", quietly = TRUE)) {
+    return(invisible(file))
+  }
+
+  tryCatch(
+    {
+      dir <- tempfile("pptx-rotate")
+      on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+      utils::unzip(file, exdir = dir)
+
+      slides <- list.files(file.path(dir, "ppt", "slides"),
+                           pattern = "^slide[0-9]+\\.xml$", full.names = TRUE)
+
+      for (s in slides) {
+        doc <- xml2::read_xml(s)
+        ns <- xml2::xml_ns(doc)
+        changed <- FALSE
+
+        for (tbl in xml2::xml_find_all(doc, ".//a:tbl", ns)) {
+          rows <- xml2::xml_find_all(tbl, "./a:tr", ns)
+          if (length(rows) < row) next
+          cells <- xml2::xml_find_all(rows[[row]], "./a:tc", ns)
+          # The stub header stays flat: it is the one column with room.
+          for (tc in utils::tail(cells, -1L)) {
+            pr <- xml2::xml_find_first(tc, "./a:tcPr", ns)
+            if (inherits(pr, "xml_missing")) next
+            xml2::xml_set_attr(pr, "vert", "vert270")
+            xml2::xml_set_attr(pr, "anchor", "b")
+            changed <- TRUE
+          }
+        }
+
+        if (changed) xml2::write_xml(doc, s)
+      }
+
+      zip::zip(
+        basename(file),
+        files = list.files(dir, recursive = FALSE),
+        root = dir, mode = "cherry-pick"
+      )
+      file.copy(file.path(dir, basename(file)), file, overwrite = TRUE)
+    },
+    error = function(e) NULL
+  )
+
+  invisible(file)
+}
+
 # The reference deck this export styles against: the caller's, the app's, the
 # outline's, or none. A path that no longer exists counts as none -- state
 # saved on one machine and opened on another carries absolute paths that
@@ -452,6 +559,61 @@ pptx_content_width <- function(template) {
   if (length(out) == 1L && is.finite(out) && out > 0) out else fallback
 }
 
+# Where the title placeholder's text ends, in inches from the top of the
+# slide. The table is placed below THAT rather than at a constant, because a
+# title long enough to wrap runs down into the table: the BMS layout puts its
+# title at 0.4in with 1.25in of box, and the exporter's old fixed 1.1in top
+# sits inside it. A one-line title never showed the collision; adding a
+# "(55 of 57)" page marker to an already long one does.
+#
+# NULL when the layout has no title placeholder or the geometry cannot be
+# read, and the caller keeps its default.
+pptx_title_bottom <- function(doc, layout, master, template, title,
+                              gap = 0.1) {
+
+  if (!is.character(title) || length(title) != 1L || !nzchar(title)) {
+    return(NULL)
+  }
+
+  tryCatch(
+    {
+      props <- officer::layout_properties(doc, layout = layout,
+                                          master = master)
+      ph <- props[grepl("title", props$type, fixed = TRUE), , drop = FALSE]
+      if (!nrow(ph)) {
+        return(NULL)
+      }
+      size <- pptx_title_size(template)
+      font <- pptx_theme_font(template, "major") %||% "Arial"
+      lines <- ft_line_count(title, ph$cx[[1L]] - 0.2, font, size,
+                             bold = TRUE)
+      ph$offy[[1L]] + lines * size * 1.2 / 72 + gap
+    },
+    error = function(e) NULL
+  )
+}
+
+# Point size of the layout's title text, from the master's own title style.
+pptx_title_size <- function(template, fallback = 24) {
+
+  xml <- pptx_part(template, "ppt/slideMasters/slideMaster1.xml")
+
+  if (is.null(xml)) {
+    return(fallback)
+  }
+
+  style <- regmatches(xml, regexpr("<p:titleStyle>.*?</p:titleStyle>", xml))
+  sz <- regmatches(style, regexpr("sz=\"[0-9]+\"", style))
+
+  if (!length(sz)) {
+    return(fallback)
+  }
+
+  # OOXML states point sizes in hundredths.
+  out <- as.numeric(gsub("\\D", "", sz)) / 100
+  if (length(out) == 1L && is.finite(out) && out > 0) out else fallback
+}
+
 # The deck's body typeface (the theme's MINOR latin font; the major one is for
 # titles). NULL when the template carries no readable font scheme.
 #
@@ -460,23 +622,30 @@ pptx_content_width <- function(template) {
 # exported table would be the one thing on the slide that does not match its
 # own master -- invisibly so on the machine that authored it.
 pptx_body_font <- function(template) {
+  pptx_theme_font(template, "minor")
+}
 
+# Either half of the theme's font scheme: "minor" is the body face, "major"
+# the one titles are set in.
+pptx_theme_font <- function(template, which = c("minor", "major")) {
+
+  which <- match.arg(which)
   xml <- pptx_part(template, "ppt/theme/theme1.xml")
 
   if (is.null(xml)) {
     return(NULL)
   }
 
-  minor <- regmatches(
+  block <- regmatches(
     xml,
-    regexpr("<a:minorFont>.*?<a:latin typeface=\"[^\"]*\"", xml)
+    regexpr(sprintf("<a:%sFont>.*?<a:latin typeface=\"[^\"]*\"", which), xml)
   )
 
-  if (!length(minor)) {
+  if (!length(block)) {
     return(NULL)
   }
 
-  face <- regmatches(minor, regexpr("typeface=\"[^\"]*\"", minor))
+  face <- regmatches(block, regexpr("typeface=\"[^\"]*\"", block))
   face <- sub("\"$", "", sub("^typeface=\"", "", face))
 
   if (!length(face) || !nzchar(face)) NULL else face
