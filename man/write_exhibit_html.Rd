@@ -4,7 +4,17 @@
 \alias{write_exhibit_html}
 \title{Write an Exhibit to a Self-Contained HTML File}
 \usage{
-write_exhibit_html(x, file, title = NULL, subtitle = NULL, caption = NULL, ...)
+write_exhibit_html(
+  x,
+  file,
+  title = NULL,
+  subtitle = NULL,
+  caption = NULL,
+  default_expanded = TRUE,
+  collapsible = TRUE,
+  sortable = TRUE,
+  ...
+)
 }
 \arguments{
 \item{x}{A data frame or \code{\link[=as_annotated_df]{as_annotated_df()}}-coercible table object.}
@@ -15,6 +25,16 @@ write_exhibit_html(x, file, title = NULL, subtitle = NULL, caption = NULL, ...)
 \code{""} omits each.}
 
 \item{caption}{Trailing footnote, rendered under the table.}
+
+\item{default_expanded}{Logical. \code{TRUE} (default) opens every section, which
+is what a downloaded file is for: the page scrolls, so there is no height
+to budget, and a reader who asked for the table wants the numbers, not
+nine headers to click. \code{FALSE} opens it at its section rows.}
+
+\item{collapsible, sortable}{Logical. Whether the saved page keeps the
+collapse chevrons and the click-to-sort headers (both \code{TRUE} by default).
+The table block passes its own display toggles through here, so a table
+shown without collapsing downloads without it.}
 
 \item{...}{Passed to \code{\link[=html_exhibit]{html_exhibit()}}.}
 }

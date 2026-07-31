@@ -102,6 +102,80 @@ test_that("write_exhibit_html() keeps the section structure it was given", {
   expect_match(html, "Treatment", fixed = TRUE)
 })
 
+# A tall nested table: html_exhibit()'s height rule would open this one at its
+# section rows (>24 rows, and the .indent nesting gives it something to
+# collapse into). The download must not inherit that -- a page scrolls.
+tall_df <- function(n = 40L) {
+  data.frame(
+    .label  = c("Age (years)", paste("Stat", seq_len(n))),
+    .indent = c(0L, rep(1L, n)),
+    Placebo = c("", rep("1.0", n)),
+    check.names = FALSE
+  )
+}
+
+test_that("write_exhibit_html() opens every section, however tall the table", {
+  f <- tempfile(fileext = ".html")
+  on.exit(unlink(f), add = TRUE)
+
+  # The auto rule this replaces would collapse this table.
+  expect_false(html_exhibit_expanded(tall_df()))
+
+  write_exhibit_html(tall_df(), f)
+  html <- paste(readLines(f, warn = FALSE), collapse = "\n")
+
+  expect_match(html, "data-initial-expanded=\"1\"", fixed = TRUE)
+
+  # ... and the caller can still ask for the collapsed opening.
+  write_exhibit_html(tall_df(), f, default_expanded = FALSE)
+  html <- paste(readLines(f, warn = FALSE), collapse = "\n")
+
+  expect_match(html, "data-initial-expanded=\"0\"", fixed = TRUE)
+})
+
+test_that("write_exhibit_html() honours collapsible = FALSE", {
+  f <- tempfile(fileext = ".html")
+  on.exit(unlink(f), add = TRUE)
+
+  df <- data.frame(
+    .group1_level = c("Screening", "Screening", "Treatment"),
+    .label = c("Age", "Sex", "Dose"),
+    Placebo = c("75", "F", "10mg"),
+    check.names = FALSE
+  )
+
+  write_exhibit_html(df, f, collapsible = FALSE)
+  html <- paste(readLines(f, warn = FALSE), collapse = "\n")
+
+  # Static section labels: no toggle button, no chevron, and the script is
+  # told to leave the rows alone.
+  expect_match(html, "blockr-section-btn-static", fixed = TRUE)
+  expect_false(grepl("<button class=\"blockr-section-btn\"", html, fixed = TRUE))
+  expect_match(html, "data-dt-collapsible=\"0\"", fixed = TRUE)
+  # Nothing can unfold a table with no chevrons, so it cannot start folded.
+  expect_match(html, "data-initial-expanded=\"1\"", fixed = TRUE)
+})
+
+test_that("write_exhibit_html() honours sortable = FALSE", {
+  f <- tempfile(fileext = ".html")
+  on.exit(unlink(f), add = TRUE)
+
+  # The class name is in the inlined stylesheet either way; what must go is
+  # the header that carries it (the hook the inline script binds to) and its
+  # sort arrow.
+  write_exhibit_html(demo_df(), f)
+  expect_match(paste(readLines(f, warn = FALSE), collapse = "\n"),
+               "<th class=\"blockr-col-header leaf blockr-sortable\"",
+               fixed = TRUE)
+
+  write_exhibit_html(demo_df(), f, sortable = FALSE)
+  html <- paste(readLines(f, warn = FALSE), collapse = "\n")
+
+  expect_false(grepl("<th class=\"blockr-col-header leaf blockr-sortable\"",
+                     html, fixed = TRUE))
+  expect_false(grepl("blockr-sort-icon\"", html, fixed = TRUE))
+})
+
 # ---- pptx -----------------------------------------------------------------
 
 test_that("write_exhibit_pptx() writes one slide holding a NATIVE table", {

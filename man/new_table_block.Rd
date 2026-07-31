@@ -97,7 +97,8 @@ rendered (annotated) frame -- the same frame, the same resolved title /
 subtitle / caption -- through that format's writer:
 \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}} for a styled spreadsheet (needs \code{openxlsx}),
 \code{\link[=write_exhibit_html]{write_exhibit_html()}} for a self-contained page that keeps the table's
-sorting and section collapse, and \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}} for a one-slide
+sorting and section collapse (opened out: a downloaded page scrolls, so
+every section starts expanded), and \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}} for a one-slide
 deck carrying a native, editable PowerPoint table (needs \code{officer} and
 \code{flextable}). One format on renders a button, several render a menu; a
 format whose writer is not installed shows disabled with the reason.}

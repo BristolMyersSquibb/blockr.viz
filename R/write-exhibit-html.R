@@ -18,6 +18,14 @@
 #' @param title,subtitle Document heading and its muted second line. `NULL` or
 #'   `""` omits each.
 #' @param caption Trailing footnote, rendered under the table.
+#' @param default_expanded Logical. `TRUE` (default) opens every section, which
+#'   is what a downloaded file is for: the page scrolls, so there is no height
+#'   to budget, and a reader who asked for the table wants the numbers, not
+#'   nine headers to click. `FALSE` opens it at its section rows.
+#' @param collapsible,sortable Logical. Whether the saved page keeps the
+#'   collapse chevrons and the click-to-sort headers (both `TRUE` by default).
+#'   The table block passes its own display toggles through here, so a table
+#'   shown without collapsing downloads without it.
 #' @param ... Passed to [html_exhibit()].
 #'
 #' @return `file`, invisibly.
@@ -32,12 +40,27 @@
 #' unlink(f)
 #' @export
 write_exhibit_html <- function(x, file, title = NULL, subtitle = NULL,
-                               caption = NULL, ...) {
+                               caption = NULL, default_expanded = TRUE,
+                               collapsible = TRUE, sortable = TRUE, ...) {
 
   # The exhibit's own title slot stays empty: the document heading below says
   # it once, and a <caption> repeating it two lines further down reads as a
   # rendering accident rather than a design.
-  exhibit <- html_exhibit(x, title = "", caption = caption, ...)
+  #
+  # default_expanded is passed rather than left to html_exhibit()'s height
+  # rule. That rule exists for the slide: a sixty-row table printed onto a
+  # reveal.js slide has a fixed box to fit and trades rows for reach. A
+  # downloaded file has no such box -- it scrolls, and it prints -- so the
+  # rule would only cost the reader nine clicks on a demographics table.
+  exhibit <- html_exhibit(
+    x,
+    title = "",
+    caption = caption,
+    default_expanded = default_expanded,
+    collapsible = collapsible,
+    sortable = sortable,
+    ...
+  )
 
   rendered <- htmltools::renderTags(exhibit)
 

@@ -43,6 +43,13 @@
 #'   table that cannot be typed into -- one printed into a report or a slide,
 #'   where an input the reader can never use is a promise the document does
 #'   not keep. With no search box and no title, the header bar goes too.
+#' @param sortable,collapsible Logical display toggles (each default `TRUE`),
+#'   the same pair the interactive table block exposes: click-to-sort column
+#'   headers, and section / indent rows that fold their children away. Off
+#'   means the affordance is not rendered at all -- no sort hook, no chevron,
+#'   no click handler -- rather than rendered and inert. `collapsible = FALSE`
+#'   also forces the table open: with nothing to click, a collapsed section
+#'   would be rows the reader can never get back.
 #'
 #' @return A [htmltools::tagList()] containing the scoped style, the
 #'   `<table>` element, and the initialisation script. Drop into any
@@ -59,7 +66,9 @@ html_table <- function(data,
                        caption = NULL,
                        default_expanded = TRUE,
                        max_height = "600px",
-                       search = TRUE) {
+                       search = TRUE,
+                       sortable = TRUE,
+                       collapsible = TRUE) {
   stopifnot(is.data.frame(data))
 
   # The contract is the wide display grid; summary_table()'s internal long
@@ -89,9 +98,10 @@ html_table <- function(data,
   wrapper_id <- paste0("blockr-html-table-", sub("^file", "", basename(tempfile(""))))
 
   thead <- build_html_thead(data, data_cols, stub_col,
-                            stub_sortable = FALSE)
+                            stub_sortable = FALSE, sortable = sortable)
   tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
-                            styling_cols = styling_cols)
+                            styling_cols = styling_cols,
+                            collapsible = collapsible)
 
   # Use the same class names the canonical blockr.ui preview uses so the
   # shared table_preview_css() rules (typography, padding, hover, sort icons)
@@ -152,7 +162,14 @@ html_table <- function(data,
     htmltools::tags$div(
       id = wrapper_id,
       class = "blockr-html-table-container",
-      `data-initial-expanded` = if (isTRUE(default_expanded)) "1" else "0",
+      # "Open collapsed" is only a state the reader can leave when the chevrons
+      # are there to leave it with, so a non-collapsible table opens expanded
+      # whatever the flag says -- the alternative is rows nothing can reveal.
+      `data-initial-expanded` = if (isTRUE(default_expanded) ||
+                                    !isTRUE(collapsible)) "1" else "0",
+      # Read by the inline script below (the block renderer's table.js reads
+      # the same attribute name on its own table): no wiring, no toggling.
+      `data-dt-collapsible` = if (isTRUE(collapsible)) "1" else "0",
       header_div,
       htmltools::tags$div(
         class = "blockr-table-wrapper",
@@ -1349,6 +1366,10 @@ html_table_js_template <- function() {
   });
 
   // ---------- Collapse ----------
+  // Off means off: with collapsing disabled the renderer emits static section
+  // labels (no chevron, no button), so a click handler here would fold rows
+  // away with nothing on screen to unfold them.
+  var canCollapse = root.getAttribute('data-dt-collapsible') !== '0';
   // Recompute visibility of every row from section-header collapsed state.
   // Nested collapse is respected: a row is hidden iff any ancestor section
   // header has the .collapsed class.
@@ -1379,7 +1400,7 @@ html_table_js_template <- function() {
     var btn = h.querySelector('.blockr-section-btn');
     if (btn) btn.setAttribute('aria-expanded', h.classList.contains('collapsed') ? 'false' : 'true');
   }
-  root.querySelectorAll('tr.blockr-indent-toggle .blockr-indent-btn').forEach(function(btn){
+  if (canCollapse) root.querySelectorAll('tr.blockr-indent-toggle .blockr-indent-btn').forEach(function(btn){
     btn.addEventListener('click', function(ev){
       ev.stopPropagation();
       ev.preventDefault();
@@ -1397,13 +1418,13 @@ html_table_js_template <- function() {
   }
   // The group label is a <button> inside the header row; its click bubbles
   // up to this row-level handler, so one listener covers both.
-  root.querySelectorAll('tr.blockr-section-header').forEach(function(h){
+  if (canCollapse) root.querySelectorAll('tr.blockr-section-header').forEach(function(h){
     h.addEventListener('click', function(ev){
       ev.stopPropagation();
       toggleCollapse(h);
     });
   });
-  if (root.getAttribute('data-initial-expanded') === '0') {
+  if (canCollapse && root.getAttribute('data-initial-expanded') === '0') {
     root.querySelectorAll('tr.blockr-section-header').forEach(function(h){
       h.classList.add('collapsed');
       syncAria(h);

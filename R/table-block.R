@@ -1283,7 +1283,8 @@ table_guidance <- function() {
 #'   subtitle / caption -- through that format's writer:
 #'   [write_annotated_xlsx()] for a styled spreadsheet (needs `openxlsx`),
 #'   [write_exhibit_html()] for a self-contained page that keeps the table's
-#'   sorting and section collapse, and [write_exhibit_pptx()] for a one-slide
+#'   sorting and section collapse (opened out: a downloaded page scrolls, so
+#'   every section starts expanded), and [write_exhibit_pptx()] for a one-slide
 #'   deck carrying a native, editable PowerPoint table (needs `officer` and
 #'   `flextable`). One format on renders a button, several render a menu; a
 #'   format whose writer is not installed shows disabled with the reason.
@@ -1742,7 +1743,13 @@ new_table_block <- function(rowname = NULL,
             title = resolve_block_title(r_title(), d, auto = auto$label),
             subtitle = resolve_block_title(r_subtitle(), d,
                                            auto = auto$subtitle),
-            caption = resolve_block_title(r_caption(), d, auto = auto$caption)
+            caption = resolve_block_title(r_caption(), d, auto = auto$caption),
+            # The display toggles travel with the exhibit: the HTML file is the
+            # table, so a table shown without collapsing (or without sorting)
+            # downloads that way too. Reading them here rather than in the
+            # handler keeps every writer looking at one snapshot of the block.
+            collapsible = isTRUE(r_collapsible()),
+            sortable = isTRUE(r_sortable())
           )
         }
 
@@ -1762,7 +1769,8 @@ new_table_block <- function(rowname = NULL,
             e <- dl_exhibit()
             write_exhibit_html(
               e$data, file,
-              title = e$title, subtitle = e$subtitle, caption = e$caption
+              title = e$title, subtitle = e$subtitle, caption = e$caption,
+              collapsible = e$collapsible, sortable = e$sortable
             )
           }
         )
