@@ -1,5 +1,5 @@
 # Display-option toggles for the table block: sortable / collapsible / search /
-# excel_download. The gear popover sends them as `config` messages; the renderer
+# download. The gear popover sends them as `config` messages; the renderer
 # (dt_table_tag / dt_chrome) honours them and mirrors their state onto the
 # <table> as data-dt-* attrs so the gear can read them back.
 
@@ -130,6 +130,39 @@ test_that("config toggle messages update state (on/off and logical back-compat)"
     expect_null(session$returned$state$excel_download())
     expect_null(session$returned$state$html_download())
     expect_null(session$returned$state$pptx_download())
+  })
+})
+
+test_that("a board saved by an older blockr.viz restores through the ctor", {
+  # The call blockr_deser.block() makes: every saved state field handed to the
+  # constructor as an argument (blockr.core/R/utils-serdes.R). Values arrive as
+  # plain logicals -- blockr.core parses with jsonlite's vector simplification
+  # left on -- so this is the shape the fold has to read.
+  df <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
+  # ctor / ctor_pkg ride along exactly as blockr_deser.block() sends them: a
+  # do.call()ed constructor has no calling expression for resolve_ctor() to
+  # read, which is what those two arguments exist for.
+  saved <- list(sortable = TRUE, collapsible = TRUE, search = TRUE,
+                excel_download = TRUE, block_name = "Demographics",
+                ctor = "new_table_block", ctor_pkg = "blockr.viz")
+
+  blk <- do.call(new_table_block, saved)
+  testServer(blk$expr_server, args = list(data = reactive(df)), {
+    session$flushReact()
+    expect_true(session$returned$state$download())
+    expect_false(is.null(output$dt_download))
+  })
+
+  # A board saved from HERE carries the one toggle and three NULLs (the legacy
+  # formals serialize as NULL), and must survive the same trip.
+  now <- list(sortable = TRUE, collapsible = TRUE, search = TRUE,
+              download = TRUE, excel_download = NULL, html_download = NULL,
+              pptx_download = NULL, block_name = "Demographics",
+              ctor = "new_table_block", ctor_pkg = "blockr.viz")
+  blk2 <- do.call(new_table_block, now)
+  testServer(blk2$expr_server, args = list(data = reactive(df)), {
+    session$flushReact()
+    expect_true(session$returned$state$download())
   })
 })
 
