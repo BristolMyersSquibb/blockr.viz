@@ -26,6 +26,9 @@ rank_table_css <- function() {
   --blockr-rank-pos: var(--blockr-color-danger, #d03b3b);
   --blockr-rank-neg: var(--blockr-color-primary, #2a78d6);
   --blockr-rank-tick: var(--blockr-color-border, #c3c2b7);
+  /* The floor under a GLYPH -- see .blockr-rank-barwrap below. A board that
+     wants shorter marks and less scrolling overrides it on the container. */
+  --blockr-rank-lane-min: 80px;
 }
 /* Title / subtitle / caption: the canonical .dd-table-* bands, styled by
    inst/css/table.css (shipped with the table dep). Nothing to add here. */
@@ -69,9 +72,20 @@ rank_table_css <- function() {
   align-items: center;
   gap: 8px;
 }
+/* The mark has a FLOOR, and it is the mark that carries it, not the cell.
+   A cell minimum (the 110px on .blockr-rank-bar-col) is spent on the value
+   label first, so a faceted table with a dozen level columns squeezed every
+   lane down to the few pixels the label left over -- glyphs too small to
+   compare, which is the whole point of the column. Putting the minimum on
+   the lane makes the column's minimum label-plus-a-readable-mark instead, and
+   a table that no longer fits scrolls sideways in its wrapper (the cheap
+   direction: rows stay put, and the reader keeps the labels in view). */
 .blockr-rank-barwrap .blockr-rank-track,
 .blockr-rank-barwrap .blockr-rank-dv,
-.blockr-rank-barwrap .blockr-rank-lane { flex: 1 1 auto; min-width: 0; }
+.blockr-rank-barwrap .blockr-rank-lane {
+  flex: 1 1 auto;
+  min-width: var(--blockr-rank-lane-min, 80px);
+}
 .blockr-rank-barval {
   flex: 0 0 auto;
   text-align: right;

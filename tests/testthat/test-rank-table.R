@@ -501,3 +501,17 @@ test_that("every row carries the order it arrived in", {
   ord <- regmatches(html, gregexpr("data-rank-ord=\"[0-9]+\"", html))[[1L]]
   expect_identical(ord, paste0("data-rank-ord=\"", 0:2, "\""))
 })
+
+test_that("the glyph, not the cell, carries the column's minimum width", {
+  # A cell minimum is spent on the value label first, so a facet with many
+  # levels used to squeeze every lane down to the leftovers. The floor rides
+  # the lane instead, and the table scrolls sideways when it no longer fits.
+  css <- rank_table_css()
+  expect_match(css, "--blockr-rank-lane-min:\\s*\\d+px")
+  rule <- regmatches(
+    css,
+    regexpr("\\.blockr-rank-barwrap \\.blockr-rank-track,[^}]*}", css)
+  )
+  expect_length(rule, 1L)
+  expect_match(rule, "min-width: var(--blockr-rank-lane-min", fixed = TRUE)
+})
