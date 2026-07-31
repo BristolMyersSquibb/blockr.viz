@@ -12,6 +12,7 @@ write_exhibit_pptx(
   caption = NULL,
   template = NULL,
   max_rows = "auto",
+  max_cols = "auto",
   min_font_size = getOption("blockr.viz.ft_min_font_size", 11),
   ...
 )
@@ -45,14 +46,25 @@ whole table and reused on every page, so the columns line up when the
 reader flips between slides. Breaks avoid stranding one or two rows of a
 section at the top of a slide by moving the whole section over.}
 
-\item{min_font_size}{Points. The floor for the two shrink passes, ignored
-when \code{max_rows} is \code{NULL} and defaulting from
-\code{getOption("blockr.viz.ft_min_font_size")}. Width first: a table with more
-columns than the slide can hold at the stated size steps down until its
-cells fit, because columns narrower than a character are illegible at any
-height and no amount of splitting helps. Height second: it steps down
-again if that avoids a split altogether, since one slide at 11pt beats
-two at 13pt.}
+\item{max_cols}{How a table too wide for its slide is handled, once the
+font has stepped down as far as \code{min_font_size} allows and the columns
+still do not fit. \code{"auto"} (default) deals them over several sets of
+slides, each repeating the row stub, so every slide is a readable table
+on its own; a set is a whole number of spanner groups, so an arm is never
+cut in half. A number puts at most that many data columns on a slide.
+\code{NULL} never splits, and the columns are squeezed as far as they will go.
+
+Thirty-six toxicity-grade columns do not fit a widescreen slide at any
+legible size, and the alternatives are cells cut off or headers broken
+inside words, which at that width becomes one character per line.}
+
+\item{min_font_size}{Points. The floor for the two shrink passes, defaulting
+from \code{getOption("blockr.viz.ft_min_font_size")}. Width first, because a
+table whose columns are narrower than their contents is illegible at any
+height and splitting rows does not help; the font steps down until the
+cells fit and the headers stop breaking inside words, and \code{max_cols}
+takes over from there. Height second: it steps down again if that avoids
+a row split altogether, since one slide at 11pt beats two at 13pt.}
 
 \item{...}{Passed to \code{\link[=static_table]{static_table()}}.}
 }
@@ -64,7 +76,8 @@ The pptx sibling of \code{\link[=write_exhibit_html]{write_exhibit_html()}} and 
 annotated data frame typeset by \code{\link[=static_table]{static_table()}} and placed on a slide of
 the house template, at the same coordinates and in the same face the
 outline's deck export uses. A table too tall for one slide is carried over
-onto as many as it needs, each repeating the header (see \code{max_rows}).
+onto as many as it needs, each repeating the header (see \code{max_rows}); one
+too wide has its columns dealt over several (see \code{max_cols}).
 }
 \details{
 The table is a NATIVE PowerPoint table, not a picture: every cell is real

@@ -4,7 +4,8 @@
 #' annotated data frame typeset by [static_table()] and placed on a slide of
 #' the house template, at the same coordinates and in the same face the
 #' outline's deck export uses. A table too tall for one slide is carried over
-#' onto as many as it needs, each repeating the header (see `max_rows`).
+#' onto as many as it needs, each repeating the header (see `max_rows`); one
+#' too wide has its columns dealt over several (see `max_cols`).
 #'
 #' The table is a NATIVE PowerPoint table, not a picture: every cell is real
 #' text an editor can retype, restyle and re-colour. That is what officer buys
@@ -49,14 +50,24 @@
 #'   whole table and reused on every page, so the columns line up when the
 #'   reader flips between slides. Breaks avoid stranding one or two rows of a
 #'   section at the top of a slide by moving the whole section over.
-#' @param min_font_size Points. The floor for the two shrink passes, ignored
-#'   when `max_rows` is `NULL` and defaulting from
-#'   `getOption("blockr.viz.ft_min_font_size")`. Width first: a table with more
-#'   columns than the slide can hold at the stated size steps down until its
-#'   cells fit, because columns narrower than a character are illegible at any
-#'   height and no amount of splitting helps. Height second: it steps down
-#'   again if that avoids a split altogether, since one slide at 11pt beats
-#'   two at 13pt.
+#' @param max_cols How a table too wide for its slide is handled, once the
+#'   font has stepped down as far as `min_font_size` allows and the columns
+#'   still do not fit. `"auto"` (default) deals them over several sets of
+#'   slides, each repeating the row stub, so every slide is a readable table
+#'   on its own; a set is a whole number of spanner groups, so an arm is never
+#'   cut in half. A number puts at most that many data columns on a slide.
+#'   `NULL` never splits, and the columns are squeezed as far as they will go.
+#'
+#'   Thirty-six toxicity-grade columns do not fit a widescreen slide at any
+#'   legible size, and the alternatives are cells cut off or headers broken
+#'   inside words, which at that width becomes one character per line.
+#' @param min_font_size Points. The floor for the two shrink passes, defaulting
+#'   from `getOption("blockr.viz.ft_min_font_size")`. Width first, because a
+#'   table whose columns are narrower than their contents is illegible at any
+#'   height and splitting rows does not help; the font steps down until the
+#'   cells fit and the headers stop breaking inside words, and `max_cols`
+#'   takes over from there. Height second: it steps down again if that avoids
+#'   a row split altogether, since one slide at 11pt beats two at 13pt.
 #' @param ... Passed to [static_table()].
 #'
 #' @return `file`, invisibly.
@@ -72,7 +83,7 @@
 #' @export
 write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
                                caption = NULL, template = NULL,
-                               max_rows = "auto",
+                               max_rows = "auto", max_cols = "auto",
                                min_font_size =
                                  getOption("blockr.viz.ft_min_font_size", 11),
                                ...) {
@@ -129,11 +140,11 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
   x <- fmt_to_wide(as_annotated_df(x))
 
   args <- list(...)
-  build <- function(rows = NULL, size = NULL, plan = NULL,
+  build <- function(data, rows = NULL, size = NULL, plan = NULL,
                     continued = FALSE, page = NULL) {
     do.call(static_table, c(
       list(
-        if (is.null(rows)) x else pptx_slice_rows(x, rows),
+        if (is.null(rows)) data else pptx_slice_rows(data, rows),
         title = if (slide_title) "" else pptx_page_title(title, page),
         subtitle = subtitle,
         caption = caption,
@@ -166,60 +177,73 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
     }
   )
   budget <- slide_h - top - 0.4
+  base_size <- args$font_size %||% getOption("blockr.viz.ft_font_size", 13)
 
-  ft <- build()
-  size <- args$font_size %||% getOption("blockr.viz.ft_font_size", 13)
+  # Width first, and it is a question about the COLUMNS, so it is settled
+  # before any row is thought about: a table whose cells no longer fit their
+  # columns is illegible at any height. The font steps down, and when even the
+  # smallest allowed will not do it, the columns themselves are dealt over
+  # several slides -- 36 grade columns do not fit a widescreen slide in any
+  # orientation, and cutting them off or stacking them one character per line
+  # are not answers.
+  fit_size <- function(data) {
+    size <- base_size
+    ft <- build(data, size = size)
+    while (pptx_width_squeezed(ft) && size > min_font_size) {
+      size <- size - 1
+      ft <- build(data, size = size)
+    }
+    list(ft = ft, size = size, fits = !pptx_width_squeezed(ft))
+  }
 
-  # Width first. A table whose CELLS no longer fit their columns is illegible
-  # at any height -- past about 44 columns a count and its padding is wider
-  # than the slide can give, and PowerPoint stacks the characters one per
-  # line. Stepping the font down is the only thing that buys real width back,
-  # so it happens before anything else is decided.
-  if (!is.null(max_rows) && pptx_cell_squeezed(ft) && size > min_font_size) {
-    for (s in seq(size - 1, min_font_size)) {
-      ft <- build(size = s)
-      size <- s
-      if (!pptx_cell_squeezed(ft)) break
+  chunks <- list(x)
+  if (!is.null(max_cols)) {
+    probe <- fit_size(x)
+    if (is.numeric(max_cols)) {
+      chunks <- pptx_column_chunks(x, as.integer(max_cols))
+    } else if (!probe$fits) {
+      chunks <- pptx_split_columns(x, function(cx) fit_size(cx)$fits)
+    }
+    if (length(chunks) > 1L) {
+      message("The table is too wide for one slide; its ",
+              length(pptx_data_cols(x)), " columns are dealt over ",
+              length(chunks), " sets of slides.")
     }
   }
 
-  # Past every escalation there are tables a slide simply cannot hold: sixty
-  # columns need 14in of width at the smallest font allowed. Said out loud,
-  # because the alternative is a deck of quietly clipped cells, which is how
-  # this was found in the first place.
-  if (!is.null(max_rows) && pptx_cell_squeezed(ft)) {
-    warning(
-      "The table has more columns (", length(ft$body$colwidths) - 1L,
-      ") than the slide can hold at ", min_font_size,
-      "pt, so some cells are cut off. Fewer columns, or a lower ",
-      "`min_font_size`, would fit.",
-      call. = FALSE
-    )
-  }
+  # Every page of every column set, planned before any of it is drawn, so the
+  # slides can be numbered over the whole deck.
+  plans <- lapply(chunks, function(cx) {
+    got <- fit_size(cx)
+    ft <- got$ft
+    size <- got$size
 
-  # Then height: shrink further if that avoids a split, since one slide at
-  # 11pt beats two at 13pt.
-  if (!is.null(max_rows) && !pptx_fits(ft, budget) && size > min_font_size) {
-    for (s in seq(size - 1, min_font_size)) {
-      cand <- build(size = s)
-      if (pptx_fits(cand, budget)) {
-        ft <- cand
-        size <- s
-        break
+    if (!is.null(max_rows) && !pptx_fits(ft, budget) && size > min_font_size) {
+      # Height second: shrink further if that avoids a split, since one slide
+      # at 11pt beats two at 13pt.
+      for (s in seq(size - 1, min_font_size)) {
+        cand <- build(cx, size = s)
+        if (pptx_fits(cand, budget)) {
+          ft <- cand
+          size <- s
+          break
+        }
       }
     }
-  }
 
-  pages <- list(ft)
-  if (!is.null(max_rows) && !pptx_fits(ft, budget)) {
+    if (is.null(max_rows) || pptx_fits(ft, budget)) {
+      return(list(data = cx, size = size, plan = attr(ft, "layout_plan"),
+                  from = 1L, to = nrow(cx), cont = FALSE,
+                  squeezed = pptx_width_squeezed(ft)))
+    }
+
     breaks <- if (is.numeric(max_rows)) {
-      pptx_fixed_breaks(nrow(x), as.integer(max_rows))
+      pptx_fixed_breaks(nrow(cx), as.integer(max_rows))
     } else {
       pptx_page_breaks(ft, budget)
     }
-    key <- pptx_section_key(x)
+    key <- pptx_section_key(cx)
     breaks <- pptx_hold_sections(breaks, key)
-    plan <- attr(ft, "layout_plan")
     from <- c(1L, utils::head(breaks, -1L) + 1L)
     # Only a page that opens INSIDE a section says "(continued)". One that
     # opens on a fresh heading is not a continuation of anything, and saying
@@ -227,22 +251,34 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
     cont <- vapply(from, function(a) {
       !is.null(key) && a > 1L && identical(key[[a]], key[[a - 1L]])
     }, logical(1L))
-    pages <- Map(
-      function(a, b, i) {
-        build(rows = a:b, size = size, plan = plan,
-              continued = cont[[i]], page = c(i, length(breaks)))
-      },
-      from, breaks, seq_along(breaks)
+
+    list(data = cx, size = size, plan = attr(ft, "layout_plan"),
+         from = from, to = breaks, cont = cont,
+         squeezed = pptx_width_squeezed(ft))
+  })
+
+  if (any(vapply(plans, function(p) isTRUE(p$squeezed), logical(1L)))) {
+    warning(
+      "The table has more columns (", length(pptx_data_cols(x)),
+      ") than the slide can hold at ", min_font_size,
+      "pt, so some cells are cut off.",
+      call. = FALSE
     )
   }
 
-  for (i in seq_along(pages)) {
-    doc <- pptx_add_table_slide(
-      doc, pages[[i]], layout, master, slide_w, top,
-      title = if (slide_title) {
-        pptx_page_title(title, if (length(pages) > 1L) c(i, length(pages)))
-      }
-    )
+  n_page <- sum(vapply(plans, function(p) length(p$from), integer(1L)))
+  at <- 0L
+  for (p in plans) {
+    for (i in seq_along(p$from)) {
+      at <- at + 1L
+      page <- if (n_page > 1L) c(at, n_page)
+      ft <- build(p$data, rows = p$from[[i]]:p$to[[i]], size = p$size,
+                  plan = p$plan, continued = p$cont[[i]], page = page)
+      doc <- pptx_add_table_slide(
+        doc, ft, layout, master, slide_w, top,
+        title = if (slide_title) pptx_page_title(title, page)
+      )
+    }
   }
 
   print(doc, target = file)
@@ -300,12 +336,15 @@ pptx_fits <- function(ft, budget) {
   !is.finite(h) || h <= budget
 }
 
-# Did the width allocator run out of slide for the DATA cells, which will be
-# cut off rather than wrapped? Splitting rows cannot help with that, which is
-# why it is asked apart from the height and answered by stepping the font
-# down.
-pptx_cell_squeezed <- function(ft) {
-  isTRUE(attr(ft, "width_squeeze")[["cell"]])
+# Did the width allocator run out of slide? Either half counts: a data cell
+# narrower than its own characters is cut off, and a header narrower than its
+# longest word breaks inside it, which at 36 columns degenerates into one
+# character per line. Splitting ROWS helps with neither, which is why this is
+# asked apart from the height and answered by stepping the font down and then
+# by dealing the columns over several slides.
+pptx_width_squeezed <- function(ft) {
+  sq <- attr(ft, "width_squeeze")
+  isTRUE(sq[["cell"]]) || isTRUE(sq[["header"]])
 }
 
 # Last input row of each page, decided on the measured height of the rendered
@@ -400,6 +439,111 @@ pptx_hold_sections <- function(breaks, key, keep = 2L) {
   breaks <- breaks[c(TRUE, diff(breaks) > 0)]
   if (utils::tail(breaks, 1L) < n) breaks <- c(breaks, n)
   breaks
+}
+
+# The data columns of an annotated frame, in order. Everything dot-prefixed is
+# structure, never a column of the display table.
+pptx_data_cols <- function(x) {
+  nm <- names(x)
+  nm[!startsWith(nm, ".")]
+}
+
+# The column groups a split may cut between: the spanner groups, so an arm is
+# never dealt half onto one slide and half onto the next. Without spanners
+# every column is its own group.
+pptx_col_groups <- function(x) {
+  cols <- pptx_data_cols(x)
+  top <- vapply(strsplit(cols, "||", fixed = TRUE), function(p) {
+    if (length(p) > 1L) p[[1L]] else ""
+  }, character(1L))
+  key <- ifelse(nzchar(top), top, cols)
+  unname(split(cols, factor(key, levels = unique(key))))
+}
+
+#' Deal a table's columns over several slides
+#'
+#' Called when no font the exporter is allowed to use makes the columns fit:
+#' 36 toxicity-grade columns do not fit a widescreen slide in any orientation,
+#' and the alternatives are cells cut off or headers stacked one character per
+#' line. Each set of slides repeats the row stub, so every one is a readable
+#' table on its own.
+#'
+#' @param fits A predicate taking a candidate frame and saying whether its
+#'   cells fit, which is the exporter's own width pass rather than a second
+#'   copy of the arithmetic.
+#' @return A list of frames, each the stub plus a contiguous run of the
+#'   spanner groups.
+#' @noRd
+pptx_split_columns <- function(x, fits, max_sets = 12L) {
+
+  groups <- pptx_col_groups(x)
+
+  if (length(groups) < 2L) {
+    return(list(x))
+  }
+
+  for (n in 2:min(max_sets, length(groups))) {
+    at <- pptx_deal(length(groups), n)
+    sets <- lapply(at, function(idx) {
+      pptx_subset_cols(x, unlist(groups[idx], use.names = FALSE))
+    })
+    if (all(vapply(sets, fits, logical(1L)))) {
+      return(sets)
+    }
+  }
+
+  # Nothing worked: hand back the whole thing and let the caller say so,
+  # rather than dealing it into slivers.
+  list(x)
+}
+
+# Fixed-size column sets, the `max_cols = n` route.
+pptx_column_chunks <- function(x, per) {
+  cols <- pptx_data_cols(x)
+  per <- max(1L, per)
+  if (length(cols) <= per) {
+    return(list(x))
+  }
+  groups <- pptx_col_groups(x)
+  sets <- list()
+  cur <- character()
+  for (g in groups) {
+    if (length(cur) && length(cur) + length(g) > per) {
+      sets <- c(sets, list(cur))
+      cur <- character()
+    }
+    cur <- c(cur, g)
+  }
+  lapply(c(sets, list(cur)), function(keep) pptx_subset_cols(x, keep))
+}
+
+# Split `n` groups into `k` contiguous runs, as evenly as the counts allow.
+pptx_deal <- function(n, k) {
+  size <- diff(round(seq(0, n, length.out = k + 1L)))
+  ends <- cumsum(size)
+  Map(seq, c(1L, utils::head(ends, -1L) + 1L), ends)
+}
+
+# Column subset that keeps the structure columns and the frame's own display
+# attributes; `keep` names the data columns to hold on to.
+pptx_subset_cols <- function(x, keep) {
+
+  nm <- names(x)
+  out <- x[, nm %in% keep | startsWith(nm, "."), drop = FALSE]
+
+  for (cn in names(out)) {
+    a <- attributes(x[[cn]])
+    for (k in setdiff(names(a), c("names", "dim", "dimnames", "class",
+                                  "levels", "row.names"))) {
+      attr(out[[cn]], k) <- a[[k]]
+    }
+  }
+  for (k in setdiff(names(attributes(x)),
+                    c("names", "row.names", "class"))) {
+    attr(out, k) <- attr(x, k)
+  }
+
+  out
 }
 
 # Row subset that keeps what `[.data.frame` throws away: the column labels the

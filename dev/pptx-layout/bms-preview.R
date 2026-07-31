@@ -267,18 +267,28 @@ page <- tagAppendChild(page, tags$main(
     tags$h2("36 columns"),
     tags$p(paste(
       "Six arms times six toxicity grades. Flat, the word \"Grade\" alone",
-      "needs 23.5in across 36 columns, so the headers break inside words and",
-      "the counts get 0.315in each. That is as far as width alone goes: a",
-      "table this wide wants fewer columns, or its columns split over two",
-      "slides, and neither is something the exporter can decide."
+      "needs 23.5in across 36 columns, and no font the exporter is allowed to",
+      "use closes that: the headers break inside words and, at 0.175in of",
+      "text space, one character per line. So the arms are dealt over two",
+      "sets of slides instead, three each, and every slide repeats the stub."
     )),
     tags$p(class = "q", paste(
       "Standing the headers up was tried and reverted. It bought horizontal",
-      "room at the cost of a 1.50in header band against 0.65in flat, and",
-      "vertical space is the scarce one on a slide."
+      "room by spending vertical, which is the scarce one on a slide, and the",
+      "labels clipped anyway."
     )),
-    slide(static_table(grade_tbl[1:12, ], title = "", fit_width = fit),
-          GRADE_TITLE)
+    tags$h3("first set: Placebo, 300mg, 600mg"),
+    slide(static_table(
+      pptx_subset_cols(grade_tbl[1:12, ],
+                       unlist(pptx_col_groups(grade_tbl)[1:3])),
+      title = "", fit_width = fit
+    ), paste(GRADE_TITLE, "(1 of 12)")),
+    tags$h3("second set: 900mg, 1500mg, 1200mg"),
+    slide(static_table(
+      pptx_subset_cols(grade_tbl[1:12, ],
+                       unlist(pptx_col_groups(grade_tbl)[4:6])),
+      title = "", fit_width = fit
+    ), paste(GRADE_TITLE, "(7 of 12)"))
   )
 ))
 

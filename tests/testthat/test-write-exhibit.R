@@ -420,19 +420,83 @@ test_that("a table that still will not fit gets tighter padding, then says so", 
   expect_equal(attr(ft, "layout_plan")$cell_padding, TIGHT_PAD)
   expect_lt(ft$body$styles$pars$padding.left$data[[1L, 2L]], 5)
 
-  # Twenty columns of "143 (41.2%)" need 17in at the smallest font allowed,
-  # whatever the padding. Cut off rather than dropped, but never silently.
-  wide <- grade_df(4L)
-  wide[-(1:2)] <- lapply(wide[-(1:2)], function(x) {
-    structure(rep("143 (41.2%)", length(x)), label = attr(x, "label"))
-  })
+  # One arm holding twenty columns of "143 (41.2%)": too wide for a slide and
+  # nowhere to cut it, since a spanner group is never dealt in half. Cut off
+  # rather than dropped, but never silently.
+  wide <- data.frame(.label = c("Nausea", "Vomiting"), .indent = 0L,
+                     check.names = FALSE)
+  for (i in 1:20) {
+    wide[[sprintf("Arm A||Week %d", i)]] <-
+      structure(rep("143 (41.2%)", 2L), label = sprintf("Week %d", i))
+  }
 
   f <- tempfile(fileext = ".pptx")
   on.exit(unlink(f), add = TRUE)
-  expect_warning(
-    write_exhibit_pptx(wide, f, title = "Grades"),
-    "more columns"
+  expect_warning(write_exhibit_pptx(wide, f, title = "Wide"), "more columns")
+})
+
+test_that("columns too wide for one slide are dealt over several", {
+  skip_if_not_installed("officer")
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  f <- tempfile(fileext = ".pptx")
+  on.exit(unlink(f), add = TRUE)
+
+  # 36 grade columns do not fit a widescreen slide at any font the exporter
+  # is allowed to use, so the arms are dealt over two sets of slides.
+  expect_message(
+    write_exhibit_pptx(grade_df(6L), f, title = "Grades"),
+    "dealt over"
   )
+  doc <- officer::read_pptx(f)
+  expect_gt(length(doc), 1L)
+
+  arms_on <- function(i) {
+    xml <- pptx_part(f, sprintf("ppt/slides/slide%d.xml", i))
+    unique(regmatches(xml, gregexpr("[0-9a-zA-Z]+mg \\(N=20\\)|Placebo \\(N=20\\)",
+                                    xml))[[1L]])
+  }
+  first <- arms_on(1L)
+  last <- arms_on(length(doc))
+  # Every slide carries the stub and a whole number of arms, and no arm is on
+  # two slides at once.
+  expect_lt(length(first), 6L)
+  expect_length(intersect(first, last), 0L)
+
+  # Nothing is lost: every arm appears somewhere.
+  seen <- unique(unlist(lapply(seq_along(doc), arms_on)))
+  expect_length(seen, 6L)
+
+  # Told a column count, it uses that instead.
+  g <- tempfile(fileext = ".pptx")
+  on.exit(unlink(g), add = TRUE)
+  write_exhibit_pptx(grade_df(6L), g, title = "Grades", max_cols = 6L)
+  expect_gte(length(officer::read_pptx(g)), 6L)
+
+  # Told not to, it does not.
+  h <- tempfile(fileext = ".pptx")
+  on.exit(unlink(h), add = TRUE)
+  expect_silent(suppressWarnings(
+    write_exhibit_pptx(grade_df(6L), h, title = "Grades", max_cols = NULL)
+  ))
+})
+
+test_that("column sets never cut an arm in half", {
+  x <- data.frame(.label = "a", check.names = FALSE)
+  for (a in c("A", "B", "C")) {
+    for (s in c("n", "pct")) x[[paste0(a, "||", s)]] <- "1"
+  }
+  expect_equal(pptx_col_groups(x),
+               list(c("A||n", "A||pct"), c("B||n", "B||pct"),
+                    c("C||n", "C||pct")))
+  # ... and a frame without spanners splits anywhere.
+  flat <- data.frame(.label = "a", p = "1", q = "2", check.names = FALSE)
+  expect_equal(pptx_col_groups(flat), list("p", "q"))
+
+  # Whole groups, contiguous, in order.
+  expect_equal(pptx_deal(6L, 2L), list(1:3, 4:6))
+  expect_equal(pptx_deal(5L, 2L), list(1:2, 3:5))
 })
 
 test_that("a squeezed table gives the stub back to the columns", {
