@@ -294,14 +294,14 @@ test_that("a table too tall for one slide is carried onto the next", {
   expect_gt(length(doc), 1L)
 
   # Every slide repeats the header band, and says which page it is.
-  for (i in seq_len(length(doc))) {
+  for (i in seq_along(doc)) {
     xml <- pptx_part(f, sprintf("ppt/slides/slide%d.xml", i))
     expect_match(xml, "Placebo", fixed = TRUE)
     expect_match(xml, sprintf("(%d of %d)", i, length(doc)), fixed = TRUE)
   }
 
   # ... and no row is lost or printed twice.
-  seen <- unlist(lapply(seq_len(length(doc)), function(i) {
+  seen <- unlist(lapply(seq_along(doc), function(i) {
     xml <- pptx_part(f, sprintf("ppt/slides/slide%d.xml", i))
     grep("Preferred term", regmatches(
       xml, gregexpr("Preferred term [0-9]+", xml)
@@ -443,12 +443,53 @@ test_that("headers turn on their side rather than columns into stacked character
 })
 
 test_that("a table that still will not fit gets tighter padding, then says so", {
+  skip_if_not_installed("officer")
   skip_if_not_installed("flextable")
   skip_if_not_installed("systemfonts")
 
   ft <- static_table(grade_df(8L), title = "", fit_width = 12.53)
   expect_equal(attr(ft, "layout_plan")$cell_padding, TIGHT_PAD)
   expect_lt(ft$body$styles$pars$padding.left$data[[1L, 2L]], 5)
+
+  # Sixty columns need 14in at the smallest font allowed. Cut off rather than
+  # dropped, but never silently.
+  f <- tempfile(fileext = ".pptx")
+  on.exit(unlink(f), add = TRUE)
+  expect_warning(
+    write_exhibit_pptx(grade_df(10L), f, title = "Grades"),
+    "more columns"
+  )
+})
+
+test_that("a standing header gets the width its line needs", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  ft <- static_table(grade_df(), title = "", fit_width = 12.53)
+  leaf <- attr(ft, "leaf_row")
+
+  # Rotated, a label's own line breaks stack ACROSS the column, so they are
+  # joined: two lines would want twice the width and be clipped to one.
+  expect_equal(ft_cell_text(ft$header, 2L)[[leaf]], "Any Grade N=20")
+
+  # ... and the column is at least one line height plus its padding wide.
+  pad <- 2 * attr(ft, "layout_plan")$cell_padding / 72
+  expect_gte(min(ft$body$colwidths[-1L]), 13 * 1.2 / 72 + pad - 1e-6)
+
+  # The row is as tall as the longest label is long.
+  expect_gt(ft$header$rowheights[[leaf]],
+            max(ft_text_widths("Any Grade N=20", "Inter", 13)))
+})
+
+test_that("a squeezed table gives the stub back to the columns", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  # Short stub labels: holding 1.2in for them while the data columns are cut
+  # off is the wrong trade.
+  short <- grade_df(8L)
+  short$.label <- paste("T", seq_len(nrow(short)))
+  expect_lt(static_table(short, title = "", fit_width = 12.53)$body$colwidths[[1L]], 1.2)
 })
 
 test_that("the pptx keeps the rotation officer drops", {

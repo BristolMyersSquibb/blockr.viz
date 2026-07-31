@@ -498,7 +498,13 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
         rotate_leaf <- TRUE
         widths <- measure(rotate_leaf, pad)
       }
-      if (isTRUE(attr(widths, "cell_squeeze")) && is.null(cell_padding)) {
+      # Padding is the last width there is to give back. Worth giving when the
+      # cells no longer fit, and equally when the headers are already standing
+      # and STILL do not: a rotated label too wide for its column is cut off,
+      # not wrapped, and a header you cannot read is worse than a tight one.
+      if (is.null(cell_padding) &&
+            (isTRUE(attr(widths, "cell_squeeze")) ||
+               (rotate_leaf && isTRUE(attr(widths, "header_squeeze"))))) {
         cell_padding <- TIGHT_PAD
         pad <- ft_pad_width(cell_padding)
         widths <- measure(rotate_leaf, pad)
@@ -521,16 +527,26 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
         flextable::padding(j = 1L, padding.right = cell_padding, part = "all")
     }
     if (isTRUE(rotate_leaf) && n_data > 0L) {
-      # The leaf labels run bottom-to-top, and their row is made as tall as
-      # the longest of them: a rotated cell needs the height a flat one needed
-      # in width, and flextable will not work that out on its own.
+      # Standing up, a label's own line breaks stack ACROSS the column rather
+      # than down it, so "Grade 1\nN=20" would want two line heights of width
+      # and be clipped to one. Joined into a single line it wants one, which
+      # is the width rotation was chosen to afford.
+      flat_leaf <- gsub("[[:space:]]*\n[[:space:]]*", " ", leaf)
+      ft <- flextable::set_header_labels(
+        ft,
+        values = stats::setNames(as.list(flat_leaf), data_cols)
+      )
+      # The row is then made as tall as the longest of them: a rotated cell
+      # needs the height a flat one needed in width, and flextable will not
+      # work that out on its own.
       ft <- ft |>
         flextable::rotate(i = leaf_i, j = 1L + seq_len(n_data),
                           rotation = "btlr", align = "bottom",
                           part = "header") |>
         flextable::height(
           i = leaf_i,
-          height = max(ft_text_widths(leaf, font, font_size)) + 0.1,
+          height = max(ft_text_widths(flat_leaf, font, font_size)) +
+            2 * ft_pad_width(cell_padding),
           part = "header"
         ) |>
         flextable::hrule(i = leaf_i, rule = "exact", part = "header")
@@ -639,8 +655,12 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
         min(stub_min, total / 3),
         ft_word_width(c(stub, stub_label), font, font_size) + pad
       )
-      stub_want <- max(c(stub_cells, 0)) + pad
-      stub_want <- max(stub_want, stub_floor)
+      stub_nat <- max(c(stub_cells, 0)) + pad
+      stub_want <- max(stub_nat, stub_floor)
+      # What the stub keeps when the table has to be squeezed: its floor, or
+      # its own width when that is smaller. A stub of short codes must not
+      # hold half an inch back from columns that are being cut off.
+      stub_keep <- min(stub_nat, stub_floor)
 
       # A data column asks for two widths. `want` is the one it must have:
       # its widest cell, and its header's longest word, so the numbers never
@@ -654,16 +674,19 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
         numeric(1L)
       ) + pad
       # A rotated leaf header runs down the column instead of across it, so it
-      # asks for no width at all (it asks for height instead, which is the
-      # trade that makes a 36-column table fit).
+      # asks for its own LINE HEIGHT in width and its text length in height.
+      # One line: a rotated cell stacks its lines across the column, so a
+      # two-line label would ask for twice this and be clipped at the width
+      # rotation was chosen to afford. static_table() joins the lines to
+      # match.
       head_word <- if (rotate_leaf) {
-        rep(0, n_data)
+        rep(font_size * 1.2 / 72 + pad, n_data)
       } else {
         vapply(leaf, ft_word_width, numeric(1L),
                font = font, size = font_size) + pad
       }
       head_full <- if (rotate_leaf) {
-        rep(0, n_data)
+        head_word
       } else {
         ft_text_widths(leaf, font, font_size) + pad
       }
@@ -710,8 +733,8 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
         # caller apart, so it can rotate the headers or tighten the padding
         # instead of narrowing the columns into stacked characters.
         squeeze[["header"]] <- TRUE
-        squeeze[["cell"]] <- sum(need) + stub_floor > total
-        data_w <- ft_water_fill(want, max(total - stub_floor, 0), need)
+        squeeze[["cell"]] <- sum(need) + stub_keep > total
+        data_w <- ft_water_fill(want, max(total - stub_keep, 0), need)
         stub_w <- total - sum(data_w)
       } else {
         # Whether this table is close enough to the slide to fill it, decided

@@ -183,6 +183,20 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
     }
   }
 
+  # Past every escalation there are tables a slide simply cannot hold: sixty
+  # columns need 14in of width at the smallest font allowed. Said out loud,
+  # because the alternative is a deck of quietly clipped cells, which is how
+  # this was found in the first place.
+  if (!is.null(max_rows) && pptx_cell_squeezed(ft)) {
+    warning(
+      "The table has more columns (", length(ft$body$colwidths) - 1L,
+      ") than the slide can hold at ", min_font_size,
+      "pt, so some cells are cut off. Fewer columns, or a lower ",
+      "`min_font_size`, would fit.",
+      call. = FALSE
+    )
+  }
+
   # Then height: shrink further if that avoids a split, since one slide at
   # 11pt beats two at 13pt.
   if (!is.null(max_rows) && !pptx_fits(ft, budget) && size > min_font_size) {
@@ -293,10 +307,14 @@ pptx_fits <- function(ft, budget) {
   !is.finite(h) || h <= budget
 }
 
-# Did the width allocator run out of slide for the DATA cells? Splitting rows
-# cannot help with this one, which is why it is asked separately.
+# Did the width allocator run out of slide for something that will now be cut
+# off rather than wrapped -- the data cells, or headers already standing on
+# end? Splitting rows cannot help with either, which is why this is asked
+# apart from the height, and answered by stepping the font down.
 pptx_cell_squeezed <- function(ft) {
-  isTRUE(attr(ft, "width_squeeze")[["cell"]])
+  sq <- attr(ft, "width_squeeze")
+  rotated <- identical(attr(ft, "layout_plan")$header_rotate, "vertical")
+  isTRUE(sq[["cell"]]) || (rotated && isTRUE(sq[["header"]]))
 }
 
 # Last input row of each page, decided on the measured height of the rendered
