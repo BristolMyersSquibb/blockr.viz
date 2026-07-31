@@ -18,7 +18,6 @@ static_table(
   other_cols_width = 3.5,
   fit_width = getOption("blockr.viz.ft_fit_width", NULL),
   col_widths = getOption("blockr.viz.ft_col_widths", "measured"),
-  header_rotate = getOption("blockr.viz.ft_header_rotate", "auto"),
   cell_padding = NULL,
   auto_width = FALSE,
   continued = FALSE,
@@ -80,15 +79,6 @@ than those constants assume. Defaults from
 A numeric vector of widths (one per column, stub first) is also accepted
 and used as given. That is how \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}} gives every page of
 a split table the widths measured on the whole of it.}
-
-\item{header_rotate}{What to do when the leaf headers do not fit their
-columns flat. \code{"auto"} (default) turns them on their side only when they
-would otherwise break inside a word, \code{"vertical"} always does, \code{"none"}
-never does. A standing header asks for no width at all, which is what
-lets a table of six arms times six toxicity grades hold 36 columns on one
-slide; without it the columns end up narrower than a character and
-PowerPoint stacks the letters one per line. Defaults from
-\code{getOption("blockr.viz.ft_header_rotate")}.}
 
 \item{cell_padding}{Points of left and right padding per cell, or \code{NULL}
 (default) for the flextable default of 5. Set automatically to a tighter

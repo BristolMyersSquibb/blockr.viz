@@ -267,21 +267,16 @@ page <- tagAppendChild(page, tags$main(
     tags$h2("36 columns"),
     tags$p(paste(
       "Six arms times six toxicity grades. Flat, the word \"Grade\" alone",
-      "needs 23.5in across 36 columns, so every column is squeezed below the",
-      "width of a capital letter and the header comes out one character per",
-      "line. Turned on its side the header asks for no width at all, and the",
-      "columns are sized by their counts instead."
+      "needs 23.5in across 36 columns, so the headers break inside words and",
+      "the counts get 0.315in each. That is as far as width alone goes: a",
+      "table this wide wants fewer columns, or its columns split over two",
+      "slides, and neither is something the exporter can decide."
     )),
     tags$p(class = "q", paste(
-      "Read the shape here, not the width badge. A browser refuses to draw a",
-      "table narrower than its content, so both of these measure wider than",
-      "they are; PowerPoint honours the stated widths exactly, and the",
-      "written deck is 12.53in either way."
+      "Standing the headers up was tried and reverted. It bought horizontal",
+      "room at the cost of a 1.50in header band against 0.65in flat, and",
+      "vertical space is the scarce one on a slide."
     )),
-    tags$h3("header_rotate = \"none\" (what production did)"),
-    slide(static_table(grade_tbl[1:12, ], title = "", fit_width = fit,
-                       header_rotate = "none"), GRADE_TITLE),
-    tags$h3("header_rotate = \"auto\" (now)"),
     slide(static_table(grade_tbl[1:12, ], title = "", fit_width = fit),
           GRADE_TITLE)
   )

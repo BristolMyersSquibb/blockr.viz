@@ -141,8 +141,8 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
       ),
       if (!is.null(size)) list(font_size = size),
       # The whole table's layout decisions, not just its widths: a page
-      # measured on its own would rotate its headers when the others did not,
-      # or pad differently, and the slides would no longer match.
+      # measured on its own would pad differently, and the slides would no
+      # longer match.
       plan,
       args
     ))
@@ -246,13 +246,6 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
   }
 
   print(doc, target = file)
-
-  # Rotation is the one styling decision flextable cannot carry into pptx, so
-  # it is applied to the file after officer has written it.
-  if (identical(attr(ft, "layout_plan")$header_rotate, "vertical")) {
-    pptx_rotate_header_cells(file, attr(ft, "leaf_row") %||% NA_integer_)
-  }
-
   invisible(file)
 }
 
@@ -307,14 +300,12 @@ pptx_fits <- function(ft, budget) {
   !is.finite(h) || h <= budget
 }
 
-# Did the width allocator run out of slide for something that will now be cut
-# off rather than wrapped -- the data cells, or headers already standing on
-# end? Splitting rows cannot help with either, which is why this is asked
-# apart from the height, and answered by stepping the font down.
+# Did the width allocator run out of slide for the DATA cells, which will be
+# cut off rather than wrapped? Splitting rows cannot help with that, which is
+# why it is asked apart from the height and answered by stepping the font
+# down.
 pptx_cell_squeezed <- function(ft) {
-  sq <- attr(ft, "width_squeeze")
-  rotated <- identical(attr(ft, "layout_plan")$header_rotate, "vertical")
-  isTRUE(sq[["cell"]]) || (rotated && isTRUE(sq[["header"]]))
+  isTRUE(attr(ft, "width_squeeze")[["cell"]])
 }
 
 # Last input row of each page, decided on the measured height of the rendered
@@ -432,68 +423,6 @@ pptx_slice_rows <- function(x, i) {
 
   rownames(out) <- NULL
   out
-}
-
-# Turn the leaf header cells on their side, in the written file.
-#
-# flextable::rotate() reaches Word and HTML but not PowerPoint: it emits a bare
-# `<a:bodyPr/>` and the text stays flat. In DrawingML a table cell states its
-# text direction on `<a:tcPr vert="vert270">`, so the rotation is set here,
-# afterwards, on the cells that need it. Best effort throughout -- a deck that
-# cannot be reopened is worse than one whose headers stayed horizontal.
-#
-# @param row 1-based index of the header row to rotate, counting the table's
-#   own rows from the top (title and subtitle lines included).
-pptx_rotate_header_cells <- function(file, row) {
-
-  if (!is.numeric(row) || length(row) != 1L || !is.finite(row) ||
-        !requireNamespace("xml2", quietly = TRUE) ||
-        !requireNamespace("zip", quietly = TRUE)) {
-    return(invisible(file))
-  }
-
-  tryCatch(
-    {
-      dir <- tempfile("pptx-rotate")
-      on.exit(unlink(dir, recursive = TRUE), add = TRUE)
-      utils::unzip(file, exdir = dir)
-
-      slides <- list.files(file.path(dir, "ppt", "slides"),
-                           pattern = "^slide[0-9]+\\.xml$", full.names = TRUE)
-
-      for (s in slides) {
-        doc <- xml2::read_xml(s)
-        ns <- xml2::xml_ns(doc)
-        changed <- FALSE
-
-        for (tbl in xml2::xml_find_all(doc, ".//a:tbl", ns)) {
-          rows <- xml2::xml_find_all(tbl, "./a:tr", ns)
-          if (length(rows) < row) next
-          cells <- xml2::xml_find_all(rows[[row]], "./a:tc", ns)
-          # The stub header stays flat: it is the one column with room.
-          for (tc in utils::tail(cells, -1L)) {
-            pr <- xml2::xml_find_first(tc, "./a:tcPr", ns)
-            if (inherits(pr, "xml_missing")) next
-            xml2::xml_set_attr(pr, "vert", "vert270")
-            xml2::xml_set_attr(pr, "anchor", "b")
-            changed <- TRUE
-          }
-        }
-
-        if (changed) xml2::write_xml(doc, s)
-      }
-
-      zip::zip(
-        basename(file),
-        files = list.files(dir, recursive = FALSE),
-        root = dir, mode = "cherry-pick"
-      )
-      file.copy(file.path(dir, basename(file)), file, overwrite = TRUE)
-    },
-    error = function(e) NULL
-  )
-
-  invisible(file)
 }
 
 # The reference deck this export styles against: the caller's, the app's, the

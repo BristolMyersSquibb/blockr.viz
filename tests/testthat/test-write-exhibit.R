@@ -411,37 +411,6 @@ grade_df <- function(n_arm = 6L, n_row = 6L) {
   out
 }
 
-test_that("headers turn on their side rather than columns into stacked characters", {
-  skip_if_not_installed("flextable")
-  skip_if_not_installed("systemfonts")
-
-  wide <- static_table(grade_df(), title = "", fit_width = 12.53)
-  narrow <- static_table(grade_df(2L), title = "", fit_width = 12.53)
-
-  rot <- function(ft) {
-    unname(ft$header$styles$cells$text.direction$data[attr(ft, "leaf_row"), 2L])
-  }
-  # 36 columns cannot hold "Grade" flat, 12 can.
-  expect_equal(rot(wide), "btlr")
-  expect_equal(rot(narrow), "lrtb")
-  expect_equal(attr(wide, "layout_plan")$header_rotate, "vertical")
-
-  # Rotating buys width: no column is left narrower than its own contents.
-  pad <- ft_side_padding() / 72
-  expect_gt(min(wide$body$colwidths[-1L]),
-            max(ft_text_widths("1", "Inter", 13)) + pad)
-
-  # ... and the row it lives in is made tall enough to hold the standing text.
-  expect_gt(wide$header$rowheights[[attr(wide, "leaf_row")]], 0.5)
-
-  # Told not to, it does not.
-  flat <- static_table(grade_df(), title = "", fit_width = 12.53,
-                       header_rotate = "none")
-  expect_equal(unname(
-    flat$header$styles$cells$text.direction$data[attr(flat, "leaf_row"), 2L]
-  ), "lrtb")
-})
-
 test_that("a table that still will not fit gets tighter padding, then says so", {
   skip_if_not_installed("officer")
   skip_if_not_installed("flextable")
@@ -451,34 +420,19 @@ test_that("a table that still will not fit gets tighter padding, then says so", 
   expect_equal(attr(ft, "layout_plan")$cell_padding, TIGHT_PAD)
   expect_lt(ft$body$styles$pars$padding.left$data[[1L, 2L]], 5)
 
-  # Sixty columns need 14in at the smallest font allowed. Cut off rather than
-  # dropped, but never silently.
+  # Twenty columns of "143 (41.2%)" need 17in at the smallest font allowed,
+  # whatever the padding. Cut off rather than dropped, but never silently.
+  wide <- grade_df(4L)
+  wide[-(1:2)] <- lapply(wide[-(1:2)], function(x) {
+    structure(rep("143 (41.2%)", length(x)), label = attr(x, "label"))
+  })
+
   f <- tempfile(fileext = ".pptx")
   on.exit(unlink(f), add = TRUE)
   expect_warning(
-    write_exhibit_pptx(grade_df(10L), f, title = "Grades"),
+    write_exhibit_pptx(wide, f, title = "Grades"),
     "more columns"
   )
-})
-
-test_that("a standing header gets the width its line needs", {
-  skip_if_not_installed("flextable")
-  skip_if_not_installed("systemfonts")
-
-  ft <- static_table(grade_df(), title = "", fit_width = 12.53)
-  leaf <- attr(ft, "leaf_row")
-
-  # Rotated, a label's own line breaks stack ACROSS the column, so they are
-  # joined: two lines would want twice the width and be clipped to one.
-  expect_equal(ft_cell_text(ft$header, 2L)[[leaf]], "Any Grade N=20")
-
-  # ... and the column is at least one line height plus its padding wide.
-  pad <- 2 * attr(ft, "layout_plan")$cell_padding / 72
-  expect_gte(min(ft$body$colwidths[-1L]), 13 * 1.2 / 72 + pad - 1e-6)
-
-  # The row is as tall as the longest label is long.
-  expect_gt(ft$header$rowheights[[leaf]],
-            max(ft_text_widths("Any Grade N=20", "Inter", 13)))
 })
 
 test_that("a squeezed table gives the stub back to the columns", {
@@ -490,23 +444,6 @@ test_that("a squeezed table gives the stub back to the columns", {
   short <- grade_df(8L)
   short$.label <- paste("T", seq_len(nrow(short)))
   expect_lt(static_table(short, title = "", fit_width = 12.53)$body$colwidths[[1L]], 1.2)
-})
-
-test_that("the pptx keeps the rotation officer drops", {
-  skip_if_not_installed("officer")
-  skip_if_not_installed("flextable")
-  skip_if_not_installed("systemfonts")
-  skip_if_not_installed("xml2")
-
-  f <- tempfile(fileext = ".pptx")
-  on.exit(unlink(f), add = TRUE)
-
-  write_exhibit_pptx(grade_df(), f, title = "Grades")
-  xml <- pptx_part(f, "ppt/slides/slide1.xml")
-  # flextable's own rotation never reaches pptx, so the cells are turned in
-  # the written file: 36 data columns, stub left flat.
-  expect_equal(lengths(regmatches(xml, gregexpr("vert=\"vert270\"", xml))),
-               36L)
 })
 
 test_that("the table starts below the title, however many lines it takes", {
