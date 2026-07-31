@@ -508,6 +508,12 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
 
   attr(ft, "pptx_left") <- pptx_left
   attr(ft, "pptx_top") <- pptx_top
+  # The frame this table was built from, coerced and spread exactly as the
+  # renderer saw it. A consumer holding only the rendered exhibit -- the slide
+  # builder evaluates a report call and gets a flextable back -- can hand it
+  # to pptx_add_exhibit() and still have the table paged over slides, because
+  # the pages are rebuilt from this rather than cut out of the flextable.
+  attr(ft, "exhibit_data") <- data
   # Which input row each rendered body row came from, `NA` for the section
   # headers the renderer synthesized. A consumer that has to cut the table
   # into pages (write_exhibit_pptx()) measures the rendered rows and slices

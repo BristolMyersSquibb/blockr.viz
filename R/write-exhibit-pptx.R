@@ -120,13 +120,96 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
     officer::read_pptx()
   }
 
+  doc <- pptx_add_exhibit(
+    doc, x,
+    title = title, subtitle = subtitle, caption = caption,
+    template = template,
+    max_rows = max_rows, max_cols = max_cols,
+    min_font_size = min_font_size,
+    ...
+  )
+
+  print(doc, target = file)
+
+  invisible(file)
+}
+
+#' Add an Exhibit's Slides to an Open Deck
+#'
+#' The paginating half of [write_exhibit_pptx()], with the file taken away: it
+#' receives an [officer::read_pptx()] document, appends one slide per page of
+#' the table, and returns the document. Everything the file writer does about
+#' fitting a table to a slide -- measured column widths, the font step-down,
+#' the row and column splits, the repeated header band, the `(2 of 8)` page
+#' titles -- happens here, so a caller assembling a deck of its own gets the
+#' same slides as a caller downloading one table.
+#'
+#' That caller is blockr.outline's slide builder, which places many blocks'
+#' exhibits into one deck. Before this seam existed it placed each table with a
+#' single `officer::ph_with()`, so a table longer than the slide ran off the
+#' bottom of it.
+#'
+#' @section What the caller owns:
+#' The two options that size and typeset the table
+#' (`blockr.viz.ft_fit_width`, `blockr.viz.ft_font`) are NOT set here:
+#' a deck sets them once, around all of its slides, from its own template.
+#' [write_exhibit_pptx()] sets them for the single-table case. Passing a
+#' `template` here is only about geometry the layout cannot report (the title's
+#' point size and typeface, to measure where it ends).
+#'
+#' @param doc An `rpptx` document from [officer::read_pptx()].
+#' @param x A data frame, an [as_annotated_df()]-coercible table object, or a
+#'   flextable built by [static_table()] -- which carries the frame it was
+#'   built from, so an already-rendered exhibit can still be paged. A
+#'   flextable from anywhere else is placed whole on one slide, since there is
+#'   nothing to re-cut.
+#' @param layout,master Layout and master to add slides on. `NULL` (default)
+#'   picks "Title and Content" when the deck has it, else the first layout.
+#' @param top Distance from the top of the slide to the table, in inches.
+#'   `NULL` (default) measures it from the layout's own title placeholder, so
+#'   a wrapped title cannot land on the table.
+#' @inheritParams write_exhibit_pptx
+#'
+#' @return The document, with the exhibit's slides appended.
+#' @seealso [write_exhibit_pptx()], [static_table()]
+#' @examplesIf requireNamespace("officer", quietly = TRUE) && requireNamespace("flextable", quietly = TRUE)
+#' doc <- officer::read_pptx()
+#' doc <- pptx_add_exhibit(doc, head(iris, 20), title = "Iris")
+#' length(doc)
+#' @export
+pptx_add_exhibit <- function(doc, x, title = NULL, subtitle = NULL,
+                             caption = NULL, template = NULL,
+                             layout = NULL, master = NULL, top = NULL,
+                             max_rows = "auto", max_cols = "auto",
+                             min_font_size =
+                               getOption("blockr.viz.ft_min_font_size", 11),
+                             ...) {
+
+  if (!requireNamespace("officer", quietly = TRUE)) {
+    stop("pptx_add_exhibit() needs the 'officer' package.", call. = FALSE)
+  }
+  if (!requireNamespace("flextable", quietly = TRUE)) {
+    stop("pptx_add_exhibit() needs the 'flextable' package.", call. = FALSE)
+  }
+
+  template <- if (is.character(template) && length(template) == 1L) {
+    template
+  } else {
+    ""
+  }
+
   layouts <- officer::layout_summary(doc)
-  layout <- if ("Title and Content" %in% layouts$layout) {
+  layout <- layout %||% if ("Title and Content" %in% layouts$layout) {
     "Title and Content"
   } else {
     layouts$layout[[1L]]
   }
-  master <- layouts$master[match(layout, layouts$layout)]
+  master <- master %||% layouts$master[match(layout, layouts$layout)]
+
+  slide_h <- tryCatch(officer::slide_size(doc)$height,
+                      error = function(e) 7.5)
+  slide_w <- tryCatch(officer::slide_size(doc)$width,
+                      error = function(e) 13.333)
 
   has_title <- is.character(title) && length(title) == 1L && nzchar(title)
   # Does this layout own a title placeholder? Asked rather than assumed,
@@ -134,6 +217,26 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
   # placeholder that is not there loses it silently, and putting it in the
   # table when the placeholder IS there prints it twice.
   slide_title <- has_title && pptx_layout_has_title(doc, layout, master)
+
+  # An exhibit that has already been RENDERED. static_table() stashes the
+  # frame it was built from, which is the whole of what paging needs -- the
+  # pages are rebuilt from it, not cut out of the flextable. A flextable from
+  # anywhere else (a hand-built one, the topline block's) carries no such
+  # frame, so it goes onto one slide as it always did: placing it whole is
+  # worse than paging it and better than refusing it.
+  if (inherits(x, "flextable")) {
+    src <- attr(x, "exhibit_data")
+    if (is.null(src)) {
+      return(
+        pptx_add_table_slide(
+          doc, x, layout, master, slide_w,
+          top %||% attr(x, "pptx_top") %||% 1.1,
+          title = if (slide_title) title
+        )
+      )
+    }
+    x <- src
+  }
 
   # Sliced from here on, so the table has to be a data frame: a producer
   # object is coerced once, up front, rather than once per page.
@@ -159,15 +262,11 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
     ))
   }
 
-  slide_h <- tryCatch(officer::slide_size(doc)$height,
-                      error = function(e) 7.5)
-  slide_w <- tryCatch(officer::slide_size(doc)$width,
-                      error = function(e) 13.333)
-
   # The table starts below the title's own text, not at a constant that may
   # sit inside it. Measured on the LAST page's title, the longest of them, so
-  # the table does not shift as the reader flips.
-  top <- max(
+  # the table does not shift as the reader flips. A caller that has measured
+  # its own layout says so and is taken at its word.
+  top <- top %||% max(
     args$pptx_top %||% 1.1,
     if (slide_title) {
       pptx_title_bottom(doc, layout, master, template,
@@ -281,8 +380,7 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
     }
   }
 
-  print(doc, target = file)
-  invisible(file)
+  doc
 }
 
 # One slide carrying one (page of a) table, centred on the slide.
