@@ -37,6 +37,19 @@
 #' sees. An empty offer list is inert (no output column) until it has
 #' choices, which also covers clearing it mid-edit to refill.
 #'
+#' The state is externally controllable (`external_ctrl`): a board
+#' modification carrying `list(pickers = ...)` sets the pick from outside --
+#' another block, the assistant, or the block card's control panel -- and the
+#' face follows. Such a payload PATCHES the authored definition: entries match
+#' by `into`, only the fields they carry override, and pickers the payload
+#' does not mention keep their state. So steering one picker is
+#' `list(pickers = list(list(into = "value", selected = "AEBODSYS")))`, with
+#' the curated offer list, the flags and the sibling pickers left alone. An
+#' entry whose `into` matches no picker adds one, but only when it also brings
+#' `choices` -- otherwise it is a typo'd `into`, not a request for a control
+#' that offers nothing. A payload that is not shaped like a picker list at all
+#' is ignored, and the block keeps its last good definition.
+#'
 #' Design records: blockr.docs design-system/target select-controls.html
 #' (control style) and measure-switch-proposals.html (schema; the picker
 #' generalizes the measure switch to n pickers with editable output names).
@@ -72,11 +85,48 @@ new_picker_block <- function(
   blockr.core::new_transform_block(
     function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {
-        r_pickers <- shiny::reactiveVal(pickers)
+        # The `state` field must BE a reactiveVal, not a derived reactive:
+        # under `external_ctrl` blockr.core writes the controlled value
+        # straight into it (block-server.R rejects anything else). So the
+        # reactiveVal holds the whole state blob, and an external write (a
+        # cross-block send, the assistant, the block card's control panel)
+        # lands exactly where a client edit lands.
+        r_state <- shiny::reactiveVal(list(pickers = pickers))
 
-        set_if_changed <- function(rv, val) {
-          if (!identical(rv(), val)) rv(val)
+        # ... but everything else reads the REPAIRED list, never the raw blob:
+        # the expression must not see, even for one flush, whatever an
+        # external writer happened to send.
+        r_pickers <- shiny::reactiveVal(normalize_pickers(pickers))
+
+        # Which of the two wrote last. A write from inside the block (client
+        # edit, data seeding, the repair below) is authoritative and only
+        # normalized; anything else is external and gets patched into the
+        # authored definition first.
+        own <- new.env(parent = emptyenv())
+        own$write <- TRUE
+
+        set_pickers <- function(pks) {
+          if (!identical(shiny::isolate(r_state()), list(pickers = pks))) {
+            own$write <- TRUE
+            r_state(list(pickers = pks))
+          }
         }
+
+        # Repair whatever landed in the state, publish it, and write the
+        # canonical form back so the board saves that. Terminates because
+        # normalize_pickers() is idempotent: the write-back arrives as an own
+        # write, normalizes to itself, and `set_pickers()` stops on identical.
+        shiny::observeEvent(r_state(), {
+          raw <- picker_payload(r_state())
+          pks <- normalize_pickers(
+            if (own$write) raw else merge_pickers(r_pickers(), raw)
+          )
+          own$write <- FALSE
+          if (!identical(shiny::isolate(r_pickers()), pks)) {
+            r_pickers(pks)
+          }
+          set_pickers(pks)
+        })
 
         col_labels <- shiny::reactive({
           d <- data()
@@ -96,7 +146,7 @@ new_picker_block <- function(
         # purpose -- the builder curates which columns the viewer sees; the
         # block does nothing until at least one column is offered.
         shiny::observeEvent(data(), {
-          pks <- normalize_pickers(r_pickers())
+          pks <- r_pickers()
           if (!length(pks) && ncol(data())) {
             pks <- list(list(
               into = "value",
@@ -105,7 +155,7 @@ new_picker_block <- function(
               multiple = FALSE
             ))
           }
-          set_if_changed(r_pickers, pks)
+          set_pickers(pks)
         })
 
         # Push the full control state. Length-1 vectors unbox to scalars over
@@ -136,13 +186,13 @@ new_picker_block <- function(
           )
           pks <- normalize_pickers(raw)
           if (length(pks)) {
-            set_if_changed(r_pickers, pks)
+            set_pickers(pks)
           }
         })
 
         list(
           expr = shiny::reactive(make_picker_expr(r_pickers())),
-          state = list(state = shiny::reactive(list(pickers = r_pickers())))
+          state = list(state = r_state)
         )
       })
     },
@@ -191,6 +241,13 @@ new_picker_block <- function(
     },
     expr_type = "bquoted",
     allow_empty_state = TRUE,
+    # The viewer control of a locked dashboard is exactly the thing another
+    # block (or the assistant) wants to steer, so `state` is externally
+    # controllable: a board modification carrying
+    # `list(pickers = list(list(into = ..., selected = ...)))` sets the pick,
+    # the push observer above echoes it to the face, and the normalizing
+    # observer repairs a partial payload.
+    external_ctrl = TRUE,
     class = "picker_block",
     ...
   )
@@ -250,6 +307,84 @@ normalize_pickers <- function(pickers) {
     intos <- make.unique(vapply(out, `[[`, character(1), "into"), sep = "")
     for (i in seq_along(out)) {
       out[[i]]$into <- intos[[i]]
+    }
+  }
+  out
+}
+
+# The picker list inside a `state` blob, or NULL when there is nothing usable
+# in it. What lands in `state` from outside is not the block's own writing: a
+# cross-block send, an LLM tool call, or core's default `ctrl_block_ui()` --
+# which offers a plain text field per controllable input, so submitting it
+# writes a bare STRING where the block expects a list. The repair observer
+# runs on its own, outside the try()/rollback the ctrl plugin wraps around
+# `eval()`, so reaching into such a payload would take the block's session
+# down rather than be reported as a failed control attempt. Keep only what is
+# shaped like a picker list; anything else is no payload at all and the block
+# holds its last good definition, the same way it holds it against a transient
+# frame that lacks its columns.
+picker_payload <- function(x) {
+  if (!is.list(x) || !is.list(x$pickers)) {
+    return(NULL)
+  }
+  Filter(is.list, x$pickers)
+}
+
+# Patch an EXTERNAL picker payload onto the authored definition. External
+# control is about the PICK: a sender saying "show AEBODSYS in the AE Term
+# picker" should not have to restate the offer list, the flags and every other
+# picker just to keep them. So incoming entries are matched to the current
+# ones by `into` (by position when `into` is omitted) and only the fields they
+# actually carry override, and current pickers the payload does not mention
+# survive untouched. Removing a picker is builder work in the gear, not
+# something a send can do by omission.
+#
+# An entry matching nothing is a NEW picker, so it is appended -- but only if
+# it brings `choices`. Without them it would land as an inert control the
+# viewer can do nothing with, permanently, on a board someone curated: that is
+# what a typo in `into` looks like ("show x in the y_value picker" against a
+# board whose picker is called `y`), and it is the more likely reading by far.
+# An empty offer list means "mid-edit" only when the builder is the one
+# holding the gear.
+#
+# Deliberately NOT applied to the block's own writes: there, an empty
+# `choices` is a legitimate inert state (the builder clearing the offer list
+# to refill it), and a patch would keep resurrecting the cleared list.
+merge_pickers <- function(cur, incoming) {
+  if (is.null(incoming) || !length(incoming)) {
+    return(cur)
+  }
+  if (!length(cur)) {
+    return(Filter(function(p) is.list(p) && length(p$choices), incoming))
+  }
+  intos <- vapply(
+    cur,
+    function(p) if (length(p$into)) as.character(p$into)[[1L]] else "",
+    character(1)
+  )
+  out <- cur
+  for (i in seq_along(incoming)) {
+    p <- incoming[[i]]
+    if (!is.list(p)) {
+      next
+    }
+    hit <- if (length(p$into)) {
+      match(as.character(p$into)[[1L]], intos)
+    } else if (i <= length(cur)) {
+      i
+    } else {
+      NA_integer_
+    }
+    if (is.na(hit)) {
+      if (length(p$choices)) {
+        out[[length(out) + 1L]] <- p
+      }
+      next
+    }
+    for (f in names(p)) {
+      if (!is.null(p[[f]])) {
+        out[[hit]][[f]] <- p[[f]]
+      }
     }
   }
   out

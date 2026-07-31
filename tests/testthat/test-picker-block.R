@@ -122,6 +122,157 @@ test_that("a JS-sent selection updates the stored state", {
   })
 })
 
+test_that("the state slot is externally controllable", {
+  blk <- new_picker_block(
+    state = list(pickers = list(
+      list(into = "value", choices = c("Sepal.Length", "Sepal.Width"),
+           selected = "Sepal.Length", multiple = FALSE)
+    ))
+  )
+
+  expect_setequal(blockr.core::external_ctrl_vars(blk), c("state", "block_name"))
+
+  testServer(blk$expr_server, args = list(data = reactive(datasets::iris)), {
+    session$flushReact()
+    ctrl <- session$returned$state$state
+    # blockr.core writes the controlled value straight into the reactiveVal,
+    # unnormalized -- here without `optional` and with a list-shaped pick.
+    ctrl(list(pickers = list(
+      list(into = "value", choices = c("Sepal.Length", "Sepal.Width"),
+           selected = list("Sepal.Width"), multiple = FALSE)
+    )))
+    session$flushReact()
+
+    out <- eval_picker_expr(session$returned$expr(), datasets::iris)
+    expect_equal(as.numeric(out$value), datasets::iris$Sepal.Width)
+    # ... and the stored state comes back canonical.
+    st <- ctrl()$pickers
+    expect_equal(st[[1]]$selected, "Sepal.Width")
+    expect_false(st[[1]]$optional)
+  })
+})
+
+test_that("an external payload patches the pick, keeping the offer list", {
+  # The realistic send: only `into` + `selected`, one of two pickers.
+  blk <- new_picker_block(
+    state = list(pickers = list(
+      list(into = "x", choices = c("Sepal.Length", "Sepal.Width"),
+           selected = "Sepal.Length", multiple = FALSE),
+      list(into = "y", choices = c("Petal.Length", "Petal.Width"),
+           selected = "Petal.Length", multiple = FALSE)
+    ))
+  )
+
+  testServer(blk$expr_server, args = list(data = reactive(datasets::iris)), {
+    session$flushReact()
+    ctrl <- session$returned$state$state
+    ctrl(list(pickers = list(list(into = "y", selected = "Petal.Width"))))
+    session$flushReact()
+
+    pks <- ctrl()$pickers
+    expect_length(pks, 2L)
+    # Untouched picker survives, patched picker keeps its curated offer list.
+    expect_equal(pks[[1]]$selected, "Sepal.Length")
+    expect_equal(pks[[2]]$choices, c("Petal.Length", "Petal.Width"))
+    expect_equal(pks[[2]]$selected, "Petal.Width")
+
+    out <- eval_picker_expr(session$returned$expr(), datasets::iris)
+    expect_equal(as.numeric(out$y), datasets::iris$Petal.Width)
+  })
+})
+
+test_that("an unmatched into adds a picker only when it offers something", {
+  blk <- new_picker_block(
+    state = list(pickers = list(
+      list(into = "y", choices = c("Petal.Length", "Petal.Width"),
+           selected = "Petal.Length", multiple = FALSE)
+    ))
+  )
+
+  testServer(blk$expr_server, args = list(data = reactive(datasets::iris)), {
+    session$flushReact()
+    ctrl <- session$returned$state$state
+
+    # A typo'd `into` would otherwise leave an inert control on a curated
+    # board, permanently, with nothing for the viewer to pick.
+    ctrl(list(pickers = list(list(into = "y_value", selected = "Petal.Width"))))
+    session$flushReact()
+    expect_length(ctrl()$pickers, 1L)
+    expect_equal(ctrl()$pickers[[1]]$selected, "Petal.Length")
+
+    # Bringing an offer list is a real request for a second picker.
+    ctrl(list(pickers = list(
+      list(into = "x", choices = c("Sepal.Length", "Sepal.Width"),
+           selected = "Sepal.Width")
+    )))
+    session$flushReact()
+    pks <- ctrl()$pickers
+    expect_length(pks, 2L)
+    expect_equal(pks[[2]]$into, "x")
+
+    out <- eval_picker_expr(session$returned$expr(), datasets::iris)
+    expect_equal(as.numeric(out$x), datasets::iris$Sepal.Width)
+    expect_equal(as.numeric(out$y), datasets::iris$Petal.Length)
+  })
+})
+
+test_that("a payload that is not a picker list leaves the block standing", {
+  # core's default `ctrl_block_ui()` is a text field per controllable input,
+  # so submitting it writes a bare string into `state`. The repair observer
+  # runs outside the ctrl plugin's try()/rollback, so reaching into that used
+  # to kill the block's session; it must be a no-op instead.
+  blk <- new_picker_block(
+    state = list(pickers = list(
+      list(into = "value", choices = c("Sepal.Length", "Sepal.Width"),
+           selected = "Sepal.Length", multiple = FALSE)
+    ))
+  )
+
+  testServer(blk$expr_server, args = list(data = reactive(datasets::iris)), {
+    session$flushReact()
+    ctrl <- session$returned$state$state
+
+    for (junk in list("Sepal.Width", list(), list(pickers = "Sepal.Width"),
+                      list(pickers = list("Sepal.Width")))) {
+      ctrl(junk)
+      session$flushReact()
+      pks <- ctrl()$pickers
+      expect_length(pks, 1L)
+      expect_equal(pks[[1]]$choices, c("Sepal.Length", "Sepal.Width"))
+      expect_equal(pks[[1]]$selected, "Sepal.Length")
+    }
+
+    out <- eval_picker_expr(session$returned$expr(), datasets::iris)
+    expect_equal(as.numeric(out$value), datasets::iris$Sepal.Length)
+  })
+})
+
+test_that("clearing the offer list from the client still goes inert", {
+  # The patch is for EXTERNAL writes only: the builder emptying "Columns
+  # offered" must not have the cleared list patched back in.
+  blk <- new_picker_block(
+    state = list(pickers = list(
+      list(into = "value", choices = c("Sepal.Length", "Sepal.Width"),
+           selected = "Sepal.Length", multiple = FALSE)
+    ))
+  )
+
+  testServer(blk$expr_server, args = list(data = reactive(datasets::iris)), {
+    session$flushReact()
+    session$setInputs(pickers = jsonlite::toJSON(
+      list(list(into = "value", choices = character(),
+                selected = character(), multiple = FALSE)),
+      auto_unbox = TRUE
+    ))
+    session$flushReact()
+
+    st <- session$returned$state$state()$pickers
+    expect_length(st[[1]]$choices, 0L)
+    out <- eval_picker_expr(session$returned$expr(), datasets::iris)
+    expect_null(out$value)
+  })
+})
+
 test_that("chained pickers keep the ORIGINAL source column in blockr_source", {
   # Upstream picker already copied Sepal.Width into `mid`; a second picker
   # copying `mid` must claim Sepal.Width, not the intermediate copy (which

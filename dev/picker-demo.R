@@ -16,6 +16,14 @@
 #   3. Two pickers     x_value + y_value -> viewer picks BOTH axes of a
 #                      scatter; copies, so measure-vs-itself is legal
 #
+# Every picker card also carries a third header button ("Control"): the block
+# is externally controllable, so a sender outside the block can set the pick.
+# The panel behind that button is the stand-in for whatever the real app
+# serves there (blockr.ai's sparkle assistant, a cross-block send): type
+# `into=column` and Apply, and watch the face and the chart follow. It sends
+# ONLY `selected`, which is the point -- the curated offer list, the flags and
+# the sibling pickers survive the patch.
+#
 # Run from the workspace root:
 #   Rscript blockr.viz/dev/picker-demo.R [port]
 # Port: argument, else BLOCKR_PORT, else 3838.
@@ -35,6 +43,50 @@ pkgload::load_all("blockr.dplyr")
 pkgload::load_all("blockr.dock")
 pkgload::load_all("blockr.dag")
 pkgload::load_all("blockr.viz")
+
+# A minimal `ctrl_block` plugin. The real apps serve blockr.ai's
+# `ai_ctrl_block()` here; this one needs no LLM, so the external-control seam
+# can be driven (and seen) on its own. `vars$state` is the block's state
+# reactiveVal — writing it IS the external write.
+demo_ctrl_block <- function() {
+  blockr.core::ctrl_block(
+    server = function(id, x, vars, data, eval) {
+      shiny::moduleServer(id, function(input, output, session) {
+        shiny::observeEvent(input$apply, {
+          spec <- strsplit(trimws(input$pick), "=", fixed = TRUE)[[1]]
+          if (length(spec) != 2L) {
+            return()
+          }
+          # A patch, not a replacement: `into` names WHICH picker to steer,
+          # `selected` is all it carries. Anything not mentioned is kept.
+          vars$state(list(pickers = list(list(
+            into = trimws(spec[[1]]),
+            selected = trimws(spec[[2]])
+          ))))
+        })
+        TRUE
+      })
+    },
+    ui = structure(
+      function(id, x) {
+        ns <- shiny::NS(id)
+        shiny::div(
+          class = "blockr-ctrl-body",
+          style = "padding: 8px 12px;",
+          shiny::p(
+            class = "text-muted small",
+            "Steer a picker from outside: ", shiny::tags$code("into=column"),
+            " (e.g. ", shiny::tags$code("value=Sepal.Width"), ")."
+          ),
+          shiny::textInput(ns("pick"), NULL, placeholder = "into=column"),
+          shiny::actionButton(ns("apply"), "Apply", class = "btn-sm")
+        )
+      },
+      ctrl_label = "Control",
+      ctrl_tooltip = "External control"
+    )
+  )
+}
 
 # iris with labels on the measures — pickers show labels as sublabels and
 # carry them through to the chart.
@@ -161,4 +213,4 @@ board <- new_dock_board(
   extensions = list(blockr.dag::new_dag_extension())
 )
 
-serve(board)
+serve(board, plugins = custom_plugins(demo_ctrl_block()))

@@ -58,6 +58,19 @@ offer list starts empty: the builder curates which columns the viewer
 sees. An empty offer list is inert (no output column) until it has
 choices, which also covers clearing it mid-edit to refill.
 
+The state is externally controllable (\code{external_ctrl}): a board
+modification carrying \code{list(pickers = ...)} sets the pick from outside --
+another block, the assistant, or the block card's control panel -- and the
+face follows. Such a payload PATCHES the authored definition: entries match
+by \code{into}, only the fields they carry override, and pickers the payload
+does not mention keep their state. So steering one picker is
+\code{list(pickers = list(list(into = "value", selected = "AEBODSYS")))}, with
+the curated offer list, the flags and the sibling pickers left alone. An
+entry whose \code{into} matches no picker adds one, but only when it also brings
+\code{choices} -- otherwise it is a typo'd \code{into}, not a request for a control
+that offers nothing. A payload that is not shaped like a picker list at all
+is ignored, and the block keeps its last good definition.
+
 Design records: blockr.docs design-system/target select-controls.html
 (control style) and measure-switch-proposals.html (schema; the picker
 generalizes the measure switch to n pickers with editable output names).
