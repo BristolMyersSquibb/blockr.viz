@@ -174,3 +174,31 @@ test_that("the html download writes a self-contained page", {
     expect_false(grepl("<script[^>]+src=", html))
   })
 })
+
+test_that("the download control does not re-render when the data changes", {
+  # The control reads the format toggles and nothing else. If it read the data
+  # it would rebuild -- and re-probe for the writers -- on every filter click,
+  # which is the cost that would make enabling a format something to think
+  # twice about. Counted through the probe seam.
+  calls <- 0L
+  local_mocked_bindings(
+    dt_has_officer = function() { calls <<- calls + 1L; TRUE }
+  )
+
+  rv <- reactiveVal(data.frame(grp = c("A", "B"), val = c(1, 2)))
+  blk <- new_table_block(pptx_download = TRUE, html_download = TRUE)
+
+  testServer(blk$expr_server, args = list(data = rv), {
+    session$flushReact()
+    invisible(output$dt_download)
+    first <- calls
+    expect_gt(first, 0L)
+
+    for (i in 1:3) {
+      rv(data.frame(grp = c("A", "B"), val = c(i, i + 1)))
+      session$flushReact()
+      invisible(output$dt_download)
+    }
+    expect_identical(calls, first)
+  })
+})

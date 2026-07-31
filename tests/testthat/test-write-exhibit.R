@@ -208,3 +208,37 @@ test_that("pptx_template() takes the first path that actually exists", {
     expect_identical(pptx_template("/nowhere/deck.pptx"), real)
   )
 })
+
+# ---- the availability probe ----------------------------------------------
+
+test_that("the format probe reports what is installed", {
+  expect_true(dt_pkg_installed("stats"))
+  expect_true(dt_pkg_installed("stats", "utils"))
+  expect_false(dt_pkg_installed("notAPackageThatExists"))
+  # All of them, not any: the pptx entry needs officer AND flextable.
+  expect_false(dt_pkg_installed("stats", "notAPackageThatExists"))
+})
+
+test_that("the format probe does not LOAD what it finds", {
+  skip_if_not_installed("callr")
+  skip_if_not_installed("flextable")
+
+  # The probe runs when the download control renders, not when a download is
+  # clicked. requireNamespace() would pull officer + flextable into the process
+  # (0.49s, 53MB) just to decide whether to grey out a menu entry, so enabling
+  # the PowerPoint pill has to stay free. Checked in a fresh process, because
+  # this one has flextable loaded already.
+  loaded <- callr::r(
+    function(probe) {
+      found <- probe("officer", "flextable")
+      c(found = found,
+        officer = "officer" %in% loadedNamespaces(),
+        flextable = "flextable" %in% loadedNamespaces())
+    },
+    args = list(probe = dt_pkg_installed)
+  )
+
+  expect_true(loaded[["found"]])
+  expect_false(loaded[["officer"]])
+  expect_false(loaded[["flextable"]])
+})

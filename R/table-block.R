@@ -792,15 +792,29 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
 #' Each format needs one Suggests-level package: `openxlsx` writes the
 #' spreadsheet, `flextable` (with `officer`) typesets the slide. HTML needs
 #' none -- the renderer is the package's own.
+#'
+#' Asked with `system.file()` rather than `requireNamespace()`, because this
+#' runs when the CONTROL renders, not when a download is clicked, and
+#' requireNamespace() LOADS what it finds: turning the PowerPoint pill on would
+#' otherwise pull officer + flextable into the process (measured: 0.49s and
+#' 53MB, once per process) purely to decide whether to grey out a menu entry.
+#' The writers keep their own requireNamespace() guard, so an installed but
+#' unloadable package still fails at click time with a sentence that says so --
+#' this probe answers "installed?", not "loadable?", which is the question the
+#' menu is actually asking.
+#' @noRd
+dt_pkg_installed <- function(...) {
+  all(vapply(c(...), function(p) nzchar(system.file(package = p)), logical(1L)))
+}
+
 #' @noRd
 dt_has_openxlsx <- function() {
-  requireNamespace("openxlsx", quietly = TRUE)
+  dt_pkg_installed("openxlsx")
 }
 
 #' @noRd
 dt_has_officer <- function() {
-  requireNamespace("officer", quietly = TRUE) &&
-    requireNamespace("flextable", quietly = TRUE)
+  dt_pkg_installed("officer", "flextable")
 }
 
 #' Table-block chrome: the scoped CSS, the search/gear header, and the scroll
