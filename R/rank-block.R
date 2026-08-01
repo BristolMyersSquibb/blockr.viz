@@ -184,6 +184,19 @@ new_summarize_table_block <- function(group = NULL,
   filter_values <- null_state(filter_values)
   cols <- chr_vec_state(cols)
   fields <- chr_vec_state(fields)
+  # The summarize table groups by `by`; the ranked bar by `group` (+ `parent`).
+  # A board that grew its column list out of the ranked-bar surface -- or one
+  # saved before `by` existed -- still carries the value in the old slots, and
+  # rank_prepare() falls back to them. So the table draws correctly while the
+  # gear's REQUIRED "Group by" row shows empty, which reads as a broken block.
+  # Move the value into the slot the summarize gear reads, and clear the old
+  # ones: left in place they would silently resurrect a grouping the user
+  # cleared in the gear (the same rule as the colour / facet migration below).
+  if (length(summaries) && !length(by) && length(c(parent, group))) {
+    by <- unique(c(parent, group))
+    group <- NULL
+    parent <- NULL
+  }
   # Colour and facet used to be ONE table-level pair for the summarize table;
   # they are the summary's own mappings now. Migrate a saved board here, at
   # construction (which is also how a restore runs), so the fanned-down values

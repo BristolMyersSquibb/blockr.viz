@@ -496,6 +496,24 @@ test_that("the ctor migrates the retired pair into the block's STATE", {
   expect_null(st$facet)
 })
 
+test_that("the ctor moves a ranked-bar grouping into `by`", {
+  # rank_prepare() falls back to group/parent when `by` is unset, so such a
+  # board DRAWS -- while the summarize gear's required "Group by" row shows
+  # empty. The state has to say what the table is doing.
+  b <- new_rank_block(group = "TERM", parent = "SOC",
+                      summaries = list(list(type = "dist", col = "DUR")))
+  st <- blockr.core::blockr_ser(b)$payload
+  expect_identical(st$by, c("SOC", "TERM"))
+  # Cleared, so clearing "Group by" in the gear cannot resurrect them.
+  expect_null(st$group)
+  expect_null(st$parent)
+
+  # The ranked-bar surface (no column list) keeps its own slots untouched.
+  st <- blockr.core::blockr_ser(new_rank_block(group = "TERM"))$payload
+  expect_identical(st$group, "TERM")
+  expect_null(st$by)
+})
+
 test_that("by nests one level: outer parent rows plus inner leaves", {
   ae <- sum_fixture()
   S <- list(list(type = "simple", name = "Rows", func = "count",
