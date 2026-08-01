@@ -183,7 +183,10 @@ test_that("the download control does not re-render when the data changes", {
   # twice about. Counted through the probe seam.
   calls <- 0L
   local_mocked_bindings(
-    dt_has_officer = function() { calls <<- calls + 1L; TRUE }
+    dt_has_officer = function() {
+      calls <<- calls + 1L
+      TRUE
+    }
   )
 
   rv <- reactiveVal(data.frame(grp = c("A", "B"), val = c(1, 2)))
