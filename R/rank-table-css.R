@@ -139,18 +139,22 @@ rank_table_css <- function() {
   border-bottom: 1px solid var(--blockr-color-border, #e1e0d9);
 }
 
-/* Bars: SQUARE, and segments TOUCH -- the house bar style, taken from the chart
-   block rather than invented here. echarts sets no borderRadius on any bar
-   series (chart.js even records dropping a lone rounded override, which had
-   made the waterfall the only rounded chart), stacks
-   with `stack:'stack'` and no separating border, and groups with `barGap: 0` so
-   a group's bars touch. A rank table sitting next to a chart of the same data
-   has to read as the same mark, so: no rounded data-end, no surface gap between
-   segments, no gap between grouped bars.
+/* Bars: segments TOUCH, and only the VALUE end is rounded. The end a bar grows
+   to is a measurement and gets the cosmetic --blockr-mark-radius; the end at
+   zero is the axis, shared by every row, and stays square because rounding it
+   lifts the bar off its baseline. In a stack only the outermost segment has a
+   value end, so `:last-child` carries the radius and the inner joins stay
+   square -- which is also why segments still touch with no separating border,
+   matching the chart block's `stack:'stack'` and `barGap: 0`.
+
+   The radius is cosmetic and means NOTHING. It must stay well under half the
+   lane height, where a capsule becomes the SEMANTIC mark for a soft boundary
+   (see .blockr-rank-prcell below). On the 6px grouped rows the token would be a
+   third of the height, so it is clamped to thickness/4 there.
 
    The grey track stays: it is a table-cell affordance (it says what the row's
    share is against the column max) with no echarts equivalent, and the
-   crossfilter block in blockr.dm already draws track + fill. */
+   crossfilter block in blockr.dm draws the same track + fill pair. */
 .blockr-rank-track {
   display: flex;
   gap: 0;
@@ -158,22 +162,39 @@ rank_table_css <- function() {
      line up across columns. */
   height: 12px;
   background: var(--blockr-rank-track);
+  border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
 }
 .blockr-rank-track.is-tall {
   height: auto;
   flex-direction: column;
   gap: 2px;
   background: none;
+  border-radius: 0;
 }
 .blockr-rank-track.is-tall .blockr-rank-row3 {
   height: 6px;
   background: var(--blockr-rank-track);
+  /* 6px row: thickness/4, so the radius eases down instead of reading as a
+     capsule at the token's full 2px. */
+  border-radius: 0 min(var(--blockr-mark-radius, 2px), 1.5px)
+                 min(var(--blockr-mark-radius, 2px), 1.5px) 0;
 }
 .blockr-rank-fill {
   height: 100%;
   min-width: 2px;
   border-radius: 0;
   background: var(--blockr-rank-fill);
+}
+/* The value end. In a plain bar the fill is the only child; in a stack it is
+   the outermost segment; in a grouped bar each row3 holds one. Zero-width
+   segments are never emitted, so :last-child is always a segment that shows. */
+.blockr-rank-track > .blockr-rank-fill:last-child,
+.blockr-rank-row3 > .blockr-rank-fill:last-child {
+  border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
+}
+.blockr-rank-row3 > .blockr-rank-fill:last-child {
+  border-radius: 0 min(var(--blockr-mark-radius, 2px), 1.5px)
+                 min(var(--blockr-mark-radius, 2px), 1.5px) 0;
 }
 .blockr-rank-track.is-sub .blockr-rank-fill { background: var(--blockr-rank-sub); }
 
@@ -242,10 +263,16 @@ rank_table_css <- function() {
   width: 1px;
   background: var(--blockr-rank-fill);
 }
+/* The IQR body is free-standing: neither end sits on an axis and neither abuts
+   a sibling, so the cosmetic radius applies to BOTH ends. It is not the pill --
+   the box is 10px tall and the radius is 2px, nowhere near the half-height that
+   would make it read as a soft boundary. The fence caps, whiskers and median
+   tick stay square: at 1-2px a radius would turn them into dots. */
 .blockr-rank-boxcell .lane-box {
   top: 1px;
   bottom: 1px;
   background: var(--blockr-rank-sub);
+  border-radius: var(--blockr-mark-radius, 2px);
 }
 .blockr-rank-boxcell .lane-med {
   top: 0;
@@ -258,11 +285,16 @@ rank_table_css <- function() {
    ringed dot -- so the eye reads centre first, spread second, extent third,
    which is the order the numbers matter in. Both ends rounded because the
    band is a soft boundary, unlike the box's hard fence caps. */
+/* 999px, not half the height as a literal. These are CAPSULES: the radius is
+   the signal, so it has to stay half the height whatever the height becomes.
+   Written as 4px and 2px it only happened to be a capsule at 8px and 4px, and
+   a later height change would have quietly demoted it to a rounded rectangle,
+   i.e. to the cosmetic --blockr-mark-radius, which means nothing. */
 .blockr-rank-prcell .lane-fence {
   top: 50%;
   height: 8px;
   margin-top: -4px;
-  border-radius: 4px;
+  border-radius: 999px;
   background: var(--blockr-rank-fill);
   opacity: 0.16;
 }
@@ -270,7 +302,7 @@ rank_table_css <- function() {
   top: 50%;
   height: 4px;
   margin-top: -2px;
-  border-radius: 2px;
+  border-radius: 999px;
   background: var(--blockr-rank-fill);
 }
 .blockr-rank-prcell .lane-ctr {
@@ -524,11 +556,14 @@ rank_table_css <- function() {
   white-space: nowrap;
 }
 
-/* Zero-centred difference bar. */
+/* Zero-centred difference bar. Zero sits in the MIDDLE here, so neither end of
+   the rail is an axis and both round; the fill rounds on whichever end points
+   away from the zero tick. */
 .blockr-rank-dv {
   position: relative;
   height: 12px;
   background: var(--blockr-rank-track);
+  border-radius: var(--blockr-mark-radius, 2px);
 }
 .blockr-rank-dv::before {
   content: '';
@@ -543,8 +578,14 @@ rank_table_css <- function() {
 /* One colour both ways. The side of the zero line already says which
    direction; colouring the two apart would only add an opinion about which
    one is good, and nothing tells the block that. */
-.blockr-rank-dv .blockr-rank-fill.is-pos { left: 50%; }
-.blockr-rank-dv .blockr-rank-fill.is-neg { right: 50%; }
+.blockr-rank-dv .blockr-rank-fill.is-pos {
+  left: 50%;
+  border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
+}
+.blockr-rank-dv .blockr-rank-fill.is-neg {
+  right: 50%;
+  border-radius: var(--blockr-mark-radius, 2px) 0 0 var(--blockr-mark-radius, 2px);
+}
 .blockr-rank-dv .blockr-rank-fill {
   background: var(--blockr-rank-bar);
 }

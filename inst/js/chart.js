@@ -317,6 +317,27 @@
   // override palette cycling for this mode.
   const WATERFALL_COLORS = { increase: '#009E73', decrease: '#dc2626', total: '#bbbbbb' };
 
+  // Cosmetic corner radius for a bar's VALUE end, matching --blockr-mark-radius
+  // in blockr.dock's design-system CSS so a chart and a summarize table of the
+  // same data carry the same mark. It means nothing: the end a bar grows to is
+  // a measurement and gets softened, the end at zero is the axis and stays
+  // square, because rounding a baseline lifts the bar off it. In a stack only
+  // the outermost segment has a value end (see barStackRadius below).
+  //
+  // echarts orders the corners clockwise from top-left, so the pair that gets
+  // the radius depends on which way the bar grows.
+  const MARK_RADIUS = 2;
+  /**
+   * @param {boolean} vertical bar grows up the value axis
+   * @param {boolean} [floating] neither end touches the axis (waterfall delta)
+   * @returns {number[]} echarts itemStyle.borderRadius
+   */
+  const barRadius = (vertical, floating) => {
+    const r = MARK_RADIUS;
+    if (floating) return [r, r, r, r];
+    return vertical ? [r, r, 0, 0] : [0, r, r, 0];
+  };
+
   // Always-on, small, muted toolbox shared by every chart family.
   //
   // `feature.brush` MUST be registered for the line/scatter family —
@@ -3099,7 +3120,7 @@
       if (colors.length === 0) {
         // A null aggregate (no usable value in the group) stays null — ECharts
         // renders a gap, not a zero bar.
-        series.push({ type: 'bar', data: groups.map(g => { const d = facetData.find(a => a.group === g); return d ? d.value : null; }), itemStyle: { color: palette[0] }, barWidth: '60%', barMaxWidth: BAR_MAX, emphasis: { focus: 'self' } });
+        series.push({ type: 'bar', data: groups.map(g => { const d = facetData.find(a => a.group === g); return d ? d.value : null; }), itemStyle: { color: palette[0], borderRadius: barRadius(vertical) }, barWidth: '60%', barMaxWidth: BAR_MAX, emphasis: { focus: 'self' } });
       } else {
         const colorScale = this._scaleFor(this.config.color);
         // Per-group total across colors, for percent normalization only.
@@ -3141,6 +3162,26 @@
             ...barLayout,
             emphasis: { focus: 'self' }
           });
+        }
+        // The value end. A grouped bar is its own bar, so each series carries
+        // the radius. A STACK has exactly one value end -- the outermost
+        // segment -- and which series that is varies per group, because a
+        // (group, color) combo can be null. Rounding the last SERIES would
+        // therefore square the top of any group whose last colour is missing,
+        // so the stack applies it per datum instead.
+        if (isGrouped) {
+          for (const s of series) s.itemStyle.borderRadius = barRadius(vertical);
+        } else {
+          for (let gi = 0; gi < groups.length; gi++) {
+            for (let si = series.length - 1; si >= 0; si--) {
+              const d = series[si].data[gi];
+              if (d == null) continue;
+              series[si].data[gi] = (typeof d === 'object')
+                ? { ...d, itemStyle: { ...d.itemStyle, borderRadius: barRadius(vertical) } }
+                : { value: d, itemStyle: { borderRadius: barRadius(vertical) } };
+              break;
+            }
+          }
         }
       }
 
@@ -3314,19 +3355,26 @@
           delta.push(null);
           continue;
         }
+        // A waterfall is always vertical. A total sits ON the axis, so it
+        // rounds its top only like any other bar; a delta FLOATS between two
+        // cumulatives, so neither of its ends is an axis and both round --
+        // except for a step starting from zero, which is anchored after all.
         if (isTotal) {
           // Total / subtotal bar: from 0 up to the running cumulative.
           base.push(0);
-          delta.push({ value: cum, itemStyle: { color: WATERFALL_COLORS.total } });
+          delta.push({ value: cum, itemStyle: { color: WATERFALL_COLORS.total,
+            borderRadius: barRadius(true) } });
           // A total bar does not advance the cumulative (it restates it).
         } else if (v >= 0) {
           base.push(cum);
-          delta.push({ value: v, itemStyle: { color: WATERFALL_COLORS.increase } });
+          delta.push({ value: v, itemStyle: { color: WATERFALL_COLORS.increase,
+            borderRadius: barRadius(true, cum !== 0) } });
           cum += v;
         } else {
           // Negative delta: the bar hangs down from the prior cumulative.
           base.push(cum + v);
-          delta.push({ value: -v, itemStyle: { color: WATERFALL_COLORS.decrease } });
+          delta.push({ value: -v, itemStyle: { color: WATERFALL_COLORS.decrease,
+            borderRadius: barRadius(true, (cum + v) !== 0) } });
           cum += v;
         }
       }
@@ -3387,9 +3435,9 @@
             itemStyle: { color: 'transparent', borderColor: 'transparent' },
             emphasis: { disabled: true }, silent: true,
             tooltip: { show: false }, data: base },
-          // No explicit borderRadius: bars follow the default/registered theme
-          // like every other bar series (was a lone hardcoded override that made
-          // the waterfall the only rounded chart).
+          // borderRadius rides on each DATUM (see the delta loop above): a
+          // total is anchored to the axis and a floating step is not, so the
+          // corners differ per bar and cannot be set once for the series.
           { name: 'delta', type: 'bar', stack: 'waterfall', barWidth: '60%',
             emphasis: { focus: 'self' }, data: delta }
         ]
