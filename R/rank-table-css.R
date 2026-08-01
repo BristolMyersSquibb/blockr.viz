@@ -314,11 +314,22 @@ rank_table_css <- function() {
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 2px var(--blockr-color-bg, #fff);
 }
-/* Interval: the swimlane. Square segments, colour = the mapped level. */
+/* Interval: the swimlane. Colour = the mapped level, and BOTH ends round.
+   A timeline is not a stack. A stack tiles by construction -- its segments
+   always share edges, they compose one quantity, and a seam between them
+   would read as a gap in that quantity, which is why a stack's inner joins
+   stay square. A swimlane's segments are per-event [left, width] pairs that
+   overlap, leave gaps, or only incidentally touch. When two of them DO touch,
+   the seam is true: it says these are two events and not one long one. So the
+   abutment exception belongs to stacking, not to interval marks.
+
+   Narrow segments need no guard: min-width is 2px and CSS scales border-radius
+   down proportionally when the corners would not fit the box. */
 .blockr-rank-ivcell .lane-seg {
   top: 0;
   bottom: 0;
   min-width: 2px;
+  border-radius: var(--blockr-mark-radius, 2px);
 }
 /* The exhibit form (a spans row's size = lg): a WIDER column for boards
    where the swimlane is the centerpiece -- more horizontal resolution for
