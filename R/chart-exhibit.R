@@ -40,6 +40,17 @@ gg_exhibit_size <- function(p, max_width = NULL) {
   list(width = w, height = h)
 }
 
+# A plot's own title, whatever ggplot2 version wrote it. Used to tell a
+# duplicate slide title from a different one; NULL when the plot has none.
+#' @noRd
+gg_title <- function(p) {
+  lab <- tryCatch(p$labels$title, error = function(e) NULL)
+  if (is.null(lab) || !is.character(lab) || !length(lab)) {
+    return(NULL)
+  }
+  lab[[1L]]
+}
+
 #' @noRd
 gg_write_png <- function(p, file, width, height, res = 300) {
 
@@ -119,6 +130,31 @@ pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
       0
     }
   )
+
+  # The slide's title placeholder and the plot's own title band can print the
+  # same line twice, one above the other, in two sizes -- and the band costs
+  # the picture the height it takes. Where they SAY THE SAME THING the
+  # placeholder wins: it inherits the deck's styling and an editor can retype
+  # it. Where they differ they both stay, because then they are two facts: a
+  # deck titles its slides with the BLOCK NAME ("3. Chart"), and dropping the
+  # chart's own title there would throw away the informative one.
+  #
+  # The subtitle is never touched: a placeholder holds one line, and the
+  # subtitle belongs next to the marks.
+  if (slide_title && identical(trimws(title), trimws(gg_title(x) %||% "")) &&
+        requireNamespace("ggplot2", quietly = TRUE)) {
+    stripped <- tryCatch(x + ggplot2::labs(title = NULL),
+                         error = function(e) NULL)
+    if (!is.null(stripped)) {
+      # `+` returns a bare ggplot: the size attributes static_chart() left on
+      # the original do not survive it, and they are the placement.
+      attributes(stripped) <- utils::modifyList(
+        attributes(stripped),
+        attributes(x)[setdiff(names(attributes(x)), names(attributes(stripped)))]
+      )
+      x <- stripped
+    }
+  }
 
   size <- gg_exhibit_size(x)
 

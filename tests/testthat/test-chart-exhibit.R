@@ -82,3 +82,63 @@ test_that("the chart block carries the download toggle", {
   expect_false(isTRUE(
     get0("download", envir = environment(off[["expr_server"]]))))
 })
+
+test_that("a chart fills the slide it is placed on", {
+  skip_if_not_installed("officer")
+
+  p <- chart_static_exhibit(datasets::iris, chart_state())
+  own <- gg_exhibit_size(p)
+
+  doc <- officer::read_pptx()
+  doc <- pptx_add_exhibit(doc, p, title = "Species")
+  f <- withr::local_tempfile(fileext = ".pptx")
+  print(doc, target = f)
+
+  d <- withr::local_tempdir()
+  utils::unzip(f, exdir = d)
+  xml <- paste(readLines(file.path(d, "ppt", "slides", "slide1.xml"),
+                         warn = FALSE), collapse = "")
+  ext <- regmatches(xml, gregexpr('<a:ext cx="[0-9]+" cy="[0-9]+"', xml))[[1L]]
+  pic <- ext[[length(ext)]]
+  w <- as.numeric(sub('.*cx="([0-9]+)".*', "\\1", pic)) / 914400
+  h <- as.numeric(sub('.*cy="([0-9]+)".*', "\\1", pic)) / 914400
+
+  # Bigger than the size the plot asks to be read at: the slide's space is
+  # there to be used, and an 8in figure centred on a 12.5in slide reads as
+  # unfinished.
+  expect_gt(w, own$width)
+  # ... and at the same aspect. A plot stretched to a slide is another chart.
+  expect_equal(w / h, own$width / own$height, tolerance = 1e-6)
+})
+
+test_that("a title is printed once, and only the duplicate is dropped", {
+  skip_if_not_installed("officer")
+
+  slide_text <- function(p, title) {
+    doc <- pptx_add_exhibit(officer::read_pptx(), p, title = title)
+    f <- tempfile(fileext = ".pptx")
+    on.exit(unlink(f), add = TRUE)
+    print(doc, target = f)
+    d <- file.path(tempdir(), basename(tempfile()))
+    utils::unzip(f, exdir = d)
+    xml <- paste(readLines(file.path(d, "ppt", "slides", "slide1.xml"),
+                           warn = FALSE), collapse = "")
+    gsub("</?a:t>", "", regmatches(xml, gregexpr("<a:t>[^<]*</a:t>", xml))[[1L]])
+  }
+
+  p <- chart_static_exhibit(datasets::iris,
+                            chart_state(title = "Species counts"))
+  expect_identical(gg_title(p), "Species counts")
+
+  # The placeholder and the plot's band would say the same thing twice, in two
+  # sizes. The placeholder keeps it: it is the slide's title, and an editor
+  # can retype it.
+  expect_identical(slide_text(p, "Species counts"), "Species counts")
+
+  # A deck titles its slides with the BLOCK NAME, which says something else --
+  # so both survive, and the informative one is not thrown away. (The plot's
+  # own title is inside the picture, so the slide's text is just the
+  # placeholder's.)
+  expect_identical(slide_text(p, "3. Chart"), "3. Chart")
+  expect_identical(gg_title(p), "Species counts")
+})
