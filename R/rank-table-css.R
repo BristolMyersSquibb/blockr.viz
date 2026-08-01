@@ -464,7 +464,8 @@ rank_table_css <- function() {
 .lane-sum-ctl-wide { flex: 1 1 100%; }
 /* The optional mappings (colour, facet): the add buttons sit on the label
    line's baseline so the row reads as one band of controls, and an added
-   mapping carries its ✕ in the label, the way a grouping role does. */
+   mapping carries its remove button in the label, the way a grouping role
+   does. */
 .lane-sum-addmaps { flex-direction: row; gap: 5px; align-self: flex-end; }
 .lane-sum-map-rm {
   border: 0;

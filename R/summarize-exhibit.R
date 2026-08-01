@@ -43,7 +43,14 @@
 #' @return An object of class `summarize_exhibit`.
 #' @seealso [rank_table()], [pptx_add_exhibit()], [html_exhibit()]
 #' @examplesIf requireNamespace("systemfonts", quietly = TRUE)
-#' ex <- static_summarize_table(mtcars, by = "cyl")
+#' ex <- static_summarize_table(
+#'   mtcars, by = "cyl",
+#'   summaries = list(
+#'     list(type = "simple", func = "count", show = "bar", name = "Cars"),
+#'     list(type = "dist", col = "mpg", style = "box",
+#'          inner = "median_q1_q3", outer = "p10_p90", name = "MPG")
+#'   )
+#' )
 #' ex
 #' @export
 static_summarize_table <- function(data, ...) {

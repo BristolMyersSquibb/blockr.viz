@@ -740,7 +740,7 @@ rank_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
       paste0(title, "  (", k, " of ", n_pg, ")")
     }
     sub <- if (isTRUE(attr(idx, "carried")) && !is.null(subtitle)) {
-      paste0(subtitle, " · continued")
+      paste0(subtitle, " \u00b7 continued")
     } else {
       subtitle
     }

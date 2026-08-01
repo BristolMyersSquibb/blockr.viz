@@ -211,6 +211,10 @@
 #'   keeps a shared x. It is offered on scatter / line / band only, where the
 #'   value axis IS y -- elsewhere the value axis follows `orientation`, so the
 #'   name would lie, and a saved `"free_y"` reads as `"free"` there.
+#' @param download Offer the chart for download. `TRUE` (the default) puts a
+#'   control in the gear header that writes the chart a report would print --
+#'   image, HTML, PowerPoint and the plotted numbers -- rather than a capture
+#'   of the live canvas. `FALSE` shows no control.
 #' @param ctrl_target Character(1), beta. Block id of a value filter block on
 #'   the board: a categorical drill click's claim is ALSO pushed there over
 #'   the board's control channel ([ctrl_send()]; the board needs the channel

@@ -51,7 +51,7 @@ shows -- wrapped in a minimal document shell that carries the title,
 subtitle and caption.
 }
 \details{
-The file is self-contained, always. \code{\link[=html_table]{html_table()}} inlines its own \verb{<style>}
+The file is self-contained, always. The display table inlines its own \verb{<style>}
 and \verb{<script>} next to the table and talks to nothing outside them (no
 Shiny, no CDN, no sidecar \verb{lib/} folder), so for a display table there is
 nothing to bundle. A renderer that does carry dependencies -- the summarize

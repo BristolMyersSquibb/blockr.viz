@@ -292,6 +292,11 @@ keeps a shared x. It is offered on scatter / line / band only, where the
 value axis IS y -- elsewhere the value axis follows \code{orientation}, so the
 name would lie, and a saved \code{"free_y"} reads as \code{"free"} there.}
 
+\item{download}{Offer the chart for download. \code{TRUE} (the default) puts a
+control in the gear header that writes the chart a report would print --
+image, HTML, PowerPoint and the plotted numbers -- rather than a capture
+of the live canvas. \code{FALSE} shows no control.}
+
 \item{ctrl_target}{Character(1), beta. Block id of a value filter block on
 the board: a categorical drill click's claim is ALSO pushed there over
 the board's control channel (\code{\link[=ctrl_send]{ctrl_send()}}; the board needs the channel

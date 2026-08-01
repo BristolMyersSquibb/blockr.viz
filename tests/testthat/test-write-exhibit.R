@@ -518,6 +518,11 @@ test_that("a table only splits sideways once the headers are unreadable", {
   skip_if_not_installed("officer")
   skip_if_not_installed("flextable")
   skip_if_not_installed("systemfonts")
+  # This table is meant to sit right on the boundary -- it fits, but only just
+  # -- and where that boundary falls is a property of the deck's typeface. A
+  # runner that substitutes a wider face deals the same 14 columns over two
+  # sets of slides, which says nothing about the tolerance under test.
+  skip_if_font_substituted()
 
   # Seven arms of counts: it fits, but only with the stub over two lines and
   # the headers breaking inside a word. That is a table to read down, not one

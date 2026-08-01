@@ -324,7 +324,7 @@ band_empty_reason <- function(data, x_col, y_col, min_n = 12, id_col = NULL) {
   }
   if (!is.numeric(data[[x_col]])) {
     return(sprintf(
-      "Timeline \"%s\" is not numeric — a band slides a window along a continuous axis, so it needs a numeric column (e.g. ADY).",
+      "Timeline \"%s\" is not numeric \u2014 a band slides a window along a continuous axis, so it needs a numeric column (e.g. ADY).",
       x_col))
   }
   if (!is.numeric(data[[y_col]])) {

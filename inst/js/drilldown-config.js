@@ -1649,7 +1649,8 @@
     if (!t || typeof t.closest !== 'function') return;
     const item = t.closest('.blockr-dl-menu-list a');
     if (!item) return;
-    const menu = item.closest('details.blockr-dl-menu');
+    const menu = /** @type {HTMLDetailsElement | null} */ (
+      item.closest('details.blockr-dl-menu'));
     if (menu) menu.open = false;
   });
 })();

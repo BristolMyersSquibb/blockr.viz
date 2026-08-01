@@ -179,7 +179,7 @@ rank_data_ord <- function(x, labels) {
 #' no group picked), else `list(rows =, cols =, ...)`.
 #'
 #' @noRd
-rank_prepare <- function(data, group, value = ".count", func = "count",
+rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
                          id_var = NULL, parent = NULL, color = NULL,
                          bar_mode = "stacked", facet = NULL,
                          cols = NULL, fields = NULL, sort_by = "value",

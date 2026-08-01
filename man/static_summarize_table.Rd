@@ -35,7 +35,14 @@ has no such constraint and keeps \code{\link[=static_table]{static_table()}}.
 }
 \examples{
 \dontshow{if (requireNamespace("systemfonts", quietly = TRUE)) withAutoprint(\{ # examplesIf}
-ex <- static_summarize_table(mtcars, by = "cyl")
+ex <- static_summarize_table(
+  mtcars, by = "cyl",
+  summaries = list(
+    list(type = "simple", func = "count", show = "bar", name = "Cars"),
+    list(type = "dist", col = "mpg", style = "box",
+         inner = "median_q1_q3", outer = "p10_p90", name = "MPG")
+  )
+)
 ex
 \dontshow{\}) # examplesIf}
 }
