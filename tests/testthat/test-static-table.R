@@ -158,16 +158,25 @@ test_that("the stub wraps before the data columns are pinched", {
   }
 
   tbl <- arms(2L, c("n (%)", "Events", "Grade 3 or higher"))
-  meas <- static_table(tbl, title = "", fit_width = 12)$body$colwidths
   hog <- withr::with_options(
     list(blockr.viz.ft_stub_share = 1),
+    static_table(tbl, title = "", fit_width = 12)$body$colwidths
+  )
+
+  # The share is derived from what the stub actually asked for -- half of it --
+  # rather than named outright, so the cap bites whichever face the machine
+  # resolves the deck's typeface to. A runner with no Inter substitutes one
+  # with different metrics, and a fixed 0.3 there is a share the stub never
+  # reaches: the test would then compare two identical layouts.
+  share <- hog[[1L]] / 12 / 2
+  meas <- withr::with_options(
+    list(blockr.viz.ft_stub_share = share),
     static_table(tbl, title = "", fit_width = 12)$body$colwidths
   )
 
   # The stub takes its share and wraps; what it gives up goes to the headers
   # the reader compares across, which were breaking to hold it.
   expect_lt(meas[[1L]], hog[[1L]])
-  expect_lt(meas[[1L]], 0.35 * 12)
   expect_true(all(meas[-1L] >= hog[-1L]))
   expect_gt(max(meas[-1L]), max(hog[-1L]))
   expect_equal(sum(meas), 12, tolerance = 1e-6)

@@ -239,7 +239,7 @@ chart_arguments <- function() {
         "`band_size` distinct subjects, keeping the band's reliability ",
         "constant as a cohort thins; \"fixed\" treats `band_size` as a ",
         "half-width in x units. Prefer adaptive for studies with uneven ",
-        "visit spacing — a narrow fixed window lands in the gaps between ",
+        "visit spacing \u2014 a narrow fixed window lands in the gaps between ",
         "late visits and tears the band into pieces. No-op for other charts."
       ),
       example = "adaptive",
@@ -268,7 +268,7 @@ chart_arguments <- function() {
       paste0(
         "Subject id column for the distribution band (e.g. \"USUBJID\"), ",
         "counted DISTINCT for the window and the reported n, and carried ",
-        "on an outlier point's drill. Leave empty to count rows — which ",
+        "on an outlier point's drill. Leave empty to count rows \u2014 which ",
         "over-counts whenever one subject contributes several observations ",
         "to the same window, so set it for repeated-measures data."
       ),
@@ -331,7 +331,7 @@ chart_arguments <- function() {
         "How the facet panels scale, like ggplot2's facet_wrap(scales=). ",
         "\"fixed\" (default) shares ONE numeric domain and one category set / ",
         "order across the panels, so equal bar lengths mean equal values. ",
-        "\"free\" lets each panel size itself — use it when the panels do ",
+        "\"free\" lets each panel size itself \u2014 use it when the panels do ",
         "not share a unit, e.g. facet=\"PARAM\" over labs with different ",
         "ranges. \"free_y\" frees the value axis but keeps a shared x ",
         "(scatter/line/band only). No-op without a facet."

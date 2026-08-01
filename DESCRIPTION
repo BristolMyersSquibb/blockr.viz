@@ -38,12 +38,14 @@ Imports:
     tools,
     utils
 Suggests:
+    base64enc,
     blockr.ai,
     blockr.dag,
     blockr.dock,
     blockr.extra,
     blockr.io,
     blockr.theme (>= 0.0.0.9002),
+    callr,
     chromote,
     flextable,
     ggplot2,

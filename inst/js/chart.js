@@ -801,6 +801,11 @@
    * wears). Null wherever there is no crowd to pick a line OUT of: on scatter,
    * and on a line chart drawing a single line. `focusSi` is the series index
    * currently promoted, or null when nothing is.
+   * `band` is the band chart's series-index registry -- the centre line and
+   * ribbon slots each level occupies -- so the hover picker can patch ribbon
+   * data without re-deriving the layout. Null on every other family, and on a
+   * band drawing a single level (nothing to pick between). `bandFocus` is the
+   * level whose ribbon is currently revealed, or null when none is.
    * @typedef {{ container: HTMLElement, labelEl: HTMLElement | null,
    *             chartDiv: HTMLDivElement, chart: any, facetVal: any,
    *             hover: { si: number | null },
@@ -811,7 +816,11 @@
    *                      smoothOn: boolean, xAxisType: string,
    *                      xOrder: Map<string, number> | null,
    *                      markerPx: number, focusW: number } | null,
-   *             focusSi: number | null }} ChartSlot
+   *             focusSi: number | null,
+   *             band: { centerIdx: Record<string, number>,
+   *                     ribbonIdx: Record<string, { idx: number, item: any }>,
+   *                     total: number } | null,
+   *             bandFocus: string | null }} ChartSlot
    */
 
   class DrilldownChart {
@@ -1330,9 +1339,12 @@
     // The host is a SIBLING of the chart container in the block's UI, so it is
     // found by walking up one level rather than searching the document -- a
     // dock page holds many blocks and every one of them has this host.
+    /** @param {HTMLElement} gearHeader */
     _hoistDownload(gearHeader) {
       const root = this.el && this.el.parentElement;
-      const host = root ? root.querySelector('.dd-chart-dl-host') : null;
+      const host = root
+        ? /** @type {HTMLElement | null} */ (root.querySelector('.dd-chart-dl-host'))
+        : null;
       if (!host) return;
       host.style.display = '';
       host.classList.add('dd-chart-dl');
@@ -2311,7 +2323,8 @@
         slot = { container, labelEl, chartDiv, chart: null, facetVal: null,
                  hover: { si: null }, seriesByColorByVal: null,
                  brushable: false, zoomArmed: false, zoom: null,
-                 focus: null, focusSi: null };
+                 focus: null, focusSi: null,
+                 band: null, bandFocus: null };
         this._slots[i] = slot;
       }
       if (slot.labelEl) {
@@ -4551,7 +4564,7 @@
             // for would vanish with no explanation. Pin it to the edge and
             // say which way it went, rather than dropping it silently.
             let at = v, off = '';
-            if (bandYLo != null && v > bandYHi) { at = bandYHi; off = ' ↑ off scale'; }
+            if (bandYHi != null && v > bandYHi) { at = bandYHi; off = ' ↑ off scale'; }
             else if (bandYLo != null && v < bandYLo) { at = bandYLo; off = ' ↓ off scale'; }
             // A reference limit is scaffolding you read the data against --
             // the same job an axis tick does -- so it takes the axis label's
@@ -5717,7 +5730,6 @@
     // confirm it is within HOVER_PX vertically. This is what makes the hover
     // self-healing — it depends only on where the cursor is, never on enter /
     // leave events that can be dropped.
-    /** @param {any} slot @param {any} chart @param {number} px @param {number} py */
     /**
      * Level whose band centre line is nearest the cursor, or null when the
      * cursor is outside the plot. Vertical distance at the cursor's x, which
@@ -5779,6 +5791,7 @@
       chart.setOption({ series: patch }, { lazyUpdate: true });
     }
 
+    /** @param {any} slot @param {any} chart @param {number} px @param {number} py */
     _nearestLineSeries(slot, chart, px, py) {
       const f = slot.focus;
       if (!f) return null;

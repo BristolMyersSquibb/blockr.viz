@@ -414,13 +414,13 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     switch(s$type,
       simple = {
         f <- rank_chr1(s$func) %||% "count"
-        put <- function(target, slice, out) {
+        put_value <- function(target, slice, out) {
           agg <- rank_aggregate(slice, tkeys, f, rank_chr1(s$col),
                                 rank_chr1(s$col))
           target[[out]] <- rank_match_col(target, agg, tkeys, ".v")
           target
         }
-        target <- put(target, slice, paste0(sid, "_v"))
+        target <- put_value(target, slice, paste0(sid, "_v"))
         # The pooled value above stays the sort key and the label either
         # way; the per-level values are what the split draws. The dot names
         # them for lane_color_split()'s geometry keys, the bar for the
@@ -435,9 +435,9 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
             } else {
               paste0(sid, "_S_", lv)
             }
-            target <- put(target,
-                          slice[as.character(slice[[cc]]) == lv, ,
-                                drop = FALSE], out)
+            target <- put_value(target,
+                                slice[as.character(slice[[cc]]) == lv, ,
+                                      drop = FALSE], out)
           }
         }
         target
@@ -450,7 +450,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         if (!identical(s$outer %||% "none", "none")) {
           stats$.w <- s$outer
         }
-        put <- function(target, slice, prefix) {
+        put_stats <- function(target, slice, prefix) {
           agg <- lane_stat_agg(slice, tkeys, rank_chr1(s$col), stats)
           for (nm in setdiff(names(agg), tkeys)) {
             target[[paste0(prefix, "_", sub("^\\.", "", nm))]] <-
@@ -460,7 +460,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         }
         # The pooled glyph is computed either way: it is the column's sort
         # key and its fallback when no colour splits it.
-        target <- put(target, slice, sid)
+        target <- put_stats(target, slice, sid)
         # The colour dimension (chart parity: colour splits a distribution
         # into one glyph per level). Each level gets its own stat columns;
         # a level with no rows in this group stays NA and draws no lane.
@@ -468,9 +468,10 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         if (!is.null(cc)) {
           for (j in seq_along(s$.levels)) {
             lv <- s$.levels[[j]]
-            target <- put(target, slice[as.character(slice[[cc]]) == lv, ,
-                                        drop = FALSE],
-                          paste0(sid, "_L", j))
+            target <- put_stats(target,
+                                slice[as.character(slice[[cc]]) == lv, ,
+                                      drop = FALSE],
+                                paste0(sid, "_L", j))
           }
         }
         target

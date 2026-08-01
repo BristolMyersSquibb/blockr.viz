@@ -6,7 +6,7 @@
 #' shows -- wrapped in a minimal document shell that carries the title,
 #' subtitle and caption.
 #'
-#' The file is self-contained, always. [html_table()] inlines its own `<style>`
+#' The file is self-contained, always. The display table inlines its own `<style>`
 #' and `<script>` next to the table and talks to nothing outside them (no
 #' Shiny, no CDN, no sidecar `lib/` folder), so for a display table there is
 #' nothing to bundle. A renderer that does carry dependencies -- the summarize

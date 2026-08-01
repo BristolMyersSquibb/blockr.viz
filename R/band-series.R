@@ -42,7 +42,9 @@ summarize_stat <- function(vals, stat = "median_q1_q3") {
     p10_p90  = list(center = q(.5), lo = q(.10), hi = q(.90)),
     min_max  = list(center = q(.5), lo = vals[1L], hi = vals[n]),
     tukey    = {
-      q1 <- q(.25); q3 <- q(.75); iqr <- q3 - q1
+      q1 <- q(.25)
+      q3 <- q(.75)
+      iqr <- q3 - q1
       list(center = q(.5),
            lo = max(vals[1L], q1 - 1.5 * iqr),
            hi = min(vals[n],  q3 + 1.5 * iqr))
@@ -84,7 +86,10 @@ band_half_width <- function(dist, id_code, n_ids, window, window_size,
   seen <- logical(n_ids)
   cnt <- 0L
   for (j in ord) {
-    if (!seen[id_code[j]]) { seen[id_code[j]] <- TRUE; cnt <- cnt + 1L }
+    if (!seen[id_code[j]]) {
+      seen[id_code[j]] <- TRUE
+      cnt <- cnt + 1L
+    }
     if (cnt >= window_size) return(min(dist[j], max_half))
   }
   max_half
@@ -193,7 +198,8 @@ compute_band_series <- function(data, x_col, y_col, color_by, series_by,
     )
     # Tukey band kept alongside the drawn one: the outlier test is always the
     # Tukey fence, whatever `whiskers` shows.
-    tlo <- rep(NA_real_, ng); thi <- rep(NA_real_, ng)
+    tlo <- rep(NA_real_, ng)
+    thi <- rep(NA_real_, ng)
 
     for (k in seq_len(ng)) {
       dist <- abs(xv - grid[k])
@@ -209,10 +215,12 @@ compute_band_series <- function(data, x_col, y_col, color_by, series_by,
       out$center[k] <- inner$center
       out$lo[k] <- inner$lo
       out$hi[k] <- inner$hi
-      tlo[k] <- tuk$lo; thi[k] <- tuk$hi
+      tlo[k] <- tuk$lo
+      thi[k] <- tuk$hi
       if (outer_on) {
         o <- summarize_stat(vals, whiskers)
-        out$olo[k] <- o$lo; out$ohi[k] <- o$hi
+        out$olo[k] <- o$lo
+        out$ohi[k] <- o$hi
       }
     }
 
@@ -324,7 +332,7 @@ band_empty_reason <- function(data, x_col, y_col, min_n = 12, id_col = NULL) {
   }
   if (!is.numeric(data[[x_col]])) {
     return(sprintf(
-      "Timeline \"%s\" is not numeric — a band slides a window along a continuous axis, so it needs a numeric column (e.g. ADY).",
+      "Timeline \"%s\" is not numeric \u2014 a band slides a window along a continuous axis, so it needs a numeric column (e.g. ADY).",
       x_col))
   }
   if (!is.numeric(data[[y_col]])) {

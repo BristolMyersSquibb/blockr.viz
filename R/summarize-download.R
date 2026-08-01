@@ -63,7 +63,7 @@ rank_export_df <- function(prep) {
   full_label <- function(p) {
     lab <- p$label %||% ""
     sub <- p$sname %||% p$sub_label %||% ""
-    if (nzchar(sub) && !identical(sub, lab)) paste0(sub, " · ", lab) else lab
+    if (nzchar(sub) && !identical(sub, lab)) paste0(sub, " \u00b7 ", lab) else lab
   }
 
   for (p in prep$plan) {
@@ -81,7 +81,7 @@ rank_export_df <- function(prep) {
       for (role in names(p$cols)) {
         key <- p$cols[[role]]
         if (is.null(rows[[key]])) next
-        out[[paste0(full_label(p), " · ", role_label(p, role))]] <-
+        out[[paste0(full_label(p), " \u00b7 ", role_label(p, role))]] <-
           rows[[key]]
       }
       next
