@@ -70,14 +70,26 @@ cut in half. A number puts at most that many data columns on a slide.
 
 Thirty-six toxicity-grade columns do not fit a widescreen slide at any
 legible size, and the alternatives are cells cut off or headers broken
-inside words, which at that width becomes one character per line.}
+inside words, which at that width becomes one character per line.
+
+It is the last resort rather than the second, because a table carried
+left-half then right-half is read by flipping back and forth, where the
+same table carried over more slides is read top to bottom. Before it,
+the stub wraps (\code{getOption("blockr.viz.ft_stub_share")}, the share of
+the width it claims while the data columns are still short) and the
+headers are allowed to break inside a word, down to
+\code{getOption("blockr.viz.ft_header_break_tol")} of the longest one -- 0.6,
+a word losing a syllable to a second line. Lower that to hold a wide
+table together for longer, raise it to split sooner.}
 
 \item{min_font_size}{Points. The floor for the two shrink passes, defaulting
 from \code{getOption("blockr.viz.ft_min_font_size")}. Width first, because a
 table whose columns are narrower than their contents is illegible at any
 height and splitting rows does not help; the font steps down until the
 cells fit and the headers stop breaking inside words, and \code{max_cols}
-takes over from there. Height second: it steps down again if that avoids
+takes over from there. A shrink that does not clear the wrap is undone --
+a smaller wrapped table is only smaller -- unless it is what keeps the
+columns on one slide. Height second: it steps down again if that avoids
 a row split altogether, since one slide at 11pt beats two at 13pt.}
 
 \item{...}{Passed to \code{\link[=static_table]{static_table()}}.}

@@ -61,12 +61,24 @@
 #'   Thirty-six toxicity-grade columns do not fit a widescreen slide at any
 #'   legible size, and the alternatives are cells cut off or headers broken
 #'   inside words, which at that width becomes one character per line.
+#'
+#'   It is the last resort rather than the second, because a table carried
+#'   left-half then right-half is read by flipping back and forth, where the
+#'   same table carried over more slides is read top to bottom. Before it,
+#'   the stub wraps (`getOption("blockr.viz.ft_stub_share")`, the share of
+#'   the width it claims while the data columns are still short) and the
+#'   headers are allowed to break inside a word, down to
+#'   `getOption("blockr.viz.ft_header_break_tol")` of the longest one -- 0.6,
+#'   a word losing a syllable to a second line. Lower that to hold a wide
+#'   table together for longer, raise it to split sooner.
 #' @param min_font_size Points. The floor for the two shrink passes, defaulting
 #'   from `getOption("blockr.viz.ft_min_font_size")`. Width first, because a
 #'   table whose columns are narrower than their contents is illegible at any
 #'   height and splitting rows does not help; the font steps down until the
 #'   cells fit and the headers stop breaking inside words, and `max_cols`
-#'   takes over from there. Height second: it steps down again if that avoids
+#'   takes over from there. A shrink that does not clear the wrap is undone --
+#'   a smaller wrapped table is only smaller -- unless it is what keeps the
+#'   columns on one slide. Height second: it steps down again if that avoids
 #'   a row split altogether, since one slide at 11pt beats two at 13pt.
 #' @param ... Passed to [static_table()].
 #'
@@ -280,19 +292,32 @@ pptx_add_exhibit <- function(doc, x, title = NULL, subtitle = NULL,
 
   # Width first, and it is a question about the COLUMNS, so it is settled
   # before any row is thought about: a table whose cells no longer fit their
-  # columns is illegible at any height. The font steps down, and when even the
-  # smallest allowed will not do it, the columns themselves are dealt over
-  # several slides -- 36 grade columns do not fit a widescreen slide in any
-  # orientation, and cutting them off or stacking them one character per line
-  # are not answers.
+  # columns is illegible at any height. The font steps down, and only when
+  # even the smallest allowed leaves the table unreadable are the columns
+  # themselves dealt over several slides -- 36 grade columns do not fit a
+  # widescreen slide in any orientation, and cutting them off or stacking them
+  # one character per line are not answers.
+  #
+  # Dealing the columns is the last resort, not the second one: two sets of
+  # slides make the reader hold half a table in mind while looking at the
+  # other half. A header wrapping inside a word does not.
   fit_size <- function(data) {
+    ft <- build(data, size = base_size)
+    asked <- list(ft = ft, size = base_size)
     size <- base_size
-    ft <- build(data, size = size)
     while (pptx_width_squeezed(ft) && size > min_font_size) {
       size <- size - 1
       ft <- build(data, size = size)
     }
-    list(ft = ft, size = size, fits = !pptx_width_squeezed(ft))
+    # Shrinking that does not clear the squeeze only makes a wrapped table
+    # smaller, so it goes back to the size that was asked for -- unless the
+    # smaller one is what keeps the columns together.
+    if (pptx_width_squeezed(ft) && !pptx_width_broken(asked$ft)) {
+      ft <- asked$ft
+      size <- asked$size
+    }
+    list(ft = ft, size = size, fits = !pptx_width_squeezed(ft),
+         whole = !pptx_width_broken(ft))
   }
 
   chunks <- list(x)
@@ -300,8 +325,8 @@ pptx_add_exhibit <- function(doc, x, title = NULL, subtitle = NULL,
     probe <- fit_size(x)
     if (is.numeric(max_cols)) {
       chunks <- pptx_column_chunks(x, as.integer(max_cols))
-    } else if (!probe$fits) {
-      chunks <- pptx_split_columns(x, function(cx) fit_size(cx)$fits)
+    } else if (!probe$whole) {
+      chunks <- pptx_split_columns(x, function(cx) fit_size(cx)$whole)
     }
     if (length(chunks) > 1L) {
       message("The table is too wide for one slide; its ",
@@ -333,7 +358,7 @@ pptx_add_exhibit <- function(doc, x, title = NULL, subtitle = NULL,
     if (is.null(max_rows) || pptx_fits(ft, budget)) {
       return(list(data = cx, size = size, plan = attr(ft, "layout_plan"),
                   from = 1L, to = nrow(cx), cont = FALSE,
-                  squeezed = pptx_width_squeezed(ft)))
+                  squeezed = pptx_width_broken(ft)))
     }
 
     breaks <- if (is.numeric(max_rows)) {
@@ -353,7 +378,7 @@ pptx_add_exhibit <- function(doc, x, title = NULL, subtitle = NULL,
 
     list(data = cx, size = size, plan = attr(ft, "layout_plan"),
          from = from, to = breaks, cont = cont,
-         squeezed = pptx_width_squeezed(ft))
+         squeezed = pptx_width_broken(ft))
   })
 
   if (any(vapply(plans, function(p) isTRUE(p$squeezed), logical(1L)))) {
@@ -436,13 +461,30 @@ pptx_fits <- function(ft, budget) {
 
 # Did the width allocator run out of slide? Either half counts: a data cell
 # narrower than its own characters is cut off, and a header narrower than its
-# longest word breaks inside it, which at 36 columns degenerates into one
-# character per line. Splitting ROWS helps with neither, which is why this is
-# asked apart from the height and answered by stepping the font down and then
-# by dealing the columns over several slides.
+# longest word breaks inside it. Splitting ROWS helps with neither, which is
+# why this is asked apart from the height, and it is what the font ladder
+# tries to clear: a point smaller and nothing wraps.
 pptx_width_squeezed <- function(ft) {
   sq <- attr(ft, "width_squeeze")
   isTRUE(sq[["cell"]]) || isTRUE(sq[["header"]])
+}
+
+# The narrower question, and the only one worth dealing the columns over two
+# sets of slides for: are the cells cut off, or are the headers down past
+# `blockr.viz.ft_header_break_tol` of their longest word? At the default 0.6 a
+# word may lose a syllable to a second line; below it the word is cut into
+# thirds, which is what 36 grade columns do to "Grade".
+#
+# A table carried over two slides is read by flipping back and forth with the
+# stub in the middle; a header that breaks after a syllable is read at a
+# glance. So a squeeze on its own is not enough: the columns come apart only
+# when a reader could not follow them otherwise.
+pptx_width_broken <- function(ft, tol = getOption(
+                                "blockr.viz.ft_header_break_tol", 0.6)) {
+  sq <- attr(ft, "width_squeeze")
+  fit <- attr(ft, "word_fit")
+  isTRUE(sq[["cell"]]) ||
+    (is.numeric(fit) && length(fit) == 1L && is.finite(fit) && fit < tol)
 }
 
 # Last input row of each page, decided on the measured height of the rendered

@@ -136,6 +136,49 @@ test_that("measured widths size every column to its own text", {
   expect_true(all(w[-1L] >= need))
 })
 
+test_that("the stub wraps before the data columns are pinched", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  # A system organ class long enough to eat a third of the slide, against
+  # enough arms to want the room back.
+  arms <- function(n, stats) {
+    tbl <- data.frame(
+      .label = c("General disorders and administration site conditions",
+                 "Nausea"),
+      check.names = FALSE
+    )
+    for (a in LETTERS[seq_len(n)]) {
+      for (s in stats) {
+        tbl[[sprintf("Arm %s (N=143)||%s", a, s)]] <-
+          structure(c("143 (100.0%)", "12 (8.4%)"), label = s)
+      }
+    }
+    tbl
+  }
+
+  tbl <- arms(2L, c("n (%)", "Events", "Grade 3 or higher"))
+  meas <- static_table(tbl, title = "", fit_width = 12)$body$colwidths
+  hog <- withr::with_options(
+    list(blockr.viz.ft_stub_share = 1),
+    static_table(tbl, title = "", fit_width = 12)$body$colwidths
+  )
+
+  # The stub takes its share and wraps; what it gives up goes to the headers
+  # the reader compares across, which were breaking to hold it.
+  expect_lt(meas[[1L]], hog[[1L]])
+  expect_lt(meas[[1L]], 0.35 * 12)
+  expect_true(all(meas[-1L] >= hog[-1L]))
+  expect_gt(max(meas[-1L]), max(hog[-1L]))
+  expect_equal(sum(meas), 12, tolerance = 1e-6)
+
+  # With nothing else asking for the room the stub still ends up on one line:
+  # the cap is a queue, not a ceiling.
+  w <- static_table(arms(2L, "n (%)"), title = "",
+                    fit_width = 12)$body$colwidths
+  expect_gt(w[[1L]], 0.35 * 12)
+})
+
 test_that("a table narrower than the slide keeps its natural width", {
   skip_if_not_installed("flextable")
   skip_if_not_installed("systemfonts")

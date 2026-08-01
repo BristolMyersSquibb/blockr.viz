@@ -67,6 +67,9 @@
 #'   current font and gives the data columns enough that a cell never wraps
 #'   and a header never breaks inside a word, leaving the rest to the row
 #'   stub, which is the one column whose text is prose and wraps gracefully.
+#'   While the data columns are still short of their full headers the stub
+#'   takes at most `getOption("blockr.viz.ft_stub_share")` (0.3) of the width
+#'   and wraps; it grows past that only with what is left over.
 #'   Even is the older positional rule (the stub takes `first_col_width`
 #'   capped at half the slide, the data columns share the remainder equally),
 #'   which is wrong whenever the stub is shorter or the data columns wider
@@ -529,6 +532,11 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
     header = isTRUE(attr(widths, "header_squeeze")),
     cell = isTRUE(attr(widths, "cell_squeeze"))
   )
+  # How much of the longest header word the tightest column keeps (1 when
+  # nothing breaks). A header wrapping mid-word is a blemish the writer lives
+  # with; a header down to a couple of letters per line is what makes it deal
+  # the columns over several slides instead.
+  attr(ft, "word_fit") <- attr(widths, "word_fit") %||% 1
   # Everything the width pass decided, so a caller rendering the SAME table in
   # pieces (one page per slide) reproduces the layout instead of measuring
   # each piece on its own and drifting.
@@ -556,10 +564,17 @@ TIGHT_PAD <- 2
 
 # ---- measured column widths ------------------------------------------------
 # Give every column the width its own text needs, in this priority: a data
-# cell never wraps, a header never breaks inside a word, and the stub takes
-# what is left. The stub is the only column whose content is prose, so it is
-# the one that survives wrapping; a count like "143 (41.2%)" broken over two
-# lines costs a readable row and doubles its height.
+# cell never wraps, a header never breaks inside a word, the headers unwrap
+# toward their full text, and only then does the stub grow past its share.
+# The stub is the only column whose content is prose, so it is the one that
+# survives wrapping; a count like "143 (41.2%)" broken over two lines costs a
+# readable row and doubles its height.
+#
+# The stub does not hold its whole label on one line while the data columns
+# are pinched: `stub_share` caps what it claims until everything else is
+# served, and it takes the leftovers afterwards. A long system organ class
+# reading over two lines costs a row; the same label spread over five inches
+# is what pushes a table onto a second set of slides.
 #
 # Everything is measured through systemfonts at the table's own font and size,
 # which is the same engine flextable itself measures with. When the deck's
@@ -571,20 +586,27 @@ TIGHT_PAD <- 2
 # be measured -- the caller then falls back to the positional split, so a
 # missing measurement never fails an export.
 #
-# Two attributes come back with them, both saying the slide is not wide enough
-# and what would help:
+# Three attributes come back with them, all saying how close the slide came to
+# being too narrow and what would help:
 #   `header_squeeze` -- the headers will break inside a word. Nothing here can
 #     fix that; fewer columns or a smaller font can.
 #   `cell_squeeze`   -- the DATA cells no longer fit. Below that the columns
 #     are narrower than a character and PowerPoint stacks them one per line,
 #     which is the 36-column grade table. Only less padding or a smaller font
 #     helps, because a digit and its padding is all that is left.
+#   `word_fit`       -- how much of the longest header word the narrowest
+#     column can hold, as a fraction. 1 is a header that never breaks, 0.5 a
+#     word taking two lines, 0.1 the stacked-letters case. It is the difference
+#     between a header squeeze worth living with and one that is not, and the
+#     pptx writer reads it to decide whether to deal the columns over slides.
 ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
                                font, font_size, total, banner = character(),
                                pad = ft_side_padding() / 72,
                                slack = getOption("blockr.viz.ft_width_slack",
                                                  1.04),
-                               stub_min = 1.2) {
+                               stub_min = 1.2,
+                               stub_share = getOption("blockr.viz.ft_stub_share",
+                                                      0.3)) {
 
   n_data <- ncol(cells)
 
@@ -595,6 +617,7 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
   }
 
   squeeze <- c(header = FALSE, cell = FALSE)
+  word_fit <- 1
 
   out <- tryCatch(
     {
@@ -678,7 +701,11 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
         # on the widths it needs rather than the ones it ends up with.
         fills <- stub_want + sum(want) >= 0.7 * total
 
-        stub_w <- min(stub_want, total - sum(want))
+        # What the stub claims before the data columns have had their turn.
+        # Past this it is spending slide on a label that wraps perfectly well,
+        # and the columns that pay for it are the ones a reader compares.
+        stub_cap <- max(stub_floor, stub_share * total)
+        stub_w <- min(stub_want, stub_cap, total - sum(want))
         data_w <- want
         room <- total - stub_w - sum(data_w)
 
@@ -687,6 +714,14 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
         short <- pmax(lux - data_w, 0)
         if (room > 0 && sum(short) > 0) {
           data_w <- data_w + short * min(1, room / sum(short))
+          room <- total - stub_w - sum(data_w)
+        }
+
+        # Second call: the stub back up to its own text, now that nothing else
+        # is waiting for the room. A four-column table on a wide slide still
+        # ends with its label on one line; a twelve-column one does not.
+        if (room > 0 && stub_w < stub_want) {
+          stub_w <- stub_w + min(room, stub_want - stub_w)
           room <- total - stub_w - sum(data_w)
         }
 
@@ -712,6 +747,15 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
         }
       }
 
+      # How much of its longest word the tightest header keeps. A word that
+      # loses a syllable to the next line is a blemish; one holding two
+      # characters of six is the stacked-letters failure, and only the reader
+      # of this number can tell them apart.
+      word_need <- pmax(head_word, span_word)
+      if (any(word_need > 0)) {
+        word_fit <- min(1, min(data_w[word_need > 0] / word_need[word_need > 0]))
+      }
+
       c(stub_w, data_w)
     },
     error = function(e) NULL
@@ -724,6 +768,7 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
 
   attr(out, "header_squeeze") <- unname(squeeze[["header"]])
   attr(out, "cell_squeeze") <- unname(squeeze[["cell"]])
+  attr(out, "word_fit") <- word_fit
   out
 }
 

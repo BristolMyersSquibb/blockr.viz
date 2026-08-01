@@ -482,6 +482,39 @@ test_that("columns too wide for one slide are dealt over several", {
   ))
 })
 
+test_that("a table only splits sideways once the headers are unreadable", {
+  skip_if_not_installed("officer")
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  # Seven arms of counts: it fits, but only with the stub over two lines and
+  # the headers breaking inside a word. That is a table to read down, not one
+  # to deal over two sets of slides.
+  ae <- data.frame(
+    .label = c("Gastrooesophageal reflux disease",
+               "Upper respiratory tract infection", "Nausea"),
+    .indent = 0L, check.names = FALSE
+  )
+  for (a in LETTERS[1:7]) {
+    ae[[sprintf("Arm %s (N=143)||n (%%)", a)]] <-
+      structure(c("143 (100.0%)", "88 (61.5%)", "12 (8.4%)"), label = "n (%)")
+    ae[[sprintf("Arm %s (N=143)||Events", a)]] <-
+      structure(c("212", "104", "17"), label = "Events")
+  }
+
+  f <- tempfile(fileext = ".pptx")
+  on.exit(unlink(f), add = TRUE)
+  expect_no_message(write_exhibit_pptx(ae, f, title = "Adverse events"))
+
+  # The tolerance is what decides it: hold the headers to their full words and
+  # the same table comes apart.
+  g <- tempfile(fileext = ".pptx")
+  on.exit(unlink(g), add = TRUE)
+  withr::local_options(blockr.viz.ft_header_break_tol = 1)
+  expect_message(write_exhibit_pptx(ae, g, title = "Adverse events"),
+                 "dealt over")
+})
+
 test_that("column sets never cut an arm in half", {
   x <- data.frame(.label = "a", check.names = FALSE)
   for (a in c("A", "B", "C")) {

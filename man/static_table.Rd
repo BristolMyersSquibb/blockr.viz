@@ -70,6 +70,9 @@ pdf, where the natural widths apply.}
 current font and gives the data columns enough that a cell never wraps
 and a header never breaks inside a word, leaving the rest to the row
 stub, which is the one column whose text is prose and wraps gracefully.
+While the data columns are still short of their full headers the stub
+takes at most \code{getOption("blockr.viz.ft_stub_share")} (0.3) of the width
+and wraps; it grows past that only with what is left over.
 Even is the older positional rule (the stub takes \code{first_col_width}
 capped at half the slide, the data columns share the remainder equally),
 which is wrong whenever the stub is shorter or the data columns wider
