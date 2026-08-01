@@ -1622,3 +1622,34 @@
   ns.DrilldownConfig = DrilldownConfig;
   window.DrilldownConfig = DrilldownConfig;
 })();
+
+// The download menu closes when a format is picked -------------------------
+//
+// The menu is a <details>, which is what buys the open/close, the keyboard
+// handling and the focus order for free. What <details> does NOT do is close
+// when something inside it is activated, and a download link navigates
+// nowhere: the file arrives and the menu is still hanging open over the
+// table, hiding the rows the reader just exported.
+//
+// One delegated listener for every download menu on the page (the table, the
+// summarize table and the chart all wear the same control), registered once
+// per document rather than per block -- a dock page holds many blocks, and
+// per-block listeners would each fire on every click.
+//
+// `click` rather than the anchor's own handler: Shiny's download link starts
+// the download from its own click handler, and closing the parent <details>
+// afterwards does not interrupt it.
+(function () {
+  if (typeof document === 'undefined') return;
+  if (document.documentElement.dataset.blockrDlMenuBound === '1') return;
+  document.documentElement.dataset.blockrDlMenuBound = '1';
+
+  document.addEventListener('click', function (e) {
+    const t = /** @type {Element} */ (e.target);
+    if (!t || typeof t.closest !== 'function') return;
+    const item = t.closest('.blockr-dl-menu-list a');
+    if (!item) return;
+    const menu = item.closest('details.blockr-dl-menu');
+    if (menu) menu.open = false;
+  });
+})();

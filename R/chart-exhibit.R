@@ -121,9 +121,30 @@ pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
   )
 
   size <- gg_exhibit_size(x)
-  # Fit the box that is left, keeping the aspect the chart asked for: a plot
-  # stretched to the slide is a different chart.
-  fit <- min(1, (slide_w - 0.8) / size$width, (slide_h - top - 0.4) / size$height)
+
+  # FILL the box that is left, keeping the aspect the chart asked for.
+  #
+  # `pptx_width` / `pptx_height` are the size the chart wants to be READ at
+  # (static_chart() derives them from its row geometry), not the size of the
+  # slide it lands on. Placing a plot at that size and stopping left an 8in
+  # figure floating in the middle of a 12.5in slide with a hand's width of
+  # margin on each side -- the deck looked unfinished, and the axis labels
+  # were smaller than they needed to be for no reason.
+  #
+  # So the plot scales UP as well as down, until the first edge of the
+  # content box is reached. Officer re-renders the ggplot at the placed size
+  # rather than blowing up pixels, so this is a bigger drawing, not a coarser
+  # one -- type stays at its point size, which is why the relative weight of
+  # the labels drops as the panel grows. `blockr.viz.gg_slide_fill` caps it
+  # for a deck that wants the older, smaller figure back.
+  fill <- getOption("blockr.viz.gg_slide_fill", 1)
+  if (!is.numeric(fill) || length(fill) != 1L || !is.finite(fill) ||
+        fill <= 0) {
+    fill <- 1
+  }
+
+  fit <- min((slide_w - 0.8) / size$width,
+             (slide_h - top - 0.4) / size$height) * fill
   w <- size$width * fit
   h <- size$height * fit
 

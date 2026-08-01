@@ -13,9 +13,11 @@
 #   summarize   xlsx html pptx png  painted picture, paged
 #   chart       xlsx html pptx png  the ggplot a report compiles
 #
-# The template is pinned below for both routes, which is what makes the two
-# pptx files identical: same renderer, same box. Unset it and the deck's
-# slide and the block's download are sized to different slides.
+# No template is set here, on purpose: both routes fall back to the same
+# bundled widescreen deck (blockr.outline's `widescreen-default.pptx`), so the
+# block download and the deck slide come out the same size without any board
+# configuring anything. Point both at a house deck with
+# `options(blockr.outline.template = "...")`.
 
 options(blockr.tabular_display = blockr.ui::html_table_display)
 options(blockr.dock_is_locked = FALSE)
@@ -32,14 +34,6 @@ pkgload::load_all(file.path(.ws, "blockr.dock"))
 pkgload::load_all(file.path(.ws, "blockr.dag"))
 pkgload::load_all(file.path(.ws, "blockr.viz"))
 pkgload::load_all(file.path(.ws, "blockr.outline"))
-
-# ONE template for both routes. blockr.viz's downloads resolve
-# `blockr.viz.pptx_template` -> `blockr.outline.template` -> the bundled
-# default; the deck reads the same option. Pinning it is what makes a slide
-# and a download the same picture rather than two sizes of it.
-.tmpl <- file.path(.ws, "blockr.outline", "inst", "templates",
-                   "widescreen-default.pptx")
-if (file.exists(.tmpl)) options(blockr.outline.template = .tmpl)
 
 stopifnot(requireNamespace("pharmaverseadam", quietly = TRUE))
 
