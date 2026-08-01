@@ -32,6 +32,13 @@ push_fixture <- function() {
   # A SIGNED measure (a change from baseline), so the diverging bar has a
   # fixture: the group means straddle zero (T1 positive, T2-T4 negative).
   rows$CHG <- rows$AVAL - 10L
+  # A subject-level FACT: constant within USUBJID, unlike SEV and ARM which
+  # both vary within a subject here. Grouping by USUBJID and colouring by it
+  # is the degenerate split -- one level per row, nothing to lay side by side.
+  rows$COHORT <- factor(
+    ifelse(as.integer(sub("^S", "", rows$USUBJID)) %% 2L == 0L, "C1", "C2"),
+    levels = c("C1", "C2")
+  )
   rows
 }
 
@@ -95,6 +102,54 @@ test_that("a split column ships one width vector per series", {
   # percent mode: the two segments fill each row.
   sums <- c1$seg[[1]] + c1$seg[[2]]
   expect_true(all(abs(sums - 100) < 0.02))
+})
+
+test_that("a grouped split with one level per row is stacked instead", {
+  ae <- push_fixture()
+  # COHORT is constant within USUBJID, and `max` is non-additive, so the plan
+  # asks for side-by-side lanes -- with nothing to put beside anything. Every
+  # row would draw one bar and one EMPTY lane, at twice the height.
+  deg <- rank_build_payload(ae, by = "USUBJID", summaries = list(
+    list(type = "simple", func = "max", col = "AVAL", show = "bar",
+         color = "COHORT")
+  ))
+  c1 <- deg$cols[[1]]
+  expect_identical(c1$kind, "barsplit")
+  expect_identical(c1$mode, "stacked")
+  # Stacked omits an empty segment, so the cell is one bar in the row's own
+  # colour -- and the colours are still the level colours, not a flat fill.
+  html <- rank_cells_html(rank_cells(rank_prepare(
+    ae, by = "USUBJID", summaries = list(
+      list(type = "simple", func = "max", col = "AVAL", show = "bar",
+           color = "COHORT")
+    )
+  )))
+  row1 <- regmatches(html, regexpr("<tr class=\"blockr-rank-row.*?</tr>", html))
+  expect_length(gregexpr("blockr-rank-fill", row1)[[1]], 1L)
+  expect_identical(gregexpr("width:0%", row1)[[1]][[1]], -1L)
+  expect_identical(gregexpr("is-tall", row1)[[1]][[1]], -1L)
+
+  # A REAL split is untouched: SEV varies within a term, so the lanes carry
+  # a comparison and grouped stays grouped.
+  keep <- rank_build_payload(ae, by = "TERM", summaries = list(
+    list(type = "simple", func = "max", col = "AVAL", show = "bar",
+         color = "SEV")
+  ))
+  expect_identical(keep$cols[[1]]$mode, "grouped")
+})
+
+test_that("the degenerate collapse leaves widths and the domain alone", {
+  ae <- push_fixture()
+  cfg <- list(type = "simple", func = "max", col = "AVAL", show = "bar")
+  plain <- rank_build_payload(ae, by = "USUBJID", summaries = list(cfg))
+  split <- rank_build_payload(ae, by = "USUBJID", summaries = list(
+    c(cfg, list(color = "COHORT"))
+  ))
+  # One level per row means the segment IS the bar: same numbers, same axis,
+  # only the colour differs from the uncoloured column.
+  expect_equal(as.numeric(split$cols[[1]]$v), as.numeric(plain$cols[[1]]$v))
+  seg_w <- Reduce(`+`, lapply(split$cols[[1]]$seg, as.numeric))
+  expect_equal(seg_w, as.numeric(plain$cols[[1]]$w), tolerance = 1e-8)
 })
 
 test_that("a non-renderable state ships as kind html, not a cell model", {
@@ -382,6 +437,13 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
     # assemblers must agree about polarity as well as width.
     bardiv_signed = list(by = "TERM", summaries = list(
       list(type = "simple", func = "mean", col = "CHG", show = "bar")
+    )),
+    # A grouped split with one level per row, collapsed to stacked: both
+    # assemblers have to DROP the empty segments, or one draws lanes the
+    # other does not.
+    barsplit_degenerate = list(by = "USUBJID", summaries = list(
+      list(type = "simple", func = "max", col = "AVAL", show = "bar",
+           color = "COHORT")
     )),
     interval = list(by = "USUBJID", summaries = list(
       list(type = "spans", x = "SDY", xend = "EDY", color = "SEV"),

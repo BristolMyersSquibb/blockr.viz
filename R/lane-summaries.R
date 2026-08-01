@@ -724,6 +724,12 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       # Only for an ADDITIVE measure, though: the parts of a mean do not add
       # up to it, so those segments sit side by side (rank_additive()) rather
       # than stacking into a length nothing computes.
+      #
+      # `mode` is provisional: nothing here has seen a value yet, so a
+      # non-additive measure asks for lanes even when every row turns out to
+      # hold ONE level and there is nothing to lay beside anything.
+      # lane_summary_domains() sees the assembled rows and stacks those back
+      # (lane_split_degenerate()).
       c(base, list(kind = "barsplit", key = paste0(sid, "_v"),
                    prefix = paste0(sid, "_S_"), series = s$.levels,
                    mode = if (rank_additive(rank_chr1(s$func) %||% "count")) {
@@ -945,6 +951,48 @@ lane_spans_split <- function(slice, target, tkeys, s) {
   })
 }
 
+#' Has a `grouped` colour split anything to lay side by side?
+#'
+#' Grouped gives every level its own lane whatever the row holds. That is
+#' right when a group really does span levels (AE terms by severity), and
+#' wrong when the colour column is a group-level FACT: one row per subject
+#' coloured by arm draws one bar and N-1 EMPTY lanes, at N times the row
+#' height, saying nothing a legend does not already say. (Wanting one lane
+#' per level as a reading in its own right is what `facet` is for -- one
+#' column per level, on a shared scale.)
+#'
+#' True when no row anywhere in the column carries more than one level. The
+#' caller then stacks instead: with a single part per row the two layouts
+#' draw the SAME numbers -- stacking a lone segment is that segment -- and
+#' the stacked emitter omits an empty one, in both `rank_split_html()` and
+#' its `splitHtml()` twin. So the cell becomes one bar in that row's colour,
+#' with no width, colour or tooltip changed.
+#'
+#' Decided over the assembled rows for the same reason the diverging bar is
+#' (below): the plan is built before any value exists.
+#' @noRd
+lane_split_degenerate <- function(plan, idx, rows) {
+  for (i in idx) {
+    p <- plan[[i]]
+    if (!identical(p$kind, "barsplit") || !identical(p$mode, "grouped")) {
+      return(FALSE)
+    }
+    cn <- paste0(p$prefix %||% ".s_", p$series)
+    cn <- cn[cn %in% names(rows)]
+    # Levels present per row, summed across the level columns rather than
+    # tabulated per row: shape-safe for a one-row table, where an
+    # apply()/vapply() matrix would collapse to a vector.
+    per_row <- NULL
+    for (x in cn) {
+      v <- suppressWarnings(as.numeric(rows[[x]]))
+      hit <- as.integer(is.finite(v) & v != 0)
+      per_row <- if (is.null(per_row)) hit else per_row + hit
+    }
+    if (!is.null(per_row) && any(per_row > 1L)) return(FALSE)
+  }
+  TRUE
+}
+
 #' Per-entry domains, computed over the assembled rows and SHARED across a
 #' summary's facet copies (same `sid` stem before the `f<j>` suffix).
 #' @noRd
@@ -956,6 +1004,13 @@ lane_summary_domains <- function(plan, rows) {
   for (idx in groups) {
     kinds <- unique(vapply(plan[idx], function(p) p$kind, character(1L)))
     kind <- kinds[[1L]]
+    # Before the domain, because grouped and stacked read different columns
+    # for it. Decided for the whole stem at once so a summary's facet copies
+    # keep one layout -- a column that switched per copy would put a tall
+    # cell beside a short one on the same row.
+    if (identical(kind, "barsplit") && lane_split_degenerate(plan, idx, rows)) {
+      for (i in idx) plan[[i]]$mode <- "stacked"
+    }
     if (kind %in% c("bar", "barsplit", "box", "pointrange")) {
       vals <- numeric()
       for (i in idx) {
