@@ -556,14 +556,25 @@ pptx_fixed_breaks <- function(n_row, per) {
 }
 
 # The section each input row belongs to, or NULL when the table has none.
+#
+# The key is read off the view's OWN frame, not off the input: a table whose
+# only row axis is `.variable_label` has its sections named by the synthetic
+# `.variable_block` column, which the view adds and the input never carries.
+# Reading `x[[".variable_block"]]` there gave NULL -- a zero-length key that is
+# not NULL, so every guard downstream let it through and the first
+# continuation page asked it for row 11 of nothing.
 pptx_section_key <- function(x) {
-  cols <- tryCatch(annotated_structure_view(x)$section_cols,
-                   error = function(e) character())
+  view <- tryCatch(annotated_structure_view(x), error = function(e) NULL)
+  cols <- view$section_cols
   if (!length(cols)) {
     return(NULL)
   }
-  do.call(paste, c(lapply(cols, function(cn) as.character(x[[cn]])),
-                   list(sep = "\r")))
+  key <- do.call(paste, c(lapply(cols, function(cn) as.character(view$data[[cn]])),
+                          list(sep = "\r")))
+  if (length(key) != nrow(x)) {
+    return(NULL)
+  }
+  key
 }
 
 # Move a break back when it would leave a section with one or two rows

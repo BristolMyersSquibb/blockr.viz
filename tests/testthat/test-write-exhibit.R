@@ -365,6 +365,38 @@ test_that("a section carried across a break repeats its heading", {
                      fixed = TRUE))
 })
 
+test_that("a table sectioned by .variable_label alone still pages", {
+  skip_if_not_installed("officer")
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  # The composer shape: no `.group1_level` axis, the sections come from runs
+  # of `.variable_label`, and the column the headers are named from
+  # (`.variable_block`) exists only on the structure view. Reading it off the
+  # input instead gave an empty key and the second page asked it for a row it
+  # did not have -- so the download handler threw and a deck lost its
+  # pagination silently.
+  x <- long_df(60L, sections = FALSE)
+  x$.variable_label <- rep(c("Age", "Race", "Sex"), length.out = nrow(x))[
+    order(rep(1:3, length.out = nrow(x)))
+  ]
+
+  expect_length(pptx_section_key(x), nrow(x))
+
+  f <- tempfile(fileext = ".pptx")
+  on.exit(unlink(f), add = TRUE)
+
+  expect_silent(write_exhibit_pptx(x, f, title = "Demographics"))
+  doc <- officer::read_pptx(f)
+  expect_gt(length(doc), 1L)
+
+  seen <- unlist(lapply(seq_along(doc), function(i) {
+    xml <- pptx_part(f, sprintf("ppt/slides/slide%d.xml", i))
+    regmatches(xml, gregexpr("Preferred term [0-9]+", xml))[[1L]]
+  }))
+  expect_setequal(seen, x$.label)
+})
+
 test_that("breaks do not strand the tail of a section on the next slide", {
   key <- rep(c("a", "b"), c(10L, 12L))
   # A break at 21 would leave one row of "b" alone: the whole section moves.
