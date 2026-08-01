@@ -56,6 +56,7 @@ new_chart_block(
   count_on = "off",
   count_col = NULL,
   facet_scales = "fixed",
+  download = TRUE,
   ctrl_target = "",
   ctrl_table = "",
   ...

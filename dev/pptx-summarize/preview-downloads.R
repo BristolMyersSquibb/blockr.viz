@@ -44,10 +44,15 @@ board <- new_dock_board(
       download = TRUE,
       title = "Adverse events by system organ class",
       subtitle = "downloads on: xlsx, html, pptx, png",
-      block_name = "Downloads on")
+      block_name = "Downloads on"),
+    cht = new_chart_block(
+      chart_type = "bar", group = "AEBODSYS", func = "count_distinct",
+      value = "USUBJID", color = "TRT01A", bar_mode = "grouped",
+      title = "Adverse events by system organ class",
+      block_name = "Chart downloads")
   ),
-  links = links(from = "ae", to = "tbl"),
-  grids = list(Table = dock_grid("tbl")),
+  links = links(from = c("ae", "ae"), to = c("tbl", "cht")),
+  grids = list(Table = dock_grid("tbl"), Chart = dock_grid("cht")),
   active = "Table"
 )
 

@@ -584,6 +584,12 @@
     //
     // `when` hides the control until a facet column is mapped: with one panel
     // there is nothing to share a scale WITH.
+    // One toggle for downloads, the same decision the table and summarize
+    // blocks take: "can people take this chart away" is one question, and
+    // which file the reader wants is theirs.
+    download: { label: 'Download', kind: 'segmented', options: [
+                  { value: 'on', label: 'Downloads' },
+                  { value: 'off', label: 'No downloads' }] },
     facet_scales: { label: 'Panel scales', kind: 'select',
                     when: (/** @type {any} */ cfg) => !!cfg.facet,
                     optionsBy: {
@@ -718,7 +724,7 @@
         // category axis, so "axis" no-ops there (the tooltip n covers it).
         'count_on', 'count_col',
         // Facet-grid scales; hidden until a facet is mapped (role `when`).
-        'facet_scales'],
+        'facet_scales', 'download'],
       titles: ['title', 'subtitle', 'caption']
     },
     individual: {
@@ -762,7 +768,7 @@
         // apply here (the "axis" choice no-ops); shown for faceted charts.
         'count_on', 'count_col',
         // Facet-grid scales; hidden until a facet is mapped (role `when`).
-        'facet_scales'
+        'facet_scales', 'download'
       ],
       titles: ['title', 'subtitle', 'caption']
     },
@@ -773,7 +779,7 @@
       // Count labels: "axis" counts events (or distinct count_col) per lane.
       presentation: ['sort_by', 'sort_dir', 'count_on', 'count_col',
         // Facet-grid scales; hidden until a facet is mapped (role `when`).
-        'facet_scales'],
+        'facet_scales', 'download'],
       titles: ['title', 'subtitle', 'caption']
     }
   };
@@ -1238,34 +1244,20 @@
         e.stopPropagation();
         this._togglePopover();
       });
-      // Image download: the table's design-system download chrome
-      // (.blockr-dl-xlsx — quiet icon button, same inline SVG), one per
-      // BLOCK so a facet grid gets a single control. An <a role=button>
-      // because the shared styles are element-qualified on the anchor.
-      this.dlBtn = document.createElement('a');
-      this.dlBtn.className = 'blockr-dl-xlsx dd-chart-dl';
-      this.dlBtn.setAttribute('role', 'button');
-      this.dlBtn.setAttribute('tabindex', '0');
-      this.dlBtn.title = 'Download as image';
-      this.dlBtn.setAttribute('aria-label', 'Download as image');
-      this.dlBtn.innerHTML =
-        '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
-        'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" ' +
-        'stroke-linejoin="round">' +
-        '<path d="M8 2.5 V10 M4.8 7 L8 10.2 L11.2 7"/>' +
-        '<path d="M2.5 11.5 V12.8 A1.2 1.2 0 0 0 3.7 14 H12.3 ' +
-        'A1.2 1.2 0 0 0 13.5 12.8 V11.5"/></svg>';
-      this.dlBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this._downloadImage();
-      });
-      this.dlBtn.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        this._downloadImage();
-      });
-      gearHeader.appendChild(this.dlBtn);
+      // Downloads are RENDERED BY R and hoisted here: the block writes the
+      // same chart a report prints (xlsx / html / pptx / png through
+      // R/chart-exhibit.R), so the file you take from the block and the
+      // picture on a slide are one rendering rather than two.
+      //
+      // This replaced a canvas capture (getDataURL of the live ECharts
+      // instances, composed offscreen). The capture matched the screen
+      // exactly, zoom and hidden series included, but nothing else in the
+      // ecosystem could reproduce it -- and a deck built from the same block
+      // came out different. _downloadImage() is kept below, unwired, because
+      // the composition it does (title band, facet panels at their grid
+      // positions, caption) is the reference for what a chart export must
+      // contain.
+      this._hoistDownload(gearHeader);
       gearHeader.appendChild(this.gearBtn);
       this.card.appendChild(gearHeader);
 
@@ -1329,6 +1321,22 @@
       this.card.appendChild(this.statusEl);
       this._updateStatus();
       this._updateTitles();
+    }
+
+    // The R-rendered download control, moved into the gear header. Same shape
+    // rank-table.js uses for the search box: Shiny owns the element (download
+    // links are server-driven), the widget owns where it sits.
+    //
+    // The host is a SIBLING of the chart container in the block's UI, so it is
+    // found by walking up one level rather than searching the document -- a
+    // dock page holds many blocks and every one of them has this host.
+    _hoistDownload(gearHeader) {
+      const root = this.el && this.el.parentElement;
+      const host = root ? root.querySelector('.dd-chart-dl-host') : null;
+      if (!host) return;
+      host.style.display = '';
+      host.classList.add('dd-chart-dl');
+      gearHeader.appendChild(host);
     }
 
     // -- Image download -------------------------------------------------------
@@ -5928,6 +5936,9 @@
         count_col: this.config.count_col || '',
         // Facet-grid panel scales ('fixed' | 'free_y' | 'free').
         facet_scales: this.config.facet_scales || 'fixed',
+        // Segmented on/off, like search / sortable on the table blocks.
+        download: (this.config.download === false ||
+                   this.config.download === 'off') ? 'off' : 'on',
         lo: this.config.lo || '',
         hi: this.config.hi || '',
         // Extra tooltip columns (gantt): always an array so R can tell an

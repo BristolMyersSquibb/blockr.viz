@@ -339,6 +339,11 @@ new_chart_block <- function(
     # value axis IS y (elsewhere it follows `orientation`, so the name would
     # lie) and reads as "free" there.
     facet_scales = "fixed",
+    # Downloads. TRUE by default, because a chart has always been takeable:
+    # the gear header carried an image button before this was a setting. What
+    # changed is WHAT it writes -- the chart a report would print, in four
+    # formats, instead of a capture of the live canvas (see R/chart-exhibit.R).
+    download = TRUE,
     ctrl_target = "",
     ctrl_table = "",
     ...) {
@@ -565,6 +570,7 @@ new_chart_block <- function(
         r_count_col <- shiny::reactiveVal(count_col)
         # Facet-grid panel scales (see constructor args).
         r_facet_scales <- shiny::reactiveVal(facet_scales)
+        r_download <- shiny::reactiveVal(isTRUE(download))
         r_board_theme <- setup_drilldown_theme_sync(session)
         # Board scale map (NULL when the board has no "scale_map" option);
         # resolved per data push, never stored in block state.
@@ -874,6 +880,9 @@ new_chart_block <- function(
               # category set across the panels ("fixed"), or per-panel
               # ("free" / "free_y").
               facet_scales = r_facet_scales(),
+              # Downloads: the gear's toggle, and what decides whether the
+              # hoisted control renders at all.
+              download = if (isTRUE(r_download())) "on" else "off",
               # Bar baseline mode. chart_type "waterfall" implies "cumulative"
               # on the JS side (sugar); also send the flag explicitly so a plain
               # bar can opt into the cumulative bridge, and pass the optional
@@ -1059,6 +1068,9 @@ new_chart_block <- function(
             if (!is.null(msg$count_col))  upd(r_count_col, nn(msg$count_col))
             if (!is.null(msg$facet_scales)) {
               upd(r_facet_scales, msg$facet_scales)
+            }
+            if (!is.null(msg$download)) {
+              upd(r_download, identical(as.character(msg$download)[[1L]], "on"))
             }
             if (!is.null(msg$lo))         upd(r_lo, nn(msg$lo))
             if (!is.null(msg$hi))         upd(r_hi, nn(msg$hi))
@@ -1251,6 +1263,136 @@ new_chart_block <- function(
           }
         }
 
+        # --- downloads ------------------------------------------------------
+        #
+        # The chart a REPORT would print, in four formats. Not the live
+        # canvas: a slide and a download were two different renderings of one
+        # chart while this went through ECharts' getDataURL, and the file you
+        # sent on did not match the deck you sent with it. Both routes now
+        # build the ggplot through chart_static_exhibit(), which follows the
+        # same `blockr.viz.report_style` the deck's report call does.
+        #
+        # What that costs, said plainly: the download no longer carries the
+        # live view's zoom, hidden series or drill highlight. It carries the
+        # chart the block is configured to show.
+        dl_state <- function() {
+          st <- list(
+            chart_type = r_chart_type(), group = r_group(), color = r_color(),
+            facet = r_facet(), value = r_value(), func = r_func(),
+            x = r_x(), y = r_y(), series = r_series(),
+            bar_mode = r_bar_mode(), orientation = r_orientation(),
+            sort_by = r_sort_by(), sort_dir = r_sort_dir(),
+            count_on = r_count_on(), count_col = r_count_col(),
+            facet_scales = r_facet_scales(), box_points = r_box_points(),
+            smoother = r_smoother(), identity_line = r_identity_line(),
+            lo = r_lo(), hi = r_hi(), vlines = r_vlines(),
+            hlines = r_hlines(),
+            title = r_title(), subtitle = r_subtitle(),
+            caption = r_caption()
+          )
+          st[!vapply(st, is.null, logical(1L))]
+        }
+
+        dl_chart <- function() {
+          chart_static_exhibit(plain_data(), dl_state())
+        }
+
+        dl_formats <- shiny::reactive({
+          if (!isTRUE(r_download())) {
+            return(list())
+          }
+          Filter(
+            function(s) isTRUE(s$ok),
+            list(
+              list(id = "dl_xlsx", ext = "xlsx", label = "Excel (.xlsx)",
+                   ok = requireNamespace("openxlsx", quietly = TRUE)),
+              list(id = "dl_html", ext = "html", label = "Web page (.html)",
+                   ok = TRUE),
+              list(id = "dl_pptx", ext = "pptx", label = "PowerPoint (.pptx)",
+                   ok = requireNamespace("officer", quietly = TRUE)),
+              list(id = "dl_png", ext = "png", label = "Image (.png)",
+                   ok = TRUE)
+            )
+          )
+        })
+
+        output$chart_download <- shiny::renderUI({
+          specs <- dl_formats()
+          if (!length(specs)) return(NULL)
+          if (length(specs) == 1L) {
+            return(rank_dl_link(ns, specs[[1L]]))
+          }
+          htmltools::tags$details(
+            class = "blockr-dl-menu",
+            htmltools::tags$summary(
+              class = "blockr-dl-xlsx", title = "Download",
+              `aria-label` = "Download", rank_dl_icon()
+            ),
+            htmltools::tags$div(
+              class = "blockr-dl-menu-list", role = "menu",
+              lapply(specs, function(s) rank_dl_link(ns, s, menu = TRUE))
+            )
+          )
+        })
+
+        output$dl_xlsx <- shiny::downloadHandler(
+          filename = function() "chart.xlsx",
+          content = function(file) {
+            p <- dl_chart()
+            shiny::req(!is.null(p))
+            # The AGGREGATED frame, one row per mark -- the numbers the chart
+            # draws, not the block's input rows.
+            d <- chart_exhibit_data(p)
+            shiny::req(!is.null(d))
+            auto <- r_data_titles()
+            write_annotated_xlsx(
+              d, file,
+              title = resolve_block_title(r_title(), plain_data(),
+                                          auto = auto$label),
+              subtitle = resolve_block_title(r_subtitle(), plain_data(),
+                                             auto = auto$subtitle),
+              caption = resolve_block_title(r_caption(), plain_data(),
+                                            auto = auto$caption)
+            )
+          }
+        )
+        output$dl_html <- shiny::downloadHandler(
+          filename = function() "chart.html",
+          content = function(file) {
+            p <- dl_chart()
+            shiny::req(!is.null(p))
+            auto <- r_data_titles()
+            write_exhibit_html(
+              p, file,
+              title = resolve_block_title(r_title(), plain_data(),
+                                          auto = auto$label),
+              subtitle = resolve_block_title(r_subtitle(), plain_data(),
+                                             auto = auto$subtitle)
+            )
+          }
+        )
+        output$dl_pptx <- shiny::downloadHandler(
+          filename = function() "chart.pptx",
+          content = function(file) {
+            p <- dl_chart()
+            shiny::req(!is.null(p))
+            auto <- r_data_titles()
+            write_exhibit_pptx(
+              p, file,
+              title = resolve_block_title(r_title(), plain_data(),
+                                          auto = auto$label)
+            )
+          }
+        )
+        output$dl_png <- shiny::downloadHandler(
+          filename = function() "chart.png",
+          content = function(file) {
+            p <- dl_chart()
+            shiny::req(!is.null(p))
+            write_exhibit_png(p, file)
+          }
+        )
+
         list(
           expr = shiny::reactive({
             # The expr's only job is the data transform: the click/brush
@@ -1321,6 +1463,7 @@ new_chart_block <- function(
             count_on = r_count_on,
             count_col = r_count_col,
             facet_scales = r_facet_scales,
+            download = r_download,
             lo = r_lo,
             hi = r_hi,
             baseline = r_baseline,
@@ -1340,7 +1483,17 @@ new_chart_block <- function(
         viz_echarts_dep(),
         viz_block_css_dep(),
         drilldown_chart_dep(),
-        shiny::div(id = ns("drilldown_block"), class = "drilldown-chart-container")
+        shiny::div(id = ns("drilldown_block"), class = "drilldown-chart-container"),
+        # The download control is rendered HERE and hoisted into the gear
+        # header by chart.js -- the same shape rank-table.js uses for the
+        # search box. It has to be a Shiny output (download links are
+        # server-driven), and the gear header is built by the widget's JS.
+        # The download chrome (the icon button and its menu) comes from the
+        # table's stylesheet, which a chart-only page does not load. One
+        # shared definition, carried by both blocks.
+        htmltools::tags$style(htmltools::HTML(dl_chrome_css())),
+        shiny::div(class = "dd-chart-dl-host", style = "display:none",
+                   shiny::uiOutput(ns("chart_download"), inline = TRUE))
       )
     },
     # Shared input contract (see validate_annotated_df_input): a data frame,

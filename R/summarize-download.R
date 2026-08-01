@@ -105,38 +105,66 @@ rank_export_df <- function(prep) {
   df
 }
 
-#' Write a Painted Exhibit to a PNG
+#' Write an Exhibit to a PNG
 #'
-#' The summarize table as one image: the picture [pptx_add_exhibit()] places on
-#' a slide, without the slide. No paging -- a file has no fixed box, so the
-#' image is as tall as the table is long.
+#' The exhibit as one image: what [pptx_add_exhibit()] places on a slide,
+#' without the slide. A summarize table is painted from its cell model and is
+#' as tall as the table is long (a file has no fixed box, so nothing is
+#' paged); a chart is its ggplot at the size the plot asks for.
 #'
-#' It is a re-render, not a screenshot: the marks are drawn from the same cell
-#' model the browser gets, so the file is sharper than a capture and not
-#' pixel-identical to one.
+#' It is a re-render, not a screenshot. The summarize table's marks are drawn
+#' from the same cell model the browser gets and the chart from the same
+#' pipeline a report compiles, so the file is sharper than a capture -- and
+#' not pixel-identical to one, since neither carries the live view's zoom or
+#' hidden series.
 #'
-#' @param x A `summarize_exhibit` from [static_summarize_table()].
+#' @param x A `summarize_exhibit` from [static_summarize_table()], or a ggplot
+#'   from [static_chart()].
 #' @param file Path to write the `.png` to.
-#' @param width_in Image width in inches.
+#' @param width_in Image width in inches. `NULL` (charts) keeps the plot's own.
 #' @param res Pixels per inch.
-#' @param ... Passed to the painter.
+#' @param ... Passed to the renderer.
 #'
 #' @return `file`, invisibly.
-#' @seealso [static_summarize_table()], [write_exhibit_pptx()]
+#' @seealso [static_summarize_table()], [static_chart()], [write_exhibit_pptx()]
 #' @export
-write_exhibit_png <- function(x, file, width_in = 12.5,
+write_exhibit_png <- function(x, file, width_in = NULL,
                               res = getOption("blockr.viz.paint_res", 300),
                               ...) {
+  UseMethod("write_exhibit_png")
+}
 
-  if (!inherits(x, "summarize_exhibit")) {
-    stop("write_exhibit_png() needs a summarize_exhibit.", call. = FALSE)
-  }
+#' @rdname write_exhibit_png
+#' @export
+write_exhibit_png.default <- function(x, file, width_in = NULL, res = 300,
+                                      ...) {
+  stop("write_exhibit_png() has no method for <",
+       paste(class(x), collapse = "/"), ">.", call. = FALSE)
+}
+
+#' @rdname write_exhibit_png
+#' @export
+write_exhibit_png.summarize_exhibit <- function(x, file, width_in = NULL,
+                                                res = getOption(
+                                                  "blockr.viz.paint_res", 300),
+                                                ...) {
   rank_paint_require()
 
-  p <- rank_paint_grob(x$cells, x$prep, width_in = width_in,
+  p <- rank_paint_grob(x$cells, x$prep, width_in = width_in %||% 12.5,
                        title = x$title, subtitle = x$subtitle,
                        caption = x$caption, ...)
   rp_write_png(p, file, res = res)
+
+  invisible(file)
+}
+
+#' @rdname write_exhibit_png
+#' @export
+write_exhibit_png.gg <- function(x, file, width_in = NULL,
+                                 res = getOption("blockr.viz.paint_res", 300),
+                                 ...) {
+  size <- gg_exhibit_size(x, max_width = width_in)
+  gg_write_png(x, file, size$width, size$height, res = res)
 
   invisible(file)
 }

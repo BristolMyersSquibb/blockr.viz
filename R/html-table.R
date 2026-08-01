@@ -1108,6 +1108,7 @@ input.blockr-search:focus {
 #' itself now pulls the canonical CSS straight from blockr.ui.
 #' @noRd
 html_table_shared_css_fallback <- function() {
+  paste0(
   "/* Suppress Shiny's `.recalculating` dim (opacity 0.3) on the drilldown
    table. The table now re-renders in single-digit ms on a filter, so the
    'computing' fade is pure flicker, not useful feedback. blockr.ui already
@@ -1229,7 +1230,21 @@ input.blockr-search:focus {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   background-color: #ffffff;
 }
-/* Download: a quiet icon button matching the search input's chrome
+",
+    # The download chrome, defined once and shared: the chart block wears the
+    # same control and its page carries none of the table's CSS.
+    dl_chrome_css()
+  )
+}
+
+# The download control's styling -- the icon button and, when several formats
+# are writable, the <details> menu it becomes. Split out of the table's shared
+# fallback so the CHART block can carry it too: the two blocks show one
+# control, and a page with a chart and no table would otherwise render it as a
+# row of bare links.
+#' @noRd
+dl_chrome_css <- function() {
+  "/* Download: a quiet icon button matching the search input's chrome
    (28px, radius 4, bg-input) - an inline-SVG anchor built by the block
    server (no Bootstrap .btn, no icon font). It is an <a> when one format is
    enabled and the <summary> of a <details> menu when several are, so both

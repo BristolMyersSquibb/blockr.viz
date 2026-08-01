@@ -2,40 +2,65 @@
 % Please edit documentation in R/summarize-download.R
 \name{write_exhibit_png}
 \alias{write_exhibit_png}
-\title{Write a Painted Exhibit to a PNG}
+\alias{write_exhibit_png.default}
+\alias{write_exhibit_png.summarize_exhibit}
+\alias{write_exhibit_png.gg}
+\title{Write an Exhibit to a PNG}
 \usage{
 write_exhibit_png(
   x,
   file,
-  width_in = 12.5,
+  width_in = NULL,
+  res = getOption("blockr.viz.paint_res", 300),
+  ...
+)
+
+\method{write_exhibit_png}{default}(x, file, width_in = NULL, res = 300, ...)
+
+\method{write_exhibit_png}{summarize_exhibit}(
+  x,
+  file,
+  width_in = NULL,
+  res = getOption("blockr.viz.paint_res", 300),
+  ...
+)
+
+\method{write_exhibit_png}{gg}(
+  x,
+  file,
+  width_in = NULL,
   res = getOption("blockr.viz.paint_res", 300),
   ...
 )
 }
 \arguments{
-\item{x}{A \code{summarize_exhibit} from \code{\link[=static_summarize_table]{static_summarize_table()}}.}
+\item{x}{A \code{summarize_exhibit} from \code{\link[=static_summarize_table]{static_summarize_table()}}, or a ggplot
+from \code{\link[=static_chart]{static_chart()}}.}
 
 \item{file}{Path to write the \code{.png} to.}
 
-\item{width_in}{Image width in inches.}
+\item{width_in}{Image width in inches. \code{NULL} (charts) keeps the plot's own.}
 
 \item{res}{Pixels per inch.}
 
-\item{...}{Passed to the painter.}
+\item{...}{Passed to the renderer.}
 }
 \value{
 \code{file}, invisibly.
 }
 \description{
-The summarize table as one image: the picture \code{\link[=pptx_add_exhibit]{pptx_add_exhibit()}} places on
-a slide, without the slide. No paging -- a file has no fixed box, so the
-image is as tall as the table is long.
+The exhibit as one image: what \code{\link[=pptx_add_exhibit]{pptx_add_exhibit()}} places on a slide,
+without the slide. A summarize table is painted from its cell model and is
+as tall as the table is long (a file has no fixed box, so nothing is
+paged); a chart is its ggplot at the size the plot asks for.
 }
 \details{
-It is a re-render, not a screenshot: the marks are drawn from the same cell
-model the browser gets, so the file is sharper than a capture and not
-pixel-identical to one.
+It is a re-render, not a screenshot. The summarize table's marks are drawn
+from the same cell model the browser gets and the chart from the same
+pipeline a report compiles, so the file is sharper than a capture -- and
+not pixel-identical to one, since neither carries the live view's zoom or
+hidden series.
 }
 \seealso{
-\code{\link[=static_summarize_table]{static_summarize_table()}}, \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}
+\code{\link[=static_summarize_table]{static_summarize_table()}}, \code{\link[=static_chart]{static_chart()}}, \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}
 }
