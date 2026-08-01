@@ -60,6 +60,9 @@
 #'   JS emits. `NULL` outside a block (a static table).
 #' @param active Active drill filter, `list(col =, vals =)`, for the row
 #'   highlight and the status line.
+#' @param expanded Open every nested row. `FALSE` (default) is the dashboard's
+#'   collapsed-to-parents view; an EXPORT sets it, having nobody to click the
+#'   chevron.
 #'
 #' @return An [htmltools::tagList()].
 #' @examplesIf interactive()
@@ -75,7 +78,7 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
                        search = TRUE, sortable = TRUE, axis = TRUE,
                        title = NULL, subtitle = NULL,
                        caption = NULL, drill = NULL, scale_map = NULL,
-                       elem_id = NULL, active = NULL) {
+                       elem_id = NULL, active = NULL, expanded = FALSE) {
   prep <- rank_prepare(
     data, group = group, value = value, func = func, id_var = id_var,
     summaries = summaries, by = by,
@@ -120,7 +123,7 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
       rank_message_table(prep$err)
     } else {
       htmltools::HTML(rank_table_html(prep, drill = drill, active = active,
-                                      cfg = cfg))
+                                      cfg = cfg, expanded = expanded))
     },
     prep = prep, max_height = max_height, search = search,
     title = title, subtitle = subtitle, caption = caption,
@@ -411,8 +414,10 @@ rank_num_parts <- function(v, denom = NULL, combined = FALSE, signed = FALSE,
 
 # --- the table ---------------------------------------------------------------
 #' @noRd
-rank_table_html <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
-  rank_cells_html(rank_cells(prep, drill = drill, active = active, cfg = cfg))
+rank_table_html <- function(prep, drill = NULL, active = NULL, cfg = NULL,
+                            expanded = FALSE) {
+  rank_cells_html(rank_cells(prep, drill = drill, active = active, cfg = cfg),
+                  expanded = expanded)
 }
 
 #' @noRd

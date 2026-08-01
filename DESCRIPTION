@@ -1,6 +1,6 @@
 Package: blockr.viz
 Title: Visualization and Render Blocks for Blockr
-Version: 0.2.52
+Version: 0.2.53
 Authors@R:
     person(given = "Christoph",
            family = "Sax",
@@ -26,6 +26,7 @@ Imports:
     blockr.ui,
     dplyr,
     echarts4r,
+    grDevices,
     gt,
     htmltools,
     jsonlite,
@@ -46,9 +47,11 @@ Suggests:
     chromote,
     flextable,
     ggplot2,
+    grid,
     knitr,
     officer,
     openxlsx,
+    ragg,
     rmarkdown,
     scales,
     shinytest2,

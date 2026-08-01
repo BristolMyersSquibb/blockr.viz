@@ -189,13 +189,26 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
 #' doc <- pptx_add_exhibit(doc, head(iris, 20), title = "Iris")
 #' length(doc)
 #' @export
-pptx_add_exhibit <- function(doc, x, title = NULL, subtitle = NULL,
-                             caption = NULL, template = NULL,
-                             layout = NULL, master = NULL, top = NULL,
-                             max_rows = "auto", max_cols = "auto",
-                             min_font_size =
-                               getOption("blockr.viz.ft_min_font_size", 11),
-                             ...) {
+pptx_add_exhibit <- function(doc, x, ...) {
+  UseMethod("pptx_add_exhibit", x)
+}
+
+#' Generic since 0.2.53. The default is this one: a table typeset by
+#' [static_table()] into real PowerPoint cells. An exhibit whose marks cannot
+#' be expressed as text runs -- the summarize table's distribution glyphs --
+#' brings its own method instead (see [static_summarize_table()]), which is
+#' also where the picture-versus-cells trade is explained.
+#'
+#' @rdname pptx_add_exhibit
+#' @export
+pptx_add_exhibit.default <- function(doc, x, title = NULL, subtitle = NULL,
+                                     caption = NULL, template = NULL,
+                                     layout = NULL, master = NULL, top = NULL,
+                                     max_rows = "auto", max_cols = "auto",
+                                     min_font_size =
+                                       getOption("blockr.viz.ft_min_font_size",
+                                                 11),
+                                     ...) {
 
   if (!requireNamespace("officer", quietly = TRUE)) {
     stop("pptx_add_exhibit() needs the 'officer' package.", call. = FALSE)

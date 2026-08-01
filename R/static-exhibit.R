@@ -130,11 +130,25 @@ exhibit_html_output <- function() {
 #'   `getOption("blockr.viz.html_exhibit_expanded_max_rows")` (24).
 #' @param ... Passed to the underlying renderer.
 #'
+#' Generic since 0.2.53: an exhibit that carries its own renderer (the
+#' summarize table's glyph model, say) answers for itself, and everything
+#' else falls to the default -- an annotated data frame drawn as the display
+#' table. That is the seam that lets ONE report call serve an HTML target and
+#' a PowerPoint one without the caller knowing which it is.
+#'
 #' @return A [htmltools::tagList()].
 #' @seealso [static_exhibit()], [static_table()]
 #' @export
 html_exhibit <- function(x, title = NULL, caption = NULL, max_height = NULL,
                          default_expanded = NULL, ...) {
+  UseMethod("html_exhibit")
+}
+
+#' @rdname html_exhibit
+#' @export
+html_exhibit.default <- function(x, title = NULL, caption = NULL,
+                                 max_height = NULL, default_expanded = NULL,
+                                 ...) {
 
   # Same entry sequence as static_table() and gt_table(): coerce, then spread
   # summary_table()'s long internals to the wide display grid (a no-op on

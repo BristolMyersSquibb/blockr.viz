@@ -708,8 +708,13 @@ rank_fold_text <- function(prep) {
 
 # --- consumer 1: markup ------------------------------------------------------
 
+#' `expanded = TRUE` opens every nested row: the collapse is a dashboard
+#' affordance (a chevron to click), and an EXPORT has nobody to click it --
+#' a printed AE table that shows only its system organ classes has lost its
+#' numbers. The default is unchanged, so the drift guard against the JS
+#' assembler still compares like with like.
 #' @noRd
-rank_cells_html <- function(m) {
+rank_cells_html <- function(m, expanded = FALSE) {
   cells <- lapply(m$cols, function(c) {
     if (identical(c$kind, "bar")) {
       paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
@@ -768,8 +773,15 @@ rank_cells_html <- function(m) {
   )
   tr <- paste0(
     "<tr class=\"blockr-rank-row",
-    ifelse(m$parent_row, " is-parent blockr-indent-toggle collapsed", ""),
-    ifelse(m$level > 0L, " is-child collapsed-hidden", ""),
+    ifelse(m$parent_row,
+           if (isTRUE(expanded)) {
+             " is-parent blockr-indent-toggle"
+           } else {
+             " is-parent blockr-indent-toggle collapsed"
+           }, ""),
+    ifelse(m$level > 0L,
+           if (isTRUE(expanded)) " is-child" else " is-child collapsed-hidden",
+           ""),
     if (isTRUE(m$pick)) " is-pick" else "",
     ifelse(m$on, " is-on", ""),
     "\" data-rank-label=\"", rank_esc(m$label), "\"",

@@ -2,9 +2,12 @@
 % Please edit documentation in R/write-exhibit-pptx.R
 \name{pptx_add_exhibit}
 \alias{pptx_add_exhibit}
+\alias{pptx_add_exhibit.default}
 \title{Add an Exhibit's Slides to an Open Deck}
 \usage{
-pptx_add_exhibit(
+pptx_add_exhibit(doc, x, ...)
+
+\method{pptx_add_exhibit}{default}(
   doc,
   x,
   title = NULL,
@@ -28,6 +31,8 @@ flextable built by \code{\link[=static_table]{static_table()}} -- which carries 
 built from, so an already-rendered exhibit can still be paged. A
 flextable from anywhere else is placed whole on one slide, since there is
 nothing to re-cut.}
+
+\item{...}{Passed to \code{\link[=static_table]{static_table()}}.}
 
 \item{title, subtitle, caption}{Slide title, table subtitle and footnote.
 \code{NULL} or \code{""} omits each. The title goes into the layout's own title
@@ -91,8 +96,6 @@ takes over from there. A shrink that does not clear the wrap is undone --
 a smaller wrapped table is only smaller -- unless it is what keeps the
 columns on one slide. Height second: it steps down again if that avoids
 a row split altogether, since one slide at 11pt beats two at 13pt.}
-
-\item{...}{Passed to \code{\link[=static_table]{static_table()}}.}
 }
 \value{
 The document, with the exhibit's slides appended.

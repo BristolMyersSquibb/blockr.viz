@@ -2,9 +2,19 @@
 % Please edit documentation in R/static-exhibit.R
 \name{html_exhibit}
 \alias{html_exhibit}
+\alias{html_exhibit.default}
 \title{Static HTML Renderer for a Display Table}
 \usage{
 html_exhibit(
+  x,
+  title = NULL,
+  caption = NULL,
+  max_height = NULL,
+  default_expanded = NULL,
+  ...
+)
+
+\method{html_exhibit}{default}(
   x,
   title = NULL,
   caption = NULL,
@@ -28,7 +38,13 @@ table's height: a table that fits opens expanded, one that does not opens
 at its section rows. The threshold is
 \code{getOption("blockr.viz.html_exhibit_expanded_max_rows")} (24).}
 
-\item{...}{Passed to the underlying renderer.}
+\item{...}{Passed to the underlying renderer.
+
+Generic since 0.2.53: an exhibit that carries its own renderer (the
+summarize table's glyph model, say) answers for itself, and everything
+else falls to the default -- an annotated data frame drawn as the display
+table. That is the seam that lets ONE report call serve an HTML target and
+a PowerPoint one without the caller knowing which it is.}
 }
 \value{
 A \code{\link[htmltools:tagList]{htmltools::tagList()}}.
