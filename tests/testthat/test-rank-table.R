@@ -156,6 +156,25 @@ test_that("a plain facet is colour-neutral: no per-level hues, no legend", {
   expect_null(rank_legend_spec(p))
 })
 
+test_that("a BLANK colour level legends as (Missing) instead of throwing", {
+  # Real data codes a missing arm / severity as "", and `pal[[""]]` is a
+  # subscript error in R even when the entry is there -- the legend must
+  # never look a level up by name.
+  ae <- ae_fixture()
+  ae$SEV <- as.character(ae$SEV)
+  ae$SEV[seq(1L, nrow(ae), by = 7L)] <- ""
+  p <- rank_prepare(ae, group = "TERM", color = "SEV", func = "count")
+  expect_identical(names(p$palette), c("", "MILD", "MODERATE"))
+  spec <- rank_legend_spec(p)
+  expect_identical(
+    vapply(spec$groups[[1L]]$items, `[[`, character(1L), "label"),
+    c("(Missing)", "MILD", "MODERATE")
+  )
+  # Every swatch keeps a real colour -- no `background:NA`.
+  expect_true(all(vapply(spec$groups[[1L]]$items,
+                         function(it) nzchar(it$color %||% ""), logical(1L))))
+})
+
 test_that("the bar cell carries its own value label unless cols asks for columns", {
   ae <- ae_fixture()
   # Default: no separate num columns; the bar plan entry wants its label.

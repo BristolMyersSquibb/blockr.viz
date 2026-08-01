@@ -367,6 +367,21 @@ test_that("two colour columns give two titled legend groups", {
   expect_length(p$chrome$legend$groups[[1L]]$items, 2L)
 })
 
+test_that("a colour column with BLANK values still builds its payload", {
+  # Adding a colour field on real data used to abort the whole render with
+  # "subscript out of bounds": `pal[[""]]` finds nothing, because the empty
+  # string matches no name in R.
+  ae <- sum_fixture()
+  ae$SEV[seq(1L, nrow(ae), by = 5L)] <- ""
+  S <- list(list(type = "dist", name = "By severity", col = "DUR",
+                 color = "SEV"))
+  p <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = S)
+  expect_identical(
+    vapply(p$chrome$legend$groups[[1L]]$items, `[[`, character(1L), "label"),
+    c("(Missing)", "MILD", "MOD")
+  )
+})
+
 test_that("facet is the SUMMARY's mapping: only mapped columns repeat", {
   ae <- sum_fixture()
   S <- list(

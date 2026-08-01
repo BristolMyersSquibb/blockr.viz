@@ -35,7 +35,13 @@ rank_level_colors <- function(map, col, levels, column = NULL) {
     res <- dd_resolve_scales(map, col, column %||% levels)
     pal <- res$color
     if (!is.null(pal) && all(levels %in% names(pal))) {
-      return(stats::setNames(unname(pal[levels]), levels))
+      out <- stats::setNames(unname(pal[levels]), levels)
+      # `pal[""]` is NA even when the theme carries a blank level -- the empty
+      # string matches no name. Fill any such gap from the pool so no mark
+      # ever renders with `background:NA`.
+      gap <- is.na(out)
+      if (any(gap)) out[gap] <- rep_len(dd_palette(), length(levels))[gap]
+      return(out)
     }
   }
   stats::setNames(rep_len(dd_palette(), length(levels)), levels)

@@ -285,10 +285,21 @@ rank_legend_spec <- function(prep) {
   }
   if (!length(groups)) return(NULL)
   list(groups = lapply(groups, function(g) {
+    # Positional, never by name: a colour column can carry a BLANK level (an
+    # untreated subject's empty TRT01A), and `pal[[""]]` is a subscript error
+    # even though the entry sits right there -- the empty string matches no
+    # name in R. rank_level_colors() returns the palette in `levels` order,
+    # so the index IS the lookup. Blank reads as "(Missing)", as it does in
+    # the table's group columns.
+    pal <- g$palette
     list(
       title = g$column,
-      items = lapply(g$levels, function(l) {
-        list(label = l, color = unname(g$palette[[l]]))
+      items = lapply(seq_along(g$levels), function(i) {
+        l <- as.character(g$levels[[i]])
+        list(
+          label = if (nzchar(trimws(l))) l else "(Missing)",
+          color = if (i <= length(pal)) unname(pal[[i]])
+        )
       })
     )
   }))
