@@ -181,7 +181,7 @@ rank_data_ord <- function(x, labels) {
 #' @noRd
 rank_prepare <- function(data, group, value = ".count", func = "count",
                          id_var = NULL, parent = NULL, color = NULL,
-                         bar_mode = "stacked", facet = NULL, compare = NULL,
+                         bar_mode = "stacked", facet = NULL,
                          cols = NULL, fields = NULL, sort_by = "value",
                          sort_dir = "desc", top_n = NULL, scale_map = NULL,
                          summaries = list(), by = NULL,
@@ -277,16 +277,8 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   # the colour slot (its bars are coloured by direction) -- reported, never
   # silent.
   note <- NULL
-  compare <- if (is.null(facet)) NULL else rank_chr1(compare)
-  if (!is.null(color) && !is.null(compare)) {
-    note <- paste0(
-      "A comparison colours its bars by direction; ignoring the colour ",
-      "split by \"", color, "\"."
-    )
-    color <- NULL
-  }
   layout <- if (!is.null(facet)) {
-    if (!is.null(compare)) "compare" else "facet"
+    "facet"
   } else if (!is.null(color)) {
     "split"
   } else {
@@ -339,7 +331,7 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
   # --- the column plan -----------------------------------------------------
   # Each entry: kind (bar / barsplit / bardiv / num), the per-row numeric
   # vector(s) it draws, and its header. The renderer walks this and knows
-  # nothing about group / facet / compare.
+  # nothing about group / facet.
   plan <- list()
   series <- NULL
   pal <- character()
@@ -402,41 +394,7 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
       sub <- data[as.character(data[[facet]]) == lv, , drop = FALSE]
       denoms[[lv]] <- rank_denom(sub, func, id_var)
     }
-    if (identical(layout, "compare")) {
-      if (!compare %in% facet_levels) {
-        return(bad(paste0(
-          "Compare to \"", compare, "\" is not a level of \"", facet,
-          "\". Levels: ", paste(facet_levels, collapse = ", "), "."
-        )))
-      }
-      if (!pct_ok) {
-        return(bad(paste0(
-          "A difference column needs a counting measure (Count or Count ",
-          "distinct), so the two arms are comparable as percentages."
-        )))
-      }
-      others <- setdiff(facet_levels, compare)
-      plan <- c(plan, list(list(kind = "num", label = compare,
-                                key = paste0(".f_", compare),
-                                denom = denoms[[compare]], combined = TRUE,
-                                sub_label = paste0("N = ", denoms[[compare]]))))
-      for (lv in others) {
-        # Risk difference in percentage points, comparator first.
-        leaf[[paste0(".d_", lv)]] <-
-          leaf[[paste0(".f_", lv)]] / denoms[[lv]] * 100 -
-          leaf[[paste0(".f_", compare)]] / denoms[[compare]] * 100
-        plan <- c(plan, list(
-          list(kind = "num", label = lv, key = paste0(".f_", lv),
-               denom = denoms[[lv]], combined = TRUE,
-               sub_label = paste0("N = ", denoms[[lv]])),
-          # The signed delta rides IN the difference bar's cell; a separate
-          # column would say the same number twice.
-          list(kind = "bardiv", label = "Difference (pp)",
-               key = paste0(".d_", lv), compare = compare, level = lv,
-               sub_label = paste0("vs ", compare), show_val = TRUE)
-        ))
-      }
-    } else if (!is.null(color)) {
+    if (!is.null(color)) {
       # Facet AND colour, the chart's two independent mappings: one bar
       # column per facet level, each bar split into colour segments. Facet
       # columns are keyed by INDEX (.f<i>s_<level>) so a facet level name can
@@ -539,13 +497,13 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
         par_rows[[paste0(".s_", lv)]] <- rank_match(par_rows, s, parent, absent)
       }
     }
-    if (layout %in% c("facet", "compare")) {
+    if (identical(layout, "facet")) {
       fac <- rank_aggregate(data, c(parent, facet), func, value, id_var)
       for (lv in facet_levels) {
         s <- fac[as.character(fac[[facet]]) == lv, , drop = FALSE]
         par_rows[[paste0(".f_", lv)]] <- rank_match(par_rows, s, parent, absent)
       }
-      if (identical(layout, "facet") && !is.null(color)) {
+      if (!is.null(color)) {
         seg <- rank_aggregate(data, c(parent, facet, color), func, value,
                               id_var)
         for (fi in seq_along(facet_levels)) {
@@ -556,13 +514,6 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
             par_rows[[paste0(".f", fi, "s_", cv)]] <-
               rank_match(par_rows, s, parent, absent)
           }
-        }
-      }
-      if (identical(layout, "compare")) {
-        for (lv in setdiff(facet_levels, compare)) {
-          par_rows[[paste0(".d_", lv)]] <-
-            par_rows[[paste0(".f_", lv)]] / denoms[[lv]] * 100 -
-            par_rows[[paste0(".f_", compare)]] / denoms[[compare]] * 100
         }
       }
     }
@@ -597,7 +548,7 @@ rank_prepare <- function(data, group, value = ".count", func = "count",
     group_label = rank_group_label(data, group, parent),
     series = series, palette = pal, facet_levels = facet_levels,
     denoms = denoms, group = group, parent = parent, color = color,
-    facet = facet, compare = compare, folded = folded, fold_max = fold_max,
+    facet = facet, folded = folded, fold_max = fold_max,
     # par_rows is the UNCAPPED frame here (rank_assemble_rows caps a copy),
     # so its row count already is the group total.
     n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows),

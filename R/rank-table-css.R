@@ -6,8 +6,8 @@
 # same object with a different cell.
 #
 # Colors read blockr.theme's --blockr-* tokens with a fallback, so a themed
-# board restyles the bars without touching this file. The diverging pair is a
-# warm/cool pair with a neutral zero tick (polarity, not identity).
+# board restyles the bars without touching this file. The diverging bar is one
+# colour both ways: the zero tick carries the direction, not the hue.
 
 #' @noRd
 rank_table_css <- function() {
@@ -23,8 +23,7 @@ rank_table_css <- function() {
   --blockr-rank-track: color-mix(in srgb,
                                  var(--blockr-color-bg-subtle, #eeeeea) 80%,
                                  var(--blockr-color-text-subtle, #898781));
-  --blockr-rank-pos: var(--blockr-color-danger, #d03b3b);
-  --blockr-rank-neg: var(--blockr-color-primary, #2a78d6);
+  --blockr-rank-bar: var(--blockr-color-primary, #2a78d6);
   --blockr-rank-tick: var(--blockr-color-border, #c3c2b7);
   /* The floor under a GLYPH -- see .blockr-rank-barwrap below. A board that
      wants shorter marks and less scrolling overrides it on the container. */
@@ -541,13 +540,13 @@ rank_table_css <- function() {
   background: var(--blockr-rank-tick);
 }
 .blockr-rank-dv .blockr-rank-fill { position: absolute; top: 0; }
-.blockr-rank-dv .blockr-rank-fill.is-pos {
-  left: 50%;
-  background: var(--blockr-rank-pos);
-}
-.blockr-rank-dv .blockr-rank-fill.is-neg {
-  right: 50%;
-  background: var(--blockr-rank-neg);
+/* One colour both ways. The side of the zero line already says which
+   direction; colouring the two apart would only add an opinion about which
+   one is good, and nothing tells the block that. */
+.blockr-rank-dv .blockr-rank-fill.is-pos { left: 50%; }
+.blockr-rank-dv .blockr-rank-fill.is-neg { right: 50%; }
+.blockr-rank-dv .blockr-rank-fill {
+  background: var(--blockr-rank-bar);
 }
 
 /* Hierarchy. The chevron itself is the table block's -- same button, same svg

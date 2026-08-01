@@ -137,13 +137,6 @@ test_that("facet and colour compose: split bars inside each facet column", {
   # The palette encodes the COLOUR levels, and the legend says so.
   expect_identical(names(p$palette), c("MILD", "MODERATE"))
   expect_identical(rank_legend_spec(p)$groups[[1L]]$title, "SEV")
-
-  # A comparison still owns the colour slot -- reported, never silent.
-  cmp <- rank_prepare(ae, group = "TERM", facet = "ARM", compare = "Placebo",
-                      color = "SEV", func = "count_distinct",
-                      id_var = "USUBJID")
-  expect_identical(cmp$layout, "compare")
-  expect_match(cmp$note, "colours its bars by direction")
 })
 
 test_that("a plain facet is colour-neutral: no per-level hues, no legend", {
@@ -222,32 +215,6 @@ test_that("identity fields ride as raw columns, text sorting on the text", {
   pn <- rank_prepare(subj, group = "ARM", func = "count", fields = "AGE")
   expect_match(pn$note, "as-is measure")
   expect_identical(vapply(pn$plan, function(x) x$kind, ""), "bar")
-})
-
-test_that("compare gives a signed difference in points per non-comparator arm", {
-  ae <- ae_fixture()
-  p <- rank_prepare(ae, group = "TERM", facet = "ARM", compare = "Placebo",
-                    func = "count_distinct", id_var = "USUBJID")
-
-  expect_identical(p$layout, "compare")
-  expect_named(p$rows[grep("^\\.d_", names(p$rows))], c(".d_Low", ".d_High"))
-  manual <- p$rows$.f_High / p$denoms[["High"]] * 100 -
-    p$rows$.f_Placebo / p$denoms[["Placebo"]] * 100
-  expect_equal(p$rows$.d_High, manual)
-})
-
-test_that("compare rejects a bad comparator and a non-counting measure", {
-  ae <- ae_fixture()
-  expect_match(
-    rank_prepare(ae, group = "TERM", facet = "ARM", compare = "Nope",
-                 func = "count")$err,
-    "not a level"
-  )
-  expect_match(
-    rank_prepare(ae, group = "TERM", facet = "ARM", compare = "Placebo",
-                 func = "mean", value = "AVAL")$err,
-    "counting measure"
-  )
 })
 
 test_that("top_n caps with a reported fold, and is off by default", {
@@ -413,7 +380,7 @@ test_that("the HTML carries the chrome, the marks and the drill contract", {
   expect_false(grepl("is-pick", html(group = "TERM", func = "count")))
 })
 
-test_that("the HTML marks nested, split and compare shapes distinctly", {
+test_that("the HTML marks nested and split shapes distinctly", {
   ae <- ae_fixture()
   html <- function(...) markup(ae, ...)
 
@@ -429,12 +396,6 @@ test_that("the HTML marks nested, split and compare shapes distinctly", {
   grouped <- html(group = "TERM", color = "SEV", func = "count",
                   bar_mode = "grouped")
   expect_match(grouped, "blockr-rank-row3")
-
-  cmp <- html(group = "TERM", facet = "ARM", compare = "Placebo",
-              func = "count_distinct", id_var = "USUBJID")
-  expect_match(cmp, "is-pos")
-  expect_match(cmp, "is-neg")
-  expect_match(cmp, "blockr-rank-dv")
 })
 
 test_that("title tiers follow the chart and table contract", {

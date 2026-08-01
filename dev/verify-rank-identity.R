@@ -79,33 +79,24 @@ board <- new_dock_board(
       subtitle = "One column per arm; segments = maximum severity",
       block_name = "Facet + color"),
 
-    # Compare: zero-centred risk difference vs the comparator arm, the
-    # signed delta riding in the difference bar's cell.
-    diff = new_rank_block(
-      group = "AEDECOD", facet = "TRTA", compare = "Placebo",
-      func = "count_distinct", id_var = "USUBJID",
-      title = "Risk difference vs placebo",
-      caption = "Percentage points, each arm over its own N",
-      block_name = "Compare to"),
-
     # Untouched block, for the gear's default state.
     fresh = new_rank_block(block_name = "Fresh rank")
   ),
   links = links(
-    from = c("data", "data", "data", "data", "ae", "ae", "data"),
+    from = c("data", "data", "data", "data", "ae", "data"),
     to   = c("ident", "ident_color", "chart_ref", "ident_facet",
-             "facet_color", "diff", "fresh")
+             "facet_color", "fresh")
   ),
   options = dock_board_options(),
   views = list(
     Identity = dock_view(c("ident", "ident_color", "chart_ref")),
     Facet = dock_view(c("ident_facet", "facet_color")),
-    Compare = dock_view(c("diff", "fresh"))
+    Fresh = dock_view("fresh")
   ),
   grids = list(
     Identity = dock_grid("ident", "ident_color", "chart_ref"),
     Facet = dock_grid("ident_facet", "facet_color"),
-    Compare = dock_grid("diff", "fresh")
+    Fresh = dock_grid("fresh")
   ),
   active = "Identity"
 )

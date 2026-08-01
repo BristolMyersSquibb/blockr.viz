@@ -653,7 +653,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     palette = pal, facet_levels = facet_levels,
     denoms = c(all = nrow(data)), group = group, parent = parent,
     color = lead_group$column, color_groups = color_groups,
-    facet = shared_facet, compare = NULL,
+    facet = shared_facet,
     folded = asm$folded, fold_max = asm$fold_max,
     n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows),
     note = note, pct_ok = FALSE, func = "identity",
@@ -989,6 +989,26 @@ lane_summary_domains <- function(plan, rows) {
       # read against the other rows, not against zero, so pinning zero only
       # squashes data that lives far from it (chart parity: `scale: true` on
       # the boxplot, blockr.viz d2dd210).
+      # A bar encodes value as LENGTH from zero, and length has no way to say
+      # "negative": mk_pct_w() takes abs(), so a fall of 30 draws as wide as a
+      # rise of 30 and an all-negative column collapses to empty tracks. A
+      # signed measure (mean/median of a change column, a waterfall's extreme
+      # per subject) is the zero-centred DIVERGING bar instead -- same column,
+      # same numbers, and every consumer downstream already switches on `kind`
+      # (rank_axis_domain(), rank_cells(), rank_cells_html(), the JSON packer
+      # and its rank-table.js twin). Decided here because this is the first
+      # point that has seen the assembled values.
+      # `barsplit` is deliberately excluded: stacked segments that go negative
+      # are a different problem, and it has no diverging form.
+      if (identical(kind, "bar") && any(vals < 0)) {
+        amx <- if (length(vals)) max(abs(vals)) else 0
+        for (i in idx) {
+          plan[[i]]$kind <- "bardiv"
+          plan[[i]]$dmax <- amx
+          plan[[i]]$dmin <- -amx
+        }
+        next
+      }
       zero <- kind %in% c("bar", "barsplit") ||
         any(vapply(plan[idx], function(p) isTRUE(p$zero), logical(1L)))
       if (zero) {

@@ -185,7 +185,11 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     } else if (identical(p$kind, "bardiv")) {
       v <- rows[[p$key]]
       lab <- val_parts(p, v, signed = TRUE)
-      w <- if (is.finite(mx) && mx > 0) pmin(50, abs(v) / mx * 50) else v * 0
+      # Per-entry scale, like the plain bar: on the summaries path every
+      # column owns its domain and the prep-level bar_max is 0 there, so
+      # reading it would zero every width.
+      dmx <- p$dmax %||% mx
+      w <- if (is.finite(dmx) && dmx > 0) pmin(50, abs(v) / dmx * 50) else v * 0
       w[!is.finite(w)] <- 0
       c(list(kind = "bardiv", w = round(w, 2L), v = sortv(v),
              pos = !is.na(v) & v >= 0), lab)

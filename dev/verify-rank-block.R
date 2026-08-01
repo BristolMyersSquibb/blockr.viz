@@ -76,31 +76,23 @@ board <- new_dock_board(
     tbl_ref = new_table_block(
       title = "Most frequent adverse events",
       block_name = "Table (reference chrome)"),
-
-    # 5. Difference against the comparator arm.
-    diff = new_rank_block(
-      group = "AEDECOD", facet = "TRTA", compare = "Placebo",
-      func = "count_distinct", id_var = "USUBJID",
-      title = "Risk difference vs placebo",
-      caption = "Percentage points. A confidence interval would be the next column.",
-      block_name = "Difference")
   ),
   links = links(
-    from = c("data", "rank", "data", "data", "data", "data", "data", "data"),
-    to   = c("rank", "drilled", "nested", "split", "faceted", "diff",
+    from = c("data", "rank", "data", "data", "data", "data", "data"),
+    to   = c("rank", "drilled", "nested", "split", "faceted",
              "chart_ref", "tbl_ref")
   ),
   options = dock_board_options(),
   views = list(
     Rank = dock_view(c("rank", "drilled", "nested", "split")),
-    Compare = dock_view(c("faceted", "diff")),
+    Facet = dock_view("faceted"),
     Chrome = dock_view(c("chart_ref", "rank", "tbl_ref"))
   ),
   grids = list(
     # Nested sub-trees are group() nodes, not nested dock_grid() calls.
     Rank = dock_grid(group("rank", "drilled"), group("nested", "split"),
                      orientation = "horizontal"),
-    Compare = dock_grid("faceted", "diff"),
+    Facet = dock_grid("faceted"),
     Chrome = dock_grid("chart_ref", "rank", "tbl_ref")
   ),
   active = "Rank"

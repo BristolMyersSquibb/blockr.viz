@@ -17,7 +17,6 @@ rank_table(
   color = NULL,
   bar_mode = "stacked",
   facet = NULL,
-  compare = NULL,
   cols = NULL,
   fields = NULL,
   sort_by = "value",
@@ -64,9 +63,6 @@ with \code{facet}.}
 
 \item{facet}{Optional column giving one bar column per level, all on one
 shared scale.}
-
-\item{compare}{With \code{facet}, the level to treat as the comparator: each
-other level gets a zero-centred difference bar in percentage points.}
 
 \item{cols}{Opt-in separate numeric columns beside the bar: any of \code{"n"},
 \code{"pct"}. By default the bar cell carries its own value label.}
@@ -115,9 +111,9 @@ click-to-sort, exact values, a sticky header and an arbitrary row count
 come from the table form; the bar carries the magnitude.
 }
 \details{
-The bar column takes one of four shapes, picked by the arguments:
-plain (\code{group} only), split into segments (\code{color}), one column per level
-(\code{facet}), or centred on zero (\code{facet} + \code{compare}).
+The bar column takes one of three shapes, picked by the arguments:
+plain (\code{group} only), split into segments (\code{color}), or one column per
+level (\code{facet}).
 }
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}

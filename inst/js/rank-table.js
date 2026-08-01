@@ -785,9 +785,6 @@
     parent: { label: "Nest under", kind: "column", colType: "cat" },
     color:  { label: "Color", kind: "column", colType: "cat" },
     facet:  { label: "Facet", kind: "column", colType: "cat" },
-    // Compare offers LEVELS of the facet column, not columns, so it is a
-    // plain select whose options are refreshed from data-rank-cfg.
-    compare: { label: "Compare to", kind: "select", options: [] },
     // Extra row columns beside the bar — the chart's tooltip fields, shown
     // as real columns. Offered only for the as-is measure (rankSections):
     // any aggregation has no underlying row to read a column from.
@@ -1463,12 +1460,10 @@
     if (needsValue) mapping.push("value");
     if (cfg.func === "count_distinct") mapping.push("id_var");
     optional = ["parent", "color", "facet"];
-    if (cfg.facet) optional.push("compare");
     if (cfg.func === "identity") optional.push("fields");
     // color + facet compose (split bars inside each facet column), so the
-    // split layout applies whenever a colour split exists — except under a
-    // comparison, which owns the colour slot.
-    if (cfg.color && !cfg.compare) pres.push("bar_mode");
+    // split layout applies whenever a colour split exists.
+    if (cfg.color) pres.push("bar_mode");
     // The measure is the aggregation step, so it gets the chart's trailing
     // "Aggregation" section rather than sitting inside Mapping.
     aggTitle = "Aggregation";
@@ -1526,8 +1521,7 @@
     cfg.subtitle_auto = titles.subtitle || "";
     cfg.caption_auto = titles.caption || "";
     // A `null` column pick reads as "" for the pickers (the engine's no-value).
-    ["group", "parent", "color", "facet", "compare", "value", "id_var",
-     "drill"]
+    ["group", "parent", "color", "facet", "value", "id_var", "drill"]
       .forEach(function (k) { if (cfg[k] == null) cfg[k] = ""; });
     // The summarize-table config: the column list and the grouping vector.
     if (!Array.isArray(cfg.summaries)) {
@@ -1542,7 +1536,6 @@
     // The ctrl-send tail wants a string target and an array of choices.
     if (cfg.ctrl_target == null) cfg.ctrl_target = "";
     if (!Array.isArray(cfg.ctrl_choices)) cfg.ctrl_choices = [];
-    RANK_ROLES.compare.options = levels;
     // Sort targets: the measure / the name, plus facet levels, plus (in the
     // summarize-table mode) each summary column by its name.
     var sumNames = (cfg.summaries || []).map(function (s) {

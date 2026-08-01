@@ -12,9 +12,9 @@
 #' click-to-sort, exact values, a sticky header and an arbitrary row count
 #' come from the table form; the bar carries the magnitude.
 #'
-#' The bar column takes one of four shapes, picked by the arguments:
-#' plain (`group` only), split into segments (`color`), one column per level
-#' (`facet`), or centred on zero (`facet` + `compare`).
+#' The bar column takes one of three shapes, picked by the arguments:
+#' plain (`group` only), split into segments (`color`), or one column per
+#' level (`facet`).
 #'
 #' @param data A data frame.
 #' @param group Column to rank by (one row per level).
@@ -36,8 +36,6 @@
 #'   `color`.
 #' @param facet Optional column giving one bar column per level, all on one
 #'   shared scale.
-#' @param compare With `facet`, the level to treat as the comparator: each
-#'   other level gets a zero-centred difference bar in percentage points.
 #' @param cols Opt-in separate numeric columns beside the bar: any of `"n"`,
 #'   `"pct"`. By default the bar cell carries its own value label.
 #' @param fields Extra columns from the underlying row (identity measure
@@ -71,7 +69,7 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
                        id_var = NULL, summaries = list(), by = NULL,
                        facet_layout = "by_summary", parent = NULL,
                        color = NULL,
-                       bar_mode = "stacked", facet = NULL, compare = NULL,
+                       bar_mode = "stacked", facet = NULL,
                        cols = NULL, fields = NULL, sort_by = "value",
                        sort_dir = "desc", top_n = NULL, max_height = "600px",
                        search = TRUE, sortable = TRUE, axis = TRUE,
@@ -83,7 +81,7 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
     summaries = summaries, by = by,
     facet_layout = facet_layout,
     parent = parent, color = color, bar_mode = bar_mode, facet = facet,
-    compare = compare, cols = cols, fields = fields, sort_by = sort_by,
+    cols = cols, fields = fields, sort_by = sort_by,
     sort_dir = sort_dir, top_n = top_n, scale_map = scale_map
   )
 
@@ -104,7 +102,7 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
   # input columns. Read back by rank-table.js off the rendered <table>.
   cfg <- list(
     group = group, parent = parent, color = color, facet = facet,
-    compare = compare, func = func, value = value, id_var = id_var,
+    func = func, value = value, id_var = id_var,
     summaries = summaries, by = by, facet_layout = facet_layout,
     bar_mode = bar_mode, cols = cols, fields = fields, sort_by = sort_by,
     sort_dir = sort_dir, top_n = top_n, search = search,
@@ -263,17 +261,6 @@ rank_foot_spec <- function(prep, drill = NULL, active = NULL) {
 #' @noRd
 rank_legend_spec <- function(prep) {
   if (!is.null(prep$err)) return(NULL)
-  if (identical(prep$layout, "compare")) {
-    return(list(groups = list(list(
-      title = "Direction",
-      items = list(
-        list(label = paste0("More than ", prep$compare),
-             color = "var(--blockr-rank-pos, #d03b3b)"),
-        list(label = paste0("Less than ", prep$compare),
-             color = "var(--blockr-rank-neg, #2a78d6)")
-      )
-    ))))
-  }
   # Colour identity lives in the COLOUR mapping only: a plain facet's bars are
   # all the house blue and its column headers already name the levels, so it
   # carries no legend (chart parity -- a facet never recolours the marks).

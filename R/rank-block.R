@@ -11,7 +11,7 @@
 #' (see below). One row is one group, and every glyph is a horizontal mark
 #' on a shared linear domain confined to a cell. With no `summaries`, the
 #' block is the original ranked-bar table (the flat `group` / `func` /
-#' `color` / `facet` / `compare` surface below). For anything else --
+#' `color` / `facet` surface below). For anything else --
 #' vertical columns, lines, scatter, a second measure on an axis -- use
 #' [new_chart_block()].
 #'
@@ -78,9 +78,6 @@
 #'   side whatever is asked for, and the table says so in its footer.
 #' @param facet Optional column giving one bar column per level on a shared
 #'   scale (e.g. one column per treatment arm).
-#' @param compare With `facet`, the level to treat as the comparator: every
-#'   other level gets a zero-centred difference bar in percentage points.
-#'   A comparison colours its bars by direction, so it ignores `color`.
 #' @param cols Opt-in separate numeric columns beside the bar: any of `"n"`,
 #'   `"pct"`. By default the bar cell carries its own value label instead.
 #' @param fields Extra columns from the underlying row, shown as real columns
@@ -141,7 +138,6 @@ new_summarize_table_block <- function(group = NULL,
                                  color = NULL,
                                  bar_mode = "stacked",
                                  facet = NULL,
-                                 compare = NULL,
                                  cols = NULL,
                                  fields = NULL,
                                  sort_by = "value",
@@ -178,7 +174,6 @@ new_summarize_table_block <- function(group = NULL,
   parent <- chr_state(parent)
   color <- chr_state(color)
   facet <- chr_state(facet)
-  compare <- chr_state(compare)
   drill <- chr_state(drill)
   filter_column <- chr_state(filter_column)
   filter_values <- null_state(filter_values)
@@ -238,7 +233,6 @@ new_summarize_table_block <- function(group = NULL,
         r_color   <- shiny::reactiveVal(color)
         r_bar_mode <- shiny::reactiveVal(bar_mode %||% "stacked")
         r_facet   <- shiny::reactiveVal(facet)
-        r_compare <- shiny::reactiveVal(compare)
         r_cols    <- shiny::reactiveVal(as.character(cols %||% character()))
         r_fields  <- shiny::reactiveVal(as.character(fields %||% character()))
         r_sort_by <- shiny::reactiveVal(sort_by %||% "value")
@@ -290,7 +284,7 @@ new_summarize_table_block <- function(group = NULL,
         # a new arg needs one line here and one role in rank-table.js.
         setters <- list(
           group = r_group, parent = r_parent, color = r_color,
-          facet = r_facet, compare = r_compare, func = r_func,
+          facet = r_facet, func = r_func,
           value = r_value, id_var = r_id_var, bar_mode = r_bar_mode,
           summaries = r_summaries, by = r_by,
           facet_layout = r_facet_layout,
@@ -459,7 +453,7 @@ new_summarize_table_block <- function(group = NULL,
             ),
             cfg = list(
               group = r_group(), parent = r_parent(), color = r_color(),
-              facet = r_facet(), compare = r_compare(), func = r_func(),
+              facet = r_facet(), func = r_func(),
               value = r_value(), id_var = r_id_var(),
               summaries = r_summaries(), by = r_by(),
               facet_layout = r_facet_layout(),
@@ -482,7 +476,7 @@ new_summarize_table_block <- function(group = NULL,
             ),
             group = r_group(), value = r_value(), func = r_func(),
             id_var = r_id_var(), parent = r_parent(), color = r_color(),
-            bar_mode = r_bar_mode(), facet = r_facet(), compare = r_compare(),
+            bar_mode = r_bar_mode(), facet = r_facet(),
             summaries = r_summaries(), by = r_by(),
             facet_layout = r_facet_layout(),
             cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
@@ -520,7 +514,7 @@ new_summarize_table_block <- function(group = NULL,
             id_var = r_id_var, summaries = r_summaries, by = r_by,
             facet_layout = r_facet_layout, parent = r_parent,
             color = r_color,
-            bar_mode = r_bar_mode, facet = r_facet, compare = r_compare,
+            bar_mode = r_bar_mode, facet = r_facet,
             cols = r_cols, fields = r_fields, sort_by = r_sort_by,
             sort_dir = r_sort_dir, top_n = r_top_n,
             max_height = r_max_height, search = r_search,
@@ -556,14 +550,14 @@ new_summarize_table_block <- function(group = NULL,
     # reference: allow_empty_state wedge).
     allow_empty_state = c(
       "group", "value", "id_var", "summaries", "by",
-      "parent", "color", "facet", "compare",
+      "parent", "color", "facet",
       "cols", "fields", "top_n", "title", "subtitle", "caption", "drill",
       "ctrl_target", "ctrl_table", "filter_column", "filter_values"
     ),
     external_ctrl = c(
       "group", "value", "func", "id_var", "summaries", "by", "facet_layout",
       "parent", "color", "bar_mode",
-      "facet", "compare", "cols", "fields", "sort_by", "sort_dir", "top_n",
+      "facet", "cols", "fields", "sort_by", "sort_dir", "top_n",
       "max_height", "search", "sortable", "axis", "title", "subtitle",
       "caption",
       "drill",
@@ -721,8 +715,7 @@ rank_arguments <- function() {
       paste0(
         "Optional column splitting each bar into segments (e.g. AESEV). ",
         "Composes with `facet`: each facet column's bars are then split by ",
-        "this column. Ignored only under `compare`, which colours by ",
-        "direction."
+        "this column."
       ),
       example = "AESEV",
       type = arg_string()
@@ -745,15 +738,6 @@ rank_arguments <- function() {
         "`color`."
       ),
       example = "TRTA",
-      type = arg_string()
-    ),
-    compare = new_arg_spec(
-      paste0(
-        "With `facet`, the level treated as the comparator: every other ",
-        "level gets a zero-centred difference bar in percentage points ",
-        "(risk difference). Needs a counting measure."
-      ),
-      example = "Placebo",
       type = arg_string()
     ),
     cols = new_arg_spec(
@@ -919,8 +903,6 @@ rank_guidance <- function() {
     "\n- `color` splits each bar into segments (severity); `facet` gives one",
     "bar column per level (treatment arm) on a shared scale. They COMPOSE:",
     "both set = one column per facet level, each bar split by colour.",
-    "\n- `facet` + `compare` gives a zero-centred difference bar in",
-    "percentage points against the comparator level (risk difference).",
     "\n- `drill` makes a row click filter downstream blocks.",
     "\n- Do NOT set `top_n` for an interactive board: the table renders every",
     "row and scrolls, like the table block. It is for report exhibits only.",

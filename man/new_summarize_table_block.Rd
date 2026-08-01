@@ -18,7 +18,6 @@ new_summarize_table_block(
   color = NULL,
   bar_mode = "stacked",
   facet = NULL,
-  compare = NULL,
   cols = NULL,
   fields = NULL,
   sort_by = "value",
@@ -112,10 +111,6 @@ side whatever is asked for, and the table says so in its footer.}
 \item{facet}{Optional column giving one bar column per level on a shared
 scale (e.g. one column per treatment arm).}
 
-\item{compare}{With \code{facet}, the level to treat as the comparator: every
-other level gets a zero-centred difference bar in percentage points.
-A comparison colours its bars by direction, so it ignores \code{color}.}
-
 \item{cols}{Opt-in separate numeric columns beside the bar: any of \code{"n"},
 \code{"pct"}. By default the bar cell carries its own value label instead.}
 
@@ -192,7 +187,7 @@ the new constructor on the next save).
 (see below). One row is one group, and every glyph is a horizontal mark
 on a shared linear domain confined to a cell. With no \code{summaries}, the
 block is the original ranked-bar table (the flat \code{group} / \code{func} /
-\code{color} / \code{facet} / \code{compare} surface below). For anything else --
+\code{color} / \code{facet} surface below). For anything else --
 vertical columns, lines, scatter, a second measure on an axis -- use
 \code{\link[=new_chart_block]{new_chart_block()}}.
 

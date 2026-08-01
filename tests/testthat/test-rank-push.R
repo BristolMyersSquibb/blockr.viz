@@ -29,6 +29,9 @@ push_fixture <- function() {
   rows$EDY <- rows$AVAL * 3L + 5L
   rows$LO <- rows$DUR - 1
   rows$HI <- rows$DUR + 1
+  # A SIGNED measure (a change from baseline), so the diverging bar has a
+  # fixture: the group means straddle zero (T1 positive, T2-T4 negative).
+  rows$CHG <- rows$AVAL - 10L
   rows
 }
 
@@ -272,6 +275,57 @@ test_that("negative lows extend the distribution domain below zero", {
 
 # --- the drift guard --------------------------------------------------------
 
+test_that("a signed simple column becomes a zero-centred diverging bar", {
+  mk <- function(vals) {
+    d <- data.frame(g = paste0("r", seq_along(vals)), v = vals)
+    rank_build_payload(d, group = NULL, by = "g", summaries = list(
+      list(type = "simple", func = "median", col = "v", show = "bar")
+    ))$cols[[1]]
+  }
+  # No negatives: the plain bar is untouched, length from a zero baseline.
+  c1 <- mk(c(30, 20, 10))
+  expect_identical(c1$kind, "bar")
+  # Widths ship rounded to 2dp so both consumers print the same string.
+  expect_equal(as.numeric(c1$w), c(100, 66.67, 33.33))
+  expect_null(c1$pos)
+
+  # All negative: every bar used to be EMPTY (abs() over a max of -5).
+  c2 <- mk(c(-5, -10, -20))
+  expect_identical(c2$kind, "bardiv")
+  expect_equal(as.numeric(c2$w), c(12.5, 25, 50))
+  expect_false(any(c2$pos))
+
+  # Mixed: -30 used to draw the same full width as the +10 maximum. It is now
+  # half the track wide (the maximum magnitude) and on the other side of zero.
+  c3 <- mk(c(10, 0, -30))
+  expect_identical(c3$kind, "bardiv")
+  expect_equal(as.numeric(c3$w), c(16.67, 0, 50))
+  expect_identical(as.logical(c3$pos), c(TRUE, TRUE, FALSE))
+
+  # Equal magnitudes, opposite signs: same length, opposite polarity.
+  c4 <- mk(c(5, -5))
+  expect_equal(as.numeric(c4$w), c(50, 50))
+  expect_identical(as.logical(c4$pos), c(TRUE, FALSE))
+
+  # An all-zero column has no sign to show and stays a plain bar.
+  expect_identical(mk(c(0, 0, 0))$kind, "bar")
+})
+
+test_that("the diverging bar's axis is centred on zero at the column max", {
+  d <- data.frame(g = c("a", "b", "c"), v = c(10, 0, -30))
+  prep <- rank_prepare(d, group = NULL, by = "g", summaries = list(
+    list(type = "simple", func = "median", col = "v", show = "bar")
+  ))
+  p <- prep$plan[[1]]
+  expect_identical(p$kind, "bardiv")
+  # The axis prints the same numbers the geometry is scaled with.
+  expect_equal(p$dmax, 30)
+  expect_equal(p$dmin, -30)
+  dom <- rank_axis_domain(p, prep)
+  expect_equal(dom$d0, -30)
+  expect_equal(dom$d1, 30)
+})
+
 test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
   skip_on_cran()
   skip_if_not(chromote_works(), "no headless browser here")
@@ -287,8 +341,6 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
                    bar_mode = "percent"),
     facet = list(group = "TERM", facet = "ARM", func = "count_distinct",
                  id_var = "USUBJID"),
-    compare = list(group = "TERM", facet = "ARM", compare = "Placebo",
-                   func = "count_distinct", id_var = "USUBJID"),
     facet_color = list(group = "TERM", facet = "ARM", color = "SEV",
                        func = "count"),
     identity = list(group = "USUBJID", func = "identity", value = "AVAL",
@@ -325,6 +377,11 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
     )),
     dot = list(by = "TERM", summaries = list(
       list(type = "simple", func = "mean", col = "DUR", show = "dot")
+    )),
+    # A signed measure: the bar column becomes the diverging bar, so both
+    # assemblers must agree about polarity as well as width.
+    bardiv_signed = list(by = "TERM", summaries = list(
+      list(type = "simple", func = "mean", col = "CHG", show = "bar")
     )),
     interval = list(by = "USUBJID", summaries = list(
       list(type = "spans", x = "SDY", xend = "EDY", color = "SEV"),
