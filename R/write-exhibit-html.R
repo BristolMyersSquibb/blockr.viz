@@ -6,14 +6,17 @@
 #' shows -- wrapped in a minimal document shell that carries the title,
 #' subtitle and caption.
 #'
-#' The file is self-contained by construction rather than by a bundling step.
-#' The renderer inlines its own `<style>` and `<script>` next to the table and
-#' talks to nothing outside them (no Shiny, no CDN, no sidecar `lib/` folder),
-#' so writing the rendered tags into a document is all "self-contained" takes.
-#' Section collapse and column sorting keep working in the saved file, offline,
-#' which is the difference between this and a screenshot.
+#' The file is self-contained, always. [html_table()] inlines its own `<style>`
+#' and `<script>` next to the table and talks to nothing outside them (no
+#' Shiny, no CDN, no sidecar `lib/` folder), so for a display table there is
+#' nothing to bundle. A renderer that does carry dependencies -- the summarize
+#' table's shared script bundle -- has them read off disk and written into the
+#' document. Section collapse and column sorting keep working in the saved
+#' file, offline, which is the difference between this and a screenshot.
 #'
-#' @param x A data frame or [as_annotated_df()]-coercible table object.
+#' @param x A data frame, an [as_annotated_df()]-coercible table object, or an
+#'   exhibit that renders itself -- a `summarize_exhibit` from
+#'   [static_summarize_table()], whose glyphs exist only in this markup.
 #' @param file Path to write the `.html` to.
 #' @param title,subtitle Document heading and its muted second line. `NULL` or
 #'   `""` omits each.
@@ -64,15 +67,17 @@ write_exhibit_html <- function(x, file, title = NULL, subtitle = NULL,
 
   rendered <- htmltools::renderTags(exhibit)
 
-  # A dependency here would mean a file the download does not carry -- the
-  # table would arrive unstyled on the machine that opens it, and only there.
-  # Better to refuse than to ship a broken artifact silently.
+  # Self-contained or nothing. `html_table()` inlines its own style and script
+  # and so arrives here with no dependencies at all; the summarize table's
+  # renderer carries the shared bundle (Blockr.Select, the gear engine, the
+  # rank script), and those are read off disk and written INTO the file, the
+  # same way blockr.outline's HTML deck carries them. What cannot be inlined
+  # -- a CDN href, a file that has gone -- is a dependency the download would
+  # not carry, so it is a refusal rather than a silently broken artifact.
+  head_extra <- character()
+
   if (length(rendered$dependencies)) {
-    stop(
-      "write_exhibit_html() cannot write an exhibit with external HTML ",
-      "dependencies; the file would not be self-contained.",
-      call. = FALSE
-    )
+    head_extra <- exhibit_inline_deps(rendered$dependencies)
   }
 
   txt <- function(x) {
@@ -90,6 +95,7 @@ write_exhibit_html <- function(x, file, title = NULL, subtitle = NULL,
       "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
       paste0("<title>", htmltools::htmlEscape(head_title), "</title>"),
       paste0("<style>", exhibit_doc_css(), "</style>"),
+      head_extra,
       as.character(rendered$head),
       "</head>",
       "<body>",
@@ -162,4 +168,54 @@ exhibit_doc_css <- function() {
     "}",
     sep = "\n"
   )
+}
+
+# An HTML dependency written INTO the document rather than linked beside it.
+#
+# A download is a file somebody mails on; a `<link href="lib/...">` beside it
+# is a promise the recipient's machine cannot keep. So each stylesheet and
+# script is read off disk and emitted as a `<style>` / `<script>` block, in
+# dependency order. Anything with no readable local file -- a CDN href, a
+# package that has moved -- is an error here rather than a table that arrives
+# unstyled on somebody else's laptop.
+#
+# blockr.outline's deck writer does the same job for the same reason
+# (deck_inline_deps); it drops what it cannot inline because a deck of twenty
+# exhibits should not fail over one widget. A single-table download has no
+# such trade: there is nothing else in the file.
+#' @noRd
+exhibit_inline_deps <- function(deps) {
+
+  out <- character()
+
+  for (dep in deps) {
+
+    dir <- dep$src$file
+
+    if (is.null(dir) || !nzchar(dir) || !dir.exists(dir)) {
+      stop("write_exhibit_html() cannot inline the HTML dependency '",
+           dep$name %||% "?", "'; the file would not be self-contained.",
+           call. = FALSE)
+    }
+
+    read_one <- function(f, tag) {
+      path <- file.path(dir, f)
+      if (!file.exists(path)) {
+        stop("write_exhibit_html() cannot inline '", f, "' from the '",
+             dep$name %||% "?", "' dependency.", call. = FALSE)
+      }
+      c(paste0("<", tag, ">"),
+        readLines(path, warn = FALSE),
+        paste0("</", tag, ">"))
+    }
+
+    for (f in dep$stylesheet %||% character()) {
+      out <- c(out, read_one(f, "style"))
+    }
+    for (f in dep$script %||% character()) {
+      out <- c(out, read_one(f, "script"))
+    }
+  }
+
+  out
 }

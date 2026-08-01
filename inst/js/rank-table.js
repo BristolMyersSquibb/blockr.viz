@@ -730,6 +730,11 @@
   // scale in the numbers beside the marks.
   var AXIS_OPT = [{ value: "on", label: "Column axis" },
                   { value: "off", label: "No column axis" }];
+  // One toggle, every format the machine can write: "can people take this
+  // table away" is one decision, and which file the reader wants is theirs.
+  // (The table block settled this the same way.)
+  var DOWNLOAD_OPT = [{ value: "on", label: "Downloads" },
+                      { value: "off", label: "No downloads" }];
 
   // The lane statistic vocabulary: MUST mirror R's LANE_STATS/LANE_STAT_META
   // (R/lane-stats.R, drift-tested) -- chart.js's SUMMARY_STATS plus
@@ -809,6 +814,7 @@
     sortable: { label: "Header sorting", kind: "segmented",
                 options: SORTABLE_OPT },
     axis:     { label: "Column axis", kind: "segmented", options: AXIS_OPT },
+    download: { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
     // Drill-down: a plain column role, like the table block's.
     drill:    { label: "Filter on", kind: "column", colType: "any" },
     title:    { label: "Title", kind: "text", ph: "e.g. AEs by {ARM}",
@@ -1437,8 +1443,8 @@
         }] : [],
         presentation: fcols.length === 1
           ? ["sort_by", "sort_dir", "facet_layout", "search", "sortable",
-             "axis"]
-          : ["sort_by", "sort_dir", "search", "sortable", "axis"],
+             "axis", "download"]
+          : ["sort_by", "sort_dir", "search", "sortable", "axis", "download"],
         drillToggle: "drill",
         drillDefault: (cfg.by && cfg.by.length)
           ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),
@@ -1470,6 +1476,7 @@
     pres.push("search");
     pres.push("sortable");
     pres.push("axis");
+    pres.push("download");
 
     return {
       requiredMap: ["group"],

@@ -146,8 +146,21 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
                                                subtitle = NULL, caption = NULL,
                                                template = NULL, layout = NULL,
                                                master = NULL, top = NULL,
+                                               font_size = 10,
                                                res = getOption(
                                                  "blockr.viz.paint_res", 300),
+                                               # Accepted and ignored: the
+                                               # flextable paginator's knobs.
+                                               # A painted table has no font
+                                               # ladder and no column deal --
+                                               # its marks are positioned in
+                                               # percent, so they narrow with
+                                               # the column instead of
+                                               # overflowing it. The file
+                                               # writer passes them to
+                                               # whichever method it reaches.
+                                               max_rows = NULL, max_cols = NULL,
+                                               min_font_size = NULL,
                                                ...) {
 
   if (!requireNamespace("officer", quietly = TRUE)) {
@@ -186,11 +199,10 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
 
   pages <- rank_paint_pages(
     x$cells, x$prep,
-    width_in = width, max_height = budget,
+    width_in = width, max_height = budget, fs = font_size,
     title = if (slide_title) "" else (title %||% x$title),
     subtitle = subtitle %||% x$subtitle,
-    caption = caption %||% x$caption,
-    ...
+    caption = caption %||% x$caption
   )
 
   for (k in seq_along(pages)) {

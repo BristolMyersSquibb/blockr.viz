@@ -17,7 +17,9 @@ write_exhibit_html(
 )
 }
 \arguments{
-\item{x}{A data frame or \code{\link[=as_annotated_df]{as_annotated_df()}}-coercible table object.}
+\item{x}{A data frame, an \code{\link[=as_annotated_df]{as_annotated_df()}}-coercible table object, or an
+exhibit that renders itself -- a \code{summarize_exhibit} from
+\code{\link[=static_summarize_table]{static_summarize_table()}}, whose glyphs exist only in this markup.}
 
 \item{file}{Path to write the \code{.html} to.}
 
@@ -49,12 +51,13 @@ shows -- wrapped in a minimal document shell that carries the title,
 subtitle and caption.
 }
 \details{
-The file is self-contained by construction rather than by a bundling step.
-The renderer inlines its own \verb{<style>} and \verb{<script>} next to the table and
-talks to nothing outside them (no Shiny, no CDN, no sidecar \verb{lib/} folder),
-so writing the rendered tags into a document is all "self-contained" takes.
-Section collapse and column sorting keep working in the saved file, offline,
-which is the difference between this and a screenshot.
+The file is self-contained, always. \code{\link[=html_table]{html_table()}} inlines its own \verb{<style>}
+and \verb{<script>} next to the table and talks to nothing outside them (no
+Shiny, no CDN, no sidecar \verb{lib/} folder), so for a display table there is
+nothing to bundle. A renderer that does carry dependencies -- the summarize
+table's shared script bundle -- has them read off disk and written into the
+document. Section collapse and column sorting keep working in the saved
+file, offline, which is the difference between this and a screenshot.
 }
 \examples{
 f <- tempfile(fileext = ".html")

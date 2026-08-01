@@ -103,9 +103,9 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
   if (!requireNamespace("officer", quietly = TRUE)) {
     stop("write_exhibit_pptx() needs the 'officer' package.", call. = FALSE)
   }
-  if (!requireNamespace("flextable", quietly = TRUE)) {
-    stop("write_exhibit_pptx() needs the 'flextable' package.", call. = FALSE)
-  }
+  # flextable is checked by the method that uses it: an exhibit that paints
+  # itself needs ragg and grid instead, and refusing it for a missing
+  # typesetter it never calls would be a lie.
 
   template <- pptx_template(template)
   usable <- nzchar(template)

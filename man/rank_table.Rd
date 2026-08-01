@@ -32,7 +32,8 @@ rank_table(
   drill = NULL,
   scale_map = NULL,
   elem_id = NULL,
-  active = NULL
+  active = NULL,
+  expanded = FALSE
 )
 }
 \arguments{
@@ -100,6 +101,10 @@ JS emits. \code{NULL} outside a block (a static table).}
 
 \item{active}{Active drill filter, \code{list(col =, vals =)}, for the row
 highlight and the status line.}
+
+\item{expanded}{Open every nested row. \code{FALSE} (default) is the dashboard's
+collapsed-to-parents view; an EXPORT sets it, having nobody to click the
+chevron.}
 }
 \value{
 An \code{\link[htmltools:tagList]{htmltools::tagList()}}.

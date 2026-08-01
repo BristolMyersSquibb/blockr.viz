@@ -148,7 +148,7 @@ rank_message_table <- function(msg = "No data") {
 rank_chrome <- function(inner, prep = NULL, max_height = "600px", search = TRUE,
                         title = NULL, subtitle = NULL, caption = NULL,
                         drill = NULL, elem_id = NULL, active = NULL,
-                        shell = FALSE) {
+                        shell = FALSE, download = NULL) {
   legend <- if (isTRUE(shell)) rank_legend_tag(NULL) else rank_legend(prep)
 
   # The control row holds the search only; rank-table.js hoists it into the gear
@@ -156,13 +156,19 @@ rank_chrome <- function(inner, prep = NULL, max_height = "600px", search = TRUE,
   # row at its 30px.
   header <- htmltools::tags$div(
     class = "blockr-html-table-header",
-    if (isTRUE(search)) {
+    if (isTRUE(search) || !is.null(download)) {
       htmltools::tags$div(
         class = "blockr-html-table-toolbar",
-        htmltools::tags$input(
-          type = "search", class = "blockr-search",
-          placeholder = "Search\u2026", `aria-label` = "Search table"
-        )
+        if (isTRUE(search)) {
+          htmltools::tags$input(
+            type = "search", class = "blockr-search",
+            placeholder = "Search\u2026", `aria-label` = "Search table"
+          )
+        },
+        # The download control rides in the toolbar so the JS hoist carries it
+        # into the gear row with the search box (one 30px control row), and so
+        # it inherits the shared table CSS rather than growing its own.
+        download
       )
     }
   )
@@ -434,7 +440,7 @@ rank_table_dep <- memoise0(function() {
     drilldown_table_dep(),
     htmltools::htmlDependency(
       name = "blockr-viz-rank",
-      version = paste0(utils::packageVersion("blockr.viz"), ".17"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".18"),
       src = system.file("js", package = "blockr.viz"),
       script = "rank-table.js"
     )
@@ -511,9 +517,39 @@ rank_table_attrs <- function(prep, cfg) {
 #' @return An [htmltools::tagList()].
 #' @noRd
 rank_chrome_shell <- function(max_height = "600px", search = TRUE,
-                              drill = NULL, elem_id = NULL) {
+                              drill = NULL, elem_id = NULL, download = NULL) {
   rank_chrome(
     inner = htmltools::HTML(""), prep = NULL, max_height = max_height,
-    search = search, drill = drill, elem_id = elem_id, shell = TRUE
+    search = search, drill = drill, elem_id = elem_id, shell = TRUE,
+    download = download
+  )
+}
+
+# The download control's icon and links. Same markup and classes as the table
+# block's (R/table-block.R), so the two controls are one control: the shared
+# table CSS styles both, and a board with a table block and a summarize table
+# side by side does not show two shapes of download button.
+#' @noRd
+rank_dl_icon <- function() {
+  htmltools::HTML(paste0(
+    '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" ',
+    'fill="none" stroke="currentColor" stroke-width="1.6" ',
+    'stroke-linecap="round" stroke-linejoin="round">',
+    '<path d="M8 2.5 V10 M4.8 7 L8 10.2 L11.2 7"/>',
+    '<path d="M2.5 11.5 V12.8 A1.2 1.2 0 0 0 3.7 14 H12.3 ',
+    'A1.2 1.2 0 0 0 13.5 12.8 V11.5"/></svg>'
+  ))
+}
+
+#' @noRd
+rank_dl_link <- function(ns, spec, menu = FALSE) {
+  htmltools::tags$a(
+    id = ns(spec$id),
+    class = paste(if (menu) "blockr-dl-item" else "blockr-dl-xlsx",
+                  "shiny-download-link"),
+    href = "", target = "_blank", download = NA,
+    title = paste0("Download as ", spec$label),
+    `aria-label` = paste0("Download as ", spec$label),
+    if (menu) spec$label else rank_dl_icon()
   )
 }

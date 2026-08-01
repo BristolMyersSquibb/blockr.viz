@@ -94,6 +94,14 @@
 #'   the table in the configured `sort_by` order -- for exhibits whose row
 #'   order carries meaning (visits, dose groups), where an accidental click
 #'   would scramble it.
+#' @param download Offer the table for download. `FALSE` (default) shows no
+#'   control; `TRUE` adds one to the gear row, writing every format this
+#'   machine can: the numbers as a spreadsheet (through
+#'   [write_annotated_xlsx()], one column per statistic each mark was drawn
+#'   from -- a box glyph is three or five numbers, and
+#'   whoever opens an xlsx came to pivot), the table itself as a
+#'   self-contained page, and the painted exhibit as a deck or an image. One
+#'   writable format renders a button, several render a menu.
 #' @param axis Print each glyph column's domain as a tick strip under its
 #'   header (default `TRUE`). One strip per column, whatever the mark: the
 #'   value domain for a box, a dot range or a bar, the zero-centred one for a
@@ -147,6 +155,7 @@ new_summarize_table_block <- function(group = NULL,
                                  search = TRUE,
                                  sortable = TRUE,
                                  axis = TRUE,
+                                 download = FALSE,
                                  title = NULL,
                                  subtitle = NULL,
                                  caption = NULL,
@@ -242,6 +251,7 @@ new_summarize_table_block <- function(group = NULL,
         r_search  <- shiny::reactiveVal(isTRUE(search))
         r_sortable <- shiny::reactiveVal(isTRUE(sortable))
         r_axis    <- shiny::reactiveVal(isTRUE(axis))
+        r_download <- shiny::reactiveVal(isTRUE(download))
         r_title   <- shiny::reactiveVal(title)
         r_subtitle <- shiny::reactiveVal(subtitle)
         r_caption <- shiny::reactiveVal(caption)
@@ -310,7 +320,7 @@ new_summarize_table_block <- function(group = NULL,
           if (identical(act$action, "config")) {
             key <- as.character(act$param %||% "")[1L]
             if (!nzchar(key)) return()
-            if (!key %in% c("search", "sortable", "axis") &&
+            if (!key %in% c("search", "sortable", "axis", "download") &&
                   is.null(setters[[key]])) return()
             val <- act$value
             if (key %in% c("title", "subtitle", "caption")) {
@@ -331,6 +341,8 @@ new_summarize_table_block <- function(group = NULL,
               r_sortable(identical(as.character(val)[[1L]], "on"))
             } else if (identical(key, "axis")) {
               r_axis(identical(as.character(val)[[1L]], "on"))
+            } else if (identical(key, "download")) {
+              r_download(identical(as.character(val)[[1L]], "on"))
             } else if (identical(key, "top_n")) {
               n <- suppressWarnings(as.integer(as.character(val)[[1L]]))
               setters[[key]](if (is.na(n) || n <= 0L) NULL else n)
@@ -400,7 +412,8 @@ new_summarize_table_block <- function(group = NULL,
         output$rank_chrome <- shiny::renderUI({
           rank_chrome_shell(
             max_height = r_max_height(), search = r_search(),
-            drill = r_drill(), elem_id = ns("rank_block")
+            drill = r_drill(), elem_id = ns("rank_block"),
+            download = shiny::uiOutput(ns("rank_download"), inline = TRUE)
           )
         })
 
@@ -460,7 +473,8 @@ new_summarize_table_block <- function(group = NULL,
               bar_mode = r_bar_mode(), cols = r_cols(), fields = r_fields(),
               sort_by = r_sort_by(), sort_dir = r_sort_dir(),
               top_n = r_top_n(), search = r_search(),
-              sortable = r_sortable(), axis = r_axis(), drill = r_drill(),
+              sortable = r_sortable(), axis = r_axis(),
+              download = r_download(), drill = r_drill(),
               ctrl_target = r_ctrl_target(),
               ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices()),
               titles = list(
@@ -492,6 +506,119 @@ new_summarize_table_block <- function(group = NULL,
           push(json)
         })
 
+        # --- downloads ------------------------------------------------------
+        #
+        # The block's table, taken away. Every writer starts from the SAME
+        # exhibit the report path builds (static_summarize_table), so a table
+        # downloaded here and the same table on a deck slide are one artifact
+        # rendered twice, not two implementations that drift.
+        #
+        # One toggle, every format the machine can write, in menu order. A
+        # format whose writer is missing is left out rather than shown
+        # disabled: nobody asked for PowerPoint specifically, the download
+        # toggle did, so an entry that only ever explains itself is noise.
+        dl_exhibit <- function() {
+          d <- ann_data()
+          do.call(static_summarize_table, c(
+            list(d),
+            list(
+              group = r_group(), parent = r_parent(), color = r_color(),
+              facet = r_facet(), func = r_func(), value = r_value(),
+              id_var = r_id_var(), summaries = r_summaries(), by = r_by(),
+              facet_layout = r_facet_layout(), bar_mode = r_bar_mode(),
+              cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
+              sort_dir = r_sort_dir(), top_n = r_top_n(), axis = r_axis(),
+              sortable = r_sortable(),
+              title = r_title(), subtitle = r_subtitle(),
+              caption = r_caption(),
+              scale_map = board_scale_map()
+            )
+          ))
+        }
+
+        dl_formats <- shiny::reactive({
+          if (!isTRUE(r_download())) {
+            return(list())
+          }
+          Filter(
+            function(s) isTRUE(s$ok),
+            list(
+              list(id = "dl_xlsx", ext = "xlsx", label = "Excel (.xlsx)",
+                   ok = requireNamespace("openxlsx", quietly = TRUE)),
+              list(id = "dl_html", ext = "html", label = "Web page (.html)",
+                   ok = TRUE),
+              list(id = "dl_pptx", ext = "pptx", label = "PowerPoint (.pptx)",
+                   ok = requireNamespace("officer", quietly = TRUE) &&
+                     rank_paint_ready()),
+              list(id = "dl_png", ext = "png", label = "Image (.png)",
+                   ok = rank_paint_ready())
+            )
+          )
+        })
+
+        output$rank_download <- shiny::renderUI({
+          specs <- dl_formats()
+          if (!length(specs)) return(NULL)
+          if (length(specs) == 1L) {
+            return(rank_dl_link(ns, specs[[1L]]))
+          }
+          # <details> rather than a scripted popover, exactly as the table
+          # block does it: the open / close behaviour, the keyboard handling
+          # and the focus order are the browser's, so the menu needs no JS and
+          # cannot fall out of step with the table's own script.
+          htmltools::tags$details(
+            class = "blockr-dl-menu",
+            htmltools::tags$summary(
+              class = "blockr-dl-xlsx", title = "Download",
+              `aria-label` = "Download", rank_dl_icon()
+            ),
+            htmltools::tags$div(
+              class = "blockr-dl-menu-list", role = "menu",
+              lapply(specs, function(s) rank_dl_link(ns, s, menu = TRUE))
+            )
+          )
+        })
+
+        output$dl_xlsx <- shiny::downloadHandler(
+          filename = function() "summarize-table.xlsx",
+          content = function(file) {
+            e <- dl_exhibit()
+            # Values, not pictures: openxlsx anchors an image to a cell RANGE
+            # rather than a cell, so images neither sort nor resize with the
+            # data -- and someone opening the xlsx came to pivot.
+            write_annotated_xlsx(
+              rank_export_df(e$prep), file,
+              title = e$title, subtitle = e$subtitle, caption = e$caption
+            )
+          }
+        )
+        output$dl_html <- shiny::downloadHandler(
+          filename = function() "summarize-table.html",
+          content = function(file) {
+            e <- dl_exhibit()
+            write_exhibit_html(
+              e, file,
+              title = e$title, subtitle = e$subtitle, caption = e$caption
+            )
+          }
+        )
+        output$dl_pptx <- shiny::downloadHandler(
+          filename = function() "summarize-table.pptx",
+          content = function(file) {
+            e <- dl_exhibit()
+            write_exhibit_pptx(
+              e, file,
+              title = e$title, subtitle = e$subtitle, caption = e$caption
+            )
+          }
+        )
+        output$dl_png <- shiny::downloadHandler(
+          filename = function() "summarize-table.png",
+          content = function(file) {
+            write_exhibit_png(dl_exhibit(), file)
+          }
+        )
+
         list(
           expr = shiny::reactive({
             col <- r_filter_column()
@@ -518,7 +645,7 @@ new_summarize_table_block <- function(group = NULL,
             cols = r_cols, fields = r_fields, sort_by = r_sort_by,
             sort_dir = r_sort_dir, top_n = r_top_n,
             max_height = r_max_height, search = r_search,
-            sortable = r_sortable, axis = r_axis,
+            sortable = r_sortable, axis = r_axis, download = r_download,
             title = r_title, subtitle = r_subtitle, caption = r_caption,
             drill = r_drill, ctrl_target = r_ctrl_target,
             ctrl_table = r_ctrl_table, filter_type = r_filter_type,
@@ -558,7 +685,8 @@ new_summarize_table_block <- function(group = NULL,
       "group", "value", "func", "id_var", "summaries", "by", "facet_layout",
       "parent", "color", "bar_mode",
       "facet", "cols", "fields", "sort_by", "sort_dir", "top_n",
-      "max_height", "search", "sortable", "axis", "title", "subtitle",
+      "max_height", "search", "sortable", "axis", "download", "title",
+      "subtitle",
       "caption",
       "drill",
       "ctrl_target", "ctrl_table"

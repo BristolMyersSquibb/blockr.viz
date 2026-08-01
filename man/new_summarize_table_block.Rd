@@ -27,6 +27,7 @@ new_summarize_table_block(
   search = TRUE,
   sortable = TRUE,
   axis = TRUE,
+  download = FALSE,
   title = NULL,
   subtitle = NULL,
   caption = NULL,
@@ -140,6 +141,15 @@ value domain for a box, a dot range or a bar, the zero-centred one for a
 difference bar, the x domain (dates as dates) for a swimlane or a
 sparkline. \code{FALSE} drops every strip, for a dense exhibit where the
 numbers beside the marks carry the scale.}
+
+\item{download}{Offer the table for download. \code{FALSE} (default) shows no
+control; \code{TRUE} adds one to the gear row, writing every format this
+machine can: the numbers as a spreadsheet (through
+\code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}, one column per statistic each mark was drawn
+from -- a box glyph is three or five numbers, and
+whoever opens an xlsx came to pivot), the table itself as a
+self-contained page, and the painted exhibit as a deck or an image. One
+writable format renders a button, several render a menu.}
 
 \item{title, subtitle, caption}{Display text. \code{NULL} = auto (inherits the
 input's label / subtitle / caption attribute), \code{""} = explicitly none,
