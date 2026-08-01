@@ -371,27 +371,51 @@ ce_cat_axis <- function(g, st, metric, fun, horiz, extra = NULL) {
 # is present; the bare palette pool otherwise.
 ce_scale <- function(aes, col, st) {
 
-  values <- if (!is.null(st$data)) {
+  if (!is.null(st$data)) {
+
     map <- st$scale_map %||% tryCatch(
       blockr.core::get_board_option_or_null(
         "scale_map", blockr.core::get_session()
       ),
       error = function(e) NULL
     )
-    gg_level_colors(map, col, st$data)
-  } else {
-    # Unnamed values assign over the levels in order -- palette cycling,
-    # as long as there are enough. dd_palette() is the full house pool.
-    dd_palette()
+
+    # NAMED values: level -> colour, so a level keeps its colour wherever it
+    # appears and a level the snapshot never saw simply falls through to the
+    # scale's na.value rather than failing the render.
+    return(
+      ce_call(
+        if (identical(aes, "fill")) {
+          "ggplot2::scale_fill_manual"
+        } else {
+          "ggplot2::scale_color_manual"
+        },
+        values = ce_vec(gg_level_colors(map, col, st$data))
+      )
+    )
   }
 
+  # No snapshot -- which is the DECK's case: blockr.outline builds the report
+  # call from the block alone, long before any data is evaluated.
+  #
+  # The palette must therefore fit a level count nobody knows yet, and
+  # `scale_*_manual(values = <unnamed>)` does NOT cycle: ggplot2 raises
+  # "Insufficient values in manual scale. 5 needed but only 4 provided" the
+  # moment the data has more levels than the pool. The same chart downloaded
+  # from its block was fine, because that route HAS the data and emits named
+  # values -- so the deck was the only place it broke, which is the worst
+  # place to find out.
+  #
+  # A palette FUNCTION cycles by construction and is still plain ggplot2 that
+  # a reader can run: the emitted document keeps working at any level count.
   ce_call(
-    if (identical(aes, "fill")) {
-      "ggplot2::scale_fill_manual"
-    } else {
-      "ggplot2::scale_color_manual"
-    },
-    values = ce_vec(values)
+    "ggplot2::discrete_scale",
+    if (identical(aes, "fill")) "fill" else "colour",
+    palette = call(
+      "function",
+      as.pairlist(alist(n = )),
+      call("rep_len", ce_vec(dd_palette()), as.name("n"))
+    )
   )
 }
 

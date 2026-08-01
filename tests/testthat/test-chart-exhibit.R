@@ -142,3 +142,46 @@ test_that("a title is printed once, and only the duplicate is dropped", {
   expect_identical(slide_text(p, "3. Chart"), "3. Chart")
   expect_identical(gg_title(p), "Species counts")
 })
+
+test_that("a colour scale never runs short of levels on the deck path", {
+  # The deck builds a report call from the BLOCK alone -- blockr.outline has
+  # no data at projection time -- so the emitted palette has to fit a level
+  # count nobody knows yet. `scale_*_manual(values = <unnamed>)` does not
+  # cycle: it raises "Insufficient values in manual scale" the moment the
+  # data has more levels than the pool, and it did so only on a slide,
+  # because the block's own download passes a snapshot and emits NAMED
+  # values. That is the worst place to find out.
+  set.seed(1)
+  levels_n <- function(k) {
+    data.frame(
+      x = stats::rnorm(60), y = stats::rnorm(60),
+      grp = sample(paste0("L", seq_len(k)), 60, TRUE),
+      stringsAsFactors = FALSE
+    )
+  }
+  render <- function(expr, data) {
+    p <- eval(expr, list(data = data), baseenv())
+    f <- tempfile(fileext = ".png")
+    on.exit(unlink(f), add = TRUE)
+    grDevices::png(f, width = 400, height = 300)
+    on.exit(try(grDevices::dev.off(), silent = TRUE), add = TRUE)
+    print(p)
+    TRUE
+  }
+
+  state <- list(chart_type = "scatter", x = "x", y = "y", color = "grp")
+
+  # More levels than the house palette holds (7).
+  for (k in c(3L, 9L, 14L)) {
+    d <- levels_n(k)
+    deck <- do.call(chart_expr, c(list(var = "data", qualify = TRUE), state))
+    expect_true(render(deck, d))
+  }
+
+  # A snapshot still pins each level to its colour, and a level the snapshot
+  # never saw does not fail the render.
+  snap <- do.call(chart_expr,
+                  c(list(var = "data", data = levels_n(4L), qualify = TRUE),
+                    state))
+  expect_true(render(snap, levels_n(5L)))
+})
