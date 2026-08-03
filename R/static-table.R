@@ -64,12 +64,22 @@
 #'   pdf, where the natural widths apply.
 #' @param col_widths How `fit_width` is split, `"measured"` (default) or
 #'   `"even"`. Measured asks every column what its own text needs at the
-#'   current font and gives the data columns enough that a cell never wraps
-#'   and a header never breaks inside a word, leaving the rest to the row
-#'   stub, which is the one column whose text is prose and wraps gracefully.
-#'   While the data columns are still short of their full headers the stub
-#'   takes at most `getOption("blockr.viz.ft_stub_share")` (0.3) of the width
-#'   and wraps; it grows past that only with what is left over.
+#'   current font. When the slide can hold them all, the data columns get
+#'   enough that no cell wraps and no header breaks inside a word, and the
+#'   rest goes to the row stub, which is the one column whose text is prose
+#'   and wraps gracefully. While the data columns are still short of their
+#'   full headers the stub takes at most
+#'   `getOption("blockr.viz.ft_stub_share")` (0.3) of the width and wraps; it
+#'   grows past that only with what is left over.
+#'
+#'   When the slide cannot hold them all, every column gives a little rather
+#'   than one being crushed: the stub and the data columns are filled to a
+#'   common level, from the width each cannot go below -- its longest word,
+#'   in a cell or a header, since nothing may break inside a word -- toward
+#'   its whole text. A count is very nearly one word, so a column of counts
+#'   reaches its full width almost at once and does not wrap; a column whose
+#'   cells are several short words gives room back and reads as two lines,
+#'   which is what a header has always been allowed to do.
 #'   Even is the older positional rule (the stub takes `first_col_width`
 #'   capped at half the slide, the data columns share the remainder equally),
 #'   which is wrong whenever the stub is shorter or the data columns wider
@@ -649,6 +659,17 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
         function(j) max(c(ft_text_widths(cells[, j], font, font_size), 0)),
         numeric(1L)
       ) + pad
+      # And the width below which it cannot go: its longest word. A count is
+      # very nearly one word, so a column of counts asks for the whole cell
+      # either way; a cell of several short words can give most of its width
+      # back and read as two lines. That is what lets a table whose cells are
+      # more text than number share the shortfall, instead of spending the
+      # slide on cells that would wrap perfectly well.
+      cell_word <- vapply(
+        seq_len(n_data),
+        function(j) ft_word_width(cells[, j], font, font_size),
+        numeric(1L)
+      ) + pad
       head_word <- vapply(leaf, ft_word_width, numeric(1L),
                           font = font, size = font_size) + pad
       head_full <- ft_text_widths(leaf, font, font_size) + pad
@@ -675,6 +696,9 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
       need <- cell_w * slack
       want <- pmax(need, head_word, span_word)
       lux <- pmax(want, head_full, span_full)
+      # Nothing may break inside a word, in a cell or in a header. Everything
+      # above that is negotiable.
+      bare <- pmax(cell_word, head_word, span_word)
 
       # Columns that carry the same statistic get the same width, whatever
       # their own arm happens to need: "n (%)" under Placebo and under a
@@ -686,16 +710,32 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
       need <- ft_group_max(need, role)
       want <- ft_group_max(want, role)
       lux <- ft_group_max(lux, role)
+      bare <- ft_group_max(bare, role)
 
       if (sum(want) + stub_floor > total) {
-        # Too wide even at the minimum: shrink the widest columns first and
-        # accept that something wraps. Which thing wraps is worth telling the
-        # caller apart: a header taking a second line is a cost, a data cell
-        # narrower than its own characters is a defect.
+        # Nothing fits at its full width, so everything gives a little rather
+        # than one column being crushed. The stub takes part in the fill
+        # instead of being handed the remainder: it used to be pinned at its
+        # floor while columns of medium-long text kept every character on one
+        # line, which is the wide-spread table -- three lines of stub beside
+        # data columns with air in them.
+        #
+        # Each column is filled from what it cannot go below (its longest
+        # word) toward what it would like (its whole text), all to a common
+        # level. A column of counts reaches its full width almost at once
+        # because a count is one word; a column of prose keeps taking room as
+        # long as there is any, and wraps when there is not. Which is the
+        # right answer either way round: with a system organ class in the stub
+        # and counts beside it, the counts are served and the stub wraps.
         squeeze[["header"]] <- TRUE
-        squeeze[["cell"]] <- sum(need) + stub_keep > total
-        data_w <- ft_water_fill(want, max(total - stub_keep, 0), need)
-        stub_w <- total - sum(data_w)
+        w <- ft_water_fill(c(stub_want, want), total, c(stub_floor, bare))
+        stub_w <- w[[1L]]
+        data_w <- w[-1L]
+        # A cell narrower than its own longest word is the defect worth
+        # reporting: below that a number is broken mid-token and, further
+        # down, PowerPoint stacks the characters one per line. A cell that
+        # merely wraps between words is not.
+        squeeze[["cell"]] <- any(data_w < bare - 1e-9)
       } else {
         # Whether this table is close enough to the slide to fill it, decided
         # on the widths it needs rather than the ones it ends up with.

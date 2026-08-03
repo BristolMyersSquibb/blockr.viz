@@ -67,12 +67,22 @@ pdf, where the natural widths apply.}
 
 \item{col_widths}{How \code{fit_width} is split, \code{"measured"} (default) or
 \code{"even"}. Measured asks every column what its own text needs at the
-current font and gives the data columns enough that a cell never wraps
-and a header never breaks inside a word, leaving the rest to the row
-stub, which is the one column whose text is prose and wraps gracefully.
-While the data columns are still short of their full headers the stub
-takes at most \code{getOption("blockr.viz.ft_stub_share")} (0.3) of the width
-and wraps; it grows past that only with what is left over.
+current font. When the slide can hold them all, the data columns get
+enough that no cell wraps and no header breaks inside a word, and the
+rest goes to the row stub, which is the one column whose text is prose
+and wraps gracefully. While the data columns are still short of their
+full headers the stub takes at most
+\code{getOption("blockr.viz.ft_stub_share")} (0.3) of the width and wraps; it
+grows past that only with what is left over.
+
+When the slide cannot hold them all, every column gives a little rather
+than one being crushed: the stub and the data columns are filled to a
+common level, from the width each cannot go below -- its longest word,
+in a cell or a header, since nothing may break inside a word -- toward
+its whole text. A count is very nearly one word, so a column of counts
+reaches its full width almost at once and does not wrap; a column whose
+cells are several short words gives room back and reads as two lines,
+which is what a header has always been allowed to do.
 Even is the older positional rule (the stub takes \code{first_col_width}
 capped at half the slide, the data columns share the remainder equally),
 which is wrong whenever the stub is shorter or the data columns wider

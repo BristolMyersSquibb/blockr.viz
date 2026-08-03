@@ -303,3 +303,60 @@ test_that("header_bg off / empty resolves to no bands", {
   expect_null(resolve_header_bands(FALSE, c("", ""), c("a", "b")))
   expect_null(resolve_header_bands("#A59F9F", character(), character()))
 })
+
+test_that("cells of several words share the shortfall instead of the stub", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  # Every cell in every column holds text of a few short words -- wider than
+  # a count, well short of its own header. There is not enough slide for all
+  # of them at full width, and the question is what gives.
+  words <- function(n) paste(rep(c("one", "two", "three", "four"),
+                                 length.out = n), collapse = " ")
+  tbl <- data.frame(.label = c(rep(words(4L), 5L), words(6L)), .indent = 1L,
+                    check.names = FALSE)
+  for (j in 1:6) {
+    tbl[[sprintf("Group %d of the whole population", j)]] <- structure(
+      rep(words(6L), 6L), label = sprintf("Group %d of the whole population", j)
+    )
+  }
+
+  w <- static_table(tbl, title = "", fit_width = 12)$body$colwidths
+
+  # Nobody is crushed to hold everyone else at full width: the stub is not
+  # pinned at its floor while the data columns keep every cell on one line.
+  expect_gt(w[[1L]], 1.5)
+  expect_equal(w[[1L]], w[[2L]], tolerance = 0.25)
+
+  # And the cells do what the headers have always been allowed to do: wrap
+  # between words rather than take the whole width. Measured against the same
+  # table given room to spare, where nothing wraps and every row is one line.
+  tight <- ft_part_heights(static_table(tbl, title = "", fit_width = 12),
+                           "body")
+  roomy <- ft_part_heights(static_table(tbl, title = "", fit_width = 30),
+                           "body")
+  expect_gt(sum(tight), sum(roomy))
+})
+
+test_that("a column of counts is served before a stub that wraps well", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  # The other way round, and the rule this must not undo: a count is very
+  # nearly one word, so it cannot give width back, and the prose stub is the
+  # one that wraps.
+  tbl <- data.frame(
+    .label = c(paste(rep("a long row label", 3L), collapse = " "), "Short"),
+    check.names = FALSE
+  )
+  for (a in LETTERS[1:6]) {
+    tbl[[sprintf("Group %s (N=143)", a)]] <- c("143 (100.0%)", "12 (8.4%)")
+  }
+
+  w <- static_table(tbl, title = "", fit_width = 12)$body$colwidths
+  need <- max(ft_text_widths(c("143 (100.0%)", "12 (8.4%)"), "Inter", 13)) +
+    ft_side_padding() / 72
+
+  expect_true(all(w[-1L] >= need))
+  expect_gt(w[[1L]], max(w[-1L]))
+})
