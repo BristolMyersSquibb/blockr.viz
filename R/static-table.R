@@ -70,6 +70,17 @@
 #'   While the data columns are still short of their full headers the stub
 #'   takes at most `getOption("blockr.viz.ft_stub_share")` (0.3) of the width
 #'   and wraps; it grows past that only with what is left over.
+#'
+#'   "What its own text needs" means its TYPICAL cells, not its widest one. A
+#'   cell more than `getOption("blockr.viz.ft_cell_outlier_tol")` (2) times
+#'   the column's median is allowed to take a second line: one endpoint row
+#'   reading `Median [Q1, Q3] = 23.0 [8.0, 44.8]` among ten rows of
+#'   `41 (28.7)` would otherwise size every column for a row that is not like
+#'   the others, inflating all of them and taking the stub down to its floor.
+#'   A column where more than a fifth of the cells are that long is not an
+#'   accident and keeps its full width, and no column goes below a third of
+#'   its widest cell, so the odd row wraps to two or three lines rather than
+#'   to a stack. `Inf` restores the plain maximum.
 #'   Even is the older positional rule (the stub takes `first_col_width`
 #'   capped at half the slide, the data columns share the remainder equally),
 #'   which is wrong whenever the stub is shorter or the data columns wider
@@ -599,6 +610,51 @@ TIGHT_PAD <- 2
 #     word taking two lines, 0.1 the stacked-letters case. It is the difference
 #     between a header squeeze worth living with and one that is not, and the
 #     pptx writer reads it to decide whether to deal the columns over slides.
+# The width a column needs so its TYPICAL cells do not wrap, given what each
+# of its cells measures.
+#
+# Not the plain maximum, which is what this replaced. One row unlike the rest
+# of its column -- `Median [Q1, Q3] = 23.0 [8.0, 44.8]` among ten rows of
+# `41 (28.7)` -- was four times the width of every other cell, and because a
+# data cell never wraps it set the width for the whole column. Eleven rows,
+# one of them the odd one out, and every data column went from 1.71in to
+# 2.83in while the stub fell to its 1.20in floor and took its label over
+# three lines. The columns had been sized for a row that is not like the
+# others, and the table paid for it everywhere.
+#
+# So a cell more than `tol` times the typical width is allowed to take a
+# second line. Two guards, because this is easy to overshoot:
+#
+#   * If more than a fifth of the cells are "outliers" they are not outliers,
+#     they are the shape of the column, and the plain maximum stands. A
+#     column of long labels is not an accident.
+#   * The width never falls below a third of the widest cell, so the odd row
+#     wraps to two or three lines and never to a stack.
+#
+# The median is the reference rather than a high quantile so that a short
+# column still has one: with five rows the 90th percentile sits inside the
+# outlier itself and nothing is ever flagged.
+#
+# `getOption("blockr.viz.ft_cell_outlier_tol")` = `Inf` restores the plain
+# maximum, which is the behaviour every table had before.
+ft_typical_width <- function(w, tol = getOption(
+                               "blockr.viz.ft_cell_outlier_tol", 2)) {
+
+  full <- max(c(w, 0))
+
+  if (!length(w) || !is.numeric(tol) || !is.finite(tol) || tol <= 1) {
+    return(full)
+  }
+
+  wide <- w > tol * stats::median(w)
+
+  if (!any(wide) || mean(wide) > 0.2) {
+    return(full)
+  }
+
+  max(max(w[!wide]), full / 3)
+}
+
 ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
                                font, font_size, total, banner = character(),
                                pad = ft_side_padding() / 72,
@@ -639,14 +695,15 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
       stub_keep <- min(stub_nat, stub_floor)
 
       # A data column asks for two widths. `want` is the one it must have:
-      # its widest cell, and its header's longest word, so the numbers never
-      # wrap and the header never breaks mid-word. `lux` is the one it would
-      # like: the whole header on as few lines as it was written with. A
-      # header may wrap between words when the slide is tight; it should not
-      # have to when the slide has room to spare.
+      # the width its TYPICAL cells need, and its header's longest word, so
+      # the numbers never wrap and the header never breaks mid-word. `lux` is
+      # the one it would like: the whole header on as few lines as it was
+      # written with. A header may wrap between words when the slide is
+      # tight; it should not have to when the slide has room to spare.
       cell_w <- vapply(
         seq_len(n_data),
-        function(j) max(c(ft_text_widths(cells[, j], font, font_size), 0)),
+        function(j) ft_typical_width(ft_text_widths(cells[, j], font,
+                                                    font_size)),
         numeric(1L)
       ) + pad
       head_word <- vapply(leaf, ft_word_width, numeric(1L),

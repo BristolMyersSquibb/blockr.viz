@@ -303,3 +303,64 @@ test_that("header_bg off / empty resolves to no bands", {
   expect_null(resolve_header_bands(FALSE, c("", ""), c("a", "b")))
   expect_null(resolve_header_bands("#A59F9F", character(), character()))
 })
+
+test_that("one row unlike the rest does not size the whole column", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  # Reported from a real deck: one endpoint row carrying
+  # `Median [Q1, Q3] = 23.0 [8.0, 44.8]` among ten rows of `41 (28.7)`. It is
+  # four times the width of every other cell in its column, and because a
+  # data cell never wraps it set the width for all of them -- so every data
+  # column inflated, the stub fell to its floor and took its label over three
+  # lines. The columns had been sized for a row that is not like the others.
+  rows <- c("Age (years)", "Mean (SD)", "Median", "Sex n (%)", "Female",
+            "Male", "Race n (%)", "White", "Black or African American",
+            "Asian", "Time to resolution, days")
+  tbl <- data.frame(.label = rows, .indent = 1L, check.names = FALSE)
+  for (arm in c("Placebo (N=143)", "Low dose (N=141)", "High dose (N=138)")) {
+    tbl[[arm]] <- c(rep("41 (28.7)", length(rows) - 1L),
+                    "Median [Q1, Q3] = 23.0 [8.0, 44.8]")
+  }
+  plain <- tbl
+  plain[nrow(plain), -(1:2)] <- "41 (28.7)"
+
+  odd <- static_table(tbl, title = "", fit_width = 12.53)$body$colwidths
+  without <- static_table(plain, title = "", fit_width = 12.53)$body$colwidths
+
+  # The layout is the one the table would have had without that row at all.
+  expect_equal(odd, without, tolerance = 1e-6)
+
+  # And the odd cell is the one that pays: it wraps rather than the stub.
+  ft <- static_table(tbl, title = "", fit_width = 12.53)
+  h <- ft_part_heights(ft, "body")
+  expect_gt(h[[length(h)]], stats::median(h))
+  # To two or three lines, never a stack.
+  expect_lt(h[[length(h)]], 4 * stats::median(h))
+})
+
+test_that("a column of long cells is not a column of outliers", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("systemfonts")
+
+  # Every cell long: that is the shape of the column, not an accident, so the
+  # plain maximum stands and nothing wraps.
+  w <- ft_text_widths(rep("Median [Q1, Q3] = 23.0 [8.0, 44.8]", 10L),
+                      "Inter", 13)
+  expect_identical(ft_typical_width(w), max(w))
+
+  # Three in ten long is still the column's shape, not three accidents.
+  mixed <- c(rep(0.7, 7L), rep(2.8, 3L))
+  expect_identical(ft_typical_width(mixed), 2.8)
+
+  # One in eleven is the accident, and the column comes back narrower than
+  # that cell -- but never below a third of it, so the odd row wraps to a few
+  # lines and not to a stack of characters.
+  one <- c(rep(0.7, 10L), 2.8)
+  expect_lt(ft_typical_width(one), 2.8)
+  expect_gte(ft_typical_width(one), 2.8 / 3)
+  expect_identical(ft_typical_width(c(rep(0.1, 10L), 3)), 1)
+
+  # And the old behaviour is one option away.
+  expect_identical(ft_typical_width(one, tol = Inf), 2.8)
+})
