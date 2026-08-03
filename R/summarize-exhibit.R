@@ -156,16 +156,19 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
                                                font_size = 10,
                                                res = getOption(
                                                  "blockr.viz.paint_res", 300),
-                                               # Accepted and ignored: the
-                                               # flextable paginator's knobs.
-                                               # A painted table has no font
-                                               # ladder and no column deal --
-                                               # its marks are positioned in
-                                               # percent, so they narrow with
-                                               # the column instead of
-                                               # overflowing it. The file
-                                               # writer passes them to
-                                               # whichever method it reaches.
+                                               # Accepted and ignored: a
+                                               # painted table has no column
+                                               # deal -- its marks are
+                                               # positioned in percent, so
+                                               # they narrow with the column
+                                               # instead of overflowing it --
+                                               # and it pages by row height
+                                               # rather than by a row count.
+                                               # The file writer passes both
+                                               # to whichever method it
+                                               # reaches. `min_font_size` is
+                                               # honoured: see the ladder
+                                               # below.
                                                max_rows = NULL, max_cols = NULL,
                                                min_font_size = NULL,
                                                ...) {
@@ -204,13 +207,54 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
   width <- pptx_content_width(template) %||% (slide_w - 0.8)
   budget <- slide_h - top - 0.4
 
-  pages <- rank_paint_pages(
+  common <- list(
     x$cells, x$prep,
-    width_in = width, max_height = budget, fs = font_size,
+    width_in = width, max_height = budget,
     title = if (slide_title) "" else (title %||% x$title),
     subtitle = subtitle %||% x$subtitle,
     caption = caption %||% x$caption
   )
+
+  # The same trade the flextable paginator makes, and for the same reason:
+  # one slide at 9pt beats two at 10pt. Here it is cheaper -- the rows are
+  # uniform by construction, so a candidate size is a division rather than a
+  # measured table -- and it matters as much, since a board that has asked to
+  # keep its tables on one slide means the summarize tables too.
+  #
+  # Nothing is painted until the size is settled. `min_font_size` is the same
+  # floor the typeset tables use, so the two kinds of table on one deck
+  # shrink alike.
+  min_font_size <- exhibit_min_font_size(min_font_size)
+  fits_one <- function(fs) {
+    do.call(rank_paint_per_page, c(common, list(fs = fs))) >= x$cells$n
+  }
+
+  if (!fits_one(font_size) && min_font_size < font_size) {
+    for (s in seq(font_size - 1, min_font_size)) {
+      if (fits_one(s)) {
+        font_size <- s
+        break
+      }
+    }
+  }
+
+  pages <- do.call(rank_paint_pages, c(common, list(fs = font_size)))
+
+  if (length(pages) > 1L) {
+    # Below the floor only to say what it would have taken: the deck still
+    # gets the pages it got, and the reader gets the number to set.
+    fit <- NULL
+    below <- seq_len(max(0, min(font_size, min_font_size) - MIN_FONT_FLOOR))
+    for (s in min(font_size, min_font_size) - below) {
+      if (fits_one(s)) {
+        fit <- s
+        break
+      }
+    }
+    exhibit_split_note(title %||% x$title, pages = length(pages),
+                       size = font_size, floor = min_font_size,
+                       fit_size = fit)
+  }
 
   for (k in seq_along(pages)) {
     p <- pages[[k]]

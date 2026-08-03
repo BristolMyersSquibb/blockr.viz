@@ -71,15 +71,25 @@
 #'   `getOption("blockr.viz.ft_header_break_tol")` of the longest one -- 0.6,
 #'   a word losing a syllable to a second line. Lower that to hold a wide
 #'   table together for longer, raise it to split sooner.
-#' @param min_font_size Points. The floor for the two shrink passes, defaulting
-#'   from `getOption("blockr.viz.ft_min_font_size")`. Width first, because a
-#'   table whose columns are narrower than their contents is illegible at any
-#'   height and splitting rows does not help; the font steps down until the
-#'   cells fit and the headers stop breaking inside words, and `max_cols`
-#'   takes over from there. A shrink that does not clear the wrap is undone --
-#'   a smaller wrapped table is only smaller -- unless it is what keeps the
-#'   columns on one slide. Height second: it steps down again if that avoids
-#'   a row split altogether, since one slide at 11pt beats two at 13pt.
+#' @param min_font_size Points. The floor for the two shrink passes. `NULL`
+#'   (default) resolves it, first hit wins, from the board's
+#'   `exhibit_min_font_size` option ([new_exhibit_font_option()], which is how
+#'   an app lets its users say how small a table may go), then
+#'   `getOption("blockr.viz.ft_min_font_size")`, then 11pt. Width first,
+#'   because a table whose columns are narrower than their contents is
+#'   illegible at any height and splitting rows does not help; the font steps
+#'   down until the cells fit and the headers stop breaking inside words, and
+#'   `max_cols` takes over from there. A shrink that does not clear the wrap
+#'   is undone -- a smaller wrapped table is only smaller -- unless it is what
+#'   keeps the columns on one slide. Height second: it steps down again if
+#'   that avoids a row split altogether, since one slide at 11pt beats two at
+#'   13pt.
+#'
+#'   One floor, both axes: it is the whole of "keep this table on one slide",
+#'   and lowering it is what a deck that must not split its tables asks for.
+#'   A table that still does not fit at the floor is split rather than shrunk
+#'   past it, and signals a `blockr_exhibit_split` message naming the size
+#'   that would have kept it whole.
 #' @param ... Passed to [static_table()].
 #'
 #' @return `file`, invisibly.
@@ -96,13 +106,16 @@
 write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
                                caption = NULL, template = NULL,
                                max_rows = "auto", max_cols = "auto",
-                               min_font_size =
-                                 getOption("blockr.viz.ft_min_font_size", 11),
-                               ...) {
+                               min_font_size = NULL, ...) {
 
   if (!requireNamespace("officer", quietly = TRUE)) {
     stop("write_exhibit_pptx() needs the 'officer' package.", call. = FALSE)
   }
+
+  # Resolved here as well as in the method below, because both are entry
+  # points and resolving twice costs nothing: the second call is handed a
+  # number and returns it.
+  min_font_size <- exhibit_min_font_size(min_font_size)
   # flextable is checked by the method that uses it: an exhibit that paints
   # itself needs ragg and grid instead, and refusing it for a missing
   # typesetter it never calls would be a lie.
@@ -205,9 +218,7 @@ pptx_add_exhibit.default <- function(doc, x, title = NULL, subtitle = NULL,
                                      caption = NULL, template = NULL,
                                      layout = NULL, master = NULL, top = NULL,
                                      max_rows = "auto", max_cols = "auto",
-                                     min_font_size =
-                                       getOption("blockr.viz.ft_min_font_size",
-                                                 11),
+                                     min_font_size = NULL,
                                      ...) {
 
   if (!requireNamespace("officer", quietly = TRUE)) {
@@ -216,6 +227,8 @@ pptx_add_exhibit.default <- function(doc, x, title = NULL, subtitle = NULL,
   if (!requireNamespace("flextable", quietly = TRUE)) {
     stop("pptx_add_exhibit() needs the 'flextable' package.", call. = FALSE)
   }
+
+  min_font_size <- exhibit_min_font_size(min_font_size)
 
   template <- if (is.character(template) && length(template) == 1L) {
     template
@@ -341,12 +354,10 @@ pptx_add_exhibit.default <- function(doc, x, title = NULL, subtitle = NULL,
     } else if (!probe$whole) {
       chunks <- pptx_split_columns(x, function(cx) fit_size(cx)$whole)
     }
-    if (length(chunks) > 1L) {
-      message("The table is too wide for one slide; its ",
-              length(pptx_data_cols(x)), " columns are dealt over ",
-              length(chunks), " sets of slides.")
-    }
   }
+  # What the deal cost is reported once, below, together with what the row
+  # split cost: two messages about one table that would not fit read as two
+  # problems.
 
   # Every page of every column set, planned before any of it is drawn, so the
   # slides can be numbered over the whole deck.
@@ -391,7 +402,12 @@ pptx_add_exhibit.default <- function(doc, x, title = NULL, subtitle = NULL,
 
     list(data = cx, size = size, plan = attr(ft, "layout_plan"),
          from = from, to = breaks, cont = cont,
-         squeezed = pptx_width_broken(ft))
+         squeezed = pptx_width_broken(ft),
+         # Measured here, where the table that did not fit is still in hand:
+         # the size that would have kept it whole is the one thing a reader
+         # asked to keep tables on one slide can act on.
+         fit_size = pptx_fit_size(ft, function(s) build(cx, size = s),
+                                  budget, size))
   })
 
   if (any(vapply(plans, function(p) isTRUE(p$squeezed), logical(1L)))) {
@@ -404,6 +420,24 @@ pptx_add_exhibit.default <- function(doc, x, title = NULL, subtitle = NULL,
   }
 
   n_page <- sum(vapply(plans, function(p) length(p$from), integer(1L)))
+
+  # Row pages within a set, since that is what a reader flips through; the
+  # sets are counted beside it. A size is reported only when EVERY set that
+  # split has one, and it is the smallest of them: lowering the floor to it
+  # is then a promise that the whole table comes back together.
+  split <- Filter(function(p) length(p$from) > 1L, plans)
+  fits <- lapply(split, `[[`, "fit_size")
+  exhibit_split_note(
+    title,
+    pages = max(vapply(plans, function(p) length(p$from), integer(1L))),
+    sets = length(plans),
+    size = min(vapply(plans, function(p) p$size, numeric(1L))),
+    floor = min_font_size,
+    fit_size = if (length(split) && !any(vapply(fits, is.null, logical(1L)))) {
+      min(unlist(fits))
+    }
+  )
+
   at <- 0L
   for (p in plans) {
     for (i in seq_along(p$from)) {
@@ -464,12 +498,42 @@ pptx_page_title <- function(title, page = NULL) {
   sprintf("%s (%d of %d)", title, page[[1L]], page[[2L]])
 }
 
-# Does the whole thing clear the vertical budget, header band and footnote
-# included?
+# How tall the whole thing is, header band and footnote included.
+pptx_table_height <- function(ft) {
+  sum(ft_part_heights(ft, "header"), ft_part_heights(ft, "body"),
+      ft_part_heights(ft, "footer"))
+}
+
+# Does it clear the vertical budget?
 pptx_fits <- function(ft, budget) {
-  h <- sum(ft_part_heights(ft, "header"), ft_part_heights(ft, "body"),
-           ft_part_heights(ft, "footer"))
+  h <- pptx_table_height(ft)
   !is.finite(h) || h <= budget
+}
+
+# The size at which this table WOULD have been one slide, or NULL when no
+# legible size is.
+#
+# Asked only of a table that has already been split, and answered with one
+# extra measurement rather than a walk down the ladder: heights scale with
+# the type, so `size * budget / height` is a guess that is never too small --
+# a smaller font also unwraps rows, which the guess does not count. One probe
+# confirms it. Walking the ladder from the floor downward would build the
+# table five more times to learn the same thing.
+pptx_fit_size <- function(ft, build, budget, size, hard = MIN_FONT_FLOOR) {
+
+  h <- pptx_table_height(ft)
+
+  if (!is.finite(h) || h <= 0 || !is.finite(budget) || budget <= 0) {
+    return(NULL)
+  }
+
+  est <- floor(size * budget / h)
+
+  if (est < hard || est >= size) {
+    return(NULL)
+  }
+
+  if (pptx_fits(build(est), budget)) est else NULL
 }
 
 # Did the width allocator run out of slide? Either half counts: a data cell

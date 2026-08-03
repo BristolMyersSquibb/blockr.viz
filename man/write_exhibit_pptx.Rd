@@ -13,7 +13,7 @@ write_exhibit_pptx(
   template = NULL,
   max_rows = "auto",
   max_cols = "auto",
-  min_font_size = getOption("blockr.viz.ft_min_font_size", 11),
+  min_font_size = NULL,
   ...
 )
 }
@@ -68,15 +68,25 @@ headers are allowed to break inside a word, down to
 a word losing a syllable to a second line. Lower that to hold a wide
 table together for longer, raise it to split sooner.}
 
-\item{min_font_size}{Points. The floor for the two shrink passes, defaulting
-from \code{getOption("blockr.viz.ft_min_font_size")}. Width first, because a
-table whose columns are narrower than their contents is illegible at any
-height and splitting rows does not help; the font steps down until the
-cells fit and the headers stop breaking inside words, and \code{max_cols}
-takes over from there. A shrink that does not clear the wrap is undone --
-a smaller wrapped table is only smaller -- unless it is what keeps the
-columns on one slide. Height second: it steps down again if that avoids
-a row split altogether, since one slide at 11pt beats two at 13pt.}
+\item{min_font_size}{Points. The floor for the two shrink passes. \code{NULL}
+(default) resolves it, first hit wins, from the board's
+\code{exhibit_min_font_size} option (\code{\link[=new_exhibit_font_option]{new_exhibit_font_option()}}, which is how
+an app lets its users say how small a table may go), then
+\code{getOption("blockr.viz.ft_min_font_size")}, then 11pt. Width first,
+because a table whose columns are narrower than their contents is
+illegible at any height and splitting rows does not help; the font steps
+down until the cells fit and the headers stop breaking inside words, and
+\code{max_cols} takes over from there. A shrink that does not clear the wrap
+is undone -- a smaller wrapped table is only smaller -- unless it is what
+keeps the columns on one slide. Height second: it steps down again if
+that avoids a row split altogether, since one slide at 11pt beats two at
+13pt.
+
+One floor, both axes: it is the whole of "keep this table on one slide",
+and lowering it is what a deck that must not split its tables asks for.
+A table that still does not fit at the floor is split rather than shrunk
+past it, and signals a \code{blockr_exhibit_split} message naming the size
+that would have kept it whole.}
 
 \item{...}{Passed to \code{\link[=static_table]{static_table()}}.}
 }

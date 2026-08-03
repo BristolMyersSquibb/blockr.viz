@@ -386,7 +386,14 @@ test_that("a table sectioned by .variable_label alone still pages", {
   f <- tempfile(fileext = ".pptx")
   on.exit(unlink(f), add = TRUE)
 
-  expect_silent(write_exhibit_pptx(x, f, title = "Demographics"))
+  # Sixty rows page, and a table that pages says so (exhibit_split_note).
+  # What this test is about is that nothing on that path throws or warns.
+  expect_no_warning(
+    expect_message(
+      write_exhibit_pptx(x, f, title = "Demographics"),
+      class = "blockr_exhibit_split"
+    )
+  )
   doc <- officer::read_pptx(f)
   expect_gt(length(doc), 1L)
 

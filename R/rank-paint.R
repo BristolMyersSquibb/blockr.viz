@@ -705,12 +705,14 @@ rp_page_rows <- function(m, per_page) {
   pages
 }
 
-# One table, as many pictures as it takes. `max_height` is the slide's body
-# box; `title` grows a "(2 of 7)" marker so a reader always knows a page is
-# part of a longer table, and the fold row rides on the LAST page only.
-rank_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
-                             fs = 9, family = "sans", row_h = NULL,
-                             title = NULL, subtitle = NULL, caption = NULL) {
+# How many rows fit one page at this type size. Split out of the pager so
+# the exporter can ask the question without painting anything: choosing the
+# size that keeps a table on one slide means asking it once per candidate,
+# and building the grobs to find out would paint pages nobody keeps.
+rank_paint_per_page <- function(m, prep, width_in = 12.5, max_height = 5.4,
+                                fs = 9, family = "sans", row_h = NULL,
+                                title = NULL, subtitle = NULL,
+                                caption = NULL) {
 
   lay <- rp_layout(m, prep, width_in, fs = fs, family = family)
   hh <- rp_heights(m, prep, lay, fs, row_h, title, subtitle, caption)
@@ -718,7 +720,19 @@ rank_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
   # The page marker can push a one-line title to two, so budget for the
   # chrome a CONTINUATION page carries, which is never less than page 1's.
   budget <- max_height - hh$chrome - hh$fold_h
-  per_page <- max(1L, floor(budget / hh$row_h))
+
+  max(1L, floor(budget / hh$row_h))
+}
+
+# One table, as many pictures as it takes. `max_height` is the slide's body
+# box; `title` grows a "(2 of 7)" marker so a reader always knows a page is
+# part of a longer table, and the fold row rides on the LAST page only.
+rank_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
+                             fs = 9, family = "sans", row_h = NULL,
+                             title = NULL, subtitle = NULL, caption = NULL) {
+
+  per_page <- rank_paint_per_page(m, prep, width_in, max_height, fs, family,
+                                  row_h, title, subtitle, caption)
 
   if (per_page >= m$n) {
     p <- rank_paint_grob(m, prep, width_in = width_in, fs = fs,
