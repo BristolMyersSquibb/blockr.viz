@@ -73,17 +73,6 @@ stub, which is the one column whose text is prose and wraps gracefully.
 While the data columns are still short of their full headers the stub
 takes at most \code{getOption("blockr.viz.ft_stub_share")} (0.3) of the width
 and wraps; it grows past that only with what is left over.
-
-"What its own text needs" means its TYPICAL cells, not its widest one. A
-cell more than \code{getOption("blockr.viz.ft_cell_outlier_tol")} (2) times
-the column's median is allowed to take a second line: one endpoint row
-reading \code{Median [Q1, Q3] = 23.0 [8.0, 44.8]} among ten rows of
-\code{41 (28.7)} would otherwise size every column for a row that is not like
-the others, inflating all of them and taking the stub down to its floor.
-A column where more than a fifth of the cells are that long is not an
-accident and keeps its full width, and no column goes below a third of
-its widest cell, so the odd row wraps to two or three lines rather than
-to a stack. \code{Inf} restores the plain maximum.
 Even is the older positional rule (the stub takes \code{first_col_width}
 capped at half the slide, the data columns share the remainder equally),
 which is wrong whenever the stub is shorter or the data columns wider
