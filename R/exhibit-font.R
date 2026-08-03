@@ -102,7 +102,11 @@ new_exhibit_font_option <- function(value = 11, category = "Table options",
             "10 pt" = "10",
             "9 pt" = "9",
             "8 pt" = "8",
-            "7 pt" = "7"
+            "7 pt" = "7",
+            # The last step the ladder can take: below 6pt is the hard floor,
+            # and a size the "it would fit at ..." report could no longer
+            # point past.
+            "6 pt" = "6"
           ),
           selected = as.character(value)
         ),
