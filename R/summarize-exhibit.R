@@ -205,7 +205,10 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
     }
   )
   width <- pptx_content_width(template) %||% (slide_w - 0.8)
-  budget <- slide_h - top - 0.4
+  # Down to the top of whatever the layout puts at the foot, not to a
+  # constant that may sit inside it -- a painted page overprints a footer as
+  # readily as a typeset one.
+  budget <- pptx_body_bottom(doc, layout, master, slide_h) - top
 
   common <- list(
     x$cells, x$prep,

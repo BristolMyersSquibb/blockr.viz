@@ -684,3 +684,30 @@ test_that("the format probe does not LOAD what it finds", {
   expect_false(loaded[["officer"]])
   expect_false(loaded[["flextable"]])
 })
+
+test_that("a page stops above whatever the layout puts at the foot", {
+  skip_if_not_installed("officer")
+
+  doc <- officer::read_pptx()
+  layouts <- officer::layout_summary(doc)
+  lay <- layouts$layout[[1L]]
+  mas <- layouts$master[[1L]]
+
+  bottom <- pptx_body_bottom(doc, lay, mas, 7.5)
+
+  # Whatever the layout says, a page never runs past the old constant.
+  expect_lte(bottom, 7.5 - 0.4)
+
+  # And where there is a footer band it stops above THAT, with a gap: the
+  # limit used to be the constant, so a full page of rows printed over the
+  # company line on a template whose footer sits higher than 0.4in.
+  ph <- officer::layout_properties(doc, layout = lay, master = mas)
+  foot <- ph$offy[ph$type %in% c("ftr", "dt", "sldNum")]
+  foot <- foot[is.finite(foot) & foot > 7.5 / 2]
+  if (length(foot)) {
+    expect_lt(bottom, min(foot))
+  }
+
+  # Unreadable geometry is not a reason to fail an export.
+  expect_identical(pptx_body_bottom(doc, "no such layout", mas, 7.5), 7.5 - 0.4)
+})

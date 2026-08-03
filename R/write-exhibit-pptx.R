@@ -318,7 +318,7 @@ pptx_add_exhibit.default <- function(doc, x, title = NULL, subtitle = NULL,
       0
     }
   )
-  budget <- slide_h - top - 0.4
+  budget <- pptx_body_bottom(doc, layout, master, slide_h) - top
   base_size <- args$font_size %||% getOption("blockr.viz.ft_font_size", 13)
 
   # Width first, and it is a question about the COLUMNS, so it is settled
@@ -883,6 +883,43 @@ pptx_content_width <- function(template) {
       cx <- regmatches(body, regexpr("cx=\"[0-9]+\"", body))
       cx <- as.numeric(gsub("\\D", "", cx))
       if (length(cx) == 1L && is.finite(cx) && cx > 0) cx / 914400 else fallback
+    },
+    error = function(e) fallback
+  )
+
+  if (length(out) == 1L && is.finite(out) && out > 0) out else fallback
+}
+
+# How far down the slide a table may run, in inches from the top.
+#
+# The same lesson as the title, at the other end: a constant does not know
+# what the template put there. This was `slide_h - 0.4`, and the BMS layout
+# starts its footer band at 6.95in of a 7.5in slide -- so a full page of rows
+# was allowed 0.15in INTO the footer, and the last row or two printed over the
+# company line. Split or not, every page did it, which is why it showed up on
+# a page that had already been split.
+#
+# So the limit is the top of whatever the layout puts at the foot -- the
+# footer, the date, the slide number -- and never worse than the old
+# constant. The date and slide-number placeholders count: they are usually
+# level with the footer, and a table over the page number is as wrong as a
+# table over the company name.
+pptx_body_bottom <- function(doc, layout, master, slide_h,
+                             gap = getOption("blockr.viz.ft_footer_gap",
+                                             0.05)) {
+
+  fallback <- slide_h - 0.4
+
+  out <- tryCatch(
+    {
+      ph <- officer::layout_properties(doc, layout = layout, master = master)
+      foot <- ph[ph$type %in% c("ftr", "dt", "sldNum"), , drop = FALSE]
+      tops <- foot$offy[is.finite(foot$offy) & foot$offy > slide_h / 2]
+      # A gap, because stopping exactly ON the footer still reads as one
+      # thing touching another, and because a stated row height is a floor:
+      # PowerPoint grows a row whose text needs more lines than the measuring
+      # font predicted, and the growth all comes out of the bottom.
+      if (length(tops)) min(tops - gap, fallback) else fallback
     },
     error = function(e) fallback
   )
