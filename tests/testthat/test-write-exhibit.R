@@ -429,7 +429,7 @@ test_that("row heights are measured, not counted", {
 
 # The shape that broke in production: six arms times six toxicity grades, so
 # 36 data columns on a 12.5in slide.
-grade_df <- function(n_arm = 6L, n_row = 6L) {
+grade_df <- function(n_arm = 6L, n_row = 6L, cell = "1") {
   arms <- paste0(c("Placebo", "300mg", "600mg", "900mg", "1500mg", "1200mg",
                    "1800mg", "2400mg"), " (N=20)")
   stats <- c("Any Grade\nN=20", paste0("Grade ", 1:5, "\nN=20"))
@@ -437,7 +437,7 @@ grade_df <- function(n_arm = 6L, n_row = 6L) {
                     .indent = 0L, check.names = FALSE)
   for (a in arms[seq_len(n_arm)]) {
     for (s in stats) {
-      out[[paste0(a, "||", s)]] <- structure(rep("1", n_row), label = s)
+      out[[paste0(a, "||", s)]] <- structure(rep(cell, n_row), label = s)
     }
   }
   out
@@ -448,7 +448,13 @@ test_that("a table that still will not fit gets tighter padding, then says so", 
   skip_if_not_installed("flextable")
   skip_if_not_installed("systemfonts")
 
-  ft <- static_table(grade_df(8L), title = "", fit_width = 12.53)
+  # Counts, not a bare "1": a single digit is the narrowest cell there is, and
+  # in a face as tight as Inter 48 of them still clear the default padding --
+  # so the relief correctly does not fire and the test was asserting the
+  # metrics of whichever wider face the machine happened to substitute. A real
+  # grade table holds "n (pct)", which no face fits at 5pt of padding a side.
+  ft <- static_table(grade_df(8L, cell = "143 (41.2%)"), title = "",
+                     fit_width = 12.53)
   expect_equal(attr(ft, "layout_plan")$cell_padding, TIGHT_PAD)
   expect_lt(ft$body$styles$pars$padding.left$data[[1L, 2L]], 5)
 
