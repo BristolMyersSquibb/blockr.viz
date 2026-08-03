@@ -1,0 +1,93 @@
+#' Options That Tune an Exported Table
+#'
+#' Everything the table exporters read from `options()`, in one place. An app
+#' sets them once at startup; nothing here is per-table state, and nothing
+#' here is required -- the defaults are what every deck gets.
+#'
+#' The values below are the defaults as shipped. Where a board option exists
+#' for the same thing it wins, because it is the more specific answer: a user
+#' who has said how small their tables may go has said it about their board,
+#' not about the deployment.
+#'
+#' @section Fitting a table to a slide:
+#' The exporter would rather shrink a table than break it, and rather carry it
+#' downward than deal its columns sideways. These say how far each of those
+#' goes.
+#'
+#' \describe{
+#'   \item{`blockr.viz.ft_min_font_size` (11)}{How small the type may go
+#'     before a table is split. One floor, both axes. The board option
+#'     `exhibit_min_font_size` ("Smallest table font",
+#'     [new_exhibit_font_option()]) overrides it, and 5pt is a hard floor
+#'     under both.}
+#'   \item{`blockr.viz.ft_font_size` (13)}{The size a table starts at, before
+#'     any shrinking.}
+#'   \item{`blockr.viz.ft_footer_gap` (0.05)}{Inches left above whatever the
+#'     layout puts at the foot of the slide -- footer, date, slide number.
+#'     `0` lets a page run right up to it. Worth more than it looks: a stated
+#'     row height is a floor and PowerPoint grows a row that needs another
+#'     line, so the bottom of a page is where a measurement error lands.}
+#'   \item{`blockr.viz.ft_header_break_tol` (0, off)}{Set to a fraction (0.6
+#'     was the old default) to deal the columns over two sets of slides when
+#'     a header word is cut past that much of itself. Off by default because
+#'     a table read by flipping between two sets of slides is a high price,
+#'     and a wrapped header is not worth it: the columns now come apart only
+#'     when a data cell no longer fits its own longest word.}
+#'   \item{`blockr.viz.ft_fit_width` (unset)}{Total table width in inches. A
+#'     deck sets it from the reference template; unset means natural widths,
+#'     which is right for html and pdf.}
+#' }
+#'
+#' @section How the width is shared out:
+#' \describe{
+#'   \item{`blockr.viz.ft_stub_share` (0.3)}{The most the row stub claims
+#'     while the data columns are still short of their full headers. Raise it
+#'     to keep long row labels on one line, lower it to feed the columns.}
+#'   \item{`blockr.viz.ft_width_slack` (1.04)}{Margin for the measuring font
+#'     not being the rendering font -- a deck naming a typeface the exporting
+#'     machine does not have is measured in whatever systemfonts substitutes.
+#'     Raise it if a real deck wraps where the export predicted it would not.}
+#'   \item{`blockr.viz.ft_col_widths` ("measured")}{`"even"` is the older
+#'     positional rule: the stub takes a fixed width, the data columns share
+#'     what is left equally, whatever their text needs.}
+#' }
+#'
+#' @section Typography and appearance:
+#' \describe{
+#'   \item{`blockr.viz.ft_font` ("Inter")}{The table's typeface. A deck sets
+#'     it from the reference template's own font scheme, so a table printed
+#'     into a house deck belongs to it; an app naming a face is the more
+#'     specific answer and wins.}
+#'   \item{`blockr.viz.ft_header_bg` (unset)}{Header band colors. blockr.viz
+#'     ships no palette of its own.}
+#'   \item{`blockr.viz.ft_emphasis_colors` (unset)}{The ramp for emphasised
+#'     columns.}
+#'   \item{`blockr.viz.pptx_template` (unset)}{Reference deck for a block's
+#'     own PowerPoint download, when the app has not set
+#'     `blockr.outline.template`.}
+#'   \item{`blockr.viz.paint_res` (300)}{Dots per inch for a summarize table,
+#'     which reaches a slide as a picture because a PowerPoint cell cannot
+#'     hold a glyph.}
+#'   \item{`blockr.viz.gg_slide_fill` (1)}{How far a chart grows into the
+#'     slide it is placed on.}
+#' }
+#'
+#' @section Not options:
+#' Two knobs that decide layout and are function arguments rather than
+#' options, because a table that needs them needs them by itself:
+#' `static_table(cell_padding = )` (`NULL`, the flextable default of 5pt,
+#' tightened to 2 automatically when a table cannot fit any other way) and
+#' the stub's own minimum width, a 1.2in constant inside the width allocator.
+#'
+#' @name exhibit-options
+#' @seealso [static_table()], [write_exhibit_pptx()],
+#'   [new_exhibit_font_option()]
+#' @examples
+#' # A house style, set once at app startup.
+#' old <- options(
+#'   blockr.viz.ft_font_size = 12,
+#'   blockr.viz.ft_min_font_size = 9,
+#'   blockr.viz.ft_stub_share = 0.35
+#' )
+#' options(old)
+NULL

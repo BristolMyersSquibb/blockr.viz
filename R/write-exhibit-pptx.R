@@ -98,7 +98,8 @@
 #' @param ... Passed to [static_table()].
 #'
 #' @return `file`, invisibly.
-#' @seealso [write_exhibit_html()], [write_annotated_xlsx()], [static_table()]
+#' @seealso [write_exhibit_html()], [write_annotated_xlsx()], [static_table()],
+#'   [exhibit-options] for the options that tune the fit
 #' @examplesIf requireNamespace("officer", quietly = TRUE) && requireNamespace("flextable", quietly = TRUE)
 #' f <- tempfile(fileext = ".pptx")
 #' write_exhibit_pptx(

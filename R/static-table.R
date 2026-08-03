@@ -125,7 +125,8 @@
 #' @examplesIf requireNamespace("flextable", quietly = TRUE)
 #' tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
 #' static_table(tbl, title = "Sepal length by species")
-#' @seealso [as_annotated_df()], [gt_table()], [write_annotated_xlsx()]
+#' @seealso [as_annotated_df()], [gt_table()], [write_annotated_xlsx()],
+#'   [exhibit-options] for everything the renderer reads from `options()`
 #' @export
 static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
                      na_rep = "\u2014",

@@ -170,5 +170,6 @@ static_table(tbl, title = "Sepal length by species")
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=as_annotated_df]{as_annotated_df()}}, \code{\link[=gt_table]{gt_table()}}, \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}
+\code{\link[=as_annotated_df]{as_annotated_df()}}, \code{\link[=gt_table]{gt_table()}}, \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}},
+\link{exhibit-options} for everything the renderer reads from \code{options()}
 }

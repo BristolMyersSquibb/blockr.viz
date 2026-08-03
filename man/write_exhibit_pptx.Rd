@@ -141,5 +141,6 @@ unlink(f)
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=write_exhibit_html]{write_exhibit_html()}}, \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}, \code{\link[=static_table]{static_table()}}
+\code{\link[=write_exhibit_html]{write_exhibit_html()}}, \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}, \code{\link[=static_table]{static_table()}},
+\link{exhibit-options} for the options that tune the fit
 }
