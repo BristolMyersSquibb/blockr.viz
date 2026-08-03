@@ -734,8 +734,10 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
         # A cell narrower than its own longest word is the defect worth
         # reporting: below that a number is broken mid-token and, further
         # down, PowerPoint stacks the characters one per line. A cell that
-        # merely wraps between words is not.
-        squeeze[["cell"]] <- any(data_w < bare - 1e-9)
+        # merely wraps between words is not, and neither is a HEADER whose
+        # longest word breaks -- that is what `word_fit` is for, and calling
+        # it a cell squeeze is what sent seven-column tables sideways.
+        squeeze[["cell"]] <- any(data_w < cell_word - 1e-9)
       } else {
         # Whether this table is close enough to the slide to fill it, decided
         # on the widths it needs rather than the ones it ends up with.

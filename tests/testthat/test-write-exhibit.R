@@ -488,10 +488,17 @@ test_that("columns too wide for one slide are dealt over several", {
   f <- tempfile(fileext = ".pptx")
   on.exit(unlink(f), add = TRUE)
 
-  # 36 grade columns do not fit a widescreen slide at any font the exporter
-  # is allowed to use, so the arms are dealt over two sets of slides.
+  # 36 grade columns of counts do not fit a widescreen slide at any font the
+  # exporter is allowed to use, so the arms are dealt over two sets of slides.
+  #
+  # Counts rather than the fixture's bare "1": a single digit fits 36 columns
+  # comfortably and only the HEADERS run out of room, and a header running out
+  # of room is no longer a reason to deal the columns sideways. A table read by
+  # flipping between two sets of slides is a high price, and wrapped headers do
+  # not justify it -- see pptx_width_broken().
+  wide <- grade_df(6L, cell = "12 (60.0)")
   expect_message(
-    write_exhibit_pptx(grade_df(6L), f, title = "Grades"),
+    write_exhibit_pptx(wide, f, title = "Grades"),
     "dealt over"
   )
   doc <- officer::read_pptx(f)
@@ -516,14 +523,14 @@ test_that("columns too wide for one slide are dealt over several", {
   # Told a column count, it uses that instead.
   g <- tempfile(fileext = ".pptx")
   on.exit(unlink(g), add = TRUE)
-  write_exhibit_pptx(grade_df(6L), g, title = "Grades", max_cols = 6L)
+  write_exhibit_pptx(wide, g, title = "Grades", max_cols = 6L)
   expect_gte(length(officer::read_pptx(g)), 6L)
 
   # Told not to, it does not.
   h <- tempfile(fileext = ".pptx")
   on.exit(unlink(h), add = TRUE)
   expect_silent(suppressWarnings(
-    write_exhibit_pptx(grade_df(6L), h, title = "Grades", max_cols = NULL)
+    write_exhibit_pptx(wide, h, title = "Grades", max_cols = NULL)
   ))
 })
 

@@ -58,19 +58,24 @@
 #'   cut in half. A number puts at most that many data columns on a slide.
 #'   `NULL` never splits, and the columns are squeezed as far as they will go.
 #'
-#'   Thirty-six toxicity-grade columns do not fit a widescreen slide at any
-#'   legible size, and the alternatives are cells cut off or headers broken
-#'   inside words, which at that width becomes one character per line.
+#'   It is the LAST resort, and a distant one. A table carried left-half then
+#'   right-half is read by flipping back and forth with the stub in the
+#'   middle; the same table carried over more slides is read top to bottom.
+#'   So the columns come apart on one condition only: the DATA CELLS no
+#'   longer fit their own longest word, which is the point at which
+#'   PowerPoint starts stacking characters one per line. Thirty-six
+#'   toxicity-grade columns of counts do that on a widescreen slide at any
+#'   legible size.
 #'
-#'   It is the last resort rather than the second, because a table carried
-#'   left-half then right-half is read by flipping back and forth, where the
-#'   same table carried over more slides is read top to bottom. Before it,
-#'   the stub wraps (`getOption("blockr.viz.ft_stub_share")`, the share of
-#'   the width it claims while the data columns are still short) and the
-#'   headers are allowed to break inside a word, down to
-#'   `getOption("blockr.viz.ft_header_break_tol")` of the longest one -- 0.6,
-#'   a word losing a syllable to a second line. Lower that to hold a wide
-#'   table together for longer, raise it to split sooner.
+#'   Everything short of that is absorbed instead. The font steps down to
+#'   `min_font_size`, the stub wraps
+#'   (`getOption("blockr.viz.ft_stub_share")`, the share of the width it
+#'   claims while the data columns are still short), the cells wrap between
+#'   words and the headers break inside them. A wrapped header is not a
+#'   reason to split: `getOption("blockr.viz.ft_header_break_tol")` used to
+#'   deal the columns when a header word was cut past 0.6 of itself, which
+#'   sent seven-column tables sideways; it now defaults to 0, and an app that
+#'   wants that behaviour back can set it.
 #' @param min_font_size Points. The floor for the two shrink passes. `NULL`
 #'   (default) resolves it, first hit wins, from the board's
 #'   `exhibit_min_font_size` option ([new_exhibit_font_option()], which is how
@@ -547,21 +552,28 @@ pptx_width_squeezed <- function(ft) {
 }
 
 # The narrower question, and the only one worth dealing the columns over two
-# sets of slides for: are the cells cut off, or are the headers down past
-# `blockr.viz.ft_header_break_tol` of their longest word? At the default 0.6 a
-# word may lose a syllable to a second line; below it the word is cut into
-# thirds, which is what 36 grade columns do to "Grade".
+# sets of slides for: are the DATA CELLS cut off -- narrower than their own
+# longest word, so a number is broken mid-token and, below that, PowerPoint
+# stacks the characters one per line?
 #
-# A table carried over two slides is read by flipping back and forth with the
-# stub in the middle; a header that breaks after a syllable is read at a
-# glance. So a squeeze on its own is not enough: the columns come apart only
-# when a reader could not follow them otherwise.
+# Nothing else. A table carried over two slides is read by flipping back and
+# forth with the stub in the middle, and almost nothing is worth that: a
+# header taking a second line is read at a glance, a header breaking after a
+# syllable is read with a moment's pause, and a table that pages downward is
+# read straight through. The columns come apart only when a reader could not
+# follow them at all.
+#
+# `blockr.viz.ft_header_break_tol` used to sit here at 0.6, so a header word
+# losing a third of itself dealt the columns. That is what put seven-column
+# tables on two sets of slides. It now defaults to 0 -- off -- and an app
+# that wants the old eagerness can set it.
 pptx_width_broken <- function(ft, tol = getOption(
-                                "blockr.viz.ft_header_break_tol", 0.6)) {
+                                "blockr.viz.ft_header_break_tol", 0)) {
   sq <- attr(ft, "width_squeeze")
   fit <- attr(ft, "word_fit")
   isTRUE(sq[["cell"]]) ||
-    (is.numeric(fit) && length(fit) == 1L && is.finite(fit) && fit < tol)
+    (is.numeric(tol) && tol > 0 &&
+       is.numeric(fit) && length(fit) == 1L && is.finite(fit) && fit < tol)
 }
 
 # Last input row of each page, decided on the measured height of the rendered

@@ -73,19 +73,24 @@ on its own; a set is a whole number of spanner groups, so an arm is never
 cut in half. A number puts at most that many data columns on a slide.
 \code{NULL} never splits, and the columns are squeezed as far as they will go.
 
-Thirty-six toxicity-grade columns do not fit a widescreen slide at any
-legible size, and the alternatives are cells cut off or headers broken
-inside words, which at that width becomes one character per line.
+It is the LAST resort, and a distant one. A table carried left-half then
+right-half is read by flipping back and forth with the stub in the
+middle; the same table carried over more slides is read top to bottom.
+So the columns come apart on one condition only: the DATA CELLS no
+longer fit their own longest word, which is the point at which
+PowerPoint starts stacking characters one per line. Thirty-six
+toxicity-grade columns of counts do that on a widescreen slide at any
+legible size.
 
-It is the last resort rather than the second, because a table carried
-left-half then right-half is read by flipping back and forth, where the
-same table carried over more slides is read top to bottom. Before it,
-the stub wraps (\code{getOption("blockr.viz.ft_stub_share")}, the share of
-the width it claims while the data columns are still short) and the
-headers are allowed to break inside a word, down to
-\code{getOption("blockr.viz.ft_header_break_tol")} of the longest one -- 0.6,
-a word losing a syllable to a second line. Lower that to hold a wide
-table together for longer, raise it to split sooner.}
+Everything short of that is absorbed instead. The font steps down to
+\code{min_font_size}, the stub wraps
+(\code{getOption("blockr.viz.ft_stub_share")}, the share of the width it
+claims while the data columns are still short), the cells wrap between
+words and the headers break inside them. A wrapped header is not a
+reason to split: \code{getOption("blockr.viz.ft_header_break_tol")} used to
+deal the columns when a header word was cut past 0.6 of itself, which
+sent seven-column tables sideways; it now defaults to 0, and an app that
+wants that behaviour back can set it.}
 
 \item{min_font_size}{Points. The floor for the two shrink passes. \code{NULL}
 (default) resolves it, first hit wins, from the board's
