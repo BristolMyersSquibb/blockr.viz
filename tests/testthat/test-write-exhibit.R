@@ -329,8 +329,11 @@ test_that("shrinking to fit beats splitting", {
   f <- tempfile(fileext = ".pptx")
   on.exit(unlink(f), add = TRUE)
 
-  # 21 rows overflow at 13pt and fit once the font steps down.
-  write_exhibit_pptx(long_df(21L, sections = FALSE), f, title = "AE")
+  # 20 rows overflow at 13pt and fit once the font steps down. The count is
+  # deliberate: 21 lands on the boundary and steps to 11pt under a wider face
+  # (DejaVu Sans, which the runners substitute for Inter), while 20 measures
+  # the same under Inter, DejaVu Sans, Arial, Helvetica and Courier New.
+  write_exhibit_pptx(long_df(20L, sections = FALSE), f, title = "AE")
   expect_length(officer::read_pptx(f), 1L)
   xml <- pptx_part(f, "ppt/slides/slide1.xml")
   expect_false(grepl("sz=\"1300\"", xml, fixed = TRUE))
@@ -339,7 +342,7 @@ test_that("shrinking to fit beats splitting", {
   # Denied the step, the same table splits instead.
   g <- tempfile(fileext = ".pptx")
   on.exit(unlink(g), add = TRUE)
-  write_exhibit_pptx(long_df(21L, sections = FALSE), g, title = "AE",
+  write_exhibit_pptx(long_df(20L, sections = FALSE), g, title = "AE",
                      min_font_size = 13)
   expect_gt(length(officer::read_pptx(g)), 1L)
 })

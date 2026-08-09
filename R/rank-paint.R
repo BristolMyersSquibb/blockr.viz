@@ -45,15 +45,44 @@ rp_sub <- function(col) grDevices::adjustcolor(col, alpha.f = 0.45)
 rp_faint <- function(col) grDevices::adjustcolor(col, alpha.f = 0.16)
 
 # --- measuring -----------------------------------------------------------
+# The size some faces cannot be measured at, and one they can. freetype
+# refuses macOS's Helvetica.ttc below 8pt ("freetype error 133") and "sans"
+# resolves straight to it, so the shrink loop -- which walks down to
+# min_font_size, as low as 5 -- measures its way into an error on any Mac.
+# Advances scale linearly with size for a scalable face, so where the wanted
+# size will not measure, measure at one that will and scale the answer. Per-
+# size rounding makes that read a few percent wide, which is the safe
+# direction: a column believed wider than it is never overflows.
+RP_W_FLOOR <- 8
+RP_W_REF <- 12
+
+rp_string_width <- function(txt, fs, family, bold) {
+  measure <- function(size) {
+    tryCatch(
+      systemfonts::string_width(txt, family = family, size = size,
+                                bold = bold),
+      error = function(e) NULL
+    )
+  }
+  w <- if (fs >= RP_W_FLOOR) measure(fs)
+  if (is.null(w)) {
+    ref <- measure(RP_W_REF)
+    w <- if (is.null(ref)) NULL else ref * (fs / RP_W_REF)
+  }
+  w
+}
+
 rp_w <- function(txt, fs, family = "sans", bold = FALSE) {
   if (!length(txt)) return(0)
   txt <- txt[!is.na(txt)]
   if (!length(txt)) return(0)
-  w <- systemfonts::string_width(
-    as.character(txt), family = family, size = fs,
-    bold = bold
-  )
-  max(w, na.rm = TRUE) / 72
+  txt <- as.character(txt)
+  w <- rp_string_width(txt, fs, family, bold)
+  w <- w[is.finite(w)]
+  # Nothing measurable at any size: a half-em per character is coarse, but a
+  # layout built on -Inf is not a layout.
+  if (!length(w)) return(max(nchar(txt)) * fs * 0.5 / 72)
+  max(w) / 72
 }
 
 rp_ch <- function(fs, family = "sans") rp_w("0", fs, family)
