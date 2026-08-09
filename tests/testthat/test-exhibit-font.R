@@ -80,6 +80,13 @@ test_that("a table that still does not fit says what would have fitted", {
   expect_identical(note$floor, 13)
   # The actionable half: a size, below the floor that was in force, at which
   # the table is one slide. Confirmed by rendering at it.
+  #
+  # Whether such a size EXISTS is a metric question, not a mechanical one:
+  # under a face wider than Inter the estimate falls through pptx_fit_size()'s
+  # floor and the note carries no size at all. The note itself -- its pages,
+  # its floor, that it was raised -- is asserted above and holds under any
+  # face; only this half needs the deck's own typeface to be the one measured.
+  skip_if_font_substituted()
   expect_true(is.numeric(note$fit_size))
   expect_lt(note$fit_size, 13)
   expect_identical(deck_of(fit_df(), min_font_size = note$fit_size)$slides, 1L)
