@@ -311,8 +311,10 @@ test_that("cells of several words share the shortfall instead of the stub", {
   # Every cell in every column holds text of a few short words -- wider than
   # a count, well short of its own header. There is not enough slide for all
   # of them at full width, and the question is what gives.
-  words <- function(n) paste(rep(c("one", "two", "three", "four"),
-                                 length.out = n), collapse = " ")
+  words <- function(n) {
+    paste(rep(c("one", "two", "three", "four"), length.out = n),
+          collapse = " ")
+  }
   tbl <- data.frame(.label = c(rep(words(4L), 5L), words(6L)), .indent = 1L,
                     check.names = FALSE)
   for (j in 1:6) {
