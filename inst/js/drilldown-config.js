@@ -1005,6 +1005,7 @@
         p.className = 'dd-form-help dd-drill-hint';
         p.textContent = hint;
         sec.appendChild(p);
+        this._renderDrillSourceRow(sec, cfg);
         if (this.h.sections().ctrlSection) this._renderCtrlRows(sec);
         return;
       }
@@ -1049,6 +1050,53 @@
         sec.appendChild(row);
         if (this.h.sections().ctrlSection) this._renderCtrlRows(sec);
       }
+    }
+
+    // "Hand over the source records" — only where the drill takes a MODE
+    // rather than a column (structured / aggregated tables; the host says so
+    // via spec.drillSourceOption). Off, a click hands downstream the clicked
+    // subset of the DISPLAYED table ('auto'); on, the records behind it
+    // ('source'), resolved from the claim against the frame the producer
+    // stamped as the input's source_data attribute. What the table SHOWS is
+    // identical either way -- only the downstream shape changes.
+    /** @param {HTMLElement} sec @param {Record<string, any>} cfg */
+    _renderDrillSourceRow(sec, cfg) {
+      const spec = this.h.sections();
+      if (!spec || !spec.drillSourceOption) return;
+      const on = cfg.drill === 'source';
+      const onToggle = (/** @type {boolean} */ enabled) => {
+        cfg.drill = enabled ? 'source' : 'auto';
+        this._rerender();
+        this.h.onChange('drill');
+        this.h.onClearFilter();
+      };
+      const row = document.createElement('div');
+      row.className = 'blockr-popover-row dd-form-row';
+      if (typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
+        // Returns a WRAPPER, not a node -- append its .el (same as the
+        // "Send to filter" row below). Passing the wrapper to appendChild
+        // throws, and this runs inside engine.render(), which the host calls
+        // BEFORE it inserts the gear header: the whole gear goes missing.
+        const box = Blockr.checkbox('Hand over source records', on, onToggle);
+        row.appendChild(box.el);
+      } else {
+        const lab = document.createElement('label');
+        lab.className = 'dd-cfg-check';
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        box.checked = on;
+        box.addEventListener('change', () => onToggle(box.checked));
+        lab.appendChild(box);
+        lab.appendChild(document.createTextNode(' Hand over source records'));
+        row.appendChild(lab);
+      }
+      const help = document.createElement('div');
+      help.className = 'dd-form-help';
+      help.textContent = 'Downstream gets the records behind the click ' +
+        'instead of the clicked row. Needs the input to carry its source ' +
+        'data.';
+      row.appendChild(help);
+      sec.appendChild(row);
     }
 
     // "Send to filter (beta)" — the external-control tail of the drill: the

@@ -195,7 +195,11 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
       onclick_col = onclick$col, onclick_idx = onclick$idx, digits = digits,
       color = color, shadings = shadings, num_cols = value_cols[num_flag],
       toggles = toggles, group_cols = group_cols, group = group,
-      summaries = summaries, active = active, gear_cols = gear_cols
+      summaries = summaries, active = active, gear_cols = gear_cols,
+      # Aggregated tables drill on their group keys, so `drill` is a mode
+      # word there too, not a column.
+      drill_mode = if (length(group_cols) && !is.null(drill) &&
+                         nzchar(drill)) drill
     )
   )
 }

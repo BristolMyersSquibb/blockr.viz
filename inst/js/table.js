@@ -727,6 +727,11 @@
                  // click target), so drill works in one click; the picker
                  // stays for re-aiming (e.g. AETERM instead of USUBJID).
                  drillDefault: stubCol || "",
+                 // The picker-less variants (structured / aggregated) take a
+                 // MODE rather than a column, so they can offer "hand over
+                 // the source records instead". A flat table has a column to
+                 // choose and no mode, so it never sees this.
+                 drillSourceOption: (!hasCols || hasGroup),
                  // COLOR — one plain section (no checkbox: its activation
                  // lives in the picks): "Color by" identity tint + the
                  // repeatable "Shade cells" value-encoding rules.
@@ -805,11 +810,19 @@
       // when drill is enabled); represented as 'auto' for the engine's
       // checkbox section.
       drill: (function () {
-        // Structured drill: ON iff the renderer stamped the row keys
-        // (data-dt-structured-drill), represented as 'auto' like the grouped
-        // table's keys drill.
-        if (table.getAttribute("data-dt-structured-drill") === "1") return "auto";
-        if ((table.getAttribute("data-dt-group-cols") || "") !== "") return "auto";
+        // Structured / aggregated drill: ON iff the renderer stamped the row
+        // keys. There is no column to pick, so the value is a MODE word --
+        // 'auto' (hand over the clicked display subset) or 'source' (hand
+        // over the records behind it). Read the stamped mode, defaulting to
+        // 'auto'; returning a flat 'auto' here would clobber 'source' on the
+        // next config write.
+        var mode = table.getAttribute("data-dt-drill-mode") || "";
+        if (table.getAttribute("data-dt-structured-drill") === "1") {
+          return mode || "auto";
+        }
+        if ((table.getAttribute("data-dt-group-cols") || "") !== "") {
+          return mode || "auto";
+        }
         return (onClick && onClick !== "(none)") ? onClick : "";
       })(),
       // Identity color ("Color by") + value-encoding rules ({mode, cols}
@@ -963,9 +976,9 @@
         // picker-less checkbox (same as the grouped table / tile).
         if (root.getAttribute("data-dt-structured") === "1") {
           return "Clicking a row filters downstream to that row's identity " +
-            "(variable and value, plus its sections); the selection is also " +
-            "named as a real column, so a dm filter-by-data block can " +
-            "cascade it to the source data.";
+            "(variable and value, plus its sections). The output is a pure " +
+            "subset of this table \u2014 the identity columns carry the " +
+            "selection, so a downstream block can read them directly.";
         }
         var hasGroup = cfg.group && cfg.group.length > 0;
         if (!hasCols() || !hasGroup) return null;

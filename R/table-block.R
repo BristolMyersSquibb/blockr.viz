@@ -217,7 +217,8 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
   # "[]" (not absent): a structured frame HAS no pickable columns -- the gear
   # must read that, not fall back to scraping the section-spanner header.
   dt_table_attrs(table_tag, NULL, NULL, digits,
-                 toggles = toggles, active = active, gear_cols = "[]")
+                 toggles = toggles, active = active, gear_cols = "[]",
+                 drill_mode = if (drill_on) drill)
 }
 
 #' Cell-visual spec for [drilldown_table()]
@@ -741,7 +742,8 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
                            num_cols = NULL,
                            toggles = NULL, group_cols = NULL,
                            group = character(), summaries = list(),
-                           active = NULL, gear_cols = NULL) {
+                           active = NULL, gear_cols = NULL,
+                           drill_mode = NULL) {
   on_off <- function(x) if (isTRUE(x)) "on" else "off"
   htmltools::tagAppendAttributes(
     table_tag,
@@ -761,6 +763,13 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
     # Grouped-table drill: the group columns whose per-row values a click ANDs
     # into a downstream filter (comma-joined; "" = not a grouped table).
     `data-dt-group-cols` = paste(group_cols %||% character(), collapse = ","),
+    # The drill MODE for the picker-less variants (structured / aggregated),
+    # where `drill` is not a column but a word: "auto" hands the clicked
+    # display subset downstream, "source" the records behind it. Stamped so
+    # the gear reads back what is actually set -- readGearState used to
+    # report a flat "auto" for any structured drill, which would clobber the
+    # mode on the next config write.
+    `data-dt-drill-mode` = drill_mode,
     `data-dt-onclick-col` = onclick_col,
     `data-dt-onclick-idx` = if (!is.null(onclick_idx)) onclick_idx else NULL,
     `data-dt-digits` = as.character(digits),
