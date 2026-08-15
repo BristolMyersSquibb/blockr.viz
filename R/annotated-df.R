@@ -168,6 +168,107 @@ as_plain_df <- function(x, ...) {
   x[, !drop, drop = FALSE]
 }
 
+#' Resolve a drilled summary row back to the source rows behind it
+#'
+#' A drill on a structured (annotated) table yields a subset of the DISPLAY
+#' frame: the clicked row, not the records it summarises. The row does carry
+#' the machine claim (`.variable` / `.variable_level`, plus any enclosing
+#' `.group<k>` pairs) which reads "source rows where SEX == 'F'", so the
+#' records are recoverable by anything that still holds the frame the table
+#' was computed from. `drill_source()` is that resolution step: give it a
+#' drilled annotated frame and it returns the matching source rows.
+#'
+#' The frame comes from `attr(x, "source_data")`, which a producer stamps
+#' when it summarises (composer tables via the blockr.sandbox adapter; see
+#' `as_annotated_df.composed_table`). Pass `source` explicitly to resolve
+#' against a frame the input does not carry.
+#'
+#' The claim rule is the one the control channel uses ([ctrl_send()]): a
+#' dimension becomes a condition only when the drilled subset resolves it to
+#' EXACTLY ONE value. One value is a decision; many is not a claim. So an
+#' undrilled table (every level still present) claims nothing and this
+#' returns ZERO rows rather than the whole source -- "no click, no cohort",
+#' never a silent everything.
+#'
+#' Two claim modes, the same split [ctrl_send()] uses. A structured table
+#' carries ARD identity columns and the claim is read off those, so `columns`
+#' stays `NULL`. An AGGREGATED table (one display row standing for many
+#' records) has no identity columns: name its group columns in `columns` and
+#' the claim is read off those instead. A frame with neither is not
+#' resolvable and errors, rather than reporting zero rows as if nobody
+#' matched.
+#'
+#' @param x A drilled annotated data frame, or an object coercible via
+#'   [as_annotated_df()].
+#' @param source Data frame to resolve against. Default `NULL` = the input's
+#'   `source_data` attribute.
+#' @param columns Real source columns the claim is read from, for an
+#'   aggregated table. Default `NULL` = read the ARD identity columns
+#'   (`.variable` / `.variable_level`, `.group<k>` pairs) instead.
+#'
+#' @return A subset of `source`: the rows the claim selects, or a zero-row
+#'   frame when nothing is claimed.
+#' @seealso [as_annotated_df()], [new_table_block()] (`drill = "source"`)
+#' @examplesIf interactive()
+#' drill_source(drilled_table)
+#' @export
+drill_source <- function(x, source = NULL, columns = NULL) {
+  x <- as_annotated_df(x)
+  src <- source %||% attr(x, "source_data", exact = TRUE)
+
+  if (!length(columns) &&
+        !all(c(".variable", ".variable_level") %in% names(x))) {
+    stop(
+      "Cannot resolve this drill to source rows: the input carries no ARD ",
+      "identity columns (`.variable` / `.variable_level`), so there is no ",
+      "claim to read. For an aggregated table pass `columns` (its group ",
+      "columns); a flat table needs no resolution at all, its drilled rows ",
+      "ARE the source rows.",
+      call. = FALSE
+    )
+  }
+
+  if (is.null(src)) {
+    stop(
+      "No source data to resolve the drill against: the input carries no ",
+      "`source_data` attribute and none was passed. The producer must stamp ",
+      "the frame it summarised (for a composer table: ",
+      "`attr(tbl, \"source_data\") <- data` before it leaves the block).",
+      call. = FALSE
+    )
+  }
+  if (!is.data.frame(src)) {
+    stop("`source_data` must be a data frame, got <",
+         paste(class(src), collapse = "/"), ">.", call. = FALSE)
+  }
+
+  claims <- drill_claim_columns(x, table = "", columns = columns)
+  if (!length(claims)) {
+    return(src[0, , drop = FALSE])
+  }
+
+  keep <- rep(TRUE, nrow(src))
+  for (cl in claims) {
+    # A claim naming a column the source lacks is a producer mistake (the
+    # stamped frame was too narrow), not a soft miss -- returning zero rows
+    # would read as "nobody matched" and hide it.
+    if (!cl$name %in% names(src)) {
+      stop(
+        "The drill claims `", cl$name, "`, which the source data does not ",
+        "have. Stamp a frame that carries every column the table can claim ",
+        "(here: ", paste(vapply(claims, `[[`, character(1L), "name"),
+                          collapse = ", "), ").",
+        call. = FALSE
+      )
+    }
+    keep <- keep & as.character(src[[cl$name]]) %in% as.character(cl$values)
+  }
+
+  out <- src[keep, , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
 # Renderer-side input coercion for the chart / tile: a plain data frame
 # passes through UNTOUCHED (byte-identical to the pre-contract behavior,
 # dotted columns included); anything else is coerced + stripped via

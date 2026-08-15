@@ -216,3 +216,157 @@ test_that("only identity-claim rows are clickable in the structured renderer", {
   # And no spread instruction exists anywhere anymore.
   expect_null(a$spread)
 })
+
+# ---- drill = "source": hand downstream the RECORDS, not the clicked row -----
+# The display is untouched either way (the body renders from the block's
+# input, never from the expr); only what the block hands downstream changes.
+
+test_that("drill = 'source' resolves the click to the source records", {
+  adae <- data.frame(
+    AETOXGR = c(1, 1, 2, 3, 1, 2),
+    AEDECOD = c("ABDOMINAL PAIN", "AGITATION", "ABDOMINAL PAIN",
+                "ANXIETY", "AGITATION", "ANXIETY"),
+    ARM     = c("Placebo", "Placebo", "Drug", "Drug", "Placebo", "Drug"),
+    stringsAsFactors = FALSE
+  )
+  wide <- summary_table(adae, vars = c("AETOXGR", "AEDECOD"), by = "ARM")
+  attr(wide, "source_data") <- adae
+
+  blk <- new_table_block(drill = "source")
+
+  testServer(blk$expr_server, args = list(data = reactive(wide)), {
+    # Undrilled: nothing resolves to a single value, so no cohort. NOT the
+    # whole source -- a silent "everything" is the dangerous default.
+    expect_equal(nrow(eval_block_expr(session$returned$expr(), wide)), 0L)
+
+    session$setInputs(
+      drilldown_table_block_action = list(
+        action = "filter",
+        filter_type = "categorical",
+        filters = list(
+          list(column = ".variable",       value = "AEDECOD"),
+          list(column = ".variable_level", value = "ABDOMINAL PAIN")
+        )
+      )
+    )
+
+    out <- eval_block_expr(session$returned$expr(), wide)
+    # The two ABDOMINAL PAIN events, not the one display row.
+    expect_equal(nrow(out), 2L)
+    expect_true(all(out$AEDECOD == "ABDOMINAL PAIN"))
+    expect_identical(names(out), names(adae))
+    expect_identical(session$returned$state$drill(), "source")
+  })
+})
+
+test_that("drill = 'auto' keeps the display subset even when a source exists", {
+  wide <- structured_fixture()
+  attr(wide, "source_data") <- data.frame(AEDECOD = "ABDOMINAL PAIN")
+
+  blk <- new_table_block(drill = "auto")
+
+  testServer(blk$expr_server, args = list(data = reactive(wide)), {
+    session$setInputs(
+      drilldown_table_block_action = list(
+        action = "filter",
+        filter_type = "categorical",
+        filters = list(
+          list(column = ".variable",       value = "AEDECOD"),
+          list(column = ".variable_level", value = "ABDOMINAL PAIN")
+        )
+      )
+    )
+    out <- eval_block_expr(session$returned$expr(), wide)
+    # "auto" is unchanged even though a source frame is available.
+    expect_true(".variable_level" %in% names(out))
+    expect_identical(session$returned$state$drill(), "auto")
+  })
+})
+
+test_that("drill = 'source' errors when nothing stamped a source", {
+  wide <- structured_fixture()   # no source_data attribute
+  blk <- new_table_block(drill = "source")
+
+  testServer(blk$expr_server, args = list(data = reactive(wide)), {
+    session$setInputs(
+      drilldown_table_block_action = list(
+        action = "filter",
+        filter_type = "categorical",
+        filters = list(
+          list(column = ".variable",       value = "AEDECOD"),
+          list(column = ".variable_level", value = "ABDOMINAL PAIN")
+        )
+      )
+    )
+    # Errors rather than quietly handing back the display row.
+    expect_error(
+      eval_block_expr(session$returned$expr(), wide),
+      "no `source_data` attribute"
+    )
+  })
+})
+
+test_that("an AGGREGATED table resolves 'source' through its group columns", {
+  # No ARD identity here: one display row per AEDECOD, standing for many
+  # records. The claim is the group column, the mode drill_claim_columns()
+  # takes when `columns` is passed -- the same split dd_ctrl_claims() makes.
+  raw <- data.frame(
+    USUBJID = sprintf("S%02d", 1:6),
+    AEDECOD = c("PAIN", "PAIN", "ANXIETY", "PAIN", "ANXIETY", "PAIN"),
+    stringsAsFactors = FALSE
+  )
+  agg <- dplyr::count(raw, AEDECOD, name = "n")
+  attr(agg, "source_data") <- raw
+
+  blk <- new_table_block(drill = "source", group = "AEDECOD")
+
+  testServer(blk$expr_server, args = list(data = reactive(agg)), {
+    session$setInputs(
+      drilldown_table_block_action = list(
+        action = "filter",
+        filter_type = "categorical",
+        filters = list(list(column = "AEDECOD", value = "PAIN"))
+      )
+    )
+    out <- eval_block_expr(session$returned$expr(), agg)
+    expect_equal(nrow(out), 4L)          # the 4 PAIN records, not the 1 row
+    expect_true(all(out$AEDECOD == "PAIN"))
+    expect_identical(names(out), names(raw))
+  })
+})
+
+test_that("drill_source() refuses a frame it cannot read a claim from", {
+  flat <- data.frame(AEDECOD = c("PAIN", "PAIN"), stringsAsFactors = FALSE)
+  attr(flat, "source_data") <- flat
+  # Neither identity columns nor `columns`: unresolvable. Errors instead of
+  # reporting zero rows as though nobody matched.
+  expect_error(drill_source(flat), "no ARD identity columns")
+  # Named columns make it resolvable.
+  expect_equal(nrow(drill_source(flat, columns = "AEDECOD")), 2L)
+})
+
+test_that("on a FLAT table, `source` is a column name and not the mode", {
+  # The one collision the single-argument design could have had. A flat table
+  # has a column to choose, so the mode does not apply and a real column
+  # called `source` keeps working as a drill target.
+  df <- data.frame(
+    source = c("EDC", "EDC", "LAB"),
+    val    = c(1, 2, 3),
+    stringsAsFactors = FALSE
+  )
+  blk <- new_table_block(drill = "source", value = "val")
+
+  testServer(blk$expr_server, args = list(data = reactive(df)), {
+    session$setInputs(
+      drilldown_table_block_action = list(
+        action = "filter", filter_type = "categorical",
+        column = "source", values = list("EDC")
+      )
+    )
+    out <- eval_block_expr(session$returned$expr(), df)
+    # Filtered on the COLUMN. No drill_source() wrap, so no source_data
+    # requirement and no error.
+    expect_equal(nrow(out), 2L)
+    expect_true(all(out$source == "EDC"))
+  })
+})

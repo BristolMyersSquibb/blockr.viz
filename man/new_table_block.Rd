@@ -150,6 +150,32 @@ through the generic before rendering and filtering, so such objects can be
 connected directly without an explicit coercion step in between. Plain
 data frames pass through untouched.
 }
+\section{Drill values}{
+
+On a FLAT table \code{drill} names the column a click filters on. On a
+STRUCTURED or AGGREGATED one there is no column to choose -- the click
+filters on the row's identity or group keys -- so the value is a MODE
+instead, and it selects what the click hands downstream:
+\itemize{
+\item \code{"auto"} -- the clicked subset of the displayed table.
+\item \code{"source"} -- the RECORDS behind the click (e.g. the 143 female
+subjects, not the "Sex: F" row), resolved by \code{\link[=drill_source]{drill_source()}} from the
+claim against the frame the producer stamped as the input's
+\code{source_data} attribute. A composer table stamps it with
+\code{attr(tbl, "source_data") <- data} and the blockr.sandbox adapter
+carries it onto the annotated frame. Errors at eval time when the
+input carries no such frame, rather than quietly handing back display
+rows.
+}
+The two modes render identically: the table body draws from the block's
+input, never from its output. With no drill active \code{"source"} yields zero
+rows -- no click, no cohort, never a silent everything.
+
+\code{"source"} is read as a mode only where a mode can exist. On a flat table
+it is an ordinary column name, so a real column called \code{source} stays a
+usable drill target.
+}
+
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 new_table_block()

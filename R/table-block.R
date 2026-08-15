@@ -1123,7 +1123,13 @@ table_arguments <- function() {
         "filters the annotated frame to that row's identity and names the ",
         "selection under its source column (e.g. an AEDECOD column appears ",
         "on the output), so a downstream dm filter-by-data block can cascade ",
-        "the click to the source data."
+        "the click to the source data. On a structured or aggregated table ",
+        "the value is a MODE, not a column: \"auto\" hands the clicked ",
+        "subset of the DISPLAYED table downstream, \"source\" hands the ",
+        "RECORDS behind the click instead (the 143 female subjects, not the ",
+        "\"Sex: F\" row) -- resolved from the claim against the frame the ",
+        "producer stamped as the input's `source_data` attribute, and an ",
+        "error at eval time if there is none. Both render identically."
       ),
       example = "Region",
       type = arg_string()
@@ -1234,6 +1240,29 @@ table_guidance <- function() {
 #' @param rowname,value,drill,digits,max_height
 #'   Forwarded to the renderer. The block has no in-table title:
 #'   the block's own name (card header) serves that role.
+#' @section Drill values:
+#' On a FLAT table `drill` names the column a click filters on. On a
+#' STRUCTURED or AGGREGATED one there is no column to choose -- the click
+#' filters on the row's identity or group keys -- so the value is a MODE
+#' instead, and it selects what the click hands downstream:
+#' \itemize{
+#'   \item `"auto"` -- the clicked subset of the displayed table.
+#'   \item `"source"` -- the RECORDS behind the click (e.g. the 143 female
+#'     subjects, not the "Sex: F" row), resolved by [drill_source()] from the
+#'     claim against the frame the producer stamped as the input's
+#'     `source_data` attribute. A composer table stamps it with
+#'     `attr(tbl, "source_data") <- data` and the blockr.sandbox adapter
+#'     carries it onto the annotated frame. Errors at eval time when the
+#'     input carries no such frame, rather than quietly handing back display
+#'     rows.
+#' }
+#' The two modes render identically: the table body draws from the block's
+#' input, never from its output. With no drill active `"source"` yields zero
+#' rows -- no click, no cohort, never a silent everything.
+#'
+#' `"source"` is read as a mode only where a mode can exist. On a flat table
+#' it is an ordinary column name, so a real column called `source` stays a
+#' usable drill target.
 #' @param group Optional grouping column(s) for an aggregated table. Default
 #'   `NULL` (row-per-observation).
 #' @param summaries Summary-column specification for aggregated tables (a list
@@ -2016,6 +2045,21 @@ new_table_block <- function(rowname = NULL,
           ))
         })
 
+        # Is `drill` the "source" MODE, or a column that happens to be
+        # called that? A mode only exists where there is no column to
+        # choose -- a structured or aggregated table -- so on a FLAT table
+        # `drill = "source"` is a column name like any other and the mode
+        # never applies. Resolving against the input rather than against
+        # the literal keeps `source` usable as a real column name, the
+        # thing `"auto"` never bothered to do.
+        drill_is_source <- shiny::reactive({
+          if (!identical(r_drill(), "source")) return(FALSE)
+          d <- tryCatch(ann_data(), error = function(e) NULL)
+          if (!is.data.frame(d)) return(FALSE)
+          if ("source" %in% names(d)) return(FALSE)
+          dt_is_structured(d) || length(r_group()) > 0L
+        })
+
         list(
           # The expr coerces before filtering, so the block's data output (and
           # the drill filter) is always the annotated data frame -- one
@@ -2027,6 +2071,27 @@ new_table_block <- function(rowname = NULL,
             gv <- r_filter_group_vals()
             col  <- r_filter_column()
             vals <- r_filter_values()
+            # `drill = "source"` wraps whatever the drill built, so every
+            # branch (including the undrilled `filter(TRUE)`) goes through
+            # one resolution step: no claim resolves -> zero rows, never a
+            # silent "everything". The wrap is a plain call around the
+            # bbquote result, so the emitted code still stands alone.
+            #
+            # `columns` tells drill_source() which mode to resolve in, using
+            # dd_ctrl_claims()'s rule: dotted names are ARD identity columns
+            # (structured table -> identity mode, no `columns`), undotted
+            # ones are real source columns (aggregated table -> those are
+            # the claim). One convention, two call sites.
+            as_output <- function(ex, claim_cols = NULL) {
+              if (!drill_is_source()) return(ex)
+              cols <- if (length(claim_cols)) {
+                claim_cols[!startsWith(claim_cols, ".")]
+              }
+              call <- list(quote(blockr.viz::drill_source), ex)
+              if (length(cols)) call <- c(call, list(columns = cols))
+              as.call(call)
+            }
+            as_output(
             if (length(gc) && length(gc) == length(gv)) {
               # Grouped / structured drill: AND each clicked key. The output
               # is a pure SUBSET of the annotated df -- the identity columns
@@ -2058,7 +2123,13 @@ new_table_block <- function(rowname = NULL,
                 ),
                 list(col = col, vals = vals)
               )
+            },
+            claim_cols = if (length(gc) && length(gc) == length(gv)) {
+              as.character(gc)
+            } else if (!is.null(col)) {
+              as.character(col)
             }
+            )
           }),
           state = list(
             rowname       = r_rowname,
