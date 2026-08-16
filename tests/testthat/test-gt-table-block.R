@@ -1,3 +1,6 @@
+# gt is a Suggests: the renderer is optional, so its tests are too.
+skip_if_not_installed("gt")
+
 test_that("gt_table hides dotted styling columns and applies tab_style", {
   d <- tibble::tibble(
     .label   = c("Non-white", "American Indian", "Asian", "Black", "White"),

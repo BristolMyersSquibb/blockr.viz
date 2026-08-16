@@ -40,13 +40,15 @@
 #'   string.
 #' @return A `gt_tbl` object.
 #'
-#' @examples
+#' @examplesIf requireNamespace("gt", quietly = TRUE)
 #' tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
 #' gt_table(tbl, title = "Sepal length by species")
 #' @export
 gt_table <- function(data, title = NULL, subtitle = NULL,
                      full_width = TRUE, borders = TRUE,
                      na_rep = "\u2014") {
+  require_gt()
+
   # Shared input contract: a data frame passes through untouched; a
   # table-producing object (composer et al.) is coerced first.
   data <- as_annotated_df(data)
@@ -442,6 +444,8 @@ new_gt_table_block <- function(title = "",
                                borders = TRUE,
                                na_rep = "\u2014",
                                ...) {
+  require_gt()
+
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {
@@ -542,4 +546,29 @@ block_ui.gt_table_block <- function(id, x, ...) {
 #' @export
 block_output.gt_table_block <- function(x, result, session) {
   gt::render_gt(result)
+}
+
+# ---------------------------------------------------------------------------
+# gt is optional
+# ---------------------------------------------------------------------------
+
+#' Stop early when gt is not installed
+#'
+#' gt is a Suggests, not an Import, because it reaches a system library:
+#' gt imports juicyjuice, which imports V8, which needs libnode on Linux.
+#' On a server without it every blockr.viz install fails, and the other
+#' three renderers of the quartet -- chart, table, summarize table -- need
+#' none of it. So the gt renderer asks for gt when it is used, and everyone
+#' else never pays for it.
+#' @noRd
+require_gt <- function() {
+  if (!requireNamespace("gt", quietly = TRUE)) {
+    stop(
+      "The gt renderer needs the 'gt' package. Install it with ",
+      "install.packages(\"gt\"), or use new_table_block() / ",
+      "new_summarize_table_block() instead.",
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
 }

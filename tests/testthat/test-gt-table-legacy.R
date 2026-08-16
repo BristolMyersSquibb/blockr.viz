@@ -9,6 +9,9 @@
 
 # occurrence_summary_block shape: n / N / pct per (label, col_var) cell,
 # ordered so each consecutive n_cols rows form one display row.
+# gt is a Suggests: the renderer is optional, so its tests are too.
+skip_if_not_installed("gt")
+
 legacy_npct <- data.frame(
   label   = rep(c("Any AE", "Headache"), each = 2),
   depth   = rep(c(0L, 1L), each = 2),

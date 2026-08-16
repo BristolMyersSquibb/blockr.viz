@@ -66,6 +66,8 @@ want custom labels can use a \code{mutate_block} upstream to overwrite
 \code{attr(col, "label")}.
 }
 \examples{
+\dontshow{if (requireNamespace("gt", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
 gt_table(tbl, title = "Sepal length by species")
+\dontshow{\}) # examplesIf}
 }

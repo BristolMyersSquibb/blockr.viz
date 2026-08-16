@@ -86,9 +86,12 @@ test_that("every renderer block's dat_valid enforces the shared contract", {
   blocks <- list(
     chart = new_chart_block(),
     table = new_table_block(),
-    tile  = new_tile_block(),
-    gt    = new_gt_table_block()
+    tile  = new_tile_block()
   )
+  # gt is a Suggests; the renderer only exists where it is installed.
+  if (requireNamespace("gt", quietly = TRUE)) {
+    blocks$gt <- new_gt_table_block()
+  }
   plain <- data.frame(a = 1:3, b = letters[1:3], stringsAsFactors = FALSE)
   for (blk in blocks) {
     expect_no_error(blockr.core::validate_data_inputs(blk, list(data = plain)))
@@ -109,6 +112,7 @@ test_that("every renderer block's dat_valid enforces the shared contract", {
 })
 
 test_that("gt block accepts a tidy .fmt frame without .label", {
+  skip_if_not_installed("gt")
   tidy <- data.frame(
     .var   = c("AGE", "AGE"),
     .fmt   = c("{mean} ({sd})", "{mean} ({sd})"),
@@ -127,6 +131,7 @@ test_that("gt block accepts a tidy .fmt frame without .label", {
 })
 
 test_that("gt_table coerces table-producing objects on entry", {
+  skip_if_not_installed("gt")
   tbl <- gt_table(new_contract_composed(ann_df))
   expect_s3_class(tbl, "gt_tbl")
 })
