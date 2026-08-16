@@ -444,8 +444,11 @@ new_gt_table_block <- function(title = "",
                                borders = TRUE,
                                na_rep = "\u2014",
                                ...) {
-  require_gt()
-
+  # No gt check here. `register_block()` CONSTRUCTS every block it registers
+  # (to read its classes and validate its arguments), so a constructor that
+  # stops without gt takes the whole package down at load. Constructing costs
+  # nothing; the block reaches gt only through `gt_table()` when it renders,
+  # and that is where the check lives.
   blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {
