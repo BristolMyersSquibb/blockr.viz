@@ -112,7 +112,11 @@ test_that("quartiles use tern's quantile type, not R's default", {
 })
 
 test_that("every rendered cell matches tern cell for cell", {
+  # rtables/formatters ship with tern (it Depends on the first, imports the
+  # second), but R CMD check wants every `::` in tests declared.
   skip_if_not_installed("tern")
+  skip_if_not_installed("rtables")
+  skip_if_not_installed("formatters")
   d <- data.frame(AVAL = mtcars$mpg, ARM = "A")
   ours <- summary_table(
     d, vars = "AVAL", by = "ARM",
