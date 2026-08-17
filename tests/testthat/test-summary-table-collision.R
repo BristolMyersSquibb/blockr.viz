@@ -50,8 +50,8 @@ test_that("shared level labels survive a grouped (spread) summary", {
 })
 
 test_that("multi-stat numeric vars no longer collide on shared stat labels", {
-  # The docs' own example: mpg and hp both emit "n (%)" / the median+quartiles
-  # "Min - Max" rows, which used to merge into list-cols.
+  # The docs' own example: mpg and hp both emit "n (%)" / "Median (Q1, Q3)" /
+  # "Min, Max" rows, which used to merge into list-cols.
   expect_no_warning(
     wide <- summary_table(
       mtcars,
@@ -64,7 +64,7 @@ test_that("multi-stat numeric vars no longer collide on shared stat labels", {
   # 3 stat rows per variable; the shared labels stay apart via `.variable`.
   expect_identical(nrow(wide), 6L)
   expect_false(any(vapply(wide, is.list, logical(1))))
-  expect_identical(sum(wide$.label == "Min - Max"), 2L)
+  expect_identical(sum(wide$.label == "Min, Max"), 2L)
   # Stat rows make no value claim: their `.variable_level` is NA.
   expect_true(all(is.na(wide$.variable_level)))
 })
@@ -86,8 +86,7 @@ test_that("non-colliding output keeps its shape, order and cells", {
                    c("Sepal.Length", rep("Species", 3)))
   # Absolute indents match what the materialized header rows used to impose.
   expect_identical(wide$.indent, c(1L, 1L, 1L, 1L))
-  # SD at one decimal, tern's format for the Mean (SD) cell.
-  expect_identical(wide$Overall[1], "5.8 (0.8)")
+  expect_identical(wide$Overall[1], "5.8 (0.83)")
   expect_identical(wide$Overall[2], "50 (33.3%)")
 })
 
