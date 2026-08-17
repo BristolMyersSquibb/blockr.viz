@@ -24,7 +24,7 @@
 #'
 #' - **numeric** -> one row per selected stat key (see `stats`). A single
 #'   key emits one un-indented row per variable (e.g. `"mean_sd"` ->
-#'   `.fmt = "{mean:1} ({sd:2})"`); several keys emit one indented row
+#'   `.fmt = "{mean:1} ({sd:1})"`); several keys emit one indented row
 #'   each, in catalog order.
 #' - **categorical** -> one row per level, `.fmt = "{n:0} ({pct:1}%)"`.
 #' - **logical** -> one row per variable, `.fmt = "{n:0} ({pct:1}%)"` for
@@ -540,12 +540,24 @@ add_group_col <- function(stats_df, by) {
 # Each entry maps a stat key to the row label and `.fmt` template it emits
 # for numeric variables. Catalog order is the canonical row order -- the
 # selection is reordered to it, so serialized boards are order-insensitive.
+#
+# **`composer` is the standard for clinical table numbers, and this catalog does
+# not exceed it.** composer is BMS's own CSR-output package and computes through
+# `cards`/`cardx`; its stat registry (`composer/R/stat-registry.R`) and row
+# labels are the vocabulary. So: `Q1`/`Q3` rather than tern's
+# "25% and 75%-ile", R's default `quantile()` type rather than tern's type 2,
+# `SD` at one decimal to match composer's `{mean:xx.x} ({sd:xx.x})`, and **no
+# confidence intervals** -- composer has none, and a statistic the standard does
+# not carry is one we do not offer. If in doubt, check composer.
+#
+# Rationale and the full convention:
+# `blockr.sandbox/dev/summary-statistics-conventions.md`.
 SUMMARY_STATS_CATALOG <- list(
   n            = list(label = "N",               fmt = "{n:0}"),
   n_pct        = list(label = "n (%)",           fmt = "{n:0} ({pct:1}%)"),
   mean         = list(label = "Mean",            fmt = "{mean:1}"),
-  sd           = list(label = "SD",              fmt = "{sd:2}"),
-  mean_sd      = list(label = "Mean (SD)",       fmt = "{mean:1} ({sd:2})"),
+  sd           = list(label = "SD",              fmt = "{sd:1}"),
+  mean_sd      = list(label = "Mean (SD)",       fmt = "{mean:1} ({sd:1})"),
   median       = list(label = "Median",          fmt = "{median:1}"),
   median_q1_q3 = list(label = "Median (Q1, Q3)", fmt = "{median:1} ({q1:1}, {q3:1})"),
   q1_q3        = list(label = "Q1, Q3",          fmt = "{q1:1}, {q3:1}"),
