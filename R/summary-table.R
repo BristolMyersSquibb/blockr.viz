@@ -61,7 +61,10 @@
 #'   like `.group`.
 #' - Raw numeric stat columns: `n, pct` (categorical/logical, and
 #'   numeric where `pct` is the share of non-missing rows), `mean,
-#'   sd, median, q1, q3, min, max` (numeric). `NA` where not applicable.
+#'   sd, median, q1, q3, min, max` and the interval bounds
+#'   `mean_ci_lwr, mean_ci_upr, median_ci_lwr, median_ci_upr` (numeric).
+#'   `NA` where not applicable -- including a CI that the group size does
+#'   not support.
 #'
 #' The per-group denominators (for `"<group>\\nN = <n>"` column headers)
 #' ride along as a **named numeric vector** in `attr(out, "group_n")`
@@ -82,7 +85,8 @@
 #'   templates are emitted for **numeric** variables (the underlying
 #'   numbers are always all computed). Any combination of `"n"`,
 #'   `"n_pct"` (non-missing n and % of group rows), `"mean"`, `"sd"`,
-#'   `"mean_sd"`, `"median"`, `"median_q1_q3"`, `"q1_q3"`, `"min_max"`;
+#'   `"mean_sd"`, `"mean_ci"`, `"median"`, `"median_ci"`,
+#'   `"median_q1_q3"`, `"q1_q3"`, `"min_max"`;
 #'   rows follow this canonical order regardless of input order. A single
 #'   key gives one row per variable, several give one row per stat. The
 #'   legacy presets `"compact"` (= `"mean_sd"`) and `"expanded"`
@@ -385,7 +389,8 @@ summary_table_long <- function(data,
 #'   templates are emitted for **numeric** variables (the underlying
 #'   numbers are always all computed). Any combination of `"n"`,
 #'   `"n_pct"` (non-missing n and % of group rows), `"mean"`, `"sd"`,
-#'   `"mean_sd"`, `"median"`, `"median_q1_q3"`, `"q1_q3"`, `"min_max"`;
+#'   `"mean_sd"`, `"mean_ci"`, `"median"`, `"median_ci"`,
+#'   `"median_q1_q3"`, `"q1_q3"`, `"min_max"`;
 #'   rows follow this canonical order regardless of input order. A single
 #'   key gives one row per variable, several give one row per stat. The
 #'   legacy presets `"compact"` (= `"mean_sd"`) and `"expanded"`
@@ -540,16 +545,34 @@ add_group_col <- function(stats_df, by) {
 # Each entry maps a stat key to the row label and `.fmt` template it emits
 # for numeric variables. Catalog order is the canonical row order -- the
 # selection is reordered to it, so serialized boards are order-insensitive.
+#
+# Labels and formats follow `tern`'s defaults, because that is what the tables
+# we are compared against are made of: old CDEx's summary rows are
+# `tern::analyze_vars()` output, so matching it means matching tern. Taken
+# wholesale rather than à la carte -- picking some of tern's labels and keeping
+# our own for the rest is what produces drift. Note the CI rows carry TWO
+# decimals while the rest carry one; that is tern's convention, and mixing it up
+# makes an otherwise identical table read as different.
+#
+# `na_blank` names a column whose `NA` blanks the whole cell instead of
+# rendering "(NA, NA)": a confidence interval that is not defined for the group
+# size has no value to show. See `ci_mean()` / `ci_median()` for when that is.
 SUMMARY_STATS_CATALOG <- list(
   n            = list(label = "N",               fmt = "{n:0}"),
   n_pct        = list(label = "n (%)",           fmt = "{n:0} ({pct:1}%)"),
   mean         = list(label = "Mean",            fmt = "{mean:1}"),
   sd           = list(label = "SD",              fmt = "{sd:2}"),
   mean_sd      = list(label = "Mean (SD)",       fmt = "{mean:1} ({sd:2})"),
+  mean_ci      = list(label = "Mean 95% CI",     fmt = "({mean_ci_lwr:2}, {mean_ci_upr:2})",
+                      na_blank = "mean_ci_lwr"),
   median       = list(label = "Median",          fmt = "{median:1}"),
+  median_ci    = list(label = "Median 95% CI",   fmt = "({median_ci_lwr:2}, {median_ci_upr:2})",
+                      na_blank = "median_ci_lwr"),
+  # No tern equivalent for this composite, so it keeps our own label rather
+  # than inventing a tern-shaped one.
   median_q1_q3 = list(label = "Median (Q1, Q3)", fmt = "{median:1} ({q1:1}, {q3:1})"),
-  q1_q3        = list(label = "Q1, Q3",          fmt = "{q1:1}, {q3:1}"),
-  min_max      = list(label = "Min, Max",        fmt = "{min:1}, {max:1}")
+  q1_q3        = list(label = "25% and 75%-ile", fmt = "{q1:1} - {q3:1}"),
+  min_max      = list(label = "Min - Max",       fmt = "{min:1} - {max:1}")
 )
 
 # Legacy preset values accepted for back-compat with boards serialized
@@ -630,6 +653,11 @@ compute_numeric_rows <- function(data, var, stats, sections, by,
     f$.fmt <- entry$fmt
     # Empty cells (n == 0): blank template -> NA cell at render time.
     f$.fmt[!is.na(f$n) & f$n == 0] <- NA_character_
+    # A CI that is undefined for the group size blanks too, rather than
+    # rendering "(NA, NA)".
+    if (!is.null(entry$na_blank)) {
+      f$.fmt[is.na(f[[entry$na_blank]])] <- NA_character_
+    }
     f
   })
 
@@ -794,6 +822,51 @@ rbind_long <- function(...) {
   do.call(rbind, frames)
 }
 
+#' Mean confidence interval, the t-interval `tern::stat_mean_ci()` computes
+#'
+#' `mean +/- qt((1 + conf_level) / 2, df = n - 1) * sd / sqrt(n)` -- a
+#' t-interval, NOT `1.96 * se`. Undefined below `n_min` observations, where it
+#' returns `NA` and the cell renders blank (tern does the same).
+#' @return Numeric of length 2, `c(lower, upper)`.
+#' @noRd
+ci_mean <- function(v, conf_level = 0.95, n_min = 2L) {
+  v <- v[!is.na(v)]
+  n <- length(v)
+  if (n < n_min) {
+    return(c(NA_real_, NA_real_))
+  }
+  hci <- stats::qt((1 + conf_level) / 2, df = n - 1) * stats::sd(v) / sqrt(n)
+  mean(v) + c(-hci, hci)
+}
+
+#' Median confidence interval, the order-statistic interval
+#' `tern::stat_median_ci()` computes
+#'
+#' Distribution-free: the bounds are two observed values picked by the binomial
+#' quantile. **Undefined below six observations** -- `qbinom(0.025, n, 0.5)` is
+#' 0 there, so no pair of order statistics attains the level and tern returns
+#' `NA`. That blank cell in a small subgroup is correct, not a rendering bug.
+#'
+#' The attained coverage is discrete and always conservative (n = 6 -> 96.9%,
+#' n = 20 -> 95.9%, n = 100 -> 96.5%), so the row says 95% while the interval
+#' rarely is. tern keeps the empirical level as an attribute and still prints
+#' "Median 95% CI"; we do the same and do not surface it.
+#' @return Numeric of length 2, `c(lower, upper)`.
+#' @noRd
+ci_median <- function(v, conf_level = 0.95) {
+  v <- v[!is.na(v)]
+  n <- length(v)
+  if (n == 0L) {
+    return(c(NA_real_, NA_real_))
+  }
+  k <- stats::qbinom((1 - conf_level) / 2, size = n, prob = 0.5)
+  if (k == 0L) {
+    return(c(NA_real_, NA_real_))
+  }
+  v <- sort(v)
+  c(v[k], v[n - k + 1L])
+}
+
 #' Per-group numeric stats. `pct` is the share of non-missing rows in the
 #' group (the `n_pct` denominator is always a row count -- a distinct-subject
 #' denominator would not match the non-missing-value numerator).
@@ -810,7 +883,11 @@ compute_numeric_stats <- function(data, var, group_vars) {
       q1     = suppressWarnings(stats::quantile(v, 0.25, na.rm = TRUE, names = FALSE)),
       q3     = suppressWarnings(stats::quantile(v, 0.75, na.rm = TRUE, names = FALSE)),
       min    = suppressWarnings(min(v, na.rm = TRUE)),
-      max    = suppressWarnings(max(v, na.rm = TRUE))
+      max    = suppressWarnings(max(v, na.rm = TRUE)),
+      mean_ci_lwr   = ci_mean(v)[1L],
+      mean_ci_upr   = ci_mean(v)[2L],
+      median_ci_lwr = ci_median(v)[1L],
+      median_ci_upr = ci_median(v)[2L]
     )
   } else {
     data |>
@@ -825,6 +902,10 @@ compute_numeric_stats <- function(data, var, group_vars) {
         q3     = suppressWarnings(stats::quantile(.data[[var]], 0.75, na.rm = TRUE, names = FALSE)),
         min    = suppressWarnings(min(.data[[var]], na.rm = TRUE)),
         max    = suppressWarnings(max(.data[[var]], na.rm = TRUE)),
+        mean_ci_lwr   = ci_mean(.data[[var]])[1L],
+        mean_ci_upr   = ci_mean(.data[[var]])[2L],
+        median_ci_lwr = ci_median(.data[[var]])[1L],
+        median_ci_upr = ci_median(.data[[var]])[2L],
         .groups = "drop"
       ) |>
       as.data.frame()

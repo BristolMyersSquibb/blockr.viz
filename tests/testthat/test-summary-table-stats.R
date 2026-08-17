@@ -20,7 +20,7 @@ test_that("legacy presets map to catalog keys", {
   expect_identical(expanded, keys)
   expect_identical(
     keys$.label,
-    c("N", "Mean", "SD", "Median", "Q1, Q3", "Min, Max")
+    c("N", "Mean", "SD", "Median", "25% and 75%-ile", "Min - Max")
   )
 })
 
@@ -92,7 +92,7 @@ test_that("selection is reordered to canonical catalog order", {
   fwd <- summary_table_long(mtcars, vars = "mpg", stats = c("n", "min_max"))
   rev <- summary_table_long(mtcars, vars = "mpg", stats = c("min_max", "n"))
   expect_identical(fwd, rev)
-  expect_identical(fwd$.label, c("N", "Min, Max"))
+  expect_identical(fwd$.label, c("N", "Min - Max"))
 })
 
 test_that("n_pct is the share of non-missing rows per group", {

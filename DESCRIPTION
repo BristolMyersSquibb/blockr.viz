@@ -58,6 +58,7 @@ Suggests:
     scales,
     shinytest2,
     systemfonts,
+    tern,
     testthat (>= 3.0.0),
     withr
 Remotes:

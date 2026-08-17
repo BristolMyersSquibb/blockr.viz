@@ -51,7 +51,7 @@ test_that("shared level labels survive a grouped (spread) summary", {
 
 test_that("multi-stat numeric vars no longer collide on shared stat labels", {
   # The docs' own example: mpg and hp both emit "n (%)" / "Median (Q1, Q3)" /
-  # "Min, Max" rows, which used to merge into list-cols.
+  # "Min - Max" rows, which used to merge into list-cols.
   expect_no_warning(
     wide <- summary_table(
       mtcars,
@@ -64,7 +64,7 @@ test_that("multi-stat numeric vars no longer collide on shared stat labels", {
   # 3 stat rows per variable; the shared labels stay apart via `.variable`.
   expect_identical(nrow(wide), 6L)
   expect_false(any(vapply(wide, is.list, logical(1))))
-  expect_identical(sum(wide$.label == "Min, Max"), 2L)
+  expect_identical(sum(wide$.label == "Min - Max"), 2L)
   # Stat rows make no value claim: their `.variable_level` is NA.
   expect_true(all(is.na(wide$.variable_level)))
 })
