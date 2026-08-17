@@ -568,9 +568,12 @@ SUMMARY_STATS_CATALOG <- list(
   median       = list(label = "Median",          fmt = "{median:1}"),
   median_ci    = list(label = "Median 95% CI",   fmt = "({median_ci_lwr:2}, {median_ci_upr:2})",
                       na_blank = "median_ci_lwr"),
-  # No tern equivalent for this composite, so it keeps our own label rather
-  # than inventing a tern-shaped one.
-  median_q1_q3 = list(label = "Median (Q1, Q3)", fmt = "{median:1} ({q1:1}, {q3:1})"),
+  # tern has no median+quartiles composite, but it does have a rule for
+  # composites -- `median_range` is "Median (Min - Max)" at
+  # "xx.x (xx.x - xx.x)" -- so this follows that rather than keeping a
+  # Q1/Q3 label the standalone row no longer uses.
+  median_q1_q3 = list(label = "Median (25% and 75%-ile)",
+                      fmt = "{median:1} ({q1:1} - {q3:1})"),
   q1_q3        = list(label = "25% and 75%-ile", fmt = "{q1:1} - {q3:1}"),
   min_max      = list(label = "Min - Max",       fmt = "{min:1} - {max:1}")
 )

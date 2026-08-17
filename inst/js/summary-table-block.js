@@ -42,7 +42,7 @@
     { key: 'mean_ci',      label: 'Mean 95% CI' },
     { key: 'median',       label: 'Median' },
     { key: 'median_ci',    label: 'Median 95% CI' },
-    { key: 'median_q1_q3', label: 'Median (Q1, Q3)' },
+    { key: 'median_q1_q3', label: 'Median (25% and 75%-ile)' },
     { key: 'q1_q3',        label: '25% and 75%-ile' },
     { key: 'min_max',      label: 'Min - Max' }
   ];

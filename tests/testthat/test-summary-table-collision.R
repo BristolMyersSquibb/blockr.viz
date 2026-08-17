@@ -50,7 +50,7 @@ test_that("shared level labels survive a grouped (spread) summary", {
 })
 
 test_that("multi-stat numeric vars no longer collide on shared stat labels", {
-  # The docs' own example: mpg and hp both emit "n (%)" / "Median (Q1, Q3)" /
+  # The docs' own example: mpg and hp both emit "n (%)" / the median+quartiles
   # "Min - Max" rows, which used to merge into list-cols.
   expect_no_warning(
     wide <- summary_table(
