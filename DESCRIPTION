@@ -47,7 +47,6 @@ Suggests:
     callr,
     chromote,
     flextable,
-    formatters,
     ggplot2,
     grid,
     gt,
@@ -56,11 +55,9 @@ Suggests:
     openxlsx,
     ragg,
     rmarkdown,
-    rtables,
     scales,
     shinytest2,
     systemfonts,
-    tern,
     testthat (>= 3.0.0),
     withr
 Remotes:

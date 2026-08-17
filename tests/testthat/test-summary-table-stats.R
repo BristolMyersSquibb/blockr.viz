@@ -20,7 +20,7 @@ test_that("legacy presets map to catalog keys", {
   expect_identical(expanded, keys)
   expect_identical(
     keys$.label,
-    c("N", "Mean", "SD", "Median", "25% and 75%-ile", "Min - Max")
+    c("N", "Mean", "SD", "Median", "Q1, Q3", "Min, Max")
   )
 })
 
@@ -28,11 +28,11 @@ test_that("a single stat key emits one un-indented row per variable", {
   out <- summary_table_long(mtcars, vars = "mpg", stats = "median_q1_q3")
   expect_identical(nrow(out), 1L)
   expect_identical(out$.indent, 0L)
-  expect_identical(out$.fmt, "{median:1} ({q1:1} - {q3:1})")
+  expect_identical(out$.fmt, "{median:1} ({q1:1}, {q3:1})")
   # The row IS the variable, so the stub names the variable; the statistic is
   # constant down the table and is named once, in the subtitle.
   expect_identical(out$.label, "mpg")
-  expect_identical(attr(out, "subtitle"), "Median (25% and 75%-ile)")
+  expect_identical(attr(out, "subtitle"), "Median (Q1, Q3)")
 })
 
 test_that("one row per variable renders flat, with no variable headers", {
@@ -92,7 +92,7 @@ test_that("selection is reordered to canonical catalog order", {
   fwd <- summary_table_long(mtcars, vars = "mpg", stats = c("n", "min_max"))
   rev <- summary_table_long(mtcars, vars = "mpg", stats = c("min_max", "n"))
   expect_identical(fwd, rev)
-  expect_identical(fwd$.label, c("N", "Min - Max"))
+  expect_identical(fwd$.label, c("N", "Min, Max"))
 })
 
 test_that("n_pct is the share of non-missing rows per group", {
