@@ -4,7 +4,15 @@
 \alias{compute_smoother_series}
 \title{Compute smoother line points per group for a scatter chart}
 \usage{
-compute_smoother_series(data, smoother, x_col, y_col, color_by, series_by)
+compute_smoother_series(
+  data,
+  smoother,
+  x_col,
+  y_col,
+  color_by,
+  series_by,
+  facet_by = NULL
+)
 }
 \arguments{
 \item{data}{Data frame.}
@@ -15,6 +23,10 @@ compute_smoother_series(data, smoother, x_col, y_col, color_by, series_by)
 
 \item{color_by, series_by}{Grouping column names; smoother is fit per
 \code{series_by} if non-NULL else \code{color_by} else no grouping.}
+
+\item{facet_by}{Facet column name, or \code{NULL} for an unfaceted chart. When
+given, each panel is fit on its own rows and the result is keyed by facet
+level first.}
 }
 \value{
 A named list or \code{NULL}.
@@ -25,10 +37,26 @@ numeric vectors \code{x} and \code{y} covering a 100-point line across the group
 x range. Used by the chart's JS-side renderer to draw a regression
 overlay without doing the math in the browser.
 }
+\details{
+With \code{facet_by} set the result is nested one level deeper, keyed by facet
+level then by group. \strong{A fit belongs to its panel}: a faceted chart draws
+one panel per level, so a single fit over the pooled rows is an estimate of
+a relationship no panel shows — it can carry a slope, an x range, and even a
+sign that contradict every panel it is drawn into (Simpson's paradox). This
+mirrors \code{ggplot2::geom_smooth()} under \code{facet_wrap()}, which is what
+\code{\link[=static_chart]{static_chart()}} and the emitted code use, so the canvas and the export
+cannot disagree.
+}
 \examples{
 compute_smoother_series(
   mtcars, "lm", "wt", "mpg",
   color_by = NULL, series_by = NULL
+)
+
+# one fit per panel, keyed by facet level then group
+compute_smoother_series(
+  mtcars, "lm", "wt", "mpg",
+  color_by = NULL, series_by = NULL, facet_by = "cyl"
 )
 }
 \keyword{internal}

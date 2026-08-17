@@ -4208,10 +4208,19 @@
 
         // R precomputes the smoother (lm or loess) per group and sends the
         // line points via config.smoother_series. JS just renders.
+        //
+        // Faceted, R nests the fits one level deeper, keyed by facet level
+        // then group (compute_smoother_series). Take THIS panel's bucket
+        // first: reading the top level directly is how every panel used to
+        // get the same pooled line, which fits no panel and outruns each
+        // panel's x range.
         const smootherLine = (/** @type {any} */ groupName) => {
           if (smoother === 'none' || !smootherSeries) return null;
+          const bucket = (facet && fv !== '__all__')
+            ? smootherSeries[fv] : smootherSeries;
+          if (!bucket) return null;
           const key = groupName != null ? String(groupName) : '__all__';
-          const s = smootherSeries[key];
+          const s = bucket[key];
           if (!s || !s.x || !s.y) return null;
           /** @type {any[]} */
           const out = [];

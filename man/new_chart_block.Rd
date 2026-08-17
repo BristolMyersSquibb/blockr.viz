@@ -176,8 +176,8 @@ the names said neither "line" nor which way it ran, and they were the only
 array-valued args in the registry that were not plural.}
 
 \item{smoother}{Trend overlay for scatter charts: one of \code{"none"}
-(default), \code{"lm"}, or \code{"loess"}. Fit per \code{color}/\code{series} group via
-\code{\link[=compute_smoother_series]{compute_smoother_series()}}.}
+(default), \code{"lm"}, or \code{"loess"}. Fit per \code{color}/\code{series} group, and per
+\code{facet} panel, via \code{\link[=compute_smoother_series]{compute_smoother_series()}}.}
 
 \item{identity_line}{Identity-line overlay for scatter charts: \code{TRUE} draws
 a dashed 45-degree y = x guide line across the overlap of the x and y

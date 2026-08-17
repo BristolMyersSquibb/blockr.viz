@@ -135,8 +135,8 @@
 #'   the names said neither "line" nor which way it ran, and they were the only
 #'   array-valued args in the registry that were not plural.
 #' @param smoother Trend overlay for scatter charts: one of `"none"`
-#'   (default), `"lm"`, or `"loess"`. Fit per `color`/`series` group via
-#'   [compute_smoother_series()].
+#'   (default), `"lm"`, or `"loess"`. Fit per `color`/`series` group, and per
+#'   `facet` panel, via [compute_smoother_series()].
 #' @param identity_line Identity-line overlay for scatter charts: `TRUE` draws
 #'   a dashed 45-degree y = x guide line across the overlap of the x and y
 #'   ranges (shift / agreement plots), `FALSE` (default) omits it. The legacy
@@ -734,15 +734,19 @@ new_chart_block <- function(
         })
 
         # Smoother overlay, cached on exactly compute_smoother_series()'s
-        # inputs: the smoother kind, the data, and the x/y/color/series
+        # inputs: the smoother kind, the data, and the x/y/color/series/facet
         # roles. A loess fit (surface = "direct") is O(n^2), so any other
         # gear edit must reuse the cached fit. With smoother "none" the
         # early return keeps the reactive off the data dependency entirely.
+        # facet_by is not decoration: without it every panel was handed the
+        # same pooled fit (see compute_smoother_series()).
         r_smoother_series <- shiny::reactive({
           sm <- r_smoother()
           if (is.null(sm) || identical(sm, "none")) return(NULL)
+          d <- plain_data()
           tryCatch(compute_smoother_series(
-            plain_data(), sm, r_x(), r_y(), r_color(), r_series()
+            d, sm, r_x(), r_y(), r_color(), r_series(),
+            facet_by = col_in(d, r_facet())
           ), error = function(e) {
             # Keep the NULL fallback (no overlay) but surface the failure
             # so a broken smoother fit is diagnosable instead of silent.
@@ -1560,21 +1564,39 @@ new_chart_block <- function(
 #' x range. Used by the chart's JS-side renderer to draw a regression
 #' overlay without doing the math in the browser.
 #'
+#' With `facet_by` set the result is nested one level deeper, keyed by facet
+#' level then by group. **A fit belongs to its panel**: a faceted chart draws
+#' one panel per level, so a single fit over the pooled rows is an estimate of
+#' a relationship no panel shows — it can carry a slope, an x range, and even a
+#' sign that contradict every panel it is drawn into (Simpson's paradox). This
+#' mirrors `ggplot2::geom_smooth()` under `facet_wrap()`, which is what
+#' [static_chart()] and the emitted code use, so the canvas and the export
+#' cannot disagree.
+#'
 #' @param data Data frame.
 #' @param smoother One of `"none"`, `"lm"`, `"loess"`.
 #' @param x_col,y_col Numeric column names.
 #' @param color_by,series_by Grouping column names; smoother is fit per
 #'   `series_by` if non-NULL else `color_by` else no grouping.
+#' @param facet_by Facet column name, or `NULL` for an unfaceted chart. When
+#'   given, each panel is fit on its own rows and the result is keyed by facet
+#'   level first.
 #' @return A named list or `NULL`.
 #' @examples
 #' compute_smoother_series(
 #'   mtcars, "lm", "wt", "mpg",
 #'   color_by = NULL, series_by = NULL
 #' )
+#'
+#' # one fit per panel, keyed by facet level then group
+#' compute_smoother_series(
+#'   mtcars, "lm", "wt", "mpg",
+#'   color_by = NULL, series_by = NULL, facet_by = "cyl"
+#' )
 #' @keywords internal
 #' @export
 compute_smoother_series <- function(data, smoother, x_col, y_col,
-                                     color_by, series_by) {
+                                     color_by, series_by, facet_by = NULL) {
   if (is.null(smoother) || identical(smoother, "none")) return(NULL)
   if (is.null(data) || nrow(data) == 0) return(NULL)
   if (is.null(x_col) || is.null(y_col)) return(NULL)
@@ -1582,11 +1604,6 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
   if (!is.numeric(data[[x_col]]) || !is.numeric(data[[y_col]])) return(NULL)
 
   split_col <- series_by %||% color_by
-  if (!is.null(split_col) && split_col %in% names(data)) {
-    groups <- split(data, as.character(data[[split_col]]))
-  } else {
-    groups <- list(`__all__` = data)
-  }
 
   fit_one <- function(d) {
     d <- d[!is.na(d[[x_col]]) & !is.na(d[[y_col]]), , drop = FALSE]
@@ -1611,9 +1628,30 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
     if (is.null(ys) || all(is.na(ys))) return(NULL)
     list(x = as.list(xs), y = as.list(unname(ys)))
   }
-  res <- lapply(groups, fit_one)
-  res <- res[!vapply(res, is.null, logical(1L))]
-  if (length(res) == 0L) NULL else res
+
+  drop_empty <- function(x) {
+    x <- x[!vapply(x, is.null, logical(1L))]
+    if (length(x) == 0L) NULL else x
+  }
+
+  fit_groups <- function(d) {
+    if (nrow(d) == 0L) return(NULL)
+    if (!is.null(split_col) && split_col %in% names(d)) {
+      groups <- split(d, as.character(d[[split_col]]))
+    } else {
+      groups <- list(`__all__` = d)
+    }
+    drop_empty(lapply(groups, fit_one))
+  }
+
+  if (is.null(facet_by) || !facet_by %in% names(data)) {
+    return(fit_groups(data))
+  }
+
+  # One fit per panel. split() drops NA levels, so a panel whose facet value
+  # is missing gets no entry and the renderer draws no line there -- better
+  # than lending it another panel's fit.
+  drop_empty(lapply(split(data, as.character(data[[facet_by]])), fit_groups))
 }
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
