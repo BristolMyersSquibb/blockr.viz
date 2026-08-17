@@ -86,7 +86,8 @@ test_that("non-colliding output keeps its shape, order and cells", {
                    c("Sepal.Length", rep("Species", 3)))
   # Absolute indents match what the materialized header rows used to impose.
   expect_identical(wide$.indent, c(1L, 1L, 1L, 1L))
-  expect_identical(wide$Overall[1], "5.8 (0.83)")
+  # SD at one decimal, tern's format for the Mean (SD) cell.
+  expect_identical(wide$Overall[1], "5.8 (0.8)")
   expect_identical(wide$Overall[2], "50 (33.3%)")
 })
 

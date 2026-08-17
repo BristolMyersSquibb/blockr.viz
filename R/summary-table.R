@@ -24,7 +24,7 @@
 #'
 #' - **numeric** -> one row per selected stat key (see `stats`). A single
 #'   key emits one un-indented row per variable (e.g. `"mean_sd"` ->
-#'   `.fmt = "{mean:1} ({sd:2})"`); several keys emit one indented row
+#'   `.fmt = "{mean:1} ({sd:1})"`); several keys emit one indented row
 #'   each, in catalog order.
 #' - **categorical** -> one row per level, `.fmt = "{n:0} ({pct:1}%)"`.
 #' - **logical** -> one row per variable, `.fmt = "{n:0} ({pct:1}%)"` for
@@ -561,8 +561,8 @@ SUMMARY_STATS_CATALOG <- list(
   n            = list(label = "N",               fmt = "{n:0}"),
   n_pct        = list(label = "n (%)",           fmt = "{n:0} ({pct:1}%)"),
   mean         = list(label = "Mean",            fmt = "{mean:1}"),
-  sd           = list(label = "SD",              fmt = "{sd:2}"),
-  mean_sd      = list(label = "Mean (SD)",       fmt = "{mean:1} ({sd:2})"),
+  sd           = list(label = "SD",              fmt = "{sd:1}"),
+  mean_sd      = list(label = "Mean (SD)",       fmt = "{mean:1} ({sd:1})"),
   mean_ci      = list(label = "Mean 95% CI",     fmt = "({mean_ci_lwr:2}, {mean_ci_upr:2})",
                       na_blank = "mean_ci_lwr"),
   median       = list(label = "Median",          fmt = "{median:1}"),
@@ -822,6 +822,18 @@ rbind_long <- function(...) {
   do.call(rbind, frames)
 }
 
+#' Quantile, the way `tern` computes quartiles
+#'
+#' `type = 2` (the `tern::control_analyze_vars()` default), NOT R's default
+#' `type = 7`. The two disagree in the first decimal on ordinary data --
+#' `quantile(mtcars$mpg, 0.25)` is 15.425 at type 7 and 15.35 at type 2 -- which
+#' is enough to read as a wrong number when a summary table is held next to a
+#' tern-built one.
+#' @noRd
+quantile_tern <- function(v, probs) {
+  stats::quantile(v, probs, na.rm = TRUE, names = FALSE, type = 2)
+}
+
 #' Mean confidence interval, the t-interval `tern::stat_mean_ci()` computes
 #'
 #' `mean +/- qt((1 + conf_level) / 2, df = n - 1) * sd / sqrt(n)` -- a
@@ -880,8 +892,8 @@ compute_numeric_stats <- function(data, var, group_vars) {
       mean   = mean(v, na.rm = TRUE),
       sd     = stats::sd(v, na.rm = TRUE),
       median = stats::median(v, na.rm = TRUE),
-      q1     = suppressWarnings(stats::quantile(v, 0.25, na.rm = TRUE, names = FALSE)),
-      q3     = suppressWarnings(stats::quantile(v, 0.75, na.rm = TRUE, names = FALSE)),
+      q1     = suppressWarnings(quantile_tern(v, 0.25)),
+      q3     = suppressWarnings(quantile_tern(v, 0.75)),
       min    = suppressWarnings(min(v, na.rm = TRUE)),
       max    = suppressWarnings(max(v, na.rm = TRUE)),
       mean_ci_lwr   = ci_mean(v)[1L],
@@ -898,8 +910,8 @@ compute_numeric_stats <- function(data, var, group_vars) {
         mean   = mean(.data[[var]], na.rm = TRUE),
         sd     = stats::sd(.data[[var]], na.rm = TRUE),
         median = stats::median(.data[[var]], na.rm = TRUE),
-        q1     = suppressWarnings(stats::quantile(.data[[var]], 0.25, na.rm = TRUE, names = FALSE)),
-        q3     = suppressWarnings(stats::quantile(.data[[var]], 0.75, na.rm = TRUE, names = FALSE)),
+        q1     = suppressWarnings(quantile_tern(.data[[var]], 0.25)),
+        q3     = suppressWarnings(quantile_tern(.data[[var]], 0.75)),
         min    = suppressWarnings(min(.data[[var]], na.rm = TRUE)),
         max    = suppressWarnings(max(.data[[var]], na.rm = TRUE)),
         mean_ci_lwr   = ci_mean(.data[[var]])[1L],

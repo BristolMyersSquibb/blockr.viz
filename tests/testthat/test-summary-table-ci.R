@@ -91,6 +91,47 @@ test_that("an undefined CI renders blank, not \"(NA, NA)\"", {
   expect_true(all(is.na(wide$b) | !nzchar(wide$b)))
 })
 
+test_that("quartiles use tern's quantile type, not R's default", {
+  skip_if_not_installed("tern")
+  ctrl <- tern::control_analyze_vars()
+  expect_identical(ctrl$quantile_type, 2)
+  for (x in list(mtcars$mpg, mtcars$hp, mtcars$wt)) {
+    expect_equal(
+      c(quantile_tern(x, 0.25), quantile_tern(x, 0.75)),
+      unname(stats::quantile(x, c(0.25, 0.75), type = ctrl$quantile_type))
+    )
+  }
+  # Not a distinction without a difference: on mpg the two types disagree in
+  # the first decimal, which is what a side-by-side comparison would flag.
+  expect_false(
+    isTRUE(all.equal(
+      quantile_tern(mtcars$mpg, 0.25),
+      unname(stats::quantile(mtcars$mpg, 0.25))
+    ))
+  )
+})
+
+test_that("every rendered cell matches tern cell for cell", {
+  skip_if_not_installed("tern")
+  d <- data.frame(AVAL = mtcars$mpg, ARM = "A")
+  ours <- summary_table(
+    d, vars = "AVAL", by = "ARM",
+    stats = c("mean_sd", "mean_ci", "median", "median_ci", "q1_q3", "min_max")
+  )
+  lyt <- rtables::basic_table()
+  lyt <- rtables::split_cols_by(lyt, "ARM")
+  lyt <- tern::analyze_vars(
+    lyt, "AVAL",
+    .stats = c("mean_sd", "mean_ci", "median", "median_ci", "quantiles", "range")
+  )
+  theirs <- rtables::build_table(lyt, d)
+  # The rendered strings, not the raw numbers: the formats are half of what
+  # "matches old CDEx" means.
+  cells <- formatters::matrix_form(theirs)$strings
+  cells <- trimws(cells[-seq_len(nrow(cells) - nrow(ours)), 2])
+  expect_identical(as.character(ours$A), cells)
+})
+
 test_that("the tern-matching stat set reproduces old CDEx's row labels", {
   # The set old CDEx selects (spec_CA_244_0001_app.R), in tern's order.
   out <- summary_table_long(
