@@ -162,7 +162,9 @@ new_picker_block <- function(
         # the wire; the JS side re-wraps them. ALL columns are candidates in
         # the gear's "Columns offered" pool (a picker may drive a grouping or
         # color dimension, not just a measure); the builder chooses from it.
-        shiny::observe({
+        # Reads its reactives directly, so the observe() below tracks them and
+        # the announce handler (isolated by observeEvent) does not.
+        send_state <- function() {
           shiny::req(data())
           labs <- col_labels()
           session$sendCustomMessage(
@@ -174,7 +176,20 @@ new_picker_block <- function(
               pickers = r_pickers()
             )
           )
-        })
+        }
+
+        shiny::observe(send_state())
+
+        # Deferred dock panel: the push above went out at boot, before this
+        # block's per-instance script existed on the page (it ships with the
+        # panel), and Shiny drops a custom message that has no handler. The
+        # script's own `pending` slot cannot catch that -- it only parks a
+        # message that arrived after the script parsed. So the client
+        # announces when it comes up with nothing parked, and we send again;
+        # without this the gear band is empty and the face carries no
+        # controls at all, restored pickers or not. Same fix as the chart
+        # (`drilldown_block_ready`) and the rank table.
+        shiny::observeEvent(input$picker_block_ready, send_state())
 
         # JS -> R: the whole picker list on any change (value-filter style).
         # Sent as a JSON string: a bare array of objects would arrive
@@ -508,10 +523,10 @@ picker_block_assets <- function(ns) {
   # and the full script exceeds that.
   head_js <- sprintf(
     "var NS = { gear: '%s', band: '%s', rows: '%s', add: '%s', face: '%s' };
-      var IN = { pickers: '%s' };
+      var IN = { pickers: '%s', ready: '%s' };
       var MSG = '%s';",
     ns("gear"), ns("band"), ns("rows"), ns("add"), ns("face"),
-    ns("pickers"), ns("pk_update")
+    ns("pickers"), ns("picker_block_ready"), ns("pk_update")
   )
   js <- paste0(
     "(function() {
@@ -556,6 +571,31 @@ picker_block_assets <- function(ns) {
       Shiny.addCustomMessageHandler(MSG, function(msg) {
         if (ready) apply(msg); else pending = msg;
       });
+
+      // Ask R for the control state. `pending` only parks a push that arrived
+      // after this script parsed; on a deferred dock panel the script ships
+      // WITH the panel, so the boot push was dropped before any handler
+      // existed and no client-side queue can recover it. Announcing
+      // unconditionally keeps this branch-free: when nothing was dropped the
+      // answer is identical and apply()'s `changed` guard makes it a no-op.
+      function announce() {
+        if (window.Shiny && Shiny.setInputValue) {
+          Shiny.setInputValue(IN.ready, Date.now(), { priority: 'event' });
+        }
+      }
+      function announceWhenConnected() {
+        // On a late mount the socket is long open, so announce now. On first
+        // page load this script runs before the socket exists and an input
+        // set then is lost -- wait for the connection (nothing was dropped in
+        // that case anyway, so the wait costs nothing).
+        var app = window.Shiny && Shiny.shinyapp;
+        if (app && app.isConnected && app.isConnected()) { announce(); return; }
+        if (window.jQuery) {
+          window.jQuery(document).one('shiny:connected', announce);
+        } else {
+          announce();
+        }
+      }
 
       function apply(msg) {
         var cfg = toArr(msg.cfg_options).map(function (o) {
@@ -769,6 +809,7 @@ picker_block_assets <- function(ns) {
         });
         ready = true;
         if (pending) { apply(pending); pending = null; }
+        announceWhenConnected();
       }
       init();
     })();"

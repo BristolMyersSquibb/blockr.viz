@@ -334,3 +334,47 @@ test_that("the expr carries the data SLOT, not a free `data` symbol", {
     expect_error(eval(ex, new.env(parent = globalenv())))
   }
 })
+
+test_that("a client announcing itself gets the control state re-sent", {
+  # A picker on a dock panel that is not on the startup view has its server run
+  # at boot but its per-instance script delivered later, with the panel. The
+  # boot push is dropped (Shiny discards custom messages with no handler) and
+  # the script's own `pending` slot cannot catch it -- that only parks a
+  # message which arrived after the script parsed. So the client announces on
+  # bind and R sends again; without this the gear band and the face are both
+  # empty. See blockr.core#317.
+  blk <- new_picker_block(
+    state = list(pickers = list(
+      list(into = "value",
+           choices = c("Sepal.Length", "Sepal.Width", "Petal.Length"),
+           selected = "Sepal.Width", multiple = FALSE)
+    ))
+  )
+
+  testServer(blk$expr_server, args = list(data = reactive(datasets::iris)), {
+    session$flushReact()
+
+    # Assigning into `session$rootScope()$...` errors on the proxy session, so
+    # the root MockShinySession has to be bound first.
+    sent <- new.env(parent = emptyenv())
+    sent$msgs <- list()
+    root <- session$rootScope()
+    root$sendCustomMessage <- function(type, message) {
+      sent$msgs <- c(sent$msgs, list(list(type = type, message = message)))
+      invisible(NULL)
+    }
+
+    session$setInputs(picker_block_ready = 1)
+    session$flushReact()
+
+    expect_length(sent$msgs, 1L)
+    expect_match(sent$msgs[[1]]$type, "pk_update$")
+
+    msg <- sent$msgs[[1]]$message
+    expect_equal(msg$pickers[[1]]$selected, "Sepal.Width")
+    expect_equal(msg$pickers[[1]]$choices,
+                 c("Sepal.Length", "Sepal.Width", "Petal.Length"))
+    # The offer pool the gear draws from: every column is a candidate.
+    expect_length(msg$cfg_options, ncol(datasets::iris))
+  })
+})
