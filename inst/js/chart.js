@@ -268,6 +268,16 @@
   // config as `palette` (see _palette()), so a themed board recolours both
   // engines from one place instead of this list being hand-synced to R.
   const BLOCKR_PALETTE = ['#0072B2', '#D55E00', '#F0E442', '#009E73', '#56B4E9', '#E69F00', '#CC79A7'];
+  // THE colour-per-level function: every categorical mark goes through it, so
+  // the rule lives in one place. The palette while it lasts, then a boring
+  // grey — recycling made level 8 identical to level 1, two unrelated
+  // categories reading as one series, silently. Nothing is said about it: the
+  // chart already refuses outright above MAX_COLOR_LEVELS, and below that the
+  // greys are the message. Mirrored by dd_level_palette() in
+  // R/theme-palette.R so a PPTX export agrees with the screen.
+  const PALETTE_OVERFLOW = '#9AA0A6';
+  /** @param {string[]} pal @param {number} i */
+  const paletteAt = (pal, i) => (i < pal.length ? pal[i] : PALETTE_OVERFLOW);
   const BLOCKR_FONT = "'Open Sans', system-ui, sans-serif";
   // A color-split boxplot dodges its boxes by giving each (group, color) box
   // its own category slot; the slot value is `group + SEP + level`. ECharts
@@ -3018,14 +3028,14 @@
           : [];
         bandItems = levels.map((lv, i) => ({
           name: lv,
-          color: (cs && cs.color && cs.color[lv]) || palette[i % palette.length]
+          color: (cs && cs.color && cs.color[lv]) || paletteAt(palette, i)
         }));
       } else if (ct !== 'pie' && ct !== 'treemap' &&
                  this._baselineMode() !== 'cumulative' && colors.length) {
         bandItems = colors.map((c, i) => ({
           name: c,
           color: (colorScale && colorScale.color && colorScale.color[c]) ||
-            palette[i % palette.length]
+            paletteAt(palette, i)
         }));
       }
       this._updateLegendBand(bandItems && bandItems.length
@@ -3178,7 +3188,7 @@
             ...(isGrouped ? {} : { stack: 'stack' }),
             itemStyle: {
               color: (colorScale && colorScale.color && colorScale.color[color])
-                || palette[ci % palette.length]
+                || paletteAt(palette, ci)
             },
             ...barLayout,
             emphasis: { focus: 'self' }
@@ -3472,7 +3482,7 @@
         const cells = facetData.filter(a => a.group === g);
         const total = cells.reduce((s, a) => s + (a.value ?? 0), 0);
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
-        return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
+        return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || paletteAt(palette, i) } };
       }).filter(d => d.value > 0);
       return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n, p.percent)) }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: 10, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
     }
@@ -3484,7 +3494,7 @@
         const cells = facetData.filter(a => a.group === g);
         const total = cells.reduce((s, a) => s + (a.value ?? 0), 0);
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
-        return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || palette[i % palette.length] } };
+        return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || paletteAt(palette, i) } };
       }).filter(d => d.value > 0);
       return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: (/** @type {any} */ p) => p.name + '\n' + ddNum(Number(p.value)) }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
     }
@@ -3531,7 +3541,7 @@
         : colors.map((c, ci) => mkShape(
             c, groups.map(g => cellVal(g, c)),
             (colorScale && colorScale.color && colorScale.color[c])
-              || palette[ci % palette.length]));
+              || paletteAt(palette, ci)));
       const legendOn = colors.length > 0;
       return {
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
@@ -3649,7 +3659,7 @@
         : [];
       const split = levels.length > 0;
       const hexFor = (/** @type {string} */ lv, /** @type {number} */ i) =>
-        (colorScale && colorScale.color && colorScale.color[lv]) || palette[i % palette.length];
+        (colorScale && colorScale.color && colorScale.color[lv]) || paletteAt(palette, i);
 
       // Rows behind a (group, level) box, within this facet. level ===
       // '__all__' means no split. Levels themselves are taken from the full
@@ -4688,6 +4698,12 @@
             itemStyle: { color:
               (colorScale && colorScale.color && colorScale.color[lvl] != null)
                 ? colorScale.color[lvl]
+                // NOT paletteAt: the individual family cycles on purpose.
+                // Its colours do stability (a level keeps its colour under a
+                // filter), not decodability -- a 200-patient chart has no
+                // readable legend either way, identity comes from hover. Grey
+                // there would erase the chart. colorForLevel() still cycles,
+                // and these chips have to agree with it.
                 : (lookup[lvl] || palette[i % palette.length]) }
           }));
           // Precompute series-name → color-value map used by the
@@ -5382,7 +5398,7 @@
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
           color: (colorScale && colorScale.color && colorLevels.length)
             ? colorLevels.map((/** @type {any} */ lvl, /** @type {number} */ i) =>
-                colorScale.color[lvl] || palette[i % palette.length])
+                colorScale.color[lvl] || paletteAt(palette, i))
             : palette,
           textStyle: { fontFamily: BLOCKR_FONT },
           tooltip: {
@@ -5466,7 +5482,7 @@
             items: colorLevels.map((/** @type {any} */ lvl, /** @type {number} */ i) => ({
               name: String(lvl),
               color: (colorScale && colorScale.color && colorScale.color[lvl]) ||
-                palette[i % palette.length]
+                paletteAt(palette, i)
             })) }
         : null);
       this._capMessage = null;
@@ -5503,11 +5519,27 @@
               areaStyle: { ...d.areaStyle, opacity: sel && d.name !== sel ? 0.04 : 0.15 }
             })) };
           }
+          // Boxplot IS an aggregated, click-selected family — it drills like a
+          // bar and _selected holds its group. It needs its own branch rather
+          // than the generic one below for two reasons: with a color split the
+          // category is `group + BOX_CAT_SEP + level` (see the cats build in
+          // _renderDistribution), so the match is on the group half; and its
+          // data are `{value: [min,q1,med,q3,max], n}` objects, which the
+          // generic rebuild would flatten to `{value, itemStyle}` and drop the
+          // `n` the tooltip prints.
+          if (s.type === 'boxplot') {
+            if (cats.length === 0) return {};
+            return { data: (s.data || []).map((/** @type {any} */ v, /** @type {number} */ i) => {
+              if (!v || typeof v !== 'object') return v;
+              const grp = String(cats[i] ?? '').split(BOX_CAT_SEP)[0];
+              return { ...v, itemStyle: { ...v.itemStyle, opacity: sel ? (grp === sel ? 1 : 0.15) : 1 } };
+            }) };
+          }
           // Individual/timeline families use echarts emphasis/blur states
           // for highlighting, driven natively by hover. Skip the manual
           // category-mask path — it would mis-apply to non-category data
           // (USUBJID on a trajectory, term on a gantt).
-          if (s.type === 'boxplot' || s.type === 'line' || s.type === 'scatter' || s.type === 'custom') {
+          if (s.type === 'line' || s.type === 'scatter' || s.type === 'custom') {
             return {};
           }
           if (cats.length === 0) return {};

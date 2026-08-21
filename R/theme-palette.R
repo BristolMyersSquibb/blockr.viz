@@ -20,6 +20,27 @@ DD_PALETTE_FALLBACK <- c(
   "#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00", "#CC79A7"
 )
 
+# Mirrors PALETTE_OVERFLOW / paletteAt() in inst/js/chart.js. Static exports
+# (PPTX, report code) go through here, so a deck agrees with the screen.
+DD_PALETTE_OVERFLOW <- "#9AA0A6"
+
+#' Colours for `n` levels: the palette while it lasts, then grey
+#'
+#' The one place the rule lives on this side. Correct for any `n`, including
+#' 0 and n far past the palette -- padding first and cutting to length means
+#' there is no branch to get wrong.
+#'
+#' @param n Number of levels needing a colour.
+#' @param pal The palette to draw from; defaults to the resolved theme palette.
+#' @return Character vector of `n` hex colours.
+#' @noRd
+dd_level_palette <- function(n, pal = dd_palette()) {
+  if (!length(pal)) {
+    pal <- DD_PALETTE_FALLBACK
+  }
+  c(pal, rep(DD_PALETTE_OVERFLOW, n))[seq_len(n)]
+}
+
 # Interpolation endpoints for the numeric cell heatmap: two points low-to-high,
 # three for diverging (pole, neutral midpoint, pole). dt_color_fun() lerps
 # between them, so these are endpoints and not discrete steps -- the ramp's

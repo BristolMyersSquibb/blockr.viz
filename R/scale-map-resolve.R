@@ -156,6 +156,6 @@ dd_ident_hex <- function(map, col, data) {
   if (!length(lv)) {
     return(NULL)
   }
-  pal <- stats::setNames(rep_len(dd_palette(), length(lv)), lv)
+  pal <- stats::setNames(dd_level_palette(length(lv)), lv)
   unname(pal[as.character(x)])
 }

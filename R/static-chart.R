@@ -466,12 +466,12 @@ gg_level_colors <- function(map, col, data) {
     res <- dd_resolve_scales(map, col, x)
     if (!is.null(res$color)) {
       hex <- res$color[lv]
-      hex[is.na(hex)] <- rep_len(dd_palette(), length(lv))[is.na(hex)]
+      hex[is.na(hex)] <- dd_level_palette(length(lv))[is.na(hex)]
       return(stats::setNames(unname(hex), lv))
     }
   }
 
-  stats::setNames(rep_len(dd_palette(), length(lv)), lv)
+  stats::setNames(dd_level_palette(length(lv)), lv)
 }
 
 gg_scale_fill <- function(map, col, data) {
@@ -1083,6 +1083,10 @@ gg_series_color_values <- function(map, color, series, data) {
 
   lv <- gg_js_levels(data[[color]])
   hex <- pal[lv]
+  # rep_len, NOT dd_level_palette: this is the individual family, whose JS twin
+  # (colorForLevel / _colorLookup in inst/js/chart.js) still cycles on purpose.
+  # Those colours do stability under filtering, not legend decodability, and a
+  # per-patient chart greyed past level 7 would be no chart at all.
   hex[is.na(hex)] <- rep_len(dd_palette(), length(lv))[is.na(hex)]
   stats::setNames(unname(hex), lv)
 }

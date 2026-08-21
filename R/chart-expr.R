@@ -406,15 +406,22 @@ ce_scale <- function(aes, col, st) {
   # values -- so the deck was the only place it broke, which is the worst
   # place to find out.
   #
-  # A palette FUNCTION cycles by construction and is still plain ggplot2 that
-  # a reader can run: the emitted document keeps working at any level count.
+  # A palette FUNCTION covers any level count and is still plain ggplot2 that a
+  # reader can run. It pads with grey rather than cycling, matching the canvas
+  # (paletteAt() in inst/js/chart.js) and dd_level_palette(): a deck that
+  # repeated colour 1 at level 8 would disagree with the app it was exported
+  # from, in the one place nobody can check it against the data.
   ce_call(
     "ggplot2::discrete_scale",
     if (identical(aes, "fill")) "fill" else "colour",
     palette = call(
       "function",
       as.pairlist(alist(n = )),
-      call("rep_len", ce_vec(dd_palette()), as.name("n"))
+      call(
+        "[",
+        call("c", ce_vec(dd_palette()), call("rep", DD_PALETTE_OVERFLOW, as.name("n"))),
+        call("seq_len", as.name("n"))
+      )
     )
   )
 }
