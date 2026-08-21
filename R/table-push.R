@@ -183,7 +183,8 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
   colgroup <- dt_colgroup(
     c(label_col, value_cols),
     c(list(as.character(data[[label_col]])), disp_by_col),
-    labels = flat_labels
+    labels = flat_labels,
+    wrap_names = isTRUE(toggles$wrap_titles %||% TRUE)
   )
 
   onclick <- dt_onclick(drill, c(label_col, value_cols))

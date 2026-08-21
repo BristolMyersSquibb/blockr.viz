@@ -336,3 +336,44 @@ test_that("collapse JS recomputes visibility from ancestor state", {
   expect_true(grepl("collapsed", html, fixed = TRUE))
   expect_true(grepl("blockr-hidden-collapse", html, fixed = TRUE))
 })
+
+test_that("wrap_titles narrows arm columns to their longest word", {
+  # A long arm label used to set the column width outright (both arms hit the
+  # hard 320px cap), pushing the later columns off screen in a narrow panel.
+  # Wrapping measures the longest word instead, so the title wraps into a
+  # column sized for the data.
+  skip_if_not_installed("safetyData")
+  adsl <- safetyData::adam_adsl[c("USUBJID", "ARM", "AGE")]
+  adsl$ARM <- c("Placebo" = "Placebo",
+                "Xanomeline Low Dose" = "Investigational Product 54 mg Once Daily",
+                "Xanomeline High Dose" = "Investigational Product 81 mg Twice Daily"
+                )[as.character(adsl$ARM)]
+  st <- summary_table(adsl, vars = "AGE", by = "ARM")
+
+  widths <- function(wrap) {
+    h <- paste(as.character(dt_table_tag_structured(
+      st, NULL, 1, toggles = list(wrap_titles = wrap))), collapse = "")
+    as.integer(regmatches(h, gregexpr("(?<=width: )[0-9]+(?=px)", h,
+                                      perl = TRUE))[[1L]])
+  }
+  off <- widths(FALSE)
+  on  <- widths(TRUE)
+  expect_true(all(on <= off))
+  expect_lt(sum(on), sum(off))
+  # The two long arms come down off the 320px cap; the short ones do not move.
+  expect_equal(sum(off == 320L), 2L)
+  expect_equal(sum(on == 320L), 0L)
+})
+
+test_that("wrap_titles defaults on and rides a data attribute the gear reads", {
+  skip_if_not_installed("safetyData")
+  adsl <- safetyData::adam_adsl[c("USUBJID", "ARM", "AGE")]
+  st <- summary_table(adsl, vars = "AGE", by = "ARM")
+  render <- function(toggles) {
+    paste(as.character(dt_table_tag_structured(st, NULL, 1, toggles = toggles)),
+          collapse = "")
+  }
+  expect_match(render(list()), 'data-dt-wrap-titles="on"', fixed = TRUE)
+  expect_match(render(list(wrap_titles = FALSE)), 'data-dt-wrap-titles="off"',
+               fixed = TRUE)
+})

@@ -214,11 +214,12 @@ dt_fixed_table_tag <- function(thead, tbody, colgroup) {
 #' @noRd
 dt_colgroup <- function(header_texts, cells,
                         labels = character(length(header_texts)),
-                        extra_px = 0L) {
+                        extra_px = 0L, wrap_names = FALSE) {
   widths <- blockr.ui::column_widths_px(
     col_names = header_texts,
     col_labels = labels,
-    formatted = lapply(cells, as.character)
+    formatted = lapply(cells, as.character),
+    wrap_names = wrap_names
   ) + extra_px
   htmltools::tags$colgroup(
     lapply(widths, function(w) {
@@ -249,7 +250,7 @@ dt_header_text <- function(data, col) {
 #' html_table() and the structured table block: optional stub + leaf
 #' data columns, with an indent allowance on the stub.
 #' @noRd
-structured_colgroup <- function(data, data_cols, stub_col) {
+structured_colgroup <- function(data, data_cols, stub_col, wrap_names = FALSE) {
   header_texts <- vapply(data_cols, function(col) dt_header_text(data, col),
                          character(1L))
   cells <- lapply(data_cols, function(col) as.character(data[[col]]))
@@ -266,7 +267,7 @@ structured_colgroup <- function(data, data_cols, stub_col) {
     }
     extra <- c(8L + 16L * as.integer(max_indent), extra)
   }
-  dt_colgroup(header_texts, cells, extra_px = extra)
+  dt_colgroup(header_texts, cells, extra_px = extra, wrap_names = wrap_names)
 }
 
 # ---------------------------------------------------------------------------

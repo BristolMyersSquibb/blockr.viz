@@ -163,6 +163,7 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
                                     active = NULL) {
   sortable    <- toggles$sortable %||% TRUE
   collapsible <- toggles$collapsible %||% TRUE
+  wrap_titles <- toggles$wrap_titles %||% TRUE
   view <- annotated_structure_view(data)
   data <- view$data
   section_cols <- view$section_cols
@@ -200,7 +201,7 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
 
   table_tag <- dt_fixed_table_tag(
     thead, tbody,
-    structured_colgroup(data, data_cols, stub_col)
+    structured_colgroup(data, data_cols, stub_col, wrap_names = wrap_titles)
   )
   # The chrome may have been rendered before the data existed, in which case it
   # carries no `drilldown-table-structured` class. This marker lets table.js
@@ -784,7 +785,8 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
     `data-dt-sortable` = on_off(toggles$sortable %||% TRUE),
     `data-dt-collapsible` = on_off(toggles$collapsible %||% TRUE),
     `data-dt-search` = on_off(toggles$search %||% TRUE),
-    `data-dt-download` = on_off(toggles$download %||% FALSE)
+    `data-dt-download` = on_off(toggles$download %||% FALSE),
+    `data-dt-wrap-titles` = on_off(toggles$wrap_titles %||% TRUE)
   )
 }
 

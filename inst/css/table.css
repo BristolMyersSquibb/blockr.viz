@@ -214,3 +214,22 @@
   width: var(--blockr-control-h-sm, 30px);
   height: var(--blockr-control-h-sm, 30px);
 }
+
+/* Wrapping column titles. The width estimator measures a header by its
+   longest WORD when wrapping is on (column_widths_px(wrap_names = TRUE)), so
+   the column takes the narrowest width that never breaks a word and the title
+   has to be free to wrap into it. The base preview CSS pins .blockr-col-name
+   to nowrap + ellipsis for the one-line estimate, which would clip instead;
+   lift that here, gated on the toggle so the off-state keeps the old look.
+   `balance` evens the line lengths rather than leaving a trailing orphan. */
+:is(.drilldown-table-container, .blockr-rank-container)
+  .blockr-table[data-dt-wrap-titles="on"] thead th .blockr-col-name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  text-wrap: balance;
+}
+:is(.drilldown-table-container, .blockr-rank-container)
+  .blockr-table[data-dt-wrap-titles="on"] thead th .arm__name {
+  text-wrap: balance;
+}
