@@ -262,6 +262,17 @@
   // TRAJ_HARD_CAP); the real fix is filtering upstream.
   const PANEL_H_CAP = 4000;
 
+  // Height one horizontal category label occupies (CSS px): axis fontSize 11
+  // plus ECharts' line gap. ECharts' category axisLabel defaults to
+  // interval:'auto', which drops any label that would collide with its
+  // neighbour — and says nothing. So once PANEL_H_CAP squeezes the row band
+  // under this, terms start disappearing off the axis with nothing on screen
+  // to explain it. The builders compare the band against it and report the
+  // thinning through the status footer, the way TRAJ_HARD_CAP reports its own
+  // cap. Raising PANEL_H_CAP is NOT the way out: see its note above, Safari's
+  // ceiling is an AREA limit and a taller canvas goes blank there.
+  const CAT_LABEL_H = 14;
+
   // blockr echarts design system. Okabe-Ito categorical palette —
   // colorblind-safe and well-tested for general categorical encoding.
   // FALLBACK only: the board theme's `categorical` role arrives on the chart
@@ -2956,6 +2967,12 @@
 
       // Facet strip labels, with optional "(n)" counts (see _facetLabelMap).
       const facetLabels = this._facetLabelMap(facets);
+      // Set by whichever horizontal panel squeezed its category axis past the
+      // point where every label fits (see CAT_LABEL_H). One footer for the
+      // grid, so the last panel to report wins — under fixed scales every
+      // panel carries the same categories anyway.
+      /** @type {string | null} */
+      let labelNote = null;
       for (let fi = 0; fi < facets.length; fi++) {
         const facet = facets[fi];
         const facetData = agg.filter(a => a.facet === facet);
@@ -2994,6 +3011,8 @@
           ? Math.max(64, Math.round(anyOption.__panelH)) + 'px'
           : '350px');
         delete anyOption.__panelH;
+        if (anyOption.__labelNote) labelNote = anyOption.__labelNote;
+        delete anyOption.__labelNote;
         const existed = !!slot.chart;
         const chart = this._ensureSlotChart(slot, 'aggregated');
         // The x-label fit rides on the option (the builders have no chart
@@ -3042,6 +3061,9 @@
         ? { col: this.config.color, items: bandItems }
         : null);
 
+      // Assigning unconditionally also clears a TRAJ_HARD_CAP message left
+      // behind by a previous line render — this path never reset it before.
+      this._capMessage = labelNote;
       this._updateHighlight();
     }
 
@@ -3138,6 +3160,11 @@
       const rowBand = hGrouped ? colors.length * GROUP_BAR + GROUP_PAD : ROW_BAND;
       const rowsH = groups.length * rowBand;
       const hCapped = !vertical && rowsH > PANEL_H_CAP;
+      // Squeezed past the point where every category still gets a label? Say
+      // so. Silent thinning is the complaint, not the thinning itself — a
+      // 500-term axis is not readable at any band.
+      const labelNote = hCapped
+        ? this._thinnedLabelNote(PANEL_H_CAP, groups.length) : null;
       const barLayout = isGrouped
         ? (vertical
             ? { barGap: 0, barCategoryGap: '30%', barMaxWidth: BAR_MAX }
@@ -3326,6 +3353,7 @@
         // loses a third of its height (and still truncates).
         __panelH: vertical ? 350 + (xlab ? xlab.bottom : 0)
           : 30 + Math.min(PANEL_H_CAP, rowsH) + bottomBase,
+        __labelNote: labelNote,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip,
@@ -3916,6 +3944,11 @@
         __panelH: vertical
           ? 350 + (xlab ? xlab.bottom : 0)
           : 30 + Math.min(PANEL_H_CAP, cats.length * 28) + bottomBase,
+        // Same silent-thinning guard as the bar builder. `cats` is
+        // groups x levels for a colour-split boxplot, so a split reaches the
+        // squeeze at a fraction of the group count.
+        __labelNote: (!vertical && cats.length * 28 > PANEL_H_CAP)
+          ? this._thinnedLabelNote(PANEL_H_CAP, cats.length) : null,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip: { trigger: 'item', confine: true, formatter: isBox ? boxTooltipFmt : rangeTooltipFmt },
@@ -5595,6 +5628,21 @@
     }
 
     // -- Status footer --------------------------------------------------------
+
+    // How many category labels survive `interval: 'auto'` in a plot area of
+    // `plotH`, and the sentence that says so. Returns null while they all fit,
+    // so callers can pass it straight through. The count is ECharts' own rule
+    // (a label is kept when it clears the previous kept one), applied to a
+    // constant band — exact for the uniform bands the horizontal builders
+    // produce, which is the only place this is used.
+    /** @param {number} plotH @param {number} nCats @returns {string | null} */
+    _thinnedLabelNote(plotH, nCats) {
+      if (!nCats || plotH / nCats >= CAT_LABEL_H) return null;
+      const shown = Math.max(1, Math.floor(plotH / CAT_LABEL_H));
+      const what = this.config.group || 'categories';
+      return `Axis labels thinned: ${shown} of ${nCats} ${what} labelled` +
+        ` \u2014 filter to fewer to see them all.`;
+    }
 
     _updateStatus() {
       if (!this.statusEl) return;

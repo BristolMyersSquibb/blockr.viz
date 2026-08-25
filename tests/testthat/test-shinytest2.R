@@ -946,3 +946,35 @@ test_that("facet_scales = free hands every panel back its own axis", {
     unique(lapply(facet_axes("chart_facet"), function(p) unlist(p$value))), 1L
   )
 })
+
+# --- Many-category axis: the thinning has to be visible ---------------------
+# ECharts' category axisLabel defaults to interval:'auto', which hides any
+# label that would collide with its neighbour, silently. Past
+# PANEL_H_CAP / CAT_LABEL_H (4000 / 14 = 286) categories the row band is
+# shorter than a label, so terms disappear off the axis with nothing on screen
+# to explain it. That silence was the CDEx complaint, not the thinning itself:
+# a 500-term axis is unreadable at any band, and PANEL_H_CAP cannot simply be
+# raised (Safari's canvas limit is an AREA, and past it the chart goes blank).
+# So what is asserted here is the message.
+
+chart_cap_text <- function(block_id) {
+  app$get_js(sprintf(
+    "(function(){var s=document.querySelector('%s .dd-status-cap');
+       return s ? s.textContent : null;})()",
+    sprintf("#board-block_%s-expr-drilldown_block", block_id)
+  ))
+}
+
+test_that("a 320-term horizontal bar reports the labels it cannot show", {
+  skip_if_no_app()
+  chart_settle("chart_many")
+  txt <- chart_cap_text("chart_many")
+  expect_match(txt, "Axis labels thinned: 285 of 320 term labelled", fixed = TRUE)
+  expect_match(txt, "filter to fewer", fixed = TRUE)
+})
+
+test_that("a chart whose labels all fit says nothing", {
+  skip_if_no_app()
+  chart_settle("chart")
+  expect_null(chart_cap_text("chart"))
+})

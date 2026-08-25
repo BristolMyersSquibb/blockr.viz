@@ -15,10 +15,21 @@ viz_data <- data.frame(
   stringsAsFactors = FALSE
 )
 
+# 320 categories on one horizontal bar. PANEL_H_CAP (4000 CSS px) divided by
+# CAT_LABEL_H (14) is 286, so past that the row band no longer fits a label and
+# ECharts' interval:'auto' starts hiding terms. 320 is the smallest round
+# number on the far side of that knee.
+many_data <- data.frame(
+  term  = sprintf("TERM %03d", seq_len(320)),
+  count = rep(c(3, 2, 1), length.out = 320),
+  stringsAsFactors = FALSE
+)
+
 serve(
   new_board(
     blocks = c(
       data = new_static_block(data = viz_data),
+      many = new_static_block(data = many_data),
       # Click-to-filter drill source: clicking a row emits a categorical
       # filter on `region`; the block re-filters its own (downstream) output.
       table = new_table_block(
@@ -92,6 +103,15 @@ serve(
         func       = "sum",
         facet      = "region"
       ),
+      # Many-category horizontal bar: the axis cannot label every term, and
+      # the status footer has to say so instead of quietly dropping them.
+      chart_many = new_chart_block(
+        chart_type  = "bar",
+        orientation = "horizontal",
+        group       = "term",
+        value       = "count",
+        func        = "sum"
+      ),
       # KPI tile matrix, click-to-filter drill on the group.
       tile = new_tile_block(
         value = "revenue",
@@ -161,6 +181,7 @@ serve(
       new_link("data", "chart_brush", "data"),
       new_link("data", "chart_cfg", "data"),
       new_link("data", "chart_facet", "data"),
+      new_link("many", "chart_many", "data"),
       new_link("data", "tile", "data"),
       new_link("data", "tile_x", "data"),
       new_link("data", "table_num", "data"),
