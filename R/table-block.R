@@ -27,6 +27,10 @@
 #' @param row_hex,row_color Optional per-row colouring. `row_color` names a
 #'   column whose values drive a row background scale; `row_hex` supplies
 #'   explicit per-row hex colours. Both default `NULL` (no row colouring).
+#' @param gear Draw the settings cogwheel? `FALSE` for a caller whose display
+#'   options are fixed and who has no block state to store an edit in -- the
+#'   gear writes its edits back over the same `_action` input the drill uses,
+#'   so a caller that does not handle them would swallow every one.
 #'
 #' @details
 #' **Structured "Table 1" input.** When `data` follows the dotted-column
@@ -56,7 +60,8 @@ drilldown_table <- function(data,
                             digits = 2L,
                             max_height = "600px",
                             row_hex = NULL,
-                            row_color = NULL) {
+                            row_color = NULL,
+                            gear = TRUE) {
   stopifnot(is.data.frame(data))
   # Tidy `.fmt` form (numbers + per-row template + `.group`) -> wide display
   # grid (format-then-spread), and detect the structured / sectioned form.
@@ -66,6 +71,7 @@ drilldown_table <- function(data,
     elem_id    = elem_id,
     structured = dt_is_structured(data),
     max_height = max_height,
+    gear       = gear,
     # This exported wrapper keeps its historical API (a single
     # drilldown_table_color() spec + row_color); internally the renderer
     # speaks the unified vocabulary -- `shadings` (a LIST of {mode, cols}
@@ -839,7 +845,7 @@ dt_has_officer <- function() {
 #' @noRd
 dt_chrome <- function(elem_id, structured, max_height, inner,
                       search = TRUE, download_slot = NULL,
-                      status_slot = NULL) {
+                      status_slot = NULL, gear = TRUE) {
   # NULL = undetermined; only a known-flat frame suppresses the delta CSS.
   unknown <- is.null(structured)
   wrapper_id <- paste0(
@@ -911,6 +917,10 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
         if (isTRUE(structured)) "drilldown-table-structured" else NULL
       ),
       `data-dt-elem-id` = if (!is.null(elem_id)) elem_id else NULL,
+      # `gear = FALSE` suppresses the settings cogwheel (table.js reads this).
+      # For a caller whose options are fixed and who has nowhere to store an
+      # edit -- see the note at buildCogwheel().
+      `data-dt-gear` = if (!isTRUE(gear)) "0" else NULL,
       `data-dt-structured` = if (isTRUE(structured)) "1" else NULL,
       `data-initial-expanded` = if (isTRUE(structured)) "1" else NULL,
       header_div,

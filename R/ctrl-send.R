@@ -598,8 +598,17 @@ new_ctrl_bridge_extension <- function(...) {
 # tile blocks' "Send to filter (beta)" gear section. One code path for all
 # three: each block server supplies its OWN drill-filter state, and these
 # helpers turn it into a claim (dd_ctrl_claims) and keep the target block in
-# sync (dd_ctrl_sender). Deliberately NOT exported: the public surface is the
-# block argument (`ctrl_target` / `ctrl_table`), not the plumbing.
+# sync (dd_ctrl_sender).
+#
+# EXPORTED, but as plumbing (`@keywords internal`), not as a public surface: for
+# a block IN this package the surface is still the `ctrl_target` / `ctrl_table`
+# argument. They are reachable because a drill sender now also lives OUTSIDE
+# this package -- blockr.sandbox draws a composer table straight in a function
+# block, and needs the same claim reading and, more to the point, the same
+# send guard. That guard is not incidental: a ctrl_send() is a board update,
+# a board update re-evaluates every block, and re-evaluation invalidates the
+# claim reactive, so a sender without the identical()-skip below sends in a
+# loop for ever. A second copy of it in another package would drift.
 # ---------------------------------------------------------------------------
 
 #' Claims from a block's own drill-filter state.
@@ -627,7 +636,15 @@ new_ctrl_bridge_extension <- function(...) {
 #' un-drill (see [dd_ctrl_sender()], which holds on `NULL`). Without this
 #' distinction a mere view switch cleared the target filter and re-sent the
 #' claim on return, one board-wide update each way.
-#' @noRd
+#'
+#' @param data The block's (annotated) input, as a data frame.
+#' @param table Name of the table the claim applies to, `""` when the target
+#'   filters a plain data frame (or when the target resolves the table itself).
+#' @param filters Named list, column -> drilled value(s).
+#' @return A list of filter conditions, `list()` for no claim, `NULL` for no
+#'   opinion.
+#' @keywords internal
+#' @export
 dd_ctrl_claims <- function(data, table, filters) {
 
   if (!is.data.frame(data)) {
@@ -738,7 +755,17 @@ dd_ctrl_pristine <- function(r_state, initial) {
 #' that is a wholly redundant reload on every open. While pristine we record the
 #' claim as sent without sending it, so the first real drill still diffs against
 #' it correctly.
-#' @noRd
+#'
+#' @param r_target Reactive returning the target block id (`""` for none).
+#' @param r_claims Reactive returning the claim list (`NULL` = hold, see
+#'   [dd_ctrl_claims()]).
+#' @param r_pristine Optional latch from `dd_ctrl_pristine()`; a sender with no
+#'   restorable drill state (one whose selection lives only in the session) may
+#'   omit it.
+#' @param session Shiny session.
+#' @return The observer, invisibly.
+#' @keywords internal
+#' @export
 dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
                            session = shiny::getDefaultReactiveDomain()) {
 

@@ -872,6 +872,13 @@
 
   /** @param {HTMLElement} root @param {HTMLElement} table */
   function buildCogwheel(root, table) {
+    // Opt out (data-dt-gear="0"): a table whose options are FIXED by whoever
+    // drew it. The gear needs somewhere to store an edit, and a renderer
+    // called outside a block -- blockr.sandbox drawing a composer table in a
+    // function block -- has no state slot to put one in: that block's state is
+    // its code and nothing else. A gear whose every edit is swallowed on the
+    // way back is worse than no gear.
+    if (root.getAttribute("data-dt-gear") === "0") return;
     var elemIdAttr = root.getAttribute("data-dt-elem-id");
     if (!elemIdAttr) return;
     // Rebound after the guard so the closures below see a plain string.

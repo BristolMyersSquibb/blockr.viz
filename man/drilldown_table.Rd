@@ -14,7 +14,8 @@ drilldown_table(
   digits = 2L,
   max_height = "600px",
   row_hex = NULL,
-  row_color = NULL
+  row_color = NULL,
+  gear = TRUE
 )
 }
 \arguments{
@@ -41,6 +42,11 @@ input name. Required for \code{drill} to do anything.}
 \item{row_hex, row_color}{Optional per-row colouring. \code{row_color} names a
 column whose values drive a row background scale; \code{row_hex} supplies
 explicit per-row hex colours. Both default \code{NULL} (no row colouring).}
+
+\item{gear}{Draw the settings cogwheel? \code{FALSE} for a caller whose display
+options are fixed and who has no block state to store an edit in -- the
+gear writes its edits back over the same \verb{_action} input the drill uses,
+so a caller that does not handle them would swallow every one.}
 }
 \value{
 An \code{\link[htmltools:tagList]{htmltools::tagList()}}.
