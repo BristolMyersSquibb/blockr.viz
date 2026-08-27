@@ -87,6 +87,18 @@ test_that("dt_chrome includes the search input only when search is on", {
   expect_false(grepl("type=\"search\"", off))
 })
 
+test_that("dt_chrome renders the footer row with a count slot", {
+  inner <- htmltools::tags$div("x")
+  html  <- render(dt_chrome("id", FALSE, "600px", inner))
+  expect_true(grepl("dt-table-footer", html, fixed = TRUE))
+  # Empty on the server: table.js fills it, and `:empty` hides the box until
+  # it does, so a chrome with no rows yet costs no vertical space.
+  expect_true(grepl(
+    "<span class=\"dt-row-count\" aria-live=\"polite\"></span>",
+    html, fixed = TRUE
+  ))
+})
+
 # --- server: the gear config messages flip the toggle state ------------------
 
 test_that("config toggle messages update state (on/off and logical back-compat)", {

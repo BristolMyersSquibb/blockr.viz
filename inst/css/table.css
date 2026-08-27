@@ -233,3 +233,41 @@
   .blockr-table[data-dt-wrap-titles="on"] thead th .arm__name {
   text-wrap: balance;
 }
+
+/* ===== Footer row: row count + filter status ===== */
+/* One flex row under the table. The count (written by table.js) sits left,
+   the server-rendered status line (`.dd-status-footer`: "Filtered: ...", and
+   Reset at its far right) takes the rest. Both halves collapse when empty --
+   a table with no drill and no count is pixel-identical to before, so the
+   footer costs no vertical space it does not use. */
+.dt-table-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* The status half takes the rest of the row, so its Reset stays hard right.
+   Two selectors, one job: shiny-sass.css gives a NON-EMPTY `.shiny-html-output`
+   `display: contents`, which erases the slot's own box and promotes the status
+   line itself to flex item -- so whichever of the two is the item, it grows.
+   (Without this the slot measures 0 wide, space-between has nothing to
+   distribute, and Reset ends up glued to the filter text.) */
+.dt-table-footer > .dt-status-slot,
+.dt-table-footer .dd-status-footer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dt-row-count {
+  padding: 6px 0;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-500, #6b7280);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* No count (structured table, error/message state, or the static renderer
+   before any row exists): drop the box, padding included. */
+.dt-row-count:empty {
+  display: none;
+}

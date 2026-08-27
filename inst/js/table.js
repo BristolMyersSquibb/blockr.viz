@@ -355,6 +355,46 @@
     parent.insertBefore(msg, table.nextSibling);
   }
 
+  // Row count in the footer: "3262 rows", or "12 of 3262 rows" while a search
+  // narrows it. The client owns this because the client owns the search — the
+  // server never sees the query, so a server-rendered count would go stale the
+  // moment someone types. Read off the cell model where there is one, else off
+  // the rendered rows (the exported static table, and the small html-kind
+  // payloads). Plain digits, no thousands separator, so a count here and the
+  // title's `{n}` token cannot disagree.
+  //
+  // Blank for a structured "Table 1" (section headers and stub rows are not
+  // "rows") and for the 0-row / message states, which already say so in the
+  // table body. `.dt-row-count:empty` then takes the footer box away.
+  /** @param {HTMLElement} root */
+  function updateCount(root) {
+    var el = /** @type {HTMLElement | null} */ (
+      root.querySelector(".dt-row-count"));
+    if (!el) return;
+    var total = 0;
+    var shown = 0;
+    var model = getModel(root);
+    if (model) {
+      total = model.p.n || 0;
+      shown = model.view.length;
+    } else if (root.getAttribute("data-dt-structured") === "1") {
+      total = 0;
+    } else {
+      var tbody = /** @type {HTMLElement | null} */ (
+        root.querySelector("table.blockr-table tbody"));
+      var rows = tbody ? tbody.querySelectorAll("tr.blockr-data-row") : [];
+      total = rows.length;
+      for (var i = 0; i < rows.length; i++) {
+        if (!rows[i].classList.contains("blockr-hidden-search")) shown++;
+      }
+    }
+    if (!total) { el.textContent = ""; return; }
+    var noun = total === 1 ? " row" : " rows";
+    el.textContent = shown === total
+      ? total + noun
+      : shown + " of " + total + noun;
+  }
+
   // One filter pass over the current table (also run directly by wireTable to
   // re-apply an active query to freshly rendered rows, skipping the debounce).
   /** @param {HTMLElement} root */
@@ -366,6 +406,7 @@
       m.query = currentQuery(root);
       computeView(m);
       renderWindow(root, m);
+      updateCount(root);
       return;
     }
     var inp = /** @type {HTMLInputElement | null} */ (root.querySelector("input.blockr-search"));
@@ -388,6 +429,7 @@
       }
     });
     updateNoMatch(table, !!q && !anyMatch);
+    updateCount(root);
     if (!structured) return;
     // A section header stays visible iff any descendant row (up to the next
     // header of equal/shallower level) is still visible — same as
@@ -1121,6 +1163,7 @@
     // of unfiltered rows after every re-render would flash.
     var inp = /** @type {HTMLInputElement | null} */ (root.querySelector("input.blockr-search"));
     if (inp && inp.value.trim()) applySearch(root);
+    else updateCount(root);
   }
 
   // ==========================================================================
@@ -1574,6 +1617,7 @@
       // inject and take the pre-existing DOM wiring path.
       slot.innerHTML = p.html || "";
       wireRoot(root);
+      updateCount(root);
       return;
     }
     if (!p.head || !p.cols) return;
@@ -1633,6 +1677,7 @@
     wireModelScroll(root);
     computeView(model);
     renderWindow(root, model);
+    updateCount(root);
   }
 
   /** @param {HTMLElement} root */

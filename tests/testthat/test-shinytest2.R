@@ -283,6 +283,46 @@ test_that("table search box filters rows in the browser (JS)", {
   expect_equal(count_visible(), 6)
 })
 
+test_that("the footer counts the rows, and re-counts under a search", {
+  skip_if_no_app()
+
+  scope <- dt_result("table")
+  count_text <- function() {
+    app$get_js(sprintf(
+      "(function(){var e=document.querySelector('%s .dt-row-count');
+         return e ? e.textContent : null;})()", scope
+    ))
+  }
+
+  expect_equal(count_text(), "6 rows")
+
+  # A search narrows the count without touching the data: the browser owns
+  # the query, so the footer has to say how much of the table is on screen.
+  app$run_js(sprintf(
+    "var i = document.querySelector('%s input.blockr-search');
+     i.value = 'East';
+     i.dispatchEvent(new Event('input', {bubbles: true}));",
+    scope
+  ))
+  app$wait_for_js(sprintf(
+    "document.querySelector('%s .dt-row-count').textContent === '1 of 6 rows'",
+    scope
+  ), timeout = 5000)
+  expect_equal(count_text(), "1 of 6 rows")
+
+  app$run_js(sprintf(
+    "var i = document.querySelector('%s input.blockr-search');
+     i.value = '';
+     i.dispatchEvent(new Event('input', {bubbles: true}));",
+    scope
+  ))
+  app$wait_for_js(sprintf(
+    "document.querySelector('%s .dt-row-count').textContent === '6 rows'",
+    scope
+  ), timeout = 5000)
+  expect_equal(count_text(), "6 rows")
+})
+
 # ===========================================================================
 # CLICK-TO-FILTER DRILL (action message -> re-filter -> downstream data)
 # ===========================================================================

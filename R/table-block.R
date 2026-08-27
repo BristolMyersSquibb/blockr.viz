@@ -929,10 +929,17 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
         style = scroll_style,
         inner
       ),
-      # Active-filter status line + Reset (chart-footer parity), rendered
-      # server-side off the block's filter state (see the block server's
-      # dt_status output) so it also survives a board restore.
-      status_slot
+      # Footer row: the row count on the left, the active-filter status line
+      # and Reset on the right. The count is written by table.js (it has to
+      # follow the client-side search, which the server never sees) and hides
+      # itself while empty; the status line is rendered server-side off the
+      # block's filter state (see the block server's dt_status output) so it
+      # also survives a board restore.
+      htmltools::tags$div(
+        class = "dt-table-footer",
+        htmltools::tags$span(class = "dt-row-count", `aria-live` = "polite"),
+        status_slot
+      )
     )
   )
 }
@@ -1033,7 +1040,7 @@ drilldown_table_dep <- memoise0(function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".28"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".30"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"
@@ -1648,7 +1655,8 @@ new_table_block <- function(rowname = NULL,
             inner      = htmltools::tags$div(class = "dt-table-slot"),
             search     = isTRUE(r_search()),
             download_slot = shiny::uiOutput(ns("dt_download"), inline = TRUE),
-            status_slot   = shiny::uiOutput(ns("dt_status"))
+            status_slot   = shiny::uiOutput(ns("dt_status"),
+                                            class = "dt-status-slot")
           )
         })
 
