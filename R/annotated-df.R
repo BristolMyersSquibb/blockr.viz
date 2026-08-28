@@ -291,3 +291,90 @@ wrap_plain_df_input <- function(ex) {
   ex[[2L]] <- as.call(list(quote(blockr.viz::as_plain_df), ex[[2L]]))
   ex
 }
+
+# ---------------------------------------------------------------------------
+# Column identity (the column / cell drill)
+# ---------------------------------------------------------------------------
+
+#' Read a frame's column-axis identity.
+#'
+#' The row axis of an annotated frame is IN the frame (`.group<k>` /
+#' `.variable` pairs, one set per row). The column axis has nowhere to live
+#' there, so a producer that knows it (composer's colgroup, summary_table's
+#' spread) stamps it as an optional table-level attribute:
+#'
+#'   attr(data, "column_keys") <- list(
+#'     "Placebo"    = list(list(column = "ARM", values = "Placebo")),
+#'     "Placebo||F" = list(list(column = "ARM", values = "Placebo"),
+#'                         list(column = "SEX", values = "F"))
+#'   )
+#'
+#' keyed by the column path as the frame spells it, so a leaf header looks
+#' itself up by its own name and a spanner by its prefix. A `values` vector
+#' of length > 1 is a pooled column (`ARM %in% c(...)`).
+#'
+#' Purely optional and read only here: absent, the renderer emits exactly the
+#' markup it emitted before this existed and every click keeps meaning "this
+#' row". Malformed entries are dropped one at a time rather than erroring --
+#' a producer bug must not take a table off the screen.
+#' @noRd
+annotated_column_keys <- function(data) {
+
+  keys <- attr(data, "column_keys", exact = TRUE)
+
+  if (!is.list(keys) || !length(keys) || is.null(names(keys))) {
+    return(NULL)
+  }
+
+  ok <- function(entry) {
+    is.list(entry) && length(entry) > 0L && all(vapply(entry, function(p) {
+      is.list(p) && dd_is_string(p[["column"]]) &&
+        length(p[["values"]]) > 0L && !anyNA(p[["values"]])
+    }, logical(1L)))
+  }
+
+  keys <- keys[nzchar(names(keys)) & vapply(keys, ok, logical(1L))]
+
+  if (!length(keys)) NULL else keys
+}
+
+#' One column's keys as the JSON the markup carries.
+#' @noRd
+dd_col_keys_json <- function(entry) {
+  as.character(jsonlite::toJSON(
+    lapply(entry, function(p) {
+      list(column = as.character(p[["column"]]),
+           values = I(as.character(p[["values"]])))
+    }),
+    auto_unbox = TRUE
+  ))
+}
+
+#' The rendered-column-index -> keys map table.js reads off the `<table>`.
+#'
+#' Indexed by `cell.cellIndex`, so the stub (when there is one) occupies slot
+#' 0 and is always null. Columns with no identity are null too: their cells
+#' still drill by row, they just add nothing to the claim.
+#' @noRd
+dd_col_keys_map_json <- function(data_cols, col_keys, stub_offset = 0L) {
+
+  slots <- vector("list", length(data_cols) + stub_offset)
+
+  for (i in seq_along(data_cols)) {
+    entry <- col_keys[[data_cols[[i]]]]
+    if (is.null(entry)) {
+      next
+    }
+    slots[[i + stub_offset]] <- lapply(entry, function(p) {
+      list(column = as.character(p[["column"]]),
+           values = I(as.character(p[["values"]])))
+    })
+  }
+
+  as.character(jsonlite::toJSON(slots, auto_unbox = TRUE, null = "null"))
+}
+
+#' @noRd
+dd_is_string <- function(x) {
+  is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)
+}

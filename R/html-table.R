@@ -276,7 +276,7 @@ structured_colgroup <- function(data, data_cols, stub_col, wrap_names = FALSE) {
 
 #' @noRd
 build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
-                             sortable = TRUE) {
+                             sortable = TRUE, col_keys = NULL) {
   # Global off-switch: when sorting is disabled no header is a sort hook.
   stub_sortable <- isTRUE(stub_sortable) && isTRUE(sortable)
   if (length(data_cols) == 0L) {
@@ -356,12 +356,18 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
         if (col_sortable) {
           th_args$`data-col-index` <- (i - 1L) + stub_offset
         }
+        th_args <- dd_col_header_attrs(th_args, data_cols[i], col_keys)
       } else {
         content <- prefix_i[L]
         th_args <- list(
           content,
           class   = "blockr-col-header group",
           colspan = span
+        )
+        # A spanner claims its own prefix ("Placebo" above F / M), which is
+        # exactly how the producer keys it.
+        th_args <- dd_col_header_attrs(
+          th_args, paste(prefix_i, collapse = "||"), col_keys
         )
       }
 
@@ -373,6 +379,24 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
   }
 
   htmltools::tags$thead(rows)
+}
+
+#' Tag a header cell with its column claim, when the producer named one.
+#'
+#' No entry, no attribute, no `dd-col-drill` class: the header renders and
+#' behaves exactly as it did before column identity existed.
+#' @noRd
+dd_col_header_attrs <- function(th_args, path, col_keys) {
+
+  entry <- if (length(col_keys)) col_keys[[path]]
+
+  if (is.null(entry)) {
+    return(th_args)
+  }
+
+  th_args$class <- paste(th_args$class, "dd-col-drill")
+  th_args$`data-dd-colkeys` <- dd_col_keys_json(entry)
+  th_args
 }
 
 #' @noRd

@@ -63,6 +63,30 @@
 :is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-row-active td:first-child {
   box-shadow: inset 3px 0 0 0 var(--blockr-color-primary, #2563eb);
 }
+/* Column drill. A header the producer could name (data-dd-colkeys, e.g. an
+   arm) reads as clickable; a Total or a stats spanner carries no keys and
+   stays inert, the same rule the section headers follow above. */
+:is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table thead th.dd-col-drill {
+  cursor: pointer;
+}
+:is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table thead th.dd-col-drill:hover {
+  background-color: var(--blockr-color-bg-subtle, #f9fafb);
+}
+/* The claimed column, painted the same soft tint the claimed row gets, with
+   the accent bar on top instead of down the left. Row and column tints
+   compose, so the cell at the crossing reads as the strongest of the three
+   without a rule of its own. */
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-col-active {
+  background-color: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
+  box-shadow: inset 0 3px 0 0 var(--blockr-color-primary, #2563eb);
+}
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.dt-col-active {
+  background-color: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
+}
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-row-active td.dt-col-active {
+  background-color: var(--blockr-color-primary, #2563eb);
+  color: #fff;
+}
 /* Flat-table header alignment, driven by the column's data type so the name,
    sub-label and sort arrow all agree with the body cells: numeric right, text
    left (the structured table does the same for its arm columns). The type

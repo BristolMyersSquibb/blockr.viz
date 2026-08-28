@@ -175,6 +175,17 @@
       th.setAttribute("aria-sort", "none");
       /** @param {Event} e */
       var activate = function (e) {
+        // A header the producer could name (data-dd-colkeys, e.g. an arm) is
+        // a DRILL target first: its label claims the column, its arrow still
+        // sorts. Sorting a Table 1 by an arm only reorders the stat rows
+        // inside each section, which is worth less than the claim. Bubble
+        // rather than stopPropagation, or the drill listener on <thead>
+        // never hears the click.
+        var t = /** @type {any} */ (e.target);
+        if (e.type === "click" && th.hasAttribute("data-dd-colkeys") &&
+            !(t && t.closest && t.closest(".blockr-sort-icon"))) {
+          return;
+        }
         e.stopPropagation();
         var idx = parseInt(th.getAttribute("data-col-index") || "", 10);
         if (!isNaN(idx)) sortBy(idx);
@@ -507,6 +518,17 @@
     // all; a click just forwards the row's keys. Rows without keys (stat
     // rows, variable-block headers -- no identity claim) are inert.
     var structured = table.getAttribute("data-dt-structured-drill") === "1";
+    // Column identity, when a producer stamped it (composer's colgroup axis).
+    // One map for the whole table, indexed the way cell.cellIndex counts, so
+    // the stub sits at 0 and unidentified columns are null. Absent map = the
+    // table has no column axis and every click means "this row", as before.
+    /** @type {Array<Array<{column: string, values: string[]}>|null>|null} */
+    var colMap = null;
+    try {
+      var cmj = table.getAttribute("data-dd-colkeys-map");
+      colMap = cmj ? JSON.parse(cmj) : null;
+    } catch (e) { colMap = null; }
+    if (!Array.isArray(colMap)) colMap = null;
     var col = table.getAttribute("data-dt-onclick-col");
     var idx = table.getAttribute("data-dt-onclick-idx");
     if (!structured && !grouped && (!col || idx == null)) return;
@@ -539,6 +561,101 @@
       return cell ? cell.getAttribute("data-raw") : null;
     }
 
+    /** @param {number} i */
+    function colKeysAt(i) {
+      if (!colMap || i < 0 || i >= colMap.length) return null;
+      var k = colMap[i];
+      return (k && k.length) ? k : null;
+    }
+    // Is `sub` the leading part of `full`? A spanner ("Placebo") is the
+    // prefix of every leaf below it ("Placebo / F", "Placebo / M"), which is
+    // how a spanner click finds the cells it covers.
+    /** @param {any} sub @param {any} full */
+    function keysPrefixOf(sub, full) {
+      if (!sub || !full || sub.length > full.length) return false;
+      for (var i = 0; i < sub.length; i++) {
+        if (sub[i].column !== full[i].column) return false;
+        if (String(sub[i].values) !== String(full[i].values)) return false;
+      }
+      return true;
+    }
+    function clearColActive() {
+      table.querySelectorAll(".dt-col-active").forEach(function (el) {
+        el.classList.remove("dt-col-active");
+      });
+    }
+    // Paint every cell of the claimed column(s). A spanner covers several
+    // leaves, so the match is by key prefix rather than by index.
+    /** @param {any} keys */
+    function markCol(keys) {
+      clearColActive();
+      if (!keys || !colMap) return;
+      /** @type {number[]} */
+      var idx = [];
+      for (var i = 0; i < colMap.length; i++) {
+        if (keysPrefixOf(keys, colMap[i])) idx.push(i);
+      }
+      if (!idx.length) return;
+      table.querySelectorAll("thead th[data-dd-colkeys]").forEach(function (th) {
+        /** @type {any} */
+        var k = null;
+        try { k = JSON.parse(th.getAttribute("data-dd-colkeys") || ""); }
+        catch (err) { k = null; }
+        if (k && (keysPrefixOf(keys, k) || keysPrefixOf(k, keys))) {
+          th.classList.add("dt-col-active");
+        }
+      });
+      Array.prototype.slice.call(tbody.children).forEach(function (r) {
+        idx.forEach(function (i) {
+          var c = r.children[i];
+          if (c) c.classList.add("dt-col-active");
+        });
+      });
+    }
+    // The one send. Row keys and column keys travel in separate fields: the
+    // row half has to be resolved against the display frame (its columns are
+    // the dotted identity ones), the column half already names real source
+    // columns and goes straight out as a claim.
+    /** @param {any} rowKeys @param {any} colKeys */
+    function sendDrill(rowKeys, colKeys) {
+      if (!window.Shiny || !Shiny.setInputValue) return;
+      Shiny.setInputValue(elemId + "_action",
+        { action: "filter",
+          filters: rowKeys || [],
+          col_filters: colKeys || [],
+          filter_type: "categorical" },
+        { priority: "event" });
+    }
+
+    // Header click = the column alone. Only headers the producer could name
+    // carry keys, so a Total or a stats spanner is inert and looks it.
+    if (structured && colMap) {
+      var thead = table.querySelector("thead");
+      if (thead) {
+        thead.addEventListener("click", function (e) {
+          var t = /** @type {Element | null} */ (e.target);
+          var th = t && t.closest("th[data-dd-colkeys]");
+          if (!th) return;
+          // Sorting owns the leaf headers too; a click on the arrow sorts.
+          if (t && t.closest(".blockr-sort-icon")) return;
+          /** @type {any} */
+          var keys = null;
+          try { keys = JSON.parse(th.getAttribute("data-dd-colkeys") || ""); }
+          catch (err) { keys = null; }
+          if (!keys || !keys.length) return;
+          if (th.classList.contains("dt-col-active")) {
+            clearColActive();
+            clearActiveRows(root);
+            sendClearFilter(elemId);
+            return;
+          }
+          clearActiveRows(root);
+          markCol(keys);
+          sendDrill([], keys);
+        });
+      }
+    }
+
     root.classList.add("dt-clickable");
     tbody.addEventListener("click", function (e) {
       var t = /** @type {Element | null} */ (e.target);
@@ -553,8 +670,19 @@
         var keysJson = srcTr.getAttribute("data-dd-keys");
         if (!keysJson) return;                       // no identity -> no-op
         if (!window.Shiny || !Shiny.setInputValue) return;
-        if (srcTr.classList.contains("dt-row-active")) {
+        // Which cell was hit: the stub means the row alone, a data cell means
+        // the row AND its column. With no column axis the two are the same
+        // click, which is why this is backwards compatible by construction.
+        var hitCell = t && t.closest("td");
+        var cellKeys = (hitCell && !hitCell.classList.contains("blockr-stub"))
+          ? colKeysAt(hitCell.cellIndex)
+          : null;
+        var wasActive = srcTr.classList.contains("dt-row-active");
+        var sameCell = wasActive &&
+          (!!cellKeys === !!(hitCell && hitCell.classList.contains("dt-col-active")));
+        if (wasActive && sameCell) {
           srcTr.classList.remove("dt-row-active");
+          clearColActive();
           sendClearFilter(elemId);
           return;
         }
@@ -562,13 +690,11 @@
         var keys = null;
         try { keys = JSON.parse(keysJson); } catch (err) { keys = null; }
         if (!keys || !keys.length) return;
-        Shiny.setInputValue(elemId + "_action",
-          { action: "filter", filters: keys,
-            filter_type: "categorical" },
-          { priority: "event" });
+        sendDrill(keys, cellKeys);
         Array.prototype.slice.call(tbody.children).forEach(function (r) {
           r.classList.remove("dt-row-active");
         });
+        markCol(cellKeys);
         srcTr.classList.add("dt-row-active");
         return;
       }

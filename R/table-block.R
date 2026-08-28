@@ -198,8 +198,13 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
   # grouped-filter payload from them.
   drill_on <- !is.null(drill) && nzchar(drill)
 
+  # Column identity, when the producer stamped it (see annotated_column_keys).
+  # Read only while the drill is on: without a drill a click means nothing, so
+  # a clickable-looking header would be a lie.
+  col_keys <- if (drill_on) annotated_column_keys(data)
+
   thead <- build_html_thead(data, data_cols, stub_col, stub_sortable = FALSE,
-                            sortable = sortable)
+                            sortable = sortable, col_keys = col_keys)
   tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
                             styling_cols = styling_cols,
                             collapsible = collapsible,
@@ -218,6 +223,17 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
   if (drill_on) {
     table_tag <- htmltools::tagAppendAttributes(
       table_tag, `data-dt-structured-drill` = "1"
+    )
+  }
+  # Cells inherit their column's claim by POSITION: one map on the table,
+  # indexed the way `cell.cellIndex` counts, rather than an attribute per
+  # cell (a Table 1 is long, and that would be n x m of the same few strings).
+  if (length(col_keys)) {
+    table_tag <- htmltools::tagAppendAttributes(
+      table_tag,
+      `data-dd-colkeys-map` = dd_col_keys_map_json(
+        data_cols, col_keys, stub_offset = if (is.null(stub_col)) 0L else 1L
+      )
     )
   }
 
@@ -1502,6 +1518,11 @@ new_table_block <- function(rowname = NULL,
         # values (aligned vectors) to filter the raw input to that group.
         r_filter_group_cols <- shiny::reactiveVal(filter_group_cols)
         r_filter_group_vals <- shiny::reactiveVal(filter_group_vals)
+        # Column half of a structured click. Session-only, deliberately: it
+        # has no constructor argument, so a board reload comes back with the
+        # row drill restored and no column claim. Add a `filter_col_keys`
+        # ctor arg (and its serialization) to make it survive a save.
+        r_filter_col_keys <- shiny::reactiveVal(NULL)
         r_sortable       <- shiny::reactiveVal(isTRUE(sortable))
         r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
         r_search         <- shiny::reactiveVal(isTRUE(search))
@@ -1551,7 +1572,11 @@ new_table_block <- function(rowname = NULL,
           if (is.null(msg)) return()
           act <- msg$action %||% "config"
           if (identical(act, "filter")) {
-            if (!is.null(msg$filters)) {
+            # The column half of a structured click (a header or a cell in an
+            # identified column). Its own field, read on every filter message
+            # so a stub click or the Reset clears it.
+            upd(r_filter_col_keys, if (length(msg$col_filters)) msg$col_filters)
+            if (length(msg$filters)) {
               # Grouped drill: [{column, value}, ...] -> aligned vectors, ANDed.
               cols <- vapply(msg$filters, function(f) as.character(f$column),
                              character(1L))
@@ -1559,6 +1584,13 @@ new_table_block <- function(rowname = NULL,
                              character(1L))
               upd(r_filter_group_cols, cols)
               upd(r_filter_group_vals, vals)
+              upd(r_filter_column, NULL)
+              upd(r_filter_values, NULL)
+            } else if (!is.null(msg$filters)) {
+              # A header click: columns and no rows. An empty `filters` is
+              # NOT a clear -- clearing carries a null column instead.
+              upd(r_filter_group_cols, NULL)
+              upd(r_filter_group_vals, NULL)
               upd(r_filter_column, NULL)
               upd(r_filter_values, NULL)
             } else {
@@ -1628,7 +1660,14 @@ new_table_block <- function(rowname = NULL,
           } else {
             list()
           }
-          dd_ctrl_claims(d, r_ctrl_table(), filters)
+          # The column half needs no resolving against the display frame: it
+          # already names a source column. ANDed in front of the row claim.
+          cols <- dd_col_claims(r_filter_col_keys(), r_ctrl_table())
+          rows <- dd_ctrl_claims(d, r_ctrl_table(), filters)
+          if (is.null(rows)) {
+            return(NULL)
+          }
+          c(cols, rows)
         })
 
         dd_ctrl_sender(
@@ -1637,10 +1676,11 @@ new_table_block <- function(rowname = NULL,
           dd_ctrl_pristine(
             function() {
               list(r_filter_column(), r_filter_values(),
-                   r_filter_group_cols(), r_filter_group_vals())
+                   r_filter_group_cols(), r_filter_group_vals(),
+                   r_filter_col_keys())
             },
             list(filter_column, filter_values, filter_group_cols,
-                 filter_group_vals)
+                 filter_group_vals, NULL)
           ),
           session
         )
