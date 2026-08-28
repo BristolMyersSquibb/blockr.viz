@@ -183,3 +183,53 @@ test_that("facet_scales reaches facet_wrap, fixed by default", {
                  facet_scales = "loose")
   )
 })
+
+# --- na_group / pct_distinct parity with the canvas -------------------------
+# The exported chart and the one on screen must say the same thing. This
+# package already learned that the hard way with downloads (a slide and a
+# download were two renderings of one chart), so the two additions that change
+# what a bar MEANS get parity tests rather than trust.
+
+pop_df <- data.frame(
+  AEDECOD = c("Diarrhoea", "Diarrhoea", "Nausea", NA),
+  USUBJID = c("S1", "S2", "S3", "S4"),
+  stringsAsFactors = FALSE
+)
+
+test_that("na_group = 'drop' removes the category from the static chart too", {
+  keep <- blockr.viz:::gg_agg(pop_df, "AEDECOD", NULL, NULL, "USUBJID",
+                              "count_distinct", na_group = "level")
+  drop <- blockr.viz:::gg_agg(pop_df, "AEDECOD", NULL, NULL, "USUBJID",
+                              "count_distinct", na_group = "drop")
+  expect_true(anyNA(keep$AEDECOD))
+  expect_false(anyNA(drop$AEDECOD))
+  expect_equal(nrow(drop), 2L)
+})
+
+test_that("pct_distinct divides by the panel, matching the JS engine", {
+  out <- blockr.viz:::gg_agg(pop_df, "AEDECOD", NULL, NULL, "USUBJID",
+                             "pct_distinct", na_group = "drop")
+  v <- stats::setNames(out$.value, out$AEDECOD)
+  # 2 of the 4 SUBJECTS, not 2 of the 3 with a term -- S4 is dropped from the
+  # categories and kept in the denominator, which is the whole point.
+  expect_equal(unname(v[["Diarrhoea"]]), 2 / 4)
+  expect_equal(unname(v[["Nausea"]]), 1 / 4)
+})
+
+test_that("each facet gets its own denominator in the static chart", {
+  d <- rbind(
+    transform(pop_df, TRT = "A"),
+    data.frame(AEDECOD = c("Diarrhoea", NA), USUBJID = c("T1", "T2"),
+               TRT = "B", stringsAsFactors = FALSE)
+  )
+  out <- blockr.viz:::gg_agg(d, "AEDECOD", NULL, "TRT", "USUBJID",
+                             "pct_distinct", na_group = "drop")
+  v <- stats::setNames(out$.value, paste(out$TRT, out$AEDECOD))
+  expect_equal(unname(v[["A Diarrhoea"]]), 2 / 4)
+  expect_equal(unname(v[["B Diarrhoea"]]), 1 / 2)
+})
+
+test_that("pct_distinct with no value column draws nothing, like the canvas", {
+  expect_null(blockr.viz:::gg_agg(pop_df, "AEDECOD", NULL, NULL, NULL,
+                                  "pct_distinct"))
+})

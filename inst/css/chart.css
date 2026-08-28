@@ -707,3 +707,51 @@
 .dd-card a.blockr-dl-xlsx.dd-chart-dl svg {
   display: block;
 }
+
+/* On-chart aggregation toggle (chart.js _buildFuncToggle) -------------------
+   Sits in the gear header beside the download, at the same 30px control
+   height, so the header reads as one row rather than a button plus a widget.
+   A segmented pair rather than a checkbox: "Counts" and "%" are two views of
+   the chart, neither of them the negation of the other. */
+.dd-card .blockr-gear-header .dd-func-toggle {
+  display: inline-flex;
+  align-items: stretch;
+  height: var(--blockr-control-h-sm, 30px);
+  border: 1px solid var(--blockr-border, #e2e8f0);
+  border-radius: var(--blockr-radius-sm, 6px);
+  overflow: hidden;
+  background: var(--blockr-surface, #fff);
+}
+
+.dd-card .dd-func-toggle .dd-func-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--blockr-muted, #64748b);
+  white-space: nowrap;
+}
+
+.dd-card .dd-func-toggle .dd-func-btn + .dd-func-btn {
+  border-left: 1px solid var(--blockr-border, #e2e8f0);
+}
+
+.dd-card .dd-func-toggle .dd-func-btn:hover {
+  background: var(--blockr-surface-hover, #f1f5f9);
+  color: var(--blockr-fg, #0f172a);
+}
+
+.dd-card .dd-func-toggle .dd-func-btn.dd-func-active {
+  background: var(--blockr-accent-soft, #f3e8ff);
+  color: var(--blockr-accent, #7e22ce);
+  font-weight: 600;
+}
+
+.dd-card .dd-func-toggle .dd-func-btn:focus-visible {
+  outline: 2px solid var(--blockr-accent, #7e22ce);
+  outline-offset: -2px;
+}

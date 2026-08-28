@@ -77,12 +77,45 @@ chart_arguments <- function() {
         "\"identity\" does NOT aggregate: it plots `value` as-is (one bar per ",
         "row when the `group` category is unique -- for precomputed heights); ",
         "duplicate categories collapse to the first row. Chart-only (not a ",
-        "table/tile aggregation)."
+        "table/tile aggregation). \"pct_distinct\" is the share of the ",
+        "PANEL's distinct `value`s, not of the bar or of the grid: a facet's ",
+        "own population is the denominator, so it stays right whatever the ",
+        "facet is set to and needs nothing joined on. Pair it with ",
+        "na_group=\"drop\" when the data carries rows that exist only to be ",
+        "counted (a subject with no event); they then draw no bar and still ",
+        "count. Chart-only."
       ),
       example = "count",
-      # identity is chart-only, so it widens the chart's enum here rather than
-      # the shared AGG_FNS (the table/tile vocabulary, drift-tested against JS).
-      type = arg_enum(c(AGG_FNS, "identity"))
+      # identity and pct_distinct are chart-only, so they widen the chart's
+      # enum here rather than the shared AGG_FNS (the table/tile vocabulary,
+      # drift-tested against JS).
+      type = arg_enum(c(AGG_FNS, "identity", "pct_distinct"))
+    ),
+    na_group = new_arg_spec(
+      paste0(
+        "What to do with rows whose `group` value is missing. \"level\" ",
+        "(default) gives them their own category, which is how this has ",
+        "always behaved -- a nameless bar and a blank legend entry. ",
+        "\"drop\" removes them from the categories but NOT from the panel, ",
+        "so they draw nothing and still count toward pct_distinct's ",
+        "denominator. That is the difference between a row that is a category ",
+        "and a row that is only a member of the population."
+      ),
+      example = "level",
+      type = arg_enum(c("level", "drop"))
+    ),
+    func_toggle = new_arg_spec(
+      paste0(
+        "Offer the aggregation as a control on the chart itself, next to the ",
+        "download button, instead of only inside the gear. FALSE (default) = ",
+        "no control. TRUE = counts vs percent (\"count_distinct\" / ",
+        "\"pct_distinct\"). A character vector names exactly which ",
+        "aggregations to offer, so the same argument grows without being ",
+        "replaced. The choice is block STATE: it is what the chart shows, not ",
+        "a viewing gesture, so it survives a save and a reload."
+      ),
+      example = NULL,
+      type = arg_string()
     ),
     x = new_arg_spec(
       paste0(

@@ -687,9 +687,26 @@
   // R AGG_FNS drift + golden cross-tests — untouched. The engine branch that
   // reads it is in drilldown-agg.js aggregate() (dormant for table/tile, which
   // never send func='identity').
+  // "% of panel" — the share of the panel's distinct values, not of the bar
+  // (bar_mode 'percent' already does that) and not of the grid. Chart-only for
+  // the same reason as identity: the denominator is a FACET population, which
+  // a table has no equivalent of, so pinning its meaning there wants composer's
+  // make_denom as the reference rather than an invention. Engine branch lives
+  // in drilldown-agg.js aggregate().
   ROLES.func = /** @type {any} */ ({
     ...ROLES.func,
-    options: [...ROLES.func.options, { value: 'identity', label: 'None (as is)' }]
+    options: [...ROLES.func.options,
+              { value: 'pct_distinct', label: '% of panel' },
+              { value: 'identity', label: 'None (as is)' }]
+  });
+
+  // Missing group keys. Sits beside the func picker because it only means
+  // anything once you know what the rows are: with pct_distinct, "drop" is what
+  // lets a row count toward the denominator without drawing a bar.
+  ROLES.na_group = /** @type {any} */ ({
+    label: 'Missing group', kind: 'select',
+    options: [{ value: 'level', label: 'Own category' },
+              { value: 'drop',  label: 'Not a category' }]
   });
 
   // FAMILY_ROLES — per family, ordered. A section entry is either a role key
@@ -1288,6 +1305,11 @@
       // positions, caption) is the reference for what a chart export must
       // contain.
       this._hoistDownload(gearHeader);
+      // The aggregation toggle goes here too, but it cannot be built yet:
+      // _buildDOM() runs at construction and `func_toggle` arrives with the
+      // first setData(). _refreshFuncToggle() inserts it then, which is why
+      // the header is kept.
+      this.gearHeader = gearHeader;
       gearHeader.appendChild(this.gearBtn);
       this.card.appendChild(gearHeader);
 
@@ -2171,6 +2193,7 @@
       this.columns = columns || [];
       this.config = config || {};
       if (args) this.argHelp = args;
+      this._refreshFuncToggle();
 
       // Convert column-oriented data to row-oriented array.
       // Data may arrive as: JSON string (pre-encoded), column object, or row
@@ -2270,8 +2293,8 @@
     /** @returns {Array<{facet: string, group: string, color: string,
      *                   value: number|null, n: number}>} */
     _aggregate() {
-      const { group, color, facet, value, func } = this.config;
-      return DAgg.aggregate(this.data, { group, color, facet, value, func });
+      const { group, color, facet, value, func, na_group } = this.config;
+      return DAgg.aggregate(this.data, { group, color, facet, value, func, na_group });
     }
 
     // -- Chart rendering ------------------------------------------------------
@@ -3264,18 +3287,26 @@
       // Percent display only applies when a color split is actually present
       // (a single series is trivially 100% of itself).
       const showPercent = isPercent && colors.length > 0;
+      // pct_distinct arrives as a fraction too, but of a different denominator:
+      // the PANEL's distinct values, not the group total. So it shares the
+      // axis formatter and 0..1 domain and keeps its own axis name. Unlike
+      // bar_mode 'percent' it needs no colour split — one series can be a
+      // share of the panel.
+      const pctFunc = this.config.func === 'pct_distinct';
+      const asFraction = showPercent || pctFunc;
       const valAxis = {
-        type: 'value', name: showPercent ? '% of group total' : valueTitle,
+        type: 'value',
+        name: showPercent ? '% of group total' : (pctFunc ? '% of panel' : valueTitle),
         nameLocation: 'middle',
         nameGap: vertical ? 45 : 30,
         nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
         axisLabel: {
           color: ax.labelColor, fontSize: ax.fontSize,
-          ...(showPercent
+          ...(asFraction
             ? { formatter: (/** @type {number} */ v) => Math.round(v * 100) + '%' }
             : {})
         },
-        ...(showPercent ? { max: 1 } : {}),
+        ...(asFraction ? { max: 1 } : {}),
         axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
         splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } }
       };
@@ -3323,8 +3354,15 @@
               const key = head + '|||' + (colors.length ? p.seriesName : '__all__');
               const n = nOf[key];
               const withN = showN;
-              return p.marker + this._esc(nm) + ': ' + fmtRaw(Number(p.value)) +
-                (withN && n != null ? '  (n=' + n + ')' : '');
+              // pct_distinct's value is a fraction; print it as a percentage
+              // and append the count it came from, which is the number a
+              // reader actually wants to check ("85% (17)").
+              const shown = pctFunc
+                ? Math.round(Number(p.value) * 1000) / 10 + '%'
+                : fmtRaw(Number(p.value));
+              return p.marker + this._esc(nm) + ': ' + shown +
+                (pctFunc && n != null ? '  (' + n + ')' : '') +
+                (!pctFunc && withN && n != null ? '  (n=' + n + ')' : '');
             });
           return this._esc(head) + '<br/>' + rows.concat(ttExtraRows(head)).join('<br/>');
         };
@@ -5627,6 +5665,89 @@
       this._resizeCharts();
     }
 
+    // -- On-chart aggregation toggle -----------------------------------------
+
+    /**
+     * Build, update or remove the segmented control for `func`. Shown only
+     * when `func_toggle` lists two or more aggregations. Labels come from the
+     * gear's own option list, so a choice reads the same in both places and
+     * there is no second label map to drift. Writes through the same path the
+     * gear writes through.
+     *
+     * Called on every setData() rather than once at construction: the config
+     * arrives after the DOM is built, and `func_toggle` can change on a gear
+     * edit or a board restore. Keyed on the choices so an unchanged toggle is
+     * repainted rather than rebuilt (a rebuild would drop focus mid-click).
+     */
+    _refreshFuncToggle() {
+      const choices = this._funcToggleChoices();
+      const key = choices.join('|');
+      if (key === this._funcToggleKey) { this._syncFuncToggle(); return; }
+      this._funcToggleKey = key;
+      if (this.funcToggleEl) { this.funcToggleEl.remove(); this.funcToggleEl = null; }
+      if (choices.length < 2 || !this.gearHeader) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'dd-func-toggle';
+      wrap.setAttribute('role', 'group');
+      wrap.setAttribute('aria-label', 'Aggregation');
+      const opts = (ROLES.func && ROLES.func.options) || [];
+      for (const value of choices) {
+        const opt = opts.find((/** @type {any} */ o) => o.value === value);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'dd-func-btn';
+        btn.dataset.func = value;
+        btn.textContent = opt ? opt.label : value;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (this.config.func === value) return;
+          this._setFunc(value);
+        });
+        wrap.appendChild(btn);
+      }
+      this.funcToggleEl = wrap;
+      // Before the gear, after the download: the order the header already
+      // reads in, most-used control nearest the content.
+      this.gearHeader.insertBefore(wrap, this.gearBtn);
+      this._syncFuncToggle();
+    }
+
+    /** @returns {string[]} */
+    _funcToggleChoices() {
+      const ft = this.config.func_toggle;
+      if (!ft) return [];
+      return (Array.isArray(ft) ? ft : [ft]).map(String).filter(Boolean);
+    }
+
+    /** Paint the active segment. Cheap, so it just runs on every render. */
+    _syncFuncToggle() {
+      if (!this.funcToggleEl) return;
+      for (const b of this.funcToggleEl.querySelectorAll('.dd-func-btn')) {
+        const on = /** @type {HTMLElement} */ (b).dataset.func === this.config.func;
+        b.classList.toggle('dd-func-active', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
+    }
+
+    /**
+     * Switch the aggregation and tell R, so the choice is block state rather
+     * than a local flip that the next re-render undoes. `value` follows `func`
+     * through the shared reconciler — count_distinct and pct_distinct both want
+     * a column, plain count wants none — so a toggle cannot leave the pair in a
+     * combination the gear would refuse.
+     * @param {string} value
+     */
+    _setFunc(value) {
+      const cfg = { ...this.config, func: value };
+      if (DAgg && DAgg.reconcileValue) DAgg.reconcileValue(cfg, this.columns || []);
+      this.config = cfg;
+      this._syncFuncToggle();
+      this._render();
+      // The gear's own transport, not a hand-rolled subset: a partial config
+      // message would drift from it the first time either side gains a field.
+      this._sendConfig();
+    }
+
     // -- Status footer --------------------------------------------------------
 
     // How many category labels survive `interval: 'auto'` in a plot area of
@@ -6008,6 +6129,7 @@
         sort_dir: this.config.sort_dir || 'asc',
         orientation: this.config.orientation || 'horizontal',
         bar_mode: this.config.bar_mode || 'stacked',
+        na_group: this.config.na_group || 'level',
         baseline: this.config.baseline || 'zero',
         series: this.config.series || '',
         label: this.config.label || '',

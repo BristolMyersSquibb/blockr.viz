@@ -65,6 +65,11 @@
 #'   resolve against `data` (same resolver as the app), `NULL` falls back
 #'   to the data's display attributes (`label` / `subtitle` / `caption`,
 #'   the canvas auto tier), `""` suppresses.
+#' @param na_group What to do with rows whose `group` value is missing:
+#'   `"level"` (default) gives them their own category, `"drop"` removes them
+#'   from the categories but NOT from the panel, so they draw nothing and still
+#'   count toward `func = "pct_distinct"`'s denominator. Must match the canvas,
+#'   or an exported chart says something different from the one on screen.
 #' @param scale_map A blockr.theme scale map binding columns to colors.
 #'   Default `NULL` reads the board's `scale_map` option when called inside
 #'   a live session (the officer deck path) and falls back to palette
@@ -92,6 +97,7 @@ static_chart <- function(data,
                      sort_dir = NULL,
                      count_on = "off",
                      count_col = NULL,
+                     na_group = "level",
                      facet_scales = "fixed",
                      box_points = "none",
                      summary = NULL,
@@ -130,7 +136,7 @@ static_chart <- function(data,
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     warning("static_chart() needs ggplot2; returning the data instead.")
     return(gg_fallback(data, chart_type, group, color, facet,
-                             value_col, func))
+                             value_col, func, na_group))
   }
 
   if (is.null(scale_map)) {
@@ -171,7 +177,7 @@ static_chart <- function(data,
     chart_type,
     bar = gg_bar(
       data, group, color, facet, value_col, func, bar_mode, horiz,
-      sort_by, sort_dir, count_on, count_col, scale_map
+      sort_by, sort_dir, count_on, count_col, scale_map, na_group
     ),
     boxplot = gg_boxplot(
       data, group, color, facet, value_col, box_points, summary, whiskers,
@@ -196,7 +202,7 @@ static_chart <- function(data,
       "\" from this state; returning the chart's data instead."
     )
     return(gg_fallback(data, chart_type, group, color, facet,
-                             value_col, func))
+                             value_col, func, na_group))
   }
 
   if (!is.null(facet)) {
@@ -307,9 +313,52 @@ gg_as_level_factor <- function(x) {
 # (dd_table_aggregate -> golden-tested against the JS chart), plus the
 # chart-only `identity` mode: no aggregation, the cell's FIRST row wins
 # (precomputed heights; duplicate categories collapse, as in the app).
-gg_agg <- function(data, group, color, facet, value_col, func) {
+gg_agg <- function(data, group, color, facet, value_col, func,
+                   na_group = "level") {
 
   cells <- c(facet, group, color)
+
+  # The population, BEFORE any dropping. Order matters and is the whole
+  # invariant: a row with no category still belongs to the panel, so the
+  # denominator has to be counted while it is still here. Counting after the
+  # drop gives 2/3 where the answer is 2/4 -- plausible, wrong, and silent.
+  # (drilldown-agg.js builds facetPop first for the same reason.)
+  full <- data
+
+  # Missing group keys: their own category, or dropped. Same fold as the JS
+  # engine (NA or ""), applied before the cells so `identity` inherits it too.
+  if (identical(na_group, "drop") && !is.null(group) && group %in% names(data)) {
+    g <- as.character(data[[group]])
+    data <- data[!is.na(g) & nzchar(g), , drop = FALSE]
+  }
+
+  # pct_distinct: the share of the PANEL's distinct values. Not in
+  # dd_table_aggregate because it is not a per-cell summary -- the denominator
+  # spans the facet -- and not in the shared AGG_FNS for the same reason the
+  # canvas keeps it chart-only. Mirrors drilldown-agg.js aggregate().
+  if (identical(func, "pct_distinct")) {
+    if (is.null(value_col)) {
+      return(NULL)
+    }
+    fac <- if (is.null(facet)) rep("__all__", nrow(full)) else
+      as.character(full[[facet]])
+    den <- vapply(split(full[[value_col]], fac),
+                  function(v) length(unique(v[!is.na(v)])), 0L)
+    agg <- dd_table_aggregate(
+      data, group = cells,
+      summaries = list(list(func = "count_distinct", cols = value_col))
+    )
+    if (!length(agg$metric_cols)) {
+      return(NULL)
+    }
+    out <- agg$data
+    key <- if (is.null(facet)) rep("__all__", nrow(out)) else
+      as.character(out[[facet]])
+    d <- den[key]
+    out$.value <- ifelse(is.na(d) | d == 0L, NA_real_,
+                         out[[agg$metric_cols[[1L]]]] / d)
+    return(out[c(cells, ".value")])
+  }
 
   if (identical(func, "identity")) {
 
@@ -337,7 +386,8 @@ gg_agg <- function(data, group, color, facet, value_col, func) {
     list(list(func = func, cols = value_col))
   }
 
-  agg <- dd_table_aggregate(data, group = cells, summaries = summaries)
+  agg <- dd_table_aggregate(data, group = cells, summaries = summaries,
+                            na_group = na_group)
 
   if (!length(agg$metric_cols)) {
     return(NULL)
@@ -352,10 +402,10 @@ gg_agg <- function(data, group, color, facet, value_col, func) {
 # chart aggregates, the raw frame otherwise. In the officer deck this
 # becomes an static_table slide; in the quarto document it prints as a table.
 gg_fallback <- function(data, chart_type, group, color, facet,
-                              value_col, func) {
+                              value_col, func, na_group = "level") {
 
   if (!is.null(group)) {
-    agg <- gg_agg(data, group, color, facet, value_col, func)
+    agg <- gg_agg(data, group, color, facet, value_col, func, na_group)
     if (!is.null(agg)) {
       return(agg)
     }
@@ -584,13 +634,14 @@ gg_bar_value_scale <- function(vals, horiz, name, percent = FALSE) {
 
 gg_bar <- function(data, group, color, facet, value_col, func,
                          bar_mode, horiz, sort_by, sort_dir,
-                         count_on, count_col, scale_map) {
+                         count_on, count_col, scale_map,
+                         na_group = "level") {
 
   if (is.null(group)) {
     return(NULL)
   }
 
-  agg <- gg_agg(data, group, color, facet, value_col, func)
+  agg <- gg_agg(data, group, color, facet, value_col, func, na_group)
 
   if (is.null(agg)) {
     return(NULL)

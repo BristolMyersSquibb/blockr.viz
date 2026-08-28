@@ -48,7 +48,7 @@ js_aggregate <- function(rows, config) {
 # The R engine, driven exactly as the table/tile drive it (summaries list ->
 # dd_metric_plan -> dd_table_aggregate). A count summary rides along (except
 # for func == "count" itself) so the JS per-cell `n` is cross-checked too.
-r_aggregate <- function(df, group, func, value) {
+r_aggregate <- function(df, group, func, value, na_group = NULL) {
   summaries <- if (identical(func, "count")) {
     list(list(func = "count", cols = character()))
   } else {
@@ -57,8 +57,10 @@ r_aggregate <- function(df, group, func, value) {
       list(func = "count", cols = character())
     )
   }
-  dd_table_aggregate(df, group, summaries)
+  dd_table_aggregate(df, group, summaries, na_group = na_group %||% "level")
 }
+
+`%||%` <- function(x, y) if (is.null(x)) y else x
 
 # JS stringifies a missing group key to '' -- fold R's NA key to match.
 key_chr <- function(x) {
@@ -68,16 +70,18 @@ key_chr <- function(x) {
 }
 
 expect_engines_agree <- function(df, func, value,
-                                 group = NULL, color = NULL, facet = NULL) {
+                                 group = NULL, color = NULL, facet = NULL,
+                                 na_group = NULL) {
   cfg <- list(func = func, value = value)
   cfg$group <- group
   cfg$color <- color
   cfg$facet <- facet
+  cfg$na_group <- na_group
   js <- js_aggregate(df, cfg)
 
   r_group <- c(facet, group, color)
   res <- r_aggregate(df, if (is.null(r_group)) character() else r_group,
-                     func, value)
+                     func, value, na_group)
   rd <- res$data
   metric <- res$metric_cols[[1L]]
 
@@ -185,4 +189,57 @@ test_that("golden: an all-NA cell is a null/NA gap, sum stays 0", {
     df, list(func = "sum", value = "val", group = "g", facet = "f")
   )
   expect_equal(cell_of(js, "F2|||C|||__all__")$value, 0)
+})
+
+# --- na_group ---------------------------------------------------------------
+# The two engines must agree about a MISSING group key under both settings, or
+# a chart and its table twin disagree about how many categories there are. The
+# fold JS applies (String(row[g] ?? '')) and the fold R applies (NA or "") have
+# to select the same rows -- that equivalence is what this pins.
+
+na_df <- data.frame(
+  g   = c("a", "a", NA, "b", NA, "b"),
+  v   = c(1, 2, 3, 4, 5, 6),
+  id  = c("s1", "s2", "s3", "s4", "s5", "s6"),
+  stringsAsFactors = FALSE
+)
+
+test_that("na_group defaults to 'level': the missing key is its own cell", {
+  skip_if_no_node()
+  js <- expect_engines_agree(na_df, "sum", "v", group = "g")
+  expect_setequal(vapply(js, function(r) r$group, ""), c("a", "b", ""))
+})
+
+test_that("na_group = 'drop' removes those rows from both engines", {
+  skip_if_no_node()
+  js <- expect_engines_agree(na_df, "sum", "v", group = "g",
+                             na_group = "drop")
+  expect_setequal(vapply(js, function(r) r$group, ""), c("a", "b"))
+  # And it is a DROP, not a re-assignment: the 3 + 5 never reappear elsewhere.
+  expect_equal(sum(vapply(js, function(r) as.numeric(r$value), 0)), 1 + 2 + 4 + 6)
+})
+
+test_that("na_group = 'drop' agrees across the other aggregations too", {
+  skip_if_no_node()
+  for (fn in c("count", "count_distinct", "mean", "median", "min", "max")) {
+    expect_engines_agree(na_df, fn, if (fn == "count_distinct") "id" else "v",
+                         group = "g", na_group = "drop")
+  }
+})
+
+test_that("an empty-string key drops like NA, so the engines cannot diverge", {
+  skip_if_no_node()
+  # R sees "" and NA as different keys; JS folds both to ''. Under "drop" both
+  # must go, or the fold the golden test relies on would start hiding a real
+  # disagreement.
+  df <- data.frame(g = c("a", "", NA, "a"), v = c(1, 2, 3, 4),
+                   stringsAsFactors = FALSE)
+  js <- expect_engines_agree(df, "sum", "v", group = "g", na_group = "drop")
+  expect_setequal(vapply(js, function(r) r$group, ""), "a")
+  expect_equal(as.numeric(js[[1]]$value), 5)
+})
+
+test_that("na_group = 'drop' with no group column is a no-op", {
+  skip_if_no_node()
+  expect_engines_agree(na_df, "sum", "v", na_group = "drop")
 })

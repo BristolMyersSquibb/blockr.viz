@@ -21,6 +21,7 @@ static_chart(
   sort_dir = NULL,
   count_on = "off",
   count_col = NULL,
+  na_group = "level",
   facet_scales = "fixed",
   box_points = "none",
   summary = NULL,
@@ -55,6 +56,12 @@ type like the canvas: horizontal for bars, vertical for boxplots.
 
 \item{count_on, count_col}{Observation-count labels, as in
 \code{\link[=new_chart_block]{new_chart_block()}}.}
+
+\item{na_group}{What to do with rows whose \code{group} value is missing:
+\code{"level"} (default) gives them their own category, \code{"drop"} removes them
+from the categories but NOT from the panel, so they draw nothing and still
+count toward \code{func = "pct_distinct"}'s denominator. Must match the canvas,
+or an exported chart says something different from the one on screen.}
 
 \item{facet_scales}{Panel scales, passed straight to
 \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}'s \code{scales}: \code{"fixed"} (default), \code{"free_y"},

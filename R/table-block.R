@@ -377,11 +377,29 @@ dt_message_table <- function(msg = "No data") {
 #' the raw input filtered by the click (see the block server's `expr`). No group
 #' -> the frame is returned unchanged, so the renderer draws the raw table.
 #'
+#' `na_group` decides what happens to rows whose group key is missing.
+#' `"level"` (the default, and the behaviour this has always had) gives them
+#' their own cell -- R keys it `NA`, the JS twin keys it `""`, same rows and
+#' same numbers. `"drop"` removes them: they are not a category. Missing means
+#' `NA` *or* the empty string, matching the JS fold `String(row[g] ?? "")`, so
+#' both engines drop the same rows and the golden cross-test still holds.
+#'
 #' @return `list(data, group, metric_cols)` -- the (aggregated or raw) frame,
 #'   the resolved group columns, and the metric column names.
 #' @noRd
-dd_table_aggregate <- function(data, group, summaries) {
+dd_table_aggregate <- function(data, group, summaries,
+                               na_group = c("level", "drop")) {
+  na_group <- match.arg(na_group)
   group <- intersect(as.character(group), names(data))
+  if (identical(na_group, "drop") && length(group)) {
+    # Any missing key drops the row: with several group columns the cell has no
+    # complete address, so there is no honest place to put it.
+    miss <- lapply(data[group], function(x) {
+      x <- as.character(x)
+      is.na(x) | !nzchar(x)
+    })
+    data <- data[!Reduce(`|`, miss), , drop = FALSE]
+  }
   plan  <- dd_metric_plan(summaries, data)
   # Aggregation is "active" when the block carries a group and/or a metric.
   # Neither -> the raw frame passes through unchanged (`aggregated = FALSE`).

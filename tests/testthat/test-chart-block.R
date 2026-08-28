@@ -603,3 +603,99 @@ test_that("config echo of a healed optional role does not erase state", {
     args = list(x = blk, data = list(data = function() df))
   )
 })
+
+# --- na_group / pct_distinct / func_toggle ----------------------------------
+# The population-as-rows design (see _team-ops
+# 2026-08-christoph-cdex-most-frequent-ae-percent): a chart divides by the
+# distinct values in its PANEL, so rows carrying a subject and no category
+# must draw nothing and still count. The numbers are guarded in the engine
+# tests (test-agg-pct-distinct.R, test-agg-golden.R); what is guarded here is
+# the block contract -- the three arguments exist, round-trip, and reach state.
+
+test_that("na_group and func_toggle round-trip through the constructor", {
+  blk <- new_chart_block(
+    chart_type = "bar", group = "AEDECOD", value = "USUBJID",
+    func = "pct_distinct", na_group = "drop", func_toggle = TRUE
+  )
+  expect_equal(chart_state_field(blk, "na_group"), "drop")
+  expect_equal(chart_state_field(blk, "func"), "pct_distinct")
+  # TRUE is sugar, expanded at construction so a SAVED board records the
+  # actual aggregations -- widening the sugar later cannot then change an
+  # existing board's controls.
+  expect_equal(chart_state_field(blk, "func_toggle"),
+               c("count_distinct", "pct_distinct"))
+})
+
+test_that("func_toggle takes an explicit set, and defaults to none", {
+  blk <- new_chart_block(chart_type = "bar", group = "g", value = "v",
+                         func_toggle = c("count", "mean"))
+  expect_equal(chart_state_field(blk, "func_toggle"), c("count", "mean"))
+  expect_null(chart_state_field(new_chart_block(chart_type = "bar"),
+                                "func_toggle"))
+})
+
+test_that("na_group defaults to 'level', so an existing board is unchanged", {
+  expect_equal(chart_state_field(new_chart_block(chart_type = "bar"),
+                                 "na_group"), "level")
+})
+
+test_that("a bad na_group is refused at construction, not at render", {
+  expect_error(new_chart_block(chart_type = "bar", na_group = "nonsense"))
+})
+
+test_that("the on-chart toggle writes func into STATE, not just the canvas", {
+  # This is the whole reason it goes through _sendConfig(): the choice is what
+  # the chart shows, so it has to survive a board save. A local flip that only
+  # repainted the canvas would look identical until someone saved the board.
+  df <- data.frame(
+    AEDECOD = c("Diarrhoea", "Diarrhoea", "Nausea"),
+    USUBJID = c("S1", "S2", "S3"),
+    stringsAsFactors = FALSE
+  )
+  blk <- new_chart_block(
+    chart_type = "bar", group = "AEDECOD", value = "USUBJID",
+    func = "pct_distinct", na_group = "drop", func_toggle = TRUE
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expect_equal(session$returned$state$func(), "pct_distinct")
+      expr_scope <- session$makeScope("expr")
+      # Exactly what _setFunc() -> _sendConfig() posts.
+      expr_scope$setInputs(drilldown_block_action = list(
+        action = "config", func = "count_distinct", value = "USUBJID",
+        na_group = "drop"
+      ))
+      session$flushReact()
+      expect_equal(session$returned$state$func(), "count_distinct")
+      expect_equal(session$returned$state$na_group(), "drop")
+      # And back, so the toggle is not one-way.
+      expr_scope$setInputs(drilldown_block_action = list(
+        action = "config", func = "pct_distinct", value = "USUBJID"
+      ))
+      session$flushReact()
+      expect_equal(session$returned$state$func(), "pct_distinct")
+    },
+    args = list(x = blk, data = list(data = function() df))
+  )
+})
+
+test_that("a gear edit of na_group reaches state too", {
+  df <- data.frame(g = c("a", NA), v = c(1, 2), stringsAsFactors = FALSE)
+  blk <- new_chart_block(chart_type = "bar", group = "g", value = "v",
+                         func = "sum")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expect_equal(session$returned$state$na_group(), "level")
+      session$makeScope("expr")$setInputs(drilldown_block_action = list(
+        action = "config", na_group = "drop"
+      ))
+      session$flushReact()
+      expect_equal(session$returned$state$na_group(), "drop")
+    },
+    args = list(x = blk, data = list(data = function() df))
+  )
+})

@@ -191,6 +191,19 @@
 #'   the series.
 #' @param lo,hi Optional lower / upper value bounds used by the renderer to
 #'   clamp or annotate the value axis. Default `NULL` (auto).
+#' @param na_group What to do with rows whose `group` value is missing:
+#'   `"level"` (default) gives them their own category, the behaviour this has
+#'   always had; `"drop"` removes them from the categories but NOT from the
+#'   panel, so they draw nothing and still count toward `pct_distinct`'s
+#'   denominator. That is the difference between a row that is a category and a
+#'   row that is only a member of the population.
+#' @param func_toggle Offer the aggregation as a control on the chart itself,
+#'   beside the download button, instead of only inside the gear. `NULL`
+#'   (default) = no control. `TRUE` = counts vs percent, i.e.
+#'   `c("count_distinct", "pct_distinct")`. A character vector names exactly
+#'   which aggregations to offer, so the same argument grows without being
+#'   replaced. The choice is block STATE: it is what the chart shows, not a
+#'   viewing gesture, so it survives a save and a reload.
 #' @param count_on Which label surfaces carry an observation count in
 #'   parentheses ("Female (12)"): `"off"` (default), `"axis"` (the category
 #'   axis ticks), `"facet"` (the facet strip labels), or `"both"`.
@@ -333,6 +346,16 @@ new_chart_block <- function(
     # subject can span several colour / facet cells (see chart.js _labelCounts).
     count_on = "off",
     count_col = NULL,
+    # Missing group keys: their own category ("level", the long-standing
+    # behaviour) or dropped from the categories while staying in the panel
+    # ("drop"). See the arg spec; "drop" is what makes a population-carrying
+    # frame work -- a subject with no event draws no bar and still counts.
+    na_group = "level",
+    # Aggregation offered on the chart's own chrome rather than only in the
+    # gear. NULL = off; TRUE = the counts/percent pair; a character vector =
+    # exactly those. Normalised to a character vector below so the saved board
+    # records the actual choices rather than a bare TRUE.
+    func_toggle = NULL,
     # Panel scales for a facet grid. "fixed" (default) = one shared numeric
     # domain and one shared category set/order across the panels, so a
     # position means the same thing in every one of them (and the canvas
@@ -406,6 +429,22 @@ new_chart_block <- function(
   # "off" when absent.
   count_col <- chr_state(count_col)
   count_on <- count_on %||% "off"
+  na_group <- match.arg(as.character(na_group %||% "level")[1L],
+                        c("level", "drop"))
+  # TRUE is sugar for the pair this exists to offer. Expanding it here (rather
+  # than in the browser) means a saved board carries the actual aggregations,
+  # so widening the sugar later cannot silently change an existing board.
+  func_toggle <- if (isTRUE(func_toggle)) {
+    c("count_distinct", "pct_distinct")
+  } else if (isFALSE(func_toggle)) {
+    NULL
+  } else {
+    # chr_vec_state, NOT chr_state: this is a multi-value slot like
+    # `tt_fields` / `waterfall_totals`. chr_state keeps only the first
+    # element, which would silently reduce every explicit set to one choice
+    # and leave the toggle with nothing to switch between.
+    chr_vec_state(func_toggle)
+  }
   # Fixed-option select; a saved board predating it (or a DAG-poisoned list())
   # backfills to the shared-scale default.
   facet_scales <- match.arg(
@@ -572,6 +611,9 @@ new_chart_block <- function(
         # DISTINCT id column; the browser does the counting per label group.
         r_count_on <- shiny::reactiveVal(count_on)
         r_count_col <- shiny::reactiveVal(count_col)
+        # Missing-key handling and the on-chart aggregation control.
+        r_na_group <- shiny::reactiveVal(na_group)
+        r_func_toggle <- shiny::reactiveVal(func_toggle)
         # Facet-grid panel scales (see constructor args).
         r_facet_scales <- shiny::reactiveVal(facet_scales)
         r_download <- shiny::reactiveVal(isTRUE(download))
@@ -884,6 +926,9 @@ new_chart_block <- function(
               # Observation-count labels: which surface(s) get the "(n)" and the
               # DISTINCT id column to count (browser-side, per label group).
               count_on = r_count_on(), count_col = r_count_col(),
+              # Missing group keys, and whether the aggregation is offered on
+              # the chart's own chrome. Both are read by chart.js.
+              na_group = r_na_group(), func_toggle = r_func_toggle(),
               # Facet-grid panel scales: shared numeric domain + shared
               # category set across the panels ("fixed"), or per-panel
               # ("free" / "free_y").
@@ -1072,6 +1117,7 @@ new_chart_block <- function(
             if (!is.null(msg$ref_hi))  upd(r_ref_hi, nn(msg$ref_hi))
             if (!is.null(msg$ref_lo))  upd(r_ref_lo, nn(msg$ref_lo))
             if (!is.null(msg$count_on))   upd(r_count_on, msg$count_on)
+            if (!is.null(msg$na_group))   upd(r_na_group, msg$na_group)
             # nn(): "" (picker cleared) means "no id column" -> row count.
             if (!is.null(msg$count_col))  upd(r_count_col, nn(msg$count_col))
             if (!is.null(msg$facet_scales)) {
@@ -1291,6 +1337,7 @@ new_chart_block <- function(
             bar_mode = r_bar_mode(), orientation = r_orientation(),
             sort_by = r_sort_by(), sort_dir = r_sort_dir(),
             count_on = r_count_on(), count_col = r_count_col(),
+            na_group = r_na_group(), func_toggle = r_func_toggle(),
             facet_scales = r_facet_scales(), box_points = r_box_points(),
             smoother = r_smoother(), identity_line = r_identity_line(),
             lo = r_lo(), hi = r_hi(), vlines = r_vlines(),
@@ -1470,6 +1517,8 @@ new_chart_block <- function(
             ref_lo = r_ref_lo,
             count_on = r_count_on,
             count_col = r_count_col,
+            na_group = r_na_group,
+            func_toggle = r_func_toggle,
             facet_scales = r_facet_scales,
             download = r_download,
             lo = r_lo,
@@ -1531,7 +1580,11 @@ new_chart_block <- function(
       "band_id", "ref_hi", "ref_lo", "lo", "hi", "waterfall_totals",
       # count_col is optional (blank = row count); count_on is a fixed-option
       # select (always "off"/"axis"/"facet"/"both"), so it is not listed here.
-      "count_col",
+      # `func_toggle` is NULL whenever the on-chart control is off, which is
+      # the default -- so it MUST be listed, or every chart block wedges.
+      # `na_group` is not: it is a fixed-option select like count_on, always
+      # "level" or "drop".
+      "count_col", "func_toggle",
       "title", "subtitle", "caption",
       # Legacy alias formals: permanently NULL in state (mapped onto
       # vlines/hlines at construction), so they MUST be allowed to be empty --
@@ -1548,7 +1601,7 @@ new_chart_block <- function(
       "identity_line",
       "box_points", "summary", "whiskers", "connect_centers",
       "lo", "hi", "baseline", "waterfall_totals",
-      "count_on", "count_col", "facet_scales",
+      "count_on", "count_col", "na_group", "func_toggle", "facet_scales",
       "title", "subtitle", "caption",
       "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",

@@ -55,6 +55,8 @@ new_chart_block(
   caption = NULL,
   count_on = "off",
   count_col = NULL,
+  na_group = "level",
+  func_toggle = NULL,
   facet_scales = "fixed",
   download = TRUE,
   ctrl_target = "",
@@ -278,6 +280,21 @@ axis ticks), \code{"facet"} (the facet strip labels), or \code{"both"}.}
 the raw row count. Counts are computed per label group in the browser and
 do NOT sum from the per-cell n: one subject can span several color /
 facet cells.}
+
+\item{na_group}{What to do with rows whose \code{group} value is missing:
+\code{"level"} (default) gives them their own category, the behaviour this has
+always had; \code{"drop"} removes them from the categories but NOT from the
+panel, so they draw nothing and still count toward \code{pct_distinct}'s
+denominator. That is the difference between a row that is a category and a
+row that is only a member of the population.}
+
+\item{func_toggle}{Offer the aggregation as a control on the chart itself,
+beside the download button, instead of only inside the gear. \code{NULL}
+(default) = no control. \code{TRUE} = counts vs percent, i.e.
+\code{c("count_distinct", "pct_distinct")}. A character vector names exactly
+which aggregations to offer, so the same argument grows without being
+replaced. The choice is block STATE: it is what the chart shows, not a
+viewing gesture, so it survives a save and a reload.}
 
 \item{facet_scales}{How the facet panels scale, as in ggplot2's
 \code{facet_wrap(scales = )}. \code{"fixed"} (default) gives every panel ONE

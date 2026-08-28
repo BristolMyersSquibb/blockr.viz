@@ -94,7 +94,9 @@
    */
   function reconcileValue(cfg, columns) {
     if (!cfg.func || cfg.func === 'count') { cfg.value = '.count'; return; }
-    if (cfg.func === 'count_distinct') {
+    // Both count the distinct values of any column, numeric or not, so the
+    // value picker must not be narrowed to numerics for either.
+    if (cfg.func === 'count_distinct' || cfg.func === 'pct_distinct') {
       if (cfg.value === '.count') cfg.value = '';
       return;
     }
@@ -118,8 +120,23 @@
    *
    * "Usable" = non-null and coercible to a number, so a single bad cell
    * can't poison a mean/sum into NaN. Missing group KEYS form their own
-   * cell: null/undefined stringify to '' here, while R groups them under
-   * NA (a labeling difference only — same rows, same numbers).
+   * cell by default: null/undefined stringify to '' here, while R groups them
+   * under NA (a labeling difference only — same rows, same numbers).
+   *
+   *   na_group        'level' (default, the behaviour above) or 'drop'.
+   *                   'drop' removes rows with a MISSING GROUP KEY from the
+   *                   cells, so they draw no nameless bar — but leaves them in
+   *                   the facet population that pct_distinct divides by. That
+   *                   distinction is the whole point: a subject something did
+   *                   not happen to is not a category, and is still a subject.
+   *   pct_distinct    chart-only. distinct `value` in the cell divided by
+   *                   distinct `value` in the whole FACET, as a fraction
+   *                   (0..1, like bar_mode 'percent'). The denominator is the
+   *                   panel's population, not the sum of its bars, so it is
+   *                   correct for whatever the user faceted by and needs
+   *                   nothing joined on. Absent from AGG_FNS for the same
+   *                   reason as identity: no R twin, so it sits out the golden
+   *                   cross-test (see test-agg-pct-distinct.R).
    *
    * Returns RAW numbers ({facet, group, color, value, n}) — presentation
    * rounding belongs to the consumers (tooltip / label formatters).
@@ -128,12 +145,33 @@
    *          value?: string, func?: string}} cfg
    */
   function aggregate(rows, cfg) {
-    const { group, color, facet, value, func } = cfg || {};
+    const { group, color, facet, value, func, na_group } = cfg || {};
     if (!rows || rows.length === 0) return [];
+
+    // A group key is missing when it stringifies to '' — the same fold the
+    // golden cross-test applies to R's NA, so both engines drop the same rows.
+    const dropNa = na_group === 'drop';
+    const usable = (/** @type {any} */ v) =>
+      v != null && !(typeof v === 'number' && Number.isNaN(v));
+
+    // pct_distinct denominators, counted over EVERY row including the ones
+    // 'drop' removes from the cells. Built before the cells, because that is
+    // the point: the denominator is the panel's population.
+    /** @type {Record<string, Set<any>>} */
+    const facetPop = {};
+    if (func === 'pct_distinct') {
+      for (const row of rows) {
+        const fv = facet ? String(row[facet] ?? '') : '__all__';
+        const v = value != null ? row[value] : null;
+        if (!usable(v)) continue;
+        (facetPop[fv] || (facetPop[fv] = new Set())).add(v);
+      }
+    }
 
     /** @type {Record<string, any>} */
     const groups = {};
     for (const row of rows) {
+      if (dropNa && group && String(row[group] ?? '') === '') continue;
       const gv = group ? String(row[group] ?? '') : 'Total';
       const cv = color ? String(row[color] ?? '') : '__all__';
       const fv = facet ? String(row[facet] ?? '') : '__all__';
@@ -153,7 +191,16 @@
       // shadow it and silently count r[undefined] (every group → 0).
       let out;
       if (func === 'count') out = g.rows.length;
-      else if (func === 'count_distinct') { const s = new Set(); for (const r of g.rows) { const v = value != null ? r[value] : null; if (v != null && !(typeof v === 'number' && Number.isNaN(v))) s.add(v); } out = s.size; }
+      else if (func === 'count_distinct') { const s = new Set(); for (const r of g.rows) { const v = value != null ? r[value] : null; if (usable(v)) s.add(v); } out = s.size; }
+      // Share of the FACET's distinct values, as a fraction. A facet with no
+      // usable value has no denominator, so the cell is null (a gap) rather
+      // than a fabricated 0 — same rule as mean/min on an empty cell.
+      else if (func === 'pct_distinct') {
+        const s = new Set();
+        for (const r of g.rows) { const v = value != null ? r[value] : null; if (usable(v)) s.add(v); }
+        const den = facetPop[g.facet] ? facetPop[g.facet].size : 0;
+        out = den ? s.size / den : null;
+      }
       else if (func === 'mean') out = g.values.length ? g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / g.values.length : null;
       else if (func === 'median') { const s = g.values.slice().sort((/** @type {number} */ a, /** @type {number} */ b) => a - b); const m = Math.floor(s.length / 2); out = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : null; }
       else if (func === 'sum') out = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
