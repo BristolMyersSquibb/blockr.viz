@@ -734,7 +734,11 @@
   border: 1px solid var(--blockr-color-border, #e5e7eb);
   border-radius: 4px;
   background-color: var(--blockr-color-bg-input, #f9fafb);
-  color: var(--blockr-color-text-primary, #374151);
+  /* The same muted grey the download and gear icons carry, and the same
+     darkening on hover: three squares in a row have to read as one set, and a
+     glyph at full text-primary beside two grey icons reads as the odd one out
+     rather than as the important one. */
+  color: var(--blockr-grey-500, #6b7280);
   font: inherit;
   font-size: 13px;
   font-weight: 600;
@@ -747,6 +751,7 @@
 .dd-card .blockr-gear-header .dd-func-btn:hover {
   background-color: #ffffff;
   border-color: var(--blockr-grey-300, #d1d5db);
+  color: var(--blockr-color-text-primary, #374151);
 }
 
 .dd-card .blockr-gear-header .dd-func-btn:focus-visible {
