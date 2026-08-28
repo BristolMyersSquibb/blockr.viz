@@ -709,6 +709,21 @@
               { value: 'drop',  label: 'Not a category' }]
   });
 
+  // Whether the aggregation is also offered on the CARD, for a reader rather
+  // than a board author. 'on' is sugar the browser expands (see
+  // _funcToggleChoices) so this select can bind straight to the config value;
+  // an explicit set passed from R stays a list of aggregations and is simply
+  // not editable here, which is the right trade for the advanced case.
+  // Rendered as a CHECKBOX (_isBoolSegmented), whose caption is the "on"
+  // option's label, not the role's -- so that label has to read on its own,
+  // the way identity_line's does. "off" stays first so an absent value (the
+  // default) falls back to unchecked.
+  ROLES.func_toggle = /** @type {any} */ ({
+    label: 'Counts / % switch', kind: 'segmented',
+    options: [{ value: 'off', label: 'Off' },
+              { value: 'on',  label: 'Offer counts / % on the chart' }]
+  });
+
   // FAMILY_ROLES — per family, ordered. A section entry is either a role key
   // (always shown for the family) or { role, types:[...] } (shown only for
   // those chart types). requiredMap rows render immediately; optionalMap rows
@@ -761,6 +776,12 @@
         // facet applies to any faceted family. Pie/treemap/radar have no
         // category axis, so "axis" no-ops there (the tooltip n covers it).
         'count_on', 'count_col',
+        // Missing-key handling, and the on-card aggregation switch. Bar only:
+        // they exist for the population-as-rows pattern, which is a bar idea
+        // (a pie of "everyone, including the ones with no category" is not a
+        // chart anyone wants).
+        { role: 'na_group', types: ['bar'] },
+        { role: 'func_toggle', types: ['bar'] },
         // Facet-grid scales; hidden until a facet is mapped (role `when`).
         'facet_scales', 'download'],
       titles: ['title', 'subtitle', 'caption']
@@ -5712,11 +5733,20 @@
       this._syncFuncToggle();
     }
 
-    /** @returns {string[]} */
+    /**
+     * The aggregations the on-card switch offers. 'on' is sugar for the pair
+     * this exists for, expanded here rather than in R so the gear's select can
+     * bind straight to the stored value; 'off' and anything under two entries
+     * mean no switch.
+     * @returns {string[]}
+     */
     _funcToggleChoices() {
       const ft = this.config.func_toggle;
       if (!ft) return [];
-      return (Array.isArray(ft) ? ft : [ft]).map(String).filter(Boolean);
+      const v = (Array.isArray(ft) ? ft : [ft]).map(String).filter(Boolean);
+      if (v.length === 1 && v[0] === 'on') return ['count_distinct', 'pct_distinct'];
+      if (v.length === 1 && v[0] === 'off') return [];
+      return v;
     }
 
     /** Paint the active segment. Cheap, so it just runs on every render. */
@@ -6130,6 +6160,7 @@
         orientation: this.config.orientation || 'horizontal',
         bar_mode: this.config.bar_mode || 'stacked',
         na_group: this.config.na_group || 'level',
+        func_toggle: this.config.func_toggle || 'off',
         baseline: this.config.baseline || 'zero',
         series: this.config.series || '',
         label: this.config.label || '',

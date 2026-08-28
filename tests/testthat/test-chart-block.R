@@ -619,11 +619,10 @@ test_that("na_group and func_toggle round-trip through the constructor", {
   )
   expect_equal(chart_state_field(blk, "na_group"), "drop")
   expect_equal(chart_state_field(blk, "func"), "pct_distinct")
-  # TRUE is sugar, expanded at construction so a SAVED board records the
-  # actual aggregations -- widening the sugar later cannot then change an
-  # existing board's controls.
-  expect_equal(chart_state_field(blk, "func_toggle"),
-               c("count_distinct", "pct_distinct"))
+  # TRUE is stored as the sugar "on", not expanded: the gear's select binds to
+  # the stored value, so storing the pair would leave the control with nothing
+  # to match. The browser expands it (_funcToggleChoices).
+  expect_equal(chart_state_field(blk, "func_toggle"), "on")
 })
 
 test_that("func_toggle takes an explicit set, and defaults to none", {
@@ -695,6 +694,33 @@ test_that("a gear edit of na_group reaches state too", {
       ))
       session$flushReact()
       expect_equal(session$returned$state$na_group(), "drop")
+    },
+    args = list(x = blk, data = list(data = function() df))
+  )
+})
+
+test_that("the gear can switch the on-card control on and off", {
+  df <- data.frame(g = c("a", "b"), v = c(1, 2), stringsAsFactors = FALSE)
+  blk <- new_chart_block(chart_type = "bar", group = "g", value = "v",
+                         func = "count_distinct")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expect_null(session$returned$state$func_toggle())
+      sc <- session$makeScope("expr")
+      sc$setInputs(drilldown_block_action = list(
+        action = "config", func_toggle = "on"
+      ))
+      session$flushReact()
+      expect_equal(session$returned$state$func_toggle(), "on")
+      # "off" stores NULL, so a board that switched it off reads the same as
+      # one that never asked for the control.
+      sc$setInputs(drilldown_block_action = list(
+        action = "config", func_toggle = "off"
+      ))
+      session$flushReact()
+      expect_null(session$returned$state$func_toggle())
     },
     args = list(x = blk, data = list(data = function() df))
   )

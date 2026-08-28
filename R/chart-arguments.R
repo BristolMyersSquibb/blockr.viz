@@ -108,11 +108,13 @@ chart_arguments <- function() {
       paste0(
         "Offer the aggregation as a control on the chart itself, next to the ",
         "download button, instead of only inside the gear. FALSE (default) = ",
-        "no control. TRUE = counts vs percent (\"count_distinct\" / ",
-        "\"pct_distinct\"). A character vector names exactly which ",
-        "aggregations to offer, so the same argument grows without being ",
-        "replaced. The choice is block STATE: it is what the chart shows, not ",
-        "a viewing gesture, so it survives a save and a reload."
+        "no control. TRUE (stored as \"on\") = counts vs percent. A ",
+        "character vector names exactly which aggregations to offer, so the ",
+        "same argument grows without being replaced. The gear offers the ",
+        "on/off form; an explicit vector is a code-level setting and is left ",
+        "alone there. The reader's choice of aggregation is block STATE: it ",
+        "is what the chart shows, not a viewing gesture, so it survives a ",
+        "save."
       ),
       example = NULL,
       type = arg_string()

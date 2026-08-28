@@ -434,8 +434,12 @@ new_chart_block <- function(
   # TRUE is sugar for the pair this exists to offer. Expanding it here (rather
   # than in the browser) means a saved board carries the actual aggregations,
   # so widening the sugar later cannot silently change an existing board.
+  # "on" rather than the expanded pair: the gear's select binds to the stored
+  # value, so storing the sugar is what makes the control show the right
+  # position. The browser expands it (_funcToggleChoices). An explicit vector
+  # passed from R survives untouched and simply is not editable in the gear.
   func_toggle <- if (isTRUE(func_toggle)) {
-    c("count_distinct", "pct_distinct")
+    "on"
   } else if (isFALSE(func_toggle)) {
     NULL
   } else {
@@ -1118,6 +1122,12 @@ new_chart_block <- function(
             if (!is.null(msg$ref_lo))  upd(r_ref_lo, nn(msg$ref_lo))
             if (!is.null(msg$count_on))   upd(r_count_on, msg$count_on)
             if (!is.null(msg$na_group))   upd(r_na_group, msg$na_group)
+            # "off" is the gear saying no switch; store NULL so the state
+            # reads the same as a block that never asked for one.
+            if (!is.null(msg$func_toggle)) {
+              upd(r_func_toggle,
+                  if (identical(msg$func_toggle, "off")) NULL else msg$func_toggle)
+            }
             # nn(): "" (picker cleared) means "no id column" -> row count.
             if (!is.null(msg$count_col))  upd(r_count_col, nn(msg$count_col))
             if (!is.null(msg$facet_scales)) {
