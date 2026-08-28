@@ -162,7 +162,7 @@
 
 <!-- C -->
 <div class="variant">
-  <h2>C. One square, click-through <span class="tag">— shows the CURRENT mode</span></h2>
+  <h2>C. One square, click-through <span class="tag">— shows the CURRENT mode &nbsp;·&nbsp; <b style="color:#15803d">CHOSEN</b></span></h2>
   <p class="note">
     Your suggestion, smallest thing that can work. The catch is the oldest
     ambiguity in toggle design: a button reading <b>%</b> can mean "you are
@@ -174,7 +174,13 @@
     <button class="cycle" id="cycC" title="Showing counts — click for %">N</button>
     <button class="icon-btn" title="Settings"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="2.6"/><path d="M8 1.4v2M8 12.6v2M1.4 8h2M12.6 8h2" stroke="currentColor" stroke-width="1.4"/></svg></button>
   </div><div class="plot"></div></div>
-  <p class="verdict meh">Smallest, but ambiguous and it hides the alternative. Survivable with a tooltip; a tooltip is not a fix.</p>
+  <p class="verdict yes">
+    <b>Shipped 2026-08-28</b>, at 30px so it matches the download and the gear
+    exactly — three identical squares read as one control row. The tooltip
+    carries both halves ("Showing % of panel — click for Count distinct"),
+    which is the mitigation for the ambiguity below, not a cure for it.
+  </p>
+  <p class="verdict meh">Standing weakness: the label alone reads either way, and a second mode is not advertised.</p>
 </div>
 
 <!-- D -->

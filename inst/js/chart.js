@@ -714,6 +714,17 @@
   // _funcToggleChoices) so this select can bind straight to the config value;
   // an explicit set passed from R stays a list of aggregations and is simply
   // not editable here, which is the right trade for the advanced case.
+  // Short labels for the on-card square. The gear's option labels name the
+  // aggregation for someone configuring a board ("Count distinct", "% of
+  // panel"); a reader flipping between two views wants the thing on the axis.
+  // Anything not listed keeps its full label and the button widens -- the CSS
+  // uses min-width for exactly that, since a truncated aggregation would be
+  // worse than a wide button.
+  /** @type {Record<string, string>} */
+  const FUNC_SHORT = {
+    count: 'n', count_distinct: 'N', pct_distinct: '%', sum: '\u03a3'
+  };
+
   // Rendered as a CHECKBOX (_isBoolSegmented), whose caption is the "on"
   // option's label, not the role's -- so that label has to read on its own,
   // the way identity_line's does. "off" stays first so an absent value (the
@@ -5686,55 +5697,43 @@
       this._resizeCharts();
     }
 
-    // -- On-chart aggregation toggle -----------------------------------------
+    // -- On-chart aggregation switch -----------------------------------------
 
     /**
-     * Build, update or remove the segmented control for `func`. Shown only
-     * when `func_toggle` lists two or more aggregations. Labels come from the
-     * gear's own option list, so a choice reads the same in both places and
-     * there is no second label map to drift. Writes through the same path the
-     * gear writes through.
+     * One square showing the CURRENT aggregation, cycling on click. Sized as
+     * the download and gear it sits between.
      *
      * Called on every setData() rather than once at construction: the config
      * arrives after the DOM is built, and `func_toggle` can change on a gear
-     * edit or a board restore. Keyed on the choices so an unchanged toggle is
+     * edit or a board restore. Keyed on the choices so an unchanged switch is
      * repainted rather than rebuilt (a rebuild would drop focus mid-click).
      */
     _refreshFuncToggle() {
       const choices = this._funcToggleChoices();
       const key = choices.join('|');
-      if (key === this._funcToggleKey) { this._syncFuncToggle(); return; }
-      this._funcToggleKey = key;
-      if (this.funcToggleEl) { this.funcToggleEl.remove(); this.funcToggleEl = null; }
-      if (choices.length < 2 || !this.gearHeader) return;
-      const wrap = document.createElement('div');
-      wrap.className = 'dd-func-toggle';
-      wrap.setAttribute('role', 'group');
-      wrap.setAttribute('aria-label', 'Aggregation');
-      const opts = (ROLES.func && ROLES.func.options) || [];
-      for (const value of choices) {
-        const opt = opts.find((/** @type {any} */ o) => o.value === value);
+      if (key !== this._funcToggleKey) {
+        this._funcToggleKey = key;
+        if (this.funcToggleEl) { this.funcToggleEl.remove(); this.funcToggleEl = null; }
+        if (choices.length < 2 || !this.gearHeader) return;
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'dd-func-btn';
-        btn.dataset.func = value;
-        btn.textContent = opt ? opt.label : value;
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (this.config.func === value) return;
-          this._setFunc(value);
+          const cs = this._funcToggleChoices();
+          const at = cs.indexOf(this.config.func);
+          this._setFunc(cs[(at + 1) % cs.length]);
         });
-        wrap.appendChild(btn);
+        this.funcToggleEl = btn;
+        // Before the gear, after the download: the order the header already
+        // reads in, most-used control nearest the content.
+        this.gearHeader.insertBefore(btn, this.gearBtn);
       }
-      this.funcToggleEl = wrap;
-      // Before the gear, after the download: the order the header already
-      // reads in, most-used control nearest the content.
-      this.gearHeader.insertBefore(wrap, this.gearBtn);
       this._syncFuncToggle();
     }
 
     /**
-     * The aggregations the on-card switch offers. 'on' is sugar for the pair
+     * The aggregations the switch cycles through. 'on' is sugar for the pair
      * this exists for, expanded here rather than in R so the gear's select can
      * bind straight to the stored value; 'off' and anything under two entries
      * mean no switch.
@@ -5749,22 +5748,38 @@
       return v;
     }
 
-    /** Paint the active segment. Cheap, so it just runs on every render. */
+    /** @param {string} value @returns {string} */
+    _funcLabel(value) {
+      const opts = (ROLES.func && ROLES.func.options) || [];
+      const opt = opts.find((/** @type {any} */ o) => o.value === value);
+      return opt ? opt.label : value;
+    }
+
+    /**
+     * Paint the square with the CURRENT aggregation, and say in the tooltip
+     * both what it is showing and what a click does — the standing weakness of
+     * a click-through control is that the label alone reads either way.
+     */
     _syncFuncToggle() {
-      if (!this.funcToggleEl) return;
-      for (const b of this.funcToggleEl.querySelectorAll('.dd-func-btn')) {
-        const on = /** @type {HTMLElement} */ (b).dataset.func === this.config.func;
-        b.classList.toggle('dd-func-active', on);
-        b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      }
+      const btn = this.funcToggleEl;
+      if (!btn) return;
+      const cs = this._funcToggleChoices();
+      const at = cs.indexOf(this.config.func);
+      const cur = at >= 0 ? cs[at] : cs[0];
+      const next = cs[((at < 0 ? 0 : at) + 1) % cs.length];
+      btn.textContent = FUNC_SHORT[cur] || this._funcLabel(cur);
+      const title = 'Showing ' + this._funcLabel(cur) +
+        ' \u2014 click for ' + this._funcLabel(next);
+      btn.title = title;
+      btn.setAttribute('aria-label', title);
     }
 
     /**
      * Switch the aggregation and tell R, so the choice is block state rather
-     * than a local flip that the next re-render undoes. `value` follows `func`
-     * through the shared reconciler — count_distinct and pct_distinct both want
-     * a column, plain count wants none — so a toggle cannot leave the pair in a
-     * combination the gear would refuse.
+     * than a local flip the next re-render undoes. `value` follows `func`
+     * through the shared reconciler — count_distinct and pct_distinct both
+     * want a column, plain count wants none — so the switch cannot leave the
+     * pair in a combination the gear would refuse.
      * @param {string} value
      */
     _setFunc(value) {
