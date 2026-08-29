@@ -101,13 +101,15 @@ validate_annotated_df_input <- function(data) {
 # The reserved annotation columns of the convention (see as_annotated_df()
 # roxygen and the spec, _blockr.design/open/annotated-data-frame/format.md):
 # row stub / hierarchy / identity / emphasis / the `.fmt` template and its
-# `.digits` precision sibling. Row-grouping axes are the ARD-named pairs
+# `.digits` precision sibling, plus `.filter`, the predicate identity of a row
+# that is not a level of anything (see drill_source()). Row-grouping axes are the ARD-named pairs
 # `.group<k>` / `.group<k>_level` (+ optional `.group<k>_label`), matched by
 # ANNOTATION_GROUP_RE. Other dot-prefixed names (`.count`, user columns) are
 # NOT reserved and pass through.
 ANNOTATION_COLS <- c(".label", ".indent", ".strong", ".emph", ".fmt",
                      ".digits",
-                     ".variable", ".variable_level", ".variable_label")
+                     ".variable", ".variable_level", ".variable_label",
+                     ".filter")
 ANNOTATION_GROUP_RE <- "^\\.group\\d+(_level|_label)?$"
 
 # All reserved annotation column names present in `data` (fixed names plus

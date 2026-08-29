@@ -78,3 +78,60 @@ test_that("a variable/level row is unaffected", {
   attr(d, "source_data") <- src
   expect_equal(nrow(drill_source(d)), 3L)
 })
+
+# A MIXED table -- both row shapes at once.
+#
+# The AE summary is one: "Any Serious AEs" is a predicate row, and the preferred
+# terms under it are level rows. Both live in the same frame, so both identity
+# columns are present and each row fills only one of them. Reading the leaf
+# alone drops every predicate row, and with it the enclosing arm.
+
+mixed <- function(i) {
+  d <- data.frame(
+    .group1 = "TRT01A", .group1_level = c("A", "A", "B", "B"),
+    .variable = c(NA, "TMPFL_SER", NA, "TMPFL_SER"),
+    .variable_level = c(NA, "Y", NA, "Y"),
+    .filter = c("TMPFL_SER == 'Y'", NA, "TMPFL_SER == 'Y'", NA),
+    stringsAsFactors = FALSE
+  )[i, , drop = FALSE]
+  attr(d, "source_data") <- src
+  d
+}
+
+test_that("a predicate row in a mixed table keeps its enclosing group", {
+  out <- drill_source(mixed(1L))
+  expect_equal(nrow(out), 2L)
+  expect_setequal(out$USUBJID, c("S1", "S3"))
+  expect_true(all(out$TRT01A == "A"))
+})
+
+test_that("a level row in a mixed table ignores the empty predicate", {
+  out <- drill_source(mixed(2L))
+  expect_setequal(out$USUBJID, c("S1", "S3"))
+})
+
+test_that("a predicate row is clickable", {
+  # The keys a click emits. Without the predicate half the row carries no
+  # identity, gets no attribute, and table.js renders it non-clickable -- the
+  # count rows of an AE summary simply do not respond.
+  d <- data.frame(
+    .group1 = "TRT01A", .group1_level = "A",
+    .label = c("Any Serious AEs", "Mean (SD)"),
+    .filter = c("TMPFL_SER == 'Y'", NA),
+    stringsAsFactors = FALSE
+  )
+  keys <- dd_row_drill_attrs(d, ".group1_level")$keys
+
+  expect_true(nzchar(keys[[1L]]))
+  cols <- vapply(jsonlite::fromJSON(keys[[1L]], simplifyVector = FALSE),
+                 `[[`, character(1L), "column")
+  expect_equal(cols, c(".group1_level", ".filter"))
+
+  # A row with neither shape still claims nothing, so it still does not click.
+  expect_false(nzchar(keys[[2L]]))
+})
+
+test_that("`.filter` is a reserved annotation column", {
+  # Or the predicate renders as a data cell, in every table that carries one.
+  expect_true(".filter" %in% annotation_cols_in(data.frame(.filter = "x")))
+})

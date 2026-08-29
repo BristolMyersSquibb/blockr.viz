@@ -507,9 +507,11 @@ annotated_structure_view <- function(data) {
 #'
 #' For every data row, the filter keys a click emits: a JSON array of
 #' `{column, value}` pairs over the identity columns (the enclosing
-#' `.group<k>_level`s, `.variable`, `.variable_level`). Only rows that carry
-#' a resolvable identity claim -- categorical LEVEL rows, where both
-#' `.variable` and `.variable_level` are non-NA -- get keys at all. Stat rows
+#' `.group<k>_level`s, `.variable`, `.variable_level`, `.filter`). A row gets
+#' keys when it carries a resolvable claim, which is either of two shapes: a
+#' categorical LEVEL row, where `.variable` and `.variable_level` are both
+#' non-NA, or a PREDICATE row, where `.filter` holds the condition the
+#' producer counted with ("Any Serious AEs" is a row, not a level). Stat rows
 #' of continuous blocks ("Mean (SD)") denote a summary, not a cohort: they
 #' get "" -> no attribute -> table.js renders them non-clickable
 #' (.dt-row-nodrill). The drilled output is a pure SUBSET of the annotated
@@ -520,20 +522,24 @@ dd_row_drill_attrs <- function(data, section_cols) {
   n <- nrow(data)
   group_cols <- intersect(section_cols,
                           grep("^\\.group\\d+_level$", names(data), value = TRUE))
-  has_var <- ".variable" %in% names(data)
-  has_lvl <- ".variable_level" %in% names(data)
+  has_leaf <- all(c(".variable", ".variable_level") %in% names(data))
+  has_fil <- ".filter" %in% names(data)
 
   chr <- function(col) if (col %in% names(data)) as.character(data[[col]]) else rep(NA_character_, n)
   v_var <- chr(".variable")
   v_lvl <- chr(".variable_level")
   v_vlb <- chr(".variable_label")
+  v_fil <- chr(".filter")
 
   keys <- character(n)
-  if (!has_var || !has_lvl) return(list(keys = keys))
+  if (!has_leaf && !has_fil) return(list(keys = keys))
   for (i in seq_len(n)) {
-    # The claim rule: a click means "<.variable> = <.variable_level>". No
-    # level, no claim, no click.
-    if (is.na(v_var[i]) || is.na(v_lvl[i])) next
+    # The claim rule: a click means "<.variable> = <.variable_level>", or the
+    # predicate in `.filter`. A row with neither claims nothing, so it does
+    # not click. Both together is allowed and ANDs.
+    leaf <- has_leaf && !is.na(v_var[i]) && !is.na(v_lvl[i])
+    fil <- has_fil && !is.na(v_fil[i]) && nzchar(v_fil[i])
+    if (!leaf && !fil) next
     pairs <- list()
     for (sc in group_cols) {
       val <- as.character(data[[sc]][i])
@@ -546,9 +552,14 @@ dd_row_drill_attrs <- function(data, section_cols) {
       pairs[[length(pairs) + 1L]] <-
         list(column = ".variable_label", value = v_vlb[i])
     }
-    pairs[[length(pairs) + 1L]] <- list(column = ".variable", value = v_var[i])
-    pairs[[length(pairs) + 1L]] <-
-      list(column = ".variable_level", value = v_lvl[i])
+    if (leaf) {
+      pairs[[length(pairs) + 1L]] <- list(column = ".variable", value = v_var[i])
+      pairs[[length(pairs) + 1L]] <-
+        list(column = ".variable_level", value = v_lvl[i])
+    }
+    if (fil) {
+      pairs[[length(pairs) + 1L]] <- list(column = ".filter", value = v_fil[i])
+    }
     keys[i] <- as.character(jsonlite::toJSON(pairs, auto_unbox = TRUE))
   }
   list(keys = keys)

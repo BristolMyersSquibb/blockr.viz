@@ -360,18 +360,23 @@ drill_claim_columns <- function(data, table, mode = "multi", columns = NULL) {
   # are read for those frames too; only the leaf needs the pair.
   # `drill_source()` supplies the predicate half.
   has_leaf <- all(c(".variable", ".variable_level") %in% nms)
-  if (!has_leaf && !".filter" %in% nms) {
+  has_fil <- ".filter" %in% nms
+  if (!has_leaf && !has_fil) {
     return(list())
   }
 
   var <- if (has_leaf) as.character(data$.variable) else character(nrow(data))
   lvl <- if (has_leaf) as.character(data$.variable_level) else
     character(nrow(data))
-  # Which rows carry a usable leaf. Without one, every row is in play: the
-  # group claims are then read over the whole drilled subset, which is what
-  # "this predicate, inside this arm" means.
-  keep <- if (has_leaf) !is.na(var) & !is.na(lvl) & nzchar(lvl) else
-    rep(TRUE, nrow(data))
+  fil <- if (has_fil) as.character(data$.filter) else character(nrow(data))
+
+  # Which rows carry a usable claim, of either shape. A MIXED table has both
+  # columns present and each row filling one of them, so testing the leaf
+  # alone would drop every predicate row -- and with it the enclosing arm,
+  # leaving "serious AEs in arm A" resolving to serious AEs in every arm.
+  leaf_ok <- has_leaf & !is.na(var) & !is.na(lvl) & nzchar(lvl)
+  fil_ok <- has_fil & !is.na(fil) & nzchar(fil)
+  keep <- leaf_ok | fil_ok
 
   if (!any(keep)) {
     return(list())
@@ -394,9 +399,9 @@ drill_claim_columns <- function(data, table, mode = "multi", columns = NULL) {
   }
 
   # The `.variable` leaf, when there is one.
-  if (has_leaf) {
-    name <- single_value(var[keep])
-    value <- single_value(lvl[keep])
+  if (any(leaf_ok)) {
+    name <- single_value(var[leaf_ok])
+    value <- single_value(lvl[leaf_ok])
 
     if (!is.null(name) && !is.null(value)) {
       cols[[length(cols) + 1L]] <- cond(name, value)
