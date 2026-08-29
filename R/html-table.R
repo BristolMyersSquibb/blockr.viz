@@ -291,6 +291,11 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
 
   stub_offset <- if (is.null(stub_col)) 0L else 1L
 
+  # Display text for the group (spanner) rows, keyed by prefix path. A leaf
+  # carries its own header on attr(col, "label"); a spanner has no column, so
+  # a producer that knows its text stamps it table-level.
+  spanner_labels <- annotated_spanner_labels(data)
+
   rows <- vector("list", max_depth)
 
   for (L in seq_len(max_depth)) {
@@ -358,7 +363,8 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
         }
         th_args <- dd_col_header_attrs(th_args, data_cols[i], col_keys)
       } else {
-        content <- prefix_i[L]
+        path <- paste(prefix_i, collapse = "||")
+        content <- group_header_content(prefix_i[L], spanner_labels[[path]])
         th_args <- list(
           content,
           class   = "blockr-col-header group",
@@ -397,6 +403,39 @@ dd_col_header_attrs <- function(th_args, path, col_keys) {
   th_args$class <- paste(th_args$class, "dd-col-drill")
   th_args$`data-dd-colkeys` <- dd_col_keys_json(entry)
   th_args
+}
+
+#' A group (spanner) header cell's content.
+#'
+#' Without a stamped label this is the prefix as the column names spell it,
+#' which is what the group row has always rendered. With one, the same
+#' two-tier treatment the leaf headers get: a strong name line and a quiet
+#' sub-line under it, split on the newline. No sort arrow -- a spanner covers
+#' several columns, so there is nothing for it to sort.
+#' @noRd
+group_header_content <- function(fallback_text, label = NULL) {
+
+  if (!is.character(label) || length(label) != 1L || !nzchar(label)) {
+    return(fallback_text)
+  }
+
+  parts <- strsplit(label, "\n", fixed = TRUE)[[1L]]
+  name_line <- parts[1L]
+  sub_line <- if (length(parts) > 1L) {
+    paste(parts[-1L], collapse = " ")
+  }
+
+  if (is.null(sub_line) || !nzchar(sub_line)) {
+    return(name_line)
+  }
+
+  htmltools::tagList(
+    htmltools::tags$span(class = "arm__name", name_line),
+    htmltools::tags$div(
+      class = "dt-th-subrow",
+      htmltools::tags$span(class = "arm__n num", sub_line)
+    )
+  )
 }
 
 #' @noRd
@@ -849,6 +888,10 @@ section_chevron_svg <- function() {
 #' purpose -- they are generic table chrome a flat table needs too.
 #' @noRd
 html_table_delta_css <- function(scope = ".blockr-html-table-container") {
+  # Pasted in chunks, and it has to stay that way: R refuses to parse a string
+  # literal past 10000 characters when it contains unicode escapes, and this
+  # sheet is well over. Adding a block? Put it in a new chunk rather than
+  # growing one until load_all() starts failing on the whole file.
   css <- paste0(".blockr-html-table-container {
   background: #ffffff;
   font-size: var(--blockr-font-size-base, 0.875rem);
@@ -935,10 +978,39 @@ input.blockr-search:focus {
 .blockr-html-table-container .blockr-table thead th.blockr-col-header {
   text-align: right;
 }
+",
+"/* A group header sits ABOVE the columns it names, so it cannot read smaller
+   than them: without the size here it falls through to the 11px meta size the
+   header band uses and the parent ends up smaller than its children.
+   The tile is what says how far the group reaches -- four groups side by side
+   have nothing else to separate them, and a fill that runs edge to edge just
+   makes one grey band with words in it. The inset gutters cut that band into
+   tiles; the wash is translucent so a drill-active column still shows through. */
 .blockr-html-table-container .blockr-table thead th.blockr-col-header.group {
   text-align: center;
+  font-size: 13.5px;
   font-weight: var(--blockr-font-weight-semibold, 600);
   color: var(--stbl-ink-1);
+  background: color-mix(in srgb, var(--stbl-ink-1) 5%, var(--stbl-surface-1));
+  border-radius: 7px 7px 0 0;
+  box-shadow:
+    inset 5px 0 0 0 var(--stbl-surface-1),
+    inset -5px 0 0 0 var(--stbl-surface-1);
+}
+/* A spanner's Big N sub-line follows its own row's centring, not the
+   flush-right the leaf headers use to sit over their numbers. */
+.blockr-html-table-container .blockr-table thead th.blockr-col-header.group .dt-th-subrow {
+  justify-content: center;
+}
+/* The claimed-column paint has to be restated for a group cell, because the
+   tile above sets both of the properties it uses. Gutters first so they cut
+   the accent bar's ends too and the tile keeps its shape. */
+.blockr-html-table-container .blockr-table thead th.blockr-col-header.group.dt-col-active {
+  background: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
+  box-shadow:
+    inset 5px 0 0 0 var(--stbl-surface-1),
+    inset -5px 0 0 0 var(--stbl-surface-1),
+    inset 0 3px 0 0 var(--stbl-accent);
 }
 .blockr-html-table-container .blockr-table thead th.blockr-col-header.leaf {
   font-size: 13.5px;

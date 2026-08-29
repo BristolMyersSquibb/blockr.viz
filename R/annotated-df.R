@@ -405,6 +405,43 @@ annotated_column_keys <- function(data) {
   if (!length(keys)) NULL else keys
 }
 
+#' Display text for the header cells the frame cannot label per column.
+#'
+#' A leaf column carries its own header on `attr(col, "label")`. A spanner
+#' has no column of its own -- it exists only as a prefix in the names of the
+#' columns beneath it -- so there is nowhere to hang its text, and the group
+#' `<th>` falls back to printing the raw prefix. A producer that knows more
+#' than the prefix (composer, whose `spanner()` carries a label and a Big N)
+#' stamps it as an optional table-level attribute:
+#'
+#'   attr(data, "spanner_labels") <- c(
+#'     "Xanomeline" = "Xanomeline\nN = 168"
+#'   )
+#'
+#' keyed by the prefix path exactly as `column_keys` is keyed, so a spanner
+#' looks itself up by the same string it claims by. The text follows the leaf
+#' convention: a newline splits a strong name line from a quiet sub-line.
+#'
+#' Optional and read only here: absent, a group header renders its prefix,
+#' which is what it did before this existed.
+#' @noRd
+annotated_spanner_labels <- function(data) {
+
+  lbl <- attr(data, "spanner_labels", exact = TRUE)
+
+  if (!length(lbl) || is.null(names(lbl))) {
+    return(NULL)
+  }
+
+  lbl <- unlist(lapply(lbl, function(x) {
+    if (is.character(x) && length(x) == 1L) x else NA_character_
+  }))
+
+  lbl <- lbl[nzchar(names(lbl)) & !is.na(lbl) & nzchar(lbl)]
+
+  if (!length(lbl)) NULL else lbl
+}
+
 #' One column's keys as the JSON the markup carries.
 #' @noRd
 dd_col_keys_json <- function(entry) {
