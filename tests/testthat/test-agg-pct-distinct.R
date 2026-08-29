@@ -218,3 +218,21 @@ test_that("several roles at once take the denominator within their crossing", {
   a <- Filter(function(r) r$facet == "A", js)
   expect_equal(a[[1]]$value, 1 / 2)
 })
+
+test_that("a row dropped from its PANEL still counts in the denominator", {
+  skip_if_no_node()
+  # The Actions-by-Country shape, and the reason the two rules have to be
+  # ordered the way they are. The population rows have no ACTION, so
+  # na_group = "drop" keeps them out of the facet -- no empty panel -- while
+  # pct_of = "group" still divides by every subject in the country, because
+  # the denominator is counted before anything is dropped.
+  js <- js_aggregate(by_country, list(
+    group = "COUNTRY", facet = "ACTION", value = "USUBJID",
+    func = "pct_distinct", na_group = "drop", pct_of = "group"))
+  expect_equal(length(js), 2L)                       # no NA-action panel
+  expect_true(all(vapply(js, function(r) nzchar(r$facet), TRUE)))
+  v <- stats::setNames(lapply(js, function(r) r$value),
+                       vapply(js, function(r) r$group, ""))
+  expect_equal(v[["USA"]], 4 / 10)                   # not 4/4
+  expect_equal(v[["JPN"]], 3 / 5)                    # not 3/3
+})

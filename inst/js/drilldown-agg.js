@@ -124,11 +124,18 @@
    * under NA (a labeling difference only — same rows, same numbers).
    *
    *   na_group        'level' (default, the behaviour above) or 'drop'.
-   *                   'drop' removes rows with a MISSING GROUP KEY from the
-   *                   cells, so they draw no nameless bar — but leaves them in
-   *                   the facet population that pct_distinct divides by. That
-   *                   distinction is the whole point: a subject something did
-   *                   not happen to is not a category, and is still a subject.
+   *                   'drop' removes rows whose cell has no complete address —
+   *                   a missing value in ANY mapped role, group, facet or
+   *                   color — so they draw no nameless bar, panel or series.
+   *                   They are still counted in the population pct_distinct
+   *                   divides by, because that is built before any of this.
+   *                   The distinction is the whole point: a subject something
+   *                   did not happen to is not a category, and is still a
+   *                   subject.
+   *                   (All three roles, not just group: R's twin has always
+   *                   dropped on any of them, since the table passes facet,
+   *                   group and color as one grouping. JS checked group alone,
+   *                   so the engines disagreed whenever a FACET carried NAs.)
    *   pct_distinct    chart-only. distinct `value` in the cell divided by
    *                   distinct `value` in the surrounding population, as a
    *                   fraction (0..1, like bar_mode 'percent'). Absent from
@@ -158,9 +165,12 @@
     const { group, color, facet, value, func, na_group, pct_of } = cfg || {};
     if (!rows || rows.length === 0) return [];
 
-    // A group key is missing when it stringifies to '' — the same fold the
-    // golden cross-test applies to R's NA, so both engines drop the same rows.
+    // A key is missing when it stringifies to '' — the same fold the golden
+    // cross-test applies to R's NA, so both engines drop the same rows.
     const dropNa = na_group === 'drop';
+    const cellCols = [group, facet, color].filter(Boolean);
+    const incomplete = (/** @type {any} */ row) =>
+      cellCols.some(c => String(row[c] ?? '') === '');
     const usable = (/** @type {any} */ v) =>
       v != null && !(typeof v === 'number' && Number.isNaN(v));
 
@@ -195,7 +205,7 @@
     /** @type {Record<string, any>} */
     const groups = {};
     for (const row of rows) {
-      if (dropNa && group && String(row[group] ?? '') === '') continue;
+      if (dropNa && incomplete(row)) continue;
       const gv = group ? String(row[group] ?? '') : 'Total';
       const cv = color ? String(row[color] ?? '') : '__all__';
       const fv = facet ? String(row[facet] ?? '') : '__all__';

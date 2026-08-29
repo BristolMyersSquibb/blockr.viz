@@ -330,11 +330,16 @@ gg_agg <- function(data, group, color, facet, value_col, func,
   # (drilldown-agg.js builds facetPop first for the same reason.)
   full <- data
 
-  # Missing group keys: their own category, or dropped. Same fold as the JS
+  # Missing cell coordinates: their own category, or dropped. ANY of the
+  # mapped roles, matching both other engines -- a row with no facet is no
+  # more a panel than a row with no group is a category. Same fold as the JS
   # engine (NA or ""), applied before the cells so `identity` inherits it too.
-  if (identical(na_group, "drop") && !is.null(group) && group %in% names(data)) {
-    g <- as.character(data[[group]])
-    data <- data[!is.na(g) & nzchar(g), , drop = FALSE]
+  if (identical(na_group, "drop") && length(cells)) {
+    miss <- lapply(data[intersect(cells, names(data))], function(x) {
+      x <- as.character(x)
+      is.na(x) | !nzchar(x)
+    })
+    if (length(miss)) data <- data[!Reduce(`|`, miss), , drop = FALSE]
   }
 
   # pct_distinct: the share of the PANEL's distinct values. Not in

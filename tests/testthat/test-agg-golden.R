@@ -243,3 +243,32 @@ test_that("na_group = 'drop' with no group column is a no-op", {
   skip_if_no_node()
   expect_engines_agree(na_df, "sum", "v", na_group = "drop")
 })
+
+test_that("'drop' removes a row missing ANY cell coordinate, in both engines", {
+  skip_if_no_node()
+  # The engines used to disagree here. R passes facet, group and color as ONE
+  # grouping, so it has always dropped on any of them; JS checked `group`
+  # alone, so a missing FACET produced an unnamed panel there and nothing in
+  # R. No fixture had an NA facet, which is why it went unnoticed.
+  df <- data.frame(
+    f = c("p", "p", NA, "q"),
+    g = c("a", "b", "a", NA),
+    v = c(1, 2, 3, 4),
+    stringsAsFactors = FALSE
+  )
+  js <- expect_engines_agree(df, "sum", "v", group = "g", facet = "f",
+                             na_group = "drop")
+  expect_equal(length(js), 2L)                    # only the complete cells
+  expect_true(all(vapply(js, function(r) nzchar(r$facet), TRUE)))
+  expect_true(all(vapply(js, function(r) nzchar(r$group), TRUE)))
+})
+
+test_that("a missing COLOUR drops the row too", {
+  skip_if_no_node()
+  df <- data.frame(g = c("a", "a"), c = c("x", NA), v = c(1, 2),
+                   stringsAsFactors = FALSE)
+  js <- expect_engines_agree(df, "sum", "v", group = "g", color = "c",
+                             na_group = "drop")
+  expect_equal(length(js), 1L)
+  expect_equal(as.numeric(js[[1]]$value), 1)
+})
