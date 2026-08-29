@@ -198,6 +198,25 @@ as_plain_df <- function(x, ...) {
 #' resolvable and errors, rather than reporting zero rows as if nobody
 #' matched.
 #'
+#' # Rows defined by a predicate
+#'
+#' Some display rows are not a level of anything. "Any Serious AEs" is one
+#' row standing for a condition, and a producer that writes it has no
+#' variable/level pair to offer -- only the predicate it counted with. Such a
+#' row is resolvable all the same, and exactly so: carry the predicate on a
+#' **`.filter`** column and this applies it to the source.
+#'
+#' It composes with the pairs rather than replacing them, so a predicate row
+#' inside a treatment column resolves to "rows matching the predicate AND in
+#' that arm". A frame carrying `.filter` needs no `.variable` /
+#' `.variable_level` at all.
+#'
+#' The expression is evaluated against `source`. That is deliberate and not a
+#' widening of trust: it is the producer's own string, which it already
+#' evaluated to compute the number on screen. Applying the same expression to
+#' the same frame is what makes the resolution exact instead of a
+#' reconstruction. It must yield a logical vector.
+#'
 #' @param x A drilled annotated data frame, or an object coercible via
 #'   [as_annotated_df()].
 #' @param source Data frame to resolve against. Default `NULL` = the input's
@@ -216,14 +235,25 @@ drill_source <- function(x, source = NULL, columns = NULL) {
   x <- as_annotated_df(x)
   src <- source %||% attr(x, "source_data", exact = TRUE)
 
-  if (!length(columns) &&
+  # The COLUMN is what makes a frame resolvable; a single value in it is what
+  # makes this particular subset a claim. Conflating the two turned "several
+  # predicates, so nothing is claimed" into an error, where the rest of the
+  # machinery answers zero rows.
+  has_filter_col <- ".filter" %in% names(x)
+  filter_claim <- if (has_filter_col) {
+    single_value(as.character(x$.filter))
+  } else {
+    NULL
+  }
+
+  if (!length(columns) && !has_filter_col &&
         !all(c(".variable", ".variable_level") %in% names(x))) {
     stop(
       "Cannot resolve this drill to source rows: the input carries no ARD ",
-      "identity columns (`.variable` / `.variable_level`), so there is no ",
-      "claim to read. For an aggregated table pass `columns` (its group ",
-      "columns); a flat table needs no resolution at all, its drilled rows ",
-      "ARE the source rows.",
+      "identity columns (`.variable` / `.variable_level`) and no `.filter` ",
+      "predicate, so there is no claim to read. For an aggregated table pass ",
+      "`columns` (its group columns); a flat table needs no resolution at ",
+      "all, its drilled rows ARE the source rows.",
       call. = FALSE
     )
   }
@@ -243,11 +273,17 @@ drill_source <- function(x, source = NULL, columns = NULL) {
   }
 
   claims <- drill_claim_columns(x, table = "", columns = columns)
-  if (!length(claims)) {
+  if (!length(claims) && is.null(filter_claim)) {
     return(src[0, , drop = FALSE])
   }
 
   keep <- rep(TRUE, nrow(src))
+
+  # A predicate row. Same "exactly one value is a claim" rule as everything
+  # else: a subset still spanning several predicates has decided nothing.
+  if (!is.null(filter_claim)) {
+    keep <- keep & eval_row_filter(filter_claim, src)
+  }
   for (cl in claims) {
     # A claim naming a column the source lacks is a producer mistake (the
     # stamped frame was too narrow), not a soft miss -- returning zero rows
@@ -267,6 +303,35 @@ drill_source <- function(x, source = NULL, columns = NULL) {
   out <- src[keep, , drop = FALSE]
   rownames(out) <- NULL
   out
+}
+
+# Apply a display row's `.filter` predicate to the frame it was computed from.
+# Errors rather than returning FALSE on a bad expression: a predicate that
+# does not evaluate is a producer bug, and silently claiming nobody would read
+# as "no records match" -- the failure this whole path exists to avoid.
+#' @noRd
+eval_row_filter <- function(expr_txt, src) {
+  parsed <- tryCatch(parse(text = expr_txt), error = function(e) NULL)
+  if (is.null(parsed)) {
+    stop("The drilled row's `.filter` is not parseable R: ", expr_txt,
+         call. = FALSE)
+  }
+  ok <- tryCatch(
+    eval(parsed[[1L]], envir = src, enclos = baseenv()),
+    error = function(e) {
+      stop("The drilled row's `.filter` (", expr_txt, ") could not be ",
+           "evaluated against the source data: ", conditionMessage(e),
+           call. = FALSE)
+    }
+  )
+  if (!is.logical(ok) || !(length(ok) %in% c(1L, nrow(src)))) {
+    stop("The drilled row's `.filter` (", expr_txt, ") must give a logical ",
+         "vector, got <", paste(class(ok), collapse = "/"), "> of length ",
+         length(ok), ".", call. = FALSE)
+  }
+  # NA is not a match, the same reading `%in%` gives the column claims.
+  ok <- rep_len(ok, nrow(src))
+  !is.na(ok) & ok
 }
 
 # Renderer-side input coercion for the chart / tile: a plain data frame

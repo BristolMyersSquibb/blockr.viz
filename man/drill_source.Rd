@@ -51,6 +51,25 @@ the claim is read off those instead. A frame with neither is not
 resolvable and errors, rather than reporting zero rows as if nobody
 matched.
 }
+\section{Rows defined by a predicate}{
+Some display rows are not a level of anything. "Any Serious AEs" is one
+row standing for a condition, and a producer that writes it has no
+variable/level pair to offer -- only the predicate it counted with. Such a
+row is resolvable all the same, and exactly so: carry the predicate on a
+\strong{\code{.filter}} column and this applies it to the source.
+
+It composes with the pairs rather than replacing them, so a predicate row
+inside a treatment column resolves to "rows matching the predicate AND in
+that arm". A frame carrying \code{.filter} needs no \code{.variable} /
+\code{.variable_level} at all.
+
+The expression is evaluated against \code{source}. That is deliberate and not a
+widening of trust: it is the producer's own string, which it already
+evaluated to compute the number on screen. Applying the same expression to
+the same frame is what makes the resolution exact instead of a
+reconstruction. It must yield a logical vector.
+}
+
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 drill_source(drilled_table)

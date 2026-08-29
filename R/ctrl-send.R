@@ -354,13 +354,24 @@ drill_claim_columns <- function(data, table, mode = "multi", columns = NULL) {
     return(claims)
   }
 
-  if (!all(c(".variable", ".variable_level") %in% nms)) {
+  # A row defined by a PREDICATE (`.filter`) has no variable/level leaf, but it
+  # still sits inside its enclosing group dimensions -- a serious-AE count in
+  # arm A is claimed by the predicate AND by the arm. So the group claims below
+  # are read for those frames too; only the leaf needs the pair.
+  # `drill_source()` supplies the predicate half.
+  has_leaf <- all(c(".variable", ".variable_level") %in% nms)
+  if (!has_leaf && !".filter" %in% nms) {
     return(list())
   }
 
-  var <- as.character(data$.variable)
-  lvl <- as.character(data$.variable_level)
-  keep <- !is.na(var) & !is.na(lvl) & nzchar(lvl)
+  var <- if (has_leaf) as.character(data$.variable) else character(nrow(data))
+  lvl <- if (has_leaf) as.character(data$.variable_level) else
+    character(nrow(data))
+  # Which rows carry a usable leaf. Without one, every row is in play: the
+  # group claims are then read over the whole drilled subset, which is what
+  # "this predicate, inside this arm" means.
+  keep <- if (has_leaf) !is.na(var) & !is.na(lvl) & nzchar(lvl) else
+    rep(TRUE, nrow(data))
 
   if (!any(keep)) {
     return(list())
@@ -382,12 +393,14 @@ drill_claim_columns <- function(data, table, mode = "multi", columns = NULL) {
     cols[[length(cols) + 1L]] <- cond(name, value)
   }
 
-  # The `.variable` leaf.
-  name <- single_value(var[keep])
-  value <- single_value(lvl[keep])
+  # The `.variable` leaf, when there is one.
+  if (has_leaf) {
+    name <- single_value(var[keep])
+    value <- single_value(lvl[keep])
 
-  if (!is.null(name) && !is.null(value)) {
-    cols[[length(cols) + 1L]] <- cond(name, value)
+    if (!is.null(name) && !is.null(value)) {
+      cols[[length(cols) + 1L]] <- cond(name, value)
+    }
   }
 
   cols
