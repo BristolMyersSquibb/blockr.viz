@@ -703,6 +703,23 @@
   // Missing group keys. Sits beside the func picker because it only means
   // anything once you know what the rows are: with pct_distinct, "drop" is what
   // lets a row count toward the denominator without drawing a bar.
+  // Which roles a pct_distinct denominator is taken WITHIN. The chart cannot
+  // infer this: it would have to know whether a column is a population split
+  // (arm, sex, country) or an event attribute (grade), and dividing grade-2
+  // subjects by subjects-with-grade-2 is circular. Only the three mapped roles
+  // are offered, because a cell knows no other coordinate.
+  // A single role here, not a combination: the gear has no multi-select kind,
+  // and no case so far needs one (facet+group is the cell itself, i.e. always
+  // 100%). The ENGINE takes a vector, so widening this to combinations later
+  // is a control change and not a data one.
+  ROLES.pct_of = /** @type {any} */ ({
+    label: 'Percent within', kind: 'select',
+    when: (/** @type {any} */ cfg) => cfg.func === 'pct_distinct',
+    options: [{ value: 'facet', label: 'Facet' },
+              { value: 'group', label: 'Group' },
+              { value: 'color', label: 'Colour' }]
+  });
+
   ROLES.na_group = /** @type {any} */ ({
     label: 'Missing group', kind: 'select',
     options: [{ value: 'level', label: 'Own category' },
@@ -792,6 +809,7 @@
         // (a pie of "everyone, including the ones with no category" is not a
         // chart anyone wants).
         { role: 'na_group', types: ['bar'] },
+        { role: 'pct_of', types: ['bar'] },
         { role: 'func_toggle', types: ['bar'] },
         // Facet-grid scales; hidden until a facet is mapped (role `when`).
         'facet_scales', 'download'],
@@ -2325,8 +2343,9 @@
     /** @returns {Array<{facet: string, group: string, color: string,
      *                   value: number|null, n: number}>} */
     _aggregate() {
-      const { group, color, facet, value, func, na_group } = this.config;
-      return DAgg.aggregate(this.data, { group, color, facet, value, func, na_group });
+      const { group, color, facet, value, func, na_group, pct_of } = this.config;
+      return DAgg.aggregate(this.data, { group, color, facet, value, func,
+                                         na_group, pct_of });
     }
 
     // -- Chart rendering ------------------------------------------------------
@@ -3326,9 +3345,20 @@
       // share of the panel.
       const pctFunc = this.config.func === 'pct_distinct';
       const asFraction = showPercent || pctFunc;
+      // Name the denominator by its COLUMNS, not by the role: "% of COUNTRY"
+      // tells a reader what the number is a share of, where "% of group" tells
+      // them how the chart is configured.
+      const pctName = () => {
+        const roleCol = { facet: this.config.facet, group: this.config.group,
+                          color: this.config.color };
+        const roles = (Array.isArray(this.config.pct_of) ? this.config.pct_of
+          : (this.config.pct_of ? [this.config.pct_of] : ['facet']));
+        const cols = roles.map(r => roleCol[r]).filter(Boolean);
+        return cols.length ? '% of ' + cols.join(' x ') : '% of total';
+      };
       const valAxis = {
         type: 'value',
-        name: showPercent ? '% of group total' : (pctFunc ? '% of panel' : valueTitle),
+        name: showPercent ? '% of group total' : (pctFunc ? pctName() : valueTitle),
         nameLocation: 'middle',
         nameGap: vertical ? 45 : 30,
         nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
@@ -6175,6 +6205,7 @@
         orientation: this.config.orientation || 'horizontal',
         bar_mode: this.config.bar_mode || 'stacked',
         na_group: this.config.na_group || 'level',
+        pct_of: this.config.pct_of || 'facet',
         func_toggle: this.config.func_toggle || 'off',
         baseline: this.config.baseline || 'zero',
         series: this.config.series || '',

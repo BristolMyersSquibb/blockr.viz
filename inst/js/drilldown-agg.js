@@ -130,13 +130,23 @@
    *                   distinction is the whole point: a subject something did
    *                   not happen to is not a category, and is still a subject.
    *   pct_distinct    chart-only. distinct `value` in the cell divided by
-   *                   distinct `value` in the whole FACET, as a fraction
-   *                   (0..1, like bar_mode 'percent'). The denominator is the
-   *                   panel's population, not the sum of its bars, so it is
-   *                   correct for whatever the user faceted by and needs
-   *                   nothing joined on. Absent from AGG_FNS for the same
-   *                   reason as identity: no R twin, so it sits out the golden
-   *                   cross-test (see test-agg-pct-distinct.R).
+   *                   distinct `value` in the surrounding population, as a
+   *                   fraction (0..1, like bar_mode 'percent'). Absent from
+   *                   AGG_FNS for the same reason as identity: no R twin, so
+   *                   it sits out the golden cross-test (see
+   *                   test-agg-pct-distinct.R).
+   *   pct_of          which roles the denominator is taken WITHIN: any subset
+   *                   of 'facet', 'group', 'color'. Default ['facet'].
+   *                   A cell only knows the values of the roles it is mapped
+   *                   on, so those three are the whole option space -- there
+   *                   is nothing else a denominator could be grouped by.
+   *
+   *                   Why it cannot be inferred: the chart would have to know
+   *                   whether a column is a POPULATION split (arm, sex,
+   *                   country -- a per-level denominator is meaningful) or an
+   *                   EVENT attribute (grade, seriousness -- dividing grade-2
+   *                   subjects by subjects-with-grade-2 is circular). Nothing
+   *                   in the data says which, so the user says.
    *
    * Returns RAW numbers ({facet, group, color, value, n}) — presentation
    * rounding belongs to the consumers (tooltip / label formatters).
@@ -145,7 +155,7 @@
    *          value?: string, func?: string}} cfg
    */
   function aggregate(rows, cfg) {
-    const { group, color, facet, value, func, na_group } = cfg || {};
+    const { group, color, facet, value, func, na_group, pct_of } = cfg || {};
     if (!rows || rows.length === 0) return [];
 
     // A group key is missing when it stringifies to '' — the same fold the
@@ -154,17 +164,31 @@
     const usable = (/** @type {any} */ v) =>
       v != null && !(typeof v === 'number' && Number.isNaN(v));
 
-    // pct_distinct denominators, counted over EVERY row including the ones
-    // 'drop' removes from the cells. Built before the cells, because that is
-    // the point: the denominator is the panel's population.
+    // The roles the pct_distinct denominator is taken within. Placeholders for
+    // an unmapped role MUST match the ones the cells use below ('Total' for
+    // group, '__all__' for facet/color), or a cell's key never finds its
+    // denominator and every percentage comes out null.
+    const pctRoles = (Array.isArray(pct_of) ? pct_of
+      : (pct_of ? [pct_of] : ['facet'])).map(String);
+    const coords = (/** @type {any} */ row) => ({
+      facet: facet ? String(row[facet] ?? '') : '__all__',
+      group: group ? String(row[group] ?? '') : 'Total',
+      color: color ? String(row[color] ?? '') : '__all__'
+    });
+    const denomKey = (/** @type {any} */ c) =>
+      pctRoles.map(r => c[r] !== undefined ? c[r] : '__all__').join('|||');
+
+    // Denominators, counted over EVERY row including the ones 'drop' removes
+    // from the cells. Built before the cells, because that is the point: a
+    // subject something did not happen to still belongs to the population.
     /** @type {Record<string, Set<any>>} */
-    const facetPop = {};
+    const denomPop = {};
     if (func === 'pct_distinct') {
       for (const row of rows) {
-        const fv = facet ? String(row[facet] ?? '') : '__all__';
         const v = value != null ? row[value] : null;
         if (!usable(v)) continue;
-        (facetPop[fv] || (facetPop[fv] = new Set())).add(v);
+        const k = denomKey(coords(row));
+        (denomPop[k] || (denomPop[k] = new Set())).add(v);
       }
     }
 
@@ -198,7 +222,8 @@
       else if (func === 'pct_distinct') {
         const s = new Set();
         for (const r of g.rows) { const v = value != null ? r[value] : null; if (usable(v)) s.add(v); }
-        const den = facetPop[g.facet] ? facetPop[g.facet].size : 0;
+        const pop = denomPop[denomKey(g)];
+        const den = pop ? pop.size : 0;
         out = den ? s.size / den : null;
       }
       else if (func === 'mean') out = g.values.length ? g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / g.values.length : null;

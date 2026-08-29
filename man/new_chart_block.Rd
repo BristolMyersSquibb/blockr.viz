@@ -56,6 +56,7 @@ new_chart_block(
   count_on = "off",
   count_col = NULL,
   na_group = "level",
+  pct_of = "facet",
   func_toggle = NULL,
   facet_scales = "fixed",
   download = TRUE,
@@ -287,6 +288,14 @@ always had; \code{"drop"} removes them from the categories but NOT from the
 panel, so they draw nothing and still count toward \code{pct_distinct}'s
 denominator. That is the difference between a row that is a category and a
 row that is only a member of the population.}
+
+\item{pct_of}{Which mapped role a \code{func = "pct_distinct"} denominator is
+taken within: \code{"facet"} (default), \code{"group"} or \code{"color"}. A cell only
+knows the values of the roles it is mapped on, so those three are the
+whole option space. It cannot be inferred: the chart would have to know
+whether a column is a population split (arm, sex, country) or an event
+attribute (grade), and dividing grade-2 subjects by subjects-with-grade-2
+is circular. A vector is accepted, though the gear offers one role.}
 
 \item{func_toggle}{Offer the aggregation as a control on the chart itself,
 beside the download button, instead of only inside the gear. \code{NULL}

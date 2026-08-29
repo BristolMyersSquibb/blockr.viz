@@ -121,3 +121,100 @@ test_that("without na_group = 'drop' the population row becomes a category", {
                               func = "pct_distinct"))
   expect_true("" %in% vapply(js, function(r) r$group, ""))
 })
+
+# --- pct_of: which role the denominator is taken within ---------------------
+# The chart cannot infer this. It would have to know whether a column is a
+# POPULATION split (arm, sex, country -- a per-level denominator is
+# meaningful) or an EVENT attribute (grade -- dividing grade-2 subjects by
+# subjects-with-grade-2 is circular). Nothing in the data says which.
+
+# Two countries. 4 of 10 US subjects and 3 of 5 Japanese subjects took an
+# action. The right answer is 40% and 60%: Japan is HIGHER.
+by_country <- rbind(
+  data.frame(USUBJID = sprintf("U%02d", 1:10), COUNTRY = "USA",
+             ACTION = c(rep("DOSE NOT CHANGED", 4), rep(NA, 6)),
+             stringsAsFactors = FALSE),
+  data.frame(USUBJID = sprintf("J%02d", 1:5), COUNTRY = "JPN",
+             ACTION = c(rep("DOSE NOT CHANGED", 3), rep(NA, 2)),
+             stringsAsFactors = FALSE)
+)
+
+test_that("pct_of = 'group' divides within the group", {
+  skip_if_no_node()
+  js <- js_aggregate(by_country, list(
+    group = "COUNTRY", facet = "ACTION", value = "USUBJID",
+    func = "pct_distinct", na_group = "drop", pct_of = "group"))
+  v <- stats::setNames(lapply(js, function(r) r$value),
+                       vapply(js, function(r) r$group, ""))
+  expect_equal(v[["USA"]], 4 / 10)
+  expect_equal(v[["JPN"]], 3 / 5)
+})
+
+test_that("the default divides within the facet, which is wrong HERE", {
+  skip_if_no_node()
+  # Pinning the failure the option exists to fix. The panel is one ACTION, so
+  # its population is the 7 subjects who took that action -- 4 US and 3 JPN.
+  # Every bar then reads as a share of those 7, i.e. a COMPOSITION across
+  # countries summing to 100%, not a rate within each country. And the RANKING
+  # FLIPS: USA reads higher than Japan when it is in fact lower (40% v 60%).
+  # A reader draws the opposite conclusion with nothing on screen to say so.
+  js <- js_aggregate(by_country, list(
+    group = "COUNTRY", facet = "ACTION", value = "USUBJID",
+    func = "pct_distinct", na_group = "drop"))
+  v <- stats::setNames(lapply(js, function(r) r$value),
+                       vapply(js, function(r) r$group, ""))
+  expect_equal(v[["USA"]], 4 / 7)
+  expect_equal(v[["JPN"]], 3 / 7)
+  expect_equal(v[["USA"]] + v[["JPN"]], 1)     # a composition, not a rate
+  expect_gt(v[["USA"]], v[["JPN"]])            # backwards, by construction
+})
+
+test_that("pct_of = 'color' divides within the colour level", {
+  skip_if_no_node()
+  d <- data.frame(
+    USUBJID = c("S1", "S2", "S3", "S4"),
+    TERM    = c("Diarrhoea", "Diarrhoea", "Diarrhoea", NA),
+    SEX     = c("F", "F", "M", "M"),
+    stringsAsFactors = FALSE
+  )
+  js <- js_aggregate(d, list(group = "TERM", color = "SEX", value = "USUBJID",
+                             func = "pct_distinct", na_group = "drop",
+                             pct_of = "color"))
+  v <- stats::setNames(lapply(js, function(r) r$value),
+                       vapply(js, function(r) r$color, ""))
+  expect_equal(v[["F"]], 2 / 2)   # both F subjects had it
+  expect_equal(v[["M"]], 1 / 2)   # one of two M subjects
+})
+
+test_that("an unmapped role collapses to the whole frame, not to nothing", {
+  skip_if_no_node()
+  # pct_of names COLOUR, which is not mapped: every row shares the
+  # placeholder, so the denominator is all 15. A null here would mean silent
+  # blank bars rather than a visible over- or under-count.
+  js <- js_aggregate(by_country, list(
+    group = "COUNTRY", facet = "ACTION", value = "USUBJID",
+    func = "pct_distinct", na_group = "drop", pct_of = "color"))
+  v <- stats::setNames(lapply(js, function(r) r$value),
+                       vapply(js, function(r) r$group, ""))
+  expect_equal(v[["USA"]], 4 / 15)
+  expect_equal(v[["JPN"]], 3 / 15)
+})
+
+test_that("several roles at once take the denominator within their crossing", {
+  skip_if_no_node()
+  # The gear offers one role; the engine takes a vector, so the capability is
+  # there before a control for it is.
+  d <- data.frame(
+    USUBJID = c("S1", "S2", "S3", "S4"),
+    TERM    = c("D", "D", NA, NA),
+    ARM     = c("A", "B", "A", "B"),
+    SEX     = c("F", "F", "F", "F"),
+    stringsAsFactors = FALSE
+  )
+  js <- js_aggregate(d, list(group = "TERM", facet = "ARM", color = "SEX",
+                             value = "USUBJID", func = "pct_distinct",
+                             na_group = "drop", pct_of = list("facet", "color")))
+  # Arm A has 2 subjects, both F; one had the term.
+  a <- Filter(function(r) r$facet == "A", js)
+  expect_equal(a[[1]]$value, 1 / 2)
+})

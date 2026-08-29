@@ -725,3 +725,16 @@ test_that("the gear can switch the on-card control on and off", {
     args = list(x = blk, data = list(data = function() df))
   )
 })
+
+test_that("pct_of round-trips, and refuses anything that is not a role", {
+  blk <- new_chart_block(chart_type = "bar", group = "COUNTRY",
+                         value = "USUBJID", func = "pct_distinct",
+                         pct_of = "group")
+  expect_equal(chart_state_field(blk, "pct_of"), "group")
+  expect_equal(chart_state_field(new_chart_block(chart_type = "bar"),
+                                 "pct_of"), "facet")
+  # A cell knows only the roles it is mapped on, so a bare column name has no
+  # meaning here and is refused at construction rather than at render.
+  expect_error(new_chart_block(chart_type = "bar", pct_of = "COUNTRY"),
+               "facet, group or color")
+})

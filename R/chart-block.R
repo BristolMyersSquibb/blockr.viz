@@ -197,6 +197,13 @@
 #'   panel, so they draw nothing and still count toward `pct_distinct`'s
 #'   denominator. That is the difference between a row that is a category and a
 #'   row that is only a member of the population.
+#' @param pct_of Which mapped role a `func = "pct_distinct"` denominator is
+#'   taken within: `"facet"` (default), `"group"` or `"color"`. A cell only
+#'   knows the values of the roles it is mapped on, so those three are the
+#'   whole option space. It cannot be inferred: the chart would have to know
+#'   whether a column is a population split (arm, sex, country) or an event
+#'   attribute (grade), and dividing grade-2 subjects by subjects-with-grade-2
+#'   is circular. A vector is accepted, though the gear offers one role.
 #' @param func_toggle Offer the aggregation as a control on the chart itself,
 #'   beside the download button, instead of only inside the gear. `NULL`
 #'   (default) = no control. `TRUE` = counts vs percent, i.e.
@@ -351,6 +358,11 @@ new_chart_block <- function(
     # ("drop"). See the arg spec; "drop" is what makes a population-carrying
     # frame work -- a subject with no event draws no bar and still counts.
     na_group = "level",
+    # Which role a pct_distinct denominator is taken within. See the arg spec:
+    # "facet" is right when the population split is the panel (a chart
+    # faceted by arm), "group" when it is the bars (countries grouped, faceted
+    # by action). Getting it wrong is plausible-but-wrong, not an error.
+    pct_of = "facet",
     # Aggregation offered on the chart's own chrome rather than only in the
     # gear. NULL = off; TRUE = the counts/percent pair; a character vector =
     # exactly those. Normalised to a character vector below so the saved board
@@ -431,6 +443,14 @@ new_chart_block <- function(
   count_on <- count_on %||% "off"
   na_group <- match.arg(as.character(na_group %||% "level")[1L],
                         c("level", "drop"))
+  # chr_vec_state, not chr_state: the engine takes several roles even though
+  # the gear offers one, and truncating here would silently drop the rest.
+  pct_of <- chr_vec_state(pct_of) %||% "facet"
+  bad <- setdiff(pct_of, c("facet", "group", "color"))
+  if (length(bad)) {
+    stop("`pct_of` must name mapped roles: facet, group or color. Got ",
+         paste0("\"", bad, "\"", collapse = ", "), ".", call. = FALSE)
+  }
   # TRUE is sugar for the pair this exists to offer. Expanding it here (rather
   # than in the browser) means a saved board carries the actual aggregations,
   # so widening the sugar later cannot silently change an existing board.
@@ -617,6 +637,7 @@ new_chart_block <- function(
         r_count_col <- shiny::reactiveVal(count_col)
         # Missing-key handling and the on-chart aggregation control.
         r_na_group <- shiny::reactiveVal(na_group)
+        r_pct_of <- shiny::reactiveVal(pct_of)
         r_func_toggle <- shiny::reactiveVal(func_toggle)
         # Facet-grid panel scales (see constructor args).
         r_facet_scales <- shiny::reactiveVal(facet_scales)
@@ -932,7 +953,8 @@ new_chart_block <- function(
               count_on = r_count_on(), count_col = r_count_col(),
               # Missing group keys, and whether the aggregation is offered on
               # the chart's own chrome. Both are read by chart.js.
-              na_group = r_na_group(), func_toggle = r_func_toggle(),
+              na_group = r_na_group(), pct_of = r_pct_of(),
+              func_toggle = r_func_toggle(),
               # Facet-grid panel scales: shared numeric domain + shared
               # category set across the panels ("fixed"), or per-panel
               # ("free" / "free_y").
@@ -1122,6 +1144,7 @@ new_chart_block <- function(
             if (!is.null(msg$ref_lo))  upd(r_ref_lo, nn(msg$ref_lo))
             if (!is.null(msg$count_on))   upd(r_count_on, msg$count_on)
             if (!is.null(msg$na_group))   upd(r_na_group, msg$na_group)
+            if (!is.null(msg$pct_of))     upd(r_pct_of, msg$pct_of)
             # "off" is the gear saying no switch; store NULL so the state
             # reads the same as a block that never asked for one.
             if (!is.null(msg$func_toggle)) {
@@ -1347,7 +1370,8 @@ new_chart_block <- function(
             bar_mode = r_bar_mode(), orientation = r_orientation(),
             sort_by = r_sort_by(), sort_dir = r_sort_dir(),
             count_on = r_count_on(), count_col = r_count_col(),
-            na_group = r_na_group(), func_toggle = r_func_toggle(),
+            na_group = r_na_group(), pct_of = r_pct_of(),
+            func_toggle = r_func_toggle(),
             facet_scales = r_facet_scales(), box_points = r_box_points(),
             smoother = r_smoother(), identity_line = r_identity_line(),
             lo = r_lo(), hi = r_hi(), vlines = r_vlines(),
@@ -1528,6 +1552,7 @@ new_chart_block <- function(
             count_on = r_count_on,
             count_col = r_count_col,
             na_group = r_na_group,
+            pct_of = r_pct_of,
             func_toggle = r_func_toggle,
             facet_scales = r_facet_scales,
             download = r_download,
@@ -1611,7 +1636,8 @@ new_chart_block <- function(
       "identity_line",
       "box_points", "summary", "whiskers", "connect_centers",
       "lo", "hi", "baseline", "waterfall_totals",
-      "count_on", "count_col", "na_group", "func_toggle", "facet_scales",
+      "count_on", "count_col", "na_group", "pct_of", "func_toggle",
+      "facet_scales",
       "title", "subtitle", "caption",
       "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",

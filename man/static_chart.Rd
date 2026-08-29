@@ -22,6 +22,7 @@ static_chart(
   count_on = "off",
   count_col = NULL,
   na_group = "level",
+  pct_of = "facet",
   facet_scales = "fixed",
   box_points = "none",
   summary = NULL,
@@ -62,6 +63,11 @@ type like the canvas: horizontal for bars, vertical for boxplots.
 from the categories but NOT from the panel, so they draw nothing and still
 count toward \code{func = "pct_distinct"}'s denominator. Must match the canvas,
 or an exported chart says something different from the one on screen.}
+
+\item{pct_of}{Which mapped role a \code{func = "pct_distinct"} denominator is
+taken within: \code{"facet"} (default), \code{"group"} or \code{"color"}. Must match the
+canvas, or an exported chart divides by something else than the one on
+screen.}
 
 \item{facet_scales}{Panel scales, passed straight to
 \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}'s \code{scales}: \code{"fixed"} (default), \code{"free_y"},

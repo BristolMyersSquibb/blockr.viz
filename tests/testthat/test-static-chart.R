@@ -233,3 +233,30 @@ test_that("pct_distinct with no value column draws nothing, like the canvas", {
   expect_null(blockr.viz:::gg_agg(pop_df, "AEDECOD", NULL, NULL, NULL,
                                   "pct_distinct"))
 })
+
+test_that("pct_of picks the same denominator in the static chart", {
+  # Export parity. The canvas numbers are guarded in test-agg-pct-distinct.R;
+  # this pins that a PNG says the same thing as the screen, which is the
+  # failure this package already had once with downloads.
+  d <- rbind(
+    data.frame(USUBJID = sprintf("U%02d", 1:10), COUNTRY = "USA",
+               ACTION = c(rep("CHANGED", 4), rep(NA, 6)),
+               stringsAsFactors = FALSE),
+    data.frame(USUBJID = sprintf("J%02d", 1:5), COUNTRY = "JPN",
+               ACTION = c(rep("CHANGED", 3), rep(NA, 2)),
+               stringsAsFactors = FALSE)
+  )
+  by_group <- blockr.viz:::gg_agg(d, "COUNTRY", NULL, "ACTION", "USUBJID",
+                                  "pct_distinct", na_group = "drop",
+                                  pct_of = "group")
+  v <- stats::setNames(by_group$.value, by_group$COUNTRY)
+  expect_equal(unname(v[["USA"]]), 4 / 10)
+  expect_equal(unname(v[["JPN"]]), 3 / 5)
+
+  by_facet <- blockr.viz:::gg_agg(d, "COUNTRY", NULL, "ACTION", "USUBJID",
+                                  "pct_distinct", na_group = "drop",
+                                  pct_of = "facet")
+  w <- stats::setNames(by_facet$.value, by_facet$COUNTRY)
+  expect_equal(unname(w[["USA"]]), 4 / 7)
+  expect_equal(unname(w[["JPN"]]), 3 / 7)
+})

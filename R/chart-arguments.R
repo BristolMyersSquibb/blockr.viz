@@ -104,6 +104,26 @@ chart_arguments <- function() {
       example = "level",
       type = arg_enum(c("level", "drop"))
     ),
+    pct_of = new_arg_spec(
+      paste0(
+        "Which mapped role a `func = \"pct_distinct\"` denominator is taken ",
+        "WITHIN: \"facet\" (default), \"group\" or \"color\". A cell only ",
+        "knows the values of the roles it is mapped on, so those three are ",
+        "the whole option space. ",
+        "It cannot be inferred, because the chart would have to know whether ",
+        "a column is a POPULATION split (arm, sex, country, where a per-level ",
+        "denominator is meaningful) or an EVENT attribute (grade, where ",
+        "dividing grade-2 subjects by subjects-with-grade-2 is circular). ",
+        "Worked example: two countries, 4 of 10 US subjects and 3 of 5 ",
+        "Japanese subjects had an action. Grouped by country and faceted by ",
+        "action, \"facet\" divides both by all 15 and gives 27% and 20% -- ",
+        "wrong, and it reverses the ranking. \"group\" gives 40% and 60%. ",
+        "A vector is accepted for a denominator taken within several roles at ",
+        "once, though the gear offers one."
+      ),
+      example = "facet",
+      type = arg_string()
+    ),
     func_toggle = new_arg_spec(
       paste0(
         "Offer the aggregation as a control on the chart itself, next to the ",
