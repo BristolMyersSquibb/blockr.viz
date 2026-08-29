@@ -645,6 +645,22 @@ new_ctrl_bridge_extension <- function(...) {
 #' real source column, which IS the claim column. The block never asks the
 #' user which column was drilled -- it knows.
 #'
+#' @section Cannot resolve is not an un-drill:
+#' Two very different things used to return the same `list()`, and the sender
+#' reads `list()` as "clear the target": the user having no drill selection at
+#' all, and this block being unable to resolve the selection it has. Only the
+#' first is an un-drill. The second is temporary -- a `ctrl_send()` IS a board
+#' update and a board update re-evaluates every block, so the frame a claim is
+#' read off is being rebuilt at exactly the moment the claim is re-read. For
+#' the one flush where it does not line up, the target was cleared to
+#' everything and then re-narrowed: a cohort of 53 patients became all 254 and
+#' back, which on a slow pipeline is plainly visible and reads as a bug.
+#'
+#' So anything that means "I do not know right now" returns `NULL` and the
+#' target keeps what it has, which is the treatment a `NULL` input already got
+#' for the lazy-evaluation case. `list()` is reserved for the one case that
+#' really is a claim: the user has no drill, so the cohort should open up.
+#'
 #' Returns `NULL` -- no opinion, distinct from the evaluated no-claim
 #' `list()` -- when there is no data frame to read. Under lazy evaluation a
 #' block's input is gated to `NULL` whenever the block leaves the screen, so
@@ -659,8 +675,8 @@ new_ctrl_bridge_extension <- function(...) {
 #' @param table Name of the table the claim applies to, `""` when the target
 #'   filters a plain data frame (or when the target resolves the table itself).
 #' @param filters Named list, column -> drilled value(s).
-#' @return A list of filter conditions, `list()` for no claim, `NULL` for no
-#'   opinion.
+#' @return A list of filter conditions, `list()` when the user has no drill,
+#'   `NULL` when the claim cannot be resolved right now (hold).
 #' @keywords internal
 #' @export
 dd_ctrl_claims <- function(data, table, filters) {
@@ -669,12 +685,17 @@ dd_ctrl_claims <- function(data, table, filters) {
     return(NULL)
   }
 
+  # THE un-drill: no selection, so the cohort opens up. The only path here
+  # that may clear the target.
   if (!length(filters)) {
     return(list())
   }
 
+  # A selection the frame cannot answer. Mid board update the frame is being
+  # rebuilt under us, so this is normally one flush long -- hold rather than
+  # clear (see "Cannot resolve is not an un-drill" above).
   if (!all(names(filters) %in% names(data))) {
-    return(list())
+    return(NULL)
   }
 
   keep <- rep(TRUE, nrow(data))
@@ -705,11 +726,20 @@ dd_ctrl_claims <- function(data, table, filters) {
     USE.NAMES = FALSE
   ))
 
-  drill_claim_columns(
+  out <- drill_claim_columns(
     data[keep, , drop = FALSE],
     table = table %||% "",
     columns = if (length(cols)) cols
   )
+
+  # The user HAS a selection, so an empty read is this block failing to name
+  # it (the subset resolved to no single value, the identity columns are not
+  # there yet), never a request to widen the cohort.
+  if (!length(out)) {
+    return(NULL)
+  }
+
+  out
 }
 
 #' Has the user actually drilled, or is this still the state we were built with?

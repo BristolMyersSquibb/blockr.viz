@@ -122,3 +122,50 @@ test_that("dd_col_claims reshapes the column half without touching the data", {
   expect_equal(dd_col_claims(NULL), list())
   expect_equal(dd_col_claims(list(list(column = "", values = "x"))), list())
 })
+
+# --- cannot resolve is not an un-drill --------------------------------------
+#
+# The sender clears the target on `list()` and holds on `NULL`. Only a user
+# with no drill selection may clear; a block that cannot resolve the selection
+# it has must hold, or a board update (which re-evaluates every block, and so
+# rebuilds the very frame the claim is read off) briefly opens the cohort to
+# everything and closes it again.
+
+test_that("no drill selection clears; that is the only thing that clears", {
+  d <- data.frame(ARM = c("A", "B"), stringsAsFactors = FALSE)
+  expect_equal(dd_ctrl_claims(d, "", list()), list())
+  expect_equal(dd_ctrl_claims(d, "", NULL), list())
+})
+
+test_that("a selection the frame cannot answer holds", {
+  d <- data.frame(ARM = c("A", "B"), stringsAsFactors = FALSE)
+  # SEX is not in the frame: mid re-evaluation, or a frame that changed shape.
+  expect_null(dd_ctrl_claims(d, "", list(SEX = "F")))
+})
+
+test_that("a selection that resolves to nothing holds", {
+  # The column is there but the value is not, so the subset is empty and there
+  # is nothing to claim. Saying `list()` here would say "the user un-drilled",
+  # which is false -- the user drilled, this block just cannot answer.
+  d <- data.frame(ARM = c("A", "B"), SEX = c("F", "M"),
+                  stringsAsFactors = FALSE)
+  expect_null(dd_ctrl_claims(d, "", list(ARM = "Z")))
+
+  # Structured frame with no identity columns to read.
+  s <- data.frame(.group1 = c("x", "x"), .group1_level = c("1", "1"),
+                  stringsAsFactors = FALSE)
+  expect_null(dd_ctrl_claims(s, "", list(.group1_level = "1")))
+})
+
+test_that("a resolvable selection still claims", {
+  d <- data.frame(ARM = c("A", "B"), SEX = c("F", "M"),
+                  stringsAsFactors = FALSE)
+  out <- dd_ctrl_claims(d, "", list(ARM = "A"))
+  expect_length(out, 1L)
+  expect_equal(out[[1]]$name, "ARM")
+  expect_equal(out[[1]]$values, "A")
+})
+
+test_that("no data at all still holds", {
+  expect_null(dd_ctrl_claims(NULL, "", list(ARM = "A")))
+})

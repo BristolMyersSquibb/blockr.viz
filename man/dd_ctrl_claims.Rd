@@ -15,8 +15,8 @@ filters a plain data frame (or when the target resolves the table itself).}
 \item{filters}{Named list, column -> drilled value(s).}
 }
 \value{
-A list of filter conditions, \code{list()} for no claim, \code{NULL} for no
-opinion.
+A list of filter conditions, \code{list()} when the user has no drill,
+\code{NULL} when the claim cannot be resolved right now (hold).
 }
 \description{
 \code{filters} is a named list, column -> drilled value(s), taken from the
@@ -33,6 +33,23 @@ structured table drills on its dot-prefixed identity columns
 off the subset (\code{columns = NULL}); a chart / tile / flat table drills on a
 real source column, which IS the claim column. The block never asks the
 user which column was drilled -- it knows.
+}
+\section{Cannot resolve is not an un-drill}{
+
+Two very different things used to return the same \code{list()}, and the sender
+reads \code{list()} as "clear the target": the user having no drill selection at
+all, and this block being unable to resolve the selection it has. Only the
+first is an un-drill. The second is temporary -- a \code{ctrl_send()} IS a board
+update and a board update re-evaluates every block, so the frame a claim is
+read off is being rebuilt at exactly the moment the claim is re-read. For
+the one flush where it does not line up, the target was cleared to
+everything and then re-narrowed: a cohort of 53 patients became all 254 and
+back, which on a slow pipeline is plainly visible and reads as a bug.
+
+So anything that means "I do not know right now" returns \code{NULL} and the
+target keeps what it has, which is the treatment a \code{NULL} input already got
+for the lazy-evaluation case. \code{list()} is reserved for the one case that
+really is a claim: the user has no drill, so the cohort should open up.
 
 Returns \code{NULL} -- no opinion, distinct from the evaluated no-claim
 \code{list()} -- when there is no data frame to read. Under lazy evaluation a
@@ -44,4 +61,5 @@ un-drill (see \code{\link[=dd_ctrl_sender]{dd_ctrl_sender()}}, which holds on \c
 distinction a mere view switch cleared the target filter and re-sent the
 claim on return, one board-wide update each way.
 }
+
 \keyword{internal}
