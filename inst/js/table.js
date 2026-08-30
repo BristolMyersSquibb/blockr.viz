@@ -678,8 +678,18 @@
           ? colKeysAt(hitCell.cellIndex)
           : null;
         var wasActive = srcTr.classList.contains("dt-row-active");
+        // A click toggles-clear ONLY when it re-hits the claim that is
+        // active: the very cell (this cell's column is the active column),
+        // or the stub while NO column is active (a row-only claim). A stub
+        // click while a cell claim is active is a NEW, wider claim -- the
+        // row alone -- not a re-click; reading it as a toggle cleared the
+        // whole drill and threw the cohort open. With no column axis
+        // colActive is always false and this is exactly the old row toggle.
+        var colActive = table.querySelector(".dt-col-active") != null;
         var sameCell = wasActive &&
-          (!!cellKeys === !!(hitCell && hitCell.classList.contains("dt-col-active")));
+          (cellKeys
+            ? !!(hitCell && hitCell.classList.contains("dt-col-active"))
+            : !colActive);
         if (wasActive && sameCell) {
           srcTr.classList.remove("dt-row-active");
           clearColActive();
