@@ -827,6 +827,8 @@
                          { value: "off", label: "No search bar" }];
   var DOWNLOAD_OPT    = [{ value: "on", label: "Download" },
                          { value: "off", label: "No download" }];
+  var ROTATE_OPT      = [{ value: "off", label: "Horizontal titles" },
+                         { value: "on", label: "Rotated titles" }];
   var TABLE_ROLES = Object.assign({}, DAgg.aggRoles({ multiple: true }), {
     // "Filter on" matches the chart's drill picker label (one vocabulary).
     drill:      { label: "Filter on", kind: "column", colType: "any" },
@@ -849,6 +851,10 @@
     // format it can write (xlsx, html, pptx) -- a button for one, a menu for
     // several.
     download:    { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
+    // Matrix display mode: value-column titles stand upright and columns
+    // size on cell content — a wide subject x term matrix (AE heatmap)
+    // fits several times more columns per viewport.
+    rotate_titles: { label: "Column titles", kind: "segmented", options: ROTATE_OPT },
     // Table text (chart parity; three-tier contract, R side
     // R/title-template.R): null = auto — the title inherits the data frame's
     // label attribute; "" = explicitly none; other text renders with {...}
@@ -887,6 +893,7 @@
     var pres = [];
     if (hasCols) pres.push("digits");
     pres.push("sortable");
+    if (hasCols) pres.push("rotate_titles");   // flat tables only
     if (!hasCols) pres.push("collapsible");   // only sectioned tables collapse
     pres.push("search", "download");
     var spec = /** @type {Record<string, any>} */ ({ requiredMap: [], optionalMap: [],
@@ -1016,6 +1023,7 @@
       collapsible: table.getAttribute("data-dt-collapsible") || "on",
       search:      table.getAttribute("data-dt-search") || "on",
       download:    table.getAttribute("data-dt-download") || "off",
+      rotate_titles: table.getAttribute("data-dt-rotate-titles") || "off",
       // External-control send (beta): target value filter block + dm table,
       // and the board's candidate targets ([{value,label}] JSON, stamped by R).
       ctrl_target: table.getAttribute("data-dt-ctrl-target") || "",

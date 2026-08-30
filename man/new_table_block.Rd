@@ -36,6 +36,7 @@ new_table_block(
   caption = NULL,
   ctrl_target = "",
   ctrl_table = "",
+  rotate_titles = FALSE,
   ...
 )
 }
@@ -130,6 +131,12 @@ section.}
 \item{ctrl_table}{Character(1), beta. Name of the table in the target's
 \code{dm} the pushed conditions apply to (e.g. \code{"adsl"}). Leave empty when the
 target filters a plain data frame.}
+
+\item{rotate_titles}{Logical display toggle (default \code{FALSE}), exposed in
+the block's gear menu: render the value-column titles vertically and let
+each column size on its CELL content instead of its title. The matrix
+display mode -- a subject x term AE heatmap fits 3-4x more columns per
+viewport when the terms stand upright. Flat tables only.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }

@@ -60,8 +60,10 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
   # (see dd_shading_visuals): explicit cols claim; empty cols = all numeric
   # minus claimed (override rule, re-resolved per render so it survives
   # upstream schema changes); diverging/sequential pool one domain per rule,
-  # bars normalize per column.
+  # bars normalize per column. Columns a rule reads as its color SOURCE are
+  # paint metadata -- dropped from the display here, painted below.
   shading_vis <- dd_shading_visuals(shadings, data, value_cols)
+  value_cols <- setdiff(value_cols, attr(shading_vis, "hidden"))
 
   # ---- thead ----------------------------------------------------------
   # Per-column numeric flag drives type-based alignment for both the header
@@ -126,10 +128,23 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
           style_full[keep] <- dt_bar_style(as.numeric(vk), sv$max, sv$fill)
         } else {
           # Heatmap: sv$fun is vectorized (see dt_color_fun) -- one call
-          # styles the whole column, like dt_bar_style above.
-          bg <- sv$fun(as.numeric(vk))
-          style_full[keep] <- paste0(" style=\"background:", bg$bg,
-                                     ";color:", bg$fg, ";\"")
+          # styles the whole column, like dt_bar_style above. With a color
+          # SOURCE (sv$src) the paint reads the companion column's values at
+          # the same rows while the cell keeps displaying its own; a row
+          # whose source is missing stays unpainted rather than lying.
+          pv <- if (is.null(sv$src)) {
+            as.numeric(vk)
+          } else {
+            suppressWarnings(as.numeric(data[[sv$src]]))[keep]
+          }
+          ok <- is.finite(pv)
+          sk <- rep("", sum(keep))
+          if (any(ok)) {
+            bg <- sv$fun(pv[ok])
+            sk[ok] <- paste0(" style=\"background:", bg$bg,
+                             ";color:", bg$fg, ";\"")
+          }
+          style_full[keep] <- sk
         }
       }
     }
@@ -180,12 +195,33 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
       dt_col_label(data[[vc]], vc) %||% ""
     }, character(1L))
   )
-  colgroup <- dt_colgroup(
-    c(label_col, value_cols),
-    c(list(as.character(data[[label_col]])), disp_by_col),
-    labels = flat_labels,
-    wrap_names = isTRUE(toggles$wrap_titles %||% TRUE)
-  )
+  colgroup <- if (isTRUE(toggles$rotate_titles)) {
+    # Rotated titles (matrix tables): header text no longer drives the
+    # column width -- that is the point of rotating. Value columns size on
+    # their CELL content alone (a count needs ~30px, not the 60px+ the
+    # header estimator floors at), the stub keeps the standard estimate.
+    stub_w <- blockr.ui::column_widths_px(
+      col_names = label_col,
+      col_labels = flat_labels[1L],
+      formatted = list(as.character(data[[label_col]]))
+    )
+    val_w <- vapply(disp_by_col, function(dd) {
+      w <- if (length(dd)) max(nchar(dd, type = "width"), 0L) else 0L
+      max(28L, w * 8L + 12L)
+    }, numeric(1))
+    htmltools::tags$colgroup(
+      lapply(round(c(stub_w, val_w)), function(w) {
+        htmltools::tags$col(style = sprintf("width: %dpx;", w))
+      })
+    )
+  } else {
+    dt_colgroup(
+      c(label_col, value_cols),
+      c(list(as.character(data[[label_col]])), disp_by_col),
+      labels = flat_labels,
+      wrap_names = isTRUE(toggles$wrap_titles %||% TRUE)
+    )
+  }
 
   onclick <- dt_onclick(drill, c(label_col, value_cols))
   list(
@@ -308,6 +344,7 @@ dt_build_payload <- function(data, label_col = NULL, value_cols = NULL,
                              row_hex = NULL, color = NULL,
                              sortable = TRUE, collapsible = TRUE,
                              search = TRUE, download = FALSE,
+                             rotate_titles = FALSE,
                              group_cols = NULL, group = character(),
                              summaries = list(), active = NULL,
                              gear_cols = NULL, stamp = identity) {
@@ -315,7 +352,8 @@ dt_build_payload <- function(data, label_col = NULL, value_cols = NULL,
   # internal long dialect errors here instead of being silently pivoted.
   reject_long_form(data)
   toggles <- list(sortable = sortable, collapsible = collapsible,
-                  search = search, download = download)
+                  search = search, download = download,
+                  rotate_titles = rotate_titles)
   if (dt_is_structured(data)) {
     tag <- stamp(dt_table_tag_structured(data, drill, digits, toggles,
                                          active = active))

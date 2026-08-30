@@ -8,7 +8,8 @@ drilldown_table_color(
   type = c("diverging", "sequential", "bar"),
   domain = NULL,
   palette = NULL,
-  columns = NULL
+  columns = NULL,
+  source = NULL
 )
 }
 \arguments{
@@ -26,6 +27,15 @@ sequential (low/high), length 1 for the bar fill.}
 rule, re-resolved against whatever data arrives -- survives upstream
 schema changes), or a character vector to restrict to those columns.
 A picked column that no longer exists is silently skipped.}
+
+\item{source}{\code{NULL} (the paint reads the shaded column's own values), a
+column name (paint every shaded column by THAT column's row values), or
+a \code{{col}} template such as \code{"{col} (sev)"} (pair each shaded column
+with its own companion, re-resolved per render). The cell keeps
+displaying its own value while the background encodes the source's --
+the AE heatmap's "count shown, worst grade painted". Source columns are
+hidden from the display; sources must be numeric. Diverging/sequential
+only.}
 }
 \value{
 A list consumed by \code{\link[=drilldown_table]{drilldown_table()}}.

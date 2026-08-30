@@ -297,3 +297,50 @@
 .dt-row-count:empty {
   display: none;
 }
+
+/* Rotated column titles (matrix display mode, data-dt-rotate-titles="on").
+   The value-column headers stand upright so the column width is set by the
+   CELL content, not the title -- the subject x term AE heatmap fits several
+   times more terms per viewport this way. writing-mode vertical-rl +
+   rotate(180deg) reads bottom-up (the spreadsheet convention); the stub
+   header (.blockr-stub-header) stays horizontal -- it is the row identity.
+   Gated on the table attribute exactly like wrap-titles above. */
+:is(.drilldown-table-container, .blockr-rank-container)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header {
+  vertical-align: bottom;
+  text-align: center;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+:is(.drilldown-table-container, .blockr-rank-container)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header .dt-th-namerow,
+:is(.drilldown-table-container, .blockr-rank-container)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header .dt-th-subrow {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+:is(.drilldown-table-container, .blockr-rank-container)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header .blockr-col-name {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  max-height: 148px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.15;
+}
+/* The column sub-label (variable label) has no room in a 30px column;
+   the title carries the identity in matrix mode. */
+:is(.drilldown-table-container, .blockr-rank-container)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header .blockr-col-label {
+  display: none;
+}
+/* Dense cells: the standard cell padding would eat a 28px column whole,
+   and centred counts read better than right-aligned ones in a matrix. */
+:is(.drilldown-table-container, .blockr-rank-container)
+  .blockr-table[data-dt-rotate-titles="on"] tbody td.blockr-data {
+  padding-left: 4px;
+  padding-right: 4px;
+  text-align: center;
+}

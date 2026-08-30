@@ -103,7 +103,8 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
                          shadings = list(), drill = NULL, digits = 2L,
                          row_hex = NULL, color = NULL,
                          sortable = TRUE, collapsible = TRUE, search = TRUE,
-                         download = FALSE, group_cols = NULL,
+                         download = FALSE, rotate_titles = FALSE,
+                         group_cols = NULL,
                          group = character(), summaries = list(),
                          active = NULL, gear_cols = NULL) {
   # The inter-block currency is the wide annotated df; summary_table()'s
@@ -115,7 +116,8 @@ dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
   # and the download control are realized by the chrome (dt_chrome /
   # dt_download).
   toggles <- list(sortable = sortable, collapsible = collapsible,
-                  search = search, download = download)
+                  search = search, download = download,
+                  rotate_titles = rotate_titles)
   if (dt_is_structured(data)) {
     return(dt_table_tag_structured(data, drill, digits, toggles,
                                    active = active))
@@ -274,15 +276,24 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
 #'   rule, re-resolved against whatever data arrives -- survives upstream
 #'   schema changes), or a character vector to restrict to those columns.
 #'   A picked column that no longer exists is silently skipped.
+#' @param source `NULL` (the paint reads the shaded column's own values), a
+#'   column name (paint every shaded column by THAT column's row values), or
+#'   a `{col}` template such as `"{col} (sev)"` (pair each shaded column
+#'   with its own companion, re-resolved per render). The cell keeps
+#'   displaying its own value while the background encodes the source's --
+#'   the AE heatmap's "count shown, worst grade painted". Source columns are
+#'   hidden from the display; sources must be numeric. Diverging/sequential
+#'   only.
 #' @return A list consumed by [drilldown_table()].
 #' @examples
 #' drilldown_table_color("sequential", domain = c(0, 100))
 #' @export
 drilldown_table_color <- function(type = c("diverging", "sequential", "bar"),
                                    domain = NULL, palette = NULL,
-                                   columns = NULL) {
+                                   columns = NULL, source = NULL) {
   type <- match.arg(type)
-  list(type = type, domain = domain, palette = palette, columns = columns)
+  list(type = type, domain = domain, palette = palette, columns = columns,
+       source = source)
 }
 
 # --- internal helpers --------------------------------------------------
@@ -632,7 +643,11 @@ dd_parse_shadings <- function(v) {
     # specs may. `source` decouples the painted value from the displayed one
     # (see dd_shading_visuals).
     if (!is.null(s$palette)) out$palette <- s$palette
-    if (!is.null(s$domain))  out$domain <- s$domain
+    if (!is.null(s$domain)) {
+      # A JSON restore delivers c(lo, hi) as a two-element list; the visuals
+      # resolver does arithmetic on it, so normalize to numeric here.
+      out$domain <- suppressWarnings(as.numeric(unlist(s$domain)))
+    }
     if (!is.null(s$source) && nzchar(as.character(s$source)[1L])) {
       out$source <- as.character(s$source)[1L]
     }
@@ -647,10 +662,18 @@ dd_shadings_json <- function(shadings) {
   if (!length(shadings)) return("[]")
   as.character(jsonlite::toJSON(
     lapply(shadings, function(s) {
-      list(
+      out <- list(
         mode = jsonlite::unbox(as.character(s$mode %||% "diverging")[1L]),
         cols = as.character(s$cols %||% character())
       )
+      # `source` must ROUND-TRIP through the gear even though the gear never
+      # edits it: JS echoes the whole list back on any rule edit, so a field
+      # left out here would be silently dropped by the first unrelated
+      # mode/cols change.
+      if (!is.null(s$source)) {
+        out$source <- jsonlite::unbox(as.character(s$source)[1L])
+      }
+      out
     }),
     auto_unbox = FALSE
   ))
@@ -686,14 +709,45 @@ dt_gear_cols_json <- function(data) {
 #' the rule's resolved columns (a correlation matrix reads on one scale);
 #' `bar` normalizes per column on absolute magnitude.
 #'
+#' **Color source** (diverging/sequential only, ctor-level): a rule may name
+#' a `source` -- the column whose values drive the paint while the cell keeps
+#' displaying its own. Two forms: a plain column name paints ALL of the
+#' rule's columns by that one column's row values (the BI "shade A by B"),
+#' and a `{col}` template (e.g. `"{col} (sev)"`) pairs each shaded column
+#' with its own companion, re-resolved per render so it follows a dynamic
+#' matrix (the AE heatmap: counts displayed, worst grade painted). Columns
+#' referenced as a source are paint metadata, not data for the eye: they are
+#' excluded from shading candidates here and reported in the `"hidden"`
+#' attribute so the caller drops them from the display. The domain pools
+#' over the SOURCE values (that is what is being encoded); sources must be
+#' numeric.
+#'
 #' @return named list: column -> `list(kind = "bar", fill, max)` or
-#'   `list(kind = "bg", fun)` (a dt_color_fun closure). Unlisted columns
-#'   render plain.
+#'   `list(kind = "bg", fun)` (a dt_color_fun closure, plus `src` when a
+#'   source drives the paint). Unlisted columns render plain. Attribute
+#'   `"hidden"`: source columns the display must drop.
 #' @noRd
 dd_shading_visuals <- function(shadings, data, value_cols) {
   out <- list()
   if (!length(shadings)) return(out)
   num_cols <- value_cols[vapply(data[value_cols], is.numeric, logical(1L))]
+  # Pass 1 -- expand every rule's `source` against the columns it could
+  # cover, so sources are known BEFORE candidates resolve (a companion
+  # column must never itself end up shaded, or displayed).
+  expand_src <- function(src, cols) {
+    if (grepl("{col}", src, fixed = TRUE)) {
+      vapply(cols, function(cn) gsub("{col}", cn, src, fixed = TRUE),
+             character(1L))
+    } else {
+      rep(src, length(cols))
+    }
+  }
+  hidden <- unique(unlist(lapply(shadings, function(s) {
+    src <- as.character(s$source %||% "")[1L]
+    if (!nzchar(src)) return(character())
+    intersect(unique(expand_src(src, num_cols)), names(data))
+  })))
+  num_cols <- setdiff(num_cols, hidden)
   claimed <- unique(unlist(lapply(
     shadings, function(s) as.character(s$cols %||% character())
   )))
@@ -714,7 +768,20 @@ dd_shading_visuals <- function(shadings, data, value_cols) {
                           max = if (length(v)) max(abs(v)) else 0)
       }
     } else {
-      vals <- unlist(data[cols], use.names = FALSE)
+      # Paired source per column (NA = none resolvable -> that column's
+      # paint reads its own values, so a missing companion degrades to the
+      # sourceless behaviour instead of rendering plain).
+      src <- as.character(s$source %||% "")[1L]
+      srcs <- if (nzchar(src)) {
+        sc <- expand_src(src, cols)
+        ifelse(sc %in% names(data), sc, NA_character_)
+      } else {
+        rep(NA_character_, length(cols))
+      }
+      pool_cols <- ifelse(is.na(srcs), cols, srcs)
+      vals <- suppressWarnings(as.numeric(unlist(
+        data[unique(pool_cols)], use.names = FALSE
+      )))
       vals <- vals[is.finite(vals)]
       dom <- s$domain
       if (is.null(dom) && length(vals)) {
@@ -727,10 +794,14 @@ dd_shading_visuals <- function(shadings, data, value_cols) {
       }
       if (!is.null(dom) && length(vals) && diff(range(dom)) > 0) {
         fun <- dt_color_fun(mode, dom, s$palette)
-        for (cn in cols) out[[cn]] <- list(kind = "bg", fun = fun)
+        for (k in seq_along(cols)) {
+          out[[cols[k]]] <- c(list(kind = "bg", fun = fun),
+                              if (!is.na(srcs[k])) list(src = srcs[k]))
+        }
       }
     }
   }
+  attr(out, "hidden") <- hidden
   out
 }
 
@@ -838,7 +909,11 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
     `data-dt-collapsible` = on_off(toggles$collapsible %||% TRUE),
     `data-dt-search` = on_off(toggles$search %||% TRUE),
     `data-dt-download` = on_off(toggles$download %||% FALSE),
-    `data-dt-wrap-titles` = on_off(toggles$wrap_titles %||% TRUE)
+    `data-dt-wrap-titles` = on_off(toggles$wrap_titles %||% TRUE),
+    # Rotated column titles (matrix tables): the attribute drives the CSS
+    # (vertical value-column headers) exactly like wrap-titles above, and
+    # the gear reads the current state off it.
+    `data-dt-rotate-titles` = on_off(toggles$rotate_titles %||% FALSE)
   )
 }
 
@@ -1178,8 +1253,13 @@ table_arguments <- function() {
         "in-cell data bar proportional to the value). Empty `cols` on a rule ",
         "= ALL numeric columns except those claimed by another rule (so ",
         "`{bar, [DOSE]}` + `{diverging, []}` bars DOSE and shades everything ",
-        "else). Empty list = plain cells. Presentational only; never changes ",
-        "data."
+        "else). Empty list = plain cells. A diverging/sequential rule may ",
+        "add `source`: a column name paints the rule's columns by THAT ",
+        "column's row values, a `{col}` template (e.g. \"{col} (sev)\") ",
+        "pairs each column with its own companion -- the cell displays its ",
+        "own value, the paint encodes the source's (AE heatmap: counts ",
+        "shown, worst grade painted). Source columns are hidden from ",
+        "display. Presentational only; never changes data."
       ),
       example = list(
         list(mode = "diverging", cols = list())
@@ -1375,6 +1455,11 @@ table_guidance <- function() {
 #' @param sortable,collapsible,search Logical display toggles (each default
 #'   `TRUE`): column sorting, indent-derived collapsible section headers, and
 #'   the toolbar search box. Exposed in the block's gear menu.
+#' @param rotate_titles Logical display toggle (default `FALSE`), exposed in
+#'   the block's gear menu: render the value-column titles vertically and let
+#'   each column size on its CELL content instead of its title. The matrix
+#'   display mode -- a subject x term AE heatmap fits 3-4x more columns per
+#'   viewport when the terms stand upright. Flat tables only.
 #' @param download Logical display toggle (default `FALSE`), exposed in the
 #'   block's gear menu: may the reader take this table away? On, a download
 #'   control appears on the table toolbar offering every format the machine can
@@ -1464,6 +1549,7 @@ new_table_block <- function(rowname = NULL,
                                       caption = NULL,
                                       ctrl_target = "",
                                       ctrl_table = "",
+                                      rotate_titles = FALSE,
                                       ...) {
   # Heal state poisoned by a pre-#144 DAG copy/paste, where a NULL slot came
   # back as list() (see R/state-normalize.R -- this block is where that bug was
@@ -1539,6 +1625,7 @@ new_table_block <- function(rowname = NULL,
         r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
         r_search         <- shiny::reactiveVal(isTRUE(search))
         r_download       <- shiny::reactiveVal(isTRUE(download))
+        r_rotate_titles  <- shiny::reactiveVal(isTRUE(rotate_titles))
         r_title    <- shiny::reactiveVal(title)
         r_subtitle <- shiny::reactiveVal(subtitle)
         r_caption  <- shiny::reactiveVal(caption)
@@ -1639,6 +1726,8 @@ new_table_block <- function(rowname = NULL,
               upd(r_search, as_toggle(v))
             } else if (identical(p, "download")) {
               upd(r_download, as_toggle(v))
+            } else if (identical(p, "rotate_titles")) {
+              upd(r_rotate_titles, as_toggle(v))
             } else if (identical(p, "ctrl_target")) {
               upd(r_ctrl_target, trimws(as.character(v %||% "")))
             } else if (identical(p, "ctrl_table")) {
@@ -1935,6 +2024,7 @@ new_table_block <- function(rowname = NULL,
                 collapsible = isTRUE(r_collapsible()),
                 search      = isTRUE(r_search()),
                 download    = isTRUE(r_download()),
+                rotate_titles = isTRUE(r_rotate_titles()),
                 active     = act
               ))),
               error = function(e) {
@@ -1993,6 +2083,7 @@ new_table_block <- function(rowname = NULL,
               collapsible = isTRUE(r_collapsible()),
               search      = isTRUE(r_search()),
               download    = isTRUE(r_download()),
+              rotate_titles = isTRUE(r_rotate_titles()),
               active     = act
             ))),
             error = function(e) {
@@ -2148,6 +2239,7 @@ new_table_block <- function(rowname = NULL,
             collapsible    = r_collapsible,
             search         = r_search,
             download       = r_download,
+            rotate_titles  = r_rotate_titles,
             # LEGACY per-format download formals (one `download` toggle now):
             # serialized as NULL, kept as ctor formals so a board saved with
             # `excel_download = TRUE` still restores -- as downloads on.
@@ -2193,7 +2285,7 @@ new_table_block <- function(rowname = NULL,
       "digits", "max_height",
       "filter_column", "filter_values",
       "filter_group_cols", "filter_group_vals",
-      "sortable", "collapsible", "search", "download",
+      "sortable", "collapsible", "search", "download", "rotate_titles",
       "title", "subtitle", "caption",
       "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",
