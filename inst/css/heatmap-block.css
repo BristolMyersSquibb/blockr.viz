@@ -1,0 +1,192 @@
+/* heatmap-block.css — new_heatmap_block()'s hmb-* markup (R/heatmap-html.R).
+   Variant B of _scratch/ae-heatmap-design/ae-heatmap-facets.html: one
+   continuous matrix, rotated column titles, a rotated grey rail tile
+   spanning each group on the right, legend in the summarize-table
+   vocabulary, truly empty cells. */
+
+.hmb-block { font-size: 12.5px; color: var(--blockr-color-text, #111827); }
+
+/* Toolbar: Top-n + cell numbers LEFT (block-level controls), search + the
+   JS-appended gear header on the right. */
+.hmb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 2px 6px;
+}
+.hmb-tb-label { font-weight: 600; font-size: 12px; white-space: nowrap; }
+.hmb-topn { width: 120px; accent-color: var(--blockr-color-primary, #2563eb); }
+.hmb-topn-badge {
+  min-width: 2.2em;
+  text-align: center;
+  background: var(--blockr-color-primary, #2563eb);
+  color: #fff;
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.hmb-tb-check {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+  white-space: nowrap;
+  margin: 0;
+  font-weight: 400;
+}
+.hmb-tb-check input { accent-color: var(--blockr-color-primary, #2563eb); }
+.hmb-tb-spacer { flex: 1; }
+.hmb-search {
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  width: 150px;
+}
+.hmb-toolbar .blockr-gear-header { display: inline-flex; }
+
+/* Legend (summarize-table vocabulary: uppercase group title + swatches). */
+.hmb-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.6rem;
+  align-items: center;
+  padding: 0 2px 8px;
+  font-size: 12px;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.hmb-lg { display: inline-flex; gap: 0.6rem; align-items: center; }
+.hmb-lt {
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+}
+.hmb-li { display: inline-flex; gap: 0.3rem; align-items: center; }
+.hmb-li i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+.hmb-muted { color: var(--blockr-color-text-subtle, #9ca3af); }
+
+/* The matrix. Fixed layout so the narrow value columns hold. */
+.hmb-scroll { overflow: auto; }
+.hmb-table { border-collapse: collapse; table-layout: fixed; }
+.hmb-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--blockr-color-bg, #fff);
+}
+.hmb-stubh, .hmb-stub {
+  width: 116px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  /* 8px left: the active-row marker (3px inset bar) needs air before the
+     id text. */
+  padding: 3px 8px 3px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hmb-stubh {
+  font-weight: 600;
+  font-size: 12px;
+  vertical-align: bottom;
+  padding-bottom: 6px;
+}
+.hmb-table th.hmb-rot { width: 26px; vertical-align: bottom; padding: 0 0 6px; }
+.hmb-table th.hmb-rot span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  max-height: 148px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  font-size: 11.5px;
+  color: var(--blockr-color-text-strong, #374151);
+  display: inline-block;
+  line-height: 1.1;
+}
+.hmb-table td.hmb-c {
+  width: 26px;
+  height: 22px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--blockr-color-bg, #fff);
+  background: #fafafa;   /* the truly-empty tile: faint, no dash */
+  padding: 0;
+}
+/* Cell numbers off: the pure color heatmap. */
+.hmb-block.hmb-nonum td.hmb-c span { visibility: hidden; }
+
+/* Drill affordance + active row (chart parity). */
+.hmb-block[data-hmb-drill="1"] tr.hmb-r { cursor: pointer; }
+.hmb-block[data-hmb-drill="1"] tr.hmb-r:hover td { filter: brightness(0.96); }
+tr.hmb-active td.hmb-stub {
+  box-shadow: inset 3px 0 0 0 var(--blockr-color-primary, #2563eb);
+  font-weight: 600;
+}
+
+/* The group rail (variant B): a rotated grey tile spanning the group's
+   rows, right of the matrix -- the table analogue of the chart's facet
+   strip. Hidden while a search is active (hiding rows breaks rowspans). */
+.hmb-table th.hmb-railh { width: 36px; }
+.hmb-table td.hmb-rail {
+  width: 30px;
+  background: var(--blockr-color-bg-muted, #f3f4f6);
+  border-radius: 6px;
+  border-left: 6px solid var(--blockr-color-bg, #fff);
+}
+.hmb-table td.hmb-rail span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--blockr-color-text-strong, #374151);
+  display: block;
+  margin: 0 auto;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.hmb-block.hmb-searching td.hmb-rail,
+.hmb-block.hmb-searching th.hmb-railh { display: none; }
+tr.hmb-gsep td { height: 10px; background: var(--blockr-color-bg, #fff); }
+
+/* Footer: count + drill status (rank-table vocabulary). */
+.hmb-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 2px 0;
+  font-size: 11.5px;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+}
+.hmb-status { display: inline-flex; gap: 6px; align-items: center; }
+.hmb-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--blockr-color-primary, #2563eb);
+  display: inline-block;
+}
+.hmb-reset {
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  background: var(--blockr-color-bg, #fff);
+  border-radius: 5px;
+  font-size: 11px;
+  padding: 1px 8px;
+  cursor: pointer;
+}
+.hmb-empty {
+  padding: 24px 8px;
+  color: var(--blockr-color-text-muted, #6b7280);
+  font-size: 13px;
+}
