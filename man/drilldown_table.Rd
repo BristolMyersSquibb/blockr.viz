@@ -15,7 +15,8 @@ drilldown_table(
   max_height = "600px",
   row_hex = NULL,
   row_color = NULL,
-  gear = TRUE
+  gear = TRUE,
+  download_slot = NULL
 )
 }
 \arguments{
@@ -47,6 +48,11 @@ explicit per-row hex colours. Both default \code{NULL} (no row colouring).}
 options are fixed and who has no block state to store an edit in -- the
 gear writes its edits back over the same \verb{_action} input the drill uses,
 so a caller that does not handle them would swallow every one.}
+
+\item{download_slot}{Optional tag for the toolbar's download control,
+placed beside the search box. A ready-made tag rather than a \code{download = TRUE} flag on purpose: the writers need a session to register their
+handlers on, which this wrapper does not have and should not ask for.
+\code{\link[=dt_download_control]{dt_download_control()}} builds the tag for a caller that does.}
 }
 \value{
 An \code{\link[htmltools:tagList]{htmltools::tagList()}}.

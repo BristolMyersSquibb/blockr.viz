@@ -31,6 +31,11 @@
 #'   options are fixed and who has no block state to store an edit in -- the
 #'   gear writes its edits back over the same `_action` input the drill uses,
 #'   so a caller that does not handle them would swallow every one.
+#' @param download_slot Optional tag for the toolbar's download control,
+#'   placed beside the search box. A ready-made tag rather than a `download =
+#'   TRUE` flag on purpose: the writers need a session to register their
+#'   handlers on, which this wrapper does not have and should not ask for.
+#'   [dt_download_control()] builds the tag for a caller that does.
 #'
 #' @details
 #' **Structured "Table 1" input.** When `data` follows the dotted-column
@@ -61,7 +66,8 @@ drilldown_table <- function(data,
                             max_height = "600px",
                             row_hex = NULL,
                             row_color = NULL,
-                            gear = TRUE) {
+                            gear = TRUE,
+                            download_slot = NULL) {
   stopifnot(is.data.frame(data))
   # Tidy `.fmt` form (numbers + per-row template + `.group`) -> wide display
   # grid (format-then-spread), and detect the structured / sectioned form.
@@ -72,6 +78,7 @@ drilldown_table <- function(data,
     structured = dt_is_structured(data),
     max_height = max_height,
     gear       = gear,
+    download_slot = download_slot,
     # This exported wrapper keeps its historical API (a single
     # drilldown_table_color() spec + row_color); internally the renderer
     # speaks the unified vocabulary -- `shadings` (a LIST of {mode, cols}
@@ -620,10 +627,15 @@ dd_parse_shadings <- function(v) {
       mode = as.character(s$mode %||% s$type %||% "diverging")[1L],
       cols = as.character(unlist(s$cols %||% s$columns %||% character()))
     )
-    # Optional power knobs (per-rule palette / fixed domain) ride along when
-    # present -- the gear never writes them, ctor / legacy specs may.
+    # Optional power knobs (per-rule palette / fixed domain / color source)
+    # ride along when present -- the gear never writes them, ctor / legacy
+    # specs may. `source` decouples the painted value from the displayed one
+    # (see dd_shading_visuals).
     if (!is.null(s$palette)) out$palette <- s$palette
     if (!is.null(s$domain))  out$domain <- s$domain
+    if (!is.null(s$source) && nzchar(as.character(s$source)[1L])) {
+      out$source <- as.character(s$source)[1L]
+    }
     out
   })
 }
@@ -1685,6 +1697,33 @@ new_table_block <- function(rowname = NULL,
           session
         )
 
+        # The three writers see the same frame and the same resolved text the
+        # on-screen bands show -- the point of a clinical title is the export.
+        dl_exhibit <- function() {
+          d <- ann_data()
+          auto <- r_data_titles()
+          list(
+            data = d,
+            title = resolve_block_title(r_title(), d, auto = auto$label),
+            subtitle = resolve_block_title(r_subtitle(), d,
+                                           auto = auto$subtitle),
+            caption = resolve_block_title(r_caption(), d, auto = auto$caption),
+            # The display toggles travel with the exhibit: the HTML file is the
+            # table, so a table shown without collapsing (or without sorting)
+            # downloads that way too. Reading them here rather than in the
+            # handler keeps every writer looking at one snapshot of the block.
+            collapsible = isTRUE(r_collapsible()),
+            sortable = isTRUE(r_sortable())
+          )
+        }
+
+        # Downloads: a control on the chrome toolbar, on when the block's
+        # `download` toggle is. The markup and the handlers are shared with
+        # every other renderer that offers the same three formats (see
+        # dt_download_control), so the reader meets one control.
+        dl_slot <- dt_download_control(session, dl_exhibit,
+                                       enabled = r_download)
+
         # Split render so a filter (or gear edit) re-renders ONLY the <table>,
         # never the search bar / gear / scroll container -- no whole-panel
         # blank-out, and search text + scroll position survive. `dt_result` is
@@ -1712,7 +1751,7 @@ new_table_block <- function(rowname = NULL,
             # output to bind.
             inner      = htmltools::tags$div(class = "dt-table-slot"),
             search     = isTRUE(r_search()),
-            download_slot = shiny::uiOutput(ns("dt_download"), inline = TRUE),
+            download_slot = dl_slot,
             status_slot   = shiny::uiOutput(ns("dt_status"),
                                             class = "dt-status-slot")
           )
@@ -1767,149 +1806,6 @@ new_table_block <- function(rowname = NULL,
             }
           )
         })
-
-        # Downloads: a control on the chrome toolbar, shown only for the
-        # formats the block turns on. Each one writes the SAME rendered
-        # (annotated) frame the table shows, through the format's own writer --
-        # write_annotated_xlsx() for the spreadsheet, write_exhibit_html() for
-        # a self-contained page, write_exhibit_pptx() for a deck (the
-        # exhibit machinery blockr.outline's report and deck exports use, so a
-        # table downloaded here and the same table in a deck are one artifact).
-        #
-        # Hand-built download links (the `shiny-download-link` class is what
-        # shiny's download binding attaches to) instead of
-        # shiny::downloadButton, so they render as quiet design-system controls
-        # rather than stock Bootstrap .btns with FontAwesome icons.
-        dl_icon <- function() {
-          htmltools::HTML(paste0(
-            '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ',
-            'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" ',
-            'stroke-linejoin="round">',
-            '<path d="M8 2.5 V10 M4.8 7 L8 10.2 L11.2 7"/>',
-            '<path d="M2.5 11.5 V12.8 A1.2 1.2 0 0 0 3.7 14 H12.3 ',
-            'A1.2 1.2 0 0 0 13.5 12.8 V11.5"/></svg>'
-          ))
-        }
-
-        # Downloads on = every format this machine can write, in menu order.
-        # The formats are not a per-board choice: "can people take this table
-        # away" is one decision, and which file the reader wants is theirs.
-        #
-        # A format whose writer is missing is left out rather than shown
-        # disabled. Nobody asked for PowerPoint specifically -- the download
-        # toggle did -- so an entry that only ever explains itself is noise.
-        # (That was the right call while each format had its own pill: a toggle
-        # you just switched on and that rendered nothing read as broken.) HTML
-        # is always there: its renderer is this package's own.
-        dl_formats <- shiny::reactive({
-          if (!isTRUE(r_download())) {
-            return(list())
-          }
-          specs <- list(
-            list(id = "dl_xlsx", ext = "xlsx", label = "Excel (.xlsx)",
-                 ok = dt_has_openxlsx()),
-            list(id = "dl_html", ext = "html", label = "Web page (.html)",
-                 ok = TRUE),
-            list(id = "dl_pptx", ext = "pptx", label = "PowerPoint (.pptx)",
-                 ok = dt_has_officer())
-          )
-          Filter(function(s) isTRUE(s$ok), specs)
-        })
-
-        # One writable format is a button; several are a menu. Both are the
-        # same 30px icon control, so a machine with officer installed does not
-        # get a differently-shaped toolbar -- the button just gains somewhere
-        # to open.
-        dl_link <- function(spec, menu = FALSE) {
-          cls <- if (menu) "blockr-dl-item" else "blockr-dl-xlsx"
-          htmltools::tags$a(
-            id = ns(spec$id),
-            class = paste(cls, "shiny-download-link"),
-            href = "",
-            target = "_blank",
-            download = NA,
-            title = paste0("Download as ", spec$label),
-            `aria-label` = paste0("Download as ", spec$label),
-            if (menu) spec$label else dl_icon()
-          )
-        }
-
-        output$dt_download <- shiny::renderUI({
-          specs <- dl_formats()
-          if (!length(specs)) return(NULL)
-          if (length(specs) == 1L) {
-            return(dl_link(specs[[1L]]))
-          }
-          # <details> rather than a scripted popover: the open / close
-          # behaviour, the keyboard handling and the focus order are the
-          # browser's, so the menu needs no JS of its own and cannot fall out
-          # of step with the table's own script.
-          htmltools::tags$details(
-            class = "blockr-dl-menu",
-            htmltools::tags$summary(
-              class = "blockr-dl-xlsx",
-              title = "Download",
-              `aria-label` = "Download",
-              dl_icon()
-            ),
-            htmltools::tags$div(
-              class = "blockr-dl-menu-list", role = "menu",
-              lapply(specs, dl_link, menu = TRUE)
-            )
-          )
-        })
-
-        # The three writers see the same frame and the same resolved text the
-        # on-screen bands show -- the point of a clinical title is the export.
-        dl_exhibit <- function() {
-          d <- ann_data()
-          auto <- r_data_titles()
-          list(
-            data = d,
-            title = resolve_block_title(r_title(), d, auto = auto$label),
-            subtitle = resolve_block_title(r_subtitle(), d,
-                                           auto = auto$subtitle),
-            caption = resolve_block_title(r_caption(), d, auto = auto$caption),
-            # The display toggles travel with the exhibit: the HTML file is the
-            # table, so a table shown without collapsing (or without sorting)
-            # downloads that way too. Reading them here rather than in the
-            # handler keeps every writer looking at one snapshot of the block.
-            collapsible = isTRUE(r_collapsible()),
-            sortable = isTRUE(r_sortable())
-          )
-        }
-
-        output$dl_xlsx <- shiny::downloadHandler(
-          filename = function() "table.xlsx",
-          content  = function(file) {
-            e <- dl_exhibit()
-            write_annotated_xlsx(
-              e$data, file,
-              title = e$title, subtitle = e$subtitle, caption = e$caption
-            )
-          }
-        )
-        output$dl_html <- shiny::downloadHandler(
-          filename = function() "table.html",
-          content  = function(file) {
-            e <- dl_exhibit()
-            write_exhibit_html(
-              e$data, file,
-              title = e$title, subtitle = e$subtitle, caption = e$caption,
-              collapsible = e$collapsible, sortable = e$sortable
-            )
-          }
-        )
-        output$dl_pptx <- shiny::downloadHandler(
-          filename = function() "table.pptx",
-          content  = function(file) {
-            e <- dl_exhibit()
-            write_exhibit_pptx(
-              e$data, file,
-              title = e$title, subtitle = e$subtitle, caption = e$caption
-            )
-          }
-        )
 
         # Board scale map (NULL when the board has none / blockr.theme absent) --
         # the same source the drilldown chart reads. Used to color the
