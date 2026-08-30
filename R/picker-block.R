@@ -31,7 +31,10 @@
 #' UI follows the blockr design system: `Blockr.Select` controls on the
 #' block face (one per picker, labelled by `into`), and the picker
 #' definitions in the gear-toggled settings band, like the value filter's
-#' filter list. Every column qualifies as a candidate -- a picker can just
+#' filter list. Each gear row carries move-up / move-down buttons next to its
+#' remove button: the order of the pickers is the order of the controls on the
+#' face, so that is how the builder arranges them. Every column qualifies as a
+#' candidate -- a picker can just
 #' as well drive a grouping or color dimension as a measure. A picker's
 #' offer list starts empty: the builder curates which columns the viewer
 #' sees. An empty offer list is inert (no output column) until it has
@@ -620,6 +623,33 @@ picker_block_assets <- function(ns) {
         return 'value' + i;
       }
 
+      // Reorder a picker within the list. The list order IS the order of the
+      // face controls (and of the copies in the expression), so this is the
+      // builder's only way to arrange the viewer's controls -- before, moving
+      // one meant removing it and adding it back at the end.
+      function moveRow(from, to) {
+        if (to < 0 || to >= state.pickers.length || from === to) return;
+        var p = state.pickers.splice(from, 1)[0];
+        state.pickers.splice(to, 0, p);
+        renderBand();
+        renderFace();
+        send();
+      }
+
+      function moveBtn(dir, from, to) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'pk-row-move pk-row-move--' + dir;
+        b.title = dir === 'up' ? 'Move picker up' : 'Move picker down';
+        b.innerHTML = Blockr.icons.chevron;
+        if (to < 0 || to >= state.pickers.length) {
+          b.disabled = true;
+        } else {
+          b.addEventListener('click', function () { moveRow(from, to); });
+        }
+        return b;
+      }
+
       function renderBand() {
         var host = el(NS.rows);
         host.innerHTML = '';
@@ -715,6 +745,15 @@ picker_block_assets <- function(ns) {
             row.appendChild(optWrap);
           }
 
+          // Card tools, top-right, revealed on hover like the remove button
+          // everywhere else in the design system.
+          var tools = document.createElement('div');
+          tools.className = 'pk-row-tools';
+          if (state.pickers.length > 1) {
+            tools.appendChild(moveBtn('up', i, i - 1));
+            tools.appendChild(moveBtn('down', i, i + 1));
+          }
+
           var rm = document.createElement('button');
           rm.type = 'button';
           rm.className = 'blockr-row-remove';
@@ -727,7 +766,8 @@ picker_block_assets <- function(ns) {
             renderFace();
             send();
           });
-          row.appendChild(rm);
+          tools.appendChild(rm);
+          row.appendChild(tools);
 
           host.appendChild(row);
         });
@@ -834,8 +874,25 @@ picker_block_assets <- function(ns) {
        .blockr-picker .pk-choices .blockr-select--bordered { min-width: 0; }
        .blockr-picker .pk-multiple,
        .blockr-picker .pk-optional { padding-bottom: 0; }
-       .blockr-picker .pk-row .blockr-row-remove { position: absolute; top: 6px;
-         right: 6px; margin: 0; }"
+       /* Move up / move down / remove, stacked in the card's top-right
+          corner. The move buttons copy .blockr-row-remove's geometry and
+          hover-reveal so the three read as one set; only the danger colour
+          stays exclusive to remove. */
+       .blockr-picker .pk-row-tools { position: absolute; top: 6px; right: 6px;
+         display: flex; align-items: center; gap: 2px; }
+       .blockr-picker .pk-row .blockr-row-remove { position: static; margin: 0; }
+       .blockr-picker .pk-row-move { display: flex; align-items: center;
+         justify-content: center; width: 26px; height: 26px; padding: 0;
+         background: none; border: none; border-radius: 4px;
+         color: var(--blockr-grey-400, #9ca3af); cursor: pointer; opacity: 0;
+         flex-shrink: 0; transition: opacity 0.15s ease, color 0.15s ease; }
+       .blockr-picker .pk-row:hover .pk-row-move { opacity: 1; }
+       .blockr-picker .pk-row-move:hover:not(:disabled) {
+         color: var(--blockr-color-primary, #2563eb);
+         background: var(--blockr-grey-100, #f3f4f6); }
+       .blockr-picker .pk-row:hover .pk-row-move:disabled { opacity: 0.3;
+         cursor: default; }
+       .blockr-picker .pk-row-move--up svg { transform: rotate(180deg); }"
     )),
     shiny::tags$script(shiny::HTML(js))
   )

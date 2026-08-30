@@ -52,7 +52,10 @@ required roles (x/y axes).
 UI follows the blockr design system: \code{Blockr.Select} controls on the
 block face (one per picker, labelled by \code{into}), and the picker
 definitions in the gear-toggled settings band, like the value filter's
-filter list. Every column qualifies as a candidate -- a picker can just
+filter list. Each gear row carries move-up / move-down buttons next to its
+remove button: the order of the pickers is the order of the controls on the
+face, so that is how the builder arranges them. Every column qualifies as a
+candidate -- a picker can just
 as well drive a grouping or color dimension as a measure. A picker's
 offer list starts empty: the builder curates which columns the viewer
 sees. An empty offer list is inert (no output column) until it has
