@@ -1,9 +1,16 @@
-# new_heatmap_block(): the bespoke matrix heatmap. Long event rows in (one
-# row per event), the rendered subject x term matrix out -- the block
+# new_heatmap_block(): the matrix heatmap ENGINE. Long event rows in (one
+# row per event), the rendered row x column matrix out -- the block
 # aggregates ITSELF (cell = event count + worst level of `color`), so no
 # upstream reshape block is needed. Data output is a passthrough filter
 # (drill: a row click hands the clicked row identity downstream), the tile
 # block's model. Renderer: R/heatmap-html.R; JS: inst/js/heatmap-block.js.
+#
+# Deliberately NOT in this package's registry: the registered surface is
+# blockr.pharma::new_ae_heatmap_block() -- same formals, AE defaults, and
+# it stamps ITSELF as the serialized ctor (via the ctor/ctor_pkg
+# passthrough below), so study boards restore against blockr.pharma. This
+# ctor stays exported for the pharma delegation and for non-pharma reuse
+# from code.
 
 #' Heatmap block
 #'
@@ -39,6 +46,9 @@
 #' @param max_height Scroll container height (default `"600px"`).
 #' @param ctrl_target,ctrl_table Character(1), beta: as in
 #'   [new_table_block()] -- push the drill claim into a value filter block.
+#' @param class Optional subclass(es) prepended to `"heatmap_block"` -- how
+#'   a delegating surface (blockr.pharma's AE heatmap) gets its own class,
+#'   which is what the registry keys metadata on.
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #' @return A transform block of class `heatmap_block`.
 #' @examplesIf interactive()
@@ -57,6 +67,7 @@ new_heatmap_block <- function(row = character(),
                               max_height = "600px",
                               ctrl_target = "",
                               ctrl_table = "",
+                              class = character(),
                               ...) {
   row <- chr_state(row)
   col <- chr_state(col)
@@ -253,12 +264,19 @@ new_heatmap_block <- function(row = character(),
     },
     dat_valid = validate_annotated_df_input,
     allow_empty_state = c("row", "col", "color", "group", "drill",
-      "filter_column", "filter_values", "ctrl_target", "ctrl_table"),
+      "filter_column", "filter_values", "ctrl_target", "ctrl_table",
+      "class"),
     external_ctrl = c("row", "col", "color", "group", "top_n",
       "cell_numbers", "drill", "download", "filter_column", "filter_values",
       "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",
-    class = "heatmap_block",
+    class = c(class, "heatmap_block"),
+    # `ctor`/`ctor_pkg` deliberately ride `...` and are NOT formals: the
+    # framework passes them itself (registry harvest, deser restore), and a
+    # formal would both collide with that injection and leak into the
+    # serialized state (initial_block_state = the recorded ctor's formals).
+    # blockr.pharma's new_ae_heatmap_block stamps its own identity the same
+    # way -- through `...`.
     ...
   )
 }
@@ -296,99 +314,3 @@ heatmap_block_dep <- memoise0(function() {
     )
   )
 })
-
-#' @noRd
-heatmap_arguments <- function() {
-  new_arg_specs(
-    row = new_arg_spec(
-      paste0(
-        "Column identifying a matrix ROW -- the entity a line belongs to, ",
-        "e.g. \"USUBJID\". Names a data column. Required."
-      ),
-      example = "USUBJID",
-      type = arg_string()
-    ),
-    col = new_arg_spec(
-      paste0(
-        "Column identifying a matrix COLUMN, e.g. the AE preferred term. ",
-        "Columns are capped to the top_n most frequent. Required."
-      ),
-      example = "AEDECOD",
-      type = arg_string()
-    ),
-    color = new_arg_spec(
-      paste0(
-        "Optional column whose WORST level per cell drives the paint ",
-        "(severity: the cell shows the event count, the color the worst ",
-        "grade). Ordered factors keep their level order; numeric grades ",
-        "order numerically. Empty = paint by count."
-      ),
-      example = "AESEV",
-      type = arg_string()
-    ),
-    group = new_arg_spec(
-      paste0(
-        "Optional column grouping the rows (one value per row identity, ",
-        "e.g. the treatment arm) -- drawn as a rotated rail tile spanning ",
-        "the group, and rows order group-first."
-      ),
-      example = "TRT",
-      type = arg_string()
-    ),
-    top_n = new_arg_spec(
-      "Cap on the matrix columns, most frequent first. Default 25.",
-      example = 25L,
-      type = arg_number()
-    ),
-    cell_numbers = new_arg_spec(
-      paste0(
-        "Show the event count in each cell (default true). false = pure ",
-        "color heatmap."
-      ),
-      example = TRUE,
-      type = arg_boolean()
-    ),
-    download = new_arg_spec(
-      paste0(
-        "Offer the matrix as a download (xlsx / html / pptx of the count ",
-        "columns). Default false."
-      ),
-      example = TRUE,
-      type = arg_boolean()
-    ),
-    drill = new_arg_spec(
-      paste0(
-        "Drill-down: true = a row click filters downstream on the `row` ",
-        "column (click again to clear). Default false."
-      ),
-      example = TRUE,
-      type = arg_boolean()
-    ),
-    ctrl_target = new_arg_spec(
-      paste0(
-        "BETA. Block id of a value filter block on the same board the ",
-        "drill claim is also pushed to. Empty = off."
-      ),
-      example = "cohort_filter",
-      type = arg_string()
-    ),
-    ctrl_table = new_arg_spec(
-      "BETA. Only with ctrl_target: the dm table the claim applies to.",
-      example = "adsl",
-      type = arg_string()
-    )
-  )
-}
-
-#' @noRd
-heatmap_guidance <- function() {
-  paste0(
-    "Feed LONG event rows (one row per event), never a pre-pivoted ",
-    "matrix -- the block aggregates itself: cell = event count, paint = ",
-    "worst `color` level. Typical AE use: row=\"USUBJID\", ",
-    "col=\"AEDECOD\", color=\"AETOXGR\" (or AESEV), group=the treatment ",
-    "arm column. The data output is a PASSTHROUGH of the input rows ",
-    "(filtered to the clicked row identity when drill is on) -- ",
-    "downstream blocks receive event rows, not the matrix."
-  )
-}

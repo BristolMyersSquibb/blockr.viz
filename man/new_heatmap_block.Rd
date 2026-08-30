@@ -18,6 +18,7 @@ new_heatmap_block(
   max_height = "600px",
   ctrl_target = "",
   ctrl_table = "",
+  class = character(),
   ...
 )
 }
@@ -55,6 +56,10 @@ html / pptx.}
 
 \item{ctrl_target, ctrl_table}{Character(1), beta: as in
 \code{\link[=new_table_block]{new_table_block()}} -- push the drill claim into a value filter block.}
+
+\item{class}{Optional subclass(es) prepended to \code{"heatmap_block"} -- how
+a delegating surface (blockr.pharma's AE heatmap) gets its own class,
+which is what the registry keys metadata on.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }

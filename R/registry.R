@@ -30,8 +30,7 @@ register_viz_blocks <- function() {
       "new_tile_block",
       "new_chart_block",
       "new_table_block",
-      "new_summarize_table_block",
-      "new_heatmap_block"
+      "new_summarize_table_block"
     ),
     name = c(
       # "Variable summary", not "Summary Table": its rows are VARIABLES
@@ -42,8 +41,7 @@ register_viz_blocks <- function() {
       "Tile",
       "Chart",
       "Table",
-      "Summarize table",
-      "Heatmap"
+      "Summarize table"
     ),
     description = c(
       "Wide, display-shaped multi-variable summary (list of variables by Y pattern). Successor to tidy_summary_block.",
@@ -51,8 +49,7 @@ register_viz_blocks <- function() {
       "Scorecard of bold KPI numbers \u2014 cards or an aligned matrix, with deltas / fills / status pills and click-to-filter drill. A pure renderer (shape upstream).",
       "Configurable chart with click-to-filter drill-down",
       "Interactive table (sticky header, sort, search) with optional cell coloring and click-to-filter drill-down",
-      "Grouped summary table with graphical cells \u2014 an ordered list of summary columns (count/mean bars, box / point-range distributions, interval swimlanes, sparklines, text stats, group facts) over one grouping, with facet, search, sort and click-to-filter drill-down",
-      "Row x column matrix from long event rows \u2014 cell shows the event count, paint encodes the worst level of a severity column; top-N column cap, group rail, click-to-filter drill (the AE heatmap form)"
+      "Grouped summary table with graphical cells \u2014 an ordered list of summary columns (count/mean bars, box / point-range distributions, interval swimlanes, sparklines, text stats, group facts) over one grouping, with facet, search, sort and click-to-filter drill-down"
     ),
     # Categories come from blockr.core::suggested_categories() (a fixed
     # vocabulary the pickers group by; anything else warns as discouraged).
@@ -68,8 +65,7 @@ register_viz_blocks <- function() {
       "plot",
       "plot",
       "table",
-      "table",
-      "plot"
+      "table"
     ),
     icon = c(
       "calculator",
@@ -77,8 +73,7 @@ register_viz_blocks <- function() {
       "speedometer2",
       "funnel",
       "table",
-      "bar-chart-steps",
-      "grid-3x3"
+      "bar-chart-steps"
     ),
     arguments = list(
       summary_table_arguments(),
@@ -86,8 +81,7 @@ register_viz_blocks <- function() {
       tile_arguments(),
       chart_arguments(),
       table_arguments(),
-      rank_arguments(),
-      heatmap_arguments()
+      rank_arguments()
     ),
     guidance = c(
       summary_table_guidance(),
@@ -95,8 +89,7 @@ register_viz_blocks <- function() {
       tile_guidance(),
       chart_guidance(),
       table_guidance(),
-      rank_guidance(),
-      heatmap_guidance()
+      rank_guidance()
     ),
     package = utils::packageName(),
     overwrite = TRUE
