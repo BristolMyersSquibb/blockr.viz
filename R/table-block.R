@@ -1087,6 +1087,22 @@ dt_bar_style <- function(v, mx, fill) {
 #' one call, keeping the shaded table on the same vectorized fast path as
 #' dt_bar_style(). A 10k x 10 shaded table used to burn 100k scalar closure
 #' calls per render here.
+#' Readable text colour over a background: white on dark, near-black on
+#' light, by perceived luminance. ONE rule for every painted cell, so a
+#' ramp cell and a scale-map cell (the heatmap block's two paint sources)
+#' cannot disagree about when text flips to white. Vectorized.
+#' @noRd
+dt_fg_for_rgb <- function(r, g, b) {
+  lum <- (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  ifelse(lum < 0.55, "#ffffff", "#111827")
+}
+
+#' @noRd
+dt_fg_for_hex <- function(hex) {
+  m <- grDevices::col2rgb(hex)
+  dt_fg_for_rgb(m[1L, ], m[2L, ], m[3L, ])
+}
+
 #' @noRd
 dt_color_fun <- function(type, domain, palette) {
   lo <- domain[1L]
@@ -1094,9 +1110,8 @@ dt_color_fun <- function(type, domain, palette) {
   hex2rgb <- function(h) grDevices::col2rgb(h)[, 1L]
   # Per-channel r/g/b vectors -> bg hex + contrast-tested fg hex.
   bg_fg <- function(r, g, b) {
-    lum <- (0.299 * r + 0.587 * g + 0.114 * b) / 255
     list(bg = grDevices::rgb(r, g, b, maxColorValue = 255),
-         fg = ifelse(lum < 0.55, "#ffffff", "#111827"))
+         fg = dt_fg_for_rgb(r, g, b))
   }
 
   if (identical(type, "diverging")) {

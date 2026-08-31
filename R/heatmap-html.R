@@ -129,6 +129,61 @@ heatmap_prep <- function(data, row, col, color = NULL, group = NULL,
   )
 }
 
+#' The cell paint, as one vectorized `function(v) list(bg =, fg =)`.
+#'
+#' TWO sources, and the board wins. When the board's scale map binds the
+#' colour column (option "scale_map" -- the same seam the chart and the
+#' summarize table resolve through, provenance-aware so a picker copy
+#' keeps the source column's binding) and it covers every level present,
+#' the cell takes the DECLARED colour per level: a study that pins CTCAE
+#' grade 5 to red gets red, not whatever the theme ramp lands on, and the
+#' colours stay put as filters change the levels in view. Only without a
+#' binding does the block fall back to its sequential ramp, which is the
+#' right default for an unlabelled ordinal scale but is theme-derived and
+#' says nothing about the vocabulary.
+#'
+#' `v` is a level INDEX when the matrix is levelled, an event count
+#' otherwise. Falls back per call, never per cell.
+#' @noRd
+hmb_paint <- function(prep, data = NULL, scale_map = NULL) {
+  lv <- prep$levels
+  if (!is.null(lv) && length(lv) && !is.null(scale_map) &&
+        !is.null(prep$color_col) && has_blockr_theme()) {
+    column <- if (is.data.frame(data) && prep$color_col %in% names(data)) {
+      data[[prep$color_col]]
+    } else {
+      lv
+    }
+    res <- tryCatch(dd_resolve_scales(scale_map, prep$color_col, column),
+                    error = function(e) NULL)
+    pal <- res$color
+    # blockr.theme completes the palette itself: levels the board declared
+    # keep their colour, the rest get stable palette entries -- so a bound
+    # column never mixes declared colours with RAMP positions (which would
+    # move as filters change the levels in view). The check is therefore
+    # "bound at all", and the same one rank_level_colors uses.
+    if (!is.null(pal) && all(lv %in% names(pal))) {
+      hex <- unname(pal[lv])
+      if (!anyNA(hex)) {
+        fg <- dt_fg_for_hex(hex)
+        return(function(v) {
+          i <- pmax(pmin(as.integer(v), length(hex)), 1L)
+          list(bg = hex[i], fg = fg[i])
+        })
+      }
+    }
+  }
+  dom <- if (!is.null(lv)) {
+    c(1L, max(2L, length(lv)))
+  } else {
+    r <- range(prep$count, na.rm = TRUE)
+    if (!all(is.finite(r))) r <- c(0, 1)
+    if (r[1L] == r[2L]) r[2L] <- r[1L] + 1L
+    r
+  }
+  dt_color_fun("sequential", dom, NULL)
+}
+
 #' The legend row (summarize-table vocabulary: uppercase group title +
 #' swatches). Leveled paint decodes the levels; count paint shows the ramp
 #' ends. A second text-only group says what the cell number is.
@@ -185,7 +240,7 @@ heatmap_html <- function(data, row = NULL, col = NULL, color = NULL,
                          group = NULL, top_n = 25L, cell_numbers = TRUE,
                          drill = FALSE, download = FALSE, elem_id = NULL,
                          active_values = NULL, status = NULL,
-                         download_slot = NULL,
+                         download_slot = NULL, scale_map = NULL,
                          ctrl = list(), max_height = "600px") {
   prep <- heatmap_prep(data, row, col, color, group, top_n)
 
@@ -229,16 +284,10 @@ heatmap_html <- function(data, row = NULL, col = NULL, color = NULL,
     return(wrap(htmltools::tags$div(class = "hmb-empty", prep$err)))
   }
 
-  # One vectorized color fun over level indices (or counts when unleveled),
-  # the dt_color_fun machinery -- same ramp, same contrast-tested fg.
-  dom <- if (!is.null(prep$levels)) {
-    c(1L, max(2L, length(prep$levels)))
-  } else {
-    r <- range(prep$count, na.rm = TRUE)
-    if (r[1] == r[2]) r[2] <- r[1] + 1L
-    r
-  }
-  fun <- dt_color_fun("sequential", dom, NULL)
+  # One vectorized colour fun over level indices (or counts when
+  # unlevelled): the board's declared level colours when the scale map
+  # binds the column, else the sequential ramp. See hmb_paint().
+  fun <- hmb_paint(prep, data, scale_map)
 
   # ---- toolbar --------------------------------------------------------
   n_terms <- prep$n_terms_total
@@ -290,7 +339,12 @@ heatmap_html <- function(data, row = NULL, col = NULL, color = NULL,
   cells <- matrix('<td class="hmb-c"></td>', n, k)
   if (any(filled)) {
     pv <- src[filled]
-    pv[is.na(pv)] <- dom[1L]   # count without a level: paint at the floor
+    # A filled cell whose SOURCE is missing (an event with no recorded
+    # grade) paints at the floor -- level index 1, or the low end of the
+    # count ramp -- rather than dropping out of the matrix. `fun` reads
+    # level indices when levelled and counts otherwise, and both floors
+    # sit at the bottom of their own scale.
+    pv[is.na(pv)] <- if (!is.null(prep$levels)) 1L else min(cnt, na.rm = TRUE)
     cl <- fun(as.numeric(pv))
     cells[filled] <- paste0(
       '<td class="hmb-c" style="background:', cl$bg,

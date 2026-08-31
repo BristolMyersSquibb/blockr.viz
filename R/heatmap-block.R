@@ -194,6 +194,11 @@ new_heatmap_block <- function(row = character(),
         # therefore ISOLATES the filter state (and the cell-numbers flag,
         # which the JS also applies instantly) -- a restore still reads the
         # current values on its first render.
+        # Board scale map: the declared per-level colours (e.g. AETOXGR
+        # grade 5 = red) the chart and the summarize table already honour.
+        # Without one the block falls back to its sequential ramp.
+        board_scale_map <- dd_board_scale_map()
+
         output$heatmap_status <- shiny::renderUI({
           hmb_status_tag(one_or_null(r_row()) %||% "row",
                          r_filter_values())
@@ -213,6 +218,7 @@ new_heatmap_block <- function(row = character(),
             active_values = shiny::isolate(r_filter_values()),
             status = shiny::uiOutput(ns("heatmap_status"), inline = TRUE),
             download_slot = dl_slot,
+            scale_map = board_scale_map(),
             ctrl = list(
               target = r_ctrl_target(),
               table = r_ctrl_table(),
