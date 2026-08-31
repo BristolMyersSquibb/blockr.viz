@@ -71,12 +71,32 @@ test_that("a chart with nothing mapped says so", {
   expect_match(out, "nothing mapped yet", fixed = TRUE)
 })
 
-test_that("the modifiable-argument line survives", {
+test_that("the modifiable-argument line survives, summarised", {
 
   out <- chart_desc(list(chart_type = "bar", group = "AESOC"))
 
-  expect_match(out, "Modifiable via modify_block:", fixed = TRUE)
-  expect_match(out, "chart_type", fixed = TRUE)
+  # A chart declares ~49 of its arguments controllable. Spelling them out cost
+  # more of the prompt cap than the whole rest of the description, so the line
+  # states the count and points at the typed tool for the schema.
+  expect_match(out, "Modifiable via modify_block: all", fixed = TRUE)
+  expect_match(out, "modify_chart_block", fixed = TRUE)
+  expect_lt(nchar(out), 900L)
+})
+
+test_that("aggregation is reported only for the families that aggregate", {
+
+  agg <- chart_desc(
+    list(chart_type = "bar", group = "AESOC", value = "AGE", func = "mean")
+  )
+  ind <- chart_desc(
+    list(chart_type = "scatter", x = "XMAX", y = "BILI", func = "count",
+         value = ".count")
+  )
+
+  expect_match(agg, "Aggregation: mean of AGE", fixed = TRUE)
+  # A scatter does not aggregate; `func`/`value` sit at their defaults and
+  # "count of row counts" on an eDish plot is worse than saying nothing.
+  expect_false(grepl("Aggregation", ind, fixed = TRUE))
 })
 
 test_that("without live state it falls back to the default method", {

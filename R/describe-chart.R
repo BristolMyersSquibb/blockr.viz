@@ -111,7 +111,7 @@ describe_block.chart_block <- function(x, board, id, state = NULL, ...) {
     } else {
       "Plots: nothing mapped yet -- no column is assigned to any channel."
     },
-    chart_value_line(state),
+    chart_value_line(state, defaults),
     chart_filter_lines(state),
     chart_chrome_lines(state),
     chart_other_lines(state, defaults),
@@ -126,6 +126,23 @@ describe_block.chart_block <- function(x, board, id, state = NULL, ...) {
 chart_ctrl_line <- function(x) {
 
   ctrl <- blockr.core::external_ctrl_vars(x)
+
+  # A chart declares nearly every one of its 50-odd arguments controllable, so
+  # spelling them out costs more of the prompt cap than the rest of the
+  # description put together and tells the model nothing it cannot get from the
+  # typed tool, which carries the full schema.
+  if (length(ctrl) > 12L) {
+    return(
+      sprintf(
+        paste(
+          "Modifiable via modify_block: all %d chart arguments, including",
+          "every one named above (the typed modify_chart_block tool carries",
+          "the full list with types)."
+        ),
+        length(ctrl)
+      )
+    )
+  }
 
   sprintf(
     "Modifiable via modify_block: %s",
@@ -158,9 +175,21 @@ chart_type_line <- function(state, defaults) {
   )
 }
 
-# `value` and `func` only mean anything on the aggregated families; on a
-# scatter or line they sit at their defaults and saying so is noise.
-chart_value_line <- function(state) {
+# The families that aggregate in the browser. Elsewhere -- scatter, line,
+# gantt, and the distribution marks, which summarize the raw `value` without a
+# `func` -- these two arguments sit at their defaults and mean nothing, so
+# reporting "count of row counts" on an eDish scatter is worse than silence.
+chart_aggregated_types <- function() {
+  c("bar", "waterfall", "pie", "treemap", "radar")
+}
+
+chart_value_line <- function(state, defaults) {
+
+  typ <- coal_chr(state$chart_type, defaults$chart_type)
+
+  if (!typ %in% chart_aggregated_types()) {
+    return(NULL)
+  }
 
   func <- state$func
 
