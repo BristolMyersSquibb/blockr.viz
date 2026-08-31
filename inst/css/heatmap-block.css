@@ -63,7 +63,15 @@
    (number field, search, download) it adopts the control height, exactly
    as the table chrome does (table.css). Otherwise one control in the row
    sits 4px short. */
-.hmb-toolbar .blockr-gear-header { display: inline-flex; flex-shrink: 0; }
+.hmb-toolbar .blockr-gear-header {
+  display: inline-flex;
+  flex-shrink: 0;
+  /* The shared .blockr-gear-header sits ABOVE a settings band, so it
+     carries margin-bottom: 6px. In a centred flex row the MARGIN box is
+     what gets centred, so that 6px lifted the gear 3px above the other
+     controls (and inflated the row to 46px). Measured, not guessed. */
+  margin: 0;
+}
 .hmb-toolbar .blockr-gear-header .blockr-gear-btn {
   width: var(--blockr-control-h-sm, 30px);
   height: var(--blockr-control-h-sm, 30px);
