@@ -14,35 +14,50 @@
   gap: 12px;
   padding: 4px 2px 6px;
 }
-.hmb-tb-label { font-weight: 600; font-size: 12px; white-space: nowrap; }
-.hmb-topn { width: 120px; accent-color: var(--blockr-color-primary, #2563eb); }
-.hmb-topn-badge {
-  min-width: 2.2em;
-  text-align: center;
-  background: var(--blockr-color-primary, #2563eb);
-  color: #fff;
-  border-radius: 5px;
-  padding: 1px 6px;
-  font-size: 12px;
+.hmb-tb-label {
   font-weight: 600;
-}
-.hmb-tb-check {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  cursor: pointer;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
   white-space: nowrap;
-  margin: 0;
-  font-weight: 400;
 }
-.hmb-tb-check input { accent-color: var(--blockr-color-primary, #2563eb); }
+/* Top n. `.blockr-num-input` is borderless by contract (it sits inside a
+   row), so the wrap carries the border and hosts the Enter chip that
+   Blockr.textCommit inserts beside the input -- the slice block's
+   .slb-n-wrap, at the shared small-control height. */
+.hmb-topn-wrap {
+  display: inline-flex;
+  align-items: center;
+  height: var(--blockr-control-h-sm, 30px);
+  /* Room for the 60px min-width field PLUS the armed "Enter ↵" chip
+     (~57px) -- the design system's "room available" form. At 92px the
+     chip overflowed the border onto the checkbox (measured). */
+  width: 132px;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 4px;
+  background: var(--blockr-color-bg-input, #f9fafb);
+  padding-right: 2px;
+}
+.hmb-topn-wrap:focus-within {
+  border-color: var(--blockr-color-primary, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+.hmb-topn-wrap .blockr-num-input { height: 100%; }
+/* The toolbar is a flex row, so its checkbox must not wrap its label or
+   shrink to a two-line block when the panel narrows -- the controls sit
+   on ONE line and the spacer absorbs the slack. */
+.hmb-toolbar .blockr-checkbox {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .hmb-tb-spacer { flex: 1; }
 .hmb-search {
+  height: var(--blockr-control-h-sm, 30px);
   border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 6px;
-  padding: 3px 10px;
-  font-size: 12px;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  background: var(--blockr-color-bg-input, #f9fafb);
   width: 150px;
+  box-sizing: border-box;
 }
 .hmb-toolbar .blockr-gear-header { display: inline-flex; }
 

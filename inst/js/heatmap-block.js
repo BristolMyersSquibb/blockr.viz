@@ -25,19 +25,43 @@
   // ---- toolbar --------------------------------------------------------
   /** @param {Element} root @param {string} elemId */
   function wireToolbar(root, elemId) {
-    var slider = /** @type {HTMLInputElement|null} */ (root.querySelector('.hmb-topn'));
-    var badge = root.querySelector('.hmb-topn-badge');
-    if (slider) {
-      // Live badge while dragging; the (re-rendering) config send only on
-      // release, so a drag is one render, not thirty.
-      slider.addEventListener('input', function () {
-        if (badge) badge.textContent = slider.value;
-      });
-      slider.addEventListener('change', function () {
-        sendConfig(elemId, 'top_n', parseInt(slider.value, 10));
-      });
+    // Top n: a number field committing on Enter / blur (Blockr.textCommit,
+    // the shared control -- it also owns the "Enter ↵" chip). Per-keystroke
+    // would re-render the whole matrix on the way to "25".
+    var topn = /** @type {HTMLInputElement|null} */ (root.querySelector('.hmb-topn'));
+    if (topn) {
+      var maxN = parseInt(topn.getAttribute('max') || '', 10);
+      var lastN = parseInt(topn.value, 10);
+      /** @type {any} */
+      var commit = null;
+      /** @param {string} raw */
+      var apply = function (raw) {
+        var n = parseInt(raw, 10);
+        if (!isFinite(n)) {
+          if (commit) commit.sync(String(lastN));
+          return;
+        }
+        // Clamp rather than reject: "400" on a 230-term frame means "all of
+        // them", which is a reasonable thing to type.
+        n = Math.max(1, isFinite(maxN) ? Math.min(n, maxN) : n);
+        if (commit && String(n) !== raw) commit.sync(String(n));
+        if (n === lastN) return;
+        lastN = n;
+        sendConfig(elemId, 'top_n', n);
+      };
+      if (typeof Blockr !== 'undefined' && Blockr.textCommit) {
+        commit = Blockr.textCommit(topn, {
+          onCommit: function (v) { apply(v); }
+        });
+      } else {
+        // No shared helper (a page without blockr-core.js): same
+        // Enter/blur contract by hand, rather than per-keystroke.
+        topn.addEventListener('change', function () { apply(topn.value); });
+      }
     }
-    var nums = /** @type {HTMLInputElement|null} */ (root.querySelector('.hmb-nums'));
+
+    var nums = /** @type {HTMLInputElement|null} */ (
+      root.querySelector('.hmb-nums input'));
     if (nums) {
       nums.addEventListener('change', function () {
         // Instant visual (CSS class), then persist -- the server render

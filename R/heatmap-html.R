@@ -129,6 +129,31 @@ heatmap_prep <- function(data, row, col, color = NULL, group = NULL,
   )
 }
 
+#' A design-system checkbox (`.blockr-checkbox`): 16px box, primary fill
+#' when checked, native input underneath. The boolean control for a DATA
+#' option -- a self-labelling pill would not say whether its text is the
+#' current state or the action (blockr.docs ux-principles, Boolean
+#' controls).
+#' @noRd
+hmb_checkbox <- function(cls, label, checked) {
+  htmltools::tags$label(
+    class = paste("blockr-checkbox", cls),
+    htmltools::tags$input(
+      type = "checkbox", checked = if (isTRUE(checked)) NA
+    ),
+    htmltools::tags$span(
+      class = "blockr-checkbox__box",
+      htmltools::HTML(paste0(
+        '<svg width="10" height="10" viewBox="0 0 16 16" ',
+        'fill="currentColor"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 ',
+        '7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646',
+        '-6.647a.5.5 0 0 1 .708 0"/></svg>'
+      ))
+    ),
+    htmltools::tags$span(label)
+  )
+}
+
 #' The cell paint, as one vectorized `function(v) list(bg =, fg =)`.
 #'
 #' TWO sources, and the board wins. When the board's scale map binds the
@@ -290,29 +315,33 @@ heatmap_html <- function(data, row = NULL, col = NULL, color = NULL,
   fun <- hmb_paint(prep, data, scale_map)
 
   # ---- toolbar --------------------------------------------------------
+  # Design-system primitives only (blockr.docs/design-system): a number
+  # field is `.blockr-num-input` inside a bordered wrap, committing on
+  # Enter / blur via Blockr.textCommit -- the slice block's "n rows"
+  # control, and the reason a slider is wrong here: "top 25" is a value
+  # you type, not one you drag to. Booleans are `.blockr-checkbox` (a data
+  # option, not a value pill). No bespoke badge: the field shows the value.
   n_terms <- prep$n_terms_total
-  slider_max <- min(400L, max(n_terms, 1L))
-  slider_min <- min(5L, slider_max)
-  slider_val <- min(max(as.integer(top_n), slider_min), slider_max)
+  top_max <- max(n_terms, 1L)
+  top_val <- min(max(as.integer(top_n), 1L), top_max)
   toolbar <- htmltools::tags$div(
     class = "hmb-toolbar",
     htmltools::tags$span(class = "hmb-tb-label", "Top n"),
-    htmltools::tags$input(
-      type = "range", class = "hmb-topn",
-      min = slider_min, max = slider_max, value = slider_val
-    ),
-    htmltools::tags$span(class = "hmb-topn-badge", slider_val),
-    htmltools::tags$label(
-      class = "hmb-tb-check",
+    htmltools::tags$div(
+      # The wrap carries the border and hosts the Enter chip textCommit
+      # inserts next to the input (slice block's .slb-n-wrap).
+      class = "hmb-topn-wrap",
       htmltools::tags$input(
-        type = "checkbox", class = "hmb-nums",
-        checked = if (isTRUE(cell_numbers)) NA
-      ),
-      "Cell numbers"
+        type = "number", class = "blockr-num-input hmb-topn",
+        min = 1L, max = top_max, step = 1L, value = top_val,
+        title = paste0("Columns shown, most frequent first (1-", top_max,
+                       "). Enter to apply.")
+      )
     ),
+    hmb_checkbox("hmb-nums", "Cell numbers", cell_numbers),
     htmltools::tags$span(class = "hmb-tb-spacer"),
     htmltools::tags$input(
-      type = "search", class = "hmb-search", placeholder = "Search…"
+      type = "search", class = "hmb-search", placeholder = "Search\u2026"
     ),
     download_slot
   )

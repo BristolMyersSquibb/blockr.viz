@@ -51,8 +51,12 @@ test_that("heatmap_html renders legend, rail, toolbar, and no dashes", {
   expect_match(html, "hmb-legend", fixed = TRUE)
   expect_match(html, "MODERATE", fixed = TRUE)     # legend decodes levels
   expect_match(html, 'class="hmb-rail" rowspan="2"', fixed = TRUE)
-  expect_match(html, "hmb-topn", fixed = TRUE)     # Top-n slider
-  expect_match(html, "hmb-nums", fixed = TRUE)     # cell-numbers toggle
+  # Design-system controls, not bespoke ones: a number field (never a
+  # slider -- "top 25" is typed, not dragged) and a real checkbox.
+  expect_match(html, "blockr-num-input hmb-topn", fixed = TRUE)
+  expect_no_match(html, 'type="range"', fixed = TRUE)
+  expect_match(html, "blockr-checkbox hmb-nums", fixed = TRUE)
+  expect_match(html, "blockr-checkbox__box", fixed = TRUE)
   expect_false(grepl("&mdash;", html, fixed = TRUE))
   # empty cell renders as a bare tile, no text span
   expect_match(html, '<td class="hmb-c"></td>', fixed = TRUE)
@@ -70,6 +74,17 @@ test_that("heatmap_html paints by the worst level, not the count", {
   sev_cell <- grep(">1<", grep("color:#ffffff", cells, value = TRUE),
                    value = TRUE)
   expect_length(sev_cell, 1L)
+})
+
+test_that("the Top n field is bounded by the terms actually available", {
+  d <- hm_toy()
+  html <- as.character(heatmap_html(
+    d, row = "USUBJID", col = "AEDECOD", top_n = 25, elem_id = "hm-n"
+  ))
+  # two distinct terms in the toy frame, so 25 clamps to 2 -- the field
+  # can never ask for columns that do not exist
+  expect_match(html, 'max="2"', fixed = TRUE)
+  expect_match(html, 'value="2"', fixed = TRUE)
 })
 
 test_that("cell_numbers = FALSE marks the wrapper", {
