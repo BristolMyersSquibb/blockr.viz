@@ -59,7 +59,21 @@
   width: 150px;
   box-sizing: border-box;
 }
-.hmb-toolbar .blockr-gear-header { display: inline-flex; }
+/* The gear ships stand-alone at 26px; beside the 30px toolbar controls
+   (number field, search, download) it adopts the control height, exactly
+   as the table chrome does (table.css). Otherwise one control in the row
+   sits 4px short. */
+.hmb-toolbar .blockr-gear-header { display: inline-flex; flex-shrink: 0; }
+.hmb-toolbar .blockr-gear-header .blockr-gear-btn {
+  width: var(--blockr-control-h-sm, 30px);
+  height: var(--blockr-control-h-sm, 30px);
+}
+/* Same for the download control, which the shared dl chrome also sizes
+   at 30px -- keep it explicit so the row cannot drift. */
+.hmb-toolbar :is(a.blockr-dl-xlsx, summary.blockr-dl-xlsx) {
+  width: var(--blockr-control-h-sm, 30px);
+  height: var(--blockr-control-h-sm, 30px);
+}
 
 /* Legend (summarize-table vocabulary: uppercase group title + swatches). */
 .hmb-legend {
