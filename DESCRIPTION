@@ -39,6 +39,7 @@ Imports:
 Suggests:
     base64enc,
     blockr.ai,
+    blockr.assistant,
     blockr.dag,
     blockr.dock,
     blockr.extra,
@@ -62,6 +63,7 @@ Suggests:
     withr
 Remotes:
     BristolMyersSquibb/blockr.core,
+    BristolMyersSquibb/blockr.assistant,
     BristolMyersSquibb/blockr.dplyr,
     BristolMyersSquibb/blockr.ai,
     BristolMyersSquibb/blockr.ui,
