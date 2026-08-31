@@ -76,14 +76,15 @@ chart_set_args <- function(state, nms) {
 #' @param x A `chart_block`.
 #' @param board Board snapshot, for link metadata.
 #' @param id Block id on the board.
-#' @param state Live block state, or `NULL`.
 #' @param ... Passed on.
+#' @param state Live block state, or `NULL`. Argument order follows the
+#'   generic, which takes it after the dots, so it is always named.
 #'
 #' @return Character vector of lines.
 #'
 #' @exportS3Method blockr.assistant::describe_block
 #' @name describe_block.chart_block
-describe_block.chart_block <- function(x, board, id, state = NULL, ...) {
+describe_block.chart_block <- function(x, board, id, ..., state = NULL) {
 
   if (!length(state)) {
     return(NextMethod())

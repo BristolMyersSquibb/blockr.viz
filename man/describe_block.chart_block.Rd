@@ -4,7 +4,7 @@
 \alias{describe_block.chart_block}
 \title{Describe a chart block for the assistant}
 \usage{
-\method{describe_block}{chart_block}(x, board, id, state = NULL, ...)
+\method{describe_block}{chart_block}(x, board, id, ..., state = NULL)
 }
 \arguments{
 \item{x}{A \code{chart_block}.}
@@ -13,9 +13,10 @@
 
 \item{id}{Block id on the board.}
 
-\item{state}{Live block state, or \code{NULL}.}
-
 \item{...}{Passed on.}
+
+\item{state}{Live block state, or \code{NULL}. Argument order follows the
+generic, which takes it after the dots, so it is always named.}
 }
 \value{
 Character vector of lines.
