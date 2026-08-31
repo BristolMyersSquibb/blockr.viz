@@ -601,7 +601,15 @@
         var k = null;
         try { k = JSON.parse(th.getAttribute("data-dd-colkeys") || ""); }
         catch (err) { k = null; }
-        if (k && (keysPrefixOf(keys, k) || keysPrefixOf(k, keys))) {
+        // Only what the claim COVERS, not what covers the claim. The reverse
+        // test used to be here too, so clicking one leaf also lit every
+        // header whose claim contains it: the spanner above it, and any
+        // sibling claiming less (an "Any Grade" column claims the arm alone,
+        // so it contains every grade in that arm). Three headers went active
+        // for a one-cell click, and with the spanner drawn as a tile the arm
+        // read as selected when it was not. Clicking the SPANNER still lights
+        // its leaves -- that direction is the forward test.
+        if (k && keysPrefixOf(keys, k)) {
           th.classList.add("dt-col-active");
         }
       });
