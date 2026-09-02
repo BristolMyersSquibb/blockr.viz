@@ -234,7 +234,9 @@ static_chart <- function(data,
 
   p <- gg_apply_titles(p, title, subtitle, caption, data)
 
-  p <- p + gg_theme() + gg_grid_theme(chart_type, horiz)
+  p <- p + gg_theme() + gg_grid_theme(chart_type, horiz) +
+    gg_x_label_theme(data, chart_type, horiz, group, facet,
+                     count_on, count_col, func)
 
   if (!is.null(facet)) {
     # The canvas boxes each panel in a hairline (.dd-facet border); added
@@ -272,6 +274,112 @@ gg_band_px <- function(n_groups, n_panels = 1L) {
   ncol <- ceiling(sqrt(max(1L, n_panels))) # facet_wrap's default grid
   plot_px <- (w_in * 96) / ncol - 130      # axis gutter + margins
   max(20, plot_px / max(1L, n_groups))
+}
+
+# -- category labels on a vertical axis --------------------------------------
+
+# The text actually drawn under each category: the level, or "Level (n)"
+# when the block asks for observation counts on the axis.
+gg_cat_labels <- function(data, group, count_on, count_col, func) {
+
+  lv <- dd_levels(data[[group]])
+
+  if (!count_on %in% c("axis", "both")) {
+    return(lv)
+  }
+
+  as.character(gg_count_labels(data, group, count_col, func)[lv])
+}
+
+# Widest of `x` in CSS pixels at `size` pt. systemfonts measures the face
+# that will actually draw it; without systemfonts, 0.55 em per character is
+# near enough to decide a rotation.
+gg_text_px <- function(x, size) {
+
+  x <- as.character(x)
+  x <- x[!is.na(x)]
+
+  if (!length(x)) {
+    return(0)
+  }
+
+  if (requireNamespace("systemfonts", quietly = TRUE)) {
+    return(max(systemfonts::string_width(x, size = size, res = 96)))
+  }
+
+  max(nchar(x)) * size * (96 / 72) * 0.55
+}
+
+# Do a vertical layout's category labels fit their own columns? The canvas
+# asks the same question (chart.js _xAxisLabels): widest label plus 8px of
+# padding against the per-category slot. `slot` is the band gg_band_px()
+# sizes marks with, so both answers come off one geometry.
+gg_x_labels_fit <- function(labels, n_panels, size_pt) {
+  gg_text_px(labels, size_pt) + 8 <= gg_band_px(length(labels), n_panels)
+}
+
+# Cut each label to `cap` CSS px at `size` pt, ending in the ellipsis the
+# canvas uses. Character by character, because a proportional face gives no
+# usable character count. The cap is the canvas' 160px: past it the category
+# axis is the wrong home for the text either way.
+gg_truncate_px <- function(x, size, cap = 160) {
+
+  vapply(as.character(x), function(s) {
+
+    if (is.na(s) || gg_text_px(s, size) <= cap) {
+      return(s)
+    }
+
+    for (k in rev(seq_len(nchar(s)))) {
+      cut <- paste0(substr(s, 1L, k), "\u2026")
+      if (gg_text_px(cut, size) <= cap) {
+        return(cut)
+      }
+    }
+
+    "\u2026"
+  }, character(1L), USE.NAMES = FALSE)
+}
+
+# The drawn labels for a turned category axis: NULL when they fit flat (the
+# caller keeps whatever it had), a level -> text vector cut to the cap when
+# they do not. Rotated text spends its width on the plot's height, and a
+# slide cannot grow the way the canvas panel does, so the cap is what keeps
+# a chart from becoming a label rack.
+gg_turned_labels <- function(data, group, count_on, count_col, func,
+                             n_panels, size_pt) {
+
+  labels <- gg_cat_labels(data, group, count_on, count_col, func)
+
+  if (gg_x_labels_fit(labels, n_panels, size_pt)) {
+    return(NULL)
+  }
+
+  stats::setNames(gg_truncate_px(labels, size_pt), dd_levels(data[[group]]))
+}
+
+# The canvas turns a vertical layout's category labels 90 degrees when they
+# do not fit flat, and never draws them diagonal. An export has to make the
+# same call: six treatment arms print on top of each other otherwise.
+gg_x_label_theme <- function(data, chart_type, horiz, group, facet,
+                             count_on, count_col, func) {
+
+  if (horiz || is.null(group) || !chart_type %in% c("bar", "boxplot")) {
+    return(NULL)
+  }
+
+  labels <- gg_cat_labels(data, group, count_on,
+                          count_col, if (identical(chart_type, "bar")) func)
+
+  n_panels <- if (is.null(facet)) 1L else length(dd_levels(data[[facet]]))
+
+  if (gg_x_labels_fit(labels, n_panels, gg_px_pt(11))) {
+    return(NULL)
+  }
+
+  ggplot2::theme(axis.text.x = ggplot2::element_text(
+    angle = 90, hjust = 1, vjust = 0.5
+  ))
 }
 
 # Structural colors, verbatim from chart.js.
@@ -680,14 +788,14 @@ gg_bar <- function(data, group, color, facet, value_col, func,
   # at 14px each with a 12px gap between groups. Vertical: same fractions,
   # but capped at barMaxWidth 48px of the device band.
   n_colors <- if (is.null(color)) 1L else length(dd_levels(data[[color]]))
+  n_panels <- if (is.null(facet)) 1L else length(dd_levels(data[[facet]]))
   width <- if (grouped) {
     (n_colors * 14) / (n_colors * 14 + 12)
   } else {
     0.6
   }
   if (!horiz) {
-    band <- gg_band_px(length(lv), if (is.null(facet)) 1L else
-      length(dd_levels(data[[facet]])))
+    band <- gg_band_px(length(lv), n_panels)
     width <- if (grouped) {
       min(0.7, n_colors * 48 / band)
     } else {
@@ -753,7 +861,9 @@ gg_bar <- function(data, group, color, facet, value_col, func,
     ) + ggplot2::labs(y = NULL)
   } else {
     p + ggplot2::scale_x_discrete(
-      labels = axis_labs %||% ggplot2::waiver()
+      labels = gg_turned_labels(data, group, count_on, count_col, func,
+                                n_panels, gg_px_pt(11)) %||%
+        axis_labs %||% ggplot2::waiver()
     ) + ggplot2::labs(x = NULL)
   }
 }
@@ -902,6 +1012,7 @@ gg_boxplot <- function(data, group, color, facet, value_col,
 
   lwd <- gg_px_lw(1)
   n_colors <- if (is.null(color)) 1L else length(dd_levels(data[[color]]))
+  n_panels <- if (is.null(facet)) 1L else length(dd_levels(data[[facet]]))
   # Box widths follow the ECharts layout: available = 80% of the band - 2,
   # a 30% gap between split boxes, each box clamped to [7, 50] px of the
   # device band. Horizontal keeps the fixed 28px-slot fraction. Plain
@@ -910,8 +1021,7 @@ gg_boxplot <- function(data, group, color, facet, value_col,
     bw <- 0.73 / max(1L, n_colors)
     dodge <- ggplot2::position_dodge(width = 0.75)
   } else {
-    band <- gg_band_px(length(lv), if (is.null(facet)) 1L else
-      length(dd_levels(data[[facet]])))
+    band <- gg_band_px(length(lv), n_panels)
     avail <- band * 0.8 - 2
     gap <- avail / n_colors * 0.3
     bx <- min(50, max(7, (avail - gap * (n_colors - 1)) / n_colors))
@@ -1001,7 +1111,9 @@ gg_boxplot <- function(data, group, color, facet, value_col,
       ggplot2::labs(y = NULL)
   } else {
     p + ggplot2::scale_x_discrete(
-      labels = axis_labs %||% ggplot2::waiver()
+      labels = gg_turned_labels(data, group, count_on, count_col, NULL,
+                                n_panels, gg_px_pt(11)) %||%
+        axis_labs %||% ggplot2::waiver()
     ) +
       gg_nice_scale(vals, "y", val_lab) +
       ggplot2::labs(x = NULL)

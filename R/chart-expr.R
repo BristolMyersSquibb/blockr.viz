@@ -191,6 +191,12 @@ chart_expr <- function(var = "data",
 
   parts <- c(parts, ce_theme())
 
+  # A turned category axis is a theme setting, so it has to come after
+  # theme_minimal(), which replaces the theme wholesale.
+  if (isTRUE(fam$rotate_x)) {
+    parts <- c(parts, list(ce_x_rotate()))
+  }
+
   out <- Reduce(function(a, b) call("+", a, b), parts, init = head)
 
   if (isTRUE(qualify)) out else ce_unqualify(out)
@@ -558,6 +564,39 @@ ce_labs <- function(axis_labs, st, chart_type, title, subtitle, caption) {
   ))
 }
 
+# Vertical category labels, emitted when the flat ones would collide. The
+# canvas turns them (chart.js _xAxisLabels) and so does static_chart(); the
+# compiled chart is the third renderer of the same picture.
+ce_x_rotate <- function() {
+  ce_call(
+    "ggplot2::theme",
+    axis.text.x = ce_call("ggplot2::element_text",
+                          angle = 90, hjust = 1, vjust = 0.5)
+  )
+}
+
+# The turned labels, or NULL when the flat ones fit. Measured the way
+# static_chart() measures them but at the axis-text size ce_theme() draws:
+# theme_minimal()'s 0.8 em of base_size 11. Only a snapshot can answer it --
+# without one the emitted code keeps the labels flat, the same way it leaves
+# other data-dependent choices to run time.
+ce_turned_labels <- function(st, horiz, func = NULL) {
+
+  if (horiz || is.null(st$data) || is.null(st$group) ||
+        is.null(st$data[[st$group]])) {
+    return(NULL)
+  }
+
+  n_panels <- if (is.null(st$facet)) {
+    1L
+  } else {
+    length(dd_levels(st$data[[st$facet]]))
+  }
+
+  gg_turned_labels(st$data, st$group, st$count_on, st$count_col, func,
+                   n_panels, 11 * 0.8)
+}
+
 # Print typography, the compact subset of gg_theme() a human would write.
 ce_theme <- function() {
   list(
@@ -673,7 +712,10 @@ ce_bar <- function(st) {
   pct <- identical(st$bar_mode, "percent") && !is.null(st$color)
   pct_labels <- quote(function(v) paste0(round(100 * v), "%"))
 
-  cat_labels <- ce_axis_labels(st)
+  # A turned axis carries its own label text: cut to the cap, and baked as
+  # a literal, since only the snapshot could measure it.
+  turned <- ce_turned_labels(st, horiz, st$func)
+  cat_labels <- if (is.null(turned)) ce_axis_labels(st) else ce_vec(turned)
 
   if (horiz) {
     if (!is.null(cat_labels)) {
@@ -712,7 +754,8 @@ ce_bar <- function(st) {
     layers = layers,
     scale_aes = if (!is.null(st$color)) "fill",
     scale_col = st$color,
-    axis_labs = axis_labs
+    axis_labs = axis_labs,
+    rotate_x = !is.null(turned)
   )
 }
 
@@ -778,7 +821,9 @@ ce_boxplot <- function(st) {
     )))
   }
 
-  cat_labels <- ce_axis_labels(st)
+  turned <- ce_turned_labels(st, horiz)
+  cat_labels <- if (is.null(turned)) ce_axis_labels(st) else ce_vec(turned)
+
   if (!is.null(cat_labels)) {
     layers <- c(layers, list(ce_call(
       if (horiz) "ggplot2::scale_y_discrete" else "ggplot2::scale_x_discrete",
@@ -798,7 +843,8 @@ ce_boxplot <- function(st) {
     layers = layers,
     scale_aes = if (!is.null(st$color)) "fill",
     scale_col = st$color,
-    axis_labs = axis_labs
+    axis_labs = axis_labs,
+    rotate_x = !is.null(turned)
   )
 }
 

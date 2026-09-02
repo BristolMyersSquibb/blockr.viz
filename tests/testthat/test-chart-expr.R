@@ -262,3 +262,37 @@ test_that("the emitted pipeline round-trips through parse", {
   p <- ce_eval(reparsed, ce_iris())
   expect_s3_class(p, "gg")
 })
+
+test_that("the compiled chart turns and cuts the same labels", {
+
+  long <- paste0("GROUP", LETTERS[1:6],
+                 " BMS-986507 2.0mg+Pumitamig 1500 or 1200mg")
+  d <- data.frame(k = factor(rep(long, each = 4L), levels = long),
+                  v = rep(c(1, 5, 9, 4, 6, 3), each = 4L))
+
+  p <- ce_eval(chart_expr("chart1", "boxplot", group = "k", value = "v",
+                          data = d, qualify = TRUE), d)
+  expect_identical(p$theme$axis.text.x$angle, 90)
+
+  # Both renderers turn and cut; each measures at the size IT draws axis
+  # text (8.25pt here, 8.8pt in the compiled theme), so the cut lands a
+  # character apart. What has to agree is the order and the arms staying
+  # distinguishable.
+  drawn <- as.character(ce_cats(p, "x"))
+  expect_true(all(grepl("\u2026$", drawn)))
+  expect_identical(length(unique(drawn)), 6L)
+  expect_identical(sub("\u2026$", "", drawn),
+                   substr(long, 1L, nchar(sub("\u2026$", "", drawn[[1L]]))))
+
+  # Without a snapshot there is nothing to measure, so the labels stay flat
+  # and whole rather than being cut on a guess.
+  live <- chart_expr("chart1", "boxplot", group = "k", value = "v",
+                     qualify = TRUE)
+  expect_no_match(chart_code(live), "angle", fixed = TRUE)
+
+  short <- data.frame(k = factor(rep(c("A", "B", "C"), each = 4L)),
+                      v = rep(c(1, 5, 9), each = 4L))
+  flat <- chart_expr("chart1", "boxplot", group = "k", value = "v",
+                     data = short, qualify = TRUE)
+  expect_no_match(chart_code(flat), "angle", fixed = TRUE)
+})

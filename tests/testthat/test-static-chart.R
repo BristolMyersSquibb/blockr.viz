@@ -260,3 +260,36 @@ test_that("pct_of picks the same denominator in the static chart", {
   expect_equal(unname(w[["USA"]]), 4 / 7)
   expect_equal(unname(w[["JPN"]]), 3 / 7)
 })
+
+# The canvas turns a vertical layout's category labels when they do not fit
+# their column, and truncates the turned ones at a cap (chart.js
+# _xAxisLabels). A slide has the same problem and less room to grow.
+test_that("long category labels turn 90 degrees and cut at the cap", {
+
+  long <- paste0("GROUP", LETTERS[1:6],
+                 " BMS-986507 2.0mg+Pumitamig 1500 or 1200mg")
+  d <- data.frame(k = factor(rep(long, each = 4L), levels = long),
+                  v = rep(c(1, 5, 9, 4, 6, 3), each = 4L))
+
+  p <- static_chart(d, "boxplot", group = "k", value = "v")
+  expect_identical(p$theme$axis.text.x$angle, 90)
+
+  drawn <- built(p)$layout$panel_params[[1L]]$x$get_labels()
+  expect_true(all(grepl("\u2026$", drawn)))
+  # Cut, not collapsed: the arms are still told apart.
+  expect_identical(length(unique(drawn)), 6L)
+
+  short <- data.frame(k = factor(rep(c("A", "B", "C"), each = 4L)),
+                      v = rep(c(1, 5, 9), each = 4L))
+  flat <- static_chart(short, "boxplot", group = "k", value = "v")
+  expect_null(flat$theme$axis.text.x$angle)
+  expect_identical(built(flat)$layout$panel_params[[1L]]$x$get_labels(),
+                   c("A", "B", "C"))
+
+  # Horizontal reads them left to right, so nothing turns and nothing is cut.
+  h <- static_chart(d, "boxplot", group = "k", value = "v",
+                    orientation = "horizontal")
+  expect_null(h$theme$axis.text.x$angle)
+  expect_identical(built(h)$layout$panel_params[[1L]]$y$get_labels(),
+                   rev(long))
+})
