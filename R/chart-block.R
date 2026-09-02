@@ -515,7 +515,7 @@ new_chart_block <- function(
   filter_range <- null_state(filter_range)
   filter_point <- null_state(filter_point)
 
-  blockr.core::new_transform_block(
+  res <- blockr.core::new_transform_block(
     server = function(id, data) {
       shiny::moduleServer(id, function(input, output, session) {
         ns <- session$ns
@@ -1644,6 +1644,32 @@ new_chart_block <- function(
     class = "chart_block",
     ...
   )
+
+  # Take the retired names back OFF the block, so a board that carries them
+  # loses them the next time it is saved.
+  #
+  # Without this they are immortal. They arrive through `...`, `...` is
+  # forwarded above, and blockr.core stores unrecognised dots as block
+  # ATTRIBUTES. `blockr_ser.block()` appends every attribute outside
+  # `internal_block_attributes()` to the payload, so a re-save wrote `value`
+  # AND `metric`, `func` AND `agg_fn` -- the old names came back on the next
+  # open, warned again, and were written out again. Every workflow warned on
+  # every visit, with no way out except editing the stored JSON.
+  #
+  # Making them formals is not the alternative: `block_ctor_inputs()` is every
+  # formal bar `...`, so they would serialize as state instead. Nor is
+  # filtering the dots before forwarding them, which would mean rebuilding a
+  # 1100-line call through `do.call()`. Stripping the attribute after
+  # construction is the whole of it, and it is where the leak actually is:
+  # these names are a transport for `value` / `func`, and nothing reads them
+  # after this function returns.
+  #
+  # So a stale board heals by being opened and saved once. The warning above
+  # is what says a board has not been.
+  attr(res, "metric") <- NULL
+  attr(res, "agg_fn") <- NULL
+
+  res
 }
 
 #' Compute smoother line points per group for a scatter chart
