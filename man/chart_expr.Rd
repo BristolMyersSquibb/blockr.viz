@@ -17,8 +17,8 @@ chart_expr(
   y = NULL,
   series = NULL,
   bar_mode = "stacked",
-  orientation = "horizontal",
-  sort_by = "value",
+  orientation = NULL,
+  sort_by = NULL,
   sort_dir = NULL,
   count_on = "off",
   count_col = NULL,
@@ -52,9 +52,9 @@ emitted code.}
 as in \code{\link[=new_chart_block]{new_chart_block()}}.}
 
 \item{bar_mode, orientation, sort_by, sort_dir}{Bar layout and category
-ordering, as in \code{\link[=new_chart_block]{new_chart_block()}}. \code{orientation = NULL} resolves per
-type like the canvas: horizontal for bars, vertical for boxplots.
-\code{sort_by = NULL} means \code{"alpha"} (level order for factors).}
+ordering, as in \code{\link[=new_chart_block]{new_chart_block()}}. Unset values resolve per type like
+the canvas: a bar lies horizontal and sorts by value, descending; a
+boxplot stands vertical and keeps the data's own order, ascending.}
 
 \item{count_on, count_col}{Observation-count labels, as in
 \code{\link[=new_chart_block]{new_chart_block()}}.}

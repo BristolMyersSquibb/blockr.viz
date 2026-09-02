@@ -41,9 +41,9 @@
 #' @param chart_type,group,color,facet,value,func,x,y,series Chart state,
 #'   as in [new_chart_block()].
 #' @param bar_mode,orientation,sort_by,sort_dir Bar layout and category
-#'   ordering, as in [new_chart_block()]. `orientation = NULL` resolves per
-#'   type like the canvas: horizontal for bars, vertical for boxplots.
-#'   `sort_by = NULL` means `"alpha"` (level order for factors).
+#'   ordering, as in [new_chart_block()]. Unset values resolve per type like
+#'   the canvas: a bar lies horizontal and sorts by value, descending; a
+#'   boxplot stands vertical and keeps the data's own order, ascending.
 #' @param count_on,count_col Observation-count labels, as in
 #'   [new_chart_block()].
 #' @param facet_scales Panel scales, passed straight to

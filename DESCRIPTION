@@ -1,6 +1,6 @@
 Package: blockr.viz
 Title: Visualization and Render Blocks for Blockr
-Version: 0.2.82
+Version: 0.2.83
 Authors@R:
     person(given = "Christoph",
            family = "Sax",

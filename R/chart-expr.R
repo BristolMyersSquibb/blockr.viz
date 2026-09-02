@@ -72,8 +72,8 @@ chart_expr <- function(var = "data",
                        y = NULL,
                        series = NULL,
                        bar_mode = "stacked",
-                       orientation = "horizontal",
-                       sort_by = "value",
+                       orientation = NULL,
+                       sort_by = NULL,
                        sort_dir = NULL,
                        count_on = "off",
                        count_col = NULL,
@@ -98,6 +98,21 @@ chart_expr <- function(var = "data",
 
   chart_type <- (chart_type %||% "bar")[1L]
 
+  # Unset state resolves per family, as the canvas resolves it
+  # (_ensureFamilyDefaults / _ensureDistributionMetric in chart.js) and as
+  # static_chart() mirrors it: bars sort by value descending and lie
+  # horizontal, distribution marks keep the data's own order ascending and
+  # stand vertical. A compiler that skips this emits a different picture
+  # from the one on screen.
+  if (identical(chart_type, "boxplot")) {
+    orientation <- orientation %||% "vertical"
+    sort_by <- sort_by %||% "data"
+    sort_dir <- sort_dir %||% "asc"
+  } else {
+    orientation <- orientation %||% "horizontal"
+    sort_by <- sort_by %||% "value"
+  }
+
   col <- function(v) ce_col(v, data)
 
   group <- col(group)
@@ -117,8 +132,8 @@ chart_expr <- function(var = "data",
     value_col = value_col, func = func %||% "count",
     x = x, y = y, series = series,
     bar_mode = bar_mode %||% "stacked",
-    orientation = orientation %||% "horizontal",
-    sort_by = sort_by %||% "value", sort_dir = sort_dir,
+    orientation = orientation,
+    sort_by = sort_by, sort_dir = sort_dir,
     count_on = count_on %||% "off", count_col = count_col,
     box_points = box_points %||% "none", smoother = smoother %||% "none",
     identity_line = isTRUE(identity_line),
@@ -333,13 +348,34 @@ ce_cat_axis <- function(g, st, metric, fun, horiz, extra = NULL) {
 
   gs <- as.name(g)
 
-  if (identical(st$sort_by, "alpha")) {
-    # Alphabetical, first name on top of a horizontal chart = descending
-    # levels. sort_dir flips.
-    desc <- if (horiz) !identical(st$sort_dir, "desc") else
-      identical(st$sort_dir, "desc")
-    lv <- ce_call("base::sort", ce_call("base::unique", gs),
-                  decreasing = if (desc) TRUE else NULL)
+  # "data" and "alpha" name a LEVEL order, not a metric reorder: the order
+  # the data carries (factor levels, else first seen) and the alphabetical
+  # one (factor levels again -- the canvas contract dd_levels() states).
+  # With a snapshot the order bakes in as a literal, the way colours and
+  # count labels already do; without one the emitted code recomputes it.
+  if (st$sort_by %in% c("data", "alpha")) {
+
+    if (!is.null(st$data) && !is.null(st$data[[g]])) {
+      lv <- gg_sorted_levels(NULL, st$data, g, st$sort_by, st$sort_dir,
+                             flip = horiz)
+      return(ce_call("base::factor", gs, levels = ce_vec(lv)))
+    }
+
+    # A horizontal category axis reads top down and a discrete ggplot y axis
+    # bottom up, so horizontal reverses (gg_sorted_levels()' `flip`).
+    desc <- xor(identical(st$sort_dir, "desc"), isTRUE(horiz))
+
+    lv <- if (identical(st$sort_by, "alpha")) {
+      ce_call("base::sort", ce_call("base::unique", gs),
+              decreasing = if (desc) TRUE else NULL)
+    } else {
+      # Levels when the column carries them, first seen otherwise -- the
+      # base-only spelling of dd_levels(), so the code still stands alone.
+      seen <- ce_call("base::union", ce_call("base::levels", gs),
+                      ce_call("base::unique", ce_call("base::as.character", gs)))
+      if (desc) ce_call("base::rev", seen) else seen
+    }
+
     return(ce_call("base::factor", gs, levels = lv))
   }
 
@@ -692,13 +728,23 @@ ce_boxplot <- function(st) {
 
   v <- as.name(st$value_col)
 
+  # A distribution mark stands VERTICAL unless the state says otherwise --
+  # groups on the x axis, so visits and arms read left to right. Only an
+  # explicit "horizontal" flips it, the same test the canvas makes.
+  horiz <- identical(st$orientation, "horizontal")
+
   cat_axis <- ce_cat_axis(
-    st$group, st, v, "stats::median", horiz = TRUE,
+    st$group, st, v, "stats::median", horiz = horiz,
     extra = list(na.rm = TRUE)
   )
 
-  aes <- ce_aes(x = v, y = cat_axis,
-                fill = if (!is.null(st$color)) as.name(st$color))
+  fill <- if (!is.null(st$color)) as.name(st$color)
+
+  aes <- if (horiz) {
+    ce_aes(x = v, y = cat_axis, fill = fill)
+  } else {
+    ce_aes(x = cat_axis, y = v, fill = fill)
+  }
 
   box_args <- list(
     outlier.shape = if (identical(st$box_points, "outliers")) 19 else NA,
@@ -712,10 +758,19 @@ ce_boxplot <- function(st) {
   layers <- list(do.call(ce_call, c(list("ggplot2::geom_boxplot"), box_args), quote = TRUE))
 
   if (identical(st$box_points, "all")) {
+    # Jitter runs ACROSS the category axis and nowhere else: a point moved
+    # along the value axis is a point that reads off its own value.
     pos <- if (!is.null(st$color)) {
-      ce_call("ggplot2::position_jitterdodge", jitter.height = 0.15)
+      if (horiz) {
+        ce_call("ggplot2::position_jitterdodge",
+                jitter.height = 0.15, jitter.width = 0)
+      } else {
+        ce_call("ggplot2::position_jitterdodge", jitter.width = 0.15)
+      }
+    } else if (horiz) {
+      ce_call("ggplot2::position_jitter", height = 0.15, width = 0)
     } else {
-      ce_call("ggplot2::position_jitter", height = 0.15)
+      ce_call("ggplot2::position_jitter", width = 0.15, height = 0)
     }
     layers <- c(layers, list(ce_call(
       "ggplot2::geom_point",
@@ -725,9 +780,16 @@ ce_boxplot <- function(st) {
 
   cat_labels <- ce_axis_labels(st)
   if (!is.null(cat_labels)) {
-    layers <- c(layers, list(
-      ce_call("ggplot2::scale_y_discrete", labels = cat_labels)
-    ))
+    layers <- c(layers, list(ce_call(
+      if (horiz) "ggplot2::scale_y_discrete" else "ggplot2::scale_x_discrete",
+      labels = cat_labels
+    )))
+  }
+
+  axis_labs <- if (horiz) {
+    list(x = st$value_col, y = NULL)
+  } else {
+    list(x = NULL, y = st$value_col)
   }
 
   list(
@@ -736,7 +798,7 @@ ce_boxplot <- function(st) {
     layers = layers,
     scale_aes = if (!is.null(st$color)) "fill",
     scale_col = st$color,
-    axis_labs = list(x = st$value_col, y = NULL)
+    axis_labs = axis_labs
   )
 }
 

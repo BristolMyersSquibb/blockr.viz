@@ -20,6 +20,12 @@ ce_eval <- function(ex, d, var = "chart1") {
 
 built <- function(p) ggplot2::ggplot_build(p)
 
+# The tick labels of one axis, in ggplot's own order (discrete axes list
+# bottom-up / left-to-right).
+ce_cats <- function(p, axis) {
+  built(p)$layout$panel_params[[1L]][[axis]]$get_labels()
+}
+
 test_that("every family compiles, evaluates bare, and builds", {
   d <- ce_iris()
 
@@ -96,6 +102,52 @@ test_that("value sort puts the largest category on top, both directions", {
 
   lv_asc <- lv_of(sort_dir = "asc")
   expect_identical(lv_asc[[length(lv_asc)]], "small")
+})
+
+# The canvas resolves unset state per family: a bar lies horizontal and
+# sorts by value, a boxplot stands vertical and keeps the data's own order
+# (_ensureDistributionMetric). A compiler that skips that emits a picture
+# the screen never showed.
+test_that("an unset boxplot stands vertical in data order, like static_chart", {
+  d <- data.frame(
+    k = factor(rep(c("20 mg", "5 mg", "10 mg"), each = 4L),
+               levels = c("5 mg", "10 mg", "20 mg")),
+    v = rep(c(9, 1, 5), each = 4L)
+  )
+
+  p <- ce_eval(chart_expr("chart1", "boxplot", group = "k", value = "v",
+                          data = d, qualify = TRUE), d)
+  # Categories on x, in the factor's levels -- not reordered by the median.
+  expect_identical(ce_cats(p, "x"), levels(d$k))
+  expect_identical(
+    ce_cats(p, "x"),
+    ce_cats(static_chart(d, "boxplot", group = "k", value = "v"), "x")
+  )
+
+  h <- ce_eval(chart_expr("chart1", "boxplot", group = "k", value = "v",
+                          orientation = "horizontal", data = d,
+                          qualify = TRUE), d)
+  # Horizontal puts them on y, first level at the top = last in ggplot's
+  # bottom-up listing.
+  expect_identical(ce_cats(h, "y"), rev(levels(d$k)))
+  expect_identical(
+    ce_cats(h, "y"),
+    ce_cats(static_chart(d, "boxplot", group = "k", value = "v",
+                         orientation = "horizontal"), "y")
+  )
+})
+
+test_that("the data order recomputes from the column with no snapshot", {
+  fct <- data.frame(k = factor(c("b", "a"), levels = c("b", "a")), v = c(1, 2))
+  p <- ce_eval(chart_expr("chart1", "boxplot", group = "k", value = "v",
+                          qualify = TRUE), fct)
+  expect_identical(ce_cats(p, "x"), c("b", "a"))
+
+  # A character column has no levels: first seen, not alphabetical.
+  chr <- data.frame(k = c("b", "a"), v = c(1, 2))
+  q <- ce_eval(chart_expr("chart1", "boxplot", group = "k", value = "v",
+                          qualify = TRUE), chr)
+  expect_identical(ce_cats(q, "x"), c("b", "a"))
 })
 
 test_that("identity heights collapse duplicates like the canvas", {
