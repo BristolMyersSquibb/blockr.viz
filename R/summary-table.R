@@ -440,7 +440,7 @@ summary_table <- function(data,
                           subject_var = NULL,
                           indent_details = TRUE,
                           nest_hierarchies = FALSE) {
-  fmt_to_wide(
+  out <- fmt_to_wide(
     summary_table_long(
       data,
       vars             = vars,
@@ -454,6 +454,23 @@ summary_table <- function(data,
       nest_hierarchies = nest_hierarchies
     )
   )
+
+  # The frame the table was computed from, so a click on a display row can be
+  # resolved back to the RECORDS behind it: `new_table_block(drill =
+  # "source")` hands the clicked row to [drill_source()], which reads the
+  # row's `.variable` / `.variable_level` claim ("SEX == F") and applies it
+  # here. Without this attribute that drill errors at eval time, which is how
+  # the contract is written: a producer either stamps the frame or the click
+  # is not resolvable, never a silent fallback to display rows.
+  #
+  # Stamping the INPUT is correct for this producer and would not be for
+  # every one. A composer table applies a population filter and restricts to
+  # denominator members before summarising, so its input over-selects and it
+  # must stamp what it actually summarised. `summary_table()` summarises
+  # `data` as given, so the two frames are the same frame.
+  attr(out, "source_data") <- data
+
+  out
 }
 
 # =============================================================================
