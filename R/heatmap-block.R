@@ -204,28 +204,127 @@ new_heatmap_block <- function(row = character(),
                          r_filter_values())
         })
 
+        # The chrome renders ONCE and never again: every read below is
+        # isolated, so this reactive has no dependencies at all. It must not
+        # touch the data. The dock publishes a transient `on_screen=[]` while
+        # it arranges the layout, which closes core's data gate for a tick; a
+        # chrome that read `plain_data()` would hit the gate's `req()` on that
+        # tick, return nothing, and Shiny would wipe the whole panel -- matrix,
+        # then white, then the matrix again. The chart / table / rank /
+        # summarize blocks are immune because their exhibit lives in a shell
+        # like this one, fed by a custom message.
         output$heatmap_result <- shiny::renderUI({
+          shiny::isolate(
+            hmb_chrome(
+              elem_id = ns("heatmap_block"),
+              cell_numbers = r_numbers(),
+              drill = r_drill(),
+              download = r_download(),
+              top_n = r_top_n(),
+              max_height = max_height,
+              cfg_json = hmb_cfg_json(
+                row = one_or_null(r_row()), col = one_or_null(r_col()),
+                color = one_or_null(r_color()), group = one_or_null(r_group()),
+                top_n = r_top_n(), cell_numbers = r_numbers(),
+                drill = r_drill(), download = r_download(),
+                ctrl = list(
+                  target = r_ctrl_target(),
+                  table = r_ctrl_table(),
+                  choices = dd_ctrl_choices_list(r_ctrl_choices())
+                )
+              ),
+              row_col = one_or_null(r_row()) %||% "",
+              active_values = r_filter_values(),
+              download_slot = dl_slot,
+              status = shiny::uiOutput(ns("heatmap_status"), inline = TRUE)
+            )
+          )
+        })
+
+        # The body ships over a custom message, the shape the other exhibit
+        # blocks already have (dev/table-data-push-design.md, `kind: "html"`:
+        # the payload carries markup from the SAME builders, so there is one
+        # markup source and the client wires the DOM it always has).
+        #
+        # A single plain `observe`, NOT observeEvent + channels: that exact
+        # shape is what blockr.dock's lazy-eval card probe suspends for hidden
+        # panels (see the chart and rank blocks). When the data gate is shut
+        # the `req()` below simply declines to push, and what is on screen
+        # stays on screen.
+        last_msg <- new.env(parent = emptyenv())
+        last_msg$json <- NULL
+        last_msg$rev <- 0L
+
+        push <- function(json) {
+          session$sendCustomMessage("blockr-viz-heatmap-data", list(
+            id = ns("heatmap_block"), rev = last_msg$rev, payload = json
+          ))
+        }
+
+        # The client announces itself when it binds with nothing to render.
+        # Shiny DROPS a custom message that has no registered handler yet, and
+        # heatmap-block.js only loads with the first heatmap block UI in the
+        # page -- on a board whose opening view carries none, the startup
+        # payload is lost and the identity guard below would never re-send it.
+        shiny::observeEvent(input$heatmap_block_ready, {
+          if (!is.null(last_msg$json)) push(last_msg$json)
+        })
+
+        shiny::observe({
           d <- plain_data()
           shiny::req(is.data.frame(d))
-          heatmap_html(
+          body <- hmb_body(
             d,
             row = one_or_null(r_row()), col = one_or_null(r_col()),
             color = one_or_null(r_color()), group = one_or_null(r_group()),
             top_n = r_top_n(),
-            cell_numbers = shiny::isolate(r_numbers()),
-            drill = r_drill(), download = r_download(),
-            elem_id = ns("heatmap_block"),
-            active_values = shiny::isolate(r_filter_values()),
-            status = shiny::uiOutput(ns("heatmap_status"), inline = TRUE),
-            download_slot = dl_slot,
-            scale_map = board_scale_map(),
-            ctrl = list(
-              target = r_ctrl_target(),
-              table = r_ctrl_table(),
-              choices = dd_ctrl_choices_list(r_ctrl_choices())
-            ),
-            max_height = max_height
+            scale_map = board_scale_map()
           )
+          json <- as.character(jsonlite::toJSON(
+            list(
+              err = body$err %||% "",
+              # The gear reads its state off `data-hmb-config`. The chrome
+              # stamps the state it mounted with and is never rebuilt, so the
+              # payload has to carry the current one -- a gear edit is a
+              # config change followed by a push.
+              config = hmb_cfg_json(
+                row = one_or_null(r_row()), col = one_or_null(r_col()),
+                color = one_or_null(r_color()), group = one_or_null(r_group()),
+                top_n = r_top_n(), cell_numbers = shiny::isolate(r_numbers()),
+                drill = r_drill(), download = r_download(),
+                ctrl = list(
+                  target = r_ctrl_target(),
+                  table = r_ctrl_table(),
+                  choices = dd_ctrl_choices_list(r_ctrl_choices())
+                )
+              ),
+              legend = body$legend %||% "",
+              # The <table> shell plus its rotated header (small, fiddly,
+              # stays R markup) and the cell model the client assembles the
+              # rows from. The matrix is sparse -- a 194 x 25 AE heatmap is
+              # ~460 filled cells out of 4850 -- so the model is ~7 KB where
+              # the pasted HTML was ~157 KB.
+              head = body$head %||% "",
+              model = hmb_model_payload(body$model),
+              count = body$count %||% "",
+              topMax = body$top_max %||% max(as.integer(r_top_n()), 1L),
+              topVal = body$top_val %||% max(as.integer(r_top_n()), 1L),
+              rowCol = body$row_col %||% "",
+              cols = body$cols %||% "[]",
+              # The cell-numbers flag and the active rows are applied by the
+              # JS the instant they are clicked; they travel here so a
+              # restore -- or a panel re-mount off the client-side cache --
+              # comes back in the state the server holds.
+              cellNumbers = isTRUE(shiny::isolate(r_numbers())),
+              drill = isTRUE(r_drill()),
+              active = I(as.character(unlist(shiny::isolate(r_filter_values()))))
+            ),
+            auto_unbox = TRUE, null = "null"
+          ))
+          if (identical(json, last_msg$json)) return()
+          last_msg$json <- json
+          last_msg$rev <- last_msg$rev + 1L
+          push(json)
         })
 
         list(

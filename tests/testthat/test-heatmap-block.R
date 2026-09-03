@@ -167,3 +167,115 @@ test_that("the rendered legend and cells use the declared colours", {
   expect_match(html, "#FF0000", fixed = TRUE)   # grade 5 swatch + cell
   expect_match(html, "#43978D", fixed = TRUE)
 })
+
+# ---- chrome / body split ---------------------------------------------------
+# The chrome is what keeps the panel on screen while the dock churns: it is
+# mounted once, from config alone, and the matrix arrives over the data
+# channel. A chrome that needed the data would blank the whole block on the
+# transient `on_screen=[]` the dock publishes while it arranges.
+
+test_that("the chrome mounts from config alone, with no data in reach", {
+  html <- as.character(hmb_chrome(
+    elem_id = "hm-chrome", cell_numbers = TRUE, drill = TRUE, top_n = 25L,
+    cfg_json = hmb_cfg_json(row = "USUBJID", col = "AEDECOD", top_n = 25L)
+  ))
+  # the shell: toolbar, gear-bearing attributes, and the slots the body
+  # lands in
+  expect_match(html, "hmb-toolbar", fixed = TRUE)
+  expect_match(html, "blockr-num-input hmb-topn", fixed = TRUE)
+  expect_match(html, "hmb-legend-slot", fixed = TRUE)
+  expect_match(html, "hmb-scroll", fixed = TRUE)
+  expect_match(html, "hmb-footer", fixed = TRUE)
+  expect_match(html, 'data-hmb-elem-id="hm-chrome"', fixed = TRUE)
+  expect_match(html, "USUBJID", fixed = TRUE)      # config, not data
+  # and nothing that could only come from a frame
+  expect_no_match(html, 'class="hmb-c"', fixed = TRUE)
+  expect_no_match(html, "hmb-rail", fixed = TRUE)
+  expect_no_match(html, "hmb-legend\"", fixed = TRUE)
+})
+
+test_that("the body carries the matrix, the legend and the frame's bounds", {
+  b <- hmb_body(hm_toy(), row = "USUBJID", col = "AEDECOD", color = "AESEV",
+                group = "ARM", top_n = 25L)
+  expect_null(b$err)
+  expect_match(b$table, "hmb-table", fixed = TRUE)
+  expect_match(b$table, 'class="hmb-rail" rowspan="2"', fixed = TRUE)
+  expect_match(b$legend, "hmb-legend", fixed = TRUE)
+  expect_match(b$legend, "MODERATE", fixed = TRUE)
+  # two distinct terms in the toy frame, so the ceiling is 2 whatever was
+  # asked for -- the Top n field can never offer columns that do not exist
+  expect_identical(b$top_max, 2L)
+  expect_identical(b$top_val, 2L)
+  expect_identical(b$row_col, "USUBJID")
+  expect_match(b$count, "of 2 AEDECOD", fixed = TRUE)
+  expect_match(b$cols, "USUBJID", fixed = TRUE)
+})
+
+test_that("an unrenderable frame reports through the body, not the chrome", {
+  b <- hmb_body(hm_toy(), row = NULL, col = "AEDECOD")
+  expect_identical(b$err, "Pick the row and column identities")
+  expect_null(b$table)
+  # the chrome still stands, so the gear that fixes the config is reachable
+  html <- as.character(hmb_chrome(elem_id = "hm-err", body = b))
+  expect_match(html, "hmb-toolbar", fixed = TRUE)
+  expect_match(html, "hmb-empty", fixed = TRUE)
+  expect_match(html, "Pick the row and column identities", fixed = TRUE)
+})
+
+test_that("chrome plus body is what the standalone render emits", {
+  args <- list(hm_toy(), row = "USUBJID", col = "AEDECOD", color = "AESEV",
+               group = "ARM", top_n = 25L)
+  whole <- as.character(do.call(heatmap_html, c(args, elem_id = "hm-w")))
+  b <- do.call(hmb_body, args)
+  # every piece the client would otherwise be sent is present inline
+  expect_match(whole, b$count, fixed = TRUE)
+  expect_true(grepl("hmb-table", whole, fixed = TRUE))
+  expect_match(whole, "hmb-legend", fixed = TRUE)
+})
+
+# ---- the two assemblers must not drift -------------------------------------
+# hmb_cell_model() has two renderers: hmb_assemble_rows() in R (standalone,
+# tests) and assembleRows() in heatmap-block.js (the block, off the pushed
+# model). The whole point of the model is that both emit the same matrix, so
+# the markup is compared byte for byte -- classes, attribute order, escaping.
+
+hm_js_rows <- function(model) {
+  node <- Sys.which("node")
+  testthat::skip_if(!nzchar(node), "node not available")
+  mj <- tempfile(fileext = ".json")
+  out <- tempfile(fileext = ".html")
+  writeLines(as.character(jsonlite::toJSON(hmb_model_payload(model),
+                                           auto_unbox = TRUE)), mj)
+  res <- system2(node, c(
+    shQuote(testthat::test_path("js", "assemble-rows.js")),
+    shQuote(system.file("js", "heatmap-block.js", package = "blockr.viz")),
+    shQuote(mj), shQuote(out)
+  ), stdout = TRUE, stderr = TRUE)
+  testthat::expect_equal(attr(res, "status") %||% 0L, 0L)
+  paste(readLines(out, warn = FALSE), collapse = "\n")
+}
+
+test_that("the JS assembler emits the same rows as the R one", {
+  b <- hmb_body(hm_toy(), row = "USUBJID", col = "AEDECOD", color = "AESEV",
+                group = "ARM", top_n = 25L)
+  expect_identical(hm_js_rows(b$model), hmb_assemble_rows(b$model))
+})
+
+test_that("the assemblers agree without groups, and on the count ramp", {
+  # no `color`, so the paint is the sequential count ramp rather than
+  # levels -- the palette is keyed by distinct count, the other mode
+  b <- hmb_body(hm_toy(), row = "USUBJID", col = "AEDECOD", top_n = 25L)
+  expect_identical(hm_js_rows(b$model), hmb_assemble_rows(b$model))
+})
+
+test_that("the assemblers agree on markup that has to be escaped", {
+  d <- hm_toy()
+  d$AEDECOD <- ifelse(d$AEDECOD == d$AEDECOD[1], "R&D <lab>", d$AEDECOD)
+  d$USUBJID <- paste0(d$USUBJID, " <&>")
+  d$ARM <- paste0(d$ARM, " & co")
+  b <- hmb_body(d, row = "USUBJID", col = "AEDECOD", color = "AESEV",
+                group = "ARM", top_n = 25L)
+  rows <- hmb_assemble_rows(b$model)
+  expect_match(rows, "&lt;&amp;&gt;", fixed = TRUE)
+  expect_identical(hm_js_rows(b$model), rows)
+})

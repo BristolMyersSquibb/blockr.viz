@@ -30,7 +30,11 @@
     // would re-render the whole matrix on the way to "25".
     var topn = /** @type {HTMLInputElement|null} */ (root.querySelector('.hmb-topn'));
     if (topn) {
-      var maxN = parseInt(topn.getAttribute('max') || '', 10);
+      // Read live, never captured: the toolbar is wired once and the body
+      // payload rewrites `max` every time the frame changes.
+      var maxOf = function () {
+        return parseInt(topn.getAttribute('max') || '', 10);
+      };
       var lastN = parseInt(topn.value, 10);
       /** @type {any} */
       var commit = null;
@@ -43,6 +47,7 @@
         }
         // Clamp rather than reject: "400" on a 230-term frame means "all of
         // them", which is a reasonable thing to type.
+        var maxN = maxOf();
         n = Math.max(1, isFinite(maxN) ? Math.min(n, maxN) : n);
         if (commit && String(n) !== raw) commit.sync(String(n));
         if (n === lastN) return;
@@ -72,21 +77,29 @@
     }
     var search = /** @type {HTMLInputElement|null} */ (root.querySelector('.hmb-search'));
     if (search) {
-      search.addEventListener('input', function () {
-        var q = search.value.trim().toLowerCase();
-        // Hiding rows breaks the rail rowspans visually, so an active
-        // search hides the rail column wholesale (hmb-searching).
-        root.classList.toggle('hmb-searching', q !== '');
-        root.querySelectorAll('tr.hmb-r').forEach(function (tr) {
-          var id = (tr.getAttribute('data-hmb-id') || '').toLowerCase();
-          (/** @type {HTMLElement} */ (tr)).style.display =
-            (q === '' || id.indexOf(q) !== -1) ? '' : 'none';
-        });
-        root.querySelectorAll('tr.hmb-gsep').forEach(function (tr) {
-          (/** @type {HTMLElement} */ (tr)).style.display = q === '' ? '' : 'none';
-        });
-      });
+      search.addEventListener('input', function () { applySearch(root); });
     }
+  }
+
+  // The row filter, re-applied after every body swap -- the rows are new
+  // nodes, so a search typed before the data changed would otherwise show
+  // everything again.
+  /** @param {Element} root */
+  function applySearch(root) {
+    var search = /** @type {HTMLInputElement|null} */ (
+      root.querySelector('.hmb-search'));
+    var q = search ? search.value.trim().toLowerCase() : '';
+    // Hiding rows breaks the rail rowspans visually, so an active
+    // search hides the rail column wholesale (hmb-searching).
+    root.classList.toggle('hmb-searching', q !== '');
+    root.querySelectorAll('tr.hmb-r').forEach(function (tr) {
+      var id = (tr.getAttribute('data-hmb-id') || '').toLowerCase();
+      (/** @type {HTMLElement} */ (tr)).style.display =
+        (q === '' || id.indexOf(q) !== -1) ? '' : 'none';
+    });
+    root.querySelectorAll('tr.hmb-gsep').forEach(function (tr) {
+      (/** @type {HTMLElement} */ (tr)).style.display = q === '' ? '' : 'none';
+    });
   }
 
   // ---- drill ----------------------------------------------------------
@@ -122,20 +135,26 @@
         }, { priority: 'event' });
       }
     });
-    // Restore / server re-render: mark the active row(s).
+    markActive(root);
+  }
+
+  // Mark the drilled row(s) from `data-hmb-active`. Runs on wire AND after
+  // every body swap: a restore, or a data refresh under a live filter, ships
+  // fresh <tr>s that have never carried the class.
+  /** @param {Element} root */
+  function markActive(root) {
     var activeJson = root.getAttribute('data-hmb-active');
+    /** @type {any} */
+    var vals = null;
     if (activeJson) {
-      /** @type {any} */
-      var vals = null;
       try { vals = JSON.parse(activeJson); } catch (err) { vals = null; }
-      if (vals && vals.length) {
-        root.querySelectorAll('tr.hmb-r').forEach(function (tr) {
-          if (vals.indexOf(tr.getAttribute('data-hmb-id')) !== -1) {
-            tr.classList.add('hmb-active');
-          }
-        });
-      }
     }
+    if (!vals || !vals.length) return;
+    root.querySelectorAll('tr.hmb-r').forEach(function (tr) {
+      if (vals.indexOf(tr.getAttribute('data-hmb-id')) !== -1) {
+        tr.classList.add('hmb-active');
+      }
+    });
   }
 
   // ---- gear band via the shared DrilldownConfig engine ------------------
@@ -279,6 +298,151 @@
     if (wasOpen) openPop();
   }
 
+  // ---- body payloads ---------------------------------------------------
+  // A PERSISTENT store, not a one-shot queue (the table and rank blocks'
+  // shape): a payload that arrives before its chrome exists waits here, and
+  // a chrome re-created later -- dock panel re-mount, view switch -- paints
+  // from the store with no R round trip.
+  /** @type {Record<string, any>} */
+  var store = {};
+  /** @type {Record<string, string>} */
+  var gearBuiltWith = {};
+
+  // ---- body assembly ---------------------------------------------------
+  // The client half of the cell model (R/heatmap-html.R): R sends the
+  // <table> shell with its rotated header and a sparse model, this pastes
+  // the rows. The matrix is ~90% empty, so shipping the model instead of
+  // the HTML is ~157 KB -> ~7 KB on a 194 x 25 AE heatmap.
+  //
+  // The markup MUST match hmb_assemble_rows() byte for byte: same classes,
+  // same attribute order, same escaping (& < > escaped, quotes not, which
+  // is htmltools' own rule for text and non-attribute content).
+  /** @param {string} x */
+  function esc(x) {
+    return String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  /** @param {any} m @returns {string} */
+  function assembleRows(m) {
+    var n = m.n, k = m.k, i, j;
+    // Column-major, the layout R's matrix already has: idx %% n is the row.
+    var cells = new Array(n * k);
+    for (i = 0; i < n * k; i++) cells[i] = '<td class="hmb-c"></td>';
+    for (j = 0; j < m.idx.length; j++) {
+      var slot = m.pal[j] - 1;
+      cells[m.idx[j]] = '<td class="hmb-c" style="background:' + m.bg[slot] +
+        ';color:' + m.fg[slot] + '"><span>' + m.cnt[j] + '</span></td>';
+    }
+
+    // Rail runs and the group separators that follow each group's last row.
+    /** @type {Record<number, string>} */
+    var railAt = {};
+    /** @type {Record<number, boolean>} */
+    var sepAt = {};
+    var groups = m.groups || [];
+    var ncols = k + 2;
+    var at = 0;
+    for (i = 0; i < groups.length; i++) {
+      railAt[at] = '<td class="hmb-rail" rowspan="' + groups[i].n +
+        '" title="' + esc(groups[i].label) + ' \u00b7 ' + groups[i].n +
+        ' rows"><span>' + esc(groups[i].label) + '</span></td>';
+      at += groups[i].n;
+      if (i < groups.length - 1) sepAt[at - 1] = true;
+    }
+
+    var out = new Array(n);
+    for (i = 0; i < n; i++) {
+      var id = esc(m.rows[i]);
+      var row = '<tr class="hmb-r" data-hmb-id="' + id +
+        '"><td class="hmb-stub" data-raw="' + id + '">' + id + '</td>';
+      for (j = 0; j < k; j++) row += cells[j * n + i];
+      if (railAt[i]) row += railAt[i];
+      if (sepAt[i]) {
+        row += '</tr><tr class="hmb-gsep"><td colspan="' + ncols +
+          '"></td>';
+      }
+      out[i] = row + '</tr>';
+    }
+    return out.join('');
+  }
+
+  /** @param {Element} root @param {any} p */
+  function applyPayload(root, p) {
+    if (!p) return;
+    var elemId = root.getAttribute('data-hmb-elem-id') || '';
+
+    // Root state the gear and the drill read back off the DOM.
+    if (p.cols != null) root.setAttribute('data-hmb-cols', p.cols);
+    if (p.config != null) root.setAttribute('data-hmb-config', p.config);
+    root.setAttribute('data-hmb-drill', p.drill ? '1' : '0');
+    root.setAttribute('data-hmb-row-col', p.rowCol || '');
+    var active = p.active || [];
+    if (active.length) {
+      root.setAttribute('data-hmb-active', JSON.stringify(active));
+    } else {
+      root.removeAttribute('data-hmb-active');
+    }
+
+    // Cell numbers: the checkbox is applied instantly on click, so this only
+    // corrects it when the server disagrees (a restore, a gear edit).
+    var nums = /** @type {HTMLInputElement|null} */ (
+      root.querySelector('.hmb-nums input'));
+    if (nums && nums.checked !== !!p.cellNumbers) nums.checked = !!p.cellNumbers;
+    root.classList.toggle('hmb-nonum', !p.cellNumbers);
+
+    // Top n: the frame decides the ceiling. Never fight a field being typed
+    // into -- the commit that follows will bring the server round anyway.
+    var topn = /** @type {HTMLInputElement|null} */ (
+      root.querySelector('.hmb-topn'));
+    if (topn) {
+      if (p.topMax) {
+        topn.setAttribute('max', String(p.topMax));
+        topn.title = 'Columns shown, most frequent first (1-' + p.topMax +
+          '). Enter to apply.';
+      }
+      if (p.topVal && document.activeElement !== topn) {
+        topn.value = String(p.topVal);
+      }
+    }
+
+    var legend = root.querySelector('.hmb-legend-slot');
+    var scroll = root.querySelector('.hmb-scroll');
+    var count = root.querySelector('.hmb-count');
+    if (p.err) {
+      if (legend) legend.innerHTML = '';
+      if (scroll) scroll.innerHTML = '<div class="hmb-empty"></div>';
+      var empty = scroll && scroll.firstChild;
+      if (empty) empty.textContent = p.err;
+      if (count) count.textContent = '';
+    } else {
+      if (legend) legend.innerHTML = p.legend || '';
+      if (scroll) {
+        scroll.innerHTML = p.head || '';
+        var tbody = scroll.querySelector('tbody');
+        if (tbody && p.model) tbody.innerHTML = assembleRows(p.model);
+      }
+      if (count) count.textContent = p.count || '';
+      markActive(root);
+      applySearch(root);
+    }
+
+    // The gear is built from the columns and the config; rebuild it only
+    // when one of those actually changed, so a plain data refresh leaves an
+    // open band alone.
+    var key = (p.cols || '') + '|' + (p.config || '');
+    if (elemId && gearBuiltWith[elemId] !== key) {
+      gearBuiltWith[elemId] = key;
+      var oldHeader = root.querySelector('.hmb-toolbar .blockr-gear-header');
+      if (oldHeader && oldHeader.parentNode) {
+        oldHeader.parentNode.removeChild(oldHeader);
+      }
+      var oldPop = root.querySelector('[data-dd-pop-for="' + elemId + '"]');
+      if (oldPop && oldPop.parentNode) oldPop.parentNode.removeChild(oldPop);
+      buildCogwheel(root, elemId);
+    }
+  }
+
   /** @param {Element} root */
   function init(root) {
     if (!root || root.getAttribute('data-hmb-initialized') === '1') return;
@@ -286,8 +450,33 @@
     var elemId = root.getAttribute('data-hmb-elem-id');
     if (!elemId) return;
     buildCogwheel(root, elemId);
+    gearBuiltWith[elemId] = (root.getAttribute('data-hmb-cols') || '') + '|' +
+      (root.getAttribute('data-hmb-config') || '');
     wireToolbar(root, elemId);
     wireDrill(root, elemId);
+    if (store[elemId]) {
+      applyPayload(root, store[elemId]);
+    } else if (window.Shiny && Shiny.setInputValue) {
+      // Nothing to paint: tell the server this chrome is up. Shiny DROPS a
+      // custom message with no handler registered, and this script only
+      // loads with the first heatmap in the page -- on a board that opens on
+      // a view without one, the startup payload would be lost.
+      Shiny.setInputValue(elemId + '_ready', Date.now(), { priority: 'event' });
+    }
+  }
+
+  if (window.Shiny && Shiny.addCustomMessageHandler) {
+    Shiny.addCustomMessageHandler('blockr-viz-heatmap-data',
+      function (/** @type {any} */ msg) {
+        if (!msg || !msg.id) return;
+        /** @type {any} */
+        var p = null;
+        try { p = JSON.parse(msg.payload); } catch (e) { return; }
+        store[msg.id] = p;
+        var root = document.querySelector(
+          '.hmb-block[data-hmb-elem-id="' + msg.id + '"]');
+        if (root) applyPayload(root, p);
+      });
   }
 
   var SCAN_SEL = '.hmb-block[data-hmb-elem-id]';
