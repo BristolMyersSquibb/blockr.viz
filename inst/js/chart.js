@@ -1355,6 +1355,17 @@
       // positions, caption) is the reference for what a chart export must
       // contain.
       this._hoistDownload(gearHeader);
+      // PROTOTYPE (config.capture_export, R/chart-capture.R): composing on
+      // the menu OPEN rather than on the format click means the bitmap is
+      // already in R by the time a format is picked, so the download handlers
+      // need no round trip of their own. Capture phase, because the <details>
+      // summary is R-rendered markup this binding does not own.
+      gearHeader.addEventListener('click', (e) => {
+        const t = /** @type {Element} */ (e.target);
+        if (!this.config || !this.config.capture_export || !t.closest) return;
+        const host = t.closest('.blockr-dl-menu, .blockr-dl-xlsx');
+        if (host) this._downloadImage(true);
+      }, true);
       // The aggregation toggle goes here too, but it cannot be built yet:
       // _buildDOM() runs at construction and `func_toggle` arrives with the
       // first setData(). _refreshFuncToggle() inserts it then, which is why
@@ -1455,12 +1466,25 @@
     // position (facet labels redrawn), caption. Purely download-time — reads
     // the canvases via getDataURL and never touches the chart option, config
     // wire or state.
-    _downloadImage() {
+    // `send` posts the composed bitmap to R (the PROTOTYPE path, wired from
+    // the download menu below) instead of saving it from the browser.
+    //
+    // `pixelRatio` is the resolution knob, and the only one: it multiplies
+    // the bitmap's pixels while every layout decision stays fixed, so the
+    // picture is the same picture drawn finer. Growing the CSS box instead
+    // would re-lay-out the chart. 2 is screen density; a slide placed at
+    // 11.9in wants more, which is what `blockr.viz.canvas_capture_ratio`
+    // raises it to.
+    /** @param {boolean} [send]
+     *  @param {{pixelRatio?: number,
+     *           done?: (url: string, w: number, h: number) => void}} [opts] */
+    _downloadImage(send, opts) {
       const slots = (this._slots || []).filter(s => s && s.chart);
       if (!slots.length || !this.chartGrid) return;
       const gridR = this.chartGrid.getBoundingClientRect();
       if (!gridR.width || !gridR.height) return;
-      const pr = 2;
+      const pr = (opts && opts.pixelRatio) ||
+        (this.config && this.config.capture_ratio) || 2;
       const pad = 12;
 
       // Text styles come from the live band elements' computed styles, so the
@@ -1625,8 +1649,27 @@
           for (const ln of cap.lines) { ctx.fillText(ln, pad, cy); cy += cap.lineH; }
         }
 
+        const url = canvas.toDataURL('image/png');
+        // Kept on the instance so a driven browser can read back exactly what
+        // was composed (dev/capture-demo.R drives it this way).
+        this._lastCapture = url;
+
+        if (opts && typeof opts.done === 'function') {
+          opts.done(url, W, H);
+          return;
+        }
+
+        if (send) {
+          if (window.Shiny && Shiny.setInputValue) {
+            Shiny.setInputValue(this.el.id + '_capture',
+                                { png: url, width: W, height: H },
+                                { priority: 'event' });
+          }
+          return;
+        }
+
         const a = document.createElement('a');
-        a.href = canvas.toDataURL('image/png');
+        a.href = url;
         a.download = 'chart.png';
         a.click();
       });
@@ -6398,6 +6441,96 @@
     }
   });
   Shiny.inputBindings.register(binding, 'blockr.drilldown');
+
+  // -- Capture service ------------------------------------------------------
+  //
+  // A deck is generated FROM an open board, so the browser holding the charts
+  // is the one that draws them: R asks for a picture of a block at a given
+  // box and gets the bitmap back. The block's own panel does not have to be
+  // open, which is the point -- a dock panel nobody fronted has no canvas to
+  // read, so this mounts a fresh chart in a hidden host instead.
+  //
+  // The host is parked outside the viewport rather than display:none: a
+  // hidden element measures zero and the composer needs real geometry. One
+  // host per request, disposed after, so nothing carries over between charts.
+  /** @param {number} w @param {number} h */
+  const captureHost = (w, h) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'blockr-capture-host';
+    wrap.style.cssText = 'position:fixed;left:-20000px;top:0;' +
+      'width:' + w + 'px;height:' + h + 'px;';
+    const el = document.createElement('div');
+    el.id = 'blockr-capture-chart-' +
+      (captureHost.n = (captureHost.n || 0) + 1);
+    el.className = 'drilldown-chart-container';
+    el.style.cssText = 'width:' + w + 'px;height:' + h + 'px;';
+    wrap.appendChild(el);
+    document.body.appendChild(wrap);
+    el._wrap = wrap;
+    return el;
+  };
+
+  // ECharts draws a frame or two after setData, and then ANIMATES in over
+  // about a second. Slots with canvases are therefore not enough: composing
+  // the moment they appear captures the animation's first frame, which is a
+  // blank chart with a title band over it (measured, not guessed). So poll
+  // for the slots, then let the animation finish before reading the pixels.
+  const CAPTURE_SETTLE_MS = 1400;
+  /** @param {any} inst @param {() => void} then @param {number} [tries] */
+  const whenDrawn = (inst, then, tries) => {
+    const left = tries === undefined ? 50 : tries;
+    const ready = (inst._slots || []).some(
+      s => s && s.chart && s.chartDiv && s.chartDiv.clientHeight > 40);
+    if (ready || left <= 0) {
+      setTimeout(then, CAPTURE_SETTLE_MS);
+      return;
+    }
+    setTimeout(() => whenDrawn(inst, then, left - 1), 100);
+  };
+
+  Shiny.addCustomMessageHandler('drilldown-capture', (/** @type {any} */ msg) => {
+    // Exactly one reply per request, whatever happens: a chart that cannot
+    // draw (no group picked, a column the data lost) returns early from
+    // _downloadImage and would otherwise leave R waiting for a picture that
+    // is never coming.
+    let replied = false;
+    const reply = (/** @type {any} */ payload) => {
+      if (replied) return;
+      replied = true;
+      if (window.Shiny && Shiny.setInputValue) {
+        Shiny.setInputValue('blockr_viz_capture_result',
+                            Object.assign({ req: msg.req }, payload),
+                            { priority: 'event' });
+      }
+    };
+    setTimeout(() => reply({ error: 'the chart did not compose in time' }),
+               20000);
+    let el;
+    try {
+      el = captureHost(msg.width, msg.height);
+      el._block = new DrilldownChart(el);
+      el._block.setData(msg.columns, msg.data, msg.config, msg.arguments,
+                        msg.data_rev);
+    } catch (e) {
+      reply({ error: String(e) });
+      return;
+    }
+    whenDrawn(el._block, () => {
+      try {
+        el._block._downloadImage(false, {
+          pixelRatio: msg.ratio,
+          done: (url, w, h) => {
+            reply({ png: url, width: w, height: h });
+            // Its own wrapper, not whatever currently answers to the id: two
+            // requests in flight would otherwise tear down each other's host.
+            el._wrap.remove();
+          }
+        });
+      } catch (e) {
+        reply({ error: String(e) });
+      }
+    });
+  });
 
   Shiny.addCustomMessageHandler('drilldown-data', (/** @type {any} */ msg) => {
     const el = /** @type {any} */ (document.getElementById(msg.id));

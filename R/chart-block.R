@@ -856,7 +856,12 @@ new_chart_block <- function(
         last_push <- new.env(parent = emptyenv())
         last_push$msg <- NULL
 
-        shiny::observe({
+        # The payload the browser draws from, built on demand. It used to be
+        # assembled inline in the observer below, which meant the ONLY copy
+        # of it was whatever had last been pushed -- and a chart whose panel
+        # nobody ever opened has never pushed, so an export could not draw
+        # it. Now the capture service builds one when it needs one.
+        build_chart_msg <- function() {
           d <- plain_data()
           # No nrow gate: an upstream filter emptying the frame MUST push,
           # or the browser keeps rendering (clickable) stale marks over data
@@ -962,6 +967,11 @@ new_chart_block <- function(
               # Downloads: the gear's toggle, and what decides whether the
               # hoisted control renders at all.
               download = if (isTRUE(r_download())) "on" else "off",
+              # PROTOTYPE (R/chart-capture.R): opening the download menu makes
+              # the canvas compose itself and send the bitmap up, and the
+              # files carry that instead of a server-side re-render.
+              capture_export = canvas_capture_on(),
+              capture_ratio = canvas_capture_ratio(),
               # Bar baseline mode. chart_type "waterfall" implies "cumulative"
               # on the JS side (sugar); also send the flag explicitly so a plain
               # bar can opt into the cumulative bridge, and pass the optional
@@ -1007,9 +1017,44 @@ new_chart_block <- function(
             # is a UI-layer concern (terse labels + the live `name (label)`
             # convention). See blockr.design/open/block-config-ui.
           )
+          chart_msg
+        }
+
+        shiny::observe({
+          chart_msg <- build_chart_msg()
           last_push$msg <- chart_msg
           session$sendCustomMessage("drilldown-data", chart_msg)
         })
+
+        # Register this chart with the session's capture service, so an
+        # export can ask for a picture of it whether or not its panel is
+        # open. The payload is the one the browser already renders from;
+        # the box comes from whoever is exporting (the slide, say).
+        if (canvas_capture_on()) {
+          # Keyed by the chart's own element id, which is the only thing
+          # unique per block here: `id` is the module id every chart block
+          # shares ("expr"), so registering under it would leave one entry
+          # for the whole board.
+          register_chart_capture(ns("drilldown_block"), function(token, width,
+                                                                 height) {
+            # The last payload when there is one, a fresh one when there is
+            # not: a chart in a view nobody opened has pushed nothing, and
+            # that is exactly the chart an export cannot afford to skip.
+            msg <- last_push$msg %||% tryCatch(
+              shiny::isolate(build_chart_msg()),
+              error = function(e) NULL
+            )
+            if (is.null(msg)) {
+              stop("chart block '", ns("drilldown_block"),
+                   "' has no data to draw yet", call. = FALSE)
+            }
+            session$sendCustomMessage("drilldown-capture", c(
+              msg[c("columns", "data", "data_rev", "config")],
+              list(req = token, width = width, height = height,
+                   ratio = canvas_capture_ratio())
+            ))
+          })
+        }
 
         # The client announces itself when it binds with no payload waiting.
         # chart.js's `pendingData` only catches a message that arrived while the
@@ -1382,7 +1427,29 @@ new_chart_block <- function(
           st[!vapply(st, is.null, logical(1L))]
         }
 
+        # PROTOTYPE (R/chart-capture.R). The canvas posts its composed
+        # bitmap when the download menu opens, so by the time a format is
+        # picked the picture on screen is already here. Kept OUT of the
+        # reactive graph deliberately: it is an artifact of the last render,
+        # not state anything should recompute from.
+        capture <- shiny::reactiveVal(NULL)
+
+        shiny::observeEvent(input$drilldown_block_capture, {
+          msg <- input$drilldown_block_capture
+          capture(new_chart_capture(chart_capture_decode(msg$png),
+                                    msg$width, msg$height))
+          # Nothing in the UI says the picture came off the canvas rather
+          # than out of R, so the console does while this is a prototype.
+          message("chart capture: ", msg$width, " x ", msg$height, " px")
+        })
+
+        # The chart an export should carry: what the browser drew when we
+        # have it, the server-side render otherwise (no canvas has been
+        # mounted, or the flag is off).
         dl_chart <- function() {
+          if (canvas_capture_on() && !is.null(capture())) {
+            return(capture())
+          }
           chart_static_exhibit(plain_data(), dl_state())
         }
 
@@ -1427,7 +1494,9 @@ new_chart_block <- function(
         output$dl_xlsx <- shiny::downloadHandler(
           filename = function() "chart.xlsx",
           content = function(file) {
-            p <- dl_chart()
+            # The numbers, never the picture: xlsx reads the aggregated frame
+            # off the server-side render even when a capture is in hand.
+            p <- chart_static_exhibit(plain_data(), dl_state())
             shiny::req(!is.null(p))
             # The AGGREGATED frame, one row per mark -- the numbers the chart
             # draws, not the block's input rows.
@@ -1478,7 +1547,11 @@ new_chart_block <- function(
           content = function(file) {
             p <- dl_chart()
             shiny::req(!is.null(p))
-            write_exhibit_png(p, file)
+            if (inherits(p, "chart_capture")) {
+              chart_capture_file(p, file)
+            } else {
+              write_exhibit_png(p, file)
+            }
           }
         )
 
