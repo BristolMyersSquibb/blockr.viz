@@ -331,7 +331,62 @@
   // that keeps all three is the common case and must stay free.
   /** @param {any} axisLabel @returns {string} */
   const xLabelKey = (axisLabel) =>
-    `${axisLabel.rotate}|${axisLabel.interval}|${axisLabel.width}`;
+    `${axisLabel.rotate}|${axisLabel.interval}|${axisLabel.__wrapAt}` +
+    `|${axisLabel.__lines}`;
+
+  // -- Category label typesetting -------------------------------------------
+  //
+  // The ladder a long label goes down, cheapest first. A turned label costs
+  // the plot up to 160px of HEIGHT; the same label wrapped onto three flat
+  // lines costs 45. So wrapping comes first and turning is the fallback,
+  // which is the reverse of what this used to do.
+  //
+  //   1. break on spaces into as few lines as fit the slot
+  //   2. <= 3 lines and no word wider than the slot -> draw it FLAT
+  //   3. otherwise turn 90deg and wrap the turned text onto <= 2 lines
+  //   4. turned labels still collide -> thin them, but only where the axis
+  //      is a SEQUENCE (see `decimate`)
+  //
+  // Nothing is ever cut. A single word too wide for the whole budget breaks
+  // at the character level instead, because a broken word can still be read
+  // and an ellipsis cannot.
+  const LABEL_LINE_H = 15;   // 11px text, 1.35 leading
+  const FLAT_MAX_LINES = 3;
+  const TURN_MAX_LINES = 2;
+  const TURN_CAP = 160;      // px of height a turned label may spend
+
+  // Greedy wrap on spaces. `hard` reports that a word had to be broken
+  // mid-word, which is the signal that this width is the wrong one to use.
+  /** @param {(s: string) => number} measure @param {string} text
+   *  @param {number} width */
+  const wrapLabel = (measure, text, width) => {
+    const words = String(text ?? '').split(/\s+/).filter(Boolean);
+    const lines = [];
+    let hard = false;
+    let cur = '';
+    const pushWord = (word) => {
+      // A word that does not fit a line of its own: break it, and keep
+      // breaking, rather than lose the tail.
+      let rest = word;
+      while (measure(rest) > width && rest.length > 1) {
+        let k = rest.length;
+        while (k > 1 && measure(rest.slice(0, k)) > width) k--;
+        lines.push(rest.slice(0, k));
+        rest = rest.slice(k);
+        hard = true;
+      }
+      cur = rest;
+    };
+    for (const word of words) {
+      const cand = cur ? cur + ' ' + word : word;
+      if (measure(cand) <= width) { cur = cand; continue; }
+      if (cur) lines.push(cur);
+      cur = '';
+      pushWord(word);
+    }
+    if (cur) lines.push(cur);
+    return { lines: lines.length ? lines : [''], hard };
+  };
 
   // Waterfall sign colors (mirrors new_waterfall_block's defaults): increase =
   // Okabe-Ito green, decrease = red, total/subtotal = grey. Semantic, so they
@@ -1997,34 +2052,72 @@
       // and buys a layout that never depends on its own height.
       const SCROLLBAR = 16;
       const slot = ((availW > 0 ? availW : 600) - SCROLLBAR) / n;
-      const base = { color: AXIS_LABEL_COLOR, fontSize: 11, interval: 0 };
+      const base = { color: AXIS_LABEL_COLOR, fontSize: 11, interval: 0,
+                     lineHeight: LABEL_LINE_H };
+      const measure = (s) => ctx.measureText(String(s ?? '')).width;
+
       if (widest + PAD <= slot) {
-        // Fits horizontally — keep flat, truncate only as a safety net.
-        const axisLabel = { ...base, rotate: 0, overflow: 'truncate',
-          width: Math.max(10, Math.floor(slot - PAD)), ellipsis: '…' };
+        // One line each, nothing to decide.
+        const axisLabel = { ...base, rotate: 0, __wrapAt: 0, __lines: 1 };
         return { axisLabel, bottom: 0, key: xLabelKey(axisLabel) };
       }
-      // Doesn't fit — rotate to vertical and truncate long labels at a cap.
-      // The cap is a HEIGHT cost, not a width one: rotated text spends its
-      // pixel width on the grid's bottom gutter, and every caller adds
-      // `bottom` to the panel height so the plot area stays put. 160px is
-      // ~27 characters at 11px; past that the category axis is the wrong
-      // home for the label and the ellipsis is the honest signal.
-      const CAP = 160;
-      const len = Math.min(Math.ceil(widest) + PAD, CAP);
-      // Rotated text needs about its line-height of HORIZONTAL room, so labels
-      // collide once the per-category slot drops under ~13px however long they
-      // are. `interval: n` draws one label then skips n, putting the drawn ones
-      // (n + 1) * slot apart — solve that for LABEL_ROOM. A fixed "every
-      // second" would only fix 2x overcrowding; this degrades smoothly at any
-      // density. The gutter is unaffected: `len` measures the WIDEST label,
-      // not how many are drawn, so thinning never changes the panel height.
-      const LABEL_ROOM = 13;
+
+      // 1 + 2. Flat, wrapped to the slot. Accepted when every label lands
+      // inside the line budget without a word having to be broken: a break
+      // inside "BMS-986507" is the axis telling us this width is too narrow
+      // for horizontal text, whatever the line count says.
+      const flatW = Math.max(10, slot - PAD);
+      const flat = labels.map((l) => wrapLabel(measure, l, flatW));
+      const flatLines = Math.max(...flat.map((f) => f.lines.length));
+
+      if (flatLines <= FLAT_MAX_LINES && !flat.some((f) => f.hard)) {
+        const axisLabel = {
+          ...base, rotate: 0, __wrapAt: Math.round(flatW), __lines: flatLines,
+          formatter: (/** @type {string} */ v) =>
+            wrapLabel(measure, v, flatW).lines.join('\n')
+        };
+        // The first line lives in the gutter every axis already has; each
+        // further line is what this costs the plot.
+        return { axisLabel, bottom: (flatLines - 1) * LABEL_LINE_H,
+                 key: xLabelKey(axisLabel) };
+      }
+
+      // 3. Turned. The wrap budget is now the HEIGHT a label may spend
+      // (TURN_CAP), because turned text runs down the page; the line count
+      // is what costs WIDTH inside the slot.
+      // Past the line budget the remainder joins the last line, which then
+      // runs longer than the cap: long, but whole, which is the deal. One
+      // function so the gutter is measured on the text that gets drawn.
+      const turnedLines = (/** @type {string} */ v) => {
+        const w = wrapLabel(measure, v, TURN_CAP).lines;
+        if (w.length <= TURN_MAX_LINES) return w;
+        return w.slice(0, TURN_MAX_LINES - 1)
+          .concat(w.slice(TURN_MAX_LINES - 1).join(' '));
+      };
+
+      const turned = labels.map(turnedLines);
+      const turnLines = Math.max(...turned.map((t) => t.length));
+      // The gutter is the longest LINE, not the longest label: wrapping is
+      // what keeps this off the cap.
+      const len = Math.ceil(Math.max(
+        ...turned.map((t) => Math.max(...t.map(measure)))
+      )) + PAD;
+
+      // 4. Turned text needs about a line-height of horizontal room per line,
+      // so labels collide once the slot drops under that. `interval: n` draws
+      // one and skips n, putting the drawn ones (n + 1) * slot apart — solve
+      // that for the room needed. Only where the caller says the axis is an
+      // ordered run: a skipped visit is interpolated by the reader, a skipped
+      // arm is simply missing.
+      const room = Math.max(13, turnLines * LABEL_LINE_H);
       const interval = decimate
-        ? Math.max(0, Math.ceil(LABEL_ROOM / slot) - 1)
+        ? Math.max(0, Math.ceil(room / slot) - 1)
         : 0;
-      const axisLabel = { ...base, rotate: 90, overflow: 'truncate',
-        width: len, ellipsis: '…', interval };
+
+      const axisLabel = {
+        ...base, rotate: 90, interval, __wrapAt: TURN_CAP, __lines: turnLines,
+        formatter: (/** @type {string} */ v) => turnedLines(v).join('\n')
+      };
       return { axisLabel, bottom: len, key: xLabelKey(axisLabel) };
     }
 

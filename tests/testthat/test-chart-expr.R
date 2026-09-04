@@ -263,7 +263,7 @@ test_that("the emitted pipeline round-trips through parse", {
   expect_s3_class(p, "gg")
 })
 
-test_that("the compiled chart turns and cuts the same labels", {
+test_that("the compiled chart wraps the same labels the renderer does", {
 
   long <- paste0("GROUP", LETTERS[1:6],
                  " BMS-986507 2.0mg+Pumitamig 1500 or 1200mg")
@@ -272,17 +272,14 @@ test_that("the compiled chart turns and cuts the same labels", {
 
   p <- ce_eval(chart_expr("chart1", "boxplot", group = "k", value = "v",
                           data = d, qualify = TRUE), d)
-  expect_identical(p$theme$axis.text.x$angle, 90)
 
-  # Both renderers turn and cut; each measures at the size IT draws axis
-  # text (8.25pt here, 8.8pt in the compiled theme), so the cut lands a
-  # character apart. What has to agree is the order and the arms staying
-  # distinguishable.
+  # Wrapped, upright, and whole: each renderer measures at the size IT draws
+  # axis text, so the line breaks can land a word apart, but no text is lost
+  # in either.
   drawn <- as.character(ce_cats(p, "x"))
-  expect_true(all(grepl("\u2026$", drawn)))
-  expect_identical(length(unique(drawn)), 6L)
-  expect_identical(sub("\u2026$", "", drawn),
-                   substr(long, 1L, nchar(sub("\u2026$", "", drawn[[1L]]))))
+  expect_true(all(grepl("\n", drawn, fixed = TRUE)))
+  expect_no_match(paste(drawn, collapse = ""), "\u2026")
+  expect_identical(gsub("\n", " ", drawn), long)
 
   # Without a snapshot there is nothing to measure, so the labels stay flat
   # and whole rather than being cut on a guess.

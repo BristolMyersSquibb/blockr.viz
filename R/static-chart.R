@@ -318,49 +318,112 @@ gg_x_labels_fit <- function(labels, n_panels, size_pt) {
   gg_text_px(labels, size_pt) + 8 <= gg_band_px(length(labels), n_panels)
 }
 
-# Cut each label to `cap` CSS px at `size` pt, ending in the ellipsis the
-# canvas uses. Character by character, because a proportional face gives no
-# usable character count. The cap is the canvas' 160px: past it the category
-# axis is the wrong home for the text either way.
-gg_truncate_px <- function(x, size, cap = 160) {
+# One label broken on spaces into lines that fit `width` CSS px. A word too
+# wide for a line of its own is broken mid-word rather than cut: a broken
+# word can still be read, an ellipsis cannot. `hard` reports that it had to,
+# which is the signal that this width is the wrong one for flat text.
+gg_wrap_label <- function(text, width, size) {
 
-  vapply(as.character(x), function(s) {
+  words <- strsplit(as.character(text %||% ""), "[[:space:]]+")[[1L]]
+  words <- words[nzchar(words)]
 
-    if (is.na(s) || gg_text_px(s, size) <= cap) {
-      return(s)
+  lines <- character()
+  hard <- FALSE
+  cur <- ""
+
+  for (word in words) {
+    cand <- if (nzchar(cur)) paste(cur, word) else word
+    if (gg_text_px(cand, size) <= width) {
+      cur <- cand
+      next
     }
-
-    for (k in rev(seq_len(nchar(s)))) {
-      cut <- paste0(substr(s, 1L, k), "\u2026")
-      if (gg_text_px(cut, size) <= cap) {
-        return(cut)
+    if (nzchar(cur)) {
+      lines <- c(lines, cur)
+    }
+    cur <- word
+    while (gg_text_px(cur, size) > width && nchar(cur) > 1L) {
+      k <- nchar(cur)
+      while (k > 1L && gg_text_px(substr(cur, 1L, k), size) > width) {
+        k <- k - 1L
       }
+      lines <- c(lines, substr(cur, 1L, k))
+      cur <- substr(cur, k + 1L, nchar(cur))
+      hard <- TRUE
     }
+  }
 
-    "\u2026"
-  }, character(1L), USE.NAMES = FALSE)
+  if (nzchar(cur)) {
+    lines <- c(lines, cur)
+  }
+
+  list(lines = if (length(lines)) lines else "", hard = hard)
 }
 
-# The drawn labels for a turned category axis: NULL when they fit flat (the
-# caller keeps whatever it had), a level -> text vector cut to the cap when
-# they do not. Rotated text spends its width on the plot's height, and a
-# slide cannot grow the way the canvas panel does, so the cap is what keeps
-# a chart from becoming a label rack.
+# The ladder chart.js walks (_xAxisLabels), in the same order and with the
+# same budgets: wrap flat onto at most three lines, turn only when that
+# cannot be done without breaking a word, and never cut. Returns the drawn
+# text per level plus whether the axis has to turn.
+GG_FLAT_MAX_LINES <- 3L
+GG_TURN_MAX_LINES <- 2L
+GG_TURN_CAP <- 160
+
+gg_x_label_plan <- function(labels, n_panels, size_pt) {
+
+  slot <- gg_band_px(length(labels), n_panels)
+  pad <- 8
+
+  if (gg_text_px(labels, size_pt) + pad <= slot) {
+    return(list(turn = FALSE, text = labels))
+  }
+
+  flat <- lapply(labels, gg_wrap_label, width = max(10, slot - pad),
+                 size = size_pt)
+  n_lines <- max(vapply(flat, function(f) length(f$lines), integer(1L)))
+
+  if (n_lines <= GG_FLAT_MAX_LINES &&
+        !any(vapply(flat, `[[`, logical(1L), "hard"))) {
+    return(list(
+      turn = FALSE,
+      text = vapply(flat, function(f) paste(f$lines, collapse = "\n"),
+                    character(1L))
+    ))
+  }
+
+  # Turned: the wrap budget is the HEIGHT a label may spend, because turned
+  # text runs down the page. Past the line budget the remainder joins the
+  # last line -- long, but whole.
+  turned <- lapply(labels, function(l) {
+    w <- gg_wrap_label(l, GG_TURN_CAP, size_pt)$lines
+    if (length(w) <= GG_TURN_MAX_LINES) {
+      return(w)
+    }
+    c(utils::head(w, GG_TURN_MAX_LINES - 1L),
+      paste(utils::tail(w, -(GG_TURN_MAX_LINES - 1L)), collapse = " "))
+  })
+
+  list(
+    turn = TRUE,
+    text = vapply(turned, paste, character(1L), collapse = "\n")
+  )
+}
+
+# The drawn labels for a vertical category axis: NULL when they fit flat on
+# one line (the caller keeps whatever it had), a level -> text vector with
+# newlines in it otherwise.
 gg_turned_labels <- function(data, group, count_on, count_col, func,
                              n_panels, size_pt) {
 
   labels <- gg_cat_labels(data, group, count_on, count_col, func)
+  plan <- gg_x_label_plan(labels, n_panels, size_pt)
 
-  if (gg_x_labels_fit(labels, n_panels, size_pt)) {
+  if (identical(plan$text, labels)) {
     return(NULL)
   }
 
-  stats::setNames(gg_truncate_px(labels, size_pt), dd_levels(data[[group]]))
+  stats::setNames(plan$text, dd_levels(data[[group]]))
 }
 
-# The canvas turns a vertical layout's category labels 90 degrees when they
-# do not fit flat, and never draws them diagonal. An export has to make the
-# same call: six treatment arms print on top of each other otherwise.
+# ...and whether that axis turns. Same plan, so the two never disagree.
 gg_x_label_theme <- function(data, chart_type, horiz, group, facet,
                              count_on, count_col, func) {
 
@@ -373,7 +436,7 @@ gg_x_label_theme <- function(data, chart_type, horiz, group, facet,
 
   n_panels <- if (is.null(facet)) 1L else length(dd_levels(data[[facet]]))
 
-  if (gg_x_labels_fit(labels, n_panels, gg_px_pt(11))) {
+  if (!gg_x_label_plan(labels, n_panels, gg_px_pt(11))$turn) {
     return(NULL)
   }
 
