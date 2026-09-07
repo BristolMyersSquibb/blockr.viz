@@ -82,9 +82,21 @@ interface VizDrilldownRole {
   [field: string]: any;
 }
 
+/** One config problem, rendered by the engine's notice strip (renderNotices). */
+interface VizDrilldownNotice {
+  /** 'error' (the mapping cannot draw) or 'warn'. */
+  tone?: string;
+  /** The one-line diagnosis. */
+  text: string;
+  /** The quieter second line (e.g. which columns the data does have). */
+  detail?: string;
+}
+
 interface VizDrilldownHost {
   /** Current column metadata. */
   columns(): VizColumn[] | null | undefined;
+  /** Config problems for the notice strip; absent when the host reports none. */
+  notices?(): VizDrilldownNotice[] | null | undefined;
   /** Current persisted config (role -> value); values are dynamic JSON. */
   config(): Record<string, any>;
   /** Role specs, keyed by R config param. */
@@ -106,6 +118,8 @@ declare class VizDrilldownConfig {
   render(): void;
   /** render() from the host's CURRENT state, re-seeding section checkboxes. */
   refresh(): void;
+  /** Refill the notice strip in place, without rebuilding the panel. */
+  renderNotices(): void;
   [member: string]: any;
 }
 

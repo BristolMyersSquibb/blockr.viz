@@ -7,7 +7,11 @@
 configure_chromote <- function() {
   if (!nzchar(Sys.getenv("CHROMOTE_CHROME"))) {
     for (cand in c("/usr/bin/chromium", "/usr/bin/chromium-browser",
-                   "/usr/bin/google-chrome")) {
+                   "/usr/bin/google-chrome",
+                   # The dev container ships its chromium under /opt (a
+                   # Playwright-managed build); without this entry every
+                   # browser-driven test silently skips there.
+                   "/opt/pw-browsers/chromium")) {
       if (file.exists(cand)) {
         Sys.setenv(CHROMOTE_CHROME = cand)
         break

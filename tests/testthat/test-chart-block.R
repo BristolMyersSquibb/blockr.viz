@@ -544,7 +544,7 @@ test_that("empty-list state from a pre-#144 DAG paste normalizes back to NULL", 
 
 test_that("a missing aesthetic column leaves the expr a valid pass-through filter", {
   # An aesthetic (group/color/x/y/...) that was renamed or dropped upstream is
-  # a PRESENTATION problem, surfaced by the JS renderer's in-canvas message --
+  # a PRESENTATION problem, surfaced by the JS renderer in its gear --
   # never an expr-level failure. The emitted expr is only the click/brush
   # filter, which stays valid and passes the data through; the block must NOT
   # error, validate() or stop() just because a mapped column is gone. (A broken

@@ -39,6 +39,10 @@
  *   onClearFilter()  -> clear the emitted filter
  *   ensureDefaults() -> fill block defaults after a type change
  *   afterTypeChange()-> e.g. update family CSS classes (optional)
+ *   notices()        -> optional [{tone,text,detail}]: the host's CONFIG
+ *                       PROBLEMS, rendered as an alert strip under the title
+ *                       (see renderNotices) instead of onto the block's own
+ *                       output
  *   isOpen()         -> is the popover open
  *   reopen()         -> reopen the popover (keep it open across a re-render)
  *
@@ -47,6 +51,16 @@
 // @ts-check
 (() => {
   'use strict';
+
+  // Notice glyph: a warning triangle, so the strip is not carried by colour
+  // alone (WCAG 1.4.1) and reads as a problem at a glance rather than as one
+  // more paragraph of settings.
+  const NOTICE_ICON =
+    '<svg viewBox="0 0 16 16" width="14" height="14" focusable="false">' +
+    '<path fill="currentColor" d="M7.1 1.9a1.05 1.05 0 0 1 1.8 0l6.05 11.3A1' +
+    ' 1 0 0 1 14.05 15H1.95a1 1 0 0 1-.9-1.8L7.1 1.9ZM8 5.4a.8.8 0 0 0-.8.85' +
+    'l.2 3.1a.6.6 0 0 0 1.2 0l.2-3.1A.8.8 0 0 0 8 5.4Zm0 5.4a.9.9 0 1 0 0 1.' +
+    '8.9.9 0 0 0 0-1.8Z"/></svg>';
 
   class DrilldownConfig {
     /** @param {VizDrilldownHost} host */
@@ -62,6 +76,8 @@
       this._openSec = null;         // capability-section open state (lazy)
       /** @type {MutationObserver | null} */
       this._closeWatch = null;      // armed deferred re-render (multi picks)
+      /** @type {HTMLElement | null} */
+      this._noticeBox = null;       // notice strip, refreshed in place
     }
 
     // Rebuild the popover from the host's CURRENT config/columns, dropping
@@ -242,6 +258,14 @@
       title.textContent = this.h.title || 'Settings';
       pop.setAttribute('aria-labelledby', title.id);
       pop.appendChild(title);
+
+      // Notice strip, directly under the heading: the host's config problems
+      // (see renderNotices). Built even when there are none, so a later data
+      // push can refill it without rebuilding the panel.
+      this._noticeBox = document.createElement('div');
+      this._noticeBox.className = 'dd-notices';
+      pop.appendChild(this._noticeBox);
+      this.renderNotices();
 
       // Type picker (optional — chart only)
       if (this.h.typeGroups && this.h.typeGroups.length && this.h.typeTiles) {
@@ -469,6 +493,60 @@
     }
 
     /**
+     * The host's config problems, as an alert strip under the panel heading.
+     * `h.notices()` returns [{ tone, text, detail }] — `tone` is 'error' (the
+     * mapping cannot draw) or 'warn', `text` is the one-line diagnosis and
+     * `detail` the quieter second line (which columns the data actually has).
+     *
+     * Why the panel and not the block's own output: a mapped column the data
+     * no longer has used to print its whole diagnosis onto the output, where
+     * it swamped the panel, repeated itself in every slot the block was drawn
+     * in, and put the fix — a picker — two clicks away behind the gear with
+     * nothing saying so (blockr.viz#24). The output now keeps a quiet empty
+     * state, this strip carries the diagnosis, and the host badges its gear so
+     * a CLOSED panel still says the answer is in here.
+     *
+     * Refreshed IN PLACE, into a container the engine owns: a host can update
+     * the strip on a data push without a full render(), which would drop an
+     * open dropdown and the section-open memory.
+     */
+    renderNotices() {
+      const box = this._noticeBox;
+      if (!box) return;
+      const list = (this.h.notices ? this.h.notices() : null) || [];
+      box.innerHTML = '';
+      box.hidden = !list.length;
+      for (const n of list) {
+        const el = document.createElement('div');
+        el.className = 'dd-notice dd-notice--' + (n.tone || 'error');
+        // Polite, not assertive: the panel is opened BY the user, and a data
+        // push that merely re-states a standing problem must not interrupt a
+        // screen reader mid-sentence. The gear's own label carries the count
+        // while the panel is closed.
+        el.setAttribute('role', 'status');
+        const icon = document.createElement('span');
+        icon.className = 'dd-notice-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.innerHTML = NOTICE_ICON;
+        el.appendChild(icon);
+        const body = document.createElement('div');
+        body.className = 'dd-notice-body';
+        const txt = document.createElement('div');
+        txt.className = 'dd-notice-text';
+        txt.textContent = n.text;
+        body.appendChild(txt);
+        if (n.detail) {
+          const det = document.createElement('div');
+          det.className = 'dd-notice-detail';
+          det.textContent = n.detail;
+          body.appendChild(det);
+        }
+        el.appendChild(body);
+        box.appendChild(el);
+      }
+    }
+
+    /**
      * @param {string} titleText
      * @param {{ toggle?: { checked: boolean, onToggle: (on: boolean) => void } }} [opts]
      *   When `toggle` is given the header carries a checkbox (Variant A): the
@@ -691,6 +769,12 @@
           !!opts.required && (!reversed || usesMetric()) &&
           !this._hasVal(this._cfg()[key]));
       };
+      // The row the notice strip is ABOUT: a column mapping the data no longer
+      // has. Without it the picker just looks blank and the strip's "re-pick
+      // it below" has nothing to point at.
+      const markStale = () => {
+        row.classList.toggle('dd-role-stale-col', this._isStaleCol(key));
+      };
       const setHelp = () => {
         const picker = role.kind === 'column' || role.kind === 'columns';
         if (!picker || (reversed && !usesMetric())) {
@@ -719,7 +803,23 @@
       row.appendChild(helpEl);
       setHelp();
       markRequired();
+      markStale();
       container.appendChild(row);
+    }
+
+    /**
+     * Is this role a column pick the current data cannot honour? True only for
+     * a single-column role holding a real column name that is not in
+     * columns() — '.count' is a pseudo-column, and an empty pick is the
+     * required-empty cue's business, not this one.
+     *
+     * @param {string} key
+     */
+    _isStaleCol(key) {
+      const role = this._role(key);
+      if (!role || role.kind !== 'column') return false;
+      const v = this._cfg()[key];
+      return this._hasVal(v) && v !== '.count' && !this._colExists(v);
     }
 
     // Re-render the popover, preserving the open state (used by the repeatable
@@ -1238,6 +1338,16 @@
       const cfg = this._cfg();
       if (role.kind === 'column') {
         const opts = this._colOptionsFor(key, { required });
+        // A pick the data no longer has stays in the list, marked, rather than
+        // leaving the picker looking empty: the user has to SEE what the
+        // mapping still says before replacing it (the same treatment the
+        // external-control target gets for a block that left the board). The
+        // `label` slot is where a column's variable label shows -- option text
+        // is "name (label)", see _mkSelect -- so it reads "AGE_OLD (not in
+        // data)", in the notice strip's own words.
+        if (this._isStaleCol(key)) {
+          opts.push({ value: cfg[key], label: 'not in data' });
+        }
         const wrap = document.createElement('div');
         wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
         const sel = this._hasVal(cfg[key]) ? cfg[key] : (required ? '' : '(none)');
