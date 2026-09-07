@@ -184,7 +184,7 @@ test_that("chart mapped to a coercion-dropped column still emits a valid expr", 
   testServer(blk$expr_server, args = list(data = reactive(obj)), {
     # `.label` is an annotation column, dropped by the coercion -- so the
     # chart is mapped to a column the plain frame does not carry. That is a
-    # PRESENTATION problem, surfaced by the JS renderer's in-canvas message,
+    # PRESENTATION problem, surfaced by the JS renderer in its gear,
     # never an expr-level failure (the expr-level aesthetic guard used to
     # validate() here and leaked its message into the dock header). The
     # emitted expr is only the click/brush filter: still valid, passes the

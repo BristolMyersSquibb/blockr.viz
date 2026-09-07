@@ -1,6 +1,11 @@
 # Differentiated empty / error states across the table and tile renderers
 # (chart parity: chart.js already distinguishes "no data", "mapped column not
 # in data" and "pick a role" -- these pin the same three states server-side).
+#
+# One deliberate divergence since issue #24: the CHART reports the mapped-column
+# state in its gear (see test-chart-config-notice.R) rather than in the chart
+# area, because a chart area is the whole panel and a paragraph of diagnosis
+# took all of it. A table's message occupies one row of a table that has none.
 
 render <- function(x) as.character(htmltools::renderTags(x)$html)
 

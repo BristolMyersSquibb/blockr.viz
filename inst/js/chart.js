@@ -214,6 +214,11 @@
   const BASE_SCATTER_SIZE = 6;
   const BASE_LINE_MARKER  = 4;
 
+  // Distinct `color` levels past which the legend stops being readable: a
+  // small palette has ~7 readable colors, and 15 is the hard ceiling. Module
+  // scope because the ceiling is quoted in the message _configIssues writes.
+  const MAX_COLOR_LEVELS = 15;
+
   // Trajectory overlay degradation thresholds (spec §2)
   const TRAJ_FULL_MAX = 50;
   const TRAJ_REDUCED_MAX = 500;
@@ -1017,6 +1022,8 @@
       this.card;
       /** @type {HTMLButtonElement} */
       this.gearBtn;
+      /** @type {HTMLSpanElement} */
+      this.gearAlertEl;
       /** @type {HTMLDivElement} */
       this.popoverEl;
       /** @type {HTMLDivElement} */
@@ -1035,6 +1042,10 @@
       this._selectedColumn;
       /** @type {Record<string, any> | null} */
       this._colorLookup;
+      // Config problems the GEAR reports (see _configIssues). Set before the
+      // DOM exists so _syncIssues can run from the first render on.
+      /** @type {Array<{tone: string, text: string, detail: string}>} */
+      this._issues = [];
       this._buildDOM();
       // The gear-popover config engine (shared with the table block). It owns
       // the popover rendering, role rows, add-as-needed, sticky memory and the
@@ -1098,6 +1109,11 @@
             : 'Auto — the selected point';
         },
         title: 'Chart settings',
+        // A mapping the data cannot honour is reported HERE, at the top of the
+        // settings, and no longer painted across the chart area (#24) -- the
+        // panel is where the columns are re-picked, so it is where naming the
+        // broken one is worth the space.
+        notices: () => this._issues,
         onChange: (/** @type {string} */ key) => {
           if (key === 'func') this._reconcileMetric();
           this._render(); this._sendConfig();
@@ -1392,6 +1408,17 @@
       this.gearBtn.setAttribute('aria-label', 'Chart settings');
       this.gearBtn.setAttribute('aria-haspopup', 'dialog');
       this.gearBtn.setAttribute('aria-expanded', 'false');
+      // Alert badge for a config problem (_syncIssues). A badge rather than a
+      // red gear: the button keeps its icon, size and place, so it still reads
+      // as THE gear -- a control that turns solid red reads as a different,
+      // and usually destructive, button. The cue is a mark that APPEARS, not a
+      // colour swapped into something already there, and it is spelled out in
+      // the title and the accessible name; colour carries none of it alone.
+      this.gearAlertEl = document.createElement('span');
+      this.gearAlertEl.className = 'blockr-gear-badge';
+      this.gearAlertEl.setAttribute('aria-hidden', 'true');
+      this.gearAlertEl.textContent = '!';
+      this.gearBtn.appendChild(this.gearAlertEl);
       this.gearBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this._togglePopover();
@@ -2945,7 +2972,130 @@
       });
     }
 
+    /**
+     * The chart's configuration problems, in the shape the gear's notice strip
+     * takes: [{ tone, text, detail }], empty when the mapping is sound.
+     *
+     * These used to be paragraphs of diagnosis painted across the chart area
+     * (blockr.viz#24). One sentence became the whole panel, it was repeated in
+     * every slot the block was drawn in, and the fix -- a picker -- sat two
+     * clicks away behind the gear with nothing saying so. The chart area now
+     * shows a quiet empty state (_showConfigEmpty), this list feeds the
+     * settings panel, and _syncIssues badges the gear so a shut panel still
+     * says there is something in it.
+     *
+     * @returns {Array<{tone: string, text: string, detail: string}>}
+     */
+    _configIssues() {
+      const cfg = this.config || {};
+      const cols = this.columns || [];
+      /** @type {Array<{tone: string, text: string, detail: string}>} */
+      const out = [];
+
+      // A REQUIRED mapping pointing at a column the data does not have. The
+      // optional aesthetics never reach here: R heals them to unmapped against
+      // the current data (see build_chart_msg's present_role), because an
+      // upstream picker set to "(none)" is a legitimate way to turn one off.
+      const colSet = new Set(cols.map(c => c.name));
+      const req = this._family() === 'aggregated'
+        ? [['Group', cfg.group],
+           ['Metric', cfg.value !== '.count' ? cfg.value : null]]
+        : [['X', cfg.x], ['Y', cfg.y]];
+      const missing = req
+        .filter(([, v]) => v && !colSet.has(v))
+        .map(([lbl, v]) => `${lbl} = "${v}"`);
+      if (missing.length) {
+        const avail = cols.map(c => c.name);
+        out.push({
+          tone: 'error',
+          text: 'Mapped column not in data: ' + missing.join(', ') + '.',
+          // The columns the data DOES have: the pick is made right below this
+          // strip, so the list is what turns the message into the next click.
+          detail: 'A rename, flatten or pivot upstream may have changed the ' +
+            'column name — re-pick it below.' +
+            (avail.length
+              ? ' Columns available here: ' + avail.slice(0, 30).join(', ') +
+                (avail.length > 30 ? ', …' : '') + '.'
+              : '')
+        });
+      }
+
+      // color with too many distinct levels renders an unreadable legend.
+      // color means "map column values to colors" — a small palette has ~7
+      // readable colors, 15 is a hard ceiling. For splitting data into many
+      // series (one per patient), use `series` instead. Skipped while a
+      // required column is missing: the level count would be counting a
+      // column against rows the chart cannot draw anyway.
+      if (cfg.color && !missing.length) {
+        const nColors = new Set(this.data.map(r => r[cfg.color])).size;
+        if (nColors > MAX_COLOR_LEVELS) {
+          // Aggregated: no series escape hatch, hard stop.
+          // Individual/timeline: nudge the user toward series (or a
+          // lower-cardinality grouping column like arm).
+          const hint = this._family() === 'aggregated'
+            ? `Pick a column with \u2264${MAX_COLOR_LEVELS} categories.`
+            : 'Use `series` to split into series (e.g. USUBJID); keep ' +
+              '`color` for low-cardinality grouping (e.g. ARM).';
+          out.push({
+            tone: 'error',
+            text: `Too many color levels (${nColors}).`,
+            detail: hint
+          });
+        }
+      }
+
+      return out;
+    }
+
+    /**
+     * Put the current issue list where it is read: the gear's alert badge, and
+     * the settings panel's notice strip.
+     *
+     * The badge is the whole point of moving the text off the chart area — it
+     * is the only thing that says "there is something to fix in here" while
+     * the panel is shut, so it carries the count in its accessible name and
+     * the diagnosis in its tooltip, not just a colour.
+     */
+    _syncIssues() {
+      const n = this._issues.length;
+      if (this.gearBtn) {
+        this.gearBtn.classList.toggle('blockr-gear-btn--alert', n > 0);
+        const label = n
+          ? `Chart settings — ${n} problem${n === 1 ? '' : 's'}`
+          : 'Chart settings';
+        this.gearBtn.setAttribute('aria-label', label);
+        this.gearBtn.title = n
+          ? label + ': ' + this._issues.map(i => i.text).join(' ')
+          : 'Chart settings';
+      }
+      // In place, not a full panel rebuild: a data push must not drop an open
+      // dropdown or the section-open memory.
+      if (this._cfg) this._cfg.renderNotices();
+    }
+
+    /**
+     * The chart area's side of a config problem: one quiet line and the way
+     * in. What exactly is wrong, and which columns there are instead, is in
+     * the settings panel — see _configIssues.
+     */
+    _showConfigEmpty() {
+      this._showEmpty(
+        '<div class="vd-empty-state"><div class="vd-empty-stack">' +
+        '<p class="vd-empty-text">Nothing to plot</p>' +
+        '<button type="button" class="vd-empty-action">' +
+        'Open chart settings</button></div></div>');
+      const grid = this.chartGrid;
+      const btn = grid && grid.querySelector('.vd-empty-action');
+      if (btn) btn.addEventListener('click', () => this._openPopover());
+    }
+
     _render() {
+      // Diagnose the configuration FIRST, so every exit below leaves the gear
+      // badge and the notice strip current — including the ones that return
+      // before any mark is drawn.
+      this._issues = this._configIssues();
+      this._syncIssues();
+
       if (this.data.length === 0) {
         this._showEmpty('<div class="vd-empty-state"><p class="vd-empty-text">No data to chart</p></div>');
         return;
@@ -2987,48 +3137,12 @@
         }
       }
 
-      // Guard: color with too many distinct levels renders an unreadable
-      // legend. color means "map column values to colors" — a small
-      // palette has ~7 readable colors, 15 is a hard ceiling. For splitting
-      // data into many series (one per patient), use `series` instead.
-      const MAX_COLOR_LEVELS = 15;
-      if (this.config.color) {
-        const nColors = new Set(this.data.map(r => r[this.config.color])).size;
-        if (nColors > MAX_COLOR_LEVELS) {
-          // Aggregated: no series escape hatch, hard stop.
-          // Individual/timeline: nudge the user toward series (or a
-          // lower-cardinality grouping column like arm).
-          const hint = fam === 'aggregated'
-            ? `Pick a column with \u2264${MAX_COLOR_LEVELS} categories.`
-            : `Use <code>series</code> to split into series (e.g. USUBJID); keep <code>color</code> for low-cardinality grouping (e.g. ARM).`;
-          this._showEmpty(`<div class="vd-empty-state"><p class="vd-empty-text">Too many color levels (${nColors}). ${hint}</p></div>`);
-          return;
-        }
-      }
-
-      // Guard (restored — present pre-refactor): a mapped column not in
-      // the data means nothing to draw; bail cheaply instead of running
-      // the full (expensive) render.
-      const cfg = this.config;
-      const colSet = new Set((this.columns || []).map(c => c.name));
-      const req = fam === 'aggregated'
-        ? [['Group', cfg.group],
-           ['Metric', cfg.value !== '.count' ? cfg.value : null]]
-        : [['X', cfg.x], ['Y', cfg.y]];
-      const missing = req
-        .filter(([, v]) => v && !colSet.has(v))
-        .map(([lbl, v]) => `${lbl} = "${v}"`);
-      if (missing.length) {
-        const avail = (this.columns || []).map(c => c.name);
-        const availTxt = avail.length
-          ? ' Columns available here: ' + avail.slice(0, 30).join(', ') +
-            (avail.length > 30 ? ', …' : '') + '.'
-          : '';
-        this._showEmpty(
-          '<div class="vd-empty-state"><p class="vd-empty-text">' +
-          'Mapped column not in data: ' + missing.join(', ') + '.' + availTxt +
-          ' A rename, flatten or pivot upstream may have changed the column ' +
-          'name — re-pick it in the gear.</p></div>');
+      // A configuration the gear now carries in full (_configIssues): the
+      // chart area says only that there is nothing to draw, and offers the
+      // way in. Last of the empty states, so "no data" and "pick a role" --
+      // which are not errors -- keep speaking for themselves.
+      if (this._issues.length) {
+        this._showConfigEmpty();
         return;
       }
 

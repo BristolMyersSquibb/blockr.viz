@@ -35,6 +35,72 @@
   margin-bottom: 10px;
 }
 
+/* ===== Config-problem notice strip (drilldown-config.js renderNotices) =====
+   A mapped column the data no longer has is diagnosed HERE, under the panel
+   heading and directly above the pickers that fix it; the block's own output
+   keeps a quiet empty state (blockr.viz#24). Full panel width -- the strip
+   speaks about the whole configuration, not about one field. */
+.dd-notices {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+/* Beats the display:flex above, which would otherwise keep an empty strip
+   holding a full-width row of the panel's flex layout. */
+.dd-notices[hidden] {
+  display: none;
+}
+
+.dd-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid;
+  border-radius: 6px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 1.4;
+}
+
+/* Tinted, never filled: the strip has to read as a sentence about the
+   settings below it, and a solid danger block above a form reads instead as a
+   submission that failed. */
+.dd-notice--error {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+}
+.dd-notice--error .dd-notice-icon {
+  color: var(--blockr-color-danger, #dc3545);
+}
+.dd-notice--warn {
+  border-color: var(--blockr-color-warning, #f59e0b);
+  background: var(--blockr-color-warning-bg, #fffbeb);
+  color: var(--blockr-color-warning-text, #b45309);
+}
+
+.dd-notice-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  margin-top: 1px;
+}
+.dd-notice-body {
+  min-width: 0;
+}
+.dd-notice-text {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
+/* The column list, in .dd-form-help's voice: a tone below the headline, and
+   free to wrap -- a long name must break rather than widen the panel. */
+.dd-notice-detail {
+  margin-top: 2px;
+  font-weight: var(--blockr-font-weight-normal, 400);
+  opacity: 0.85;
+  overflow-wrap: anywhere;
+}
+
 .dd-form-row {
   flex: 1 1 190px;
   min-width: 0;
@@ -269,6 +335,15 @@
 .dd-role-required-empty .blockr-popover-select-wrap .blockr-select__control {
   border-color: var(--blockr-color-warning, #f59e0b);
   background: var(--blockr-color-warning-bg, #fffbeb);
+}
+
+/* The pick the notice strip is about: a column the data no longer has. Amber
+   above means "not filled in yet"; this one takes the danger tint, because the
+   mapping IS filled in and cannot be honoured. Matches .dd-notice--error, so
+   the strip and the row it names read as one statement. */
+.dd-role-stale-col .blockr-popover-select-wrap .blockr-select__control {
+  border-color: #fca5a5;
+  background: #fef2f2;
 }
 
 /* Add-mapping menu. The trigger reuses blockr.dplyr's .blockr-add-link
@@ -668,6 +743,54 @@
 .dd-card .blockr-gear-header .blockr-gear-btn {
   width: var(--blockr-control-h-sm, 30px);
   height: var(--blockr-control-h-sm, 30px);
+  /* Anchor for the alert badge below. */
+  position: relative;
+}
+
+/* ===== Gear alert: a config problem is waiting in the settings =====
+   chart.js _syncIssues sets --alert whenever _configIssues finds something.
+   The gear keeps its icon, its size and its place -- a control turned solid
+   red stops reading as the settings gear and starts reading as a destructive
+   button -- and instead grows a mark in its corner over the faintest tint. The
+   cue is a shape that APPEARS rather than a colour swapped into something
+   already there, and the button's title and accessible name spell out the
+   count, so nothing here is carried by colour alone (WCAG 1.4.1). */
+.dd-card .blockr-gear-header .blockr-gear-btn--alert {
+  border-color: #fca5a5;
+  background-color: #fef2f2;
+  color: var(--blockr-color-danger, #dc3545);
+}
+.dd-card .blockr-gear-header .blockr-gear-btn--alert:hover {
+  border-color: var(--blockr-color-danger, #dc3545);
+  background-color: #fee2e2;
+  color: var(--blockr-color-danger, #dc3545);
+}
+
+.blockr-gear-badge {
+  display: none;
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  padding: 0 2px;
+  border-radius: 999px;
+  /* A ring in the panel colour, so the badge separates from the button edge
+     however the gear is tinted. */
+  border: 1.5px solid #fff;
+  background: var(--blockr-color-danger, #dc3545);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  align-items: center;
+  justify-content: center;
+  /* The badge is part of the button's hit area, never a target of its own. */
+  pointer-events: none;
+}
+.dd-card .blockr-gear-header .blockr-gear-btn--alert .blockr-gear-badge {
+  display: inline-flex;
 }
 
 .dd-card a.blockr-dl-xlsx.dd-chart-dl {

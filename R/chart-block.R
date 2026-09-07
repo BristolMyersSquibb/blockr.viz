@@ -1562,12 +1562,14 @@ new_chart_block <- function(
             # it -- they are presentation config the JS renderer consumes, so a
             # mapped column that was renamed or dropped upstream leaves the
             # filter (and the downstream data) perfectly valid. That is a
-            # presentation concern, surfaced by the renderer's own in-canvas
-            # message (see chart.js: "Mapped column not in data ... re-pick it
-            # in the gear"), NOT an expr-level failure. Validating aesthetics
-            # here would fail a correct expression; a broken *filter* column,
-            # by contrast, fails hard on its own when the emitted filter is
-            # evaluated (caught by core's capture_conditions("eval")).
+            # presentation concern, surfaced by the renderer in its GEAR
+            # (chart.js _configIssues: "Mapped column not in data ... re-pick
+            # it below", with an alert badge on the gear and a quiet empty
+            # state in the chart area), NOT an expr-level failure. Validating
+            # aesthetics here would fail a correct expression; a broken
+            # *filter* column, by contrast, fails hard on its own when the
+            # emitted filter is evaluated (caught by core's
+            # capture_conditions("eval")).
             d <- data()
             # Non-data-frame input under the shared contract (a composer
             # table et al.): the emitted code must coerce the same way the

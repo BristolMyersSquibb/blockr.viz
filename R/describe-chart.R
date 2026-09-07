@@ -265,9 +265,10 @@ chart_other_lines <- function(state, defaults) {
 }
 
 # The commonest cause of an empty chart is a mapped column the data no longer
-# has (renamed or dropped upstream). The renderer reports it inside the
-# canvas, where the assistant cannot see it, and this method has the block
-# arguments but not the data -- so name the columns and say where to check.
+# has (renamed or dropped upstream). The renderer reports it in the browser --
+# in the block's gear, where the assistant cannot see it -- and this method has
+# the block arguments but not the data, so name the columns and say where to
+# check.
 chart_mapping_hint <- function(maps) {
 
   if (!length(maps)) {
