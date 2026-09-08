@@ -1,12 +1,13 @@
-# PROTOTYPE: the download is the picture on the screen.
+# The download is the picture on the screen.
 #
-#   BLOCKR_CANVAS_CAPTURE=1 Rscript blockr.viz/dev/capture-demo.R [port]
+#   Rscript blockr.viz/dev/capture-demo.R [port]
+#   BLOCKR_CANVAS_CAPTURE=0 Rscript ...   # the old ggplot exports, to compare
 #
-# With the flag on, opening a chart's download menu makes the canvas compose
+# Opening a chart's download menu makes the canvas compose
 # itself (chart.js `_downloadImage`) and post the bitmap to R; the png, html
-# and pptx downloads then carry that instead of a server-side re-render. Turn
-# the flag off and the same buttons go back through static_chart(), so the
-# two can be compared side by side in one session.
+# and pptx downloads then carry that instead of a server-side re-render. The
+# kill switch above puts the same buttons back on static_chart(), so the two
+# can be compared side by side.
 #
 # The board is the shape that started this: long treatment-arm labels on a
 # boxplot, where a wide panel keeps them flat and an 11.9in slide cannot.

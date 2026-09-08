@@ -22,15 +22,22 @@
 # picture. So `static_chart()` / `chart_expr()` stay, as the fallback rather
 # than the main path.
 
-# PROTOTYPE flag. The option first, an env var second, so an app that already
-# exists (devmaster, a deployed board) can be started with the capture on
-# without editing its script.
+# ON by default. Nobody wants the rebuilt picture when the real one is right
+# there, so this is a kill switch rather than a feature flag: set the option
+# to FALSE, or BLOCKR_CANVAS_CAPTURE=0 in an already-deployed app, and the
+# exports go back through static_chart(). Kept only so a deployment can be
+# put back without a redeploy; it should go once this has ridden along for a
+# release.
 #' @noRd
 canvas_capture_on <- function() {
-  isTRUE(getOption(
-    "blockr.viz.canvas_capture",
-    tolower(Sys.getenv("BLOCKR_CANVAS_CAPTURE")) %in% c("1", "true", "yes")
-  ))
+
+  env <- tolower(Sys.getenv("BLOCKR_CANVAS_CAPTURE"))
+
+  if (nzchar(env)) {
+    return(!env %in% c("0", "false", "no", "off"))
+  }
+
+  !isFALSE(getOption("blockr.viz.canvas_capture", TRUE))
 }
 
 # How many device pixels per CSS pixel the canvas composes with. 2 is what
