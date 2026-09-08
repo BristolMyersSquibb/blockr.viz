@@ -25,7 +25,14 @@ ctor_formals <- function(ctor) {
 # Fields deliberately absent from the AI registry, per block. Every entry
 # needs a reason; anything not listed here and not in the registry FAILS.
 registry_allowlist <- list(
-  chart = character(),
+  chart = c(
+    # The prepare script and its control values. Externally controllable (MCP,
+    # restore) but deliberately NOT on the AI surface: a general escape hatch
+    # on a block that appears twenty times in a board invites the assistant to
+    # write a script where a mapping would have done the job. Signed off as a
+    # non-AI-exposed argument.
+    "script", "values"
+  ),
   table = c(
     # Runtime filter transport: written by clicks, round-trips through
     # save/restore only -- never AI-set at creation. (filter_spread_col /

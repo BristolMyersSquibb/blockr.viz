@@ -527,8 +527,11 @@ test_that("empty-list state from a pre-#144 DAG paste normalizes back to NULL", 
   )
   payload <- blockr.core::blockr_ser(blk)[["payload"]]
 
+  # `values` is exempt: it is a genuinely list-valued slot (the prepare
+  # script's control values, keyed by declared name), so list() is its real
+  # empty value rather than the `{}` corruption this test is about.
   empty_list <- vapply(payload, function(v) is.list(v) && !length(v), logical(1))
-  expect_equal(names(payload)[empty_list], character())
+  expect_equal(setdiff(names(payload)[empty_list], "values"), character())
 
   # Real config survives the heal untouched.
   expect_equal(payload$facet, "ARM")

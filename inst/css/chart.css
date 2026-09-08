@@ -947,3 +947,64 @@
 .dd-role-unset .blockr-select__value {
   color: var(--blockr-grey-400, #9ca3af);
 }
+
+/* ---------------------------------------------------------------------------
+   Prepare script (chart block `script` argument).
+
+   The gear's textarea, and the two failure surfaces. Nothing here styles the
+   script's CONTROLS: those are ordinary band rows drawn by the same renderer
+   a mapping row uses, so they already inherit the shell, the label track and
+   the column ladder above.
+   --------------------------------------------------------------------------- */
+/* A gear section is a four-column grid sized for narrow pickers. A script is
+   the one thing in here that wants the whole width, so this row spans every
+   track. (`flex` does nothing on a grid item, which is why the row measured
+   203.75px until this said `grid-column`.) */
+.dd-script-row {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+.dd-script-wrap {
+  display: block;
+  width: 100%;
+}
+.dd-script-editor {
+  width: 100%;
+  box-sizing: border-box;
+  /* Monospace, because it is code. `font:` shorthand is deliberately NOT used
+     here -- it resets font-family to the shorthand's own value and drops the
+     inherited stack (reference_css_font_shorthand_inherit_drops). */
+  font-family: var(--blockr-font-mono, ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 96px;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+/* The Apply chip sits under the box rather than inside it: a textarea's
+   bottom-right corner already belongs to the resize handle. */
+.dd-script-wrap .dd-text-commit {
+  margin-top: 6px;
+}
+.dd-script-row .dd-form-help {
+  display: block;
+  margin-top: 6px;
+}
+/* A script that threw, and a declaration that could not become a control.
+   Both read as errors rather than as help text, because both mean a knob the
+   user expected is not there. */
+.dd-script-failed {
+  color: var(--blockr-color-danger, #b91c1c);
+}
+.dd-mapping-band .dd-script-input-error .dd-form-help {
+  display: block;
+  margin-top: 5px;
+  color: var(--blockr-color-danger, #b91c1c);
+}
+.dd-mapping-band .dd-script-failed {
+  grid-column: 1 / -1;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}

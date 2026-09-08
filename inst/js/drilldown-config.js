@@ -101,7 +101,27 @@
     _cols() { return this.h.columns() || []; }
     _cfg() { return this.h.config(); }
     /** @param {string} key */
-    _role(key) { return this.h.roles[key]; }
+    _role(key) { return this.h.roles[key] || this._scriptRoles()[key]; }
+
+    // Controls declared by the prepare script. R has already worked out what
+    // each declaration means (R/prepare-apply.R: dd_script_roles) and ships
+    // the answer in the engine's own role vocabulary, so a script knob is an
+    // ordinary role from here on: same _buildControl(), same band renderer,
+    // same config channel. Rebuilt per call rather than cached -- the list
+    // changes whenever the script does, and it is a handful of entries.
+    /** @returns {Record<string, any>} */
+    _scriptRoles() {
+      /** @type {Record<string, any>} */
+      const out = {};
+      for (const spec of (this._cfg().script_inputs || [])) {
+        if (!spec || !spec.key || spec.kind === 'error') continue;
+        out[spec.key] = spec;
+      }
+      return out;
+    }
+
+    /** @returns {Array<any>} */
+    _scriptSpecs() { return this._cfg().script_inputs || []; }
     /** @param {string} name */
     _colExists(name) { return this._cols().some(c => c.name === name); }
 
@@ -201,9 +221,17 @@
       if (!el) return;
       const spec = this.h.sections() || {};
       const keys = this._exposed().filter(k => this._mappingKeys(spec).includes(k));
+      // Controls the prepare script declares. Always on the band, with no pin
+      // in the gear: writing the declaration IS asking for the knob, and a
+      // knob nothing can reach is not worth the line. They follow the mapping
+      // rows rather than interleaving with them, so the band reads as "what
+      // this chart shows" and then "what this chart's script takes".
+      const specs = this._scriptSpecs();
+      const err = this._cfg().script_error;
       el.innerHTML = '';
-      el.style.display = keys.length ? '' : 'none';
-      if (!keys.length) return;
+      const any = keys.length || specs.length || err;
+      el.style.display = any ? '' : 'none';
+      if (!any) return;
       // Required means "cannot be emptied", and for the chart's value that is
       // a question about the AGGREGATION, not about the section it sits in:
       // "Max of (none)" is not a state, while a bare row count ignores the
@@ -231,10 +259,44 @@
         for (const key of keys) {
           this._renderRole(el, key, { required: required.has(key), band: true });
         }
+        for (const sp of specs) {
+          if (sp.kind === 'error') this._renderScriptError(el, sp);
+          else this._renderRole(el, sp.key, { band: true });
+        }
       } finally {
         this._bandSelects = this._selects;
         this._selects = outer;
       }
+      // A script that threw. Shown here rather than swallowed into an empty
+      // chart, because an empty chart with no reason reads as one that is
+      // still loading.
+      if (err) {
+        const row = document.createElement('div');
+        row.className = 'dd-form-row dd-band-row dd-script-failed';
+        row.textContent = 'Script failed: ' + err;
+        el.appendChild(row);
+      }
+    }
+
+    // A declaration that could not become a control (a mistyped column name in
+    // a factor's levels is the usual one). Named, with its reason, because a
+    // knob that quietly fails to appear is the hardest kind to debug.
+    /** @param {HTMLElement} el @param {any} sp */
+    _renderScriptError(el, sp) {
+      const row = document.createElement('div');
+      row.className = 'dd-form-row dd-band-row dd-script-input-error';
+      const head = document.createElement('div');
+      head.className = 'dd-row-head';
+      const lbl = document.createElement('span');
+      lbl.className = 'blockr-popover-label';
+      lbl.textContent = sp.label;
+      head.appendChild(lbl);
+      row.appendChild(head);
+      const msg = document.createElement('span');
+      msg.className = 'dd-form-help';
+      msg.textContent = sp.error || 'no control';
+      row.appendChild(msg);
+      el.appendChild(row);
     }
 
     // Every mapping role the block currently offers, in section order:
@@ -603,11 +665,97 @@
         }
       }
 
+      this._renderScriptSection();
+
       if (this.h.afterTypeChange) this.h.afterTypeChange();
 
       // Rebuild done, content height is back — restore the scroll position
       // captured before the wipe (see above).
       if (scroller) scroller.scrollTop = scrollPos;
+    }
+
+    // The prepare script, last in the gear because it is the one thing here a
+    // reader never touches: the board builder writes it once, and what the
+    // reader gets is the controls it puts on the band.
+    //
+    // A checkbox capability, not an always-open box. Nineteen chart blocks in
+    // twenty carry no script, and a permanently visible code editor in all of
+    // them is a bigger tax than one header line.
+    //
+    // No-ops entirely where the host does not support it (the copy of this
+    // engine vendored into blockr.ggplot), because `script` is then absent
+    // from the config rather than empty.
+    _renderScriptSection() {
+      const cfg = this._cfg();
+      if (cfg.script === undefined) return;
+      const has = !!(cfg.script && String(cfg.script).trim());
+      const open = this._secOpen('script', () => has);
+      const sec = this._sectionEl('Prepare script', {
+        toggle: { checked: open, onToggle: (on) =>
+          this._toggleSection('script', on, () => {
+            cfg.script = '';
+            this.h.onChange('script');
+          }) }
+      });
+      if (!open) return;
+
+      const row = document.createElement('div');
+      row.className = 'dd-form-row dd-script-row';
+      const ta = document.createElement('textarea');
+      ta.className = 'blockr-popover-input dd-script-editor';
+      ta.rows = 6;
+      ta.spellcheck = false;
+      ta.placeholder = 'data |> dplyr::filter(...)';
+      ta.value = cfg.script == null ? '' : String(cfg.script);
+      // Commit on blur or the Apply chip, never per keystroke: every commit
+      // re-runs the script server-side and re-serializes the whole frame for
+      // the browser. Escape reverts to the last committed text. Enter inserts
+      // a newline, because this is a script and not a one-line field.
+      let committed = ta.value;
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'blockr-expr-confirm dd-text-commit';
+      chip.textContent = 'Apply';
+      chip.style.display = 'none';
+      const sync = () => { chip.style.display = ta.value === committed ? 'none' : ''; };
+      const commit = () => {
+        if (ta.value === committed) return;
+        committed = ta.value;
+        cfg.script = ta.value;
+        this.h.onChange('script');
+        sync();
+      };
+      ta.addEventListener('input', sync);
+      ta.addEventListener('blur', commit);
+      ta.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { ta.value = committed; sync(); }
+      });
+      chip.addEventListener('mousedown', (e) => e.preventDefault());
+      chip.addEventListener('click', commit);
+      const wrap = document.createElement('div');
+      wrap.className = 'dd-text-wrap dd-script-wrap';
+      wrap.appendChild(ta);
+      wrap.appendChild(chip);
+      row.appendChild(wrap);
+
+      // What the script declared, read back. The band is the real feedback
+      // (write the line, apply, the knob appears), but a line that did NOT
+      // become a control says so here rather than being invisible.
+      const specs = this._scriptSpecs();
+      const help = document.createElement('span');
+      help.className = 'dd-form-help';
+      if (cfg.script_error) {
+        help.textContent = 'Script failed: ' + cfg.script_error;
+        help.classList.add('dd-script-failed');
+      } else if (specs.length) {
+        help.textContent = specs.map(sp => sp.kind === 'error' ?
+          (sp.name + ' (' + (sp.error || 'no control') + ')') :
+          (sp.name + ' (' + sp.kind + ')')).join(', ');
+      } else {
+        help.textContent = 'No controls declared.';
+      }
+      row.appendChild(help);
+      sec.appendChild(row);
     }
 
     /**
@@ -1642,6 +1790,68 @@
         chip.addEventListener('click', commit);
         wrap.appendChild(inp);
         wrap.appendChild(chip);
+        parent.appendChild(wrap);
+      } else if (role.kind === 'multi') {
+        // Multi-select over a fixed option list (a prepare script's
+        // `factor(c("a","b"), lv)`). The column multi-picker above is the same
+        // primitive fed from the data; this one takes the role's own options,
+        // which is the only difference between them.
+        const sel = Array.isArray(cfg[key]) ? cfg[key].slice() :
+          (this._hasVal(cfg[key]) ? [String(cfg[key])] : []);
+        const wrap = document.createElement('div');
+        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+        const onSel = (/** @type {string[]} */ vals) => {
+          cfg[key] = vals; cb(); this.h.onChange(key);
+        };
+        if (typeof Blockr !== 'undefined' && Blockr.Select && Blockr.Select.multi) {
+          this._selects[key] = Blockr.Select.multi(wrap, {
+            options: role.options || [], selected: sel,
+            placeholder: role.placeholder || 'None', onChange: onSel
+          });
+        } else {
+          const sl = document.createElement('select');
+          sl.className = 'dd-cfg-select'; sl.multiple = true;
+          for (const o of (role.options || [])) {
+            const val = (typeof o === 'object' && o) ? o.value : o;
+            const op = document.createElement('option');
+            op.value = val;
+            op.textContent = (typeof o === 'object' && o && o.label) ? o.label : val;
+            if (sel.indexOf(val) >= 0) op.selected = true;
+            sl.appendChild(op);
+          }
+          sl.addEventListener('change', () => onSel(
+            Array.prototype.slice.call(sl.selectedOptions).map(o => o.value)));
+          wrap.appendChild(sl);
+        }
+        parent.appendChild(wrap);
+      } else if (role.kind === 'number' || role.kind === 'date') {
+        // Commits on change and on blur, not per keystroke: every commit
+        // re-runs the prepare script and re-serializes the frame for the
+        // browser, so a half-typed "1" on the way to "12" must not travel.
+        const inp = document.createElement('input');
+        inp.type = role.kind === 'date' ? 'date' : 'number';
+        inp.className = 'blockr-popover-input';
+        if (role.min != null) inp.min = String(role.min);
+        if (role.max != null) inp.max = String(role.max);
+        if (role.step != null) inp.step = String(role.step);
+        if (role.placeholder) inp.placeholder = String(role.placeholder);
+        inp.value = (cfg[key] == null) ? '' : String(cfg[key]);
+        let committed = inp.value;
+        const commit = () => {
+          if (inp.value === committed) return;
+          committed = inp.value;
+          cfg[key] = (role.kind === 'number') ? Number(inp.value) : inp.value;
+          cb();
+          this.h.onChange(key);
+        };
+        inp.addEventListener('change', commit);
+        inp.addEventListener('blur', commit);
+        inp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        });
+        const wrap = document.createElement('div');
+        wrap.className = 'dd-text-wrap';
+        wrap.appendChild(inp);
         parent.appendChild(wrap);
       } else if (role.kind === 'slider') {
         this._buildSlider(parent, key);

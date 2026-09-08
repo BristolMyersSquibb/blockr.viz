@@ -6406,7 +6406,7 @@
 
     _sendConfig() {
       if (!this.el.id) return;
-      Shiny.setInputValue(this.el.id + '_action', {
+      const msg = {
         action: 'config',
         group: this.config.group,
         color: this.config.color || '',
@@ -6478,8 +6478,24 @@
         // the sender / a plain-data target that names no table), so they are
         // always sent rather than omitted when empty.
         ctrl_target: this.config.ctrl_target || '',
-        ctrl_table: this.config.ctrl_table || ''
-      }, { priority: 'event' });
+        ctrl_table: this.config.ctrl_table || '',
+        // The prepare script, verbatim. "" is a real value (clearing it), so
+        // it is always sent rather than omitted when empty.
+        script: this.config.script == null ? '' : String(this.config.script)
+      };
+      // Script control values (`sv_<name>`). Written out by name because the
+      // names come out of the script, so they cannot be part of the literal
+      // above. An emptied multi-select ships as "" for the same reason
+      // `expose` does: an empty array arrives R-side as NULL and the handler's
+      // is.null() guard would skip the write, so the control could never be
+      // cleared.
+      for (const spec of (this.config.script_inputs || [])) {
+        if (!spec || !spec.key || spec.kind === 'error') continue;
+        const v = this.config[spec.key];
+        msg[spec.key] = (Array.isArray(v) && !v.length) ? '' :
+          (v == null ? '' : v);
+      }
+      Shiny.setInputValue(this.el.id + '_action', msg, { priority: 'event' });
     }
 
     _sendMults() {

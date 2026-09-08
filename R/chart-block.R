@@ -414,6 +414,33 @@ new_chart_block <- function(
     # Authored, never inferred: a role stays on the face when it is set to
     # "(none)", or picking (none) would delete its own control.
     expose = character(),
+    # PREPARE SCRIPT (experiment). An ordinary R script run on the incoming
+    # data before the chart sees it, whose plain-value declarations become
+    # controls on the block's face. NULL (default) = no script, and the block
+    # behaves exactly as it did.
+    #
+    # It exists for the cases the exposed mapping band cannot reach: a chart
+    # that needs one derived column, or a knob that is not an aesthetic. A
+    # transform on its own would be a code block upstream; the point here is
+    # that the knob lands on THIS block's face, because a dev-master board
+    # wants a chart and its settings to be one card.
+    #
+    # Declaration convention is the code block's: a top-level assignment whose
+    # right-hand side is a plain value (a literal, or c()/factor()/as.Date()/
+    # as.POSIXct()) is a control, everything else is code, and a name starting
+    # with a dot is never a control. A factor's levels are its choice list.
+    #
+    # Deliberately NOT on the AI surface: it is absent from the registry
+    # argument spec, so the assistant never sees it and cannot reach for a
+    # script where a mapping would have done. It stays externally controllable
+    # for MCP and restore.
+    #
+    # A script that RESHAPES the data (a pivot) drops the frame's
+    # `blockr_kinds` attribute, and the gear's role selects then fall back to
+    # offering every column. Not guarded, by decision: call
+    # `mark_column_kinds()` at the end of such a script.
+    script = NULL,
+    values = list(),
     ...) {
 
   # ARG-RENAME (see dev/unified-arg-naming.md): `metric`/`agg_fn` are the
@@ -441,6 +468,11 @@ new_chart_block <- function(
   # picker, and the render paths stop coercing their vectors to lists. Column
   # roles normalize to character; the numeric / free-form slots only collapse
   # the empty list, keeping their type.
+  # A script may arrive as a character vector of lines (a hand-edited board, an
+  # MCP write). Collapse it HERE, at the one place every construction passes
+  # through, so nothing downstream has to keep asking which shape it has.
+  script <- cb_script_text(script)
+
   group <- chr_state(group)
   color <- chr_state(color)
   facet <- chr_state(facet)
@@ -575,7 +607,7 @@ new_chart_block <- function(
         # What the render paths consume (same contract as coerce_plain_df,
         # minus the second coercion). Mirrors the table block's ann_data
         # reactive.
-        plain_data <- shiny::reactive({
+        raw_data <- shiny::reactive({
           inp <- r_input()
           d <- inp$df
           if (!is.data.frame(d)) return(NULL)
@@ -590,6 +622,63 @@ new_chart_block <- function(
           # captured before coercion to avoid.
           attr(out, "blockr_filters") <- attr(d, "blockr_filters", exact = TRUE)
           out
+        })
+
+        # --- prepare script ------------------------------------------------
+        # Parse is cheap and pure; everything else derives from it.
+        r_parsed <- shiny::reactive(cb_parse(r_script()))
+
+        # Declarations are evaluated against the live upstream data, so a
+        # factor's levels track the data instead of being frozen at authoring
+        # time. NEVER DEGRADE THE SPECS WHILE THE DATA IS MOMENTARILY GONE:
+        # `data()` does not merely go stale when a panel is hidden, the
+        # visibility gate makes it throw, so `raw_data()` becomes NULL. A
+        # declaration like `site <- factor(unique(data$SITE))` then cannot be
+        # evaluated, yields an error spec, and cb_expr() drops it as unusable --
+        # the compiled body loses its substitution and refers to a symbol
+        # nothing defines. Coming back flips it to the good expression again,
+        # so the block genuinely re-evaluates on every tab switch. Keeping the
+        # last good specs removes the flip-flop. (Learned the hard way in
+        # blockr.extra's code block; same fix, same reason.)
+        last_specs <- new.env(parent = emptyenv())
+        last_specs$value <- list()
+        r_specs <- shiny::reactive({
+          d <- tryCatch(raw_data(), error = function(e) NULL)
+          parsed <- r_parsed()
+          if (is.null(d) && length(last_specs$value)) {
+            return(last_specs$value)
+          }
+          out <- cb_specs(parsed, d)
+          if (!identical(out, last_specs$value)) {
+            last_specs$value <- out
+          }
+          last_specs$value
+        })
+
+        # A script failure has to be visible. It rides the config payload to
+        # the band rather than being swallowed into an unexplained empty chart
+        # (reference_dead_block_looks_like_a_loading_view).
+        r_prepared <- shiny::reactive({
+          dd_prepare_run(raw_data(), r_parsed(), r_specs(), r_values())
+        })
+
+        # What every render path consumes. With no script this is raw_data()
+        # unchanged, which is what the other nineteen chart blocks in twenty
+        # see.
+        plain_data <- shiny::reactive({
+          prep <- r_prepared()
+          if (is.null(prep$error)) {
+            return(prep$data)
+          }
+          # A failed script draws NOTHING rather than the untransformed frame:
+          # the chart would otherwise show data the block's own output does not
+          # have, and say nothing about it. An EMPTY frame carrying the
+          # upstream's columns, not NULL, because every render path guards with
+          # `req(is.data.frame(d))` -- a NULL halts the push, and then the
+          # error never reaches the band and the block just looks like it is
+          # still loading (reference_dead_block_looks_like_a_loading_view).
+          d <- tryCatch(raw_data(), error = function(e) NULL)
+          if (is.data.frame(d)) d[0, , drop = FALSE] else NULL
         })
 
         # Auto-tier sources: the input's label / subtitle / caption
@@ -680,6 +769,12 @@ new_chart_block <- function(
         r_facet_scales <- shiny::reactiveVal(facet_scales)
         r_download <- shiny::reactiveVal(isTRUE(download))
         r_expose <- shiny::reactiveVal(as.character(expose))
+        # Prepare script. Externally controllable, so a write can arrive from
+        # MCP or a restore as a vector of lines rather than one string;
+        # cb_script_text() collapses it at the one place every write passes
+        # through (the same shape blockr.extra's code block uses).
+        r_script <- shiny::reactiveVal(cb_script_text(script))
+        r_values <- shiny::reactiveVal(if (is.list(values)) values else list())
         r_board_theme <- setup_drilldown_theme_sync(session)
         # Board scale map (NULL when the board has no "scale_map" option);
         # resolved per data push, never stored in block state.
@@ -1053,13 +1148,27 @@ new_chart_block <- function(
               ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices()),
               # Mapping roles the face carries. as.list() so a single role
               # ships as a JSON array rather than a bare string (auto_unbox).
-              expose = as.list(r_expose())
+              expose = as.list(r_expose()),
+              # Prepare script: the text the gear's textarea edits, the
+              # controls it declares (in the engine's own role vocabulary, so
+              # the band draws them with the same _buildControl() a mapping row
+              # uses), and why a knob is missing when one is.
+              script = r_script(),
+              script_inputs = dd_script_roles(r_specs()),
+              # NB: the `sv_*` value entries are spliced onto this list below,
+              # since their names are only known once the script is parsed.
+              script_error = r_prepared()$error
             )
             # NB: the registry _arguments() prose is intentionally NOT sent to
             # the browser. LLM prompts live in the registry only; popover help
             # is a UI-layer concern (terse labels + the live `name (label)`
             # convention). See blockr.design/open/block-config-ui.
           )
+          # Script control values, keyed by declared name. Spliced rather than
+          # written inline: the keys come out of the script, so they cannot be
+          # part of the literal above.
+          chart_msg$config <- c(chart_msg$config,
+                                dd_script_cfg(r_specs(), r_values()))
           chart_msg
         }
 
@@ -1268,6 +1377,23 @@ new_chart_block <- function(
             # and be skipped by the guard above it.
             if (!is.null(msg$expose)) {
               upd(r_expose, expose_state(msg$expose))
+            }
+            # The prepare script, committed from the gear's textarea (on blur
+            # or the Apply chip, never per keystroke: every write re-runs the
+            # script and re-serializes the whole frame for the browser). "" is
+            # a real value here, clearing the script, so it must not be
+            # confused with an absent key.
+            if (!is.null(msg$script)) {
+              upd(r_script, cb_script_text(as.character(msg$script)))
+            }
+            # Script control values. They ride the ordinary config channel
+            # under an `sv_` prefix, keyed by declared name, so a script
+            # variable called `color` cannot write the chart's colour mapping.
+            # Read against the CURRENT specs, which know each declaration's
+            # type and drive the coercion back out of the DOM.
+            sv <- dd_script_values(msg, r_specs(), r_values())
+            if (!identical(sv, r_values())) {
+              r_values(sv)
             }
           } else if (action == "set_mults") {
             if (!is.null(msg$line_width_mult)) {
@@ -1653,7 +1779,13 @@ new_chart_block <- function(
             # chart draws. NULL input (no upstream yet) stays unwrapped.
             coerce <- !is.null(d) && !is.data.frame(d)
             ex <- build_filter_expr()
-            if (coerce) wrap_plain_df_input(ex) else ex
+            if (coerce) ex <- wrap_plain_df_input(ex)
+            # The prepare script wraps the filter, so the click filter still
+            # applies to the SOURCE rows: a mark is identified by an upstream
+            # column, which the script is free not to keep. Downstream then
+            # receives what the chart draws, filtered.
+            sx <- cb_expr(r_parsed(), r_specs(), r_values(), slot = TRUE)
+            if (is.null(sx)) ex else dd_splice_slot(sx, ex)
           }),
           state = list(
             group = r_group,
@@ -1681,6 +1813,14 @@ new_chart_block <- function(
             line_width_mult = r_line_width_mult,
             dot_size_mult = r_dot_size_mult,
             connect = r_connect,
+            # One string, not the code block's array-of-lines: every entry in
+            # `external_ctrl` has to BE a reactiveVal (blockr.core checks), and
+            # a state entry that reshapes on the way out cannot be one. The
+            # ctor and the config handler still accept a character vector and
+            # collapse it (cb_script_text), so a hand-edited board with the
+            # script written as lines loads fine.
+            script = r_script,
+            values = r_values,
             vlines = r_vlines,
             hlines = r_hlines,
             # Legacy alias formals (mapped on construction): serialized as
@@ -1788,6 +1928,10 @@ new_chart_block <- function(
       # allowed to be empty or every chart block wedges
       # (reference_blockr_allow_empty_state_wedge).
       "expose",
+      # No script is the default and the common case, so both MUST be allowed
+      # to be empty or every chart block wedges
+      # (reference_blockr_allow_empty_state_wedge).
+      "script", "values",
       "ctrl_target", "ctrl_table"),
     external_ctrl = c("group", "color", "facet", "value", "func",
       "chart_type", "x", "y", "xend", "series", "label", "tt_fields", "drill",
@@ -1802,6 +1946,11 @@ new_chart_block <- function(
       "facet_scales",
       "title", "subtitle", "caption",
       "expose",
+      # Externally controllable (MCP, restore) but deliberately NOT on the AI
+      # surface: `script` is absent from the registry argument spec, so the
+      # assistant never sees it. A general escape hatch on a block that appears
+      # twenty times in a board invites a script where a mapping would do.
+      "script", "values",
       "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",
     class = "chart_block",
