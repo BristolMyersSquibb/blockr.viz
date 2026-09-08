@@ -582,42 +582,60 @@ new_summarize_table_block <- function(group = NULL,
         output$dl_xlsx <- shiny::downloadHandler(
           filename = function() "summarize-table.xlsx",
           content = function(file) {
-            e <- dl_exhibit()
-            # Values, not pictures: openxlsx anchors an image to a cell RANGE
-            # rather than a cell, so images neither sort nor resize with the
-            # data -- and someone opening the xlsx came to pivot.
-            write_annotated_xlsx(
-              rank_export_df(e$prep), file,
-              title = e$title, subtitle = e$subtitle, caption = e$caption
-            )
+            dl_guard("Excel", {
+              e <- dl_exhibit()
+              # Values, not pictures: openxlsx anchors an image to a cell RANGE
+              # rather than a cell, so images neither sort nor resize with the
+              # data -- and someone opening the xlsx came to pivot.
+              write_annotated_xlsx(
+                rank_export_df(e$prep), file,
+                title = e$title, subtitle = e$subtitle, caption = e$caption
+              )
+            })
           }
         )
         output$dl_html <- shiny::downloadHandler(
           filename = function() "summarize-table.html",
           content = function(file) {
-            e <- dl_exhibit()
-            write_exhibit_html(
-              e, file,
-              title = e$title, subtitle = e$subtitle, caption = e$caption
-            )
+            dl_guard("web page", {
+              e <- dl_exhibit()
+              write_exhibit_html(
+                e, file,
+                title = e$title, subtitle = e$subtitle, caption = e$caption
+              )
+            })
           }
         )
         output$dl_pptx <- shiny::downloadHandler(
           filename = function() "summarize-table.pptx",
           content = function(file) {
-            e <- dl_exhibit()
-            write_exhibit_pptx(
-              e, file,
-              title = e$title, subtitle = e$subtitle, caption = e$caption
-            )
+            dl_guard("PowerPoint", {
+              e <- dl_exhibit()
+              write_exhibit_pptx(
+                e, file,
+                title = e$title, subtitle = e$subtitle, caption = e$caption
+              )
+            })
           }
         )
         output$dl_png <- shiny::downloadHandler(
           filename = function() "summarize-table.png",
           content = function(file) {
-            write_exhibit_png(dl_exhibit(), file)
+            dl_guard("image", {
+              write_exhibit_png(dl_exhibit(), file)
+            })
           }
         )
+
+        # Same reason as the chart block's, one line up from the same trap:
+        # a download link inside a display:none host is a hidden output,
+        # Shiny suspends it, the handler is never registered, and the click
+        # comes back 404.
+        shiny::outputOptions(output, "rank_download", suspendWhenHidden = FALSE)
+        shiny::outputOptions(output, "dl_xlsx", suspendWhenHidden = FALSE)
+        shiny::outputOptions(output, "dl_html", suspendWhenHidden = FALSE)
+        shiny::outputOptions(output, "dl_pptx", suspendWhenHidden = FALSE)
+        shiny::outputOptions(output, "dl_png", suspendWhenHidden = FALSE)
 
         list(
           expr = shiny::reactive({

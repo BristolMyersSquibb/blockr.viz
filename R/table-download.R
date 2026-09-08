@@ -156,29 +156,74 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
   session$output$dl_xlsx <- shiny::downloadHandler(
     filename = function() paste0(filename, ".xlsx"),
     content = function(file) {
-      e <- exhibit()
-      write_annotated_xlsx(e$data, file, title = e$title,
-                           subtitle = e$subtitle, caption = e$caption)
-    }
-  )
+            dl_guard("Excel", {
+              e <- exhibit()
+              write_annotated_xlsx(e$data, file, title = e$title,
+                                   subtitle = e$subtitle, caption = e$caption)
+            })
+          }
+        )
   session$output$dl_html <- shiny::downloadHandler(
     filename = function() paste0(filename, ".html"),
     content = function(file) {
-      e <- exhibit()
-      write_exhibit_html(e$data, file, title = e$title,
-                         subtitle = e$subtitle, caption = e$caption,
-                         collapsible = !identical(e$collapsible, FALSE),
-                         sortable = !identical(e$sortable, FALSE))
-    }
-  )
+            dl_guard("web page", {
+              e <- exhibit()
+              write_exhibit_html(e$data, file, title = e$title,
+                                 subtitle = e$subtitle, caption = e$caption,
+                                 collapsible = !identical(e$collapsible, FALSE),
+                                 sortable = !identical(e$sortable, FALSE))
+            })
+          }
+        )
   session$output$dl_pptx <- shiny::downloadHandler(
     filename = function() paste0(filename, ".pptx"),
     content = function(file) {
-      e <- exhibit()
-      write_exhibit_pptx(e$data, file, title = e$title,
-                         subtitle = e$subtitle, caption = e$caption)
-    }
-  )
+            dl_guard("PowerPoint", {
+              e <- exhibit()
+              write_exhibit_pptx(e$data, file, title = e$title,
+                                 subtitle = e$subtitle, caption = e$caption)
+            })
+          }
+        )
+
+  # The control lives wherever its host puts it, and the table's host is
+  # display:none until the JS hoists it. A hidden output is a SUSPENDED
+  # output, so the download handler never registers and the click comes back
+  # 404 -- the prod failure that saves "<block>-expr-dl_pptx.htm".
+  for (nm in c(slot_id, "dl_xlsx", "dl_html", "dl_pptx")) {
+    try(
+      shiny::outputOptions(session$output, nm, suspendWhenHidden = FALSE),
+      silent = TRUE
+    )
+  }
 
   slot
+}
+
+# -- Download failures, said out loud -----------------------------------------
+#
+# A download that fails on a deployment is a mystery. Shiny answers the
+# request with an HTML error page, so the browser saves
+# "<session>-<block>-dl_pptx.htm" and reports "Couldn't download", while the
+# reason stays in a Connect log nobody watching the app can reach. Two prod
+# bugs have now been diagnosed by guessing at that file.
+#
+# This puts the message on screen at click time and keeps the failure: the
+# error still propagates, it just stops being anonymous.
+#' @noRd
+dl_guard <- function(what, expr) {
+  withCallingHandlers(
+    expr,
+    error = function(e) {
+      msg <- conditionMessage(e)
+      try(
+        shiny::showNotification(
+          paste0("The ", what, " download failed: ", msg),
+          type = "error", duration = NULL
+        ),
+        silent = TRUE
+      )
+      message("[blockr.viz] ", what, " download failed: ", msg)
+    }
+  )
 }

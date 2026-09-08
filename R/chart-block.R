@@ -1494,66 +1494,94 @@ new_chart_block <- function(
         output$dl_xlsx <- shiny::downloadHandler(
           filename = function() "chart.xlsx",
           content = function(file) {
-            # The numbers, never the picture: xlsx reads the aggregated frame
-            # off the server-side render even when a capture is in hand.
-            p <- chart_static_exhibit(plain_data(), dl_state())
-            shiny::req(!is.null(p))
-            # The AGGREGATED frame, one row per mark -- the numbers the chart
-            # draws, not the block's input rows.
-            d <- chart_exhibit_data(p)
-            shiny::req(!is.null(d))
-            auto <- r_data_titles()
-            write_annotated_xlsx(
-              d, file,
-              title = resolve_block_title(r_title(), plain_data(),
-                                          auto = auto$label),
-              subtitle = resolve_block_title(r_subtitle(), plain_data(),
-                                             auto = auto$subtitle),
-              caption = resolve_block_title(r_caption(), plain_data(),
-                                            auto = auto$caption)
-            )
+            dl_guard("Excel", {
+              # The numbers, never the picture: xlsx reads the aggregated frame
+              # off the server-side render even when a capture is in hand.
+              p <- chart_static_exhibit(plain_data(), dl_state())
+              shiny::req(!is.null(p))
+              # The AGGREGATED frame, one row per mark -- the numbers the chart
+              # draws, not the block's input rows.
+              d <- chart_exhibit_data(p)
+              shiny::req(!is.null(d))
+              auto <- r_data_titles()
+              write_annotated_xlsx(
+                d, file,
+                title = resolve_block_title(r_title(), plain_data(),
+                                            auto = auto$label),
+                subtitle = resolve_block_title(r_subtitle(), plain_data(),
+                                               auto = auto$subtitle),
+                caption = resolve_block_title(r_caption(), plain_data(),
+                                              auto = auto$caption)
+              )
+            })
           }
         )
         output$dl_html <- shiny::downloadHandler(
           filename = function() "chart.html",
           content = function(file) {
-            p <- dl_chart()
-            shiny::req(!is.null(p))
-            auto <- r_data_titles()
-            write_exhibit_html(
-              p, file,
-              title = resolve_block_title(r_title(), plain_data(),
-                                          auto = auto$label),
-              subtitle = resolve_block_title(r_subtitle(), plain_data(),
-                                             auto = auto$subtitle)
-            )
+            dl_guard("web page", {
+              p <- dl_chart()
+              shiny::req(!is.null(p))
+              auto <- r_data_titles()
+              write_exhibit_html(
+                p, file,
+                title = resolve_block_title(r_title(), plain_data(),
+                                            auto = auto$label),
+                subtitle = resolve_block_title(r_subtitle(), plain_data(),
+                                               auto = auto$subtitle)
+              )
+            })
           }
         )
         output$dl_pptx <- shiny::downloadHandler(
           filename = function() "chart.pptx",
           content = function(file) {
-            p <- dl_chart()
-            shiny::req(!is.null(p))
-            auto <- r_data_titles()
-            write_exhibit_pptx(
-              p, file,
-              title = resolve_block_title(r_title(), plain_data(),
-                                          auto = auto$label)
-            )
+            dl_guard("PowerPoint", {
+              p <- dl_chart()
+              shiny::req(!is.null(p))
+              auto <- r_data_titles()
+              write_exhibit_pptx(
+                p, file,
+                title = resolve_block_title(r_title(), plain_data(),
+                                            auto = auto$label)
+              )
+            })
           }
         )
         output$dl_png <- shiny::downloadHandler(
           filename = function() "chart.png",
           content = function(file) {
-            p <- dl_chart()
-            shiny::req(!is.null(p))
-            if (inherits(p, "chart_capture")) {
-              chart_capture_file(p, file)
-            } else {
-              write_exhibit_png(p, file)
-            }
+            dl_guard("image", {
+              p <- dl_chart()
+              shiny::req(!is.null(p))
+              if (inherits(p, "chart_capture")) {
+                chart_capture_file(p, file)
+              } else {
+                write_exhibit_png(p, file)
+              }
+            })
           }
         )
+
+
+        # A download link inside a display:none host is a HIDDEN output, and
+        # Shiny suspends those: the handler is never registered, so the click
+        # fetches /session/<id>/download/<name> and Connect answers 404 "Not
+        # Found". The browser saves that response as
+        # "<block>-expr-dl_pptx.htm" and reports "Couldn't download".
+        #
+        # Which is exactly what prod does. It never shows up locally, because
+        # there the host is hoisted into the gear header (chart.js
+        # _hoistDownload) before the output would have been suspended, so the
+        # registration happens anyway.
+        #
+        # The UI slot needs it too: a suspended renderUI never draws the link
+        # the JS then hoists.
+        shiny::outputOptions(output, "chart_download", suspendWhenHidden = FALSE)
+        shiny::outputOptions(output, "dl_xlsx", suspendWhenHidden = FALSE)
+        shiny::outputOptions(output, "dl_html", suspendWhenHidden = FALSE)
+        shiny::outputOptions(output, "dl_pptx", suspendWhenHidden = FALSE)
+        shiny::outputOptions(output, "dl_png", suspendWhenHidden = FALSE)
 
         list(
           expr = shiny::reactive({
