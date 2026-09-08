@@ -824,7 +824,11 @@
    is one word, and giving it half the cell steals the width from the column
    name, which is the part that is actually read. Only when it IS a control --
    as a fixed word it sizes itself (.dd-pair-fixed). */
-.dd-mapping-band .dd-band-row.dd-role-value .dd-row-controls > .blockr-popover-select-wrap:first-child {
+/* ONLY on a row that is actually a pair. A distribution mark (boxplot,
+   pointrange) has no aggregation, so its value row holds the column select
+   alone -- and without the .dd-role-paired guard that select IS the first
+   child, took the 34%, and rendered as "A..." in a 70px box. */
+.dd-mapping-band .dd-band-row.dd-role-value.dd-role-paired .dd-row-controls > .blockr-popover-select-wrap:first-child {
   flex: 0 0 34%;
 }
 .dd-mapping-band .dd-band-row .dd-pair-connector {
