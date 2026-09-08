@@ -117,3 +117,35 @@ test_that("chart block round-trips the three title tiers through state", {
     args = list(x = blk, data = list(data = function() df))
   )
 })
+
+test_that("{filters} renders the filter trail the data carries", {
+
+  d <- data.frame(x = 1:3)
+  attr(d, "blockr_filters") <- c(
+    global_filter = "SEX = F", ae_flags = "TRTEMFL"
+  )
+
+  expect_equal(resolve_title_template("{filters}", d), "SEX = F; TRTEMFL")
+  expect_equal(
+    resolve_title_template("Filtered: {filters} (n = {n})", d),
+    "Filtered: SEX = F; TRTEMFL (n = 3)"
+  )
+
+  # Works in any slot, because all three go through the same resolver.
+  expect_equal(resolve_block_title("{filters}", d), "SEX = F; TRTEMFL")
+})
+
+test_that("{filters} disappears rather than erroring when nothing is filtered", {
+
+  d <- data.frame(x = 1:3)
+
+  # A caption resolving to "" is how the band gets hidden, so `{filters}` on
+  # its own leaves no trace on an unfiltered board. A prefix does survive,
+  # which is why the token is documented as best used alone.
+  expect_equal(resolve_title_template("{filters}", d), "")
+  expect_equal(resolve_title_template("Filtered: {filters}", d), "Filtered: ")
+
+  # An empty trail is the same as no trail.
+  attr(d, "blockr_filters") <- character()
+  expect_equal(resolve_title_template("{filters}", d), "")
+})

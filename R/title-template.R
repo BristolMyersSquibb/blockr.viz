@@ -16,6 +16,19 @@
 #                     `{label(value)}` follows the pick.
 #   {n}               the number of rows.
 #   {n_distinct(col)} the number of distinct values of `col`.
+#   {filters}         the filter trail: what the filters upstream of this
+#                     block actually applied, in the order they applied it
+#                     ("SEX = F; TRTEMFL"). Written onto the data by the
+#                     filter blocks themselves -- see
+#                     `blockr.dm::filter_trail()` -- so it reports the filters
+#                     on THIS block's path and no others. A block fed from a
+#                     branch the global filter does not reach says so by
+#                     leaving it out.
+#
+#                     Resolves to "" when nothing is filtered, and a caption
+#                     that resolves to "" hides its band. So `{filters}` on
+#                     its own disappears on an unfiltered board, whereas
+#                     "Filtered: {filters}" leaves the label behind.
 #
 # Tokens are data lookups, never code: nothing is evaluated (the same
 # decision as dropping glue from the ggplot exprs). A token naming a column
@@ -52,6 +65,18 @@ resolve_title_template <- function(template, data) {
 
 resolve_title_token <- function(token, data) {
   if (identical(token, "n")) return(format(nrow(data), big.mark = ""))
+
+  if (identical(token, "filters")) {
+    # Read straight off the frame rather than threaded in: every caller hands
+    # the resolver the block's own input, and the one place that subsets
+    # columns first (the chart block's `plain_data()`) carries the attribute
+    # across deliberately. Names are the producing block ids, used for
+    # deduplication upstream; a reader wants the clauses.
+    trail <- attr(data, "blockr_filters", exact = TRUE)
+    trail <- trail[!is.na(trail) & nzchar(trail)]
+    if (!length(trail)) return("")
+    return(paste(unname(trail), collapse = "; "))
+  }
 
   fn_arg <- function(fn) {
     m <- regmatches(

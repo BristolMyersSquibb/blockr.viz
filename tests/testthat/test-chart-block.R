@@ -738,3 +738,53 @@ test_that("pct_of round-trips, and refuses anything that is not a role", {
   expect_error(new_chart_block(chart_type = "bar", pct_of = "COUNTRY"),
                "facet, group or color")
 })
+
+test_that("a chart captions itself with the filter trail its data carries", {
+
+  d <- data.frame(
+    AEDECOD = c("HEADACHE", "NAUSEA", "RASH"),
+    ASTDY   = c(3, 10, 5),
+    AENDY   = c(5, 12, 7),
+    AESEV   = c("MILD", "SEVERE", "MODERATE"),
+    stringsAsFactors = FALSE
+  )
+  attr(d, "blockr_filters") <- c(
+    global_filter = "SEX = F", ae_flags = "TRTEMFL"
+  )
+
+  blk <- new_chart_block(
+    chart_type = "gantt", x = "ASTDY", xend = "AENDY", y = "AEDECOD",
+    caption = "{filters}"
+  )
+
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      # The push observer fires on the first flush, so the spy goes in first.
+      sent <- new.env(parent = emptyenv())
+      sent$msgs <- list()
+      root <- session$rootScope()
+      root$sendCustomMessage <- function(type, message) {
+        sent$msgs <- c(sent$msgs, list(list(type = type, message = message)))
+        invisible(NULL)
+      }
+
+      session$flushReact()
+
+      # The template is what the block stores...
+      expect_equal(session$returned$state$caption(), "{filters}")
+
+      # ...and what it pushes to the client is the RESOLVED text, read off the
+      # trail the filter blocks stamped on the data. `caption_resolved` is
+      # what the chart draws and what the export writers receive.
+      data_msg <- Filter(function(m) identical(m$type, "drilldown-data"),
+                         sent$msgs)
+      expect_length(data_msg, 1L)
+      expect_equal(
+        data_msg[[1L]]$message$config$caption_resolved,
+        "SEX = F; TRTEMFL"
+      )
+    },
+    args = list(x = blk, data = list(data = reactive(d)))
+  )
+})

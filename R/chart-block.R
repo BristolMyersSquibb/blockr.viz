@@ -552,7 +552,15 @@ new_chart_block <- function(
           if (!is.data.frame(d)) return(NULL)
           if (!inp$coerced) return(d)
           drop <- names(d) %in% annotation_cols_in(d)
-          d[, !drop, drop = FALSE]
+          out <- d[, !drop, drop = FALSE]
+          # Column subsetting drops data-frame-level attributes on a base
+          # data.frame (it does not on a tibble, which is why this is easy to
+          # miss). The `{filters}` token reads the filter trail off whatever
+          # frame it is handed, so carry it across rather than making every
+          # caller thread it in. Same hazard the display attributes above are
+          # captured before coercion to avoid.
+          attr(out, "blockr_filters") <- attr(d, "blockr_filters", exact = TRUE)
+          out
         })
 
         # Auto-tier sources: the input's label / subtitle / caption

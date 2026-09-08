@@ -707,7 +707,8 @@
     // Chart text (three-tier contract, R side R/title-template.R): null =
     // auto — the title inherits the data frame's label attribute; "" =
     // explicitly none; other text renders with {...} tokens resolved against
-    // the current data BY R ({ARM}, {label(value)}, {n}, {n_distinct(col)}).
+    // the current data BY R ({ARM}, {label(value)}, {n}, {n_distinct(col)},
+    // and {filters} for what the upstream filters applied).
     // `autoValue` surfaces the inherited auto title as the input's value, so
     // clearing the field is how the auto title is turned OFF (commits "").
     title:    { label: 'Title', kind: 'text', ph: 'e.g. AEs by {ARM}',
@@ -716,7 +717,7 @@
     subtitle: { label: 'Subtitle', kind: 'text', ph: 'e.g. Treatment: {ARM}',
                 autoValue: (/** @type {any} */ cfg) =>
                   (cfg.subtitle == null && cfg.subtitle_resolved) ? cfg.subtitle_resolved : '' },
-    caption:  { label: 'Caption', kind: 'text', ph: 'e.g. N = {n} records',
+    caption:  { label: 'Caption', kind: 'text', ph: 'e.g. {filters} or N = {n} records',
                 autoValue: (/** @type {any} */ cfg) =>
                   (cfg.caption == null && cfg.caption_resolved) ? cfg.caption_resolved : '' }
   };
