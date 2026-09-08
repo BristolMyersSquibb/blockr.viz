@@ -90,7 +90,9 @@ chart_capture_decode <- function(url) {
 }
 
 # The bitmap on disk, for the writers that want a file.
-#' @noRd
+#' @param file Where to write it.
+#' @rdname chart_capture_ids
+#' @export
 chart_capture_file <- function(x, file = tempfile(fileext = ".png")) {
   writeBin(x$png, file)
   file
