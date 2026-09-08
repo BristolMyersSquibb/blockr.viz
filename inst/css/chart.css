@@ -758,3 +758,192 @@
   outline: 2px solid var(--blockr-color-primary, #2563eb);
   outline-offset: 1px;
 }
+
+/* -- Exposed mapping band ---------------------------------------------------
+   Mapping roles promoted out of the gear onto the block's face (the chart
+   block's `expose` argument). The rows are the gear's own role rows, rendered
+   into this container instead of the popover, so the two surfaces cannot
+   drift apart -- everything below is layout.
+
+   Geometry follows the code / function block's params grid
+   (blockr.extra .fb-params-grid): 13px medium label at 5px, a 42px control
+   shell, a 12px gap, and a column ladder that steps on the PANEL's width, not
+   the viewport's. A band of selects wants a wide track -- four narrow columns
+   of truncated column names say nothing -- so a third and fourth column are
+   added only once every column still clears ~330px. */
+.dd-mapping-band {
+  container-type: inline-size;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* No padding on top: the gear header above already carries its own space,
+     and the code block's params sit 6px under the icon row. Measured, not
+     guessed -- 12px here put the first label 18px down. */
+  padding: 0 12px 12px;
+  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+  background: #fff;
+}
+
+@container (max-width: 1356px) {
+  .dd-mapping-band { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@container (max-width: 1014px) {
+  .dd-mapping-band { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 452px) {
+  .dd-mapping-band { grid-template-columns: 1fr; }
+}
+
+/* The popover rows are laid out for a narrow column; on the face they sit in
+   the grid, so they drop the popover's own spacing and take the 42px shell. */
+.dd-mapping-band .dd-band-row {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+.dd-mapping-band .dd-band-row .dd-row-head {
+  margin-bottom: 5px;
+}
+.dd-mapping-band .dd-band-row .blockr-popover-label {
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-weight: 500;
+  color: var(--blockr-color-text-secondary, #6b7280);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.dd-mapping-band .dd-band-row .dd-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dd-mapping-band .dd-band-row .dd-row-controls > * {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+/* The verb-object pair ("[max] of [AVAL]") keeps the aggregation narrow: it
+   is one word, and giving it half the cell steals the width from the column
+   name, which is the part that is actually read. Only when it IS a control --
+   as a fixed word it sizes itself (.dd-pair-fixed). */
+.dd-mapping-band .dd-band-row.dd-role-value .dd-row-controls > .blockr-popover-select-wrap:first-child {
+  flex: 0 0 34%;
+}
+.dd-mapping-band .dd-band-row .dd-pair-connector {
+  flex: 0 0 auto;
+  color: var(--blockr-grey-400, #9ca3af);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+/* The help line under a picker is gear voice (it explains a choice while you
+   are configuring). On the face it would double the band's height on every
+   block, so it is dropped -- the label and the value carry the reading. */
+.dd-mapping-band .dd-band-row .dd-form-help {
+  display: none;
+}
+
+/* -- Expose controls in the gear -------------------------------------------- */
+
+/* The Mapping header's "On block" checkbox, right-aligned in the header row. */
+.dd-section-title--action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dd-expose-all {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.dd-expose-all-label {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+}
+/* Some but not all of the mapping roles are on the face. A dash, not a tick:
+   the header must not claim a state that is not true. */
+.dd-section-checkbox.dd-partial {
+  background: var(--blockr-color-primary, #2563eb);
+  border-color: var(--blockr-color-primary, #2563eb);
+}
+.dd-section-checkbox.dd-partial::after {
+  content: "";
+  width: 7px;
+  height: 0;
+  border-top: 2px solid #fff;
+}
+
+/* The per-role pin: this control travels UP, out of the gear onto the face. */
+.dd-role-pin {
+  border: none;
+  background: none;
+  color: var(--blockr-grey-300, #cfd4da);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  line-height: 1;
+  padding: 2px 3px;
+  border-radius: 4px;
+}
+.dd-role-pin:hover {
+  color: var(--blockr-color-text-primary, #374151);
+  background: var(--blockr-color-bg-input, #f9fafb);
+}
+.dd-role-pin.dd-on {
+  color: var(--blockr-color-primary, #2563eb);
+}
+.dd-role-pin:focus-visible {
+  outline: 2px solid var(--blockr-color-primary, #2563eb);
+  outline-offset: 1px;
+}
+
+/* The aggregation beside an exposed value, on the face: a word, not a
+   control. `func` is an analysis decision authored per exhibit (a waterfall's
+   "max" IS worst-value-per-patient), so the band states it and the gear is
+   where it changes -- unless the builder exposes `func` itself, which renders
+   the picker again. */
+.dd-mapping-band .dd-band-row .dd-pair-fixed {
+  flex: 0 0 auto;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  font-weight: 500;
+  color: var(--blockr-color-text-primary, #111827);
+  white-space: nowrap;
+}
+
+/* Parity with the code / function block's params grid, measured rather than
+   guessed: the label is already the same 13px / 500 / secondary, but the
+   engine's select is the popover's 38px one and its row head carries the
+   popover's spacing. Lift both to the standalone control geometry -- the same
+   override settings-band.css makes for the in-flow gear band. */
+.dd-mapping-band .blockr-popover-select-wrap .blockr-select__control {
+  min-height: 42px;
+}
+.dd-mapping-band .blockr-popover-input {
+  padding: 10px 14px;
+  min-height: 42px;
+}
+/* 5px under the label, exactly as .fb-field-label sets. The head is a flex
+   box whose own height can exceed the label's line box, so it is zeroed and
+   the gap put on the head itself. */
+.dd-mapping-band .dd-band-row .dd-row-head {
+  margin: 0 0 5px;
+  padding: 0;
+  min-height: 0;
+  line-height: inherit;
+}
+/* The popover label carries its own 4px bottom margin, which stacks with the
+   head's 5px and made the gap 9px against the code block's 5px. */
+.dd-mapping-band .dd-band-row .blockr-popover-label {
+  line-height: 19.5px;
+  margin-bottom: 0;
+}
+
+/* A column role with no mapping shows the "(none)" option, which is a real
+   value in the list and so renders like any other. It is the absence of a
+   mapping, though, so it reads muted -- the same weight an unset field has
+   anywhere else. Applies in the gear and on the face: it is one control. */
+.dd-role-unset .blockr-select__value {
+  color: var(--blockr-grey-400, #9ca3af);
+}

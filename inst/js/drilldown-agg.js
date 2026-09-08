@@ -62,6 +62,10 @@
       group: {
         label: 'Group', kind: multiple ? 'columns' : 'column',
         colType: 'cat', ph: 'category column…',
+        // Column kinds (mark_column_kinds()): a group is a stratifier, a
+        // visit (one bar per AVISIT) or an item dimension (one bar per
+        // preferred term) -- the item kinds a colour must never offer.
+        kinds: ['group', 'time', 'id'],
         // The table's multi-group gates the summaries list, so a change
         // re-renders the gear (reveals/hides the aggregations). The chart's
         // single group gates nothing, so it does not.
@@ -81,7 +85,11 @@
           cfg.func === 'count_distinct' ? 'any'
             : (!cfg.func || cfg.func === 'count') ? 'none' : 'num',
         allowCount: (/** @type {any} */ cfg) =>
-          !cfg.func || cfg.func === 'count'
+          !cfg.func || cfg.func === 'count',
+        // Aggregating a measure. `count_distinct` counts the levels of an id
+        // (patients, not records), so ids belong here too -- the colType
+        // callback above already opens the picker to any column for it.
+        kinds: ['value', 'id']
       },
       func: { label: 'Aggregate', kind: 'select', options: AGG_FNS, rerender: true }
     };

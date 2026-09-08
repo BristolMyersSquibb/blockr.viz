@@ -62,6 +62,7 @@ new_chart_block(
   download = TRUE,
   ctrl_target = "",
   ctrl_table = "",
+  expose = character(),
   ...
 )
 }
@@ -333,6 +334,25 @@ to filter (beta)" section.}
 \item{ctrl_table}{Character(1), beta. Name of the table in the target's
 \code{dm} the pushed conditions apply to (e.g. \code{"adsl"}). Leave empty when
 the target filters a plain data frame.}
+
+\item{expose}{Character vector of mapping role keys the block shows on its
+own face, in an always-visible band above the chart, instead of behind
+the gear: any of \code{"group"}, \code{"value"}, \code{"x"}, \code{"y"}, \code{"xend"},
+\code{"series"}, \code{"color"}, \code{"facet"}, \code{"label"}, \code{"tt_fields"}. A reader can
+change an exposed role on a locked board, which is the point -- the gear
+is hidden there and the band is not. Empty (the default) leaves the block
+looking exactly as it did.
+
+Expose the roles a reader should steer, not the ones that say what the
+exhibit IS: a waterfall's \code{group} is one bar per subject, and a shift
+plot's axes are fixed because a shift against a percent change means
+nothing. Optional roles carry a leading \code{"(none)"}, so faceting can be
+switched off without the control disappearing.
+
+In the gear, the Mapping header's "On block" checkbox and the up-arrow
+pin on each mapping row write this argument, so it can be set by hand or
+by clicking. What a role OFFERS is a separate question, answered by
+\code{\link[=mark_column_kinds]{mark_column_kinds()}}.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
 }

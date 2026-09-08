@@ -244,6 +244,24 @@
 #' @param ctrl_table Character(1), beta. Name of the table in the target's
 #'   `dm` the pushed conditions apply to (e.g. `"adsl"`). Leave empty when
 #'   the target filters a plain data frame.
+#' @param expose Character vector of mapping role keys the block shows on its
+#'   own face, in an always-visible band above the chart, instead of behind
+#'   the gear: any of `"group"`, `"value"`, `"x"`, `"y"`, `"xend"`,
+#'   `"series"`, `"color"`, `"facet"`, `"label"`, `"tt_fields"`. A reader can
+#'   change an exposed role on a locked board, which is the point -- the gear
+#'   is hidden there and the band is not. Empty (the default) leaves the block
+#'   looking exactly as it did.
+#'
+#'   Expose the roles a reader should steer, not the ones that say what the
+#'   exhibit IS: a waterfall's `group` is one bar per subject, and a shift
+#'   plot's axes are fixed because a shift against a percent change means
+#'   nothing. Optional roles carry a leading `"(none)"`, so faceting can be
+#'   switched off without the control disappearing.
+#'
+#'   In the gear, the Mapping header's "On block" checkbox and the up-arrow
+#'   pin on each mapping row write this argument, so it can be set by hand or
+#'   by clicking. What a role OFFERS is a separate question, answered by
+#'   [mark_column_kinds()].
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'
 #' @return A transform block of class `chart_block`
@@ -385,6 +403,17 @@ new_chart_block <- function(
     download = TRUE,
     ctrl_target = "",
     ctrl_table = "",
+    # Mapping roles promoted out of the gear onto the block's face, where a
+    # reader can change them without unlocking the board. Character vector of
+    # role keys ("color", "facet", "value", ...); empty (default) = the block
+    # looks exactly as it did, everything in the gear. The gear's Mapping
+    # header carries the toggle that fills this, and each mapping row a pin
+    # that adds or removes itself -- a waterfall's `group` is what the
+    # exhibit IS, not a reader's choice, so it stays pinned out.
+    #
+    # Authored, never inferred: a role stays on the face when it is set to
+    # "(none)", or picking (none) would delete its own control.
+    expose = character(),
     ...) {
 
   # ARG-RENAME (see dev/unified-arg-naming.md): `metric`/`agg_fn` are the
@@ -650,32 +679,17 @@ new_chart_block <- function(
         # Facet-grid panel scales (see constructor args).
         r_facet_scales <- shiny::reactiveVal(facet_scales)
         r_download <- shiny::reactiveVal(isTRUE(download))
+        r_expose <- shiny::reactiveVal(as.character(expose))
         r_board_theme <- setup_drilldown_theme_sync(session)
         # Board scale map (NULL when the board has no "scale_map" option);
         # resolved per data push, never stored in block state.
         r_scale_map <- dd_board_scale_map()
 
-        # Column metadata (computed once when data changes). No nrow gate:
-        # a 0-row frame still HAS columns (names/types/labels/levels), and
-        # the gear pickers must stay usable while an upstream filter has
-        # emptied the data.
+        # Column metadata (computed once when data changes); see dd_col_meta().
         r_col_meta <- shiny::reactive({
           d <- plain_data()
           shiny::req(is.data.frame(d))
-          lapply(names(d), function(col) {
-            vals <- d[[col]]
-            lbl <- attr(vals, "label")
-            res <- list(
-              name = col,
-              type = if (is.numeric(vals)) "numeric" else "categorical",
-              n_unique = length(unique(vals))
-            )
-            if (!is.null(lbl) && nzchar(lbl)) res$label <- lbl
-            # Factor level order travels to JS as the category/legend order
-            # (the data-level "order lives in factors" contract).
-            if (is.factor(vals)) res$levels <- as.list(levels(vals))
-            res
-          })
+          dd_col_meta(d)
         })
 
         # Columns needed by the chart (reactive -- changes when config
@@ -709,6 +723,24 @@ new_chart_block <- function(
           if (!is.data.frame(d)) return(character())
           if (identical(r_x(), "AVISIT") && "AVISITN" %in% names(d)) {
             needed <- c(needed, "AVISITN")
+          }
+          # Columns a READER can switch a role to, shipped up front.
+          #
+          # Only the columns the current mapping needs travel, so re-pointing
+          # an exposed role at another column would otherwise need a fresh
+          # payload -- and until it lands the browser draws the new mapping
+          # over rows without that column, which reads as the aesthetic
+          # switching off and back on. Shipping the offer list with the data
+          # makes the switch immediate.
+          #
+          # Bounded by the marks: this only fires when the frame carries
+          # kinds (mark_column_kinds()), which is a curated set an author
+          # chose -- on the CEDX lab chain, ~16 columns of 40. An unmarked
+          # frame offers EVERY column, so nothing extra is shipped there and
+          # the client falls back to holding the last picture until the data
+          # catches up.
+          if (length(r_expose())) {
+            needed <- c(needed, names(column_kinds(d)))
           }
           needed <- unique(needed)
           needed[!is.null(needed) & needed != "" &
@@ -1018,7 +1050,10 @@ new_chart_block <- function(
               # value filter blocks come, go or get renamed.
               ctrl_target = r_ctrl_target(),
               ctrl_table = r_ctrl_table(),
-              ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices())
+              ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices()),
+              # Mapping roles the face carries. as.list() so a single role
+              # ships as a JSON array rather than a bare string (auto_unbox).
+              expose = as.list(r_expose())
             )
             # NB: the registry _arguments() prose is intentionally NOT sent to
             # the browser. LLM prompts live in the registry only; popover help
@@ -1226,6 +1261,13 @@ new_chart_block <- function(
             }
             if (!is.null(msg$ctrl_table)) {
               upd(r_ctrl_table, trimws(as.character(msg$ctrl_table)))
+            }
+            # Exposed roles. A JS array arrives as a list
+            # (reference_shiny_inputs_arrive_as_lists); "" is how the client
+            # says "none exposed", since an empty array would come back NULL
+            # and be skipped by the guard above it.
+            if (!is.null(msg$expose)) {
+              upd(r_expose, expose_state(msg$expose))
             }
           } else if (action == "set_mults") {
             if (!is.null(msg$line_width_mult)) {
@@ -1673,7 +1715,8 @@ new_chart_block <- function(
             subtitle = r_subtitle,
             caption = r_caption,
             ctrl_target = r_ctrl_target,
-            ctrl_table = r_ctrl_table
+            ctrl_table = r_ctrl_table,
+            expose = r_expose
           )
         )
       })
@@ -1684,6 +1727,12 @@ new_chart_block <- function(
         viz_echarts_dep(),
         viz_block_css_dep(),
         drilldown_chart_dep(),
+        # The exposed mapping band. Always in the DOM, empty and
+        # display:none until the block exposes a role -- chart.js fills it,
+        # because the controls it holds are the gear's own role rows rendered
+        # into a different box (one renderer, two surfaces).
+        shiny::div(id = ns("mapping_band"), class = "dd-mapping-band",
+                   style = "display:none"),
         shiny::div(id = ns("drilldown_block"), class = "drilldown-chart-container"),
         # The download control is rendered HERE and hoisted into the gear
         # header by chart.js -- the same shape rank-table.js uses for the
@@ -1735,6 +1784,10 @@ new_chart_block <- function(
       # a non-allow_empty_state field holding NULL wedges the whole block
       # (state_ready never goes TRUE and result() stays NULL).
       "ref_x", "ref_y",
+      # No exposed roles is the default and the common case, so it MUST be
+      # allowed to be empty or every chart block wedges
+      # (reference_blockr_allow_empty_state_wedge).
+      "expose",
       "ctrl_target", "ctrl_table"),
     external_ctrl = c("group", "color", "facet", "value", "func",
       "chart_type", "x", "y", "xend", "series", "label", "tt_fields", "drill",
@@ -1748,6 +1801,7 @@ new_chart_block <- function(
       "count_on", "count_col", "na_group", "pct_of", "func_toggle",
       "facet_scales",
       "title", "subtitle", "caption",
+      "expose",
       "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",
     class = "chart_block",

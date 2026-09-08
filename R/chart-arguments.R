@@ -225,6 +225,20 @@ chart_arguments <- function() {
       example = "cohort_filter",
       type = arg_string()
     ),
+    expose = new_arg_spec(
+      paste0(
+        "Mapping roles promoted out of the gear onto the block's face, as a ",
+        "character vector of role keys (\"color\", \"facet\", \"value\", ",
+        "\"x\", \"y\", \"group\", \"series\", \"label\"). A reader can ",
+        "change an exposed role without unlocking the board; everything else ",
+        "stays in the gear. Empty (default) = nothing on the face. Expose the ",
+        "roles the reader should steer (colour, facet, which value), not the ",
+        "ones that define what the exhibit IS (a waterfall's `group` is one ",
+        "bar per subject, not a choice)."
+      ),
+      example = list("color", "facet"),
+      type = arg_array(arg_string())
+    ),
     ctrl_table = new_arg_spec(
       paste0(
         "BETA. Only with `ctrl_target`: the table in the target's dm the ",

@@ -41,6 +41,14 @@
  *   afterTypeChange()-> e.g. update family CSS classes (optional)
  *   isOpen()         -> is the popover open
  *   reopen()         -> reopen the popover (keep it open across a re-render)
+ *   bandEl()         -> the on-block mapping band element, or null (optional).
+ *                       With it, mapping roles gain a pin in their row head
+ *                       and the Mapping header an "on block" checkbox; the
+ *                       pinned ones are rendered into the band by renderBand()
+ *                       -- the SAME _renderRole() the popover uses, so the two
+ *                       surfaces cannot drift
+ *   exposed()        -> array of role keys currently on the band (optional)
+ *   onExpose(keys)   -> the exposed set changed (host stores + sends it)
  *
  * Exposed as Blockr.DrilldownConfig (and window.DrilldownConfig).
  */
@@ -122,6 +130,131 @@
       return true;
     }
 
+    // Column kinds (mark_column_kinds()): what a column is FOR, as a fact
+    // about the column rather than a decision about a chart. A role declares
+    // which kinds it accepts (ROLES[key].kinds) and is narrowed to them.
+    //
+    // Two rules keep this from ever losing someone a column:
+    //
+    //  * NOTHING marked in the frame -> no filtering at all. An unmarked board
+    //    behaves exactly as it did, so marking is additive, and a chart whose
+    //    data arrives from an unmarked chain is never crippled.
+    //  * the role's CURRENT value always survives the filter. A saved board
+    //    that maps a column the marks disagree with still shows its own pick
+    //    in its own picker, instead of silently reading as empty.
+    /** @param {string} key @param {Array<any>} cols */
+    _filterByKind(key, cols) {
+      const role = this._role(key);
+      const want = role && role.kinds;
+      if (!want || !want.length) return cols;
+      if (!this._cols().some(c => c.kind)) return cols;
+      const cur = this._cfg()[key];
+      return cols.filter(c =>
+        (c.kind && want.includes(c.kind)) ||
+        (typeof cur === 'string' ? c.name === cur
+          : Array.isArray(cur) && cur.includes(c.name)));
+    }
+
+    // -- the on-block band ----------------------------------------------------
+
+    /** @returns {Array<string>} */
+    _exposed() {
+      return (this.h.exposed && this.h.exposed()) || [];
+    }
+
+    /** @returns {boolean} */
+    _bandSupported() { return typeof this.h.bandEl === 'function'; }
+
+    /** @param {string} key */
+    _isExposed(key) { return this._exposed().includes(key); }
+
+    // Toggling one role. The order the band shows is the order roles were
+    // pinned, which is stable across a re-render and is what a builder means
+    // by putting a control "next to" another one.
+    /** @param {string} key @param {boolean} on */
+    _setExposed(key, on) {
+      const cur = this._exposed().filter(k => k !== key);
+      if (on) cur.push(key);
+      if (this.h.onExpose) this.h.onExpose(cur);
+      this.render();
+      this.renderBand();
+    }
+
+    // The Mapping header checkbox: every mapping role this block currently
+    // offers, or none. Roles pinned out individually come back when it is
+    // switched off and on again, which is the only reading of "all" that does
+    // not need a third state.
+    /** @param {Array<string>} keys @param {boolean} on */
+    _setExposedAll(keys, on) {
+      if (this.h.onExpose) this.h.onExpose(on ? keys.slice() : []);
+      this.render();
+      this.renderBand();
+    }
+
+    // Render the exposed roles into the band. Same _renderRole() as the
+    // popover: one renderer, two boxes, so a control cannot behave one way in
+    // the gear and another on the face. The band hides itself when empty
+    // rather than sitting there as a 12px strip.
+    renderBand() {
+      if (!this._bandSupported()) return;
+      const el = this.h.bandEl();
+      if (!el) return;
+      const spec = this.h.sections() || {};
+      const keys = this._exposed().filter(k => this._mappingKeys(spec).includes(k));
+      el.innerHTML = '';
+      el.style.display = keys.length ? '' : 'none';
+      if (!keys.length) return;
+      // Required means "cannot be emptied", and for the chart's value that is
+      // a question about the AGGREGATION, not about the section it sits in:
+      // "Max of (none)" is not a state, while a bare row count ignores the
+      // column entirely. The host answers it through entryRequired(), which
+      // the popover already consults -- the band has to ask the same
+      // question, or an optional-looking "(none)" appears in front of a
+      // column the chart cannot do without.
+      const req = new Set(spec.requiredMap || []);
+      const required = {
+        has: (/** @type {string} */ k) => req.has(k) ||
+          !!(this.h.entryRequired && this.h.entryRequired(k))
+      };
+      // The band keeps its OWN select registry. `_selects` is keyed by role
+      // and render() destroys everything in it, so sharing it would mean the
+      // band's control clobbering the popover's entry for the same role --
+      // one of the two instances then never destroyed, and the popover's
+      // rebuild silently killing a control that is still on screen.
+      for (const inst of Object.values(this._bandSelects || {})) {
+        if (inst && typeof inst.destroy === 'function') inst.destroy();
+      }
+      this._bandSelects = {};
+      const outer = this._selects;
+      this._selects = this._bandSelects;
+      try {
+        for (const key of keys) {
+          this._renderRole(el, key, { required: required.has(key), band: true });
+        }
+      } finally {
+        this._bandSelects = this._selects;
+        this._selects = outer;
+      }
+    }
+
+    // Every mapping role the block currently offers, in section order:
+    // required rows, the always-on mapping extras (the chart's value), then
+    // the optional ones. Type-conditional entries are resolved first, so a
+    // role the current chart type does not offer is neither pinnable nor
+    // rendered on the band -- switching a bar to a pie cannot leave an
+    // orphaned control behind.
+    /** @param {any} spec @returns {Array<string>} */
+    _mappingKeys(spec) {
+      const extra = this._filterEntries(spec.mapping || [])
+        .map((/** @type {any} */ e) => e.role)
+        .filter((/** @type {string} */ k) => !this.h.secondary || !this.h.secondary.has(k));
+      return [].concat(
+        spec.requiredMap || [],
+        extra,
+        this._filterEntries(spec.optionalMap || []).map((/** @type {any} */ e) => e.role)
+      );
+    }
+
     // A "segmented" role whose two values are literally on/off is a plain
     // boolean data option — per the design-system rule (values -> pill, data
     // options -> checkbox) it renders as a .blockr-checkbox, not a pill.
@@ -151,6 +284,7 @@
       else if (ct === 'num') cols = cols.filter(c => c.type === 'numeric');
       else if (ct === 'cat') cols = cols.filter(c => c.type === 'categorical' || (c.n_unique != null && c.n_unique <= 50));
       if (role.maxUnique) cols = cols.filter(c => c.n_unique != null && c.n_unique <= role.maxUnique);
+      cols = this._filterByKind(key, cols);
       const opts = cols.map(c => c.label ? { value: c.name, label: c.label } : c.name);
       if (this._roleAllowCount(role)) opts.unshift('.count');
       else if (!required) opts.unshift('(none)');
@@ -340,7 +474,13 @@
       // latter offers the role only for those chart types (e.g. the chart's
       // color is inert on pie/treemap, so it is not offered there).
       const optKeys = this._filterEntries(spec.optionalMap || []).map(e => e.role);
-      const shownOpt = optKeys.filter((/** @type {string} */ k) => this._hasVal(cfg[k]) || this._added.has(k));
+      // An optional role shows a row once it holds a value, once it has been
+      // added from the menu this session -- or once it is ON THE BLOCK. That
+      // last one matters: an exposed-but-empty role (a Facet offered to the
+      // reader, currently "(none)") would otherwise have a control on the
+      // face and no row in the gear, so nothing to unpin it with.
+      const shownOpt = optKeys.filter((/** @type {string} */ k) =>
+        this._hasVal(cfg[k]) || this._added.has(k) || this._isExposed(k));
       const remaining = optKeys.filter((/** @type {string} */ k) => !shownOpt.includes(k));
       const mapExtra = this._filterEntries(spec.mapping || []);
 
@@ -355,7 +495,9 @@
       const mapNeeded = spec.requiredMap.length || shownOpt.length ||
         remaining.length || (!spec.aggregatable && mapExtra.length);
       if (mapNeeded) {
-        const mapSec = this._sectionEl(this._mappingTitle('Mapping'));
+        const mapKeys = this._bandSupported() ? this._mappingKeys(spec) : [];
+        const mapSec = this._sectionEl(this._mappingTitle('Mapping'),
+          mapKeys.length ? { action: this._exposeAllControl(mapKeys) } : {});
         for (const key of spec.requiredMap) this._renderRole(mapSec, key, { required: true });
         if (!spec.aggTitle && !spec.aggregatable) this._renderEntries(mapSec, mapExtra);
         // Repeatable aggregation list under Mapping only for non-aggregatable
@@ -507,9 +649,71 @@
       } else {
         h.textContent = titleText;
       }
+      // A trailing control in the header row, right-aligned: the Mapping
+      // section's "on block" checkbox. Appended rather than folded into
+      // `opts.toggle`, which turns the whole header INTO a checkbox -- here
+      // the header still names the section and the control sits beside it.
+      if (opts.action) {
+        h.classList.add('dd-section-title--action');
+        h.appendChild(opts.action);
+      }
       sec.appendChild(h);
       this.h.popoverEl().appendChild(sec);
       return sec;
+    }
+
+    // The Mapping header's "on block" checkbox. Off when nothing is pinned,
+    // on when everything the block offers is; a partial pin shows as
+    // indeterminate, so the header never claims a state that is not true.
+    /** @param {Array<string>} keys */
+    _exposeAllControl(keys) {
+      const on = this._exposed();
+      const all = keys.length > 0 && keys.every(k => on.includes(k));
+      const some = !all && keys.some(k => on.includes(k));
+      const wrap = document.createElement('span');
+      wrap.className = 'dd-expose-all';
+      const box = document.createElement('span');
+      box.className = 'dd-section-checkbox' +
+        (all ? ' dd-on' : some ? ' dd-partial' : '');
+      box.setAttribute('role', 'checkbox');
+      box.setAttribute('tabindex', '0');
+      box.setAttribute('aria-checked', all ? 'true' : some ? 'mixed' : 'false');
+      const lbl = document.createElement('span');
+      lbl.className = 'dd-expose-all-label';
+      lbl.textContent = 'On block';
+      wrap.appendChild(box);
+      wrap.appendChild(lbl);
+      const flip = (/** @type {Event} */ e) => {
+        e.stopPropagation();
+        this._setExposedAll(keys, !all);
+      };
+      wrap.addEventListener('click', flip);
+      box.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
+        if (e.key !== ' ' && e.key !== 'Enter') return;
+        e.preventDefault();
+        flip(e);
+      });
+      return wrap;
+    }
+
+    // The per-role pin, in a mapping row's head next to the remove button.
+    // Up-arrow, because that is the direction the control travels: out of the
+    // gear and onto the block's face.
+    /** @param {string} key @param {string} roleLabel */
+    _exposePin(key, roleLabel) {
+      const on = this._isExposed(key);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'dd-role-pin' + (on ? ' dd-on' : '');
+      btn.title = on ? 'Remove ' + roleLabel + ' from the block'
+        : 'Show ' + roleLabel + ' on the block';
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.innerHTML = '\u2191';
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._setExposed(key, !on);
+      });
+      return btn;
     }
 
     // Per-section open state for the Variant A toggle sections (aggregation,
@@ -641,8 +845,15 @@
         return !!a && a !== 'count';
       };
       const row = document.createElement('div');
+      // An unset column role reads "(none)", which is a real option value and
+      // therefore renders as ordinary text -- but it is the ABSENCE of a
+      // mapping, not a column called none. Flagged here so the control can
+      // mute it, the way an unset field reads everywhere else.
+      const unset = (role.kind === 'column' || role.kind === 'columns') &&
+        !this._hasVal(this._cfg()[key]);
       row.className = 'blockr-popover-row dd-form-row dd-role-' + key +
-        (paired ? ' dd-role-paired' : '');
+        (paired ? ' dd-role-paired' : '') + (opts.band ? ' dd-band-row' : '') +
+        (unset ? ' dd-role-unset' : '');
 
       // Boolean option -> a single self-describing checkbox row: the checkbox
       // label carries the affirmative meaning (the on-option label), so the
@@ -668,9 +879,22 @@
       // value reads "Value" on a boxplot, "Aggregate" when it feeds an
       // aggregation), so resolve it before use.
       const roleLabel = (typeof role.label === 'function') ? role.label(this._cfg()) : role.label;
-      lbl.textContent = roleLabel + (reqMark ? ' *' : '');
+      // The asterisk is gear vocabulary: it warns a builder that a slot must
+      // be filled. On the block's face the control no longer offers to break
+      // that rule (a required role has no "(none)" entry), so the marker
+      // explains a constraint nothing can violate -- and the code block's
+      // params carry no such marks either.
+      lbl.textContent = roleLabel + (reqMark && !opts.band ? ' *' : '');
       head.appendChild(lbl);
-      if (opts.removable) {
+      // The pin, on mapping rows in the popover only: the band's own copy of
+      // a row is not the place to take itself off the band, and a
+      // presentation row has nowhere to go. Before the remove button, so the
+      // destructive one stays the outermost of the two.
+      if (!opts.band && this._bandSupported() &&
+          this._mappingKeys(this.h.sections() || {}).includes(key)) {
+        head.appendChild(this._exposePin(key, roleLabel));
+      }
+      if (opts.removable && !opts.band) {
         const rm = document.createElement('button');
         rm.type = 'button';
         rm.className = 'dd-role-remove';
@@ -703,7 +927,26 @@
 
       if (reversed) {
         // "[agg ▾] of [value ▾]" — aggregation leads; value only when used.
-        this._buildControl(controls, role.pairedWith, { onChange: () => {} });
+        //
+        // On the block's face the aggregation is a WORD, not a control,
+        // unless it was exposed in its own right. It is an analysis decision
+        // rather than a display one: across the whole CEDX workflow `func` is
+        // authored once per exhibit and never varies (28 counts, 18 means,
+        // one max, one min), and flipping the lab waterfall's max to min
+        // silently turns "worst value per patient" into "best" with nothing
+        // in the chart saying so. The column beside it is a real choice --
+        // the board's own picker offers AVAL / CHG / PCHG.
+        if (opts.band && !this._isExposed(role.pairedWith)) {
+          const word = document.createElement('span');
+          word.className = 'dd-pair-fixed';
+          const DAgg = (typeof Blockr !== 'undefined' && Blockr.DrilldownAgg) ||
+            window.DrilldownAgg;
+          const fn = this._cfg()[role.pairedWith];
+          word.textContent = (DAgg && DAgg.AGG_WORDS[fn]) || fn || '';
+          controls.appendChild(word);
+        } else {
+          this._buildControl(controls, role.pairedWith, { onChange: () => {} });
+        }
         if (usesMetric()) {
           const of = document.createElement('span');
           of.className = 'dd-pair-connector';
@@ -727,6 +970,10 @@
     _rerender() {
       const wasOpen = this.h.isOpen();
       this.render();
+      // The band shows the same roles the popover does, so it goes stale for
+      // exactly the same reasons -- a pick that changes another role's
+      // options, a type switch that drops a role.
+      this.renderBand();
       if (wasOpen) setTimeout(() => this.h.reopen(), 0);
     }
 

@@ -513,16 +513,27 @@
               // column changed type underneath it.
               colType: (/** @type {any} */ cfg) =>
                 (cfg.chart_type === 'band' ? 'num' : 'any'),
+              // A band slides a window along a numeric x, everything else
+              // plots time, a measure, or a category on it.
+              kinds: ['time', 'value', 'group'],
               phBy: { individual: 'numeric column…', timeline: 'time / sequence…' } },
     y:      { label: (/** @type {any} */ cfg) =>
                 (cfg.chart_type === 'band' ? 'Value' : 'Y'),
-              kind: 'column', colTypeBy: { individual: 'num', timeline: 'any' } },
-    xend:   { label: 'X end',  kind: 'column', colType: 'any', ph: 'interval end…' },
-    series: { label: 'Series', kind: 'column', colType: 'any' },
-    color:  { label: 'Color',  kind: 'column', colType: 'any' },
-    facet:  { label: 'Facet',  kind: 'column', colType: 'cat', maxUnique: 10 },
+              // `id` for the timeline family, whose y IS the lane (one row
+              // per subject); a value everywhere else.
+              kind: 'column', colTypeBy: { individual: 'num', timeline: 'any' },
+              kinds: ['value', 'id'] },
+    xend:   { label: 'X end',  kind: 'column', colType: 'any', kinds: ['time', 'value'],
+              ph: 'interval end…' },
+    series: { label: 'Series', kind: 'column', colType: 'any', kinds: ['id', 'group'] },
+    color:  { label: 'Color',  kind: 'column', colType: 'any', kinds: ['group'] },
+    facet:  { label: 'Facet',  kind: 'column', colType: 'cat', maxUnique: 10,
+              kinds: ['group'] },
+    // `drill` is a capability, not an aesthetic: it names whatever column a
+    // click should filter downstream on, which is a board wiring decision and
+    // not something the marks can predict. Left unnarrowed on purpose.
     drill:  { label: 'Drill',  kind: 'column', colType: 'any' },
-    label:  { label: 'Label',  kind: 'column', colType: 'any' },
+    label:  { label: 'Label',  kind: 'column', colType: 'any', kinds: ['group', 'id'] },
     // Extra columns to append to each mark's hover tooltip (beyond the mapped
     // roles). Multi-select; empty = none. Values are shipped and packed
     // per-bar, so this is bounded to the picked columns, never the whole row.
@@ -1101,20 +1112,68 @@
         title: 'Chart settings',
         onChange: (/** @type {string} */ key) => {
           if (key === 'func') this._reconcileMetric();
-          this._render(); this._sendConfig();
+          // A mapping the shipped rows cannot support yet: only the columns
+          // the mapping needs travel, so re-pointing a role at a new column
+          // means R has to send the data again. Rendering in between draws
+          // the new mapping over rows without that column -- every mark
+          // lands in one bucket, which reads on screen as the aesthetic
+          // switching itself OFF and back on. Hold the last picture instead;
+          // the setData() that follows always clears the wait.
+          if (this._mappingNeedsData()) this._awaitData = true;
+          else this._render();
+          this._sendConfig();
         },
         onMults: () => this._sendMults(),
         onClearFilter: () => { this._selected = null; this._sendClearFilter(); },
         ensureDefaults: () => this._ensureFamilyDefaults(),
         afterTypeChange: () => this._updateFamilyClass(),
         isOpen: () => this._popoverOpen,
-        reopen: () => this._openPopover()
+        reopen: () => this._openPopover(),
+        // The on-block mapping band. R renders the (empty, hidden) container
+        // as a sibling of the chart element; the engine fills it with the
+        // same role rows it puts in the gear.
+        bandEl: () => this._bandEl(),
+        exposed: () => Array.isArray(this.config.expose) ? this.config.expose
+          : (this.config.expose ? [this.config.expose] : []),
+        onExpose: (/** @type {Array<string>} */ keys) => {
+          this.config.expose = keys;
+          this._sendConfig();
+        }
       });
+    }
+
+    // Does the current config name a column the rows we hold do not carry?
+    // Checked against the first row, which is the shape of all of them.
+    // '.count' is the synthetic row-count value and never a column.
+    _mappingNeedsData() {
+      const rows = this.data;
+      if (!rows || !rows.length || !rows[0]) return false;
+      const have = rows[0];
+      return ['group', 'value', 'x', 'y', 'xend', 'series', 'color', 'facet',
+        'label'].some((/** @type {string} */ k) => {
+        const v = this.config[k];
+        return typeof v === 'string' && v && v !== '.count' && !(v in have);
+      });
+    }
+
+    // The band container, rendered by the R block UI as a sibling of the
+    // chart element. Looked up through the parent rather than by id: the id
+    // is namespaced by the block module and the two elements are built
+    // together, so "the .dd-mapping-band next to me" is the stable relation.
+    _bandEl() {
+      // Once _buildDOM() has moved it, the band is in the card; before that
+      // (and while a rebuild has it parked) it is where R put it, next to
+      // this element.
+      const inCard = this.el.querySelector(':scope > .dd-card > .dd-mapping-band');
+      if (inCard) return inCard;
+      const host = this.el && this.el.parentNode;
+      if (!host || !host.querySelector) return null;
+      return host.querySelector(':scope > .dd-mapping-band');
     }
 
     // Thin delegators so external callers (tests / harness) and setData keep
     // working after the engine moved into DrilldownConfig.
-    _renderConfig() { this._cfg.render(); }
+    _renderConfig() { this._cfg.render(); this._cfg.renderBand(); }
     /** @param {string} t */
     _onChartType(t) { this._cfg._onType(t); }
     /** @param {string} key */
@@ -1374,6 +1433,13 @@
     _buildDOM() {
       // The settings band lives inside the card, so clearing the element
       // removes it along with everything else.
+      //
+      // The EXPOSED MAPPING band is different: it is R-rendered markup that
+      // _buildDOM() moves into the card (below), so a rebuild would destroy
+      // it and the block would lose its controls for good. Park it back
+      // outside first; the move below picks it up again.
+      const parked = this.el.querySelector(':scope > .dd-card > .dd-mapping-band');
+      if (parked && this.el.parentNode) this.el.parentNode.appendChild(parked);
       this.el.innerHTML = '';
 
       // Card wrapper (for popover positioning)
@@ -1443,6 +1509,15 @@
       this.popoverEl = document.createElement('div');
       this.popoverEl.className = 'blockr-settings blockr-settings--beak dd-popover';
       this.card.appendChild(this.popoverEl);
+
+      // The exposed mapping band, moved in from where R rendered it (a
+      // sibling of this element, so it exists before the widget binds). It
+      // belongs UNDER the gear header, which is what makes a chart read like
+      // a code block: title, the icon row, the controls, then the result.
+      // After popoverEl, so the settings band stays adjacent to the gear its
+      // beak points at.
+      const band = this._bandEl();
+      if (band) this.card.appendChild(band);
       // A widget re-render rebuilds the DOM; restore the band's open state.
       if (this._popoverOpen) {
         this.popoverEl.classList.add('blockr-settings--open');
@@ -2415,6 +2490,11 @@
       }
       this._lastDataRev = dataRev != null ? dataRev : null;
       this.data = data || [];
+      // Whatever we were waiting for, this is the answer to it: either the
+      // rows now carry the column, or the config came back without it.
+      // Cleared unconditionally, so a mapping that is never satisfiable
+      // cannot leave the chart frozen on an old picture.
+      this._awaitData = false;
 
       if (!this.config.chart_type) this.config.chart_type = 'bar';
 
@@ -6348,6 +6428,11 @@
         series: this.config.series || '',
         label: this.config.label || '',
         drill: this.config.drill || '',
+        // Which mapping roles sit on the block's face. "" (not []) when none:
+        // an empty array arrives R-side as NULL and the handler's !is.null()
+        // guard would skip the write, leaving the last role stuck on screen.
+        expose: (this.config.expose && this.config.expose.length)
+          ? this.config.expose : '',
         smoother: this.config.smoother || 'none',
         connect: this.config.connect || 'monotone',
         identity_line: this.config.identity_line || 'off',
