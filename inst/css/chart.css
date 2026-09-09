@@ -536,6 +536,32 @@
   outline: none;
 }
 
+/* A setting the sentence would name if it were set. The clause left with its
+   value and took the word with it, so the offer stands in for the word: same
+   menu, dashed rather than underlined, because it is an invitation and not a
+   statement about the picture. Muted, and gone the moment the setting is
+   filled. */
+.blockr-slot-offer {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 0 6px;
+  border: 1px dashed var(--blockr-color-border-strong, #d1d5db);
+  border-radius: var(--blockr-radius-sm, 4px);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 1.5;
+  color: var(--blockr-color-text-secondary, #6b7280);
+  cursor: pointer;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+
+.blockr-slot-offer:hover,
+.blockr-slot-offer:focus-visible {
+  border-color: var(--blockr-color-primary, #2563eb);
+  color: var(--blockr-color-primary, #2563eb);
+  outline: none;
+}
+
 /* What the word opens is the list itself: Blockr.Select.menu(), the design
    system's dropdown hung off the word. Its chrome lives in
    blockr-select.css, so there is nothing to style here. */
@@ -876,68 +902,10 @@
   display: none;
 }
 
-/* -- Expose controls in the gear -------------------------------------------- */
-
-/* The Mapping header's "On block" checkbox, right-aligned in the header row. */
-.dd-section-title--action {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.dd-expose-all {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  user-select: none;
-}
-.dd-expose-all-label {
-  text-transform: none;
-  letter-spacing: normal;
-  font-weight: 500;
-}
-/* Some but not all of the mapping roles are on the face. A dash, not a tick:
-   the header must not claim a state that is not true. */
-.dd-section-checkbox.dd-partial {
-  background: var(--blockr-color-primary, #2563eb);
-  border-color: var(--blockr-color-primary, #2563eb);
-}
-.dd-section-checkbox.dd-partial::after {
-  content: "";
-  width: 7px;
-  height: 0;
-  border-top: 2px solid #fff;
-}
-
-/* The per-role pin: this control travels UP, out of the gear onto the face. */
-.dd-role-pin {
-  border: none;
-  background: none;
-  color: var(--blockr-grey-300, #cfd4da);
-  cursor: pointer;
-  font-size: 0.8125rem;
-  line-height: 1;
-  padding: 2px 3px;
-  border-radius: 4px;
-}
-.dd-role-pin:hover {
-  color: var(--blockr-color-text-primary, #374151);
-  background: var(--blockr-color-bg-input, #f9fafb);
-}
-.dd-role-pin.dd-on {
-  color: var(--blockr-color-primary, #2563eb);
-}
-.dd-role-pin:focus-visible {
-  outline: 2px solid var(--blockr-color-primary, #2563eb);
-  outline-offset: 1px;
-}
-
-/* The aggregation beside an exposed value, on the face: a word, not a
-   control. `func` is an analysis decision authored per exhibit (a waterfall's
-   "max" IS worst-value-per-patient), so the band states it and the gear is
-   where it changes -- unless the builder exposes `func` itself, which renders
-   the picker again. */
+/* The aggregation beside a value in the strip: a word, not a control. `func`
+   is an analysis decision authored per exhibit (a waterfall's "max" IS
+   worst-value-per-patient), so the strip states it and the gear is where it
+   changes. */
 .dd-mapping-band .dd-band-row .dd-pair-fixed {
   flex: 0 0 auto;
   height: 42px;

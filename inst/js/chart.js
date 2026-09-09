@@ -1130,16 +1130,9 @@
         afterTypeChange: () => this._updateFamilyClass(),
         isOpen: () => this._popoverOpen,
         reopen: () => this._openPopover(),
-        // The on-block mapping band. R renders the (empty, hidden) container
-        // as a sibling of the chart element; the engine fills it with the
-        // same role rows it puts in the gear.
-        bandEl: () => this._bandEl(),
-        exposed: () => Array.isArray(this.config.expose) ? this.config.expose
-          : (this.config.expose ? [this.config.expose] : []),
-        onExpose: (/** @type {Array<string>} */ keys) => {
-          this.config.expose = keys;
-          this._sendConfig();
-        }
+        // The prepare script's control strip. R renders the (empty, hidden)
+        // container as a sibling of the chart element; the engine fills it.
+        bandEl: () => this._bandEl()
       });
     }
 
@@ -1511,8 +1504,8 @@
       this.popoverEl.className = 'blockr-settings blockr-settings--beak dd-popover';
       this.card.appendChild(this.popoverEl);
 
-      // The exposed mapping band, moved in from where R rendered it (a
-      // sibling of this element, so it exists before the widget binds). It
+      // The prepare script's control strip, moved in from where R rendered it
+      // (a sibling of this element, so it exists before the widget binds). It
       // belongs UNDER the gear header, which is what makes a chart read like
       // a code block: title, the icon row, the controls, then the result.
       // After popoverEl, so the settings band stays adjacent to the gear its
@@ -1823,10 +1816,15 @@
       // A repaint replaces the very node an open slot popover is anchored to.
       this._closeSlot();
       this._paintTitle(this.titleEl, t, cfg.title_parts);
-      this._paintTitle(this.subtitleEl, s, cfg.subtitle_parts);
+      this._paintTitle(this.subtitleEl, s, cfg.subtitle_parts,
+                       cfg.subtitle_offers);
+      // An offer is a control, so a sentence that is nothing but offers is
+      // still worth a row: that is a chart whose only promoted setting is
+      // unset, which is exactly the case the offer exists for.
+      const offered = Array.isArray(cfg.subtitle_offers) && cfg.subtitle_offers.length;
       this.titleEl.style.display = t ? '' : 'none';
-      this.subtitleEl.style.display = s ? '' : 'none';
-      this.titleWrap.style.display = (t || s) ? '' : 'none';
+      this.subtitleEl.style.display = (s || offered) ? '' : 'none';
+      this.titleWrap.style.display = (t || s || offered) ? '' : 'none';
       this._paintTitle(this.captionEl, cap, cfg.caption_parts);
       this.captionEl.style.display = cap ? '' : 'none';
     }
@@ -1835,10 +1833,14 @@
     // the template holds an `{@arg}` token: those words are the block's own
     // controls, drawn in the sentence instead of in a band. Text nodes and
     // textContent throughout -- titles are data-derived text.
-    /** @param {HTMLElement} el @param {string} text @param {any[]} [parts] */
-    _paintTitle(el, text, parts) {
+    /** @param {HTMLElement} el @param {string} text @param {any[]} [parts] @param {any[]} [offers] */
+    _paintTitle(el, text, parts, offers) {
       el.textContent = '';
-      if (!Array.isArray(parts) || !parts.length) { el.textContent = text; return; }
+      if (!Array.isArray(parts) || !parts.length) {
+        el.textContent = text;
+        this._paintOffers(el, offers);
+        return;
+      }
       for (const p of parts) {
         if (!p || !p.text) continue;
         if (!p.arg) { el.appendChild(document.createTextNode(p.text)); continue; }
@@ -1855,6 +1857,52 @@
           this._openSlot(p.arg, w, p.by);
         });
         el.appendChild(w);
+      }
+      this._paintOffers(el, offers);
+    }
+
+    /* The settings the sentence would name if they were set.
+     *
+     * A clause in brackets leaves with its value, and takes the word that
+     * would open it: promoting `facet` on a chart that has no facet promotes
+     * nothing. So the sentence ends with one dashed chip per dropped setting,
+     * opening exactly the menu the word would have opened, and each chip
+     * disappears the moment its clause comes back. Past three the block has
+     * more unset settings than a caption can offer, and the gear is the right
+     * surface for that.
+     *
+     * @param {HTMLElement} el @param {any[]} [offers]
+     */
+    _paintOffers(el, offers) {
+      if (!Array.isArray(offers) || !offers.length) return;
+      const MAX = 3;
+      const shown = offers.slice(0, MAX);
+      for (const key of shown) {
+        if (typeof key !== 'string') continue;
+        const label = this._slotLabel(key) || key;
+        const c = document.createElement('span');
+        c.className = 'blockr-slot-offer';
+        c.textContent = '+ ' + label;
+        c.setAttribute('role', 'button');
+        c.setAttribute('tabindex', '0');
+        c.title = 'Add ' + label.toLowerCase() + ' to this chart';
+        c.addEventListener('click', (e) => { e.stopPropagation(); this._openSlot(key, c); });
+        c.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault();
+          this._openSlot(key, c);
+        });
+        el.appendChild(c);
+      }
+      if (offers.length > MAX) {
+        const more = document.createElement('span');
+        more.className = 'blockr-slot-offer blockr-slot-offer--more';
+        more.textContent = '+' + (offers.length - MAX);
+        more.setAttribute('role', 'button');
+        more.setAttribute('tabindex', '0');
+        more.title = 'The rest, in the settings';
+        more.addEventListener('click', (e) => { e.stopPropagation(); this._openPopover(); });
+        el.appendChild(more);
       }
     }
 
@@ -6510,11 +6558,6 @@
         series: this.config.series || '',
         label: this.config.label || '',
         drill: this.config.drill || '',
-        // Which mapping roles sit on the block's face. "" (not []) when none:
-        // an empty array arrives R-side as NULL and the handler's !is.null()
-        // guard would skip the write, leaving the last role stuck on screen.
-        expose: (this.config.expose && this.config.expose.length)
-          ? this.config.expose : '',
         smoother: this.config.smoother || 'none',
         connect: this.config.connect || 'monotone',
         identity_line: this.config.identity_line || 'off',
@@ -6567,10 +6610,9 @@
       };
       // Script control values (`sv_<name>`). Written out by name because the
       // names come out of the script, so they cannot be part of the literal
-      // above. An emptied multi-select ships as "" for the same reason
-      // `expose` does: an empty array arrives R-side as NULL and the handler's
-      // is.null() guard would skip the write, so the control could never be
-      // cleared.
+      // above. An emptied multi-select ships as "": an empty array arrives
+      // R-side as NULL and the handler's is.null() guard would skip the
+      // write, so the control could never be cleared.
       for (const spec of (this.config.script_inputs || [])) {
         if (!spec || !spec.key || spec.kind === 'error') continue;
         const v = this.config[spec.key];

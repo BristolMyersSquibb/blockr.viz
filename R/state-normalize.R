@@ -102,25 +102,3 @@ num_vec_state <- function(x) {
   if (!length(x)) NULL else x
 }
 
-# The exposed-roles slot: a character vector of role keys, in the order the
-# band shows them.
-#
-# It arrives as a JS array (a LIST once Shiny has parsed it -- see
-# reference_shiny_inputs_arrive_as_lists), as a character vector (the ctor),
-# or as the single string "" -- which is how the client says "nothing
-# exposed", because an empty array comes back NULL and the `!is.null()` guard
-# on the message handler would skip the write, leaving the last role stuck on
-# the face.
-#
-# Deduped, blanks dropped, order preserved: the band renders in this order.
-expose_state <- function(x) {
-
-  if (is.null(x)) return(character())
-
-  x <- as.character(unlist(x, use.names = FALSE))
-  x <- x[!is.na(x)]
-  x <- trimws(x)
-  x <- x[nzchar(x)]
-
-  unique(x)
-}

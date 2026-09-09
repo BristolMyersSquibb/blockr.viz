@@ -131,10 +131,21 @@ title_template_parts <- function(template, data, args = list()) {
   template <- as.character(template)[[1L]]
   if (!length(template) || is.na(template) || !nzchar(template)) return(list())
   out <- list()
+  # Arguments whose clause dropped. They are the ones a reader cannot reach:
+  # the word that would open them left with the segment, so the face offers
+  # them at the end of the sentence instead. Without this, promoting `facet`
+  # on a chart that has no facet yet promotes nothing.
+  offers <- character()
   for (seg in split_template_segments(template)) {
     parts <- resolve_template_chunk(seg$text, data, args)
     if (isTRUE(seg$optional) &&
         any(vapply(parts, function(p) isTRUE(p$empty), logical(1L)))) {
+      dropped <- vapply(
+        parts,
+        function(p) if (is.null(p$arg)) NA_character_ else p$arg,
+        character(1L)
+      )
+      offers <- c(offers, dropped[!is.na(dropped)])
       next
     }
     out <- c(out, parts)
@@ -150,6 +161,13 @@ title_template_parts <- function(template, data, args = list()) {
       merged <- c(merged, list(p))
     }
   }
+  # An argument named twice, once in a clause that stayed, is not on offer.
+  kept <- vapply(
+    merged, function(p) if (is.null(p$arg)) NA_character_ else p$arg,
+    character(1L)
+  )
+  offers <- setdiff(unique(offers), kept[!is.na(kept)])
+  attr(merged, "offers") <- offers
   merged
 }
 
@@ -183,7 +201,15 @@ resolve_title_token <- function(token, data, args = list()) {
   )[[1L]]
   if (length(m) == 3L) {
     col <- arg_token_value(m[[3L]], args)
-    if (!nzchar(col)) return(plain(""))
+    if (!nzchar(col)) {
+      # Empty, but still this argument's slot. Dropping the `arg` here would
+      # lose the offer as well as the word: a clause written
+      # `[, split by {label(@facet)}]` would vanish with nothing left to
+      # switch faceting on with. A count is the exception, as below.
+      if (identical(m[[2L]], "n_distinct")) return(plain(""))
+      return(list(text = "", arg = m[[3L]],
+                  by = if (identical(m[[2L]], "label")) "label" else "name"))
+    }
     inner <- resolve_title_token(paste0(m[[2L]], "(", col, ")"), data, args)
     # A count is not a value a reader can set, so it is text, not a slot.
     if (identical(m[[2L]], "n_distinct")) return(plain(inner$text))
@@ -292,15 +318,25 @@ block_title_parts <- function(x, data, auto = NULL, args = list()) {
   x <- as.character(x)[[1L]]
   if (is.na(x) || !nzchar(trimws(x))) return(NULL)
   parts <- title_template_parts(x, data, args)
-  if (!length(parts)) return(NULL)
+  offers <- attr(parts, "offers", exact = TRUE)
+  if (!length(parts)) {
+    # Every clause dropped: there is no sentence, and the offers are all
+    # there is to show.
+    if (!length(offers)) return(NULL)
+    out <- list()
+    attr(out, "offers") <- offers
+    return(out)
+  }
   # `empty` is a parser flag; the client only needs the word and its argument.
-  lapply(parts, function(p) {
+  out <- lapply(parts, function(p) {
     if (is.null(p$arg)) {
       list(text = p$text)
     } else {
       list(text = p$text, arg = p$arg, by = p$by %||% "name")
     }
   })
+  attr(out, "offers") <- offers
+  out
 }
 
 # A free-text title slot: NULL = auto, "" = explicitly none, else a template.

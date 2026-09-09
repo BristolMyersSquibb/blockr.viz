@@ -244,14 +244,6 @@
 #' @param ctrl_table Character(1), beta. Name of the table in the target's
 #'   `dm` the pushed conditions apply to (e.g. `"adsl"`). Leave empty when
 #'   the target filters a plain data frame.
-#' @param expose Character vector of mapping role keys the block shows on its
-#'   own face, in an always-visible band above the chart, instead of behind
-#'   the gear: any of `"group"`, `"value"`, `"x"`, `"y"`, `"xend"`,
-#'   `"series"`, `"color"`, `"facet"`, `"label"`, `"tt_fields"`. A reader can
-#'   change an exposed role on a locked board, which is the point -- the gear
-#'   is hidden there and the band is not. Empty (the default) leaves the block
-#'   looking exactly as it did.
-#'
 #'   Expose the roles a reader should steer, not the ones that say what the
 #'   exhibit IS: a waterfall's `group` is one bar per subject, and a shift
 #'   plot's axes are fixed because a shift against a percent change means
@@ -411,16 +403,13 @@ new_chart_block <- function(
     # that adds or removes itself -- a waterfall's `group` is what the
     # exhibit IS, not a reader's choice, so it stays pinned out.
     #
-    # Authored, never inferred: a role stays on the face when it is set to
-    # "(none)", or picking (none) would delete its own control.
-    expose = character(),
     # PREPARE SCRIPT (experiment). An ordinary R script run on the incoming
     # data before the chart sees it, whose plain-value declarations become
     # controls on the block's face. NULL (default) = no script, and the block
     # behaves exactly as it did.
     #
-    # It exists for the cases the exposed mapping band cannot reach: a chart
-    # that needs one derived column, or a knob that is not an aesthetic. A
+    # It exists for the cases a mapping cannot reach: a chart that needs one
+    # derived column, or a knob that is not an aesthetic. A
     # transform on its own would be a code block upstream; the point here is
     # that the knob lands on THIS block's face, because a dev-master board
     # wants a chart and its settings to be one card.
@@ -449,6 +438,18 @@ new_chart_block <- function(
   # under the old name -- so saved boards (which pass the old names on restore)
   # still map onto the new args. Remove after one release cycle.
   .dep <- list(...)
+  # RETIRED: `expose` put mapping rows in an always-visible band above the
+  # chart. There is one channel now and it is the block's own sentence --
+  # `subtitle`, whose `{@arg}` words are the controls (blockr.docs
+  # design-system/pinned-controls.md). Taken from `...` like the other retired
+  # names so a saved board that carries it still restores, minus the band.
+  if (!is.null(.dep$expose)) {
+    warning(
+      "new_chart_block(): `expose` is retired. Name the setting in ",
+      "`subtitle` instead, e.g. \"[, coloured by {@color}]\".",
+      call. = FALSE
+    )
+  }
   if (!is.null(.dep$metric)) {
     warning("new_chart_block(): `metric` is deprecated, use `value`.",
             call. = FALSE)
@@ -768,7 +769,6 @@ new_chart_block <- function(
         # Facet-grid panel scales (see constructor args).
         r_facet_scales <- shiny::reactiveVal(facet_scales)
         r_download <- shiny::reactiveVal(isTRUE(download))
-        r_expose <- shiny::reactiveVal(as.character(expose))
         # Prepare script. Externally controllable, so a write can arrive from
         # MCP or a restore as a vector of lines rather than one string;
         # cb_script_text() collapses it at the one place every write passes
@@ -822,7 +822,7 @@ new_chart_block <- function(
           # Columns a READER can switch a role to, shipped up front.
           #
           # Only the columns the current mapping needs travel, so re-pointing
-          # an exposed role at another column would otherwise need a fresh
+          # a role from the sentence would otherwise need a fresh
           # payload -- and until it lands the browser draws the new mapping
           # over rows without that column, which reads as the aesthetic
           # switching off and back on. Shipping the offer list with the data
@@ -834,7 +834,9 @@ new_chart_block <- function(
           # frame offers EVERY column, so nothing extra is shipped there and
           # the client falls back to holding the last picture until the data
           # catches up.
-          if (length(r_expose())) {
+          # A sentence can re-point any role it names, so the kinds every
+          # role could offer have to travel with the data.
+          if (length(r_subtitle()) && grepl("@", r_subtitle(), fixed = TRUE)) {
             needed <- c(needed, names(column_kinds(d)))
           }
           needed <- unique(needed)
@@ -983,6 +985,10 @@ new_chart_block <- function(
           shiny::req(is.data.frame(d))
           auto <- r_data_titles()
           a <- title_args()
+          # The subtitle is the block's sentence, so its pieces are read
+          # twice: the words, and the settings whose clause dropped. One call.
+          sub_parts <- block_title_parts(r_subtitle(), d, auto = auto$subtitle,
+                                         args = a)
           list(
             title = resolve_block_title(r_title(), d, auto = auto$label,
                                         args = a),
@@ -992,10 +998,12 @@ new_chart_block <- function(
                                           auto = auto$caption, args = a),
             title_parts = block_title_parts(r_title(), d, auto = auto$label,
                                             args = a),
-            subtitle_parts = block_title_parts(r_subtitle(), d,
-                                               auto = auto$subtitle, args = a),
+            subtitle_parts = sub_parts,
             caption_parts = block_title_parts(r_caption(), d,
-                                              auto = auto$caption, args = a)
+                                              auto = auto$caption, args = a),
+            # Settings the sentence names in a clause that dropped, so the
+            # face can offer them: an unset facet has no word to click.
+            subtitle_offers = attr(sub_parts, "offers", exact = TRUE)
           )
         })
 
@@ -1151,6 +1159,7 @@ new_chart_block <- function(
               title_parts = r_titles_resolved()$title_parts,
               subtitle_parts = r_titles_resolved()$subtitle_parts,
               caption_parts = r_titles_resolved()$caption_parts,
+              subtitle_offers = as.list(r_titles_resolved()$subtitle_offers),
               smoother_series = r_smoother_series(),
               lo = r_lo(), hi = r_hi(),
               # Board scale map, resolved for the chart type's colored role
@@ -1175,7 +1184,6 @@ new_chart_block <- function(
               ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices()),
               # Mapping roles the face carries. as.list() so a single role
               # ships as a JSON array rather than a bare string (auto_unbox).
-              expose = as.list(r_expose()),
               # Prepare script: the text the gear's textarea edits, the
               # controls it declares (in the engine's own role vocabulary, so
               # the band draws them with the same _buildControl() a mapping row
@@ -1397,13 +1405,6 @@ new_chart_block <- function(
             }
             if (!is.null(msg$ctrl_table)) {
               upd(r_ctrl_table, trimws(as.character(msg$ctrl_table)))
-            }
-            # Exposed roles. A JS array arrives as a list
-            # (reference_shiny_inputs_arrive_as_lists); "" is how the client
-            # says "none exposed", since an empty array would come back NULL
-            # and be skipped by the guard above it.
-            if (!is.null(msg$expose)) {
-              upd(r_expose, expose_state(msg$expose))
             }
             # The prepare script, committed from the gear's textarea (on blur
             # or the Apply chip, never per keystroke: every write re-runs the
@@ -1882,8 +1883,7 @@ new_chart_block <- function(
             subtitle = r_subtitle,
             caption = r_caption,
             ctrl_target = r_ctrl_target,
-            ctrl_table = r_ctrl_table,
-            expose = r_expose
+            ctrl_table = r_ctrl_table
           )
         )
       })
@@ -1894,10 +1894,10 @@ new_chart_block <- function(
         viz_echarts_dep(),
         viz_block_css_dep(),
         drilldown_chart_dep(),
-        # The exposed mapping band. Always in the DOM, empty and
-        # display:none until the block exposes a role -- chart.js fills it,
-        # because the controls it holds are the gear's own role rows rendered
-        # into a different box (one renderer, two surfaces).
+        # The prepare script's control strip. Always in the DOM, empty and
+        # display:none until a script declares a value -- chart.js fills it.
+        # It used to hold promoted mapping rows too (`expose`, retired): a
+        # mapping is named in the block's sentence now.
         shiny::div(id = ns("mapping_band"), class = "dd-mapping-band",
                    style = "display:none"),
         shiny::div(id = ns("drilldown_block"), class = "drilldown-chart-container"),
@@ -1951,10 +1951,6 @@ new_chart_block <- function(
       # a non-allow_empty_state field holding NULL wedges the whole block
       # (state_ready never goes TRUE and result() stays NULL).
       "ref_x", "ref_y",
-      # No exposed roles is the default and the common case, so it MUST be
-      # allowed to be empty or every chart block wedges
-      # (reference_blockr_allow_empty_state_wedge).
-      "expose",
       # No script is the default and the common case, so both MUST be allowed
       # to be empty or every chart block wedges
       # (reference_blockr_allow_empty_state_wedge).
@@ -1972,7 +1968,6 @@ new_chart_block <- function(
       "count_on", "count_col", "na_group", "pct_of", "func_toggle",
       "facet_scales",
       "title", "subtitle", "caption",
-      "expose",
       # Externally controllable (MCP, restore) but deliberately NOT on the AI
       # surface: `script` is absent from the registry argument spec, so the
       # assistant never sees it. A general escape hatch on a block that appears

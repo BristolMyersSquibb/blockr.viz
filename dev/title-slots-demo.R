@@ -10,16 +10,16 @@
 #               the picker for `y`; {n_distinct(@y)} is a count, so it is
 #               text, not a control.
 #   [ ... ]     a clause that leaves with its token. "[, faceted by {@facet}]"
-#               says nothing at all when facet is unset, where a band keeps an
-#               empty "(none)" select for as long as the block exists.
+#               says nothing at all when facet is unset -- and the setting is
+#               offered as a "+ Facet" chip at the end of the sentence, which
+#               is the only way to reach a setting that is not set yet.
 #
 # Views
 #   1. Sentence   one chart, four settable words, no band at all. Change the
 #                 colour from the sentence and watch the clause for facet
 #                 appear when you give it one.
-#   2. Both       the same chart twice: the sentence, and the on-block band
-#                 (`expose =`) that costs 96px above the exhibit. Same
-#                 settings, same state, two renderings.
+#   2. Both       the same chart twice: with a sentence and without one. The
+#                 second is what every chart looked like before this.
 #   3. Optional   a chart whose facet is unset, so its sentence is shorter.
 #
 # Rules: blockr.docs design-system/pinned-controls.md.
@@ -86,6 +86,10 @@ sentence <- paste0(
   "[, split by {@facet}]"
 )
 
+# Facet is unset on this board, as it is on 31 of the 32 CEDX exhibits, so the
+# clause is not there and neither is the word that would open it. The offer
+# chip at the end of the sentence is what a reader clicks to add one.
+
 board <- new_dock_board(
   blocks = c(
     raw = new_static_block(lab, block_name = "Lab"),
@@ -99,7 +103,8 @@ board <- new_dock_board(
       block_name = "Trajectory"
     ),
 
-    # 2a / 2b. The same settings, drawn twice.
+    # 2a / 2b. The same settings, drawn twice. The band is the OLD channel and
+    # is on its way out; this pair is what says why.
     both_sent = new_chart_block(
       chart_type = "bar", group = "USUBJID", value = "CHG", func = "max",
       color = "TRT", sort_by = "value", sort_dir = "desc",
@@ -111,8 +116,9 @@ board <- new_dock_board(
       chart_type = "bar", group = "USUBJID", value = "CHG", func = "max",
       color = "TRT", sort_by = "value", sort_dir = "desc",
       title = "Change from baseline",
-      expose = c("value", "color", "facet"),
-      block_name = "Waterfall - band"
+      # No sentence: everything is behind the gear, which is what a block
+      # looks like when nothing is promoted.
+      block_name = "Waterfall - gear only"
     ),
 
     # 3. Facet unset, so the clause is not there at all. Set it from the

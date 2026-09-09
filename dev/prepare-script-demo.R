@@ -1,23 +1,24 @@
-# Chart block `script`: a prepare step whose declarations become controls on
-# the block's face. Three charts, so the band can be compared side by side.
+# Chart block `script`: a prepare step whose declarations become controls in
+# the strip above the chart. Three charts, so it can be compared side by side.
 #
 #   Rscript dev/prepare-script-demo.R
 pkgload::load_all("/workspace/blockr.viz", quiet = TRUE)
 
 library(blockr.core)
 
-# 1. No script. The other nineteen in twenty: the band shows only what
-#    `expose` puts there, and the gear carries one extra header line.
+# 1. No script. The other nineteen in twenty: no strip at all, and the gear
+#    carries one extra header line.
 plain <- new_chart_block(
   chart_type = "bar", group = "Species", value = ".count", func = "count",
-  expose = "color", title = "No script"
+  subtitle = "counts by {@group}[, coloured by {@color}]", title = "No script"
 )
 
 # 2. A script with three kinds of knob: a number, a multi-select fed from the
-#    data, and a flag. All three land on the band, after the exposed mapping.
+#    data, and a flag. All three land in the strip.
 knobs <- new_chart_block(
   chart_type = "bar", group = "Species", value = "Sepal.Length",
-  func = "mean", expose = "color", title = "Script knobs",
+  func = "mean", title = "Script knobs",
+  subtitle = "mean {label(@value)} by {@group}[, coloured by {@color}]",
   script = paste(
     "min_len <- 5           #| number(min = 4, max = 8, step = 0.1)",
     "species <- factor(c(\"setosa\", \"versicolor\"), levels = unique(data$Species))",
@@ -31,7 +32,7 @@ knobs <- new_chart_block(
 )
 
 # 3. A script that computes a column the upstream data does not have, which is
-#    the case the exposed mapping band cannot reach at all.
+#    the case a mapping cannot reach at all.
 derived <- new_chart_block(
   chart_type = "scatter", x = "Sepal.Length", y = "ratio",
   title = "Derived column",

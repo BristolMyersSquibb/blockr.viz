@@ -225,20 +225,6 @@ chart_arguments <- function() {
       example = "cohort_filter",
       type = arg_string()
     ),
-    expose = new_arg_spec(
-      paste0(
-        "Mapping roles promoted out of the gear onto the block's face, as a ",
-        "character vector of role keys (\"color\", \"facet\", \"value\", ",
-        "\"x\", \"y\", \"group\", \"series\", \"label\"). A reader can ",
-        "change an exposed role without unlocking the board; everything else ",
-        "stays in the gear. Empty (default) = nothing on the face. Expose the ",
-        "roles the reader should steer (colour, facet, which value), not the ",
-        "ones that define what the exhibit IS (a waterfall's `group` is one ",
-        "bar per subject, not a choice)."
-      ),
-      example = list("color", "facet"),
-      type = arg_array(arg_string())
-    ),
     ctrl_table = new_arg_spec(
       paste0(
         "BETA. Only with `ctrl_target`: the table in the target's dm the ",
@@ -597,11 +583,20 @@ chart_arguments <- function() {
     ),
     subtitle = new_arg_spec(
       paste0(
-        "Subtitle under the title, same {...} tokens as `title`. Unset = ",
-        "auto (inherits the input data's subtitle attribute when present, ",
-        "e.g. from a composer table); \"\" = explicitly none."
+        "Subtitle under the title, same {...} tokens as `title`, and the ",
+        "block's control surface. An {@arg} token prints one of this ",
+        "block's own settings and makes that word a control: the reader ",
+        "clicks it and picks, without opening the gear or unlocking the ",
+        "board. {label(@y)} prints the column's label and is still the ",
+        "picker for `y`. A clause in [ ] disappears when its setting is ",
+        "empty, and the setting is offered at the end of the sentence ",
+        "instead. Name the settings a reader should steer (colour, facet, ",
+        "which value), not the ones that define what the exhibit IS (a ",
+        "waterfall's `group` is one bar per subject, not a choice). ",
+        "Unset = auto (inherits the input data's subtitle attribute when ",
+        "present, e.g. from a composer table); \"\" = explicitly none."
       ),
-      example = "Treatment: {ARM}",
+      example = "{func} of {label(@y)} by {@x}[, coloured by {@color}]",
       type = arg_string()
     ),
     caption = new_arg_spec(

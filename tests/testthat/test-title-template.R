@@ -227,6 +227,13 @@ test_that("parts carry the argument each settable word belongs to", {
   expect_null(parts[[1L]]$arg)
 })
 
+# The pieces carry the offers as an attribute; these assertions are about the
+# pieces themselves.
+unclass_parts <- function(x) {
+  attr(x, "offers") <- NULL
+  x
+}
+
 test_that("block_title_parts follows the three tiers", {
   d <- data.frame(x = 1)
   expect_null(block_title_parts(NULL, d, auto = NULL))
@@ -236,14 +243,57 @@ test_that("block_title_parts follows the three tiers", {
   # `by` travels with a slot so the menu can lead with the half the sentence
   # printed: the name here, the label for a {label(@x)} token.
   expect_equal(
-    block_title_parts("by {@color}", d, args = list(color = "TRT")),
+    unclass_parts(block_title_parts("by {@color}", d, args = list(color = "TRT"))),
     list(list(text = "by "), list(text = "TRT", arg = "color", by = "name"))
   )
   d2 <- data.frame(TRT = "A")
   attr(d2$TRT, "label") <- "Actual Treatment"
   expect_equal(
-    block_title_parts("by {label(@color)}", d2, args = list(color = "TRT")),
+    unclass_parts(block_title_parts("by {label(@color)}", d2,
+                                    args = list(color = "TRT"))),
     list(list(text = "by "),
          list(text = "Actual Treatment", arg = "color", by = "label"))
   )
+})
+
+test_that("a dropped clause puts its argument on offer", {
+  d <- data.frame(x = 1)
+  tpl <- "max[, coloured by {@color}][, split by {@facet}]"
+  p <- block_title_parts(tpl, d, args = list(color = "Group", facet = NULL))
+  expect_equal(attr(p, "offers"), "facet")
+
+  # Both set: nothing to offer.
+  p2 <- block_title_parts(tpl, d, args = list(color = "Group", facet = "SEX"))
+  expect_equal(attr(p2, "offers"), character())
+
+  # Both empty, and the sentence is only the words that stayed.
+  p3 <- block_title_parts(tpl, d, args = list())
+  expect_equal(attr(p3, "offers"), c("color", "facet"))
+  expect_equal(vapply(p3, function(x) x$text, character(1L)), "max")
+
+  # An argument that is also named in a clause that stayed is reachable, so
+  # it is not on offer.
+  p4 <- block_title_parts(
+    "by {@color}[, and again {@color}][, split by {@facet}]", d,
+    args = list(color = "Group")
+  )
+  expect_equal(attr(p4, "offers"), "facet")
+})
+
+test_that("a sentence that resolves to nothing still carries its offers", {
+  d <- data.frame(x = 1)
+  p <- block_title_parts("[split by {@facet}]", d, args = list())
+  expect_length(p, 0L)
+  expect_equal(attr(p, "offers"), "facet")
+})
+
+test_that("an empty label(@arg) is still that argument's slot", {
+  d <- data.frame(x = 1)
+  # The offer is what makes an unset setting reachable, and it is keyed on
+  # the argument each piece carries.
+  p <- block_title_parts("max[, split by {label(@facet)}]", d, args = list())
+  expect_equal(attr(p, "offers"), "facet")
+  # A count still is not a slot, empty or not.
+  p2 <- block_title_parts("max[, {n_distinct(@facet)} levels]", d, args = list())
+  expect_equal(attr(p2, "offers"), character())
 })
