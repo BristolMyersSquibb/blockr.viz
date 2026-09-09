@@ -1949,9 +1949,23 @@
         return;
       }
       const opts = this._cfg._slotOptionsFor(key);
+      // No list to open: a number, a text field, a multi-select. Those keep
+      // their row in the strip, so there is nothing to do here.
       if (!opts) return;
       const B = (typeof Blockr !== 'undefined') ? Blockr : null;
-      if (!B || !B.Select || !B.Select.menu) return;
+      if (!B || !B.Select || !B.Select.menu) {
+        // LOUD on purpose. This is a version skew, not a capability to feel
+        // out at runtime: blockr.viz paints the words and blockr.dplyr owns
+        // the menu they open, so a deployment carrying one without the other
+        // gives words that do nothing and no other symptom at all. A silent
+        // return here cost an afternoon on prod. See blockr.docs
+        // design-system/pinned-controls.md.
+        throw new Error(
+          'Blockr.Select.menu() is missing: this blockr.dplyr predates the ' +
+          'title-slot menu. The words in a block\'s sentence cannot open ' +
+          'their list until blockr.dplyr is updated alongside blockr.viz.'
+        );
+      }
       this._slotKey = key;
       this._slotAnchor = anchor;
       anchor.classList.add('blockr-slot--open');
