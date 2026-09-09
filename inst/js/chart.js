@@ -725,7 +725,8 @@
     title:    { label: 'Title', kind: 'text', ph: 'e.g. AEs by {ARM}',
                 autoValue: (/** @type {any} */ cfg) =>
                   (cfg.title == null && cfg.title_resolved) ? cfg.title_resolved : '' },
-    subtitle: { label: 'Subtitle', kind: 'text', ph: 'e.g. Treatment: {ARM}',
+    subtitle: { label: 'Subtitle', kind: 'text', ph: 'e.g. {func} of {label(@y)}[, by {@color}]',
+                hint: 'An {@arg} token prints that setting and makes the word a control on the block. [ ] drops its clause when the setting is empty.',
                 autoValue: (/** @type {any} */ cfg) =>
                   (cfg.subtitle == null && cfg.subtitle_resolved) ? cfg.subtitle_resolved : '' },
     caption:  { label: 'Caption', kind: 'text', ph: 'e.g. {filters} or N = {n} records',
@@ -1819,13 +1820,94 @@
       const t = cfg.title_resolved || '';
       const s = cfg.subtitle_resolved || '';
       const cap = cfg.caption_resolved || '';
-      this.titleEl.textContent = t;
-      this.subtitleEl.textContent = s;
+      // A repaint replaces the very node an open slot popover is anchored to.
+      this._closeSlot();
+      this._paintTitle(this.titleEl, t, cfg.title_parts);
+      this._paintTitle(this.subtitleEl, s, cfg.subtitle_parts);
       this.titleEl.style.display = t ? '' : 'none';
       this.subtitleEl.style.display = s ? '' : 'none';
       this.titleWrap.style.display = (t || s) ? '' : 'none';
-      this.captionEl.textContent = cap;
+      this._paintTitle(this.captionEl, cap, cfg.caption_parts);
       this.captionEl.style.display = cap ? '' : 'none';
+    }
+
+    // One band's text. Plain string unless R sent pieces, which it does when
+    // the template holds an `{@arg}` token: those words are the block's own
+    // controls, drawn in the sentence instead of in a band. Text nodes and
+    // textContent throughout -- titles are data-derived text.
+    /** @param {HTMLElement} el @param {string} text @param {any[]} [parts] */
+    _paintTitle(el, text, parts) {
+      el.textContent = '';
+      if (!Array.isArray(parts) || !parts.length) { el.textContent = text; return; }
+      for (const p of parts) {
+        if (!p || !p.text) continue;
+        if (!p.arg) { el.appendChild(document.createTextNode(p.text)); continue; }
+        const w = document.createElement('span');
+        w.className = 'blockr-slot';
+        w.textContent = p.text;
+        w.setAttribute('role', 'button');
+        w.setAttribute('tabindex', '0');
+        w.title = 'Change ' + (this._slotLabel(p.arg) || p.arg);
+        w.addEventListener('click', (e) => { e.stopPropagation(); this._openSlot(p.arg, w, p.by); });
+        w.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault();
+          this._openSlot(p.arg, w, p.by);
+        });
+        el.appendChild(w);
+      }
+    }
+
+    // A role.label may be a function of the current config (the x role reads
+    // "Timeline" on a band chart), exactly as the gear's rows resolve it.
+    /** @param {string} key */
+    _slotLabel(key) {
+      const role = this._cfg && this._cfg._role ? this._cfg._role(key) : null;
+      if (!role || !role.label) return '';
+      return (typeof role.label === 'function') ? role.label(this.config) : role.label;
+    }
+
+    // The slot's editor is the list, hung off the word: no popover, no
+    // control to click a second time. Blockr.Select.menu() is the same
+    // dropdown every select in the product opens, so the tick, the filter
+    // box, the keyboard and the edge flip come with it.
+    /** @param {string} key @param {HTMLElement} anchor @param {string} [by] */
+    _openSlot(key, anchor, by) {
+      const wasKey = this._slotKey;
+      this._closeSlot();
+      if (wasKey === key) return;              // the word toggles its own menu
+      if (!this._cfg || !this._cfg._role || !this._cfg._role(key)) return;
+      const opts = this._cfg._slotOptionsFor(key);
+      if (!opts) return;
+      const B = (typeof Blockr !== 'undefined') ? Blockr : null;
+      if (!B || !B.Select || !B.Select.menu) return;
+      this._slotKey = key;
+      this._slotAnchor = anchor;
+      anchor.classList.add('blockr-slot--open');
+      this._slotMenu = B.Select.menu(anchor, {
+        options: opts.options,
+        selected: opts.selected,
+        title: this._slotLabel(key) || key,
+        // Lead with the half the sentence printed.
+        labelFirst: by === 'label',
+        searchPlaceholder: 'Filter columns',
+        onChange: (/** @type {string} */ val) => this._cfg._setRoleValue(key, val),
+        onClose: () => {
+          if (this._slotAnchor) this._slotAnchor.classList.remove('blockr-slot--open');
+          this._slotAnchor = null;
+          this._slotMenu = null;
+          this._slotKey = null;
+        }
+      });
+    }
+
+    _closeSlot() {
+      if (this._slotMenu) { this._slotMenu.close(); this._slotMenu = null; }
+      if (this._slotAnchor) {
+        this._slotAnchor.classList.remove('blockr-slot--open');
+        this._slotAnchor = null;
+      }
+      this._slotKey = null;
     }
 
     // -- Shared facet legend ---------------------------------------------------
@@ -6589,8 +6671,9 @@
       if (this._resizeRaf) { cancelAnimationFrame(this._resizeRaf); this._resizeRaf = null; }
       this._teardownCharts();
       // The settings band lives inside the widget element, so it is torn
-      // down with the card — no portaled popover or document-level
-      // outside-click listener to clean up anymore.
+      // down with the card. A slot popover is the one thing that is not: it
+      // is portaled to <body> and holds a document-level listener.
+      this._closeSlot();
     }
   }
 

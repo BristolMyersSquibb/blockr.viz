@@ -965,16 +965,37 @@ new_chart_block <- function(
         # below fires per edit, and an uncached call there re-paid 3 column
         # scans per sort/step/width tweak. Same pattern as r_data_json /
         # r_smoother_series above.
+        # The block's own arguments, reachable from a title template as
+        # `{@color}` and friends. A word printed from one of these is a slot:
+        # the face renders it as a control and clicking it opens that
+        # argument's picker. See blockr.docs design-system/pinned-controls.md.
+        title_args <- shiny::reactive({
+          list(
+            chart_type = r_chart_type(), group = r_group(), value = r_value(),
+            func = r_func(), x = r_x(), y = r_y(), xend = r_xend(),
+            series = r_series(), color = r_color(), facet = r_facet(),
+            label = r_label(), sort_by = r_sort_by(), drill = r_drill()
+          )
+        })
+
         r_titles_resolved <- shiny::reactive({
           d <- plain_data()
           shiny::req(is.data.frame(d))
           auto <- r_data_titles()
+          a <- title_args()
           list(
-            title = resolve_block_title(r_title(), d, auto = auto$label),
+            title = resolve_block_title(r_title(), d, auto = auto$label,
+                                        args = a),
             subtitle = resolve_block_title(r_subtitle(), d,
-                                           auto = auto$subtitle),
+                                           auto = auto$subtitle, args = a),
             caption = resolve_block_title(r_caption(), d,
-                                          auto = auto$caption)
+                                          auto = auto$caption, args = a),
+            title_parts = block_title_parts(r_title(), d, auto = auto$label,
+                                            args = a),
+            subtitle_parts = block_title_parts(r_subtitle(), d,
+                                               auto = auto$subtitle, args = a),
+            caption_parts = block_title_parts(r_caption(), d,
+                                              auto = auto$caption, args = a)
           )
         })
 
@@ -1124,6 +1145,12 @@ new_chart_block <- function(
               title_resolved = r_titles_resolved()$title,
               subtitle_resolved = r_titles_resolved()$subtitle,
               caption_resolved = r_titles_resolved()$caption,
+              # The same three, as pieces, so the face can draw the words a
+              # reader may set as controls. Absent when the text holds no
+              # `@arg` token, which is every board written before this.
+              title_parts = r_titles_resolved()$title_parts,
+              subtitle_parts = r_titles_resolved()$subtitle_parts,
+              caption_parts = r_titles_resolved()$caption_parts,
               smoother_series = r_smoother_series(),
               lo = r_lo(), hi = r_hi(),
               # Board scale map, resolved for the chart type's colored role

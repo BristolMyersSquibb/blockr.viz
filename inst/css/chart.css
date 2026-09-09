@@ -507,6 +507,39 @@
   margin-top: 1px;
 }
 
+/* ===== Title slots ===== */
+/* A word in the block's own sentence that is one of its arguments: clicking
+   it opens that argument's control. The mark is the colour plus a dashed
+   underline, and nothing else -- no padding, no tint -- so a unit can touch
+   the word ("25+ patients") and so a caption reads as a caption. Grey plus an
+   underline reads as emphasis, and nobody clicks an emphasised word; a tinted
+   tag reads as a control but pushes the punctuation after it away.
+   On hover the dash firms up: dashed says you can change this, solid says you
+   are about to.
+   Rules, and the marks it was chosen from: blockr.docs
+   design-system/pinned-controls.md. Moves to blockr.ui with the rest of the
+   shared layer; `blockr-` is the reserved prefix on purpose, because the
+   table and code blocks render the same word. */
+.blockr-slot {
+  color: var(--blockr-color-primary, #2563eb);
+  font-weight: 500;
+  border-bottom: 1px dashed var(--blockr-color-primary, #2563eb);
+  padding-bottom: 1px;
+  cursor: pointer;
+}
+
+.blockr-slot:hover,
+.blockr-slot:focus-visible,
+.blockr-slot--open {
+  color: var(--blockr-blue-700, #1d4ed8);
+  border-bottom: 1px solid var(--blockr-blue-700, #1d4ed8);
+  outline: none;
+}
+
+/* What the word opens is the list itself: Blockr.Select.menu(), the design
+   system's dropdown hung off the word. Its chrome lives in
+   blockr-select.css, so there is nothing to style here. */
+
 .dd-chart-caption {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-grey-500, #6b7280);

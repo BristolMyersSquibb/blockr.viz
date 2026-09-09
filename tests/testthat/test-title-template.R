@@ -149,3 +149,101 @@ test_that("{filters} disappears rather than erroring when nothing is filtered", 
   attr(d, "blockr_filters") <- character()
   expect_equal(resolve_title_template("{filters}", d), "")
 })
+
+# -- Argument tokens and optional segments -----------------------------------
+#
+# The sentence a block writes about itself: `{@arg}` prints a setting and
+# marks the word as that setting's control, `[ ... ]` drops a clause whose
+# token is empty. blockr.docs design-system/pinned-controls.md.
+
+test_that("@arg tokens print the argument value, not the column's values", {
+  d <- data.frame(TRT = c("Placebo", "Drug A"), stringsAsFactors = FALSE)
+  expect_equal(
+    resolve_title_template("Coloured by {@color}", d, list(color = "TRT")),
+    "Coloured by TRT"
+  )
+  # The bare token is unchanged: it still spells out the column's values.
+  expect_equal(
+    resolve_title_template("Coloured by {TRT}", d, list(color = "TRT")),
+    "Coloured by Placebo, Drug A"
+  )
+})
+
+test_that("label() and n_distinct() compose with an @arg", {
+  d <- data.frame(AVAL = c(1, 2, 2))
+  attr(d$AVAL, "label") <- "Analysis Value"
+  a <- list(y = "AVAL")
+  expect_equal(resolve_title_template("{label(@y)}", d, a), "Analysis Value")
+  expect_equal(resolve_title_template("{n_distinct(@y)}", d, a), "2")
+  # Falls back to the column name, like {label(col)} does.
+  expect_equal(
+    resolve_title_template("{label(@y)}", data.frame(AVAL = 1), a), "AVAL"
+  )
+})
+
+test_that("an empty argument empties its token", {
+  d <- data.frame(x = 1)
+  expect_equal(resolve_title_template("[{@facet}]", d, list(facet = NULL)), "")
+  expect_equal(resolve_title_template("[{@facet}]", d, list(facet = "")), "")
+  expect_equal(
+    resolve_title_template("[{@facet}]", d, list(facet = "(none)")), ""
+  )
+  # No args at all: a board written before this reads the token as empty
+  # rather than erroring.
+  expect_equal(resolve_title_template("a{@facet}b", d), "ab")
+})
+
+test_that("an optional segment leaves with its token", {
+  d <- data.frame(x = 1)
+  tpl <- "Most frequent {@group}[, faceted by {@facet}][, {@min_n}+ patients]"
+  expect_equal(
+    resolve_title_template(tpl, d, list(group = "AEDECOD", facet = "SEX",
+                                        min_n = 5)),
+    "Most frequent AEDECOD, faceted by SEX, 5+ patients"
+  )
+  expect_equal(
+    resolve_title_template(tpl, d, list(group = "AEDECOD", facet = "(none)",
+                                        min_n = 5)),
+    "Most frequent AEDECOD, 5+ patients"
+  )
+  # An unmatched bracket is literal: display copy must not error.
+  expect_equal(resolve_title_template("a [b {@x}", d, list(x = "X")), "a [b X")
+})
+
+test_that("parts carry the argument each settable word belongs to", {
+  d <- data.frame(AVAL = 1)
+  attr(d$AVAL, "label") <- "Analysis Value"
+  parts <- title_template_parts(
+    "Top {label(@y)} by {@color}, {n_distinct(@y)} values",
+    d, list(y = "AVAL", color = "TRT")
+  )
+  # A count is not something a reader can set, so it is text, not a slot --
+  # which is why it merges into the run of plain text around it.
+  expect_equal(vapply(parts, function(p) p$text, character(1L)),
+               c("Top ", "Analysis Value", " by ", "TRT", ", 1 values"))
+  expect_equal(parts[[2L]]$arg, "y")
+  expect_equal(parts[[4L]]$arg, "color")
+  expect_null(parts[[5L]]$arg)
+  expect_null(parts[[1L]]$arg)
+})
+
+test_that("block_title_parts follows the three tiers", {
+  d <- data.frame(x = 1)
+  expect_null(block_title_parts(NULL, d, auto = NULL))
+  expect_equal(block_title_parts(NULL, d, auto = "From upstream"),
+               list(list(text = "From upstream")))
+  expect_null(block_title_parts("", d, auto = "From upstream"))
+  # `by` travels with a slot so the menu can lead with the half the sentence
+  # printed: the name here, the label for a {label(@x)} token.
+  expect_equal(
+    block_title_parts("by {@color}", d, args = list(color = "TRT")),
+    list(list(text = "by "), list(text = "TRT", arg = "color", by = "name"))
+  )
+  d2 <- data.frame(TRT = "A")
+  attr(d2$TRT, "label") <- "Actual Treatment"
+  expect_equal(
+    block_title_parts("by {label(@color)}", d2, args = list(color = "TRT")),
+    list(list(text = "by "),
+         list(text = "Actual Treatment", arg = "color", by = "label"))
+  )
+})

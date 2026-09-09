@@ -1898,6 +1898,65 @@
       parent.appendChild(wrap);
     }
 
+    /* The options behind a word in the block's sentence.
+     *
+     * Same lists the gear's rows get, so a slot can never offer a column the
+     * gear would refuse. Returns null for the kinds a menu cannot carry (a
+     * multi-column scope, a slider, free text) -- those stay in the gear.
+     *
+     * @param {string} key
+     */
+    _slotOptionsFor(key) {
+      const role = this._role(key);
+      if (!role) return null;
+      const cfg = this._cfg();
+      const required = this.h.entryRequired ? this.h.entryRequired(key) : false;
+      if (role.kind === 'column') {
+        return {
+          options: this._colOptionsFor(key, { required }),
+          selected: this._hasVal(cfg[key]) ? cfg[key] : (required ? '' : '(none)')
+        };
+      }
+      if (role.kind === 'select') {
+        const options = this._selectOptionsFor(key);
+        const first = (typeof options[0] === 'object' && options[0])
+          ? options[0].value : options[0];
+        return {
+          options: options,
+          selected: this._hasVal(cfg[key]) ? cfg[key] : first
+        };
+      }
+      return null;
+    }
+
+    /* Write a role from outside the gear's own rows.
+     *
+     * The one place that knows what a pick means: '(none)' is stored as '',
+     * a column pick is remembered for the role, a select that gates other
+     * rows re-renders the gear. A slot calls this instead of re-implementing
+     * it, or the two paths drift.
+     *
+     * @param {string} key @param {string} val
+     */
+    _setRoleValue(key, val) {
+      const role = this._role(key);
+      if (!role) return;
+      const cfg = this._cfg();
+      if (role.kind === 'column') {
+        cfg[key] = (val === '(none)') ? '' : val;
+        this._rememberRole(key, cfg[key]);
+        this.h.onChange(key);
+        this.h.onClearFilter();
+      } else {
+        cfg[key] = val;
+        this.h.onChange(key);
+      }
+      // The gear may be open on the same role: its row shows a stale value
+      // until it is rebuilt.
+      if (this.h.isOpen && this.h.isOpen()) this.render();
+      this.renderBand();
+    }
+
     // Build a Blockr.Select (or native fallback). `decorate` shows
     // `name (label)` option text (column pickers); else just the label.
     /**
