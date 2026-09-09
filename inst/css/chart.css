@@ -494,6 +494,8 @@
 .dd-chart-titles {
   padding: 2px 2px 6px;
 }
+/* Empty title AND subtitle: the wrap hides itself (chart.js), and the row is
+   just the icons again, exactly as before the title moved up. */
 
 .dd-chart-title {
   font-size: var(--blockr-font-size-md, 0.9375rem);
@@ -716,6 +718,18 @@
    sheets load, so this block -- not the table sheet -- decides the size. */
 .dd-card .blockr-gear-header {
   gap: 6px;
+  /* The title sits on the left of this row (chart.js). Top-aligned, so a
+     sentence that wraps grows downward and the icons stay put at the top
+     right, where every other block keeps them. */
+  align-items: flex-start;
+}
+
+/* The title takes the row's width; the icons take what they need. A long
+   sentence wraps before it reaches them rather than pushing them down. */
+.dd-card .blockr-gear-header .dd-chart-titles {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 8px 0 2px;
 }
 
 /* Both header controls take the design-system control height, the same

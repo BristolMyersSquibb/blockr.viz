@@ -1531,7 +1531,13 @@
       this.subtitleEl.className = 'dd-chart-subtitle';
       this.titleWrap.appendChild(this.titleEl);
       this.titleWrap.appendChild(this.subtitleEl);
-      this.card.appendChild(this.titleWrap);
+      // Into the gear header, on its left. That row held only the download
+      // and the gear, right-aligned, and the title sat in a row of its own
+      // beneath it: 40px of nothing above every chart. The sentence is the
+      // block's own statement of what it draws, and the header is where a
+      // block says what it is. The settings band and the script strip then
+      // open BELOW the title, so a reader tuning the chart keeps the words.
+      gearHeader.insertBefore(this.titleWrap, gearHeader.firstChild);
 
       // Chart area
       this.chartGrid = document.createElement('div');
