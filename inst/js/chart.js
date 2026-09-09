@@ -1815,18 +1815,26 @@
       const cap = cfg.caption_resolved || '';
       // A repaint replaces the very node an open slot popover is anchored to.
       this._closeSlot();
-      this._paintTitle(this.titleEl, t, cfg.title_parts);
+      // Offers go to the band that named the setting: a clause dropped from
+      // the caption leaves its chip in the caption, which is the only thing
+      // left to switch that setting back on with.
+      const some = (/** @type {any} */ o) => Array.isArray(o) && o.length > 0;
+      const tOffered = some(cfg.title_offers);
+      const sOffered = some(cfg.subtitle_offers);
+      const capOffered = some(cfg.caption_offers);
+      this._paintTitle(this.titleEl, t, cfg.title_parts, cfg.title_offers);
       this._paintTitle(this.subtitleEl, s, cfg.subtitle_parts,
                        cfg.subtitle_offers);
       // An offer is a control, so a sentence that is nothing but offers is
       // still worth a row: that is a chart whose only promoted setting is
       // unset, which is exactly the case the offer exists for.
-      const offered = Array.isArray(cfg.subtitle_offers) && cfg.subtitle_offers.length;
-      this.titleEl.style.display = t ? '' : 'none';
-      this.subtitleEl.style.display = (s || offered) ? '' : 'none';
-      this.titleWrap.style.display = (t || s || offered) ? '' : 'none';
-      this._paintTitle(this.captionEl, cap, cfg.caption_parts);
-      this.captionEl.style.display = cap ? '' : 'none';
+      this.titleEl.style.display = (t || tOffered) ? '' : 'none';
+      this.subtitleEl.style.display = (s || sOffered) ? '' : 'none';
+      this.titleWrap.style.display =
+        (t || s || tOffered || sOffered) ? '' : 'none';
+      this._paintTitle(this.captionEl, cap, cfg.caption_parts,
+                       cfg.caption_offers);
+      this.captionEl.style.display = (cap || capOffered) ? '' : 'none';
     }
 
     // One band's text. Plain string unless R sent pieces, which it does when
@@ -1924,7 +1932,16 @@
       const wasKey = this._slotKey;
       this._closeSlot();
       if (wasKey === key) return;              // the word toggles its own menu
-      if (!this._cfg || !this._cfg._role || !this._cfg._role(key)) return;
+      if (!this._cfg) return;
+      // A flag has no list: the word IS the switch, and it says which state it
+      // is in. Its clause disappears when it goes off, and comes back as an
+      // offer chip.
+      const flag = this._cfg._slotFlag && this._cfg._slotFlag(key);
+      if (flag) {
+        const on = this.config[flag.key] !== 'off';
+        this._cfg._setRoleValue(key, on ? 'off' : 'on');
+        return;
+      }
       const opts = this._cfg._slotOptionsFor(key);
       if (!opts) return;
       const B = (typeof Blockr !== 'undefined') ? Blockr : null;

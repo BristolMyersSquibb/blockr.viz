@@ -972,12 +972,50 @@ new_chart_block <- function(
         # the face renders it as a control and clicking it opens that
         # argument's picker. See blockr.docs design-system/pinned-controls.md.
         title_args <- shiny::reactive({
-          list(
+          roles <- list(
             chart_type = r_chart_type(), group = r_group(), value = r_value(),
             func = r_func(), x = r_x(), y = r_y(), xend = r_xend(),
             series = r_series(), color = r_color(), facet = r_facet(),
             label = r_label(), sort_by = r_sort_by(), drill = r_drill()
           )
+          # The prepare script's declared values are settings too, named in a
+          # template by the variable the script uses: `{@param}` for
+          # `param <- factor(...)`. A role wins a collision, so a script
+          # variable called `color` cannot quietly shadow the colour mapping.
+          # A value the reader has not touched is still the value the script
+          # is running with, and the sentence has to say it: `r_values()` only
+          # holds what the controls have CHANGED, so an untouched `param`
+          # resolved to "" and its word vanished from the caption while the
+          # strip's own control showed the declaration's value. Same fallback
+          # `dd_script_cfg()` makes for that control.
+          vals <- r_values()
+          for (s in r_specs()) {
+            if (!is.null(s$error) || is.na(s$kind)) next
+            if (is.null(vals[[s$name]])) vals[[s$name]] <- s$default
+          }
+          if (!length(vals)) return(roles)
+          vals <- vals[setdiff(names(vals), names(roles))]
+          # A flag reads as a WORD or as nothing, which is what lets a clause
+          # carry it: `[{@scheduled} visits only]` says so when it is on and
+          # says nothing at all when it is off. TRUE prints the control's own
+          # label, because that is the name the reader saw when setting it.
+          labs <- vapply(
+            dd_script_roles(r_specs()),
+            function(r) as.character(r$label %||% r$name)[[1L]],
+            character(1L)
+          )
+          names(labs) <- vapply(
+            dd_script_roles(r_specs()),
+            function(r) as.character(r$name)[[1L]], character(1L)
+          )
+          for (nm in names(vals)) {
+            v <- vals[[nm]]
+            if (is.logical(v) && length(v) == 1L) {
+              w <- if (nm %in% names(labs)) unname(labs[[nm]]) else nm
+              vals[[nm]] <- if (isTRUE(v)) w else ""
+            }
+          }
+          c(roles, vals)
         })
 
         r_titles_resolved <- shiny::reactive({
@@ -989,6 +1027,10 @@ new_chart_block <- function(
           # twice: the words, and the settings whose clause dropped. One call.
           sub_parts <- block_title_parts(r_subtitle(), d, auto = auto$subtitle,
                                          args = a)
+          title_parts <- block_title_parts(r_title(), d, auto = auto$label,
+                                           args = a)
+          caption_parts <- block_title_parts(r_caption(), d,
+                                             auto = auto$caption, args = a)
           list(
             title = resolve_block_title(r_title(), d, auto = auto$label,
                                         args = a),
@@ -996,14 +1038,27 @@ new_chart_block <- function(
                                            auto = auto$subtitle, args = a),
             caption = resolve_block_title(r_caption(), d,
                                           auto = auto$caption, args = a),
-            title_parts = block_title_parts(r_title(), d, auto = auto$label,
-                                            args = a),
+            title_parts = title_parts,
             subtitle_parts = sub_parts,
-            caption_parts = block_title_parts(r_caption(), d,
-                                              auto = auto$caption, args = a),
+            caption_parts = caption_parts,
             # Settings the sentence names in a clause that dropped, so the
-            # face can offer them: an unset facet has no word to click.
-            subtitle_offers = attr(sub_parts, "offers", exact = TRUE)
+            # face can offer them: an unset facet has no word to click. Per
+            # band, because the offer belongs where the word was -- a flag
+            # switched off in the caption (`[{@scheduled} visits only. ]`)
+            # takes its own word away, and without a chip beside the caption
+            # there is nothing left to switch it back on with.
+            subtitle_offers = attr(sub_parts, "offers", exact = TRUE),
+            title_offers = attr(title_parts, "offers", exact = TRUE),
+            caption_offers = attr(caption_parts, "offers", exact = TRUE),
+            # Every setting the block's text speaks for, across all three
+            # bands and including the ones only on offer. A prepare script's
+            # declared value gets a control in the strip above the chart
+            # BECAUSE it has nowhere else to go; once the sentence names it,
+            # that control is a second live copy of one setting on one face,
+            # which is a state you cannot explain to the person looking at it.
+            sentence_args = sentence_args(
+              title_parts, sub_parts, caption_parts
+            )
           )
         })
 
@@ -1160,6 +1215,9 @@ new_chart_block <- function(
               subtitle_parts = r_titles_resolved()$subtitle_parts,
               caption_parts = r_titles_resolved()$caption_parts,
               subtitle_offers = as.list(r_titles_resolved()$subtitle_offers),
+              title_offers = as.list(r_titles_resolved()$title_offers),
+              caption_offers = as.list(r_titles_resolved()$caption_offers),
+              sentence_args = as.list(r_titles_resolved()$sentence_args),
               smoother_series = r_smoother_series(),
               lo = r_lo(), hi = r_hi(),
               # Board scale map, resolved for the chart type's colored role

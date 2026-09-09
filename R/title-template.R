@@ -370,3 +370,22 @@ input_display_attrs <- function(d) {
     caption  = one("caption")
   )
 }
+
+
+# Every argument the block's own text speaks for: the words it makes live, and
+# the ones it only offers because their clause dropped. A control elsewhere on
+# the face for one of these would be a second live copy of one setting, which
+# is why the prepare script's strip drops the rows the sentence has taken over.
+sentence_args <- function(...) {
+  parts <- list(...)
+  out <- character()
+  for (p in parts) {
+    if (is.null(p)) next
+    args <- vapply(
+      p, function(x) if (is.null(x$arg)) NA_character_ else x$arg,
+      character(1L)
+    )
+    out <- c(out, args[!is.na(args)], attr(p, "offers", exact = TRUE))
+  }
+  unique(out)
+}
