@@ -103,6 +103,14 @@ serve(
         func       = "sum",
         facet      = "region"
       ),
+      # Colour-split boxplot: one box per (region, product) slot, two series
+      # (one per product level). Six slots, every one a single row.
+      chart_box_split = new_chart_block(
+        chart_type = "boxplot",
+        group      = "region",
+        value      = "revenue",
+        color      = "product"
+      ),
       # Many-category horizontal bar: the axis cannot label every term, and
       # the status footer has to say so instead of quietly dropping them.
       chart_many = new_chart_block(
@@ -181,6 +189,7 @@ serve(
       new_link("data", "chart_brush", "data"),
       new_link("data", "chart_cfg", "data"),
       new_link("data", "chart_facet", "data"),
+      new_link("data", "chart_box_split", "data"),
       new_link("many", "chart_many", "data"),
       new_link("data", "tile", "data"),
       new_link("data", "tile_x", "data"),

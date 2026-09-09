@@ -987,6 +987,57 @@ test_that("facet_scales = free hands every panel back its own axis", {
   )
 })
 
+# --- Colour-split boxplot: every box ON its slot's tick ---------------------
+# ECharts lays out all boxplot series sharing a category axis as a dodged
+# group (one sub-band per series). A colour-split boxplot is one series per
+# level with each box already in its own (group, level) slot, so the dodge
+# pushed level 0 left of its tick and the last level right of it. Each level
+# now rides its own hidden category axis over the same slots; what is
+# asserted is the geometry: every drawn box is centred on its tick.
+
+box_geometry <- function(block_id) {
+  sel <- sprintf("#board-block_%s-expr-drilldown_block", block_id)
+  jsonlite::fromJSON(app$get_js(sprintf(
+    "JSON.stringify((function() {
+       var c = echarts.getInstanceByDom(document.querySelector('%s .dd-chart'));
+       var m = c.getModel();
+       var out = { series: 0, x_axes: 0, shown_x_axes: 0, offsets: [] };
+       m.eachComponent('xAxis', function(a) {
+         out.x_axes++;
+         if (a.get('show') !== false) out.shown_x_axes++;
+       });
+       m.eachSeries(function(s) {
+         if (s.subType !== 'boxplot') return;
+         out.series++;
+         var d = s.getData();
+         for (var k = 0; k < d.count(); k++) {
+           var g = d.getItemGraphicEl(k);
+           if (!g || !g.shape || !g.shape.points) continue;
+           var xs = g.shape.points.map(function(p) { return p[0]; });
+           var cx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
+           out.offsets.push(cx - c.convertToPixel({xAxisIndex: 0}, k));
+         }
+       });
+       return out;
+     })())", sel
+  )), simplifyVector = TRUE)
+}
+
+test_that("a colour-split boxplot centres every box on its own slot", {
+  skip_if_no_app()
+  chart_settle("chart_box_split")
+
+  geo <- box_geometry("chart_box_split")
+  # One series per product level: the legend band toggles by series name.
+  expect_equal(geo$series, 2L)
+  # ...each on its own category axis, only the first of them drawn.
+  expect_equal(geo$x_axes, 2L)
+  expect_equal(geo$shown_x_axes, 1L)
+  # Six (region, product) slots; each box within a pixel of its tick.
+  expect_length(geo$offsets, 6L)
+  expect_lt(max(abs(geo$offsets)), 1)
+})
+
 # --- Many-category axis: the thinning has to be visible ---------------------
 # ECharts' category axisLabel defaults to interval:'auto', which hides any
 # label that would collide with its neighbour, silently. Past

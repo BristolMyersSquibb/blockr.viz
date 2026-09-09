@@ -4249,7 +4249,13 @@
           const data = catMeta.map(cm => cm.level === lv
             ? (summarize(rowsFor(cm.group, lv)) || EMPTY_BOX())
             : EMPTY_BOX());
-          return { type: 'boxplot', name: split ? lv : undefined, data, itemStyle: { color: hex + '22', borderColor: hex } };
+          return {
+            type: 'boxplot', name: split ? lv : undefined, data,
+            // A split box rides its level's own category axis (catAxes
+            // below), so ECharts never dodges it against the other levels.
+            ...(split ? (vertical ? { xAxisIndex: li } : { yAxisIndex: li }) : {}),
+            itemStyle: { color: hex + '22', borderColor: hex }
+          };
         });
       } else {
         // Pointrange: per level, a silent whisker custom series under a
@@ -4407,6 +4413,20 @@
       const catAxis = vertical
         ? { type: 'category', data: cats, axisLabel: { ...(xlab ? xlab.axisLabel : {}), ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
         : { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '…', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false } };
+      // ECharts lays out every boxplot series that shares one category axis
+      // as a dodged group: the band is cut into one sub-band per series and
+      // series i draws in sub-band i (boxplotLayout's calculateBase). With
+      // one series per colour level, each box already owning its own slot,
+      // that pushed level 0 left of its tick and the last level right of it,
+      // further the wider the band (±59px at a 260px band, ±149px at 651px).
+      // So a split boxplot gives every level its own category axis over the
+      // same slots, only the first one drawn: each grouping holds one series
+      // and the offset is zero. Everything that addresses the category axis
+      // (_refitXLabels, _harmoniseAxes, _updateHighlight, convertToPixel)
+      // uses index 0, which stays the visible axis.
+      const catAxes = (isBox && split)
+        ? seriesLevels.map((_, i) => (i === 0 ? catAxis : { ...catAxis, show: false }))
+        : catAxis;
       return {
         // Horizontal sizing: one 28px row per DRAWN slot — cats, not groups: a color-split
         // boxplot draws a (group x level) row each, so sizing off the group
@@ -4440,8 +4460,8 @@
         grid: vertical
           ? { left: 55, right: 10, top: 30, bottom: bottomBase }
           : { left: gut.gridLeft, right: 5, top: 30, bottom: bottomBase },
-        xAxis: vertical ? catAxis : valAxis,
-        yAxis: vertical ? valAxis : catAxis,
+        xAxis: vertical ? catAxes : valAxis,
+        yAxis: vertical ? valAxis : catAxes,
         series: [...series, ...pointSeries]
       };
     }
