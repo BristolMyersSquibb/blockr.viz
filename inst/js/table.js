@@ -1709,6 +1709,10 @@
   // pixel-identical to before. textContent, never innerHTML.
   /** @param {HTMLElement} root @param {VizTablePayload} p */
   function applyTitles(root, p) {
+    // No `titles` field at all: the sender paints its own band (the composer
+    // block's sentence, rendered by R as its own output inside this
+    // container). Leave it alone; `titles: {}` still means "hide the band".
+    if (/** @type {any} */ (p).titles == null) return;
     var wrap = /** @type {HTMLElement | null} */ (
       root.querySelector(".blockr-table-wrapper"));
     if (!wrap || !wrap.parentNode) return;
