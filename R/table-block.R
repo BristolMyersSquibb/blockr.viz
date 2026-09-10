@@ -1966,6 +1966,13 @@ new_table_block <- function(rowname = NULL,
           single_on  <- !is.null(col) && length(vals) > 0
           drill_on   <- !is.null(r_drill()) && nzchar(r_drill())
           if (!grouped_on && !single_on && !drill_on) return(NULL)
+          # Transient drill: nothing can ever latch here, so the line would
+          # read "No filter active" for the life of the block and the Reset it
+          # can host would have nothing to reset. No footer at all. (The chart
+          # keeps its own: a brush still latches there, and the "Drilled down
+          # to ..." receipt needs somewhere to live. A table's flash lands on
+          # the row label and the column header, which are the words already.)
+          if (transient_drill()) return(NULL)
           text <- if (grouped_on) {
             # Structured drill keys are identity columns; read the source
             # terms out of the VALUES ("AEDECOD = ABDOMINAL PAIN" -- the

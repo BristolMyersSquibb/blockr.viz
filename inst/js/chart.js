@@ -2679,6 +2679,22 @@
         }
         if (data && !Array.isArray(data)) {
           const keys = Object.keys(data);
+          // Dictionary-encoded columns (R: chart_data_json). A low-cardinality
+          // string column ships its distinct values once plus one index per
+          // row; expand it back to a plain column here, before anything below
+          // reads a length off it. Levels were serialized by the same toJSON()
+          // that would have written the column, so the values that come out
+          // are the values that used to arrive -- `null` for NA included.
+          for (const k of keys) {
+            const col = data[k];
+            if (col && !Array.isArray(col) && col.__enc__ === 'dict') {
+              const levels = col.levels || [];
+              const codes = col.codes || [];
+              const out = new Array(codes.length);
+              for (let i = 0; i < codes.length; i++) out[i] = levels[codes[i]];
+              data[k] = out;
+            }
+          }
           const n = keys.length > 0 ? (Array.isArray(data[keys[0]]) ? data[keys[0]].length : 1) : 0;
           const rows = new Array(n);
           for (let i = 0; i < n; i++) {

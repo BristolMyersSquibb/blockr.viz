@@ -903,8 +903,9 @@ new_chart_block <- function(
           payload_rev <<- payload_rev + 1L
           list(
             rev = payload_rev,
-            json = jsonlite::toJSON(df_send, dataframe = "columns",
-                                    digits = NA)
+            # Dictionary-encodes the low-cardinality string columns; see
+            # chart-payload.R. Everything else is serialized exactly as it was.
+            json = chart_data_json(df_send)
           )
         })
 
