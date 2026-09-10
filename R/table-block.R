@@ -818,6 +818,42 @@ dd_group_filter_call <- function(cols, vals) {
   Reduce(function(a, b) bquote(.(a) & .(b)), conds)
 }
 
+#' Say what a drill claim claims, in the source data's own words.
+#'
+#' Structured drill keys are identity columns, so the source terms are in the
+#' VALUES: `.variable` holds the variable NAME and `.variable_level` its level,
+#' which is what makes "AEDECOD = ABDOMINAL PAIN" out of a pair of dotted
+#' columns. Enclosing `.group<k>_level` values come first as a breadcrumb. A
+#' header click has group levels and no variable pair; an aggregated table
+#' drills on real column names and falls through to `col = value`.
+#'
+#' Shared by the latched footer ("Filtered: ...") and the transient receipt
+#' ("Drilled down to ..."), so one click cannot be described two ways.
+#' @param gc,gv Aligned claim columns and values.
+#' @return A character vector of clause labels, outermost first.
+#' @noRd
+dt_claim_label <- function(gc, gv) {
+
+  gc <- as.character(unlist(gc))
+  gv <- as.character(unlist(gv))
+
+  if (!length(gc) || length(gc) != length(gv)) {
+    return(character())
+  }
+
+  glv <- grepl("^\\.group[0-9]+_level$", gc)
+  vi <- match(".variable", gc)
+  li <- match(".variable_level", gc)
+
+  if (!is.na(vi) && !is.na(li)) {
+    c(gv[glv], paste0(gv[vi], " = ", gv[li]))
+  } else if (any(glv)) {
+    gv[glv]
+  } else {
+    paste0(gc, " = ", gv)
+  }
+}
+
 #' Serialize the block's active drill-filter state for the `data-dt-active`
 #' table attribute (JSON lives only at this edge, like `summaries`). `active`
 #' is `list(col, vals, gcols, gvals)` -- the filter reactiveVals as captured
@@ -1966,32 +2002,43 @@ new_table_block <- function(rowname = NULL,
           single_on  <- !is.null(col) && length(vals) > 0
           drill_on   <- !is.null(r_drill()) && nzchar(r_drill())
           if (!grouped_on && !single_on && !drill_on) return(NULL)
-          # Transient drill: nothing can ever latch here, so the line would
-          # read "No filter active" for the life of the block and the Reset it
-          # can host would have nothing to reset. No footer at all. (The chart
-          # keeps its own: a brush still latches there, and the "Drilled down
-          # to ..." receipt needs somewhere to live. A table's flash lands on
-          # the row label and the column header, which are the words already.)
-          if (transient_drill()) return(NULL)
-          text <- if (grouped_on) {
-            # Structured drill keys are identity columns; read the source
-            # terms out of the VALUES ("AEDECOD = ABDOMINAL PAIN" -- the
-            # variable NAME is the `.variable` key's value), with enclosing
-            # group levels as a breadcrumb. Falls back to a plain group
-            # breadcrumb for header clicks, and to `col = value` pairs for
-            # the aggregated-table drill (real column names).
-            glv <- grepl("^\\.group[0-9]+_level$", gc)
-            vi <- match(".variable", gc)
-            li <- match(".variable_level", gc)
-            structured_keys <- !is.na(li) || any(glv)
-            lab <- if (!is.na(vi) && !is.na(li)) {
-              c(gv[glv], paste0(gv[vi], " = ", gv[li]))
-            } else if (structured_keys) {
-              gv[glv]
-            } else {
-              paste0(gc, " = ", gv)
+          # Transient drill: nothing latches, so there is no steady state to
+          # report and no Reset to offer. The line exists only just after a
+          # click, says what was sent, and fades -- the same receipt the chart
+          # shows, in the same words, so both ends of one gesture read alike.
+          # No claim yet = no footer at all, rather than a permanent
+          # "No filter active" that can never become anything else.
+          if (transient_drill()) {
+            claim <- r_drill_claim()
+            if (is.null(claim)) return(NULL)
+            rows <- dt_claim_label(
+              vapply(claim$filters, function(f) as.character(f$column),
+                     character(1L)),
+              vapply(claim$filters, function(f) as.character(f$value),
+                     character(1L))
+            )
+            if (!length(rows) && !is.null(claim$column) &&
+                  length(claim$values)) {
+              rows <- paste0(claim$column, " = ",
+                             paste(claim$values, collapse = ", "))
             }
-            paste0("Filtered: ", paste0(lab, collapse = " \u203a "))
+            cols <- vapply(claim$col_keys %||% list(), function(k) {
+              paste0(as.character(k[["column"]])[1L], " = ",
+                     paste(as.character(unlist(k[["values"]])), collapse = ", "))
+            }, character(1L))
+            parts <- c(rows, cols)
+            if (!length(parts)) return(NULL)
+            return(htmltools::tags$div(
+              class = "dd-status-footer",
+              htmltools::tags$span(
+                class = "dd-status-text dt-status-receipt",
+                paste0("Drilled down to ", paste(parts, collapse = "; "))
+              )
+            ))
+          }
+          text <- if (grouped_on) {
+            paste0("Filtered: ", paste0(dt_claim_label(gc, gv),
+                                        collapse = " \u203a "))
           } else if (single_on) {
             paste0("Filtered: ", col, " = ", paste(vals, collapse = ", "))
           } else {

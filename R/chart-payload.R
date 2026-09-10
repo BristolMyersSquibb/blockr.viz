@@ -21,26 +21,42 @@
 
 #' Should this column be dictionary-encoded?
 #'
-#' Only character and factor columns: a numeric vector is already compact, and
-#' codes plus levels would cost more than it saves. `min_rows` keeps the
-#' encoding off small frames, where the levels array is pure overhead, and
-#' `max_ratio` keeps it off columns that are near-unique (a true id column
-#' encodes to one code per row plus a level per row, which is strictly worse).
+#' Any atomic column, not just the strings: a code is shorter than the value it
+#' replaces whenever the values repeat, and the levels array is serialized by
+#' the same writer, so a Date stays an ISO string and a double stays a double.
+#' On the CEDX vital-signs frame that catches ADT (757 distinct dates in 65,032
+#' rows) and AVISITN (12) as well as the obvious ETHNIC and TRT.
+#'
+#' Three guards, each answering a way the encoding could cost more than it
+#' saves:
+#'
+#' * `min_rows` -- on a small frame the levels array is pure overhead.
+#' * `max_ratio` -- a near-unique column (a true id) would ship one level per
+#'   row AND one code per row, which is strictly worse.
+#' * `max_levels` -- the codes are decimal digits on the wire, so a column with
+#'   a million distinct values writes 7-digit codes and saves nothing. Capping
+#'   the level count caps the code width.
+#'
+#' A list column is left alone: `unique()` on one is not the identity the
+#' round trip needs.
 #'
 #' @param v A column.
 #' @param min_rows Below this many rows, never encode.
 #' @param max_ratio Encode only when `n_unique <= max_ratio * length(v)`.
+#' @param max_levels Encode only when `n_unique` is at most this.
 #' @return `TRUE` when encoding pays.
 #' @noRd
-chart_col_dict_worth_it <- function(v, min_rows = 500L, max_ratio = 0.25) {
-  if (!(is.character(v) || is.factor(v))) {
+chart_col_dict_worth_it <- function(v, min_rows = 500L, max_ratio = 0.25,
+                                    max_levels = 4096L) {
+  if (!is.atomic(v) && !is.factor(v)) {
     return(FALSE)
   }
   n <- length(v)
   if (n < min_rows) {
     return(FALSE)
   }
-  length(unique(v)) <= max_ratio * n
+  n_lv <- length(unique(v))
+  n_lv <= max_ratio * n && n_lv <= max_levels
 }
 
 #' Serialize a chart's data frame for the browser

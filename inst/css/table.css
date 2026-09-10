@@ -172,6 +172,22 @@
   to { opacity: 0; }
 }
 
+/* The transient receipt: what this click sent, then gone. Held longer than the
+   flash (a sentence takes longer to read than a lit row takes to notice) and
+   linear for the same reason the flash is -- an ease-in fade on text spends its
+   visible part in the last few hundred ms and reads as a cut. Rendered by R
+   (it owns the claim's words) and animated here; nothing needs to remove it,
+   an invisible line at the end of a fade is not in anyone's way. */
+:is(.drilldown-table-container, .blockr-rank-container) .dt-status-receipt {
+  color: var(--blockr-color-text-secondary, #374151);
+  animation: dt-receipt-out 1100ms linear 1400ms both;
+}
+
+@keyframes dt-receipt-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 /* Flat-table header alignment, driven by the column's data type so the name,
    sub-label and sort arrow all agree with the body cells: numeric right, text
    left (the structured table does the same for its arm columns). The type
