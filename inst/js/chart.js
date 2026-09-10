@@ -6345,6 +6345,16 @@
       }
 
       const hasFilter = this._selected || this._hasBrushFilter;
+
+      // Transient drill, nothing latched: no line at all. "No filter active"
+      // would be a permanent truth in a slot that can never say anything else,
+      // which is the same noise the table's footer was. A brush still latches
+      // even in this mode (a scatter drag is not a claim), and that keeps its
+      // line and its Reset; so does a cap message, which is a warning about
+      // the picture rather than a report of state.
+      const resting = !hasFilter && this._transientDrill();
+      if (resting && !this._capMessage) return;
+
       let text = 'No filter active';
 
       if (this._selected) {
@@ -6354,11 +6364,13 @@
         text = 'Brush filter active';
       }
 
-      const span = document.createElement('span');
-      span.className = 'dd-status-text' +
-        (this._returning ? ' dd-status-returning' : '');
-      span.textContent = text;
-      this.statusEl.appendChild(span);
+      if (!resting) {
+        const span = document.createElement('span');
+        span.className = 'dd-status-text' +
+          (this._returning ? ' dd-status-returning' : '');
+        span.textContent = text;
+        this.statusEl.appendChild(span);
+      }
 
       if (this._capMessage) {
         const cap = document.createElement('span');
