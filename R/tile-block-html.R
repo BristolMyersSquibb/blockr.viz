@@ -472,6 +472,9 @@ tile_html <- function(data, value = character(), group = character(),
     # needs it to show (and word) the picker-less Drill-down section before
     # the capability is enabled. Empty/absent = no target -> section hidden.
     `data-tk-drill-col` = if (nzchar(drill_col)) drill_col else NULL,
+    # Transient drill: the JS reads this to decide whether a click is an event
+    # (send and forget) or a selection it latches.
+    `data-tk-ctrl-target` = ctrl$target %||% "",
     `data-tk-layout`  = layout,
     # The gear's column pickers offer the RAW columns (what you group /
     # aggregate over), not the aggregated frame.

@@ -257,6 +257,18 @@ new_summarize_table_block <- function(group = NULL,
         r_caption <- shiny::reactiveVal(caption)
         r_drill   <- shiny::reactiveVal(drill)
         r_ctrl_target <- shiny::reactiveVal(rank_chr1(ctrl_target) %||% "")
+
+        # Transient drill. With a target set, a click is an EVENT sent to that
+        # block, not a selection this rank table holds: nothing lands in
+        # `r_filter_*`, so the block does not filter its own output on a click
+        # it only forwarded, the board saves no selection, and clicking the
+        # same row twice sends twice instead of toggling off. The undo lives at
+        # the target. NULL = no click this session: HOLD, never clear. Mirrors
+        # chart-block.R / table-block.R / heatmap-block.R.
+        r_drill_claim <- shiny::reactiveVal(NULL)
+        transient_drill <- function() {
+          nzchar(trimws(r_ctrl_target() %||% ""))
+        }
         r_ctrl_table  <- shiny::reactiveVal(rank_chr1(ctrl_table) %||% "")
         # Candidate targets for the gear's "Send to filter" select: the value
         # filter blocks currently on the board (dd_ctrl_choices tracks the
@@ -369,6 +381,16 @@ new_summarize_table_block <- function(group = NULL,
           }
           col <- rank_chr1(act$column)
           vals <- as.character(unlist(act$values %||% character()))
+          # The event path. A clear (no column, from a re-aim or the Reset)
+          # is inert: there is no local selection to clear and the target's
+          # cohort is not this block's to drop.
+          if (transient_drill()) {
+            if (!is.null(col) && length(vals)) {
+              r_drill_claim(list(column = col, values = vals,
+                                 nonce = as.numeric(act$nonce %||% 0)))
+            }
+            return()
+          }
           if (is.null(col) || !length(vals)) {
             r_filter_column(NULL)
             r_filter_values(NULL)
@@ -386,6 +408,21 @@ new_summarize_table_block <- function(group = NULL,
         # target it never touched this session.
         r_ctrl_claims <- shiny::reactive({
           d <- tryCatch(ann_data(), error = function(e) NULL)
+
+          # Transient mode: the claim is the last click, and no click yet is a
+          # HOLD (NULL), not an un-drill. `list()` -- the one value that clears
+          # the target -- is unreachable from here by design.
+          if (transient_drill()) {
+            claim <- r_drill_claim()
+            if (is.null(claim)) {
+              return(NULL)
+            }
+            return(dd_ctrl_claims(
+              d, r_ctrl_table(),
+              stats::setNames(list(claim$values), claim$column)
+            ))
+          }
+
           col <- r_filter_column()
           vals <- r_filter_values()
           filters <- if (!is.null(col) && length(vals)) {
@@ -398,11 +435,26 @@ new_summarize_table_block <- function(group = NULL,
         dd_ctrl_sender(
           r_ctrl_target,
           r_ctrl_claims,
-          dd_ctrl_pristine(
-            function() list(r_filter_column(), r_filter_values()),
-            list(filter_column, filter_values)
-          ),
-          session
+          # Startup suppression, over the LATCHED state -- which transient mode
+          # never writes, so the latch would stay pristine forever and swallow
+          # every send. A transient claim exists only after a real click.
+          local({
+            latch <- dd_ctrl_pristine(
+              function() list(r_filter_column(), r_filter_values()),
+              list(filter_column, filter_values)
+            )
+            function() {
+              still <- latch()
+              is.null(r_drill_claim()) && still
+            }
+          }),
+          session,
+          # Re-clicking the same row must send again; a board re-evaluation
+          # must not. The counter is minted per click in the browser.
+          r_nonce = function() {
+            claim <- r_drill_claim()
+            if (is.null(claim)) NULL else claim$nonce
+          }
         )
 
         # The chrome is a ONE-SHOT render: container, control row, empty title
@@ -413,6 +465,7 @@ new_summarize_table_block <- function(group = NULL,
           rank_chrome_shell(
             max_height = r_max_height(), search = r_search(),
             drill = r_drill(), elem_id = ns("rank_block"),
+            ctrl_target = r_ctrl_target(),
             download = shiny::uiOutput(ns("rank_download"), inline = TRUE)
           )
         })

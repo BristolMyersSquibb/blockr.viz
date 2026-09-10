@@ -170,6 +170,47 @@ tr.hmb-active td.hmb-stub {
   font-weight: 600;
 }
 
+/* Transient drill (a ctrl_target is set): the row is lit, held, released --
+   there is nothing to un-set, and a paint that stayed would show a cohort
+   anyone else can reset. A LAYER whose opacity fades, not the cell's own
+   background: a heatmap cell's colour IS the data, and background-image
+   gradients animate discretely anyway (see the note in table.css). Same clock
+   as the table's flash. */
+tr.hmb-flash td {
+  position: relative;
+  z-index: 0;
+}
+tr.hmb-flash td::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
+  animation: hmb-flash-out 900ms linear 300ms both;
+}
+tr.hmb-flash td.hmb-stub::after {
+  box-shadow: inset 3px 0 0 0 var(--blockr-color-primary, #2563eb);
+}
+
+@keyframes hmb-flash-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* The transient receipt, in the slot the latched status line uses. Held longer
+   than the flash (a sentence takes longer to read than a lit row takes to
+   notice) and linear, for the same reason the flash is. */
+.hmb-status-receipt {
+  color: var(--blockr-color-text-secondary, #374151);
+  animation: hmb-receipt-out 1100ms linear 1400ms both;
+}
+
+@keyframes hmb-receipt-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 /* The group rail (variant B): a rotated grey tile spanning the group's
    rows, right of the matrix -- the table analogue of the chart's facet
    strip. Hidden while a search is active (hiding rows breaks rowspans). */

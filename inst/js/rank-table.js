@@ -277,6 +277,34 @@
   // ---------- drill ----------
   // Row click emits the same categorical filter contract as the chart and
   // table blocks: {type, column, values}. Clicking the active row clears it.
+  // Transient drill: with a ctrl_target the row click is an EVENT sent to that
+  // block, not a selection this table holds. Nothing latches, nothing toggles
+  // off, and the claim carries a click counter so re-clicking one row sends
+  // again. Same rule as the chart, the table and the heatmap; the undo lives
+  // at the target.
+  function rankTransient(root) {
+    var t = root.getAttribute("data-rank-ctrl-target");
+    return !!(t && t.trim());
+  }
+
+  // Click counter: changes on a real click and NOT on a board update, which is
+  // the distinction the server's send-once skip has to make.
+  var rankDrillSeq = 0;
+
+  // Light the clicked row, then release it. One at a time: two lit rows would
+  // read as two selections where only the last click counts.
+  function rankFlash(root, tr) {
+    root.querySelectorAll("tr.rk-flash").forEach(function (n) {
+      n.classList.remove("rk-flash");
+    });
+    tr.classList.add("rk-flash");
+    var drop = function () {
+      tr.classList.remove("rk-flash");
+      tr.removeEventListener("animationend", drop);
+    };
+    tr.addEventListener("animationend", drop);
+  }
+
   function bindDrill(root) {
     var elemId = root.getAttribute("data-rank-elem-id");
     var col = root.getAttribute("data-rank-drill");
@@ -290,7 +318,8 @@
           action: values === null ? "clear_filter" : "filter",
           type: "categorical",
           column: col,
-          values: values
+          values: values,
+          nonce: ++rankDrillSeq
         },
         { priority: "event" }
       );
@@ -309,6 +338,13 @@
       if (!tr || !root.contains(tr)) return;
       if (e.target.closest(".blockr-indent-btn")) return;
       var label = tr.getAttribute("data-rank-label");
+      // Transient: no toggle. A second click on the same row means "send it
+      // again", never "un-drill" -- that is the target's job.
+      if (rankTransient(root)) {
+        send([label]);
+        rankFlash(root, tr);
+        return;
+      }
       var was = tr.classList.contains("is-on");
       rows(root).forEach(function (r) { r.classList.remove("is-on"); });
       if (was) {

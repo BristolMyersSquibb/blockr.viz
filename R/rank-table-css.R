@@ -643,6 +643,32 @@ rank_table_css <- function() {
 .blockr-rank-table tr.is-on {
   background: color-mix(in srgb, var(--blockr-rank-fill) 10%, transparent);
 }
+/* Transient drill (a ctrl_target is set): the row is lit, held, released --
+   there is nothing to un-set. A LAYER whose opacity fades, not the row's own
+   background: the bars behind it are the data, and a background-image fade
+   would animate discretely anyway (see the note in table.css). Same clock as
+   the table's flash. */
+.blockr-rank-table tr.rk-flash td {
+  position: relative;
+  z-index: 0;
+}
+.blockr-rank-table tr.rk-flash td::after {
+  /* Single quotes: this stylesheet lives inside an R string literal. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--blockr-rank-fill) 10%, transparent);
+  animation: rk-flash-out 900ms linear 300ms both;
+}
+.blockr-rank-table tr.rk-flash td:first-child::after {
+  box-shadow: inset 3px 0 0 0 var(--blockr-color-primary, #2563eb);
+}
+@keyframes rk-flash-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
 .blockr-rank-table tr.blockr-rank-fold td {
   font-style: italic;
   color: var(--blockr-color-text-subtle, #898781);

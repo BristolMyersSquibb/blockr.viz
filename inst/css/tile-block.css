@@ -205,6 +205,19 @@ table.tk-table{
 }
 .tk-card.tk-active{border-color:var(--tk-accent);box-shadow:0 0 0 1px var(--tk-accent);}
 .tk-table tbody tr.tk-active{background:var(--tk-accent-soft);}
+/* Transient drill (a ctrl_target is set): the tile is lit, held, released --
+   there is nothing to un-set. Opacity on a layer, not the tile's own
+   background: a card already has one, and a background fade would animate
+   discretely anyway (see the note in table.css). Same clock as the table's
+   flash. */
+.tk-card.tk-flash,.tk-table tbody tr.tk-flash td{position:relative;z-index:0;}
+.tk-card.tk-flash::after,.tk-table tbody tr.tk-flash td::after{
+  content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+  border-radius:inherit;background:var(--tk-accent-soft);
+  animation:tk-flash-out 900ms linear 300ms both;
+}
+.tk-card.tk-flash::after{box-shadow:0 0 0 1px var(--tk-accent);}
+@keyframes tk-flash-out{from{opacity:1;}to{opacity:0;}}
 
 /* ---------------- edge states ---------------- */
 .tk-card.is-empty{

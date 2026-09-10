@@ -95,6 +95,21 @@ new_heatmap_block <- function(row = character(),
         r_ctrl_table   <- shiny::reactiveVal(ctrl_table %||% "")
         r_ctrl_choices <- dd_ctrl_choices()
 
+        # Transient drill. With a target set, a row click is an EVENT sent to
+        # that block, not a selection this heatmap holds: nothing lands in
+        # `r_filter_*`, so the block does not filter its own output on a click
+        # it only forwarded, the board saves no selection, `data-hmb-active`
+        # stays empty (which is what makes the JS restore walk inert), and
+        # clicking the same row twice sends twice instead of toggling off. The
+        # undo lives at the target -- the control channel has no back-edge, so
+        # a selection held here would go stale the moment anyone else resets it.
+        # NULL = no click this session: HOLD, never clear. Mirrors chart-block.R
+        # and table-block.R.
+        r_drill_claim <- shiny::reactiveVal(NULL)
+        transient_drill <- function() {
+          nzchar(trimws(r_ctrl_target() %||% ""))
+        }
+
         upd <- function(rv, v) {
           if (!identical(shiny::isolate(rv()), v)) rv(v)
         }
@@ -111,7 +126,18 @@ new_heatmap_block <- function(row = character(),
           msg <- input$heatmap_block_action
           if (is.null(msg)) return()
           act <- msg$action %||% "config"
-          if (identical(act, "filter")) {
+          if (identical(act, "filter") && transient_drill()) {
+            # The event path. A clear (null column, from the Reset button or a
+            # mapping change) is inert: there is no local selection to clear
+            # and the target's cohort is not this block's to drop.
+            if (!is.null(msg$column) && length(msg$values)) {
+              r_drill_claim(list(
+                column = as.character(msg$column)[[1L]],
+                values = as.character(unlist(msg$values)),
+                nonce  = as.numeric(msg$nonce %||% 0)
+              ))
+            }
+          } else if (identical(act, "filter")) {
             upd(r_filter_column, msg$column)
             upd(r_filter_values, msg$values)
           } else if (identical(act, "config")) {
@@ -138,6 +164,21 @@ new_heatmap_block <- function(row = character(),
 
         r_ctrl_claims <- shiny::reactive({
           d <- tryCatch(plain_data(), error = function(e) NULL)
+
+          # Transient mode: the claim is the last click, and no click yet is a
+          # HOLD (NULL), not an un-drill. `list()` -- the one value that clears
+          # the target -- is unreachable from here by design.
+          if (transient_drill()) {
+            claim <- r_drill_claim()
+            if (is.null(claim)) {
+              return(NULL)
+            }
+            return(dd_ctrl_claims(
+              d, r_ctrl_table(),
+              stats::setNames(list(claim$values), claim$column)
+            ))
+          }
+
           col <- r_filter_column()
           vals <- as.character(unlist(r_filter_values()))
           filters <- if (!is.null(col) && length(vals)) {
@@ -150,11 +191,28 @@ new_heatmap_block <- function(row = character(),
         dd_ctrl_sender(
           r_ctrl_target,
           r_ctrl_claims,
-          dd_ctrl_pristine(
-            function() list(r_filter_column(), r_filter_values()),
-            list(filter_column, filter_values)
-          ),
-          session
+          # Startup suppression, over the LATCHED state -- which transient mode
+          # never writes, so the latch would stay pristine forever and swallow
+          # every send. A transient claim exists only after a real click, so it
+          # ends pristine on its own. The latch is still read on every pass:
+          # that is what holds the dependency on the filter state.
+          local({
+            latch <- dd_ctrl_pristine(
+              function() list(r_filter_column(), r_filter_values()),
+              list(filter_column, filter_values)
+            )
+            function() {
+              still <- latch()
+              is.null(r_drill_claim()) && still
+            }
+          }),
+          session,
+          # Re-clicking the same row must send again; a board re-evaluation
+          # must not. The counter is minted per click in the browser.
+          r_nonce = function() {
+            claim <- r_drill_claim()
+            if (is.null(claim)) NULL else claim$nonce
+          }
         )
 
         # Downloads: the matrix as the reader sees it (row identity, group,
@@ -200,6 +258,15 @@ new_heatmap_block <- function(row = character(),
         board_scale_map <- dd_board_scale_map()
 
         output$heatmap_status <- shiny::renderUI({
+          if (transient_drill()) {
+            claim <- r_drill_claim()
+            if (is.null(claim)) return(NULL)
+            return(hmb_status_tag(
+              NULL, NULL,
+              receipt = paste0("Drilled down to ", claim$column, " = ",
+                               paste(claim$values, collapse = ", "))
+            ))
+          }
           hmb_status_tag(one_or_null(r_row()) %||% "row",
                          r_filter_values())
         })

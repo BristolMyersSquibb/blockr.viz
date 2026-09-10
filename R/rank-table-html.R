@@ -148,7 +148,7 @@ rank_message_table <- function(msg = "No data") {
 rank_chrome <- function(inner, prep = NULL, max_height = "600px", search = TRUE,
                         title = NULL, subtitle = NULL, caption = NULL,
                         drill = NULL, elem_id = NULL, active = NULL,
-                        shell = FALSE, download = NULL) {
+                        shell = FALSE, download = NULL, ctrl_target = "") {
   legend <- if (isTRUE(shell)) rank_legend_tag(NULL) else rank_legend(prep)
 
   # The control row holds the search only; rank-table.js hoists it into the gear
@@ -210,6 +210,9 @@ rank_chrome <- function(inner, prep = NULL, max_height = "600px", search = TRUE,
       class = "blockr-html-table-container blockr-rank-container",
       `data-rank-elem-id` = elem_id,
       `data-rank-drill` = drill,
+      # Transient drill: the JS reads this to decide whether a click is an
+      # event (send and forget) or a selection it latches.
+      `data-rank-ctrl-target` = ctrl_target %||% "",
       htmltools::tags$div(class = "blockr-rank-scope", header),
       titles,
       # The legend sits below the title band and above the table, never in the
@@ -517,11 +520,12 @@ rank_table_attrs <- function(prep, cfg) {
 #' @return An [htmltools::tagList()].
 #' @noRd
 rank_chrome_shell <- function(max_height = "600px", search = TRUE,
-                              drill = NULL, elem_id = NULL, download = NULL) {
+                              drill = NULL, elem_id = NULL, download = NULL,
+                              ctrl_target = "") {
   rank_chrome(
     inner = htmltools::HTML(""), prep = NULL, max_height = max_height,
     search = search, drill = drill, elem_id = elem_id, shell = TRUE,
-    download = download
+    download = download, ctrl_target = ctrl_target
   )
 }
 

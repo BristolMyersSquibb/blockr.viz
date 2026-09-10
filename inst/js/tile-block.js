@@ -27,6 +27,36 @@
     }, { priority: 'event' });
   }
 
+  // Transient drill: with a ctrl_target the click is an EVENT sent to that
+  // block, not a selection this block holds. Nothing latches, nothing toggles
+  // off, and the claim carries a click counter so re-clicking one tile sends
+  // again. Same rule as the chart, the table, the heatmap and the rank table;
+  // the undo lives at the target.
+  /** @param {Element} root */
+  function tileTransient(root) {
+    var t = root.getAttribute('data-tk-ctrl-target');
+    return !!(t && t.trim());
+  }
+
+  // Click counter: changes on a real click and NOT on a board update, which is
+  // the distinction the server's send-once skip has to make.
+  var tileDrillSeq = 0;
+
+  // Light the clicked tile, then release it. One at a time: two lit tiles
+  // would read as two selections where only the last click counts.
+  /** @param {Element} root @param {Element} hit */
+  function tileFlash(root, hit) {
+    root.querySelectorAll('.tk-flash').forEach(function (n) {
+      n.classList.remove('tk-flash');
+    });
+    hit.classList.add('tk-flash');
+    var drop = function () {
+      hit.classList.remove('tk-flash');
+      hit.removeEventListener('animationend', drop);
+    };
+    hit.addEventListener('animationend', drop);
+  }
+
   // ---- drill: card / row click -> categorical filter on the group ----------
   /** @param {Element} root */
   function wireDrill(root) {
@@ -42,6 +72,18 @@
       if (!hit || !root.contains(hit)) return;
       var val = hit.getAttribute('data-group');
       if (val == null || val === '') return;
+      // Transient: no toggle. A second click on the same tile means "send it
+      // again", never "un-drill" -- that is the target's job.
+      if (tileTransient(root)) {
+        if (window.Shiny && Shiny.setInputValue) {
+          Shiny.setInputValue(elemId + '_action', {
+            action: 'filter', column: col, values: [val],
+            filter_type: 'categorical', nonce: ++tileDrillSeq
+          }, { priority: 'event' });
+        }
+        tileFlash(root, hit);
+        return;
+      }
       // Click-to-toggle (chart parity): re-clicking the active card / row
       // clears the filter and the highlight.
       if (hit.classList.contains('tk-active')) {

@@ -103,6 +103,42 @@
   }
 
   // ---- drill ----------------------------------------------------------
+
+  // Transient drill: with a ctrl_target the row click is an EVENT sent to that
+  // block, not a selection this heatmap holds. Nothing latches, nothing toggles
+  // off, and the claim carries a click counter so re-clicking one row sends
+  // again. Same rule as the chart and the table; the undo lives at the target.
+  /** @param {Element} root */
+  function transientDrill(root) {
+    /** @type {any} */
+    var cfg = null;
+    try { cfg = JSON.parse(root.getAttribute('data-hmb-config') || '{}'); }
+    catch (e) { cfg = null; }
+    var t = cfg && cfg.ctrl_target;
+    return !!(t && String(t).trim());
+  }
+
+  // Click counter: it changes on a real click and NOT on a board update, which
+  // is the distinction the server's send-once skip has to make.
+  var drillSeq = 0;
+
+  // Light the clicked row, then release it. One at a time: two lit rows would
+  // read as two selections in a model where only the last click counts.
+  /** @param {Element} root @param {Element} tr */
+  function flashRow(root, tr) {
+    root.querySelectorAll('tr.hmb-flash').forEach(function (n) {
+      n.classList.remove('hmb-flash');
+    });
+    tr.classList.add('hmb-flash');
+    var drop = function () {
+      tr.classList.remove('hmb-flash');
+      tr.removeEventListener('animationend', drop);
+    };
+    // The animation runs on the row's cells, so animationend arrives by
+    // bubbling.
+    tr.addEventListener('animationend', drop);
+  }
+
   /** @param {Element} root @param {string} elemId */
   function wireDrill(root, elemId) {
     root.addEventListener('click', function (e) {
@@ -120,6 +156,17 @@
       var id = tr.getAttribute('data-hmb-id');
       var col = root.getAttribute('data-hmb-row-col');
       if (!id || !col) return;
+      // Transient: no toggle. A second click on the same row means "send it
+      // again", never "un-drill" -- that is the target's job.
+      if (transientDrill(root)) {
+        if (window.Shiny && Shiny.setInputValue) {
+          Shiny.setInputValue(elemId + '_action', {
+            action: 'filter', column: col, values: [id], nonce: ++drillSeq
+          }, { priority: 'event' });
+        }
+        flashRow(root, tr);
+        return;
+      }
       if (tr.classList.contains('hmb-active')) {
         tr.classList.remove('hmb-active');
         sendClearFilter(elemId);

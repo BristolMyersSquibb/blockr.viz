@@ -626,7 +626,19 @@ heatmap_html <- function(data, row = NULL, col = NULL, color = NULL,
 #' The drill-status line (dot + text + Reset), shared by the server's small
 #' status output and the standalone inline render.
 #' @noRd
-hmb_status_tag <- function(row_col, active_values) {
+hmb_status_tag <- function(row_col, active_values, receipt = NULL) {
+
+  # Transient drill: nothing latches, so there is no steady state to report and
+  # no Reset to offer. The line exists only just after a click, says what was
+  # sent, and fades -- the same receipt the chart and the table show, in the
+  # same words. No claim yet = nothing rendered at all.
+  if (!is.null(receipt)) {
+    return(htmltools::tags$span(
+      class = "hmb-status hmb-status-receipt",
+      htmltools::tags$span(class = "hmb-status-text", receipt)
+    ))
+  }
+
   htmltools::tags$span(
     class = "hmb-status",
     style = if (!length(active_values)) "display:none",

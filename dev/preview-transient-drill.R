@@ -25,7 +25,7 @@
 
 root <- if (file.exists("blockr.viz/DESCRIPTION")) "." else ".."
 for (p in c("blockr.core", "blockr.theme", "blockr.dplyr", "blockr.dm",
-            "blockr.viz", "blockr.dock", "blockr.dag")) {
+            "blockr.viz", "blockr.pharma", "blockr.dock", "blockr.dag")) {
   pkgload::load_all(file.path(root, p), quiet = TRUE)
 }
 
@@ -64,11 +64,24 @@ new_ctrl_bridge_extension <- function() {
 
 set.seed(1)
 adsl <- data.frame(
+  USUBJID = sprintf("01-%04d", 1:300),
   ARM  = sample(c("Placebo", "Low dose", "High dose"), 300, replace = TRUE),
   SEX  = sample(c("F", "M"), 300, replace = TRUE),
   RACE = sample(c("WHITE", "BLACK", "ASIAN"), 300, replace = TRUE),
   AGE  = sample(18:85, 300, replace = TRUE),
   BMI  = round(rnorm(300, 26, 4), 1),
+  stringsAsFactors = FALSE
+)
+
+# Long AE rows for the heatmap: one row per event, so a cell is a count and
+# the paint is the worst grade. The claim a row click sends is USUBJID, which
+# the drill filter can resolve because adsl carries it too.
+ae_n <- 900
+adae <- data.frame(
+  USUBJID = sample(adsl$USUBJID, ae_n, replace = TRUE),
+  AEDECOD = sample(c("Nausea", "Fatigue", "Headache", "Rash", "Diarrhoea",
+                     "Pyrexia", "Cough"), ae_n, replace = TRUE),
+  AETOXGR = sample(1:4, ae_n, replace = TRUE, prob = c(.5, .3, .15, .05)),
   stringsAsFactors = FALSE
 )
 
@@ -110,6 +123,22 @@ serve(
       # Flat table: the row drill.
       flat = new_table_block(drill = "SEX", ctrl_target = "vf",
                              block_name = "Subjects (sends)"),
+      # Heatmap: the row click is the claim, and it has its own JS and markup,
+      # so it is the third rendering path this mode has to work in. Through
+      # blockr.pharma's surface, which is what ships -- blockr.viz's engine
+      # ctor is unregistered and cannot be constructed directly (see below).
+      hm_data = new_static_block(data = adae),
+      hm = blockr.pharma::new_ae_heatmap_block(
+        row = "USUBJID", col = "AEDECOD", color = "AETOXGR",
+        drill = TRUE, ctrl_target = "vf",
+        block_name = "AE heatmap (sends)"),
+      # Rank (summarize table) and tile: the fourth and fifth rendering paths.
+      rk = new_summarize_table_block(group = "AEDECOD", drill = "AEDECOD",
+                                     ctrl_target = "vf",
+                                     block_name = "AE terms (sends)"),
+      tk = new_tile_block(value = "AGE", group = "ARM", drill = TRUE,
+                          ctrl_target = "vf",
+                          block_name = "Arms (sends)"),
       vf = new_drill_filter_block(),
       cohort = new_table_block(block_name = "Cohort"),
       # A table whose data a drill never touches. It is here to answer one
@@ -122,6 +151,9 @@ serve(
       list(from = "data", to = "chart", input = "data"),
       list(from = "t1_data", to = "t1", input = "data"),
       list(from = "data", to = "flat", input = "data"),
+      list(from = "hm_data", to = "hm", input = "data"),
+      list(from = "hm_data", to = "rk", input = "data"),
+      list(from = "data", to = "tk", input = "data"),
       list(from = "data", to = "vf", input = "data"),
       list(from = "vf", to = "cohort", input = "data"),
       list(from = "data", to = "probe", input = "data")
@@ -134,7 +166,9 @@ serve(
       Chart = dock_grid(list("chart", "vf"), list("cohort", "probe"),
                         sizes = c(1, 1)),
       Table = dock_grid(list("t1", "flat"), "vf", sizes = c(2, 1)),
-      Data = dock_grid(c("t1_data", "cohort", "probe")),
+      Heatmap = dock_grid("hm", "vf", sizes = c(2, 1)),
+      More = dock_grid(list("rk", "tk"), "vf", sizes = c(2, 1)),
+      Data = dock_grid(c("t1_data", "hm_data", "cohort", "probe")),
       Pipeline = dock_grid("dag_extension")
     ),
     active = "Table"

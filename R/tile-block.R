@@ -183,6 +183,19 @@ new_tile_block <- function(value = character(),
         r_ctrl_table   <- shiny::reactiveVal(ctrl_table %||% "")
         r_ctrl_choices <- dd_ctrl_choices()
 
+        # Transient drill. With a target set, a tile click is an EVENT sent to
+        # that block, not a selection this block holds: nothing lands in
+        # `r_filter_*`, so the block does not filter its own output on a click
+        # it only forwarded, the board saves no selection, `data-tk-active`
+        # stays empty (which is what makes the JS restore walk inert), and
+        # clicking the same tile twice sends twice instead of toggling off. The
+        # undo lives at the target. NULL = no click this session: HOLD, never
+        # clear. Mirrors chart-block.R / table-block.R / heatmap-block.R.
+        r_drill_claim <- shiny::reactiveVal(NULL)
+        transient_drill <- function() {
+          nzchar(trimws(r_ctrl_target() %||% ""))
+        }
+
         # Only write when the value actually changes. The JS echoes the full
         # config on any popover change, so a blind set would re-render on
         # every echo (the R->JS->R loop guard the chart / table use).
@@ -195,7 +208,18 @@ new_tile_block <- function(value = character(),
           msg <- input$tile_block_action
           if (is.null(msg)) return()
           act <- msg$action %||% "config"
-          if (identical(act, "filter")) {
+          if (identical(act, "filter") && transient_drill()) {
+            # The event path. A clear (null column) is inert: there is no local
+            # selection to clear and the target's cohort is not this block's to
+            # drop.
+            if (!is.null(msg$column) && length(msg$values)) {
+              r_drill_claim(list(
+                column = as.character(msg$column)[[1L]],
+                values = as.character(unlist(msg$values)),
+                nonce  = as.numeric(msg$nonce %||% 0)
+              ))
+            }
+          } else if (identical(act, "filter")) {
             upd(r_filter_column, msg$column)
             upd(r_filter_values, msg$values)
           } else if (identical(act, "config")) {
@@ -229,6 +253,21 @@ new_tile_block <- function(value = character(),
         # code path with the chart / table (dd_ctrl_claims / dd_ctrl_sender).
         r_ctrl_claims <- shiny::reactive({
           d <- tryCatch(plain_data(), error = function(e) NULL)
+
+          # Transient mode: the claim is the last click, and no click yet is a
+          # HOLD (NULL), not an un-drill. `list()` -- the one value that clears
+          # the target -- is unreachable from here by design.
+          if (transient_drill()) {
+            claim <- r_drill_claim()
+            if (is.null(claim)) {
+              return(NULL)
+            }
+            return(dd_ctrl_claims(
+              d, r_ctrl_table(),
+              stats::setNames(list(claim$values), claim$column)
+            ))
+          }
+
           col <- r_filter_column()
           vals <- as.character(unlist(r_filter_values()))
           filters <- if (!is.null(col) && length(vals)) {
@@ -242,11 +281,26 @@ new_tile_block <- function(value = character(),
         dd_ctrl_sender(
           r_ctrl_target,
           r_ctrl_claims,
-          dd_ctrl_pristine(
-            function() list(r_filter_column(), r_filter_values()),
-            list(filter_column, filter_values)
-          ),
-          session
+          # Startup suppression, over the LATCHED state -- which transient mode
+          # never writes, so the latch would stay pristine forever and swallow
+          # every send. A transient claim exists only after a real click.
+          local({
+            latch <- dd_ctrl_pristine(
+              function() list(r_filter_column(), r_filter_values()),
+              list(filter_column, filter_values)
+            )
+            function() {
+              still <- latch()
+              is.null(r_drill_claim()) && still
+            }
+          }),
+          session,
+          # Re-clicking the same tile must send again; a board re-evaluation
+          # must not. The counter is minted per click in the browser.
+          r_nonce = function() {
+            claim <- r_drill_claim()
+            if (is.null(claim)) NULL else claim$nonce
+          }
         )
 
         # Board scale map (NULL when the board has no "scale_map" option) --
