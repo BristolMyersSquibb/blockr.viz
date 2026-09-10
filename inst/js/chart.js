@@ -296,6 +296,25 @@
   // per-color boxes into one slot — the separator keeps them distinct while the
   // axisLabel formatter strips it back to the group name for display.
   const BOX_CAT_SEP = '\u0000';
+  // How long the footer holds the receipt after a transient drill, and how long
+  // it takes to leave. Long enough to read the clause, short enough that a
+  // stale line never outlives the click that produced it.
+  //
+  // Both numbers live HERE and are written onto the element as an inline
+  // animation, because the delay has to be computed per render: _updateStatus()
+  // rebuilds the line on every chart re-render, and a drill click causes a
+  // board update, so the line is routinely rebuilt while it is still on screen.
+  // A fresh element restarts a CSS animation from the top, which held the text
+  // at full strength past the moment it should have been fading -- and then the
+  // backstop below cut it, undimmed. Hence: the age of the RECEIPT drives the
+  // animation, not the age of the element. A rebuild resumes.
+  const RECEIPT_HOLD_MS = 1400;
+  const RECEIPT_FADE_MS = 1100;
+  // Backstop only, for the case where animationend never arrives (an off-screen
+  // block does not fire it).
+  const RECEIPT_GRACE_MS = 600;
+  const now = () => (typeof performance !== 'undefined' && performance.now)
+    ? performance.now() : Date.now();
   // Display-only number formatting. Data is now sent at full precision
   // (so click-to-filter equality round-trips), so trim noisy decimals
   // for tooltips / status text without touching the underlying value.
@@ -1006,6 +1025,22 @@
       this._lastDataRev = null;
       /** @type {any} */
       this._selected = null;
+      // Transient drill (a ctrl_target is set): the click is an event, not a
+      // selection. `_drillSeq` is the click counter that rides the claim so R
+      // can tell a re-click of the same mark from a board re-evaluation;
+      // `_receipt` is the past-tense line the footer shows for a moment after
+      // a send, and never a claim about what the target now holds.
+      this._drillSeq = 0;
+      /** @type {HTMLElement | null} */
+      this._signalEl = null;
+      /** @type {string | null} */
+      this._receipt = null;
+      /** @type {any} */
+      this._receiptTimer = null;
+      /** @type {boolean} */
+      this._returning = false;
+      /** @type {number} */
+      this._receiptAt = 0;
       // Shared facet legend state: levels toggled off in the HTML band, plus
       // the item-list key that decides when a re-render resets the toggles.
       /** @type {Set<string>} */
@@ -2705,7 +2740,10 @@
       // sends filter_values as an array (as.list) and only alongside a
       // filter_column; the column also feeds the footer's "Filtered: col ="
       // label and survives a Reset (which nulls both).
-      if (config?.filter_values && config.filter_values.length &&
+      // Transient mode never latches, so a saved board carries no selection;
+      // restoring one would paint a highlight nothing can clear.
+      if (!this._transientDrill() &&
+          config?.filter_values && config.filter_values.length &&
           config?.filter_column) {
         this._selected = config.filter_values.length === 1
           ? config.filter_values[0] : config.filter_values;
@@ -2860,10 +2898,11 @@
       // highlighted one. Fall back to the hit-test when the picker has no focus.
       const lineName = (isLine && splitCol) ? (focusName || params.seriesName) : null;
       let hitRows, pointVal = null;
+      let selection;
       if (lineName) {
         hitRows = (this.data || []).filter(
           r => inFacet(r) && String(r[splitCol]) === String(lineName));
-        this._selected = lineName;
+        selection = lineName;
       } else {
         const v = params.value;
         if (!Array.isArray(v) || v.length < 2 || !x || !y) return;
@@ -2873,9 +2912,17 @@
                  String(r[splitCol]) === String(params.seriesName)) &&
                String(r[x]) === String(v[0]) &&
                String(r[y]) === String(v[1]));
-        this._selected = `${ddNum3(v[0])}, ${ddNum3(v[1])}`;
+        selection = `${ddNum3(v[0])}, ${ddNum3(v[1])}`;
         pointVal = v;
       }
+      // A geometric click (scatter with no drill column) has no claim to
+      // send, so it stays a local range filter even in transient mode --
+      // there is nothing for the target to receive.
+      if (this._transientDrill() && this._drillColumn()) {
+        this._transientClick(slot, params, hitRows);
+        return;
+      }
+      this._selected = selection;
       this._updateStatus();
       if (this._drillColumn()) {
         this._emitDrill(hitRows);
@@ -2911,9 +2958,6 @@
               typeof clickedGroup === 'string') {
             clickedGroup = clickedGroup.split(BOX_CAT_SEP)[0];
           }
-          this._selected = this._selected === clickedGroup ? null : clickedGroup;
-          this._updateHighlight();
-          if (this._selected == null) { this._sendClearFilter(); return; }
           // The clicked mark's source rows -> _emitDrill. With drill 'auto'
           // the target is the group column (radar: the color column); with
           // an override, that column.
@@ -2923,6 +2967,16 @@
           const rows = (this.data || []).filter(r =>
             String(r[g]) === String(clickedGroup) &&
             (facet === '__all__' || !fc || String(r[fc]) === String(facet)));
+          // Transient: no toggle. Clicking the same mark twice sends twice,
+          // because the only meaning a second click can have is "send it
+          // again" -- un-drilling is the target's business.
+          if (this._transientDrill()) {
+            this._transientClick(slot, params, rows);
+            return;
+          }
+          this._selected = this._selected === clickedGroup ? null : clickedGroup;
+          this._updateHighlight();
+          if (this._selected == null) { this._sendClearFilter(); return; }
           this._emitDrill(rows);
         });
         return;
@@ -2936,10 +2990,16 @@
           // effective drill column: lane for 'auto', or an override).
           const v = params.value;
           if (!v) return;
-          this._selected = String(v[3] || '');
-          this._updateStatus();
           const drill = this._drillColumn();
           const dv = v[7];
+          if (this._transientDrill()) {
+            if (drill && dv != null && dv !== '') {
+              this._transientClick(slot, params, [{ [drill]: dv }]);
+            }
+            return;
+          }
+          this._selected = String(v[3] || '');
+          this._updateStatus();
           if (drill && dv != null && dv !== '') {
             this._emitDrill([{ [drill]: dv }]);
           }
@@ -6248,6 +6308,26 @@
       if (!this.statusEl) return;
       this.statusEl.innerHTML = '';
 
+      // A live receipt wins the line: it is the newest thing that happened,
+      // and in transient mode there is no selection competing for the slot.
+      if (this._receipt) {
+        const age = now() - (this._receiptAt || 0);
+        if (age < RECEIPT_HOLD_MS + RECEIPT_FADE_MS) {
+          const rec = document.createElement('span');
+          rec.className = 'dd-status-text dd-status-receipt';
+          rec.textContent = this._receipt;
+          // Resume, do not restart: a negative delay starts the fade already
+          // part-way through, which is where this line actually is.
+          rec.style.animation = `dd-receipt-out ${RECEIPT_FADE_MS}ms linear ` +
+            `${RECEIPT_HOLD_MS - age}ms both`;
+          rec.addEventListener('animationend', () => this._dropReceipt());
+          this.statusEl.appendChild(rec);
+          return;
+        }
+        // Rebuilt after its time was up: fall through to the resting line.
+        this._receipt = null;
+      }
+
       const hasFilter = this._selected || this._hasBrushFilter;
       let text = 'No filter active';
 
@@ -6259,7 +6339,8 @@
       }
 
       const span = document.createElement('span');
-      span.className = 'dd-status-text';
+      span.className = 'dd-status-text' +
+        (this._returning ? ' dd-status-returning' : '');
       span.textContent = text;
       this.statusEl.appendChild(span);
 
@@ -6286,6 +6367,137 @@
       }
     }
 
+    // -- Transient drill ------------------------------------------------------
+
+    // With a ctrl_target the drill is an EVENT: the click sends a claim to the
+    // target block and this chart keeps nothing. No latched selection, no
+    // dimmed siblings, no Reset here — the undo lives where the effect is
+    // visible (the target's cohort), and the control channel has no back-edge,
+    // so anything held here would go stale the moment the target is reset by
+    // someone else. What the click leaves behind is the clicked mark itself,
+    // lit briefly, and a receipt in the footer -- both of which end.
+    _transientDrill() {
+      const t = this.config.ctrl_target;
+      return !!(t && String(t).trim());
+    }
+
+    // Light the clicked mark, hold, release. Two marks lit at once would read
+    // as two selections in a model where only the last click counts, so an
+    // in-flight signal is dropped before a new one starts.
+    /** @param {ChartSlot | null} slot @param {any} params */
+    _flashMark(slot, params) {
+      const host = slot && slot.chartDiv;
+      const ev = params && params.event;
+      if (!host || !ev) return;
+      this._clearSignal();
+
+      // The mark's own box, from the clicked zrender element. A shape with a
+      // width and a height is a box we can trace (bar, boxplot, gantt segment,
+      // treemap tile, heatmap cell); a sector or a polygon is not, and a
+      // bounding box around one is the wrong outline.
+      const t = ev.target;
+      const boxy = t && t.shape &&
+        typeof t.shape.width === 'number' && typeof t.shape.height === 'number';
+      if (boxy && t.getBoundingRect) {
+        const r = t.getBoundingRect().clone();
+        if (t.transform) r.applyTransform(t.transform);
+        if (r.width > 0 && r.height > 0) {
+          const box = document.createElement('span');
+          box.className = 'dd-drill-flash';
+          box.style.left = r.x + 'px';
+          box.style.top = r.y + 'px';
+          box.style.width = r.width + 'px';
+          box.style.height = r.height + 'px';
+          // Follow the mark's own corners, so the trace sits ON the bar rather
+          // than in a box around it.
+          const rad = t.shape.r;
+          if (rad != null) {
+            box.style.borderRadius = (Array.isArray(rad) ? rad : [rad])
+              .map((/** @type {number} */ v) => v + 'px').join(' ');
+          }
+          this._mount(host, box, 2000);
+          return;
+        }
+      }
+
+      // No box to trace: a ring at the click point instead.
+      const x = ev.offsetX, y = ev.offsetY;
+      if (typeof x !== 'number' || typeof y !== 'number') return;
+      const ring = document.createElement('span');
+      ring.className = 'dd-drill-pulse';
+      ring.style.left = x + 'px';
+      ring.style.top = y + 'px';
+      this._mount(host, ring, 1200);
+    }
+
+    // Append a self-removing signal element. The timeout is the backstop for
+    // the case where the element is off screen and animationend never fires.
+    /** @param {HTMLElement} host @param {HTMLElement} el @param {number} ms */
+    _mount(host, el, ms) {
+      const drop = () => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+        if (this._signalEl === el) this._signalEl = null;
+      };
+      el.addEventListener('animationend', drop);
+      this._signalEl = el;
+      host.appendChild(el);
+      setTimeout(drop, ms);
+    }
+
+    _clearSignal() {
+      const el = this._signalEl;
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+      this._signalEl = null;
+    }
+
+    // The footer line for a send. Past tense and about what the USER did, never
+    // "Filtered": this chart is not filtered, the target is. The words are the
+    // patient profile's own -- it titles the same event "Drilled down to
+    // <clause>" (blockr.pharma/inst/js/pp-header.js) -- so the two ends of the
+    // channel name it the same way. The clause keeps `col = value`, which is
+    // how the profile's title and the target's filter pills spell it.
+    /** @param {any} col @param {any[]} vals */
+    _showReceipt(col, vals) {
+      const shown = vals.slice(0, 2).join(', ') +
+        (vals.length > 2 ? ` +${vals.length - 2}` : '');
+      this._receipt = 'Drilled down to ' + (col ? col + ' = ' : '') + shown;
+      // The clock starts at the CLICK and is never restarted by a re-render.
+      this._receiptAt = now();
+      this._updateStatus();
+      clearTimeout(this._receiptTimer);
+      this._receiptTimer = setTimeout(
+        () => this._dropReceipt(),
+        RECEIPT_HOLD_MS + RECEIPT_FADE_MS + RECEIPT_GRACE_MS);
+    }
+
+    // Clear the receipt and bring the resting line back. `_returning` makes
+    // that line fade IN rather than appear at full strength: a receipt that
+    // dissolves only to have "No filter active" snap into the same slot is
+    // the same abrupt cut, moved one step later.
+    _dropReceipt() {
+      if (!this._receipt) return;
+      this._receipt = null;
+      this._returning = true;
+      this._updateStatus();
+      this._returning = false;
+    }
+
+    // The whole click reaction in transient mode: pulse, receipt, send. Rows
+    // are the clicked mark's source rows, the same ones _emitDrill resolves
+    // the claim from.
+    /** @param {ChartSlot | null} slot @param {any} params @param {any[]} rows */
+    _transientClick(slot, params, rows) {
+      const c = this._drillColumn();
+      if (!c) return;
+      const vals = [...new Set(
+        (rows || []).map(r => (r ? r[c] : null)).filter(v => v != null)
+      )].map(String);
+      if (!vals.length) return;
+      this._flashMark(slot, params);
+      this._showReceipt(c, vals);
+      this._sendCategoricalFilter(c, vals);
+    }
+
     // -- Communication --------------------------------------------------------
 
     // Emits a categorical filter. If `col` and `values` are provided, they
@@ -6301,7 +6513,12 @@
       Shiny.setInputValue(this.el.id + '_action', {
         action: 'filter', filter_type: 'categorical',
         column: column,
-        values: vals
+        values: vals,
+        // Click counter. In transient mode the same mark clicked twice
+        // produces the identical claim, and the server's send-once skip would
+        // swallow the second click; the counter changes per click and not per
+        // board re-evaluation, which is the distinction that skip needs.
+        nonce: ++this._drillSeq
       }, { priority: 'event' });
     }
 

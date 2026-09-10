@@ -807,18 +807,28 @@ dd_ctrl_pristine <- function(r_state, initial) {
 #' @param r_target Reactive returning the target block id (`""` for none).
 #' @param r_claims Reactive returning the claim list (`NULL` = hold, see
 #'   [dd_ctrl_claims()]).
+#' `r_nonce` is what makes a re-click of the SAME mark send again. A sender in
+#' transient-drill mode does not latch the selection, so clicking one mark
+#' twice produces the identical claim, and the skip below would swallow the
+#' second click. The nonce is a click counter minted in the browser: it changes
+#' on a real click and NOT on a board re-evaluation, which is exactly the
+#' distinction the skip has to make.
+#'
 #' @param r_pristine Optional latch from `dd_ctrl_pristine()`; a sender with no
 #'   restorable drill state (one whose selection lives only in the session) may
 #'   omit it.
 #' @param session Shiny session.
+#' @param r_nonce Optional reactive returning the click counter behind the
+#'   current claim; part of the send-once key, never part of the payload.
 #' @return The observer, invisibly.
 #' @keywords internal
 #' @export
 dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
-                           session = shiny::getDefaultReactiveDomain()) {
+                           session = shiny::getDefaultReactiveDomain(),
+                           r_nonce = NULL) {
 
   last_target <- ""
-  last_sent <- NULL
+  last_key <- NULL
 
   shiny::observe({
     tgt <- trimws(r_target() %||% "")
@@ -827,7 +837,7 @@ dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
     if (nzchar(last_target) && !identical(last_target, tgt)) {
       ctrl_clear(last_target, state = list(columns = list()),
                  session = session)
-      last_sent <<- NULL
+      last_key <<- NULL
     }
     last_target <<- tgt
 
@@ -848,13 +858,14 @@ dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
     # this observer's dependency on the drill selection, and a run that returns
     # without reading it would drop that dependency.
     pristine <- is.function(r_pristine) && isTRUE(r_pristine())
+    nonce <- if (is.function(r_nonce)) r_nonce() else NULL
 
     # NULL claims = the block has no evaluated data to read a claim off (its
     # input is gated while off screen under lazy evaluation) -- HOLD. This is
     # not an un-drill: the user's selection is still latched block-side, and
     # the target keeps whatever was last pushed. Clearing here wiped the
     # cohort the moment the user navigated to the view that consumes it.
-    # `last_sent` deliberately stays as it is, so coming back on screen
+    # `last_key` deliberately stays as it is, so coming back on screen
     # re-evaluates to the same claim and the identical()-skip below swallows
     # the redundant re-send.
     if (is.null(claims)) {
@@ -863,10 +874,10 @@ dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
 
     payload <- list(columns = claims)
 
-    if (identical(payload, last_sent)) {
+    if (identical(list(payload, nonce), last_key)) {
       return()
     }
-    last_sent <<- payload
+    last_key <<- list(payload, nonce)
 
     # Restored state: the target came back from the same board carrying this
     # very claim. Record it as sent -- so the first real drill diffs against

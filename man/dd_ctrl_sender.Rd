@@ -8,20 +8,30 @@ dd_ctrl_sender(
   r_target,
   r_claims,
   r_pristine = NULL,
-  session = shiny::getDefaultReactiveDomain()
+  session = shiny::getDefaultReactiveDomain(),
+  r_nonce = NULL
 )
 }
 \arguments{
 \item{r_target}{Reactive returning the target block id (\code{""} for none).}
 
 \item{r_claims}{Reactive returning the claim list (\code{NULL} = hold, see
-\code{\link[=dd_ctrl_claims]{dd_ctrl_claims()}}).}
+\code{\link[=dd_ctrl_claims]{dd_ctrl_claims()}}).
+\code{r_nonce} is what makes a re-click of the SAME mark send again. A sender in
+transient-drill mode does not latch the selection, so clicking one mark
+twice produces the identical claim, and the skip below would swallow the
+second click. The nonce is a click counter minted in the browser: it changes
+on a real click and NOT on a board re-evaluation, which is exactly the
+distinction the skip has to make.}
 
 \item{r_pristine}{Optional latch from \code{dd_ctrl_pristine()}; a sender with no
 restorable drill state (one whose selection lives only in the session) may
 omit it.}
 
 \item{session}{Shiny session.}
+
+\item{r_nonce}{Optional reactive returning the click counter behind the
+current claim; part of the send-once key, never part of the payload.}
 }
 \value{
 The observer, invisibly.

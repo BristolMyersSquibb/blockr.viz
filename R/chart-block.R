@@ -236,11 +236,20 @@
 #'   image, HTML, PowerPoint and the plotted numbers -- rather than a capture
 #'   of the live canvas. `FALSE` shows no control.
 #' @param ctrl_target Character(1), beta. Block id of a value filter block on
-#'   the board: a categorical drill click's claim is ALSO pushed there over
-#'   the board's control channel ([ctrl_send()]; the board needs the channel
+#'   the board: a categorical drill click's claim is pushed there over the
+#'   board's control channel ([ctrl_send()]; the board needs the channel
 #'   installed, see [new_ctrl_bridge_extension()]). Empty (the default) =
 #'   off; the drill behaves exactly as before. Exposed in the gear's "Send
 #'   to filter (beta)" section.
+#'
+#'   With a target set the drill becomes TRANSIENT: the click is an event,
+#'   not a selection. The chart latches nothing (so it does not filter its
+#'   own output on the click, saves no selection with the board, and highlights
+#'   nothing), clicking the same mark twice sends twice instead of toggling
+#'   off, and all the click leaves behind is the clicked mark lit for a moment
+#'   and a "Sent ..." line in the footer. Undoing a drill is the target's job, because the
+#'   control channel has no back-edge: a selection held here would keep
+#'   showing a cohort that anyone else can reset.
 #' @param ctrl_table Character(1), beta. Name of the table in the target's
 #'   `dm` the pushed conditions apply to (e.g. `"adsl"`). Leave empty when
 #'   the target filters a plain data frame.
@@ -727,6 +736,23 @@ new_chart_block <- function(
         r_ctrl_target  <- shiny::reactiveVal(ctrl_target %||% "")
         r_ctrl_table   <- shiny::reactiveVal(ctrl_table %||% "")
         r_ctrl_choices <- dd_ctrl_choices()
+
+        # Transient drill. With a target set, a categorical click is an EVENT
+        # sent to that target, not a selection this chart holds: nothing is
+        # latched in `r_filter_*`, so the chart does not filter its own output,
+        # the board saves no selection, and clicking the same mark twice sends
+        # twice instead of toggling off. The undo lives at the target (the
+        # cohort pill in the patient profile), which is the only place the
+        # effect is visible -- the control channel has no back-edge, so a
+        # selection held here goes stale the moment the target is reset by
+        # anyone else.
+        # NULL = no click this session: HOLD, never clear (see dd_ctrl_claims'
+        # "cannot resolve is not an un-drill"). The sender in this mode only
+        # ever sends.
+        r_drill_claim <- shiny::reactiveVal(NULL)
+        transient_drill <- function() {
+          nzchar(trimws(r_ctrl_target() %||% ""))
+        }
 
         # Theming state
         r_line_width_mult <- shiny::reactiveVal(line_width_mult)
@@ -1498,7 +1524,19 @@ new_chart_block <- function(
             # unchanged -- only the actual writes are now guarded.
             ft <- msg$filter_type %||% "categorical"
 
-            if (ft == "categorical") {
+            if (transient_drill() && ft == "categorical") {
+              # The event path. Only a real claim lands here: a null column
+              # (the gear clearing the filter after a mapping change) is
+              # inert, because there is no local selection to clear and the
+              # target's cohort is not this block's to drop.
+              if (!is.null(msg$column) && length(msg$values)) {
+                r_drill_claim(list(
+                  column = as.character(msg$column)[[1L]],
+                  values = as.character(unlist(msg$values)),
+                  nonce  = as.numeric(msg$nonce %||% 0)
+                ))
+              }
+            } else if (ft == "categorical") {
               upd(r_filter_column, msg$column)
               upd(r_filter_values, msg$values)
               upd(r_filter_range, NULL)
@@ -1557,6 +1595,21 @@ new_chart_block <- function(
         # (JS resolves drill = "auto" there), so no user-facing claim field.
         r_ctrl_claims <- shiny::reactive({
           d <- tryCatch(plain_data(), error = function(e) NULL)
+          claim <- r_drill_claim()
+
+          # Transient mode: the claim is the last click, and no click yet is a
+          # HOLD (NULL), not an un-drill. `list()` -- the one value that clears
+          # the target -- is unreachable from here by design.
+          if (transient_drill()) {
+            if (is.null(claim)) {
+              return(NULL)
+            }
+            return(dd_ctrl_claims(
+              d, r_ctrl_table(),
+              stats::setNames(list(claim$values), claim$column)
+            ))
+          }
+
           col <- r_filter_column()
           vals <- as.character(unlist(r_filter_values()))
           filters <- if (identical(r_filter_type(), "categorical") &&
@@ -1571,15 +1624,33 @@ new_chart_block <- function(
         dd_ctrl_sender(
           r_ctrl_target,
           r_ctrl_claims,
-          dd_ctrl_pristine(
+          # Startup suppression, over the LATCHED state -- which transient
+          # mode never writes, so the latch would stay pristine forever and
+          # swallow every send. A transient claim exists only after a real
+          # click, so it ends pristine on its own. The latch is still read on
+          # every pass: that is what holds the dependency on the filter state
+          # (see dd_ctrl_pristine).
+          local({
+            latch <- dd_ctrl_pristine(
+              function() {
+                list(r_filter_type(), r_filter_column(), r_filter_values(),
+                     r_filter_range(), r_filter_point())
+              },
+              list(filter_type, filter_column, filter_values, filter_range,
+                   filter_point)
+            )
             function() {
-              list(r_filter_type(), r_filter_column(), r_filter_values(),
-                   r_filter_range(), r_filter_point())
-            },
-            list(filter_type, filter_column, filter_values, filter_range,
-                 filter_point)
-          ),
-          session
+              still <- latch()
+              is.null(r_drill_claim()) && still
+            }
+          }),
+          session,
+          # Re-clicking the same mark must send again; a board re-evaluation
+          # must not. The counter is minted per click in the browser.
+          r_nonce = function() {
+            claim <- r_drill_claim()
+            if (is.null(claim)) NULL else claim$nonce
+          }
         )
 
         # Build filter expression. With expr_type = "bquoted", `.(data)` is

@@ -231,3 +231,48 @@ test_that("a STRUCTURED (group) drill sends -- the latch must watch ALL drill st
     }
   )
 })
+
+test_that("a transient re-click of the same mark sends again, a re-eval does not", {
+  sends <- 0
+
+  shiny::testServer(
+    function(id) {
+      shiny::moduleServer(id, function(input, output, session) {
+        r_data <- shiny::reactiveVal(1)
+
+        # As above: a send is a board update, which re-evaluates the sender.
+        session$userData$blockr_ctrl_send <- function(target, args,
+                                                      author = NULL) {
+          sends <<- sends + 1
+          if (sends > 20) {
+            stop("runaway: ctrl_send looped ", sends, " times")
+          }
+          shiny::isolate(r_data(r_data() + 1))
+        }
+
+        # The transient sender: one claim, a click counter that only the
+        # browser bumps.
+        r_nonce <- shiny::reactiveVal(1)
+        r_claims <- shiny::reactive({
+          r_data()
+          list(list(table = "adsl", column = "SEX", values = list("M")))
+        })
+
+        dd_ctrl_sender(shiny::reactiveVal("vf"), r_claims,
+                       shiny::reactive(FALSE), session = session,
+                       r_nonce = r_nonce)
+
+        session$userData$bump <- function() r_nonce(r_nonce() + 1)
+      })
+    },
+    {
+      for (i in 1:5) session$flushReact()
+      expect_identical(sends, 1)
+
+      # Same claim, new click: the claim did not change, the click did.
+      session$userData$bump()
+      for (i in 1:5) session$flushReact()
+      expect_identical(sends, 2)
+    }
+  )
+})

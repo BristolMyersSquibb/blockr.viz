@@ -485,6 +485,84 @@
 
 .dd-chart {
   width: 100%;
+  /* Anchors the transient drill pulse, which is positioned at the click. */
+  position: relative;
+}
+
+/* ===== Transient drill ===== */
+/* What a drill click leaves behind when the chart sends its claim to another
+   block (ctrl_target set). The chart holds no selection, so nothing here may
+   look latched: the mark is lit, held just long enough to read, and released.
+
+   HOLD is an animation-delay with `both`, so the element shows the first frame
+   for the whole delay and only then starts to leave. The fade runs ease-IN --
+   slow at first, decisive at the end -- because the failure mode of a fade is a
+   long tail that sits there looking like a selection nobody can clear. */
+
+/* The clicked mark, deepened. The box comes from the clicked zrender element
+   (getBoundingRect + its transform), so this is the mark's own geometry rather
+   than a guess from the cursor.
+
+   `mix-blend-mode: multiply` darkens whatever is under the box, so the mark goes
+   a deeper version of ITS OWN colour and comes back. Nothing is added on top --
+   no ring, no veil, no geometry -- which means it needs to know nothing about
+   the palette, the theme or the series colour, and the clicked bar never stops
+   matching its own legend swatch. Multiplying against the white plot background
+   is a no-op, so only the mark moves.
+
+   Same clock as the table's flash (400ms hold, 1400ms linear): the two surfaces
+   are one gesture and should not decay at different rates. Opacity, because it
+   is what actually interpolates -- see the note in table.css. */
+.dd-drill-flash {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+  background: #000;
+  mix-blend-mode: multiply;
+  animation: dd-drill-flash 1400ms linear 400ms both;
+}
+
+@keyframes dd-drill-flash {
+  from { opacity: 0.22; }
+  to { opacity: 0; }
+}
+
+/* The fallback, for a mark a box cannot trace: a pie wedge is a sector and a
+   radar shape a polygon, where a bounding box is the wrong outline. A ring at
+   the click point says the same thing without claiming a shape. */
+.dd-drill-pulse {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  border: 2px solid var(--blockr-color-primary, #2563eb);
+  /* The mark under the ring is usually painted in the same palette, so the
+     ring needs an edge that does not depend on what it lands on. */
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+  z-index: 5;
+  animation: dd-drill-pulse 700ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+/* Full strength while it is still small (that is the frame the eye catches),
+   then out. */
+@keyframes dd-drill-pulse {
+  0% { transform: scale(0.4); opacity: 1; }
+  35% { opacity: 0.9; }
+  100% { transform: scale(3.2); opacity: 0; }
+}
+
+/* Reduced motion still needs the acknowledgement, just not the travel. The
+   flash is already motion-free (it only changes colour), so it stands. */
+@media (prefers-reduced-motion: reduce) {
+  .dd-drill-pulse {
+    animation: dd-drill-fade 700ms linear forwards;
+  }
+  @keyframes dd-drill-fade {
+    from { opacity: 0.9; }
+    to { opacity: 0; }
+  }
 }
 
 /* ===== Title / caption bands ===== */
@@ -642,6 +720,48 @@
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-grey-500, #6b7280);
   font-variant-numeric: tabular-nums;
+}
+
+/* The receipt for a transient drill: past tense, this block's own act, and it
+   fades. One step darker than the muted status line it replaces, and NOT the
+   primary blue: the blue read as a link, and it outlived the flash by about a
+   second, leaving a coloured sentence with nothing coloured left on screen.
+   The change of words is the signal; the mark carries the colour.
+
+   It LEAVES the way the mark does -- hold, then fade -- rather than being cut.
+   Held longer than the mark (1400ms vs 400ms) because a sentence takes longer
+   to read than a lit bar takes to notice.
+
+   LINEAR, not the mark's ease-in. Grey text is already invisible around opacity
+   0.3, so the only part of the ramp anyone sees is the top two thirds of it.
+   Under ease-in that stretch was compressed into the last ~350ms and the line
+   read as cut, which is exactly what it looked like. A straight ramp spends its
+   time where the eye can follow it.
+
+   The `animation` shorthand is set INLINE by chart.js, not here: _updateStatus()
+   rebuilds this element on every chart re-render, and a fresh element would
+   restart the animation from the top. The delay is computed from the age of the
+   receipt so a rebuild resumes the fade instead of replaying it. Only the
+   keyframes and the colour belong in CSS. */
+.dd-status-receipt {
+  color: var(--blockr-color-text-secondary, #374151);
+}
+
+@keyframes dd-receipt-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* The resting line coming back after a receipt. Without this it snaps into the
+   slot the receipt just dissolved out of, which is the cut moved one step
+   later rather than removed. */
+.dd-status-returning {
+  animation: dd-status-in 320ms ease-out both;
+}
+
+@keyframes dd-status-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .dd-status-cap {

@@ -370,3 +370,54 @@ test_that("on a FLAT table, `source` is a column name and not the mode", {
     expect_true(all(out$source == "EDC"))
   })
 })
+
+test_that("with a ctrl_target the drill click is transient: nothing latched, claim sent", {
+  df <- data.frame(
+    grp = c("A", "A", "B", "C"),
+    val = c(1, 2, 3, 4),
+    stringsAsFactors = FALSE
+  )
+  blk <- new_table_block(values = "val", ctrl_target = "vf")
+  sent <- list()
+
+  testServer(blk$expr_server, args = list(data = reactive(df)), {
+    session$userData$blockr_ctrl_send <- function(target, args, author = NULL) {
+      sent[[length(sent) + 1L]] <<- args
+    }
+
+    click <- function(nonce) {
+      session$setInputs(
+        drilldown_table_block_action = list(
+          action = "filter", column = "grp", values = list("A"), nonce = nonce
+        )
+      )
+      session$flushReact()
+    }
+
+    click(1)
+
+    # Nothing latched: no saved selection, and the table does not filter its
+    # own output on a click it only forwarded.
+    expect_null(session$returned$state$filter_column())
+    expect_null(session$returned$state$filter_values())
+    expect_equal(nrow(eval_block_expr(session$returned$expr(), df)), 4L)
+
+    expect_length(sent, 1L)
+    expect_equal(sent[[1]]$state$columns[[1]]$name, "grp")
+    expect_equal(unlist(sent[[1]]$state$columns[[1]]$values), "A")
+
+    # The same row again: a second click, so a second send -- no toggle-off.
+    click(2)
+    expect_length(sent, 2L)
+
+    # A gear-driven clear (a mapping change) carries neither rows nor columns
+    # and is inert: the target's cohort is not this block's to drop.
+    session$setInputs(
+      drilldown_table_block_action = list(
+        action = "filter", column = NULL, values = NULL
+      )
+    )
+    session$flushReact()
+    expect_length(sent, 2L)
+  })
+})

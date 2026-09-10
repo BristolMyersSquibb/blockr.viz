@@ -501,6 +501,56 @@
     });
   }
 
+  // ==========================================================================
+  // Transient drill. With a ctrl_target the click is an EVENT sent to that
+  // block, not a selection this table holds: nothing latches, nothing toggles
+  // off, and the claim carries a click counter so re-clicking one row sends
+  // again. The undo lives at the target, because the control channel has no
+  // back-edge -- a selection held here would keep showing a cohort anyone else
+  // can reset. Same rule and the same two constants as the chart (chart.js
+  // `_transientDrill`). The R side stops stamping `data-dt-active` in this
+  // mode, so the restore walks below simply never fire.
+  // ==========================================================================
+
+  var FLASH_CLS = ["dt-flash-row", "dt-flash-col", "dt-flash-colhead",
+                   "dt-flash-cross"];
+
+  /** @param {HTMLElement} table */
+  function transientDrill(table) {
+    var t = table.getAttribute("data-dt-ctrl-target");
+    return !!(t && t.trim());
+  }
+
+  // Click counter: it changes on a real click and NOT on a board update, which
+  // is the distinction the server's send-once skip has to make.
+  var drillSeq = 0;
+
+  /** @param {HTMLElement} root */
+  function clearFlash(root) {
+    root.querySelectorAll("." + FLASH_CLS.join(", .")).forEach(function (el) {
+      el.classList.remove.apply(el.classList, FLASH_CLS);
+    });
+  }
+
+  // Light what was clicked, then release it. One signal at a time: two lit
+  // rows would read as two selections in a model where only the last click
+  // counts.
+  /** @param {HTMLElement} root @param {Array<{el: Element, cls: string}>} parts */
+  function flash(root, parts) {
+    clearFlash(root);
+    parts.forEach(function (p) {
+      if (!p.el) return;
+      p.el.classList.add(p.cls);
+      var drop = function () {
+        p.el.classList.remove.apply(p.el.classList, FLASH_CLS);
+        p.el.removeEventListener("animationend", drop);
+      };
+      // The row's animation runs on its cells, so animationend arrives by
+      // bubbling; a cell's own animation ends on the cell itself.
+      p.el.addEventListener("animationend", drop);
+    });
+  }
+
   /** @param {HTMLElement} root @param {HTMLElement} table @param {HTMLElement} tbody */
   function wireClick(root, table, tbody) {
     var elemIdAttr = root.getAttribute("data-dt-elem-id");
@@ -587,15 +637,20 @@
     // Paint every cell of the claimed column(s). A spanner covers several
     // leaves, so the match is by key prefix rather than by index.
     /** @param {any} keys */
-    function markCol(keys) {
-      clearColActive();
-      if (!keys || !colMap) return;
+    // The elements a column claim covers: its header(s) and every body cell
+    // under them. Split out of markCol so the transient path can paint the
+    // same set with its own classes.
+    /** @param {any} keys @returns {{head: Element[], cells: Element[]}} */
+    function colEls(keys) {
+      /** @type {{head: Element[], cells: Element[]}} */
+      var out = { head: [], cells: [] };
+      if (!keys || !colMap) return out;
       /** @type {number[]} */
       var idx = [];
       for (var i = 0; i < colMap.length; i++) {
         if (keysPrefixOf(keys, colMap[i])) idx.push(i);
       }
-      if (!idx.length) return;
+      if (!idx.length) return out;
       table.querySelectorAll("thead th[data-dd-colkeys]").forEach(function (th) {
         /** @type {any} */
         var k = null;
@@ -609,16 +664,42 @@
         // for a one-cell click, and with the spanner drawn as a tile the arm
         // read as selected when it was not. Clicking the SPANNER still lights
         // its leaves -- that direction is the forward test.
-        if (k && keysPrefixOf(keys, k)) {
-          th.classList.add("dt-col-active");
-        }
+        if (k && keysPrefixOf(keys, k)) out.head.push(th);
       });
       Array.prototype.slice.call(tbody.children).forEach(function (r) {
         idx.forEach(function (i) {
           var c = r.children[i];
-          if (c) c.classList.add("dt-col-active");
+          if (c) out.cells.push(c);
         });
       });
+      return out;
+    }
+
+    function markCol(keys) {
+      clearColActive();
+      var e = colEls(keys);
+      e.head.forEach(function (th) { th.classList.add("dt-col-active"); });
+      e.cells.forEach(function (c) { c.classList.add("dt-col-active"); });
+    }
+
+    // The transient twin of markCol + the row highlight: light the row, the
+    // column, and one step darker where the two cross.
+    /** @param {Element | null} tr @param {any} colKeys @param {Element | null} cell */
+    function flashClaim(tr, colKeys, cell) {
+      /** @type {Array<{el: Element, cls: string}>} */
+      var parts = [];
+      if (tr) parts.push({ el: tr, cls: "dt-flash-row" });
+      var e = colEls(colKeys);
+      e.head.forEach(function (th) {
+        parts.push({ el: th, cls: "dt-flash-colhead" });
+      });
+      e.cells.forEach(function (c) {
+        if (c !== cell) parts.push({ el: c, cls: "dt-flash-col" });
+      });
+      if (cell && e.cells.indexOf(cell) !== -1) {
+        parts.push({ el: cell, cls: "dt-flash-cross" });
+      }
+      flash(root, parts);
     }
     // The one send. Row keys and column keys travel in separate fields: the
     // row half has to be resolved against the display frame (its columns are
@@ -631,7 +712,8 @@
         { action: "filter",
           filters: rowKeys || [],
           col_filters: colKeys || [],
-          filter_type: "categorical" },
+          filter_type: "categorical",
+          nonce: ++drillSeq },
         { priority: "event" });
     }
 
@@ -651,6 +733,13 @@
           try { keys = JSON.parse(th.getAttribute("data-dd-colkeys") || ""); }
           catch (err) { keys = null; }
           if (!keys || !keys.length) return;
+          // Transient: no toggle. A second click on the same header means
+          // "send it again", never "un-drill" -- that is the target's job.
+          if (transientDrill(table)) {
+            sendDrill([], keys);
+            flashClaim(null, keys, null);
+            return;
+          }
           if (th.classList.contains("dt-col-active")) {
             clearColActive();
             clearActiveRows(root);
@@ -685,6 +774,17 @@
         var cellKeys = (hitCell && !hitCell.classList.contains("blockr-stub"))
           ? colKeysAt(hitCell.cellIndex)
           : null;
+        // Transient: send the claim, light what was clicked, keep nothing.
+        // No toggle branch, so a re-click of the same cell sends again.
+        if (transientDrill(table)) {
+          /** @type {any} */
+          var tkeys = null;
+          try { tkeys = JSON.parse(keysJson); } catch (err) { tkeys = null; }
+          if (!tkeys || !tkeys.length) return;
+          sendDrill(tkeys, cellKeys);
+          flashClaim(srcTr, cellKeys, hitCell);
+          return;
+        }
         var wasActive = srcTr.classList.contains("dt-row-active");
         // A click toggles-clear ONLY when it re-hits the claim that is
         // active: the very cell (this cell's column is the active column),
@@ -720,9 +820,11 @@
       if (!tr) return;
       var row = tr;
       if (!window.Shiny || !Shiny.setInputValue) return;
+      var transient = transientDrill(table);
       // Click-to-toggle (chart parity): re-clicking the active row clears
-      // the filter and the highlight.
-      if (tr.classList.contains("dt-row-active")) {
+      // the filter and the highlight. Not in transient mode, where a second
+      // click on the same row means "send it again".
+      if (!transient && tr.classList.contains("dt-row-active")) {
         tr.classList.remove("dt-row-active");
         sendClearFilter(elemId);
         return;
@@ -737,15 +839,20 @@
         });
         if (incomplete || !filters.length) return;   // NA group key -> no-op
         Shiny.setInputValue(elemId + "_action",
-          { action: "filter", filters: filters, filter_type: "categorical" },
+          { action: "filter", filters: filters, filter_type: "categorical",
+            nonce: ++drillSeq },
           { priority: "event" });
       } else {
         var val = rawAt(tr, idxN);
         if (val == null) return;                     // NA drill cell -> no-op
         Shiny.setInputValue(elemId + "_action",
           { action: "filter", column: col, values: [val],
-            filter_type: "categorical" },
+            filter_type: "categorical", nonce: ++drillSeq },
           { priority: "event" });
+      }
+      if (transient) {
+        flash(root, [{ el: tr, cls: "dt-flash-row" }]);
+        return;
       }
       Array.prototype.slice.call(tbody.children).forEach(function (r) {
         r.classList.remove("dt-row-active");
@@ -1665,9 +1772,11 @@
       if (!window.Shiny || !Shiny.setInputValue) return;
       var i = parseInt(tr.getAttribute("data-i") || "", 10);
       if (isNaN(i)) return;
+      var transient = transientDrill(table);
       // Click-to-toggle (chart parity): re-clicking the active row clears
-      // the filter and the highlight.
-      if (tr.classList.contains("dt-row-active")) {
+      // the filter and the highlight. Not in transient mode, where a second
+      // click on the same row means "send it again".
+      if (!transient && tr.classList.contains("dt-row-active")) {
         model.activeSet.clear();
         sendClearFilter(elemId);
         repaintActive(root, model);
@@ -1685,7 +1794,8 @@
         });
         if (incomplete || !filters.length) return;   // NA group key -> no-op
         Shiny.setInputValue(elemId + "_action",
-          { action: "filter", filters: filters, filter_type: "categorical" },
+          { action: "filter", filters: filters, filter_type: "categorical",
+            nonce: ++drillSeq },
           { priority: "event" });
       } else {
         var rawCol = cols[model.onclickIdx] ? cols[model.onclickIdx].raw : null;
@@ -1693,8 +1803,15 @@
         if (val == null) return;                     // NA drill cell -> no-op
         Shiny.setInputValue(elemId + "_action",
           { action: "filter", column: model.onclickCol, values: [val],
-            filter_type: "categorical" },
+            filter_type: "categorical", nonce: ++drillSeq },
           { priority: "event" });
+      }
+      // Transient: the flash is on the DOM row, never in the model. A windowed
+      // table rebuilds its rows on scroll, sort and search, and a signal that
+      // survived that would be the latch this mode exists to remove.
+      if (transient) {
+        flash(root, [{ el: tr, cls: "dt-flash-row" }]);
+        return;
       }
       model.activeSet.clear();
       model.activeSet.add(i);

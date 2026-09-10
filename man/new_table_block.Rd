@@ -122,11 +122,20 @@ notes there); \code{""} = explicitly none; any other string is shown with
 (\code{{col}}, \code{{label(col)}}, \code{{n}}, \code{{n_distinct(col)}}).}
 
 \item{ctrl_target}{Character(1), beta. Block id of a value filter block on
-the board: the drill's claim is ALSO pushed there over the board's
-control channel (\code{\link[=ctrl_send]{ctrl_send()}}; the board needs the channel installed,
-see \code{\link[=new_ctrl_bridge_extension]{new_ctrl_bridge_extension()}}). Empty (the default) = off; the drill
+the board: the drill's claim is pushed there over the board's control
+channel (\code{\link[=ctrl_send]{ctrl_send()}}; the board needs the channel installed, see
+\code{\link[=new_ctrl_bridge_extension]{new_ctrl_bridge_extension()}}). Empty (the default) = off; the drill
 behaves exactly as before. Exposed in the gear's "Send to filter (beta)"
-section.}
+section.
+
+With a target set the drill becomes TRANSIENT: the click is an event, not
+a selection. The table latches nothing (so it does not filter its own
+output on the click, saves no selection with the board, and keeps no
+active row or column), clicking the same row twice sends twice instead of
+toggling off, and all the click leaves behind is the clicked row, column
+or crossing cell lit for a moment. Undoing a drill is the target's job,
+because the control channel has no back-edge: a selection held here would
+keep showing a cohort that anyone else can reset.}
 
 \item{ctrl_table}{Character(1), beta. Name of the table in the target's
 \code{dm} the pushed conditions apply to (e.g. \code{"adsl"}). Leave empty when the

@@ -791,3 +791,68 @@ test_that("a chart captions itself with the filter trail its data carries", {
     args = list(x = blk, data = list(data = reactive(d)))
   )
 })
+
+test_that("with a ctrl_target the drill click is transient: nothing latched, claim sent", {
+  df <- data.frame(
+    USUBJID = c("01-001", "01-001", "01-002", "01-002"),
+    ADY = c(1, 10, 1, 10),
+    AVAL = c(100, 110, 95, 105),
+    stringsAsFactors = FALSE
+  )
+  blk <- new_chart_block(
+    chart_type = "line",
+    x = "ADY", y = "AVAL", color = "USUBJID",
+    ctrl_target = "vf"
+  )
+  sent <- list()
+
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$userData$blockr_ctrl_send <- function(target, args,
+                                                    author = NULL) {
+        sent[[length(sent) + 1L]] <<- args
+      }
+
+      expr_scope <- session$makeScope("expr")
+      click <- function(nonce) {
+        expr_scope$setInputs(drilldown_block_action = list(
+          action = "filter",
+          filter_type = "categorical",
+          column = "USUBJID",
+          values = list("01-001"),
+          nonce = nonce
+        ))
+        session$flushReact()
+      }
+
+      click(1)
+
+      # Nothing latched: no saved selection, and the chart does not filter its
+      # own output on a click it only forwarded.
+      expect_null(session$returned$state$filter_column())
+      expect_null(session$returned$state$filter_values())
+      expect_equal(nrow(session$returned$result()), 4L)
+
+      # The claim went to the target.
+      expect_length(sent, 1L)
+      expect_equal(sent[[1]]$state$columns[[1]]$name, "USUBJID")
+      expect_equal(unlist(sent[[1]]$state$columns[[1]]$values), "01-001")
+
+      # The same mark again: a second click, so a second send -- no toggle-off.
+      click(2)
+      expect_length(sent, 2L)
+      expect_equal(sent[[2]]$state$columns[[1]]$name, "USUBJID")
+
+      # A gear-driven clear (a mapping change) is inert: the target's cohort
+      # is not this block's to drop.
+      expr_scope$setInputs(drilldown_block_action = list(
+        action = "filter", filter_type = "categorical",
+        column = NULL, values = NULL
+      ))
+      session$flushReact()
+      expect_length(sent, 2L)
+    },
+    args = list(x = blk, data = list(data = function() df))
+  )
+})

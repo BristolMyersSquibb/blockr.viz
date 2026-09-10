@@ -62,7 +62,8 @@ new_chart_block(
   download = TRUE,
   ctrl_target = "",
   ctrl_table = "",
-  expose = character(),
+  script = NULL,
+  values = list(),
   ...
 )
 }
@@ -325,24 +326,24 @@ image, HTML, PowerPoint and the plotted numbers -- rather than a capture
 of the live canvas. \code{FALSE} shows no control.}
 
 \item{ctrl_target}{Character(1), beta. Block id of a value filter block on
-the board: a categorical drill click's claim is ALSO pushed there over
-the board's control channel (\code{\link[=ctrl_send]{ctrl_send()}}; the board needs the channel
+the board: a categorical drill click's claim is pushed there over the
+board's control channel (\code{\link[=ctrl_send]{ctrl_send()}}; the board needs the channel
 installed, see \code{\link[=new_ctrl_bridge_extension]{new_ctrl_bridge_extension()}}). Empty (the default) =
 off; the drill behaves exactly as before. Exposed in the gear's "Send
-to filter (beta)" section.}
+to filter (beta)" section.
+
+With a target set the drill becomes TRANSIENT: the click is an event,
+not a selection. The chart latches nothing (so it does not filter its
+own output on the click, saves no selection with the board, and highlights
+nothing), clicking the same mark twice sends twice instead of toggling
+off, and all the click leaves behind is the clicked mark lit for a moment
+and a "Sent ..." line in the footer. Undoing a drill is the target's job, because the
+control channel has no back-edge: a selection held here would keep
+showing a cohort that anyone else can reset.}
 
 \item{ctrl_table}{Character(1), beta. Name of the table in the target's
 \code{dm} the pushed conditions apply to (e.g. \code{"adsl"}). Leave empty when
-the target filters a plain data frame.}
-
-\item{expose}{Character vector of mapping role keys the block shows on its
-own face, in an always-visible band above the chart, instead of behind
-the gear: any of \code{"group"}, \code{"value"}, \code{"x"}, \code{"y"}, \code{"xend"},
-\code{"series"}, \code{"color"}, \code{"facet"}, \code{"label"}, \code{"tt_fields"}. A reader can
-change an exposed role on a locked board, which is the point -- the gear
-is hidden there and the band is not. Empty (the default) leaves the block
-looking exactly as it did.
-
+the target filters a plain data frame.
 Expose the roles a reader should steer, not the ones that say what the
 exhibit IS: a waterfall's \code{group} is one bar per subject, and a shift
 plot's axes are fixed because a shift against a percent change means

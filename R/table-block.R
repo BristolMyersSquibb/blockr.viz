@@ -1502,11 +1502,20 @@ table_guidance <- function() {
 #'   `{...}` tokens resolved against the CURRENT data on every render
 #'   (`{col}`, `{label(col)}`, `{n}`, `{n_distinct(col)}`).
 #' @param ctrl_target Character(1), beta. Block id of a value filter block on
-#'   the board: the drill's claim is ALSO pushed there over the board's
-#'   control channel ([ctrl_send()]; the board needs the channel installed,
-#'   see [new_ctrl_bridge_extension()]). Empty (the default) = off; the drill
+#'   the board: the drill's claim is pushed there over the board's control
+#'   channel ([ctrl_send()]; the board needs the channel installed, see
+#'   [new_ctrl_bridge_extension()]). Empty (the default) = off; the drill
 #'   behaves exactly as before. Exposed in the gear's "Send to filter (beta)"
 #'   section.
+#'
+#'   With a target set the drill becomes TRANSIENT: the click is an event, not
+#'   a selection. The table latches nothing (so it does not filter its own
+#'   output on the click, saves no selection with the board, and keeps no
+#'   active row or column), clicking the same row twice sends twice instead of
+#'   toggling off, and all the click leaves behind is the clicked row, column
+#'   or crossing cell lit for a moment. Undoing a drill is the target's job,
+#'   because the control channel has no back-edge: a selection held here would
+#'   keep showing a cohort that anyone else can reset.
 #' @param ctrl_table Character(1), beta. Name of the table in the target's
 #'   `dm` the pushed conditions apply to (e.g. `"adsl"`). Leave empty when the
 #'   target filters a plain data frame.
@@ -1651,6 +1660,22 @@ new_table_block <- function(rowname = NULL,
         r_ctrl_table   <- shiny::reactiveVal(ctrl_table %||% "")
         r_ctrl_choices <- dd_ctrl_choices()
 
+        # Transient drill. With a target set, a click is an EVENT sent to that
+        # block, not a selection this table holds: nothing lands in the
+        # `r_filter_*` slots, so the table does not filter its own output on a
+        # click it only forwarded, the board saves no selection, `data-dt-active`
+        # stays empty (which is what makes the JS restore walks inert), and
+        # clicking the same row twice sends twice instead of toggling off. The
+        # undo lives at the target -- the control channel has no back-edge, so
+        # a selection held here would go stale the moment anyone else resets it.
+        # NULL = no click this session: HOLD, never clear (see dd_ctrl_claims'
+        # "cannot resolve is not an un-drill"). This sender only ever sends.
+        # Mirrors chart-block.R.
+        r_drill_claim <- shiny::reactiveVal(NULL)
+        transient_drill <- function() {
+          nzchar(trimws(r_ctrl_target() %||% ""))
+        }
+
         # Only write a reactiveVal when the value actually changes. JS echoes
         # the full config/filter on any popover change, so a blind set would
         # invalidate (and re-render the table) on every echo -- the
@@ -1685,7 +1710,24 @@ new_table_block <- function(rowname = NULL,
           msg <- input$drilldown_table_block_action
           if (is.null(msg)) return()
           act <- msg$action %||% "config"
-          if (identical(act, "filter")) {
+          if (identical(act, "filter") && transient_drill()) {
+            # The event path. A claim carries rows, columns, or both; a message
+            # with neither is the gear clearing the filter after a mapping
+            # change, and it is inert -- there is no local selection to clear
+            # and the target's cohort is not this block's to drop.
+            rows <- msg$filters
+            cols <- msg$col_filters
+            has_row <- length(rows) || (!is.null(msg$column) && length(msg$values))
+            if (has_row || length(cols)) {
+              r_drill_claim(list(
+                filters    = if (length(rows)) rows,
+                col_keys   = if (length(cols)) cols,
+                column     = if (!is.null(msg$column)) as.character(msg$column)[[1L]],
+                values     = if (length(msg$values)) as.character(unlist(msg$values)),
+                nonce      = as.numeric(msg$nonce %||% 0)
+              ))
+            }
+          } else if (identical(act, "filter")) {
             # The column half of a structured click (a header or a cell in an
             # identified column). Its own field, read on every filter message
             # so a stub click or the Reset clears it.
@@ -1765,6 +1807,37 @@ new_table_block <- function(rowname = NULL,
         # code path with the chart / tile (dd_ctrl_claims / dd_ctrl_sender).
         r_ctrl_claims <- shiny::reactive({
           d <- tryCatch(ann_data(), error = function(e) NULL)
+
+          # Transient mode: the claim is the last click, and no click yet is a
+          # HOLD (NULL), not an un-drill. `list()` -- the one value that clears
+          # the target -- is unreachable from here by design.
+          if (transient_drill()) {
+            claim <- r_drill_claim()
+            if (is.null(claim)) {
+              return(NULL)
+            }
+            tf <- if (length(claim$filters)) {
+              cc <- vapply(claim$filters, function(f) as.character(f$column),
+                           character(1L))
+              vv <- vapply(claim$filters, function(f) as.character(f$value),
+                           character(1L))
+              stats::setNames(as.list(vv), cc)
+            } else if (!is.null(claim$column) && length(claim$values)) {
+              stats::setNames(list(claim$values), claim$column)
+            } else {
+              list()
+            }
+            tcols <- dd_col_claims(claim$col_keys, r_ctrl_table())
+            trows <- dd_ctrl_claims(d, r_ctrl_table(), tf)
+            if (is.null(trows)) {
+              return(NULL)
+            }
+            # A column-only claim (a header click) is a real claim, but its row
+            # half is the empty `list()` that would otherwise read as an
+            # un-drill; the column entries carry it.
+            return(c(tcols, trows))
+          }
+
           gc <- r_filter_group_cols()
           gv <- r_filter_group_vals()
           col <- r_filter_column()
@@ -1789,16 +1862,33 @@ new_table_block <- function(rowname = NULL,
         dd_ctrl_sender(
           r_ctrl_target,
           r_ctrl_claims,
-          dd_ctrl_pristine(
+          # Startup suppression, over the LATCHED state -- which transient mode
+          # never writes, so the latch would stay pristine forever and swallow
+          # every send. A transient claim exists only after a real click, so it
+          # ends pristine on its own. The latch is still read on every pass:
+          # that is what holds the dependency on the filter state.
+          local({
+            latch <- dd_ctrl_pristine(
+              function() {
+                list(r_filter_column(), r_filter_values(),
+                     r_filter_group_cols(), r_filter_group_vals(),
+                     r_filter_col_keys())
+              },
+              list(filter_column, filter_values, filter_group_cols,
+                   filter_group_vals, NULL)
+            )
             function() {
-              list(r_filter_column(), r_filter_values(),
-                   r_filter_group_cols(), r_filter_group_vals(),
-                   r_filter_col_keys())
-            },
-            list(filter_column, filter_values, filter_group_cols,
-                 filter_group_vals, NULL)
-          ),
-          session
+              still <- latch()
+              is.null(r_drill_claim()) && still
+            }
+          }),
+          session,
+          # Re-clicking the same row must send again; a board re-evaluation
+          # must not. The counter is minted per click in the browser.
+          r_nonce = function() {
+            claim <- r_drill_claim()
+            if (is.null(claim)) NULL else claim$nonce
+          }
         )
 
         # The three writers see the same frame and the same resolved text the

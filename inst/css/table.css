@@ -89,6 +89,89 @@
 :is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-row-active td.dt-col-active {
   background-color: color-mix(in srgb, var(--blockr-color-primary, #2563eb) 20%, transparent);
 }
+/* ===== Transient drill =====
+   With a ctrl_target set the click is an EVENT sent to another block, so the
+   table lights what was clicked and lets it go -- there is nothing to un-set,
+   and a paint that stayed would show a cohort anyone else can reset. The
+   values are the latched ladder above (9% row / 9% column / 20% cross, with
+   the 3px accent bars), so a transient claim draws the same picture the sticky
+   one drew; only it ends.
+
+   HOLD is an animation-delay with `both`, so the first frame shows for the
+   whole delay and only then starts to leave.
+
+   The fade is LINEAR and long (1400ms). These tints are 9% alpha -- a range so
+   small that under an ease-in curve the whole perceptible part of the ramp
+   landed in the last ~300ms, and the paint read as held-then-cut rather than
+   as fading. A straight ramp over a longer window spends its time where the
+   eye can follow it. The chart's mark keeps ease-in: a white wash plus a solid
+   ring has room to be decisive, 9% of a tint does not. */
+/* The flash is a pseudo-element LAYER whose OPACITY fades. Two constraints
+   have to hold at once and only this satisfies both:
+
+   1. It must sit above the cell's own background, not replace it. A cell
+      already has one -- the accent-blue hover on a clickable row, zebra
+      striping, a shading fill -- and an animation beats every normal
+      declaration, so animating background-color would drive the cell past
+      those to white and snap back the moment the class comes off.
+   2. It must actually interpolate. `background-image` does NOT: measured in
+      Chrome, a gradient-to-gradient animation holds the FROM value and flips
+      to the TO value at exactly 50%, which is the "stays, then it's gone" the
+      first attempt produced. background-color and opacity both interpolate;
+      opacity on a layer is the one that also satisfies (1).
+
+   z-index -1 against a z-index 0 cell keeps the wash above the cell's
+   background and below its text, so the digits stay crisp under the 20% cross.
+
+   LINEAR: these tints are 9% alpha, a range so small that any ease-in curve
+   spends its visible part in the last few hundred ms and reads as a cut.
+
+   SHORTER than the chart's mark (1200ms total against 1800ms) even though the
+   two are one gesture. A row plus a column is a large area of the screen, and
+   the same duration over a large area reads as longer than over one small mark
+   -- matching the clocks made the table feel like it was waiting for you. */
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-flash-row > td,
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.dt-flash-col {
+  position: relative;
+  z-index: 0;
+}
+/* The header may be sticky, which is already a containing block -- do not
+   touch its position. */
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-flash-colhead {
+  z-index: 0;
+}
+
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-flash-row > td::after,
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.dt-flash-col::after,
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-flash-colhead::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
+  animation: dt-flash-out 900ms linear 300ms both;
+}
+
+/* The accent bars ride the same layer, so they fade with it rather than
+   needing an animation of their own. */
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-flash-row > td:first-child::after {
+  box-shadow: inset 3px 0 0 0 var(--blockr-color-primary, #2563eb);
+}
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-flash-colhead::after {
+  box-shadow: inset 0 3px 0 0 var(--blockr-color-primary, #2563eb);
+}
+
+/* The cell where the two claims cross: one step darker, same layer. */
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-flash-row > td.dt-flash-cross::after {
+  background: color-mix(in srgb, var(--blockr-color-primary, #2563eb) 20%, transparent);
+}
+
+@keyframes dt-flash-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 /* Flat-table header alignment, driven by the column's data type so the name,
    sub-label and sort arrow all agree with the body cells: numeric right, text
    left (the structured table does the same for its arm columns). The type
