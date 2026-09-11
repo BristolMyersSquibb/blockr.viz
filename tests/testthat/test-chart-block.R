@@ -468,6 +468,34 @@ test_that("unset drill emits no downstream filter (inert)", {
   )
 })
 
+test_that("an unchanged expr is the same object when the data reactive re-fires", {
+  # blockr.core skips a re-evaluation on OBJECT IDENTITY (same_ref, in
+  # block-server.R), and this block's expr reads data() for its coercion
+  # test. A view switch lands visibility across several flushes, so the data
+  # reactive invalidates while handing back the same frame -- and a freshly
+  # allocated but equal call would read as "the expression changed" and
+  # re-evaluate every re-fronted chart.
+  blk <- new_chart_block(chart_type = "bar", group = "g")
+  tick <- shiny::reactiveVal(0L)
+  frame <- data.frame(g = c("a", "a", "b"), stringsAsFactors = FALSE)
+  src <- shiny::reactive({
+    tick()
+    frame
+  })
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      e1 <- session$returned$expr()
+      tick(tick() + 1L)
+      session$flushReact()
+      e2 <- session$returned$expr()
+      expect_identical(rlang::obj_address(e1), rlang::obj_address(e2))
+    },
+    args = list(x = blk, data = list(data = src))
+  )
+})
+
 test_that("radar round-trips through state and filters on the color column", {
   # Radar is an aggregated chart: group levels = spokes, one shape per
   # color level. The JS click handler emits a categorical filter on the

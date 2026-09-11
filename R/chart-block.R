@@ -1934,6 +1934,9 @@ new_chart_block <- function(
         shiny::outputOptions(output, "dl_pptx", suspendWhenHidden = FALSE)
         shiny::outputOptions(output, "dl_png", suspendWhenHidden = FALSE)
 
+        # See the identity guard at the end of the expr reactive below.
+        last_expr <- NULL
+
         list(
           expr = shiny::reactive({
             # The expr's only job is the data transform: the click/brush
@@ -1960,7 +1963,22 @@ new_chart_block <- function(
             # column, which the script is free not to keep. Downstream then
             # receives what the chart draws, filtered.
             sx <- cb_expr(r_parsed(), r_specs(), r_values(), slot = TRUE)
-            if (is.null(sx)) ex else dd_splice_slot(sx, ex)
+            out <- if (is.null(sx)) ex else dd_splice_slot(sx, ex)
+            # Hand back the SAME object when the emitted code has not changed.
+            # blockr.core skips a re-evaluation on object identity
+            # (same_ref, block-server.R), and this reactive reads `data()`
+            # above -- so a view switch, which lands its visibility across
+            # several flushes, invalidates it, it re-runs, and bbquote mints a
+            # freshly allocated but equal call. That fails same_ref and every
+            # re-fronted chart re-evaluates. The calls compared here are plain
+            # language and literals (no closures, no environments), so
+            # identical() is cheap and has nothing environment-sensitive to
+            # walk.
+            if (!is.null(last_expr) && identical(out, last_expr)) {
+              return(last_expr)
+            }
+            last_expr <<- out
+            out
           }),
           state = list(
             group = r_group,
