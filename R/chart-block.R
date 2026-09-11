@@ -882,15 +882,20 @@ new_chart_block <- function(
         # the expensive part of every push, and it depends only on the data
         # and the shipped columns -- so a presentation-only gear edit
         # re-sends the SAME payload instead of re-serializing the frame.
-        # `rev` ticks only when this reactive actually recomputes: shiny
+        # `rev` ticks on a change of CONTENT, not on a recompute: shiny
         # splices the json-classed string verbatim into the websocket
         # message (json_verbatim), so the browser receives a parsed OBJECT
         # and cannot use string identity -- an unchanged rev is its signal
-        # to skip the row conversion (see setData in chart.js). Read
+        # to skip the row conversion (see setData in chart.js). Ticking per
+        # recompute defeated that. Visiting a dock panel re-evaluates the
+        # block, and an equal-but-new result invalidates this reactive, so
+        # coming back to a chart shipped a fresh rev for bytes the browser
+        # already held and made it rebuild every row object. Read
         # exclusively inside the gated observer below: a reactive is
         # pull-based, so it stays suspended with the observer for hidden
         # panels.
         payload_rev <- 0L
+        last_payload <- NULL
         r_data_json <- shiny::reactive({
           d <- plain_data()
           shiny::req(is.data.frame(d))
@@ -900,13 +905,15 @@ new_chart_block <- function(
           } else {
             d[0]
           }
+          # Dictionary-encodes the low-cardinality string columns; see
+          # chart-payload.R. Everything else is serialized exactly as it was.
+          json <- chart_data_json(df_send)
+          if (identical(json, last_payload$json)) {
+            return(last_payload)
+          }
           payload_rev <<- payload_rev + 1L
-          list(
-            rev = payload_rev,
-            # Dictionary-encodes the low-cardinality string columns; see
-            # chart-payload.R. Everything else is serialized exactly as it was.
-            json = chart_data_json(df_send)
-          )
+          last_payload <<- list(rev = payload_rev, json = json)
+          last_payload
         })
 
         # Distribution band, cached on exactly compute_band_series()'s
@@ -1292,8 +1299,18 @@ new_chart_block <- function(
           chart_msg
         }
 
+        # An IDENTICAL message is not sent again. The observer runs whenever
+        # anything it reads invalidates, and a dock panel visit invalidates
+        # the block's result without changing it, so returning to a chart
+        # used to re-ship the whole payload for the picture already on
+        # screen (651 kB for the six Vital Signs charts, second pass). A
+        # client that never got the first copy is covered by the _ready
+        # handshake below, which re-sends `last_push$msg` on announce.
         shiny::observe({
           chart_msg <- build_chart_msg()
+          if (identical(chart_msg, last_push$msg)) {
+            return()
+          }
           last_push$msg <- chart_msg
           session$sendCustomMessage("drilldown-data", chart_msg)
         })

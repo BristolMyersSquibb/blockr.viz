@@ -856,3 +856,67 @@ test_that("with a ctrl_target the drill click is transient: nothing latched, cla
     args = list(x = blk, data = list(data = function() df))
   )
 })
+
+test_that("an unchanged payload is not serialized or pushed a second time", {
+  # Visiting a dock panel re-evaluates the block, so the chart's data arrives
+  # as a fresh object holding the same rows. That used to rebuild the JSON,
+  # tick data_rev and re-ship the whole frame for the picture already on
+  # screen. Nothing changed, so nothing goes out.
+  d <- data.frame(
+    PARAMCD = rep(c("SYSBP", "DIABP"), each = 3),
+    AVAL = c(120, 118, 122, 80, 78, 82),
+    stringsAsFactors = FALSE
+  )
+
+  blk <- new_chart_block(chart_type = "bar", group = "PARAMCD", func = "count")
+
+  # A reactive, not a reactiveVal: reactiveVal skips an identical value, and
+  # the case under test is exactly an equal-but-new object reaching the block.
+  # An environment, so the change further down reaches the reactive rather
+  # than making a local copy inside testServer's evaluation frame.
+  src <- new.env(parent = emptyenv())
+  src$d <- d
+  tick <- shiny::reactiveVal(0L)
+  dat <- shiny::reactive({
+    tick()
+    src$d[seq_len(nrow(src$d)), , drop = FALSE]
+  })
+
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      sent <- new.env(parent = emptyenv())
+      sent$msgs <- list()
+      root <- session$rootScope()
+      root$sendCustomMessage <- function(type, message) {
+        sent$msgs <- c(sent$msgs, list(list(type = type, message = message)))
+        invisible(NULL)
+      }
+
+      session$flushReact()
+
+      data_msgs <- function() {
+        Filter(function(m) identical(m$type, "drilldown-data"), sent$msgs)
+      }
+      expect_length(data_msgs(), 1L)
+      first_rev <- data_msgs()[[1L]]$message$data_rev
+
+      # Three more rounds of the same rows through a new object each time.
+      for (i in 1:3) {
+        tick(i)
+        session$flushReact()
+      }
+      expect_length(data_msgs(), 1L)
+
+      # A real change to a SHIPPED column still goes out, with a fresh rev.
+      # (Only the mapped columns travel, so an edit to AVAL, which this bar
+      # chart does not read, is correctly invisible here.)
+      src$d$PARAMCD[1L] <- "MAP"
+      tick(4L)
+      session$flushReact()
+      expect_length(data_msgs(), 2L)
+      expect_false(identical(data_msgs()[[2L]]$message$data_rev, first_rev))
+    },
+    args = list(x = blk, data = list(data = dat))
+  )
+})
