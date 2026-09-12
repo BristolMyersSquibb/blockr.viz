@@ -220,7 +220,9 @@ chart_arguments <- function() {
         "on and the board to carry the control bridge extension. Range / ",
         "point / brush selections are never pushed (a claim is one value). ",
         "Empty (default) = off; the drill then behaves exactly as ",
-        "documented above."
+        "documented above. \"auto\" needs no id: it is the board's drill ",
+        "destination, found by class -- the one drill filter block, else ",
+        "the one value filter block. Prefer it over a typed id."
       ),
       example = "cohort_filter",
       type = arg_string()

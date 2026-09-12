@@ -55,7 +55,9 @@ html / pptx.}
 \item{max_height}{Scroll container height (default \code{"600px"}).}
 
 \item{ctrl_target, ctrl_table}{Character(1), beta: as in
-\code{\link[=new_table_block]{new_table_block()}} -- push the drill claim into a value filter block.}
+\code{\link[=new_table_block]{new_table_block()}} -- push the drill claim into a value filter block.
+\code{ctrl_target = "auto"} finds that block on the board itself, see
+\code{\link[=ctrl_auto_target]{ctrl_auto_target()}}.}
 
 \item{class}{Optional subclass(es) prepended to \code{"heatmap_block"} -- how
 a delegating surface (blockr.pharma's AE heatmap) gets its own class,

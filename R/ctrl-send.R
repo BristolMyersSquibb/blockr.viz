@@ -210,6 +210,50 @@ install_ctrl_send <- function(update, board = NULL,
   invisible(send)
 }
 
+#' The board's drill destination, found by class
+#'
+#' What `ctrl_target = "auto"` resolves to. A sender set to `"auto"` is told
+#' where to send by the board rather than by its own configuration: the one
+#' `blockr.dm::new_drill_filter_block()` on the board, or -- on a board that
+#' carries none -- the one value filter block, if there is exactly one.
+#'
+#' Two or more candidates resolve to nothing rather than to a winner: with
+#' several filter blocks in play only the board author knows which one means
+#' "the cohort the user just drilled into", so the sender stays quiet and the
+#' gear's target picker is there to name one.
+#'
+#' @param session Shiny session (defaults to the current reactive domain).
+#'
+#' @return The block id, `""` when the board offers no single candidate.
+#'
+#' @export
+ctrl_auto_target <- function(session = shiny::getDefaultReactiveDomain()) {
+
+  drills <- ctrl_targets("drill_filter_block", session = session)
+
+  # A board that carries a drill filter has said where drills go, so the
+  # value filters are not considered at all -- not even when the drill
+  # filters are ambiguous. Two of them is a board to fix, and falling back
+  # to some unrelated filter would hide that.
+  if (length(drills)) {
+    return(if (length(drills) == 1L) unname(drills) else "")
+  }
+
+  vals <- ctrl_targets("value_filter_block", session = session)
+
+  if (length(vals) == 1L) unname(vals) else ""
+}
+
+# `ctrl_target` as the sender should read it: the literal block id, except for
+# the sentinel "auto", which is the board's answer (ctrl_auto_target()). Kept
+# here so every sender -- and the composer table in blockr.sandbox, which
+# calls it through dd_ctrl_sender() -- resolves the word the same way.
+#' @noRd
+dd_ctrl_resolve <- function(target, session) {
+  target <- trimws(target %||% "")
+  if (identical(target, "auto")) ctrl_auto_target(session) else target
+}
+
 #' Controllable blocks on the board
 #'
 #' The block ids a sender may point at: every block on the board of the given
@@ -831,7 +875,13 @@ dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
   last_key <- NULL
 
   shiny::observe({
-    tgt <- trimws(r_target() %||% "")
+    # "auto" is not a block id: the board answers for it (ctrl_auto_target()).
+    # Resolved HERE rather than in each sender, so the word means the same
+    # thing to the chart, the table, the heatmap, the rank table, the tile and
+    # the composer table -- and so the clear below releases the block the last
+    # claim actually went to, even if the board has since gained a second
+    # candidate and "auto" now resolves to nothing.
+    tgt <- dd_ctrl_resolve(r_target(), session)
     claims <- r_claims()
 
     if (nzchar(last_target) && !identical(last_target, tgt)) {
@@ -908,13 +958,36 @@ dd_ctrl_choices <- function(session = shiny::getDefaultReactiveDomain()) {
   rv <- shiny::reactiveVal(character())
 
   shiny::observe({
-    choices <- ctrl_targets("value_filter_block", session = session)
+    choices <- c(
+      dd_ctrl_auto_choice(session),
+      ctrl_targets("value_filter_block", session = session)
+    )
     if (!identical(choices, rv())) {
       rv(choices)
     }
   })
 
   rv
+}
+
+#' The "auto" entry at the head of the picker, labelled with what the board
+#' currently resolves it to -- so the one pick that needs no knowledge of the
+#' board says which block it found. Named like every other choice, so it rides
+#' the same two helpers to the browser.
+#' @noRd
+dd_ctrl_auto_choice <- function(session = shiny::getDefaultReactiveDomain()) {
+
+  id <- ctrl_auto_target(session)
+
+  if (!nzchar(id)) {
+    return(stats::setNames("auto", "Automatic (no filter block found)"))
+  }
+
+  cands <- ctrl_targets("value_filter_block", session = session)
+  nme <- names(which(cands == id))
+  lab <- if (length(nme) == 1L && nzchar(nme)) nme else id
+
+  stats::setNames("auto", paste0("Automatic (", lab, ")"))
 }
 
 #' Candidate targets for the JS gear: `[{value: blockId, label: blockName}]`.

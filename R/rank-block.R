@@ -120,6 +120,11 @@
 #'   the board's control channel (same feature as the chart and table
 #'   blocks), so a row click can filter a pipeline this block has no data
 #'   link to. Empty (default) = off.
+#'
+#'   `"auto"` needs no block id: it resolves to the board's drill destination
+#'   -- the one `blockr.dm::new_drill_filter_block()` on the board, else the
+#'   one value filter block ([ctrl_auto_target()]). That is what the gear's
+#'   checkbox writes, so a drill reaches the cohort filter with nothing typed.
 #' @param ctrl_table Character(1), beta. Only with `ctrl_target`: the table
 #'   in the target's dm the pushed conditions apply to. Empty for a value
 #'   filter fed a plain data frame.
@@ -1028,7 +1033,9 @@ rank_arguments <- function() {
         "block over the board's control channel, so a row click filters a ",
         "pipeline this block has no data link to. Requires drill to be on ",
         "and the board to carry the control bridge extension. Empty ",
-        "(default) = off."
+        "(default) = off. \"auto\" needs no id: it is the board's drill ",
+        "destination, found by class -- the one drill filter block, else ",
+        "the one value filter block. Prefer it over a typed id."
       ),
       example = "cohort_filter",
       type = arg_string()

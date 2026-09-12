@@ -46,6 +46,8 @@
 #' @param max_height Scroll container height (default `"600px"`).
 #' @param ctrl_target,ctrl_table Character(1), beta: as in
 #'   [new_table_block()] -- push the drill claim into a value filter block.
+#'   `ctrl_target = "auto"` finds that block on the board itself, see
+#'   [ctrl_auto_target()].
 #' @param class Optional subclass(es) prepended to `"heatmap_block"` -- how
 #'   a delegating surface (blockr.pharma's AE heatmap) gets its own class,
 #'   which is what the registry keys metadata on.

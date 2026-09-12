@@ -82,6 +82,11 @@
 #'   see [new_ctrl_bridge_extension()]). Empty (the default) = off; the drill
 #'   behaves exactly as before. Exposed in the gear's "Send to filter (beta)"
 #'   section.
+#'
+#'   `"auto"` needs no block id: it resolves to the board's drill destination
+#'   -- the one `blockr.dm::new_drill_filter_block()` on the board, else the
+#'   one value filter block ([ctrl_auto_target()]). That is what the gear's
+#'   checkbox writes, so a drill reaches the cohort filter with nothing typed.
 #' @param ctrl_table Character(1), beta. Name of the table in the target's
 #'   `dm` the pushed conditions apply to (e.g. `"adsl"`). Leave empty when
 #'   the target filters a plain data frame.
@@ -606,7 +611,10 @@ tile_arguments <- function() {
         "the board's control channel, so the drill filters a pipeline the ",
         "tile has no data link to. Requires `drill = TRUE` and the board ",
         "to carry the control bridge extension. Empty (default) = off; the ",
-        "drill then behaves exactly as documented above."
+        "drill then behaves exactly as documented above. \"auto\" needs no ",
+        "id: it is the board's drill destination, found by class -- the one ",
+        "drill filter block, else the one value filter block. Prefer it ",
+        "over a typed id."
       ),
       example = "cohort_filter",
       type = arg_string()

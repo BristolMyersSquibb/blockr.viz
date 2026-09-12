@@ -242,6 +242,11 @@
 #'   off; the drill behaves exactly as before. Exposed in the gear's "Send
 #'   to filter (beta)" section.
 #'
+#'   `"auto"` needs no block id: it resolves to the board's drill destination
+#'   -- the one `blockr.dm::new_drill_filter_block()` on the board, else the
+#'   one value filter block ([ctrl_auto_target()]). That is what the gear's
+#'   checkbox writes, so a drill reaches the cohort filter with nothing typed.
+#'
 #'   With a target set the drill becomes TRANSIENT: the click is an event,
 #'   not a selection. The chart latches nothing (so it does not filter its
 #'   own output on the click, saves no selection with the board, and highlights

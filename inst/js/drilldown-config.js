@@ -1427,6 +1427,13 @@
         if (!enabled && this._hasVal(cfg.ctrl_target)) {
           cfg.ctrl_target = '';
           this.h.onChange('ctrl_target');
+        } else if (enabled && !this._hasVal(cfg.ctrl_target)) {
+          // Checking the box is the whole configuration: 'auto' is not a
+          // block id but a word R resolves against the board (the one drill
+          // filter block, else the one value filter block). The picker below
+          // is for the board that carries several and has to be told which.
+          cfg.ctrl_target = 'auto';
+          this.h.onChange('ctrl_target');
         }
         this._rerender();
       };
@@ -1450,8 +1457,11 @@
 
       const choices = Array.isArray(cfg.ctrl_choices) ? cfg.ctrl_choices : [];
       const cur = cfg.ctrl_target || '';
+      // No "Not set": the checkbox above is how the send is turned off, and a
+      // checked box pointing nowhere was a state that looked configured and
+      // did nothing. R puts 'Automatic (<block>)' at the head of the choices.
       /** @type {Array<{value: string, label: string}>} */
-      const opts = [{ value: '', label: 'Not set' }];
+      const opts = [];
       // A configured target no longer on the board stays visible as its own
       // option rather than being silently dropped (deleted block, or a board
       // restored before its blocks registered).
@@ -1498,7 +1508,7 @@
       help.className = 'dd-form-help';
       help.textContent = choices.length
         ? 'Drilling also filters the chosen block.'
-        : 'No value filter block found on this board (is the control bridge installed?).';
+        : 'No filter block found on this board (is the control bridge installed?).';
       row.appendChild(help);
       sec.appendChild(row);
 

@@ -164,7 +164,12 @@ compose.}
 the same board: the drill's claim is ALSO pushed into that block over
 the board's control channel (same feature as the chart and table
 blocks), so a row click can filter a pipeline this block has no data
-link to. Empty (default) = off.}
+link to. Empty (default) = off.
+
+\code{"auto"} needs no block id: it resolves to the board's drill destination
+-- the one \code{blockr.dm::new_drill_filter_block()} on the board, else the
+one value filter block (\code{\link[=ctrl_auto_target]{ctrl_auto_target()}}). That is what the gear's
+checkbox writes, so a drill reaches the cohort filter with nothing typed.}
 
 \item{ctrl_table}{Character(1), beta. Only with \code{ctrl_target}: the table
 in the target's dm the pushed conditions apply to. Empty for a value

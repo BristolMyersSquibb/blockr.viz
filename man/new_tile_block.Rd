@@ -99,7 +99,12 @@ the board: the drill's claim is ALSO pushed there over the board's
 control channel (\code{\link[=ctrl_send]{ctrl_send()}}; the board needs the channel installed,
 see \code{\link[=new_ctrl_bridge_extension]{new_ctrl_bridge_extension()}}). Empty (the default) = off; the drill
 behaves exactly as before. Exposed in the gear's "Send to filter (beta)"
-section.}
+section.
+
+\code{"auto"} needs no block id: it resolves to the board's drill destination
+-- the one \code{blockr.dm::new_drill_filter_block()} on the board, else the
+one value filter block (\code{\link[=ctrl_auto_target]{ctrl_auto_target()}}). That is what the gear's
+checkbox writes, so a drill reaches the cohort filter with nothing typed.}
 
 \item{ctrl_table}{Character(1), beta. Name of the table in the target's
 \code{dm} the pushed conditions apply to (e.g. \code{"adsl"}). Leave empty when
