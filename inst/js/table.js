@@ -984,7 +984,8 @@
                 autoValue: function (/** @type {any} */ cfg) {
                   return (cfg.subtitle == null && cfg.subtitle_auto) ? cfg.subtitle_auto : "";
                 } },
-    caption:  { label: "Caption", kind: "text", ph: "e.g. N = {n} records",
+    caption:  { label: "Caption", kind: "text", multiline: true,
+                ph: "e.g. N = {n} records",
                 autoValue: function (/** @type {any} */ cfg) {
                   return (cfg.caption == null && cfg.caption_auto) ? cfg.caption_auto : "";
                 } }

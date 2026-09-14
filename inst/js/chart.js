@@ -748,7 +748,8 @@
                 hint: 'An {@arg} token prints that setting and makes the word a control on the block. [ ] drops its clause when the setting is empty.',
                 autoValue: (/** @type {any} */ cfg) =>
                   (cfg.subtitle == null && cfg.subtitle_resolved) ? cfg.subtitle_resolved : '' },
-    caption:  { label: 'Caption', kind: 'text', ph: 'e.g. {filters} or N = {n} records',
+    caption:  { label: 'Caption', kind: 'text', multiline: true,
+                ph: 'e.g. {filters} or N = {n} records',
                 autoValue: (/** @type {any} */ cfg) =>
                   (cfg.caption == null && cfg.caption_resolved) ? cfg.caption_resolved : '' }
   };
@@ -1687,21 +1688,28 @@
       const DC = /** @type {any} */ (DrilldownChart);
       const meas = DC._measureCtx ||
         (DC._measureCtx = document.createElement('canvas').getContext('2d'));
+      // Explicit newlines break first, then each of those lines word-wraps to
+      // the grid width. Without the split the /\s+/ word walk would eat the
+      // newline and the export would run a two-line caption together, which
+      // is not what the block shows (.dd-chart-caption is `pre-line`).
       /** @param {{ text: string, font: string, color: string }} b */
       const wrapLines = (b) => {
         meas.font = b.font;
-        const words = String(b.text).split(/\s+/);
         const lines = [];
-        let cur = '';
-        for (const w of words) {
-          const cand = cur ? cur + ' ' + w : w;
-          if (meas.measureText(cand).width > W - 2 * pad && cur) {
-            lines.push(cur); cur = w;
-          } else {
-            cur = cand;
+        for (const src of String(b.text).split(/\r?\n/)) {
+          const words = src.split(/\s+/).filter(Boolean);
+          if (!words.length) { lines.push(''); continue; }
+          let cur = '';
+          for (const w of words) {
+            const cand = cur ? cur + ' ' + w : w;
+            if (meas.measureText(cand).width > W - 2 * pad && cur) {
+              lines.push(cur); cur = w;
+            } else {
+              cur = cand;
+            }
           }
+          if (cur) lines.push(cur);
         }
-        if (cur) lines.push(cur);
         const px = parseFloat((b.font.match(/(\d+(?:\.\d+)?)px/) || ['', '13'])[1]);
         return { lines, lineH: Math.round(px * 1.4) };
       };

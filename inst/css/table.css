@@ -316,11 +316,14 @@
   margin-top: 1px;
 }
 
+/* `pre-line`, as on .dd-chart-caption: a newline in the caption text is a
+   line break, so a caption can carry a second note on its own line. */
 .dd-table-caption {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-grey-500, #6b7280);
   font-style: italic;
   padding: 4px 2px 0;
+  white-space: pre-line;
 }
 
 /* ===== Control row (search · download · gear) ===== */
