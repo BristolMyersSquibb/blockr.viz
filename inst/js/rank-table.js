@@ -861,8 +861,7 @@
                 autoValue: function (cfg) {
                   return (cfg.subtitle == null && cfg.subtitle_auto) ? cfg.subtitle_auto : "";
                 } },
-    caption:  { label: "Caption", kind: "text", multiline: true,
-                ph: "e.g. Source: ADAE",
+    caption:  { label: "Caption", kind: "text", ph: "e.g. Source: ADAE",
                 autoValue: function (cfg) {
                   return (cfg.caption == null && cfg.caption_auto) ? cfg.caption_auto : "";
                 } }

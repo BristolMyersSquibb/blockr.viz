@@ -748,8 +748,7 @@
                 hint: 'An {@arg} token prints that setting and makes the word a control on the block. [ ] drops its clause when the setting is empty.',
                 autoValue: (/** @type {any} */ cfg) =>
                   (cfg.subtitle == null && cfg.subtitle_resolved) ? cfg.subtitle_resolved : '' },
-    caption:  { label: 'Caption', kind: 'text', multiline: true,
-                ph: 'e.g. {filters} or N = {n} records',
+    caption:  { label: 'Caption', kind: 'text', ph: 'e.g. {filters} or N = {n} records',
                 autoValue: (/** @type {any} */ cfg) =>
                   (cfg.caption == null && cfg.caption_resolved) ? cfg.caption_resolved : '' }
   };

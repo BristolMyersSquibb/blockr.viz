@@ -65,6 +65,17 @@ TITLE_MAX_VALUES <- 8L
 # and `resolve_title_template()` pastes them, so an export and the block can
 # never disagree about what the sentence says.
 
+# `\n` written in a template is a line break. Every surface a template is
+# typed on is one line -- the gear's text field, a composer script's `#|`
+# declaration -- so the two characters are the only way to say "break here",
+# and they are the same two an R string takes for it in a block ctor. The
+# bands render them (`white-space: pre-line`), which is why the rule is the
+# same for the title, the subtitle and the caption.
+tt_line_breaks <- function(template) {
+  if (is.na(template)) return(template)
+  gsub("\\n", "\n", template, fixed = TRUE)
+}
+
 # Split a template into segments. Each is `list(text=, optional=)`; an
 # unmatched "[" is literal text, because a template is display copy and must
 # not error.
@@ -128,7 +139,7 @@ resolve_template_chunk <- function(text, data, args) {
 }
 
 title_template_parts <- function(template, data, args = list()) {
-  template <- as.character(template)[[1L]]
+  template <- tt_line_breaks(as.character(template)[[1L]])
   if (!length(template) || is.na(template) || !nzchar(template)) return(list())
   out <- list()
   # Arguments whose clause dropped. They are the ones a reader cannot reach:
@@ -172,7 +183,7 @@ title_template_parts <- function(template, data, args = list()) {
 }
 
 resolve_title_template <- function(template, data, args = list()) {
-  template <- as.character(template)[[1L]]
+  template <- tt_line_breaks(as.character(template)[[1L]])
   if (!nzchar(template)) return(template)
   # Nothing to resolve, and no data needed to say so.
   if (!grepl("[{[]", template)) return(template)

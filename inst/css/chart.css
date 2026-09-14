@@ -88,26 +88,6 @@
   transform: translateY(-50%);
 }
 
-/* Multiline rows (the caption: a newline in it is a line break, and an
-   <input> cannot carry one). The field keeps the popover input's chrome and
-   its commit cycle -- Enter commits, Shift+Enter breaks the line -- so only
-   the box grows, and the chip moves to the first line rather than floating
-   in the middle of it. */
-.dd-text-wrap--multi {
-  align-items: flex-start;
-}
-
-.dd-text-wrap--multi .blockr-popover-input {
-  font: inherit;
-  line-height: 1.4;
-  resize: vertical;
-}
-
-.dd-text-wrap--multi .blockr-expr-confirm {
-  top: 6px;
-  transform: none;
-}
-
 /* Fallback native select (only when Blockr.Select is unavailable) — mirror the
    canonical popover input look. */
 .dd-cfg-select {
@@ -599,12 +579,14 @@
   font-size: var(--blockr-font-size-md, 0.9375rem);
   font-weight: 600;
   color: var(--blockr-grey-800, #1f2937);
+  white-space: pre-line;
 }
 
 .dd-chart-subtitle {
   font-size: var(--blockr-font-size-sm, 0.8125rem);
   color: var(--blockr-grey-500, #6b7280);
   margin-top: 1px;
+  white-space: pre-line;
 }
 
 /* ===== Title slots ===== */
@@ -666,10 +648,11 @@
    system's dropdown hung off the word. Its chrome lives in
    blockr-select.css, so there is nothing to style here. */
 
-/* `pre-line` so a newline in the caption text is a line break: a caption
-   often carries a second note (a pooling rule, a denominator) that belongs
-   on its own line. Runs of spaces still collapse, and the text stays a text
-   node -- captions are data-derived, never HTML. */
+/* `pre-line`, like the title and subtitle bands: a newline in the text is a
+   line break, which is how a caption carries a second note (a pooling rule,
+   a denominator) on its own line. `\n` in the template is that newline
+   (R/title-template.R, tt_line_breaks). Runs of spaces still collapse, and
+   the text stays a text node -- bands are data-derived, never HTML. */
 .dd-chart-caption {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-grey-500, #6b7280);

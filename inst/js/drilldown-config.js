@@ -1653,12 +1653,8 @@
         // Commit model (design-system §5.5): typing never mutates cfg — the
         // value commits on Enter, blur or the "Enter ↵" chip, which then fades
         // to ✓; Escape reverts to the last committed value.
-        // A caption often carries a second note on its own line, and an
-        // <input> cannot hold a newline (the browser strips it out of the
-        // value), so `multiline` roles get a textarea. Same class, same
-        // commit cycle: Enter commits, Shift+Enter is the line break.
-        const inp = document.createElement(role.multiline ? 'textarea' : 'input');
-        if (role.multiline) inp.rows = 2; else inp.type = 'text';
+        const inp = document.createElement('input');
+        inp.type = 'text';
         inp.className = 'blockr-popover-input';
         // `autoValue` (optional role hook): when the stored value is null, a
         // host-computed inherited value shows as the input's CONTENT, not its
@@ -1670,7 +1666,7 @@
         inp.value = (cfg[key] == null) ? autoVal : String(cfg[key]);
         if (role.ph) inp.placeholder = role.ph;
         const wrap = document.createElement('div');
-        wrap.className = 'dd-text-wrap' + (role.multiline ? ' dd-text-wrap--multi' : '');
+        wrap.className = 'dd-text-wrap';
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'blockr-expr-confirm dd-text-commit';
@@ -1706,7 +1702,6 @@
         };
         inp.addEventListener('input', syncChip);
         inp.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' && role.multiline && e.shiftKey) return;
           if (e.key === 'Enter') { e.preventDefault(); commit(); }
           else if (e.key === 'Escape') { inp.value = committed; syncChip(); }
         });
