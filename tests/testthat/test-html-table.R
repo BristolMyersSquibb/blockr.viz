@@ -133,6 +133,33 @@ test_that("html_table() builds two-level column spanners from pipe-delimited nam
   expect_true(grepl("Week 4", html, fixed = TRUE))
 })
 
+test_that("html_table() renders per-row stub labels with optional bolding", {
+  df <- tibble::tibble(
+    .label = "Total subjects with an event",
+    `A||Any Grade (%)||(N=2)` = "1 (50.0%)",
+    `A||Grade 1 (%)||(N=2)` = "0"
+  )
+  attr(df$.label, "label") <- c(
+    "",
+    "Primary System Organ Class",
+    "Dictionary-Derived Term"
+  )
+  attr(df$.label, "label_bold") <- c(FALSE, TRUE, TRUE)
+
+  html <- as.character(htmltools::tagList(html_table(df)))
+
+  expect_true(grepl("Primary System Organ Class", html, fixed = TRUE))
+  expect_true(grepl("Dictionary-Derived Term", html, fixed = TRUE))
+  expect_equal(
+    length(gregexpr(
+      "class=\"blockr-stub-header blockr-stub-header-bold\"",
+      html,
+      fixed = TRUE
+    )[[1]]),
+    2L
+  )
+})
+
 test_that("html_table() handles mixed-depth columns via rowspan", {
   df <- tibble::tibble(
     .label           = c("n"),
