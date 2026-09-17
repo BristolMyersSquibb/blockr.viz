@@ -289,3 +289,16 @@ test_that("the block's expression carries the script and the filter together", {
     args = list(x = blk, data = list(data = function() datasets::iris))
   )
 })
+
+test_that("an assignment whose right side folds away binds NULL", {
+
+  # Same bug and fix as blockr.extra's cb_prune(); the prepare-script rewriter
+  # is a twin of it. `x <- if (FALSE) 1` must stay a three-element call, or
+  # the block dies with `incorrect number of arguments to "<-"` on a script
+  # that is valid R.
+  out <- cb_fold(quote(x <- if (FALSE) 1))
+
+  expect_length(out, 3L)
+  expect_null(eval(out))
+  expect_equal(cb_fold(quote(p + if (FALSE) g())), quote(p))
+})
