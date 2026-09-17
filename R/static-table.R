@@ -277,13 +277,10 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   # Bottom-up: leaf labels, then the merged spanner row on top, then
   # subtitle / title lines (add_header_lines prepends, so subtitle first).
   # The stub header uses the stub column's `label` attribute when the
-  # producer set one (the topline block's `first_column_label`), else blank.
-  stub_label <- attr(df[[stub_col]], "label")
-  stub_label <- if (is.character(stub_label) && length(stub_label) == 1L) {
-    stub_label
-  } else {
-    ""
-  }
+  # producer set one (the topline block's `first_column_label`, or one label
+  # per header row for an AE table's SOC / preferred term), else blank.
+  stub_hdr <- stub_header_rows(df[[stub_col]], 1L + has_spanner)
+  stub_label <- utils::tail(stub_hdr$label, 1L)
   # Through `values`, not through `...`: the labels are keyed by COLUMN NAME,
   # and a column called `x` (or `values`) then matches set_header_labels()'s
   # own formals instead of naming a column -- so `data.frame(x = ..)` failed
@@ -299,7 +296,7 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
     runs <- rle(top)
     ft <- flextable::add_header_row(
       ft,
-      values = c("", runs$values),
+      values = c(stub_hdr$label[[1L]], runs$values),
       colwidths = c(1L, runs$lengths),
       top = TRUE
     )
@@ -361,6 +358,13 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
 
   hdr_rows <- c(spanner_i, leaf_i)
   ft <- flextable::bold(ft, i = hdr_rows, part = "header")
+  # The header is bold throughout; a producer that sets `label_bold` decides
+  # for the stub cells itself.
+  if (!is.null(attr(df[[stub_col]], "label_bold", exact = TRUE)) &&
+        any(!stub_hdr$bold)) {
+    ft <- flextable::bold(ft, i = hdr_rows[!stub_hdr$bold], j = 1L,
+                          bold = FALSE, part = "header")
+  }
 
   band <- if (emphasis_mode) {
     ft_emphasis_bands(col_strong, col_emph)
@@ -476,7 +480,7 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
         ft_measured_widths(
           stub = body[data_pos, 1L],
           stub_indent = indent * indent_width,
-          stub_label = stub_label,
+          stub_label = stub_hdr$label,
           cells = body[data_pos, -1L, drop = FALSE],
           leaf = leaf, top = top,
           font = font, font_size = font_size, total = fit_width,

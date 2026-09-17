@@ -21,7 +21,9 @@
 #' - `.strong` / `.indent` -- fallback positional dialect for coerced
 #'   free-form tables (bold header rows + indented children).
 #' - `.label` -- innermost per-row identifier (stat name / factor
-#'   level). Rendered as the leftmost row-stub column.
+#'   level). Rendered as the leftmost row-stub column. A character vector
+#'   `attr(.label, "label")` supplies per-header-row stub labels; a logical
+#'   vector `attr(.label, "label_bold")` can bold selected stub header rows.
 #' - Data columns -- names use `|` as nesting delimiter for multi-level
 #'   column spanners (e.g. `"KarXT|Week 2"`). `attr(col, "label")` may
 #'   carry HTML-wrapped display text for the leaf column header.
@@ -295,6 +297,15 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
   # carries its own header on attr(col, "label"); a spanner has no column, so
   # a producer that knows its text stamps it table-level.
   spanner_labels <- annotated_spanner_labels(data)
+  stub_labels <- if (!is.null(stub_col)) {
+    attr(data[[stub_col]], "label", exact = TRUE)
+  }
+  stub_label_bold <- if (!is.null(stub_col)) {
+    stub_header_flags(attr(data[[stub_col]], "label_bold", exact = TRUE), max_depth)
+  } else {
+    logical(max_depth)
+  }
+  stub_by_row <- is.character(stub_labels) && length(stub_labels) > 1L
 
   rows <- vector("list", max_depth)
 
@@ -304,14 +315,24 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
     if (L == 1L && !is.null(stub_col)) {
       stub_class <- "blockr-stub-header"
       if (isTRUE(stub_sortable)) stub_class <- paste(stub_class, "blockr-sortable")
+      stub_class <- stub_header_class(stub_class, stub_label_bold[[1L]])
+      stub_content <- stub_header_content(
+        if (stub_by_row) stub_labels[[1L]] else stub_labels
+      )
       cells[[length(cells) + 1L]] <- htmltools::tags$th(
         class = stub_class,
-        rowspan = max_depth,
+        rowspan = if (stub_by_row) NULL else max_depth,
         `data-col-index` = if (isTRUE(stub_sortable)) 0L else NULL,
-        htmltools::HTML("&nbsp;"),
+        stub_content,
         if (isTRUE(stub_sortable)) {
           htmltools::tags$span(class = "blockr-sort-icon")
         }
+      )
+    } else if (stub_by_row && !is.null(stub_col)) {
+      stub_label <- if (L <= length(stub_labels)) stub_labels[[L]] else ""
+      cells[[length(cells) + 1L]] <- htmltools::tags$th(
+        class = stub_header_class("blockr-stub-header", stub_label_bold[[L]]),
+        stub_header_content(stub_label)
       )
     }
 
@@ -364,7 +385,10 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
         th_args <- dd_col_header_attrs(th_args, data_cols[i], col_keys)
       } else {
         path <- paste(prefix_i, collapse = "||")
-        content <- group_header_content(prefix_i[L], spanner_labels[[path]])
+        spanner_label <- if (length(spanner_labels) && path %in% names(spanner_labels)) {
+          spanner_labels[[path]]
+        }
+        content <- group_header_content(prefix_i[L], spanner_label)
         th_args <- list(
           content,
           class   = "blockr-col-header group",
@@ -385,6 +409,74 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
   }
 
   htmltools::tags$thead(rows)
+}
+
+#' Normalize per-header-row stub flags.
+#' @noRd
+stub_header_flags <- function(flags, n) {
+  if (!is.logical(flags) || !length(flags)) {
+    return(rep(FALSE, n))
+  }
+
+  flags <- rep_len(flags, n)
+  flags[is.na(flags)] <- FALSE
+  flags
+}
+
+#' The row-stub header text and bold flag for each of `n` header rows.
+#'
+#' The xlsx and pptx writers draw at most two header rows (spanner + leaf),
+#' fewer than the HTML table when the column names nest deeper. When the
+#' producer gave more labels than there are rows, the bottom ones are kept,
+#' so the label naming the innermost rows stays next to the body. A single
+#' label sits on the bottom row, where the writers always put it.
+#' @noRd
+stub_header_rows <- function(col, n) {
+  lbl <- attr(col, "label", exact = TRUE)
+  if (!is.character(lbl) || !length(lbl)) {
+    return(list(label = rep("", n), bold = rep(FALSE, n)))
+  }
+  lbl[is.na(lbl)] <- ""
+  bold <- stub_header_flags(attr(col, "label_bold", exact = TRUE), length(lbl))
+
+  idx <- if (length(lbl) == 1L) {
+    c(rep(NA_integer_, n - 1L), 1L)
+  } else if (length(lbl) >= n) {
+    utils::tail(seq_along(lbl), n)
+  } else {
+    c(seq_along(lbl), rep(NA_integer_, n - length(lbl)))
+  }
+
+  list(
+    label = ifelse(is.na(idx), "", lbl[idx]),
+    bold = !is.na(idx) & bold[idx] %in% TRUE
+  )
+}
+
+#' A row-stub header cell's CSS class.
+#' @noRd
+stub_header_class <- function(base, bold = FALSE) {
+  if (isTRUE(bold)) {
+    return(paste(base, "blockr-stub-header-bold"))
+  }
+
+  base
+}
+
+#' A row-stub header cell's content.
+#' @noRd
+stub_header_content <- function(label = NULL) {
+  if (!is.character(label) || length(label) != 1L || !nzchar(label)) {
+    return(htmltools::HTML("&nbsp;"))
+  }
+
+  parts <- strsplit(label, "\n", fixed = TRUE)[[1L]]
+  parts <- parts[nzchar(parts)]
+  if (!length(parts)) {
+    return(htmltools::HTML("&nbsp;"))
+  }
+
+  htmltools::HTML(paste(htmltools::htmlEscape(parts), collapse = "<br>"))
 }
 
 #' Tag a header cell with its column claim, when the producer named one.
@@ -1036,6 +1128,10 @@ input.blockr-search:focus {
 .blockr-html-table-container .blockr-table thead th.blockr-stub-header {
   text-align: left;
   border-bottom: 1px solid var(--stbl-hair-strong);
+}
+.blockr-html-table-container .blockr-table thead th.blockr-stub-header.blockr-stub-header-bold {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--stbl-ink-1);
 }
 /* Stat-label (row-stub) cells \u2014 wrap to 2 lines (never truncate), aligned
    to the top so a wrapped label stays level with its numbers. Typography

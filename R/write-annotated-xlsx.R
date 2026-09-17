@@ -118,8 +118,23 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
     textDecoration = "bold", halign = "center", valign = "bottom",
     border = "bottom", borderStyle = "thin")
 
+  # Stub header cells: one label per header row when the producer set them
+  # (see stub_header_rows()), left-aligned like the stub below them.
+  stub_hdr <- stub_header_rows(df[[stub_col]], 1L + has_spanner)
+  write_stub_header <- function(i, row, border = NULL, border_style = NULL) {
+    if (!nzchar(stub_hdr$label[[i]])) return(invisible())
+    openxlsx::writeData(wb, sheet, stub_hdr$label[[i]], startRow = row,
+                        startCol = 1L)
+    openxlsx::addStyle(wb, sheet, openxlsx::createStyle(
+      textDecoration = if (stub_hdr$bold[[i]]) "bold" else NULL,
+      halign = "left", valign = "bottom", wrapText = TRUE,
+      border = border, borderStyle = border_style %||% "thin"),
+      rows = row, cols = 1L)
+  }
+
   header_top_row <- r
   if (has_spanner) {
+    write_stub_header(1L, r)
     runs <- rle(top)
     pos <- 2L
     for (i in seq_along(runs$lengths)) {
@@ -136,11 +151,12 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
     }
     r <- r + 1L
   }
-  # Leaf header row (stub header blank).
+  # Leaf header row.
   openxlsx::writeData(wb, sheet, t(c("", leaf)), startRow = r, startCol = 1L,
                       colNames = FALSE)
   openxlsx::addStyle(wb, sheet, header_style, rows = r, cols = seq_len(n_col),
                      gridExpand = TRUE)
+  write_stub_header(1L + has_spanner, r, "bottom", "medium")
   header_bottom_row <- r
   r <- r + 1L
 
