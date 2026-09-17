@@ -191,3 +191,16 @@ test_that("subtitle alone and caption alone still write", {
   flat <- unlist(openxlsx::read.xlsx(f, colNames = FALSE), use.names = FALSE)
   expect_true(all(c("Sub only", "Cap only") %in% flat))
 })
+
+test_that("write_annotated_xlsx() writes one stub header label per header row", {
+  skip_if_not_installed("openxlsx")
+  df <- tibble::tibble(.label = "n", `A||Any Grade` = "1", `A||Grade 3+` = "0")
+  attr(df$.label, "label") <- c("", "Primary System Organ Class",
+                                "Dictionary-Derived Term")
+  f <- withr::local_tempfile(fileext = ".xlsx")
+  write_annotated_xlsx(df, f)
+  got <- openxlsx::read.xlsx(f, colNames = FALSE, skipEmptyRows = FALSE)
+  # Two header rows in the sheet, so the bottom two labels are kept.
+  expect_equal(got[1:2, 1], c("Primary System Organ Class",
+                              "Dictionary-Derived Term"))
+})

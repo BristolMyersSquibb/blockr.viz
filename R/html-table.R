@@ -423,6 +423,36 @@ stub_header_flags <- function(flags, n) {
   flags
 }
 
+#' The row-stub header text and bold flag for each of `n` header rows.
+#'
+#' The xlsx and pptx writers draw at most two header rows (spanner + leaf),
+#' fewer than the HTML table when the column names nest deeper. When the
+#' producer gave more labels than there are rows, the bottom ones are kept,
+#' so the label naming the innermost rows stays next to the body. A single
+#' label sits on the bottom row, where the writers always put it.
+#' @noRd
+stub_header_rows <- function(col, n) {
+  lbl <- attr(col, "label", exact = TRUE)
+  if (!is.character(lbl) || !length(lbl)) {
+    return(list(label = rep("", n), bold = rep(FALSE, n)))
+  }
+  lbl[is.na(lbl)] <- ""
+  bold <- stub_header_flags(attr(col, "label_bold", exact = TRUE), length(lbl))
+
+  idx <- if (length(lbl) == 1L) {
+    c(rep(NA_integer_, n - 1L), 1L)
+  } else if (length(lbl) >= n) {
+    utils::tail(seq_along(lbl), n)
+  } else {
+    c(seq_along(lbl), rep(NA_integer_, n - length(lbl)))
+  }
+
+  list(
+    label = ifelse(is.na(idx), "", lbl[idx]),
+    bold = !is.na(idx) & bold[idx] %in% TRUE
+  )
+}
+
 #' A row-stub header cell's CSS class.
 #' @noRd
 stub_header_class <- function(base, bold = FALSE) {

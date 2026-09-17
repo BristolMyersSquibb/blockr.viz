@@ -362,3 +362,25 @@ test_that("a column of counts is served before a stub that wraps well", {
   expect_true(all(w[-1L] >= need))
   expect_gt(w[[1L]], max(w[-1L]))
 })
+
+test_that("static_table() puts per-row stub labels in the header", {
+  skip_if_not_installed("flextable")
+  df <- tibble::tibble(.label = "n", `A||Any Grade` = "1", `A||Grade 3+` = "0")
+  attr(df$.label, "label") <- c("Primary System Organ Class",
+                                "Dictionary-Derived Term")
+  ft <- static_table(df)
+  hdr <- flextable::information_data_chunk(ft)
+  hdr <- hdr[hdr$.part == "header" & hdr$.col_id == ".label", ]
+  expect_equal(hdr$txt, c("Primary System Organ Class",
+                            "Dictionary-Derived Term"))
+})
+
+test_that("stub_header_rows() aligns labels to the header rows", {
+  one <- structure("n", label = "Statistic")
+  expect_equal(stub_header_rows(one, 2L)$label, c("", "Statistic"))
+  three <- structure("x", label = c("", "SOC", "PT"),
+                     label_bold = c(FALSE, TRUE, FALSE))
+  expect_equal(stub_header_rows(three, 2L),
+               list(label = c("SOC", "PT"), bold = c(TRUE, FALSE)))
+  expect_equal(stub_header_rows("x", 2L)$label, c("", ""))
+})
