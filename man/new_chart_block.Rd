@@ -52,7 +52,7 @@ new_chart_block(
   waterfall_totals = NULL,
   title = NULL,
   subtitle = NULL,
-  caption = NULL,
+  caption = getOption("blockr.viz.default_caption"),
   count_on = "off",
   count_col = NULL,
   na_group = "level",
@@ -260,7 +260,10 @@ to 0 and they draw the absolute running cumulative. Default \code{NULL} (every
 bar is a relative delta).}
 
 \item{title, subtitle, caption}{Chart text, rendered above (title, subtitle)
-and below (caption) the chart. Each is one of three tiers: \code{NULL}
+and below (caption) the chart. \code{caption} defaults to the option
+\code{blockr.viz.default_caption} (unset = \code{NULL}), so a deployment can caption
+every new chart, e.g. \code{options(blockr.viz.default_caption = "{filters}")}.
+Each is one of three tiers: \code{NULL}
 (default) = auto -- each slot falls back to the input data frame's
 table-level display attribute (\code{label} for the title, \code{subtitle},
 \code{caption}) when one is present; \code{""} = explicitly none (suppresses the
@@ -348,16 +351,13 @@ showing a cohort that anyone else can reset.}
 
 \item{ctrl_table}{Character(1), beta. Name of the table in the target's
 \code{dm} the pushed conditions apply to (e.g. \code{"adsl"}). Leave empty when
-the target filters a plain data frame.
-Expose the roles a reader should steer, not the ones that say what the
-exhibit IS: a waterfall's \code{group} is one bar per subject, and a shift
-plot's axes are fixed because a shift against a percent change means
-nothing. Optional roles carry a leading \code{"(none)"}, so faceting can be
-switched off without the control disappearing.
+the target filters a plain data frame.}
 
-In the gear, the Mapping header's "On block" checkbox and the up-arrow
-pin on each mapping row write this argument, so it can be set by hand or
-by clicking. What a role OFFERS is a separate question, answered by
+\item{script, values}{Experimental prepare script. \code{script} is R code run
+on the incoming data before the chart sees it; its top-level plain-value
+assignments become controls on the block's face, and \code{values} holds
+their current settings. \code{NULL} (default) = no script. Not on the AI
+surface. A script that reshapes the data should end with
 \code{\link[=mark_column_kinds]{mark_column_kinds()}}.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}

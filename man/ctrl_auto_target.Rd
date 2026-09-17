@@ -19,8 +19,8 @@ where to send by the board rather than by its own configuration: the one
 carries none -- the one value filter block, if there is exactly one.
 }
 \details{
-Two or more candidates of a class resolve to nothing rather than to a
-winner: with several filter blocks in play only the board author knows
-which one means "the cohort the user just drilled into", so the sender
-stays quiet and the gear's target picker is there to name one.
+Two or more candidates resolve to nothing rather than to a winner: with
+several filter blocks in play only the board author knows which one means
+"the cohort the user just drilled into", so the sender stays quiet and the
+gear's target picker is there to name one.
 }

@@ -46,7 +46,7 @@ test_that("a named column gets header keys, an unnamed one stays inert", {
     collapse = "\n"
   )
   expect_match(html, "dd-col-drill")
-  expect_match(html, 'data-dd-colkeys=', fixed = TRUE)
+  expect_match(html, "data-dd-colkeys=", fixed = TRUE)
   expect_match(html, "data-dd-colkeys-map")
   # Two arms are named; Total is not, so exactly two leaf headers plus two
   # spanners carry keys and the Total header carries none.

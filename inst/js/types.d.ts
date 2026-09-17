@@ -23,6 +23,8 @@ interface VizColumn {
   n_unique?: number;
   /** factor-level ordering (chart category sort); absent for non-factor columns */
   levels?: string[];
+  /** mark_column_kinds() tag; absent when the frame carries no marks */
+  kind?: string;
 }
 
 /* --- Table data-push payload (table-block.R -> table.js) ---
@@ -168,9 +170,20 @@ interface BlockrSelectMultiConfig {
   [opt: string]: unknown;
 }
 
+interface BlockrSelectMenuConfig {
+  options?: BlockrSelectOption[];
+  selected?: string | null;
+  title?: string;
+  onChange?: (value: string) => void;
+  onClose?: () => void;
+  [opt: string]: unknown;
+}
+
 interface BlockrSelectStatic {
   single(container: HTMLElement, config: BlockrSelectSingleConfig): BlockrSelectSingleHandle;
   multi(container: HTMLElement, config: BlockrSelectMultiConfig): BlockrSelectMultiHandle;
+  /** A menu opened from an anchor (a caption word); absent before blockr.dplyr added it. */
+  menu?(anchor: HTMLElement, config: BlockrSelectMenuConfig): { close(): void };
 }
 
 interface BlockrNamespace {
@@ -199,6 +212,12 @@ interface BlockrNamespace {
     set(v: boolean): void;
     get(): boolean;
   };
+  /** Commit-on-Enter text input with the "Enter" chip (blockr-core.js);
+      absent on a page without blockr-core.js. */
+  textCommit?(
+    input: HTMLInputElement,
+    opts: { onCommit: (value: string) => void }
+  ): { chip: HTMLButtonElement; commit(): void; sync(value: string): void };
   [member: string]: unknown;
 }
 

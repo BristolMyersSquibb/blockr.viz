@@ -383,7 +383,7 @@
     const lines = [];
     let hard = false;
     let cur = '';
-    const pushWord = (word) => {
+    const pushWord = (/** @type {string} */ word) => {
       // A word that does not fit a line of its own: break it, and keep
       // breaking, rather than lose the tail.
       let rest = word;
@@ -1047,6 +1047,16 @@
       this._legendOff = new Set();
       /** @type {string | null} */
       this._legendKey = null;
+      // The caption word whose menu is open, its anchor and the menu handle.
+      /** @type {string | null} */
+      this._slotKey = null;
+      /** @type {HTMLElement | null} */
+      this._slotAnchor = null;
+      /** @type {{ close(): void } | null} */
+      this._slotMenu = null;
+      // Choices the func toggle was last built for, joined.
+      /** @type {string | null} */
+      this._funcToggleKey = null;
       // Per-render one-pass caches for the per-panel raw-data scans (axis
       // counts / tooltip representative values); reset in _renderAggregated.
       /** @type {Map<string, Map<string, any>> | null} */
@@ -1917,7 +1927,7 @@
       this._paintOffers(el, offers);
     }
 
-    /* The settings the sentence would name if they were set.
+    /** The settings the sentence would name if they were set.
      *
      * A clause in brackets leaves with its value, and takes the word that
      * would open it: promoting `facet` on a chart that has no facet promotes
@@ -1927,7 +1937,8 @@
      * more unset settings than a caption can offer, and the gear is the right
      * surface for that.
      *
-     * @param {HTMLElement} el @param {any[]} [offers]
+     * @param {HTMLElement} el
+     * @param {any[]} [offers]
      */
     _paintOffers(el, offers) {
       if (!Array.isArray(offers) || !offers.length) return;
@@ -2339,7 +2350,7 @@
       const slot = ((availW > 0 ? availW : 600) - SCROLLBAR) / n;
       const base = { color: AXIS_LABEL_COLOR, fontSize: 11, interval: 0,
                      lineHeight: LABEL_LINE_H };
-      const measure = (s) => ctx.measureText(String(s ?? '')).width;
+      const measure = (/** @type {any} */ s) => ctx.measureText(String(s ?? '')).width;
 
       if (widest + PAD <= slot) {
         // One line each, nothing to decide.
@@ -3816,6 +3827,7 @@
       // tells a reader what the number is a share of, where "% of group" tells
       // them how the chart is configured.
       const pctName = () => {
+        /** @type {Record<string, any>} */
         const roleCol = { facet: this.config.facet, group: this.config.group,
                           color: this.config.color };
         const roles = (Array.isArray(this.config.pct_of) ? this.config.pct_of
@@ -6845,6 +6857,7 @@
 
     _sendConfig() {
       if (!this.el.id) return;
+      /** @type {Record<string, any>} */
       const msg = {
         action: 'config',
         group: this.config.group,
@@ -7082,15 +7095,15 @@
   // The host is parked outside the viewport rather than display:none: a
   // hidden element measures zero and the composer needs real geometry. One
   // host per request, disposed after, so nothing carries over between charts.
+  let captureSeq = 0;
   /** @param {number} w @param {number} h */
   const captureHost = (w, h) => {
     const wrap = document.createElement('div');
     wrap.className = 'blockr-capture-host';
     wrap.style.cssText = 'position:fixed;left:-20000px;top:0;' +
       'width:' + w + 'px;height:' + h + 'px;';
-    const el = document.createElement('div');
-    el.id = 'blockr-capture-chart-' +
-      (captureHost.n = (captureHost.n || 0) + 1);
+    const el = /** @type {any} */ (document.createElement('div'));
+    el.id = 'blockr-capture-chart-' + (++captureSeq);
     el.className = 'drilldown-chart-container';
     el.style.cssText = 'width:' + w + 'px;height:' + h + 'px;';
     wrap.appendChild(el);
@@ -7109,7 +7122,8 @@
   const whenDrawn = (inst, then, tries) => {
     const left = tries === undefined ? 50 : tries;
     const ready = (inst._slots || []).some(
-      s => s && s.chart && s.chartDiv && s.chartDiv.clientHeight > 40);
+      (/** @type {any} */ s) => s && s.chart && s.chartDiv &&
+        s.chartDiv.clientHeight > 40);
     if (ready || left <= 0) {
       setTimeout(then, CAPTURE_SETTLE_MS);
       return;
@@ -7148,7 +7162,8 @@
       try {
         el._block._downloadImage(false, {
           pixelRatio: msg.ratio,
-          done: (url, w, h) => {
+          done: (/** @type {string} */ url, /** @type {number} */ w,
+                 /** @type {number} */ h) => {
             reply({ png: url, width: w, height: h });
             // Its own wrapper, not whatever currently answers to the id: two
             // requests in flight would otherwise tear down each other's host.

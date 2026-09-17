@@ -46,7 +46,8 @@ registry_allowlist <- list(
     # (excel_download / html_download / pptx_download are LEGACY restore-only
     # formals folding into `download`: no longer external_ctrl, so like the
     # filter_spread_* pair above they are not listed here.)
-    "max_height", "sortable", "collapsible", "search", "download"
+    "max_height", "sortable", "collapsible", "search", "download",
+    "rotate_titles"
   ),
   tile = c(
     # Runtime filter transport (see the table's filter_* above).
