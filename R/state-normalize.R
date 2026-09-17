@@ -101,4 +101,3 @@ num_vec_state <- function(x) {
 
   if (!length(x)) NULL else x
 }
-

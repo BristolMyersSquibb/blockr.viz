@@ -284,7 +284,8 @@ test_that("drill = 'auto' keeps the display subset even when a source exists", {
 })
 
 test_that("drill = 'source' errors when nothing stamped a source", {
-  wide <- structured_fixture()   # no source_data attribute
+  wide <- structured_fixture()
+  attr(wide, "source_data") <- NULL   # summary_table() stamps one
   blk <- new_table_block(drill = "source")
 
   testServer(blk$expr_server, args = list(data = reactive(wide)), {

@@ -675,6 +675,7 @@
       return out;
     }
 
+    /** @param {any} keys */
     function markCol(keys) {
       clearColActive();
       var e = colEls(keys);

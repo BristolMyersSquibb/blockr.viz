@@ -28,7 +28,7 @@
     // Top n: a number field committing on Enter / blur (Blockr.textCommit,
     // the shared control -- it also owns the "Enter ↵" chip). Per-keystroke
     // would re-render the whole matrix on the way to "25".
-    var topn = /** @type {HTMLInputElement|null} */ (root.querySelector('.hmb-topn'));
+    const topn = /** @type {HTMLInputElement|null} */ (root.querySelector('.hmb-topn'));
     if (topn) {
       // Read live, never captured: the toolbar is wired once and the body
       // payload rewrites `max` every time the frame changes.
@@ -56,7 +56,7 @@
       };
       if (typeof Blockr !== 'undefined' && Blockr.textCommit) {
         commit = Blockr.textCommit(topn, {
-          onCommit: function (v) { apply(v); }
+          onCommit: function (/** @type {string} */ v) { apply(v); }
         });
       } else {
         // No shared helper (a page without blockr-core.js): same
@@ -65,7 +65,7 @@
       }
     }
 
-    var nums = /** @type {HTMLInputElement|null} */ (
+    const nums = /** @type {HTMLInputElement|null} */ (
       root.querySelector('.hmb-nums input'));
     if (nums) {
       nums.addEventListener('change', function () {

@@ -167,7 +167,8 @@
    * rounding belongs to the consumers (tooltip / label formatters).
    * @param {any[]} rows
    * @param {{group?: string, color?: string, facet?: string,
-   *          value?: string, func?: string}} cfg
+   *          value?: string, func?: string, na_group?: string,
+   *          pct_of?: string | string[]}} cfg
    */
   function aggregate(rows, cfg) {
     const { group, color, facet, value, func, na_group, pct_of } = cfg || {};
@@ -176,7 +177,7 @@
     // A key is missing when it stringifies to '' — the same fold the golden
     // cross-test applies to R's NA, so both engines drop the same rows.
     const dropNa = na_group === 'drop';
-    const cellCols = [group, facet, color].filter(Boolean);
+    const cellCols = /** @type {string[]} */ ([group, facet, color].filter(Boolean));
     const incomplete = (/** @type {any} */ row) =>
       cellCols.some(c => String(row[c] ?? '') === '');
     const usable = (/** @type {any} */ v) =>

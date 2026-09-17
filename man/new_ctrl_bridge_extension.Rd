@@ -7,7 +7,7 @@
 new_ctrl_bridge_extension(...)
 }
 \arguments{
-\item{...}{Forwarded to \code{\link[blockr.dock:extension]{blockr.dock::new_dock_extension()}}. On restore, dock
+\item{...}{Forwarded to \code{blockr.dock::new_dock_extension()}. On restore, dock
 calls this constructor with the \code{ctor}/\code{pkg} it recorded, so the dots must
 be here for a saved board to come back.}
 }

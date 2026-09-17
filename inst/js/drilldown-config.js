@@ -105,7 +105,7 @@
         this._scriptRoles()[this._slotCfgKey(key)];
     }
 
-    /* The config key behind a word in the sentence.
+    /** The config key behind a word in the sentence.
      *
      * A template names a script value by the variable the script declares
      * (`{@param}`), while the control channel keys it `sv_param`
@@ -287,7 +287,7 @@
       const extra = this._filterEntries(spec.mapping || [])
         .map((/** @type {any} */ e) => e.role)
         .filter((/** @type {string} */ k) => !this.h.secondary || !this.h.secondary.has(k));
-      return [].concat(
+      return /** @type {string[]} */ ([]).concat(
         spec.requiredMap || [],
         extra,
         this._filterEntries(spec.optionalMap || []).map((/** @type {any} */ e) => e.role)
@@ -732,7 +732,8 @@
 
     /**
      * @param {string} titleText
-     * @param {{ toggle?: { checked: boolean, onToggle: (on: boolean) => void } }} [opts]
+     * @param {{ toggle?: { checked: boolean, onToggle: (on: boolean) => void },
+     *          action?: HTMLElement }} [opts]
      *   When `toggle` is given the header carries a checkbox (Variant A): the
      *   section is a capability that is off by default and reveals its body only
      *   when checked.
@@ -899,7 +900,7 @@
       this._renderEntries(this._sectionEl(titleText), list);
     }
 
-    /** @param {HTMLElement} container @param {string} key @param {{ required?: boolean, removable?: boolean }} [opts] */
+    /** @param {HTMLElement} container @param {string} key @param {{ required?: boolean, removable?: boolean, band?: boolean }} [opts] */
     _renderRole(container, key, opts = {}) {
       const role = this._role(key);
       const paired = !!(role.pairedWith && this._entryApplicable(role.pairedWith));
@@ -1819,7 +1820,7 @@
       parent.appendChild(wrap);
     }
 
-    /* The options behind a word in the block's sentence.
+    /** The options behind a word in the block's sentence.
      *
      * Same lists the gear's rows get, so a slot can never offer a column the
      * gear would refuse. Returns null for the kinds a menu cannot carry (a
@@ -1857,7 +1858,7 @@
       return null;
     }
 
-    /* Is this word a flag? A flag toggles in place: a menu of two words is a
+    /** Is this word a flag? A flag toggles in place: a menu of two words is a
      * menu too many (blockr.docs design-system/pinned-controls.md).
      * @param {string} key
      */
@@ -1866,7 +1867,7 @@
       return (sp && sp.kind === 'segmented') ? sp : null;
     }
 
-    /* Write a role from outside the gear's own rows.
+    /** Write a role from outside the gear's own rows.
      *
      * The one place that knows what a pick means: '(none)' is stored as '',
      * a column pick is remembered for the role, a select that gates other

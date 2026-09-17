@@ -6,7 +6,8 @@
 // argv: <path to heatmap-block.js> <path to model JSON> <path to write rows>
 const fs = require('fs');
 const [srcPath, modelPath, outPath] = process.argv.slice(2);
-const src = fs.readFileSync(srcPath, 'utf8');
+// A Windows checkout carries CRLF, and the markers below are LF.
+const src = fs.readFileSync(srcPath, 'utf8').replace(/\r\n/g, '\n');
 const start = src.indexOf('  /** @param {string} x */\n  function esc(');
 const endMark = "    return out.join('');\n  }";
 const end = src.indexOf(endMark) + endMark.length;

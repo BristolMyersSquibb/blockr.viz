@@ -616,7 +616,7 @@ ctrl_receipt_dep <- memoise0(function() {
 #' *before* the bridge was added to the app carry their old extension list and
 #' come back without a channel -- they need one re-save.
 #'
-#' @param ... Forwarded to [blockr.dock::new_dock_extension()]. On restore, dock
+#' @param ... Forwarded to `blockr.dock::new_dock_extension()`. On restore, dock
 #'   calls this constructor with the `ctor`/`pkg` it recorded, so the dots must
 #'   be here for a saved board to come back.
 #'

@@ -261,15 +261,11 @@
 #' @param ctrl_table Character(1), beta. Name of the table in the target's
 #'   `dm` the pushed conditions apply to (e.g. `"adsl"`). Leave empty when
 #'   the target filters a plain data frame.
-#'   Expose the roles a reader should steer, not the ones that say what the
-#'   exhibit IS: a waterfall's `group` is one bar per subject, and a shift
-#'   plot's axes are fixed because a shift against a percent change means
-#'   nothing. Optional roles carry a leading `"(none)"`, so faceting can be
-#'   switched off without the control disappearing.
-#'
-#'   In the gear, the Mapping header's "On block" checkbox and the up-arrow
-#'   pin on each mapping row write this argument, so it can be set by hand or
-#'   by clicking. What a role OFFERS is a separate question, answered by
+#' @param script,values Experimental prepare script. `script` is R code run
+#'   on the incoming data before the chart sees it; its top-level plain-value
+#'   assignments become controls on the block's face, and `values` holds
+#'   their current settings. `NULL` (default) = no script. Not on the AI
+#'   surface. A script that reshapes the data should end with
 #'   [mark_column_kinds()].
 #' @param ... Forwarded to [blockr.core::new_transform_block()]
 #'

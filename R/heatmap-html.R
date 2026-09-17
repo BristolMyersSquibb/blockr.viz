@@ -146,7 +146,7 @@ hmb_checkbox <- function(cls, label, checked) {
       htmltools::HTML(paste0(
         '<svg width="10" height="10" viewBox="0 0 16 16" ',
         'fill="currentColor"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 ',
-        '7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646',
+        "7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646",
         '-6.647a.5.5 0 0 1 .708 0"/></svg>'
       ))
     ),
@@ -484,7 +484,7 @@ hmb_body <- function(data, row = NULL, col = NULL, color = NULL,
     table = as.character(
       htmltools::tags$table(class = "hmb-table", thead, tbody)
     ),
-    count = sprintf("%d × %d of %d %s", n, k, n_terms, prep$col_col),
+    count = sprintf("%d \u00d7 %d of %d %s", n, k, n_terms, prep$col_col),
     top_max = top_max,
     top_val = min(max(as.integer(top_n), 1L), top_max),
     row_col = prep$row_col,
@@ -543,7 +543,7 @@ hmb_chrome <- function(elem_id = NULL, cell_numbers = TRUE, drill = FALSE,
     hmb_checkbox("hmb-nums", "Cell numbers", cell_numbers),
     htmltools::tags$span(class = "hmb-tb-spacer"),
     htmltools::tags$input(
-      type = "search", class = "hmb-search", placeholder = "Search…"
+      type = "search", class = "hmb-search", placeholder = "Search\u2026"
     ),
     download_slot
   )
