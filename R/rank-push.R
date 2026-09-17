@@ -288,6 +288,55 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
             g
           })))
       }
+    } else if (identical(p$kind, "pair")) {
+      # The dumbbell: `from` and `to` as positions, the segment between them
+      # as [left, width] (either direction), the band per row, the reference
+      # line once per column. Every number rounded here; emitters only print.
+      a <- rows[[p$cols[["a"]]]]
+      b <- rows[[p$cols[["b"]]]]
+      lo <- rows[[p$cols[["lo"]]]]
+      hi <- rows[[p$cols[["hi"]]]]
+      dmn <- p$dmin %||% mn
+      dmx <- p$dmax %||% mx
+      band <- !(is.na(lo) & is.na(hi))
+      blo <- ifelse(is.na(lo), dmn, lo)
+      bhi <- ifelse(is.na(hi), dmx, hi)
+      both <- !is.na(a) & !is.na(b)
+      fi <- rows[[p$fidx]]
+      di <- rows[[p$didx]]
+      # A `to` outside the band is drawn open: the range is the question the
+      # band asks, so the mark answers it without a tooltip.
+      open <- band & !is.na(b) & (b < blo | b > bhi)
+      wd <- p$words %||% list(from = "From", to = "To")
+      delta <- b - a
+      tip <- ifelse(is.na(a) & is.na(b), "", rank_esc(paste0(
+        ifelse(is.na(a), "", paste0(wd$from, " ", lane_fmt(a))),
+        ifelse(both, " \u2192 ", ""),
+        ifelse(is.na(b), "", paste0(wd$to, " ", lane_fmt(b))),
+        ifelse(both, paste0(" (", ifelse(delta >= 0, "+", ""),
+                            lane_fmt(delta), ")"), ""),
+        ifelse(band, paste0(" \u00b7 range ",
+                            ifelse(is.na(lo), "", lane_fmt(lo)), "\u2013",
+                            ifelse(is.na(hi), "", lane_fmt(hi))), "")
+      )))
+      disp <- ifelse(both, paste0(ifelse(delta >= 0, "+", ""),
+                                  lane_fmt(delta)), "")
+      fills <- as.character(p$fills %||% character())
+      list(kind = "pair",
+           a = pos_w(a), b = pos_w(b),
+           l = ifelse(both, pos_w(pmin(a, b)), NA_real_),
+           w = ifelse(both, span_w(pmin(a, b), pmax(a, b)), NA_real_),
+           bl = ifelse(band, pos_w(blo), NA_real_),
+           bw = ifelse(band, span_w(blo, bhi), NA_real_),
+           rf = if (!is.null(p$ref)) pos_w(p$ref) else NA_real_,
+           fill = if (length(fills)) {
+             ifelse(is.na(fi), NA_character_, fills[pmax(1L, fi)])
+           } else {
+             rep(NA_character_, n)
+           },
+           dash = !is.na(di) & di > 1L,
+           open = open, tip = tip, v = sortv(b),
+           disp = disp, dw = max(c(1L, nchar(disp))))
     } else if (identical(p$kind, "interval")) {
       # Swimlane segments: [left, width, fill-index] triples per row, plus a
       # pre-escaped tooltip per segment. The domain is the observed x/xend
@@ -581,7 +630,7 @@ rank_axis_domain <- function(p, prep = NULL) {
     length(a) && length(b) && is.finite(a) && is.finite(b) && b > a
   }
   kind <- p$kind %||% ""
-  if (kind %in% c("box", "pointrange")) {
+  if (kind %in% c("box", "pointrange", "pair")) {
     if (!ok(p$dmin, p$dmax)) return(NULL)
     return(list(d0 = p$dmin, d1 = p$dmax))
   }
@@ -735,6 +784,9 @@ rank_cells_html <- function(m, expanded = FALSE) {
       }
       paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
              rank_barwrap(inner, c), "</td>")
+    } else if (identical(c$kind, "pair")) {
+      paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
+             rank_barwrap(rank_pair_html(c), c), "</td>")
     } else if (identical(c$kind, "interval")) {
       paste0("<td class=\"blockr-rank-bar-col",
              if (isTRUE(c$lg)) " blockr-rank-wide" else "", "\"",
@@ -969,6 +1021,54 @@ rank_pr_html <- function(c) {
   }, character(1L))
 }
 
+#' The pair cell: band, reference line, the linking segment, then the two
+#' marks, in that order so the marks paint on top. Byte-identical to
+#' pairHtml() in rank-table.js.
+#' @noRd
+rank_pair_html <- function(c) {
+  n <- length(c$a)
+  pos <- function(v) paste0("left:", rank_fmt_w(v), "%")
+  vapply(seq_len(n), function(i) {
+    fill <- c$fill[[i]]
+    paste0(
+      "<div class=\"blockr-rank-lane blockr-rank-pacell",
+      if (isTRUE(c$dash[[i]])) " is-dash" else "", "\"",
+      if (!is.na(fill)) paste0(" style=\"--blockr-rank-fill:", fill, "\"") else "",
+      if (nzchar(c$tip[[i]])) paste0(" title=\"", c$tip[[i]], "\"") else "",
+      ">",
+      if (!is.na(c$bw[[i]])) {
+        paste0("<i class=\"lane-band\" style=\"", pos(c$bl[[i]]), ";width:",
+               rank_fmt_w(c$bw[[i]]), "%\"></i>")
+      } else {
+        ""
+      },
+      if (!is.na(c$rf)) {
+        paste0("<i class=\"lane-ref\" style=\"", pos(c$rf), "\"></i>")
+      } else {
+        ""
+      },
+      if (!is.na(c$w[[i]])) {
+        paste0("<i class=\"lane-link\" style=\"", pos(c$l[[i]]), ";width:",
+               rank_fmt_w(c$w[[i]]), "%\"></i>")
+      } else {
+        ""
+      },
+      if (!is.na(c$a[[i]])) {
+        paste0("<i class=\"lane-from\" style=\"", pos(c$a[[i]]), "\"></i>")
+      } else {
+        ""
+      },
+      if (!is.na(c$b[[i]])) {
+        paste0("<i class=\"lane-to", if (isTRUE(c$open[[i]])) " is-open" else "",
+               "\" style=\"", pos(c$b[[i]]), "\"></i>")
+      } else {
+        ""
+      },
+      "</div>"
+    )
+  }, character(1L))
+}
+
 #' A colour-split distribution cell: one lane per level, in level order,
 #' each in the level's colour and each carrying its own tooltip. A level
 #' with no rows in this group draws NO lane, so a table grouped by subject
@@ -1150,6 +1250,13 @@ rank_flat_payload <- function(m) {
       } else {
         out <- c(out, pack(c))
       }
+    } else if (identical(c$kind, "pair")) {
+      for (nm in c("a", "b", "l", "w", "bl", "bw")) out[[nm]] <- arr(c[[nm]])
+      out$fill <- arr(c$fill)
+      out$dash <- arr(c$dash)
+      out$open <- arr(c$open)
+      out$tip <- arr(as.character(c$tip))
+      if (!is.na(c$rf)) out$rf <- c$rf
     } else if (identical(c$kind, "interval")) {
       # Per-row lists stay arrays even at length one: a collapsed tips vector
       # would index as characters in JS (the auto_unbox trap).

@@ -110,7 +110,7 @@ rp_layout <- function(m, prep, width_in, fs = 9, family = "sans",
 
   kind <- vapply(m$cols, function(c) c$kind %||% "num", character(1L))
   is_glyph <- kind %in% c("bar", "barsplit", "bardiv", "box", "pointrange",
-                          "interval", "sparkline")
+                          "pair", "interval", "sparkline")
 
   # Fixed columns: the widest of the header and its cells.
   fixed <- vapply(seq_along(m$cols), function(i) {
@@ -286,6 +286,54 @@ rp_pr <- function(c, i, x, w, ytop, gl, fill = RP_FILL) {
                r = grid::unit(gl$px * 4, "in"),
                gp = grid::gpar(fill = fill, col = "#ffffff", lwd = 1.2))
   ))
+}
+
+# The pair (dumbbell): band, reference line, link, a hollow diamond at
+# `from` and a dot at `to`, open when it falls outside the band.
+rp_pair <- function(c, i, x, w, ytop, gl) {
+  h <- gl$lane
+  y <- ytop + (gl$row_h - h) / 2
+  mid <- y + h / 2
+  fill <- c$fill[[i]]
+  if (is.na(fill)) fill <- RP_FILL
+  out <- list()
+  if (!is.na(c$bw[[i]])) {
+    out <- c(out, list(rp_rect(rp_lane_x(c$bl[[i]], x, w), c$bw[[i]] / 100 * w,
+                               y, h, "#eeede8", gl)))
+  }
+  if (!is.na(c$rf)) {
+    rx <- rp_lane_x(c$rf, x, w)
+    out <- c(out, list(grid::segmentsGrob(
+      grid::unit(rx, "in"), grid::unit(gl$H - ytop, "in"),
+      grid::unit(rx, "in"), grid::unit(gl$H - ytop - gl$row_h, "in"),
+      gp = grid::gpar(col = "#8d8b84", lwd = 0.8, lty = "dashed"))))
+  }
+  if (!is.na(c$w[[i]])) {
+    x1 <- rp_lane_x(c$l[[i]], x, w)
+    x2 <- x1 + c$w[[i]] / 100 * w
+    out <- c(out, list(grid::segmentsGrob(
+      grid::unit(x1, "in"), grid::unit(gl$H - mid, "in"),
+      grid::unit(x2, "in"), grid::unit(gl$H - mid, "in"),
+      gp = grid::gpar(col = fill, lwd = 1.6,
+                      lty = if (isTRUE(c$dash[[i]])) "dashed" else "solid"))))
+  }
+  r <- gl$px * 4
+  if (!is.na(c$a[[i]])) {
+    ax <- rp_lane_x(c$a[[i]], x, w)
+    out <- c(out, list(grid::polygonGrob(
+      x = grid::unit(ax + c(0, r, 0, -r), "in"),
+      y = grid::unit(gl$H - mid + c(r, 0, -r, 0), "in"),
+      gp = grid::gpar(fill = "#ffffff", col = fill, lwd = 1.2))))
+  }
+  if (!is.na(c$b[[i]])) {
+    bx <- rp_lane_x(c$b[[i]], x, w)
+    out <- c(out, list(grid::circleGrob(
+      x = grid::unit(bx, "in"), y = grid::unit(gl$H - mid, "in"),
+      r = grid::unit(r, "in"),
+      gp = grid::gpar(fill = if (isTRUE(c$open[[i]])) "#ffffff" else fill,
+                      col = fill, lwd = 1.2))))
+  }
+  out
 }
 
 # The swimlane. Segment tuples are [left%, width%, fill index], already
@@ -594,6 +642,8 @@ rank_paint_grob <- function(m, prep, width_in = 12.5, fs = 9, family = "sans",
         rp_box(c, r, x0, lane_w, ytop, gl)
       } else if (k == "pointrange") {
         rp_pr(c, r, x0, lane_w, ytop, gl)
+      } else if (k == "pair") {
+        rp_pair(c, r, x0, lane_w, ytop, gl)
       } else if (k == "interval") {
         rp_interval(c, r, x0, lane_w, ytop, gl)
       } else if (k == "sparkline") {

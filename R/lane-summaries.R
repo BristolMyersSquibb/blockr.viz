@@ -22,8 +22,15 @@ LANE_ROW_TYPES <- list(
   field = "text",
   series = "sparkline",
   spans = "interval",
+  pair = "dumbbell",
   expr = "text"
 )
+
+# The pair row: two summaries of the same group drawn as one segment, a
+# hollow diamond at `from` and a dot at `to` (baseline to peak, first to last
+# visit). `from_func` / `to_func` use the simple row's function vocabulary;
+# the defaults read one value per subject as is, then its maximum.
+LANE_PAIR_FUNCS <- c("identity", "mean", "median", "min", "max")
 
 # A distribution glyph is ONE mark: a centre, an optional inner range and an
 # optional outer range, drawn in a style. Box plot and dot range are two
@@ -67,6 +74,13 @@ lane_norm_summaries <- function(summaries) {
     if (!is.list(s)) {
       return(list(err = paste0("Summary ", i, " is not a list")))
     }
+    # An unset field is an ABSENT field. A typed tool call (the assistant, an
+    # MCP client) delivers the array as a table, so every field a row does not
+    # use arrives as NA rather than missing, and an NA reaching a per-type
+    # branch below is read as a value: a pair row threw "invalid 'times'".
+    s <- s[!vapply(s, function(v) {
+      is.null(v) || (is.atomic(v) && length(v) == 1L && is.na(v))
+    }, logical(1L))]
     type <- rank_chr1(s$type) %||% "simple"
     if (!type %in% names(LANE_ROW_TYPES)) {
       return(list(err = paste0("Summary ", i, ": unknown type \"", type,
@@ -87,6 +101,7 @@ lane_norm_summaries <- function(summaries) {
       field = "col",
       series = c("x", "col"),
       spans = c("x", "xend"),
+      pair = c("from", "to"),
       expr = "expr"
     )
     for (nm in need) {
@@ -144,6 +159,22 @@ lane_norm_summaries <- function(summaries) {
       if (!size %in% c("md", "lg")) size <- "md"
       s$size <- size
     }
+    # The pair row: the two functions, an optional band (`lo` / `hi`, each a
+    # number or a column), an optional reference line (`ref`, a number) and
+    # an optional `dash` column whose non-first levels draw dashed.
+    if (identical(type, "pair")) {
+      ff <- rank_chr1(s$from_func) %||% "identity"
+      if (!ff %in% LANE_PAIR_FUNCS) ff <- "identity"
+      tf <- rank_chr1(s$to_func) %||% "max"
+      if (!tf %in% LANE_PAIR_FUNCS) tf <- "max"
+      s$from_func <- ff
+      s$to_func <- tf
+      s$lo <- lane_pair_bound(s$lo)
+      s$hi <- lane_pair_bound(s$hi)
+      ref <- suppressWarnings(as.numeric(s$ref %||% NA_real_))[1L]
+      s$ref <- if (is.finite(ref)) ref
+      s$dash <- rank_chr1(s$dash)
+    }
     s$name <- rank_chr1(s$name) %||% lane_summary_auto_name(s)
     out[[i]] <- s
   }
@@ -176,7 +207,20 @@ lane_takes_color <- function(s) {
 #' attribute rather than split into lanes.
 #' @noRd
 lane_color_capable <- function(s) {
-  lane_takes_color(s) || identical(s$type, "spans")
+  lane_takes_color(s) || s$type %in% c("spans", "pair")
+}
+
+#' A pair row's band bound: a finite number, a column name, or NULL. Numbers
+#' may arrive as strings from the gear's text input.
+#' @noRd
+lane_pair_bound <- function(x) {
+  if (is.null(x) || !length(x)) return(NULL)
+  x <- x[[1L]]
+  if (is.numeric(x)) return(if (is.finite(x)) as.numeric(x))
+  x <- trimws(as.character(x))
+  if (is.na(x) || !nzchar(x)) return(NULL)
+  num <- suppressWarnings(as.numeric(x))
+  if (is.finite(num)) num else x
 }
 
 #' Boards saved before colour and facet moved onto the summary carry them as
@@ -231,6 +275,7 @@ lane_summary_auto_name <- function(s) {
     field = rank_chr1(s$col),
     series = rank_chr1(s$col),
     spans = paste0(rank_chr1(s$x), " \u2192 ", rank_chr1(s$xend)),
+    pair = paste0(rank_chr1(s$from), " \u2192 ", rank_chr1(s$to)),
     expr = "Value",
     "Value"
   )
@@ -308,8 +353,13 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
 
   # Every summary's mapped columns must exist -- reported by row name.
   for (s in summaries) {
-    cols <- unlist(s[intersect(names(s), c("col", "x", "xend", "band"))])
+    cols <- unlist(s[intersect(names(s), c("col", "x", "xend", "band", "from",
+                                            "to", "dash"))])
     cols <- as.character(cols)
+    if (identical(s$type, "pair")) {
+      cols <- c(cols, Filter(is.character, list(s$lo, s$hi)))
+      cols <- as.character(unlist(cols))
+    }
     miss <- setdiff(cols[nzchar(cols)], names(data))
     if (length(miss)) {
       return(bad(paste0(
@@ -359,6 +409,11 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       }
       s$.facet <- fc
       s$.flevels <- lv
+    }
+    # The dash levels come from the full data, like colour: a facet slice
+    # missing a level must not renumber which rows draw dashed.
+    if (identical(s$type, "pair") && !is.null(present(s$dash))) {
+      s$.dlevels <- rank_levels(data[[s$dash]])
     }
     if (s$type %in% c("series", "spans")) {
       s$.date <- inherits(data[[rank_chr1(s$x)]], "Date")
@@ -524,6 +579,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         }, numeric(1L))
         target
       },
+      pair = lane_pair_fill(target, tkeys, keys, slice, s, sid),
       spans = {
         segs <- lane_spans_split(slice, target, tkeys, s)
         target[[paste0(sid, "_segs")]] <- I(segs)
@@ -797,6 +853,36 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
     # key and rank_cells falls back to the text column when it is absent.
     c(base, list(kind = "num", key = paste0(sid, "_v"),
                  alt_text = paste0(sid, "_t")))
+  } else if (identical(s$type, "pair")) {
+    lv <- s$.levels
+    dlv <- s$.dlevels
+    words <- c(
+      trimws(paste(LANE_PAIR_WORDS[[s$from_func]], s$from, "\u25c7")),
+      trimws(paste(LANE_PAIR_WORDS[[s$to_func]], s$to, "\u25cf"))
+    )
+    # Set on `base` itself: c() would append a second `sub_label` that `$`
+    # never reads past the first (NULL) one.
+    base$sub_label <- sub %||% paste0(
+      words[[1L]], " \u2192 ", words[[2L]],
+      if (length(dlv) > 1L) {
+        paste0(" \u00b7 dashed: ", s$dash, " \u2260 ", dlv[[1L]])
+      } else {
+        ""
+      }
+    )
+    c(base, list(kind = "pair", key = paste0(sid, "_to"),
+                 cols = c(a = paste0(sid, "_from"), b = paste0(sid, "_to"),
+                          lo = paste0(sid, "_lo"), hi = paste0(sid, "_hi")),
+                 fidx = paste0(sid, "_f"), didx = paste0(sid, "_d"),
+                 ref = s$ref, levels = lv,
+                 words = list(from = words[[1L]], to = words[[2L]]),
+                 fills = if (!is.null(lv)) {
+                   unname(rank_level_colors(
+                     scale_map, rank_chr1(s$color), lv,
+                     data[[rank_chr1(s$color)]]
+                   )[lv])
+                 },
+                 show_val = TRUE))
   } else if (identical(s$type, "series")) {
     c(base, list(kind = "sparkline", key = paste0(sid, "_last"),
                  pts = paste0(sid, "_pts"), x = rank_chr1(s$x),
@@ -848,6 +934,7 @@ lane_primary_col <- function(s, sid) {
     expr = paste0(sid, "_v"),
     series = paste0(sid, "_last"),
     spans = paste0(sid, "_start"),
+    pair = paste0(sid, "_to"),
     paste0(sid, "_v")
   )
 }
@@ -1112,6 +1199,26 @@ lane_summary_domains <- function(plan, rows) {
         plan[[i]]$dom <- xd
         plan[[i]]$ydom <- yd
       }
+    } else if (identical(kind, "pair")) {
+      # Value as POSITION, like the box: the data range plus a hair, widened
+      # to take in the band and the reference line so neither is clipped.
+      vals <- numeric()
+      for (i in idx) {
+        p <- plan[[i]]
+        for (cn in p$cols) vals <- c(vals, rows[[cn]])
+        vals <- c(vals, p$ref)
+      }
+      vals <- vals[is.finite(vals)]
+      rng <- if (length(vals)) range(vals) else c(0, 1)
+      pad <- if (rng[[2L]] > rng[[1L]]) {
+        (rng[[2L]] - rng[[1L]]) * 0.04
+      } else {
+        max(abs(rng[[1L]]) * 0.04, 0.5)
+      }
+      for (i in idx) {
+        plan[[i]]$dmin <- rng[[1L]] - pad
+        plan[[i]]$dmax <- rng[[2L]] + pad
+      }
     } else if (identical(kind, "interval")) {
       ext <- numeric()
       for (i in idx) {
@@ -1126,4 +1233,76 @@ lane_summary_domains <- function(plan, rows) {
     }
   }
   plan
+}
+
+# --- pair builder ---------------------------------------------------------------
+
+LANE_PAIR_WORDS <- c(identity = "", mean = "Mean", median = "Median",
+                     min = "Min", max = "Max")
+
+#' Fill one pair row's columns on `target`: `_from`, `_to`, the band `_lo` /
+#' `_hi` (NA where there is none), the colour level index `_f` and the dash
+#' level index `_d`.
+#'
+#' A leaf row (one subject) summarises its own rows. A PARENT row (the dose
+#' group above its subjects) is the mean of its children's values: the
+#' identity of a group of subjects is not a number, and the maximum over every
+#' subject's rows would be one outlier standing in for the group.
+#' @noRd
+lane_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
+  agg_one <- function(func, col, kk) {
+    if (identical(func, "identity")) {
+      g <- dplyr::group_by(slice, dplyr::across(dplyr::all_of(kk)))
+      out <- as.data.frame(dplyr::summarise(
+        g, .v = rank_agg_first(.data[[col]]), .groups = "drop"
+      ))
+      out$.v <- as.numeric(out$.v)
+      out
+    } else {
+      rank_aggregate(slice, kk, func, col, col)
+    }
+  }
+  per <- function(func, col) {
+    if (identical(tkeys, keys) || !length(setdiff(keys, tkeys))) {
+      return(rank_match_col(target, agg_one(func, col, tkeys), tkeys, ".v"))
+    }
+    leaf <- agg_one(func, col, keys)
+    g <- dplyr::group_by(leaf, dplyr::across(dplyr::all_of(tkeys)))
+    up <- as.data.frame(dplyr::summarise(
+      g, .v = mean(.data$.v, na.rm = TRUE), .groups = "drop"
+    ))
+    up$.v[!is.finite(up$.v)] <- NA_real_
+    rank_match_col(target, up, tkeys, ".v")
+  }
+  target[[paste0(sid, "_from")]] <- per(s$from_func, s$from)
+  target[[paste0(sid, "_to")]] <- per(s$to_func, s$to)
+  n <- nrow(target)
+  bound <- function(b) {
+    if (is.null(b)) return(rep(NA_real_, n))
+    if (is.numeric(b)) return(rep(b, n))
+    per("mean", b)
+  }
+  target[[paste0(sid, "_lo")]] <- bound(s$lo)
+  target[[paste0(sid, "_hi")]] <- bound(s$hi)
+  level_idx <- function(col, lv) {
+    if (is.null(col) || !length(lv)) return(rep(NA_integer_, n))
+    g <- dplyr::group_by(slice, dplyr::across(dplyr::all_of(tkeys)))
+    agg <- as.data.frame(dplyr::summarise(
+      g, .t = {
+        x <- as.character(.data[[col]])
+        x <- x[!is.na(x)]
+        if (length(x)) x[[1L]] else NA_character_
+      },
+      .groups = "drop"
+    ))
+    match(rank_match_field(target, agg, tkeys, ".t"), lv)
+  }
+  target[[paste0(sid, "_f")]] <- level_idx(s$.color %||% s$color, s$.levels)
+  dash <- s$dash
+  target[[paste0(sid, "_d")]] <- if (!is.null(dash) && length(s$.dlevels)) {
+    level_idx(dash, s$.dlevels)
+  } else {
+    rep(NA_integer_, n)
+  }
+  target
 }

@@ -53,6 +53,10 @@ rank_export_df <- function(prep) {
       wh = paste0(w$whisk %||% "whiskers", " (high)"),
       ol = paste0(w$whisk %||% "outer", " (low)"),
       oh = paste0(w$whisk %||% "outer", " (high)"),
+      a = sub(" \u25c7$", "", w$from %||% "from"),
+      b = sub(" \u25cf$", "", w$to %||% "to"),
+      lo = "range (low)",
+      hi = "range (high)",
       role
     )
   }

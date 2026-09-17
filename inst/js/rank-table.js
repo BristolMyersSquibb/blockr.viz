@@ -503,6 +503,34 @@
       '%"></i></div>';
   }
 
+  // The pair cell (dumbbell): band, reference line, link, then the two
+  // marks. Byte-identical to rank_pair_html().
+  function pairHtml(c, i) {
+    var s = '<div class="blockr-rank-lane blockr-rank-pacell' +
+      (c.dash[i] ? " is-dash" : "") + '"' +
+      (c.fill[i] != null ? ' style="--blockr-rank-fill:' + c.fill[i] + '"' : "") +
+      (c.tip[i] ? ' title="' + c.tip[i] + '"' : "") + ">";
+    if (c.bw[i] != null) {
+      s += '<i class="lane-band" style="left:' + p(c.bl[i]) + "%;width:" +
+        p(c.bw[i]) + '%"></i>';
+    }
+    if (c.rf != null) {
+      s += '<i class="lane-ref" style="left:' + p(c.rf) + '%"></i>';
+    }
+    if (c.w[i] != null) {
+      s += '<i class="lane-link" style="left:' + p(c.l[i]) + "%;width:" +
+        p(c.w[i]) + '%"></i>';
+    }
+    if (c.a[i] != null) {
+      s += '<i class="lane-from" style="left:' + p(c.a[i]) + '%"></i>';
+    }
+    if (c.b[i] != null) {
+      s += '<i class="lane-to' + (c.open[i] ? " is-open" : "") +
+        '" style="left:' + p(c.b[i]) + '%"></i>';
+    }
+    return s + "</div>";
+  }
+
   function ivHtml(c, i) {
     var s = '<div class="blockr-rank-lane blockr-rank-ivcell" data-d0="' +
       p(c.d0) + '" data-d1="' + p(c.d1) + '"' +
@@ -607,6 +635,9 @@
             : (c.kind === "box" ? boxHtml(c, i) : prHtml(c, i));
           row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
             barWrap(glyph, c, i) + "</td>";
+        } else if (c.kind === "pair") {
+          row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
+            barWrap(pairHtml(c, i), c, i) + "</td>";
         } else if (c.kind === "interval") {
           row += '<td class="blockr-rank-bar-col' +
             (c.lg ? " blockr-rank-wide" : "") + '"' + dataV(c.v[i]) + ">" +
@@ -881,6 +912,7 @@
     field:  { label: "field", shows: ["text"] },
     series: { label: "series", shows: ["sparkline"] },
     spans:  { label: "spans", shows: ["interval"] },
+    pair:   { label: "pair", shows: ["dumbbell"] },
     expr:   { label: "expr", shows: ["text"] }
   };
   var SHOW_ICONS = {
@@ -894,7 +926,12 @@
     box: TYPE_ICONS.box,
     pointrange: TYPE_ICONS.pointrange,
     interval: TYPE_ICONS.interval,
-    sparkline: TYPE_ICONS.sparkline
+    sparkline: TYPE_ICONS.sparkline,
+    dumbbell: '<svg width="14" height="14" viewBox="0 0 16 16">' +
+      '<line x1="4" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="1.5"/>' +
+      '<rect x="1.8" y="5.8" width="4.4" height="4.4" fill="none" stroke="currentColor"' +
+      ' stroke-width="1.2" transform="rotate(45 4 8)"/>' +
+      '<circle cx="12" cy="8" r="2.6" fill="currentColor"/></svg>'
   };
   // Tile captions: friendlier than the raw enum where it helps.
   var SHOW_LABELS = { pointrange: "dot range", interval: "swimlane" };
@@ -925,7 +962,7 @@
       ok: function (s) {
         if (s.type === "dist") return (s.show || "pointrange") !== "text";
         if (s.type === "simple") return (s.show || "bar") !== "number";
-        return s.type === "spans";
+        return s.type === "spans" || s.type === "pair";
       } },
     { key: "facet",  label: "Facet",
       hint: "Repeat this column once per level of a column",
@@ -969,6 +1006,13 @@
       case "spans": return (s.x || "?") + " → " + (s.xend || "?") +
         (s.label ? ", label " + s.label : "") +
         (s.size === "lg" ? ", wide" : "");
+      case "pair": return (s.from_func && s.from_func !== "identity" ?
+          s.from_func + "(" + (s.from || "?") + ")" : (s.from || "?")) +
+        " → " + (s.to_func || "max") + "(" + (s.to || "?") + ")" +
+        (s.lo != null && s.lo !== "" || s.hi != null && s.hi !== "" ?
+          ", range " + (s.lo == null ? "" : s.lo) + "–" + (s.hi == null ? "" : s.hi) : "") +
+        (s.ref != null && s.ref !== "" ? ", ref " + s.ref : "") +
+        (s.dash ? ", dashed by " + s.dash : "");
       case "expr": return s.expr || "";
       default: return "";
     }
@@ -1281,6 +1325,69 @@
             commit();
             ctx.rerender();
           });
+        } else if (t === "pair") {
+          // Two summaries of the group on one segment. A band bound or the
+          // reference takes a number; a band bound may also name a column
+          // (a per-subject reference range such as ANRLO / ANRHI).
+          var PAIR_FUNCS = [
+            { value: "identity", label: "None (as is)" },
+            { value: "mean", label: "Mean" },
+            { value: "median", label: "Median" },
+            { value: "min", label: "Min" },
+            { value: "max", label: "Max" }
+          ];
+          selectCtl(body, "From ◇", "num", s.from, function (v) {
+            s.from = v; commit(); ctx.rerender();
+          });
+          selectCtl(body, "From function", PAIR_FUNCS,
+            s.from_func || "identity",
+            function (v) { s.from_func = v; commit(); ctx.rerender(); });
+          selectCtl(body, "To ●", "num", s.to, function (v) {
+            s.to = v; commit(); ctx.rerender();
+          });
+          selectCtl(body, "To function", PAIR_FUNCS, s.to_func || "max",
+            function (v) { s.to_func = v; commit(); ctx.rerender(); });
+          [["lo", "Range low", "number or column"],
+           ["hi", "Range high", "number or column"],
+           ["ref", "Reference line", "e.g. 20"]].forEach(function (d) {
+            var tc = document.createElement("div");
+            tc.className = "lane-sum-ctl";
+            tc.innerHTML = '<span class="blockr-popover-label">' + d[1] +
+              "</span>";
+            var ti = document.createElement("input");
+            ti.type = "text";
+            ti.className = "lane-sum-name-input";
+            ti.value = s[d[0]] == null ? "" : String(s[d[0]]);
+            ti.placeholder = d[2];
+            ti.addEventListener("change", function () {
+              var v = ti.value.trim();
+              if (v === "") delete s[d[0]];
+              else s[d[0]] = isFinite(Number(v)) ? Number(v) : v;
+              commit();
+              ctx.rerender();
+            });
+            tc.appendChild(ti);
+            body.appendChild(tc);
+          });
+          if (s.dash) {
+            selectCtl(body, "Dashed by", "cat", s.dash, function (v) {
+              s.dash = v; commit(); ctx.rerender();
+            }, function () { delete s.dash; commit(); ctx.rerender(); });
+          } else {
+            var dm = document.createElement("div");
+            dm.className = "lane-sum-ctl lane-sum-addmaps";
+            var db = document.createElement("button");
+            db.type = "button";
+            db.className = "lane-sum-add";
+            db.textContent = "+ dashed by";
+            db.title = "Draw the link dashed for all but the first level";
+            db.disabled = !firstMapCol(cols);
+            db.addEventListener("click", function () {
+              s.dash = firstMapCol(cols); commit(); ctx.rerender();
+            });
+            dm.appendChild(db);
+            body.appendChild(dm);
+          }
         } else if (t === "expr") {
           var exCtl = document.createElement("div");
           exCtl.className = "lane-sum-ctl lane-sum-ctl-wide";
@@ -1407,6 +1514,12 @@
         if (t === "spans") {
           s.x = firstCol(cols, "num");
           s.xend = firstCol(cols, "num", [s.x]);
+        }
+        if (t === "pair") {
+          s.from = firstCol(cols, "num");
+          s.to = firstCol(cols, "num", [s.from]) || s.from;
+          s.from_func = "identity";
+          s.to_func = "max";
         }
         list.push(s);
         ctx.open.add(list.length - 1);

@@ -464,6 +464,15 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
       list(type = "spans", x = "SDY", xend = "EDY", color = "SEV",
            label = "TERM", fields = "ARM", size = "lg")
     )),
+    # The pair (dumbbell): band, reference, colour, dash and an open end.
+    pair = list(by = "USUBJID", summaries = list(
+      list(type = "pair", from = "AVAL", from_func = "min", to = "DUR",
+           to_func = "max", lo = 5, hi = "HI", ref = 10, dash = "SEV",
+           color = "ARM")
+    )),
+    pair_plain = list(by = c("SOC", "TERM"), summaries = list(
+      list(type = "pair", from = "CHG", to = "AVAL", to_func = "mean")
+    )),
     # The summarize-table path: every row type in one heterogeneous table,
     # and the facet + pooled + field composition.
     summaries_mixed = list(by = "TERM", summaries = list(
@@ -540,5 +549,58 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
     ), returnByValue = TRUE)$result$value
     js_body <- sub(".*<tbody>", "", sub("</tbody>.*", "", js_html))
     expect_identical(js_body, r_body, info = nm)
+  }
+})
+
+test_that("a pair column ships both ends, the band, the ref and the flags", {
+  ae <- push_fixture()
+  prep <- rank_prepare(ae, by = "USUBJID", summaries = list(
+    list(type = "pair", from = "AVAL", from_func = "min", to = "DUR",
+         to_func = "max", lo = 5, ref = 10, dash = "SEV", color = "ARM")
+  ))
+  expect_null(prep$err)
+  p <- prep$plan[[1]]
+  expect_identical(p$kind, "pair")
+  expect_match(p$sub_label, "dashed: SEV")
+  c1 <- rank_cells(prep)$cols[[1]]
+  expect_identical(c1$kind, "pair")
+  rows <- prep$rows
+  a <- rows[[p$cols[["a"]]]]
+  b <- rows[[p$cols[["b"]]]]
+  expect_true(all(b >= a))
+  # A `to` below the band's low end is drawn open.
+  expect_identical(c1$open, !is.na(b) & b < 5)
+  expect_true(is.finite(c1$rf))
+  expect_true(all(!is.na(c1$fill)))
+  expect_match(c1$disp[[1]], "^\\+")
+})
+
+test_that("a pair row names a missing column", {
+  ae <- push_fixture()
+  prep <- rank_prepare(ae, by = "USUBJID", summaries = list(
+    list(type = "pair", from = "AVAL", to = "NOPE")
+  ))
+  expect_match(prep$err, "NOPE")
+})
+
+test_that("a pair column's dash levels come from the full data, not the facet", {
+  ae <- push_fixture()
+  # ARM = Placebo rows are all MILD, so the Placebo copy's own levels would
+  # be MILD alone and MODERATE rows elsewhere would be numbered wrongly.
+  ae$SEV[ae$ARM == "Placebo"] <- "MILD"
+  prep <- rank_prepare(ae, by = "USUBJID", summaries = list(
+    list(type = "pair", from = "AVAL", to = "DUR", dash = "SEV",
+         facet = "ARM")
+  ))
+  expect_null(prep$err)
+  rows <- prep$rows
+  for (p in prep$plan) {
+    d <- rows[[sub("_to$", "_d", p$key)]]
+    lv <- p$flevel
+    sev <- vapply(rows$USUBJID, function(u) {
+      x <- as.character(ae$SEV[ae$USUBJID == u & ae$ARM == lv])
+      if (length(x)) x[[1]] else NA_character_
+    }, character(1))
+    expect_identical(d, match(sev, c("MILD", "MODERATE")), info = lv)
   }
 })

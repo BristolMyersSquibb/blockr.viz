@@ -314,6 +314,50 @@ rank_table_css <- function() {
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 2px var(--blockr-color-bg, #fff);
 }
+/* Pair (dumbbell): two values of one group joined by a segment. The band is
+   the range the values are read against, at lane height like every other
+   ground; the reference line runs past the lane so rows read as one line. The
+   `from` mark is a hollow diamond, the `to` mark a dot, hollow when it falls
+   outside the band. A dashed link is the row's `dash` level. */
+.blockr-rank-pacell .lane-band {
+  top: 0;
+  bottom: 0;
+  background: var(--blockr-rank-track);
+  border-radius: var(--blockr-mark-radius, 2px);
+}
+.blockr-rank-pacell .lane-ref {
+  top: -6px;
+  bottom: -6px;
+  width: 0;
+  border-left: 1px dashed var(--blockr-color-text-subtle, #8d8b84);
+}
+.blockr-rank-pacell .lane-link {
+  top: 50%;
+  height: 0;
+  border-top: 2px solid var(--blockr-rank-fill);
+  margin-top: -1px;
+}
+.blockr-rank-pacell.is-dash .lane-link { border-top-style: dashed; }
+.blockr-rank-pacell .lane-from {
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  background: var(--blockr-color-bg, #fff);
+  border: 1.5px solid var(--blockr-rank-fill);
+  transform: translate(-50%, -50%) rotate(45deg);
+  box-sizing: border-box;
+}
+.blockr-rank-pacell .lane-to {
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--blockr-rank-fill);
+  border: 1.5px solid var(--blockr-rank-fill);
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+}
+.blockr-rank-pacell .lane-to.is-open { background: var(--blockr-color-bg, #fff); }
 /* Interval: the swimlane. Colour = the mapped level, and BOTH ends round.
    A timeline is not a stack. A stack tiles by construction -- its segments
    always share edges, they compose one quantity, and a seam between them
