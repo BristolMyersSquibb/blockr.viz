@@ -101,7 +101,10 @@
 #'   to 0 and they draw the absolute running cumulative. Default `NULL` (every
 #'   bar is a relative delta).
 #' @param title,subtitle,caption Chart text, rendered above (title, subtitle)
-#'   and below (caption) the chart. Each is one of three tiers: `NULL`
+#'   and below (caption) the chart. `caption` defaults to the option
+#'   `blockr.viz.default_caption` (unset = `NULL`), so a deployment can caption
+#'   every new chart, e.g. `options(blockr.viz.default_caption = "{filters}")`.
+#'   Each is one of three tiers: `NULL`
 #'   (default) = auto -- each slot falls back to the input data frame's
 #'   table-level display attribute (`label` for the title, `subtitle`,
 #'   `caption`) when one is present; `""` = explicitly none (suppresses the
@@ -367,7 +370,11 @@ new_chart_block <- function(
     # ("{ARM}" = the distinct values, "{label(value)}" = the column's label).
     title = NULL,
     subtitle = NULL,
-    caption = NULL,
+    # The caption's default is the deployment's to set: a clinical board wants
+    # every chart to say which filters produced it ("{filters}"), including
+    # the charts nobody wrote a caption for, such as the ones an assistant
+    # adds. Read once, at construction; a saved chart keeps its own value.
+    caption = getOption("blockr.viz.default_caption"),
     # Observation counts appended to category-axis ticks and/or facet strip
     # labels ("Female (12)"). `count_on` picks the surface(s): "off" (default),
     # "axis" (the category axis), "facet", or "both". `count_col` is the id

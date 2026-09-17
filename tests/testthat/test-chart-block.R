@@ -820,6 +820,38 @@ test_that("a chart captions itself with the filter trail its data carries", {
   )
 })
 
+test_that("the default_caption option captions a new chart that sets none", {
+
+  d <- data.frame(AEDECOD = c("HEADACHE", "NAUSEA"), n = c(3, 5))
+  attr(d, "blockr_filters") <- c(global_filter = "SEX = F")
+
+  blk <- withr::with_options(
+    list(blockr.viz.default_caption = "{filters}"),
+    new_chart_block(chart_type = "bar", group = "AEDECOD", value = "n")
+  )
+  unset <- withr::with_options(
+    list(blockr.viz.default_caption = NULL),
+    new_chart_block(chart_type = "bar", group = "AEDECOD", value = "n")
+  )
+
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expect_equal(session$returned$state$caption(), "{filters}")
+    },
+    args = list(x = blk, data = list(data = reactive(d)))
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", unset),
+    {
+      session$flushReact()
+      expect_null(session$returned$state$caption())
+    },
+    args = list(x = unset, data = list(data = reactive(d)))
+  )
+})
+
 test_that("with a ctrl_target the drill click is transient: nothing latched, claim sent", {
   df <- data.frame(
     USUBJID = c("01-001", "01-001", "01-002", "01-002"),
