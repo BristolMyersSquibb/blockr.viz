@@ -101,3 +101,38 @@ num_vec_state <- function(x) {
 
   if (!length(x)) NULL else x
 }
+
+# Panels per row in a facet grid: NULL (auto) or a length-1 character holding
+# a positive whole number.
+#
+# A string, because that is what every surface it travels through speaks: the
+# gear's select, the config channel, and `{@facet_cols}` in a title template.
+# NULL is auto, and it is the one value `arg_token_value()` reads as "nothing
+# to print", so a clause like `[, in {@facet_cols} columns]` drops out of the
+# sentence while the setting is on auto and comes back with it.
+#
+# Anything that is not a whole number >= 1 heals to auto rather than erroring:
+# the value arrives from a select, from MCP and from saved state, and a chart
+# that refuses to draw because a layout hint was junk is the wrong trade. The
+# cap is generous and only there to stop a typed 300 from rendering 300 empty
+# tracks.
+FACET_COLS_MAX <- 12L
+
+facet_cols_state <- function(x) {
+
+  x <- chr_state(x)
+
+  if (is.null(x)) return(NULL)
+
+  n <- suppressWarnings(as.numeric(x))
+
+  if (is.na(n) || n < 1) return(NULL)
+
+  as.character(min(as.integer(n), FACET_COLS_MAX))
+}
+
+# The same slot as an integer, for the renderers that do geometry with it.
+facet_cols_n <- function(x) {
+  x <- facet_cols_state(x)
+  if (is.null(x)) NULL else as.integer(x)
+}

@@ -23,6 +23,7 @@ chart_expr(
   count_on = "off",
   count_col = NULL,
   facet_scales = "fixed",
+  facet_cols = NULL,
   box_points = "none",
   smoother = "none",
   identity_line = FALSE,
@@ -62,6 +63,12 @@ boxplot stands vertical and keeps the data's own order, ascending.}
 \item{facet_scales}{Panel scales, passed straight to
 \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}'s \code{scales}: \code{"fixed"} (default), \code{"free_y"},
 \code{"free_x"} or \code{"free"}. Same argument as in \code{\link[=new_chart_block]{new_chart_block()}}.}
+
+\item{facet_cols}{Panels per row, passed to \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}'s
+\code{ncol}. \code{NULL} (default) leaves the grid to ggplot2, which picks a
+square-ish one. A number pins it, capped at the panel count. The chart
+block hands its own \code{facet_cols} down, so the deck and the canvas draw
+the same shape.}
 
 \item{box_points, smoother, identity_line, lo, hi}{Family-specific options,
 as in \code{\link[=new_chart_block]{new_chart_block()}}.}

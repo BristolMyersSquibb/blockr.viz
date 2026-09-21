@@ -78,6 +78,7 @@ chart_expr <- function(var = "data",
                        count_on = "off",
                        count_col = NULL,
                        facet_scales = "fixed",
+                       facet_cols = NULL,
                        box_points = "none",
                        smoother = "none",
                        identity_line = FALSE,
@@ -138,6 +139,9 @@ chart_expr <- function(var = "data",
     box_points = box_points %||% "none", smoother = smoother %||% "none",
     identity_line = isTRUE(identity_line),
     lo = lo, hi = hi, step = step,
+    # Panels per row: NULL (auto) leaves facet_wrap() its own grid, and the
+    # label geometry below its square-ish guess.
+    facet_cols = facet_cols_state(facet_cols),
     vlines = vlines, hlines = hlines,
     line_width_mult = line_width_mult %||% 1,
     dot_size_mult = dot_size_mult %||% 1
@@ -309,6 +313,10 @@ ce_call <- function(fn, ...) {
   args <- list(...)
   as.call(c(list(head), args[!vapply(args, is.null, logical(1L))]))
 }
+
+# A count as a plain number, or NULL passed through: emitted code says
+# `ncol = 2`, never `ncol = 2L`.
+ce_num <- function(x) if (is.null(x)) NULL else as.numeric(x)
 
 # A literal (possibly named) vector as a c(...) call; scalars stay bare.
 ce_vec <- function(v) {
@@ -486,6 +494,20 @@ ce_facet <- function(st, facet_scales) {
     "ggplot2::facet_wrap",
     call("~", as.name(st$facet)),
     scales = if (!identical(scales, "fixed")) scales,
+    # Emitted only when the block pinned one: `ncol` at facet_wrap's own
+    # default is noise in code a human is meant to read. Without a data
+    # snapshot the pick travels uncapped -- the cap needs a panel count, and
+    # guessing one here would emit `ncol = 1` for every chart.
+    # ce_num(): the emitted line is code a human reads, and `ncol = 2L` is a
+    # type annotation nobody would write there.
+    ncol = ce_num(
+      if (is.null(st$data)) {
+        facet_cols_n(st$facet_cols)
+      } else {
+        gg_facet_ncol(length(dd_levels(st$data[[st$facet]])), st$facet_cols,
+                      auto = NULL)
+      }
+    ),
     labeller = labeller
   )
 }
@@ -594,7 +616,7 @@ ce_turned_labels <- function(st, horiz, func = NULL) {
   }
 
   gg_turned_labels(st$data, st$group, st$count_on, st$count_col, func,
-                   n_panels, 11 * 0.8)
+                   n_panels, 11 * 0.8, st$facet_cols)
 }
 
 # Print typography, the compact subset of gg_theme() a human would write.

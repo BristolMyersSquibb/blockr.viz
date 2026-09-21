@@ -59,6 +59,7 @@ new_chart_block(
   pct_of = "facet",
   func_toggle = NULL,
   facet_scales = "fixed",
+  facet_cols = getOption("blockr.viz.facet_cols"),
   download = TRUE,
   ctrl_target = "",
   ctrl_table = "",
@@ -322,6 +323,21 @@ categories a panel has no rows for. \code{"free_y"} frees the value axis and
 keeps a shared x. It is offered on scatter / line / band only, where the
 value axis IS y -- elsewhere the value axis follows \code{orientation}, so the
 name would lie, and a saved \code{"free_y"} reads as \code{"free"} there.}
+
+\item{facet_cols}{How many facet panels sit in a row, as in ggplot2's
+\code{facet_wrap(ncol = )}. \code{NULL} (default) is auto: the canvas fits as many
+panels per row as the card is wide, which is what every faceted chart did
+before this setting existed. A number pins the row, and the same number
+reaches the report / deck render -- where ggplot2 otherwise picks a
+square-ish grid of its own, so an auto chart and its exhibit could
+disagree about the shape of the same picture. Capped at the panel count:
+four columns over two panels leaves no empty tracks.
+
+It is deliberately NOT a board-wide setting the way the echarts theme is.
+Colour and type can have one answer for every chart; how many panels fit
+depends on how many this chart has and how wide its card is. A deployment
+that does want one answer sets \code{blockr.viz.facet_cols} and every block
+takes it as its default.}
 
 \item{download}{Offer the chart for download. \code{TRUE} (the default) puts a
 control in the gear header that writes the chart a report would print --

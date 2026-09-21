@@ -104,6 +104,7 @@ static_chart_call <- function(x, var) {
     count_on = "off",
     count_col = NULL,
     facet_scales = "fixed",
+    facet_cols = NULL,
     box_points = "none",
     summary = NULL,
     whiskers = NULL,
@@ -165,7 +166,8 @@ chart_report_state <- function(x) {
   nms <- c(
     "chart_type", "group", "color", "facet", "value", "func", "x", "y",
     "series", "bar_mode", "orientation", "sort_by", "sort_dir", "count_on",
-    "count_col", "facet_scales", "box_points", "smoother", "identity_line",
+    "count_col", "facet_scales", "facet_cols", "box_points", "smoother",
+    "identity_line",
     "lo", "hi", "step", "vlines", "hlines", "line_width_mult",
     "dot_size_mult", "title", "subtitle", "caption"
   )

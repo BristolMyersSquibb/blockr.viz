@@ -234,6 +234,20 @@
 #'   keeps a shared x. It is offered on scatter / line / band only, where the
 #'   value axis IS y -- elsewhere the value axis follows `orientation`, so the
 #'   name would lie, and a saved `"free_y"` reads as `"free"` there.
+#' @param facet_cols How many facet panels sit in a row, as in ggplot2's
+#'   `facet_wrap(ncol = )`. `NULL` (default) is auto: the canvas fits as many
+#'   panels per row as the card is wide, which is what every faceted chart did
+#'   before this setting existed. A number pins the row, and the same number
+#'   reaches the report / deck render -- where ggplot2 otherwise picks a
+#'   square-ish grid of its own, so an auto chart and its exhibit could
+#'   disagree about the shape of the same picture. Capped at the panel count:
+#'   four columns over two panels leaves no empty tracks.
+#'
+#'   It is deliberately NOT a board-wide setting the way the echarts theme is.
+#'   Colour and type can have one answer for every chart; how many panels fit
+#'   depends on how many this chart has and how wide its card is. A deployment
+#'   that does want one answer sets `blockr.viz.facet_cols` and every block
+#'   takes it as its default.
 #' @param download Offer the chart for download. `TRUE` (the default) puts a
 #'   control in the gear header that writes the chart a report would print --
 #'   image, HTML, PowerPoint and the plotted numbers -- rather than a capture
@@ -405,6 +419,20 @@ new_chart_block <- function(
     # value axis IS y (elsewhere it follows `orientation`, so the name would
     # lie) and reads as "free" there.
     facet_scales = "fixed",
+    # Panels per row in the facet grid (`facet_wrap(ncol = )`). NULL = auto:
+    # the canvas packs as many panels per row as the card is wide (the
+    # stylesheet's auto-fit grid), which is what every faceted chart did
+    # before this setting. A number pins the row count, and the SAME number
+    # reaches the ggplot render, where facet_wrap() otherwise picks its own
+    # square-ish grid -- so the chart on screen and the exhibit in a deck stop
+    # disagreeing about the shape of one picture.
+    #
+    # Not a theme setting. The board's `echart_theme` option is colour and
+    # type, one answer for every chart; how many panels fit is a question
+    # about THIS chart's panel count and card width. A deployment that does
+    # want one answer sets the option, and every block takes it as its
+    # default -- the same route `caption` takes.
+    facet_cols = getOption("blockr.viz.facet_cols"),
     # Downloads. TRUE by default, because a chart has always been takeable:
     # the gear header carried an image button before this was a setting. What
     # changed is WHAT it writes -- the chart a report would print, in four
@@ -554,6 +582,9 @@ new_chart_block <- function(
     as.character(facet_scales %||% "fixed")[1L],
     c("fixed", "free_y", "free")
   )
+  # NULL (auto) or a whole number as a string; junk heals to auto rather than
+  # erroring, because this value also arrives from MCP and from saved state.
+  facet_cols <- facet_cols_state(facet_cols)
   # Legacy aliases mapped on construction (old saved boards restore through the
   # ctor, and every chart saved before the rename carries ref_x / ref_y). The
   # new name wins when both are given: a board that already saved `vlines` is
@@ -800,8 +831,9 @@ new_chart_block <- function(
         r_na_group <- shiny::reactiveVal(na_group)
         r_pct_of <- shiny::reactiveVal(pct_of)
         r_func_toggle <- shiny::reactiveVal(func_toggle)
-        # Facet-grid panel scales (see constructor args).
+        # Facet-grid panel scales and panels per row (see constructor args).
         r_facet_scales <- shiny::reactiveVal(facet_scales)
+        r_facet_cols <- shiny::reactiveVal(facet_cols)
         r_download <- shiny::reactiveVal(isTRUE(download))
         # Prepare script. Externally controllable, so a write can arrive from
         # MCP or a restore as a vector of lines rather than one string;
@@ -1018,7 +1050,11 @@ new_chart_block <- function(
             chart_type = r_chart_type(), group = r_group(), value = r_value(),
             func = r_func(), x = r_x(), y = r_y(), xend = r_xend(),
             series = r_series(), color = r_color(), facet = r_facet(),
-            label = r_label(), sort_by = r_sort_by(), drill = r_drill()
+            label = r_label(), sort_by = r_sort_by(), drill = r_drill(),
+            # Not a mapping, but a setting a reader may want on the face: a
+            # 12-panel grid is the one chart where the shape of the page is
+            # the reader's call, not the author's.
+            facet_cols = r_facet_cols()
           )
           # The prepare script's declared values are settings too, named in a
           # template by the variable the script uses: `{@param}` for
@@ -1225,6 +1261,8 @@ new_chart_block <- function(
               # category set across the panels ("fixed"), or per-panel
               # ("free" / "free_y").
               facet_scales = r_facet_scales(),
+              # Panels per row: null = auto (the stylesheet's auto-fit grid).
+              facet_cols = r_facet_cols(),
               # Downloads: the gear's toggle, and what decides whether the
               # hoisted control renders at all.
               download = if (isTRUE(r_download())) "on" else "off",
@@ -1497,6 +1535,10 @@ new_chart_block <- function(
             if (!is.null(msg$count_col))  upd(r_count_col, nn(msg$count_col))
             if (!is.null(msg$facet_scales)) {
               upd(r_facet_scales, msg$facet_scales)
+            }
+            # nn(): "" (the select's Auto row) means no pinned row count.
+            if (!is.null(msg$facet_cols)) {
+              upd(r_facet_cols, facet_cols_state(msg$facet_cols))
             }
             if (!is.null(msg$download)) {
               upd(r_download, identical(as.character(msg$download)[[1L]], "on"))
@@ -1776,7 +1818,8 @@ new_chart_block <- function(
             count_on = r_count_on(), count_col = r_count_col(),
             na_group = r_na_group(), pct_of = r_pct_of(),
             func_toggle = r_func_toggle(),
-            facet_scales = r_facet_scales(), box_points = r_box_points(),
+            facet_scales = r_facet_scales(), facet_cols = r_facet_cols(),
+            box_points = r_box_points(),
             smoother = r_smoother(), identity_line = r_identity_line(),
             lo = r_lo(), hi = r_hi(), vlines = r_vlines(),
             hlines = r_hlines(),
@@ -2047,6 +2090,7 @@ new_chart_block <- function(
             pct_of = r_pct_of,
             func_toggle = r_func_toggle,
             facet_scales = r_facet_scales,
+            facet_cols = r_facet_cols,
             download = r_download,
             lo = r_lo,
             hi = r_hi,
@@ -2118,6 +2162,9 @@ new_chart_block <- function(
       # `na_group` is not: it is a fixed-option select like count_on, always
       # "level" or "drop".
       "count_col", "func_toggle",
+      # NULL is `facet_cols` on auto, which is its default and the common
+      # case, so it MUST be listed or every chart block wedges.
+      "facet_cols",
       "title", "subtitle", "caption",
       # Legacy alias formals: permanently NULL in state (mapped onto
       # vlines/hlines at construction), so they MUST be allowed to be empty --
@@ -2139,7 +2186,7 @@ new_chart_block <- function(
       "box_points", "summary", "whiskers", "connect_centers",
       "lo", "hi", "baseline", "waterfall_totals",
       "count_on", "count_col", "na_group", "pct_of", "func_toggle",
-      "facet_scales",
+      "facet_scales", "facet_cols",
       "title", "subtitle", "caption",
       # Externally controllable (MCP, restore) but deliberately NOT on the AI
       # surface: `script` is absent from the registry argument spec, so the

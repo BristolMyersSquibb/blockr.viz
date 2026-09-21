@@ -710,6 +710,35 @@
                         { value: 'fixed', label: 'Shared across panels' },
                         { value: 'free',  label: 'Free per panel' }]
                     } },
+    // Panels per row in the facet grid. '' (the default) is auto: the
+    // stylesheet's `repeat(auto-fit, minmax(300px, 1fr))` fits as many panels
+    // per row as the card is wide, which is what a faceted chart has always
+    // done. A number pins the row, and the SAME number reaches
+    // facet_wrap(ncol = ) in the report / deck render, where ggplot picks a
+    // square-ish grid of its own — so the picture on screen and the one in
+    // the deck stop disagreeing about their shape.
+    //
+    // Labelled "Panel columns", never "Columns": everywhere else in this gear
+    // a column is a column of the DATA.
+    //
+    // `when` hides it until a facet is mapped, like facet_scales: one panel
+    // has no row to lay out.
+    //
+    // '' is not a picked value, so the closed control shows the PLACEHOLDER,
+    // which is where auto has to be said (`ph`) — a select that renders blank
+    // reads as a setting that failed to load. The list still carries the
+    // Auto row, because going back to auto is a pick like any other.
+    facet_cols: { label: 'Panel columns', kind: 'select',
+                  when: (/** @type {any} */ cfg) => !!cfg.facet,
+                  ph: 'Auto (fits the width)',
+                  // A row reads `<value> <label>`, so the label carries only
+                  // the unit: "3" + "per row".
+                  options: [{ value: '',  label: 'Auto (fits the width)' },
+                            { value: '1', label: 'per row' },
+                            { value: '2', label: 'per row' },
+                            { value: '3', label: 'per row' },
+                            { value: '4', label: 'per row' },
+                            { value: '6', label: 'per row' }] },
     // Distribution band. `band_window` picks how the window is sized;
     // `band_size` reads as subjects (adaptive) or x units (fixed), so its
     // label follows the mode rather than lying in one of them.
@@ -898,8 +927,9 @@
         { role: 'na_group', types: ['bar'] },
         { role: 'pct_of', types: ['bar'] },
         { role: 'func_toggle', types: ['bar'] },
-        // Facet-grid scales; hidden until a facet is mapped (role `when`).
-        'facet_scales', 'download'],
+        // Facet-grid shape; both hidden until a facet is mapped (role
+        // `when`).
+        'facet_scales', 'facet_cols', 'download'],
       titles: ['title', 'subtitle', 'caption']
     },
     individual: {
@@ -942,8 +972,9 @@
         // Count labels: scatter/line have numeric axes, so only facet counts
         // apply here (the "axis" choice no-ops); shown for faceted charts.
         'count_on', 'count_col',
-        // Facet-grid scales; hidden until a facet is mapped (role `when`).
-        'facet_scales', 'download'
+        // Facet-grid shape; both hidden until a facet is mapped (role
+        // `when`).
+        'facet_scales', 'facet_cols', 'download'
       ],
       titles: ['title', 'subtitle', 'caption']
     },
@@ -953,8 +984,9 @@
       mapping: [],
       // Count labels: "axis" counts events (or distinct count_col) per lane.
       presentation: ['sort_by', 'sort_dir', 'count_on', 'count_col',
-        // Facet-grid scales; hidden until a facet is mapped (role `when`).
-        'facet_scales', 'download'],
+        // Facet-grid shape; both hidden until a facet is mapped (role
+        // `when`).
+        'facet_scales', 'facet_cols', 'download'],
       titles: ['title', 'subtitle', 'caption']
     }
   };
@@ -1329,6 +1361,27 @@
       if (m !== 'fixed' && m !== 'free' && m !== 'free_y') return 'fixed';
       if (m === 'free_y' && this._family() !== 'individual') return 'free';
       return m;
+    }
+
+    // Lay the facet grid out: the single-panel class, and the row width.
+    //
+    // Auto (`facet_cols` unset, the default) leaves the stylesheet alone —
+    // `repeat(auto-fit, minmax(300px, 1fr))`, as many panels per row as the
+    // card is wide. A pinned number writes the tracks inline, capped at the
+    // panel count so three columns over two panels do not leave an empty
+    // track the eye reads as a missing panel. Clearing the property (rather
+    // than rewriting it) is what hands the grid back to the stylesheet.
+    //
+    // Every family calls this where it used to toggle the class, so the one
+    // panel case and the row width can never disagree.
+    /** @param {number} nFacets */
+    _applyFacetGrid(nFacets) {
+      this.chartGrid.classList.toggle('dd-chart-grid-single', nFacets <= 1);
+      const n = parseInt(this.config.facet_cols, 10);
+      this.chartGrid.style.gridTemplateColumns =
+        (n > 0 && nFacets > 1)
+          ? `repeat(${Math.min(n, nFacets)}, minmax(0, 1fr))`
+          : '';
     }
 
     // ONE numeric domain across the facet panels ("fixed"). Each panel is its
@@ -3407,8 +3460,8 @@
       const palette = this._palette();
       const singleFacet = facets.length === 1;
 
-      // Switch grid off for single facet
-      this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
+      // Switch grid off for single facet, and lay the row out.
+      this._applyFacetGrid(facets.length);
       this._syncShape('aggregated', facets.length);
 
       const sortBy = this.config.sort_by || 'alpha';
@@ -4710,7 +4763,7 @@
         return p;
       };
 
-      this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
+      this._applyFacetGrid(facets.length);
       this._syncShape('individual', facets.length);
 
       // Facet strip labels, with optional "(n)" counts (see _facetLabelMap).
@@ -5787,7 +5840,7 @@
         ? [...new Set(this.data.map(r => String(r[facet] ?? '')))].sort()
         : ['__all__'];
       const singleFacet = facets.length === 1;
-      this.chartGrid.classList.toggle('dd-chart-grid-single', singleFacet);
+      this._applyFacetGrid(facets.length);
 
       // Distinct color levels (scale/factor/alpha order). With one named
       // series per level below, echarts assigns a color to each series from
@@ -6906,6 +6959,9 @@
         count_col: this.config.count_col || '',
         // Facet-grid panel scales ('fixed' | 'free_y' | 'free').
         facet_scales: this.config.facet_scales || 'fixed',
+        // Panels per row, as a string ('' = auto). Always sent: '' is a real
+        // value (going back to auto), not an omission.
+        facet_cols: this.config.facet_cols == null ? '' : String(this.config.facet_cols),
         // Segmented on/off, like search / sortable on the table blocks.
         download: (this.config.download === false ||
                    this.config.download === 'off') ? 'off' : 'on',

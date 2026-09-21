@@ -46,6 +46,11 @@
 #'   boxplot stands vertical and keeps the data's own order, ascending.
 #' @param count_on,count_col Observation-count labels, as in
 #'   [new_chart_block()].
+#' @param facet_cols Panels per row, passed to [ggplot2::facet_wrap()]'s
+#'   `ncol`. `NULL` (default) leaves the grid to ggplot2, which picks a
+#'   square-ish one. A number pins it, capped at the panel count. The chart
+#'   block hands its own `facet_cols` down, so the deck and the canvas draw
+#'   the same shape.
 #' @param facet_scales Panel scales, passed straight to
 #'   [ggplot2::facet_wrap()]'s `scales`: `"fixed"` (default), `"free_y"`,
 #'   `"free_x"` or `"free"`. Same argument as in [new_chart_block()].
@@ -104,6 +109,7 @@ static_chart <- function(data,
                      na_group = "level",
                      pct_of = "facet",
                      facet_scales = "fixed",
+                     facet_cols = NULL,
                      box_points = "none",
                      summary = NULL,
                      whiskers = NULL,
@@ -182,11 +188,12 @@ static_chart <- function(data,
     chart_type,
     bar = gg_bar(
       data, group, color, facet, value_col, func, bar_mode, horiz,
-      sort_by, sort_dir, count_on, count_col, scale_map, na_group, pct_of
+      sort_by, sort_dir, count_on, count_col, scale_map, na_group, pct_of,
+      facet_cols
     ),
     boxplot = gg_boxplot(
       data, group, color, facet, value_col, box_points, summary, whiskers,
-      horiz, sort_by, sort_dir, count_on, count_col, scale_map
+      horiz, sort_by, sort_dir, count_on, count_col, scale_map, facet_cols
     ),
     scatter = gg_scatter(
       data, x, y, color, facet, smoother, identity_line, vlines, hlines,
@@ -223,6 +230,11 @@ static_chart <- function(data,
         as.character(facet_scales %||% "fixed")[1L],
         c("fixed", "free_y", "free_x", "free")
       ),
+      # Panels per row. NULL leaves ggplot2 its own square-ish grid; a
+      # number is the block's `facet_cols`, capped at the panel count so an
+      # over-wide pick leaves no empty tracks (the canvas caps the same way).
+      ncol = gg_facet_ncol(length(dd_levels(data[[facet]])), facet_cols,
+                           auto = NULL),
       # Every canvas panel is its own ECharts instance with its own axes.
       axes = "all",
       # The canvas strip is uppercase (CSS text-transform on .dd-facet-label).
@@ -236,7 +248,7 @@ static_chart <- function(data,
 
   p <- p + gg_theme() + gg_grid_theme(chart_type, horiz) +
     gg_x_label_theme(data, chart_type, horiz, group, facet,
-                     count_on, count_col, func)
+                     count_on, count_col, func, facet_cols)
 
   if (!is.null(facet)) {
     # The canvas boxes each panel in a hairline (.dd-facet border); added
@@ -247,7 +259,7 @@ static_chart <- function(data,
   }
 
   gg_attach_pptx_size(p, data, chart_type, horiz, group, color,
-                      facet, bar_mode)
+                      facet, bar_mode, facet_cols)
 }
 
 # -- canvas geometry constants -----------------------------------------------
@@ -266,12 +278,30 @@ gg_px_size <- function(px) px * 0.75 / 2.845276
 # only translates to a ggplot width fraction through the target device
 # width. Defaults to the deck slide (ft_fit_width); harnesses rendering at
 # other sizes can set blockr.viz.gg_device_width (inches).
-gg_band_px <- function(n_groups, n_panels = 1L) {
+# How many panels sit in a row. `facet_cols` unset is what facet_wrap()
+# decides on its own, a square-ish grid; a number is the block's pick, capped
+# at the panel count so four columns over two panels leaves no empty tracks.
+# `auto` is what an unset setting resolves to -- the square-ish guess for the
+# geometry below, and NULL where the answer goes to facet_wrap(), which wants
+# to be left alone rather than told its own default.
+gg_facet_ncol <- function(n_panels, facet_cols = NULL, auto = "square") {
+
+  n_panels <- max(1L, as.integer(n_panels))
+  n <- facet_cols_n(facet_cols)
+
+  if (is.null(n)) {
+    return(if (identical(auto, "square")) ceiling(sqrt(n_panels)) else auto)
+  }
+
+  min(n, n_panels)
+}
+
+gg_band_px <- function(n_groups, n_panels = 1L, facet_cols = NULL) {
   w_in <- getOption(
     "blockr.viz.gg_device_width",
     getOption("blockr.viz.ft_fit_width", 11.9)
   )
-  ncol <- ceiling(sqrt(max(1L, n_panels))) # facet_wrap's default grid
+  ncol <- gg_facet_ncol(n_panels, facet_cols)
   plot_px <- (w_in * 96) / ncol - 130      # axis gutter + margins
   max(20, plot_px / max(1L, n_groups))
 }
@@ -314,8 +344,9 @@ gg_text_px <- function(x, size) {
 # asks the same question (chart.js _xAxisLabels): widest label plus 8px of
 # padding against the per-category slot. `slot` is the band gg_band_px()
 # sizes marks with, so both answers come off one geometry.
-gg_x_labels_fit <- function(labels, n_panels, size_pt) {
-  gg_text_px(labels, size_pt) + 8 <= gg_band_px(length(labels), n_panels)
+gg_x_labels_fit <- function(labels, n_panels, size_pt, facet_cols = NULL) {
+  gg_text_px(labels, size_pt) + 8 <=
+    gg_band_px(length(labels), n_panels, facet_cols)
 }
 
 # One label broken on spaces into lines that fit `width` CSS px. A word too
@@ -367,9 +398,9 @@ GG_FLAT_MAX_LINES <- 3L
 GG_TURN_MAX_LINES <- 2L
 GG_TURN_CAP <- 160
 
-gg_x_label_plan <- function(labels, n_panels, size_pt) {
+gg_x_label_plan <- function(labels, n_panels, size_pt, facet_cols = NULL) {
 
-  slot <- gg_band_px(length(labels), n_panels)
+  slot <- gg_band_px(length(labels), n_panels, facet_cols)
   pad <- 8
 
   if (gg_text_px(labels, size_pt) + pad <= slot) {
@@ -411,10 +442,10 @@ gg_x_label_plan <- function(labels, n_panels, size_pt) {
 # one line (the caller keeps whatever it had), a level -> text vector with
 # newlines in it otherwise.
 gg_turned_labels <- function(data, group, count_on, count_col, func,
-                             n_panels, size_pt) {
+                             n_panels, size_pt, facet_cols = NULL) {
 
   labels <- gg_cat_labels(data, group, count_on, count_col, func)
-  plan <- gg_x_label_plan(labels, n_panels, size_pt)
+  plan <- gg_x_label_plan(labels, n_panels, size_pt, facet_cols)
 
   if (identical(plan$text, labels)) {
     return(NULL)
@@ -425,7 +456,8 @@ gg_turned_labels <- function(data, group, count_on, count_col, func,
 
 # ...and whether that axis turns. Same plan, so the two never disagree.
 gg_x_label_theme <- function(data, chart_type, horiz, group, facet,
-                             count_on, count_col, func) {
+                             count_on, count_col, func,
+                             facet_cols = NULL) {
 
   if (horiz || is.null(group) || !chart_type %in% c("bar", "boxplot")) {
     return(NULL)
@@ -436,7 +468,7 @@ gg_x_label_theme <- function(data, chart_type, horiz, group, facet,
 
   n_panels <- if (is.null(facet)) 1L else length(dd_levels(data[[facet]]))
 
-  if (!gg_x_label_plan(labels, n_panels, gg_px_pt(11))$turn) {
+  if (!gg_x_label_plan(labels, n_panels, gg_px_pt(11), facet_cols)$turn) {
     return(NULL)
   }
 
@@ -824,7 +856,8 @@ gg_bar_value_scale <- function(vals, horiz, name, percent = FALSE) {
 gg_bar <- function(data, group, color, facet, value_col, func,
                          bar_mode, horiz, sort_by, sort_dir,
                          count_on, count_col, scale_map,
-                         na_group = "level", pct_of = "facet") {
+                         na_group = "level", pct_of = "facet",
+                         facet_cols = NULL) {
 
   if (is.null(group)) {
     return(NULL)
@@ -858,7 +891,7 @@ gg_bar <- function(data, group, color, facet, value_col, func,
     0.6
   }
   if (!horiz) {
-    band <- gg_band_px(length(lv), n_panels)
+    band <- gg_band_px(length(lv), n_panels, facet_cols)
     width <- if (grouped) {
       min(0.7, n_colors * 48 / band)
     } else {
@@ -925,7 +958,7 @@ gg_bar <- function(data, group, color, facet, value_col, func,
   } else {
     p + ggplot2::scale_x_discrete(
       labels = gg_turned_labels(data, group, count_on, count_col, func,
-                                n_panels, gg_px_pt(11)) %||%
+                                n_panels, gg_px_pt(11), facet_cols) %||%
         axis_labs %||% ggplot2::waiver()
     ) + ggplot2::labs(x = NULL)
   }
@@ -999,7 +1032,7 @@ gg_box_stats <- function(vals, summary, whiskers) {
 gg_boxplot <- function(data, group, color, facet, value_col,
                              box_points, summary, whiskers, horiz,
                              sort_by, sort_dir, count_on,
-                             count_col, scale_map) {
+                             count_col, scale_map, facet_cols = NULL) {
 
   if (is.null(group) || is.null(value_col) ||
         !is.numeric(data[[value_col]])) {
@@ -1084,7 +1117,7 @@ gg_boxplot <- function(data, group, color, facet, value_col,
     bw <- 0.73 / max(1L, n_colors)
     dodge <- ggplot2::position_dodge(width = 0.75)
   } else {
-    band <- gg_band_px(length(lv), n_panels)
+    band <- gg_band_px(length(lv), n_panels, facet_cols)
     avail <- band * 0.8 - 2
     gap <- avail / n_colors * 0.3
     bx <- min(50, max(7, (avail - gap * (n_colors - 1)) / n_colors))
@@ -1175,7 +1208,7 @@ gg_boxplot <- function(data, group, color, facet, value_col,
   } else {
     p + ggplot2::scale_x_discrete(
       labels = gg_turned_labels(data, group, count_on, count_col, NULL,
-                                n_panels, gg_px_pt(11)) %||%
+                                n_panels, gg_px_pt(11), facet_cols) %||%
         axis_labs %||% ggplot2::waiver()
     ) +
       gg_nice_scale(vals, "y", val_lab) +
@@ -1640,7 +1673,7 @@ gg_grid_theme <- function(chart_type, horiz) {
 # usable slide body; the officer placement (blockr.outline::place_exhibit)
 # reads these attributes.
 gg_attach_pptx_size <- function(p, data, chart_type, horiz, group,
-                                color, facet, bar_mode) {
+                                color, facet, bar_mode, facet_cols = NULL) {
 
   fit_w <- getOption("blockr.viz.ft_fit_width", 11.9)
   max_h <- 5.6
@@ -1665,7 +1698,11 @@ gg_attach_pptx_size <- function(p, data, chart_type, horiz, group,
     (350 + 130) / 96
   } else {
     n_panels <- n_of(facet)
-    panel_rows <- ceiling(n_panels / min(2L, max(1L, n_panels)))
+    # Panels per row: the block's pick when it has one, else the two-up
+    # reading a wide horizontal panel has always been given here.
+    panel_rows <- ceiling(n_panels / gg_facet_ncol(
+      n_panels, facet_cols, auto = min(2L, max(1L, n_panels))
+    ))
     # 30px top + rows + 46px bottom per panel row, plus the title band.
     min(max_h, panel_rows * (30 + rows_px + 46) / 96 + 0.4)
   }

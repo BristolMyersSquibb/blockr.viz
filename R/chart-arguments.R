@@ -396,6 +396,17 @@ chart_arguments <- function() {
       example = "fixed",
       type = arg_enum(c("fixed", "free_y", "free"))
     ),
+    facet_cols = new_arg_spec(
+      paste0(
+        "How many facet panels sit in a row, like ggplot2's ",
+        "facet_wrap(ncol=). null (default) is auto: as many panels per row ",
+        "as the card is wide. A number pins the row and the deck render ",
+        "follows it, so the picture keeps its shape wherever it is printed. ",
+        "Capped at the panel count. No-op without a facet."
+      ),
+      example = NULL,
+      type = arg_enum(c("1", "2", "3", "4", "6"))
+    ),
     lo = new_arg_spec(
       paste0(
         "Lower error-band column (individual line only). Set together ",
