@@ -497,13 +497,75 @@ dd_col_header_attrs <- function(th_args, path, col_keys) {
   th_args
 }
 
+#' Does this label text carry HTML, or is it text that merely contains a `<`?
+#'
+#' A `<` only opens a tag when a letter or a slash follows it, so an age band
+#' named `<65` is text and `<strong>` is markup. The distinction matters
+#' because markup is passed through unescaped: without it, `<65` reached the
+#' browser raw (it happens to render, but only because `<6` is not a valid
+#' tag).
+#' @noRd
+looks_like_markup <- function(x) {
+  grepl("<[[:alpha:]/]", x)
+}
+
+#' Split a header label into its name lines and the quiet "N = k" line.
+#'
+#' Every producer of these labels appends the Big N at the END: composer
+#' through the annotated-df bridge (`paste0(leaf, "\nN = ", n)`) and
+#' `fmt_cells()` on the summarise path (`sprintf("%s\nN = %d", ...)`). What
+#' sits in front of it is the level value as the data spells it, so it can
+#' carry newlines of its own -- a long arm description the sponsor broke
+#' across lines. Splitting on the FIRST newline (what this did until
+#' 2026-09-22) then demoted the tail of the arm name into the quiet sub-line,
+#' where it rendered at 11px in the muted ink.
+#'
+#' So: take the N off the END, and leave everything before it as the name.
+#' A label with no "N = " line has nothing to demote -- `arm__n` holds the
+#' count, not "whatever came after the first line" -- and renders as one name
+#' wrapped across its own breaks.
+#' @noRd
+header_label_split <- function(lbl) {
+  parts <- strsplit(lbl, "\n", fixed = TRUE)[[1L]]
+  parts <- trimws(parts)
+  parts <- parts[nzchar(parts)]
+  if (!length(parts)) {
+    return(NULL)
+  }
+  last <- parts[[length(parts)]]
+  if (length(parts) > 1L && grepl("^N\\s*=", last)) {
+    return(list(name = parts[-length(parts)], n = last))
+  }
+  list(name = parts, n = NULL)
+}
+
+#' The name half of a header label as tags -- one line, or several joined by
+#' `<br>`.
+#'
+#' A line carrying markup passes through as HTML, so a pre-baked
+#' `<strong>...` name keeps working and a `<br>` inside the level value still
+#' breaks; a plain line is left to htmltools to escape, so a level named
+#' `<65` renders as text.
+#' @noRd
+header_name_node <- function(parts) {
+  node <- function(p) if (looks_like_markup(p)) htmltools::HTML(p) else p
+  if (length(parts) == 1L) {
+    return(node(parts[[1L]]))
+  }
+  out <- list(node(parts[[1L]]))
+  for (p in parts[-1L]) {
+    out <- c(out, list(htmltools::tags$br(), node(p)))
+  }
+  do.call(htmltools::tagList, out)
+}
+
 #' A group (spanner) header cell's content.
 #'
 #' Without a stamped label this is the prefix as the column names spell it,
 #' which is what the group row has always rendered. With one, the same
 #' two-tier treatment the leaf headers get: a strong name line and a quiet
-#' sub-line under it, split on the newline. No sort arrow -- a spanner covers
-#' several columns, so there is nothing for it to sort.
+#' "N = k" sub-line under it. No sort arrow -- a spanner covers several
+#' columns, so there is nothing for it to sort.
 #' @noRd
 group_header_content <- function(fallback_text, label = NULL) {
 
@@ -511,21 +573,21 @@ group_header_content <- function(fallback_text, label = NULL) {
     return(fallback_text)
   }
 
-  parts <- strsplit(label, "\n", fixed = TRUE)[[1L]]
-  name_line <- parts[1L]
-  sub_line <- if (length(parts) > 1L) {
-    paste(parts[-1L], collapse = " ")
+  split <- header_label_split(label)
+  if (is.null(split)) {
+    return(fallback_text)
   }
 
-  if (is.null(sub_line) || !nzchar(sub_line)) {
-    return(name_line)
+  name_node <- header_name_node(split$name)
+  if (is.null(split$n)) {
+    return(name_node)
   }
 
   htmltools::tagList(
-    htmltools::tags$span(class = "arm__name", name_line),
+    htmltools::tags$span(class = "arm__name", name_node),
     htmltools::tags$div(
       class = "dt-th-subrow",
-      htmltools::tags$span(class = "arm__n num", sub_line)
+      htmltools::tags$span(class = "arm__n num", split$n)
     )
   )
 }
@@ -537,43 +599,50 @@ leaf_header_content <- function(data, col_name, fallback_text, span,
     # Group spanner -- never sortable, so the icon (if any) is dropped.
     return(fallback_text)
   }
-  lbl <- attr(data[[col_name]], "label")
-  if (is.null(lbl) || !is.character(lbl) || !nzchar(lbl)) {
-    # No label: name and sort arrow share the single row.
-    if (is.null(sort_icon)) return(fallback_text)
-    return(htmltools::tags$div(
+  # Name and sort arrow share the single row: no label, or nothing usable in
+  # the one there is.
+  bare <- function() {
+    if (is.null(sort_icon)) {
+      return(fallback_text)
+    }
+    htmltools::tags$div(
       class = "dt-th-namerow",
       htmltools::tags$span(class = "arm__name", fallback_text),
       sort_icon
-    ))
+    )
   }
-  if (grepl("<", lbl, fixed = TRUE)) {
-    # Pre-baked HTML label (legacy / spanner path) -- pass through untouched,
-    # with the sort arrow trailing.
+  lbl <- attr(data[[col_name]], "label")
+  if (is.null(lbl) || !is.character(lbl) || !nzchar(lbl)) {
+    return(bare())
+  }
+  if (!grepl("\n", lbl, fixed = TRUE) && looks_like_markup(lbl)) {
+    # Pre-baked HTML label on ONE line (legacy / spanner path) -- passed
+    # through untouched, with the sort arrow trailing. A label that also has
+    # newlines is ours to lay out; its markup stays inside the name line.
     return(htmltools::tagList(htmltools::HTML(lbl), sort_icon))
   }
-  # Direction-01 two-tier arm header: "<arm>\nN = <n>" splits into a strong
-  # arm name line + a quiet "N = k" sub-line. A label without a newline
-  # renders as the arm name alone.
-  parts <- strsplit(lbl, "\n", fixed = TRUE)[[1]]
-  name_line <- parts[1L]
-  n_line <- if (length(parts) > 1L) paste(parts[-1L], collapse = " ") else NULL
-  if (!is.null(n_line) && nzchar(n_line)) {
+  split <- header_label_split(lbl)
+  if (is.null(split)) {
+    return(bare())
+  }
+  name_node <- header_name_node(split$name)
+  if (!is.null(split$n)) {
     # Two-tier: arm name on top; the "N = k" sub-line and the sort arrow
     # share the lower row, so the arrow never adds a row of its own.
     htmltools::tagList(
-      htmltools::tags$span(class = "arm__name", name_line),
+      htmltools::tags$span(class = "arm__name", name_node),
       htmltools::tags$div(
         class = "dt-th-subrow",
-        htmltools::tags$span(class = "arm__n num", n_line),
+        htmltools::tags$span(class = "arm__n num", split$n),
         sort_icon
       )
     )
   } else {
-    # Single-line label: name and sort arrow share the one row.
+    # No Big N: the name (wrapped across its own breaks) and the sort arrow
+    # share the one row.
     htmltools::tags$div(
       class = "dt-th-namerow",
-      htmltools::tags$span(class = "arm__name", name_line),
+      htmltools::tags$span(class = "arm__name", name_node),
       sort_icon
     )
   }

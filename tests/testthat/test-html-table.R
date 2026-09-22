@@ -194,6 +194,60 @@ test_that("html_table() renders leaf-level attr(col, 'label') as HTML", {
   expect_true(grepl("<strong>Placebo</strong><br>N = 208", html, fixed = TRUE))
 })
 
+test_that("the quiet header sub-line is the Big N, not everything after line 1", {
+  # The arm name is the level value as the data spells it, so it can carry
+  # newlines of its own. Only the trailing "N = k" belongs in `arm__n`.
+  render <- function(lbl) {
+    df <- tibble::tibble(.label = "n", Arm = "84")
+    attr(df$Arm, "label") <- lbl
+    as.character(htmltools::tagList(html_table(df)))
+  }
+
+  one <- render("Active Arm 54 mg Once Daily\nN = 84")
+  expect_true(grepl(
+    '<span class="arm__name">Active Arm 54 mg Once Daily</span>', one,
+    fixed = TRUE
+  ))
+  expect_true(grepl('<span class="arm__n num">N = 84</span>', one, fixed = TRUE))
+
+  # The break inside the name used to push "54 mg Once Daily" into `arm__n`,
+  # where it rendered at 11px in the muted ink.
+  two <- render("Active Arm\n54 mg Once Daily\nN = 84")
+  expect_true(grepl("54 mg Once Daily", two, fixed = TRUE))
+  expect_false(grepl("54 mg Once Daily N = 84", two, fixed = TRUE))
+  expect_match(
+    two, '<span class="arm__name">\\s*Active Arm\\s*<br/>\\s*54 mg Once Daily\\s*</span>'
+  )
+  expect_true(grepl('<span class="arm__n num">N = 84</span>', two, fixed = TRUE))
+
+  # A `<br>` the level value brought with it breaks the name in place rather
+  # than tipping the whole label into the pre-baked HTML branch.
+  br <- render("Active Arm<br>54 mg Once Daily\nN = 84")
+  expect_true(grepl(
+    '<span class="arm__name">Active Arm<br>54 mg Once Daily</span>', br,
+    fixed = TRUE
+  ))
+  expect_true(grepl('<span class="arm__n num">N = 84</span>', br, fixed = TRUE))
+
+  # No Big N: nothing to demote, the whole label is the name.
+  none <- render("Active Arm\n54 mg Once Daily")
+  expect_false(grepl("arm__n num", none, fixed = TRUE))
+  expect_match(
+    none, '<span class="arm__name">\\s*Active Arm\\s*<br/>\\s*54 mg Once Daily\\s*</span>'
+  )
+
+  # A level named "<65" is text, not markup, and is escaped as such.
+  lt <- render("<65\nN = 12")
+  expect_true(grepl('<span class="arm__name">&lt;65</span>', lt, fixed = TRUE))
+})
+
+test_that("group_header_content() splits the Big N off the end too", {
+  out <- as.character(group_header_content("fallback", "Active Arm\n54 mg\nN = 168"))
+  out <- paste(out, collapse = "")
+  expect_match(out, '<span class="arm__name">\\s*Active Arm\\s*<br/>\\s*54 mg\\s*</span>')
+  expect_true(grepl('<span class="arm__n num">N = 168</span>', out, fixed = TRUE))
+})
+
 test_that("html_table() hides internal dotted columns from data cells", {
   df <- tibble::tibble(
     .group1_level = c("A", "A"),
