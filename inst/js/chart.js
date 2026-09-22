@@ -774,7 +774,7 @@
                 autoValue: (/** @type {any} */ cfg) =>
                   (cfg.title == null && cfg.title_resolved) ? cfg.title_resolved : '' },
     subtitle: { label: 'Subtitle', kind: 'text', ph: 'e.g. {func} of {label(@y)}[, by {@color}]',
-                hint: 'An {@arg} token prints that setting and makes the word a control on the block. [ ] drops its clause when the setting is empty.',
+                hint: 'A setting becomes a control on the block. [ ] drops its clause when the setting is empty.',
                 autoValue: (/** @type {any} */ cfg) =>
                   (cfg.subtitle == null && cfg.subtitle_resolved) ? cfg.subtitle_resolved : '' },
     caption:  { label: 'Caption', kind: 'text', ph: 'e.g. {filters} or N = {n} records',

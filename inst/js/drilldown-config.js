@@ -69,6 +69,12 @@
       this._openSec = null;         // capability-section open state (lazy)
       /** @type {MutationObserver | null} */
       this._closeWatch = null;      // armed deferred re-render (multi picks)
+      /** @type {any} */
+      this._at = null;              // the open `@` menu (Titles), portalled
+      /** @type {((e: MouseEvent) => void) | null} */
+      this._atDocClose = null;
+      /** @type {((e: Event) => void) | null} */
+      this._atScrollSync = null;
     }
 
     // Rebuild the popover from the host's CURRENT config/columns, dropping
@@ -384,6 +390,9 @@
       // re-render (multi-select dropdown still open) is moot — and its
       // observed select is about to be destroyed anyway.
       this._dropCloseWatch();
+      // Portalled to <body>, so a rebuild would otherwise leave it hanging
+      // over a field that no longer exists.
+      this._closeAtMenu();
       for (const s of Object.values(this._selects)) {
         if (s && typeof s.destroy === 'function') s.destroy();
       }
@@ -565,7 +574,7 @@
       // section so the free-text rows don't read as layout options; hosts
       // opt in via spec.titles.
       if (spec.titles && spec.titles.length) {
-        this._renderSection('Titles', spec.titles);
+        this._renderTitles(spec.titles);
       }
 
       // Aggregation as a checkbox capability (Variant A). Activation is
@@ -730,9 +739,528 @@
       sec.appendChild(row);
     }
 
+    // ===== Titles: the block's sentence, written =============================
+    //
+    // The one section here that is typed rather than picked. Three things it
+    // does that an ordinary text row cannot:
+    //
+    //   - it takes the full popover width, because a template
+    //     ("{@func} of {label(@value)}[, by {@color}]") is three times the
+    //     length of a column name and the grid gives a cell 180px;
+    //   - it prints what the template currently RESOLVES to, from the parts R
+    //     already ships for the card (`subtitle_parts` / `subtitle_offers`),
+    //     so the gear and the block cannot disagree about the sentence;
+    //   - `@` in the field opens the list of everything this block can print,
+    //     with the value each one prints right now. That list is the only
+    //     surface that can say "facet exists and is unset".
+    //
+    // Folded away by default: three full-width rows at the bottom of every
+    // gear is a lot of gear for something a board author sets once, and the
+    // closed header prints the current subtitle.
+    /** @param {string[]} keys */
+    _renderTitles(keys) {
+      const open = this._secOpen('titles', () => false);
+      const sec = this._sectionEl('Titles', {
+        fold: {
+          open,
+          onToggle: (on) => { this._setSecOpen('titles', on); this._rerender(); }
+        }
+      });
+      if (!open) return;
+      sec.classList.add('dd-section--titles');
+      for (const key of keys) this._renderTitleRow(sec, key);
+    }
+
+    /** The text a template currently resolves to.
+     *
+     * The parts are the resolver's own output (R/title-template.R, one walk,
+     * two renderers), so this never re-implements the token language. The
+     * fallbacks are for the hosts that ship a resolved string and no parts.
+     *
+     * @param {string} key @returns {string}
+     */
+    _resolvedText(key) {
+      const cfg = this._cfg();
+      const parts = cfg[key + '_parts'];
+      if (Array.isArray(parts) && parts.length) {
+        return parts.map(p => (p && p.text) ? p.text : '').join('');
+      }
+      // Two host conventions for the same thing: the chart ships
+      // `subtitle_resolved`, the table and the rank table fold the resolved
+      // string into `subtitle_auto` (the gear derives the clearable auto
+      // content from it).
+      for (const k of [key + '_resolved', key + '_auto']) {
+        if (typeof cfg[k] === 'string') return cfg[k];
+      }
+      const role = this._role(key);
+      if (cfg[key] == null && role && typeof role.autoValue === 'function') {
+        return String(role.autoValue(cfg) || '');
+      }
+      // Nothing resolved it, so all that is left is the template itself. A
+      // template is not what the card shows, and printing it here would say
+      // it is -- better to show nothing than to lie about the sentence.
+      const raw = cfg[key] == null ? '' : String(cfg[key]);
+      return raw.indexOf('{') >= 0 ? '' : raw;
+    }
+
+    /** @param {HTMLElement} sec @param {string} key */
+    _renderTitleRow(sec, key) {
+      const role = this._role(key);
+      if (!role) return;
+      const row = document.createElement('div');
+      row.className = 'blockr-popover-row dd-form-row dd-title-row dd-title-' + key;
+
+      const head = document.createElement('div');
+      head.className = 'dd-row-head';
+      const lbl = document.createElement('span');
+      lbl.className = 'blockr-popover-label';
+      lbl.textContent = (typeof role.label === 'function')
+        ? role.label(this._cfg()) : role.label;
+      head.appendChild(lbl);
+      row.appendChild(head);
+
+      const controls = document.createElement('div');
+      controls.className = 'dd-row-controls';
+      row.appendChild(controls);
+
+      // What the card shows. Painted from the committed state, which is the
+      // only state R has resolved -- while the field is dirty it keeps the
+      // last sentence and says so, rather than guessing in JS at what a
+      // half-typed template means.
+      //
+      // Text, not a field. A bordered box here put a second control-shaped
+      // thing under a control, and the two read as a pair of inputs; the turn
+      // says "that becomes this" and the blue words carry the rest.
+      const pv = document.createElement('div');
+      pv.className = 'dd-title-shows';
+      const turn = document.createElement('span');
+      turn.className = 'dd-title-turn';
+      turn.textContent = '\u21b3';
+      turn.setAttribute('aria-hidden', 'true');
+      const body = document.createElement('span');
+      body.className = 'dd-title-preview-body';
+      pv.appendChild(turn);
+      pv.appendChild(body);
+      row.appendChild(pv);
+
+      const foot = document.createElement('div');
+      foot.className = 'dd-title-foot';
+      const help = document.createElement('span');
+      help.className = 'dd-form-help';
+      help.appendChild(document.createTextNode('Type '));
+      const at = document.createElement('code');
+      at.className = 'dd-at-key';
+      at.textContent = '@';
+      help.appendChild(at);
+      help.appendChild(document.createTextNode(
+        ' for a setting or a value' + (this._fieldHelp(key) ? '. ' + this._fieldHelp(key) : '')));
+      foot.appendChild(help);
+
+      /** @type {{ input: HTMLInputElement, commit: () => void, isDirty: () => boolean } | null} */
+      let api = null;
+      const sync = () => {
+        if (!api) return;
+        row.classList.toggle('dd-title-row--dirty', api.isDirty());
+        this._paintTitleWarning(row, pv, api.input.value);
+      };
+      this._buildControl(controls, key, {
+        chipTarget: foot,
+        onReady: (a) => {
+          api = a;
+          // A template is code, not prose: the spell checker underlines every
+          // token in it.
+          a.input.spellcheck = false;
+        },
+        onInput: (inp, e) => {
+          // `e.data` is the character just typed; a paste or a pick from the
+          // menu reports something else, and neither should open a menu.
+          if (e && e.data === '@') this._openAtMenu(inp);
+          else this._refilterAtMenu(inp);
+          sync();
+        },
+        onKeydown: (e, inp) => this._atMenuKeydown(e, inp)
+      });
+      row.appendChild(foot);
+      sec.appendChild(row);
+      this._paintPreview(body, key);
+      const stale = document.createElement('span');
+      stale.className = 'dd-title-stale';
+      stale.textContent = 'not applied';
+      body.appendChild(stale);
+      sync();
+    }
+
+    /** The resolved sentence, marked the way the card marks it.
+     *
+     * Read-only: the slot is a word here, not a control. Two live copies of
+     * one setting on one screen is a state you cannot explain, and the one
+     * that belongs to the reader is the one on the block.
+     *
+     * @param {HTMLElement} el @param {string} key
+     */
+    _paintPreview(el, key) {
+      const cfg = this._cfg();
+      el.textContent = '';
+      const parts = cfg[key + '_parts'];
+      const text = this._resolvedText(key);
+      if (!Array.isArray(parts) || !parts.length) {
+        if (text) el.textContent = text;
+        else el.classList.add('dd-title-preview-body--empty');
+      } else {
+        for (const p of parts) {
+          if (!p || !p.text) continue;
+          if (!p.arg) { el.appendChild(document.createTextNode(p.text)); continue; }
+          const w = document.createElement('span');
+          w.className = 'blockr-slot blockr-slot--preview';
+          w.textContent = p.text;
+          el.appendChild(w);
+        }
+        if (!el.childNodes.length) el.classList.add('dd-title-preview-body--empty');
+      }
+      const offers = cfg[key + '_offers'];
+      if (!Array.isArray(offers) || !offers.length) return;
+      for (const arg of offers.slice(0, 3)) {
+        const chip = document.createElement('span');
+        chip.className = 'dd-title-offer';
+        chip.textContent = '+ ' + this._argLabel(arg);
+        el.appendChild(chip);
+      }
+      el.classList.remove('dd-title-preview-body--empty');
+    }
+
+    /** A name the resolver has no answer for.
+     *
+     * The resolver stays forgiving on purpose -- display text must not take a
+     * block down, so `{@colr}` prints "" and takes its `[ ]` clause with it.
+     * That silence is right on the card and wrong in the editor, so the check
+     * happens here. It is a LOOKUP, not a resolution: a second copy of
+     * title-template.R in JS is how two renderers drift.
+     *
+     * @param {HTMLElement} row @param {HTMLElement} after @param {string} tpl
+     */
+    _paintTitleWarning(row, after, tpl) {
+      const known = this._atNames();
+      const bad = [];
+      for (const m of String(tpl).matchAll(/\{([^{}]+)\}/g)) {
+        const tok = m[1].trim();
+        const inner = /^[A-Za-z_.][A-Za-z0-9_.]*\(\s*(.+?)\s*\)$/.exec(tok);
+        const name = (inner ? inner[1] : tok).trim();
+        if (name === 'n' || name === 'filters') continue;
+        if (known.has(name)) continue;
+        if (bad.indexOf(m[0]) < 0) bad.push(m[0]);
+      }
+      let el = row.querySelector('.dd-title-warn');
+      if (!bad.length) { if (el) el.remove(); return; }
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'dd-title-warn';
+        after.after(el);
+      }
+      el.textContent = 'Nothing is called ' + bad.join(', ') +
+        '. It prints nothing, and takes its [ ] clause with it.';
+    }
+
+    /** Every name a token may carry: the settings R answers `{@name}` for,
+     * plus the data's columns. @returns {Set<string>} */
+    _atNames() {
+      const out = new Set();
+      for (const name of Object.keys(this._cfg().title_arg_values || {})) {
+        out.add(name);
+        out.add('@' + name);
+      }
+      for (const c of this._cols()) out.add(c.name);
+      return out;
+    }
+
+    /** The name a menu row (or an offer chip) goes by.
+     *
+     * Roles and script values carry their own label. An argument R ships that
+     * has no control in this gear (`chart_type`) has none, so the variable
+     * name is humanised rather than printed raw: a menu listing
+     * "chart_type" beside "Colour" reads like a leak.
+     *
+     * @param {string} name @returns {string}
+     */
+    _argLabel(name) {
+      const role = this._role(name);
+      const lab = role &&
+        ((typeof role.label === 'function') ? role.label(this._cfg()) : role.label);
+      if (lab) return lab;
+      const words = String(name).replace(/[_.]+/g, ' ').trim();
+      return words.charAt(0).toUpperCase() + words.slice(1);
+    }
+
+    // -- the `@` menu ---------------------------------------------------------
+    //
+    // A mention-style trigger rather than a button: the people who write these
+    // templates write them all day, and the price -- an invisible keystroke --
+    // is paid by the help line under the field, which names it.
+    //
+    // The list is built from what R ships in `title_arg_values`: the settings
+    // the resolver answers to, and the value each one prints right now. So the
+    // menu cannot offer a token the resolver would print nothing for, and the
+    // value column is the answer to "what can I pick".
+
+    /** @returns {Array<{ head: string, note?: string, items: Array<any> }>} */
+    _atGroups() {
+      const cfg = this._cfg();
+      const vals = cfg.title_arg_values || {};
+      /** @type {Array<any>} */
+      const settings = [];
+      for (const name of Object.keys(vals)) {
+        const role = this._role(name);
+        const printed = vals[name] == null ? '' : String(vals[name]);
+        settings.push({ label: this._argLabel(name), tok: '{@' + name + '}', val: printed });
+        // `{label(@x)}` reads the column's variable label and is still that
+        // setting's slot. Offered wherever the value names a column, which is
+        // the only case where the two readings differ.
+        const col = this._cols().find(c => c.name === printed);
+        if (col) {
+          settings.push({ label: 'as its variable label', indent: true,
+                          tok: '{label(@' + name + ')}', val: col.label || col.name });
+        }
+      }
+      /** @type {Array<any>} */
+      const cols = [];
+      for (const c of this._cols()) {
+        cols.push({ label: c.name, tok: '{' + c.name + '}', val: c.label || '' });
+        cols.push({ label: 'as its variable label', indent: true,
+                    tok: '{label(' + c.name + ')}', val: c.label || c.name });
+        cols.push({ label: 'as a count of distinct values', indent: true,
+                    tok: '{n_distinct(' + c.name + ')}', val: '' });
+      }
+      const groups = [];
+      if (settings.length) {
+        groups.push({ head: "This block's settings",
+                      note: 'Printed as a word the reader can click.',
+                      items: settings });
+      }
+      groups.push({ head: 'Counts and filters', items: [
+        { label: 'Row count', tok: '{n}', val: '' },
+        { label: 'Filter trail', tok: '{filters}', val: 'what the filters upstream applied' }
+      ] });
+      groups.push({ head: 'Structure', items: [
+        { label: 'Optional clause', tok: '[ ]', val: 'drops when its setting is empty' },
+        { label: 'Line break', tok: '\\n', val: 'breaks the sentence' }
+      ] });
+      if (cols.length) {
+        groups.push({ head: 'Data columns',
+                      note: "Prints the column's values, not its name.",
+                      items: cols });
+      }
+      return groups;
+    }
+
+    /** @param {HTMLInputElement} inp */
+    _openAtMenu(inp) {
+      this._closeAtMenu();
+      const el = document.createElement('div');
+      el.className = 'dd-at-menu';
+      document.body.appendChild(el);
+      this._at = { inp, el, pos: (inp.selectionStart || 1) - 1, query: '', items: [], idx: 0 };
+      this._positionAtMenu();
+      this._renderAtMenu();
+      // A click anywhere else dismisses, like every other menu here. mousedown
+      // rather than click, so it fires before the field's blur-commit.
+      this._atDocClose = (/** @type {MouseEvent} */ e) => {
+        if (this._at && !this._at.el.contains(/** @type {Node} */ (e.target))) this._closeAtMenu();
+      };
+      document.addEventListener('mousedown', this._atDocClose, true);
+      // Portalled and fixed, so it does not travel with the panel it hangs
+      // off. Follow the field rather than close on it: the arrow keys walking
+      // the list scroll the panel itself, and closing there would make the
+      // keyboard unusable. Gone only when the field has left the screen.
+      this._atScrollSync = (/** @type {Event} */ e) => {
+        if (!this._at) return;
+        if (this._at.el.contains(/** @type {Node} */ (e.target))) return;
+        const r = this._at.inp.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > window.innerHeight) { this._closeAtMenu(); return; }
+        this._positionAtMenu();
+      };
+      document.addEventListener('scroll', this._atScrollSync, true);
+    }
+
+    _closeAtMenu() {
+      if (this._atDocClose) {
+        document.removeEventListener('mousedown', this._atDocClose, true);
+        this._atDocClose = null;
+      }
+      if (this._atScrollSync) {
+        document.removeEventListener('scroll', this._atScrollSync, true);
+        this._atScrollSync = null;
+      }
+      if (!this._at) return;
+      this._at.el.remove();
+      this._at = null;
+    }
+
+    // Under the caret, not under the field: the template is one line of code
+    // and the menu belongs where the word will land. Measured on a canvas in
+    // the field's own font rather than with a mirror element, which is a
+    // second copy of the input's box model to keep in step.
+    _positionAtMenu() {
+      const st = this._at;
+      if (!st) return;
+      const inp = st.inp;
+      const cs = getComputedStyle(inp);
+      const ctx = document.createElement('canvas').getContext('2d');
+      let x = 0;
+      if (ctx) {
+        ctx.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+        x = ctx.measureText(inp.value.slice(0, st.pos)).width;
+      }
+      const r = inp.getBoundingClientRect();
+      // Measured, not assumed: the panel is 410px until 92vw says otherwise,
+      // and its height is whatever the filtered list left.
+      const box = st.el.getBoundingClientRect();
+      const M = 8;
+      let left = r.left + parseFloat(cs.paddingLeft || '0') + x - inp.scrollLeft;
+      // Past the end of a long template the caret sits at the far right of the
+      // block, where a 410px panel has nowhere to go: clamp to the window, or
+      // the half that carries the values is off screen.
+      left = Math.min(left, r.right - 60, window.innerWidth - box.width - M);
+      st.el.style.left = Math.max(M, left) + 'px';
+      let top = r.bottom + 4;
+      if (top + box.height > window.innerHeight - M) {
+        // Flip above the field; if it does not fit there either, sit on the
+        // bottom edge (the panel scrolls).
+        const above = r.top - box.height - 4;
+        top = above >= M ? above : Math.max(M, window.innerHeight - box.height - M);
+      }
+      st.el.style.top = top + 'px';
+    }
+
+    _renderAtMenu() {
+      const st = this._at;
+      if (!st) return;
+      const q = st.query.toLowerCase();
+      st.el.innerHTML = '';
+      st.items = [];
+      const groups = this._atGroups();
+      groups.forEach((g, gi) => {
+        const matches = (/** @type {any} */ it) =>
+          (it.label + ' ' + it.tok + ' ' + (it.val || '')).toLowerCase().includes(q);
+        /** @type {Array<any>} */
+        const hits = [];
+        for (let i = 0; i < g.items.length; i++) {
+          const it = g.items[i];
+          // An indented row rides on the row above it: matching "TRTA" has to
+          // keep "as its variable label" beneath it, or the sub-row is orphaned
+          // under a heading with nothing to attach to.
+          const parent = it.indent ? g.items.slice(0, i).reverse().find(x => !x.indent) : null;
+          if (matches(it) || (parent && matches(parent))) hits.push(it);
+        }
+        if (!hits.length) return;
+        const h = document.createElement('div');
+        h.className = 'dd-at-head';
+        h.textContent = g.head;
+        st.el.appendChild(h);
+        if (g.note && !q) {
+          const n = document.createElement('div');
+          n.className = 'dd-at-note';
+          n.textContent = g.note;
+          st.el.appendChild(n);
+        }
+        for (const it of hits) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'dd-at-item' + (it.indent ? ' dd-at-item--sub' : '');
+          const lab = document.createElement('b');
+          lab.textContent = it.label;
+          const val = document.createElement('span');
+          val.className = 'dd-at-val' + (it.val ? '' : ' dd-at-val--unset');
+          val.textContent = it.val || (it.indent ? '' : 'unset');
+          const tok = document.createElement('span');
+          tok.className = 'dd-at-tok';
+          tok.textContent = it.tok;
+          b.appendChild(lab);
+          b.appendChild(val);
+          b.appendChild(tok);
+          const idx = st.items.length;
+          // mousedown, and prevented: a click would blur the field first, and
+          // blur commits the row.
+          b.addEventListener('mousedown', (e) => { e.preventDefault(); this._pickAtItem(idx); });
+          b.addEventListener('mouseenter', () => { st.idx = idx; this._hlAtMenu(); });
+          st.items.push({ tok: it.tok, el: b });
+          st.el.appendChild(b);
+        }
+        if (gi < groups.length - 1) {
+          const sep = document.createElement('div');
+          sep.className = 'dd-at-sep';
+          st.el.appendChild(sep);
+        }
+      });
+      if (!st.items.length) {
+        const n = document.createElement('div');
+        n.className = 'dd-at-note';
+        n.textContent = 'Nothing matches "' + st.query + '".';
+        st.el.appendChild(n);
+      }
+      if (st.idx >= st.items.length) st.idx = 0;
+      this._hlAtMenu();
+      this._positionAtMenu();
+    }
+
+    _hlAtMenu() {
+      const st = this._at;
+      if (!st) return;
+      st.items.forEach((it, i) => it.el.classList.toggle('dd-at-item--hl', i === st.idx));
+      const cur = st.items[st.idx];
+      if (cur) cur.el.scrollIntoView({ block: 'nearest' });
+    }
+
+    /** @param {number} i */
+    _pickAtItem(i) {
+      const st = this._at;
+      if (!st) return;
+      const item = st.items[i];
+      if (!item) return;
+      // The bracket pair is the one entry that wraps rather than inserts;
+      // dropped in with a comma because that is how every clause in a real
+      // template starts.
+      const tok = item.tok === '[ ]' ? '[, ]' : item.tok;
+      const inp = st.inp;
+      const caret = inp.selectionStart || 0;
+      inp.value = inp.value.slice(0, st.pos) + tok + inp.value.slice(caret);
+      // Inside the brackets, not after them: the next thing typed is the
+      // clause's text.
+      const pos = st.pos + (item.tok === '[ ]' ? tok.length - 1 : tok.length);
+      this._closeAtMenu();
+      inp.focus();
+      inp.setSelectionRange(pos, pos);
+      inp.dispatchEvent(new Event('input'));
+    }
+
+    /** @param {HTMLInputElement} inp */
+    _refilterAtMenu(inp) {
+      const st = this._at;
+      if (!st || st.inp !== inp) return;
+      const caret = inp.selectionStart || 0;
+      if (caret <= st.pos || inp.value[st.pos] !== '@') { this._closeAtMenu(); return; }
+      const q = inp.value.slice(st.pos + 1, caret);
+      // A space or a brace means the template moved on and the `@` was just a
+      // character; anything else is still the query.
+      if (/[\s{}\[\]]/.test(q)) { this._closeAtMenu(); return; }
+      st.query = q;
+      this._renderAtMenu();
+    }
+
+    /** @param {KeyboardEvent} e @param {HTMLInputElement} inp @returns {boolean} */
+    _atMenuKeydown(e, inp) {
+      const st = this._at;
+      if (!st || st.inp !== inp) return false;
+      const n = st.items.length;
+      if (e.key === 'ArrowDown' && n) { e.preventDefault(); st.idx = (st.idx + 1) % n; this._hlAtMenu(); return true; }
+      if (e.key === 'ArrowUp' && n) { e.preventDefault(); st.idx = (st.idx - 1 + n) % n; this._hlAtMenu(); return true; }
+      if ((e.key === 'Enter' || e.key === 'Tab') && n) { e.preventDefault(); this._pickAtItem(st.idx); return true; }
+      if (e.key === 'Escape') { e.preventDefault(); this._closeAtMenu(); return true; }
+      return false;
+    }
+
     /**
      * @param {string} titleText
      * @param {{ toggle?: { checked: boolean, onToggle: (on: boolean) => void },
+     *          fold?: { open: boolean, onToggle: (on: boolean) => void },
      *          action?: HTMLElement }} [opts]
      *   When `toggle` is given the header carries a checkbox (Variant A): the
      *   section is a capability that is off by default and reveals its body only
@@ -765,6 +1293,39 @@
         box.addEventListener('keydown', (e) => {
           if (e.key !== ' ' && e.key !== 'Enter') return;
           e.preventDefault();   // Space must toggle, not scroll the popover
+          flip(e);
+        });
+      } else if (opts.fold) {
+        // A section that is CLOSED by default and opens on the header. Not the
+        // checkbox above: that one owns a capability, and unchecking it clears
+        // the thing it holds. Folding hides rows, it does not turn anything
+        // off, so it gets a chevron and no checkbox.
+        const fold = opts.fold;
+        h.classList.add('dd-section-title--fold');
+        h.setAttribute('role', 'button');
+        h.setAttribute('tabindex', '0');
+        h.setAttribute('aria-expanded', fold.open ? 'true' : 'false');
+        // The shared chevron (blockr.dplyr blockr-core.js), pointing down
+        // closed and flipped 180 open -- the same glyph and the same gesture
+        // the select's arrow uses, which is the only chevron convention this
+        // codebase has.
+        const chev = document.createElement('span');
+        chev.className = 'dd-fold-chev';
+        if (typeof Blockr !== 'undefined' && Blockr.icons && Blockr.icons.chevron) {
+          chev.innerHTML = Blockr.icons.chevron;
+        }
+        const label = document.createElement('span');
+        label.textContent = titleText;
+        h.appendChild(chev);
+        h.appendChild(label);
+        const flip = (/** @type {Event} */ e) => {
+          e.stopPropagation();
+          fold.onToggle(!fold.open);
+        };
+        h.addEventListener('click', flip);
+        h.addEventListener('keydown', (e) => {
+          if (e.key !== ' ' && e.key !== 'Enter') return;
+          e.preventDefault();
           flip(e);
         });
       } else {
@@ -1548,8 +2109,19 @@
       sec.appendChild(trow);
     }
 
-    /** @param {HTMLElement} parent @param {string} key @param {{ required?: boolean, onChange?: () => void }} [param2] */
-    _buildControl(parent, key, { required, onChange } = {}) {
+    /**
+     * @param {HTMLElement} parent @param {string} key
+     * @param {{ required?: boolean, onChange?: () => void,
+     *          chipTarget?: HTMLElement, onInput?: (inp: HTMLInputElement) => void,
+     *          onKeydown?: (e: KeyboardEvent, inp: HTMLInputElement) => boolean,
+     *          onReady?: (api: { input: HTMLInputElement, commit: () => void,
+     *                            isDirty: () => boolean }) => void }} [opts]
+     *   The last four are for a caller that owns more of the row than the
+     *   field does -- the Titles rows, which put the commit chip in their own
+     *   foot line and run the `@` menu off the typing.
+     */
+    _buildControl(parent, key, opts = {}) {
+      const { required, onChange } = opts;
       const role = this._role(key);
       const cb = onChange || (() => {});
       const cfg = this._cfg();
@@ -1701,8 +2273,14 @@
           this.h.onChange(key);
           syncChip();
         };
-        inp.addEventListener('input', syncChip);
+        inp.addEventListener('input', (e) => {
+          syncChip();
+          if (typeof opts.onInput === 'function') opts.onInput(inp, e);
+        });
         inp.addEventListener('keydown', (e) => {
+          // A caller running a menu off this field eats the arrows and Enter
+          // while it is open, or picking an option would commit the row.
+          if (typeof opts.onKeydown === 'function' && opts.onKeydown(e, inp)) return;
           if (e.key === 'Enter') { e.preventDefault(); commit(); }
           else if (e.key === 'Escape') { inp.value = committed; syncChip(); }
         });
@@ -1711,8 +2289,15 @@
         chip.addEventListener('mousedown', (e) => e.preventDefault());
         chip.addEventListener('click', commit);
         wrap.appendChild(inp);
-        wrap.appendChild(chip);
+        // The chip normally overlays the field's right edge, which costs the
+        // input 78px of padding. A caller with a row of its own to put it in
+        // (the Titles foot) takes it out of the field, so the input, the
+        // preview under it and the selects above all end at the same x.
+        (opts.chipTarget || wrap).appendChild(chip);
         parent.appendChild(wrap);
+        if (typeof opts.onReady === 'function') {
+          opts.onReady({ input: inp, commit, isDirty: () => inp.value !== committed });
+        }
       } else if (role.kind === 'multi') {
         // Multi-select over a fixed option list (a prepare script's
         // `factor(c("a","b"), lv)`). The column multi-picker above is the same

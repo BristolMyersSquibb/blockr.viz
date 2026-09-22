@@ -1136,6 +1136,15 @@ new_chart_block <- function(
             # which is a state you cannot explain to the person looking at it.
             sentence_args = sentence_args(
               title_parts, sub_parts, caption_parts
+            ),
+            # What `{@...}` can name, and what each one would print right now.
+            # The gear's insert menu is built from this, so it cannot offer a
+            # token the resolver has no answer for, and its value column comes
+            # from the same function that prints the word. A named list, so it
+            # arrives as an object rather than as a vector jsonlite might
+            # unbox.
+            title_arg_values = lapply(
+              stats::setNames(nm = names(a)), arg_token_value, args = a
             )
           )
         })
@@ -1298,6 +1307,10 @@ new_chart_block <- function(
               title_offers = as.list(r_titles_resolved()$title_offers),
               caption_offers = as.list(r_titles_resolved()$caption_offers),
               sentence_args = as.list(r_titles_resolved()$sentence_args),
+              # What `{@...}` can name, and what each one prints right now.
+              # The gear's `@` menu is built from this, so it cannot offer a
+              # token the resolver has no answer for.
+              title_arg_values = r_titles_resolved()$title_arg_values,
               smoother_series = r_smoother_series(),
               lo = r_lo(), hi = r_hi(),
               # Board scale map, resolved for the chart type's colored role

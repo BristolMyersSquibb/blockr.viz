@@ -88,6 +88,245 @@
   transform: translateY(-50%);
 }
 
+/* ===== Titles: writing the block's sentence =====
+   The one section in the gear that is typed rather than picked, so it is the
+   one section that needs the whole popover: a template
+   ("{@func} of {label(@value)}[, by {@color}]") is three times the length of
+   a column name, and a form cell is 180px. Folded away by default, because
+   three full-width rows at the bottom of every gear is a lot of gear for
+   something a board author sets once. Spec + the proposals it came from:
+   _scratch/sentence-builder/final.html, rules in blockr.docs
+   design-system/pinned-controls.md. */
+.dd-section--titles > .dd-form-row {
+  grid-column: 1 / -1;
+}
+
+/* A collapsible section header. Not the checkbox one above it: that owns a
+   capability and unchecking clears it, while folding only hides rows. */
+.dd-section-title--fold {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  user-select: none;
+}
+.dd-section-title--fold:hover {
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+/* The shared chevron, drawn and flipped exactly like the select's arrow
+   (blockr.dplyr .blockr-select__arrow): down when closed, 180 when open. */
+.dd-fold-chev {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+  transition: transform 150ms ease;
+  pointer-events: none;
+}
+.dd-section-title--fold[aria-expanded="true"] .dd-fold-chev {
+  transform: rotate(180deg);
+}
+
+/* The field: full width, monospace (a template is code-shaped), and NO room
+   reserved for the commit chip -- that moves to the foot line below, so the
+   input, its preview and the selects in the sections above all end at the
+   same x. */
+.dd-title-row .dd-text-wrap {
+  display: block;
+}
+.dd-title-row .blockr-popover-input {
+  display: block;
+  width: 100%;
+  padding-right: 12px;
+  font-family: var(--blockr-font-mono, 'SF Mono', 'Fira Code', Consolas, Monaco, monospace);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+.dd-title-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 26px;
+  margin-top: 6px;
+}
+.dd-title-foot .dd-form-help {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.dd-title-foot .blockr-expr-confirm {
+  position: static;
+  transform: none;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+.dd-at-key {
+  font-family: var(--blockr-font-mono, 'SF Mono', 'Fira Code', Consolas, Monaco, monospace);
+  background: var(--blockr-grey-100, #f3f4f6);
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: var(--blockr-radius-sm, 4px);
+  padding: 0 4px;
+  color: var(--blockr-color-text-secondary, #374151);
+}
+
+/* What the card shows, from the parts R resolved for the card itself. Dimmed
+   while the field is dirty, because the template in the field has not been
+   resolved by anything yet and the editor must not guess. */
+.dd-title-shows {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 7px;
+  padding-left: 2px;
+}
+.dd-title-row--dirty .dd-title-shows {
+  opacity: 0.45;
+}
+/* The only chrome: a turn, saying that the line above becomes this one. */
+.dd-title-turn {
+  flex: 0 0 auto;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--blockr-color-border-strong, #d1d5db);
+}
+/* Named in the line rather than beside it, so a wrapped sentence keeps it. */
+.dd-title-stale {
+  display: none;
+  margin-left: 6px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-style: italic;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+}
+.dd-title-row--dirty .dd-title-stale {
+  display: inline;
+}
+.dd-title-preview-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  line-height: 1.6;
+  color: var(--blockr-color-text-muted, #6b7280);
+  white-space: pre-line;
+}
+.dd-title-preview-body--empty::after {
+  content: 'nothing';
+  font-style: italic;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+}
+/* The slot is a word here, not a control: the live copy belongs to the reader,
+   on the block. Same mark, no pointer. */
+.blockr-slot--preview {
+  cursor: default;
+}
+.dd-title-offer {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 0 6px;
+  border: 1px dashed var(--blockr-color-border-strong, #d1d5db);
+  border-radius: var(--blockr-radius-sm, 4px);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 1.5;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+
+/* A name the resolver has no answer for. It prints "" on the card and takes
+   its bracketed clause with it, which is right there and wrong here. */
+.dd-title-warn {
+  margin-top: 6px;
+  padding: 4px 8px;
+  border: 1px solid #fde68a;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: var(--blockr-color-warning-bg, #fffbeb);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 1.4;
+  color: #b45309;
+}
+
+/* ===== The `@` menu =====
+   Mention-style: typing `@` in a title field opens the list of everything the
+   block can print, at the caret, filtering on what follows. Portalled to
+   <body> like every other dropdown here. */
+.dd-at-menu {
+  position: fixed;
+  z-index: 10000;
+  width: 410px;
+  max-width: 92vw;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: var(--blockr-radius-lg, 8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.dd-at-head {
+  padding: 7px 9px 4px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+}
+.dd-at-note {
+  padding: 0 9px 6px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 1.4;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+}
+.dd-at-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 9px;
+  border: none;
+  background: none;
+  border-radius: var(--blockr-radius-sm, 4px);
+  font: inherit;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  text-align: left;
+  cursor: pointer;
+}
+.dd-at-item--sub {
+  padding-left: 22px;
+}
+.dd-at-item--hl {
+  background: var(--blockr-color-bg-hover, #f3f4f6);
+}
+.dd-at-item > b {
+  flex: 0 0 auto;
+  font-weight: var(--blockr-font-weight-medium, 500);
+  color: var(--blockr-color-text-primary, #111827);
+}
+.dd-at-item--sub > b {
+  font-weight: var(--blockr-font-weight-normal, 400);
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.dd-at-val {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+/* An unset setting says so: that is how you find out the block HAS a facet. */
+.dd-at-val--unset {
+  font-style: italic;
+  color: var(--blockr-color-text-subtle, #9ca3af);
+}
+.dd-at-tok {
+  flex: 0 0 auto;
+  font-family: var(--blockr-font-mono, 'SF Mono', 'Fira Code', Consolas, Monaco, monospace);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-text-subtle, #9ca3af);
+}
+.dd-at-sep {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--blockr-grey-100, #f3f4f6);
+}
+
 /* Fallback native select (only when Blockr.Select is unavailable) — mirror the
    canonical popover input look. */
 .dd-cfg-select {
