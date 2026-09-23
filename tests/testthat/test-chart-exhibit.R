@@ -58,6 +58,41 @@ test_that("a chart renders to every target through the shared writers", {
   expect_identical(length(officer::read_pptx(h)), 1L)
 })
 
+test_that("chart HTML download omits the document subtitle", {
+  p <- chart_static_exhibit(
+    datasets::iris,
+    chart_state(
+      title = "Demographic Distribution",
+      subtitle = "{label(@value)} by {label(@group)}[, coloured by {label(@color)}]"
+    )
+  )
+
+  f <- withr::local_tempfile(fileext = ".html")
+  write_exhibit_html(p, f, title = "Demographic Distribution", subtitle = "by")
+  html <- paste(readLines(f, warn = FALSE), collapse = "\n")
+
+  expect_match(html, "<title>Demographic Distribution</title>", fixed = TRUE)
+  expect_match(html, "<h1>Demographic Distribution</h1>", fixed = TRUE)
+  expect_true(grepl("<img", html, fixed = TRUE))
+  expect_false(grepl("<p class=\"blockr-exhibit-subtitle\"", html,
+                     fixed = TRUE))
+})
+
+test_that("bare ggplot HTML output keeps the document subtitle", {
+  skip_if_not_installed("ggplot2")
+
+  p <- ggplot2::ggplot(datasets::iris, ggplot2::aes(Species, Sepal.Length)) +
+    ggplot2::geom_boxplot()
+
+  f <- withr::local_tempfile(fileext = ".html")
+  write_exhibit_html(p, f, title = "Demographic Distribution",
+                     subtitle = "Safety population")
+  html <- paste(readLines(f, warn = FALSE), collapse = "\n")
+
+  expect_match(html, "<p class=\"blockr-exhibit-subtitle\">Safety population</p>",
+               fixed = TRUE)
+})
+
 test_that("a plot keeps its aspect on a slide rather than filling it", {
   p <- chart_static_exhibit(datasets::iris, chart_state())
   size <- gg_exhibit_size(p)

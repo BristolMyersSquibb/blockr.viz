@@ -84,6 +84,7 @@ write_exhibit_html <- function(x, file, title = NULL, subtitle = NULL,
     if (is.character(x) && length(x) == 1L && nzchar(x)) x else NULL
   }
 
+  subtitle <- exhibit_doc_subtitle(x, subtitle)
   head_title <- txt(title) %||% "Table"
 
   writeLines(
@@ -115,6 +116,39 @@ write_exhibit_html <- function(x, file, title = NULL, subtitle = NULL,
   )
 
   invisible(file)
+}
+
+# Charts downloaded as HTML are already a picture of the fully titled chart:
+# the image includes its title band, subtitle and legend. The document shell
+# still owns <title> and <h1>, but its subtitle line would be a second,
+# separately resolved sentence. For the chart block that shell sentence can be
+# stale or partial (for example the unresolved template collapsing to "by"), so
+# picture exhibits deliberately suppress it. Table-like exhibits keep it.
+#' @noRd
+exhibit_doc_subtitle <- function(x, subtitle) {
+  if (inherits(x, "chart_capture")) {
+    return(NULL)
+  }
+
+  if (inherits(x, "gg") && gg_has_title_band(x)) {
+    return(NULL)
+  }
+
+  subtitle
+}
+
+#' @noRd
+gg_has_title_band <- function(x) {
+  labels <- tryCatch(x$labels, error = function(e) NULL)
+  if (!is.list(labels)) {
+    return(FALSE)
+  }
+
+  any(vapply(
+    labels[c("title", "subtitle", "caption")],
+    function(label) is.character(label) && length(label) == 1L && nzchar(label),
+    logical(1)
+  ))
 }
 
 # The document shell's own CSS -- the page around the table, never the table.
