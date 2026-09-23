@@ -1942,8 +1942,7 @@ new_chart_block <- function(
                 p, file,
                 title = resolve_block_title(r_title(), plain_data(),
                                             auto = auto$label),
-                subtitle = resolve_block_title(r_subtitle(), plain_data(),
-                                               auto = auto$subtitle)
+                subtitle = NULL
               )
             })
           }

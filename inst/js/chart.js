@@ -353,6 +353,20 @@
     `${axisLabel.rotate}|${axisLabel.interval}|${axisLabel.__wrapAt}` +
     `|${axisLabel.__lines}`;
 
+  /** @param {any} axisLabel @param {((v: any) => any) | null | undefined} display */
+  const axisLabelWithDisplay = (axisLabel, display) => {
+    const base = axisLabel || {};
+    const wrap = base.formatter;
+    if (!display && !wrap) return base;
+    return {
+      ...base,
+      formatter: (/** @type {any} */ v) => {
+        const shown = display ? display(v) : v;
+        return wrap ? wrap(shown) : shown;
+      }
+    };
+  };
+
   // -- Category label typesetting -------------------------------------------
   //
   // The ladder a long label goes down, cheapest first. A turned label costs
@@ -3864,7 +3878,7 @@
       // labels (never diagonal), all shown. Grid bottom grows for rotated text.
       const xlab = vertical ? this._xAxisLabels(catLabels, (plotW || 0) - 65) : null;
       const catAxis = vertical
-        ? { type: 'category', data: groups, axisLabel: { ...xlab?.axisLabel, ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
+        ? { type: 'category', data: groups, axisLabel: axisLabelWithDisplay(xlab?.axisLabel, catFmt), axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
         : { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false }, axisTick: { show: false } };
       // Percent display only applies when a color split is actually present
       // (a single series is trivially 100% of itself).
@@ -3973,7 +3987,7 @@
         // measured above, so a resize can redo the decision from scratch.
         __xFit: xlab
           ? { labels: catLabels, inset: 65, decimate: false,
-              gutter: xlab.bottom, key: xlab.key }
+              gutter: xlab.bottom, key: xlab.key, formatter: catFmt }
           : undefined,
         // Horizontal: exact panel height for a constant category band —
         // grid.top + rows * band + grid.bottom, band = one 28px row
@@ -4081,12 +4095,12 @@
       const xlab = this._xAxisLabels(stepLabels, (plotW || 0) - 65);
       const catAxis = {
         type: 'category', data: groups,
-        axisLabel: {
-          ...xlab.axisLabel,
-          ...(axisCounts
-            ? { formatter: (/** @type {any} */ v) => this._withCount(v, axisCounts) }
-            : {})
-        },
+        axisLabel: axisLabelWithDisplay(
+          xlab.axisLabel,
+          axisCounts
+            ? (/** @type {any} */ v) => this._withCount(v, axisCounts)
+            : null
+        ),
         axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
         axisTick: { show: false }, splitLine: { show: false }
       };
@@ -4102,7 +4116,10 @@
         // above already reserves — same rule as the vertical bar.
         __panelH: 350 + xlab.bottom,
         __xFit: { labels: stepLabels, inset: 65, decimate: false,
-                  gutter: xlab.bottom, key: xlab.key },
+                  gutter: xlab.bottom, key: xlab.key,
+                  formatter: axisCounts
+                    ? (/** @type {any} */ v) => this._withCount(v, axisCounts)
+                    : null },
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: BLOCKR_FONT },
         tooltip: {
@@ -4559,7 +4576,7 @@
       // from 0. Matches scatter/line; bars/waterfall keep the 0 baseline.
       const valAxis = { type: 'value', scale: true, name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: vertical ? 45 : 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, ...(vertical ? { splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } } } : {}) };
       const catAxis = vertical
-        ? { type: 'category', data: cats, axisLabel: { ...(xlab ? xlab.axisLabel : {}), ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
+        ? { type: 'category', data: cats, axisLabel: axisLabelWithDisplay(xlab?.axisLabel, catFmt), axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
         : { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '…', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false } };
       // ECharts lays out every boxplot series that shares one category axis
       // as a dodged group: the band is cut into one sub-band per series and
@@ -4587,7 +4604,7 @@
         // inset as measured above, so a resize redoes the fit from scratch.
         __xFit: (vertical && xlab)
           ? { labels: catLabels, inset: 65, decimate: false,
-              gutter: xlab.bottom, key: xlab.key }
+              gutter: xlab.bottom, key: xlab.key, formatter: catFmt }
           : undefined,
         // Horizontal: exact panel height for a constant 28px category row
         // (clamped at PANEL_H_CAP — see the bar builder for the rationale).
@@ -7047,7 +7064,9 @@
       fit.gutter = lab.bottom;
       const grid = (chart.getOption().grid || [])[0] || {};
       /** @type {any} */
-      const xPatch = { axisLabel: lab.axisLabel };
+      const xPatch = {
+        axisLabel: axisLabelWithDisplay(lab.axisLabel, fit.formatter)
+      };
       // Families that title the x-axis drop the title below the rotated text
       // via nameGap; families whose category axis is untitled (bar, waterfall)
       // have no nameGap to move.
