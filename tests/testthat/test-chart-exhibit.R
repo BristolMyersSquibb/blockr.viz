@@ -58,7 +58,7 @@ test_that("a chart renders to every target through the shared writers", {
   expect_identical(length(officer::read_pptx(h)), 1L)
 })
 
-test_that("chart HTML download omits the document subtitle", {
+test_that("chart HTML download omits the document title block", {
   p <- chart_static_exhibit(
     datasets::iris,
     chart_state(
@@ -72,8 +72,9 @@ test_that("chart HTML download omits the document subtitle", {
   html <- paste(readLines(f, warn = FALSE), collapse = "\n")
 
   expect_match(html, "<title>Demographic Distribution</title>", fixed = TRUE)
-  expect_match(html, "<h1>Demographic Distribution</h1>", fixed = TRUE)
   expect_true(grepl("<img", html, fixed = TRUE))
+  expect_false(grepl("<h1>Demographic Distribution</h1>", html,
+                     fixed = TRUE))
   expect_false(grepl("<p class=\"blockr-exhibit-subtitle\"", html,
                      fixed = TRUE))
 })
