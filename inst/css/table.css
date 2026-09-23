@@ -216,6 +216,21 @@
   z-index: 2;
   background: var(--blockr-color-bg, #ffffff);
 }
+/* scroll = "page" (dt_chrome): the box scrolls sideways only and runs the
+   table's full length, so the panel or page around it scrolls up and down.
+   The sticky header cannot follow that scroller (see followHeader() in
+   table.js, which moves the thead instead), so the thead is a plain
+   positioned layer above the rows. max-height: blockr.ui's preview
+   stylesheet makes every .blockr-table-wrapper a 400px scroll box. */
+.blockr-table-wrapper.dt-scroll-page {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-height: none;
+}
+.dt-scroll-page .blockr-table thead {
+  position: relative;
+  z-index: 3;
+}
 /* Sort indicator placement, matching the html preview: the arrow flows on
    the lower row immediately to the right of the subtext (small gap, like the
    preview's type-row) rather than on its own line.

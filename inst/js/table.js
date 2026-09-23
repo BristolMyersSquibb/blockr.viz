@@ -318,6 +318,9 @@
     // const (not var) so the post-guard non-null narrowing holds inside onScroll.
     const sc = root.querySelector(".blockr-table-wrapper");
     if (!sc) return;
+    // A page-scrolled box never scrolls vertically; followHeader() owns
+    // `.scrolled` there.
+    if (sc.classList.contains("dt-scroll-page")) return;
     // Arrow defined after the guard so the non-null narrowing of `sc` is captured.
     const onScroll = () => {
       if (sc.scrollTop > 2) sc.classList.add("scrolled");
@@ -326,6 +329,58 @@
     sc.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
   }
+
+  // scroll = "page" (dt_chrome, `.dt-scroll-page`): the table box scrolls
+  // sideways only and runs its full length, so up and down belongs to
+  // whatever scrolls around it (a dock panel, the page). A sticky header
+  // cannot follow that: a box that scrolls in one axis is a scroll container
+  // in both, so the header would stick to the box. Instead the header is
+  // moved down by as much of the table as has scrolled out of the
+  // scroller's view, and stops at the last row. The listener is one capture
+  // listener on the document, which sees every element's scroll: the dock
+  // moves a card between containers after it is wired, so a listener bound
+  // to one scroller would go stale.
+  var PAGE_SEL = ".blockr-table-wrapper.dt-scroll-page";
+
+  // The nearest ancestor that actually scrolls up and down. An ancestor that
+  // only scrolls sideways computes overflow-y to auto as well (the dock's
+  // outputs section does), so the style alone would stop there.
+  /** @param {Element} el @returns {Element | null} */
+  function scrollParent(el) {
+    for (var n = el.parentElement; n; n = n.parentElement) {
+      var oy = getComputedStyle(n).overflowY;
+      if ((oy === "auto" || oy === "scroll") &&
+          n.scrollHeight > n.clientHeight) return n;
+    }
+    return null;
+  }
+
+  /** @param {Element} wrapper */
+  function followHeader(wrapper) {
+    var thead = /** @type {HTMLElement | null} */ (
+      wrapper.querySelector("table.blockr-table > thead"));
+    var table = thead && thead.parentElement;
+    if (!thead || !table) return;
+    var sp = scrollParent(wrapper);
+    var top = sp ? sp.getBoundingClientRect().top : 0;
+    // offsetHeight, not a rect: a rect would include the transform set here.
+    var max = table.offsetHeight - thead.offsetHeight;
+    var y = Math.max(0, Math.min(top - table.getBoundingClientRect().top, max));
+    thead.style.transform = y > 0 ? "translateY(" + y + "px)" : "";
+    wrapper.classList.toggle("scrolled", y > 0);
+  }
+
+  /** @param {Event} e */
+  function followHeaders(e) {
+    var t = e && e.target;
+    var scope = t && /** @type {Element} */ (t).querySelectorAll
+      ? /** @type {Element} */ (t) : document;
+    scope.querySelectorAll(PAGE_SEL).forEach(followHeader);
+  }
+
+  document.addEventListener("scroll", followHeaders,
+                            { capture: true, passive: true });
+  window.addEventListener("resize", followHeaders);
 
   // Per-row lowercase search text, read + lowered ONCE per rendered row
   // (per-keystroke filtering used to re-extract textContent of the whole
@@ -1424,6 +1479,9 @@
     var inp = /** @type {HTMLInputElement | null} */ (root.querySelector("input.blockr-search"));
     if (inp && inp.value.trim()) applySearch(root);
     else updateCount(root);
+    // A fresh <thead> starts untransformed; place it for the current scroll.
+    var page = root.querySelector(PAGE_SEL);
+    if (page) followHeader(page);
   }
 
   // ==========================================================================

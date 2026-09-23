@@ -999,10 +999,18 @@ dt_has_officer <- function() {
 #' the class lands -- and table.js promotes the class + `data-dt-structured` off
 #' the `<table>` once the body renders. Callers that already hold the data pass
 #' `TRUE`/`FALSE` and get the class server-side, as before.
+#'
+#' `scroll = "page"` makes the box scroll sideways only: the table runs its
+#' full length and whatever scrolls around it (a dock panel, the page) scrolls
+#' it up and down. table.js moves the header down with that scroller
+#' (`followHeader()`), and `max_height` is ignored.
 #' @noRd
 dt_chrome <- function(elem_id, structured, max_height, inner,
                       search = TRUE, download_slot = NULL,
-                      status_slot = NULL, gear = TRUE) {
+                      status_slot = NULL, gear = TRUE,
+                      scroll = c("box", "page")) {
+
+  scroll <- match.arg(scroll)
   # NULL = undetermined; only a known-flat frame suppresses the delta CSS.
   unknown <- is.null(structured)
   wrapper_id <- paste0(
@@ -1031,7 +1039,9 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
     )
   )
 
-  scroll_style <- if (!is.null(max_height)) {
+  scroll_style <- if (identical(scroll, "page")) {
+    NULL
+  } else if (!is.null(max_height)) {
     paste0("max-height:", max_height, ";overflow:auto;")
   } else {
     "overflow:auto;"
@@ -1082,7 +1092,11 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
       `data-initial-expanded` = if (isTRUE(structured)) "1" else NULL,
       header_div,
       htmltools::tags$div(
-        class = "blockr-table-wrapper",
+        class = paste(
+          c("blockr-table-wrapper",
+            if (identical(scroll, "page")) "dt-scroll-page"),
+          collapse = " "
+        ),
         style = scroll_style,
         inner
       ),

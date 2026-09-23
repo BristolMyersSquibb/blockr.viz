@@ -71,6 +71,27 @@ test_that("structured dt_chrome scopes the delta; flat dt_chrome omits it", {
   expect_false(grepl("td.blockr-data", flat, fixed = TRUE))
 })
 
+test_that("dt_chrome scroll = 'page' drops the scroll box and the height cap", {
+  tbl <- htmltools::tags$table(class = "blockr-table")
+
+  wrapper <- function(...) {
+    html <- as.character(htmltools::tagList(
+      dt_chrome("e", structured = TRUE, inner = tbl, ...)
+    ))
+    regmatches(html, regexpr("<div class=\"blockr-table-wrapper[^>]*>", html))
+  }
+
+  box <- wrapper(max_height = "600px")
+  expect_false(grepl("dt-scroll-page", box, fixed = TRUE))
+  expect_true(grepl("max-height:600px;overflow:auto;", box, fixed = TRUE))
+
+  page <- wrapper(max_height = "600px", scroll = "page")
+  expect_true(grepl("dt-scroll-page", page, fixed = TRUE))
+  expect_false(grepl("style=", page, fixed = TRUE))
+
+  expect_error(wrapper(max_height = NULL, scroll = "panel"))
+})
+
 test_that("html_table() emits section header rows for .group1_level boundaries", {
   df <- tibble::tibble(
     .group1_level = c("GI Disorders", "GI Disorders", "Nervous System", "Nervous System"),
