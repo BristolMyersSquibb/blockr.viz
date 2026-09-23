@@ -1182,10 +1182,12 @@ input.blockr-search:focus {
 .blockr-html-table-container .blockr-table thead th .arm__name {
   display: block;
 }
+/* The Big N is bold so it reads at 11px; the size and the muted ink keep it
+   apart from a long arm name above it. */
 .blockr-html-table-container .blockr-table thead th .arm__n {
   display: block;
   font-size: 11px;
-  font-weight: 450;
+  font-weight: var(--blockr-font-weight-semibold, 600);
   color: var(--stbl-ink-3);
   letter-spacing: 0.01em;
   margin-top: 3px;
