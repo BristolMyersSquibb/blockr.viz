@@ -877,11 +877,17 @@
 }
 
 /* The dashed box is nearly as tall as a line of the sentence, so on a
-   wrapped line it would sit on the underlined words above it. A sentence
-   carrying offers gets taller lines throughout, which keeps its spacing even
-   whether a line holds words, offers or both. */
+   wrapped line it would sit on the underlined words above it. A subtitle or
+   caption carrying offers gets taller lines throughout (about 8px between an
+   underline and a wrapped offer), which keeps its spacing even whether a line
+   holds words, offers or both. */
 :is(.dd-chart-subtitle, .dd-table-subtitle):has(.blockr-slot-offer) {
-  line-height: 2.4;
+  line-height: 2.25;
+}
+/* The caption's text is a pixel smaller, so it needs a little more line
+   height for the same gap. */
+:is(.dd-chart-caption, .dd-table-caption):has(.blockr-slot-offer) {
+  line-height: 2.35;
 }
 
 .blockr-slot-offer:hover,
