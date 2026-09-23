@@ -160,6 +160,31 @@ test_that("html_table() renders per-row stub labels with optional bolding", {
   )
 })
 
+test_that("html_table() tiles only the top row of group headers", {
+  df <- tibble::tibble(
+    .label = "Total subjects with an event",
+    `A||Any Grade (%)||(N=2)` = "1 (50.0%)",
+    `A||Grade 1 (%)||(N=2)` = "0"
+  )
+
+  html <- as.character(htmltools::tagList(html_table(df)))
+
+  # "A" is the tile; the grades are groups too (the Big N is a leaf row under
+  # them) but sit inside it, so they are marked inner and drop the tile.
+  expect_equal(
+    lengths(regmatches(html, gregexpr(
+      "class=\"blockr-col-header group\"", html, fixed = TRUE
+    ))),
+    1L
+  )
+  expect_equal(
+    lengths(regmatches(html, gregexpr(
+      "class=\"blockr-col-header group group-inner\"", html, fixed = TRUE
+    ))),
+    2L
+  )
+})
+
 test_that("html_table() handles mixed-depth columns via rowspan", {
   df <- tibble::tibble(
     .label           = c("n"),

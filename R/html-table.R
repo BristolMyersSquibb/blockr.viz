@@ -389,9 +389,13 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
           spanner_labels[[path]]
         }
         content <- group_header_content(prefix_i[L], spanner_label)
+        # Only the top row is tiled. A group further down (a grade with its
+        # Big N as a leaf row below it) sits inside a tile already.
+        cls <- "blockr-col-header group"
+        if (L > 1L) cls <- paste(cls, "group-inner")
         th_args <- list(
           content,
-          class   = "blockr-col-header group",
+          class   = cls,
           colspan = span
         )
         # A spanner claims its own prefix ("Placebo" above F / M), which is
@@ -1172,6 +1176,24 @@ input.blockr-search:focus {
     inset 5px 0 0 0 var(--stbl-surface-1),
     inset -5px 0 0 0 var(--stbl-surface-1),
     inset 0 3px 0 0 var(--stbl-accent);
+}
+/* A group below the top row is already inside a tile, so it drops its own and
+   reads like a leaf: a tile in a tile is only more grey. Over a single column
+   it sits flush right, above the number, like the leaf under it. */
+.blockr-html-table-container .blockr-table thead th.blockr-col-header.group.group-inner {
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.blockr-html-table-container .blockr-table thead th.blockr-col-header.group.group-inner[colspan=\"1\"] {
+  text-align: right;
+}
+.blockr-html-table-container .blockr-table thead th.blockr-col-header.group.group-inner[colspan=\"1\"] .dt-th-subrow {
+  justify-content: flex-end;
+}
+.blockr-html-table-container .blockr-table thead th.blockr-col-header.group.group-inner.dt-col-active {
+  background: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
+  box-shadow: inset 0 3px 0 0 var(--stbl-accent);
 }
 .blockr-html-table-container .blockr-table thead th.blockr-col-header.leaf {
   font-size: 13.5px;
