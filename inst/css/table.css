@@ -231,6 +231,19 @@
   position: relative;
   z-index: 3;
 }
+/* Separate borders, because the header moves. With collapsed borders the
+   table paints the lines between rows itself, in place, so a moved header
+   left an unpainted strip between two header rows (spanner over leaf) where
+   the body showed through. Separate borders belong to the cells and move
+   with them. The body's row lines sit on its rows, which separate borders do
+   not draw, so they move onto the cells; the table renders as before. */
+.dt-scroll-page .blockr-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.dt-scroll-page .blockr-table tbody tr > td {
+  border-bottom: 1px solid var(--blockr-grey-100, #f3f4f6);
+}
 /* Sort indicator placement, matching the html preview: the arrow flows on
    the lower row immediately to the right of the subtext (small gap, like the
    preview's type-row) rather than on its own line.
