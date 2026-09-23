@@ -876,6 +876,14 @@
   vertical-align: 1px;
 }
 
+/* The dashed box is nearly as tall as a line of the sentence, so on a
+   wrapped line it would sit on the underlined words above it. A sentence
+   carrying offers gets taller lines throughout, which keeps its spacing even
+   whether a line holds words, offers or both. */
+:is(.dd-chart-subtitle, .dd-table-subtitle):has(.blockr-slot-offer) {
+  line-height: 2.4;
+}
+
 .blockr-slot-offer:hover,
 .blockr-slot-offer:focus-visible {
   border-color: var(--blockr-color-primary, #2563eb);
