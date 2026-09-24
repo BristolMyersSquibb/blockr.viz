@@ -711,10 +711,11 @@ new_chart_block <- function(
           dd_prepare_run(raw_data(), r_parsed(), r_specs(), r_values())
         })
 
-        # What every render path consumes. With no script this is raw_data()
+        # The prepared frame, one row per subject: what the block's own
+        # filter and its drill claims read. With no script this is raw_data()
         # unchanged, which is what the other nineteen chart blocks in twenty
         # see.
-        plain_data <- shiny::reactive({
+        prepared_data <- shiny::reactive({
           prep <- r_prepared()
           if (is.null(prep$error)) {
             return(prep$data)
@@ -728,6 +729,18 @@ new_chart_block <- function(
           # still loading (reference_dead_block_looks_like_a_loading_view).
           d <- tryCatch(raw_data(), error = function(e) NULL)
           if (is.data.frame(d)) d[0, , drop = FALSE] else NULL
+        })
+
+        # What every render path consumes: the prepared frame, expanded by
+        # the group definition of any column a splitting role is bound to
+        # (expand_groups()). A subject in two groups is drawn in both. A
+        # chart that does not split by such a column gets prepared_data()
+        # unchanged, so nothing that counts across groups sees a duplicate.
+        plain_data <- shiny::reactive({
+          expand_role_groups(prepared_data(), chart_split_roles(
+            group = r_group(), color = r_color(), facet = r_facet(),
+            series = r_series(), x = r_x(), y = r_y()
+          ))
         })
 
         # Auto-tier sources: the input's label / subtitle / caption
@@ -1675,7 +1688,9 @@ new_chart_block <- function(
         # filter state records the column actually drilled at click time
         # (JS resolves drill = "auto" there), so no user-facing claim field.
         r_ctrl_claims <- shiny::reactive({
-          d <- tryCatch(plain_data(), error = function(e) NULL)
+          # The unexpanded frame: a claim names the rows upstream holds, and
+          # dd_ctrl_claims() maps a group name to its members itself.
+          d <- tryCatch(prepared_data(), error = function(e) NULL)
           claim <- r_drill_claim()
 
           # Transient mode: the claim is the last click, and no click yet is a
@@ -1743,12 +1758,20 @@ new_chart_block <- function(
         # function so the expr reactive below can wrap the data slot in an
         # as_plain_df() coercion for non-data-frame inputs while plain data
         # frames keep this exact (byte-identical) emitted code.
+        # A click on a pooled group of an overlap definition filters on the
+        # group's members (dd_group_filter_members()).
+        filter_members <- dd_group_filter_members(
+          r_filter_column, r_filter_values, raw_data,
+          r_active = function() identical(r_filter_type(), "categorical")
+        )
+
         build_filter_expr <- function() {
           ft <- r_filter_type()
 
           if (ft == "categorical") {
             col <- r_filter_column()
             vals <- r_filter_values()
+            vals <- filter_members(col, vals) %||% vals
 
             if (is.null(col) || is.null(vals) || length(vals) == 0) {
               blockr.core::bbquote(dplyr::filter(.(data), TRUE))

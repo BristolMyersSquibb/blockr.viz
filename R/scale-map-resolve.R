@@ -67,11 +67,58 @@ dd_levels <- function(col) {
 # reach this only behind has_blockr_theme(), which gates on the version that
 # introduced the resolver -- no renderer here decides for itself whether
 # provenance applies, it only decides whether blockr.theme can answer at all.
+#
+# A column carrying a group definition (expand_groups()) has pools among its
+# levels ("All Xanomeline"), which no map pins, so they would get a hashed
+# colour. A pool instead takes the colour of a member (see
+# group_pool_colour_levels()), unless the map pins the pool name itself, and
+# the level order is the group order rather than pinned-levels-first.
 dd_resolve_scales <- function(map, var, column) {
   if (is.null(map) || is.null(var)) {
     return(NULL)
   }
-  blockr.theme::resolve_scales_col(map, var, column, palette = dd_palette())
+  reps <- group_pool_colour_levels(column)
+  if (!length(reps)) {
+    return(
+      blockr.theme::resolve_scales_col(map, var, column, palette = dd_palette())
+    )
+  }
+  dd_resolve_group_scales(map, var, column, reps)
+}
+
+dd_resolve_group_scales <- function(map, var, column, reps) {
+  lv <- dd_levels(column)
+  reps <- reps[names(reps) %in% lv]
+  src <- attr(column, "blockr_source", exact = TRUE)
+
+  # Resolve the pools' stand-in members alongside the column's own levels.
+  # resolve_scales() answers each level on its own, so adding levels changes
+  # no other level's colour.
+  ext <- unique(c(lv, unname(reps)))
+  attr(ext, "blockr_source") <- src
+  res <- blockr.theme::resolve_scales_col(map, var, ext, palette = dd_palette())
+  if (is.null(res)) {
+    return(NULL)
+  }
+
+  # The binding resolve_scales_col() used, to leave a pinned pool name alone.
+  m <- blockr.theme::as_scale_map(map)
+  bind <- if (var %in% names(m)) var else src
+  binding <- if (is.character(bind) && length(bind) == 1L) m[[bind]]
+
+  for (ch in setdiff(names(res), "order")) {
+    vals <- res[[ch]]
+    fixed <- names(binding[[ch]])
+    for (g in names(reps)) {
+      if (g %in% fixed || !reps[[g]] %in% names(vals)) {
+        next
+      }
+      vals[[g]] <- vals[[reps[[g]]]]
+    }
+    res[[ch]] <- vals[names(vals) %in% lv]
+  }
+  res$order <- lv
+  res
 }
 
 

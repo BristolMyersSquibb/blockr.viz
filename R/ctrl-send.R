@@ -718,7 +718,11 @@ new_ctrl_bridge_extension <- function(...) {
 #' @param data The block's (annotated) input, as a data frame.
 #' @param table Name of the table the claim applies to, `""` when the target
 #'   filters a plain data frame (or when the target resolves the table itself).
-#' @param filters Named list, column -> drilled value(s).
+#' @param filters Named list, column -> drilled value(s). A value on a column
+#'   carrying a group definition (see [expand_groups()]) is a group name; it
+#'   is matched against the group's members, and the claim is the SET of
+#'   source values the group holds (`mode = "multi"`), so a pooled bar claims
+#'   `source %in% members` instead of nothing.
 #' @return A list of filter conditions, `list()` when the user has no drill,
 #'   `NULL` when the claim cannot be resolved right now (hold).
 #' @keywords internal
@@ -742,12 +746,24 @@ dd_ctrl_claims <- function(data, table, filters) {
     return(NULL)
   }
 
+  # A click on a group of an overlap definition names the group, while an
+  # unexpanded group column holds raw levels: match the group's members
+  # (group_column_values()). An expanded column holds the names, so there the
+  # clicked value matches as it is.
   keep <- rep(TRUE, nrow(data))
   for (col in names(filters)) {
-    keep <- keep & as.character(data[[col]]) %in% as.character(filters[[col]])
+    keep <- keep & as.character(data[[col]]) %in%
+      group_column_values(data[[col]], filters[[col]])
   }
 
   cols <- names(filters)[!startsWith(names(filters), ".")]
+
+  # Columns carrying a group definition. A group can pool several raw
+  # levels, so its claim is a SET: the source values of the clicked rows,
+  # or the group's members when the claim stays on the group column. Read
+  # before the subset, which drops column attributes on a base data frame.
+  grouped <- cols[vapply(cols, function(col) has_group_def(data[[col]]),
+                         logical(1L))]
 
   # A drilled column may be a picker-made copy (`Color` <- `RACE`). The copy
   # carries its origin in a `blockr_source` attribute, and the claim must name
@@ -755,7 +771,7 @@ dd_ctrl_claims <- function(data, table, filters) {
   # which has no `Color`. The source column travels alongside the copy, so it
   # is present in the subset and single-valued whenever the copy is; a copy
   # whose source was dropped upstream keeps claiming under its own name.
-  cols <- unique(vapply(
+  claim_col <- vapply(
     cols,
     function(col) {
       src <- attr(data[[col]], "blockr_source", exact = TRUE)
@@ -768,13 +784,62 @@ dd_ctrl_claims <- function(data, table, filters) {
     },
     character(1),
     USE.NAMES = FALSE
-  ))
-
-  out <- drill_claim_columns(
-    data[keep, , drop = FALSE],
-    table = table %||% "",
-    columns = if (length(cols)) cols
   )
+
+  # Group columns: claimed as a set, in claim order with the others.
+  group_claims <- list()
+  for (i in seq_along(cols)[cols %in% grouped]) {
+    col <- cols[[i]]
+    to <- claim_col[[i]]
+    vals <- if (identical(to, col)) {
+      # No source column to claim: the values the UPSTREAM group column holds
+      # for the clicked groups (raw members under an overlap definition).
+      group_column_values(data[[col]], filters[[col]], origin = TRUE)
+    } else {
+      src <- data[[to]]
+      v <- unique(as.character(src[keep]))
+      v <- v[!is.na(v) & nzchar(v)]
+      m <- unlist(group_def_origin(data[[col]])$groups, use.names = FALSE)
+      v[order(match(v, m), v)]
+    }
+    if (length(vals)) {
+      group_claims[[to]] <- vals
+    }
+  }
+
+  plain_cols <- unique(claim_col[!cols %in% grouped])
+  plain_cols <- setdiff(plain_cols, names(group_claims))
+
+  # No named column at all: the ARD identity columns speak (table drills).
+  # Only group columns: they are claimed below and nothing else is.
+  out <- if (length(plain_cols) || !length(cols)) {
+    drill_claim_columns(
+      data[keep, , drop = FALSE],
+      table = table %||% "",
+      columns = if (length(plain_cols)) plain_cols
+    )
+  } else {
+    list()
+  }
+
+  if (length(group_claims)) {
+    mk <- function(name, values) {
+      if (nzchar(table %||% "")) {
+        list(name = name, table = table, mode = "multi", values = values)
+      } else {
+        list(name = name, mode = "multi", values = values)
+      }
+    }
+    have <- vapply(out, function(e) as.character(e$name), character(1L))
+    extra <- Map(mk, names(group_claims), unname(group_claims))
+    out <- c(out, unname(extra))
+    # Claim order follows the drilled columns.
+    ord <- match(
+      c(have, names(group_claims)),
+      unique(claim_col)
+    )
+    out <- out[order(ord)]
+  }
 
   # The user HAS a selection, so an empty read is this block failing to name
   # it (the subset resolved to no single value, the identity columns are not

@@ -169,7 +169,7 @@ chart_expr <- function(var = "data",
       as.call(c(list(stage[[1L]], lhs), as.list(stage)[-1L]))
     },
     fam$stages,
-    init = st$var
+    init = ce_expand_groups(st$var, st, chart_type, data)
   )
   head <- as.call(c(
     list(call("::", as.name("ggplot2"), as.name("ggplot"))),
@@ -287,6 +287,36 @@ chart_code <- function(expr, width = 76L) {
 
 # -- shared pieces -----------------------------------------------------------
 
+# The data the pipeline starts from: `var`, expanded by the group definition
+# of each column a splitting role is bound to (expand_groups()), so the
+# document draws the groups the canvas draws. With a data snapshot the rule is
+# exact: only a column that carries a definition is expanded. Without one
+# (a report compiled from block state alone) a role bound to the board's
+# group column, `Group` by contract, is expanded; expand_groups() leaves a
+# column without a definition alone, so that is a no-op on other boards.
+ce_expand_groups <- function(var, st, chart_type, data = NULL) {
+  roles <- chart_split_roles(
+    group = st$group, color = st$color, facet = st$facet,
+    series = st$series,
+    x = st$x, y = st$y
+  )
+  cols <- if (is.data.frame(data)) {
+    roles[vapply(roles, function(r) {
+      r %in% names(data) && group_expand_needed(data[[r]])
+    }, logical(1L))]
+  } else {
+    intersect(roles, "Group")
+  }
+  out <- var
+  for (col in cols) {
+    out <- as.call(list(
+      call("::", as.name("blockr.viz"), as.name("expand_groups")),
+      out, col
+    ))
+  }
+  out
+}
+
 # A state column reference: "" and NA become NULL; with a data snapshot,
 # columns the data lost degrade to NULL as well (same contract as gg_col).
 ce_col <- function(v, data) {
@@ -334,6 +364,11 @@ ce_dollar <- function(var, col) {
 ce_unqualify <- function(e) {
   if (is.call(e)) {
     if (identical(e[[1L]], as.name("::"))) {
+      # expand_groups() is the one blockr call the pipeline carries, and the
+      # document has no library(blockr.viz) to find it by its bare name.
+      if (identical(e[[2L]], as.name("blockr.viz"))) {
+        return(e)
+      }
       return(e[[3L]])
     }
     for (i in seq_along(e)) {

@@ -53,11 +53,26 @@ heatmap_prep <- function(data, row, col, color = NULL, group = NULL,
   group <- if (!is.null(group) && length(group) && nzchar(group[1L]) &&
                  group[1L] %in% names(data)) group[1L]
 
+  # Grouped by a column carrying a group definition: one copy of each
+  # group's rows (expand_groups()), so a subject in two groups gets a row in
+  # each group's section. The row key is then (group, id), since the same id
+  # is two rows; `rows` still reports the id.
+  split_rows <- FALSE
+  if (!is.null(group) && group_expand_needed(data[[group]])) {
+    data <- expand_groups(data, group)
+    split_rows <- isTRUE(group_def_origin(data[[group]])$overlap)
+  }
+
   rid <- as.character(data[[row]])
   trm <- as.character(data[[col]])
   keep0 <- !is.na(rid) & nzchar(rid) & !is.na(trm) & nzchar(trm)
   if (!any(keep0)) return(list(err = "No data"))
-  d <- data.frame(rid = rid[keep0], trm = trm[keep0],
+  rkey <- if (split_rows) {
+    paste(as.character(data[[group]]), rid, sep = "\037")
+  } else {
+    rid
+  }
+  d <- data.frame(rid = rkey[keep0], trm = trm[keep0],
                   stringsAsFactors = FALSE)
 
   lv <- if (!is.null(color)) hmb_levels(data[[color]])
@@ -121,7 +136,8 @@ heatmap_prep <- function(data, row, col, color = NULL, group = NULL,
     Map(function(l, n) list(label = l, n = n), r$values, r$lengths)
   }
   list(
-    rows = ids, group_of = group_of, groups = groups,
+    rows = if (split_rows) sub("^.*\037", "", ids) else ids,
+    group_of = group_of, groups = groups,
     terms = terms, n_terms_total = n_terms_total,
     count = count, worst = worst,
     levels = lv, row_col = row, col_col = col,

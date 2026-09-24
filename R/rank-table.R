@@ -191,6 +191,22 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
   if (!is.data.frame(data)) return(bad("No data"))
   if (!nrow(data)) return(bad("No rows to display"))
 
+  # One copy of each group's rows for every column the table splits by that
+  # carries a group definition (expand_groups()): rows, parents, colour and
+  # facet splits, and the per-column splits of the summaries path. `data0`
+  # keeps one row per subject for the denominators taken over the whole
+  # table.
+  data0 <- data
+  data <- expand_role_groups(data, c(
+    rank_chr1(group), rank_chr1(parent), rank_chr1(color), rank_chr1(facet),
+    as.character(unlist(by)),
+    if (is.list(summaries)) {
+      unlist(lapply(summaries, function(s) {
+        if (is.list(s)) c(rank_chr1(s$color), rank_chr1(s$facet))
+      }))
+    }
+  ))
+
   # The summarize-table path (_blockr.design/open/summarize-table/): the
   # column list is THE config model. Only the ranked bar keeps its own
   # path (its colour split / comparison / percent machinery predates the
@@ -303,7 +319,8 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
   # costs nothing when unused.
   leaf$.ord <- rank_data_ord(data[[group]], leaf$.label)
 
-  denom <- rank_denom(data, func, id_var)
+  # Over the unexpanded rows: a subject in two groups is one subject.
+  denom <- rank_denom(data0, func, id_var)
 
   additive <- rank_additive(func)
 

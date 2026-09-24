@@ -315,6 +315,10 @@ new_tile_block <- function(value = character(),
         output$tile_result <- shiny::renderUI({
           d <- plain_data()
           shiny::req(is.data.frame(d))
+          # One card cluster per group when the group column carries a
+          # group definition (expand_groups()). Grand-total cards (no group)
+          # read the rows as they are.
+          d <- expand_role_groups(d, r_group())
           tile_html(
             d,
             value = r_value(), group = r_group(), measure = r_name(),
@@ -345,10 +349,17 @@ new_tile_block <- function(value = character(),
           )
         })
 
+        # A click on a pooled group of an overlap definition filters on the
+        # group's members (dd_group_filter_members()).
+        filter_members <- dd_group_filter_members(
+          r_filter_column, r_filter_values, plain_data
+        )
+
         list(
           expr = shiny::reactive({
             col  <- r_filter_column()
             vals <- r_filter_values()
+            vals <- filter_members(col, vals) %||% vals
             ex <- if (is.null(col) || is.null(vals) || length(vals) == 0) {
               blockr.core::bbquote(dplyr::filter(.(data), TRUE))
             } else if (length(vals) == 1) {

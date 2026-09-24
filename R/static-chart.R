@@ -144,6 +144,14 @@ static_chart <- function(data,
     gg_col(value, data)
   }
 
+  # One copy of each group's rows when a splitting role is bound to a column
+  # carrying a group definition (expand_groups()), exactly as the canvas
+  # draws it.
+  data <- expand_role_groups(data, chart_split_roles(
+    group = group, color = color, facet = facet, series = series,
+    x = x, y = y
+  ))
+
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     warning("static_chart() needs ggplot2; returning the data instead.")
     return(gg_fallback(data, chart_type, group, color, facet,

@@ -12,7 +12,11 @@ dd_ctrl_claims(data, table, filters)
 \item{table}{Name of the table the claim applies to, \code{""} when the target
 filters a plain data frame (or when the target resolves the table itself).}
 
-\item{filters}{Named list, column -> drilled value(s).}
+\item{filters}{Named list, column -> drilled value(s). A value on a column
+carrying a group definition (see \code{\link[=expand_groups]{expand_groups()}}) is a group name; it
+is matched against the group's members, and the claim is the SET of
+source values the group holds (\code{mode = "multi"}), so a pooled bar claims
+\code{source \%in\% members} instead of nothing.}
 }
 \value{
 A list of filter conditions, \code{list()} when the user has no drill,

@@ -695,10 +695,17 @@ new_summarize_table_block <- function(group = NULL,
         shiny::outputOptions(output, "dl_pptx", suspendWhenHidden = FALSE)
         shiny::outputOptions(output, "dl_png", suspendWhenHidden = FALSE)
 
+        # A click on a pooled group of an overlap definition filters on the
+        # group's members (dd_group_filter_members()).
+        filter_members <- dd_group_filter_members(
+          r_filter_column, r_filter_values, ann_data
+        )
+
         list(
           expr = shiny::reactive({
             col <- r_filter_column()
             vals <- r_filter_values()
+            vals <- filter_members(col, vals) %||% vals
             # Display-only until a row is clicked: downstream receives the
             # input untouched. The expr must be a call, so identity() wraps it.
             if (is.null(col) || !length(vals)) {
