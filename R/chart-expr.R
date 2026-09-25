@@ -292,8 +292,9 @@ chart_code <- function(expr, width = 76L) {
 # document draws the groups the canvas draws. With a data snapshot the rule is
 # exact: only a column that carries a definition is expanded. Without one
 # (a report compiled from block state alone) a role bound to the board's
-# group column, `Group` by contract, is expanded; expand_groups() leaves a
-# column without a definition alone, so that is a no-op on other boards.
+# group or subgroup column, `Group` and `Subgroup` by contract, is expanded;
+# expand_groups() leaves a column without a definition alone, so that is a
+# no-op on other boards.
 ce_expand_groups <- function(var, st, chart_type, data = NULL) {
   roles <- chart_split_roles(
     group = st$group, color = st$color, facet = st$facet,
@@ -305,7 +306,7 @@ ce_expand_groups <- function(var, st, chart_type, data = NULL) {
       r %in% names(data) && group_expand_needed(data[[r]])
     }, logical(1L))]
   } else {
-    intersect(roles, "Group")
+    intersect(roles, c("Group", "Subgroup"))
   }
   out <- var
   for (col in cols) {

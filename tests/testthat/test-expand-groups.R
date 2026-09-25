@@ -181,6 +181,9 @@ test_that("chart_expr expands when a role binds a defined column", {
   # No snapshot: the board's group column by name.
   ex <- chart_expr("data", chart_type = "bar", group = "Group")
   expect_match(chart_code(ex), "expand_groups", fixed = TRUE)
+  ex <- chart_expr("data", chart_type = "bar", group = "Group",
+                   facet = "Subgroup")
+  expect_match(chart_code(ex), 'expand_groups\\(.*"Subgroup"\\)')
   ex <- chart_expr("data", chart_type = "bar", group = "SEX")
   expect_no_match(chart_code(ex), "expand_groups")
 })
