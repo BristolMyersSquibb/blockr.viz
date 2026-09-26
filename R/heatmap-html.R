@@ -157,6 +157,52 @@ hmb_label <- function(data, col) {
   }
 }
 
+#' The heatmap's matrix as a data frame
+#'
+#' The block's result: one row per matrix row, in the order the heatmap draws
+#' them, the group column when there is one, then one column per matrix column
+#' holding the event count, most frequent first. The same aggregation as the
+#' block's cells (see [new_heatmap_block()]), so the result and the picture
+#' agree.
+#'
+#' @param data Long event rows, one per event.
+#' @param row,col,color,group As in [new_heatmap_block()]. `color` does not
+#'   change the counts; it is accepted so the call mirrors the block's.
+#' @return A data frame. Cells with no event hold 0.
+#' @examples
+#' d <- data.frame(USUBJID = c("s1", "s1", "s2"),
+#'                 AEDECOD = c("RASH", "RASH", "NAUSEA"))
+#' heatmap_matrix(d, row = "USUBJID", col = "AEDECOD")
+#' @export
+heatmap_matrix <- function(data, row, col, color = NULL, group = NULL) {
+  p <- heatmap_prep(data, row, col, color, group)
+  if (!is.null(p$err)) {
+    stop(p$err, call. = FALSE)
+  }
+  out <- hmb_matrix_frame(p, empty = 0L)
+  for (nm in intersect(c(p$row_col, p$group_col), names(data))) {
+    lab <- attr(data[[nm]], "label", exact = TRUE)
+    if (!is.null(lab)) attr(out[[nm]], "label") <- lab
+  }
+  out
+}
+
+#' The prepared matrix as a frame; `empty` fills the cells with no event.
+#' @noRd
+hmb_matrix_frame <- function(p, empty = 0L) {
+  out <- stats::setNames(
+    data.frame(p$rows, stringsAsFactors = FALSE, check.names = FALSE),
+    p$row_col
+  )
+  if (!is.null(p$group_of)) out[[p$group_col]] <- p$group_of
+  for (tm in p$terms) {
+    v <- p$count[, tm]
+    v[is.na(v)] <- empty
+    out[[tm]] <- unname(v)
+  }
+  out
+}
+
 #' The cell paint, as one vectorized `function(v) list(bg =, fg =)`.
 #'
 #' TWO sources, and the board wins. When the board's scale map binds the
@@ -277,9 +323,8 @@ hmb_cols_json <- function(data) {
 #' arrived. `titles$resolved` and the script half fill in once it has.
 #' @noRd
 hmb_cfg_json <- function(row = NULL, col = NULL, color = NULL, group = NULL,
-                         cell_numbers = TRUE, drill = FALSE,
-                         download = FALSE, ctrl = list(), titles = list(),
-                         script = list()) {
+                         cell_numbers = TRUE, download = FALSE, target = "",
+                         titles = list(), script = list()) {
   res <- titles$resolved
   parts <- res$parts
   offers <- function(p) as.list(attr(p, "offers", exact = TRUE))
@@ -287,10 +332,10 @@ hmb_cfg_json <- function(row = NULL, col = NULL, color = NULL, group = NULL,
     row = row %||% "", col = col %||% "", color = color %||% "",
     group = group %||% "",
     cell_numbers = if (isTRUE(cell_numbers)) "on" else "off",
-    drill = isTRUE(drill),
     download = if (isTRUE(download)) "on" else "off",
-    ctrl_target = ctrl$target %||% "", ctrl_table = ctrl$table %||% "",
-    ctrl_choices = ctrl$choices %||% list(),
+    # The board's drill filter, resolved (ctrl_auto_target()); "" = none,
+    # and the rows do not take clicks.
+    ctrl_target = target %||% "",
     # The three-tier text: NULL (auto) travels as JSON null.
     title = titles$title, subtitle = titles$subtitle,
     caption = titles$caption,
@@ -546,10 +591,9 @@ hmb_search_icon <- function() {
 #' the slots come back filled, which is what [heatmap_html()] and the tests
 #' use. In the block, the slots ship empty and heatmap-block.js fills them.
 #' @noRd
-hmb_chrome <- function(elem_id = NULL, cell_numbers = TRUE, drill = FALSE,
+hmb_chrome <- function(elem_id = NULL, cell_numbers = TRUE,
                        cfg_json = "{}", cols_json = "[]", row_col = "",
-                       active_values = NULL, download_slot = NULL,
-                       status = NULL, body = NULL) {
+                       download_slot = NULL, status = NULL, body = NULL) {
   head <- htmltools::tags$div(
     class = "hmb-head",
     htmltools::tags$div(
@@ -582,11 +626,8 @@ hmb_chrome <- function(elem_id = NULL, cell_numbers = TRUE, drill = FALSE,
     `data-hmb-elem-id` = elem_id,
     `data-hmb-cols` = cols_json,
     `data-hmb-config` = cfg_json,
-    `data-hmb-drill` = if (isTRUE(drill)) "1" else "0",
+    `data-hmb-drill` = "0",
     `data-hmb-row-col` = row_col,
-    `data-hmb-active` = if (length(active_values)) {
-      as.character(jsonlite::toJSON(as.character(active_values)))
-    },
     heatmap_block_dep(),
     head,
     htmltools::tags$div(
@@ -605,9 +646,9 @@ hmb_chrome <- function(elem_id = NULL, cell_numbers = TRUE, drill = FALSE,
     htmltools::tags$div(
       class = "hmb-footer",
       htmltools::tags$span(class = "hmb-count", body$count %||% ""),
-      # The drill status is its own tiny output (the `status` slot) so a row
-      # click never re-renders the matrix. Standalone use renders it inline.
-      status %||% if (isTRUE(drill)) hmb_status_tag(row_col, active_values)
+      # The drill receipt is its own tiny output (the `status` slot) so a row
+      # click never re-renders the matrix.
+      status
     )
   )
 }
@@ -620,62 +661,28 @@ hmb_chrome <- function(elem_id = NULL, cell_numbers = TRUE, drill = FALSE,
 #' @noRd
 heatmap_html <- function(data, row = NULL, col = NULL, color = NULL,
                          group = NULL, cell_numbers = TRUE,
-                         drill = FALSE, download = FALSE, elem_id = NULL,
-                         active_values = NULL, status = NULL,
-                         download_slot = NULL, scale_map = NULL,
-                         ctrl = list()) {
+                         download = FALSE, elem_id = NULL, status = NULL,
+                         download_slot = NULL, scale_map = NULL) {
   body <- hmb_body(data, row, col, color, group, scale_map)
   hmb_chrome(
     elem_id = elem_id,
     cell_numbers = cell_numbers,
-    drill = drill,
-    cfg_json = hmb_cfg_json(row, col, color, group, cell_numbers, drill,
-                            download, ctrl),
+    cfg_json = hmb_cfg_json(row, col, color, group, cell_numbers, download),
     cols_json = body$cols,
     row_col = body$row_col %||% (row %||% ""),
-    active_values = active_values,
     download_slot = download_slot,
     status = status,
     body = body
   )
 }
 
-#' The status line's drill half: the receipt, then Reset.
-#'
-#' Reset (design system, "Showing that a block filters") is a 26px xs main
-#' button with the number of active filters as a count; disabled while
-#' nothing is picked, and its tooltip names the clause it undoes. A transient
-#' drill holds nothing, so it shows the receipt of the last send and no Reset.
+#' The status line's drill half: the receipt of the last send, which fades
+#' (the table's and the composer's words). A click only ever sends, so there
+#' is no selection to report and no Reset.
 #' @noRd
-hmb_status_tag <- function(row_col = NULL, active_values = NULL,
-                           receipt = NULL) {
-  if (!is.null(receipt)) {
-    return(htmltools::tags$span(
-      class = "hmb-status hmb-status-receipt",
-      htmltools::tags$span(class = "hmb-status-text", receipt)
-    ))
-  }
-  vals <- as.character(unlist(active_values))
-  on <- length(vals) > 0L
-  clause <- if (on) paste0(row_col, " = ", paste(vals, collapse = ", "))
+hmb_status_tag <- function(receipt) {
   htmltools::tags$span(
-    class = "hmb-status",
-    if (on) {
-      htmltools::tags$span(class = "hmb-status-text",
-                           paste0("Drilled down to ", clause))
-    },
-    htmltools::tags$button(
-      type = "button", class = "hmb-reset",
-      disabled = if (!on) NA,
-      `data-blockr-tooltip` = clause,
-      htmltools::HTML(paste0(
-        '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">',
-        '<path d="M3 8a5 5 0 1 0 1.5-3.5M3 3v2.5h2.5" fill="none" ',
-        'stroke="currentColor" stroke-width="1.5" stroke-linecap="round" ',
-        'stroke-linejoin="round"/></svg>'
-      )),
-      "Reset",
-      if (on) htmltools::tags$span(class = "hmb-count-badge", "1")
-    )
+    class = "hmb-status hmb-status-receipt",
+    htmltools::tags$span(class = "hmb-status-text", receipt)
   )
 }

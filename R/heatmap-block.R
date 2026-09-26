@@ -1,9 +1,11 @@
 # new_heatmap_block(): the matrix heatmap ENGINE. Long event rows in (one
 # row per event), the rendered row x column matrix out -- the block
 # aggregates ITSELF (cell = event count + worst level of `color`), so no
-# upstream reshape block is needed. Data output is a passthrough filter
-# (drill: a row click hands the clicked row identity downstream), the tile
-# block's model. Renderer: R/heatmap-html.R; JS: inst/js/heatmap-block.js.
+# upstream reshape block is needed. The block's result is the matrix itself
+# (heatmap_matrix()), so the assistant and a document read what is on screen.
+# A row click never filters anything: it is an event sent over the control
+# bridge to the board's drill filter (ctrl_auto_target()), as the composer
+# table does. Renderer: R/heatmap-html.R; JS: inst/js/heatmap-block.js.
 #
 # The engine knows no AE words. It draws every column it is handed; a cap
 # such as "the 25 most frequent terms" is the prepare script's business, and
@@ -40,17 +42,15 @@
 #'   it restores it as the script's `top_n` value.
 #' @param cell_numbers Show the count in each cell (default `TRUE`). Off,
 #'   the matrix reads as a pure color heatmap.
-#' @param drill Logical (default `FALSE`): a row click filters downstream
-#'   on the `row` column (click again to clear).
+#' @param drill LEGACY. A row click always goes to the board's drill filter,
+#'   when the board has one (see [ctrl_auto_target()]).
 #' @param download Logical (default `FALSE`), exposed in the gear: the
 #'   header row grows the shared download tool -- the matrix (row identity,
 #'   group, count columns) written as xlsx / html / pptx.
-#' @param filter_column,filter_values Persisted drill state (restore).
+#' @param filter_column,filter_values LEGACY. The block no longer filters.
 #' @param max_height LEGACY. The matrix scrolls with its panel.
-#' @param ctrl_target,ctrl_table Character(1), beta: as in
-#'   [new_table_block()] -- push the drill claim into a value filter block.
-#'   `ctrl_target = "auto"` finds that block on the board itself, see
-#'   [ctrl_auto_target()].
+#' @param ctrl_target,ctrl_table LEGACY. The target is found by the board,
+#'   see [ctrl_auto_target()].
 #' @param title,subtitle,caption Text above and below the matrix, as in
 #'   [new_chart_block()]: `NULL` = the input's own label, `""` = none, else a
 #'   template. `{@arg}` in the subtitle makes the word a control.
@@ -62,7 +62,8 @@
 #'   heatmap): it is prepended to `"heatmap_block"` at construction, which is
 #'   where block metadata is resolved from the registry. It is not a formal
 #'   because every constructor formal has to come back out as block state.
-#' @return A transform block of class `heatmap_block`.
+#' @return A transform block of class `heatmap_block`, whose result is the
+#'   matrix ([heatmap_matrix()]).
 #' @examplesIf interactive()
 #' new_heatmap_block(row = "USUBJID", col = "AEDECOD", color = "AESEV")
 #' @export
@@ -72,13 +73,13 @@ new_heatmap_block <- function(row = character(),
                               group = character(),
                               top_n = NULL,        # LEGACY: script value top_n
                               cell_numbers = TRUE,
-                              drill = FALSE,
+                              drill = NULL,        # LEGACY: bridge only
                               download = FALSE,
-                              filter_column = NULL,
-                              filter_values = NULL,
+                              filter_column = NULL, # LEGACY: no filter
+                              filter_values = NULL, # LEGACY: no filter
                               max_height = NULL,   # LEGACY: panel scroll
-                              ctrl_target = "",
-                              ctrl_table = "",
+                              ctrl_target = NULL,  # LEGACY: auto target
+                              ctrl_table = NULL,   # LEGACY: auto target
                               title = NULL,
                               subtitle = NULL,
                               caption = NULL,
@@ -118,13 +119,7 @@ new_heatmap_block <- function(row = character(),
         r_color    <- shiny::reactiveVal(color)
         r_group    <- shiny::reactiveVal(group)
         r_numbers  <- shiny::reactiveVal(isTRUE(cell_numbers))
-        r_drill    <- shiny::reactiveVal(isTRUE(drill))
         r_download <- shiny::reactiveVal(isTRUE(download))
-        r_filter_column <- shiny::reactiveVal(filter_column)
-        r_filter_values <- shiny::reactiveVal(filter_values)
-        r_ctrl_target  <- shiny::reactiveVal(ctrl_target %||% "")
-        r_ctrl_table   <- shiny::reactiveVal(ctrl_table %||% "")
-        r_ctrl_choices <- dd_ctrl_choices()
         r_title    <- shiny::reactiveVal(title)
         r_subtitle <- shiny::reactiveVal(subtitle)
         r_caption  <- shiny::reactiveVal(caption)
@@ -198,17 +193,14 @@ new_heatmap_block <- function(row = character(),
           )
         })
 
-        # Transient drill. With a target set, a row click is an EVENT sent to
-        # that block, not a selection this heatmap holds: nothing lands in
-        # `r_filter_*`, so the block does not filter its own output on a click
-        # it only forwarded, the board saves no selection, and clicking the
-        # same row twice sends twice instead of toggling off. The undo lives
-        # at the target. NULL = no click this session: HOLD, never clear.
-        # Mirrors chart-block.R and table-block.R.
+        # The drill, as the composer table has it. A row click is an EVENT
+        # sent over the control bridge to the board's drill filter: nothing
+        # latches here, the block does not filter its own result, a second
+        # click on the same row sends again, and the undo lives at the target.
+        # The target is the board's answer (ctrl_auto_target()); a board with
+        # none leaves the rows inert.
+        r_target <- shiny::reactive(ctrl_auto_target(session))
         r_drill_claim <- shiny::reactiveVal(NULL)
-        transient_drill <- function() {
-          nzchar(trimws(r_ctrl_target() %||% ""))
-        }
 
         upd <- function(rv, v) {
           if (!identical(shiny::isolate(rv()), v)) rv(v)
@@ -229,10 +221,7 @@ new_heatmap_block <- function(row = character(),
           msg <- input$heatmap_block_action
           if (is.null(msg)) return()
           act <- msg$action %||% "config"
-          if (identical(act, "filter") && transient_drill()) {
-            # The event path. A clear (null column, from Reset or a mapping
-            # change) is inert: there is no local selection to clear and the
-            # target's cohort is not this block's to drop.
+          if (identical(act, "filter")) {
             if (!is.null(msg$column) && length(msg$values)) {
               r_drill_claim(list(
                 column = as.character(msg$column)[[1L]],
@@ -240,9 +229,6 @@ new_heatmap_block <- function(row = character(),
                 nonce  = as.numeric(msg$nonce %||% 0)
               ))
             }
-          } else if (identical(act, "filter")) {
-            upd(r_filter_column, msg$column)
-            upd(r_filter_values, msg$values)
           } else if (identical(act, "config")) {
             p <- as.character(msg$param %||% "")[[1L]]
             v <- msg$value
@@ -261,10 +247,7 @@ new_heatmap_block <- function(row = character(),
               color   = upd(r_color, blank(v)),
               group   = upd(r_group, blank(v)),
               cell_numbers = upd(r_numbers, flag(v)),
-              drill   = upd(r_drill, flag(v)),
               download = upd(r_download, flag(v)),
-              ctrl_target = upd(r_ctrl_target, trimws(as.character(v %||% ""))),
-              ctrl_table  = upd(r_ctrl_table, trimws(as.character(v %||% ""))),
               # "" is a real value for the text (no title at all); NULL from
               # the client is the auto tier.
               title    = upd(r_title, title_state(v)),
@@ -277,43 +260,19 @@ new_heatmap_block <- function(row = character(),
           }
         })
 
+        # The claim, against the board's data model: the drill filter places
+        # it (dd_ctrl_claims() with no table names the column as it stands).
         r_ctrl_claims <- shiny::reactive({
+          claim <- r_drill_claim()
+          if (is.null(claim)) return(NULL)
           d <- tryCatch(raw_data(), error = function(e) NULL)
-
-          if (transient_drill()) {
-            claim <- r_drill_claim()
-            if (is.null(claim)) {
-              return(NULL)
-            }
-            return(dd_ctrl_claims(
-              d, r_ctrl_table(),
-              stats::setNames(list(claim$values), claim$column)
-            ))
-          }
-
-          col <- r_filter_column()
-          vals <- as.character(unlist(r_filter_values()))
-          filters <- if (!is.null(col) && length(vals)) {
-            stats::setNames(list(vals), col)
-          } else {
-            list()
-          }
-          dd_ctrl_claims(d, r_ctrl_table(), filters)
+          dd_ctrl_claims(d, "", stats::setNames(list(claim$values),
+                                                claim$column))
         })
         dd_ctrl_sender(
-          r_ctrl_target,
+          r_target,
           r_ctrl_claims,
-          local({
-            latch <- dd_ctrl_pristine(
-              function() list(r_filter_column(), r_filter_values()),
-              list(filter_column, filter_values)
-            )
-            function() {
-              still <- latch()
-              is.null(r_drill_claim()) && still
-            }
-          }),
-          session,
+          session = session,
           r_nonce = function() {
             claim <- r_drill_claim()
             if (is.null(claim)) NULL else claim$nonce
@@ -327,13 +286,7 @@ new_heatmap_block <- function(row = character(),
           if (!is.null(p$err)) {
             return(list(data = data.frame(message = p$err)))
           }
-          out <- stats::setNames(
-            data.frame(p$rows, stringsAsFactors = FALSE,
-                       check.names = FALSE),
-            p$row_col
-          )
-          if (!is.null(p$group_of)) out[[p$group_col]] <- p$group_of
-          for (tm in p$terms) out[[tm]] <- p$count[, tm]
+          out <- hmb_matrix_frame(p, empty = NA_integer_)
           tt <- tryCatch(r_titles(), error = function(e) list())
           list(data = out, title = tt$title, subtitle = tt$subtitle,
                caption = tt$caption)
@@ -344,19 +297,15 @@ new_heatmap_block <- function(row = character(),
 
         board_scale_map <- dd_board_scale_map()
 
-        # The status line's right half: the drill receipt and Reset. Its own
-        # small output so a row click never re-renders the matrix.
+        # The status line's right half: the receipt of the last send. Its own
+        # small output so a click never re-renders the matrix.
         output$heatmap_status <- shiny::renderUI({
-          if (!isTRUE(r_drill())) return(NULL)
-          if (transient_drill()) {
-            claim <- r_drill_claim()
-            if (is.null(claim)) return(NULL)
-            return(hmb_status_tag(receipt = paste0(
-              "Sent ", claim$column, " = ",
-              paste(claim$values, collapse = ", ")
-            )))
-          }
-          hmb_status_tag(one_or_null(r_row()) %||% "row", r_filter_values())
+          claim <- r_drill_claim()
+          if (is.null(claim) || !nzchar(r_target())) return(NULL)
+          hmb_status_tag(receipt = paste0(
+            "Drilled down to ", claim$column, " = ",
+            paste(claim$values, collapse = ", ")
+          ))
         })
 
         # Read by the chrome as well, which mounts before the data exists:
@@ -370,13 +319,9 @@ new_heatmap_block <- function(row = character(),
           hmb_cfg_json(
             row = one_or_null(r_row()), col = one_or_null(r_col()),
             color = one_or_null(r_color()), group = one_or_null(r_group()),
-            cell_numbers = r_numbers(), drill = r_drill(),
+            cell_numbers = r_numbers(),
             download = r_download(),
-            ctrl = list(
-              target = r_ctrl_target(),
-              table = r_ctrl_table(),
-              choices = dd_ctrl_choices_list(r_ctrl_choices())
-            ),
+            target = tryCatch(r_target(), error = function(e) ""),
             titles = list(
               title = r_title(), subtitle = r_subtitle(),
               caption = r_caption(), resolved = tt
@@ -395,10 +340,8 @@ new_heatmap_block <- function(row = character(),
             hmb_chrome(
               elem_id = ns("heatmap_block"),
               cell_numbers = r_numbers(),
-              drill = r_drill(),
               cfg_json = cfg_json(),
               row_col = one_or_null(r_row()) %||% "",
-              active_values = r_filter_values(),
               download_slot = dl_slot,
               status = shiny::uiOutput(ns("heatmap_status"), inline = TRUE)
             )
@@ -455,8 +398,7 @@ new_heatmap_block <- function(row = character(),
               # restore -- or a panel re-mount off the client-side cache --
               # comes back in the state the server holds.
               cellNumbers = isTRUE(shiny::isolate(r_numbers())),
-              drill = isTRUE(r_drill()),
-              active = I(as.character(unlist(shiny::isolate(r_filter_values()))))
+              drill = nzchar(r_target())
             ),
             auto_unbox = TRUE, null = "null"
           ))
@@ -467,41 +409,37 @@ new_heatmap_block <- function(row = character(),
         })
 
         list(
+          # The matrix, built from the prepared rows: the input, coerced to a
+          # plain frame when it is not one, the prepare script around it, and
+          # heatmap_matrix() around that. Until the row and column are picked
+          # the result is the prepared rows.
           expr = shiny::reactive({
-            col  <- r_filter_column()
-            vals <- r_filter_values()
-            ex <- if (is.null(col) || is.null(vals) || length(vals) == 0) {
-              blockr.core::bbquote(dplyr::filter(.(data), TRUE))
-            } else if (length(vals) == 1) {
-              blockr.core::bbquote(
-                dplyr::filter(.(data), .data[[.(col)]] == .(val)),
-                list(col = col, val = vals[[1]])
-              )
-            } else {
-              blockr.core::bbquote(
-                dplyr::filter(.(data), .data[[.(col)]] %in% .(vals)),
-                list(col = col, vals = vals)
-              )
-            }
+            src <- quote(.(data))
             d <- tryCatch(data(), error = function(e) NULL)
             if (!is.null(d) && !is.data.frame(d)) {
-              ex <- wrap_plain_df_input(ex)
+              src <- as.call(list(quote(blockr.viz::as_plain_df), src))
             }
-            # The prepare script wraps the filter, so a row click filters the
-            # SOURCE rows, and downstream receives what the matrix draws.
             sx <- cb_expr(r_parsed(), r_specs(), r_values(), slot = TRUE)
-            if (is.null(sx)) ex else dd_splice_slot(sx, ex)
+            prepared <- if (is.null(sx)) src else dd_splice_slot(sx, src)
+            row <- one_or_null(r_row())
+            col <- one_or_null(r_col())
+            if (is.null(row) || is.null(col)) return(prepared)
+            args <- list(prepared, row = row, col = col,
+                         color = one_or_null(r_color()),
+                         group = one_or_null(r_group()))
+            as.call(c(list(quote(blockr.viz::heatmap_matrix)),
+                      Filter(Negate(is.null), args)))
           }),
           state = list(
             row = r_row, col = r_col, color = r_color, group = r_group,
             top_n = function() NULL,
-            cell_numbers = r_numbers, drill = r_drill,
+            cell_numbers = r_numbers, drill = function() NULL,
             download = r_download,
-            filter_column = r_filter_column,
-            filter_values = r_filter_values,
+            filter_column = function() NULL,
+            filter_values = function() NULL,
             max_height = function() NULL,
-            ctrl_target = r_ctrl_target,
-            ctrl_table = r_ctrl_table,
+            ctrl_target = function() NULL,
+            ctrl_table = function() NULL,
             title = r_title, subtitle = r_subtitle, caption = r_caption,
             script = r_script, values = r_values
           )
@@ -517,8 +455,7 @@ new_heatmap_block <- function(row = character(),
       "top_n", "max_height", "filter_column", "filter_values", "ctrl_target",
       "ctrl_table", "title", "subtitle", "caption", "script", "values"),
     external_ctrl = c("row", "col", "color", "group", "cell_numbers",
-      "drill", "download", "filter_column", "filter_values", "ctrl_target",
-      "ctrl_table", "title", "subtitle", "caption", "script", "values"),
+      "download", "title", "subtitle", "caption", "script", "values"),
     expr_type = "bquoted",
     class = cls
     # `ctor`/`ctor_pkg` deliberately ride `...` and are NOT formals: the

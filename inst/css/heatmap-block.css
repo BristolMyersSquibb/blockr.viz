@@ -224,12 +224,8 @@
 .hmb-block[data-hmb-drill="1"] tr.hmb-r:hover td.hmb-stub {
   background: var(--blockr-color-bg-hover);
 }
-tr.hmb-r.hmb-active td.hmb-stub {
-  background: var(--blockr-color-bg-selected);
-  color: var(--blockr-color-text-accent);
-  font-weight: var(--blockr-font-weight-medium);
-}
-/* Transient drill: the clicked row lights and fades, as the table's does. */
+/* A click sends the row to the drill filter: it lights and fades, as the
+   table's does. */
 tr.hmb-flash td.hmb-stub {
   animation: hmb-flash-out 900ms linear 300ms both;
 }
@@ -269,55 +265,6 @@ tr.hmb-flash td.hmb-stub {
   from { opacity: 1; }
   to { opacity: 0; }
 }
-/* Reset: the 26px xs main button with a count; disabled while nothing is
-   picked (design system, "Showing that a block filters"). */
-.hmb-reset {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: var(--blockr-control-h-xs);
-  padding: 0 9px;
-  border: 1px solid var(--blockr-color-border-accent-subtle);
-  border-radius: var(--blockr-radius-sm);
-  background: var(--blockr-color-bg-accent-subtle);
-  color: var(--blockr-color-text-accent);
-  font: inherit;
-  font-size: var(--blockr-font-size-xs);
-  font-weight: var(--blockr-font-weight-medium);
-  cursor: pointer;
-  transition: background-color var(--blockr-transition), border-color var(--blockr-transition);
-}
-.hmb-reset:hover {
-  background: var(--blockr-color-bg-accent-subtle-hover);
-  border-color: var(--blockr-color-border-accent);
-}
-.hmb-reset:focus-visible {
-  outline: var(--blockr-focus-outline);
-  outline-offset: var(--blockr-focus-offset);
-}
-.hmb-reset:disabled,
-.hmb-reset:disabled:hover {
-  color: var(--blockr-color-text-disabled);
-  background: transparent;
-  border-color: var(--blockr-color-border-default);
-  cursor: default;
-}
-.hmb-count-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: var(--blockr-radius-pill);
-  font-size: 11px;
-  font-weight: var(--blockr-font-weight-semibold);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--blockr-color-text-accent-strong);
-  background: color-mix(in srgb, var(--blockr-color-border-accent) 14%, transparent);
-}
-
 /* ---- messages --------------------------------------------------------- */
 .hmb-msg {
   margin: 10px 0 0;
