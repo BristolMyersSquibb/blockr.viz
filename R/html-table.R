@@ -1658,37 +1658,38 @@ dl_chrome_css <- function() {
    is turned on. */
 a.blockr-dl-xlsx,
 summary.blockr-dl-xlsx {
+  /* A header tool (design system, \"Icon buttons\"): 26px, bare, the icon
+     muted; hover washes it and the icon turns default. Only the gear has a
+     frame. */
   appearance: none;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--blockr-control-h-sm, 30px);
-  height: var(--blockr-control-h-sm, 30px);
+  width: var(--blockr-control-h-xs, 26px);
+  height: var(--blockr-control-h-xs, 26px);
   flex: 0 0 auto;
   padding: 0;
   margin: 0;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 4px;
-  background-color: var(--blockr-color-bg-input, #f9fafb);
-  color: var(--blockr-grey-500, #6b7280);
+  border: 1px solid transparent;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background-color: transparent;
+  color: var(--blockr-color-text-muted, #6b7280);
   line-height: 1;
   cursor: pointer;
   box-shadow: none;
-  transition: border-color 0.12s, background-color 0.12s, color 0.12s;
+  transition: background-color var(--blockr-transition, 0.15s ease), color var(--blockr-transition, 0.15s ease);
 }
 a.blockr-dl-xlsx:hover,
 summary.blockr-dl-xlsx:hover {
-  background-color: #ffffff;
-  border-color: var(--blockr-grey-300, #d1d5db);
-  color: var(--blockr-color-text-primary, #374151);
+  background-color: var(--blockr-color-bg-hover, #f3f4f6);
+  color: var(--blockr-color-text-default, #111827);
   text-decoration: none;
 }
 a.blockr-dl-xlsx:focus-visible,
 summary.blockr-dl-xlsx:focus-visible {
-  outline: none;
-  border-color: var(--blockr-color-primary, #2563eb);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  outline: var(--blockr-focus-outline, 2px solid #2563eb);
+  outline-offset: var(--blockr-focus-offset, 2px);
 }
 /* Shiny toggles .disabled on download links until the handler is ready. */
 a.blockr-dl-xlsx.disabled { opacity: 0.45; pointer-events: none; }
@@ -1696,11 +1697,9 @@ a.blockr-dl-xlsx.disabled { opacity: 0.45; pointer-events: none; }
    NO pointer-events:none -- the tooltip must still explain why. */
 a.blockr-dl-xlsx--off,
 a.blockr-dl-xlsx--off:hover {
-  opacity: 0.45;
   cursor: not-allowed;
-  background-color: var(--blockr-color-bg-input, #f9fafb);
-  border-color: var(--blockr-color-border, #e5e7eb);
-  color: var(--blockr-grey-500, #6b7280);
+  background-color: transparent;
+  color: var(--blockr-color-text-disabled, #9ca3af);
 }
 a.blockr-dl-xlsx svg, summary.blockr-dl-xlsx svg { display: block; }
 /* Two or more formats: the button becomes a <details> menu. The open/close,
