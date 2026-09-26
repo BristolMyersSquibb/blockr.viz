@@ -900,6 +900,74 @@
 
     root.classList.add("dt-clickable");
 
+    // Hover previews what a click would claim, following the click handlers
+    // below exactly: a keyed header lights the column it claims (a spanner
+    // its leaves), a row label lights its row, a value cell lights its row
+    // and column faintly and itself a step stronger -- or its row alone when
+    // its column has no keys, since that click claims the row alone. A keyed
+    // group heading's value text claims the heading row. A row with no keys
+    // claims nothing and gets the plain row wash. Classes, not :hover, since
+    // a column is not one element.
+    var HOT = ["dt-hot-row", "dt-hot-col", "dt-hot-cell", "dt-hot-soft"];
+    /** @type {Element | null} */
+    var hotAt = null;
+    function clearHot() {
+      table.querySelectorAll("." + HOT.join(", .")).forEach(function (el) {
+        el.classList.remove.apply(el.classList, HOT);
+      });
+    }
+    /** @param {Element} el @param {string[]} cls */
+    function hot(el, cls) {
+      el.classList.add.apply(el.classList, cls);
+    }
+    function wireHover() {
+      table.addEventListener("mouseover", function (e) {
+        var t = /** @type {Element | null} */ (e.target);
+        var at = t && (t.closest(".blockr-section-value") || t.closest("td, th"));
+        if (at === hotAt) return;
+        hotAt = at;
+        clearHot();
+        if (!at || !t) return;
+        if (at.matches(".blockr-section-value")) {
+          var sh = at.closest("tr.blockr-section-header");
+          if (sh && sh.getAttribute("data-dd-keys")) hot(sh, ["dt-hot-row"]);
+          return;
+        }
+        if (at.matches("th")) {
+          if (!colMap || !at.hasAttribute("data-dd-colkeys")) return;
+          /** @type {any} */
+          var keys = null;
+          try { keys = JSON.parse(at.getAttribute("data-dd-colkeys") || ""); }
+          catch (err) { keys = null; }
+          if (!keys || !keys.length) return;
+          var ce = colEls(keys);
+          ce.head.concat(ce.cells).forEach(function (c) { hot(c, ["dt-hot-col"]); });
+          return;
+        }
+        var tr = at.closest("tr.blockr-data-row");
+        if (!tr) return;
+        if (!tr.getAttribute("data-dd-keys") || at.matches(".blockr-stub")) {
+          hot(tr, ["dt-hot-row"]);
+          return;
+        }
+        var ck = colKeysAt(/** @type {HTMLTableCellElement} */ (at).cellIndex);
+        if (!ck) {
+          hot(tr, ["dt-hot-row"]);
+          return;
+        }
+        var e2 = colEls(ck);
+        hot(tr, ["dt-hot-row", "dt-hot-soft"]);
+        e2.head.concat(e2.cells).forEach(function (c) {
+          if (c !== at) hot(c, ["dt-hot-col", "dt-hot-soft"]);
+        });
+        hot(at, ["dt-hot-cell"]);
+      });
+      table.addEventListener("mouseleave", function () {
+        hotAt = null;
+        clearHot();
+      });
+    }
+    if (structured) wireHover();
 
     tbody.addEventListener("click", function (e) {
       var t = /** @type {Element | null} */ (e.target);

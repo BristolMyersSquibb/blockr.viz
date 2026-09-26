@@ -589,6 +589,22 @@ test_that("flat table-block rows are 30px with no body rules", {
   expect_false(grepl("tr.dt-row-active td:first-child", sheet, fixed = TRUE))
 })
 
+test_that("table.js draws fold-all in the stub header and previews claims on hover", {
+  js <- paste(readLines(system.file("js", "table.js", package = "blockr.viz")),
+              collapse = "\n")
+  # Fold all: a button in the last stub header, the producer's title moved
+  # beside it untouched, "All" when there is none; Alt+click folds all too.
+  expect_match(js, "function buildFoldAll(tbody, onClick)", fixed = TRUE)
+  expect_match(js, "thead th.blockr-stub-header", fixed = TRUE)
+  expect_match(js, "lab.className = \"dt-stub-title\";", fixed = TRUE)
+  expect_match(js, "all.textContent = \"All\";", fixed = TRUE)
+  expect_match(js, ".altKey) {", fixed = TRUE)
+  # Hover follows the click model's helpers, so it lights what a click claims.
+  expect_match(js, "function wireHover()", fixed = TRUE)
+  expect_match(js, "var ck = colKeysAt(", fixed = TRUE)
+  expect_match(js, "hot(at, [\"dt-hot-cell\"]);", fixed = TRUE)
+})
+
 test_that("the R-built stub header carries no fold-all chevron", {
   # The exports and html_table() read the title from the attribute; the
   # chevron is table.js's, added in the browser.
