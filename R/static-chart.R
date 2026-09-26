@@ -14,8 +14,8 @@
 #' scale map (arm colors) resolves through the same blockr.theme resolver.
 #'
 #' The look mirrors the canvas chart, constant for constant (chart.js is the
-#' source of truth): 11px `#666` tick labels, dashed `#f3f4f6` gridlines on
-#' the value axis only, `#ccc` axis lines, the category-first-at-the-top
+#' source of truth): 11px `#6b7280` tick labels, dashed `#e5e7eb` gridlines on
+#' the value axis only, `#d1d5db` axis lines, the category-first-at-the-top
 #' horizontal layout, 60%-band bars with no rounding and no value labels,
 #' boxes filled at the series color over a full-strength border, monotone
 #' interpolation on lines, and the bottom-centered legend band.
@@ -485,12 +485,14 @@ gg_x_label_theme <- function(data, chart_type, horiz, group, facet,
   ))
 }
 
-# Structural colors, verbatim from chart.js.
-GG_AXIS_LABEL_COLOR <- "#666666"
-GG_AXIS_LINE_COLOR <- "#cccccc"
-GG_SPLIT_LINE_COLOR <- "#f3f4f6"
+# Structural colors: the light values of the tokens chart.js reads at render
+# (text-muted, border-strong, border-default, border-danger). Exports always
+# take the light scheme.
+GG_AXIS_LABEL_COLOR <- "#6b7280"
+GG_AXIS_LINE_COLOR <- "#d1d5db"
+GG_SPLIT_LINE_COLOR <- "#e5e7eb"
 GG_REF_LINE_COLOR <- "#dc2626"
-GG_IDENTITY_LINE_COLOR <- "#64748b"
+GG_IDENTITY_LINE_COLOR <- "#6b7280"
 
 # -- column handling ---------------------------------------------------------
 
@@ -1573,8 +1575,8 @@ gg_apply_titles <- function(p, title, subtitle, caption, data) {
 # The canvas chrome, constant for constant. Text sizes are the CSS pixel
 # values converted to pt (x 0.75): title 15px/600/#1f2937, subtitle
 # 13px/#6b7280, caption 12px italic/#6b7280 (left-aligned, like the HTML
-# band), ticks and axis names 11px/#666. Gridlines dashed #f3f4f6, axis
-# lines #ccc. Legend: a bottom-centered band, 11px labels over 25x14px
+# band), ticks and axis names 11px/#6b7280. Gridlines dashed #e5e7eb, axis
+# lines #d1d5db. Legend: a bottom-centered band, 11px labels over 25x14px
 # rounded swatches, semibold #6b7280 title. Facet strips: uppercase
 # semibold #6b7280 on #f9fafb.
 gg_theme <- function() {
@@ -1627,9 +1629,9 @@ gg_theme <- function() {
 }
 
 # Per-family grid and axis-line pruning: the canvas draws gridlines on the
-# VALUE axis only (dashed #f3f4f6) -- never on a category axis, and not at
+# VALUE axis only (dashed #e5e7eb) -- never on a category axis, and not at
 # all on a horizontal boxplot. The individual charts (scatter / line) grid
-# both axes. Axis lines are #ccc; horizontal layouts hide the category
+# both axes. Axis lines are #d1d5db; horizontal layouts hide the category
 # axis line, like the canvas.
 gg_grid_theme <- function(chart_type, horiz) {
 

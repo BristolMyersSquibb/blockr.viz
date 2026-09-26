@@ -201,15 +201,39 @@
   // Individual-family render baselines. Multipliers (`line_width_mult`,
   // `dot_size_mult`) scale these so slider 1.0× matches echarts' default
   // look. Values mirror the literals previously hardcoded in mkSeries.
-  // Halo drawn under a band's centre line. The ribbons are translucent
-  // fills, so a light palette step laid straight over one is unreadable and
-  // crossing centre lines merge; a surface-coloured underlay separates them
-  // without inventing a second hue.
-  const SURFACE_HALO = '#ffffff';
-  // Reference limits wear the status-critical red, not a series hue: a normal
-  // range is a threshold, not another series, and must never be mistaken for
-  // one. Same red the vlines/hlines guides already use.
-  const REF_LINE_COLOR = '#dc2626';
+  // Canvas ink. ECharts cannot resolve var(), so _render() reads the design
+  // tokens into INK once per render (readInk) and every axis, label and guide
+  // takes its colour from here. That makes the canvas follow the scheme (light
+  // or dark) and a theme's greys. The values below are the light tokens, used
+  // when the page loads no token sheet.
+  //
+  // surface: the halo under a band's centre line (the ribbons are translucent,
+  // so a surface-coloured underlay separates crossing lines without a second
+  // hue), and the separators between pie slices and treemap tiles.
+  // danger: reference limits and vlines/hlines. A normal range is a
+  // threshold, not another series, so it never wears a series hue.
+  const INK = {
+    muted: '#6b7280',
+    strong: '#d1d5db',
+    border: '#e5e7eb',
+    surface: '#ffffff',
+    danger: '#dc2626',
+    fontSize: 11,
+    face: "'Open Sans', system-ui, sans-serif"
+  };
+  /** @param {Element} el */
+  const readInk = (el) => {
+    const cs = getComputedStyle(el);
+    /** @param {string} name @param {string} fb */
+    const tok = (name, fb) => cs.getPropertyValue('--blockr-' + name).trim() || fb;
+    INK.muted = tok('color-text-muted', '#6b7280');
+    INK.strong = tok('color-border-strong', '#d1d5db');
+    INK.border = tok('color-border-default', '#e5e7eb');
+    INK.surface = tok('color-bg-surface', '#ffffff');
+    INK.danger = tok('color-border-danger', '#dc2626');
+    INK.fontSize = parseFloat(tok('mark-font-size', '11')) || 11;
+    INK.face = getComputedStyle(document.body).fontFamily || INK.face;
+  };
   const BASE_LINE_WIDTH   = 1.4;
   const BASE_SCATTER_SIZE = 6;
   const BASE_LINE_MARKER  = 4;
@@ -289,7 +313,6 @@
   const PALETTE_OVERFLOW = '#9AA0A6';
   /** @param {string[]} pal @param {number} i */
   const paletteAt = (pal, i) => (i < pal.length ? pal[i] : PALETTE_OVERFLOW);
-  const BLOCKR_FONT = "'Open Sans', system-ui, sans-serif";
   // A color-split boxplot dodges its boxes by giving each (group, color) box
   // its own category slot; the slot value is `group + SEP + level`. ECharts
   // dedupes a category axis by value, so a bare group label would collapse the
@@ -339,9 +362,6 @@
       maximumFractionDigits: 4
     });
   };
-  const AXIS_LABEL_COLOR = '#666';
-  const AXIS_LINE_COLOR = '#ccc';
-  const SPLIT_LINE_COLOR = '#f3f4f6';
 
   // Identity of a category-axis label LAYOUT (see _xAxisLabels): orientation,
   // how many labels are skipped, and the truncation width. Everything else in
@@ -468,7 +488,7 @@
         top: 4,
         itemSize: 11,
         feature: { brush: { type: ['rect', 'lineX', 'clear'] } },
-        iconStyle: { borderColor: '#bbb' }
+        iconStyle: { borderColor: INK.muted }
       }
     : undefined;
 
@@ -503,7 +523,7 @@
         title: { zoom: 'Zoom to range', back: 'Reset zoom' }
       }
     },
-    iconStyle: { borderColor: '#bbb' }
+    iconStyle: { borderColor: INK.muted }
   });
 
   // Aggregation vocabulary + the group/value/func role triple + the
@@ -1736,7 +1756,7 @@
       /** @param {Element | undefined} el @param {string} fb */
       const fontOf = (el, fb) => {
         const cs = el ? getComputedStyle(el) : null;
-        if (!cs || !cs.fontSize) return fb + ' ' + BLOCKR_FONT;
+        if (!cs || !cs.fontSize) return fb + ' ' + INK.face;
         const style = cs.fontStyle === 'italic' ? 'italic ' : '';
         return style + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
       };
@@ -2361,7 +2381,7 @@
       const DC = /** @type {any} */ (DrilldownChart);
       const ctx = DC._measureCtx ||
         (DC._measureCtx = document.createElement('canvas').getContext('2d'));
-      ctx.font = `11px ${BLOCKR_FONT}`;
+      ctx.font = `${INK.fontSize}px ${INK.face}`;
       let w = 0;
       for (const l of labels) {
         const tw = ctx.measureText(String(l ?? '')).width;
@@ -2397,7 +2417,7 @@
       const DC = /** @type {any} */ (DrilldownChart);
       const ctx = DC._measureCtx ||
         (DC._measureCtx = document.createElement('canvas').getContext('2d'));
-      ctx.font = `11px ${BLOCKR_FONT}`;
+      ctx.font = `${INK.fontSize}px ${INK.face}`;
       let widest = 0;
       for (const l of labels) {
         const tw = ctx.measureText(String(l ?? '')).width;
@@ -2415,7 +2435,7 @@
       // and buys a layout that never depends on its own height.
       const SCROLLBAR = 16;
       const slot = ((availW > 0 ? availW : 600) - SCROLLBAR) / n;
-      const base = { color: AXIS_LABEL_COLOR, fontSize: 11, interval: 0,
+      const base = { color: INK.muted, fontSize: INK.fontSize, interval: 0,
                      lineHeight: LABEL_LINE_H };
       const measure = (/** @type {any} */ s) => ctx.measureText(String(s ?? '')).width;
 
@@ -3355,6 +3375,7 @@
     }
 
     _render() {
+      readInk(this.el);
       if (this.data.length === 0) {
         this._showEmpty('<div class="vd-empty-state"><p class="vd-empty-text">No data to chart</p></div>');
         return;
@@ -3689,7 +3710,7 @@
     /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {number} [plotW] container width in px @param {string} [facet] current facet value ('__all__' when unfaceted) @param {number | null} [sharedMax] radar only: the grid-wide spoke max under fixed panel scales */
     _buildAggregatedOption(facetData, groups, colors, palette, plotW, facet, sharedMax) {
       const ct = this.config.chart_type;
-      const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
+      const ax = { labelColor: INK.muted, fontSize: INK.fontSize, splitLineColor: INK.border };
 
       // Value-axis title (the numeric axis on bar / boxplot): the value's
       // variable label, or "Count" for a row count. Same rationale as the
@@ -3878,7 +3899,7 @@
       // labels (never diagonal), all shown. Grid bottom grows for rotated text.
       const xlab = vertical ? this._xAxisLabels(catLabels, (plotW || 0) - 65) : null;
       const catAxis = vertical
-        ? { type: 'category', data: groups, axisLabel: axisLabelWithDisplay(xlab?.axisLabel, catFmt), axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
+        ? { type: 'category', data: groups, axisLabel: axisLabelWithDisplay(xlab?.axisLabel, catFmt), axisLine: { lineStyle: { color: INK.strong } }, axisTick: { show: false } }
         : { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false }, axisTick: { show: false } };
       // Percent display only applies when a color split is actually present
       // (a single series is trivially 100% of itself).
@@ -3915,7 +3936,7 @@
             : {})
         },
         ...(asFraction ? { max: 1 } : {}),
-        axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+        axisLine: { lineStyle: { color: INK.strong } },
         splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } }
       };
       // Percent tooltip shows both the share and the raw value (carried on the
@@ -4001,7 +4022,7 @@
           : 30 + Math.min(PANEL_H_CAP, rowsH) + bottomBase,
         __labelNote: labelNote,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
-        textStyle: { fontFamily: BLOCKR_FONT },
+        textStyle: { fontFamily: INK.face },
         tooltip,
         legend: legendOn ? { show: false, data: colors } : undefined,
         grid: vertical
@@ -4101,14 +4122,14 @@
             ? (/** @type {any} */ v) => this._withCount(v, axisCounts)
             : null
         ),
-        axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+        axisLine: { lineStyle: { color: INK.strong } },
         axisTick: { show: false }, splitLine: { show: false }
       };
       const valAxis = {
         type: 'value', name: valueTitle, nameLocation: 'middle', nameGap: 45,
         nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
         axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
-        axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+        axisLine: { lineStyle: { color: INK.strong } },
         splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } }
       };
       return {
@@ -4121,7 +4142,7 @@
                     ? (/** @type {any} */ v) => this._withCount(v, axisCounts)
                     : null },
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
-        textStyle: { fontFamily: BLOCKR_FONT },
+        textStyle: { fontFamily: INK.face },
         tooltip: {
           trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true,
           // Only report the visible delta series (the transparent base is an
@@ -4161,7 +4182,7 @@
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || paletteAt(palette, i) } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n, p.percent)) }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: 10, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: INK.face }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n, p.percent)) }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: INK.fontSize, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
     }
 
     /** @param {any[]} facetData @param {any[]} groups @param {any[]} palette */
@@ -4173,7 +4194,7 @@
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || paletteAt(palette, i) } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: (/** @type {any} */ p) => p.name + '\n' + ddNum(Number(p.value)) }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: INK.face }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: INK.fontSize, formatter: (/** @type {any} */ p) => p.name + '\n' + ddNum(Number(p.value)) }, itemStyle: { borderColor: INK.surface, borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
     }
 
     // Radar = an aggregated chart in polar coords: the group levels are the
@@ -4222,7 +4243,7 @@
       const legendOn = colors.length > 0;
       return {
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
-        textStyle: { fontFamily: BLOCKR_FONT },
+        textStyle: { fontFamily: INK.face },
         tooltip: {
           trigger: 'item',
           confine: true,
@@ -4242,11 +4263,11 @@
           radius: '62%',
           center: ['50%', '50%'],
           axisName: {
-            color: AXIS_LABEL_COLOR, fontSize: 11,
+            color: INK.muted, fontSize: INK.fontSize,
             overflow: 'truncate', width: 90
           },
-          axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
-          splitLine: { lineStyle: { color: SPLIT_LINE_COLOR } },
+          axisLine: { lineStyle: { color: INK.strong } },
+          splitLine: { lineStyle: { color: INK.border } },
           splitArea: { show: false }
         },
         series: [{
@@ -4574,9 +4595,9 @@
       // forcing 0 in: a distribution reads by position/spread, not
       // length-from-zero (unlike a bar), so pinning 0 just squashes marks far
       // from 0. Matches scatter/line; bars/waterfall keep the 0 baseline.
-      const valAxis = { type: 'value', scale: true, name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: vertical ? 45 : 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, ...(vertical ? { splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } } } : {}) };
+      const valAxis = { type: 'value', scale: true, name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: vertical ? 45 : 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: INK.strong } }, ...(vertical ? { splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } } } : {}) };
       const catAxis = vertical
-        ? { type: 'category', data: cats, axisLabel: axisLabelWithDisplay(xlab?.axisLabel, catFmt), axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
+        ? { type: 'category', data: cats, axisLabel: axisLabelWithDisplay(xlab?.axisLabel, catFmt), axisLine: { lineStyle: { color: INK.strong } }, axisTick: { show: false } }
         : { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '…', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false } };
       // ECharts lays out every boxplot series that shares one category axis
       // as a dodged group: the band is cut into one sub-band per series and
@@ -4619,7 +4640,7 @@
         __labelNote: (!vertical && cats.length * 28 > PANEL_H_CAP)
           ? this._thinnedLabelNote(PANEL_H_CAP, cats.length) : null,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
-        textStyle: { fontFamily: BLOCKR_FONT },
+        textStyle: { fontFamily: INK.face },
         tooltip: { trigger: 'item', confine: true, formatter: isBox ? boxTooltipFmt : rangeTooltipFmt },
         legend: legendOn ? { show: false, data: levels } : undefined,
         grid: vertical
@@ -4681,7 +4702,7 @@
       let bandMarkLineIdx = -1;
       let bandMany = false;
       const palette = this._palette();
-      const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
+      const ax = { labelColor: INK.muted, fontSize: INK.fontSize, splitLineColor: INK.border };
 
       const facets = facet
         ? [...new Set(this.data.map(r => String(r[facet] ?? '')))].sort()
@@ -5146,7 +5167,7 @@
                 data: cpts, symbol: 'none', showSymbol: false,
                 z: 6, silent: true, legendHoverLink: false,
                 itemStyle: { color: clr },
-                lineStyle: { color: SURFACE_HALO, width: (BASE_LINE_WIDTH + 2) * lm },
+                lineStyle: { color: INK.surface, width: (BASE_LINE_WIDTH + 2) * lm },
                 emphasis: { disabled: true }
               });
               centerIdx[cl] = series.length;
@@ -5299,12 +5320,12 @@
             // cannot be read positionally, so they have to be findable.
             refLabels.push({
               yAxis: at,
-              lineStyle: { color: REF_LINE_COLOR, width: 1 * lm,
+              lineStyle: { color: INK.danger, width: 1 * lm,
                            type: off ? 'dotted' : 'dashed',
                            opacity: off ? 0.6 : 0.45 },
               label: {
-                show: true, position: 'insideEndTop', color: AXIS_LABEL_COLOR,
-                fontSize: 10, fontWeight: 400, formatter: base + off
+                show: true, position: 'insideEndTop', color: INK.muted,
+                fontSize: INK.fontSize, fontWeight: 400, formatter: base + off
               }
             });
           }
@@ -5343,7 +5364,7 @@
             // Diagonal now spans the full shared domain, corner to corner.
             refData.push([
               { coord: [idMin, idMin],
-                lineStyle: { color: '#64748b', type: 'dashed', width: guideW } },
+                lineStyle: { color: INK.muted, type: 'dashed', width: guideW } },
               { coord: [idMax, idMax] }
             ]);
           }
@@ -5354,7 +5375,7 @@
           series[mlTarget].markLine = {
             silent: true,
             symbol: 'none',
-            lineStyle: { color: '#dc2626', type: 'dashed', width: guideW },
+            lineStyle: { color: INK.danger, type: 'dashed', width: guideW },
             label: { show: false },
             data: refData
           };
@@ -5449,7 +5470,7 @@
           axisLabel: xlab
             ? xlab.axisLabel
             : { color: ax.labelColor, fontSize: ax.fontSize },
-          axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+          axisLine: { lineStyle: { color: INK.strong } },
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
           scale: true
         };
@@ -5469,7 +5490,7 @@
           nameRotate: 90,
           nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
           axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
-          axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+          axisLine: { lineStyle: { color: INK.strong } },
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
           scale: true
         };
@@ -5714,7 +5735,7 @@
 
         const option = {
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
-          textStyle: { fontFamily: BLOCKR_FONT },
+          textStyle: { fontFamily: INK.face },
           tooltip: isLine
             ? lineTooltip
             : { trigger: 'item', confine: true,
@@ -5848,7 +5869,7 @@
         return;
       }
 
-      const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
+      const ax = { labelColor: INK.muted, fontSize: INK.fontSize, splitLineColor: INK.border };
       const palette = this._palette();
       const xAxisType = this._axisTypeFor(x);
       const xCats = xAxisType === 'category' ? this._orderedCategories(x) : null;
@@ -6012,7 +6033,7 @@
           nameGap: 28,
           nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
           axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
-          axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+          axisLine: { lineStyle: { color: INK.strong } },
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
           scale: true
         };
@@ -6055,9 +6076,9 @@
                 x: rect.x + 6,
                 y: rect.y + rect.height / 2,
                 fill: '#fff',
-                fontSize: 10,
+                fontSize: INK.fontSize,
                 fontWeight: 500,
-                fontFamily: BLOCKR_FONT,
+                fontFamily: INK.face,
                 textVerticalAlign: 'middle',
                 truncate: { outerWidth: barW - 12 }
               }
@@ -6102,7 +6123,7 @@
             ? colorLevels.map((/** @type {any} */ lvl, /** @type {number} */ i) =>
                 colorScale.color[lvl] || paletteAt(palette, i))
             : palette,
-          textStyle: { fontFamily: BLOCKR_FONT },
+          textStyle: { fontFamily: INK.face },
           tooltip: {
             trigger: 'item',
             confine: true,
@@ -6907,7 +6928,7 @@
           data: s.data,
           symbol: 'circle',
           symbolSize: f.markerPx,
-          itemStyle: { color: clr, borderColor: '#fff', borderWidth: 2 }
+          itemStyle: { color: clr, borderColor: INK.surface, borderWidth: 2 }
         }]
       });
     }
