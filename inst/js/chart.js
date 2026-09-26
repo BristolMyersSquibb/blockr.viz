@@ -6941,6 +6941,21 @@
   /** @type {Record<string, any>} */
   const pendingTheme = {};
 
+  // The canvas cannot resolve var(), so readInk() copies the tokens into INK
+  // at every render. A scheme switch changes the tokens without a render
+  // (bslib's dark mode writes data-bs-theme on <html>), and every chart kept
+  // drawing its grid and labels in the old scheme's values. So a switch
+  // redraws each chart once, reading the new values. Scoped by attribute, so
+  // no other mutation reaches the callback.
+  new MutationObserver(() => {
+    document.querySelectorAll('.drilldown-chart-container').forEach((el) => {
+      const blk = /** @type {any} */ (el)._block;
+      if (blk && blk.data && blk.data.length) blk._render();
+    });
+  }).observe(document.documentElement, {
+    attributes: true, attributeFilter: ['data-bs-theme'], subtree: true
+  });
+
   const binding = new Shiny.InputBinding();
   Object.assign(binding, {
     find: (/** @type {any} */ scope) => $(scope).find('.drilldown-chart-container'),
