@@ -1539,22 +1539,23 @@ html_table_shared_css_fallback <- function() {
 :where(.drilldown-table-container, .blockr-rank-container) .blockr-table thead {
   position: sticky;
   top: 0;
-  background: white;
+  background: var(--blockr-color-bg-surface, #ffffff);
   z-index: 1;
 }
 :where(.drilldown-table-container, .blockr-rank-container) .blockr-table thead tr {
-  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 :where(.drilldown-table-container, .blockr-rank-container) .blockr-table th {
   text-align: left;
   padding: 10px 16px;
   font-weight: var(--blockr-font-weight-medium, 500);
-  color: var(--blockr-color-text-primary, #111827);
+  color: var(--blockr-color-text-default, #111827);
   vertical-align: bottom;
   overflow: hidden;
 }
 :where(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr {
-  border-bottom: 1px solid var(--blockr-grey-100, #f3f4f6);
+  border-bottom: 1px solid color-mix(in srgb,
+    var(--blockr-color-border-default, #e5e7eb) 50%, transparent);
   transition: background-color 0.15s ease;
 }
 :where(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr:hover {
@@ -1563,7 +1564,7 @@ html_table_shared_css_fallback <- function() {
 :where(.drilldown-table-container, .blockr-rank-container) .blockr-table td {
   padding: 10px 16px;
   font-size: var(--blockr-font-size-base, 0.875rem);
-  color: var(--blockr-color-text-primary, #111827);
+  color: var(--blockr-color-text-default, #111827);
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1603,7 +1604,7 @@ html_table_shared_css_fallback <- function() {
   justify-content: space-between;
   gap: 16px;
   padding: 10px 4px;
-  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 .blockr-html-table-toolbar {
   display: flex;
@@ -1616,25 +1617,25 @@ input.blockr-search {
   -webkit-appearance: none;
   box-sizing: border-box;
   height: var(--blockr-control-h-sm, 30px);
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
   border-radius: 4px;
   padding: 4px 8px 4px 26px;
   font: inherit;
   font-size: var(--blockr-font-size-sm, 0.8125rem);
-  color: var(--blockr-color-text-primary, #111827);
-  background-color: var(--blockr-color-bg-input, #f9fafb);
+  color: var(--blockr-color-text-default, #111827);
+  background-color: var(--blockr-color-bg-field, #f9fafb);
   background-image: url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3-3'/></svg>\");
   background-repeat: no-repeat;
   background-position: 8px center;
   width: 180px;
   transition: border-color 0.12s, box-shadow 0.12s;
 }
-input.blockr-search::placeholder { color: var(--blockr-color-text-subtle, #9ca3af); }
+input.blockr-search::placeholder { color: var(--blockr-color-text-muted, #6b7280); }
 input.blockr-search:focus {
   outline: none;
-  border-color: var(--blockr-color-primary, #2563eb);
+  border-color: var(--blockr-color-border-accent, #2563eb);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  background-color: #ffffff;
+  background-color: var(--blockr-color-bg-surface, #ffffff);
 }
 "
   )

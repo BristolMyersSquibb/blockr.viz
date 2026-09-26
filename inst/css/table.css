@@ -344,7 +344,7 @@
 }
 
 .dd-table-title {
-  font-size: var(--blockr-font-size-md, 0.9375rem);
+  font-size: var(--blockr-font-size-lg, 1rem);
   font-weight: 600;
   color: var(--blockr-color-text-default, #111827);
   white-space: pre-line;

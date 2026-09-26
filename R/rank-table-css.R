@@ -13,18 +13,18 @@
 rank_table_css <- function() {
   "
 .blockr-rank-container {
-  --blockr-rank-fill: var(--blockr-color-primary, #2a78d6);
+  --blockr-rank-fill: var(--blockr-color-bg-accent, #2563eb);
   --blockr-rank-sub: color-mix(in srgb, var(--blockr-rank-fill) 45%, transparent);
-  /* The lane track. The design token alone (#eeeeea) is so close to the
-     surface that an empty lane reads as nothing at all -- and on a box or a
-     dot range the track IS the axis the glyph is read against, so it has to
-     be visible. Mixed toward the border token: still recessive, no longer
+  /* The lane track. The design token alone is so close to the surface
+     that an empty lane reads as nothing at all -- and on a box or a dot
+     range the track IS the axis the glyph is read against, so it has to be
+     visible. Mixed toward the strong border: still recessive, no longer
      invisible. */
   --blockr-rank-track: color-mix(in srgb,
-                                 var(--blockr-color-bg-subtle, #eeeeea) 80%,
-                                 var(--blockr-color-text-subtle, #898781));
-  --blockr-rank-bar: var(--blockr-color-primary, #2a78d6);
-  --blockr-rank-tick: var(--blockr-color-border, #c3c2b7);
+                                 var(--blockr-color-bg-subtle, #f9fafb) 55%,
+                                 var(--blockr-color-border-strong, #d1d5db));
+  --blockr-rank-bar: var(--blockr-color-bg-accent, #2563eb);
+  --blockr-rank-tick: var(--blockr-color-border-default, #e5e7eb);
   /* The floor under a GLYPH -- see .blockr-rank-barwrap below. A board that
      wants shorter marks and less scrolling overrides it on the container. */
   --blockr-rank-lane-min: 80px;
@@ -92,7 +92,7 @@ rank_table_css <- function() {
   font-variant-numeric: tabular-nums;
 }
 .blockr-rank-table .blockr-rank-pct {
-  color: var(--blockr-color-text-subtle, #898781);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 /* The column axis, under the header label. Printing the domain ONCE is what
    pays for the empty lanes below it: with a scale named at the top of the
@@ -108,7 +108,7 @@ rank_table_css <- function() {
   font-size: 9.5px;
   font-weight: var(--blockr-font-weight-normal, 400);
   letter-spacing: 0;
-  color: var(--blockr-color-text-subtle, #898781);
+  color: var(--blockr-color-text-muted, #6b7280);
   font-variant-numeric: tabular-nums;
 }
 .blockr-rank-axis-in {
@@ -136,7 +136,7 @@ rank_table_css <- function() {
    span so the group reads as one unit. */
 .blockr-rank-table th.blockr-th-group {
   text-align: center;
-  border-bottom: 1px solid var(--blockr-color-border, #e1e0d9);
+  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 
 /* Bars: segments TOUCH, and only the VALUE end is rounded. The end a bar grows
@@ -224,7 +224,7 @@ rank_table_css <- function() {
   top: 50%;
   height: 1px;
   margin-top: -0.5px;
-  background: var(--blockr-color-border, #e1e0d9);
+  background: var(--blockr-color-border-default, #e5e7eb);
 }
 .blockr-rank-lane i { position: absolute; }
 /* Colour-split distribution cell: the levels stack INSIDE the cell, so the
@@ -312,7 +312,7 @@ rank_table_css <- function() {
   border-radius: 50%;
   background: var(--blockr-rank-fill);
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 0 2px var(--blockr-color-bg, #fff);
+  box-shadow: 0 0 0 2px var(--blockr-color-bg-surface, #ffffff);
 }
 /* Pair (dumbbell): two values of one group joined by a segment. The band is
    the range the values are read against, at lane height like every other
@@ -329,7 +329,7 @@ rank_table_css <- function() {
   top: -6px;
   bottom: -6px;
   width: 0;
-  border-left: 1px dashed var(--blockr-color-text-subtle, #8d8b84);
+  border-left: 1px dashed var(--blockr-color-border-strong, #d1d5db);
 }
 .blockr-rank-pacell .lane-link {
   top: 50%;
@@ -342,7 +342,7 @@ rank_table_css <- function() {
   top: 50%;
   width: 7px;
   height: 7px;
-  background: var(--blockr-color-bg, #fff);
+  background: var(--blockr-color-bg-surface, #ffffff);
   border: 1.5px solid var(--blockr-rank-fill);
   transform: translate(-50%, -50%) rotate(45deg);
   box-sizing: border-box;
@@ -357,7 +357,7 @@ rank_table_css <- function() {
   transform: translate(-50%, -50%);
   box-sizing: border-box;
 }
-.blockr-rank-pacell .lane-to.is-open { background: var(--blockr-color-bg, #fff); }
+.blockr-rank-pacell .lane-to.is-open { background: var(--blockr-color-bg-surface, #ffffff); }
 /* Interval: the swimlane. Colour = the mapped level, and BOTH ends round.
    A timeline is not a stack. A stack tiles by construction -- its segments
    always share edges, they compose one quantity, and a seam between them
@@ -438,16 +438,16 @@ rank_table_css <- function() {
   border-radius: 50%;
   background: var(--blockr-rank-fill);
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 0 2px var(--blockr-color-bg, #fff);
+  box-shadow: 0 0 0 2px var(--blockr-color-bg-surface, #ffffff);
 }
 /* The summarize-table columns editor (the gear's custom section): one row
    per summary, expand to edit. Chips are categorical identity of the ROW
    TYPE (muted pastels, not the data palette). */
 .lane-summaries { display: flex; flex-direction: column; gap: 5px; width: 100%; }
 .lane-sum-row {
-  border: 1px solid var(--blockr-color-border, #e1e0d9);
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
   border-radius: 5px;
-  background: var(--blockr-color-bg, #fff);
+  background: var(--blockr-color-bg-surface, #ffffff);
 }
 .lane-sum-head {
   display: flex;
@@ -473,7 +473,7 @@ rank_table_css <- function() {
 .lane-sum-chip-expr { background: #f6e8ec; color: #93314f; }
 .lane-sum-name { font-weight: 500; font-size: 0.82rem; flex: none; }
 .lane-sum-line {
-  color: var(--blockr-color-text-subtle, #898781);
+  color: var(--blockr-color-text-muted, #6b7280);
   font-size: 0.76rem;
   flex: 1 1 auto;
   overflow: hidden;
@@ -483,7 +483,7 @@ rank_table_css <- function() {
 .lane-sum-rm, .lane-sum-move {
   border: 0;
   background: none;
-  color: #b6b4aa;
+  color: var(--blockr-color-text-muted, #6b7280);
   cursor: pointer;
   padding: 0;
   flex: none;
@@ -494,11 +494,11 @@ rank_table_css <- function() {
   align-items: center;
   justify-content: center;
 }
-.lane-sum-rm:hover { color: var(--blockr-color-danger, #d03b3b); }
-.lane-sum-move:hover { color: var(--blockr-color-text-primary, #111827); }
+.lane-sum-rm:hover { color: var(--blockr-color-text-danger, #b91c1c); }
+.lane-sum-move:hover { color: var(--blockr-color-text-default, #111827); }
 .lane-sum-move:disabled { opacity: 0.3; cursor: default; }
 .lane-sum-body {
-  border-top: 1px solid var(--blockr-color-bg-subtle, #f0efe9);
+  border-top: 1px solid var(--blockr-color-border-default, #e5e7eb);
   padding: 9px 11px 10px;
   display: flex;
   flex-wrap: wrap;
@@ -518,37 +518,37 @@ rank_table_css <- function() {
   font-size: 0.65rem;
   line-height: 1;
   cursor: pointer;
-  color: var(--blockr-color-text-subtle, #898781);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
-.lane-sum-map-rm:hover { color: var(--blockr-color-danger, #d03b3b); }
+.lane-sum-map-rm:hover { color: var(--blockr-color-text-danger, #b91c1c); }
 .lane-sum-name-input {
   height: 28px;
-  border: 1px solid var(--blockr-color-border, #e1e0d9);
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
   border-radius: 4px;
   padding: 0 8px;
   font: inherit;
   font-size: 0.8rem;
-  background: var(--blockr-color-bg-input, #f9fafb);
+  background: var(--blockr-color-bg-field, #f9fafb);
 }
 .lane-sum-seg {
   display: inline-flex;
-  border: 1px solid var(--blockr-color-border, #e1e0d9);
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
   border-radius: 4px;
   overflow: hidden;
 }
 .lane-sum-seg-btn {
   border: 0;
-  background: var(--blockr-color-bg, #fff);
-  color: var(--blockr-color-text-muted, #52514e);
+  background: var(--blockr-color-bg-surface, #ffffff);
+  color: var(--blockr-color-text-muted, #6b7280);
   font-size: 0.76rem;
   padding: 4px 10px;
   cursor: pointer;
-  border-left: 1px solid var(--blockr-color-border, #e1e0d9);
+  border-left: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 .lane-sum-seg-btn:first-child { border-left: 0; }
 .lane-sum-seg-btn.is-on {
-  background: var(--blockr-color-primary, #2a78d6);
-  color: #fff;
+  background: var(--blockr-color-bg-accent, #2563eb);
+  color: var(--blockr-color-text-on-accent, #ffffff);
 }
 /* Display tiles: outside the engine's type grid the tiles shrink to their
    caption (bar collapsed to 30px), so give them the grid's footprint. */
@@ -564,51 +564,54 @@ rank_table_css <- function() {
 }
 .lane-sum-add-types { display: flex; flex-wrap: wrap; gap: 5px; }
 .lane-sum-add {
-  border: 1px solid var(--blockr-color-border, #e1e0d9);
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
   border-radius: 4px;
-  background: var(--blockr-color-bg, #fff);
-  color: var(--blockr-color-text-muted, #52514e);
+  background: var(--blockr-color-bg-surface, #ffffff);
+  color: var(--blockr-color-text-muted, #6b7280);
   font-size: 0.76rem;
   padding: 3px 8px;
   min-width: 58px;
   cursor: pointer;
 }
 .lane-sum-add:hover {
-  border-color: var(--blockr-color-primary, #2a78d6);
-  color: var(--blockr-color-primary, #2a78d6);
+  border-color: var(--blockr-color-border-accent, #2563eb);
+  color: var(--blockr-color-text-accent, #2563eb);
 }
 .lane-sum-presets { display: flex; flex-wrap: wrap; gap: 5px; }
 .lane-sum-preset {
-  border: 1px dashed var(--blockr-color-border, #e1e0d9);
+  border: 1px dashed var(--blockr-color-border-default, #e5e7eb);
   border-radius: 4px;
   background: none;
-  color: var(--blockr-color-text-subtle, #898781);
+  color: var(--blockr-color-text-muted, #6b7280);
   font-size: 0.76rem;
   padding: 3px 9px;
   cursor: pointer;
 }
 .lane-sum-preset:hover {
-  border-color: var(--blockr-color-primary, #2a78d6);
-  color: var(--blockr-color-primary, #2a78d6);
+  border-color: var(--blockr-color-border-accent, #2563eb);
+  color: var(--blockr-color-text-accent, #2563eb);
 }
 .lane-sum-hint {
   font-size: 0.74rem;
-  color: var(--blockr-color-text-subtle, #898781);
+  color: var(--blockr-color-text-muted, #6b7280);
   margin-top: 5px;
 }
 
 /* The cursor readout (interval track / sparkline points): one fixed element
-   per page, positioned by rank-table.js. */
+   per page, positioned by rank-table.js. It follows the pointer, so it is
+   not a Blockr.tooltip, but it wears the same light card. */
 .blockr-lane-tip {
   position: fixed;
   z-index: 1070;
   pointer-events: none;
-  background: var(--blockr-color-text-primary, #111827);
-  color: #fff;
-  font-size: 0.72rem;
-  line-height: 1.35;
-  padding: 3px 8px;
-  border-radius: 4px;
+  background: var(--blockr-color-bg-raised, #ffffff);
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  box-shadow: var(--blockr-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
+  color: var(--blockr-color-text-default, #111827);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 1.4;
+  padding: 5px 9px;
+  border-radius: var(--blockr-radius-lg, 8px);
   white-space: nowrap;
 }
 
@@ -667,11 +670,11 @@ rank_table_css <- function() {
   width: 13px;
   height: 13px;
   flex: none;
-  color: var(--blockr-color-text-muted, #9aa3b0);
+  color: var(--blockr-color-text-muted, #6b7280);
   transition: transform 0.2s ease, color 0.15s ease;
 }
 .blockr-rank-container .blockr-indent-btn:hover .blockr-chev {
-  color: var(--blockr-color-text-primary, #111827);
+  color: var(--blockr-color-text-default, #111827);
 }
 .blockr-rank-container tr.blockr-indent-toggle.collapsed .blockr-chev {
   transform: rotate(-90deg);
@@ -679,7 +682,7 @@ rank_table_css <- function() {
 
 /* Hierarchy. */
 .blockr-rank-table tr.is-child td.blockr-rank-label-col {
-  color: var(--blockr-color-text-muted, #52514e);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 .blockr-rank-table tr.is-child.collapsed-hidden { display: none; }
 .blockr-rank-table tr.is-parent .blockr-rank-label { font-weight: 600; }
@@ -707,7 +710,7 @@ rank_table_css <- function() {
   animation: rk-flash-out 900ms linear 300ms both;
 }
 .blockr-rank-table tr.rk-flash td:first-child::after {
-  box-shadow: inset 3px 0 0 0 var(--blockr-color-primary, #2563eb);
+  box-shadow: inset 3px 0 0 0 var(--blockr-color-border-accent, #2563eb);
 }
 @keyframes rk-flash-out {
   from { opacity: 1; }
@@ -715,7 +718,7 @@ rank_table_css <- function() {
 }
 .blockr-rank-table tr.blockr-rank-fold td {
   font-style: italic;
-  color: var(--blockr-color-text-subtle, #898781);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 .blockr-rank-table tr.blockr-rank-hidden-search { display: none; }
 
@@ -729,7 +732,7 @@ rank_table_css <- function() {
   gap: 0.35rem 1.4rem;
   align-items: center;
   font-size: 0.8rem;
-  color: var(--blockr-color-text-muted, #52514e);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 /* One group per colour column (a summarize table maps colour per column, so
    it can carry several). The wider gap BETWEEN groups keeps a title bound to
@@ -744,7 +747,7 @@ rank_table_css <- function() {
   font-size: 0.7rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--blockr-color-text-subtle, #898781);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 .blockr-rank-legend-item { display: inline-flex; gap: 0.3rem; align-items: center; }
 .blockr-rank-legend-item i {
@@ -761,9 +764,9 @@ rank_table_css <- function() {
   justify-content: space-between;
   padding: 0.4rem 0.1rem 0;
   font-size: 0.75rem;
-  color: var(--blockr-color-text-subtle, #898781);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
-.blockr-rank-note { color: var(--blockr-color-warning, #b45309); }
+.blockr-rank-note { color: var(--blockr-color-text-warning, #b45309); }
 .blockr-rank-status { display: inline-flex; gap: 0.4rem; align-items: center; }
 .blockr-rank-dot {
   width: 7px;
@@ -775,7 +778,7 @@ rank_table_css <- function() {
   font: inherit;
   cursor: pointer;
   background: none;
-  border: 1px solid var(--blockr-color-border, #e1e0d9);
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
   border-radius: 2px;
   padding: 0.1rem 0.4rem;
   color: inherit;
