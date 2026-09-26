@@ -915,32 +915,6 @@
               { value: 'drop',  label: 'Not a category' }]
   });
 
-  // Whether the aggregation is also offered on the CARD, for a reader rather
-  // than a board author. 'on' is sugar the browser expands (see
-  // _funcToggleChoices) so this select can bind straight to the config value;
-  // an explicit set passed from R stays a list of aggregations and is simply
-  // not editable here, which is the right trade for the advanced case.
-  // Short labels for the on-card square. The gear's option labels name the
-  // aggregation for someone configuring a board ("Count distinct", "% of
-  // panel"); a reader flipping between two views wants the thing on the axis.
-  // Anything not listed keeps its full label and the button widens -- the CSS
-  // uses min-width for exactly that, since a truncated aggregation would be
-  // worse than a wide button.
-  /** @type {Record<string, string>} */
-  const FUNC_SHORT = {
-    count: 'n', count_distinct: 'N', pct_distinct: '%', sum: '\u03a3'
-  };
-
-  // Rendered as a CHECKBOX (_isBoolSegmented), whose caption is the "on"
-  // option's label, not the role's -- so that label has to read on its own,
-  // the way identity_line's does. "off" stays first so an absent value (the
-  // default) falls back to unchecked.
-  ROLES.func_toggle = /** @type {any} */ ({
-    label: 'Counts / % switch', kind: 'segmented',
-    options: [{ value: 'off', label: 'Off' },
-              { value: 'on',  label: 'Offer counts / % on the chart' }]
-  });
-
   // FAMILY_ROLES — per family, ordered. A section entry is either a role key
   // (always shown for the family) or { role, types:[...] } (shown only for
   // those chart types). requiredMap rows render immediately; optionalMap rows
@@ -999,7 +973,6 @@
         // chart anyone wants).
         { role: 'na_group', types: ['bar'] },
         { role: 'pct_of', types: ['bar'] },
-        { role: 'func_toggle', types: ['bar'] },
         // Facet-grid shape; both hidden until a facet is mapped (role
         // `when`).
         'facet_scales', 'facet_cols', 'download'],
@@ -1159,9 +1132,6 @@
       this._slotAnchor = null;
       /** @type {{ close(): void } | null} */
       this._slotMenu = null;
-      // Choices the func toggle was last built for, joined.
-      /** @type {string | null} */
-      this._funcToggleKey = null;
       // Per-render one-pass caches for the per-panel raw-data scans (axis
       // counts / tooltip representative values); reset in _renderAggregated.
       /** @type {Map<string, Map<string, any>> | null} */
@@ -1653,10 +1623,6 @@
         const host = t.closest('.blockr-action-menu__trigger, .dd-chart-dl .blockr-tool');
         if (host) this._downloadImage(true);
       }, true);
-      // The aggregation toggle goes here too, but it cannot be built yet:
-      // _buildDOM() runs at construction and `func_toggle` arrives with the
-      // first setData(). _refreshFuncToggle() inserts it then, which is why
-      // the header is kept.
       this.gearHeader = gearHeader;
       gearHeader.appendChild(this.gearBtn);
       this.card.appendChild(gearHeader);
@@ -2795,7 +2761,6 @@
       this.columns = columns || [];
       this.config = config || {};
       if (args) this.argHelp = args;
-      this._refreshFuncToggle();
 
       // Convert column-oriented data to row-oriented array.
       // Data may arrive as: JSON string (pre-encoded), column object, or row
@@ -6370,113 +6335,6 @@
       this._resizeCharts();
     }
 
-    // -- On-chart aggregation switch -----------------------------------------
-
-    /**
-     * One square showing the CURRENT aggregation, cycling on click. Sized as
-     * the download and gear it sits between.
-     *
-     * Called on every setData() rather than once at construction: the config
-     * arrives after the DOM is built, and `func_toggle` can change on a gear
-     * edit or a board restore. Keyed on the choices so an unchanged switch is
-     * repainted rather than rebuilt (a rebuild would drop focus mid-click).
-     */
-    _refreshFuncToggle() {
-      const choices = this._funcToggleChoices();
-      const key = choices.join('|');
-      if (key !== this._funcToggleKey) {
-        this._funcToggleKey = key;
-        if (this.funcToggleEl) { this.funcToggleEl.remove(); this.funcToggleEl = null; }
-        if (choices.length < 2 || !this.gearHeader) return;
-        // A pill that opens a menu (design system): the pill shows the
-        // current aggregation's symbol, the menu names every choice.
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'blockr-pill blockr-pill--menu dd-func-pill';
-        btn.setAttribute('aria-haspopup', 'listbox');
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const cs = this._funcToggleChoices();
-          const menu = /** @type {NonNullable<BlockrSelectStatic['menu']>} */
-            (/** @type {BlockrSelectStatic} */ (Blockr.Select).menu);
-          btn.setAttribute('aria-expanded', 'true');
-          // Rows lead with the name, the pill's symbol muted after it.
-          menu(btn, {
-            title: 'Aggregation',
-            options: cs.map((v) => ({ value: this._funcLabel(v), label: FUNC_SHORT[v] || '' })),
-            selected: this._funcLabel(this.config.func),
-            search: false,
-            align: 'end',
-            onChange: (/** @type {string} */ name) => {
-              const v = cs.find((c) => this._funcLabel(c) === name);
-              if (v && v !== this.config.func) this._setFunc(v);
-            },
-            onClose: () => btn.setAttribute('aria-expanded', 'false')
-          });
-        });
-        Blockr.tooltip.set(btn, () => 'Aggregation: ' + this._funcLabel(this.config.func));
-        this.funcToggleEl = btn;
-        // Before the gear, after the download: the order the header already
-        // reads in, most-used control nearest the content.
-        this.gearHeader.insertBefore(btn, this.gearBtn);
-      }
-      this._syncFuncToggle();
-    }
-
-    /**
-     * The aggregations the switch offers. 'on' is sugar for the pair
-     * this exists for, expanded here rather than in R so the gear's select can
-     * bind straight to the stored value; 'off' and anything under two entries
-     * mean no switch.
-     * @returns {string[]}
-     */
-    _funcToggleChoices() {
-      const ft = this.config.func_toggle;
-      if (!ft) return [];
-      const v = (Array.isArray(ft) ? ft : [ft]).map(String).filter(Boolean);
-      if (v.length === 1 && v[0] === 'on') return ['count_distinct', 'pct_distinct'];
-      if (v.length === 1 && v[0] === 'off') return [];
-      return v;
-    }
-
-    /** @param {string} value @returns {string} */
-    _funcLabel(value) {
-      const opts = (ROLES.func && ROLES.func.options) || [];
-      const opt = opts.find((/** @type {any} */ o) => o.value === value);
-      return opt ? opt.label : value;
-    }
-
-    /** Paint the pill with the CURRENT aggregation's symbol. */
-    _syncFuncToggle() {
-      const btn = this.funcToggleEl;
-      if (!btn) return;
-      // The aggregation the chart draws, even when it is not one of the
-      // choices (a func_toggle pair set on a chart that counts rows).
-      const cur = this.config.func;
-      btn.innerHTML = this._esc(FUNC_SHORT[cur] || this._funcLabel(cur)) +
-        '<span class="blockr-pill__caret">' + Blockr.icons.chevron + '</span>';
-      btn.setAttribute('aria-label', 'Aggregation: ' + this._funcLabel(cur));
-    }
-
-    /**
-     * Switch the aggregation and tell R, so the choice is block state rather
-     * than a local flip the next re-render undoes. `value` follows `func`
-     * through the shared reconciler — count_distinct and pct_distinct both
-     * want a column, plain count wants none — so the switch cannot leave the
-     * pair in a combination the gear would refuse.
-     * @param {string} value
-     */
-    _setFunc(value) {
-      const cfg = { ...this.config, func: value };
-      if (DAgg && DAgg.reconcileValue) DAgg.reconcileValue(cfg, this.columns || []);
-      this.config = cfg;
-      this._syncFuncToggle();
-      this._render();
-      // The gear's own transport, not a hand-rolled subset: a partial config
-      // message would drift from it the first time either side gains a field.
-      this._sendConfig();
-    }
-
     // -- Status footer --------------------------------------------------------
 
     // How many category labels survive `interval: 'auto'` in a plot area of
@@ -7030,7 +6888,6 @@
         bar_mode: this.config.bar_mode || 'stacked',
         na_group: this.config.na_group || 'level',
         pct_of: this.config.pct_of || 'facet',
-        func_toggle: this.config.func_toggle || 'off',
         baseline: this.config.baseline || 'zero',
         series: this.config.series || '',
         label: this.config.label || '',

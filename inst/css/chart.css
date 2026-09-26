@@ -1097,12 +1097,6 @@
   padding: 2px 8px 0 2px;
 }
 
-/* On-chart aggregation switch (chart.js _refreshFuncToggle): blockr.ui's
-   pill that opens a menu, 24px on the 26px row of header tools. */
-.dd-card .blockr-gear-header .dd-func-pill {
-  margin-top: 1px;
-}
-
 /* -- Exposed mapping band ---------------------------------------------------
    Mapping roles promoted out of the gear onto the block's face (the chart
    block's `expose` argument). The rows are the gear's own role rows, rendered
