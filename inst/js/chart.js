@@ -1590,7 +1590,7 @@
       this.gearBtn.className = 'blockr-gear-btn';
       this.gearBtn.innerHTML = (typeof Blockr !== 'undefined' && Blockr.icons)
         ? Blockr.icons.gear : '\u2699';
-      this.gearBtn.title = 'Chart settings';
+      this.gearBtn.setAttribute('data-blockr-tooltip', 'Settings');
       this.gearBtn.setAttribute('aria-label', 'Chart settings');
       this.gearBtn.setAttribute('aria-haspopup', 'dialog');
       this.gearBtn.setAttribute('aria-expanded', 'false');
@@ -2007,7 +2007,6 @@
         w.textContent = p.text;
         w.setAttribute('role', 'button');
         w.setAttribute('tabindex', '0');
-        w.title = 'Change ' + (this._slotLabel(p.arg) || p.arg);
         w.addEventListener('click', (e) => { e.stopPropagation(); this._openSlot(p.arg, w, p.by); });
         w.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
           if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -2044,7 +2043,6 @@
         c.textContent = '+ ' + label;
         c.setAttribute('role', 'button');
         c.setAttribute('tabindex', '0');
-        c.title = 'Add ' + label.toLowerCase() + ' to this chart';
         c.addEventListener('click', (e) => { e.stopPropagation(); this._openSlot(key, c); });
         c.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
           if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -2059,7 +2057,7 @@
         more.textContent = '+' + (offers.length - MAX);
         more.setAttribute('role', 'button');
         more.setAttribute('tabindex', '0');
-        more.title = 'The rest, in the settings';
+        more.setAttribute('aria-label', 'More, in the settings');
         more.addEventListener('click', (e) => { e.stopPropagation(); this._openPopover(); });
         el.appendChild(more);
       }

@@ -254,7 +254,7 @@
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'blockr-gear-btn';
-    btn.title = 'Tile settings';
+    btn.setAttribute('data-blockr-tooltip', 'Settings');
     btn.setAttribute('aria-label', 'Tile settings');
     btn.setAttribute('aria-haspopup', 'dialog');
     btn.setAttribute('aria-expanded', 'false');

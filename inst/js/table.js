@@ -284,7 +284,7 @@
       var act = open ? "Collapse all groups" : "Expand all groups";
       foldAll.setAttribute("aria-expanded", open ? "true" : "false");
       foldAll.setAttribute("aria-label", act);
-      foldAll.setAttribute("title", act);
+      foldAll.setAttribute("data-blockr-tooltip", act);
     }
     foldAll = buildFoldAll(tbody, function () {
       setAll(foldAll != null && foldAll.getAttribute("aria-expanded") === "true");
@@ -1437,7 +1437,7 @@
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "blockr-gear-btn";
-    btn.title = "Table settings";
+    btn.setAttribute("data-blockr-tooltip", "Settings");
     btn.setAttribute("aria-label", "Table settings");
     btn.setAttribute("aria-haspopup", "dialog");
     btn.setAttribute("aria-expanded", "false");

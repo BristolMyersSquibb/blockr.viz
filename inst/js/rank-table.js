@@ -430,8 +430,9 @@
     var out = "";
     for (var j = 0; j < c.names.length; j++) {
       var body = '<div class="blockr-rank-fill" style="width:' +
-        w(c.seg[j][i]) + "%;background:" + c.fills[j] + '" title="' +
-        esc(c.names[j]) + ": " + c.segv[j][i] + '"></div>';
+        w(c.seg[j][i]) + "%;background:" + c.fills[j] +
+        '" data-blockr-tooltip="' + esc(c.names[j]) + ": " + c.segv[j][i] +
+        '"></div>';
       if (grouped) out += '<div class="blockr-rank-row3">' + body + "</div>";
       else if (c.segv[j][i] > 0) out += body;
     }
@@ -460,7 +461,7 @@
         '"></div>';
     }
     var s = '<div class="blockr-rank-lane blockr-rank-boxcell' + cls +
-      '" title="' + c.tip[i] + '">';
+      '" data-blockr-tooltip="' + c.tip[i] + '">';
     if (c.w1[i] != null) {
       s += '<i class="lane-wh" style="left:' + p(c.wl[i]) + "%;width:" +
         p(c.w1[i]) + '%"></i>';
@@ -490,7 +491,7 @@
         '"></div>';
     }
     var s = '<div class="blockr-rank-lane blockr-rank-prcell' + cls +
-      '" title="' + c.tip[i] + '">';
+      '" data-blockr-tooltip="' + c.tip[i] + '">';
     if (c.ow && c.ow[i] != null) {
       s += '<i class="lane-fence" style="left:' + p(c.ol[i]) + "%;width:" +
         p(c.ow[i]) + '%"></i>';
@@ -509,7 +510,7 @@
     var s = '<div class="blockr-rank-lane blockr-rank-pacell' +
       (c.dash[i] ? " is-dash" : "") + '"' +
       (c.fill[i] != null ? ' style="--blockr-rank-fill:' + c.fill[i] + '"' : "") +
-      (c.tip[i] ? ' title="' + c.tip[i] + '"' : "") + ">";
+      (c.tip[i] ? ' data-blockr-tooltip="' + c.tip[i] + '"' : "") + ">";
     if (c.bw[i] != null) {
       s += '<i class="lane-band" style="left:' + p(c.bl[i]) + "%;width:" +
         p(c.bw[i]) + '%"></i>';
@@ -1091,7 +1092,8 @@
         var x = document.createElement("button");
         x.type = "button";
         x.className = "dd-role-remove lane-sum-map-rm";
-        x.title = "Remove " + label.toLowerCase();
+        x.setAttribute("data-blockr-tooltip", "Remove " + label.toLowerCase());
+        x.setAttribute("aria-label", "Remove " + label.toLowerCase());
         x.innerHTML = "✕";
         x.addEventListener("click", onRemove);
         l.appendChild(x);
@@ -1170,7 +1172,8 @@
       var rm = document.createElement("button");
       rm.type = "button";
       rm.className = "dd-role-remove lane-sum-rm";
-      rm.title = "Remove column";
+      rm.setAttribute("data-blockr-tooltip", "Remove column");
+      rm.setAttribute("aria-label", "Remove column");
       rm.innerHTML = "✕";
       rm.addEventListener("click", function (e) {
         e.stopPropagation();
@@ -1183,7 +1186,8 @@
       var up = document.createElement("button");
       up.type = "button";
       up.className = "lane-sum-move";
-      up.title = "Move up";
+      up.setAttribute("data-blockr-tooltip", "Move up");
+      up.setAttribute("aria-label", "Move up");
       up.innerHTML = "↑";
       up.disabled = i === 0;
       up.addEventListener("click", function (e) {
@@ -1381,7 +1385,6 @@
             db.type = "button";
             db.className = "lane-sum-add";
             db.textContent = "+ dashed by";
-            db.title = "Draw the link dashed for all but the first level";
             db.disabled = !firstMapCol(cols);
             db.addEventListener("click", function () {
               s.dash = firstMapCol(cols); commit(); ctx.rerender();
@@ -1470,7 +1473,6 @@
             b.type = "button";
             b.className = "lane-sum-add";
             b.textContent = "+ " + m.label.toLowerCase();
-            b.title = m.hint;
             // Nothing decodable to map: the button would only produce an
             // error message in the table.
             b.disabled = !firstMapCol(cols);
@@ -1537,7 +1539,6 @@
       b.type = "button";
       b.className = "lane-sum-preset";
       b.textContent = nm;
-      b.title = "Append a preconfigured " + nm.toLowerCase() + " column";
       b.addEventListener("click", function () {
         list.push(SUMMARY_PRESETS[nm](cols));
         commit();
@@ -1756,7 +1757,7 @@
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "blockr-gear-btn";
-    btn.title = "Summarize table settings";
+    btn.setAttribute("data-blockr-tooltip", "Settings");
     btn.setAttribute("aria-label", "Summarize table settings");
     btn.setAttribute("aria-haspopup", "dialog");
     btn.setAttribute("aria-expanded", "false");

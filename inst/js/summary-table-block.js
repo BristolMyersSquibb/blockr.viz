@@ -126,7 +126,8 @@
       this.gearBtn.type = 'button';
       this.gearBtn.className = 'blockr-gear-btn';
       this.gearBtn.innerHTML = Blockr.icons.gear;
-      this.gearBtn.title = 'Advanced settings';
+      this.gearBtn.setAttribute('data-blockr-tooltip', 'Settings');
+      this.gearBtn.setAttribute('aria-label', 'Settings');
       this.gearBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this._togglePopover();
@@ -352,7 +353,6 @@
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'blockr-expr-confirm';
-      chip.title = 'Apply (Enter)';
       chip.setAttribute('aria-label', 'Apply (Enter)');
       chip.style.display = 'none';
       let committed = input.value;

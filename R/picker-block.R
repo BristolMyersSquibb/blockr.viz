@@ -226,7 +226,8 @@ new_picker_block <- function(
               id = ns("gear"),
               type = "button",
               class = "blockr-gear-btn",
-              title = "Pickers"
+              `aria-label` = "Pickers",
+              `data-blockr-tooltip` = "Settings"
             )
           ),
           shiny::div(
@@ -635,7 +636,9 @@ picker_block_assets <- function(ns) {
         var b = document.createElement('button');
         b.type = 'button';
         b.className = 'pk-row-move pk-row-move--' + dir;
-        b.title = dir === 'up' ? 'Move picker up' : 'Move picker down';
+        var tip = dir === 'up' ? 'Move picker up' : 'Move picker down';
+        b.setAttribute('data-blockr-tooltip', tip);
+        b.setAttribute('aria-label', tip);
         b.innerHTML = Blockr.icons.chevron;
         if (to < 0 || to >= state.pickers.length) {
           b.disabled = true;
@@ -752,7 +755,8 @@ picker_block_assets <- function(ns) {
           var rm = document.createElement('button');
           rm.type = 'button';
           rm.className = 'blockr-row-remove';
-          rm.title = 'Remove picker';
+          rm.setAttribute('data-blockr-tooltip', 'Remove picker');
+          rm.setAttribute('aria-label', 'Remove picker');
           rm.innerHTML = Blockr.icons.x;
           rm.addEventListener('click', function () {
             if (state.pickers.length <= 1) return;

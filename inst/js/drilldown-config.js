@@ -449,7 +449,6 @@
             btn.type = 'button';
             btn.className = 'dd-type-tile' +
               (t === cfg[this.h.typeKey] ? ' dd-type-active' : '');
-            btn.title = t;
             const ic = this.h.typeIcon ? this.h.typeIcon(t) : '';
             btn.innerHTML = (ic ? '<span class="dd-type-tile-icon">' + ic + '</span>' : '') +
               '<span class="dd-type-tile-label">' + t + '</span>';
@@ -502,7 +501,7 @@
         const chip = document.createElement('span');
         chip.className = 'dd-input-badge';
         chip.textContent = spec.badge;
-        if (spec.badgeTitle) chip.title = spec.badgeTitle;
+        if (spec.badgeTitle) chip.setAttribute('data-blockr-tooltip', spec.badgeTitle);
         pop.appendChild(chip);
       }
 
@@ -1519,7 +1518,8 @@
         const rm = document.createElement('button');
         rm.type = 'button';
         rm.className = 'dd-role-remove';
-        rm.title = 'Remove ' + roleLabel;
+        rm.setAttribute('data-blockr-tooltip', 'Remove ' + roleLabel);
+        rm.setAttribute('aria-label', 'Remove ' + roleLabel);
         rm.innerHTML = '✕';
         rm.addEventListener('click', (e) => { e.stopPropagation(); this._removeRole(key); });
         head.appendChild(rm);
@@ -1733,7 +1733,8 @@
           const rm = document.createElement('button');
           rm.type = 'button';
           rm.className = 'dd-role-remove dd-value-remove';
-          rm.title = 'Remove aggregation';
+          rm.setAttribute('data-blockr-tooltip', 'Remove aggregation');
+          rm.setAttribute('aria-label', 'Remove aggregation');
           rm.innerHTML = '✕';
           rm.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1818,7 +1819,8 @@
         const rm = document.createElement('button');
         rm.type = 'button';
         rm.className = 'dd-role-remove dd-value-remove';
-        rm.title = 'Remove shading';
+        rm.setAttribute('data-blockr-tooltip', 'Remove shading');
+        rm.setAttribute('aria-label', 'Remove shading');
         rm.innerHTML = '✕';
         rm.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -2243,7 +2245,6 @@
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'blockr-expr-confirm dd-text-commit';
-        chip.title = 'Apply (Enter)';
         chip.setAttribute('aria-label', 'Apply (Enter)');
         chip.style.display = 'none';
         let committed = inp.value;

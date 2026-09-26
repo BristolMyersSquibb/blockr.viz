@@ -906,8 +906,8 @@ rank_split_html <- function(c) {
   seg <- vapply(seq_len(k), function(j) {
     body <- paste0(
       "<div class=\"blockr-rank-fill\" style=\"width:", rank_fmt_w(c$seg[[j]]),
-      "%;background:", c$fills[[j]], "\" title=\"", rank_esc(c$names[[j]]),
-      ": ", c$segv[[j]], "\"></div>"
+      "%;background:", c$fills[[j]], "\" data-blockr-tooltip=\"",
+      rank_esc(c$names[[j]]), ": ", c$segv[[j]], "\"></div>"
     )
     if (grouped) {
       paste0("<div class=\"blockr-rank-row3\">", body, "</div>")
@@ -947,8 +947,8 @@ rank_box_html <- function(c) {
                     "\"></div>"))
     }
     paste0(
-      "<div class=\"blockr-rank-lane blockr-rank-boxcell", cls, "\" title=\"",
-      c$tip[[i]], "\">",
+      "<div class=\"blockr-rank-lane blockr-rank-boxcell", cls,
+      "\" data-blockr-tooltip=\"", c$tip[[i]], "\">",
       if (!is.na(c$w1[[i]])) {
         paste0("<i class=\"lane-wh\" style=\"left:", rank_fmt_w(c$wl[[i]]),
                "%;width:", rank_fmt_w(c$w1[[i]]), "%\"></i>")
@@ -1001,8 +1001,8 @@ rank_pr_html <- function(c) {
                     "\"></div>"))
     }
     paste0(
-      "<div class=\"blockr-rank-lane blockr-rank-prcell", cls, "\" title=\"",
-      c$tip[[i]], "\">",
+      "<div class=\"blockr-rank-lane blockr-rank-prcell", cls,
+      "\" data-blockr-tooltip=\"", c$tip[[i]], "\">",
       if (!is.null(c$ow) && !is.na(c$ow[[i]])) {
         paste0("<i class=\"lane-fence\" style=\"left:", rank_fmt_w(c$ol[[i]]),
                "%;width:", rank_fmt_w(c$ow[[i]]), "%\"></i>")
@@ -1034,7 +1034,11 @@ rank_pair_html <- function(c) {
       "<div class=\"blockr-rank-lane blockr-rank-pacell",
       if (isTRUE(c$dash[[i]])) " is-dash" else "", "\"",
       if (!is.na(fill)) paste0(" style=\"--blockr-rank-fill:", fill, "\"") else "",
-      if (nzchar(c$tip[[i]])) paste0(" title=\"", c$tip[[i]], "\"") else "",
+      if (nzchar(c$tip[[i]])) {
+        paste0(" data-blockr-tooltip=\"", c$tip[[i]], "\"")
+      } else {
+        ""
+      },
       ">",
       if (!is.na(c$bw[[i]])) {
         paste0("<i class=\"lane-band\" style=\"", pos(c$bl[[i]]), ";width:",
