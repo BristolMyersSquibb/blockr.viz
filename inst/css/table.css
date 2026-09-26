@@ -378,12 +378,6 @@
   gap: 6px;
 }
 
-/* Beside the 30px toolbar controls (search, download) the gear adopts the
-   control height instead of its stand-alone 26px. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-gear-header .blockr-gear-btn {
-  width: var(--blockr-control-h-sm, 30px);
-  height: var(--blockr-control-h-sm, 30px);
-}
 
 /* Wrapping column titles. The width estimator measures a header by its
    longest WORD when wrapping is on (column_widths_px(wrap_names = TRUE)), so
