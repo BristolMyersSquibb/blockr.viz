@@ -1,14 +1,12 @@
 # Matrix heatmap renderer: long event rows in, a row x column matrix out,
 # with TWO channels per cell -- the DISPLAYED number is the event count, the
-# PAINT is the worst level of `color` (severity). Server-rendered whole (the
-# matrix is small -- hundreds of rows -- so a full re-render per state change
-# is cheap and makes restore free, the tile block's argument).
+# PAINT is the worst level of `color` (severity).
 #
-# Layout (the "variant B" pick, _scratch/ae-heatmap-design/): one continuous
-# matrix -- one sticky rotated header, one scroll -- with a rotated grey rail
-# tile spanning each group's rows on the RIGHT, the table equivalent of the
-# chart block's facet strip. Legend row in the summarize-table vocabulary.
-# Empty cells are truly empty: a faint neutral tile, no dash.
+# Layout (design system, _scratch/heatmap-ds/): the header row carries the
+# title, the sentence and the tools; then the legend band, one continuous
+# matrix (sticky rotated header), each group opening with a section-title
+# row, the caption and the status line. Empty cells are truly empty. The
+# exhibit speaks in column labels; the status line keeps names.
 
 #' Resolve the color column's ordered levels: a factor keeps its own order
 #' (vocabularies live in the data), numeric grades order numerically, and a
@@ -31,22 +29,24 @@ hmb_levels <- function(x) {
 #'   event), `worst` in level indices, `groups` a list of
 #'   `list(label, n)` in row order.
 #' @noRd
-heatmap_prep <- function(data, row, col, color = NULL, group = NULL,
-                         top_n = 25L) {
+heatmap_prep <- function(data, row, col, color = NULL, group = NULL) {
   if (!is.data.frame(data) || nrow(data) == 0L) {
-    return(list(err = "No data"))
+    return(list(err = "No data", err_kind = "empty"))
   }
   if (is.null(row) || !length(row) || !nzchar(row[1L]) ||
         is.null(col) || !length(col) || !nzchar(col[1L])) {
-    return(list(err = "Pick the row and column identities"))
+    return(list(err = "Pick a row and a column in the settings.",
+                err_kind = "empty"))
   }
   row <- row[1L]
   col <- col[1L]
   if (!row %in% names(data)) {
-    return(list(err = paste0("Column '", row, "' not in the data")))
+    return(list(err = paste0("Column '", row, "' is not in the data."),
+                err_kind = "danger"))
   }
   if (!col %in% names(data)) {
-    return(list(err = paste0("Column '", col, "' not in the data")))
+    return(list(err = paste0("Column '", col, "' is not in the data."),
+                err_kind = "danger"))
   }
   color <- if (!is.null(color) && length(color) && nzchar(color[1L]) &&
                  color[1L] %in% names(data)) color[1L]
@@ -66,7 +66,7 @@ heatmap_prep <- function(data, row, col, color = NULL, group = NULL,
   rid <- as.character(data[[row]])
   trm <- as.character(data[[col]])
   keep0 <- !is.na(rid) & nzchar(rid) & !is.na(trm) & nzchar(trm)
-  if (!any(keep0)) return(list(err = "No data"))
+  if (!any(keep0)) return(list(err = "No data", err_kind = "empty"))
   rkey <- if (split_rows) {
     paste(as.character(data[[group]]), rid, sep = "\037")
   } else {
@@ -86,15 +86,11 @@ heatmap_prep <- function(data, row, col, color = NULL, group = NULL,
   }
   gv <- if (!is.null(group)) data[[group]][keep0]
 
-  # Top-N terms by total event count; ties by first appearance.
+  # Every term, most events first; ties by first appearance. A cap is the
+  # prepare script's business, not the engine's.
   tc <- sort(table(d$trm), decreasing = TRUE)
   n_terms_total <- length(tc)
-  top_n <- max(1L, as.integer(top_n %||% 25L))
-  terms <- utils::head(names(tc), top_n)
-  sel <- d$trm %in% terms
-  if (!any(sel)) return(list(err = "No data"))
-  d <- d[sel, , drop = FALSE]
-  if (!is.null(gv)) gv <- gv[sel]
+  terms <- names(tc)
 
   # Per cell (row x term): event count + worst level index.
   key <- paste(d$rid, d$trm, sep = "\r")
@@ -141,33 +137,24 @@ heatmap_prep <- function(data, row, col, color = NULL, group = NULL,
     terms = terms, n_terms_total = n_terms_total,
     count = count, worst = worst,
     levels = lv, row_col = row, col_col = col,
-    color_col = color, group_col = group
+    color_col = color, group_col = group,
+    row_label = hmb_label(data, row),
+    col_label = hmb_label(data, col),
+    color_label = if (!is.null(color)) hmb_label(data, color),
+    group_label = if (!is.null(group)) hmb_label(data, group)
   )
 }
 
-#' A design-system checkbox (`.blockr-checkbox`): 16px box, primary fill
-#' when checked, native input underneath. The boolean control for a DATA
-#' option -- a self-labelling pill would not say whether its text is the
-#' current state or the action (blockr.docs ux-principles, Boolean
-#' controls).
+#' A column's label, or its name when it has none (design system, "Column
+#' names and their labels": an exhibit speaks in labels).
 #' @noRd
-hmb_checkbox <- function(cls, label, checked) {
-  htmltools::tags$label(
-    class = paste("blockr-checkbox", cls),
-    htmltools::tags$input(
-      type = "checkbox", checked = if (isTRUE(checked)) NA
-    ),
-    htmltools::tags$span(
-      class = "blockr-checkbox__box",
-      htmltools::HTML(paste0(
-        '<svg width="10" height="10" viewBox="0 0 16 16" ',
-        'fill="currentColor"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 ',
-        "7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646",
-        '-6.647a.5.5 0 0 1 .708 0"/></svg>'
-      ))
-    ),
-    htmltools::tags$span(label)
-  )
+hmb_label <- function(data, col) {
+  lab <- attr(data[[col]], "label", exact = TRUE)
+  if (is.character(lab) && length(lab) == 1L && !is.na(lab) && nzchar(lab)) {
+    lab
+  } else {
+    col
+  }
 }
 
 #' The cell paint, as one vectorized `function(v) list(bg =, fg =)`.
@@ -225,9 +212,10 @@ hmb_paint <- function(prep, data = NULL, scale_map = NULL) {
   dt_color_fun("sequential", dom, NULL)
 }
 
-#' The legend row (summarize-table vocabulary: uppercase group title +
-#' swatches). Leveled paint decodes the levels; count paint shows the ramp
-#' ends. A second text-only group says what the cell number is.
+#' The legend band (design system, "Charts: legend band"): the label, then
+#' 25 x 14 swatches. Levelled paint decodes the levels; count paint shows the
+#' ramp ends. A second group says what the number in a cell is, and goes with
+#' the numbers.
 #' @noRd
 hmb_legend <- function(prep, fun) {
   items <- if (!is.null(prep$levels)) {
@@ -260,17 +248,18 @@ hmb_legend <- function(prep, fun) {
       class = "hmb-lg",
       htmltools::tags$span(class = "hmb-lt",
                            if (!is.null(prep$color_col)) {
-                             paste("Worst", prep$color_col)
+                             paste("Worst", prep$color_label)
                            } else {
                              "Events"
                            }),
       items
     ),
-    htmltools::tags$span(
-      class = "hmb-lg",
-      htmltools::tags$span(class = "hmb-lt", "Cell number"),
-      htmltools::tags$span(class = "hmb-li hmb-muted", "event count")
-    )
+    if (!is.null(prep$color_col)) {
+      htmltools::tags$span(
+        class = "hmb-lg hmb-lg-num",
+        htmltools::tags$span(class = "hmb-lt", "Numbers: events")
+      )
+    }
   )
 }
 
@@ -280,32 +269,46 @@ hmb_legend <- function(prep, fun) {
 #' @noRd
 hmb_cols_json <- function(data) {
   if (!is.data.frame(data)) return("[]")
-  as.character(jsonlite::toJSON(
-    lapply(names(data), function(nm) {
-      list(name = nm,
-           type = if (is.numeric(data[[nm]])) "numeric" else "categorical")
-    }),
-    auto_unbox = TRUE
-  ))
+  as.character(jsonlite::toJSON(dd_col_meta(data), auto_unbox = TRUE))
 }
 
-#' The gear's current state, stamped as `data-hmb-config`. Config only: the
-#' chrome can build it at mount time, before any data has arrived.
+#' The gear's and the header's current state, stamped as `data-hmb-config`.
+#' Config only: the chrome can build it at mount time, before any data has
+#' arrived. `titles$resolved` and the script half fill in once it has.
 #' @noRd
 hmb_cfg_json <- function(row = NULL, col = NULL, color = NULL, group = NULL,
-                         top_n = 25L, cell_numbers = TRUE, drill = FALSE,
-                         download = FALSE, ctrl = list()) {
-  as.character(jsonlite::toJSON(
-    list(
-      row = row %||% "", col = col %||% "", color = color %||% "",
-      group = group %||% "", top_n = as.integer(top_n %||% 25L),
-      cell_numbers = isTRUE(cell_numbers), drill = isTRUE(drill),
-      download = if (isTRUE(download)) "on" else "off",
-      ctrl_target = ctrl$target %||% "", ctrl_table = ctrl$table %||% "",
-      ctrl_choices = ctrl$choices %||% list()
-    ),
-    auto_unbox = TRUE
-  ))
+                         cell_numbers = TRUE, drill = FALSE,
+                         download = FALSE, ctrl = list(), titles = list(),
+                         script = list()) {
+  res <- titles$resolved
+  parts <- res$parts
+  offers <- function(p) as.list(attr(p, "offers", exact = TRUE))
+  cfg <- list(
+    row = row %||% "", col = col %||% "", color = color %||% "",
+    group = group %||% "",
+    cell_numbers = if (isTRUE(cell_numbers)) "on" else "off",
+    drill = isTRUE(drill),
+    download = if (isTRUE(download)) "on" else "off",
+    ctrl_target = ctrl$target %||% "", ctrl_table = ctrl$table %||% "",
+    ctrl_choices = ctrl$choices %||% list(),
+    # The three-tier text: NULL (auto) travels as JSON null.
+    title = titles$title, subtitle = titles$subtitle,
+    caption = titles$caption,
+    title_resolved = res$title %||% "",
+    subtitle_resolved = res$subtitle %||% "",
+    caption_resolved = res$caption %||% "",
+    title_parts = parts$title, subtitle_parts = parts$subtitle,
+    caption_parts = parts$caption,
+    title_offers = offers(parts$title),
+    subtitle_offers = offers(parts$subtitle),
+    caption_offers = offers(parts$caption),
+    title_arg_values = res$arg_values %||% structure(list(), names = character()),
+    script = script$text %||% "",
+    script_inputs = script$inputs %||% list(),
+    script_error = script$error
+  )
+  cfg <- c(cfg, script$cfg %||% list())
+  as.character(jsonlite::toJSON(cfg, auto_unbox = TRUE, null = "null"))
 }
 
 # ---------------------------------------------------------------------------
@@ -367,6 +370,15 @@ hmb_cell_model <- function(prep, fun) {
     lapply(prep$groups, function(g) list(label = g$label, n = g$n))
   }
 
+  # The worst level per filled cell, for the data tooltip: 0 = none recorded.
+  lvl <- if (!is.null(prep$levels) && any(filled)) {
+    w <- prep$worst[filled]
+    w[is.na(w)] <- 0L
+    as.integer(w)
+  } else {
+    integer()
+  }
+
   list(
     n = n, k = k,
     rows = as.character(prep$rows),
@@ -376,7 +388,13 @@ hmb_cell_model <- function(prep, fun) {
     idx = as.integer(which(filled) - 1L),
     cnt = as.integer(cnt[filled]),
     pal = as.integer(pal),
-    bg = bg, fg = fg
+    bg = bg, fg = fg,
+    lvl = lvl,
+    levels = as.character(prep$levels %||% character()),
+    row_label = prep$row_label %||% prep$row_col,
+    col_label = prep$col_label %||% prep$col_col,
+    color_label = prep$color_label %||% "",
+    group_label = prep$group_label %||% ""
   )
 }
 
@@ -393,19 +411,23 @@ hmb_model_payload <- function(m) {
     rows = I(m$rows), terms = I(m$terms),
     # unname()d: `prep$groups` is a NAMED list, and a named list serializes
     # as a JSON object, not an array -- the client would read no groups at
-    # all and drop the rail silently.
+    # all and drop the group rows silently.
     groups = unname(m$groups) %||% list(),
     idx = I(m$idx), cnt = I(m$cnt), pal = I(m$pal),
-    bg = I(m$bg), fg = I(m$fg)
+    bg = I(m$bg), fg = I(m$fg),
+    lvl = I(m$lvl %||% integer()), levels = I(m$levels %||% character()),
+    rowLabel = m$row_label %||% "", colLabel = m$col_label %||% "",
+    colorLabel = m$color_label %||% "", groupLabel = m$group_label %||% ""
   )
 }
 
-#' Paste the model into the historical `<tr>` markup.
+#' Paste the model into the `<tr>` markup.
 #'
 #' Column-vectorized string assembly, not per-cell tag objects: those
 #' dominate render time (dt_flat_assemble_tag's argument). Text and
 #' attribute content use htmltools' own escaper, so `&` `<` `>` are escaped
 #' and quotes are not -- heatmap-block.js's assembler applies the same rule.
+#' A group opens with a section-title row spanning the matrix.
 #' @noRd
 hmb_assemble_rows <- function(m) {
   esc <- function(x) htmltools::htmlEscape(as.character(x))
@@ -418,50 +440,39 @@ hmb_assemble_rows <- function(m) {
       ";color:", m$fg[m$pal], '"><span>', m$cnt, "</span></td>"
     )
   }
-  stub <- paste0('<td class="hmb-stub" data-raw="', esc(m$rows), '">',
-                 esc(m$rows), "</td>")
-  body_rows <- paste0(stub, apply(cells, 1L, paste0, collapse = ""))
+  stub <- paste0('<td class="hmb-stub">', esc(m$rows), "</td>")
+  body_rows <- paste0('<tr class="hmb-r" data-hmb-i="', seq_len(n) - 1L,
+                      '" data-hmb-id="', esc(m$rows), '">', stub,
+                      apply(cells, 1L, paste0, collapse = ""), "</tr>")
 
-  if (!is.null(m$groups)) {
+  if (length(m$groups)) {
     gn <- vapply(m$groups, `[[`, 0L, "n")
-    rail_at <- utils::head(cumsum(c(1L, gn)), -1L)
-    rails <- rep("", n)
-    rails[rail_at] <- vapply(m$groups, function(g) {
-      paste0('<td class="hmb-rail" rowspan="', g$n, '" title="',
-             esc(g$label), " \u00b7 ", g$n, ' rows"><span>',
-             esc(g$label), "</span></td>")
+    starts <- utils::head(cumsum(c(1L, gn)), -1L)
+    heads <- vapply(m$groups, function(g) {
+      paste0('<tr class="hmb-grp"><td colspan="', k + 1L,
+             '"><span class="hmb-gt">', esc(g$label),
+             '</span><span class="hmb-gn">', g$n, "</span></td></tr>")
     }, "")
-    body_rows <- paste0(body_rows, rails)
-    # Slim separator between groups (after each group's last row); sits
-    # OUTSIDE the rowspans, so the rail math stays per group.
-    seps <- rep("", n)
-    ncols <- k + 2L
-    seps[utils::head(cumsum(gn), -1L)] <-
-      paste0('</tr><tr class="hmb-gsep"><td colspan="', ncols, '"></td>')
-    body_rows <- paste0(body_rows, seps)
+    body_rows[starts] <- paste0(heads, body_rows[starts])
   }
-  paste0('<tr class="hmb-r" data-hmb-id="', esc(m$rows), '">',
-         body_rows, "</tr>", collapse = "")
+  paste0(body_rows, collapse = "")
 }
 
-#' Build the data-dependent half: legend, matrix, footer count, and the
-#' bounds the Top-n field takes from the frame.
+#' Build the data-dependent half: legend, matrix and the status count.
 #'
 #' Returns character HTML rather than tags, because this is what ships over
 #' the custom-message channel to the client (the table block's `kind:
-#' "html"` payload, dev/table-data-push-design.md): the EXISTING builders
-#' render it, so there is one markup source and the client wires the same
-#' DOM it always has.
+#' "html"` payload, dev/table-data-push-design.md).
 #'
-#' @return `list(err=)` when not renderable, else `list(legend, table,
-#'   count, top_max, top_val, row_col, cols)`.
+#' @return `list(err=)` when not renderable, else `list(legend, head, model,
+#'   table, count, row_col, cols)`.
 #' @noRd
 hmb_body <- function(data, row = NULL, col = NULL, color = NULL,
-                     group = NULL, top_n = 25L, scale_map = NULL) {
-  prep <- heatmap_prep(data, row, col, color, group, top_n)
+                     group = NULL, scale_map = NULL) {
+  prep <- heatmap_prep(data, row, col, color, group)
   if (!is.null(prep$err)) {
-    return(list(err = prep$err, row_col = row %||% "",
-                cols = hmb_cols_json(data)))
+    return(list(err = prep$err, err_kind = prep$err_kind %||% "empty",
+                row_col = row %||% "", cols = hmb_cols_json(data)))
   }
 
   # One vectorized colour fun over level indices (or counts when
@@ -470,28 +481,30 @@ hmb_body <- function(data, row = NULL, col = NULL, color = NULL,
   fun <- hmb_paint(prep, data, scale_map)
 
   # ---- thead ----------------------------------------------------------
+  # The stub header is the row column's label (an exhibit speaks in labels);
+  # the name is its tooltip. A term cut off by the 150px header gets its
+  # full text as the tooltip, set by the client once it can measure.
   ths <- c(
-    list(htmltools::tags$th(class = "hmb-stubh", prep$row_col)),
+    list(htmltools::tags$th(
+      class = "hmb-stubh",
+      `data-blockr-tooltip` = if (!identical(prep$row_label, prep$row_col)) {
+        prep$row_col
+      },
+      prep$row_label
+    )),
     lapply(prep$terms, function(tm) {
-      htmltools::tags$th(class = "hmb-rot", title = tm,
-                         htmltools::tags$span(tm))
-    }),
-    if (!is.null(prep$groups)) list(htmltools::tags$th(class = "hmb-railh"))
+      htmltools::tags$th(class = "hmb-rot", htmltools::tags$span(tm))
+    })
   )
   thead <- htmltools::tags$thead(htmltools::tags$tr(ths))
 
   model <- hmb_cell_model(prep, fun)
   tbody <- htmltools::tags$tbody(htmltools::HTML(hmb_assemble_rows(model)))
 
-  n <- model$n
-  k <- model$k
-  n_terms <- prep$n_terms_total
-  top_max <- max(n_terms, 1L)
   list(
     legend = as.character(hmb_legend(prep, fun)),
-    # The <table> shell and its (small, fiddly) rotated header stay R
-    # markup; the body is the cell model, assembled by whichever consumer
-    # asked. See hmb_cell_model().
+    # The <table> shell and its rotated header stay R markup; the body is
+    # the cell model, assembled by whichever consumer asked.
     head = as.character(
       htmltools::tags$table(class = "hmb-table", thead,
                             htmltools::tags$tbody())
@@ -500,23 +513,33 @@ hmb_body <- function(data, row = NULL, col = NULL, color = NULL,
     table = as.character(
       htmltools::tags$table(class = "hmb-table", thead, tbody)
     ),
-    count = sprintf("%d \u00d7 %d of %d %s", n, k, n_terms, prep$col_col),
-    top_max = top_max,
-    top_val = min(max(as.integer(top_n), 1L), top_max),
+    # The status line stays on the board, so it speaks in names.
+    count = sprintf("%d %s \u00d7 %d %s", model$n, prep$row_col, model$k,
+                    prep$col_col),
     row_col = prep$row_col,
     cols = hmb_cols_json(data)
   )
 }
 
-#' The persistent shell: toolbar (Top-N + cell numbers, left of the gear the
-#' JS prepends), legend slot, scroll, footer.
+#' The search icon for the header's search tool (16px grid, stroke).
+#' @noRd
+hmb_search_icon <- function() {
+  htmltools::HTML(paste0(
+    '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">',
+    '<g fill="none" stroke="currentColor" stroke-width="1.4" ',
+    'stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/>',
+    '<path d="M10.5 10.5L14 14"/></g></svg>'
+  ))
+}
+
+#' The persistent shell: header row (title, sentence, tools; the JS adds the
+#' gear and its tray), search row, legend slot, scroll, caption, status line.
 #'
 #' Depends on CONFIG only, never on the data -- that is the whole point.
 #' The dock publishes a transient `on_screen=[]` while it arranges, which
 #' closes core's data gate for a tick; a chrome that read the data would
-#' render empty on that tick and Shiny would wipe the panel, so the reader
-#' sees the matrix, then white, then the matrix again. The chart, table,
-#' rank and summarize blocks all avoid it the same way: a shell that
+#' render empty on that tick and Shiny would wipe the panel. The chart,
+#' table, rank and summarize blocks all avoid it the same way: a shell that
 #' renders once and a body pushed over a custom message.
 #'
 #' `body` is the standalone escape hatch -- pass a [hmb_body()] result and
@@ -524,50 +547,31 @@ hmb_body <- function(data, row = NULL, col = NULL, color = NULL,
 #' use. In the block, the slots ship empty and heatmap-block.js fills them.
 #' @noRd
 hmb_chrome <- function(elem_id = NULL, cell_numbers = TRUE, drill = FALSE,
-                       download = FALSE, top_n = 25L, max_height = "600px",
                        cfg_json = "{}", cols_json = "[]", row_col = "",
                        active_values = NULL, download_slot = NULL,
                        status = NULL, body = NULL) {
-  # ---- toolbar --------------------------------------------------------
-  # Design-system primitives only (blockr.docs/design-system): a number
-  # field is `.blockr-num-input` inside a bordered wrap, committing on
-  # Enter / blur via Blockr.textCommit -- the slice block's "n rows"
-  # control, and the reason a slider is wrong here: "top 25" is a value
-  # you type, not one you drag to. Booleans are `.blockr-checkbox` (a data
-  # option, not a value pill). No bespoke badge: the field shows the value.
-  #
-  # Before the first payload the bounds are the config's own top_n: the
-  # field is honest about what was asked for, and the body's arrival
-  # narrows `max` to the terms that actually exist.
-  top_max <- body$top_max %||% max(as.integer(top_n %||% 25L), 1L)
-  top_val <- body$top_val %||% min(max(as.integer(top_n %||% 25L), 1L),
-                                   top_max)
-  toolbar <- htmltools::tags$div(
-    class = "hmb-toolbar",
-    htmltools::tags$span(class = "hmb-tb-label", "Top n"),
+  head <- htmltools::tags$div(
+    class = "hmb-head",
     htmltools::tags$div(
-      # The wrap carries the border and hosts the Enter chip textCommit
-      # inserts next to the input (slice block's .slb-n-wrap).
-      class = "hmb-topn-wrap",
-      htmltools::tags$input(
-        type = "number", class = "blockr-num-input hmb-topn",
-        min = 1L, max = top_max, step = 1L, value = top_val,
-        title = paste0("Columns shown, most frequent first (1-", top_max,
-                       "). Enter to apply.")
-      )
+      class = "hmb-titles",
+      htmltools::tags$div(class = "hmb-title"),
+      htmltools::tags$div(class = "hmb-subtitle")
     ),
-    hmb_checkbox("hmb-nums", "Cell numbers", cell_numbers),
-    htmltools::tags$span(class = "hmb-tb-spacer"),
-    htmltools::tags$input(
-      type = "search", class = "hmb-search", placeholder = "Search\u2026"
-    ),
-    download_slot
+    htmltools::tags$div(
+      class = "hmb-tools",
+      blockr.ui::tool_button(hmb_search_icon(), "Search",
+                             class = "hmb-search-btn",
+                             `aria-pressed` = "false"),
+      download_slot
+    )
   )
 
-  # An error state keeps the toolbar: the way out of "Pick the row and
-  # column identities" is the gear, which lives in that toolbar.
   scroll_inner <- if (!is.null(body$err)) {
-    htmltools::tags$div(class = "hmb-empty", body$err)
+    if (identical(body$err_kind, "danger")) {
+      htmltools::tags$div(class = "hmb-msg hmb-msg--danger", body$err)
+    } else {
+      htmltools::tags$p(class = "blockr-empty blockr-empty--block", body$err)
+    }
   } else if (!is.null(body)) {
     htmltools::HTML(body$table)
   }
@@ -584,26 +588,26 @@ hmb_chrome <- function(elem_id = NULL, cell_numbers = TRUE, drill = FALSE,
       as.character(jsonlite::toJSON(as.character(active_values)))
     },
     heatmap_block_dep(),
-    if (!is.null(download_slot)) {
-      htmltools::tags$style(htmltools::HTML(dl_chrome_css()))
-    },
-    toolbar,
+    head,
+    htmltools::tags$div(
+      class = "hmb-search-row",
+      htmltools::tags$input(
+        type = "search", class = "blockr-text-input hmb-search",
+        placeholder = "Search rows", `aria-label` = "Search rows"
+      )
+    ),
     htmltools::tags$div(
       class = "hmb-legend-slot",
       if (is.null(body$err) && !is.null(body)) htmltools::HTML(body$legend)
     ),
-    htmltools::tags$div(
-      class = "hmb-scroll",
-      style = paste0("max-height:", max_height, ";"),
-      scroll_inner
-    ),
+    htmltools::tags$div(class = "hmb-scroll", scroll_inner),
+    htmltools::tags$div(class = "hmb-caption"),
     htmltools::tags$div(
       class = "hmb-footer",
       htmltools::tags$span(class = "hmb-count", body$count %||% ""),
       # The drill status is its own tiny output (the `status` slot) so a row
-      # click never re-renders the matrix -- the split the table block and the
-      # composer preview both draw. Standalone use (tests) renders it inline.
-      status %||% hmb_status_tag(row_col, active_values)
+      # click never re-renders the matrix. Standalone use renders it inline.
+      status %||% if (isTRUE(drill)) hmb_status_tag(row_col, active_values)
     )
   )
 }
@@ -615,21 +619,18 @@ hmb_chrome <- function(elem_id = NULL, cell_numbers = TRUE, drill = FALSE,
 #' [hmb_chrome()] once and pushes [hmb_body()] over the data channel.
 #' @noRd
 heatmap_html <- function(data, row = NULL, col = NULL, color = NULL,
-                         group = NULL, top_n = 25L, cell_numbers = TRUE,
+                         group = NULL, cell_numbers = TRUE,
                          drill = FALSE, download = FALSE, elem_id = NULL,
                          active_values = NULL, status = NULL,
                          download_slot = NULL, scale_map = NULL,
-                         ctrl = list(), max_height = "600px") {
-  body <- hmb_body(data, row, col, color, group, top_n, scale_map)
+                         ctrl = list()) {
+  body <- hmb_body(data, row, col, color, group, scale_map)
   hmb_chrome(
     elem_id = elem_id,
     cell_numbers = cell_numbers,
     drill = drill,
-    download = download,
-    top_n = top_n,
-    max_height = max_height,
-    cfg_json = hmb_cfg_json(row, col, color, group, top_n, cell_numbers,
-                            drill, download, ctrl),
+    cfg_json = hmb_cfg_json(row, col, color, group, cell_numbers, drill,
+                            download, ctrl),
     cols_json = body$cols,
     row_col = body$row_col %||% (row %||% ""),
     active_values = active_values,
@@ -639,33 +640,42 @@ heatmap_html <- function(data, row = NULL, col = NULL, color = NULL,
   )
 }
 
-#' The drill-status line (dot + text + Reset), shared by the server's small
-#' status output and the standalone inline render.
+#' The status line's drill half: the receipt, then Reset.
+#'
+#' Reset (design system, "Showing that a block filters") is a 26px xs main
+#' button with the number of active filters as a count; disabled while
+#' nothing is picked, and its tooltip names the clause it undoes. A transient
+#' drill holds nothing, so it shows the receipt of the last send and no Reset.
 #' @noRd
-hmb_status_tag <- function(row_col, active_values, receipt = NULL) {
-
-  # Transient drill: nothing latches, so there is no steady state to report and
-  # no Reset to offer. The line exists only just after a click, says what was
-  # sent, and fades -- the same receipt the chart and the table show, in the
-  # same words. No claim yet = nothing rendered at all.
+hmb_status_tag <- function(row_col = NULL, active_values = NULL,
+                           receipt = NULL) {
   if (!is.null(receipt)) {
     return(htmltools::tags$span(
       class = "hmb-status hmb-status-receipt",
       htmltools::tags$span(class = "hmb-status-text", receipt)
     ))
   }
-
+  vals <- as.character(unlist(active_values))
+  on <- length(vals) > 0L
+  clause <- if (on) paste0(row_col, " = ", paste(vals, collapse = ", "))
   htmltools::tags$span(
     class = "hmb-status",
-    style = if (!length(active_values)) "display:none",
-    htmltools::tags$span(class = "hmb-dot"),
-    htmltools::tags$span(
-      class = "hmb-status-text",
-      if (length(active_values)) {
-        paste0("Filtering downstream: ", row_col, " = ",
-               paste(active_values, collapse = ", "))
-      }
-    ),
-    htmltools::tags$button(type = "button", class = "hmb-reset", "Reset")
+    if (on) {
+      htmltools::tags$span(class = "hmb-status-text",
+                           paste0("Drilled down to ", clause))
+    },
+    htmltools::tags$button(
+      type = "button", class = "hmb-reset",
+      disabled = if (!on) NA,
+      `data-blockr-tooltip` = clause,
+      htmltools::HTML(paste0(
+        '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">',
+        '<path d="M3 8a5 5 0 1 0 1.5-3.5M3 3v2.5h2.5" fill="none" ',
+        'stroke="currentColor" stroke-width="1.5" stroke-linecap="round" ',
+        'stroke-linejoin="round"/></svg>'
+      )),
+      "Reset",
+      if (on) htmltools::tags$span(class = "hmb-count-badge", "1")
+    )
   )
 }

@@ -9,16 +9,20 @@ new_heatmap_block(
   col = character(),
   color = character(),
   group = character(),
-  top_n = 25L,
+  top_n = NULL,
   cell_numbers = TRUE,
   drill = FALSE,
   download = FALSE,
   filter_column = NULL,
   filter_values = NULL,
-  max_height = "600px",
+  max_height = NULL,
   ctrl_target = "",
   ctrl_table = "",
-  class = character(),
+  title = NULL,
+  subtitle = NULL,
+  caption = NULL,
+  script = NULL,
+  values = list(),
   ...
 )
 }
@@ -34,36 +38,43 @@ column falls back to sorted unique values. Empty: cells paint by
 count instead.}
 
 \item{group}{Optional column grouping the rows (one group value per row
-identity, e.g. the treatment arm); rendered as the right-hand rail.}
+identity, e.g. the treatment arm); each group starts with a header row.}
 
-\item{top_n}{Cap on the number of columns, most frequent first
-(default 25). The toolbar slider edits this.}
+\item{top_n}{LEGACY. Folded into the prepare script: a board saved with
+it restores it as the script's \code{top_n} value.}
 
 \item{cell_numbers}{Show the count in each cell (default \code{TRUE}). Off,
-the matrix reads as a pure color heatmap. The toolbar checkbox.}
+the matrix reads as a pure color heatmap.}
 
 \item{drill}{Logical (default \code{FALSE}): a row click filters downstream
 on the \code{row} column (click again to clear).}
 
 \item{download}{Logical (default \code{FALSE}), exposed in the gear: the
-toolbar grows the shared download control (\code{\link[=dt_download_control]{dt_download_control()}}) --
-the matrix (row identity, group, count columns) written as xlsx /
-html / pptx.}
+header row grows the shared download tool -- the matrix (row identity,
+group, count columns) written as xlsx / html / pptx.}
 
 \item{filter_column, filter_values}{Persisted drill state (restore).}
 
-\item{max_height}{Scroll container height (default \code{"600px"}).}
+\item{max_height}{LEGACY. The matrix scrolls with its panel.}
 
 \item{ctrl_target, ctrl_table}{Character(1), beta: as in
 \code{\link[=new_table_block]{new_table_block()}} -- push the drill claim into a value filter block.
 \code{ctrl_target = "auto"} finds that block on the board itself, see
 \code{\link[=ctrl_auto_target]{ctrl_auto_target()}}.}
 
-\item{class}{Optional subclass(es) prepended to \code{"heatmap_block"} -- how
-a delegating surface (blockr.pharma's AE heatmap) gets its own class,
-which is what the registry keys metadata on.}
+\item{title, subtitle, caption}{Text above and below the matrix, as in
+\code{\link[=new_chart_block]{new_chart_block()}}: \code{NULL} = the input's own label, \code{""} = none, else a
+template. \verb{\{@arg\}} in the subtitle makes the word a control.}
 
-\item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
+\item{script, values}{Prepare script, as in \code{\link[=new_chart_block]{new_chart_block()}}: R code run
+on the incoming rows before the matrix is built, whose top assignments
+become settings. \code{values} holds their current settings.}
+
+\item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}. A package
+building on this block passes its own \code{class} here (blockr.pharma's AE
+heatmap): it is prepended to \code{"heatmap_block"} at construction, which is
+where block metadata is resolved from the registry. It is not a formal
+because every constructor formal has to come back out as block state.}
 }
 \value{
 A transform block of class \code{heatmap_block}.
@@ -72,11 +83,10 @@ A transform block of class \code{heatmap_block}.
 Renders long event rows (e.g. one row per adverse event) as a row x
 column matrix: the cell DISPLAYS the event count and is PAINTED by the
 worst level of \code{color} -- two channels, the old-CDEx AE heatmap form.
-Columns are capped to the top-N by event count (the "Top n" slider on
-the block toolbar, next to the cell-numbers toggle -- both deliberately
-block-level controls, not gear entries). Rows order by \code{group} (factor
-order), then total burden descending; each group is marked by a rotated
-rail tile on the right, the table analogue of the chart's facet strip.
+Columns order by event count, most first; the block draws every column
+it gets, so a cap belongs in the prepare \code{script}. Rows order by \code{group}
+(factor order), then total burden descending; each group starts with a
+header row.
 }
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}

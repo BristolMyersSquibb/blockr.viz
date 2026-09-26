@@ -1125,13 +1125,9 @@
       this._legendOff = new Set();
       /** @type {string | null} */
       this._legendKey = null;
-      // The caption word whose menu is open, its anchor and the menu handle.
-      /** @type {string | null} */
-      this._slotKey = null;
-      /** @type {HTMLElement | null} */
-      this._slotAnchor = null;
-      /** @type {{ close(): void } | null} */
-      this._slotMenu = null;
+      // The sentence painter and its open menu (Blockr.SentenceSlots).
+      /** @type {any} */
+      this._slotsInst = null;
       // Per-render one-pass caches for the per-panel raw-data scans (axis
       // counts / tooltip representative values); reset in _renderAggregated.
       /** @type {Map<string, Map<string, any>> | null} */
@@ -1987,156 +1983,34 @@
       this.captionEl.style.display = (cap || capOffered) ? '' : 'none';
     }
 
-    // One band's text. Plain string unless R sent pieces, which it does when
-    // the template holds an `{@arg}` token: those words are the block's own
-    // controls, drawn in the sentence instead of in a band. Text nodes and
-    // textContent throughout -- titles are data-derived text.
+    // One band's text, and the offers for settings whose clause dropped. The
+    // painter is shared with the heatmap (Blockr.SentenceSlots in
+    // drilldown-config.js), so a word means the same thing on both.
     /** @param {HTMLElement} el @param {string} text @param {any[]} [parts] @param {any[]} [offers] */
     _paintTitle(el, text, parts, offers) {
-      el.textContent = '';
-      if (!Array.isArray(parts) || !parts.length) {
-        el.textContent = text;
-        this._paintOffers(el, offers);
-        return;
-      }
-      for (const p of parts) {
-        if (!p || !p.text) continue;
-        if (!p.arg) { el.appendChild(document.createTextNode(p.text)); continue; }
-        const w = document.createElement('span');
-        w.className = 'blockr-slot';
-        w.textContent = p.text;
-        w.setAttribute('role', 'button');
-        w.setAttribute('tabindex', '0');
-        w.addEventListener('click', (e) => { e.stopPropagation(); this._openSlot(p.arg, w, p.by); });
-        w.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
-          if (e.key !== 'Enter' && e.key !== ' ') return;
-          e.preventDefault();
-          this._openSlot(p.arg, w, p.by);
-        });
-        el.appendChild(w);
-      }
-      this._paintOffers(el, offers);
+      const s = this._sentence();
+      s.paint(el, text, parts);
+      s.paintOffers(el, offers);
     }
 
-    /** The settings the sentence would name if they were set.
-     *
-     * A clause in brackets leaves with its value, and takes the word that
-     * would open it: promoting `facet` on a chart that has no facet promotes
-     * nothing. So the sentence ends with one dashed chip per dropped setting,
-     * opening exactly the menu the word would have opened, and each chip
-     * disappears the moment its clause comes back. Past three the block has
-     * more unset settings than a caption can offer, and the gear is the right
-     * surface for that.
-     *
-     * @param {HTMLElement} el
-     * @param {any[]} [offers]
-     */
-    _paintOffers(el, offers) {
-      if (!Array.isArray(offers) || !offers.length) return;
-      const MAX = 3;
-      const shown = offers.slice(0, MAX);
-      for (const key of shown) {
-        if (typeof key !== 'string') continue;
-        const label = this._slotLabel(key) || key;
-        const c = document.createElement('span');
-        c.className = 'blockr-slot-offer';
-        c.textContent = '+ ' + label;
-        c.setAttribute('role', 'button');
-        c.setAttribute('tabindex', '0');
-        c.addEventListener('click', (e) => { e.stopPropagation(); this._openSlot(key, c); });
-        c.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
-          if (e.key !== 'Enter' && e.key !== ' ') return;
-          e.preventDefault();
-          this._openSlot(key, c);
+    _sentence() {
+      if (!this._slotsInst) {
+        this._slotsInst = new Blockr.SentenceSlots({
+          ddc: () => this._cfg,
+          config: () => this.config,
+          openGear: () => this._openPopover()
         });
-        el.appendChild(c);
       }
-      if (offers.length > MAX) {
-        const more = document.createElement('span');
-        more.className = 'blockr-slot-offer blockr-slot-offer--more';
-        more.textContent = '+' + (offers.length - MAX);
-        more.setAttribute('role', 'button');
-        more.setAttribute('tabindex', '0');
-        more.setAttribute('aria-label', 'More, in the settings');
-        more.addEventListener('click', (e) => { e.stopPropagation(); this._openPopover(); });
-        el.appendChild(more);
-      }
+      return this._slotsInst;
     }
 
-    // A role.label may be a function of the current config (the x role reads
-    // "Timeline" on a band chart), exactly as the gear's rows resolve it.
     /** @param {string} key */
-    _slotLabel(key) {
-      const role = this._cfg && this._cfg._role ? this._cfg._role(key) : null;
-      if (!role || !role.label) return '';
-      return (typeof role.label === 'function') ? role.label(this.config) : role.label;
-    }
+    _slotLabel(key) { return this._sentence().label(key); }
 
-    // The slot's editor is the list, hung off the word: no popover, no
-    // control to click a second time. Blockr.Select.menu() is the same
-    // dropdown every select in the product opens, so the tick, the filter
-    // box, the keyboard and the edge flip come with it.
     /** @param {string} key @param {HTMLElement} anchor @param {string} [by] */
-    _openSlot(key, anchor, by) {
-      const wasKey = this._slotKey;
-      this._closeSlot();
-      if (wasKey === key) return;              // the word toggles its own menu
-      if (!this._cfg) return;
-      // A flag has no list: the word IS the switch, and it says which state it
-      // is in. Its clause disappears when it goes off, and comes back as an
-      // offer chip.
-      const flag = this._cfg._slotFlag && this._cfg._slotFlag(key);
-      if (flag) {
-        const on = this.config[flag.key] !== 'off';
-        this._cfg._setRoleValue(key, on ? 'off' : 'on');
-        return;
-      }
-      const opts = this._cfg._slotOptionsFor(key);
-      // No list to open: a number, a text field, a multi-select. Those keep
-      // their row in the strip, so there is nothing to do here.
-      if (!opts) return;
-      const B = (typeof Blockr !== 'undefined') ? Blockr : null;
-      if (!B || !B.Select || !B.Select.menu) {
-        // LOUD on purpose. This is a version skew, not a capability to feel
-        // out at runtime: blockr.viz paints the words and blockr.dplyr owns
-        // the menu they open, so a deployment carrying one without the other
-        // gives words that do nothing and no other symptom at all. A silent
-        // return here cost an afternoon on prod. See blockr.docs
-        // design-system/pinned-controls.md.
-        throw new Error(
-          'Blockr.Select.menu() is missing: this blockr.dplyr predates the ' +
-          'title-slot menu. The words in a block\'s sentence cannot open ' +
-          'their list until blockr.dplyr is updated alongside blockr.viz.'
-        );
-      }
-      this._slotKey = key;
-      this._slotAnchor = anchor;
-      anchor.classList.add('blockr-slot--open');
-      this._slotMenu = B.Select.menu(anchor, {
-        options: opts.options,
-        selected: opts.selected,
-        title: this._slotLabel(key) || key,
-        // Lead with the half the sentence printed.
-        labelFirst: by === 'label',
-        searchPlaceholder: 'Filter columns',
-        onChange: (/** @type {string} */ val) => this._cfg._setRoleValue(key, val),
-        onClose: () => {
-          if (this._slotAnchor) this._slotAnchor.classList.remove('blockr-slot--open');
-          this._slotAnchor = null;
-          this._slotMenu = null;
-          this._slotKey = null;
-        }
-      });
-    }
+    _openSlot(key, anchor, by) { this._sentence().open(key, anchor, by); }
 
-    _closeSlot() {
-      if (this._slotMenu) { this._slotMenu.close(); this._slotMenu = null; }
-      if (this._slotAnchor) {
-        this._slotAnchor.classList.remove('blockr-slot--open');
-        this._slotAnchor = null;
-      }
-      this._slotKey = null;
-    }
+    _closeSlot() { if (this._slotsInst) this._slotsInst.close(); }
 
     // -- Shared facet legend ---------------------------------------------------
     //

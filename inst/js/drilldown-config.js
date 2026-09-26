@@ -736,6 +736,16 @@
       }
       row.appendChild(help);
       sec.appendChild(row);
+
+      // A host with no strip on its face (the heatmap) keeps a row here for
+      // each declared value: the gear holds every setting, and a value its
+      // sentence does not name would otherwise have no control at all.
+      if (!this._bandSupported()) {
+        for (const sp of specs) {
+          if (sp.kind === 'error') this._renderScriptError(sec, sp);
+          else this._renderRole(sec, sp.key);
+        }
+      }
     }
 
     // ===== Titles: the block's sentence, written =============================
@@ -2441,7 +2451,33 @@
           selected: this._hasVal(cfg[key]) ? cfg[key] : first
         };
       }
+      // A number in a sentence ("Top 25") opens a short list of round values
+      // inside its declared range, with the current value among them. Typing
+      // any other value stays with the gear's row.
+      if (role.kind === 'number') {
+        const cur = Number(cfg[key]);
+        return {
+          options: this._numberSteps(role, cur).map(String),
+          selected: isFinite(cur) ? String(cur) : ''
+        };
+      }
       return null;
+    }
+
+    /** Round values between a number role's min and max, plus `cur`.
+     * @param {any} role @param {number} cur @returns {number[]} */
+    _numberSteps(role, cur) {
+      const lo = isFinite(Number(role.min)) ? Number(role.min) : 1;
+      const hi = isFinite(Number(role.max)) ? Number(role.max)
+        : Math.max(lo * 10, isFinite(cur) ? cur * 2 : 10);
+      const out = new Set();
+      for (const m of [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100,
+                       150, 200, 250, 500, 1000]) {
+        if (m >= lo && m <= hi) out.add(m);
+      }
+      out.add(lo); out.add(hi);
+      if (isFinite(cur)) out.add(cur);
+      return Array.from(out).sort((x, y) => x - y);
     }
 
     /** Is this word a flag? A flag toggles in place: a menu of two words is a
@@ -2473,7 +2509,7 @@
         this.h.onChange(key);
         this.h.onClearFilter();
       } else {
-        cfg[key] = val;
+        cfg[key] = role.kind === 'number' ? Number(val) : val;
         this.h.onChange(key);
       }
       // The gear may be open on the same role: its row shows a stale value
@@ -2690,9 +2726,160 @@
     }
   }
 
+  /**
+   * The block's sentence on its face: plain text with live words (design
+   * system, "The sentence and its slots"). R sends the pieces
+   * (R/title-template.R); a piece with an `arg` is a slot. A click opens the
+   * list under the word (Blockr.Select.menu), a flag toggles in place, and an
+   * offer ("+ Facet") stands in for a setting whose clause dropped.
+   *
+   * Every decision about what a pick MEANS stays in the engine
+   * (_slotOptionsFor, _slotFlag, _setRoleValue), so a word and the gear's
+   * row cannot disagree.
+   *
+   * host: { ddc(): DrilldownConfig, config(): object, openGear(): void }
+   */
+  class SentenceSlots {
+    /** @param {{ ddc: () => any, config: () => any, openGear: () => void }} host */
+    constructor(host) {
+      this.h = host;
+      /** @type {string | null} */
+      this._key = null;
+      /** @type {HTMLElement | null} */
+      this._anchor = null;
+      /** @type {any} */
+      this._menu = null;
+    }
+
+    /** One band's text. textContent throughout: titles are data-derived.
+     * @param {HTMLElement} el @param {string} text @param {any[]} [parts] */
+    paint(el, text, parts) {
+      el.textContent = '';
+      if (!Array.isArray(parts) || !parts.length) {
+        el.textContent = text || '';
+        return;
+      }
+      for (const p of parts) {
+        if (!p || !p.text) continue;
+        if (!p.arg) { el.appendChild(document.createTextNode(p.text)); continue; }
+        const w = document.createElement('span');
+        w.className = 'blockr-slot';
+        w.textContent = p.text;
+        w.setAttribute('role', 'button');
+        w.setAttribute('tabindex', '0');
+        this._wire(w, () => this.open(p.arg, w, p.by));
+        el.appendChild(w);
+      }
+    }
+
+    /** The settings the sentence would name if they were set. Three at
+     * most; past three the last one reads "More settings" and opens the gear.
+     * @param {HTMLElement} el @param {any[]} [offers] */
+    paintOffers(el, offers) {
+      if (!Array.isArray(offers) || !offers.length) return;
+      const keys = offers.filter(k => typeof k === 'string');
+      const MAX = 3;
+      const shown = keys.length > MAX ? keys.slice(0, MAX - 1) : keys;
+      for (const key of shown) {
+        const c = document.createElement('span');
+        c.className = 'blockr-slot-offer';
+        c.textContent = '+ ' + (this.label(key) || key);
+        c.setAttribute('role', 'button');
+        c.setAttribute('tabindex', '0');
+        this._wire(c, () => this.open(key, c));
+        el.appendChild(c);
+      }
+      if (keys.length > MAX) {
+        const more = document.createElement('span');
+        more.className = 'blockr-slot-offer blockr-slot-offer--more';
+        more.textContent = 'More settings';
+        more.setAttribute('role', 'button');
+        more.setAttribute('tabindex', '0');
+        this._wire(more, () => this.h.openGear());
+        el.appendChild(more);
+      }
+    }
+
+    /** @param {HTMLElement} el @param {() => void} fn */
+    _wire(el, fn) {
+      el.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
+      el.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        fn();
+      });
+    }
+
+    // A role.label may be a function of the current config, exactly as the
+    // gear's rows resolve it.
+    /** @param {string} key */
+    label(key) {
+      const ddc = this.h.ddc();
+      const role = ddc && ddc._role ? ddc._role(key) : null;
+      if (!role || !role.label) return '';
+      return (typeof role.label === 'function') ? role.label(this.h.config()) : role.label;
+    }
+
+    /** @param {string} key @param {HTMLElement} anchor @param {string} [by] */
+    open(key, anchor, by) {
+      const was = this._key;
+      this.close();
+      if (was === key) return;                 // the word toggles its own menu
+      const ddc = this.h.ddc();
+      if (!ddc) return;
+      // A flag has no list: the word IS the switch.
+      const flag = ddc._slotFlag && ddc._slotFlag(key);
+      if (flag) {
+        const on = this.h.config()[flag.key] !== 'off';
+        ddc._setRoleValue(key, on ? 'off' : 'on');
+        return;
+      }
+      const opts = ddc._slotOptionsFor(key);
+      if (!opts) return;
+      const B = (typeof Blockr !== 'undefined') ? Blockr : null;
+      if (!B || !B.Select || !B.Select.menu) {
+        // LOUD on purpose: a version skew, not a capability to feel out. The
+        // words would do nothing and say nothing (blockr.docs
+        // design-system/pinned-controls.md).
+        throw new Error(
+          'Blockr.Select.menu() is missing: the words in a block\'s ' +
+          'sentence cannot open their list with this blockr.ui.'
+        );
+      }
+      this._key = key;
+      this._anchor = anchor;
+      anchor.classList.add('blockr-slot--open');
+      this._menu = B.Select.menu(anchor, {
+        options: opts.options,
+        selected: opts.selected,
+        title: this.label(key) || key,
+        // Lead with the half the sentence printed.
+        labelFirst: by === 'label',
+        searchPlaceholder: 'Filter columns',
+        onChange: (/** @type {string} */ val) => ddc._setRoleValue(key, val),
+        onClose: () => {
+          if (this._anchor) this._anchor.classList.remove('blockr-slot--open');
+          this._anchor = null;
+          this._menu = null;
+          this._key = null;
+        }
+      });
+    }
+
+    close() {
+      if (this._menu) { this._menu.close(); this._menu = null; }
+      if (this._anchor) {
+        this._anchor.classList.remove('blockr-slot--open');
+        this._anchor = null;
+      }
+      this._key = null;
+    }
+  }
+
   const ns = /** @type {BlockrNamespace} */ (
     (typeof Blockr !== 'undefined') ? Blockr
       : (window.Blockr = window.Blockr || /** @type {BlockrNamespace} */ ({})));
   ns.DrilldownConfig = DrilldownConfig;
+  ns.SentenceSlots = SentenceSlots;
   window.DrilldownConfig = DrilldownConfig;
 })();

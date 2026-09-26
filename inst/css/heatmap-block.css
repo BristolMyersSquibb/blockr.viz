@@ -1,270 +1,376 @@
-/* heatmap-block.css — new_heatmap_block()'s hmb-* markup (R/heatmap-html.R).
-   Variant B of _scratch/ae-heatmap-design/ae-heatmap-facets.html: one
-   continuous matrix, rotated column titles, a rotated grey rail tile
-   spanning each group on the right, legend in the summarize-table
-   vocabulary, truly empty cells. */
+/* heatmap-block.css — new_heatmap_block()'s hmb-* markup (R/heatmap-html.R),
+   on the design system (blockr.ui: design-system.Rmd, mockup
+   _scratch/heatmap-ds/). Header row with title, sentence and tools; the
+   gear tray under it; legend band; one continuous matrix whose groups open
+   with a section-title row; caption; status line. Meaning tokens only. */
 
-.hmb-block { font-size: 12.5px; color: var(--blockr-color-text, #111827); }
+.hmb-block {
+  font-size: var(--blockr-font-size-sm);
+  color: var(--blockr-color-text-default);
+}
 
-/* Toolbar: Top-n + cell numbers LEFT (block-level controls), search + the
-   JS-appended gear header on the right. */
-.hmb-toolbar {
+/* ---- header row: title and sentence left, tools right, gear last ------ */
+.hmb-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.hmb-titles {
+  flex: 1;
+  min-width: 0;
+}
+.hmb-title {
+  font-size: var(--blockr-font-size-lg);
+  font-weight: var(--blockr-font-weight-semibold);
+  line-height: 1.35;
+  color: var(--blockr-color-text-default);
+}
+.hmb-subtitle {
+  font-size: var(--blockr-font-size-sm);
+  line-height: 1.6;
+  color: var(--blockr-color-text-muted);
+  margin-top: 2px;
+}
+/* Offers sit on their own line under the sentence. */
+.hmb-offers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.hmb-offers .blockr-slot-offer {
+  font-size: var(--blockr-font-size-xs);
+  line-height: 1.6;
+  padding: 0 6px;
+  border: 1px dashed var(--blockr-color-border-strong);
+  border-radius: var(--blockr-radius-sm);
+  color: var(--blockr-color-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.hmb-offers .blockr-slot-offer:hover,
+.hmb-offers .blockr-slot-offer:focus-visible {
+  border-color: var(--blockr-color-border-accent);
+  color: var(--blockr-color-text-accent);
+}
+.hmb-tools {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 2px 6px;
+  gap: 6px;
+  flex: none;
 }
-.hmb-tb-label {
-  font-weight: 600;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  white-space: nowrap;
-}
-/* Top n. `.blockr-num-input` is borderless by contract (it sits inside a
-   row), so the wrap carries the border and hosts the Enter chip that
-   Blockr.textCommit inserts beside the input -- the slice block's
-   .slb-n-wrap, at the shared small-control height. */
-.hmb-topn-wrap {
-  display: inline-flex;
-  align-items: center;
-  height: var(--blockr-control-h-sm, 30px);
-  /* Room for the 60px min-width field PLUS the armed "Enter ↵" chip
-     (~57px) -- the design system's "room available" form. At 92px the
-     chip overflowed the border onto the checkbox (measured). */
-  width: 132px;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 4px;
-  background: var(--blockr-color-bg-input, #f9fafb);
-  padding-right: 2px;
-}
-.hmb-topn-wrap:focus-within {
-  border-color: var(--blockr-color-primary, #2563eb);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-}
-.hmb-topn-wrap .blockr-num-input { height: 100%; }
-/* The toolbar is a flex row, so its checkbox must not wrap its label or
-   shrink to a two-line block when the panel narrows -- the controls sit
-   on ONE line and the spacer absorbs the slack. */
-.hmb-toolbar .blockr-checkbox {
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.hmb-tb-spacer { flex: 1; }
-.hmb-search {
-  height: var(--blockr-control-h-sm, 30px);
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  background: var(--blockr-color-bg-input, #f9fafb);
-  width: 150px;
-  box-sizing: border-box;
-}
-/* The gear ships stand-alone at 26px; beside the 30px toolbar controls
-   (number field, search, download) it adopts the control height, exactly
-   as the table chrome does (table.css). Otherwise one control in the row
-   sits 4px short. */
-.hmb-toolbar .blockr-gear-header {
-  display: inline-flex;
-  flex-shrink: 0;
-  /* The shared .blockr-gear-header sits ABOVE a settings band, so it
-     carries margin-bottom: 6px. In a centred flex row the MARGIN box is
-     what gets centred, so that 6px lifted the gear 3px above the other
-     controls (and inflated the row to 46px). Measured, not guessed. */
-  margin: 0;
-}
-.hmb-toolbar .blockr-gear-header .blockr-gear-btn {
-  width: var(--blockr-control-h-sm, 30px);
-  height: var(--blockr-control-h-sm, 30px);
-}
-/* Same for the download control, which the shared dl chrome also sizes
-   at 30px -- keep it explicit so the row cannot drift. */
-.hmb-toolbar :is(a.blockr-dl-xlsx, summary.blockr-dl-xlsx) {
-  width: var(--blockr-control-h-sm, 30px);
-  height: var(--blockr-control-h-sm, 30px);
+.hmb-search-btn[aria-pressed="true"] {
+  color: var(--blockr-color-text-accent);
+  background: var(--blockr-color-bg-accent-subtle);
+  border-color: var(--blockr-color-border-accent-subtle);
 }
 
-/* Legend (summarize-table vocabulary: uppercase group title + swatches). */
+/* ---- the gear tray ---------------------------------------------------- */
+.hmb-tray.blockr-settings--open {
+  margin-top: 10px;
+}
+
+/* ---- search: opens under the header row -------------------------------- */
+.hmb-search-row {
+  display: none;
+  margin-top: 10px;
+  max-width: 320px;
+}
+.hmb-block.hmb-search-open .hmb-search-row { display: block; }
+.hmb-search-row .hmb-search {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ---- legend band ------------------------------------------------------ */
 .hmb-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem 1.6rem;
   align-items: center;
-  padding: 0 2px 8px;
-  font-size: 12px;
-  color: var(--blockr-color-text-muted, #6b7280);
+  gap: 6px 20px;
+  margin: 12px 0 6px;
+  font-size: var(--blockr-mark-font-size);
+  color: var(--blockr-color-text-muted);
 }
-.hmb-lg { display: inline-flex; gap: 0.6rem; align-items: center; }
+.hmb-lg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+}
 .hmb-lt {
-  font-size: 10.5px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--blockr-color-text-subtle, #9ca3af);
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-muted);
 }
-.hmb-li { display: inline-flex; gap: 0.3rem; align-items: center; }
+.hmb-li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .hmb-li i {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
   display: inline-block;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  width: 25px;
+  height: 14px;
+  border-radius: var(--blockr-mark-radius);
 }
-.hmb-muted { color: var(--blockr-color-text-subtle, #9ca3af); }
+.hmb-block.hmb-nonum .hmb-lg-num { display: none; }
 
-/* The matrix. Fixed layout so the narrow value columns hold. */
-.hmb-scroll { overflow: auto; }
-.hmb-table { border-collapse: collapse; table-layout: fixed; }
-.hmb-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--blockr-color-bg, #fff);
+/* ---- the matrix ------------------------------------------------------- */
+/* Scrolls sideways only; up and down belongs to the panel, and the header
+   follows it (heatmap-block.js: followHeader). */
+.hmb-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
 }
-.hmb-stubh, .hmb-stub {
-  width: 116px;
-  text-align: left;
+.hmb-table {
+  border-collapse: separate;
+  border-spacing: 0;
   font-variant-numeric: tabular-nums;
-  /* 8px left: the active-row marker (3px inset bar) needs air before the
-     id text. */
-  padding: 3px 8px 3px 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.hmb-stubh {
-  font-weight: 600;
-  font-size: 12px;
-  vertical-align: bottom;
-  padding-bottom: 6px;
-}
-.hmb-table th.hmb-rot { width: 26px; vertical-align: bottom; padding: 0 0 6px; }
-.hmb-table th.hmb-rot span {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  max-height: 148px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 500;
-  font-size: 11.5px;
-  color: var(--blockr-color-text-strong, #374151);
-  display: inline-block;
-  line-height: 1.1;
-}
-.hmb-table td.hmb-c {
-  width: 26px;
-  height: 22px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  border: 1px solid var(--blockr-color-bg, #fff);
-  background: #fafafa;   /* the truly-empty tile: faint, no dash */
+.hmb-table th,
+.hmb-table td {
   padding: 0;
 }
-/* Cell numbers off: the pure color heatmap. */
+.hmb-table thead {
+  position: relative;
+  z-index: 2;
+}
+.hmb-table thead th {
+  background: var(--blockr-color-bg-surface);
+  vertical-align: bottom;
+}
+.hmb-table.hmb-scrolled thead th,
+.hmb-scroll.hmb-scrolled thead th {
+  box-shadow: 0 1px 0 var(--blockr-color-border-default);
+}
+.hmb-table th.hmb-stubh {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  text-align: left;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-semibold);
+  padding: 0 12px 6px 0;
+  white-space: nowrap;
+}
+.hmb-table th.hmb-rot {
+  width: 24px;
+  min-width: 24px;
+  height: 150px;
+}
+.hmb-table th.hmb-rot > span {
+  display: block;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  max-height: 144px;
+  margin: 0 auto 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 24px;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-default);
+}
+.hmb-table td.hmb-stub {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  height: 24px;
+  padding: 0 12px 0 0;
+  white-space: nowrap;
+  background: var(--blockr-color-bg-surface);
+  color: var(--blockr-color-text-default);
+}
+/* A cell is a mark: square ends, a 1px surface halo between neighbours,
+   the count in the canvas text size. An empty cell is truly empty. */
+.hmb-table td.hmb-c {
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  border: 1px solid var(--blockr-color-bg-surface);
+  border-radius: var(--blockr-mark-radius);
+  text-align: center;
+  font-size: var(--blockr-mark-font-size);
+  font-weight: var(--blockr-font-weight-medium);
+  line-height: 22px;
+}
 .hmb-block.hmb-nonum td.hmb-c span { visibility: hidden; }
 
-/* Drill affordance + active row (chart parity). */
-.hmb-block[data-hmb-drill="1"] tr.hmb-r { cursor: pointer; }
-.hmb-block[data-hmb-drill="1"] tr.hmb-r:hover td { filter: brightness(0.96); }
-tr.hmb-active td.hmb-stub {
-  box-shadow: inset 3px 0 0 0 var(--blockr-color-primary, #2563eb);
-  font-weight: 600;
+/* A group opens with a section title: 12px, 600, uppercase, 0.05em,
+   text-muted, no band behind it. */
+.hmb-table tr.hmb-grp td {
+  padding: 14px 0 4px;
+  white-space: nowrap;
+}
+.hmb-table tr.hmb-grp:first-child td { padding-top: 2px; }
+.hmb-gt {
+  position: sticky;
+  left: 0;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--blockr-color-text-muted);
+}
+.hmb-gn {
+  margin-left: 8px;
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-muted);
 }
 
-/* Transient drill (a ctrl_target is set): the row is lit, held, released --
-   there is nothing to un-set, and a paint that stayed would show a cohort
-   anyone else can reset. A LAYER whose opacity fades, not the cell's own
-   background: a heatmap cell's colour IS the data, and background-image
-   gradients animate discretely anyway (see the note in table.css). Same clock
-   as the table's flash. */
-tr.hmb-flash td {
-  position: relative;
-  z-index: 0;
+/* ---- drill ------------------------------------------------------------ */
+.hmb-block[data-hmb-drill="1"] tr.hmb-r { cursor: pointer; }
+.hmb-block[data-hmb-drill="1"] tr.hmb-r:hover td.hmb-stub {
+  background: var(--blockr-color-bg-hover);
 }
-tr.hmb-flash td::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
+tr.hmb-r.hmb-active td.hmb-stub {
+  background: var(--blockr-color-bg-selected);
+  color: var(--blockr-color-text-accent);
+  font-weight: var(--blockr-font-weight-medium);
+}
+/* Transient drill: the clicked row lights and fades, as the table's does. */
+tr.hmb-flash td.hmb-stub {
   animation: hmb-flash-out 900ms linear 300ms both;
 }
-tr.hmb-flash td.hmb-stub::after {
-  box-shadow: inset 3px 0 0 0 var(--blockr-color-primary, #2563eb);
-}
-
 @keyframes hmb-flash-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from { background: var(--blockr-color-bg-selected); }
+  to { background: var(--blockr-color-bg-surface); }
 }
 
-/* The transient receipt, in the slot the latched status line uses. Held longer
-   than the flash (a sentence takes longer to read than a lit row takes to
-   notice) and linear, for the same reason the flash is. */
+/* ---- caption and status line ------------------------------------------ */
+.hmb-caption {
+  margin-top: 8px;
+  font-size: var(--blockr-font-size-xs);
+  font-style: italic;
+  color: var(--blockr-color-text-muted);
+}
+.hmb-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 26px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--blockr-color-border-default);
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-muted);
+}
+.hmb-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
 .hmb-status-receipt {
-  color: var(--blockr-color-text-secondary, #374151);
   animation: hmb-receipt-out 1100ms linear 1400ms both;
 }
-
 @keyframes hmb-receipt-out {
   from { opacity: 1; }
   to { opacity: 0; }
 }
-
-/* The group rail (variant B): a rotated grey tile spanning the group's
-   rows, right of the matrix -- the table analogue of the chart's facet
-   strip. Hidden while a search is active (hiding rows breaks rowspans). */
-.hmb-table th.hmb-railh { width: 36px; }
-.hmb-table td.hmb-rail {
-  width: 30px;
-  background: var(--blockr-color-bg-muted, #f3f4f6);
-  border-radius: 6px;
-  border-left: 6px solid var(--blockr-color-bg, #fff);
-}
-.hmb-table td.hmb-rail span {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--blockr-color-text-strong, #374151);
-  display: block;
-  margin: 0 auto;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-.hmb-block.hmb-searching td.hmb-rail,
-.hmb-block.hmb-searching th.hmb-railh { display: none; }
-tr.hmb-gsep td { height: 10px; background: var(--blockr-color-bg, #fff); }
-
-/* Footer: count + drill status (rank-table vocabulary). */
-.hmb-footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 2px 0;
-  font-size: 11.5px;
-  color: var(--blockr-color-text-subtle, #9ca3af);
-}
-.hmb-status { display: inline-flex; gap: 6px; align-items: center; }
-.hmb-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--blockr-color-primary, #2563eb);
-  display: inline-block;
-}
+/* Reset: the 26px xs main button with a count; disabled while nothing is
+   picked (design system, "Showing that a block filters"). */
 .hmb-reset {
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  background: var(--blockr-color-bg, #fff);
-  border-radius: 5px;
-  font-size: 11px;
-  padding: 1px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: var(--blockr-control-h-xs);
+  padding: 0 9px;
+  border: 1px solid var(--blockr-color-border-accent-subtle);
+  border-radius: var(--blockr-radius-sm);
+  background: var(--blockr-color-bg-accent-subtle);
+  color: var(--blockr-color-text-accent);
+  font: inherit;
+  font-size: var(--blockr-font-size-xs);
+  font-weight: var(--blockr-font-weight-medium);
   cursor: pointer;
+  transition: background-color var(--blockr-transition), border-color var(--blockr-transition);
 }
-.hmb-empty {
-  padding: 24px 8px;
-  color: var(--blockr-color-text-muted, #6b7280);
-  font-size: 13px;
+.hmb-reset:hover {
+  background: var(--blockr-color-bg-accent-subtle-hover);
+  border-color: var(--blockr-color-border-accent);
+}
+.hmb-reset:focus-visible {
+  outline: var(--blockr-focus-outline);
+  outline-offset: var(--blockr-focus-offset);
+}
+.hmb-reset:disabled,
+.hmb-reset:disabled:hover {
+  color: var(--blockr-color-text-disabled);
+  background: transparent;
+  border-color: var(--blockr-color-border-default);
+  cursor: default;
+}
+.hmb-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--blockr-radius-pill);
+  font-size: 11px;
+  font-weight: var(--blockr-font-weight-semibold);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--blockr-color-text-accent-strong);
+  background: color-mix(in srgb, var(--blockr-color-border-accent) 14%, transparent);
+}
+
+/* ---- messages --------------------------------------------------------- */
+.hmb-msg {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid;
+  border-radius: var(--blockr-radius-md);
+  font-size: var(--blockr-font-size-sm);
+}
+.hmb-msg--danger {
+  color: var(--blockr-color-text-danger);
+  background: var(--blockr-color-bg-danger);
+  border-color: var(--blockr-color-border-danger-subtle);
+}
+
+/* ---- data tooltip (the chart's card) ---------------------------------- */
+.hmb-tip {
+  position: fixed;
+  z-index: 1080;
+  display: none;
+  min-width: 150px;
+  max-width: 320px;
+  padding: 8px 10px;
+  pointer-events: none;
+  background: var(--blockr-color-bg-raised);
+  border: 1px solid var(--blockr-color-border-default);
+  border-radius: var(--blockr-radius-lg);
+  box-shadow: var(--blockr-shadow-md);
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-default);
+}
+.hmb-tip.hmb-tip--on { display: block; }
+.hmb-tip-h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-semibold);
+}
+.hmb-tip-h i {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.hmb-tip-r {
+  display: flex;
+  gap: 16px;
+  line-height: 1.6;
+}
+.hmb-tip-r span { color: var(--blockr-color-text-muted); }
+.hmb-tip-r b {
+  margin-left: auto;
+  font-weight: var(--blockr-font-weight-medium);
+  font-variant-numeric: tabular-nums;
 }

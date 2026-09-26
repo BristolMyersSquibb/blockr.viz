@@ -267,3 +267,52 @@ dd_script_cfg <- function(specs, values = list()) {
 
   out
 }
+
+
+#' A block's arguments plus its script values, as a title template reads them
+#'
+#' A template names a declared value by its variable (`{@top_n}`), so the
+#' script's values join the block's own roles. A role wins a collision: a
+#' script variable called `color` cannot shadow the colour mapping. A value
+#' nobody has touched is still the value the script runs with, so it falls
+#' back to the declaration's default rather than printing nothing. A flag
+#' prints its control's label when on and nothing when off, which is what lets
+#' a `[ ... ]` clause carry it.
+#'
+#' @param roles Named list of the block's own arguments.
+#' @param specs Input specs from [cb_specs()].
+#' @param values Named list of current control values.
+#' @return A named list.
+#' @noRd
+script_title_args <- function(roles, specs, values = list()) {
+
+  vals <- values
+  for (s in specs) {
+    if (!is.null(s$error) || is.na(s$kind)) next
+    if (is.null(vals[[s$name]])) vals[[s$name]] <- s$default
+  }
+
+  if (!length(vals)) {
+    return(roles)
+  }
+
+  vals <- vals[setdiff(names(vals), names(roles))]
+  specs_ok <- Filter(function(s) is.null(s$error) && !is.na(s$kind), specs)
+  vals <- vals[names(vals) %in% vapply(specs_ok, `[[`, "", "name")]
+
+  recs <- dd_script_roles(specs_ok)
+  labs <- stats::setNames(
+    vapply(recs, function(r) as.character(r$label %||% r$name)[[1L]], ""),
+    vapply(recs, function(r) as.character(r$name)[[1L]], "")
+  )
+
+  for (nm in names(vals)) {
+    v <- vals[[nm]]
+    if (is.logical(v) && length(v) == 1L) {
+      w <- if (nm %in% names(labs)) unname(labs[[nm]]) else nm
+      vals[[nm]] <- if (isTRUE(v)) w else ""
+    }
+  }
+
+  c(roles, vals)
+}
