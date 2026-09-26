@@ -1200,25 +1200,11 @@ dt_color_fun <- function(type, domain, palette) {
 #' @noRd
 drilldown_table_dep <- memoise0(function() {
   htmltools::tagList(
-    # Shared blockr.dplyr CSS/JS (gear, popover, rows, Blockr.Select, icons) --
-    # same dep names as the chart so they de-dupe on a page with both blocks.
-    htmltools::htmlDependency(
-      name = "blockr-blocks-css",
-      version = paste0(utils::packageVersion("blockr.dplyr"), ".2"),
-      src = system.file("css", package = "blockr.dplyr"),
-      stylesheet = c("blockr-blocks.css", "blockr-select.css")
-    ),
-    htmltools::htmlDependency(
-      name = "blockr-select-js",
-      version = paste0(utils::packageVersion("blockr.dplyr"), ".2"),
-      src = system.file("js", package = "blockr.dplyr"),
-      script = c("blockr-core.js", "blockr-select.js")
-    ),
+    blockr.ui::controls_dep(),
     # Shared popover CSS (the dd-* section/row/segmented/add classes) lives in
     # chart.css; the table's gear popover reuses it. ONE definition
     # (chart-dep.R) so the cache-busting suffix cannot drift from the chart's.
     chart_css_dep(),
-    settings_band_dep(),
     # Shared aggregation vocabulary + gear engine (one dep, one version -- see
     # drilldown_shared_dep()). Before the table JS, which reads both globals.
     drilldown_shared_dep(),

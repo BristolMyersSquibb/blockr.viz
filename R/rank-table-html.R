@@ -434,9 +434,9 @@ rank_label_header <- function(prep) {
   if (is.null(prep$parent)) prep$group else paste0(prep$parent, " / ", prep$group)
 }
 
-# The same bundle the table block ships (shared blockr.dplyr CSS/JS, Blockr.Select,
-# the dd-* popover CSS, the settings band and the gear engine), plus the rank JS
-# LAST -- it reads Blockr.DrilldownConfig at bind time.
+# The same bundle the table block ships (blockr.ui's shared controls, the dd-*
+# CSS and the gear engine), plus the rank JS LAST -- it reads
+# Blockr.DrilldownConfig at bind time.
 #' @noRd
 rank_table_dep <- memoise0(function() {
   htmltools::tagList(
@@ -543,6 +543,17 @@ rank_dl_icon <- function() {
     '<path d="M2.5 11.5 V12.8 A1.2 1.2 0 0 0 3.7 14 H12.3 ',
     'A1.2 1.2 0 0 0 13.5 12.8 V11.5"/></svg>'
   ))
+}
+
+# The chart's download when it offers one format: blockr.ui's tool, as a
+# Shiny download link (a download needs an <a>, which tool_button() is not).
+#' @noRd
+chart_dl_tool <- function(ns, spec) {
+  tip <- paste0("Download as ", spec$label, " (.", spec$ext, ")")
+  shiny::downloadLink(
+    ns(spec$id), rank_dl_icon(), class = "blockr-tool",
+    `aria-label` = tip, `data-blockr-tooltip` = tip
+  )
 }
 
 #' @noRd

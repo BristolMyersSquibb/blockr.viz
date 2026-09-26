@@ -1,6 +1,6 @@
 Package: blockr.viz
 Title: Visualization and Render Blocks for Blockr
-Version: 0.2.148
+Version: 0.2.149
 Authors@R:
     person(given = "Christoph",
            family = "Sax",
@@ -22,8 +22,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
     blockr.core,
-    blockr.dplyr,
-    blockr.ui,
+    blockr.ui (>= 0.0.1.9008),
     dplyr,
     echarts4r,
     grDevices,
@@ -41,6 +40,7 @@ Suggests:
     blockr.ai,
     blockr.assistant,
     blockr.dag,
+    blockr.dplyr,
     blockr.dock,
     blockr.extra,
     blockr.io,
@@ -67,7 +67,7 @@ Remotes:
     BristolMyersSquibb/blockr.assistant,
     BristolMyersSquibb/blockr.dplyr,
     BristolMyersSquibb/blockr.ai,
-    BristolMyersSquibb/blockr.ui,
+    BristolMyersSquibb/blockr.ui@feat/action-menu,
     cynkra/blockr.extra,
     BristolMyersSquibb/blockr.theme,
     BristolMyersSquibb/blockr.dock

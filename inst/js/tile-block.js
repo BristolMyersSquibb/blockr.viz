@@ -267,7 +267,7 @@
     // header, no <body> portal, no fixed positioning.
     var wasOpen = !!bandOpen[elemId];
 
-    // --beak: gear connector T1 (settings-band.css) — the open band grows a
+    // --beak: gear connector T1 (blockr.ui's blockr-settings-band.css) — the open band grows a
     // notch pointing at the gear that opened it.
     var pop = document.createElement('div');
     pop.className = 'blockr-settings blockr-settings--beak dd-popover';

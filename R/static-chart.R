@@ -14,8 +14,8 @@
 #' scale map (arm colors) resolves through the same blockr.theme resolver.
 #'
 #' The look mirrors the canvas chart, constant for constant (chart.js is the
-#' source of truth): 11px `#666` tick labels, dashed `#f3f4f6` gridlines on
-#' the value axis only, `#ccc` axis lines, the category-first-at-the-top
+#' source of truth): 11px `#6b7280` tick labels, dashed `#e5e7eb` gridlines on
+#' the value axis only, `#d1d5db` axis lines, the category-first-at-the-top
 #' horizontal layout, 60%-band bars with no rounding and no value labels,
 #' boxes filled at the series color over a full-strength border, monotone
 #' interpolation on lines, and the bottom-centered legend band.
@@ -258,14 +258,6 @@ static_chart <- function(data,
     gg_x_label_theme(data, chart_type, horiz, group, facet,
                      count_on, count_col, func, facet_cols)
 
-  if (!is.null(facet)) {
-    # The canvas boxes each panel in a hairline (.dd-facet border); added
-    # after the theme because theme_minimal blanks panel.border.
-    p <- p + ggplot2::theme(panel.border = ggplot2::element_rect(
-      fill = NA, color = GG_SPLIT_LINE_COLOR, linewidth = gg_px_lw(1)
-    ))
-  }
-
   gg_attach_pptx_size(p, data, chart_type, horiz, group, color,
                       facet, bar_mode, facet_cols)
 }
@@ -485,12 +477,14 @@ gg_x_label_theme <- function(data, chart_type, horiz, group, facet,
   ))
 }
 
-# Structural colors, verbatim from chart.js.
-GG_AXIS_LABEL_COLOR <- "#666666"
-GG_AXIS_LINE_COLOR <- "#cccccc"
-GG_SPLIT_LINE_COLOR <- "#f3f4f6"
+# Structural colors: the light values of the tokens chart.js reads at render
+# (text-muted, border-strong, border-default, border-danger). Exports always
+# take the light scheme.
+GG_AXIS_LABEL_COLOR <- "#6b7280"
+GG_AXIS_LINE_COLOR <- "#d1d5db"
+GG_SPLIT_LINE_COLOR <- "#e5e7eb"
 GG_REF_LINE_COLOR <- "#dc2626"
-GG_IDENTITY_LINE_COLOR <- "#64748b"
+GG_IDENTITY_LINE_COLOR <- "#6b7280"
 
 # -- column handling ---------------------------------------------------------
 
@@ -1573,8 +1567,8 @@ gg_apply_titles <- function(p, title, subtitle, caption, data) {
 # The canvas chrome, constant for constant. Text sizes are the CSS pixel
 # values converted to pt (x 0.75): title 15px/600/#1f2937, subtitle
 # 13px/#6b7280, caption 12px italic/#6b7280 (left-aligned, like the HTML
-# band), ticks and axis names 11px/#666. Gridlines dashed #f3f4f6, axis
-# lines #ccc. Legend: a bottom-centered band, 11px labels over 25x14px
+# band), ticks and axis names 11px/#6b7280. Gridlines dashed #e5e7eb, axis
+# lines #d1d5db. Legend: a bottom-centered band, 11px labels over 25x14px
 # rounded swatches, semibold #6b7280 title. Facet strips: uppercase
 # semibold #6b7280 on #f9fafb.
 gg_theme <- function() {
@@ -1611,25 +1605,24 @@ gg_theme <- function() {
         size = gg_px_pt(11), face = "bold", color = "#6b7280"
       ),
       legend.text = ggplot2::element_text(
-        size = gg_px_pt(11), color = "#333333"
+        size = gg_px_pt(11), color = GG_AXIS_LABEL_COLOR
       ),
       legend.key.width = grid::unit(25 / 96, "in"),
       legend.key.height = grid::unit(14 / 96, "in"),
-      strip.background = ggplot2::element_rect(
-        fill = "#f9fafb", color = GG_SPLIT_LINE_COLOR,
-        linewidth = gg_px_lw(1)
-      ),
+      # The strip is a section title over its panel, as on the canvas: no
+      # band, no box.
+      strip.background = ggplot2::element_blank(),
       strip.text = ggplot2::element_text(
         face = "bold", color = "#6b7280", size = gg_px_pt(12)
       ),
-      panel.spacing = grid::unit(8 / 96, "in")
+      panel.spacing = grid::unit(24 / 96, "in")
     )
 }
 
 # Per-family grid and axis-line pruning: the canvas draws gridlines on the
-# VALUE axis only (dashed #f3f4f6) -- never on a category axis, and not at
+# VALUE axis only (dashed #e5e7eb) -- never on a category axis, and not at
 # all on a horizontal boxplot. The individual charts (scatter / line) grid
-# both axes. Axis lines are #ccc; horizontal layouts hide the category
+# both axes. Axis lines are #d1d5db; horizontal layouts hide the category
 # axis line, like the canvas.
 gg_grid_theme <- function(chart_type, horiz) {
 

@@ -207,13 +207,9 @@
 #'   whether a column is a population split (arm, sex, country) or an event
 #'   attribute (grade), and dividing grade-2 subjects by subjects-with-grade-2
 #'   is circular. A vector is accepted, though the gear offers one role.
-#' @param func_toggle Offer the aggregation as a control on the chart itself,
-#'   beside the download button, instead of only inside the gear. `NULL`
-#'   (default) = no control. `TRUE` = counts vs percent, i.e.
-#'   `c("count_distinct", "pct_distinct")`. A character vector names exactly
-#'   which aggregations to offer, so the same argument grows without being
-#'   replaced. The choice is block STATE: it is what the chart shows, not a
-#'   viewing gesture, so it survives a save and a reload.
+#' @param func_toggle LEGACY, ignored. Put the aggregation on the face as a
+#'   slot in the sentence (`{@func}` in `subtitle`), or declare a switch in
+#'   the prepare `script` and name it in the sentence (`{@measure}`).
 #' @param count_on Which label surfaces carry an observation count in
 #'   parentheses ("Female (12)"): `"off"` (default), `"axis"` (the category
 #'   axis ticks), `"facet"` (the facet strip labels), or `"both"`.
@@ -404,10 +400,8 @@ new_chart_block <- function(
     # faceted by arm), "group" when it is the bars (countries grouped, faceted
     # by action). Getting it wrong is plausible-but-wrong, not an error.
     pct_of = "facet",
-    # Aggregation offered on the chart's own chrome rather than only in the
-    # gear. NULL = off; TRUE = the counts/percent pair; a character vector =
-    # exactly those. Normalised to a character vector below so the saved board
-    # records the actual choices rather than a bare TRUE.
+    # LEGACY: the on-chart aggregation switch, retired. Ignored; kept so old
+    # boards restore.
     func_toggle = NULL,
     # Panel scales for a facet grid. "fixed" (default) = one shared numeric
     # domain and one shared category set/order across the panels, so a
@@ -558,24 +552,8 @@ new_chart_block <- function(
     stop("`pct_of` must name mapped roles: facet, group or color. Got ",
          paste0("\"", bad, "\"", collapse = ", "), ".", call. = FALSE)
   }
-  # TRUE is sugar for the pair this exists to offer. Expanding it here (rather
-  # than in the browser) means a saved board carries the actual aggregations,
-  # so widening the sugar later cannot silently change an existing board.
-  # "on" rather than the expanded pair: the gear's select binds to the stored
-  # value, so storing the sugar is what makes the control show the right
-  # position. The browser expands it (_funcToggleChoices). An explicit vector
-  # passed from R survives untouched and simply is not editable in the gear.
-  func_toggle <- if (isTRUE(func_toggle)) {
-    "on"
-  } else if (isFALSE(func_toggle)) {
-    NULL
-  } else {
-    # chr_vec_state, NOT chr_state: this is a multi-value slot like
-    # `tt_fields` / `waterfall_totals`. chr_state keeps only the first
-    # element, which would silently reduce every explicit set to one choice
-    # and leave the toggle with nothing to switch between.
-    chr_vec_state(func_toggle)
-  }
+  # LEGACY: retired on-chart aggregation switch; a saved value is dropped.
+  func_toggle <- NULL
   # Fixed-option select; a saved board predating it (or a DAG-poisoned list())
   # backfills to the shared-scale default.
   facet_scales <- match.arg(
@@ -843,7 +821,6 @@ new_chart_block <- function(
         # Missing-key handling and the on-chart aggregation control.
         r_na_group <- shiny::reactiveVal(na_group)
         r_pct_of <- shiny::reactiveVal(pct_of)
-        r_func_toggle <- shiny::reactiveVal(func_toggle)
         # Facet-grid panel scales and panels per row (see constructor args).
         r_facet_scales <- shiny::reactiveVal(facet_scales)
         r_facet_cols <- shiny::reactiveVal(facet_cols)
@@ -1275,10 +1252,9 @@ new_chart_block <- function(
               # Observation-count labels: which surface(s) get the "(n)" and the
               # DISTINCT id column to count (browser-side, per label group).
               count_on = r_count_on(), count_col = r_count_col(),
-              # Missing group keys, and whether the aggregation is offered on
-              # the chart's own chrome. Both are read by chart.js.
+              # Missing group keys and the percent denominator, read by
+              # chart.js.
               na_group = r_na_group(), pct_of = r_pct_of(),
-              func_toggle = r_func_toggle(),
               # Facet-grid panel scales: shared numeric domain + shared
               # category set across the panels ("fixed"), or per-panel
               # ("free" / "free_y").
@@ -1551,12 +1527,6 @@ new_chart_block <- function(
             if (!is.null(msg$count_on))   upd(r_count_on, msg$count_on)
             if (!is.null(msg$na_group))   upd(r_na_group, msg$na_group)
             if (!is.null(msg$pct_of))     upd(r_pct_of, msg$pct_of)
-            # "off" is the gear saying no switch; store NULL so the state
-            # reads the same as a block that never asked for one.
-            if (!is.null(msg$func_toggle)) {
-              upd(r_func_toggle,
-                  if (identical(msg$func_toggle, "off")) NULL else msg$func_toggle)
-            }
             # nn(): "" (picker cleared) means "no id column" -> row count.
             if (!is.null(msg$count_col))  upd(r_count_col, nn(msg$count_col))
             if (!is.null(msg$facet_scales)) {
@@ -1853,7 +1823,6 @@ new_chart_block <- function(
             sort_by = r_sort_by(), sort_dir = r_sort_dir(),
             count_on = r_count_on(), count_col = r_count_col(),
             na_group = r_na_group(), pct_of = r_pct_of(),
-            func_toggle = r_func_toggle(),
             facet_scales = r_facet_scales(), facet_cols = r_facet_cols(),
             box_points = r_box_points(),
             smoother = r_smoother(), identity_line = r_identity_line(),
@@ -1898,13 +1867,13 @@ new_chart_block <- function(
           Filter(
             function(s) isTRUE(s$ok),
             list(
-              list(id = "dl_xlsx", ext = "xlsx", label = "Excel (.xlsx)",
+              list(id = "dl_xlsx", ext = "xlsx", label = "Excel",
                    ok = requireNamespace("openxlsx", quietly = TRUE)),
-              list(id = "dl_html", ext = "html", label = "Web page (.html)",
+              list(id = "dl_html", ext = "html", label = "Web page",
                    ok = TRUE),
-              list(id = "dl_pptx", ext = "pptx", label = "PowerPoint (.pptx)",
+              list(id = "dl_pptx", ext = "pptx", label = "PowerPoint",
                    ok = requireNamespace("officer", quietly = TRUE)),
-              list(id = "dl_png", ext = "png", label = "Image (.png)",
+              list(id = "dl_png", ext = "png", label = "Image",
                    ok = TRUE)
             )
           )
@@ -1913,20 +1882,20 @@ new_chart_block <- function(
         output$chart_download <- shiny::renderUI({
           specs <- dl_formats()
           if (!length(specs)) return(NULL)
+          # One format: a tool that downloads. Several: a tool that opens
+          # an action menu of downloads (design system, Menus).
           if (length(specs) == 1L) {
-            return(rank_dl_link(ns, specs[[1L]]))
+            return(chart_dl_tool(ns, specs[[1L]]))
           }
-          htmltools::tags$details(
-            class = "blockr-dl-menu",
-            htmltools::tags$summary(
-              class = "blockr-dl-xlsx", title = "Download",
-              `aria-label` = "Download", rank_dl_icon()
-            ),
-            htmltools::tags$div(
-              class = "blockr-dl-menu-list", role = "menu",
-              lapply(specs, function(s) rank_dl_link(ns, s, menu = TRUE))
-            )
-          )
+          do.call(blockr.ui::action_menu, c(
+            list(blockr.ui::tool_button(rank_dl_icon(), "Download")),
+            lapply(specs, function(s) {
+              blockr.ui::menu_item(
+                shiny::downloadLink(ns(s$id), s$label),
+                meta = paste0(".", s$ext)
+              )
+            })
+          ))
         })
 
         output$dl_xlsx <- shiny::downloadHandler(
@@ -2123,7 +2092,9 @@ new_chart_block <- function(
             count_col = r_count_col,
             na_group = r_na_group,
             pct_of = r_pct_of,
-            func_toggle = r_func_toggle,
+            # LEGACY: serialized as NULL (blockr.core requires every ctor
+            # formal in the state).
+            func_toggle = function() NULL,
             facet_scales = r_facet_scales,
             facet_cols = r_facet_cols,
             download = r_download,
@@ -2157,10 +2128,6 @@ new_chart_block <- function(
         # header by chart.js -- the same shape rank-table.js uses for the
         # search box. It has to be a Shiny output (download links are
         # server-driven), and the gear header is built by the widget's JS.
-        # The download chrome (the icon button and its menu) comes from the
-        # table's stylesheet, which a chart-only page does not load. One
-        # shared definition, carried by both blocks.
-        htmltools::tags$style(htmltools::HTML(dl_chrome_css())),
         shiny::div(class = "dd-chart-dl-host", style = "display:none",
                    shiny::uiOutput(ns("chart_download"), inline = TRUE))
       )
@@ -2192,8 +2159,8 @@ new_chart_block <- function(
       "band_id", "ref_hi", "ref_lo", "lo", "hi", "waterfall_totals",
       # count_col is optional (blank = row count); count_on is a fixed-option
       # select (always "off"/"axis"/"facet"/"both"), so it is not listed here.
-      # `func_toggle` is NULL whenever the on-chart control is off, which is
-      # the default -- so it MUST be listed, or every chart block wedges.
+      # `func_toggle` is LEGACY and always NULL, so it MUST be listed, or
+      # every chart block wedges.
       # `na_group` is not: it is a fixed-option select like count_on, always
       # "level" or "drop".
       "count_col", "func_toggle",
@@ -2220,7 +2187,7 @@ new_chart_block <- function(
       "identity_line",
       "box_points", "summary", "whiskers", "connect_centers",
       "lo", "hi", "baseline", "waterfall_totals",
-      "count_on", "count_col", "na_group", "pct_of", "func_toggle",
+      "count_on", "count_col", "na_group", "pct_of",
       "facet_scales", "facet_cols",
       "title", "subtitle", "caption",
       # Externally controllable (MCP, restore) but deliberately NOT on the AI

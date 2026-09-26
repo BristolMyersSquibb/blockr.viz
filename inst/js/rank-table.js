@@ -1085,7 +1085,7 @@
       var ctl = document.createElement("div");
       ctl.className = "lane-sum-ctl";
       var l = document.createElement("span");
-      l.className = "blockr-popover-label";
+      l.className = "blockr-label";
       l.textContent = label;
       if (onRemove) {
         var x = document.createElement("button");
@@ -1098,10 +1098,10 @@
       }
       ctl.appendChild(l);
       var wrap = document.createElement("div");
-      wrap.className = "blockr-popover-select-wrap dd-picker-wrap";
+      wrap.className = "dd-picker-wrap";
       var opts = typeof want === "string" ? colOpts(want) : want;
       if (S && S.single) {
-        S.single(wrap, { options: opts, selected: selected || "",
+        S.single(wrap, { bordered: true, options: opts, selected: selected || "",
                          onChange: onChange });
       }
       ctl.appendChild(wrap);
@@ -1111,13 +1111,14 @@
       var ctl = document.createElement("div");
       ctl.className = "lane-sum-ctl";
       var l = document.createElement("span");
-      l.className = "blockr-popover-label";
+      l.className = "blockr-label";
       l.textContent = label;
       ctl.appendChild(l);
       var wrap = document.createElement("div");
-      wrap.className = "blockr-popover-select-wrap dd-picker-wrap";
+      wrap.className = "dd-picker-wrap";
       if (S && S.multi) {
         S.multi(wrap, {
+          bordered: true,
           options: colOpts("any"),
           selected: (selected || []).slice(),
           placeholder: "add columns…",
@@ -1131,7 +1132,7 @@
       var ctl = document.createElement("div");
       ctl.className = "lane-sum-ctl";
       var l = document.createElement("span");
-      l.className = "blockr-popover-label";
+      l.className = "blockr-label";
       l.textContent = label;
       ctl.appendChild(l);
       var seg = document.createElement("div");
@@ -1205,7 +1206,7 @@
         // Name.
         var nameCtl = document.createElement("div");
         nameCtl.className = "lane-sum-ctl";
-        nameCtl.innerHTML = '<span class="blockr-popover-label">Name</span>';
+        nameCtl.innerHTML = '<span class="blockr-label">Name</span>';
         var nameIn = document.createElement("input");
         nameIn.type = "text";
         nameIn.className = "lane-sum-name-input";
@@ -1352,7 +1353,7 @@
            ["ref", "Reference line", "e.g. 20"]].forEach(function (d) {
             var tc = document.createElement("div");
             tc.className = "lane-sum-ctl";
-            tc.innerHTML = '<span class="blockr-popover-label">' + d[1] +
+            tc.innerHTML = '<span class="blockr-label">' + d[1] +
               "</span>";
             var ti = document.createElement("input");
             ti.type = "text";
@@ -1392,7 +1393,7 @@
           var exCtl = document.createElement("div");
           exCtl.className = "lane-sum-ctl lane-sum-ctl-wide";
           exCtl.innerHTML =
-            '<span class="blockr-popover-label">Expression</span>';
+            '<span class="blockr-label">Expression</span>';
           var exIn = document.createElement("input");
           exIn.type = "text";
           exIn.className = "lane-sum-name-input";
@@ -1412,7 +1413,7 @@
         if (shows.length > 1) {
           var dCtl = document.createElement("div");
           dCtl.className = "lane-sum-ctl";
-          dCtl.innerHTML = '<span class="blockr-popover-label">Display</span>';
+          dCtl.innerHTML = '<span class="blockr-label">Display</span>';
           var tiles = document.createElement("div");
           tiles.className = "dd-type-grid lane-sum-tiles";
           shows.forEach(function (sh) {
