@@ -111,6 +111,17 @@ declare class VizDrilldownConfig {
   [member: string]: any;
 }
 
+/** The block's sentence painter (drilldown-config.js), shared by the chart
+ *  and the heatmap. */
+declare class VizSentenceSlots {
+  constructor(host: { ddc: () => any; config: () => any; openGear: () => void });
+  paint(el: HTMLElement, text: string, parts?: any[]): void;
+  paintOffers(el: HTMLElement, offers?: any[]): void;
+  label(key: string): string;
+  open(key: string, anchor: HTMLElement, by?: string): void;
+  close(): void;
+}
+
 /* --- Shared aggregation vocabulary (drilldown-agg.js) ---
    The group/value/func role triple + AGG_FNS + value-follows-agg reconcile,
    consumed identically by chart.js, table.js and tile-block.js. Exposed as
@@ -199,6 +210,14 @@ interface BlockrNamespace {
   contentWidth(el: Element): number;
   /** The shared drilldown popover engine (defined in this package). */
   DrilldownConfig: typeof VizDrilldownConfig;
+  /** The block's sentence painter (defined in this package). */
+  SentenceSlots: typeof VizSentenceSlots;
+  /** The gear tray behaviour (blockr.ui's blockr-ui.js). */
+  gearTray?(
+    band: HTMLElement,
+    gear: HTMLButtonElement,
+    opts?: { label?: string }
+  ): { set(open: boolean): void; toggle(): void; isOpen(): boolean };
   /** Shared aggregation vocabulary (drilldown-agg.js). */
   DrilldownAgg?: VizDrilldownAgg;
   /** Design-system checkbox factory (blockr.ui's blockr-ui.js). */

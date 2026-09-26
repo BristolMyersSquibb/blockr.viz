@@ -1048,42 +1048,8 @@ new_chart_block <- function(
           )
           # The prepare script's declared values are settings too, named in a
           # template by the variable the script uses: `{@param}` for
-          # `param <- factor(...)`. A role wins a collision, so a script
-          # variable called `color` cannot quietly shadow the colour mapping.
-          # A value the reader has not touched is still the value the script
-          # is running with, and the sentence has to say it: `r_values()` only
-          # holds what the controls have CHANGED, so an untouched `param`
-          # resolved to "" and its word vanished from the caption while the
-          # strip's own control showed the declaration's value. Same fallback
-          # `dd_script_cfg()` makes for that control.
-          vals <- r_values()
-          for (s in r_specs()) {
-            if (!is.null(s$error) || is.na(s$kind)) next
-            if (is.null(vals[[s$name]])) vals[[s$name]] <- s$default
-          }
-          if (!length(vals)) return(roles)
-          vals <- vals[setdiff(names(vals), names(roles))]
-          # A flag reads as a WORD or as nothing, which is what lets a clause
-          # carry it: `[{@scheduled} visits only]` says so when it is on and
-          # says nothing at all when it is off. TRUE prints the control's own
-          # label, because that is the name the reader saw when setting it.
-          labs <- vapply(
-            dd_script_roles(r_specs()),
-            function(r) as.character(r$label %||% r$name)[[1L]],
-            character(1L)
-          )
-          names(labs) <- vapply(
-            dd_script_roles(r_specs()),
-            function(r) as.character(r$name)[[1L]], character(1L)
-          )
-          for (nm in names(vals)) {
-            v <- vals[[nm]]
-            if (is.logical(v) && length(v) == 1L) {
-              w <- if (nm %in% names(labs)) unname(labs[[nm]]) else nm
-              vals[[nm]] <- if (isTRUE(v)) w else ""
-            }
-          }
-          c(roles, vals)
+          # `param <- factor(...)`. See script_title_args().
+          script_title_args(roles, r_specs(), r_values())
         })
 
         r_titles_resolved <- shiny::reactive({
