@@ -111,8 +111,9 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
   }
   if (head_rows > 0L) r <- r + 1L
 
+  # Leaf headers right-aligned over their numbers; spanners centred.
   header_style <- openxlsx::createStyle(
-    textDecoration = "bold", halign = "center", valign = "bottom",
+    textDecoration = "bold", halign = "right", valign = "bottom",
     wrapText = TRUE, border = "bottom", borderStyle = "medium")
   spanner_style <- openxlsx::createStyle(
     textDecoration = "bold", halign = "center", valign = "bottom",
