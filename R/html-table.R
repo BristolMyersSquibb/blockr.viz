@@ -1524,21 +1524,25 @@ html_table_shared_css_fallback <- function() {
   --_shiny-fade-opacity: 1;
   opacity: 1 !important;
 }
-.blockr-table {
+/* The base table rules, scoped to blockr.viz's own containers. Unscoped,
+   this page-global sheet overrode blockr.ui's preview for every table on
+   the board as soon as a table block was on it. :where() keeps each rule's
+   specificity what it was, so nothing changes inside the containers. */
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table {
   border-collapse: collapse;
   width: 100%;
   font-size: var(--blockr-font-size-base, 0.875rem);
 }
-.blockr-table thead {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table thead {
   position: sticky;
   top: 0;
   background: white;
   z-index: 1;
 }
-.blockr-table thead tr {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table thead tr {
   border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
 }
-.blockr-table th {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table th {
   text-align: left;
   padding: 10px 16px;
   font-weight: var(--blockr-font-weight-medium, 500);
@@ -1546,14 +1550,14 @@ html_table_shared_css_fallback <- function() {
   vertical-align: bottom;
   overflow: hidden;
 }
-.blockr-table tbody tr {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr {
   border-bottom: 1px solid var(--blockr-grey-100, #f3f4f6);
   transition: background-color 0.15s ease;
 }
-.blockr-table tbody tr:hover {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr:hover {
   background-color: var(--blockr-color-bg-subtle, #f9fafb);
 }
-.blockr-table td {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table td {
   padding: 10px 16px;
   font-size: var(--blockr-font-size-base, 0.875rem);
   color: var(--blockr-color-text-primary, #111827);
@@ -1562,15 +1566,15 @@ html_table_shared_css_fallback <- function() {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.blockr-table th.blockr-sortable {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table th.blockr-sortable {
   cursor: pointer;
   user-select: none;
   transition: background-color 0.15s ease;
 }
-.blockr-table th.blockr-sortable:hover {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table th.blockr-sortable:hover {
   background-color: var(--blockr-color-bg-subtle, #f9fafb);
 }
-.blockr-sort-icon {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-sort-icon {
   display: inline-block;
   width: 12px;
   height: 12px;
@@ -1578,11 +1582,11 @@ html_table_shared_css_fallback <- function() {
   line-height: 12px;
   text-align: center;
 }
-.blockr-sort-icon-asc::after {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-sort-icon-asc::after {
   content: '\\2191';
   color: #374151;
 }
-.blockr-sort-icon-desc::after {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-sort-icon-desc::after {
   content: '\\2193';
   color: #374151;
 }
