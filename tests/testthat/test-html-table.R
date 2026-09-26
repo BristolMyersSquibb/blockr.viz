@@ -523,13 +523,15 @@ test_that("delta CSS draws the clinical table style", {
   expect_match(rule(".drilldown-table-structured .blockr-table thead th"),
                "border-bottom: 1px solid transparent;", fixed = TRUE)
   expect_match(rule(".drilldown-table-structured .blockr-table tbody tr"),
-               "border-bottom-color: transparent;", fixed = TRUE)
+               "border-bottom: 0;", fixed = TRUE)
 
-  # 30px rows: 4px above and below the 21px line (+ the unpainted border).
-  expect_match(rule(".drilldown-table-structured .blockr-table tbody td.blockr-data"),
-               "padding: 4px 12px;", fixed = TRUE)
+  # 30px rows: 5px above and below a 20px line, the line height set here.
+  data_td <- rule(".drilldown-table-structured .blockr-table tbody td.blockr-data")
+  expect_match(data_td, "padding: 5px 12px;", fixed = TRUE)
+  expect_match(data_td, "line-height: 20px;", fixed = TRUE)
   stub <- rule(".drilldown-table-structured .blockr-table tbody td.blockr-stub")
-  expect_match(stub, "padding: 4px 18px 4px 24px;", fixed = TRUE)
+  expect_match(stub, "padding: 5px 18px 5px 24px;", fixed = TRUE)
+  expect_match(stub, "line-height: 20px;", fixed = TRUE)
   expect_match(stub, "color: var(--blockr-color-text-default", fixed = TRUE)
   expect_match(rule(".drilldown-table-structured .blockr-section-btn"),
                "padding: 11px 12px 3px;", fixed = TRUE)
@@ -579,11 +581,11 @@ test_that("table CSS reads design-system meaning tokens only", {
 test_that("flat table-block rows are 30px with no body rules", {
   sheet <- paste(readLines(system.file("css", "table.css", package = "blockr.viz")),
                  collapse = "\n")
-  expect_match(sheet, ".drilldown-table-container .blockr-table tbody td {\n  padding: 4px 12px;",
+  expect_match(sheet, ".drilldown-table-container .blockr-table tbody td {\n  padding: 5px 12px;\n  line-height: 20px;",
                fixed = TRUE)
   expect_match(sheet, ".drilldown-table-container .blockr-table thead th {\n  padding: 7px 12px;",
                fixed = TRUE)
-  expect_match(sheet, ".drilldown-table-container .blockr-table tbody tr {\n  border-bottom-color: transparent;",
+  expect_match(sheet, ".drilldown-table-container .blockr-table tbody tr {\n  border-bottom: 0;",
                fixed = TRUE)
   # No accent bars on a claimed row.
   expect_false(grepl("tr.dt-row-active td:first-child", sheet, fixed = TRUE))

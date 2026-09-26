@@ -28,19 +28,19 @@
 :is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.blockr-stub {
   text-align: left;
 }
-/* Table-block rows at 30px, with no rules in the body, like the preview: 4px
-   above and below the 21px line plus the row's 1px border, which stays for
-   the geometry and is never painted. The header cells take 7px. Structured
+/* Table-block rows at 30px, with no rules in the body, like the preview:
+   5px above and below a 20px line. The header cells take 7px. Structured
    tables set their own cell padding in html_table_delta_css(); these are the
    flat table's. The rank table keeps its own rows. */
 .drilldown-table-container .blockr-table tbody td {
-  padding: 4px 12px;
+  padding: 5px 12px;
+  line-height: 20px;
 }
 .drilldown-table-container .blockr-table thead th {
   padding: 7px 12px;
 }
 .drilldown-table-container .blockr-table tbody tr {
-  border-bottom-color: transparent;
+  border-bottom: 0;
 }
 /* Hover: a wash across the row, the whole row being what a flat click
    claims (or, on a table without a drill, just a reading aid). The shared

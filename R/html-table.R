@@ -1284,7 +1284,8 @@ input.blockr-search:focus {
   overflow: visible;
   text-overflow: clip;
   max-width: none;
-  padding: 4px 18px 4px 24px;
+  padding: 5px 18px 5px 24px;
+  line-height: 20px;
   font-size: var(--blockr-font-size-base, 0.875rem);
   font-weight: var(--blockr-font-weight-normal, 400);
   color: var(--blockr-color-text-default, #111827);
@@ -1299,7 +1300,8 @@ input.blockr-search:focus {
   overflow: visible;
   text-overflow: clip;
   max-width: none;
-  padding: 4px 12px;
+  padding: 5px 12px;
+  line-height: 20px;
   font-size: var(--blockr-font-size-base, 0.875rem);
   font-weight: var(--blockr-font-weight-normal, 400);
   color: var(--blockr-color-text-default, #111827);
@@ -1310,14 +1312,15 @@ input.blockr-search:focus {
 .blockr-html-table-container .blockr-table tbody td.blockr-data.blockr-dash {
   color: var(--blockr-color-text-muted, #6b7280);
 }
-/* No rules in the body. The rows keep a 1px border so the geometry does not
-   move; it is only never painted. Groups are set apart by space (the group's
-   last row and the next heading's top padding). */
+/* No rules in the body. 30px rows: 5px above and below a 20px line, set
+   here rather than inherited, so the height does not depend on the base
+   sheet's line height. Groups are set apart by space (the group's last row
+   and the next heading's top padding). */
 .blockr-html-table-container .blockr-table tbody tr {
-  border-bottom-color: transparent;
+  border-bottom: 0;
 }
 .blockr-html-table-container .blockr-table tbody tr.blockr-group-last td {
-  border-bottom: 1px solid transparent;
+  border-bottom: 0;
   padding-bottom: 7px;
 }
 .blockr-html-table-container .blockr-table tbody tr.blockr-bold td {
