@@ -504,3 +504,98 @@ test_that("wrap_titles defaults on and rides a data attribute the gear reads", {
   expect_match(render(list(wrap_titles = FALSE)), 'data-dt-wrap-titles="off"',
                fixed = TRUE)
 })
+
+test_that("delta CSS draws the clinical table style", {
+  css <- html_table_delta_css(scope = ".drilldown-table-structured")
+  squash <- function(x) gsub("\\s+", " ", x)
+  rule <- function(sel) {
+    # The declarations of the first rule whose selector list ends in `sel`.
+    m <- regmatches(css, regexpr(paste0("\\Q", sel, "\\E \\{[^}]*\\}"), css, perl = TRUE))
+    squash(m)
+  }
+
+  # A rule under each column header, 12px short and flush right; the stub
+  # header and the row borders stay transparent.
+  leaf <- rule(".drilldown-table-structured .blockr-table thead th.blockr-col-header")
+  expect_match(leaf, "linear-gradient(var(--blockr-color-border-strong", fixed = TRUE)
+  expect_match(leaf, "background-size: calc(100% - 12px) 1px;", fixed = TRUE)
+  expect_match(leaf, "background-position: right bottom;", fixed = TRUE)
+  expect_match(rule(".drilldown-table-structured .blockr-table thead th"),
+               "border-bottom: 1px solid transparent;", fixed = TRUE)
+  expect_match(rule(".drilldown-table-structured .blockr-table tbody tr"),
+               "border-bottom-color: transparent;", fixed = TRUE)
+
+  # 30px rows: 4px above and below the 21px line (+ the unpainted border).
+  expect_match(rule(".drilldown-table-structured .blockr-table tbody td.blockr-data"),
+               "padding: 4px 12px;", fixed = TRUE)
+  stub <- rule(".drilldown-table-structured .blockr-table tbody td.blockr-stub")
+  expect_match(stub, "padding: 4px 18px 4px 24px;", fixed = TRUE)
+  expect_match(stub, "color: var(--blockr-color-text-default", fixed = TRUE)
+  expect_match(rule(".drilldown-table-structured .blockr-section-btn"),
+               "padding: 11px 12px 3px;", fixed = TRUE)
+
+  # Big N: 12px, bold, muted, no top margin.
+  n <- rule(".drilldown-table-structured .blockr-table thead th .arm__n")
+  expect_match(n, "font-size: 12px;", fixed = TRUE)
+  expect_match(n, "font-weight: var(--blockr-font-weight-semibold, 600);", fixed = TRUE)
+  expect_match(n, "color: var(--blockr-color-text-muted", fixed = TRUE)
+  expect_match(n, "margin-top: 0;", fixed = TRUE)
+
+  # The chevron: 12px with a constant 1.4px stroke.
+  expect_match(rule(".drilldown-table-structured .blockr-chev"), "width: 12px;", fixed = TRUE)
+  chev_path <- rule(".drilldown-table-structured .blockr-chev path")
+  expect_match(chev_path, "vector-effect: non-scaling-stroke;", fixed = TRUE)
+  expect_match(chev_path, "stroke-width: 1.4px;", fixed = TRUE)
+
+  # Drill states: selected tint, accent ink, no bars; the cross one step up.
+  expect_match(css, "tr.dt-row-active > td.dt-col-active {\n  background-color: var(--blockr-color-bg-accent-subtle-hover",
+               fixed = TRUE)
+  expect_false(grepl("inset 0 3px 0 0", css, fixed = TRUE))
+  expect_false(grepl("inset 3px 0 0 0", css, fixed = TRUE))
+
+  # Hover classes set by table.js, and the plain wash only off .dt-clickable.
+  expect_match(css, ".drilldown-table-structured:not(.dt-clickable) .blockr-table tbody tr.blockr-data-row:hover > td",
+               fixed = TRUE)
+  expect_match(css, "tr.dt-hot-row > td.dt-hot-cell", fixed = TRUE)
+})
+
+test_that("table CSS reads design-system meaning tokens only", {
+  legacy <- c("--stbl-", "--blockr-color-text-primary", "--blockr-color-text-secondary",
+              "--blockr-color-text-subtle", "--blockr-color-border,",
+              "--blockr-color-primary", "--blockr-color-bg-input",
+              "--blockr-color-bg,", "--blockr-grey-")
+  css <- html_table_delta_css()
+  sheet <- paste(readLines(system.file("css", "table.css", package = "blockr.viz")),
+                 collapse = "\n")
+  for (x in legacy) {
+    expect_false(grepl(x, css, fixed = TRUE), info = paste("delta:", x))
+    expect_false(grepl(x, sheet, fixed = TRUE), info = paste("table.css:", x))
+  }
+  # rgba literals survive only as var() fallbacks.
+  lits <- regmatches(sheet, gregexpr("(?<!, )rgba\\(37, 99, 235", sheet, perl = TRUE))[[1]]
+  expect_length(lits, 0L)
+})
+
+test_that("flat table-block rows are 30px with no body rules", {
+  sheet <- paste(readLines(system.file("css", "table.css", package = "blockr.viz")),
+                 collapse = "\n")
+  expect_match(sheet, ".drilldown-table-container .blockr-table tbody td {\n  padding: 4px 12px;",
+               fixed = TRUE)
+  expect_match(sheet, ".drilldown-table-container .blockr-table thead th {\n  padding: 7px 12px;",
+               fixed = TRUE)
+  expect_match(sheet, ".drilldown-table-container .blockr-table tbody tr {\n  border-bottom-color: transparent;",
+               fixed = TRUE)
+  # No accent bars on a claimed row.
+  expect_false(grepl("tr.dt-row-active td:first-child", sheet, fixed = TRUE))
+})
+
+test_that("the R-built stub header carries no fold-all chevron", {
+  # The exports and html_table() read the title from the attribute; the
+  # chevron is table.js's, added in the browser.
+  df <- data.frame(.variable_label = c("Sex", "Sex"), .label = c("F", "M"),
+                   A = c("1", "2"), stringsAsFactors = FALSE)
+  attr(df$.label, "label") <- "Characteristic\nn (%)"
+  thead <- as.character(build_html_thead(df, "A", ".label"))
+  expect_match(thead, "Characteristic<br>n (%)", fixed = TRUE)
+  expect_false(grepl("dt-foldall", thead, fixed = TRUE))
+})
