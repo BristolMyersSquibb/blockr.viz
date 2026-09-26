@@ -601,41 +601,22 @@ new_summarize_table_block <- function(group = NULL,
           Filter(
             function(s) isTRUE(s$ok),
             list(
-              list(id = "dl_xlsx", ext = "xlsx", label = "Excel (.xlsx)",
+              list(id = "dl_xlsx", ext = "xlsx", label = "Excel",
                    ok = requireNamespace("openxlsx", quietly = TRUE)),
-              list(id = "dl_html", ext = "html", label = "Web page (.html)",
+              list(id = "dl_html", ext = "html", label = "Web page",
                    ok = TRUE),
-              list(id = "dl_pptx", ext = "pptx", label = "PowerPoint (.pptx)",
+              list(id = "dl_pptx", ext = "pptx", label = "PowerPoint",
                    ok = requireNamespace("officer", quietly = TRUE) &&
                      rank_paint_ready()),
-              list(id = "dl_png", ext = "png", label = "Image (.png)",
+              list(id = "dl_png", ext = "png", label = "Image",
                    ok = rank_paint_ready())
             )
           )
         })
 
-        output$rank_download <- shiny::renderUI({
-          specs <- dl_formats()
-          if (!length(specs)) return(NULL)
-          if (length(specs) == 1L) {
-            return(rank_dl_link(ns, specs[[1L]]))
-          }
-          # <details> rather than a scripted popover, exactly as the table
-          # block does it: the open / close behaviour, the keyboard handling
-          # and the focus order are the browser's, so the menu needs no JS and
-          # cannot fall out of step with the table's own script.
-          htmltools::tags$details(
-            class = "blockr-dl-menu",
-            htmltools::tags$summary(
-              class = "blockr-dl-xlsx", title = "Download",
-              `aria-label` = "Download", rank_dl_icon()
-            ),
-            htmltools::tags$div(
-              class = "blockr-dl-menu-list", role = "menu",
-              lapply(specs, function(s) rank_dl_link(ns, s, menu = TRUE))
-            )
-          )
-        })
+        output$rank_download <- shiny::renderUI(
+          dl_control_ui(ns, dl_formats())
+        )
 
         output$dl_xlsx <- shiny::downloadHandler(
           filename = function() "summarize-table.xlsx",

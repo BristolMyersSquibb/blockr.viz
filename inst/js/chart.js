@@ -1729,7 +1729,7 @@
     // HTML title / subtitle / caption bands (and the facet labels) would be
     // missing from the artifact — and a facet grid would offer one dead-end
     // button per panel. Instead ONE design-system button in the gear header
-    // (the table's .blockr-dl-xlsx chrome) composes the full block on an
+    // (the shared download tool, dl_control_ui()) composes the full block on an
     // offscreen canvas: title block, every facet panel at its on-screen grid
     // position (facet labels redrawn), caption. Purely download-time — reads
     // the canvases via getDataURL and never touches the chart option, config

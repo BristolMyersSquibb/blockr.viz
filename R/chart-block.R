@@ -1879,24 +1879,9 @@ new_chart_block <- function(
           )
         })
 
-        output$chart_download <- shiny::renderUI({
-          specs <- dl_formats()
-          if (!length(specs)) return(NULL)
-          # One format: a tool that downloads. Several: a tool that opens
-          # an action menu of downloads (design system, Menus).
-          if (length(specs) == 1L) {
-            return(chart_dl_tool(ns, specs[[1L]]))
-          }
-          do.call(blockr.ui::action_menu, c(
-            list(blockr.ui::tool_button(rank_dl_icon(), "Download")),
-            lapply(specs, function(s) {
-              blockr.ui::menu_item(
-                shiny::downloadLink(ns(s$id), s$label),
-                meta = paste0(".", s$ext)
-              )
-            })
-          ))
-        })
+        output$chart_download <- shiny::renderUI(
+          dl_control_ui(ns, dl_formats())
+        )
 
         output$dl_xlsx <- shiny::downloadHandler(
           filename = function() "chart.xlsx",
