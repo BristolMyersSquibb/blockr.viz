@@ -1,10 +1,15 @@
 // @ts-check
 /**
- * heatmap-block.js — wiring for new_heatmap_block(). The R side
- * (heatmap_html) emits the hmb-* markup fully rendered; this script only:
- *   - wires the toolbar (Top-n slider, cell-numbers toggle, search),
- *   - wires the row-click drill (+ active restore, Reset),
- *   - builds the gear band via the shared Blockr.DrilldownConfig engine.
+ * heatmap-block.js — wiring for new_heatmap_block(). R mounts the hmb-*
+ * chrome once (R/heatmap-html.R: hmb_chrome) and pushes the body over a
+ * custom message; this script:
+ *   - paints the header row: title, sentence and caption, whose `{@arg}`
+ *     words are live (Blockr.SentenceSlots, shared with the chart),
+ *   - builds the gear tray from the shared Blockr.DrilldownConfig engine and
+ *     blockr.ui's Blockr.gearTray,
+ *   - assembles the matrix rows from the sparse cell model, with a data
+ *     tooltip per cell and the header following the panel's scroll,
+ *   - wires the search tool, the row-click drill and Reset.
  * Mirrors tile-block.js (scan + MutationObserver init, idempotent per root).
  */
 (function () {
@@ -22,83 +27,61 @@
     }, { priority: 'event' });
   }
 
-  // ---- toolbar --------------------------------------------------------
-  /** @param {Element} root @param {string} elemId */
-  function wireToolbar(root, elemId) {
-    // Top n: a number field committing on Enter / blur (Blockr.textCommit,
-    // the shared control -- it also owns the "Enter ↵" chip). Per-keystroke
-    // would re-render the whole matrix on the way to "25".
-    const topn = /** @type {HTMLInputElement|null} */ (root.querySelector('.hmb-topn'));
-    if (topn) {
-      // Read live, never captured: the toolbar is wired once and the body
-      // payload rewrites `max` every time the frame changes.
-      var maxOf = function () {
-        return parseInt(topn.getAttribute('max') || '', 10);
-      };
-      var lastN = parseInt(topn.value, 10);
-      /** @type {any} */
-      var commit = null;
-      /** @param {string} raw */
-      var apply = function (raw) {
-        var n = parseInt(raw, 10);
-        if (!isFinite(n)) {
-          if (commit) commit.sync(String(lastN));
-          return;
-        }
-        // Clamp rather than reject: "400" on a 230-term frame means "all of
-        // them", which is a reasonable thing to type.
-        var maxN = maxOf();
-        n = Math.max(1, isFinite(maxN) ? Math.min(n, maxN) : n);
-        if (commit && String(n) !== raw) commit.sync(String(n));
-        if (n === lastN) return;
-        lastN = n;
-        sendConfig(elemId, 'top_n', n);
-      };
-      if (typeof Blockr !== 'undefined' && Blockr.textCommit) {
-        commit = Blockr.textCommit(topn, {
-          onCommit: function (/** @type {string} */ v) { apply(v); }
-        });
-      } else {
-        // No shared helper (a page without blockr-core.js): same
-        // Enter/blur contract by hand, rather than per-keystroke.
-        topn.addEventListener('change', function () { apply(topn.value); });
-      }
-    }
+  /**
+   * Per-root client state. The chrome is mounted once and never rebuilt, so
+   * everything that changes with a payload lives here.
+   * @typedef {{ elemId: string, cfg: Record<string, any>, cols: any[],
+   *   ddc: any, slots: any, tray: any, model: any, pos: Record<number, number>,
+   *   groupOf: string[] }} HmbState
+   */
+  /** @type {WeakMap<Element, HmbState>} */
+  var states = new WeakMap();
 
-    const nums = /** @type {HTMLInputElement|null} */ (
-      root.querySelector('.hmb-nums input'));
-    if (nums) {
-      nums.addEventListener('change', function () {
-        // Instant visual (CSS class), then persist -- the server render
-        // comes back in the same state, no flicker.
-        root.classList.toggle('hmb-nonum', !nums.checked);
-        sendConfig(elemId, 'cell_numbers', nums.checked);
-      });
-    }
-    var search = /** @type {HTMLInputElement|null} */ (root.querySelector('.hmb-search'));
-    if (search) {
-      search.addEventListener('input', function () { applySearch(root); });
-    }
-  }
-
+  // ---- search ---------------------------------------------------------
   // The row filter, re-applied after every body swap -- the rows are new
   // nodes, so a search typed before the data changed would otherwise show
-  // everything again.
+  // everything again. A search hides the group header rows: their counts
+  // would no longer match what is shown.
   /** @param {Element} root */
   function applySearch(root) {
     var search = /** @type {HTMLInputElement|null} */ (
       root.querySelector('.hmb-search'));
     var q = search ? search.value.trim().toLowerCase() : '';
-    // Hiding rows breaks the rail rowspans visually, so an active
-    // search hides the rail column wholesale (hmb-searching).
-    root.classList.toggle('hmb-searching', q !== '');
     root.querySelectorAll('tr.hmb-r').forEach(function (tr) {
       var id = (tr.getAttribute('data-hmb-id') || '').toLowerCase();
       (/** @type {HTMLElement} */ (tr)).style.display =
         (q === '' || id.indexOf(q) !== -1) ? '' : 'none';
     });
-    root.querySelectorAll('tr.hmb-gsep').forEach(function (tr) {
+    root.querySelectorAll('tr.hmb-grp').forEach(function (tr) {
       (/** @type {HTMLElement} */ (tr)).style.display = q === '' ? '' : 'none';
+    });
+  }
+
+  /** @param {Element} root */
+  function wireSearch(root) {
+    var btn0 = /** @type {HTMLButtonElement|null} */ (
+      root.querySelector('.hmb-search-btn'));
+    var input0 = /** @type {HTMLInputElement|null} */ (
+      root.querySelector('.hmb-search'));
+    if (!btn0 || !input0) return;
+    var btn = btn0, input = input0;
+    btn.addEventListener('click', function () {
+      var on = btn.getAttribute('aria-pressed') !== 'true';
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      root.classList.toggle('hmb-search-open', on);
+      if (on) {
+        input.focus();
+      } else {
+        input.value = '';
+        applySearch(root);
+      }
+    });
+    input.addEventListener('input', function () { applySearch(root); });
+    input.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      btn.click();
+      btn.focus();
     });
   }
 
@@ -110,16 +93,11 @@
   // again. Same rule as the chart and the table; the undo lives at the target.
   /** @param {Element} root */
   function transientDrill(root) {
-    /** @type {any} */
-    var cfg = null;
-    try { cfg = JSON.parse(root.getAttribute('data-hmb-config') || '{}'); }
-    catch (e) { cfg = null; }
-    var t = cfg && cfg.ctrl_target;
+    var st = states.get(root);
+    var t = st && st.cfg && st.cfg.ctrl_target;
     return !!(t && String(t).trim());
   }
 
-  // Click counter: it changes on a real click and NOT on a board update, which
-  // is the distinction the server's send-once skip has to make.
   var drillSeq = 0;
 
   // Light the clicked row, then release it. One at a time: two lit rows would
@@ -134,9 +112,14 @@
       tr.classList.remove('hmb-flash');
       tr.removeEventListener('animationend', drop);
     };
-    // The animation runs on the row's cells, so animationend arrives by
-    // bubbling.
     tr.addEventListener('animationend', drop);
+  }
+
+  /** @param {Element} root */
+  function clearActive(root) {
+    root.querySelectorAll('tr.hmb-active').forEach(function (n) {
+      n.classList.remove('hmb-active');
+    });
   }
 
   /** @param {Element} root @param {string} elemId */
@@ -144,9 +127,7 @@
     root.addEventListener('click', function (e) {
       var t = /** @type {Element|null} */ (e.target);
       if (t && t.closest('.hmb-reset')) {
-        root.querySelectorAll('tr.hmb-active').forEach(function (n) {
-          n.classList.remove('hmb-active');
-        });
+        clearActive(root);
         sendClearFilter(elemId);
         return;
       }
@@ -156,8 +137,6 @@
       var id = tr.getAttribute('data-hmb-id');
       var col = root.getAttribute('data-hmb-row-col');
       if (!id || !col) return;
-      // Transient: no toggle. A second click on the same row means "send it
-      // again", never "un-drill" -- that is the target's job.
       if (transientDrill(root)) {
         if (window.Shiny && Shiny.setInputValue) {
           Shiny.setInputValue(elemId + '_action', {
@@ -172,9 +151,7 @@
         sendClearFilter(elemId);
         return;
       }
-      root.querySelectorAll('tr.hmb-active').forEach(function (n) {
-        n.classList.remove('hmb-active');
-      });
+      clearActive(root);
       tr.classList.add('hmb-active');
       if (window.Shiny && Shiny.setInputValue) {
         Shiny.setInputValue(elemId + '_action', {
@@ -204,15 +181,31 @@
     });
   }
 
-  // ---- gear band via the shared DrilldownConfig engine ------------------
+  // ---- the gear -------------------------------------------------------
   var HM_ROLES = {
-    row:   { label: 'Row',      kind: 'column', colType: 'any' },
-    col:   { label: 'Column',   kind: 'column', colType: 'any' },
-    color: { label: 'Color by', kind: 'column', colType: 'any' },
-    group: { label: 'Group by', kind: 'column', colType: 'cat' },
+    row:   { label: 'Row', kind: 'column', colType: 'any' },
+    col:   { label: 'Column', kind: 'column', colType: 'any' },
+    color: { label: 'Paint by worst level of', kind: 'column', colType: 'any' },
+    group: { label: 'Group rows by', kind: 'column', colType: 'cat' },
+    cell_numbers: { label: 'Cell numbers', kind: 'segmented',
+                    options: [{ value: 'on', label: 'Cell numbers' },
+                              { value: 'off', label: 'Cell numbers' }] },
     download: { label: 'Download', kind: 'segmented',
                 options: [{ value: 'on', label: 'Download' },
-                          { value: 'off', label: 'No download' }] }
+                          { value: 'off', label: 'Download' }] },
+    // Three-tier text (R/title-template.R): null = the input's own label,
+    // "" = none, anything else a template.
+    title:    { label: 'Title', kind: 'text', ph: 'e.g. Adverse events',
+                autoValue: (/** @type {any} */ cfg) =>
+                  (cfg.title == null && cfg.title_resolved) ? cfg.title_resolved : '' },
+    subtitle: { label: 'Subtitle', kind: 'text',
+                ph: 'e.g. Top {@top_n} {label(@col)}[, by {label(@group)}]',
+                hint: 'A setting becomes a control on the block. [ ] drops its clause when the setting is empty.',
+                autoValue: (/** @type {any} */ cfg) =>
+                  (cfg.subtitle == null && cfg.subtitle_resolved) ? cfg.subtitle_resolved : '' },
+    caption:  { label: 'Caption', kind: 'text', ph: 'e.g. {filters}',
+                autoValue: (/** @type {any} */ cfg) =>
+                  (cfg.caption == null && cfg.caption_resolved) ? cfg.caption_resolved : '' }
   };
   /** @param {boolean} hasCols */
   function hmSections(hasCols) {
@@ -224,63 +217,48 @@
       aggregatable: false,
       colorSection: null,
       ctrlSection: true,
-      presentation: ['download'],
-      titles: []
+      presentation: ['cell_numbers', 'download'],
+      titles: ['title', 'subtitle', 'caption']
     };
   }
 
-  /** @type {Record<string, boolean>} */
-  var bandOpen = {};
+  /** @param {Element} root @param {HmbState} st */
+  function buildGear(root, st) {
+    var tools = root.querySelector('.hmb-tools');
+    var head = root.querySelector('.hmb-head');
+    if (!tools || !head) return;
 
-  /** @param {Element} root @param {string} elemId */
-  function buildCogwheel(root, elemId) {
-    /** @type {any[]} */
-    var cols = [];
-    try { cols = JSON.parse(root.getAttribute('data-hmb-cols') || '[]'); }
-    catch (e) { cols = []; }
-    /** @type {Record<string, any>} */
-    var cfg;
-    try { cfg = JSON.parse(root.getAttribute('data-hmb-config') || '{}'); }
-    catch (e) { cfg = {}; }
-    cfg.drill = cfg.drill ? 'auto' : '';
-
-    var header = document.createElement('div');
-    header.className = 'blockr-gear-header';
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'blockr-gear-btn';
-    btn.title = 'Heatmap settings';
-    btn.setAttribute('aria-label', 'Heatmap settings');
-    btn.setAttribute('aria-haspopup', 'dialog');
-    btn.setAttribute('aria-expanded', 'false');
     btn.innerHTML = (typeof Blockr !== 'undefined' && Blockr.icons)
-      ? Blockr.icons.gear : '⚙';
-    header.appendChild(btn);
+      ? Blockr.icons.gear : '';
+    tools.appendChild(btn);
 
-    var wasOpen = !!bandOpen[elemId];
-    var pop = document.createElement('div');
-    pop.className = 'blockr-settings blockr-settings--beak dd-popover';
-    pop.setAttribute('data-dd-pop-for', elemId);
+    var band = document.createElement('div');
+    band.className = 'blockr-settings blockr-settings--beak dd-popover hmb-tray';
+    band.setAttribute('data-dd-pop-for', st.elemId);
+    head.after(band);
 
-    var DDC = (typeof Blockr !== 'undefined' && Blockr.DrilldownConfig) ||
-      window.DrilldownConfig;
-    if (!DDC) {
-      // The toolbar carries the gear slot; without the engine there is no
-      // band, but the block still works.
-      var bar0 = root.querySelector('.hmb-toolbar');
-      if (bar0) bar0.appendChild(header); else root.insertBefore(header, root.firstChild);
-      return;
+    var B = (typeof Blockr !== 'undefined') ? Blockr : null;
+    if (!B || !B.gearTray || !B.DrilldownConfig || !B.SentenceSlots) {
+      // LOUD on purpose, as in the chart: blockr.viz and blockr.ui ship
+      // together, and a gear that does nothing says nothing about why.
+      throw new Error('heatmap block: blockr.ui is too old for this ' +
+        'blockr.viz (Blockr.gearTray / Blockr.SentenceSlots missing).');
     }
+    st.tray = B.gearTray(band, btn, { label: 'Heatmap settings' });
 
-    new DDC({
-      popoverEl: function () { return pop; },
+    var elemId = st.elemId;
+    st.ddc = new B.DrilldownConfig({
+      popoverEl: function () { return band; },
       roles: HM_ROLES,
-      config: function () { return cfg; },
-      columns: function () { return cols; },
+      config: function () { return st.cfg; },
+      columns: function () { return st.cols; },
       context: function () { return 'all'; },
       currentType: function () { return null; },
-      sections: function () { return hmSections(cols.length > 0); },
-      sectionsForFamily: function () { return hmSections(cols.length > 0); },
+      sections: function () { return hmSections(st.cols.length > 0); },
+      sectionsForFamily: function () { return hmSections(st.cols.length > 0); },
       secondary: new Set(),
       typeKey: null,
       typeGroups: null,
@@ -289,8 +267,8 @@
         return role === 'row' || role === 'col';
       },
       drillHint: function () {
-        return cfg.row
-          ? 'Clicking a row filters downstream on ' + cfg.row + '.'
+        return st.cfg.row
+          ? 'Clicking a row filters downstream on ' + st.cfg.row + '.'
           : null;
       },
       metricsList: function () { return []; },
@@ -298,72 +276,69 @@
       title: 'Heatmap settings',
       onChange: function (/** @type {string} */ key) {
         var v = (key === 'drill')
-          ? (cfg.drill !== '' && cfg.drill != null)
-          : cfg[key];
+          ? (st.cfg.drill !== '' && st.cfg.drill != null)
+          : st.cfg[key];
+        if (key === 'cell_numbers') {
+          root.classList.toggle('hmb-nonum', v === 'off');
+        }
         sendConfig(elemId, key, v);
       },
       onMults: function () {},
       onClearFilter: function () {
-        root.querySelectorAll('tr.hmb-active').forEach(function (n) {
-          n.classList.remove('hmb-active');
-        });
+        clearActive(root);
         sendClearFilter(elemId);
       },
       ensureDefaults: function () {},
       afterTypeChange: function () {},
-      isOpen: function () { return pop.classList.contains('blockr-settings--open'); },
-      reopen: function () { openPop(); }
-    }).render();
-
-    function openPop() {
-      pop.classList.add('blockr-settings--open');
-      btn.classList.add('blockr-gear-active');
-      btn.setAttribute('aria-expanded', 'true');
-      bandOpen[elemId] = true;
-    }
-    function closePop() {
-      pop.classList.remove('blockr-settings--open');
-      btn.classList.remove('blockr-gear-active');
-      btn.setAttribute('aria-expanded', 'false');
-      bandOpen[elemId] = false;
-    }
-    btn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      if (pop.classList.contains('blockr-settings--open')) closePop(); else openPop();
+      isOpen: function () { return st.tray.isOpen(); },
+      reopen: function () { st.tray.set(true); }
     });
-
-    // The gear sits at the END of the toolbar row (search, then gear), so
-    // "Top n" and "Cell numbers" read as block controls LEFT of it.
-    var bar = root.querySelector('.hmb-toolbar');
-    if (bar) {
-      bar.appendChild(header);
-      root.insertBefore(pop, bar.nextSibling);
-    } else {
-      root.insertBefore(header, root.firstChild);
-      root.insertBefore(pop, header.nextSibling);
-    }
-    if (wasOpen) openPop();
+    st.slots = new B.SentenceSlots({
+      ddc: function () { return st.ddc; },
+      config: function () { return st.cfg; },
+      openGear: function () { st.tray.set(true); }
+    });
   }
 
-  // ---- body payloads ---------------------------------------------------
-  // A PERSISTENT store, not a one-shot queue (the table and rank blocks'
-  // shape): a payload that arrives before its chrome exists waits here, and
-  // a chrome re-created later -- dock panel re-mount, view switch -- paints
-  // from the store with no R round trip.
-  /** @type {Record<string, any>} */
-  var store = {};
-  /** @type {Record<string, string>} */
-  var gearBuiltWith = {};
+  // ---- header: title, sentence, caption --------------------------------
+  /** @param {Element} root @param {HmbState} st */
+  function paintHeader(root, st) {
+    var cfg = st.cfg;
+    var titleEl = /** @type {HTMLElement|null} */ (root.querySelector('.hmb-title'));
+    var subEl = /** @type {HTMLElement|null} */ (root.querySelector('.hmb-subtitle'));
+    var capEl = /** @type {HTMLElement|null} */ (root.querySelector('.hmb-caption'));
+    var titles = root.querySelector('.hmb-titles');
+    if (!titleEl || !subEl || !capEl || !titles || !st.slots) return;
+    var offersEl = /** @type {HTMLElement|null} */ (titles.querySelector('.hmb-offers'));
+    if (!offersEl) {
+      offersEl = document.createElement('div');
+      offersEl.className = 'hmb-offers';
+      titles.appendChild(offersEl);
+    }
+    // A repaint replaces the very node an open slot menu is anchored to.
+    st.slots.close();
+    st.slots.paint(titleEl, cfg.title_resolved || '', cfg.title_parts);
+    st.slots.paint(subEl, cfg.subtitle_resolved || '', cfg.subtitle_parts);
+    st.slots.paint(capEl, cfg.caption_resolved || '', cfg.caption_parts);
+    // Offers sit on their own line under the sentence; the title's and the
+    // caption's join them there.
+    offersEl.textContent = '';
+    /** @type {string[]} */
+    var offers = [].concat(cfg.subtitle_offers || [], cfg.title_offers || [],
+                           cfg.caption_offers || []);
+    st.slots.paintOffers(offersEl, offers);
+    titleEl.style.display = titleEl.textContent ? '' : 'none';
+    subEl.style.display = subEl.textContent ? '' : 'none';
+    offersEl.style.display = offersEl.childNodes.length ? '' : 'none';
+    capEl.style.display = capEl.textContent ? '' : 'none';
+  }
 
   // ---- body assembly ---------------------------------------------------
   // The client half of the cell model (R/heatmap-html.R): R sends the
   // <table> shell with its rotated header and a sparse model, this pastes
-  // the rows. The matrix is ~90% empty, so shipping the model instead of
-  // the HTML is ~157 KB -> ~7 KB on a 194 x 25 AE heatmap.
-  //
-  // The markup MUST match hmb_assemble_rows() byte for byte: same classes,
-  // same attribute order, same escaping (& < > escaped, quotes not, which
-  // is htmltools' own rule for text and non-attribute content).
+  // the rows. The markup MUST match hmb_assemble_rows() byte for byte: same
+  // classes, same attribute order, same escaping (& < > escaped, quotes not,
+  // which is htmltools' own rule for text and non-attribute content).
   /** @param {string} x */
   function esc(x) {
     return String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -382,46 +357,166 @@
         ';color:' + m.fg[slot] + '"><span>' + m.cnt[j] + '</span></td>';
     }
 
-    // Rail runs and the group separators that follow each group's last row.
+    // A group opens with a section-title row spanning the matrix.
     /** @type {Record<number, string>} */
-    var railAt = {};
-    /** @type {Record<number, boolean>} */
-    var sepAt = {};
+    var heads = {};
     var groups = m.groups || [];
-    var ncols = k + 2;
     var at = 0;
     for (i = 0; i < groups.length; i++) {
-      railAt[at] = '<td class="hmb-rail" rowspan="' + groups[i].n +
-        '" title="' + esc(groups[i].label) + ' \u00b7 ' + groups[i].n +
-        ' rows"><span>' + esc(groups[i].label) + '</span></td>';
+      heads[at] = '<tr class="hmb-grp"><td colspan="' + (k + 1) +
+        '"><span class="hmb-gt">' + esc(groups[i].label) +
+        '</span><span class="hmb-gn">' + groups[i].n + '</span></td></tr>';
       at += groups[i].n;
-      if (i < groups.length - 1) sepAt[at - 1] = true;
     }
 
     var out = new Array(n);
     for (i = 0; i < n; i++) {
       var id = esc(m.rows[i]);
-      var row = '<tr class="hmb-r" data-hmb-id="' + id +
-        '"><td class="hmb-stub" data-raw="' + id + '">' + id + '</td>';
+      var row = (heads[i] || '') + '<tr class="hmb-r" data-hmb-i="' + i +
+        '" data-hmb-id="' + id + '"><td class="hmb-stub">' + id + '</td>';
       for (j = 0; j < k; j++) row += cells[j * n + i];
-      if (railAt[i]) row += railAt[i];
-      if (sepAt[i]) {
-        row += '</tr><tr class="hmb-gsep"><td colspan="' + ncols +
-          '"></td>';
-      }
       out[i] = row + '</tr>';
     }
     return out.join('');
   }
 
+  // ---- data tooltip ----------------------------------------------------
+  // The chart's data tooltip, drawn for a cell (design system, "Charts:
+  // data tooltip"): the term with the cell's swatch, then label / value
+  // rows. One card for the page, placed by the pointer.
+  /** @type {HTMLElement|null} */
+  var tipEl = null;
+  function tip() {
+    if (!tipEl) {
+      tipEl = document.createElement('div');
+      tipEl.className = 'hmb-tip';
+      tipEl.setAttribute('role', 'tooltip');
+      document.body.appendChild(tipEl);
+    }
+    return tipEl;
+  }
+  function hideTip() { if (tipEl) tipEl.classList.remove('hmb-tip--on'); }
+
+  /** @param {HTMLElement} el @param {string} label @param {string} value */
+  function tipRow(el, label, value) {
+    var r = document.createElement('div');
+    r.className = 'hmb-tip-r';
+    var l = document.createElement('span');
+    l.textContent = label;
+    var v = document.createElement('b');
+    v.textContent = value;
+    r.appendChild(l);
+    r.appendChild(v);
+    el.appendChild(r);
+  }
+
+  /** @param {Element} root */
+  function wireTooltip(root) {
+    root.addEventListener('mousemove', function (ev) {
+      var e = /** @type {MouseEvent} */ (ev);
+      var t = /** @type {Element|null} */ (e.target);
+      var td = t && /** @type {HTMLTableCellElement|null} */ (t.closest('td.hmb-c'));
+      var st = states.get(root);
+      if (!td || !td.firstChild || !st || !st.model) { hideTip(); return; }
+      var tr = td.parentElement;
+      var i = parseInt((tr && tr.getAttribute('data-hmb-i')) || '', 10);
+      var j = td.cellIndex - 1;
+      var m = st.model;
+      var at = st.pos[j * m.n + i];
+      if (!isFinite(i) || at == null) { hideTip(); return; }
+      var el = tip();
+      el.textContent = '';
+      var h = document.createElement('div');
+      h.className = 'hmb-tip-h';
+      var sw = document.createElement('i');
+      sw.style.background = m.bg[m.pal[at] - 1];
+      h.appendChild(sw);
+      h.appendChild(document.createTextNode(m.terms[j]));
+      el.appendChild(h);
+      tipRow(el, m.rowLabel || m.rowCol, m.rows[i]);
+      tipRow(el, 'Events', String(m.cnt[at]));
+      if (m.levels && m.levels.length) {
+        var lv = m.lvl[at];
+        tipRow(el, 'Worst ' + m.colorLabel,
+               lv > 0 ? m.levels[lv - 1] : 'Not recorded');
+      }
+      if (m.groupLabel && st.groupOf[i] != null) {
+        tipRow(el, m.groupLabel, st.groupOf[i]);
+      }
+      el.classList.add('hmb-tip--on');
+      var w = el.offsetWidth, hh = el.offsetHeight;
+      var x = e.clientX + 14, y = e.clientY + 14;
+      if (x + w > window.innerWidth - 8) x = e.clientX - w - 14;
+      if (y + hh > window.innerHeight - 8) y = e.clientY - hh - 14;
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+    });
+    root.addEventListener('mouseleave', hideTip);
+    root.addEventListener('mousedown', hideTip);
+  }
+
+  // ---- the header follows the panel's scroll ---------------------------
+  // The matrix box scrolls sideways only and runs its full length, so up and
+  // down belongs to the dock panel. A sticky header cannot follow that (a
+  // box that scrolls in one axis is a scroll container in both), so the
+  // header is moved down by as much of the table as has scrolled out of
+  // view, and stops at the last row. table.js does the same for the composer
+  // table (followHeader).
+  /** @param {Element} el @returns {Element | null} */
+  function scrollParent(el) {
+    for (var n = el.parentElement; n; n = n.parentElement) {
+      var oy = getComputedStyle(n).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') &&
+          n.scrollHeight > n.clientHeight) return n;
+    }
+    return null;
+  }
+  /** @param {Element} box */
+  function followHeader(box) {
+    var thead = /** @type {HTMLElement | null} */ (
+      box.querySelector('table.hmb-table > thead'));
+    var table = thead && thead.parentElement;
+    if (!thead || !table) return;
+    var sp = scrollParent(box);
+    var top = sp ? sp.getBoundingClientRect().top : 0;
+    var max = table.offsetHeight - thead.offsetHeight;
+    var y = Math.max(0, Math.min(top - table.getBoundingClientRect().top, max));
+    thead.style.transform = y > 0 ? 'translateY(' + y + 'px)' : '';
+    box.classList.toggle('hmb-scrolled', y > 0);
+  }
+  /** @param {Event} e */
+  function followHeaders(e) {
+    var t = e && e.target;
+    var scope = t && /** @type {Element} */ (t).querySelectorAll
+      ? /** @type {Element} */ (t) : document;
+    scope.querySelectorAll('.hmb-block .hmb-scroll').forEach(followHeader);
+  }
+  document.addEventListener('scroll', followHeaders,
+                            { capture: true, passive: true });
+  window.addEventListener('resize', followHeaders);
+
+  // ---- body payloads ---------------------------------------------------
+  // A PERSISTENT store, not a one-shot queue (the table and rank blocks'
+  // shape): a payload that arrives before its chrome exists waits here, and
+  // a chrome re-created later -- dock panel re-mount, view switch -- paints
+  // from the store with no R round trip.
+  /** @type {Record<string, any>} */
+  var store = {};
+
   /** @param {Element} root @param {any} p */
   function applyPayload(root, p) {
-    if (!p) return;
-    var elemId = root.getAttribute('data-hmb-elem-id') || '';
+    var st = states.get(root);
+    if (!p || !st) return;
 
-    // Root state the gear and the drill read back off the DOM.
-    if (p.cols != null) root.setAttribute('data-hmb-cols', p.cols);
-    if (p.config != null) root.setAttribute('data-hmb-config', p.config);
+    if (p.cols != null) {
+      root.setAttribute('data-hmb-cols', p.cols);
+      try { st.cols = JSON.parse(p.cols); } catch (e) { st.cols = []; }
+    }
+    if (p.config != null) {
+      root.setAttribute('data-hmb-config', p.config);
+      try { st.cfg = JSON.parse(p.config); } catch (e) { st.cfg = {}; }
+      st.cfg.drill = st.cfg.drill ? 'auto' : '';
+    }
     root.setAttribute('data-hmb-drill', p.drill ? '1' : '0');
     root.setAttribute('data-hmb-row-col', p.rowCol || '');
     var active = p.active || [];
@@ -430,37 +525,22 @@
     } else {
       root.removeAttribute('data-hmb-active');
     }
-
-    // Cell numbers: the checkbox is applied instantly on click, so this only
-    // corrects it when the server disagrees (a restore, a gear edit).
-    var nums = /** @type {HTMLInputElement|null} */ (
-      root.querySelector('.hmb-nums input'));
-    if (nums && nums.checked !== !!p.cellNumbers) nums.checked = !!p.cellNumbers;
     root.classList.toggle('hmb-nonum', !p.cellNumbers);
-
-    // Top n: the frame decides the ceiling. Never fight a field being typed
-    // into -- the commit that follows will bring the server round anyway.
-    var topn = /** @type {HTMLInputElement|null} */ (
-      root.querySelector('.hmb-topn'));
-    if (topn) {
-      if (p.topMax) {
-        topn.setAttribute('max', String(p.topMax));
-        topn.title = 'Columns shown, most frequent first (1-' + p.topMax +
-          '). Enter to apply.';
-      }
-      if (p.topVal && document.activeElement !== topn) {
-        topn.value = String(p.topVal);
-      }
-    }
 
     var legend = root.querySelector('.hmb-legend-slot');
     var scroll = root.querySelector('.hmb-scroll');
     var count = root.querySelector('.hmb-count');
+    st.model = null;
     if (p.err) {
       if (legend) legend.innerHTML = '';
-      if (scroll) scroll.innerHTML = '<div class="hmb-empty"></div>';
-      var empty = scroll && scroll.firstChild;
-      if (empty) empty.textContent = p.err;
+      if (scroll) {
+        var msg = document.createElement(p.errKind === 'danger' ? 'div' : 'p');
+        msg.className = p.errKind === 'danger'
+          ? 'hmb-msg hmb-msg--danger' : 'blockr-empty blockr-empty--block';
+        msg.textContent = p.err;
+        scroll.innerHTML = '';
+        scroll.appendChild(msg);
+      }
       if (count) count.textContent = '';
     } else {
       if (legend) legend.innerHTML = p.legend || '';
@@ -468,26 +548,51 @@
         scroll.innerHTML = p.head || '';
         var tbody = scroll.querySelector('tbody');
         if (tbody && p.model) tbody.innerHTML = assembleRows(p.model);
+        // A term the rotated header cuts off gets its full text as the
+        // tooltip; a term that fits has none.
+        scroll.querySelectorAll('th.hmb-rot > span').forEach(function (s) {
+          if (s.scrollHeight > s.clientHeight + 1) {
+            s.setAttribute('data-blockr-tooltip', s.textContent || '');
+          }
+        });
+        followHeader(scroll);
       }
       if (count) count.textContent = p.count || '';
+      if (p.model) {
+        st.model = p.model;
+        /** @type {Record<number, number>} */
+        var pos = {};
+        for (var t = 0; t < p.model.idx.length; t++) pos[p.model.idx[t]] = t;
+        st.pos = pos;
+        /** @type {string[]} */
+        var groupOf = [];
+        (p.model.groups || []).forEach(function (/** @type {any} */ g) {
+          for (var r = 0; r < g.n; r++) groupOf.push(g.label);
+        });
+        st.groupOf = groupOf;
+      }
       markActive(root);
       applySearch(root);
     }
 
-    // The gear is built from the columns and the config; rebuild it only
-    // when one of those actually changed, so a plain data refresh leaves an
-    // open band alone.
-    var key = (p.cols || '') + '|' + (p.config || '');
-    if (elemId && gearBuiltWith[elemId] !== key) {
-      gearBuiltWith[elemId] = key;
-      var oldHeader = root.querySelector('.hmb-toolbar .blockr-gear-header');
-      if (oldHeader && oldHeader.parentNode) {
-        oldHeader.parentNode.removeChild(oldHeader);
+    // A failed prepare script is a block-level error, shown above the
+    // output (design system, "Messages"); the gear's script section says it
+    // too.
+    var serr = root.querySelector('.hmb-script-error');
+    if (st.cfg.script_error) {
+      if (!serr) {
+        serr = document.createElement('div');
+        serr.className = 'hmb-msg hmb-msg--danger hmb-script-error';
+        var slot = root.querySelector('.hmb-legend-slot');
+        if (slot) slot.before(serr);
       }
-      var oldPop = root.querySelector('[data-dd-pop-for="' + elemId + '"]');
-      if (oldPop && oldPop.parentNode) oldPop.parentNode.removeChild(oldPop);
-      buildCogwheel(root, elemId);
+      serr.textContent = 'Script failed: ' + st.cfg.script_error;
+    } else if (serr) {
+      serr.remove();
     }
+
+    paintHeader(root, st);
+    if (st.ddc) st.ddc.render();
   }
 
   /** @param {Element} root */
@@ -496,11 +601,23 @@
     root.setAttribute('data-hmb-initialized', '1');
     var elemId = root.getAttribute('data-hmb-elem-id');
     if (!elemId) return;
-    buildCogwheel(root, elemId);
-    gearBuiltWith[elemId] = (root.getAttribute('data-hmb-cols') || '') + '|' +
-      (root.getAttribute('data-hmb-config') || '');
-    wireToolbar(root, elemId);
+    /** @type {HmbState} */
+    var st = {
+      elemId: elemId, cfg: {}, cols: [], ddc: null, slots: null, tray: null,
+      model: null, pos: {}, groupOf: []
+    };
+    try { st.cfg = JSON.parse(root.getAttribute('data-hmb-config') || '{}'); }
+    catch (e) { st.cfg = {}; }
+    st.cfg.drill = st.cfg.drill ? 'auto' : '';
+    try { st.cols = JSON.parse(root.getAttribute('data-hmb-cols') || '[]'); }
+    catch (e) { st.cols = []; }
+    states.set(root, st);
+    buildGear(root, st);
+    paintHeader(root, st);
+    if (st.ddc) st.ddc.render();
+    wireSearch(root);
     wireDrill(root, elemId);
+    wireTooltip(root);
     if (store[elemId]) {
       applyPayload(root, store[elemId]);
     } else if (window.Shiny && Shiny.setInputValue) {
