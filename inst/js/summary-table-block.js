@@ -6,8 +6,8 @@
  * Gear: an in-flow settings band (stat checkboxes, overall checkbox + label,
  * nest_hierarchies checkbox, group-by select, count-distinct select).
  *
- * Depends on: blockr-core.js, blockr-select.js (from blockr.dplyr),
- * blockr-blocks.css, settings-band.js/.css (Blockr.checkbox + .blockr-settings).
+ * Depends on: blockr.ui::controls_dep() (Blockr.Select, Blockr.checkbox,
+ * .blockr-settings).
  */
 (() => {
   'use strict';
@@ -193,7 +193,7 @@
       // between the gear header and the main grid, built from the standard
       // controls; on/off options are .blockr-checkbox (see
       // boolean-controls-proposals.html), not self-labeling pills.
-      // --beak: gear connector T1 (settings-band.css) — the open band grows
+      // --beak: gear connector T1 (blockr.ui's blockr-settings-band.css) — the open band grows
       // a notch pointing at the gear that opened it.
       this.popover.className = 'blockr-settings blockr-settings--beak';
 

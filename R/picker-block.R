@@ -217,12 +217,7 @@ new_picker_block <- function(
     function(id) {
       ns <- shiny::NS(id)
       shiny::tagList(
-        # Select component + shared block CSS from blockr.dplyr (exported
-        # helpers); settings band from the LOCAL copy -- blockr.viz is the
-        # canonical source of settings-band.css/js (see viz-block-dep.R).
-        blockr.dplyr::blockr_select_dep(),
-        blockr.dplyr::blockr_blocks_css_dep(),
-        settings_band_dep(),
+        blockr.ui::controls_dep(),
         shiny::div(
           class = "block-container blockr-picker",
           shiny::div(

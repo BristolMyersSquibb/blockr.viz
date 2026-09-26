@@ -271,7 +271,7 @@
       const head = document.createElement('div');
       head.className = 'dd-row-head';
       const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
+      lbl.className = 'blockr-label';
       lbl.textContent = sp.label;
       head.appendChild(lbl);
       row.appendChild(head);
@@ -419,7 +419,7 @@
       pop.setAttribute('aria-label', (this.h.title || 'Settings'));
 
       const title = document.createElement('div');
-      title.className = 'blockr-popover-label dd-popover-title';
+      title.className = 'blockr-label dd-popover-title';
       title.id = (pop.id || 'dd-pop') + '-title';
       title.textContent = this.h.title || 'Settings';
       pop.setAttribute('aria-labelledby', title.id);
@@ -431,13 +431,13 @@
         // its label is a normal field label above the grid; several groups
         // -> per-group micro-headings inside one grid.
         const typesRow = document.createElement('div');
-        typesRow.className = 'blockr-popover-row dd-popover-types dd-popover-types-tiles';
+        typesRow.className = 'dd-popover-types dd-popover-types-tiles';
         const single = this.h.typeGroups.length === 1;
         for (const g of this.h.typeGroups) {
           if (g.label) {
             const glabel = document.createElement('div');
             glabel.className = single
-              ? 'blockr-popover-label dd-type-grid-label'
+              ? 'blockr-label dd-type-grid-label'
               : 'dd-type-group-head';
             glabel.textContent = g.label;
             typesRow.appendChild(glabel);
@@ -461,7 +461,7 @@
         pop.appendChild(typesRow);
       } else if (this.h.typeGroups && this.h.typeGroups.length) {
         const typesRow = document.createElement('div');
-        typesRow.className = 'blockr-popover-row dd-popover-types';
+        typesRow.className = 'dd-popover-types';
         for (const g of this.h.typeGroups) {
           const group = document.createElement('div');
           group.className = 'dd-type-group';
@@ -683,7 +683,7 @@
       const row = document.createElement('div');
       row.className = 'dd-form-row dd-script-row';
       const ta = document.createElement('textarea');
-      ta.className = 'blockr-popover-input dd-script-editor';
+      ta.className = 'blockr-text-input dd-script-editor';
       ta.rows = 6;
       ta.spellcheck = false;
       ta.placeholder = 'data |> dplyr::filter(...)';
@@ -808,12 +808,12 @@
       const role = this._role(key);
       if (!role) return;
       const row = document.createElement('div');
-      row.className = 'blockr-popover-row dd-form-row dd-title-row dd-title-' + key;
+      row.className = 'dd-form-row dd-title-row dd-title-' + key;
 
       const head = document.createElement('div');
       head.className = 'dd-row-head';
       const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
+      lbl.className = 'blockr-label';
       lbl.textContent = (typeof role.label === 'function')
         ? role.label(this._cfg()) : role.label;
       head.appendChild(lbl);
@@ -1480,7 +1480,7 @@
       // mute it, the way an unset field reads everywhere else.
       const unset = (role.kind === 'column' || role.kind === 'columns') &&
         !this._hasVal(this._cfg()[key]);
-      row.className = 'blockr-popover-row dd-form-row dd-role-' + key +
+      row.className = 'dd-form-row dd-role-' + key +
         (paired ? ' dd-role-paired' : '') + (opts.band ? ' dd-band-row' : '') +
         (unset ? ' dd-role-unset' : '');
 
@@ -1500,7 +1500,7 @@
       const head = document.createElement('div');
       head.className = 'dd-row-head';
       const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
+      lbl.className = 'blockr-label';
       // In a reversed pair the required marker tracks the value, which is only
       // needed for aggregations that consume it (not a bare count).
       const reqMark = opts.required && (!reversed || usesMetric());
@@ -1666,7 +1666,7 @@
       const wrap = document.createElement('div');
       wrap.className = 'dd-summaries';
       const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
+      lbl.className = 'blockr-label';
       lbl.textContent = 'Aggregate';
       wrap.appendChild(lbl);
 
@@ -1675,7 +1675,7 @@
         row.className = 'dd-value-row';
 
         const aggWrap = document.createElement('div');
-        aggWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-value-agg';
+        aggWrap.className = 'dd-picker-wrap dd-value-agg';
         if (S && S.single) {
           S.single(aggWrap, {
             options: aggOpts, selected: m.func || 'count',
@@ -1703,7 +1703,7 @@
           of.textContent = 'of';
           row.appendChild(of);
           const colsWrap = document.createElement('div');
-          colsWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-value-cols';
+          colsWrap.className = 'dd-picker-wrap dd-value-cols';
           const opts = this._colOptsByType(colType(m.func));
           // Empty selection on a NUMERIC aggregation means "all numeric
           // columns not claimed by another row" (default-function rule,
@@ -1780,7 +1780,7 @@
       const wrap = document.createElement('div');
       wrap.className = 'dd-summaries dd-shadings';
       const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
+      lbl.className = 'blockr-label';
       lbl.textContent = 'Shade cells';
       wrap.appendChild(lbl);
 
@@ -1789,7 +1789,7 @@
         row.className = 'dd-value-row dd-shading-row';
 
         const modeWrap = document.createElement('div');
-        modeWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-value-agg';
+        modeWrap.className = 'dd-picker-wrap dd-value-agg';
         if (S && S.single) {
           S.single(modeWrap, {
             options: modeOpts, selected: s.mode || 'diverging',
@@ -1804,7 +1804,7 @@
         row.appendChild(on);
 
         const colsWrap = document.createElement('div');
-        colsWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-value-cols';
+        colsWrap.className = 'dd-picker-wrap dd-value-cols';
         if (S && S.multi) {
           S.multi(colsWrap, {
             options: this._colOptsByType('num'),
@@ -1881,24 +1881,24 @@
       if (on) {
         const autoLabel = this.h.drillAutoLabel();
         const row = document.createElement('div');
-        row.className = 'blockr-popover-row dd-form-row';
+        row.className = 'dd-form-row';
         const head = document.createElement('div');
         head.className = 'dd-row-head';
         const lbl = document.createElement('span');
-        lbl.className = 'blockr-popover-label';
+        lbl.className = 'blockr-label';
         lbl.textContent = 'Filter on';
         head.appendChild(lbl);
         row.appendChild(head);
         const controls = document.createElement('div');
         controls.className = 'dd-row-controls';
         const wrap = document.createElement('div');
-        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+        wrap.className = 'dd-picker-wrap';
         const colOpt = (/** @type {VizColumn} */ c) => c.label ? { value: c.name, label: c.label } : c.name;
         const opts = [{ value: 'auto', label: autoLabel }, ...this._cols().map(colOpt)];
         const sel = (this._hasVal(cfg.drill) && cfg.drill !== 'auto') ? cfg.drill : 'auto';
         const onSel = (/** @type {string} */ val) => { cfg.drill = val; this.h.onChange('drill'); this.h.onClearFilter(); };
         if (typeof Blockr !== 'undefined' && Blockr.Select) {
-          this._selects['drill'] = Blockr.Select.single(wrap, { options: opts, selected: sel, onChange: onSel });
+          this._selects['drill'] = Blockr.Select.single(wrap, { bordered: true, options: opts, selected: sel, onChange: onSel });
         } else {
           const s = document.createElement('select');
           s.className = 'dd-cfg-select';
@@ -1939,7 +1939,7 @@
         this.h.onClearFilter();
       };
       const row = document.createElement('div');
-      row.className = 'blockr-popover-row dd-form-row';
+      row.className = 'dd-form-row';
       if (typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
         // Returns a WRAPPER, not a node -- append its .el (same as the
         // "Send to filter" row below). Passing the wrapper to appendChild
@@ -2000,7 +2000,7 @@
         this._rerender();
       };
       const boxRow = document.createElement('div');
-      boxRow.className = 'blockr-popover-row dd-form-row dd-ctrl-toggle';
+      boxRow.className = 'dd-form-row dd-ctrl-toggle';
       if (typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
         const box = Blockr.checkbox('Send to filter (beta)', on, onToggle);
         boxRow.appendChild(box.el);
@@ -2033,25 +2033,25 @@
       for (const c of choices) opts.push(c);
 
       const row = document.createElement('div');
-      row.className = 'blockr-popover-row dd-form-row';
+      row.className = 'dd-form-row';
       const head = document.createElement('div');
       head.className = 'dd-row-head';
       const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
+      lbl.className = 'blockr-label';
       lbl.textContent = 'Target filter';
       head.appendChild(lbl);
       row.appendChild(head);
       const controls = document.createElement('div');
       controls.className = 'dd-row-controls';
       const wrap = document.createElement('div');
-      wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+      wrap.className = 'dd-picker-wrap';
       const onSel = (/** @type {string} */ val) => {
         cfg.ctrl_target = val;
         this.h.onChange('ctrl_target');
       };
       if (typeof Blockr !== 'undefined' && Blockr.Select) {
         this._selects['ctrl_target'] = Blockr.Select.single(wrap,
-          { options: opts, selected: cur, onChange: onSel });
+          { bordered: true, options: opts, selected: cur, onChange: onSel });
       } else {
         const s = document.createElement('select');
         s.className = 'dd-cfg-select';
@@ -2078,11 +2078,11 @@
       // change (blur / Enter), NOT on keystroke: every commit re-sends the
       // claim, and half-typed table names would push junk conditions.
       const trow = document.createElement('div');
-      trow.className = 'blockr-popover-row dd-form-row';
+      trow.className = 'dd-form-row';
       const thead = document.createElement('div');
       thead.className = 'dd-row-head';
       const tlbl = document.createElement('span');
-      tlbl.className = 'blockr-popover-label';
+      tlbl.className = 'blockr-label';
       tlbl.textContent = 'Table';
       thead.appendChild(tlbl);
       trow.appendChild(thead);
@@ -2090,7 +2090,7 @@
       tcontrols.className = 'dd-row-controls';
       const input = document.createElement('input');
       input.type = 'text';
-      input.className = 'blockr-popover-input';
+      input.className = 'blockr-text-input';
       input.value = cfg.ctrl_table || '';
       input.placeholder = 'dm only — e.g. adsl';
       input.addEventListener('change', () => {
@@ -2128,7 +2128,7 @@
       if (role.kind === 'column') {
         const opts = this._colOptionsFor(key, { required });
         const wrap = document.createElement('div');
-        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+        wrap.className = 'dd-picker-wrap';
         const sel = this._hasVal(cfg[key]) ? cfg[key] : (required ? '' : '(none)');
         const onSel = (/** @type {string} */ val) => {
           cfg[key] = (val === '(none)') ? '' : val;
@@ -2142,7 +2142,7 @@
       } else if (role.kind === 'select') {
         const opts = this._selectOptionsFor(key);
         const wrap = document.createElement('div');
-        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+        wrap.className = 'dd-picker-wrap';
         const cur = cfg[key];
         const selv = this._hasVal(cur) ? cur : ((typeof opts[0] === 'object' && opts[0]) ? opts[0].value : opts[0]);
         const onSel = (/** @type {string} */ val) => {
@@ -2169,7 +2169,7 @@
         const opts = this._colOptionsFor(key, { required: true });
         const sel = Array.isArray(cfg[key]) ? cfg[key].slice() : [];
         const wrap = document.createElement('div');
-        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+        wrap.className = 'dd-picker-wrap';
         const onSel = (/** @type {string[]} */ vals) => {
           cfg[key] = vals; cb(); this.h.onChange(key);
           // A multi-picker that gates other rows (e.g. the table's group
@@ -2179,7 +2179,7 @@
           if (role.rerender) this._rerenderOnDropdownClose(key);
         };
         if (typeof Blockr !== 'undefined' && Blockr.Select && Blockr.Select.multi) {
-          this._selects[key] = Blockr.Select.multi(wrap, {
+          this._selects[key] = Blockr.Select.multi(wrap, { bordered: true,
             options: opts, selected: sel,
             placeholder: role.placeholder || 'All', onChange: onSel
           });
@@ -2228,7 +2228,7 @@
         // to ✓; Escape reverts to the last committed value.
         const inp = document.createElement('input');
         inp.type = 'text';
-        inp.className = 'blockr-popover-input';
+        inp.className = 'blockr-text-input';
         // `autoValue` (optional role hook): when the stored value is null, a
         // host-computed inherited value shows as the input's CONTENT, not its
         // placeholder — so the user can see it and delete it, which commits ""
@@ -2306,12 +2306,12 @@
         const sel = Array.isArray(cfg[key]) ? cfg[key].slice() :
           (this._hasVal(cfg[key]) ? [String(cfg[key])] : []);
         const wrap = document.createElement('div');
-        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+        wrap.className = 'dd-picker-wrap';
         const onSel = (/** @type {string[]} */ vals) => {
           cfg[key] = vals; cb(); this.h.onChange(key);
         };
         if (typeof Blockr !== 'undefined' && Blockr.Select && Blockr.Select.multi) {
-          this._selects[key] = Blockr.Select.multi(wrap, {
+          this._selects[key] = Blockr.Select.multi(wrap, { bordered: true,
             options: role.options || [], selected: sel,
             placeholder: role.placeholder || 'None', onChange: onSel
           });
@@ -2337,7 +2337,7 @@
         // browser, so a half-typed "1" on the way to "12" must not travel.
         const inp = document.createElement('input');
         inp.type = role.kind === 'date' ? 'date' : 'number';
-        inp.className = 'blockr-popover-input';
+        inp.className = 'blockr-text-input';
         if (role.min != null) inp.min = String(role.min);
         if (role.max != null) inp.max = String(role.max);
         if (role.step != null) inp.step = String(role.step);
@@ -2494,7 +2494,7 @@
         // what to supply. `phBy` keys it by context, like colTypeBy.
         const role = this._role(key) || {};
         const ph = (role.phBy && role.phBy[this.h.context()]) || role.ph;
-        this._selects[key] = Blockr.Select.single(wrap, { options: opts, selected, placeholder: ph, onChange: onSel });
+        this._selects[key] = Blockr.Select.single(wrap, { bordered: true, options: opts, selected, placeholder: ph, onChange: onSel });
       } else {
         const s = document.createElement('select');
         s.className = 'dd-cfg-select';
@@ -2551,36 +2551,21 @@
       parent.appendChild(wrap);
     }
 
-    // Click-through pill (blockr.dplyr idiom: arrange dir-btn, filter op-toggle,
-    // pivot drop-na). One self-labeling .blockr-pill that cycles through
-    // `options` ([{value,label}]) on click; highlighted (blockr-popover-toggle-
-    // active) whenever the value is off its first/default option. Replaces the
-    // old two-button .dd-segmented control.
+    // A fixed choice of two or three short values, all in view: blockr.ui's
+    // segmented control, at the field height.
     /**
      * @param {HTMLElement} parent @param {Array<{ value: string, label: string }>} options
      * @param {string} current @param {(val: string) => void} onPick
+     * @param {string} [label]
      */
-    _buildPill(parent, options, current, onPick) {
+    _buildPill(parent, options, current, onPick, label) {
       const wrap = document.createElement('div');
       wrap.className = 'dd-pill-wrap';
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'blockr-pill blockr-popover-toggle';
-      let idx = options.findIndex((o) => o.value === current);
-      if (idx < 0) idx = 0;
-      const paint = () => {
-        btn.textContent = options[idx].label;
-        btn.classList.toggle('blockr-popover-toggle-active', idx !== 0);
-      };
-      paint();
-      btn.addEventListener('click', () => {
-        idx = (idx + 1) % options.length;
-        paint();
-        onPick(options[idx].value);
-      });
-      wrap.appendChild(btn);
+      const cur = options.some((o) => o.value === current) ? current : options[0].value;
+      const seg = Blockr.segmented(options, cur, onPick, label ? { label } : undefined);
+      wrap.appendChild(seg.el);
       parent.appendChild(wrap);
-      return btn;
+      return seg.el;
     }
 
     /** @param {HTMLElement} container @param {string[]} remaining */

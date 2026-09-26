@@ -45,7 +45,7 @@
   margin-bottom: 12px;
 }
 
-.dd-form-row > .blockr-popover-label {
+.dd-form-row > .blockr-label {
   margin-bottom: 0;
 }
 
@@ -56,9 +56,8 @@
 }
 
 /* Picker wrap — layout-only hook for the canonical select. The visual chrome
-   (bordered control, focus ring) comes from blockr.dplyr's
-   .blockr-popover-select-wrap (blockr-blocks.css), applied alongside this
-   class; here we only own width so the select fills its form row. Text inputs
+   (bordered control, focus ring) is blockr.ui's .blockr-select--bordered;
+   here we only own width so the select fills its form row. Text inputs
    sit in a .dd-text-wrap next to their commit chip (see drilldown-config.js). */
 .dd-picker-wrap {
   width: 100%;
@@ -75,7 +74,7 @@
   width: 100%;
 }
 
-.dd-text-wrap .blockr-popover-input {
+.dd-text-wrap .blockr-text-input {
   flex: 1 1 auto;
   min-width: 0;
   padding-right: 78px;
@@ -134,7 +133,7 @@
 .dd-title-row .dd-text-wrap {
   display: block;
 }
-.dd-title-row .blockr-popover-input {
+.dd-title-row .blockr-text-input {
   display: block;
   width: 100%;
   padding-right: 12px;
@@ -455,7 +454,7 @@
    rule then reads as ONE row: "[fn] of [columns] ✕" / "[mode] on [columns] ✕".
    The fn/mode picker keeps a compact share; the columns picker gets the rest. */
 .dd-section > .dd-summaries { grid-column: 1 / -1; }
-.dd-summaries > .blockr-popover-label { display: block; }
+.dd-summaries > .blockr-label { display: block; }
 .dd-value-row {
   display: flex;
   align-items: center;
@@ -503,9 +502,8 @@
 .dd-add-metric { align-self: flex-start; margin-top: 2px; }
 
 /* Required mapping with no value: soft attention, not a hard error. The border
-   now lives on the select control (.blockr-popover-select-wrap), so tint it
-   there. */
-.dd-role-required-empty .blockr-popover-select-wrap .blockr-select__control {
+   now lives on the select control, so tint it there. */
+.dd-role-required-empty .dd-picker-wrap .blockr-select__control {
   border-color: var(--blockr-color-warning, #f59e0b);
   background: var(--blockr-color-warning-bg, #fffbeb);
 }
@@ -570,6 +568,7 @@
 
 /* Popover type rows */
 .dd-popover-types {
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -1258,7 +1257,7 @@
 .dd-mapping-band .dd-band-row .dd-row-head {
   margin-bottom: 5px;
 }
-.dd-mapping-band .dd-band-row .blockr-popover-label {
+.dd-mapping-band .dd-band-row .blockr-label {
   font-size: var(--blockr-font-size-sm, 0.8125rem);
   font-weight: 500;
   color: var(--blockr-color-text-secondary, #6b7280);
@@ -1282,7 +1281,7 @@
    pointrange) has no aggregation, so its value row holds the column select
    alone -- and without the .dd-role-paired guard that select IS the first
    child, took the 34%, and rendered as "A..." in a 70px box. */
-.dd-mapping-band .dd-band-row.dd-role-value.dd-role-paired .dd-row-controls > .blockr-popover-select-wrap:first-child {
+.dd-mapping-band .dd-band-row.dd-role-value.dd-role-paired .dd-row-controls > .dd-picker-wrap:first-child {
   flex: 0 0 34%;
 }
 .dd-mapping-band .dd-band-row .dd-pair-connector {
@@ -1317,10 +1316,10 @@
    engine's select is the popover's 38px one and its row head carries the
    popover's spacing. Lift both to the standalone control geometry -- the same
    override settings-band.css makes for the in-flow gear band. */
-.dd-mapping-band .blockr-popover-select-wrap .blockr-select__control {
+.dd-mapping-band .dd-picker-wrap .blockr-select__control {
   min-height: 42px;
 }
-.dd-mapping-band .blockr-popover-input {
+.dd-mapping-band .blockr-text-input {
   padding: 10px 14px;
   min-height: 42px;
 }
@@ -1335,7 +1334,7 @@
 }
 /* The popover label carries its own 4px bottom margin, which stacks with the
    head's 5px and made the gap 9px against the code block's 5px. */
-.dd-mapping-band .dd-band-row .blockr-popover-label {
+.dd-mapping-band .dd-band-row .blockr-label {
   line-height: 19.5px;
   margin-bottom: 0;
 }

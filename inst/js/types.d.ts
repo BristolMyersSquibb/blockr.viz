@@ -201,7 +201,7 @@ interface BlockrNamespace {
   DrilldownConfig: typeof VizDrilldownConfig;
   /** Shared aggregation vocabulary (drilldown-agg.js). */
   DrilldownAgg?: VizDrilldownAgg;
-  /** Design-system checkbox factory (settings-band.js). */
+  /** Design-system checkbox factory (blockr.ui's blockr-ui.js). */
   checkbox(
     label: string,
     checked: boolean,
@@ -212,6 +212,13 @@ interface BlockrNamespace {
     set(v: boolean): void;
     get(): boolean;
   };
+  /** Design-system segmented control (blockr.ui's blockr-ui.js). */
+  segmented(
+    options: { value: string; label: string; title?: string }[],
+    selected: string,
+    onChange: (value: string) => void,
+    opts?: { size?: 'xs'; label?: string }
+  ): { el: HTMLDivElement; set(v: string): void; get(): string };
   /** Commit-on-Enter text input with the "Enter" chip (blockr-core.js);
       absent on a page without blockr-core.js. */
   textCommit?(

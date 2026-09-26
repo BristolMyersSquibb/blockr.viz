@@ -434,9 +434,9 @@ rank_label_header <- function(prep) {
   if (is.null(prep$parent)) prep$group else paste0(prep$parent, " / ", prep$group)
 }
 
-# The same bundle the table block ships (shared blockr.dplyr CSS/JS, Blockr.Select,
-# the dd-* popover CSS, the settings band and the gear engine), plus the rank JS
-# LAST -- it reads Blockr.DrilldownConfig at bind time.
+# The same bundle the table block ships (blockr.ui's shared controls, the dd-*
+# CSS and the gear engine), plus the rank JS LAST -- it reads
+# Blockr.DrilldownConfig at bind time.
 #' @noRd
 rank_table_dep <- memoise0(function() {
   htmltools::tagList(

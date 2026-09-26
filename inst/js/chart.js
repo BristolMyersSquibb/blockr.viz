@@ -1631,7 +1631,7 @@
       // fixed positioning, no outside-click dismissal — it is a panel, not a
       // menu; opening pushes the chart down so the result stays visible.
       // --beak: connector T1 of the type-picker proposals — the open band
-      // grows a notch pointing at the gear that opened it (settings-band.css).
+      // grows a notch pointing at the gear that opened it (blockr.ui's blockr-settings-band.css).
       this.popoverEl = document.createElement('div');
       this.popoverEl.className = 'blockr-settings blockr-settings--beak dd-popover';
       this.card.appendChild(this.popoverEl);
