@@ -1645,12 +1645,12 @@
       // PROTOTYPE (config.capture_export, R/chart-capture.R): composing on
       // the menu OPEN rather than on the format click means the bitmap is
       // already in R by the time a format is picked, so the download handlers
-      // need no round trip of their own. Capture phase, because the <details>
-      // summary is R-rendered markup this binding does not own.
+      // need no round trip of their own. Capture phase, because the download
+      // tool is R-rendered markup this binding does not own.
       gearHeader.addEventListener('click', (e) => {
         const t = /** @type {Element} */ (e.target);
         if (!this.config || !this.config.capture_export || !t.closest) return;
-        const host = t.closest('.blockr-dl-menu, .blockr-dl-xlsx');
+        const host = t.closest('.blockr-action-menu__trigger, .dd-chart-dl .blockr-tool');
         if (host) this._downloadImage(true);
       }, true);
       // The aggregation toggle goes here too, but it cannot be built yet:

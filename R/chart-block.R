@@ -1898,13 +1898,13 @@ new_chart_block <- function(
           Filter(
             function(s) isTRUE(s$ok),
             list(
-              list(id = "dl_xlsx", ext = "xlsx", label = "Excel (.xlsx)",
+              list(id = "dl_xlsx", ext = "xlsx", label = "Excel",
                    ok = requireNamespace("openxlsx", quietly = TRUE)),
-              list(id = "dl_html", ext = "html", label = "Web page (.html)",
+              list(id = "dl_html", ext = "html", label = "Web page",
                    ok = TRUE),
-              list(id = "dl_pptx", ext = "pptx", label = "PowerPoint (.pptx)",
+              list(id = "dl_pptx", ext = "pptx", label = "PowerPoint",
                    ok = requireNamespace("officer", quietly = TRUE)),
-              list(id = "dl_png", ext = "png", label = "Image (.png)",
+              list(id = "dl_png", ext = "png", label = "Image",
                    ok = TRUE)
             )
           )
@@ -1913,20 +1913,20 @@ new_chart_block <- function(
         output$chart_download <- shiny::renderUI({
           specs <- dl_formats()
           if (!length(specs)) return(NULL)
+          # One format: a tool that downloads. Several: a tool that opens
+          # an action menu of downloads (design system, Menus).
           if (length(specs) == 1L) {
-            return(rank_dl_link(ns, specs[[1L]]))
+            return(chart_dl_tool(ns, specs[[1L]]))
           }
-          htmltools::tags$details(
-            class = "blockr-dl-menu",
-            htmltools::tags$summary(
-              class = "blockr-dl-xlsx", title = "Download",
-              `aria-label` = "Download", rank_dl_icon()
-            ),
-            htmltools::tags$div(
-              class = "blockr-dl-menu-list", role = "menu",
-              lapply(specs, function(s) rank_dl_link(ns, s, menu = TRUE))
-            )
-          )
+          do.call(blockr.ui::action_menu, c(
+            list(blockr.ui::tool_button(rank_dl_icon(), "Download")),
+            lapply(specs, function(s) {
+              blockr.ui::menu_item(
+                shiny::downloadLink(ns(s$id), s$label),
+                meta = paste0(".", s$ext)
+              )
+            })
+          ))
         })
 
         output$dl_xlsx <- shiny::downloadHandler(
@@ -2157,10 +2157,6 @@ new_chart_block <- function(
         # header by chart.js -- the same shape rank-table.js uses for the
         # search box. It has to be a Shiny output (download links are
         # server-driven), and the gear header is built by the widget's JS.
-        # The download chrome (the icon button and its menu) comes from the
-        # table's stylesheet, which a chart-only page does not load. One
-        # shared definition, carried by both blocks.
-        htmltools::tags$style(htmltools::HTML(dl_chrome_css())),
         shiny::div(class = "dd-chart-dl-host", style = "display:none",
                    shiny::uiOutput(ns("chart_download"), inline = TRUE))
       )

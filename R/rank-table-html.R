@@ -545,6 +545,17 @@ rank_dl_icon <- function() {
   ))
 }
 
+# The chart's download when it offers one format: blockr.ui's tool, as a
+# Shiny download link (a download needs an <a>, which tool_button() is not).
+#' @noRd
+chart_dl_tool <- function(ns, spec) {
+  tip <- paste0("Download as ", spec$label, " (.", spec$ext, ")")
+  shiny::downloadLink(
+    ns(spec$id), rank_dl_icon(), class = "blockr-tool",
+    `aria-label` = tip, `data-blockr-tooltip` = tip
+  )
+}
+
 #' @noRd
 rank_dl_link <- function(ns, spec, menu = FALSE) {
   htmltools::tags$a(
