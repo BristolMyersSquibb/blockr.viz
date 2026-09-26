@@ -1577,26 +1577,21 @@ html_table_shared_css_fallback <- function() {
 :where(.drilldown-table-container, .blockr-rank-container) .blockr-table th.blockr-sortable:hover {
   background-color: var(--blockr-color-bg-subtle, #f9fafb);
 }
+/* The sort cue is the design system's sort bars: short to long for
+   ascending, long to short for descending, in the accent (as in the
+   blockr.ui preview). */
 :where(.drilldown-table-container, .blockr-rank-container) .blockr-sort-icon {
-  position: relative;
   display: inline-block;
   width: 12px;
   height: 12px;
   color: var(--blockr-color-text-accent, #2563eb);
+  background-color: currentColor;
+  -webkit-mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h3M2 6h5.5M2 9h8'/%3E%3C/svg%3E\") no-repeat center / 12px 12px;
+  mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h3M2 6h5.5M2 9h8'/%3E%3C/svg%3E\") no-repeat center / 12px 12px;
 }
-/* The sort cue is the design system's chevron: up for ascending, down for
-   descending, in the accent (as in the blockr.ui preview). */
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-sort-icon-asc::before,
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-sort-icon-desc::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: currentColor;
-  -webkit-mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\") center / 12px 12px no-repeat;
-  mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\") center / 12px 12px no-repeat;
-}
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-sort-icon-asc::before {
-  transform: rotate(180deg);
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-sort-icon-desc {
+  -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h8M2 6h5.5M2 9h3'/%3E%3C/svg%3E\");
+  mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h8M2 6h5.5M2 9h3'/%3E%3C/svg%3E\");
 }
 /* Toolbar + search chrome. Generic table chrome (not the structured Table-1
    treatment), so it lives here in the always-injected shared CSS \u2014 the
