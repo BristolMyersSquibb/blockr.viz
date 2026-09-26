@@ -259,11 +259,50 @@
         );
       }
     }
+    var heads = function () {
+      return Array.prototype.slice.call(
+        tbody.querySelectorAll("tr.blockr-section-header"));
+    };
+    /** @type {HTMLButtonElement | null} */
+    var foldAll = null;
+    // Fold or open every group at once (the corner chevron, Alt+click on a
+    // heading).
+    /** @param {boolean} shut */
+    function setAll(shut) {
+      heads().forEach(function (h) {
+        h.classList.toggle("collapsed", shut);
+        syncAria(h);
+      });
+      recompute();
+      syncFoldAll();
+    }
+    function syncFoldAll() {
+      if (!foldAll) return;
+      var open = heads().every(function (h) {
+        return !h.classList.contains("collapsed");
+      });
+      var act = open ? "Collapse all groups" : "Expand all groups";
+      foldAll.setAttribute("aria-expanded", open ? "true" : "false");
+      foldAll.setAttribute("aria-label", act);
+      foldAll.setAttribute("title", act);
+    }
+    foldAll = buildFoldAll(tbody, function () {
+      setAll(foldAll != null && foldAll.getAttribute("aria-expanded") === "true");
+    });
     root.querySelectorAll("tr.blockr-section-header").forEach(function (h) {
       // The Direction-01 group label is a <button> inside the row; its click
       // bubbles to this row-level handler, so a single listener covers both
       // the button and any bare-cell click.
       h.addEventListener("click", function (ev) {
+        // Alt+click on any heading folds or opens every group, the way the
+        // corner chevron does. Ahead of the drill test: an Alt-click is
+        // never a claim.
+        if (/** @type {MouseEvent} */ (ev).altKey) {
+          ev.stopPropagation();
+          ev.preventDefault();
+          setAll(!h.classList.contains("collapsed"));
+          return;
+        }
         // Structured drill: the section VALUE text is the drill target
         // (wireClick emits the section's filter) -- but only on headers
         // that carry an identity claim (data-dd-keys: row-group headers).
@@ -282,6 +321,7 @@
         h.classList.toggle("collapsed");
         syncAria(h);
         recompute();
+        syncFoldAll();
       });
     });
     // Indent-derived toggles: listen on the chevron button only, so clicking the
@@ -308,6 +348,55 @@
       });
       recompute();
     }
+    syncFoldAll();
+  }
+
+  // The fold-all chevron in the top-left header cell, above the row labels.
+  // Only drawn when the table folds and has groups. The producer's
+  // first-column title (attr(.label, "label"), rendered by R into the cell)
+  // stays exactly as it is and moves beside the chevron; only the chevron is
+  // the button. Without a title the button reads "All". Built here, not in R,
+  // so the exports -- which draw the title from the attribute -- never carry
+  // it. The glyph is a clone of the group chevron, so the two are one svg.
+  /** @param {HTMLElement} tbody @param {() => void} onClick */
+  function buildFoldAll(tbody, onClick) {
+    var table = tbody.closest("table");
+    if (!table) return null;
+    var chev = tbody.querySelector("tr.blockr-section-header .blockr-chev");
+    if (!chev) return null;
+    // A stub header per header row when the producer labels each row; the
+    // bottom one is next to the body, where the group chevrons are.
+    var ths = table.querySelectorAll("thead th.blockr-stub-header");
+    var th = /** @type {HTMLElement | null} */ (ths.length ? ths[ths.length - 1] : null);
+    if (!th || th.querySelector(".dt-foldall")) return null;
+    var title = (th.textContent || "").trim();
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dt-foldall";
+    btn.appendChild(chev.cloneNode(true));
+    btn.addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      ev.preventDefault();
+      onClick();
+    });
+    var wrap = document.createElement("div");
+    wrap.className = "dt-foldall-wrap";
+    wrap.appendChild(btn);
+    if (title) {
+      var lab = document.createElement("span");
+      lab.className = "dt-stub-title";
+      while (th.firstChild) lab.appendChild(th.firstChild);
+      wrap.appendChild(lab);
+    } else {
+      var all = document.createElement("span");
+      all.className = "dt-foldall-all";
+      all.textContent = "All";
+      btn.appendChild(all);
+      th.textContent = "";
+    }
+    th.appendChild(wrap);
+    th.classList.add("dt-has-foldall");
+    return btn;
   }
 
   // Sticky-header scroll shadow: toggle `.scrolled` on the scroll container
@@ -810,6 +899,8 @@
     }
 
     root.classList.add("dt-clickable");
+
+
     tbody.addEventListener("click", function (e) {
       var t = /** @type {Element | null} */ (e.target);
       if (structured) {
@@ -1976,7 +2067,7 @@
       onclickIdx: parseInt(
         table.getAttribute("data-dt-onclick-idx") || "", 10),
       onclickCol: table.getAttribute("data-dt-onclick-col"),
-      rowH: 33,
+      rowH: 30,
       measured: false,
       winStart: 0,
       winEnd: 0
