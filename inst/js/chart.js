@@ -218,6 +218,9 @@
     border: '#e5e7eb',
     surface: '#ffffff',
     danger: '#dc2626',
+    raised: '#ffffff',
+    text: '#111827',
+    shadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
     fontSize: 11,
     face: "'Open Sans', system-ui, sans-serif"
   };
@@ -231,8 +234,44 @@
     INK.border = tok('color-border-default', '#e5e7eb');
     INK.surface = tok('color-bg-surface', '#ffffff');
     INK.danger = tok('color-border-danger', '#dc2626');
+    INK.raised = tok('color-bg-raised', '#ffffff');
+    INK.text = tok('color-text-default', '#111827');
+    INK.shadow = tok('shadow-md', '0 4px 12px rgba(0, 0, 0, 0.1)');
     INK.fontSize = parseFloat(tok('mark-font-size', '11')) || 11;
     INK.face = getComputedStyle(document.body).fontFamily || INK.face;
+  };
+
+  // The data tooltip (design system, Charts). Its box is the raised card
+  // (cardTooltip, applied to every option); its content is a headline at
+  // 13px/600 and rows at 12px with a muted label and a 500 tabular value,
+  // drawn by chart.css. A swatch marks the headline or the row that stands
+  // for one series. Callers pass escaped HTML.
+  /** @param {any} c */
+  const tipSwatch = (c) => typeof c === 'string' && c
+    ? '<span class="dd-tt-sw" style="background:' + c + '"></span>' : '';
+  /** @param {string} text @param {any} [color] */
+  const tipHead = (text, color) =>
+    '<div class="dd-tt-head">' + tipSwatch(color) + '<span>' + text + '</span></div>';
+  /** @param {string} label @param {any} value @param {any} [color] */
+  const tipRow = (label, value, color) =>
+    '<div class="dd-tt-row">' + tipSwatch(color) + '<span class="dd-tt-label">' +
+    label + '</span><span class="dd-tt-value">' + value + '</span></div>';
+  /** @param {string} text */
+  const tipNote = (text) => '<div class="dd-tt-row dd-tt-label">' + text + '</div>';
+  const TIP_SEP = '<div class="dd-tt-sep"></div>';
+  /** @param {any} option */
+  const cardTooltip = (option) => {
+    const tts = Array.isArray(option.tooltip) ? option.tooltip
+      : option.tooltip ? [option.tooltip] : [];
+    for (const t of tts) {
+      Object.assign(t, {
+        backgroundColor: INK.raised, borderColor: INK.border, borderWidth: 1,
+        padding: [6, 10],
+        textStyle: { color: INK.text, fontSize: 12, fontFamily: INK.face },
+        extraCssText: 'border-radius:8px;box-shadow:' + INK.shadow + ';'
+      });
+    }
+    return option;
   };
   const BASE_LINE_WIDTH   = 1.4;
   const BASE_SCATTER_SIZE = 6;
@@ -2339,23 +2378,17 @@
       return String(Math.round((e - s) * 100) / 100);
     }
 
-    // Shared row-level tooltip: a bold headline over a list of label/value
-    // rows (nullish/empty values dropped). Used by the gantt and scatter
+    // Shared row-level tooltip: a headline over a list of label/value rows
+    // (nullish/empty values dropped), with the series swatch in the headline
+    // when `color` is given. Used by the gantt, scatter, pie and treemap
     // tooltips so a hovered mark reports every dimension mapped to it, not
     // just one. `pairs` is an array of [label, value].
-    /** @param {any} headline @param {Array<[string, any]>} pairs */
-    _rowTooltip(headline, pairs) {
-      const rows = pairs
+    /** @param {any} headline @param {Array<[string, any]>} pairs @param {any} [color] */
+    _rowTooltip(headline, pairs, color) {
+      return tipHead(this._esc(headline), color) + pairs
         .filter(p => p[1] != null && p[1] !== '')
-        .map(p =>
-          '<div style="display:flex;gap:16px;font-size:11px;line-height:1.6">' +
-          '<span style="color:#888">' + this._esc(p[0]) + '</span>' +
-          '<span style="margin-left:auto;font-weight:500;text-align:right">' +
-          this._esc(p[1]) + '</span></div>')
+        .map(p => tipRow(this._esc(p[0]), this._esc(p[1])))
         .join('');
-      return '<div style="min-width:170px">' +
-        '<div style="font-weight:700;margin-bottom:4px">' +
-        this._esc(headline) + '</div>' + rows + '</div>';
     }
 
     /** @param {any} v */
@@ -3664,7 +3697,7 @@
           ? { ...anyOption.__xFit, slot, baseH: panelH - anyOption.__xFit.gutter }
           : undefined;
         delete anyOption.__xFit;
-        chart.setOption(this._applyDrillEmphasis(option), true);
+        chart.setOption(cardTooltip(this._applyDrillEmphasis(option)), true);
         if (existed && hChanged) chart.resize();
       }
       this.charts = this._slots.map(s => s.chart).filter(Boolean);
@@ -3755,8 +3788,8 @@
         for (let i = 0; i < ttFields.length; i++) {
           const v = extra[i];
           if (v != null && v !== '') {
-            out.push(this._esc(this._axisTitle(ttFields[i]) || ttFields[i]) +
-              ': ' + this._esc(v));
+            out.push(tipRow(this._esc(this._axisTitle(ttFields[i]) || ttFields[i]),
+              this._esc(v)));
           }
         }
         return out;
@@ -3945,6 +3978,9 @@
         Number.isInteger(n) ? n : Math.round(n * 100) / 100;
       /** @type {Record<string, any>} */
       const tooltip = { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true };
+      // A split bar's rows name the colour column with the level ("drv 4").
+      const colorName = colors.length
+        ? this._esc(this._axisTitle(this.config.color) || this.config.color) + ' ' : '';
       if (showPercent) {
         tooltip.formatter = (/** @type {any[]} */ ps) => {
           if (!ps || !ps.length) return '';
@@ -3954,10 +3990,10 @@
             .map(p => {
               const pct = Math.round((Number(p.value) || 0) * 100);
               const raw = p.data && p.data.raw != null ? fmtRaw(p.data.raw) : null;
-              return p.marker + p.seriesName + ': ' + pct + '%' +
-                (raw != null ? ' (' + raw + ')' : '');
+              return tipRow(colorName + this._esc(p.seriesName),
+                pct + '%' + (raw != null ? ' (' + raw + ')' : ''), p.color);
             });
-          return head + '<br/>' + rows.concat(ttExtraRows(head)).join('<br/>');
+          return tipHead(this._esc(head)) + rows.concat(ttExtraRows(head)).join('');
         };
       } else {
         // Non-percent bar: name the value by the aggregation (a bare number
@@ -3969,6 +4005,9 @@
         for (const a of facetData) nOf[a.group + '|||' + a.color] = a.n;
         const aggLabel = this._aggLabel();
         const showN = this.config.func !== 'count' && this.config.func !== 'identity';
+        // A split bar's rows add up to its total only for a count or a sum.
+        // Otherwise the headline names what the numbers are ("Mean of hwy").
+        const additive = this.config.func === 'count' || this.config.func === 'sum';
         tooltip.formatter = (/** @type {any[]} */ ps) => {
           if (!ps || !ps.length) return '';
           const head = ps[0].axisValueLabel || ps[0].name || '';
@@ -3989,11 +4028,24 @@
               const shown = pctFunc
                 ? Math.round(Number(p.value) * 1000) / 10 + '%'
                 : fmtRaw(Number(p.value));
-              return p.marker + this._esc(nm) + ': ' + shown +
-                (pctFunc && n != null ? '  (' + n + ')' : '') +
-                (!pctFunc && withN && n != null ? '  (n=' + n + ')' : '');
+              return tipRow(colors.length ? colorName + this._esc(nm) : this._esc(nm),
+                shown +
+                (pctFunc && n != null ? ' (' + n + ')' : '') +
+                (!pctFunc && withN && n != null ? ' (n=' + n + ')' : ''),
+                colors.length ? p.color : null);
             });
-          return this._esc(head) + '<br/>' + rows.concat(ttExtraRows(head)).join('<br/>');
+          const vals = ps.filter(p => p && p.value != null);
+          let foot = '';
+          if (colors.length && vals.length > 1) {
+            foot = additive && !pctFunc
+              ? TIP_SEP + tipRow(this._esc(aggLabel),
+                fmtRaw(vals.reduce((a, p) => a + Number(p.value || 0), 0)))
+              : '';
+          }
+          const note = colors.length && !(additive && !pctFunc)
+            ? tipNote(this._esc(aggLabel)) : '';
+          return tipHead(this._esc(head)) + note + rows.join('') + foot +
+            ttExtraRows(head).join('');
         };
       }
       // The HTML band shows the chips; the panel keeps only a HIDDEN legend
@@ -4151,8 +4203,8 @@
             const p = (params || []).find((/** @type {any} */ x) => x.seriesName === 'delta');
             if (!p) return '';
             // A null step (gap) has no delta to report.
-            return '<b>' + p.name + '</b><br>' +
-              (p.value == null ? '–' : ddNum(p.value));
+            return tipHead(this._esc(p.name)) + tipRow(this._esc(this._aggLabel()),
+              p.value == null ? '–' : ddNum(p.value));
           }
         },
         legend: { show: false },
@@ -4182,7 +4234,7 @@
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || paletteAt(palette, i) } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: INK.face }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n, p.percent)) }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: INK.fontSize, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: INK.face }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n, p.percent), p.color) }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: INK.fontSize, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
     }
 
     /** @param {any[]} facetData @param {any[]} groups @param {any[]} palette */
@@ -4194,7 +4246,7 @@
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || paletteAt(palette, i) } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: INK.face }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: INK.fontSize, formatter: (/** @type {any} */ p) => p.name + '\n' + ddNum(Number(p.value)) }, itemStyle: { borderColor: INK.surface, borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: INK.face }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n), p.color) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: INK.fontSize, formatter: (/** @type {any} */ p) => p.name + '\n' + ddNum(Number(p.value)) }, itemStyle: { borderColor: INK.surface, borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
     }
 
     // Radar = an aggregated chart in polar coords: the group levels are the
@@ -4247,13 +4299,13 @@
         tooltip: {
           trigger: 'item',
           confine: true,
-          formatter: (/** @type {any} */ p) => '<b>' + this._esc(p.name) +
-            '</b> <span style="color:#888;font-size:11px">(' +
-            this._esc(this._aggLabel()) + ')</span><br>' +
+          formatter: (/** @type {any} */ p) =>
+            tipHead(this._esc(p.name), legendOn ? p.color : null) +
+            tipNote(this._esc(this._aggLabel())) +
             groups.map((g, i) => {
               const v = p.value ? p.value[i] : null;
-              return this._esc(g) + ': ' + (v == null ? '–' : ddNum(v));
-            }).join('<br>')
+              return tipRow(this._esc(g), v == null ? '–' : ddNum(v));
+            }).join('')
         },
         legend: legendOn ? { show: false, data: colors } : { show: false },
         radar: {
@@ -4569,11 +4621,11 @@
         // [dataIndex, wLo, bLo, center, bHi, wHi] — read the last five.
         const five = d.value.slice(-5);
         const h = ttHead(p);
-        return (h ? h + '<br/>' : '') +
-          'n: ' + d.n +
-          '<br/>' + bodyMeta.center + ': ' + ddNum(five[2]) +
-          '<br/>Box (' + bodyMeta.range + '): ' + ddNum(five[1]) + ', ' + ddNum(five[3]) +
-          '<br/>Whiskers (' + whiskMeta.range + '): ' + ddNum(five[0]) + ' \u2013 ' + ddNum(five[4]);
+        return (h ? tipHead(this._esc(h), split ? p.color : null) : '') +
+          tipRow('n', d.n) +
+          tipRow(this._esc(bodyMeta.center), ddNum(five[2])) +
+          tipRow('Box (' + this._esc(bodyMeta.range) + ')', ddNum(five[1]) + ', ' + ddNum(five[3])) +
+          tipRow('Whiskers (' + this._esc(whiskMeta.range) + ')', ddNum(five[0]) + ' \u2013 ' + ddNum(five[4]));
       };
       // Pointrange center datum: {value, center, n, lo, hi} (the whisker +
       // connect series are silent, only the centers hit-test). `center` is
@@ -4583,10 +4635,10 @@
         const d = p.data;
         if (!d || !d.n) return '';
         const h = ttHead(p);
-        return (h ? h + '<br/>' : '') +
-          'n: ' + d.n +
-          '<br/>' + bodyMeta.center + ': ' + ddNum(d.center) +
-          '<br/>' + bodyMeta.range + ': ' + ddNum(d.lo) + ' \u2013 ' + ddNum(d.hi);
+        return (h ? tipHead(this._esc(h), split ? p.color : null) : '') +
+          tipRow('n', d.n) +
+          tipRow(this._esc(bodyMeta.center), ddNum(d.center)) +
+          tipRow(this._esc(bodyMeta.range), ddNum(d.lo) + ' \u2013 ' + ddNum(d.hi));
       };
       const legendOn = split;
       const bottomBase = 46 + (vertical && xlab ? xlab.bottom : 0);
@@ -5620,12 +5672,13 @@
               // Without a series split there is one unnamed series and
               // ECharts invents "series0" — label the y column instead.
               const nm = splitCol ? p.seriesName : this._axisTitle(y);
-              return p.marker + nm + ': ' + ddNum3(p.value[1]) + ttSuffix(p.value);
+              return tipRow(this._esc(nm), ddNum3(p.value[1]) + ttSuffix(p.value),
+                splitCol ? p.color : null);
             });
             if (ttRows.length > TT_ROW_CAP) {
-              lines.push('… +' + (ttRows.length - TT_ROW_CAP) + ' more');
+              lines.push(tipNote('+' + (ttRows.length - TT_ROW_CAP) + ' more'));
             }
-            return head + '<br/>' + lines.join('<br/>');
+            return tipHead(this._esc(head)) + lines.join('');
           }
         };
         // The panel draws no legend at all: the option keeps a hidden legend
@@ -5755,7 +5808,7 @@
                   // the mapped roles. _rowTooltip drops empties.
                   ttFields.forEach((c, i) =>
                     pairs.push([this._axisTitle(c) || c, ttVal(p.value[2 + i])]));
-                  return this._rowTooltip(headline, pairs);
+                  return this._rowTooltip(headline, pairs, lvl ? p.color : null);
                 } },
           // Always set explicitly; leaving legend undefined lets echarts
           // auto-render one per series, which eats the plot area when
@@ -5784,7 +5837,7 @@
         slot.seriesByColorByVal =
           (useColorByLegend && seriesByColorByVal) ? seriesByColorByVal : null;
 
-        chart.setOption(this._applyDrillEmphasis(option), true);
+        chart.setOption(cardTooltip(this._applyDrillEmphasis(option)), true);
         // A RETAINED instance measured the old height at init; a fresh one
         // already measured the new one (set above _ensureSlotChart).
         if (existed && hChanged) chart.resize();
@@ -6192,7 +6245,7 @@
           series: seriesArray
         };
 
-        chart.setOption(this._applyDrillEmphasis(option), true);
+        chart.setOption(cardTooltip(this._applyDrillEmphasis(option)), true);
         if (existed && hChanged) chart.resize();
       }
 
@@ -6335,15 +6388,33 @@
         this._funcToggleKey = key;
         if (this.funcToggleEl) { this.funcToggleEl.remove(); this.funcToggleEl = null; }
         if (choices.length < 2 || !this.gearHeader) return;
+        // A pill that opens a menu (design system): the pill shows the
+        // current aggregation's symbol, the menu names every choice.
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'dd-func-btn';
+        btn.className = 'blockr-pill blockr-pill--menu dd-func-pill';
+        btn.setAttribute('aria-haspopup', 'listbox');
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           const cs = this._funcToggleChoices();
-          const at = cs.indexOf(this.config.func);
-          this._setFunc(cs[(at + 1) % cs.length]);
+          const menu = /** @type {NonNullable<BlockrSelectStatic['menu']>} */
+            (/** @type {BlockrSelectStatic} */ (Blockr.Select).menu);
+          btn.setAttribute('aria-expanded', 'true');
+          // Rows lead with the name, the pill's symbol muted after it.
+          menu(btn, {
+            title: 'Aggregation',
+            options: cs.map((v) => ({ value: this._funcLabel(v), label: FUNC_SHORT[v] || '' })),
+            selected: this._funcLabel(this.config.func),
+            search: false,
+            align: 'end',
+            onChange: (/** @type {string} */ name) => {
+              const v = cs.find((c) => this._funcLabel(c) === name);
+              if (v && v !== this.config.func) this._setFunc(v);
+            },
+            onClose: () => btn.setAttribute('aria-expanded', 'false')
+          });
         });
+        Blockr.tooltip.set(btn, () => 'Aggregation: ' + this._funcLabel(this.config.func));
         this.funcToggleEl = btn;
         // Before the gear, after the download: the order the header already
         // reads in, most-used control nearest the content.
@@ -6353,7 +6424,7 @@
     }
 
     /**
-     * The aggregations the switch cycles through. 'on' is sugar for the pair
+     * The aggregations the switch offers. 'on' is sugar for the pair
      * this exists for, expanded here rather than in R so the gear's select can
      * bind straight to the stored value; 'off' and anything under two entries
      * mean no switch.
@@ -6375,23 +6446,16 @@
       return opt ? opt.label : value;
     }
 
-    /**
-     * Paint the square with the CURRENT aggregation, and say in the tooltip
-     * both what it is showing and what a click does — the standing weakness of
-     * a click-through control is that the label alone reads either way.
-     */
+    /** Paint the pill with the CURRENT aggregation's symbol. */
     _syncFuncToggle() {
       const btn = this.funcToggleEl;
       if (!btn) return;
-      const cs = this._funcToggleChoices();
-      const at = cs.indexOf(this.config.func);
-      const cur = at >= 0 ? cs[at] : cs[0];
-      const next = cs[((at < 0 ? 0 : at) + 1) % cs.length];
-      btn.textContent = FUNC_SHORT[cur] || this._funcLabel(cur);
-      const title = 'Showing ' + this._funcLabel(cur) +
-        ' \u2014 click for ' + this._funcLabel(next);
-      btn.title = title;
-      btn.setAttribute('aria-label', title);
+      // The aggregation the chart draws, even when it is not one of the
+      // choices (a func_toggle pair set on a chart that counts rows).
+      const cur = this.config.func;
+      btn.innerHTML = this._esc(FUNC_SHORT[cur] || this._funcLabel(cur)) +
+        '<span class="blockr-pill__caret">' + Blockr.icons.chevron + '</span>';
+      btn.setAttribute('aria-label', 'Aggregation: ' + this._funcLabel(cur));
     }
 
     /**

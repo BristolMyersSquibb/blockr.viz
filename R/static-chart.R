@@ -258,14 +258,6 @@ static_chart <- function(data,
     gg_x_label_theme(data, chart_type, horiz, group, facet,
                      count_on, count_col, func, facet_cols)
 
-  if (!is.null(facet)) {
-    # The canvas boxes each panel in a hairline (.dd-facet border); added
-    # after the theme because theme_minimal blanks panel.border.
-    p <- p + ggplot2::theme(panel.border = ggplot2::element_rect(
-      fill = NA, color = GG_SPLIT_LINE_COLOR, linewidth = gg_px_lw(1)
-    ))
-  }
-
   gg_attach_pptx_size(p, data, chart_type, horiz, group, color,
                       facet, bar_mode, facet_cols)
 }
@@ -1613,18 +1605,17 @@ gg_theme <- function() {
         size = gg_px_pt(11), face = "bold", color = "#6b7280"
       ),
       legend.text = ggplot2::element_text(
-        size = gg_px_pt(11), color = "#333333"
+        size = gg_px_pt(11), color = GG_AXIS_LABEL_COLOR
       ),
       legend.key.width = grid::unit(25 / 96, "in"),
       legend.key.height = grid::unit(14 / 96, "in"),
-      strip.background = ggplot2::element_rect(
-        fill = "#f9fafb", color = GG_SPLIT_LINE_COLOR,
-        linewidth = gg_px_lw(1)
-      ),
+      # The strip is a section title over its panel, as on the canvas: no
+      # band, no box.
+      strip.background = ggplot2::element_blank(),
       strip.text = ggplot2::element_text(
         face = "bold", color = "#6b7280", size = gg_px_pt(12)
       ),
-      panel.spacing = grid::unit(8 / 96, "in")
+      panel.spacing = grid::unit(24 / 96, "in")
     )
 }
 

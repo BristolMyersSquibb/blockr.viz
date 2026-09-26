@@ -212,6 +212,11 @@ interface BlockrNamespace {
     set(v: boolean): void;
     get(): boolean;
   };
+  /** The light-card tooltip (blockr.ui's blockr-ui.js). */
+  tooltip: {
+    set(el: Element, content: unknown, opts?: { overflow?: boolean }): void;
+    clear(el: Element): void;
+  };
   /** Design-system segmented control (blockr.ui's blockr-ui.js). */
   segmented(
     options: { value: string; label: string; title?: string }[],
