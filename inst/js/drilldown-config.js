@@ -687,15 +687,18 @@
       ta.spellcheck = false;
       ta.placeholder = 'data |> dplyr::filter(...)';
       ta.value = cfg.script == null ? '' : String(cfg.script);
-      // Commit on blur or the Apply chip, never per keystroke: every commit
-      // re-runs the script server-side and re-serializes the whole frame for
-      // the browser. Escape reverts to the last committed text. Enter inserts
-      // a newline, because this is a script and not a one-line field.
+      // Commit on blur, Mod+Enter or the chip, never per keystroke: every
+      // commit re-runs the script server-side and re-serializes the whole
+      // frame for the browser. Escape reverts to the last committed text.
+      // Enter inserts a newline, because this is a script and not a one-line
+      // field, so the chip shows ⌘↵ / Ctrl+↵ (design system, "Keyboard
+      // shortcuts").
       let committed = ta.value;
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'blockr-expr-confirm dd-text-commit';
-      chip.textContent = 'Apply';
+      chip.textContent = Blockr.keys('Mod+Enter');
+      chip.setAttribute('aria-label', 'Apply (' + Blockr.keys('Mod+Enter') + ')');
       chip.style.display = 'none';
       const sync = () => { chip.style.display = ta.value === committed ? 'none' : ''; };
       const commit = () => {
@@ -709,6 +712,10 @@
       ta.addEventListener('blur', commit);
       ta.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') { ta.value = committed; sync(); }
+        else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          commit();
+        }
       });
       chip.addEventListener('mousedown', (e) => e.preventDefault());
       chip.addEventListener('click', commit);
@@ -2236,7 +2243,7 @@
         // no .dd-picker-wrap here — that wrapper carries its own border for the
         // borderless Blockr.Select; a bordered input inside it double-borders.
         // Commit model (design-system §5.5): typing never mutates cfg — the
-        // value commits on Enter, blur or the "Enter ↵" chip, which then fades
+        // value commits on Enter, blur or the ↵ button, which then fades
         // to ✓; Escape reverts to the last committed value.
         const inp = document.createElement('input');
         inp.type = 'text';
@@ -2254,7 +2261,7 @@
         wrap.className = 'dd-text-wrap';
         const chip = document.createElement('button');
         chip.type = 'button';
-        chip.className = 'blockr-expr-confirm dd-text-commit';
+        chip.className = 'blockr-expr-confirm blockr-expr-confirm--key dd-text-commit';
         chip.setAttribute('aria-label', 'Apply (Enter)');
         chip.style.display = 'none';
         let committed = inp.value;
@@ -2266,7 +2273,7 @@
           if (inp.value !== committed) {
             chip.style.display = '';
             chip.classList.remove('confirmed');
-            chip.innerHTML = 'Enter <span class="blockr-kbd">↵</span>';
+            chip.textContent = '↵';
           } else if (everCommitted) {
             chip.style.display = '';
             chip.classList.add('confirmed');

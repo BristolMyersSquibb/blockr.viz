@@ -352,7 +352,7 @@
       // commits on Enter/blur/chip, the chip fades to ✓, Escape reverts.
       const chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = 'blockr-expr-confirm';
+      chip.className = 'blockr-expr-confirm blockr-expr-confirm--key';
       chip.setAttribute('aria-label', 'Apply (Enter)');
       chip.style.display = 'none';
       let committed = input.value;
@@ -361,7 +361,7 @@
         if (input.value !== committed) {
           chip.style.display = '';
           chip.classList.remove('confirmed');
-          chip.innerHTML = 'Enter <span class="blockr-kbd">↵</span>';
+          chip.textContent = '↵';
         } else if (everCommitted) {
           chip.style.display = '';
           chip.classList.add('confirmed');
