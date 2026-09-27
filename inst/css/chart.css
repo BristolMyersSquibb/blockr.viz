@@ -77,7 +77,7 @@
 .dd-text-wrap .blockr-text-input {
   flex: 1 1 auto;
   min-width: 0;
-  padding-right: 78px;
+  padding-right: 40px;
 }
 
 .dd-text-wrap .blockr-expr-confirm {
@@ -1268,7 +1268,7 @@
   overflow-wrap: normal;
   overflow-x: auto;
 }
-/* The Apply chip sits under the box rather than inside it: a textarea's
+/* The ⌘↵ chip sits under the box rather than inside it: a textarea's
    bottom-right corner already belongs to the resize handle. */
 .dd-script-wrap .dd-text-commit {
   margin-top: 6px;
