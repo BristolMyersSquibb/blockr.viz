@@ -1076,7 +1076,7 @@ html_table_delta_css <- function(scope = ".blockr-html-table-container") {
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  padding: 10px calc(4px + var(--blockr-card-inset, 0px));
+  padding: 10px 4px;
   border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 .blockr-html-table-title {
@@ -1154,8 +1154,8 @@ input.blockr-search:focus {
   background-size: 100% 1px;
   background-position: left bottom;
 }
-/* In a block card the table runs to the card edges (see the container rule
-   in table.css): the last column pads its text back in by the card's inset,
+/* In a block card the table runs to the card edges (see the rules at the
+   end of table.css): the last column pads its text back in by the card's inset,
    as the row labels do on the left. */
 .blockr-html-table-container .blockr-table thead th.blockr-col-header:last-child,
 .blockr-html-table-container .blockr-table tbody td.blockr-data:last-child {
@@ -1513,7 +1513,7 @@ input.blockr-search:focus {
   box-shadow: 0 10px 16px -14px rgba(16, 24, 40, 0.4);
 }
 .blockr-html-table-caption {
-  padding: 8px calc(4px + var(--blockr-card-inset, 0px)) 4px;
+  padding: 8px 4px 4px;
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-color-text-muted, #6b7280);
 }
@@ -1627,7 +1627,7 @@ html_table_shared_css_fallback <- function() {
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  padding: 10px calc(4px + var(--blockr-card-inset, 0px));
+  padding: 10px 4px;
   border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 .blockr-html-table-toolbar {

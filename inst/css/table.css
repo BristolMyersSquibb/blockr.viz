@@ -484,16 +484,24 @@
   text-align: center;
 }
 
-/* In a block card the table runs to the card edges: the container pulls
-   itself out by the card's inset (--blockr-card-inset, set by blockr.dock)
-   and the first and last columns, the search bar and the footer pad their
-   text back in by as much (the structured table's row labels and last
-   column do so in the delta CSS, html_table_delta_css()). The rules, the
-   hover and drill washes and the scroll area reach the edges; every text
-   keeps its place. Outside a card the inset is 0. */
-.drilldown-table-container {
-  margin: 0 calc(-1 * var(--blockr-card-inset, 0px));
-  width: calc(100% + 2 * var(--blockr-card-inset, 0px));
+/* In a block card the table runs to the card edges: its scroll box, its
+   search bar and its footer pull themselves out by the card's inset
+   (--blockr-card-inset, set by blockr.dock), and the first and last columns,
+   the search bar and the footer pad their text back in by as much (the
+   structured table's row labels and last column do so in the delta CSS,
+   html_table_delta_css()). The rules, the hover and drill washes and the
+   scroll area reach the edges; every text keeps its place. Whatever else a
+   caller puts in the container (the composer's title row, its code tray)
+   stays on the card's inset. Outside a card the inset is 0. */
+.drilldown-table-container > .blockr-table-wrapper,
+.drilldown-table-container > .dt-table-footer,
+.drilldown-table-container > .blockr-html-table-header {
+  margin-left: calc(-1 * var(--blockr-card-inset, 0px));
+  margin-right: calc(-1 * var(--blockr-card-inset, 0px));
+}
+.drilldown-table-container > .blockr-html-table-header {
+  padding-left: calc(4px + var(--blockr-card-inset, 0px));
+  padding-right: calc(4px + var(--blockr-card-inset, 0px));
 }
 .drilldown-table-container .blockr-table tr > :first-child {
   padding-left: calc(12px + var(--blockr-card-inset, 0px));
