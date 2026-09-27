@@ -960,7 +960,8 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   # Stub + data cells, column-vectorized.
   if (!is.null(stub_col)) {
     stub_style <- ifelse(row_indent > 0L,
-      paste0(" style=\"padding-left:", 24L + row_indent * indent_px, "px;\""),
+      paste0(" style=\"padding-left:calc(", 24L + row_indent * indent_px,
+             "px + var(--blockr-card-inset, 0px));\""),
       "")
     # Parent rows get a chevron toggle button before the label; the JS attaches
     # to the button so it never competes with a drill click on the row.
@@ -1075,7 +1076,7 @@ html_table_delta_css <- function(scope = ".blockr-html-table-container") {
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  padding: 10px 4px;
+  padding: 10px calc(4px + var(--blockr-card-inset, 0px));
   border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 .blockr-html-table-title {
@@ -1137,10 +1138,28 @@ input.blockr-search:focus {
 }
 .blockr-html-table-container .blockr-table thead th.blockr-col-header {
   text-align: right;
-  background-image: linear-gradient(var(--blockr-color-border-strong, #d1d5db), var(--blockr-color-border-strong, #d1d5db));
+}
+/* One unbroken rule under the whole header, in the grey of the card's rule
+   above the table: under every cell of the last header row and under the
+   cells that span down to it (the row-label title, a column without a
+   spanner). A spanner's tile sits above it. Drawn on the cells rather than
+   as a border, which would not travel with the sticky header. */
+.blockr-html-table-container .blockr-table thead th {
+  background-image: none;
+}
+.blockr-html-table-container .blockr-table thead tr:last-child > th,
+.blockr-html-table-container .blockr-table thead th[rowspan] {
+  background-image: linear-gradient(var(--blockr-color-border-default, #e5e7eb), var(--blockr-color-border-default, #e5e7eb));
   background-repeat: no-repeat;
-  background-size: calc(100% - 12px) 1px;
-  background-position: right bottom;
+  background-size: 100% 1px;
+  background-position: left bottom;
+}
+/* In a block card the table runs to the card edges (see the container rule
+   in table.css): the last column pads its text back in by the card's inset,
+   as the row labels do on the left. */
+.blockr-html-table-container .blockr-table thead th.blockr-col-header:last-child,
+.blockr-html-table-container .blockr-table tbody td.blockr-data:last-child {
+  padding-right: calc(12px + var(--blockr-card-inset, 0px));
 }
 ",
 "/* A group header sits ABOVE the columns it names, so it cannot read smaller
@@ -1150,8 +1169,7 @@ input.blockr-search:focus {
    have nothing else to separate them, and a fill that runs edge to edge just
    makes one grey band with words in it. The inset gutters cut that band into
    tiles; the wash is translucent so a drill-active column still shows through.
-   The `background` shorthand also clears the leaf's column rule: the tile is
-   the group's edge. */
+   The last spanner keeps its gutter clear of the card's inset too. */
 .blockr-html-table-container .blockr-table thead th.blockr-col-header.group {
   text-align: center;
   font-size: 13.5px;
@@ -1162,6 +1180,11 @@ input.blockr-search:focus {
   box-shadow:
     inset 5px 0 0 0 var(--blockr-color-bg-surface, #ffffff),
     inset -5px 0 0 0 var(--blockr-color-bg-surface, #ffffff);
+}
+.blockr-html-table-container .blockr-table thead th.blockr-col-header.group:last-child {
+  box-shadow:
+    inset 5px 0 0 0 var(--blockr-color-bg-surface, #ffffff),
+    inset calc(-5px - var(--blockr-card-inset, 0px)) 0 0 0 var(--blockr-color-bg-surface, #ffffff);
 }
 /* A spanner's Big N sub-line follows its own row's centring, not the
    flush-right the leaf headers use to sit over their numbers. */
@@ -1220,10 +1243,11 @@ input.blockr-search:focus {
   font-size: 13.5px;
 }
 /* The first-column title is the producer's text (attr(.label, \"label\")), in
-   the body's size and ink. No rule under it: the rules belong to the value
-   columns. */
+   the body's size and ink, padded in by the card's inset like the row
+   labels under it. */
 .blockr-html-table-container .blockr-table thead th.blockr-stub-header {
   text-align: left;
+  padding-left: calc(12px + var(--blockr-card-inset, 0px));
   font-size: 13px;
   line-height: 20px;
   letter-spacing: normal;
@@ -1284,7 +1308,7 @@ input.blockr-search:focus {
   overflow: visible;
   text-overflow: clip;
   max-width: none;
-  padding: 5px 18px 5px 24px;
+  padding: 5px 18px 5px calc(24px + var(--blockr-card-inset, 0px));
   line-height: 20px;
   font-size: var(--blockr-font-size-base, 0.875rem);
   font-weight: var(--blockr-font-weight-normal, 400);
@@ -1384,7 +1408,7 @@ input.blockr-search:focus {
   cursor: pointer;
 }
 .blockr-html-table-container .blockr-table tbody tr.blockr-section-header td.blockr-section-cell {
-  padding: 0;
+  padding: 0 0 0 var(--blockr-card-inset, 0px);
   text-align: left;
   border-top: none;
 }
@@ -1489,7 +1513,7 @@ input.blockr-search:focus {
   box-shadow: 0 10px 16px -14px rgba(16, 24, 40, 0.4);
 }
 .blockr-html-table-caption {
-  padding: 8px 4px 4px;
+  padding: 8px calc(4px + var(--blockr-card-inset, 0px)) 4px;
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-color-text-muted, #6b7280);
 }
@@ -1602,7 +1626,7 @@ html_table_shared_css_fallback <- function() {
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  padding: 10px 4px;
+  padding: 10px calc(4px + var(--blockr-card-inset, 0px));
   border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
 }
 .blockr-html-table-toolbar {

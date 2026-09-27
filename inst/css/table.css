@@ -408,6 +408,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 0 var(--blockr-card-inset, 0px);
 }
 
 /* The status half takes the rest of the row, so its Reset stays hard right.
@@ -481,4 +482,22 @@
   padding-left: 4px;
   padding-right: 4px;
   text-align: center;
+}
+
+/* In a block card the table runs to the card edges: the container pulls
+   itself out by the card's inset (--blockr-card-inset, set by blockr.dock)
+   and the first and last columns, the search bar and the footer pad their
+   text back in by as much (the structured table's row labels and last
+   column do so in the delta CSS, html_table_delta_css()). The rules, the
+   hover and drill washes and the scroll area reach the edges; every text
+   keeps its place. Outside a card the inset is 0. */
+.drilldown-table-container {
+  margin: 0 calc(-1 * var(--blockr-card-inset, 0px));
+  width: calc(100% + 2 * var(--blockr-card-inset, 0px));
+}
+.drilldown-table-container .blockr-table tr > :first-child {
+  padding-left: calc(12px + var(--blockr-card-inset, 0px));
+}
+.drilldown-table-container .blockr-table tr > :last-child {
+  padding-right: calc(12px + var(--blockr-card-inset, 0px));
 }

@@ -439,9 +439,10 @@ test_that("html_table() applies hidden .indent/.strong/.emph styling columns", {
   )
   html <- as.character(htmltools::tagList(html_table(df)))
   # Stub padding is a 24px base (aligns indented rows with the section-header
-  # label) + 16px per indent level: level-1 -> 40px, level-2 -> 56px.
-  expect_true(grepl("padding-left:40px", html, fixed = TRUE))
-  expect_true(grepl("padding-left:56px", html, fixed = TRUE))
+  # label) + 16px per indent level: level-1 -> 40px, level-2 -> 56px, plus
+  # the card's inset (0 outside a block card).
+  expect_true(grepl("padding-left:calc(40px + var(--blockr-card-inset, 0px))", html, fixed = TRUE))
+  expect_true(grepl("padding-left:calc(56px + var(--blockr-card-inset, 0px))", html, fixed = TRUE))
   # Bold and italic classes on data rows
   expect_true(grepl("blockr-data-row blockr-bold", html, fixed = TRUE))
   expect_true(grepl("blockr-data-row blockr-italic", html, fixed = TRUE))
@@ -514,12 +515,12 @@ test_that("delta CSS draws the clinical table style", {
     squash(m)
   }
 
-  # A rule under each column header, 12px short and flush right; the stub
-  # header and the row borders stay transparent.
-  leaf <- rule(".drilldown-table-structured .blockr-table thead th.blockr-col-header")
-  expect_match(leaf, "linear-gradient(var(--blockr-color-border-strong", fixed = TRUE)
-  expect_match(leaf, "background-size: calc(100% - 12px) 1px;", fixed = TRUE)
-  expect_match(leaf, "background-position: right bottom;", fixed = TRUE)
+  # One unbroken border-default rule under the whole header: the last header
+  # row and the cells that span down to it. The row borders stay transparent.
+  hrule <- rule(".drilldown-table-structured .blockr-table thead th[rowspan]")
+  expect_match(hrule, "linear-gradient(var(--blockr-color-border-default", fixed = TRUE)
+  expect_match(hrule, "background-size: 100% 1px;", fixed = TRUE)
+  expect_match(css, ".drilldown-table-structured .blockr-table thead tr:last-child > th,", fixed = TRUE)
   expect_match(rule(".drilldown-table-structured .blockr-table thead th"),
                "border-bottom: 1px solid transparent;", fixed = TRUE)
   expect_match(rule(".drilldown-table-structured .blockr-table tbody tr"),
@@ -530,7 +531,7 @@ test_that("delta CSS draws the clinical table style", {
   expect_match(data_td, "padding: 5px 12px;", fixed = TRUE)
   expect_match(data_td, "line-height: 20px;", fixed = TRUE)
   stub <- rule(".drilldown-table-structured .blockr-table tbody td.blockr-stub")
-  expect_match(stub, "padding: 5px 18px 5px 24px;", fixed = TRUE)
+  expect_match(stub, "padding: 5px 18px 5px calc(24px + var(--blockr-card-inset, 0px));", fixed = TRUE)
   expect_match(stub, "line-height: 20px;", fixed = TRUE)
   expect_match(stub, "color: var(--blockr-color-text-default", fixed = TRUE)
   expect_match(rule(".drilldown-table-structured .blockr-section-btn"),
