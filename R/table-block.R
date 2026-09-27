@@ -1073,7 +1073,8 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
             ":has(.blockr-table[data-dt-structured=\"1\"])"
           )
         ),
-        html_table_delta_css(scope = ".drilldown-table-structured")
+        html_table_delta_css(scope = ".drilldown-table-structured"),
+        html_table_chev_css()
       )))
     },
     drilldown_table_dep(),

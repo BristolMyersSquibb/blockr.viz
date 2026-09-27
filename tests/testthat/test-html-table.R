@@ -546,9 +546,16 @@ test_that("delta CSS draws the clinical table style", {
 
   # The chevron: 12px with a constant 1.4px stroke.
   expect_match(rule(".drilldown-table-structured .blockr-chev"), "width: 12px;", fixed = TRUE)
-  chev_path <- rule(".drilldown-table-structured .blockr-chev path")
+  chev_path <- squash(html_table_chev_css())
+  expect_match(chev_path, "^\\.blockr-html-table-container \\.blockr-chev path \\{")
   expect_match(chev_path, "vector-effect: non-scaling-stroke;", fixed = TRUE)
   expect_match(chev_path, "stroke-width: 1.4px;", fixed = TRUE)
+  # Never under a :has() scope: with the descendant `path` it made every DOM
+  # insertion restyle the whole page.
+  has_scoped <- html_table_delta_css(
+    scope = ".blockr-html-table-container:has(.blockr-table[data-dt-structured=\"1\"])"
+  )
+  expect_false(grepl(" path {", has_scoped, fixed = TRUE))
 
   # Drill states: selected tint, accent ink, no bars; the cross one step up.
   expect_match(css, "tr.dt-row-active > td.dt-col-active {\n  background-color: var(--blockr-color-bg-accent-subtle-hover",

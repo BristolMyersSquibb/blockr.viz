@@ -160,7 +160,9 @@ html_table <- function(data,
 
   htmltools::tagList(
     shared_css,
-    htmltools::tags$style(htmltools::HTML(html_table_delta_css())),
+    htmltools::tags$style(htmltools::HTML(
+      paste0(html_table_delta_css(), html_table_chev_css())
+    )),
     htmltools::tags$div(
       id = wrapper_id,
       class = "blockr-html-table-container",
@@ -1452,17 +1454,13 @@ input.blockr-search:focus {
 /* The design system's chevron: 12px, a 1.4px stroke at any size, muted,
    darker on hover of its heading. Down while open, right when folded (the
    ROW carries `collapsed`). The svg keeps its 24-unit path; the stroke is
-   pinned in CSS so the rank table, which shares the markup, is untouched. */
+   pinned by html_table_chev_css(), outside this sheet's scope. */
 .blockr-html-table-container .blockr-chev {
   width: 12px;
   height: 12px;
   flex: none;
   color: var(--blockr-color-text-muted, #6b7280);
   transition: transform var(--blockr-transition, 0.15s ease), color var(--blockr-transition, 0.15s ease);
-}
-.blockr-html-table-container .blockr-chev path {
-  vector-effect: non-scaling-stroke;
-  stroke-width: 1.4px;
 }
 .blockr-html-table-container .blockr-section-btn:hover .blockr-chev {
   color: var(--blockr-color-text-default, #111827);
@@ -1525,6 +1523,23 @@ input.blockr-search:focus {
     css <- gsub(".blockr-html-table-container", scope, css, fixed = TRUE)
   }
   css
+}
+
+#' The chevron's stroke: a constant 1.4px at any size. The rank table, which
+#' shares the markup, keeps its own.
+#'
+#' Emitted with the plain container prefix, never under the structured scope
+#' of `html_table_delta_css()`: a `:has()` scope in front of the descendant
+#' `path` made Chrome restyle the whole page on every DOM insertion (1.3 ms
+#' per insertion became 4.7 ms on the CDEx board). A flat table has no
+#' chevrons, so the plain prefix leaks nothing onto it.
+#' @noRd
+html_table_chev_css <- function() {
+  ".blockr-html-table-container .blockr-chev path {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.4px;
+}
+"
 }
 
 #' Shared table CSS for the drilldown table chrome (`dt_chrome()`). Mirrors
