@@ -6946,14 +6946,23 @@
   // (bslib's dark mode writes data-bs-theme on <html>), and every chart kept
   // drawing its grid and labels in the old scheme's values. So a switch
   // redraws each chart once, reading the new values. Scoped by attribute, so
-  // no other mutation reaches the callback.
-  new MutationObserver(() => {
+  // no other mutation reaches the callback. blockr.dock's Font option
+  // (data-blockr-font) changes the face the same way; the first switch to a
+  // face also has to fetch it, so the charts redraw again once it is in.
+  const redrawAll = () => {
     document.querySelectorAll('.drilldown-chart-container').forEach((el) => {
       const blk = /** @type {any} */ (el)._block;
       if (blk && blk.data && blk.data.length) blk._render();
     });
+  };
+  new MutationObserver((records) => {
+    redrawAll();
+    if (records.some((r) => r.attributeName === 'data-blockr-font')) {
+      document.fonts.ready.then(redrawAll);
+    }
   }).observe(document.documentElement, {
-    attributes: true, attributeFilter: ['data-bs-theme'], subtree: true
+    attributes: true, attributeFilter: ['data-bs-theme', 'data-blockr-font'],
+    subtree: true
   });
 
   const binding = new Shiny.InputBinding();
