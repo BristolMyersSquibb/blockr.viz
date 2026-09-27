@@ -1,6 +1,6 @@
 Package: blockr.viz
 Title: Visualization and Render Blocks for Blockr
-Version: 0.2.158
+Version: 0.2.159
 Authors@R:
     person(given = "Christoph",
            family = "Sax",
@@ -22,7 +22,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
     blockr.core,
-    blockr.ui (>= 0.0.1.9008),
+    blockr.ui (>= 0.0.1.9041),
     dplyr,
     echarts4r,
     grDevices,
