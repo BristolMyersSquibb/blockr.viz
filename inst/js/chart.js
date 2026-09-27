@@ -5557,8 +5557,8 @@
           // datum is a constant that nothing filters and nothing rescales, and
           // renderItem still gets the grid rect because both axis pairs share
           // grid 0.
-          const scrimFill = /dark/i.test(this.theme || '')
-            ? 'rgba(20,20,20,0.55)' : 'rgba(255,255,255,0.6)';
+          // The fill is read from slot.focus at draw time, which _promoteFocus
+          // sets from the surface the plot is painted on (see _plotSurface).
           series.push({
             id: '__scrim__',
             type: 'custom',
@@ -5573,7 +5573,8 @@
               const cs = params.coordSys;   // { x, y, width, height } of the grid
               return { type: 'rect',
                 shape: { x: cs.x, y: cs.y, width: cs.width, height: cs.height },
-                style: { fill: scrimFill } };
+                style: { fill: (slot.focus && slot.focus.veil) ||
+                                'rgba(255,255,255,0.6)' } };
             }
           });
           series.push({
@@ -6685,6 +6686,11 @@
       const n = m ? parseInt(m[1], 16) : null;
       const rgba = (/** @type {number} */ a) => n == null ? 'rgba(0,0,0,0)'
         : 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
+      // Veil and dot ring take the colour the plot is painted on, read at hover
+      // time so a light/dark switch after the render is picked up. A fixed
+      // white veil turned a dark board grey.
+      const bg = this._plotSurface(slot);
+      f.veil = 'rgba(' + bg.join(',') + ',0.6)';
       // One atomic, animation-free setOption raises the scrim (one datum ->
       // renderItem draws the veil once) and fills BOTH overlay series -- the
       // line (thick, gradient, no symbols) and the scatter (the dots). All carry
@@ -6722,9 +6728,39 @@
           data: s.data,
           symbol: 'circle',
           symbolSize: f.markerPx,
-          itemStyle: { color: clr, borderColor: INK.surface, borderWidth: 2 }
+          itemStyle: { color: clr, borderColor: 'rgb(' + bg.join(',') + ')',
+                       borderWidth: 2 }
         }]
       });
+    }
+
+    /**
+     * RGB of the surface a chart slot is painted on: the ECharts theme's
+     * backgroundColor when a named theme is set, else the first ancestor with
+     * an opaque computed background (the card, which follows the board's
+     * light/dark tokens). White when nothing resolves.
+     * @param {any} slot
+     * @returns {number[]}
+     */
+    _plotSurface(slot) {
+      /** @param {string} s */
+      const rgbOf = (s) => {
+        const m = /rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?/.exec(s || '');
+        if (m && (m[4] == null || +m[4] > 0)) return [+m[1], +m[2], +m[3]];
+        const h = /^#([0-9a-f]{6})$/i.exec(s || '');
+        if (h) { const n = parseInt(h[1], 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+        return null;
+      };
+      if (this.theme && slot.chart) {
+        const opt = slot.chart.getOption();
+        const got = rgbOf(String(opt && opt.backgroundColor || ''));
+        if (got) return got;
+      }
+      for (let el = slot.chartDiv; el && el.nodeType === 1; el = el.parentElement) {
+        const got = rgbOf(getComputedStyle(el).backgroundColor);
+        if (got) return got;
+      }
+      return [255, 255, 255];
     }
 
     /** @param {any} slot @param {any} chart */
