@@ -9,7 +9,10 @@
  *     blockr.ui's Blockr.gearTray,
  *   - assembles the matrix rows from the sparse cell model, with a data
  *     tooltip per cell and the header following the panel's scroll,
- *   - wires the search tool, the row-click drill and Reset.
+ *   - wires the search tool and the row click, which is an event sent over
+ *     the control bridge to the board's drill filter (as the composer
+ *     table's): nothing latches here, and a board with no drill filter leaves
+ *     the rows inert.
  * Mirrors tile-block.js (scan + MutationObserver init, idempotent per root).
  */
 (function () {
@@ -19,14 +22,6 @@
     Shiny.setInputValue(elemId + '_action',
       { action: 'config', param: param, value: value }, { priority: 'event' });
   }
-  /** @param {string} elemId */
-  function sendClearFilter(elemId) {
-    if (!window.Shiny || !Shiny.setInputValue) return;
-    Shiny.setInputValue(elemId + '_action', {
-      action: 'filter', column: null, values: null
-    }, { priority: 'event' });
-  }
-
   /**
    * Per-root client state. The chrome is mounted once and never rebuilt, so
    * everything that changes with a payload lives here.
@@ -86,18 +81,8 @@
   }
 
   // ---- drill ----------------------------------------------------------
-
-  // Transient drill: with a ctrl_target the row click is an EVENT sent to that
-  // block, not a selection this heatmap holds. Nothing latches, nothing toggles
-  // off, and the claim carries a click counter so re-clicking one row sends
-  // again. Same rule as the chart and the table; the undo lives at the target.
-  /** @param {Element} root */
-  function transientDrill(root) {
-    var st = states.get(root);
-    var t = st && st.cfg && st.cfg.ctrl_target;
-    return !!(t && String(t).trim());
-  }
-
+  // Click counter: it changes on a real click and NOT on a board update, which
+  // is the distinction the server's send-once skip has to make.
   var drillSeq = 0;
 
   // Light the clicked row, then release it. One at a time: two lit rows would
@@ -115,69 +100,23 @@
     tr.addEventListener('animationend', drop);
   }
 
-  /** @param {Element} root */
-  function clearActive(root) {
-    root.querySelectorAll('tr.hmb-active').forEach(function (n) {
-      n.classList.remove('hmb-active');
-    });
-  }
-
   /** @param {Element} root @param {string} elemId */
   function wireDrill(root, elemId) {
     root.addEventListener('click', function (e) {
-      var t = /** @type {Element|null} */ (e.target);
-      if (t && t.closest('.hmb-reset')) {
-        clearActive(root);
-        sendClearFilter(elemId);
-        return;
-      }
+      // data-hmb-drill is "1" while the board has a drill filter to send to.
       if (root.getAttribute('data-hmb-drill') !== '1') return;
+      var t = /** @type {Element|null} */ (e.target);
       var tr = t && t.closest('tr.hmb-r');
       if (!tr || !root.contains(tr)) return;
       var id = tr.getAttribute('data-hmb-id');
       var col = root.getAttribute('data-hmb-row-col');
       if (!id || !col) return;
-      if (transientDrill(root)) {
-        if (window.Shiny && Shiny.setInputValue) {
-          Shiny.setInputValue(elemId + '_action', {
-            action: 'filter', column: col, values: [id], nonce: ++drillSeq
-          }, { priority: 'event' });
-        }
-        flashRow(root, tr);
-        return;
-      }
-      if (tr.classList.contains('hmb-active')) {
-        tr.classList.remove('hmb-active');
-        sendClearFilter(elemId);
-        return;
-      }
-      clearActive(root);
-      tr.classList.add('hmb-active');
       if (window.Shiny && Shiny.setInputValue) {
         Shiny.setInputValue(elemId + '_action', {
-          action: 'filter', column: col, values: [id]
+          action: 'filter', column: col, values: [id], nonce: ++drillSeq
         }, { priority: 'event' });
       }
-    });
-    markActive(root);
-  }
-
-  // Mark the drilled row(s) from `data-hmb-active`. Runs on wire AND after
-  // every body swap: a restore, or a data refresh under a live filter, ships
-  // fresh <tr>s that have never carried the class.
-  /** @param {Element} root */
-  function markActive(root) {
-    var activeJson = root.getAttribute('data-hmb-active');
-    /** @type {any} */
-    var vals = null;
-    if (activeJson) {
-      try { vals = JSON.parse(activeJson); } catch (err) { vals = null; }
-    }
-    if (!vals || !vals.length) return;
-    root.querySelectorAll('tr.hmb-r').forEach(function (tr) {
-      if (vals.indexOf(tr.getAttribute('data-hmb-id')) !== -1) {
-        tr.classList.add('hmb-active');
-      }
+      flashRow(root, tr);
     });
   }
 
@@ -216,7 +155,7 @@
       summaries: false,
       aggregatable: false,
       colorSection: null,
-      ctrlSection: true,
+      ctrlSection: false,
       presentation: ['cell_numbers', 'download'],
       titles: ['title', 'subtitle', 'caption']
     };
@@ -266,28 +205,18 @@
       entryRequired: function (/** @type {string} */ role) {
         return role === 'row' || role === 'col';
       },
-      drillHint: function () {
-        return st.cfg.row
-          ? 'Clicking a row filters downstream on ' + st.cfg.row + '.'
-          : null;
-      },
       metricsList: function () { return []; },
       onMetricsChange: function () {},
       title: 'Heatmap settings',
       onChange: function (/** @type {string} */ key) {
-        var v = (key === 'drill')
-          ? (st.cfg.drill !== '' && st.cfg.drill != null)
-          : st.cfg[key];
+        var v = st.cfg[key];
         if (key === 'cell_numbers') {
           root.classList.toggle('hmb-nonum', v === 'off');
         }
         sendConfig(elemId, key, v);
       },
       onMults: function () {},
-      onClearFilter: function () {
-        clearActive(root);
-        sendClearFilter(elemId);
-      },
+      onClearFilter: function () {},
       ensureDefaults: function () {},
       afterTypeChange: function () {},
       isOpen: function () { return st.tray.isOpen(); },
@@ -515,16 +444,9 @@
     if (p.config != null) {
       root.setAttribute('data-hmb-config', p.config);
       try { st.cfg = JSON.parse(p.config); } catch (e) { st.cfg = {}; }
-      st.cfg.drill = st.cfg.drill ? 'auto' : '';
     }
     root.setAttribute('data-hmb-drill', p.drill ? '1' : '0');
     root.setAttribute('data-hmb-row-col', p.rowCol || '');
-    var active = p.active || [];
-    if (active.length) {
-      root.setAttribute('data-hmb-active', JSON.stringify(active));
-    } else {
-      root.removeAttribute('data-hmb-active');
-    }
     root.classList.toggle('hmb-nonum', !p.cellNumbers);
 
     var legend = root.querySelector('.hmb-legend-slot');
@@ -571,7 +493,6 @@
         });
         st.groupOf = groupOf;
       }
-      markActive(root);
       applySearch(root);
     }
 
@@ -608,7 +529,6 @@
     };
     try { st.cfg = JSON.parse(root.getAttribute('data-hmb-config') || '{}'); }
     catch (e) { st.cfg = {}; }
-    st.cfg.drill = st.cfg.drill ? 'auto' : '';
     try { st.cols = JSON.parse(root.getAttribute('data-hmb-cols') || '[]'); }
     catch (e) { st.cols = []; }
     states.set(root, st);

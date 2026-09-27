@@ -148,7 +148,8 @@ test_that("a script value set from the sentence reaches the script", {
       ex <- do.call(bquote, list(session$returned$expr(),
                                  list(data = quote(d))))
       out <- eval(ex, list(d = hm_toy()))
-      expect_length(unique(out$AEDECOD), 1L)
+      # the matrix, cut to the one term the script kept
+      expect_identical(names(out)[-1L], "NAUSEA")
     },
     args = list(x = blk, data = list(data = function() hm_toy()))
   )
@@ -247,7 +248,7 @@ test_that("the rendered legend and cells use the declared colours", {
 
 test_that("the chrome mounts from config alone, with no data in reach", {
   html <- as.character(hmb_chrome(
-    elem_id = "hm-chrome", cell_numbers = TRUE, drill = TRUE,
+    elem_id = "hm-chrome", cell_numbers = TRUE,
     cfg_json = hmb_cfg_json(row = "USUBJID", col = "AEDECOD")
   ))
   # the shell: header row, gear-bearing attributes, and the slots the body
@@ -260,8 +261,10 @@ test_that("the chrome mounts from config alone, with no data in reach", {
   expect_match(html, "hmb-footer", fixed = TRUE)
   expect_match(html, 'data-hmb-elem-id="hm-chrome"', fixed = TRUE)
   expect_match(html, "USUBJID", fixed = TRUE)      # config, not data
-  # Reset is there and disabled while nothing is picked
-  expect_match(html, '<button type="button" class="hmb-reset" disabled', fixed = TRUE)
+  # a click only ever sends: no Reset, and no rows take clicks until the
+  # board answers with a drill filter
+  expect_no_match(html, "hmb-reset", fixed = TRUE)
+  expect_match(html, 'data-hmb-drill="0"', fixed = TRUE)
   # and nothing that could only come from a frame
   expect_no_match(html, 'class="hmb-c"', fixed = TRUE)
   expect_no_match(html, "hmb-grp", fixed = TRUE)
@@ -389,5 +392,63 @@ test_that("the chrome renders before the upstream data exists", {
       expect_match(html, "hmb-head", fixed = TRUE)
     },
     args = list(x = blk, data = list(data = function() shiny::req(FALSE)))
+  )
+})
+
+test_that("heatmap_matrix is the matrix the block draws", {
+  d <- hm_toy()
+  attr(d$USUBJID, "label") <- "Unique Subject Identifier"
+  m <- heatmap_matrix(d, row = "USUBJID", col = "AEDECOD", group = "ARM")
+  expect_identical(names(m), c("USUBJID", "ARM", "NAUSEA", "RASH"))
+  expect_identical(as.character(m$USUBJID), c("s1", "s2", "s3"))
+  expect_identical(m$RASH, c(2L, 0L, 1L))
+  expect_identical(attr(m$USUBJID, "label"), "Unique Subject Identifier")
+  expect_error(heatmap_matrix(d, row = "NOPE", col = "AEDECOD"),
+               "not in the data")
+})
+
+test_that("the block's result is the matrix, after the script", {
+  blk <- new_heatmap_block(
+    row = "USUBJID", col = "AEDECOD", group = "ARM",
+    script = paste(
+      "top_n <- 1  #| number(min = 1, max = 60)",
+      "top <- dplyr::count(data, AEDECOD, sort = TRUE)",
+      "dplyr::filter(data, AEDECOD %in% utils::head(top$AEDECOD, top_n))",
+      sep = "\n"
+    )
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      ex <- session$returned$expr()
+      expect_identical(ex[[1L]], quote(blockr.viz::heatmap_matrix))
+      ex <- do.call(bquote, list(ex, list(data = quote(d))))
+      out <- eval(ex, list(d = hm_toy()))
+      expect_identical(ncol(out), 3L)   # the row, the group, one term
+    },
+    args = list(x = blk, data = list(data = function() hm_toy()))
+  )
+})
+
+test_that("the old drill arguments are legacy and restore quietly", {
+  blk <- new_heatmap_block(row = "USUBJID", col = "AEDECOD", drill = TRUE,
+                           filter_column = "USUBJID", filter_values = "s1",
+                           ctrl_target = "pt_drill")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      st <- session$returned$state
+      for (k in c("drill", "filter_column", "filter_values", "ctrl_target",
+                  "ctrl_table")) {
+        expect_null(st[[k]]())
+      }
+      # a restored filter no longer filters: the result is the whole matrix
+      session$flushReact()
+      ex <- do.call(bquote, list(session$returned$expr(),
+                                 list(data = quote(d))))
+      expect_identical(nrow(eval(ex, list(d = hm_toy()))), 3L)
+    },
+    args = list(x = blk, data = list(data = function() hm_toy()))
   )
 })

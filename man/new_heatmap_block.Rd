@@ -11,13 +11,13 @@ new_heatmap_block(
   group = character(),
   top_n = NULL,
   cell_numbers = TRUE,
-  drill = FALSE,
+  drill = NULL,
   download = FALSE,
   filter_column = NULL,
   filter_values = NULL,
   max_height = NULL,
-  ctrl_target = "",
-  ctrl_table = "",
+  ctrl_target = NULL,
+  ctrl_table = NULL,
   title = NULL,
   subtitle = NULL,
   caption = NULL,
@@ -46,21 +46,19 @@ it restores it as the script's \code{top_n} value.}
 \item{cell_numbers}{Show the count in each cell (default \code{TRUE}). Off,
 the matrix reads as a pure color heatmap.}
 
-\item{drill}{Logical (default \code{FALSE}): a row click filters downstream
-on the \code{row} column (click again to clear).}
+\item{drill}{LEGACY. A row click always goes to the board's drill filter,
+when the board has one (see \code{\link[=ctrl_auto_target]{ctrl_auto_target()}}).}
 
 \item{download}{Logical (default \code{FALSE}), exposed in the gear: the
 header row grows the shared download tool -- the matrix (row identity,
 group, count columns) written as xlsx / html / pptx.}
 
-\item{filter_column, filter_values}{Persisted drill state (restore).}
+\item{filter_column, filter_values}{LEGACY. The block no longer filters.}
 
 \item{max_height}{LEGACY. The matrix scrolls with its panel.}
 
-\item{ctrl_target, ctrl_table}{Character(1), beta: as in
-\code{\link[=new_table_block]{new_table_block()}} -- push the drill claim into a value filter block.
-\code{ctrl_target = "auto"} finds that block on the board itself, see
-\code{\link[=ctrl_auto_target]{ctrl_auto_target()}}.}
+\item{ctrl_target, ctrl_table}{LEGACY. The target is found by the board,
+see \code{\link[=ctrl_auto_target]{ctrl_auto_target()}}.}
 
 \item{title, subtitle, caption}{Text above and below the matrix, as in
 \code{\link[=new_chart_block]{new_chart_block()}}: \code{NULL} = the input's own label, \code{""} = none, else a
@@ -77,7 +75,8 @@ where block metadata is resolved from the registry. It is not a formal
 because every constructor formal has to come back out as block state.}
 }
 \value{
-A transform block of class \code{heatmap_block}.
+A transform block of class \code{heatmap_block}, whose result is the
+matrix (\code{\link[=heatmap_matrix]{heatmap_matrix()}}).
 }
 \description{
 Renders long event rows (e.g. one row per adverse event) as a row x
