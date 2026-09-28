@@ -22,7 +22,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
     blockr.core,
-    blockr.ui (>= 0.0.1.9041),
+    blockr.ui,
     dplyr,
     echarts4r,
     grDevices,
@@ -67,7 +67,7 @@ Remotes:
     BristolMyersSquibb/blockr.assistant,
     BristolMyersSquibb/blockr.dplyr,
     BristolMyersSquibb/blockr.ai,
-    BristolMyersSquibb/blockr.ui@feat/action-menu,
+    BristolMyersSquibb/blockr.ui,
     cynkra/blockr.extra,
     BristolMyersSquibb/blockr.theme,
     BristolMyersSquibb/blockr.dock
