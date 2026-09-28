@@ -72,6 +72,15 @@ dd_prepare_run <- function(data, parsed, specs, values = list()) {
     ))
   }
 
+  # A script that aggregates or regroups (summarise(), group_by() and
+  # slice_max(), merge()) returns a frame without the input's filter trail,
+  # and the caption's `{filters}` reads the prepared frame. The filters
+  # upstream still applied to it, so the trail is carried across. A script
+  # that sets its own trail keeps it.
+  if (is.null(attr(out, "blockr_filters", exact = TRUE))) {
+    attr(out, "blockr_filters") <- attr(data, "blockr_filters", exact = TRUE)
+  }
+
   list(data = out, error = NULL)
 }
 

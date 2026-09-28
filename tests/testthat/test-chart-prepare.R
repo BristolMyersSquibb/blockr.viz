@@ -302,3 +302,33 @@ test_that("an assignment whose right side folds away binds NULL", {
   expect_null(eval(out))
   expect_equal(cb_fold(quote(p + if (FALSE) g())), quote(p))
 })
+
+
+test_that("the filter trail survives a script that regroups", {
+  d <- data.frame(USUBJID = c("1", "1", "2"), AETOXGR = c(1, 3, 2))
+  attr(d, "blockr_filters") <- c(global = "SEX = F")
+  # group_by() + slice_max() + ungroup() returns a fresh tibble without the
+  # input's attributes; this is composer::keep_worst()'s shape.
+  txt <- script_of(
+    "data |>",
+    "  dplyr::group_by(USUBJID) |>",
+    "  dplyr::slice_max(AETOXGR, n = 1L, with_ties = FALSE) |>",
+    "  dplyr::ungroup()"
+  )
+  ps <- parsed_of(txt, d)
+  out <- dd_prepare_run(d, ps$parsed, ps$specs, list())
+  expect_null(out$error)
+  expect_equal(nrow(out$data), 2L)
+  expect_identical(attr(out$data, "blockr_filters"), c(global = "SEX = F"))
+  expect_identical(resolve_title_token("filters", out$data)$text, "SEX = F")
+
+  # A script that sets its own trail keeps it.
+  own <- script_of(
+    "out <- data",
+    "attr(out, \"blockr_filters\") <- c(mine = \"AGE > 65\")",
+    "out"
+  )
+  ps <- parsed_of(own, d)
+  out <- dd_prepare_run(d, ps$parsed, ps$specs, list())
+  expect_identical(attr(out$data, "blockr_filters"), c(mine = "AGE > 65"))
+})
