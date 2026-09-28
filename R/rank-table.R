@@ -378,6 +378,7 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
   show_val <- !length(cols)
   if (identical(layout, "simple")) {
     plan <- list(list(kind = "bar", label = rank_measure_label(func, value),
+                      meas = rank_measure_label(func, value),
                       key = ".v", sub_label = measure_sub, fill = solo_fill,
                       show_val = show_val,
                       val_denom = if (pct_ok) denom))
@@ -391,6 +392,7 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
       leaf[[paste0(".s_", lv)]] <- rank_match(leaf, s, keys, absent)
     }
     plan <- list(list(kind = "barsplit", label = rank_measure_label(func, value),
+                      meas = rank_measure_label(func, value), cvar = color,
                       key = ".v", series = series, mode = bar_mode,
                       sub_label = measure_sub, show_val = show_val,
                       val_denom = if (pct_ok) denom))
@@ -429,6 +431,7 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
         }
         plan <- c(plan, list(list(
           kind = "barsplit", label = fv, key = paste0(".f_", fv),
+          meas = rank_measure_label(func, value), cvar = color,
           prefix = paste0(".f", fi, "s_"), series = series, mode = bar_mode,
           denom = if (pct_ok) denoms[[fv]],
           sub_label = paste0("N = ", denoms[[fv]]),
@@ -445,6 +448,7 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
       for (lv in facet_levels) {
         plan <- c(plan, list(list(
           kind = "bar", label = lv, key = paste0(".f_", lv),
+          meas = rank_measure_label(func, value),
           fill = solo_fill,
           denom = if (pct_ok) denoms[[lv]],
           sub_label = paste0("N = ", denoms[[lv]]),

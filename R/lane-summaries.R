@@ -758,7 +758,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
   }
   sub <- if (is.null(cp$level)) NULL else s$name
   base <- list(label = label, sub_label = sub, sid = sid, stype = s$type,
-               flevel = cp$level, sname = s$name)
+               flevel = cp$level, sname = s$name, meas = s$name)
   if (identical(s$type, "simple")) {
     if (identical(s$show, "dot")) {
       # A single value as a positioned point on the zero-based lane: the
@@ -789,6 +789,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       # (lane_split_degenerate()).
       c(base, list(kind = "barsplit", key = paste0(sid, "_v"),
                    prefix = paste0(sid, "_S_"), series = s$.levels,
+                   cvar = s$.color,
                    mode = if (rank_additive(rank_chr1(s$func) %||% "count")) {
                      "stacked"
                    } else {

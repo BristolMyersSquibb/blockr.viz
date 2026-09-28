@@ -496,7 +496,7 @@
     for (var j = 0; j < c.names.length; j++) {
       var body = '<div class="blockr-rank-fill" style="width:' +
         w(c.seg[j][i]) + "%;background:" + c.fills[j] +
-        '" data-blockr-tooltip="' + esc(c.names[j]) + ": " + c.segv[j][i] +
+        '" data-rank-tip="' + esc(c.names[j]) + ": " + c.segv[j][i] +
         '"></div>';
       if (grouped) out += '<div class="blockr-rank-row3">' + body + "</div>";
       else if (c.segv[j][i] > 0) out += body;
@@ -526,7 +526,7 @@
         '"></div>';
     }
     var s = '<div class="blockr-rank-lane blockr-rank-boxcell' + cls +
-      '" data-blockr-tooltip="' + c.tip[i] + '">';
+      '" data-rank-tip="' + c.tip[i] + '">';
     if (c.w1[i] != null) {
       s += '<i class="lane-wh" style="left:' + p(c.wl[i]) + "%;width:" +
         p(c.w1[i]) + '%"></i>';
@@ -556,7 +556,7 @@
         '"></div>';
     }
     var s = '<div class="blockr-rank-lane blockr-rank-prcell' + cls +
-      '" data-blockr-tooltip="' + c.tip[i] + '">';
+      '" data-rank-tip="' + c.tip[i] + '">';
     if (c.ow && c.ow[i] != null) {
       s += '<i class="lane-fence" style="left:' + p(c.ol[i]) + "%;width:" +
         p(c.ow[i]) + '%"></i>';
@@ -575,7 +575,7 @@
     var s = '<div class="blockr-rank-lane blockr-rank-pacell' +
       (c.dash[i] ? " is-dash" : "") + '"' +
       (c.fill[i] != null ? ' style="--blockr-rank-fill:' + c.fill[i] + '"' : "") +
-      (c.tip[i] ? ' data-blockr-tooltip="' + c.tip[i] + '"' : "") + ">";
+      (c.tip[i] ? ' data-rank-tip="' + c.tip[i] + '"' : "") + ">";
     if (c.bw[i] != null) {
       s += '<i class="lane-band" style="left:' + p(c.bl[i]) + "%;width:" +
         p(c.bw[i]) + '%"></i>';
@@ -806,6 +806,8 @@
     }
     // Fresh rows, fresh server order: the next header click starts at click 1.
     root._rankSort = { key: null, dir: 0 };
+    // The hover card reads its numbers from here (cardHtml).
+    root._rankPayload = p;
     applyChrome(root, p.chrome);
     // The row set changed: drop the search text cache and re-apply the current
     // query + collapse state to the fresh rows.
@@ -2216,16 +2218,201 @@
     }
     return String(Math.round(v * 10) / 10);
   }
+  // ---------- hover card ----------
+  // A bar, a box, a dot range or a dumbbell answers a hover with the chart's
+  // card (chart.js tipHead / tipRow, the .dd-tt-* rules in chart.css): the
+  // row as the headline, the column's arm and N under it, then one labelled
+  // line per number. The numbers come from the payload the row was built
+  // from, so the card can say what the lane only draws: every segment of a
+  // split bar with its count and share, the total against the arm's N, and
+  // a box's statistics by name.
+  function ttNum(v) {
+    if (typeof v !== "number" || !isFinite(v)) return v == null ? "" : String(v);
+    if (Number.isInteger(v)) return v.toLocaleString();
+    return Number(v.toPrecision(6)).toLocaleString(undefined, {
+      maximumFractionDigits: 4
+    });
+  }
+  function ttPct(v, den) {
+    if (!den || typeof v !== "number" || !isFinite(v)) return "";
+    // Whole percents, as the cells print them.
+    return " (" + Math.round(v / den * 100) + "%)";
+  }
+  function ttSw(color) {
+    return color ? '<span class="dd-tt-sw" style="background:' + esc(color) +
+      '"></span>' : "";
+  }
+  function ttHead(text, color) {
+    return '<div class="dd-tt-head">' + ttSw(color) + "<span>" + esc(text) +
+      "</span></div>";
+  }
+  function ttRow(label, value, color, hit) {
+    return '<div class="dd-tt-row"' +
+      (hit ? ' style="font-weight:600"' : "") + ">" + ttSw(color) +
+      '<span class="dd-tt-label">' + esc(label) + '</span>' +
+      '<span class="dd-tt-value">' + esc(value) + "</span></div>";
+  }
+  function ttNote(text) {
+    return '<div class="dd-tt-row dd-tt-label">' + esc(text) + "</div>";
+  }
+  var TT_SEP = '<div class="dd-tt-sep"></div>';
+
+  // A distribution glyph's lines, the chart's boxplot tooltip words: n, the
+  // centre, the body's range, the whiskers'.
+  function ttDist(kind, g, i, words) {
+    var r = g.r || {};
+    var at = function (k) { return r[k] ? r[k][i] : null; };
+    var span = function (lo, hi) {
+      return (lo == null || hi == null) ? "undefined (n < 2)"
+        : ttNum(lo) + " \u2013 " + ttNum(hi);
+    };
+    var h = "";
+    if (g.nn && g.nn[i] != null) h += ttRow("n", ttNum(g.nn[i]));
+    h += ttRow(words.center || "Center", ttNum(at("bc")));
+    if (words.range) {
+      h += ttRow(kind === "box" ? "Box (" + words.range + ")" : words.range,
+                 span(at("bl"), at("bh")));
+    }
+    if (words.whisk) {
+      h += ttRow(kind === "box" ? "Whiskers (" + words.whisk + ")" : words.whisk,
+                 span(at("wl"), at("wh")));
+    }
+    return h;
+  }
+
+  /** The card for the cell under the pointer, or "" for none. */
+  function cardHtml(td, t) {
+    var root = td.closest(".blockr-rank-container");
+    var tr = td.parentNode;
+    var p = root && root._rankPayload;
+    var i = tr ? Number(tr.getAttribute("data-rank-ord")) : NaN;
+    var c = (p && p.kind === "flat" && p.cols) ? p.cols[td.cellIndex - 1] : null;
+    if (!c || isNaN(i) || i >= p.n) {
+      // No payload (a static page): the one-line text the cell carries.
+      var own = t.closest("[data-rank-tip]");
+      var txt = own ? own.getAttribute("data-rank-tip") : "";
+      return txt ? ttNote(txt) : "";
+    }
+    var tt = c.tt || {};
+    var ctx = [];
+    [tt.head, tt.sub].forEach(function (x) {
+      if (x && ctx.indexOf(x) < 0) ctx.push(x);
+    });
+    var h = ttHead(p.label[i]) + (ctx.length ? ttNote(ctx.join(" \u00b7 ")) : "");
+    var den = tt.den;
+    var meas = tt.meas || "Value";
+    if (c.kind === "bar") {
+      if (c.disp && c.disp[i] != null && c.disp[i] !== "") {
+        return h + ttRow(meas, c.disp[i] + (c.pct && c.pct[i] ? " " + c.pct[i] : ""));
+      }
+      return "";
+    }
+    if (c.kind === "barsplit") {
+      var fillEl = t.closest(".blockr-rank-fill");
+      var hitName = null;
+      if (fillEl) {
+        var fills = Array.prototype.slice.call(
+          fillEl.parentNode.parentNode.querySelectorAll(".blockr-rank-fill"));
+        var drawn = [];
+        for (var j0 = 0; j0 < c.names.length; j0++) {
+          if (c.mode === "grouped" || c.segv[j0][i] > 0) drawn.push(j0);
+        }
+        var at = fills.indexOf(fillEl);
+        if (at >= 0 && at < drawn.length) hitName = c.names[drawn[at]];
+      }
+      var rows = "";
+      var shown = 0;
+      for (var j = 0; j < c.names.length; j++) {
+        var v = c.segv[j][i];
+        if (!(v > 0) && c.mode !== "grouped") continue;
+        shown++;
+        rows += ttRow((tt.cvar ? tt.cvar + " " : "") + c.names[j],
+                      ttNum(v) + ttPct(v, den), c.fills[j],
+                      c.names[j] === hitName);
+      }
+      if (!shown) return "";
+      var foot = "";
+      if (c.mode !== "grouped" && c.disp && c.disp[i]) {
+        foot = TT_SEP + ttRow(meas, c.disp[i] +
+          (c.pct && c.pct[i] ? " " + c.pct[i] : "") +
+          (den ? " of " + ttNum(den) : ""));
+      }
+      return h + rows + foot;
+    }
+    if (c.kind === "box" || c.kind === "pointrange") {
+      var words = tt.words || {};
+      if (!c.multi) {
+        if (!c.r || !c.r.bc || c.r.bc[i] == null) return "";
+        return h + ttDist(c.kind, c, i, words);
+      }
+      // A colour-split cell: the level under the pointer, else every level.
+      var lvEl = t.closest(".blockr-rank-lv");
+      var drawnLv = [];
+      for (var k = 0; k < c.lv.length; k++) {
+        var gk = c.lv[k];
+        if ((c.kind === "box" ? gk.bc[i] : gk.c[i]) != null) drawnLv.push(k);
+      }
+      var pick = drawnLv;
+      if (lvEl) {
+        var all = Array.prototype.slice.call(
+          lvEl.parentNode.querySelectorAll(".blockr-rank-lv"));
+        var pos = all.indexOf(lvEl);
+        if (pos >= 0 && pos < drawnLv.length) pick = [drawnLv[pos]];
+      }
+      if (!pick.length) return "";
+      var body = "";
+      pick.forEach(function (k2, n2) {
+        if (n2) body += TT_SEP;
+        // The level's own line, unless the column header already names it
+        // (colour and facet on the same column: one glyph per arm).
+        if (c.levels[k2] !== tt.head || pick.length > 1) {
+          body += ttRow((tt.cvar ? tt.cvar + " " : "") + c.levels[k2], "",
+                        c.fills[k2]);
+        }
+        body += ttDist(c.kind, c.lv[k2], i, words);
+      });
+      return h + body;
+    }
+    if (c.kind === "pair") {
+      var tip = c.tip && c.tip[i];
+      if (!tip) return "";
+      return h + String(tip).split(" \u00b7 ").map(function (x) {
+        return ttNote(x);
+      }).join("");
+    }
+    return "";
+  }
+
+  function placeTip(tip, e) {
+    tip.hidden = false;
+    tip.style.left = Math.min(e.clientX + 12,
+      window.innerWidth - tip.offsetWidth - 8) + "px";
+    var top = e.clientY + 16;
+    if (top + tip.offsetHeight > window.innerHeight - 8) {
+      top = Math.max(8, e.clientY - tip.offsetHeight - 12);
+    }
+    tip.style.top = top + "px";
+  }
+
   document.addEventListener("mousemove", function (e) {
     var t = /** @type {Element} */ (e.target);
     if (!t || !t.closest) { return; }
     var lane = t.closest(".blockr-rank-ivcell, .blockr-rank-spcell");
     var tip = tipEl();
     if (!lane) {
-      tip.hidden = true;
       laneHighlight(null, null);
+      var td = t.closest("td.blockr-rank-bar-col");
+      var html = td && t.closest(".blockr-rank-container") ? cardHtml(td, t) : "";
+      if (!html) {
+        tip.hidden = true;
+        return;
+      }
+      tip.className = "blockr-lane-tip is-card";
+      tip.innerHTML = html;
+      placeTip(tip, e);
       return;
     }
+    tip.className = "blockr-lane-tip";
     var r = lane.getBoundingClientRect();
     if (!r.width) { tip.hidden = true; return; }
     var fx = Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1);

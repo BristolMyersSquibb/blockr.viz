@@ -246,6 +246,13 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
                ifelse(is.na(lo) | is.na(hi), "undefined (n < 2)",
                       paste0(lane_fmt(lo), "\u2013", lane_fmt(hi))))
       }
+      # The statistics themselves, for the hover card (rank-table.js): the
+      # geometry above is in percent of the lane and cannot be read back.
+      raw_stats <- function() {
+        st <- list(bc = bc, bl = bl, bh = bh, wl = wl, wh = wh)
+        lapply(st[vapply(st, function(x) any(!is.na(x)), logical(1L))],
+               function(x) round(x, 4L))
+      }
       tip <- ifelse(is.na(bc), "", rank_esc(paste0(
         pre, ifelse(is.na(nn), "", paste0("n=", nn, " \u00b7 ")),
         wd$center, " ", lane_fmt(bc),
@@ -258,7 +265,8 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
              wl = pos_w(wl), w1 = span_w(wl, bl),
              bl = pos_w(bl), bw = span_w(bl, bh), bc = pos_w(bc),
              b2 = pos_w(bh), w2 = span_w(bh, wh), wh = pos_w(wh),
-             nn = nn, tip = tip, v = sortv(bc)) |> c(lab)
+             nn = nn, tip = tip, v = sortv(bc),
+             r = raw_stats()) |> c(lab)
       } else {
         # The dot style: the outer range as a fence band BEHIND the inner
         # bar (ol/ow), the inner range as the bar (l/rw), the centre as the
@@ -266,7 +274,8 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         list(kind = "pointrange", bare = bare,
              ol = pos_w(wl), ow = span_w(wl, wh),
              c = pos_w(bc), l = pos_w(bl), rw = span_w(bl, bh),
-             nn = nn, tip = tip, v = sortv(bc)) |> c(lab)
+             nn = nn, tip = tip, v = sortv(bc),
+             r = raw_stats()) |> c(lab)
       }
       }
       base <- glyph(p$cols)
@@ -489,6 +498,13 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       c(list(kind = "num", v = sortv(v)), parts)
     }
   })
+  # What the hover card says about each column, beside the row's numbers:
+  # its header and sub-line (the arm and its N, or the summary's name), the
+  # measure a bar shows, the colour column a split names its levels by, the
+  # percentage base, and the statistic words of a distribution.
+  for (i in seq_along(cols)) {
+    cols[[i]]$tt <- rank_tip_meta(plan[[i]])
+  }
 
   act_vals <- as.character(unlist(active$vals %||% character()))
   on <- if (length(act_vals) && !is.null(rank_chr1(active$col))) {
@@ -906,7 +922,7 @@ rank_split_html <- function(c) {
   seg <- vapply(seq_len(k), function(j) {
     body <- paste0(
       "<div class=\"blockr-rank-fill\" style=\"width:", rank_fmt_w(c$seg[[j]]),
-      "%;background:", c$fills[[j]], "\" data-blockr-tooltip=\"",
+      "%;background:", c$fills[[j]], "\" data-rank-tip=\"",
       rank_esc(c$names[[j]]), ": ", c$segv[[j]], "\"></div>"
     )
     if (grouped) {
@@ -948,7 +964,7 @@ rank_box_html <- function(c) {
     }
     paste0(
       "<div class=\"blockr-rank-lane blockr-rank-boxcell", cls,
-      "\" data-blockr-tooltip=\"", c$tip[[i]], "\">",
+      "\" data-rank-tip=\"", c$tip[[i]], "\">",
       if (!is.na(c$w1[[i]])) {
         paste0("<i class=\"lane-wh\" style=\"left:", rank_fmt_w(c$wl[[i]]),
                "%;width:", rank_fmt_w(c$w1[[i]]), "%\"></i>")
@@ -1002,7 +1018,7 @@ rank_pr_html <- function(c) {
     }
     paste0(
       "<div class=\"blockr-rank-lane blockr-rank-prcell", cls,
-      "\" data-blockr-tooltip=\"", c$tip[[i]], "\">",
+      "\" data-rank-tip=\"", c$tip[[i]], "\">",
       if (!is.null(c$ow) && !is.na(c$ow[[i]])) {
         paste0("<i class=\"lane-fence\" style=\"left:", rank_fmt_w(c$ol[[i]]),
                "%;width:", rank_fmt_w(c$ow[[i]]), "%\"></i>")
@@ -1035,7 +1051,7 @@ rank_pair_html <- function(c) {
       if (isTRUE(c$dash[[i]])) " is-dash" else "", "\"",
       if (!is.na(fill)) paste0(" style=\"--blockr-rank-fill:", fill, "\"") else "",
       if (nzchar(c$tip[[i]])) {
-        paste0(" data-blockr-tooltip=\"", c$tip[[i]], "\"")
+        paste0(" data-rank-tip=\"", c$tip[[i]], "\"")
       } else {
         ""
       },
@@ -1200,6 +1216,24 @@ rank_fmt_n <- function(x) {
 #' `I()` keeps every per-row vector a JSON array even at length 1 (auto_unbox
 #' would collapse a one-row table's columns to scalars, and the JS assembler
 #' indexes them).
+#' The hover card's column description (see rank_cells()). NULL for the
+#' columns whose cell already prints everything (numbers, text).
+#' @noRd
+rank_tip_meta <- function(p) {
+  if (identical(p$kind, "num")) return(NULL)
+  den <- p$val_denom
+  out <- list(
+    head = rank_chr1(p$label),
+    sub = rank_chr1(p$sub_label),
+    meas = rank_chr1(p$meas),
+    cvar = rank_chr1(p$cvar),
+    den = if (is.numeric(den) && length(den) == 1L && is.finite(den) &&
+                den > 0) den,
+    words = p$words
+  )
+  out[!vapply(out, is.null, logical(1L))]
+}
+
 #' @noRd
 rank_flat_payload <- function(m) {
   arr <- function(x) I(unname(x))
@@ -1239,6 +1273,8 @@ rank_flat_payload <- function(m) {
           o$ow <- arr(g$ow)
         }
         o$tip <- arr(as.character(g$tip))
+        # The statistics, for the hover card: one array per stat that exists.
+        if (length(g$r)) o$r <- lapply(g$r, arr)
         # Column-level, and only when true: the assembler reads an absent
         # flag as "this mark draws its own rail".
         if (isTRUE(g$bare)) o$bare <- TRUE
@@ -1298,6 +1334,7 @@ rank_flat_payload <- function(m) {
       out$dw <- c$dw
     }
     out$v <- arr(c$v)
+    if (length(c$tt)) out$tt <- c$tt
     out
   }
   out <- list(

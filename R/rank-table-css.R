@@ -395,6 +395,19 @@ rank_table_css <- function() {
                         var(--blockr-rank-tick)) !important;
   transition: background 0.1s ease;
 }
+/* Rows: the table style every output table uses (blockr.ui design system,
+   Tables): 30px, a 20px line with 5px above and below, no rules in the body.
+   The 12px lanes sit inside the line, and the gaps between them separate
+   the rows. The sparkline row below keeps its own taller cell. */
+.blockr-rank-table tbody td {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  line-height: 20px;
+}
+.blockr-rank-table tbody tr {
+  border-bottom: 0;
+}
+
 /* Sparkline: one inline SVG per cell, band under line, last-value dot.
    Taller than the other lanes -- and the trajectory USES the row: the
    cell keeps a token 1px of vertical padding (a line rarely touches the
@@ -613,6 +626,12 @@ rank_table_css <- function() {
   padding: 5px 9px;
   border-radius: var(--blockr-radius-lg, 8px);
   white-space: nowrap;
+}
+/* The hover card over a bar, box, dot range or dumbbell: the chart tooltip
+   card (chart.css .dd-tt-*), at its padding and width. */
+.blockr-lane-tip.is-card {
+  padding: 6px 10px;
+  min-width: 160px;
 }
 
 /* Zero-centred difference bar. Zero sits in the MIDDLE here, so neither end of
