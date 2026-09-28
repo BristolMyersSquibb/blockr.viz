@@ -614,6 +614,12 @@ rank_table_css <- function() {
   border-radius: var(--blockr-radius-lg, 8px);
   white-space: nowrap;
 }
+/* The hover card over a bar, box, dot range or dumbbell: the chart tooltip
+   card (chart.css .dd-tt-*), at its padding and width. */
+.blockr-lane-tip.is-card {
+  padding: 6px 10px;
+  min-width: 160px;
+}
 
 /* Zero-centred difference bar. Zero sits in the MIDDLE here, so neither end of
    the rail is an axis and both round; the fill rounds on whichever end points
