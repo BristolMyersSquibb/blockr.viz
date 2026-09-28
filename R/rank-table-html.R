@@ -316,19 +316,10 @@ rank_footer_tag <- function(spec) {
     class = "blockr-rank-footer",
     htmltools::tags$span(class = "blockr-rank-count", spec$count %||% ""),
     htmltools::tags$span(class = "blockr-rank-note", spec$note %||% ""),
-    htmltools::tags$span(
-      class = "blockr-rank-status",
-      style = if (is.null(spec$filter)) "display:none" else NULL,
-      htmltools::tags$span(class = "blockr-rank-dot"),
-      htmltools::tags$span(
-        class = "blockr-rank-status-text",
-        if (!is.null(spec$filter)) paste0("Filtering downstream: ", spec$filter)
-      ),
-      if (isTRUE(spec$reset)) {
-        htmltools::tags$button(type = "button", class = "blockr-rank-reset",
-                               "Reset")
-      }
-    )
+    # The drill's line, the chart's own markup and words (chart.js
+    # _updateStatus): rank-table.js fills it, because what it says depends on
+    # clicks the server never hears about in transient mode.
+    htmltools::tags$div(class = "dd-status-footer")
   )
 }
 

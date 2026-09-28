@@ -767,21 +767,5 @@ rank_table_css <- function() {
   color: var(--blockr-color-text-muted, #6b7280);
 }
 .blockr-rank-note { color: var(--blockr-color-text-warning, #b45309); }
-.blockr-rank-status { display: inline-flex; gap: 0.4rem; align-items: center; }
-.blockr-rank-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--blockr-rank-fill);
-}
-.blockr-rank-reset {
-  font: inherit;
-  cursor: pointer;
-  background: none;
-  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  border-radius: 2px;
-  padding: 0.1rem 0.4rem;
-  color: inherit;
-}
 "
 }
