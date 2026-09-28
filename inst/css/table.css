@@ -509,3 +509,39 @@
 .drilldown-table-container .blockr-table tr > :last-child {
   padding-right: calc(12px + var(--blockr-card-inset, 0px));
 }
+
+/* ===== Summarize table: the chart's header and drill line ===== */
+/* The title band sits in the gear row, on its left (rank-table.js buildGear),
+   laid out as the chart's (chart.css .dd-card .blockr-gear-header): it takes
+   the row's width and wraps before the tools, which stay top right. In the
+   row it has no hairline under it: the chart's has none either. */
+.blockr-rank-container .blockr-gear-header {
+  align-items: flex-start;
+}
+.blockr-rank-container .blockr-gear-header .dd-table-titles {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 8px 0 2px;
+  border-bottom: none;
+  margin-bottom: 0;
+}
+/* The drill line takes the rest of the footer row, so its Reset sits hard
+   right, as under a chart and under the table block. */
+.blockr-rank-footer > .dd-status-footer {
+  flex: 1 1 auto;
+  padding: 0;
+}
+.blockr-rank-footer > .dd-status-footer:empty {
+  display: none;
+}
+
+/* The export picture (rank-table.js captureRoot): the block without its
+   tools, white, with the title band as the header row shows it. */
+.blockr-rank-capture {
+  background: #fff;
+  padding: 8px 10px;
+}
+.blockr-rank-capture .dd-table-titles {
+  border-bottom: none;
+  margin-bottom: 4px;
+}

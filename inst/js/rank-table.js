@@ -18,6 +18,13 @@
 
   var BOUND = "rankTableBound";
 
+  // Where this file was served from: snapdom.js sits next to it and is loaded
+  // only when a picture is first asked for.
+  var RANK_JS_BASE = (function () {
+    var sc = document.currentScript;
+    return sc && sc.src ? sc.src.replace(/[^\/]*$/, "") : "";
+  })();
+
   /** @param {Element} root */
   function rows(root) {
     return Array.prototype.slice.call(
@@ -325,13 +332,15 @@
       );
     }
 
-    function status(text) {
-      var box = root.querySelector(".blockr-rank-status");
-      if (!box) return;
-      var txt = box.querySelector(".blockr-rank-status-text");
-      if (txt) txt.textContent = text ? "Filtering downstream: " + text : "";
-      box.style.display = text ? "" : "none";
+    function select(label) {
+      root._rankSel = label;
+      paintStatus(root);
     }
+    root._rankClear = function () {
+      rows(root).forEach(function (r) { r.classList.remove("is-on"); });
+      send(null);
+      select(null);
+    };
 
     root.addEventListener("click", function (e) {
       var tr = e.target.closest("tr.blockr-rank-row.is-pick");
@@ -343,28 +352,84 @@
       if (rankTransient(root)) {
         send([label]);
         rankFlash(root, tr);
+        root._rankReceipt = { text: "Drilled down to " + col + " = " + label,
+                              at: Date.now() };
+        paintStatus(root);
+        clearTimeout(root._rankReceiptTimer);
+        root._rankReceiptTimer = setTimeout(function () {
+          dropReceipt(root);
+        }, RK_RECEIPT_HOLD_MS + RK_RECEIPT_FADE_MS + 200);
         return;
       }
       var was = tr.classList.contains("is-on");
       rows(root).forEach(function (r) { r.classList.remove("is-on"); });
       if (was) {
         send(null);
-        status("");
+        select(null);
       } else {
         tr.classList.add("is-on");
         send([label]);
-        status(label);
+        select(label);
       }
     });
+  }
 
-    var reset = root.querySelector(".blockr-rank-reset");
-    if (reset) {
+  // The drill's footer line, in the chart's words and markup (chart.js
+  // _updateStatus, chart.css .dd-status-*), so a table and a chart on one
+  // board report a drill the same way. A latched drill reads "No filter
+  // active" / "Filtered: COL = value" with Reset. With a ctrl_target the click
+  // is an event: nothing at rest, and a receipt ("Drilled down to COL =
+  // value") that holds, then fades.
+  var RK_RECEIPT_HOLD_MS = 1400;
+  var RK_RECEIPT_FADE_MS = 1100;
+
+  function dropReceipt(root) {
+    if (!root._rankReceipt) return;
+    root._rankReceipt = null;
+    paintStatus(root, true);
+  }
+
+  function paintStatus(root, returning) {
+    var box = root.querySelector(".blockr-rank-footer .dd-status-footer");
+    if (!box) return;
+    box.textContent = "";
+    var col = root.getAttribute("data-rank-drill");
+    if (!col) return;
+    var rc = root._rankReceipt;
+    if (rc) {
+      var age = Date.now() - rc.at;
+      if (age < RK_RECEIPT_HOLD_MS + RK_RECEIPT_FADE_MS) {
+        var rec = document.createElement("span");
+        rec.className = "dd-status-text dd-status-receipt";
+        rec.textContent = rc.text;
+        // Resume, do not restart: a repaint mid-fade picks the fade up where
+        // it is (chart.js does the same).
+        rec.style.animation = "dd-receipt-out " + RK_RECEIPT_FADE_MS +
+          "ms linear " + (RK_RECEIPT_HOLD_MS - age) + "ms both";
+        rec.addEventListener("animationend", function () {
+          dropReceipt(root);
+        });
+        box.appendChild(rec);
+        return;
+      }
+      root._rankReceipt = null;
+    }
+    if (rankTransient(root)) return;
+    var sel = root._rankSel;
+    var span = document.createElement("span");
+    span.className = "dd-status-text" + (returning ? " dd-status-returning" : "");
+    span.textContent = sel ? "Filtered: " + col + " = " + sel : "No filter active";
+    box.appendChild(span);
+    if (sel) {
+      var reset = document.createElement("button");
+      reset.type = "button";
+      reset.className = "dd-status-reset";
+      reset.textContent = "Reset";
       reset.addEventListener("click", function (e) {
         e.stopPropagation();
-        rows(root).forEach(function (r) { r.classList.remove("is-on"); });
-        send(null);
-        status("");
+        if (root._rankClear) root._rankClear();
       });
+      box.appendChild(reset);
     }
   }
 
@@ -664,21 +729,7 @@
   /** Title / subtitle / caption / legend / footer, refreshed in place. */
   function applyChrome(root, ch) {
     if (!ch) return;
-    var band = root.querySelector(".dd-table-titles");
-    if (band) {
-      var t = ch.title || "";
-      var st = ch.subtitle || "";
-      var tEl = band.querySelector(".dd-table-title");
-      var sEl = band.querySelector(".dd-table-subtitle");
-      if (tEl) { tEl.textContent = t; tEl.style.display = t ? "" : "none"; }
-      if (sEl) { sEl.textContent = st; sEl.style.display = st ? "" : "none"; }
-      band.style.display = (t || st) ? "" : "none";
-    }
-    var cap = root.querySelector(".dd-table-caption");
-    if (cap) {
-      cap.textContent = ch.caption || "";
-      cap.style.display = ch.caption ? "" : "none";
-    }
+    paintTitles(root, ch);
     var lg = root.querySelector(".blockr-rank-legend");
     if (lg) {
       if (!ch.legend) {
@@ -707,13 +758,38 @@
     if (cnt) cnt.textContent = f.count || "";
     var note = root.querySelector(".blockr-rank-note");
     if (note) note.textContent = f.note || "";
-    var st2 = root.querySelector(".blockr-rank-status");
-    if (st2) {
-      var txt = st2.querySelector(".blockr-rank-status-text");
-      if (txt) {
-        txt.textContent = f.filter ? "Filtering downstream: " + f.filter : "";
+    root._rankSel = f.filter || null;
+    paintStatus(root);
+  }
+
+  // The three bands, painted as the chart paints them (chart.js
+  // _updateTitles): a piece naming one of the block's settings is a word that
+  // opens it, and a setting whose clause dropped is offered beside the
+  // sentence. Without the gear's engine (a static page) the text alone.
+  function paintTitles(root, ch) {
+    var band = root.querySelector(".dd-table-titles");
+    var tEl = band && band.querySelector(".dd-table-title");
+    var sEl = band && band.querySelector(".dd-table-subtitle");
+    var cap = root.querySelector(".dd-table-caption");
+    var slots = root._rankSlots;
+    if (slots) slots.close();
+    function paint(el, text, parts, offers) {
+      if (!el) return;
+      if (slots) {
+        slots.paint(el, text || "", parts);
+        slots.paintOffers(el, offers);
+      } else {
+        el.textContent = text || "";
       }
-      st2.style.display = f.filter ? "" : "none";
+      el.style.display = el.childNodes.length ? "" : "none";
+    }
+    paint(tEl, ch.title, ch.title_parts, ch.title_offers);
+    paint(sEl, ch.subtitle, ch.subtitle_parts, ch.subtitle_offers);
+    paint(cap, ch.caption, ch.caption_parts, ch.caption_offers);
+    if (band) {
+      var shown = (tEl && tEl.style.display !== "none") ||
+        (sEl && sEl.style.display !== "none");
+      band.style.display = shown ? "" : "none";
     }
   }
 
@@ -740,6 +816,31 @@
   }
 
   if (window.Shiny && Shiny.addCustomMessageHandler) {
+    // A deck's request (R/chart-capture.R): the picture at the width it
+    // asks for, the height the table's own. Exactly one reply per request.
+    Shiny.addCustomMessageHandler("blockr-viz-rank-capture", function (msg) {
+      var replied = false;
+      var reply = function (x) {
+        if (replied) return;
+        replied = true;
+        var out = { req: msg.req };
+        for (var k in x) out[k] = x[k];
+        Shiny.setInputValue("blockr_viz_capture_result", out,
+                            { priority: "event" });
+      };
+      setTimeout(function () {
+        reply({ error: "the table did not draw in time" });
+      }, 20000);
+      var payload = null;
+      try { payload = JSON.parse(msg.payload); } catch (e) { payload = null; }
+      if (!payload) {
+        reply({ error: "the table's payload could not be read" });
+        return;
+      }
+      rankPicture(payload, Number(msg.width) || 900, msg.ratio, msg.css)
+        .then(reply, function (e) { reply({ error: String(e) }); });
+    });
+
     Shiny.addCustomMessageHandler("blockr-viz-rank-data",
       function (msg) {
         var entry = payloadStore[msg.id];
@@ -767,6 +868,123 @@
     var id = root.getAttribute("data-rank-elem-id");
     var e = id ? payloadStore[id] : null;
     return e ? e.payload : null;
+  }
+
+  // ---------- the export picture ----------
+  // The table an export carries is the one the browser draws, the chart
+  // block's rule (R/chart-capture.R): a fresh table mounted offscreen at the
+  // export's width from the same payload the block renders, every row and no
+  // scroll box, turned into one PNG by snapdom. No second renderer to keep in
+  // step with this one.
+  var snapdomLoading = null;
+  function loadSnapdom() {
+    if (window.snapdom) return Promise.resolve(window.snapdom);
+    if (!snapdomLoading) {
+      snapdomLoading = new Promise(function (resolve, reject) {
+        var sc = document.createElement("script");
+        sc.src = RANK_JS_BASE + "snapdom.js";
+        sc.onload = function () {
+          if (window.snapdom) resolve(window.snapdom);
+          else reject(new Error("snapdom.js loaded but defined nothing"));
+        };
+        sc.onerror = function () {
+          snapdomLoading = null;
+          reject(new Error("snapdom.js could not be loaded"));
+        };
+        document.head.appendChild(sc);
+      });
+    }
+    return snapdomLoading;
+  }
+
+  // The container the export draws: the block's chrome without the tools
+  // (no gear, search, download or drill line). `css` is the table's inline
+  // stylesheet, for a page where no summarize table is mounted to carry it.
+  function captureRoot(width, css) {
+    var host = document.createElement("div");
+    host.className = "blockr-capture-host";
+    host.style.cssText = "position:fixed;left:-20000px;top:0;width:" +
+      width + "px;";
+    if (css) {
+      var st = document.createElement("style");
+      st.textContent = css;
+      host.appendChild(st);
+    }
+    var root = document.createElement("div");
+    root.className = "blockr-html-table-container blockr-rank-container " +
+      "blockr-rank-capture";
+    root.innerHTML = '<div class="dd-table-titles">' +
+      '<div class="dd-table-title"></div>' +
+      '<div class="dd-table-subtitle"></div></div>' +
+      '<div class="blockr-rank-legend" style="display:none"></div>' +
+      '<div class="blockr-table-wrapper"></div>' +
+      '<div class="dd-table-caption"></div>';
+    host.appendChild(root);
+    document.body.appendChild(host);
+    return root;
+  }
+
+  /** One picture of a payload at `width` CSS px: {png, width, height}, the
+   * size in CSS px (R turns it into inches at 96 dpi). */
+  function rankPicture(payload, width, ratio, css) {
+    return loadSnapdom().then(function (snap) {
+      var root = captureRoot(width, css);
+      var host = root.parentNode;
+      var drop = function () {
+        if (host.parentNode) host.parentNode.removeChild(host);
+      };
+      try {
+        applyPayload(root, payload);
+      } catch (e) {
+        drop();
+        throw e;
+      }
+      var fonts = (document.fonts && document.fonts.ready) ?
+        document.fonts.ready : Promise.resolve();
+      return fonts.then(function () {
+        return new Promise(function (r) {
+          requestAnimationFrame(function () { requestAnimationFrame(r); });
+        });
+      }).then(function () {
+        var w = Math.ceil(root.offsetWidth);
+        var h = Math.ceil(root.offsetHeight);
+        // dpr 1: snapdom multiplies the scale by the device pixel ratio, and
+        // the ratio is already the export's to choose.
+        return snap.toCanvas(root, {
+          scale: Number(ratio) || 2, dpr: 1, embedFonts: true,
+          backgroundColor: "#ffffff"
+        }).then(function (canvas) {
+          drop();
+          return { png: canvas.toDataURL("image/png"), width: w, height: h };
+        });
+      }, function (e) { drop(); throw e; });
+    });
+  }
+
+  // Opening the download menu posts the picture, so it is in R before a
+  // format is picked (chart.js does the same). At the panel's own width, so
+  // the file is the table on screen, unscrolled.
+  function bindCapture(root, header) {
+    var elemId = root.getAttribute("data-rank-elem-id");
+    header.addEventListener("click", function (e) {
+      var t = e.target;
+      if (!t || !t.closest ||
+          !t.closest(".blockr-action-menu__trigger, .blockr-tool")) return;
+      var tbl = root.querySelector("table.blockr-rank-table");
+      var c = {};
+      try { c = JSON.parse((tbl && tbl.getAttribute("data-rank-cfg")) || "{}"); }
+      catch (err) { c = {}; }
+      var stored = storedFor(root);
+      if (!c.capture_export || !stored || !elemId) return;
+      var w = Math.round(root.getBoundingClientRect().width) || 900;
+      rankPicture(stored, w, c.capture_ratio, null).then(function (r) {
+        if (window.Shiny && Shiny.setInputValue) {
+          Shiny.setInputValue(elemId + "_capture", r, { priority: "event" });
+        }
+      }, function (err) {
+        if (window.console) console.warn("summarize table picture:", err);
+      });
+    }, true);
   }
 
   // ---------- gear ----------
@@ -1827,6 +2045,59 @@
     ctx.rerender = function () { engine.render(); };
     engine.render();
 
+    // The words in the title bands: the chart's painter over this gear's
+    // engine, so a word and the gear's row cannot disagree. `by` is a list
+    // of columns, which the engine keeps out of the sentence (a menu picks
+    // one); the word names the innermost column, the one each row is, so
+    // it opens a single pick that replaces that column.
+    var B = (typeof Blockr !== "undefined") ? Blockr : null;
+    if (B && B.SentenceSlots) {
+      var lastBy = function () {
+        var b = Array.isArray(cfg.by) ? cfg.by : [];
+        return b.length ? b[b.length - 1] : "";
+      };
+      // Between gear sessions a word reads the state the server last sent,
+      // not the gear's copy from its last open (the gear is built before the
+      // first payload, so that copy may have no columns at all). The gear
+      // re-reads and rebuilds its controls on open, so this cannot orphan
+      // them.
+      var sync = function () {
+        if (pop.classList.contains("blockr-settings--open")) return;
+        var t = root.querySelector("table.blockr-rank-table");
+        if (!t) return;
+        var s3 = readGearState(t);
+        cfg = s3.cfg;
+        cols = s3.cols;
+      };
+      var words = {
+        _role: function (k) { return engine._role(k); },
+        _slotFlag: function (k) { return engine._slotFlag(k); },
+        _slotOptionsFor: function (k) {
+          sync();
+          if (k !== "by") return engine._slotOptionsFor(k);
+          return {
+            options: engine._colOptionsFor("by", { required: true }),
+            selected: lastBy()
+          };
+        },
+        _setRoleValue: function (k, v) {
+          if (k !== "by") { engine._setRoleValue(k, v); return; }
+          var b = Array.isArray(cfg.by) ? cfg.by.slice() : [];
+          if (b.length) b[b.length - 1] = v; else b = [v];
+          cfg.by = b;
+          sendConfig(elemId, "by", b);
+          if (pop.classList.contains("blockr-settings--open")) engine.render();
+        }
+      };
+      root._rankSlots = new B.SentenceSlots({
+        ddc: function () { return words; },
+        config: function () { sync(); return cfg; },
+        openGear: function () {
+          if (!pop.classList.contains("blockr-settings--open")) btn.click();
+        }
+      });
+    }
+
     function openPop() {
       pop.classList.add("blockr-settings--open");
       btn.setAttribute("aria-expanded", "true");
@@ -1852,6 +2123,11 @@
 
     root.insertBefore(header, root.firstChild);
     root.insertBefore(pop, header.nextSibling);
+    // The title band moves into the gear row, on its left: the chart's header
+    // (chart.js _buildDOM). The settings band then opens below the title.
+    var titles = root.querySelector(".dd-table-titles");
+    if (titles) header.insertBefore(titles, header.firstChild);
+    bindCapture(root, header);
     // One control row, chart / table parity: the search box MOVES UP into the
     // gear row and sits LEFT of the gear, which keeps its canonical top-right
     // spot (the cross-block anchor). The emptied chrome row is hidden so it
