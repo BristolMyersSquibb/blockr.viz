@@ -45,7 +45,8 @@
 #'   facet level name; `sort_dir` is `"desc"` or `"asc"`.
 #' @param top_n Optional cap. Off by default -- the table scrolls instead.
 #'   When set, the rows below the cut are reported in a visible fold row.
-#' @param max_height CSS max-height of the scroll container.
+#' @param max_height `NULL` (default): the table runs its full length and
+#'   scrolls with what is around it. A CSS length: a box of that height.
 #' @param search Show the search input.
 #' @param sortable Allow click-to-sort on the column headers.
 #' @param axis Print each glyph column's domain as a tick strip under its
@@ -74,7 +75,7 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
                        color = NULL,
                        bar_mode = "stacked", facet = NULL,
                        cols = NULL, fields = NULL, sort_by = "value",
-                       sort_dir = "desc", top_n = NULL, max_height = "600px",
+                       sort_dir = "desc", top_n = NULL, max_height = NULL,
                        search = TRUE, sortable = TRUE, axis = TRUE,
                        title = NULL, subtitle = NULL,
                        caption = NULL, drill = NULL, scale_map = NULL,
@@ -145,7 +146,7 @@ rank_message_table <- function(msg = "No data") {
 # status line. Mirrors dt_chrome() -- same classes, so the shared table CSS
 # and the design tokens apply unchanged -- plus the rank delta CSS and JS.
 #' @noRd
-rank_chrome <- function(inner, prep = NULL, max_height = "600px", search = TRUE,
+rank_chrome <- function(inner, prep = NULL, max_height = NULL, search = TRUE,
                         title = NULL, subtitle = NULL, caption = NULL,
                         drill = NULL, elem_id = NULL, active = NULL,
                         shell = FALSE, download = NULL, ctrl_target = "") {
@@ -196,10 +197,14 @@ rank_chrome <- function(inner, prep = NULL, max_height = "600px", search = TRUE,
     )
   }
 
-  scroll_style <- if (!is.null(max_height)) {
-    paste0("max-height:", max_height, ";overflow:auto;")
+  # No height: the table runs its full length and the panel or page around it
+  # scrolls, the header following (table.js followHeader(), the composer
+  # table's `scroll = "page"`). The box then scrolls sideways only.
+  page <- is.null(max_height)
+  scroll_style <- if (page) {
+    NULL
   } else {
-    "overflow:auto;"
+    paste0("max-height:", max_height, ";overflow:auto;")
   }
 
   htmltools::tagList(
@@ -219,7 +224,9 @@ rank_chrome <- function(inner, prep = NULL, max_height = "600px", search = TRUE,
       # control row -- a long legend must not push the search box around.
       legend,
       htmltools::tags$div(
-        class = "blockr-table-wrapper", style = scroll_style, inner
+        class = paste(c("blockr-table-wrapper", if (page) "dt-scroll-page"),
+                      collapse = " "),
+        style = scroll_style, inner
       ),
       if (isTRUE(shell)) {
         htmltools::tags$div(class = "dd-table-caption", style = "display:none")
@@ -497,7 +504,7 @@ rank_table_attrs <- function(prep, cfg) {
 #' @param max_height,search,drill,elem_id Same meaning as in [rank_table()].
 #' @return An [htmltools::tagList()].
 #' @noRd
-rank_chrome_shell <- function(max_height = "600px", search = TRUE,
+rank_chrome_shell <- function(max_height = NULL, search = TRUE,
                               drill = NULL, elem_id = NULL, download = NULL,
                               ctrl_target = "") {
   rank_chrome(

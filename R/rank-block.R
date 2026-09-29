@@ -88,7 +88,11 @@
 #'   `"label"`, a summary column name or a facet level name; and `"desc"` /
 #'   `"asc"`.
 #' @param top_n Optional cap (`NULL` = off, the table scrolls instead).
-#' @param max_height CSS max-height of the scroll container.
+#' @param max_height `NULL` (default): the table runs its full length and
+#'   scrolls with the panel around it, the header following, as the composer
+#'   table does. A CSS length (`"600px"`) keeps it in a box of that height
+#'   that scrolls on its own. `"600px"`, the default before, is read as
+#'   `NULL`: boards saved with it scroll with their panel too.
 #' @param search Show the search input.
 #' @param sortable Allow click-to-sort on the column headers. `FALSE` freezes
 #'   the table in the configured `sort_by` order -- for exhibits whose row
@@ -164,7 +168,7 @@ new_summarize_table_block <- function(group = NULL,
                                  sort_by = "value",
                                  sort_dir = "desc",
                                  top_n = NULL,
-                                 max_height = "600px",
+                                 max_height = NULL,
                                  search = TRUE,
                                  sortable = TRUE,
                                  axis = TRUE,
@@ -212,6 +216,10 @@ new_summarize_table_block <- function(group = NULL,
   filter_values <- null_state(filter_values)
   script <- cb_script_text(script)
   values <- if (is.list(values)) values else list()
+  # LEGACY: the old default. Every board saved before the table scrolled with
+  # its panel carries it, not a choice anyone made.
+  max_height <- chr_state(max_height)
+  if (identical(max_height, "600px")) max_height <- NULL
   cols <- chr_vec_state(cols)
   fields <- chr_vec_state(fields)
   # The summarize table groups by `by`; the ranked bar by `group` (+ `parent`).
@@ -938,6 +946,7 @@ new_summarize_table_block <- function(group = NULL,
       "group", "value", "id_var", "summaries", "by",
       "parent", "color", "facet",
       "cols", "fields", "top_n", "title", "subtitle", "caption", "drill",
+      "max_height",
       "ctrl_target", "ctrl_table", "filter_column", "filter_values",
       # NULL / empty until a board writes a prepare script; a NULL outside
       # this list wedges the block.
@@ -1188,14 +1197,17 @@ rank_arguments <- function() {
       paste0(
         "Optional cap on the number of ranked rows, with a visible fold row ",
         "for what falls below the cut. Leave unset for the default ",
-        "behaviour: every row rendered, scrolling at `max_height`. Set it ",
+        "behaviour: every row rendered, scrolling with the panel. Set it ",
         "only for report exhibits, where there is no scrollbar."
       ),
       example = 10L,
       type = arg_integer()
     ),
     max_height = new_arg_spec(
-      "CSS max-height of the scroll container.",
+      paste0(
+        "Leave unset: the table scrolls with its panel. A CSS length ",
+        "puts it in a box of that height instead."
+      ),
       example = "600px",
       type = arg_string()
     ),
