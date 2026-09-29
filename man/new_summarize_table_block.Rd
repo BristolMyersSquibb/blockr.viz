@@ -30,7 +30,7 @@ new_summarize_table_block(
   download = FALSE,
   title = NULL,
   subtitle = NULL,
-  caption = NULL,
+  caption = getOption("blockr.viz.default_caption"),
   drill = NULL,
   ctrl_target = "",
   ctrl_table = "",
@@ -151,10 +151,13 @@ whoever opens an xlsx came to pivot), the table itself as a
 self-contained page, and the painted exhibit as a deck or an image. One
 writable format renders a button, several render a menu.}
 
-\item{title, subtitle, caption}{Display text. \code{NULL} = auto (inherits the
-input's label / subtitle / caption attribute), \code{""} = explicitly none,
-else a template with the same \code{{...}} tokens as the chart and table
-blocks (see \code{resolve_title_template()}).}
+\item{title, subtitle, caption}{Display text, as on \code{\link[=new_chart_block]{new_chart_block()}}:
+\code{NULL} = auto (inherits the input's label / subtitle / caption
+attribute), \code{""} = explicitly none, else a template with the chart
+block's \code{{...}} tokens (see \code{resolve_title_template()}). A token naming
+one of the block's settings (\verb{\{label(@by)\}}, \verb{\{@func\}}) prints as a word
+that opens that setting; \code{by} names its innermost column. \code{caption}
+defaults to the option \code{blockr.viz.default_caption} (unset = \code{NULL}).}
 
 \item{drill}{Column a row click filters on. The emitted filter is the same
 categorical contract as \code{\link[=new_chart_block]{new_chart_block()}}, so existing filter links

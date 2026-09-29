@@ -890,7 +890,7 @@
         onInput: (inp, e) => {
           // `e.data` is the character just typed; a paste or a pick from the
           // menu reports something else, and neither should open a menu.
-          if (e && e.data === '@') this._openAtMenu(inp);
+          if (e && /** @type {InputEvent} */ (e).data === '@') this._openAtMenu(inp);
           else this._refilterAtMenu(inp);
           sync();
         },
@@ -1220,7 +1220,8 @@
     _hlAtMenu() {
       const st = this._at;
       if (!st) return;
-      st.items.forEach((it, i) => it.el.classList.toggle('dd-at-item--hl', i === st.idx));
+      st.items.forEach((/** @type {{ el: HTMLElement }} */ it, /** @type {number} */ i) =>
+        it.el.classList.toggle('dd-at-item--hl', i === st.idx));
       const cur = st.items[st.idx];
       if (cur) cur.el.scrollIntoView({ block: 'nearest' });
     }
@@ -2131,7 +2132,7 @@
     /**
      * @param {HTMLElement} parent @param {string} key
      * @param {{ required?: boolean, onChange?: () => void,
-     *          chipTarget?: HTMLElement, onInput?: (inp: HTMLInputElement) => void,
+     *          chipTarget?: HTMLElement, onInput?: (inp: HTMLInputElement, e: Event) => void,
      *          onKeydown?: (e: KeyboardEvent, inp: HTMLInputElement) => boolean,
      *          onReady?: (api: { input: HTMLInputElement, commit: () => void,
      *                            isDirty: () => boolean }) => void }} [opts]

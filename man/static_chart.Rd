@@ -130,8 +130,8 @@ the same level ordering (factor levels, else sorted unique), and a board
 scale map (arm colors) resolves through the same blockr.theme resolver.
 
 The look mirrors the canvas chart, constant for constant (chart.js is the
-source of truth): 11px \verb{#666} tick labels, dashed \verb{#f3f4f6} gridlines on
-the value axis only, \verb{#ccc} axis lines, the category-first-at-the-top
+source of truth): 11px \verb{#6b7280} tick labels, dashed \verb{#e5e7eb} gridlines on
+the value axis only, \verb{#d1d5db} axis lines, the category-first-at-the-top
 horizontal layout, 60\%-band bars with no rounding and no value labels,
 boxes filled at the series color over a full-strength border, monotone
 interpolation on lines, and the bottom-centered legend band.

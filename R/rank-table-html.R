@@ -519,4 +519,3 @@ rank_chrome_shell <- function(max_height = "600px", search = TRUE,
     download = download, ctrl_target = ctrl_target
   )
 }
-

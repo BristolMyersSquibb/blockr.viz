@@ -202,6 +202,8 @@ interface BlockrNamespace {
   Select?: BlockrSelectStatic;
   /** SVG icon strings (gear, plus, ...). */
   icons: Record<string, string>;
+  /** A shortcut written for this platform ("Mod+Enter" is "⌘↵" on a Mac). */
+  keys(keys: string): string;
   /** Document-level click delegate that drops listeners for removed nodes. */
   onDocClick(el: Element, cb: (e: MouseEvent) => void): void;
   uid(prefix?: string): string;

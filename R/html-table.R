@@ -1296,7 +1296,7 @@ input.blockr-search:focus {
   outline-offset: var(--blockr-focus-offset, 2px);
   border-radius: 2px;
 }
-/* Stat-label (row-stub) cells — wrap to 2 lines (never truncate), aligned
+/* Stat-label (row-stub) cells - wrap to 2 lines (never truncate), aligned
    to the top so a wrapped label stays level with its numbers, in the body
    ink. The 24px left padding is the indent-0 BASE: nested rows add
    `row_indent * 16px` on top (build_html_tbody), so level 1 sits at 40px,
@@ -1316,7 +1316,7 @@ input.blockr-search:focus {
   font-weight: var(--blockr-font-weight-normal, 400);
   color: var(--blockr-color-text-default, #111827);
 }
-/* Value cells — right-aligned, tabular figures, top-aligned to match the
+/* Value cells - right-aligned, tabular figures, top-aligned to match the
    wrapping stub. Normal weight like the preview; emphasis (totals, key rows)
    comes from the data via `.bold` rows, not a blanket medium weight. */
 .blockr-html-table-container .blockr-table tbody td.blockr-data {

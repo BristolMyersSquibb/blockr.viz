@@ -158,7 +158,7 @@ treatment arm stands out against a reference arm the same way row
 emphasis works. This overrides the identity palette (\code{header_bg}).
 
 The look is the blockr.topline flextable theme: dense bordered grid,
-first column left-aligned and wide, data columns centered, optional
+first column left-aligned and wide, data columns right-aligned, optional
 colored header bands, manual column widths (PowerPoint never autofits --
 size for the slide, don't reflow). Every aspect is parameterized; the
 defaults reproduce the topline deck look.
