@@ -312,6 +312,10 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
 
   # --- leaf rows -----------------------------------------------------------
   leaf <- rank_aggregate(data, keys, func, value, id_var)
+  # A missing group (NA) draws no row: it is what blockr.pharma's population
+  # join appends for a subject with no record. Those rows stay in `data`, so
+  # the N below and the facets' N count them. A blank string is a value.
+  leaf <- leaf[stats::complete.cases(leaf[keys]), , drop = FALSE]
   if (!nrow(leaf)) return(bad("No rows to display"))
   leaf$.label <- as.character(leaf[[group]])
   leaf$.parent <- if (is.null(parent)) NA_character_ else as.character(leaf[[parent]])
@@ -508,6 +512,7 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
   par_rows <- NULL
   if (!is.null(parent)) {
     par_rows <- rank_aggregate(data, parent, func, value, id_var)
+    par_rows <- par_rows[!is.na(par_rows[[parent]]), , drop = FALSE]
     par_rows$.label <- as.character(par_rows[[parent]])
     par_rows$.ord <- rank_data_ord(data[[parent]], par_rows$.label)
     par_rows$.parent <- NA_character_
