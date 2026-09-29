@@ -45,7 +45,8 @@
 #'   facet level name; `sort_dir` is `"desc"` or `"asc"`.
 #' @param top_n Optional cap. Off by default -- the table scrolls instead.
 #'   When set, the rows below the cut are reported in a visible fold row.
-#' @param max_height CSS max-height of the scroll container.
+#' @param max_height `NULL` (default): the table runs its full length and
+#'   scrolls with what is around it. A CSS length: a box of that height.
 #' @param search Show the search input.
 #' @param sortable Allow click-to-sort on the column headers.
 #' @param axis Print each glyph column's domain as a tick strip under its
@@ -74,7 +75,7 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
                        color = NULL,
                        bar_mode = "stacked", facet = NULL,
                        cols = NULL, fields = NULL, sort_by = "value",
-                       sort_dir = "desc", top_n = NULL, max_height = "600px",
+                       sort_dir = "desc", top_n = NULL, max_height = NULL,
                        search = TRUE, sortable = TRUE, axis = TRUE,
                        title = NULL, subtitle = NULL,
                        caption = NULL, drill = NULL, scale_map = NULL,
@@ -145,7 +146,7 @@ rank_message_table <- function(msg = "No data") {
 # status line. Mirrors dt_chrome() -- same classes, so the shared table CSS
 # and the design tokens apply unchanged -- plus the rank delta CSS and JS.
 #' @noRd
-rank_chrome <- function(inner, prep = NULL, max_height = "600px", search = TRUE,
+rank_chrome <- function(inner, prep = NULL, max_height = NULL, search = TRUE,
                         title = NULL, subtitle = NULL, caption = NULL,
                         drill = NULL, elem_id = NULL, active = NULL,
                         shell = FALSE, download = NULL, ctrl_target = "") {
@@ -196,10 +197,14 @@ rank_chrome <- function(inner, prep = NULL, max_height = "600px", search = TRUE,
     )
   }
 
-  scroll_style <- if (!is.null(max_height)) {
-    paste0("max-height:", max_height, ";overflow:auto;")
+  # No height: the table runs its full length and the panel or page around it
+  # scrolls, the header following (table.js followHeader(), the composer
+  # table's `scroll = "page"`). The box then scrolls sideways only.
+  page <- is.null(max_height)
+  scroll_style <- if (page) {
+    NULL
   } else {
-    "overflow:auto;"
+    paste0("max-height:", max_height, ";overflow:auto;")
   }
 
   htmltools::tagList(
@@ -219,7 +224,9 @@ rank_chrome <- function(inner, prep = NULL, max_height = "600px", search = TRUE,
       # control row -- a long legend must not push the search box around.
       legend,
       htmltools::tags$div(
-        class = "blockr-table-wrapper", style = scroll_style, inner
+        class = paste(c("blockr-table-wrapper", if (page) "dt-scroll-page"),
+                      collapse = " "),
+        style = scroll_style, inner
       ),
       if (isTRUE(shell)) {
         htmltools::tags$div(class = "dd-table-caption", style = "display:none")
@@ -235,31 +242,19 @@ rank_chrome <- function(inner, prep = NULL, max_height = "600px", search = TRUE,
   )
 }
 
-# The footer's content as DATA: the count line, the note a reinterpreted config
-# leaves, and the active drill filter. One definition, two consumers -- the
-# chrome renders it server-side, and rank-table.js refreshes it from the
-# payload without re-rendering the container.
+# The footer's content as DATA: the note a reinterpreted config leaves, and
+# the active drill filter. One definition, two consumers -- the chrome renders
+# it server-side, and rank-table.js refreshes it from the payload without
+# re-rendering the container. There is no row count: a Top N cut already
+# says what it left out in its fold row, and an uncut table has nothing to
+# report.
 #' @noRd
 rank_foot_spec <- function(prep, drill = NULL, active = NULL) {
   if (!is.null(prep$err)) {
-    return(list(count = "", note = NULL, filter = NULL, reset = FALSE))
-  }
-  n_shown <- if (is.null(prep$parent)) {
-    sum(!prep$rows$.is_parent)
-  } else {
-    sum(prep$rows$.is_parent)
+    return(list(note = NULL, filter = NULL, reset = FALSE))
   }
   act <- as.character(unlist(active$vals %||% character()))
   list(
-    count = paste0(
-      n_shown, " of ", prep$n_total, " ",
-      if (is.null(prep$parent)) "rows" else "groups",
-      if (prep$folded > 0L) {
-        paste0(", ", prep$folded, " folded")
-      } else {
-        ", all rendered"
-      }
-    ),
     note = prep$note,
     filter = if (length(act)) paste(act, collapse = ", ") else NULL,
     reset = !is.null(drill)
@@ -311,10 +306,9 @@ rank_footer <- function(prep, drill = NULL, active = NULL) {
 
 #' @noRd
 rank_footer_tag <- function(spec) {
-  if (is.null(spec)) spec <- list(count = "", reset = FALSE)
+  if (is.null(spec)) spec <- list(reset = FALSE)
   htmltools::tags$div(
     class = "blockr-rank-footer",
-    htmltools::tags$span(class = "blockr-rank-count", spec$count %||% ""),
     htmltools::tags$span(class = "blockr-rank-note", spec$note %||% ""),
     # The drill's line, the chart's own markup and words (chart.js
     # _updateStatus): rank-table.js fills it, because what it says depends on
@@ -510,7 +504,7 @@ rank_table_attrs <- function(prep, cfg) {
 #' @param max_height,search,drill,elem_id Same meaning as in [rank_table()].
 #' @return An [htmltools::tagList()].
 #' @noRd
-rank_chrome_shell <- function(max_height = "600px", search = TRUE,
+rank_chrome_shell <- function(max_height = NULL, search = TRUE,
                               drill = NULL, elem_id = NULL, download = NULL,
                               ctrl_target = "") {
   rank_chrome(

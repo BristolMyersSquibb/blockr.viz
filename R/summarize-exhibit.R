@@ -56,6 +56,10 @@
 static_summarize_table <- function(data, ...) {
 
   args <- list(...)
+  # The block hands over the settings its text names, script values
+  # included; a direct call names only the table's own arguments.
+  targs <- args$.title_args %||% rank_title_args(args)
+  args$.title_args <- NULL
 
   # The block resolves its title tier against the data before calling; doing
   # it again is a no-op for a plain string and gives a direct call the same
@@ -74,13 +78,13 @@ static_summarize_table <- function(data, ...) {
       cells = cells,
       title = resolve_block_title(args$title, data,
                                   auto = rank_attr(data, "label"),
-                                  args = rank_title_args(args)),
+                                  args = targs),
       subtitle = resolve_block_title(args$subtitle, data,
                                      auto = rank_attr(data, "subtitle"),
-                                     args = rank_title_args(args)),
+                                     args = targs),
       caption = resolve_block_title(args$caption, data,
                                     auto = rank_attr(data, "caption"),
-                                    args = rank_title_args(args))
+                                    args = targs)
     ),
     class = c("summarize_exhibit", "blockr_exhibit")
   )

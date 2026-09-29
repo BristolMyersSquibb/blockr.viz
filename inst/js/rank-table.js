@@ -730,6 +730,7 @@
   function applyChrome(root, ch) {
     if (!ch) return;
     paintTitles(root, ch);
+    if (root._rankBand) root._rankBand();
     var lg = root.querySelector(".blockr-rank-legend");
     if (lg) {
       if (!ch.legend) {
@@ -754,8 +755,6 @@
       }
     }
     var f = ch.foot || {};
-    var cnt = root.querySelector(".blockr-rank-count");
-    if (cnt) cnt.textContent = f.count || "";
     var note = root.querySelector(".blockr-rank-note");
     if (note) note.textContent = f.note || "";
     root._rankSel = f.filter || null;
@@ -1889,6 +1888,11 @@
     delete cfg.columns;
     delete cfg.facet_levels;
     delete cfg.titles;
+    // The prepare script's control values (sv_<name>) sit on the config
+    // itself, where the engine's script roles read and write them.
+    var sv = cfg.script_values || {};
+    delete cfg.script_values;
+    Object.keys(sv).forEach(function (k) { cfg[k] = sv[k]; });
     // The three text slots need null (auto) vs "" (explicitly none), which the
     // JSON carries; `*_auto` surfaces the inherited text so clearing the field
     // commits "" and turns the auto title off.
@@ -1991,12 +1995,21 @@
     pop.className = "blockr-settings blockr-settings--beak dd-popover";
     pop.setAttribute("data-dd-pop-for", elemId);
 
+    // The prepare script's controls, on the card under the gear row (the
+    // chart's strip, chart.css .dd-mapping-band). The engine fills it with
+    // the same rows the gear draws, and hides it while the script declares
+    // nothing.
+    var band = document.createElement("div");
+    band.className = "dd-mapping-band";
+    band.style.display = "none";
+
     var DDC = (typeof Blockr !== "undefined" && Blockr.DrilldownConfig) ||
       window.DrilldownConfig;
     if (!DDC) return;
     var engine;
     engine = new DDC({
       popoverEl: function () { return pop; },
+      bandEl: function () { return band; },
       roles: RANK_ROLES,
       config: function () { return cfg; },
       columns: function () { return cols; },
@@ -2047,6 +2060,23 @@
     ctx.rerender = function () { engine.render(); };
     engine.render();
 
+    // Between gear sessions the words and the control strip read the state
+    // the server last sent, not the gear's copy from its last open (the gear
+    // is built before the first payload, so that copy may be empty). The gear
+    // re-reads and rebuilds its controls on open, so this cannot orphan them.
+    var sync = function () {
+      if (pop.classList.contains("blockr-settings--open")) return;
+      var t = root.querySelector("table.blockr-rank-table");
+      if (!t) return;
+      var s3 = readGearState(t);
+      cfg = s3.cfg;
+      cols = s3.cols;
+    };
+    root._rankBand = function () {
+      sync();
+      engine.renderBand();
+    };
+
     // The words in the title bands: the chart's painter over this gear's
     // engine, so a word and the gear's row cannot disagree. `by` is a list
     // of columns, which the engine keeps out of the sentence (a menu picks
@@ -2057,19 +2087,6 @@
       var lastBy = function () {
         var b = Array.isArray(cfg.by) ? cfg.by : [];
         return b.length ? b[b.length - 1] : "";
-      };
-      // Between gear sessions a word reads the state the server last sent,
-      // not the gear's copy from its last open (the gear is built before the
-      // first payload, so that copy may have no columns at all). The gear
-      // re-reads and rebuilds its controls on open, so this cannot orphan
-      // them.
-      var sync = function () {
-        if (pop.classList.contains("blockr-settings--open")) return;
-        var t = root.querySelector("table.blockr-rank-table");
-        if (!t) return;
-        var s3 = readGearState(t);
-        cfg = s3.cfg;
-        cols = s3.cols;
       };
       var words = {
         _role: function (k) { return engine._role(k); },
@@ -2125,6 +2142,7 @@
 
     root.insertBefore(header, root.firstChild);
     root.insertBefore(pop, header.nextSibling);
+    root.insertBefore(band, pop.nextSibling);
     // The title band moves into the gear row, on its left: the chart's header
     // (chart.js _buildDOM). The settings band then opens below the title.
     var titles = root.querySelector(".dd-table-titles");
