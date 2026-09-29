@@ -755,8 +755,6 @@
       }
     }
     var f = ch.foot || {};
-    var cnt = root.querySelector(".blockr-rank-count");
-    if (cnt) cnt.textContent = f.count || "";
     var note = root.querySelector(".blockr-rank-note");
     if (note) note.textContent = f.note || "";
     root._rankSel = f.filter || null;

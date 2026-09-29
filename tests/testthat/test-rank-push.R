@@ -174,7 +174,8 @@ test_that("the chrome rides on the payload so the container is never rebuilt", {
   # column headers already name the levels).
   expect_identical(p$chrome$legend$groups[[1L]]$title, "SEV")
   expect_length(p$chrome$legend$groups[[1L]]$items, 2L)
-  expect_match(p$chrome$foot$count, "of 4 rows")
+  # No row count in the footer: the fold row speaks for a Top N cut.
+  expect_null(p$chrome$foot$count)
   plain <- rank_build_payload(ae, group = "TERM", facet = "ARM",
                               func = "count_distinct", id_var = "USUBJID")
   expect_null(plain$chrome$legend)
@@ -511,7 +512,7 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
     "<div class='blockr-rank-legend'></div>",
     "<div class='blockr-table-wrapper'></div>",
     "<div class='dd-table-caption'></div>",
-    "<div class='blockr-rank-footer'><span class='blockr-rank-count'></span>",
+    "<div class='blockr-rank-footer'>",
     "<span class='blockr-rank-note'></span>",
     "<div class='dd-status-footer'></div></div></div>",
     "<script>window.Shiny={addCustomMessageHandler:function(n,f){",

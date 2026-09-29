@@ -235,31 +235,19 @@ rank_chrome <- function(inner, prep = NULL, max_height = "600px", search = TRUE,
   )
 }
 
-# The footer's content as DATA: the count line, the note a reinterpreted config
-# leaves, and the active drill filter. One definition, two consumers -- the
-# chrome renders it server-side, and rank-table.js refreshes it from the
-# payload without re-rendering the container.
+# The footer's content as DATA: the note a reinterpreted config leaves, and
+# the active drill filter. One definition, two consumers -- the chrome renders
+# it server-side, and rank-table.js refreshes it from the payload without
+# re-rendering the container. There is no row count: a Top N cut already
+# says what it left out in its fold row, and an uncut table has nothing to
+# report.
 #' @noRd
 rank_foot_spec <- function(prep, drill = NULL, active = NULL) {
   if (!is.null(prep$err)) {
-    return(list(count = "", note = NULL, filter = NULL, reset = FALSE))
-  }
-  n_shown <- if (is.null(prep$parent)) {
-    sum(!prep$rows$.is_parent)
-  } else {
-    sum(prep$rows$.is_parent)
+    return(list(note = NULL, filter = NULL, reset = FALSE))
   }
   act <- as.character(unlist(active$vals %||% character()))
   list(
-    count = paste0(
-      n_shown, " of ", prep$n_total, " ",
-      if (is.null(prep$parent)) "rows" else "groups",
-      if (prep$folded > 0L) {
-        paste0(", ", prep$folded, " folded")
-      } else {
-        ", all rendered"
-      }
-    ),
     note = prep$note,
     filter = if (length(act)) paste(act, collapse = ", ") else NULL,
     reset = !is.null(drill)
@@ -311,10 +299,9 @@ rank_footer <- function(prep, drill = NULL, active = NULL) {
 
 #' @noRd
 rank_footer_tag <- function(spec) {
-  if (is.null(spec)) spec <- list(count = "", reset = FALSE)
+  if (is.null(spec)) spec <- list(reset = FALSE)
   htmltools::tags$div(
     class = "blockr-rank-footer",
-    htmltools::tags$span(class = "blockr-rank-count", spec$count %||% ""),
     htmltools::tags$span(class = "blockr-rank-note", spec$note %||% ""),
     # The drill's line, the chart's own markup and words (chart.js
     # _updateStatus): rank-table.js fills it, because what it says depends on
