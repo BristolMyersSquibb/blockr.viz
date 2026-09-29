@@ -45,7 +45,7 @@
   margin-bottom: 12px;
 }
 
-.dd-form-row > .blockr-popover-label {
+.dd-form-row > .blockr-label {
   margin-bottom: 0;
 }
 
@@ -56,9 +56,8 @@
 }
 
 /* Picker wrap — layout-only hook for the canonical select. The visual chrome
-   (bordered control, focus ring) comes from blockr.dplyr's
-   .blockr-popover-select-wrap (blockr-blocks.css), applied alongside this
-   class; here we only own width so the select fills its form row. Text inputs
+   (bordered control, focus ring) is blockr.ui's .blockr-select--bordered;
+   here we only own width so the select fills its form row. Text inputs
    sit in a .dd-text-wrap next to their commit chip (see drilldown-config.js). */
 .dd-picker-wrap {
   width: 100%;
@@ -75,10 +74,10 @@
   width: 100%;
 }
 
-.dd-text-wrap .blockr-popover-input {
+.dd-text-wrap .blockr-text-input {
   flex: 1 1 auto;
   min-width: 0;
-  padding-right: 78px;
+  padding-right: 40px;
 }
 
 .dd-text-wrap .blockr-expr-confirm {
@@ -119,7 +118,7 @@
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  color: var(--blockr-color-text-subtle, #9ca3af);
+  color: var(--blockr-color-text-muted, #6b7280);
   transition: transform 150ms ease;
   pointer-events: none;
 }
@@ -134,7 +133,7 @@
 .dd-title-row .dd-text-wrap {
   display: block;
 }
-.dd-title-row .blockr-popover-input {
+.dd-title-row .blockr-text-input {
   display: block;
   width: 100%;
   padding-right: 12px;
@@ -193,7 +192,7 @@
   margin-left: 6px;
   font-size: var(--blockr-font-size-xs, 0.75rem);
   font-style: italic;
-  color: var(--blockr-color-text-subtle, #9ca3af);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 .dd-title-row--dirty .dd-title-stale {
   display: inline;
@@ -209,7 +208,7 @@
 .dd-title-preview-body--empty::after {
   content: 'nothing';
   font-style: italic;
-  color: var(--blockr-color-text-subtle, #9ca3af);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 /* The slot is a word here, not a control: the live copy belongs to the reader,
    on the block. Same mark, no pointer. */
@@ -224,7 +223,7 @@
   border-radius: var(--blockr-radius-sm, 4px);
   font-size: var(--blockr-font-size-xs, 0.75rem);
   line-height: 1.5;
-  color: var(--blockr-color-text-subtle, #9ca3af);
+  color: var(--blockr-color-text-muted, #6b7280);
   white-space: nowrap;
   vertical-align: 1px;
 }
@@ -265,13 +264,13 @@
   font-weight: var(--blockr-font-weight-semibold, 600);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--blockr-color-text-subtle, #9ca3af);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 .dd-at-note {
   padding: 0 9px 6px;
   font-size: var(--blockr-font-size-xs, 0.75rem);
   line-height: 1.4;
-  color: var(--blockr-color-text-subtle, #9ca3af);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 .dd-at-item {
   display: flex;
@@ -313,13 +312,13 @@
 /* An unset setting says so: that is how you find out the block HAS a facet. */
 .dd-at-val--unset {
   font-style: italic;
-  color: var(--blockr-color-text-subtle, #9ca3af);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 .dd-at-tok {
   flex: 0 0 auto;
   font-family: var(--blockr-font-mono, 'SF Mono', 'Fira Code', Consolas, Monaco, monospace);
   font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-color-text-subtle, #9ca3af);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 .dd-at-sep {
   height: 1px;
@@ -455,7 +454,7 @@
    rule then reads as ONE row: "[fn] of [columns] ✕" / "[mode] on [columns] ✕".
    The fn/mode picker keeps a compact share; the columns picker gets the rest. */
 .dd-section > .dd-summaries { grid-column: 1 / -1; }
-.dd-summaries > .blockr-popover-label { display: block; }
+.dd-summaries > .blockr-label { display: block; }
 .dd-value-row {
   display: flex;
   align-items: center;
@@ -503,9 +502,8 @@
 .dd-add-metric { align-self: flex-start; margin-top: 2px; }
 
 /* Required mapping with no value: soft attention, not a hard error. The border
-   now lives on the select control (.blockr-popover-select-wrap), so tint it
-   there. */
-.dd-role-required-empty .blockr-popover-select-wrap .blockr-select__control {
+   now lives on the select control, so tint it there. */
+.dd-role-required-empty .dd-picker-wrap .blockr-select__control {
   border-color: var(--blockr-color-warning, #f59e0b);
   background: var(--blockr-color-warning-bg, #fffbeb);
 }
@@ -570,6 +568,7 @@
 
 /* Popover type rows */
 .dd-popover-types {
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -691,7 +690,7 @@
 .dd-chart-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 8px;
+  gap: 16px 24px;
   padding: 0;
   margin-left: -10px;
   margin-right: -10px;
@@ -704,22 +703,16 @@
   margin-right: -10px;
 }
 
-.dd-facet {
-  border: 1px solid var(--blockr-grey-50, #f3f4f6);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
+/* A facet strip is a section title centred over its panel (design system,
+   Charts): no card around the panel, no band behind the name. */
 .dd-facet-label {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   font-weight: var(--blockr-font-weight-semibold, 600);
-  color: var(--blockr-grey-500, #6b7280);
+  color: var(--blockr-color-text-muted, #6b7280);
   text-align: center;
-  padding: 4px;
-  background: var(--blockr-grey-50, #f9fafb);
-  border-bottom: 1px solid var(--blockr-grey-50, #f3f4f6);
+  padding: 4px 0 0;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.05em;
 }
 
 .dd-chart {
@@ -815,15 +808,15 @@
    just the icons again, exactly as before the title moved up. */
 
 .dd-chart-title {
-  font-size: var(--blockr-font-size-md, 0.9375rem);
+  font-size: var(--blockr-font-size-lg, 1rem);
   font-weight: 600;
-  color: var(--blockr-grey-800, #1f2937);
+  color: var(--blockr-color-text-default, #111827);
   white-space: pre-line;
 }
 
 .dd-chart-subtitle {
   font-size: var(--blockr-font-size-sm, 0.8125rem);
-  color: var(--blockr-grey-500, #6b7280);
+  color: var(--blockr-color-text-muted, #6b7280);
   margin-top: 1px;
   white-space: pre-line;
 }
@@ -933,7 +926,7 @@
 .dd-legend-title {
   font-size: 11px;
   font-weight: var(--blockr-font-weight-semibold, 600);
-  color: var(--blockr-grey-500, #6b7280);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 
 .dd-legend-chip {
@@ -946,13 +939,13 @@
   margin: 0;
   font-family: inherit;
   font-size: 11px;
-  color: var(--blockr-grey-700, #333);
+  color: var(--blockr-color-text-muted, #6b7280);
   cursor: pointer;
 }
 
 .dd-legend-chip:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--blockr-color-focus, rgba(37, 99, 235, 0.45));
+  outline: var(--blockr-focus-outline, 2px solid #2563eb);
+  outline-offset: var(--blockr-focus-offset, 2px);
   border-radius: var(--blockr-radius-sm, 4px);
 }
 
@@ -1071,34 +1064,25 @@
   text-align: right;
 }
 
-/* ===== Keyboard accessibility: visible focus on every popover control =====
-   Tab navigation through the gear popover gets a clear 3px focus ring (the
-   bare :focus rings on individual controls were thin/inconsistent). Shared by
-   the chart and table popovers (both render via DrilldownConfig). */
+/* ===== Keyboard accessibility: visible focus on every gear control =====
+   The design system's focus outline, on :focus-visible only. Shared by the
+   chart and table gears (both render via DrilldownConfig). */
 .dd-popover .dd-type-btn:focus-visible,
 .dd-popover .blockr-pill:focus-visible,
 .dd-popover .dd-add-trigger:focus-visible,
 .dd-popover .dd-add-item:focus-visible,
 .dd-popover .dd-role-remove:focus-visible,
-.dd-popover .dd-cfg-select:focus-visible,
-.dd-popover .blockr-gear-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--blockr-color-focus, rgba(37, 99, 235, 0.45));
-  border-radius: 6px;
-}
-.blockr-gear-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--blockr-color-focus, rgba(37, 99, 235, 0.45));
-  border-radius: 6px;
+.dd-popover .dd-cfg-select:focus-visible {
+  outline: var(--blockr-focus-outline, 2px solid #2563eb);
+  outline-offset: var(--blockr-focus-offset, 2px);
 }
 
-/* ===== Image download button (gear header) ===== */
-/* The table's .blockr-dl-xlsx download chrome, restated here because a
-   chart-only board never loads the table dep's CSS (html-table.R). The
-   .dd-chart-dl compound selector also outranks the table rules where both
-   sheets load, so this block -- not the table sheet -- decides the size. */
+/* ===== Header row =====
+   Title and sentence on the left, the tools on the right: the download
+   (blockr.ui's tool_button, or its action_menu), the aggregation pill and
+   the gear. */
 .dd-card .blockr-gear-header {
-  gap: 6px;
+  gap: 4px;
   /* The title sits on the left of this row (chart.js). Top-aligned, so a
      sentence that wraps grows downward and the icons stay put at the top
      right, where every other block keeps them. */
@@ -1111,106 +1095,6 @@
   flex: 1 1 auto;
   min-width: 0;
   padding: 2px 8px 0 2px;
-}
-
-/* Both header controls take the design-system control height, the same
-   30px the table/rank gear header uses (table.css, "Control row"). The
-   pair was formerly pinned to the gear's stand-alone 26px, which read as
-   undersized beside every other block's header -- and where the table
-   sheet also loads it split the pair, sizing the download at 30 and
-   leaving the gear at 26. */
-.dd-card .blockr-gear-header .blockr-gear-btn {
-  width: var(--blockr-control-h-sm, 30px);
-  height: var(--blockr-control-h-sm, 30px);
-}
-
-.dd-card a.blockr-dl-xlsx.dd-chart-dl {
-  appearance: none;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--blockr-control-h-sm, 30px);
-  height: var(--blockr-control-h-sm, 30px);
-  flex: 0 0 auto;
-  padding: 0;
-  margin: 0;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 4px;
-  background-color: var(--blockr-color-bg-input, #f9fafb);
-  color: var(--blockr-grey-500, #6b7280);
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: none;
-  transition: border-color 0.12s, background-color 0.12s, color 0.12s;
-}
-
-.dd-card a.blockr-dl-xlsx.dd-chart-dl:hover {
-  background-color: #ffffff;
-  border-color: var(--blockr-grey-300, #d1d5db);
-  color: var(--blockr-color-text-primary, #374151);
-  text-decoration: none;
-}
-
-.dd-card a.blockr-dl-xlsx.dd-chart-dl:focus-visible {
-  outline: none;
-  border-color: var(--blockr-color-primary, #2563eb);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-}
-
-.dd-card a.blockr-dl-xlsx.dd-chart-dl svg {
-  display: block;
-}
-
-/* On-chart aggregation switch (chart.js _buildFuncToggle) ------------------
-   One square that shows the CURRENT aggregation and cycles on click, sized and
-   styled as the download and the gear it sits between -- three identical
-   squares read as one control row, where a wider segmented pair read as a
-   widget parked next to two buttons. Grows past square only if a choice has no
-   short label, so an unusual `func_toggle` set degrades to a wide button
-   rather than to truncated text.
-
-   The known cost of a click-through (design note in
-   dev/func-toggle-proposals.html, variant C): a square reading "%" can be read
-   as "you are in %" or "press for %". The title attribute says both, which is
-   a mitigation and not a cure. */
-.dd-card .blockr-gear-header .dd-func-btn {
-  appearance: none;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: var(--blockr-control-h-sm, 30px);
-  height: var(--blockr-control-h-sm, 30px);
-  flex: 0 0 auto;
-  padding: 0 6px;
-  margin: 0;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 4px;
-  background-color: var(--blockr-color-bg-input, #f9fafb);
-  /* The same muted grey the download and gear icons carry, and the same
-     darkening on hover: three squares in a row have to read as one set, and a
-     glyph at full text-primary beside two grey icons reads as the odd one out
-     rather than as the important one. */
-  color: var(--blockr-grey-500, #6b7280);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: none;
-  transition: border-color 0.12s, background-color 0.12s, color 0.12s;
-}
-
-.dd-card .blockr-gear-header .dd-func-btn:hover {
-  background-color: #ffffff;
-  border-color: var(--blockr-grey-300, #d1d5db);
-  color: var(--blockr-color-text-primary, #374151);
-}
-
-.dd-card .blockr-gear-header .dd-func-btn:focus-visible {
-  outline: 2px solid var(--blockr-color-primary, #2563eb);
-  outline-offset: 1px;
 }
 
 /* -- Exposed mapping band ---------------------------------------------------
@@ -1258,7 +1142,7 @@
 .dd-mapping-band .dd-band-row .dd-row-head {
   margin-bottom: 5px;
 }
-.dd-mapping-band .dd-band-row .blockr-popover-label {
+.dd-mapping-band .dd-band-row .blockr-label {
   font-size: var(--blockr-font-size-sm, 0.8125rem);
   font-weight: 500;
   color: var(--blockr-color-text-secondary, #6b7280);
@@ -1282,7 +1166,7 @@
    pointrange) has no aggregation, so its value row holds the column select
    alone -- and without the .dd-role-paired guard that select IS the first
    child, took the 34%, and rendered as "A..." in a 70px box. */
-.dd-mapping-band .dd-band-row.dd-role-value.dd-role-paired .dd-row-controls > .blockr-popover-select-wrap:first-child {
+.dd-mapping-band .dd-band-row.dd-role-value.dd-role-paired .dd-row-controls > .dd-picker-wrap:first-child {
   flex: 0 0 34%;
 }
 .dd-mapping-band .dd-band-row .dd-pair-connector {
@@ -1317,10 +1201,10 @@
    engine's select is the popover's 38px one and its row head carries the
    popover's spacing. Lift both to the standalone control geometry -- the same
    override settings-band.css makes for the in-flow gear band. */
-.dd-mapping-band .blockr-popover-select-wrap .blockr-select__control {
+.dd-mapping-band .dd-picker-wrap .blockr-select__control {
   min-height: 42px;
 }
-.dd-mapping-band .blockr-popover-input {
+.dd-mapping-band .blockr-text-input {
   padding: 10px 14px;
   min-height: 42px;
 }
@@ -1335,7 +1219,7 @@
 }
 /* The popover label carries its own 4px bottom margin, which stacks with the
    head's 5px and made the gap 9px against the code block's 5px. */
-.dd-mapping-band .dd-band-row .blockr-popover-label {
+.dd-mapping-band .dd-band-row .blockr-label {
   line-height: 19.5px;
   margin-bottom: 0;
 }
@@ -1384,7 +1268,7 @@
   overflow-wrap: normal;
   overflow-x: auto;
 }
-/* The Apply chip sits under the box rather than inside it: a textarea's
+/* The ⌘↵ chip sits under the box rather than inside it: a textarea's
    bottom-right corner already belongs to the resize handle. */
 .dd-script-wrap .dd-text-commit {
   margin-top: 6px;
@@ -1407,4 +1291,46 @@
 .dd-mapping-band .dd-script-failed {
   grid-column: 1 / -1;
   font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+
+/* ===== Data tooltip =====
+   The content of the ECharts tooltip (chart.js tipHead / tipRow); the card
+   around it is set on the option (cardTooltip). Headline 13px/600, rows 12px
+   with the label muted and the value at 500 in tabular figures, a swatch
+   where a headline or a row stands for one series (design system, Charts). */
+.dd-tt-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+  font-size: 13px;
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-default, #111827);
+}
+.dd-tt-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 20px;
+}
+.dd-tt-sw {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.dd-tt-label {
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.dd-tt-value {
+  margin-left: auto;
+  padding-left: 16px;
+  font-weight: var(--blockr-font-weight-medium, 500);
+  font-variant-numeric: tabular-nums;
+  color: var(--blockr-color-text-default, #111827);
+}
+.dd-tt-sep {
+  margin: 3px 0 2px;
+  border-top: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }

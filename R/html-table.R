@@ -160,7 +160,9 @@ html_table <- function(data,
 
   htmltools::tagList(
     shared_css,
-    htmltools::tags$style(htmltools::HTML(html_table_delta_css())),
+    htmltools::tags$style(htmltools::HTML(
+      paste0(html_table_delta_css(), html_table_chev_css())
+    )),
     htmltools::tags$div(
       id = wrapper_id,
       class = "blockr-html-table-container",
@@ -960,7 +962,8 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   # Stub + data cells, column-vectorized.
   if (!is.null(stub_col)) {
     stub_style <- ifelse(row_indent > 0L,
-      paste0(" style=\"padding-left:", 24L + row_indent * indent_px, "px;\""),
+      paste0(" style=\"padding-left:calc(", 24L + row_indent * indent_px,
+             "px + var(--blockr-card-inset, 0px));\""),
       "")
     # Parent rows get a chevron toggle button before the label; the JS attaches
     # to the button so it never competes with a drill click on the row.
@@ -1057,10 +1060,15 @@ html_table_delta_css <- function(scope = ".blockr-html-table-container") {
   # literal past 10000 characters when it contains unicode escapes, and this
   # sheet is well over. Adding a block? Put it in a new chunk rather than
   # growing one until load_all() starts failing on the whole file.
+  #
+  # Colours read the design system's meaning tokens only (text-default,
+  # text-muted, border-strong, bg-surface, bg-hover, bg-selected, ...), each
+  # with its light value as the fallback: a board without the token sheet
+  # renders the same table.
   css <- paste0(".blockr-html-table-container {
-  background: #ffffff;
+  background: var(--blockr-color-bg-surface, #ffffff);
   font-size: var(--blockr-font-size-base, 0.875rem);
-  color: var(--blockr-color-text-primary, #111827);
+  color: var(--blockr-color-text-default, #111827);
 }
 .blockr-html-table-container .blockr-table-wrapper {
   max-height: none;
@@ -1071,12 +1079,12 @@ html_table_delta_css <- function(scope = ".blockr-html-table-container") {
   justify-content: space-between;
   gap: 16px;
   padding: 10px 4px;
-  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 .blockr-html-table-title {
-  font-size: var(--blockr-font-size-section, 1rem);
+  font-size: var(--blockr-font-size-lg, 1rem);
   font-weight: var(--blockr-font-weight-semibold, 600);
-  color: var(--blockr-color-text-primary, #111827);
+  color: var(--blockr-color-text-default, #111827);
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -1091,43 +1099,33 @@ input.blockr-search {
   -webkit-appearance: none;
   box-sizing: border-box;
   height: var(--blockr-control-h-sm, 30px);
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
   border-radius: 4px;
   padding: 4px 8px 4px 26px;
   font: inherit;
   font-size: var(--blockr-font-size-sm, 0.8125rem);
-  color: var(--blockr-color-text-primary, #111827);
-  background-color: var(--blockr-color-bg-input, #f9fafb);
+  color: var(--blockr-color-text-default, #111827);
+  background-color: var(--blockr-color-bg-field, #f9fafb);
   background-image: url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3-3'/></svg>\");
   background-repeat: no-repeat;
   background-position: 8px center;
   width: 180px;
   transition: border-color 0.12s, box-shadow 0.12s;
 }
-input.blockr-search::placeholder { color: var(--blockr-color-text-subtle, #9ca3af); }
+input.blockr-search::placeholder { color: var(--blockr-color-text-muted, #6b7280); }
 input.blockr-search:focus {
   outline: none;
-  border-color: var(--blockr-color-primary, #2563eb);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  background-color: #ffffff;
+  border-color: var(--blockr-color-border-accent, #2563eb);
+  box-shadow: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12));
+  background-color: var(--blockr-color-bg-surface, #ffffff);
 }
-/* ----------------------------------------------------------------
-   Direction-01 'Clean clinical' tokens. Mapped onto blockr theme
-   custom properties with the design HEX as the fallback, so the
-   renderer looks right with or without a blockr theme loaded. Scoped
-   to the container so they cannot leak.
-   ---------------------------------------------------------------- */
-.blockr-html-table-container {
-  --stbl-ink-1: var(--blockr-color-text-primary, #111827);
-  --stbl-ink-2: var(--blockr-color-text-secondary, #5b6573);
-  --stbl-ink-3: var(--blockr-color-text-muted, #9aa3b0);
-  --stbl-hair: var(--blockr-color-border, #e8ebef);
-  --stbl-hair-strong: var(--blockr-color-border-strong, #dde1e7);
-  --stbl-accent: var(--blockr-color-primary, #2563eb);
-  --stbl-surface-1: var(--blockr-color-bg, #ffffff);
-}
-/* Column headers \u2014 quiet uppercase-ish meta on the stat column, and the
-   two-tier arm treatment (strong name + soft N sub-line). */
+/* Column headers. Every cell carries a 1px bottom border so the header keeps
+   its height, but only a leaf column header paints a rule, and that rule is a
+   background line 12px short of the cell: a gap between columns instead of
+   one full-width line. It sits flush right, over the right-aligned numbers.
+   The border is transparent and still wins the collapsed-border conflict
+   against the row's own rule (cell beats row at equal width), which is what
+   keeps the shared sheet's full-width header line off. */
 .blockr-html-table-container .blockr-table thead th {
   vertical-align: bottom;
   white-space: normal;
@@ -1136,12 +1134,34 @@ input.blockr-search:focus {
   font-size: 11px;
   letter-spacing: 0.02em;
   font-weight: var(--blockr-font-weight-medium, 500);
-  color: var(--stbl-ink-2);
-  padding: 14px 18px 12px;
-  border-bottom: 1px solid var(--stbl-hair-strong);
+  color: var(--blockr-color-text-muted, #6b7280);
+  padding: 7px 12px;
+  border-bottom: 1px solid transparent;
 }
 .blockr-html-table-container .blockr-table thead th.blockr-col-header {
   text-align: right;
+}
+/* One unbroken rule under the whole header, in the grey of the card's rule
+   above the table: under every cell of the last header row and under the
+   cells that span down to it (the row-label title, a column without a
+   spanner). A spanner's tile sits above it. Drawn on the cells rather than
+   as a border, which would not travel with the sticky header. */
+.blockr-html-table-container .blockr-table thead th {
+  background-image: none;
+}
+.blockr-html-table-container .blockr-table thead tr:last-child > th,
+.blockr-html-table-container .blockr-table thead th[rowspan] {
+  background-image: linear-gradient(var(--blockr-color-border-default, #e5e7eb), var(--blockr-color-border-default, #e5e7eb));
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  background-position: left bottom;
+}
+/* In a block card the table runs to the card edges (see the rules at the
+   end of table.css): the last column pads its text back in by the card's inset,
+   as the row labels do on the left. */
+.blockr-html-table-container .blockr-table thead th.blockr-col-header:last-child,
+.blockr-html-table-container .blockr-table tbody td.blockr-data:last-child {
+  padding-right: calc(12px + var(--blockr-card-inset, 0px));
 }
 ",
 "/* A group header sits ABOVE the columns it names, so it cannot read smaller
@@ -1150,17 +1170,23 @@ input.blockr-search:focus {
    The tile is what says how far the group reaches -- four groups side by side
    have nothing else to separate them, and a fill that runs edge to edge just
    makes one grey band with words in it. The inset gutters cut that band into
-   tiles; the wash is translucent so a drill-active column still shows through. */
+   tiles; the wash is translucent so a drill-active column still shows through.
+   The last spanner keeps its gutter clear of the card's inset too. */
 .blockr-html-table-container .blockr-table thead th.blockr-col-header.group {
   text-align: center;
   font-size: 13.5px;
   font-weight: var(--blockr-font-weight-semibold, 600);
-  color: var(--stbl-ink-1);
-  background: color-mix(in srgb, var(--stbl-ink-1) 5%, var(--stbl-surface-1));
+  color: var(--blockr-color-text-default, #111827);
+  background: color-mix(in srgb, var(--blockr-color-text-default, #111827) 5%, var(--blockr-color-bg-surface, #ffffff));
   border-radius: 7px 7px 0 0;
   box-shadow:
-    inset 5px 0 0 0 var(--stbl-surface-1),
-    inset -5px 0 0 0 var(--stbl-surface-1);
+    inset 5px 0 0 0 var(--blockr-color-bg-surface, #ffffff),
+    inset -5px 0 0 0 var(--blockr-color-bg-surface, #ffffff);
+}
+.blockr-html-table-container .blockr-table thead th.blockr-col-header.group:last-child {
+  box-shadow:
+    inset 5px 0 0 0 var(--blockr-color-bg-surface, #ffffff),
+    inset calc(-5px - var(--blockr-card-inset, 0px)) 0 0 0 var(--blockr-color-bg-surface, #ffffff);
 }
 /* A spanner's Big N sub-line follows its own row's centring, not the
    flush-right the leaf headers use to sit over their numbers. */
@@ -1168,14 +1194,14 @@ input.blockr-search:focus {
   justify-content: center;
 }
 /* The claimed-column paint has to be restated for a group cell, because the
-   tile above sets both of the properties it uses. Gutters first so they cut
-   the accent bar's ends too and the tile keeps its shape. */
+   tile above sets both of the properties it uses. The gutters stay so the
+   tile keeps its shape. */
 .blockr-html-table-container .blockr-table thead th.blockr-col-header.group.dt-col-active {
-  background: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
+  background: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  color: var(--blockr-color-text-accent, #2563eb);
   box-shadow:
-    inset 5px 0 0 0 var(--stbl-surface-1),
-    inset -5px 0 0 0 var(--stbl-surface-1),
-    inset 0 3px 0 0 var(--stbl-accent);
+    inset 5px 0 0 0 var(--blockr-color-bg-surface, #ffffff),
+    inset -5px 0 0 0 var(--blockr-color-bg-surface, #ffffff);
 }
 /* A group below the top row is already inside a tile, so it drops its own and
    reads like a leaf: a tile in a tile is only more grey. Over a single column
@@ -1192,49 +1218,91 @@ input.blockr-search:focus {
   justify-content: flex-end;
 }
 .blockr-html-table-container .blockr-table thead th.blockr-col-header.group.group-inner.dt-col-active {
-  background: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
-  box-shadow: inset 0 3px 0 0 var(--stbl-accent);
+  background: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  box-shadow: none;
 }
 .blockr-html-table-container .blockr-table thead th.blockr-col-header.leaf {
   font-size: 13.5px;
   font-weight: var(--blockr-font-weight-semibold, 600);
-  color: var(--stbl-ink-1);
+  color: var(--blockr-color-text-default, #111827);
   letter-spacing: -0.01em;
 }
 .blockr-html-table-container .blockr-table thead th .arm__name {
   display: block;
 }
-/* The Big N is bold so it reads at 11px; the size and the muted ink keep it
-   apart from a long arm name above it. */
+/* The Big N: bold like the arm name above it, but smaller and in the muted
+   ink, so it reads as the name's footnote. */
 .blockr-html-table-container .blockr-table thead th .arm__n {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: var(--blockr-font-weight-semibold, 600);
-  color: var(--stbl-ink-3);
+  color: var(--blockr-color-text-muted, #6b7280);
   letter-spacing: 0.01em;
-  margin-top: 3px;
+  margin-top: 0;
 }
 .blockr-html-table-container .blockr-table thead th.blockr-col-header.leaf strong {
   font-weight: var(--blockr-font-weight-semibold, 600);
   font-size: 13.5px;
 }
+/* The first-column title is the producer's text (attr(.label, \"label\")), in
+   the body's size and ink, padded in by the card's inset like the row
+   labels under it. */
 .blockr-html-table-container .blockr-table thead th.blockr-stub-header {
   text-align: left;
-  border-bottom: 1px solid var(--stbl-hair-strong);
+  padding-left: calc(12px + var(--blockr-card-inset, 0px));
+  font-size: 13px;
+  line-height: 20px;
+  letter-spacing: normal;
+  font-weight: var(--blockr-font-weight-normal, 400);
+  color: var(--blockr-color-text-default, #111827);
 }
 .blockr-html-table-container .blockr-table thead th.blockr-stub-header.blockr-stub-header-bold {
   font-weight: var(--blockr-font-weight-semibold, 600);
-  color: var(--stbl-ink-1);
 }
-/* Stat-label (row-stub) cells \u2014 wrap to 2 lines (never truncate), aligned
-   to the top so a wrapped label stays level with its numbers. Typography
-   matches the canonical preview (normal weight, base size); the Table-1
-   character comes from STRUCTURE (sections, indentation, bold rows), not from a
-   heavier default font. The 24px left padding is the indent-0 BASE: nested rows
-   add `row_indent * 16px` on top (build_html_tbody), so level 1 sits at 40px,
+/* Fold all (table.js adds it when the table folds and has groups): the
+   chevron sits in the gutter the group chevrons use, so the title starts on
+   the group headings' text edge (12px padding + 12px chevron + 9px gap). Only
+   the chevron is the button; without a title it carries \"All\". */
+.blockr-html-table-container .dt-foldall-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+.blockr-html-table-container .dt-foldall {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: var(--blockr-font-weight-normal, 400);
+  color: var(--blockr-color-text-muted, #6b7280);
+  cursor: pointer;
+  flex: none;
+}
+.blockr-html-table-container .dt-foldall:hover,
+.blockr-html-table-container .dt-foldall:hover .blockr-chev {
+  color: var(--blockr-color-text-default, #111827);
+}
+.blockr-html-table-container .dt-foldall[aria-expanded=\"false\"] .blockr-chev {
+  transform: rotate(-90deg);
+}
+.blockr-html-table-container .dt-foldall:focus-visible {
+  outline: var(--blockr-focus-outline, 2px solid #2563eb);
+  outline-offset: var(--blockr-focus-offset, 2px);
+  border-radius: 2px;
+}
+/* Stat-label (row-stub) cells - wrap to 2 lines (never truncate), aligned
+   to the top so a wrapped label stays level with its numbers, in the body
+   ink. The 24px left padding is the indent-0 BASE: nested rows add
+   `row_indent * 16px` on top (build_html_tbody), so level 1 sits at 40px,
    level 2 at 56px, etc. Keeping this base BELOW the first indent step is what
-   makes the indentation visible \u2014 if it equalled 40px, level-1 rows would not
-   step at all. */
+   makes the indentation visible. 4px above and below the 21px line, plus the
+   1px (transparent) row border, is a 30px row. */
 .blockr-html-table-container .blockr-table tbody td.blockr-stub {
   text-align: left;
   vertical-align: top;
@@ -1242,12 +1310,13 @@ input.blockr-search:focus {
   overflow: visible;
   text-overflow: clip;
   max-width: none;
-  padding: 9px 18px 9px 24px;
+  padding: 5px 18px 5px calc(24px + var(--blockr-card-inset, 0px));
+  line-height: 20px;
   font-size: var(--blockr-font-size-base, 0.875rem);
   font-weight: var(--blockr-font-weight-normal, 400);
-  color: var(--stbl-ink-2);
+  color: var(--blockr-color-text-default, #111827);
 }
-/* Value cells \u2014 right-aligned, tabular figures, top-aligned to match the
+/* Value cells - right-aligned, tabular figures, top-aligned to match the
    wrapping stub. Normal weight like the preview; emphasis (totals, key rows)
    comes from the data via `.bold` rows, not a blanket medium weight. */
 .blockr-html-table-container .blockr-table tbody td.blockr-data {
@@ -1257,25 +1326,28 @@ input.blockr-search:focus {
   overflow: visible;
   text-overflow: clip;
   max-width: none;
-  padding: 9px 18px;
+  padding: 5px 12px;
+  line-height: 20px;
   font-size: var(--blockr-font-size-base, 0.875rem);
   font-weight: var(--blockr-font-weight-normal, 400);
-  color: var(--stbl-ink-1);
+  color: var(--blockr-color-text-default, #111827);
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
 }
 /* Em-dash for missing values reads as 'no data', not as a real figure. */
 .blockr-html-table-container .blockr-table tbody td.blockr-data.blockr-dash {
-  color: var(--stbl-ink-3);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
-/* Subtle accent-tinted hover on stat rows. */
-.blockr-html-table-container .blockr-table tbody tr.blockr-data-row:hover td {
-  background: rgba(37, 99, 235, 0.035);
+/* No rules in the body. 30px rows: 5px above and below a 20px line, set
+   here rather than inherited, so the height does not depend on the base
+   sheet's line height. Groups are set apart by space (the group's last row
+   and the next heading's top padding). */
+.blockr-html-table-container .blockr-table tbody tr {
+  border-bottom: 0;
 }
-/* A hairline ONLY at the end of each group, not between every row. */
 .blockr-html-table-container .blockr-table tbody tr.blockr-group-last td {
-  border-bottom: 1px solid var(--stbl-hair);
-  padding-bottom: 11px;
+  border-bottom: 0;
+  padding-bottom: 7px;
 }
 .blockr-html-table-container .blockr-table tbody tr.blockr-bold td {
   font-weight: var(--blockr-font-weight-semibold, 600);
@@ -1283,14 +1355,62 @@ input.blockr-search:focus {
 .blockr-html-table-container .blockr-table tbody tr.blockr-italic td {
   font-style: italic;
 }
+",
+"/* Hover. A table nothing can be clicked in keeps a plain row wash. A table
+   whose rows drill (`.dt-clickable`) shows what a click would claim instead:
+   table.js sets dt-hot-row / dt-hot-col / dt-hot-cell from the click model
+   (see wireHover), so the plain :hover wash is off there. The shared sheet's
+   own hover sits on the <tr>; it goes, or it would show under both. */
+.blockr-html-table-container .blockr-table tbody tr:hover {
+  background-color: transparent;
+}
+.blockr-html-table-container .blockr-table thead th.blockr-sortable:hover {
+  background-color: var(--blockr-color-bg-surface, #ffffff);
+}
+.blockr-html-table-container:not(.dt-clickable) .blockr-table tbody tr.blockr-data-row:hover > td {
+  background-color: var(--blockr-color-bg-hover, #f3f4f6);
+}
+.blockr-html-table-container .blockr-table tbody tr.dt-hot-row > td,
+.blockr-html-table-container .blockr-table tbody td.dt-hot-col,
+.blockr-html-table-container .blockr-table thead th.dt-hot-col {
+  background-color: var(--blockr-color-bg-hover, #f3f4f6);
+}
+.blockr-html-table-container .blockr-table tbody tr.dt-hot-row.dt-hot-soft > td,
+.blockr-html-table-container .blockr-table tbody td.dt-hot-col.dt-hot-soft {
+  background-color: color-mix(in srgb, var(--blockr-color-text-default, #111827) 3%, transparent);
+}
+/* The sticky header stays opaque, or the rows scroll through it. */
+.blockr-html-table-container .blockr-table thead th.dt-hot-col.dt-hot-soft {
+  background-color: color-mix(in srgb, var(--blockr-color-text-default, #111827) 3%, var(--blockr-color-bg-surface, #ffffff));
+}
+.blockr-html-table-container .blockr-table tbody tr.dt-hot-row > td.dt-hot-cell {
+  background-color: color-mix(in srgb, var(--blockr-color-text-default, #111827) 9%, transparent);
+}
+/* Drill state: the claimed row and column take the selected tint and the
+   accent ink, with no bars; the cell where the two cross is one step stronger
+   and bold. After the hover rules, so a claim shows through the hover. */
+.blockr-html-table-container .blockr-table tbody tr.dt-row-active > td,
+.blockr-html-table-container .blockr-table tbody td.dt-col-active,
+.blockr-html-table-container .blockr-table thead th.blockr-col-header.dt-col-active {
+  background-color: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  color: var(--blockr-color-text-accent, #2563eb);
+  box-shadow: none;
+}
+.blockr-html-table-container .blockr-table thead th.dt-col-active .arm__n {
+  color: var(--blockr-color-text-accent, #2563eb);
+}
+.blockr-html-table-container .blockr-table tbody tr.dt-row-active > td.dt-col-active {
+  background-color: var(--blockr-color-bg-accent-subtle-hover, rgba(37, 99, 235, 0.13));
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
 /* Group header row + full-width clickable button. The td carries no
    padding (so the bigger hit target reaches the row edges); the button
-   carries it per dir-1. */
+   carries it. */
 .blockr-html-table-container .blockr-table tbody tr.blockr-section-header {
   cursor: pointer;
 }
 .blockr-html-table-container .blockr-table tbody tr.blockr-section-header td.blockr-section-cell {
-  padding: 0;
+  padding: 0 0 0 var(--blockr-card-inset, 0px);
   text-align: left;
   border-top: none;
 }
@@ -1304,8 +1424,12 @@ input.blockr-search:focus {
   cursor: pointer;
   font: inherit;
   text-align: left;
-  color: var(--stbl-ink-1);
-  padding: 15px 18px 8px;
+  color: var(--blockr-color-text-default, #111827);
+  padding: 11px 12px 3px;
+}
+/* The first heading sits right under the column header. */
+.blockr-html-table-container .blockr-table tbody tr.blockr-section-header:first-child .blockr-section-btn {
+  padding-top: 10px;
 }
 /* Collapsing disabled: the section label is a static span, not a control. */
 .blockr-html-table-container .blockr-section-btn-static { cursor: default; }
@@ -1327,17 +1451,19 @@ input.blockr-search:focus {
 .blockr-html-table-container .blockr-section-cell.level-4 .blockr-section-value {
   font-size: 13px;
 }
-/* SVG caret \u2014 muted at rest, darkens on hover, rotates to encode state.
-   Path is a down-caret (expanded); collapsed rotates it -90deg. */
+/* The design system's chevron: 12px, a 1.4px stroke at any size, muted,
+   darker on hover of its heading. Down while open, right when folded (the
+   ROW carries `collapsed`). The svg keeps its 24-unit path; the stroke is
+   pinned by html_table_chev_css(), outside this sheet's scope. */
 .blockr-html-table-container .blockr-chev {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
   flex: none;
-  color: var(--stbl-ink-3);
-  transition: transform 0.2s ease, color 0.15s ease;
+  color: var(--blockr-color-text-muted, #6b7280);
+  transition: transform var(--blockr-transition, 0.15s ease), color var(--blockr-transition, 0.15s ease);
 }
 .blockr-html-table-container .blockr-section-btn:hover .blockr-chev {
-  color: var(--stbl-ink-1);
+  color: var(--blockr-color-text-default, #111827);
 }
 .blockr-html-table-container tr.blockr-section-header.collapsed .blockr-chev {
   transform: rotate(-90deg);
@@ -1355,30 +1481,31 @@ input.blockr-search:focus {
   display: inline-flex;
   align-items: center;
   vertical-align: baseline;
-  margin-left: -18px;
+  margin-left: -17px;
 }
 .blockr-html-table-container .blockr-indent-btn:hover .blockr-chev {
-  color: var(--stbl-ink-1);
+  color: var(--blockr-color-text-default, #111827);
 }
 .blockr-html-table-container tr.blockr-indent-toggle.collapsed .blockr-chev {
   transform: rotate(-90deg);
 }
 .blockr-html-table-container .blockr-table tbody tr:last-child td {
-  border-bottom: none;
+  border-bottom-color: transparent;
 }
 .blockr-html-table-container .blockr-section-label {
-  color: var(--stbl-ink-3);
+  color: var(--blockr-color-text-muted, #6b7280);
   font-weight: var(--blockr-font-weight-normal, 400);
   margin-right: 4px;
 }
 /* Sticky header + scroll shadow. The header stays put while the body
    scrolls; a soft shadow fades in once the scroll container is scrolled
-   (the JS toggles `.scrolled` on .blockr-table-wrapper). */
+   (the JS toggles `.scrolled` on .blockr-table-wrapper). background-color,
+   not the shorthand, so a leaf keeps its column rule. */
 .blockr-html-table-container .blockr-table thead th {
   position: sticky;
   top: 0;
   z-index: 3;
-  background: var(--stbl-surface-1);
+  background-color: var(--blockr-color-bg-surface, #ffffff);
 }
 .blockr-html-table-container .blockr-table-wrapper.scrolled thead th {
   box-shadow: 0 10px 16px -14px rgba(16, 24, 40, 0.4);
@@ -1396,6 +1523,23 @@ input.blockr-search:focus {
     css <- gsub(".blockr-html-table-container", scope, css, fixed = TRUE)
   }
   css
+}
+
+#' The chevron's stroke: a constant 1.4px at any size. The rank table, which
+#' shares the markup, keeps its own.
+#'
+#' Emitted with the plain container prefix, never under the structured scope
+#' of `html_table_delta_css()`: a `:has()` scope in front of the descendant
+#' `path` made Chrome restyle the whole page on every DOM insertion (1.3 ms
+#' per insertion became 4.7 ms on the CDEx board). A flat table has no
+#' chevrons, so the plain prefix leaks nothing onto it.
+#' @noRd
+html_table_chev_css <- function() {
+  ".blockr-html-table-container .blockr-chev path {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.4px;
+}
+"
 }
 
 #' Shared table CSS for the drilldown table chrome (`dt_chrome()`). Mirrors
@@ -1422,67 +1566,72 @@ html_table_shared_css_fallback <- function() {
   --_shiny-fade-opacity: 1;
   opacity: 1 !important;
 }
-.blockr-table {
+/* The base table rules, scoped to blockr.viz's own containers. Unscoped,
+   this page-global sheet overrode blockr.ui's preview for every table on
+   the board as soon as a table block was on it. :where() keeps each rule's
+   specificity what it was, so nothing changes inside the containers. */
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table {
   border-collapse: collapse;
   width: 100%;
   font-size: var(--blockr-font-size-base, 0.875rem);
 }
-.blockr-table thead {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table thead {
   position: sticky;
   top: 0;
-  background: white;
+  background: var(--blockr-color-bg-surface, #ffffff);
   z-index: 1;
 }
-.blockr-table thead tr {
-  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table thead tr {
+  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
-.blockr-table th {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table th {
   text-align: left;
   padding: 10px 16px;
   font-weight: var(--blockr-font-weight-medium, 500);
-  color: var(--blockr-color-text-primary, #111827);
+  color: var(--blockr-color-text-default, #111827);
   vertical-align: bottom;
   overflow: hidden;
 }
-.blockr-table tbody tr {
-  border-bottom: 1px solid var(--blockr-grey-100, #f3f4f6);
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr {
+  border-bottom: 1px solid color-mix(in srgb,
+    var(--blockr-color-border-default, #e5e7eb) 50%, transparent);
   transition: background-color 0.15s ease;
 }
-.blockr-table tbody tr:hover {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr:hover {
   background-color: var(--blockr-color-bg-subtle, #f9fafb);
 }
-.blockr-table td {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table td {
   padding: 10px 16px;
   font-size: var(--blockr-font-size-base, 0.875rem);
-  color: var(--blockr-color-text-primary, #111827);
+  color: var(--blockr-color-text-default, #111827);
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.blockr-table th.blockr-sortable {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table th.blockr-sortable {
   cursor: pointer;
   user-select: none;
   transition: background-color 0.15s ease;
 }
-.blockr-table th.blockr-sortable:hover {
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-table th.blockr-sortable:hover {
   background-color: var(--blockr-color-bg-subtle, #f9fafb);
 }
-.blockr-sort-icon {
+/* The sort cue is the design system's sort bars: short to long for
+   ascending, long to short for descending, in the accent (as in the
+   blockr.ui preview). */
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-sort-icon {
   display: inline-block;
   width: 12px;
   height: 12px;
-  font-size: 10px;
-  line-height: 12px;
-  text-align: center;
+  color: var(--blockr-color-text-accent, #2563eb);
+  background-color: currentColor;
+  -webkit-mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h3M2 6h5.5M2 9h8'/%3E%3C/svg%3E\") no-repeat center / 12px 12px;
+  mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h3M2 6h5.5M2 9h8'/%3E%3C/svg%3E\") no-repeat center / 12px 12px;
 }
-.blockr-sort-icon-asc::after {
-  content: '\\2191';
-  color: #374151;
-}
-.blockr-sort-icon-desc::after {
-  content: '\\2193';
-  color: #374151;
+:where(.drilldown-table-container, .blockr-rank-container) .blockr-sort-icon-desc {
+  -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h8M2 6h5.5M2 9h3'/%3E%3C/svg%3E\");
+  mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h8M2 6h5.5M2 9h3'/%3E%3C/svg%3E\");
 }
 /* Toolbar + search chrome. Generic table chrome (not the structured Table-1
    treatment), so it lives here in the always-injected shared CSS \u2014 the
@@ -1494,7 +1643,7 @@ html_table_shared_css_fallback <- function() {
   justify-content: space-between;
   gap: 16px;
   padding: 10px 4px;
-  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 .blockr-html-table-toolbar {
   display: flex;
@@ -1507,154 +1656,36 @@ input.blockr-search {
   -webkit-appearance: none;
   box-sizing: border-box;
   height: var(--blockr-control-h-sm, 30px);
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
   border-radius: 4px;
   padding: 4px 8px 4px 26px;
   font: inherit;
   font-size: var(--blockr-font-size-sm, 0.8125rem);
-  color: var(--blockr-color-text-primary, #111827);
-  background-color: var(--blockr-color-bg-input, #f9fafb);
+  color: var(--blockr-color-text-default, #111827);
+  background-color: var(--blockr-color-bg-field, #f9fafb);
   background-image: url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3-3'/></svg>\");
   background-repeat: no-repeat;
   background-position: 8px center;
   width: 180px;
   transition: border-color 0.12s, box-shadow 0.12s;
 }
-input.blockr-search::placeholder { color: var(--blockr-color-text-subtle, #9ca3af); }
+input.blockr-search::placeholder { color: var(--blockr-color-text-muted, #6b7280); }
 input.blockr-search:focus {
   outline: none;
-  border-color: var(--blockr-color-primary, #2563eb);
+  border-color: var(--blockr-color-border-accent, #2563eb);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  background-color: #ffffff;
+  background-color: var(--blockr-color-bg-surface, #ffffff);
 }
-",
-    # The download chrome, defined once and shared: the chart block wears the
-    # same control and its page carries none of the table's CSS.
-    dl_chrome_css()
+"
   )
 }
 
-# The download control's styling -- the icon button and, when several formats
-# are writable, the <details> menu it becomes. Split out of the table's shared
-# fallback so the CHART block can carry it too: the two blocks show one
-# control, and a page with a chart and no table would otherwise render it as a
-# row of bare links.
+# The download control is blockr.ui's tool and action menu now
+# (dl_control_ui()), styled by blockr.ui. The heatmap block still injects
+# this; the call goes with the heatmap's rewrite.
 #' @noRd
 dl_chrome_css <- function() {
-  "/* Download: a quiet icon button matching the search input's chrome
-   (28px, radius 4, bg-input) - an inline-SVG anchor built by the block
-   server (no Bootstrap .btn, no icon font). It is an <a> when one format is
-   enabled and the <summary> of a <details> menu when several are, so both
-   carry the same rules and the toolbar does not shift when a second format
-   is turned on. */
-a.blockr-dl-xlsx,
-summary.blockr-dl-xlsx {
-  appearance: none;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--blockr-control-h-sm, 30px);
-  height: var(--blockr-control-h-sm, 30px);
-  flex: 0 0 auto;
-  padding: 0;
-  margin: 0;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 4px;
-  background-color: var(--blockr-color-bg-input, #f9fafb);
-  color: var(--blockr-grey-500, #6b7280);
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: none;
-  transition: border-color 0.12s, background-color 0.12s, color 0.12s;
-}
-a.blockr-dl-xlsx:hover,
-summary.blockr-dl-xlsx:hover {
-  background-color: #ffffff;
-  border-color: var(--blockr-grey-300, #d1d5db);
-  color: var(--blockr-color-text-primary, #374151);
-  text-decoration: none;
-}
-a.blockr-dl-xlsx:focus-visible,
-summary.blockr-dl-xlsx:focus-visible {
-  outline: none;
-  border-color: var(--blockr-color-primary, #2563eb);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-}
-/* Shiny toggles .disabled on download links until the handler is ready. */
-a.blockr-dl-xlsx.disabled { opacity: 0.45; pointer-events: none; }
-/* Export toggled on but openxlsx not installed: muted, not-allowed, and
-   NO pointer-events:none -- the tooltip must still explain why. */
-a.blockr-dl-xlsx--off,
-a.blockr-dl-xlsx--off:hover {
-  opacity: 0.45;
-  cursor: not-allowed;
-  background-color: var(--blockr-color-bg-input, #f9fafb);
-  border-color: var(--blockr-color-border, #e5e7eb);
-  color: var(--blockr-grey-500, #6b7280);
-}
-a.blockr-dl-xlsx svg, summary.blockr-dl-xlsx svg { display: block; }
-/* Two or more formats: the button becomes a <details> menu. The open/close,
-   the keyboard handling and the focus order are the browser's, so there is
-   no JS here to fall out of step with the table's own script. */
-details.blockr-dl-menu { position: relative; flex: 0 0 auto; }
-details.blockr-dl-menu > summary {
-  list-style: none;
-  user-select: none;
-}
-/* Both spellings: WebKit still wants the pseudo-element, everyone else takes
-   list-style. Without them the marker triangle sits inside the icon box. */
-details.blockr-dl-menu > summary::-webkit-details-marker { display: none; }
-details.blockr-dl-menu > summary::marker { content: \"\"; }
-details.blockr-dl-menu[open] > summary {
-  background-color: #ffffff;
-  border-color: var(--blockr-grey-300, #d1d5db);
-  color: var(--blockr-color-text-primary, #374151);
-}
-.blockr-dl-menu-list {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 20;
-  min-width: 172px;
-  padding: 4px;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 6px;
-  background-color: #ffffff;
-  box-shadow: 0 6px 16px rgba(17, 24, 39, 0.12);
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-a.blockr-dl-item {
-  display: block;
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  color: var(--blockr-color-text-primary, #111827);
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-}
-a.blockr-dl-item:hover {
-  background-color: var(--blockr-color-bg-input, #f9fafb);
-  text-decoration: none;
-}
-a.blockr-dl-item:focus-visible {
-  outline: none;
-  background-color: var(--blockr-color-bg-input, #f9fafb);
-  box-shadow: inset 0 0 0 2px var(--blockr-color-primary, #2563eb);
-}
-a.blockr-dl-item.disabled { opacity: 0.45; pointer-events: none; }
-/* Writer not installed: muted and not-allowed, but NOT pointer-events:none --
-   the tooltip carrying the reason has to stay reachable. */
-a.blockr-dl-item--off,
-a.blockr-dl-item--off:hover {
-  opacity: 0.45;
-  cursor: not-allowed;
-  background-color: transparent;
-  color: var(--blockr-grey-500, #6b7280);
-}"
+  ""
 }
 
 # ---------------------------------------------------------------------------

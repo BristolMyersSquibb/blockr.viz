@@ -28,17 +28,39 @@
 :is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.blockr-stub {
   text-align: left;
 }
+/* Table-block rows at 30px, with no rules in the body, like the preview:
+   5px above and below a 20px line. The header cells take 7px. Structured
+   tables set their own cell padding in html_table_delta_css(); these are the
+   flat table's. The rank table keeps its own rows. */
+.drilldown-table-container .blockr-table tbody td {
+  padding: 5px 12px;
+  line-height: 20px;
+}
+.drilldown-table-container .blockr-table thead th {
+  padding: 7px 12px;
+}
+.drilldown-table-container .blockr-table tbody tr {
+  border-bottom: 0;
+}
+/* Hover: a wash across the row, the whole row being what a flat click
+   claims (or, on a table without a drill, just a reading aid). The shared
+   sheet's hover sits on the <tr>; it moves to the cells so every table-block
+   hover is the one colour. Structured tables with a drill replace this with
+   the claim preview (dt-hot-*, table.js wireHover). */
+.drilldown-table-container .blockr-table tbody tr:hover {
+  background-color: transparent;
+}
+.drilldown-table-container .blockr-table tbody tr.blockr-data-row:hover > td {
+  background-color: var(--blockr-color-bg-hover, #f3f4f6);
+}
 :is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table tbody tr.blockr-data-row {
   cursor: pointer;
 }
 /* A drill row with an NA drill value emits nothing (no data-raw -> the click
-   is a no-op), so it must not look clickable: default cursor + the neutral
-   reading-aid hover instead of the accent-blue "actionable" tint. */
+   is a no-op), so it must not look clickable: default cursor, and the plain
+   row wash every row gets. */
 :is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table tbody tr.blockr-data-row.dt-row-nodrill {
   cursor: default;
-}
-:is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table tbody tr.blockr-data-row.dt-row-nodrill:hover td {
-  background: var(--blockr-color-bg-subtle, #f9fafb);
 }
 /* Section headers: only those that ARE an identity claim (row-group headers,
    e.g. a SOC over its PTs -- they carry data-dd-keys) read as clickable.
@@ -47,55 +69,44 @@
 :is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table tbody tr.blockr-section-header[data-dd-keys] .blockr-section-value {
   cursor: pointer;
 }
-/* No drill: the row is inert. The html-table base paints an accent-blue hover
-   (which reads as "clickable"), and the drilldown container inherits it because
-   it also carries .blockr-html-table-container. When drill is off, swap that for
-   a neutral grey reading-aid tint so hover signals "readable", not "actionable".
-   The accent-blue hover + cursor:pointer above stay for the .dt-clickable case. */
-:is(.drilldown-table-container, .blockr-rank-container):not(.dt-clickable) .blockr-table tbody tr.blockr-data-row:hover td {
+/* No drill: the row is inert. The rank table keeps its own reading-aid
+   tint; the table block's plain row wash is set above. */
+.blockr-rank-container:not(.dt-clickable) .blockr-table tbody tr.blockr-data-row:hover td {
   background: var(--blockr-color-bg-subtle, #f9fafb);
 }
-/* Drill selection — a soft primary tint across the row plus a left accent
-   bar, instead of a hard per-cell outline (which boxed every cell). */
+/* Drill selection: the selected tint and the accent ink across the row, no
+   bar. Structured tables restate this in html_table_delta_css(), after their
+   hover rules. */
 :is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-row-active td {
-  background-color: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
-}
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-row-active td:first-child {
-  box-shadow: inset 3px 0 0 0 var(--blockr-color-primary, #2563eb);
+  background-color: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  color: var(--blockr-color-text-accent, #2563eb);
 }
 /* Column drill. A header the producer could name (data-dd-colkeys, e.g. an
    arm) reads as clickable; a Total or a stats spanner carries no keys and
-   stays inert, the same rule the section headers follow above. */
+   stays inert, the same rule the section headers follow above. Its hover is
+   the column it would claim (table.js wireHover). */
 :is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table thead th.dd-col-drill {
   cursor: pointer;
 }
-:is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table thead th.dd-col-drill:hover {
-  background-color: var(--blockr-color-bg-subtle, #f9fafb);
-}
-/* The claimed column, painted the same soft tint the claimed row gets, with
-   the accent bar on top instead of down the left. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-col-active {
-  background-color: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
-  box-shadow: inset 0 3px 0 0 var(--blockr-color-primary, #2563eb);
-}
+/* The claimed column, painted the same tint the claimed row gets. */
+:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-col-active,
 :is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.dt-col-active {
-  background-color: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
+  background-color: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  color: var(--blockr-color-text-accent, #2563eb);
 }
-/* The cell where the two claims cross: one more step of the SAME tint, not a
-   new device. A solid fill read as a button and put white text in a column of
-   black numbers; at 20% the cell is plainly the darkest of the three without
-   breaking the column. Mixed off the theme's primary so the whole ladder
-   (9% row / 9% column / 20% cell) moves together when a theme changes it. */
+/* The cell where the two claims cross: one step stronger of the same accent
+   tint, and bold, so it is plainly the darkest of the three without breaking
+   the column. */
 :is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-row-active td.dt-col-active {
-  background-color: color-mix(in srgb, var(--blockr-color-primary, #2563eb) 20%, transparent);
+  background-color: var(--blockr-color-bg-accent-subtle-hover, rgba(37, 99, 235, 0.13));
+  font-weight: var(--blockr-font-weight-semibold, 600);
 }
 /* ===== Transient drill =====
    With a ctrl_target set the click is an EVENT sent to another block, so the
    table lights what was clicked and lets it go -- there is nothing to un-set,
    and a paint that stayed would show a cohort anyone else can reset. The
-   values are the latched ladder above (9% row / 9% column / 20% cross, with
-   the 3px accent bars), so a transient claim draws the same picture the sticky
-   one drew; only it ends.
+   values are the design system's selected tints (row and column, one step
+   stronger at the cross), with 3px accent bars on the row and the header.
 
    HOLD is an animation-delay with `both`, so the first frame shows for the
    whole delay and only then starts to leave.
@@ -149,22 +160,22 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: var(--blockr-color-primary-subtle, rgba(37, 99, 235, 0.09));
+  background: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
   animation: dt-flash-out 900ms linear 300ms both;
 }
 
 /* The accent bars ride the same layer, so they fade with it rather than
    needing an animation of their own. */
 :is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-flash-row > td:first-child::after {
-  box-shadow: inset 3px 0 0 0 var(--blockr-color-primary, #2563eb);
+  box-shadow: inset 3px 0 0 0 var(--blockr-color-border-accent, #2563eb);
 }
 :is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-flash-colhead::after {
-  box-shadow: inset 0 3px 0 0 var(--blockr-color-primary, #2563eb);
+  box-shadow: inset 0 3px 0 0 var(--blockr-color-border-accent, #2563eb);
 }
 
 /* The cell where the two claims cross: one step darker, same layer. */
 :is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-flash-row > td.dt-flash-cross::after {
-  background: color-mix(in srgb, var(--blockr-color-primary, #2563eb) 20%, transparent);
+  background: var(--blockr-color-bg-accent-subtle-hover, rgba(37, 99, 235, 0.13));
 }
 
 @keyframes dt-flash-out {
@@ -179,7 +190,7 @@
    (it owns the claim's words) and animated here; nothing needs to remove it,
    an invisible line at the end of a fade is not in anyone's way. */
 :is(.drilldown-table-container, .blockr-rank-container) .dt-status-receipt {
-  color: var(--blockr-color-text-secondary, #374151);
+  color: var(--blockr-color-text-muted, #6b7280);
   animation: dt-receipt-out 1100ms linear 1400ms both;
 }
 
@@ -214,7 +225,7 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--blockr-color-bg, #ffffff);
+  background-color: var(--blockr-color-bg-surface, #ffffff);
 }
 /* scroll = "page" (dt_chrome): the box scrolls sideways only and runs the
    table's full length, so the panel or page around it scrolls up and down.
@@ -242,7 +253,7 @@
   border-spacing: 0;
 }
 .dt-scroll-page .blockr-table tbody tr > td {
-  border-bottom: 1px solid var(--blockr-grey-100, #f3f4f6);
+  border-bottom: 1px solid transparent;
 }
 /* Sort indicator placement, matching the html preview: the arrow flows on
    the lower row immediately to the right of the subtext (small gap, like the
@@ -328,20 +339,20 @@
    exists while a title/subtitle shows. */
 .dd-table-titles {
   padding: 2px 2px 8px;
-  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
   margin-bottom: 6px;
 }
 
 .dd-table-title {
-  font-size: var(--blockr-font-size-md, 0.9375rem);
+  font-size: var(--blockr-font-size-lg, 1rem);
   font-weight: 600;
-  color: var(--blockr-grey-800, #1f2937);
+  color: var(--blockr-color-text-default, #111827);
   white-space: pre-line;
 }
 
 .dd-table-subtitle {
   font-size: var(--blockr-font-size-sm, 0.8125rem);
-  color: var(--blockr-grey-500, #6b7280);
+  color: var(--blockr-color-text-muted, #6b7280);
   margin-top: 1px;
   white-space: pre-line;
 }
@@ -351,7 +362,7 @@
    line. */
 .dd-table-caption {
   font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-grey-500, #6b7280);
+  color: var(--blockr-color-text-muted, #6b7280);
   font-style: italic;
   padding: 4px 2px 0;
   white-space: pre-line;
@@ -367,12 +378,6 @@
   gap: 6px;
 }
 
-/* Beside the 30px toolbar controls (search, download) the gear adopts the
-   control height instead of its stand-alone 26px. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-gear-header .blockr-gear-btn {
-  width: var(--blockr-control-h-sm, 30px);
-  height: var(--blockr-control-h-sm, 30px);
-}
 
 /* Wrapping column titles. The width estimator measures a header by its
    longest WORD when wrapping is on (column_widths_px(wrap_names = TRUE)), so
@@ -403,6 +408,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 0 var(--blockr-card-inset, 0px);
 }
 
 /* The status half takes the rest of the row, so its Reset stays hard right.
@@ -420,7 +426,7 @@
 .dt-row-count {
   padding: 6px 0;
   font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-grey-500, #6b7280);
+  color: var(--blockr-color-text-muted, #6b7280);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -476,4 +482,66 @@
   padding-left: 4px;
   padding-right: 4px;
   text-align: center;
+}
+
+/* In a block card the table runs to the card edges: its scroll box, its
+   search bar and its footer pull themselves out by the card's inset
+   (--blockr-card-inset, set by blockr.dock), and the first and last columns,
+   the search bar and the footer pad their text back in by as much (the
+   structured table's row labels and last column do so in the delta CSS,
+   html_table_delta_css()). The rules, the hover and drill washes and the
+   scroll area reach the edges; every text keeps its place. Whatever else a
+   caller puts in the container (the composer's title row, its code tray)
+   stays on the card's inset. Outside a card the inset is 0. */
+.drilldown-table-container > .blockr-table-wrapper,
+.drilldown-table-container > .dt-table-footer,
+.drilldown-table-container > .blockr-html-table-header {
+  margin-left: calc(-1 * var(--blockr-card-inset, 0px));
+  margin-right: calc(-1 * var(--blockr-card-inset, 0px));
+}
+.drilldown-table-container > .blockr-html-table-header {
+  padding-left: calc(4px + var(--blockr-card-inset, 0px));
+  padding-right: calc(4px + var(--blockr-card-inset, 0px));
+}
+.drilldown-table-container .blockr-table tr > :first-child {
+  padding-left: calc(12px + var(--blockr-card-inset, 0px));
+}
+.drilldown-table-container .blockr-table tr > :last-child {
+  padding-right: calc(12px + var(--blockr-card-inset, 0px));
+}
+
+/* ===== Summarize table: the chart's header and drill line ===== */
+/* The title band sits in the gear row, on its left (rank-table.js buildGear),
+   laid out as the chart's (chart.css .dd-card .blockr-gear-header): it takes
+   the row's width and wraps before the tools, which stay top right. In the
+   row it has no hairline under it: the chart's has none either. */
+.blockr-rank-container .blockr-gear-header {
+  align-items: flex-start;
+}
+.blockr-rank-container .blockr-gear-header .dd-table-titles {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 8px 0 2px;
+  border-bottom: none;
+  margin-bottom: 0;
+}
+/* The drill line takes the rest of the footer row, so its Reset sits hard
+   right, as under a chart and under the table block. */
+.blockr-rank-footer > .dd-status-footer {
+  flex: 1 1 auto;
+  padding: 0;
+}
+.blockr-rank-footer > .dd-status-footer:empty {
+  display: none;
+}
+
+/* The export picture (rank-table.js captureRoot): the block without its
+   tools, white, with the title band as the header row shows it. */
+.blockr-rank-capture {
+  background: #fff;
+  padding: 8px 10px;
+}
+.blockr-rank-capture .dd-table-titles {
+  border-bottom: none;
+  margin-bottom: 4px;
 }

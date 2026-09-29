@@ -89,7 +89,7 @@ test_that("a format whose writer is missing is left out of the menu", {
   testServer(blk$expr_server, args = list(data = reactive(df)), {
     session$flushReact()
     html <- as.character(output$dt_download$html)
-    expect_false(grepl("Excel (.xlsx)", html, fixed = TRUE))
+    expect_false(grepl("dl_xlsx", html, fixed = TRUE))
     expect_false(grepl("--off", html, fixed = TRUE))
     # HTML needs no package of its own, so the control never empties.
     expect_true(grepl("dl_html", html))
@@ -105,8 +105,8 @@ test_that("downloads on renders every format the machine can write", {
     session$flushReact()
     html <- as.character(output$dt_download$html)
     expect_true(grepl("shiny-download-link", html))
-    expect_true(grepl("Excel (.xlsx)", html, fixed = TRUE))
-    expect_true(grepl("Web page (.html)", html, fixed = TRUE))
+    expect_true(grepl("dl_xlsx", html, fixed = TRUE))
+    expect_true(grepl("dl_html", html, fixed = TRUE))
   })
 })
 
@@ -133,9 +133,14 @@ test_that("one writable format renders a button, several render a menu", {
              args = list(data = reactive(df)), {
     session$flushReact()
     html <- as.character(output$dt_download$html)
-    expect_false(grepl("blockr-dl-menu", html))
+    expect_false(grepl("blockr-action-menu", html))
     expect_true(grepl("shiny-download-link", html))
+    expect_true(grepl("blockr-tool", html))
     expect_true(grepl("dl_html", html))
+    # blockr.ui's tooltip, never the browser's.
+    expect_true(grepl("data-blockr-tooltip=\"Download as Web page (.html)\"",
+                      html, fixed = TRUE))
+    expect_false(grepl(" title=", html, fixed = TRUE))
   })
 })
 
@@ -150,15 +155,20 @@ test_that("several formats render a menu in spec order", {
              args = list(data = reactive(df)), {
     session$flushReact()
     html <- as.character(output$dt_download$html)
-    expect_true(grepl("<details class=\"blockr-dl-menu\"", html))
-    expect_true(grepl("Excel (.xlsx)", html, fixed = TRUE))
-    expect_true(grepl("Web page (.html)", html, fixed = TRUE))
-    expect_true(grepl("PowerPoint (.pptx)", html, fixed = TRUE))
+    # blockr.ui's action menu: a tool that opens one row per format, the
+    # extension as meta text.
+    expect_true(grepl("blockr-action-menu", html, fixed = TRUE))
+    expect_true(grepl("blockr-menu__item", html, fixed = TRUE))
+    expect_true(grepl("Excel", html, fixed = TRUE))
+    expect_true(grepl("Web page", html, fixed = TRUE))
+    expect_true(grepl("PowerPoint", html, fixed = TRUE))
+    expect_true(grepl(">.pptx<", html, fixed = TRUE))
+    expect_false(grepl(" title=", html, fixed = TRUE))
     # Menu order is the spec order, never the order writers were probed in.
-    expect_lt(regexpr("Excel (.xlsx)", html, fixed = TRUE),
-              regexpr("Web page (.html)", html, fixed = TRUE))
-    expect_lt(regexpr("Web page (.html)", html, fixed = TRUE),
-              regexpr("PowerPoint (.pptx)", html, fixed = TRUE))
+    expect_lt(regexpr("dl_xlsx", html, fixed = TRUE),
+              regexpr("dl_html", html, fixed = TRUE))
+    expect_lt(regexpr("dl_html", html, fixed = TRUE),
+              regexpr("dl_pptx", html, fixed = TRUE))
   })
 })
 

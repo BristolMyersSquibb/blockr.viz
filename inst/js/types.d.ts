@@ -111,6 +111,17 @@ declare class VizDrilldownConfig {
   [member: string]: any;
 }
 
+/** The block's sentence painter (drilldown-config.js), shared by the chart
+ *  and the heatmap. */
+declare class VizSentenceSlots {
+  constructor(host: { ddc: () => any; config: () => any; openGear: () => void });
+  paint(el: HTMLElement, text: string, parts?: any[]): void;
+  paintOffers(el: HTMLElement, offers?: any[]): void;
+  label(key: string): string;
+  open(key: string, anchor: HTMLElement, by?: string): void;
+  close(): void;
+}
+
 /* --- Shared aggregation vocabulary (drilldown-agg.js) ---
    The group/value/func role triple + AGG_FNS + value-follows-agg reconcile,
    consumed identically by chart.js, table.js and tile-block.js. Exposed as
@@ -191,6 +202,8 @@ interface BlockrNamespace {
   Select?: BlockrSelectStatic;
   /** SVG icon strings (gear, plus, ...). */
   icons: Record<string, string>;
+  /** A shortcut written for this platform ("Mod+Enter" is "⌘↵" on a Mac). */
+  keys(keys: string): string;
   /** Document-level click delegate that drops listeners for removed nodes. */
   onDocClick(el: Element, cb: (e: MouseEvent) => void): void;
   uid(prefix?: string): string;
@@ -199,9 +212,17 @@ interface BlockrNamespace {
   contentWidth(el: Element): number;
   /** The shared drilldown popover engine (defined in this package). */
   DrilldownConfig: typeof VizDrilldownConfig;
+  /** The block's sentence painter (defined in this package). */
+  SentenceSlots: typeof VizSentenceSlots;
+  /** The gear tray behaviour (blockr.ui's blockr-ui.js). */
+  gearTray?(
+    band: HTMLElement,
+    gear: HTMLButtonElement,
+    opts?: { label?: string }
+  ): { set(open: boolean): void; toggle(): void; isOpen(): boolean };
   /** Shared aggregation vocabulary (drilldown-agg.js). */
   DrilldownAgg?: VizDrilldownAgg;
-  /** Design-system checkbox factory (settings-band.js). */
+  /** Design-system checkbox factory (blockr.ui's blockr-ui.js). */
   checkbox(
     label: string,
     checked: boolean,
@@ -212,6 +233,18 @@ interface BlockrNamespace {
     set(v: boolean): void;
     get(): boolean;
   };
+  /** The light-card tooltip (blockr.ui's blockr-ui.js). */
+  tooltip: {
+    set(el: Element, content: unknown, opts?: { overflow?: boolean }): void;
+    clear(el: Element): void;
+  };
+  /** Design-system segmented control (blockr.ui's blockr-ui.js). */
+  segmented(
+    options: { value: string; label: string; title?: string }[],
+    selected: string,
+    onChange: (value: string) => void,
+    opts?: { size?: 'xs'; label?: string }
+  ): { el: HTMLDivElement; set(v: string): void; get(): string };
   /** Commit-on-Enter text input with the "Enter" chip (blockr-core.js);
       absent on a page without blockr-core.js. */
   textCommit?(

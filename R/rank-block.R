@@ -108,10 +108,13 @@
 #'   difference bar, the x domain (dates as dates) for a swimlane or a
 #'   sparkline. `FALSE` drops every strip, for a dense exhibit where the
 #'   numbers beside the marks carry the scale.
-#' @param title,subtitle,caption Display text. `NULL` = auto (inherits the
-#'   input's label / subtitle / caption attribute), `""` = explicitly none,
-#'   else a template with the same `{...}` tokens as the chart and table
-#'   blocks (see `resolve_title_template()`).
+#' @param title,subtitle,caption Display text, as on [new_chart_block()]:
+#'   `NULL` = auto (inherits the input's label / subtitle / caption
+#'   attribute), `""` = explicitly none, else a template with the chart
+#'   block's `{...}` tokens (see `resolve_title_template()`). A token naming
+#'   one of the block's settings (`{label(@by)}`, `{@func}`) prints as a word
+#'   that opens that setting; `by` names its innermost column. `caption`
+#'   defaults to the option `blockr.viz.default_caption` (unset = `NULL`).
 #' @param drill Column a row click filters on. The emitted filter is the same
 #'   categorical contract as [new_chart_block()], so existing filter links
 #'   compose.
@@ -163,7 +166,12 @@ new_summarize_table_block <- function(group = NULL,
                                  download = FALSE,
                                  title = NULL,
                                  subtitle = NULL,
-                                 caption = NULL,
+                                 # The chart block's default: a deployment
+                                 # can caption every new table, e.g. with
+                                 # "{filters}". Read once, at construction.
+                                 caption = getOption(
+                                   "blockr.viz.default_caption"
+                                 ),
                                  drill = NULL,
                                  ctrl_target = "",
                                  ctrl_table = "",
@@ -303,6 +311,54 @@ new_summarize_table_block <- function(group = NULL,
           }
           list(label = att("label"), subtitle = att("subtitle"),
                caption = att("caption"))
+        })
+
+        # The title, subtitle and caption as the chart block has them: the
+        # text, and the pieces the face paints, where a piece that names one
+        # of the block's settings (`{label(@by)}`) is a word that opens that
+        # setting, and a setting whose `[ ]` clause dropped is offered beside
+        # the sentence. Resolved against the block's input, which carries the
+        # filter trail `{filters}` reads.
+        title_args <- shiny::reactive({
+          rank_title_args(list(
+            by = r_by(), group = r_group(), parent = r_parent(),
+            value = r_value(), func = r_func(), id_var = r_id_var(),
+            color = r_color(), facet = r_facet(), sort_by = r_sort_by(),
+            top_n = r_top_n(), drill = r_drill()
+          ))
+        })
+        r_titles <- shiny::reactive({
+          d <- tryCatch(ann_data(), error = function(e) NULL)
+          shiny::req(is.data.frame(d))
+          auto <- r_data_titles()
+          a <- title_args()
+          parts <- list(
+            title = block_title_parts(r_title(), d, auto = auto$label,
+                                      args = a),
+            subtitle = block_title_parts(r_subtitle(), d,
+                                         auto = auto$subtitle, args = a),
+            caption = block_title_parts(r_caption(), d, auto = auto$caption,
+                                        args = a)
+          )
+          offers <- function(p) as.list(attr(p, "offers", exact = TRUE))
+          list(
+            title = resolve_block_title(r_title(), d, auto = auto$label,
+                                        args = a),
+            subtitle = resolve_block_title(r_subtitle(), d,
+                                           auto = auto$subtitle, args = a),
+            caption = resolve_block_title(r_caption(), d,
+                                          auto = auto$caption, args = a),
+            title_parts = parts$title,
+            subtitle_parts = parts$subtitle,
+            caption_parts = parts$caption,
+            title_offers = offers(parts$title),
+            subtitle_offers = offers(parts$subtitle),
+            caption_offers = offers(parts$caption),
+            # A named list, so it arrives as an object (chart-block.R).
+            title_arg_values = lapply(
+              stats::setNames(nm = names(a)), arg_token_value, args = a
+            )
+          )
         })
 
         board_scale_map <- dd_board_scale_map()
@@ -502,18 +558,16 @@ new_summarize_table_block <- function(group = NULL,
         shiny::observeEvent(input$rank_block_ready, {
           if (!is.null(last_msg$json)) push(last_msg$json)
         })
-        shiny::observe({
+        # The payload as JSON, from the current state. The push observer
+        # below calls it, and so does a capture request for a table whose
+        # payload was never built (a view nobody opened).
+        build_json <- function() {
           d <- tryCatch(ann_data(), error = function(e) NULL)
           shiny::req(is.data.frame(d))
-          auto <- r_data_titles()
+          tt <- r_titles()
           p <- rank_build_payload(
             d,
-            chrome = list(
-              title = resolve_block_title(r_title(), d, auto = auto$label),
-              subtitle = resolve_block_title(r_subtitle(), d,
-                                             auto = auto$subtitle),
-              caption = resolve_block_title(r_caption(), d, auto = auto$caption)
-            ),
+            chrome = tt[setdiff(names(tt), "title_arg_values")],
             drill = r_drill(),
             # Isolated: a click must not rebuild the body (the JS keeps the
             # highlight live), but any fresh build -- restore, config edit, new
@@ -535,16 +589,17 @@ new_summarize_table_block <- function(group = NULL,
               download = r_download(), drill = r_drill(),
               ctrl_target = r_ctrl_target(),
               ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices()),
-              titles = list(
-                title = resolve_block_title(r_title(), d, auto = auto$label),
-                subtitle = resolve_block_title(r_subtitle(), d,
-                                               auto = auto$subtitle),
-                caption = resolve_block_title(r_caption(), d,
-                                              auto = auto$caption),
-                title_state = r_title(), subtitle_state = r_subtitle(),
-                caption_state = r_caption()
+              titles = c(
+                tt,
+                list(title_state = r_title(), subtitle_state = r_subtitle(),
+                     caption_state = r_caption())
               ),
-              columns = rank_gear_cols(d)
+              columns = rank_gear_cols(d),
+              # The export picture comes from the browser (R/chart-capture.R):
+              # the table as drawn, at full height, instead of a server
+              # repaint that has to match it.
+              capture_export = canvas_capture_on(),
+              capture_ratio = canvas_capture_ratio()
             ),
             group = r_group(), value = r_value(), func = r_func(),
             id_var = r_id_var(), parent = r_parent(), color = r_color(),
@@ -555,7 +610,10 @@ new_summarize_table_block <- function(group = NULL,
             sort_dir = r_sort_dir(), top_n = r_top_n(),
             scale_map = board_scale_map()
           )
-          json <- rank_payload_json(p)
+          rank_payload_json(p)
+        }
+        shiny::observe({
+          json <- build_json()
           # String-identity guard: an unchanged payload is never re-sent, and
           # `rev` ticks only on real change so the browser can skip the parse.
           if (identical(json, last_msg$json)) return()
@@ -563,6 +621,49 @@ new_summarize_table_block <- function(group = NULL,
           last_msg$rev <- last_msg$rev + 1L
           push(json)
         })
+
+        # --- the export picture ----------------------------------------------
+        #
+        # The browser draws the table the export carries, the way the chart
+        # block's exports come off its canvas (R/chart-capture.R): the same
+        # table as on screen, every row, no scroll box, as one picture. The
+        # download menu posts it when it opens, so it is here by the time a
+        # format is picked. The painted exhibit (rank-paint.R) stays the
+        # fallback where no browser has drawn one.
+        capture <- shiny::reactiveVal(NULL)
+        shiny::observeEvent(input$rank_block_capture, {
+          msg <- input$rank_block_capture
+          capture(new_chart_capture(chart_capture_decode(msg$png),
+                                    msg$width, msg$height))
+        })
+        dl_picture <- function() {
+          if (canvas_capture_on() && !is.null(capture())) {
+            return(capture())
+          }
+          dl_exhibit()
+        }
+
+        # A deck asks for the picture through the session's capture service,
+        # at a width it chooses; the height is the table's own.
+        if (canvas_capture_on()) {
+          register_chart_capture(ns("rank_block"), function(token, width,
+                                                            height) {
+            json <- last_msg$json %||% tryCatch(
+              shiny::isolate(build_json()),
+              error = function(e) NULL
+            )
+            if (is.null(json)) {
+              stop("summarize table '", ns("rank_block"),
+                   "' has no data to draw yet", call. = FALSE)
+            }
+            session$sendCustomMessage("blockr-viz-rank-capture", list(
+              req = token, payload = json, width = width,
+              ratio = canvas_capture_ratio(),
+              css = paste(html_table_shared_css_fallback(), rank_table_css(),
+                          sep = "\n")
+            ))
+          })
+        }
 
         # --- downloads ------------------------------------------------------
         #
@@ -601,41 +702,22 @@ new_summarize_table_block <- function(group = NULL,
           Filter(
             function(s) isTRUE(s$ok),
             list(
-              list(id = "dl_xlsx", ext = "xlsx", label = "Excel (.xlsx)",
+              list(id = "dl_xlsx", ext = "xlsx", label = "Excel",
                    ok = requireNamespace("openxlsx", quietly = TRUE)),
-              list(id = "dl_html", ext = "html", label = "Web page (.html)",
+              list(id = "dl_html", ext = "html", label = "Web page",
                    ok = TRUE),
-              list(id = "dl_pptx", ext = "pptx", label = "PowerPoint (.pptx)",
+              list(id = "dl_pptx", ext = "pptx", label = "PowerPoint",
                    ok = requireNamespace("officer", quietly = TRUE) &&
-                     rank_paint_ready()),
-              list(id = "dl_png", ext = "png", label = "Image (.png)",
-                   ok = rank_paint_ready())
+                     (canvas_capture_on() || rank_paint_ready())),
+              list(id = "dl_png", ext = "png", label = "Image",
+                   ok = canvas_capture_on() || rank_paint_ready())
             )
           )
         })
 
-        output$rank_download <- shiny::renderUI({
-          specs <- dl_formats()
-          if (!length(specs)) return(NULL)
-          if (length(specs) == 1L) {
-            return(rank_dl_link(ns, specs[[1L]]))
-          }
-          # <details> rather than a scripted popover, exactly as the table
-          # block does it: the open / close behaviour, the keyboard handling
-          # and the focus order are the browser's, so the menu needs no JS and
-          # cannot fall out of step with the table's own script.
-          htmltools::tags$details(
-            class = "blockr-dl-menu",
-            htmltools::tags$summary(
-              class = "blockr-dl-xlsx", title = "Download",
-              `aria-label` = "Download", rank_dl_icon()
-            ),
-            htmltools::tags$div(
-              class = "blockr-dl-menu-list", role = "menu",
-              lapply(specs, function(s) rank_dl_link(ns, s, menu = TRUE))
-            )
-          )
-        })
+        output$rank_download <- shiny::renderUI(
+          dl_control_ui(ns, dl_formats())
+        )
 
         output$dl_xlsx <- shiny::downloadHandler(
           filename = function() "summarize-table.xlsx",
@@ -668,11 +750,15 @@ new_summarize_table_block <- function(group = NULL,
           filename = function() "summarize-table.pptx",
           content = function(file) {
             dl_guard("PowerPoint", {
-              e <- dl_exhibit()
-              write_exhibit_pptx(
-                e, file,
-                title = e$title, subtitle = e$subtitle, caption = e$caption
-              )
+              e <- dl_picture()
+              if (inherits(e, "chart_capture")) {
+                write_exhibit_pptx(e, file)
+              } else {
+                write_exhibit_pptx(
+                  e, file,
+                  title = e$title, subtitle = e$subtitle, caption = e$caption
+                )
+              }
             })
           }
         )
@@ -680,7 +766,12 @@ new_summarize_table_block <- function(group = NULL,
           filename = function() "summarize-table.png",
           content = function(file) {
             dl_guard("image", {
-              write_exhibit_png(dl_exhibit(), file)
+              e <- dl_picture()
+              if (inherits(e, "chart_capture")) {
+                chart_capture_file(e, file)
+              } else {
+                write_exhibit_png(e, file)
+              }
             })
           }
         )

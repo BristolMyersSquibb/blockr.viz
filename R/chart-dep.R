@@ -2,20 +2,9 @@
 #' @noRd
 drilldown_chart_dep <- memoise0(function() {
   htmltools::tagList(
-    # Reuse blockr.dplyr's shared CSS (gear, popover, rows) and select component
-    htmltools::htmlDependency(
-      name = "blockr-blocks-css",
-      version = paste0(utils::packageVersion("blockr.dplyr"), ".3"),
-      src = system.file("css", package = "blockr.dplyr"),
-      stylesheet = c("blockr-blocks.css", "blockr-select.css")
-    ),
-    htmltools::htmlDependency(
-      name = "blockr-select-js",
-      version = paste0(utils::packageVersion("blockr.dplyr"), ".3"),
-      src = system.file("js", package = "blockr.dplyr"),
-      script = c("blockr-core.js", "blockr-select.js")
-    ),
-    settings_band_dep(),
+    # The design system's tokens and shared controls (Select, checkbox,
+    # gear tray, segmented control, tooltip), from blockr.ui.
+    blockr.ui::controls_dep(),
     drilldown_echarts_themes_dep(),
     # The shared aggregation vocabulary + gear engine (one dep, one version —
     # see drilldown_shared_dep()). Listed BEFORE chart-js: chart.js reads
@@ -23,7 +12,7 @@ drilldown_chart_dep <- memoise0(function() {
     drilldown_shared_dep(),
     htmltools::htmlDependency(
       name = "chart-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".120"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".125"),
       src = system.file("js", package = "blockr.viz"),
       script = c("drilldown-theme-register.js", "chart.js")
     ),
@@ -40,7 +29,7 @@ drilldown_chart_dep <- memoise0(function() {
 chart_css_dep <- memoise0(function() {
   htmltools::htmlDependency(
     name = "chart-css",
-    version = paste0(utils::packageVersion("blockr.viz"), ".36"),
+    version = paste0(utils::packageVersion("blockr.viz"), ".40"),
     src = system.file("css", package = "blockr.viz"),
     stylesheet = "chart.css"
   )

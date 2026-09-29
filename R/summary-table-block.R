@@ -251,9 +251,7 @@ new_summary_table_block <- function(
     ui = function(id) {
       ns <- shiny::NS(id)
       htmltools::tagList(
-        blockr_core_js_dep(),
-        blockr_blocks_css_dep(),
-        blockr_select_dep(),
+        blockr.ui::controls_dep(),
         summary_table_block_dep(),
         shiny::div(
           class = "block-container",
@@ -276,7 +274,6 @@ new_summary_table_block <- function(
 
 summary_table_block_dep <- memoise0(function() {
   htmltools::tagList(
-    settings_band_dep(),
     htmltools::htmlDependency(
       name = "summary-table-block-js",
       version = paste0(utils::packageVersion("blockr.viz"), ".3"),

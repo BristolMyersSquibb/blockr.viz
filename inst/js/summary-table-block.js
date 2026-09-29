@@ -6,8 +6,8 @@
  * Gear: an in-flow settings band (stat checkboxes, overall checkbox + label,
  * nest_hierarchies checkbox, group-by select, count-distinct select).
  *
- * Depends on: blockr-core.js, blockr-select.js (from blockr.dplyr),
- * blockr-blocks.css, settings-band.js/.css (Blockr.checkbox + .blockr-settings).
+ * Depends on: blockr.ui::controls_dep() (Blockr.Select, Blockr.checkbox,
+ * .blockr-settings).
  */
 (() => {
   'use strict';
@@ -126,7 +126,8 @@
       this.gearBtn.type = 'button';
       this.gearBtn.className = 'blockr-gear-btn';
       this.gearBtn.innerHTML = Blockr.icons.gear;
-      this.gearBtn.title = 'Advanced settings';
+      this.gearBtn.setAttribute('data-blockr-tooltip', 'Settings');
+      this.gearBtn.setAttribute('aria-label', 'Settings');
       this.gearBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this._togglePopover();
@@ -193,7 +194,7 @@
       // between the gear header and the main grid, built from the standard
       // controls; on/off options are .blockr-checkbox (see
       // boolean-controls-proposals.html), not self-labeling pills.
-      // --beak: gear connector T1 (settings-band.css) — the open band grows
+      // --beak: gear connector T1 (blockr.ui's blockr-settings-band.css) — the open band grows
       // a notch pointing at the gear that opened it.
       this.popover.className = 'blockr-settings blockr-settings--beak';
 
@@ -351,8 +352,7 @@
       // commits on Enter/blur/chip, the chip fades to ✓, Escape reverts.
       const chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = 'blockr-expr-confirm';
-      chip.title = 'Apply (Enter)';
+      chip.className = 'blockr-expr-confirm blockr-expr-confirm--key';
       chip.setAttribute('aria-label', 'Apply (Enter)');
       chip.style.display = 'none';
       let committed = input.value;
@@ -361,7 +361,7 @@
         if (input.value !== committed) {
           chip.style.display = '';
           chip.classList.remove('confirmed');
-          chip.innerHTML = 'Enter <span class="blockr-kbd">↵</span>';
+          chip.textContent = '↵';
         } else if (everCommitted) {
           chip.style.display = '';
           chip.classList.add('confirmed');

@@ -65,7 +65,7 @@
 }
 
 .ctrl-receipt-op {
-  color: var(--blockr-color-text-subtle, #9ca3af);
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 
 .ctrl-receipt-value {

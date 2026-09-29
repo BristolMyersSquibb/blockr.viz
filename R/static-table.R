@@ -26,7 +26,7 @@
 #' emphasis works. This overrides the identity palette (`header_bg`).
 #'
 #' The look is the blockr.topline flextable theme: dense bordered grid,
-#' first column left-aligned and wide, data columns centered, optional
+#' first column left-aligned and wide, data columns right-aligned, optional
 #' colored header bands, manual column widths (PowerPoint never autofits --
 #' size for the slide, don't reflow). Every aspect is parameterized; the
 #' defaults reproduce the topline deck look.
@@ -329,17 +329,26 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
     flextable::padding(padding.top = 0, padding.bottom = 0, part = "all") |>
     flextable::valign(valign = "center", part = "all") |>
     flextable::align(align = "left", j = 1L, part = "all")
+  # Numbers right-aligned, as on screen: the body and the leaf header over
+  # it. A spanner stays centred over the columns it names.
   if (n_data > 0L) {
-    ft <- flextable::align(ft, align = "center", j = 1L + seq_len(n_data),
-                           part = "all")
+    data_j <- 1L + seq_len(n_data)
+    ft <- ft |>
+      flextable::align(align = "right", j = data_j, part = "body") |>
+      flextable::align(align = "right", i = leaf_i, j = data_j,
+                       part = "header")
+    if (has_spanner) {
+      ft <- flextable::align(ft, align = "center", i = spanner_i, j = data_j,
+                             part = "header")
+    }
   }
 
-  # Column header styling: leaf + spanner rows bold and centered (stub
-  # header cell stays left), colored bands per column group. Colors come
-  # from `header_bg` (see resolve_header_bands): a named/unnamed color map,
-  # keyed on the by-level values the annotated df already carries. blockr.viz
-  # knows no palette of its own -- the app supplies the colors (option or
-  # argument), so nothing house-specific lives here.
+  # Column header styling: leaf + spanner rows bold (leaf right over its
+  # numbers, spanner centred, stub left), colored bands per column group.
+  # Colors come from `header_bg` (see resolve_header_bands): a named/unnamed
+  # color map, keyed on the by-level values the annotated df already
+  # carries. blockr.viz knows no palette of its own -- the app supplies the
+  # colors (option or argument), so nothing house-specific lives here.
   # Per-column emphasis, the column analogue of the row .strong / .emph
   # flags: `attr(df[[col]], "strong")` / `"emph"`. When any column carries
   # one, the header band is driven by an emphasis ramp (normal light gray /

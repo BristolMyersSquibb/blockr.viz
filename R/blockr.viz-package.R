@@ -7,8 +7,6 @@
 #' shaper / renderer architecture.
 #'
 #' @importFrom rlang %||%
-#' @importFrom blockr.dplyr blockr_core_js_dep blockr_blocks_css_dep
-#'   blockr_select_dep
 #' @keywords internal
 "_PACKAGE"
 

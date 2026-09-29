@@ -271,7 +271,7 @@
       const head = document.createElement('div');
       head.className = 'dd-row-head';
       const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
+      lbl.className = 'blockr-label';
       lbl.textContent = sp.label;
       head.appendChild(lbl);
       row.appendChild(head);
@@ -419,7 +419,7 @@
       pop.setAttribute('aria-label', (this.h.title || 'Settings'));
 
       const title = document.createElement('div');
-      title.className = 'blockr-popover-label dd-popover-title';
+      title.className = 'blockr-label dd-popover-title';
       title.id = (pop.id || 'dd-pop') + '-title';
       title.textContent = this.h.title || 'Settings';
       pop.setAttribute('aria-labelledby', title.id);
@@ -431,13 +431,13 @@
         // its label is a normal field label above the grid; several groups
         // -> per-group micro-headings inside one grid.
         const typesRow = document.createElement('div');
-        typesRow.className = 'blockr-popover-row dd-popover-types dd-popover-types-tiles';
+        typesRow.className = 'dd-popover-types dd-popover-types-tiles';
         const single = this.h.typeGroups.length === 1;
         for (const g of this.h.typeGroups) {
           if (g.label) {
             const glabel = document.createElement('div');
             glabel.className = single
-              ? 'blockr-popover-label dd-type-grid-label'
+              ? 'blockr-label dd-type-grid-label'
               : 'dd-type-group-head';
             glabel.textContent = g.label;
             typesRow.appendChild(glabel);
@@ -449,7 +449,6 @@
             btn.type = 'button';
             btn.className = 'dd-type-tile' +
               (t === cfg[this.h.typeKey] ? ' dd-type-active' : '');
-            btn.title = t;
             const ic = this.h.typeIcon ? this.h.typeIcon(t) : '';
             btn.innerHTML = (ic ? '<span class="dd-type-tile-icon">' + ic + '</span>' : '') +
               '<span class="dd-type-tile-label">' + t + '</span>';
@@ -461,7 +460,7 @@
         pop.appendChild(typesRow);
       } else if (this.h.typeGroups && this.h.typeGroups.length) {
         const typesRow = document.createElement('div');
-        typesRow.className = 'blockr-popover-row dd-popover-types';
+        typesRow.className = 'dd-popover-types';
         for (const g of this.h.typeGroups) {
           const group = document.createElement('div');
           group.className = 'dd-type-group';
@@ -502,7 +501,7 @@
         const chip = document.createElement('span');
         chip.className = 'dd-input-badge';
         chip.textContent = spec.badge;
-        if (spec.badgeTitle) chip.title = spec.badgeTitle;
+        if (spec.badgeTitle) chip.setAttribute('data-blockr-tooltip', spec.badgeTitle);
         pop.appendChild(chip);
       }
 
@@ -683,20 +682,23 @@
       const row = document.createElement('div');
       row.className = 'dd-form-row dd-script-row';
       const ta = document.createElement('textarea');
-      ta.className = 'blockr-popover-input dd-script-editor';
+      ta.className = 'blockr-text-input dd-script-editor';
       ta.rows = 6;
       ta.spellcheck = false;
       ta.placeholder = 'data |> dplyr::filter(...)';
       ta.value = cfg.script == null ? '' : String(cfg.script);
-      // Commit on blur or the Apply chip, never per keystroke: every commit
-      // re-runs the script server-side and re-serializes the whole frame for
-      // the browser. Escape reverts to the last committed text. Enter inserts
-      // a newline, because this is a script and not a one-line field.
+      // Commit on blur, Mod+Enter or the chip, never per keystroke: every
+      // commit re-runs the script server-side and re-serializes the whole
+      // frame for the browser. Escape reverts to the last committed text.
+      // Enter inserts a newline, because this is a script and not a one-line
+      // field, so the chip shows ⌘↵ / Ctrl+↵ (design system, "Keyboard
+      // shortcuts").
       let committed = ta.value;
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'blockr-expr-confirm dd-text-commit';
-      chip.textContent = 'Apply';
+      chip.textContent = Blockr.keys('Mod+Enter');
+      chip.setAttribute('aria-label', 'Apply (' + Blockr.keys('Mod+Enter') + ')');
       chip.style.display = 'none';
       const sync = () => { chip.style.display = ta.value === committed ? 'none' : ''; };
       const commit = () => {
@@ -710,6 +712,10 @@
       ta.addEventListener('blur', commit);
       ta.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') { ta.value = committed; sync(); }
+        else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          commit();
+        }
       });
       chip.addEventListener('mousedown', (e) => e.preventDefault());
       chip.addEventListener('click', commit);
@@ -737,6 +743,16 @@
       }
       row.appendChild(help);
       sec.appendChild(row);
+
+      // A host with no strip on its face (the heatmap) keeps a row here for
+      // each declared value: the gear holds every setting, and a value its
+      // sentence does not name would otherwise have no control at all.
+      if (!this._bandSupported()) {
+        for (const sp of specs) {
+          if (sp.kind === 'error') this._renderScriptError(sec, sp);
+          else this._renderRole(sec, sp.key);
+        }
+      }
     }
 
     // ===== Titles: the block's sentence, written =============================
@@ -808,12 +824,12 @@
       const role = this._role(key);
       if (!role) return;
       const row = document.createElement('div');
-      row.className = 'blockr-popover-row dd-form-row dd-title-row dd-title-' + key;
+      row.className = 'dd-form-row dd-title-row dd-title-' + key;
 
       const head = document.createElement('div');
       head.className = 'dd-row-head';
       const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
+      lbl.className = 'blockr-label';
       lbl.textContent = (typeof role.label === 'function')
         ? role.label(this._cfg()) : role.label;
       head.appendChild(lbl);
@@ -874,7 +890,7 @@
         onInput: (inp, e) => {
           // `e.data` is the character just typed; a paste or a pick from the
           // menu reports something else, and neither should open a menu.
-          if (e && e.data === '@') this._openAtMenu(inp);
+          if (e && /** @type {InputEvent} */ (e).data === '@') this._openAtMenu(inp);
           else this._refilterAtMenu(inp);
           sync();
         },
@@ -1204,7 +1220,8 @@
     _hlAtMenu() {
       const st = this._at;
       if (!st) return;
-      st.items.forEach((it, i) => it.el.classList.toggle('dd-at-item--hl', i === st.idx));
+      st.items.forEach((/** @type {{ el: HTMLElement }} */ it, /** @type {number} */ i) =>
+        it.el.classList.toggle('dd-at-item--hl', i === st.idx));
       const cur = st.items[st.idx];
       if (cur) cur.el.scrollIntoView({ block: 'nearest' });
     }
@@ -1480,7 +1497,7 @@
       // mute it, the way an unset field reads everywhere else.
       const unset = (role.kind === 'column' || role.kind === 'columns') &&
         !this._hasVal(this._cfg()[key]);
-      row.className = 'blockr-popover-row dd-form-row dd-role-' + key +
+      row.className = 'dd-form-row dd-role-' + key +
         (paired ? ' dd-role-paired' : '') + (opts.band ? ' dd-band-row' : '') +
         (unset ? ' dd-role-unset' : '');
 
@@ -1500,7 +1517,7 @@
       const head = document.createElement('div');
       head.className = 'dd-row-head';
       const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
+      lbl.className = 'blockr-label';
       // In a reversed pair the required marker tracks the value, which is only
       // needed for aggregations that consume it (not a bare count).
       const reqMark = opts.required && (!reversed || usesMetric());
@@ -1519,7 +1536,8 @@
         const rm = document.createElement('button');
         rm.type = 'button';
         rm.className = 'dd-role-remove';
-        rm.title = 'Remove ' + roleLabel;
+        rm.setAttribute('data-blockr-tooltip', 'Remove ' + roleLabel);
+        rm.setAttribute('aria-label', 'Remove ' + roleLabel);
         rm.innerHTML = '✕';
         rm.addEventListener('click', (e) => { e.stopPropagation(); this._removeRole(key); });
         head.appendChild(rm);
@@ -1666,7 +1684,7 @@
       const wrap = document.createElement('div');
       wrap.className = 'dd-summaries';
       const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
+      lbl.className = 'blockr-label';
       lbl.textContent = 'Aggregate';
       wrap.appendChild(lbl);
 
@@ -1675,7 +1693,7 @@
         row.className = 'dd-value-row';
 
         const aggWrap = document.createElement('div');
-        aggWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-value-agg';
+        aggWrap.className = 'dd-picker-wrap dd-value-agg';
         if (S && S.single) {
           S.single(aggWrap, {
             options: aggOpts, selected: m.func || 'count',
@@ -1703,7 +1721,7 @@
           of.textContent = 'of';
           row.appendChild(of);
           const colsWrap = document.createElement('div');
-          colsWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-value-cols';
+          colsWrap.className = 'dd-picker-wrap dd-value-cols';
           const opts = this._colOptsByType(colType(m.func));
           // Empty selection on a NUMERIC aggregation means "all numeric
           // columns not claimed by another row" (default-function rule,
@@ -1733,7 +1751,8 @@
           const rm = document.createElement('button');
           rm.type = 'button';
           rm.className = 'dd-role-remove dd-value-remove';
-          rm.title = 'Remove aggregation';
+          rm.setAttribute('data-blockr-tooltip', 'Remove aggregation');
+          rm.setAttribute('aria-label', 'Remove aggregation');
           rm.innerHTML = '✕';
           rm.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1780,7 +1799,7 @@
       const wrap = document.createElement('div');
       wrap.className = 'dd-summaries dd-shadings';
       const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
+      lbl.className = 'blockr-label';
       lbl.textContent = 'Shade cells';
       wrap.appendChild(lbl);
 
@@ -1789,7 +1808,7 @@
         row.className = 'dd-value-row dd-shading-row';
 
         const modeWrap = document.createElement('div');
-        modeWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-value-agg';
+        modeWrap.className = 'dd-picker-wrap dd-value-agg';
         if (S && S.single) {
           S.single(modeWrap, {
             options: modeOpts, selected: s.mode || 'diverging',
@@ -1804,7 +1823,7 @@
         row.appendChild(on);
 
         const colsWrap = document.createElement('div');
-        colsWrap.className = 'blockr-popover-select-wrap dd-picker-wrap dd-value-cols';
+        colsWrap.className = 'dd-picker-wrap dd-value-cols';
         if (S && S.multi) {
           S.multi(colsWrap, {
             options: this._colOptsByType('num'),
@@ -1818,7 +1837,8 @@
         const rm = document.createElement('button');
         rm.type = 'button';
         rm.className = 'dd-role-remove dd-value-remove';
-        rm.title = 'Remove shading';
+        rm.setAttribute('data-blockr-tooltip', 'Remove shading');
+        rm.setAttribute('aria-label', 'Remove shading');
         rm.innerHTML = '✕';
         rm.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -1881,24 +1901,24 @@
       if (on) {
         const autoLabel = this.h.drillAutoLabel();
         const row = document.createElement('div');
-        row.className = 'blockr-popover-row dd-form-row';
+        row.className = 'dd-form-row';
         const head = document.createElement('div');
         head.className = 'dd-row-head';
         const lbl = document.createElement('span');
-        lbl.className = 'blockr-popover-label';
+        lbl.className = 'blockr-label';
         lbl.textContent = 'Filter on';
         head.appendChild(lbl);
         row.appendChild(head);
         const controls = document.createElement('div');
         controls.className = 'dd-row-controls';
         const wrap = document.createElement('div');
-        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+        wrap.className = 'dd-picker-wrap';
         const colOpt = (/** @type {VizColumn} */ c) => c.label ? { value: c.name, label: c.label } : c.name;
         const opts = [{ value: 'auto', label: autoLabel }, ...this._cols().map(colOpt)];
         const sel = (this._hasVal(cfg.drill) && cfg.drill !== 'auto') ? cfg.drill : 'auto';
         const onSel = (/** @type {string} */ val) => { cfg.drill = val; this.h.onChange('drill'); this.h.onClearFilter(); };
         if (typeof Blockr !== 'undefined' && Blockr.Select) {
-          this._selects['drill'] = Blockr.Select.single(wrap, { options: opts, selected: sel, onChange: onSel });
+          this._selects['drill'] = Blockr.Select.single(wrap, { bordered: true, options: opts, selected: sel, onChange: onSel });
         } else {
           const s = document.createElement('select');
           s.className = 'dd-cfg-select';
@@ -1939,7 +1959,7 @@
         this.h.onClearFilter();
       };
       const row = document.createElement('div');
-      row.className = 'blockr-popover-row dd-form-row';
+      row.className = 'dd-form-row';
       if (typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
         // Returns a WRAPPER, not a node -- append its .el (same as the
         // "Send to filter" row below). Passing the wrapper to appendChild
@@ -2000,7 +2020,7 @@
         this._rerender();
       };
       const boxRow = document.createElement('div');
-      boxRow.className = 'blockr-popover-row dd-form-row dd-ctrl-toggle';
+      boxRow.className = 'dd-form-row dd-ctrl-toggle';
       if (typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
         const box = Blockr.checkbox('Send to filter (beta)', on, onToggle);
         boxRow.appendChild(box.el);
@@ -2033,25 +2053,25 @@
       for (const c of choices) opts.push(c);
 
       const row = document.createElement('div');
-      row.className = 'blockr-popover-row dd-form-row';
+      row.className = 'dd-form-row';
       const head = document.createElement('div');
       head.className = 'dd-row-head';
       const lbl = document.createElement('span');
-      lbl.className = 'blockr-popover-label';
+      lbl.className = 'blockr-label';
       lbl.textContent = 'Target filter';
       head.appendChild(lbl);
       row.appendChild(head);
       const controls = document.createElement('div');
       controls.className = 'dd-row-controls';
       const wrap = document.createElement('div');
-      wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+      wrap.className = 'dd-picker-wrap';
       const onSel = (/** @type {string} */ val) => {
         cfg.ctrl_target = val;
         this.h.onChange('ctrl_target');
       };
       if (typeof Blockr !== 'undefined' && Blockr.Select) {
         this._selects['ctrl_target'] = Blockr.Select.single(wrap,
-          { options: opts, selected: cur, onChange: onSel });
+          { bordered: true, options: opts, selected: cur, onChange: onSel });
       } else {
         const s = document.createElement('select');
         s.className = 'dd-cfg-select';
@@ -2078,11 +2098,11 @@
       // change (blur / Enter), NOT on keystroke: every commit re-sends the
       // claim, and half-typed table names would push junk conditions.
       const trow = document.createElement('div');
-      trow.className = 'blockr-popover-row dd-form-row';
+      trow.className = 'dd-form-row';
       const thead = document.createElement('div');
       thead.className = 'dd-row-head';
       const tlbl = document.createElement('span');
-      tlbl.className = 'blockr-popover-label';
+      tlbl.className = 'blockr-label';
       tlbl.textContent = 'Table';
       thead.appendChild(tlbl);
       trow.appendChild(thead);
@@ -2090,7 +2110,7 @@
       tcontrols.className = 'dd-row-controls';
       const input = document.createElement('input');
       input.type = 'text';
-      input.className = 'blockr-popover-input';
+      input.className = 'blockr-text-input';
       input.value = cfg.ctrl_table || '';
       input.placeholder = 'dm only — e.g. adsl';
       input.addEventListener('change', () => {
@@ -2112,7 +2132,7 @@
     /**
      * @param {HTMLElement} parent @param {string} key
      * @param {{ required?: boolean, onChange?: () => void,
-     *          chipTarget?: HTMLElement, onInput?: (inp: HTMLInputElement) => void,
+     *          chipTarget?: HTMLElement, onInput?: (inp: HTMLInputElement, e: Event) => void,
      *          onKeydown?: (e: KeyboardEvent, inp: HTMLInputElement) => boolean,
      *          onReady?: (api: { input: HTMLInputElement, commit: () => void,
      *                            isDirty: () => boolean }) => void }} [opts]
@@ -2128,7 +2148,7 @@
       if (role.kind === 'column') {
         const opts = this._colOptionsFor(key, { required });
         const wrap = document.createElement('div');
-        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+        wrap.className = 'dd-picker-wrap';
         const sel = this._hasVal(cfg[key]) ? cfg[key] : (required ? '' : '(none)');
         const onSel = (/** @type {string} */ val) => {
           cfg[key] = (val === '(none)') ? '' : val;
@@ -2142,7 +2162,7 @@
       } else if (role.kind === 'select') {
         const opts = this._selectOptionsFor(key);
         const wrap = document.createElement('div');
-        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+        wrap.className = 'dd-picker-wrap';
         const cur = cfg[key];
         const selv = this._hasVal(cur) ? cur : ((typeof opts[0] === 'object' && opts[0]) ? opts[0].value : opts[0]);
         const onSel = (/** @type {string} */ val) => {
@@ -2169,7 +2189,7 @@
         const opts = this._colOptionsFor(key, { required: true });
         const sel = Array.isArray(cfg[key]) ? cfg[key].slice() : [];
         const wrap = document.createElement('div');
-        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+        wrap.className = 'dd-picker-wrap';
         const onSel = (/** @type {string[]} */ vals) => {
           cfg[key] = vals; cb(); this.h.onChange(key);
           // A multi-picker that gates other rows (e.g. the table's group
@@ -2179,7 +2199,7 @@
           if (role.rerender) this._rerenderOnDropdownClose(key);
         };
         if (typeof Blockr !== 'undefined' && Blockr.Select && Blockr.Select.multi) {
-          this._selects[key] = Blockr.Select.multi(wrap, {
+          this._selects[key] = Blockr.Select.multi(wrap, { bordered: true,
             options: opts, selected: sel,
             placeholder: role.placeholder || 'All', onChange: onSel
           });
@@ -2224,11 +2244,11 @@
         // no .dd-picker-wrap here — that wrapper carries its own border for the
         // borderless Blockr.Select; a bordered input inside it double-borders.
         // Commit model (design-system §5.5): typing never mutates cfg — the
-        // value commits on Enter, blur or the "Enter ↵" chip, which then fades
+        // value commits on Enter, blur or the ↵ button, which then fades
         // to ✓; Escape reverts to the last committed value.
         const inp = document.createElement('input');
         inp.type = 'text';
-        inp.className = 'blockr-popover-input';
+        inp.className = 'blockr-text-input';
         // `autoValue` (optional role hook): when the stored value is null, a
         // host-computed inherited value shows as the input's CONTENT, not its
         // placeholder — so the user can see it and delete it, which commits ""
@@ -2242,8 +2262,7 @@
         wrap.className = 'dd-text-wrap';
         const chip = document.createElement('button');
         chip.type = 'button';
-        chip.className = 'blockr-expr-confirm dd-text-commit';
-        chip.title = 'Apply (Enter)';
+        chip.className = 'blockr-expr-confirm blockr-expr-confirm--key dd-text-commit';
         chip.setAttribute('aria-label', 'Apply (Enter)');
         chip.style.display = 'none';
         let committed = inp.value;
@@ -2255,7 +2274,7 @@
           if (inp.value !== committed) {
             chip.style.display = '';
             chip.classList.remove('confirmed');
-            chip.innerHTML = 'Enter <span class="blockr-kbd">↵</span>';
+            chip.textContent = '↵';
           } else if (everCommitted) {
             chip.style.display = '';
             chip.classList.add('confirmed');
@@ -2306,12 +2325,12 @@
         const sel = Array.isArray(cfg[key]) ? cfg[key].slice() :
           (this._hasVal(cfg[key]) ? [String(cfg[key])] : []);
         const wrap = document.createElement('div');
-        wrap.className = 'blockr-popover-select-wrap dd-picker-wrap';
+        wrap.className = 'dd-picker-wrap';
         const onSel = (/** @type {string[]} */ vals) => {
           cfg[key] = vals; cb(); this.h.onChange(key);
         };
         if (typeof Blockr !== 'undefined' && Blockr.Select && Blockr.Select.multi) {
-          this._selects[key] = Blockr.Select.multi(wrap, {
+          this._selects[key] = Blockr.Select.multi(wrap, { bordered: true,
             options: role.options || [], selected: sel,
             placeholder: role.placeholder || 'None', onChange: onSel
           });
@@ -2337,7 +2356,7 @@
         // browser, so a half-typed "1" on the way to "12" must not travel.
         const inp = document.createElement('input');
         inp.type = role.kind === 'date' ? 'date' : 'number';
-        inp.className = 'blockr-popover-input';
+        inp.className = 'blockr-text-input';
         if (role.min != null) inp.min = String(role.min);
         if (role.max != null) inp.max = String(role.max);
         if (role.step != null) inp.step = String(role.step);
@@ -2440,7 +2459,33 @@
           selected: this._hasVal(cfg[key]) ? cfg[key] : first
         };
       }
+      // A number in a sentence ("Top 25") opens a short list of round values
+      // inside its declared range, with the current value among them. Typing
+      // any other value stays with the gear's row.
+      if (role.kind === 'number') {
+        const cur = Number(cfg[key]);
+        return {
+          options: this._numberSteps(role, cur).map(String),
+          selected: isFinite(cur) ? String(cur) : ''
+        };
+      }
       return null;
+    }
+
+    /** Round values between a number role's min and max, plus `cur`.
+     * @param {any} role @param {number} cur @returns {number[]} */
+    _numberSteps(role, cur) {
+      const lo = isFinite(Number(role.min)) ? Number(role.min) : 1;
+      const hi = isFinite(Number(role.max)) ? Number(role.max)
+        : Math.max(lo * 10, isFinite(cur) ? cur * 2 : 10);
+      const out = new Set();
+      for (const m of [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100,
+                       150, 200, 250, 500, 1000]) {
+        if (m >= lo && m <= hi) out.add(m);
+      }
+      out.add(lo); out.add(hi);
+      if (isFinite(cur)) out.add(cur);
+      return Array.from(out).sort((x, y) => x - y);
     }
 
     /** Is this word a flag? A flag toggles in place: a menu of two words is a
@@ -2472,7 +2517,7 @@
         this.h.onChange(key);
         this.h.onClearFilter();
       } else {
-        cfg[key] = val;
+        cfg[key] = role.kind === 'number' ? Number(val) : val;
         this.h.onChange(key);
       }
       // The gear may be open on the same role: its row shows a stale value
@@ -2494,7 +2539,7 @@
         // what to supply. `phBy` keys it by context, like colTypeBy.
         const role = this._role(key) || {};
         const ph = (role.phBy && role.phBy[this.h.context()]) || role.ph;
-        this._selects[key] = Blockr.Select.single(wrap, { options: opts, selected, placeholder: ph, onChange: onSel });
+        this._selects[key] = Blockr.Select.single(wrap, { bordered: true, options: opts, selected, placeholder: ph, onChange: onSel });
       } else {
         const s = document.createElement('select');
         s.className = 'dd-cfg-select';
@@ -2551,36 +2596,21 @@
       parent.appendChild(wrap);
     }
 
-    // Click-through pill (blockr.dplyr idiom: arrange dir-btn, filter op-toggle,
-    // pivot drop-na). One self-labeling .blockr-pill that cycles through
-    // `options` ([{value,label}]) on click; highlighted (blockr-popover-toggle-
-    // active) whenever the value is off its first/default option. Replaces the
-    // old two-button .dd-segmented control.
+    // A fixed choice of two or three short values, all in view: blockr.ui's
+    // segmented control, at the field height.
     /**
      * @param {HTMLElement} parent @param {Array<{ value: string, label: string }>} options
      * @param {string} current @param {(val: string) => void} onPick
+     * @param {string} [label]
      */
-    _buildPill(parent, options, current, onPick) {
+    _buildPill(parent, options, current, onPick, label) {
       const wrap = document.createElement('div');
       wrap.className = 'dd-pill-wrap';
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'blockr-pill blockr-popover-toggle';
-      let idx = options.findIndex((o) => o.value === current);
-      if (idx < 0) idx = 0;
-      const paint = () => {
-        btn.textContent = options[idx].label;
-        btn.classList.toggle('blockr-popover-toggle-active', idx !== 0);
-      };
-      paint();
-      btn.addEventListener('click', () => {
-        idx = (idx + 1) % options.length;
-        paint();
-        onPick(options[idx].value);
-      });
-      wrap.appendChild(btn);
+      const cur = options.some((o) => o.value === current) ? current : options[0].value;
+      const seg = Blockr.segmented(options, cur, onPick, label ? { label } : undefined);
+      wrap.appendChild(seg.el);
       parent.appendChild(wrap);
-      return btn;
+      return seg.el;
     }
 
     /** @param {HTMLElement} container @param {string[]} remaining */
@@ -2704,41 +2734,160 @@
     }
   }
 
+  /**
+   * The block's sentence on its face: plain text with live words (design
+   * system, "The sentence and its slots"). R sends the pieces
+   * (R/title-template.R); a piece with an `arg` is a slot. A click opens the
+   * list under the word (Blockr.Select.menu), a flag toggles in place, and an
+   * offer ("+ Facet") stands in for a setting whose clause dropped.
+   *
+   * Every decision about what a pick MEANS stays in the engine
+   * (_slotOptionsFor, _slotFlag, _setRoleValue), so a word and the gear's
+   * row cannot disagree.
+   *
+   * host: { ddc(): DrilldownConfig, config(): object, openGear(): void }
+   */
+  class SentenceSlots {
+    /** @param {{ ddc: () => any, config: () => any, openGear: () => void }} host */
+    constructor(host) {
+      this.h = host;
+      /** @type {string | null} */
+      this._key = null;
+      /** @type {HTMLElement | null} */
+      this._anchor = null;
+      /** @type {any} */
+      this._menu = null;
+    }
+
+    /** One band's text. textContent throughout: titles are data-derived.
+     * @param {HTMLElement} el @param {string} text @param {any[]} [parts] */
+    paint(el, text, parts) {
+      el.textContent = '';
+      if (!Array.isArray(parts) || !parts.length) {
+        el.textContent = text || '';
+        return;
+      }
+      for (const p of parts) {
+        if (!p || !p.text) continue;
+        if (!p.arg) { el.appendChild(document.createTextNode(p.text)); continue; }
+        const w = document.createElement('span');
+        w.className = 'blockr-slot';
+        w.textContent = p.text;
+        w.setAttribute('role', 'button');
+        w.setAttribute('tabindex', '0');
+        this._wire(w, () => this.open(p.arg, w, p.by));
+        el.appendChild(w);
+      }
+    }
+
+    /** The settings the sentence would name if they were set. Three at
+     * most; past three the last one reads "More settings" and opens the gear.
+     * @param {HTMLElement} el @param {any[]} [offers] */
+    paintOffers(el, offers) {
+      if (!Array.isArray(offers) || !offers.length) return;
+      const keys = offers.filter(k => typeof k === 'string');
+      const MAX = 3;
+      const shown = keys.length > MAX ? keys.slice(0, MAX - 1) : keys;
+      for (const key of shown) {
+        const c = document.createElement('span');
+        c.className = 'blockr-slot-offer';
+        c.textContent = '+ ' + (this.label(key) || key);
+        c.setAttribute('role', 'button');
+        c.setAttribute('tabindex', '0');
+        this._wire(c, () => this.open(key, c));
+        el.appendChild(c);
+      }
+      if (keys.length > MAX) {
+        const more = document.createElement('span');
+        more.className = 'blockr-slot-offer blockr-slot-offer--more';
+        more.textContent = 'More settings';
+        more.setAttribute('role', 'button');
+        more.setAttribute('tabindex', '0');
+        this._wire(more, () => this.h.openGear());
+        el.appendChild(more);
+      }
+    }
+
+    /** @param {HTMLElement} el @param {() => void} fn */
+    _wire(el, fn) {
+      el.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
+      el.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        fn();
+      });
+    }
+
+    // A role.label may be a function of the current config, exactly as the
+    // gear's rows resolve it.
+    /** @param {string} key */
+    label(key) {
+      const ddc = this.h.ddc();
+      const role = ddc && ddc._role ? ddc._role(key) : null;
+      if (!role || !role.label) return '';
+      return (typeof role.label === 'function') ? role.label(this.h.config()) : role.label;
+    }
+
+    /** @param {string} key @param {HTMLElement} anchor @param {string} [by] */
+    open(key, anchor, by) {
+      const was = this._key;
+      this.close();
+      if (was === key) return;                 // the word toggles its own menu
+      const ddc = this.h.ddc();
+      if (!ddc) return;
+      // A flag has no list: the word IS the switch.
+      const flag = ddc._slotFlag && ddc._slotFlag(key);
+      if (flag) {
+        const on = this.h.config()[flag.key] !== 'off';
+        ddc._setRoleValue(key, on ? 'off' : 'on');
+        return;
+      }
+      const opts = ddc._slotOptionsFor(key);
+      if (!opts) return;
+      const B = (typeof Blockr !== 'undefined') ? Blockr : null;
+      if (!B || !B.Select || !B.Select.menu) {
+        // LOUD on purpose: a version skew, not a capability to feel out. The
+        // words would do nothing and say nothing (blockr.docs
+        // design-system/pinned-controls.md).
+        throw new Error(
+          'Blockr.Select.menu() is missing: the words in a block\'s ' +
+          'sentence cannot open their list with this blockr.ui.'
+        );
+      }
+      this._key = key;
+      this._anchor = anchor;
+      anchor.classList.add('blockr-slot--open');
+      this._menu = B.Select.menu(anchor, {
+        options: opts.options,
+        selected: opts.selected,
+        title: this.label(key) || key,
+        // Lead with the half the sentence printed.
+        labelFirst: by === 'label',
+        searchPlaceholder: 'Filter columns',
+        onChange: (/** @type {string} */ val) => ddc._setRoleValue(key, val),
+        onClose: () => {
+          if (this._anchor) this._anchor.classList.remove('blockr-slot--open');
+          this._anchor = null;
+          this._menu = null;
+          this._key = null;
+        }
+      });
+    }
+
+    close() {
+      if (this._menu) { this._menu.close(); this._menu = null; }
+      if (this._anchor) {
+        this._anchor.classList.remove('blockr-slot--open');
+        this._anchor = null;
+      }
+      this._key = null;
+    }
+  }
+
   const ns = /** @type {BlockrNamespace} */ (
     (typeof Blockr !== 'undefined') ? Blockr
       : (window.Blockr = window.Blockr || /** @type {BlockrNamespace} */ ({})));
   ns.DrilldownConfig = DrilldownConfig;
+  ns.SentenceSlots = SentenceSlots;
   window.DrilldownConfig = DrilldownConfig;
-})();
-
-// The download menu closes when a format is picked -------------------------
-//
-// The menu is a <details>, which is what buys the open/close, the keyboard
-// handling and the focus order for free. What <details> does NOT do is close
-// when something inside it is activated, and a download link navigates
-// nowhere: the file arrives and the menu is still hanging open over the
-// table, hiding the rows the reader just exported.
-//
-// One delegated listener for every download menu on the page (the table, the
-// summarize table and the chart all wear the same control), registered once
-// per document rather than per block -- a dock page holds many blocks, and
-// per-block listeners would each fire on every click.
-//
-// `click` rather than the anchor's own handler: Shiny's download link starts
-// the download from its own click handler, and closing the parent <details>
-// afterwards does not interrupt it.
-(function () {
-  if (typeof document === 'undefined') return;
-  if (document.documentElement.dataset.blockrDlMenuBound === '1') return;
-  document.documentElement.dataset.blockrDlMenuBound = '1';
-
-  document.addEventListener('click', function (e) {
-    const t = /** @type {Element} */ (e.target);
-    if (!t || typeof t.closest !== 'function') return;
-    const item = t.closest('.blockr-dl-menu-list a');
-    if (!item) return;
-    const menu = /** @type {HTMLDetailsElement | null} */ (
-      item.closest('details.blockr-dl-menu'));
-    if (menu) menu.open = false;
-  });
 })();

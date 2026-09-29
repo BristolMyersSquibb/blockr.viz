@@ -254,7 +254,7 @@
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'blockr-gear-btn';
-    btn.title = 'Tile settings';
+    btn.setAttribute('data-blockr-tooltip', 'Settings');
     btn.setAttribute('aria-label', 'Tile settings');
     btn.setAttribute('aria-haspopup', 'dialog');
     btn.setAttribute('aria-expanded', 'false');
@@ -267,7 +267,7 @@
     // header, no <body> portal, no fixed positioning.
     var wasOpen = !!bandOpen[elemId];
 
-    // --beak: gear connector T1 (settings-band.css) — the open band grows a
+    // --beak: gear connector T1 (blockr.ui's blockr-settings-band.css) — the open band grows a
     // notch pointing at the gear that opened it.
     var pop = document.createElement('div');
     pop.className = 'blockr-settings blockr-settings--beak dd-popover';

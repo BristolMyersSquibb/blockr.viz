@@ -635,7 +635,7 @@ test_that("config echo of a healed optional role does not erase state", {
   )
 })
 
-# --- na_group / pct_distinct / func_toggle ----------------------------------
+# --- na_group / pct_distinct ------------------------------------------------
 # The population-as-rows design (see _team-ops
 # 2026-08-christoph-cdex-most-frequent-ae-percent): a chart divides by the
 # distinct values in its PANEL, so rows carrying a subject and no category
@@ -643,25 +643,24 @@ test_that("config echo of a healed optional role does not erase state", {
 # tests (test-agg-pct-distinct.R, test-agg-golden.R); what is guarded here is
 # the block contract -- the three arguments exist, round-trip, and reach state.
 
-test_that("na_group and func_toggle round-trip through the constructor", {
+test_that("na_group round-trips through the constructor", {
   blk <- new_chart_block(
     chart_type = "bar", group = "AEDECOD", value = "USUBJID",
-    func = "pct_distinct", na_group = "drop", func_toggle = TRUE
+    func = "pct_distinct", na_group = "drop"
   )
   expect_equal(chart_state_field(blk, "na_group"), "drop")
   expect_equal(chart_state_field(blk, "func"), "pct_distinct")
-  # TRUE is stored as the sugar "on", not expanded: the gear's select binds to
-  # the stored value, so storing the pair would leave the control with nothing
-  # to match. The browser expands it (_funcToggleChoices).
-  expect_equal(chart_state_field(blk, "func_toggle"), "on")
 })
 
-test_that("func_toggle takes an explicit set, and defaults to none", {
+test_that("a saved func_toggle (LEGACY) restores and is dropped", {
+  # The on-chart switch is retired: the aggregation goes on the face as a
+  # slot in the sentence, or as a switch the prepare script declares.
   blk <- new_chart_block(chart_type = "bar", group = "g", value = "v",
                          func_toggle = c("count", "mean"))
-  expect_equal(chart_state_field(blk, "func_toggle"), c("count", "mean"))
-  expect_null(chart_state_field(new_chart_block(chart_type = "bar"),
-                                "func_toggle"))
+  expect_null(chart_state_field(blk, "func_toggle"))
+  expect_null(chart_state_field(
+    new_chart_block(chart_type = "bar", func_toggle = TRUE), "func_toggle"
+  ))
 })
 
 test_that("na_group defaults to 'level', so an existing board is unchanged", {
@@ -673,10 +672,9 @@ test_that("a bad na_group is refused at construction, not at render", {
   expect_error(new_chart_block(chart_type = "bar", na_group = "nonsense"))
 })
 
-test_that("the on-chart toggle writes func into STATE, not just the canvas", {
-  # This is the whole reason it goes through _sendConfig(): the choice is what
-  # the chart shows, so it has to survive a board save. A local flip that only
-  # repainted the canvas would look identical until someone saved the board.
+test_that("a func change from the face writes func into STATE", {
+  # A slot in the sentence ({@func}) posts through _sendConfig(): the choice
+  # is what the chart shows, so it has to survive a board save.
   df <- data.frame(
     AEDECOD = c("Diarrhoea", "Diarrhoea", "Nausea"),
     USUBJID = c("S1", "S2", "S3"),
@@ -684,7 +682,7 @@ test_that("the on-chart toggle writes func into STATE, not just the canvas", {
   )
   blk <- new_chart_block(
     chart_type = "bar", group = "AEDECOD", value = "USUBJID",
-    func = "pct_distinct", na_group = "drop", func_toggle = TRUE
+    func = "pct_distinct", na_group = "drop"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -692,7 +690,7 @@ test_that("the on-chart toggle writes func into STATE, not just the canvas", {
       session$flushReact()
       expect_equal(session$returned$state$func(), "pct_distinct")
       expr_scope <- session$makeScope("expr")
-      # Exactly what _setFunc() -> _sendConfig() posts.
+      # What _sendConfig() posts.
       expr_scope$setInputs(drilldown_block_action = list(
         action = "config", func = "count_distinct", value = "USUBJID",
         na_group = "drop"
@@ -700,7 +698,7 @@ test_that("the on-chart toggle writes func into STATE, not just the canvas", {
       session$flushReact()
       expect_equal(session$returned$state$func(), "count_distinct")
       expect_equal(session$returned$state$na_group(), "drop")
-      # And back, so the toggle is not one-way.
+      # And back.
       expr_scope$setInputs(drilldown_block_action = list(
         action = "config", func = "pct_distinct", value = "USUBJID"
       ))
@@ -725,33 +723,6 @@ test_that("a gear edit of na_group reaches state too", {
       ))
       session$flushReact()
       expect_equal(session$returned$state$na_group(), "drop")
-    },
-    args = list(x = blk, data = list(data = function() df))
-  )
-})
-
-test_that("the gear can switch the on-card control on and off", {
-  df <- data.frame(g = c("a", "b"), v = c(1, 2), stringsAsFactors = FALSE)
-  blk <- new_chart_block(chart_type = "bar", group = "g", value = "v",
-                         func = "count_distinct")
-  shiny::testServer(
-    blockr.core:::get_s3_method("block_server", blk),
-    {
-      session$flushReact()
-      expect_null(session$returned$state$func_toggle())
-      sc <- session$makeScope("expr")
-      sc$setInputs(drilldown_block_action = list(
-        action = "config", func_toggle = "on"
-      ))
-      session$flushReact()
-      expect_equal(session$returned$state$func_toggle(), "on")
-      # "off" stores NULL, so a board that switched it off reads the same as
-      # one that never asked for the control.
-      sc$setInputs(drilldown_block_action = list(
-        action = "config", func_toggle = "off"
-      ))
-      session$flushReact()
-      expect_null(session$returned$state$func_toggle())
     },
     args = list(x = blk, data = list(data = function() df))
   )

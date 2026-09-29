@@ -303,13 +303,9 @@ whether a column is a population split (arm, sex, country) or an event
 attribute (grade), and dividing grade-2 subjects by subjects-with-grade-2
 is circular. A vector is accepted, though the gear offers one role.}
 
-\item{func_toggle}{Offer the aggregation as a control on the chart itself,
-beside the download button, instead of only inside the gear. \code{NULL}
-(default) = no control. \code{TRUE} = counts vs percent, i.e.
-\code{c("count_distinct", "pct_distinct")}. A character vector names exactly
-which aggregations to offer, so the same argument grows without being
-replaced. The choice is block STATE: it is what the chart shows, not a
-viewing gesture, so it survives a save and a reload.}
+\item{func_toggle}{LEGACY, ignored. Put the aggregation on the face as a
+slot in the sentence (\verb{\{@func\}} in \code{subtitle}), or declare a switch in
+the prepare \code{script} and name it in the sentence (\verb{\{@measure\}}).}
 
 \item{facet_scales}{How the facet panels scale, as in ggplot2's
 \code{facet_wrap(scales = )}. \code{"fixed"} (default) gives every panel ONE

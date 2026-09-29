@@ -316,19 +316,10 @@ rank_footer_tag <- function(spec) {
     class = "blockr-rank-footer",
     htmltools::tags$span(class = "blockr-rank-count", spec$count %||% ""),
     htmltools::tags$span(class = "blockr-rank-note", spec$note %||% ""),
-    htmltools::tags$span(
-      class = "blockr-rank-status",
-      style = if (is.null(spec$filter)) "display:none" else NULL,
-      htmltools::tags$span(class = "blockr-rank-dot"),
-      htmltools::tags$span(
-        class = "blockr-rank-status-text",
-        if (!is.null(spec$filter)) paste0("Filtering downstream: ", spec$filter)
-      ),
-      if (isTRUE(spec$reset)) {
-        htmltools::tags$button(type = "button", class = "blockr-rank-reset",
-                               "Reset")
-      }
-    )
+    # The drill's line, the chart's own markup and words (chart.js
+    # _updateStatus): rank-table.js fills it, because what it says depends on
+    # clicks the server never hears about in transient mode.
+    htmltools::tags$div(class = "dd-status-footer")
   )
 }
 
@@ -434,9 +425,9 @@ rank_label_header <- function(prep) {
   if (is.null(prep$parent)) prep$group else paste0(prep$parent, " / ", prep$group)
 }
 
-# The same bundle the table block ships (shared blockr.dplyr CSS/JS, Blockr.Select,
-# the dd-* popover CSS, the settings band and the gear engine), plus the rank JS
-# LAST -- it reads Blockr.DrilldownConfig at bind time.
+# The same bundle the table block ships (blockr.ui's shared controls, the dd-*
+# CSS and the gear engine), plus the rank JS LAST -- it reads
+# Blockr.DrilldownConfig at bind time.
 #' @noRd
 rank_table_dep <- memoise0(function() {
   htmltools::tagList(
@@ -526,34 +517,5 @@ rank_chrome_shell <- function(max_height = "600px", search = TRUE,
     inner = htmltools::HTML(""), prep = NULL, max_height = max_height,
     search = search, drill = drill, elem_id = elem_id, shell = TRUE,
     download = download, ctrl_target = ctrl_target
-  )
-}
-
-# The download control's icon and links. Same markup and classes as the table
-# block's (R/table-block.R), so the two controls are one control: the shared
-# table CSS styles both, and a board with a table block and a summarize table
-# side by side does not show two shapes of download button.
-#' @noRd
-rank_dl_icon <- function() {
-  htmltools::HTML(paste0(
-    '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" ',
-    'fill="none" stroke="currentColor" stroke-width="1.6" ',
-    'stroke-linecap="round" stroke-linejoin="round">',
-    '<path d="M8 2.5 V10 M4.8 7 L8 10.2 L11.2 7"/>',
-    '<path d="M2.5 11.5 V12.8 A1.2 1.2 0 0 0 3.7 14 H12.3 ',
-    'A1.2 1.2 0 0 0 13.5 12.8 V11.5"/></svg>'
-  ))
-}
-
-#' @noRd
-rank_dl_link <- function(ns, spec, menu = FALSE) {
-  htmltools::tags$a(
-    id = ns(spec$id),
-    class = paste(if (menu) "blockr-dl-item" else "blockr-dl-xlsx",
-                  "shiny-download-link"),
-    href = "", target = "_blank", download = NA,
-    title = paste0("Download as ", spec$label),
-    `aria-label` = paste0("Download as ", spec$label),
-    if (menu) spec$label else rank_dl_icon()
   )
 }
