@@ -64,7 +64,9 @@
 #'   `"straight"`, or `"step-start"` / `"step-middle"` / `"step-end"`.
 #' @param step Deprecated spelling of the step modes (`"start"` /
 #'   `"middle"` / `"end"`); folded into `connect` when that is unset.
-#' @param vlines,hlines Numeric helper-line positions.
+#' @param value_lines,x_lines Numeric helper-line positions, as in
+#'   [new_chart_block()]: `value_lines` across the value axis (bar and
+#'   boxplot too), `x_lines` across a numeric x (scatter and line).
 #' @param line_width_mult,dot_size_mult Size multipliers.
 #' @param title,subtitle,caption Title band text; `{token}` templates
 #'   resolve against `data` (same resolver as the app), `NULL` falls back
@@ -119,8 +121,8 @@ static_chart <- function(data,
                      hi = NULL,
                      connect = "monotone",
                      step = NULL,
-                     vlines = NULL,
-                     hlines = NULL,
+                     value_lines = NULL,
+                     x_lines = NULL,
                      line_width_mult = 1,
                      dot_size_mult = 1,
                      title = NULL,
@@ -197,19 +199,20 @@ static_chart <- function(data,
     bar = gg_bar(
       data, group, color, facet, value_col, func, bar_mode, horiz,
       sort_by, sort_dir, count_on, count_col, scale_map, na_group, pct_of,
-      facet_cols
+      facet_cols, value_lines, line_width_mult
     ),
     boxplot = gg_boxplot(
       data, group, color, facet, value_col, box_points, summary, whiskers,
-      horiz, sort_by, sort_dir, count_on, count_col, scale_map, facet_cols
+      horiz, sort_by, sort_dir, count_on, count_col, scale_map, facet_cols,
+      value_lines, line_width_mult
     ),
     scatter = gg_scatter(
-      data, x, y, color, facet, smoother, identity_line, vlines, hlines,
-      line_width_mult, dot_size_mult, scale_map
+      data, x, y, color, facet, smoother, identity_line, x_lines,
+      value_lines, line_width_mult, dot_size_mult, scale_map
     ),
     line = gg_line(
-      data, x, y, series, color, facet, lo, hi, connect, vlines, hlines,
-      line_width_mult, dot_size_mult, scale_map
+      data, x, y, series, color, facet, lo, hi, connect, x_lines,
+      value_lines, line_width_mult, dot_size_mult, scale_map
     ),
     NULL
   )
@@ -483,7 +486,7 @@ gg_x_label_theme <- function(data, chart_type, horiz, group, facet,
 GG_AXIS_LABEL_COLOR <- "#6b7280"
 GG_AXIS_LINE_COLOR <- "#d1d5db"
 GG_SPLIT_LINE_COLOR <- "#e5e7eb"
-GG_REF_LINE_COLOR <- "#dc2626"
+GG_REF_LINE_COLOR <- "#111827"
 GG_IDENTITY_LINE_COLOR <- "#6b7280"
 
 # -- column handling ---------------------------------------------------------
@@ -859,7 +862,8 @@ gg_bar <- function(data, group, color, facet, value_col, func,
                          bar_mode, horiz, sort_by, sort_dir,
                          count_on, count_col, scale_map,
                          na_group = "level", pct_of = "facet",
-                         facet_cols = NULL) {
+                         facet_cols = NULL, value_lines = NULL,
+                         line_width_mult = 1) {
 
   if (is.null(group)) {
     return(NULL)
@@ -951,7 +955,16 @@ gg_bar <- function(data, group, color, facet, value_col, func,
     agg$.value
   }
 
-  p <- p + gg_bar_value_scale(as.numeric(vals), horiz, val_lab, percent = pct)
+  # A percent axis runs 0..1, but a reader types the percentage.
+  fraction <- pct || identical(func, "pct_distinct")
+  p <- gg_helper_lines(p, value_lines = value_lines,
+                       line_width_mult = line_width_mult, horiz = horiz,
+                       fraction = fraction)
+  lines <- gg_line_values(value_lines) / if (fraction) 100 else 1
+  vals <- as.numeric(vals)
+
+  p <- p + gg_bar_value_scale(c(vals, gg_line_room(lines, vals, zero = TRUE)),
+                              horiz, val_lab, percent = pct)
 
   if (horiz) {
     p + ggplot2::scale_y_discrete(
@@ -1034,7 +1047,8 @@ gg_box_stats <- function(vals, summary, whiskers) {
 gg_boxplot <- function(data, group, color, facet, value_col,
                              box_points, summary, whiskers, horiz,
                              sort_by, sort_dir, count_on,
-                             count_col, scale_map, facet_cols = NULL) {
+                             count_col, scale_map, facet_cols = NULL,
+                             value_lines = NULL, line_width_mult = 1) {
 
   if (is.null(group) || is.null(value_col) ||
         !is.numeric(data[[value_col]])) {
@@ -1198,8 +1212,13 @@ gg_boxplot <- function(data, group, color, facet, value_col,
     }
   }
 
+  lines <- gg_line_values(value_lines)
+  p <- gg_helper_lines(p, value_lines = lines,
+                       line_width_mult = line_width_mult, horiz = horiz)
+
   val_lab <- gg_axis_title(value_col, data)
   vals <- c(box$ymin, box$ymax, if (!is.null(out)) out$.value)
+  vals <- c(vals, gg_line_room(lines, vals))
 
   if (horiz) {
     p + ggplot2::scale_y_discrete(
@@ -1219,7 +1238,7 @@ gg_boxplot <- function(data, group, color, facet, value_col,
 }
 
 gg_scatter <- function(data, x, y, color, facet, smoother,
-                             identity_line, vlines, hlines,
+                             identity_line, x_lines, value_lines,
                              line_width_mult, dot_size_mult, scale_map) {
 
   if (is.null(x) || is.null(y)) {
@@ -1279,7 +1298,7 @@ gg_scatter <- function(data, x, y, color, facet, smoother,
     }
   }
 
-  p <- gg_helper_lines(p, vlines, hlines, line_width_mult)
+  p <- gg_helper_lines(p, x_lines, value_lines, line_width_mult)
 
   xv <- data[[x]]
   yv <- data[[y]]
@@ -1371,7 +1390,7 @@ gg_series_color_values <- function(map, color, series, data) {
 }
 
 gg_line <- function(data, x, y, series, color, facet, lo, hi, connect,
-                          vlines, hlines, line_width_mult, dot_size_mult,
+                          x_lines, value_lines, line_width_mult, dot_size_mult,
                           scale_map) {
 
   if (is.null(x) || is.null(y)) {
@@ -1491,7 +1510,7 @@ gg_line <- function(data, x, y, series, color, facet, lo, hi, connect,
     ))
   }
 
-  p <- gg_helper_lines(p, vlines, hlines, line_width_mult)
+  p <- gg_helper_lines(p, x_lines, value_lines, line_width_mult)
 
   p <- p + gg_nice_scale(
     c(data[[y]], if (!is.null(lo)) data[[lo]],
@@ -1510,26 +1529,65 @@ gg_line <- function(data, x, y, series, color, facet, lo, hi, connect,
   p
 }
 
-gg_helper_lines <- function(p, vlines, hlines, line_width_mult = 1) {
+# Helper-line positions as finite numbers; junk and NULL give none.
+gg_line_values <- function(v) {
+  v <- suppressWarnings(as.numeric(unlist(v %||% list())))
+  v[is.finite(v)]
+}
 
-  vlines <- suppressWarnings(as.numeric(unlist(vlines %||% list())))
-  hlines <- suppressWarnings(as.numeric(unlist(hlines %||% list())))
-  vlines <- vlines[is.finite(vlines)]
-  hlines <- hlines[is.finite(hlines)]
-
-  lw <- gg_px_lw(1.5 * (line_width_mult %||% 1))
-
-  if (length(vlines)) {
-    p <- p + ggplot2::geom_vline(
-      xintercept = vlines, linetype = "dashed",
-      color = GG_REF_LINE_COLOR, linewidth = lw
-    )
+# Values that pull the value axis past every helper line. A line exactly on
+# a rounded limit would draw as the frame (or clip, label and all), so each
+# is nudged outward and the nice extent rounds on to the next step. On a bar
+# axis (`zero`) a line at 0 is the baseline and stays put.
+gg_line_room <- function(lines, vals, zero = FALSE) {
+  if (!length(lines)) {
+    return(numeric())
   }
-  if (length(hlines)) {
-    p <- p + ggplot2::geom_hline(
-      yintercept = hlines, linetype = "dashed",
-      color = GG_REF_LINE_COLOR, linewidth = lw
-    )
+  eps <- 1e-6 * max(abs(c(vals, lines)), 1, na.rm = TRUE)
+  moved <- if (zero) lines[lines != 0] else lines
+  c(lines, moved + eps, moved - eps)
+}
+
+# `value_lines` cross the value axis, which is x on a horizontal bar or
+# boxplot; `x_lines` cross a numeric x. The canvas style: a 1px ink rule in a
+# long dash at 55%, the value at the line's end in axis-label grey. A percent
+# axis runs 0..1 while the reader typed the percentage (`fraction`).
+gg_helper_lines <- function(p, x_lines = NULL, value_lines = NULL,
+                            line_width_mult = 1, horiz = FALSE,
+                            fraction = FALSE) {
+
+  x_lines <- gg_line_values(x_lines)
+  value_lines <- gg_line_values(value_lines)
+  num <- function(v) vapply(v, gg_comma, character(1L))
+  x_text <- num(x_lines)
+  value_text <- num(value_lines)
+  if (fraction) value_text <- paste0(value_text, rep("%", length(value_text)))
+  if (fraction) value_lines <- value_lines / 100
+
+  if (horiz) {
+    x_lines <- c(x_lines, value_lines)
+    x_text <- c(x_text, value_text)
+    value_lines <- numeric()
+    value_text <- character()
+  }
+
+  line <- function(geom, ...) {
+    geom(..., linetype = "84", color = GG_REF_LINE_COLOR, alpha = 0.55,
+         linewidth = gg_px_lw(line_width_mult %||% 1))
+  }
+  if (length(x_lines)) {
+    p <- p + line(ggplot2::geom_vline, xintercept = x_lines) +
+      ggplot2::annotate(
+        "text", x = x_lines, y = Inf, label = x_text, hjust = -0.2,
+        vjust = 1.3, color = GG_AXIS_LABEL_COLOR, size = gg_px_size(10)
+      )
+  }
+  if (length(value_lines)) {
+    p <- p + line(ggplot2::geom_hline, yintercept = value_lines) +
+      ggplot2::annotate(
+        "text", x = Inf, y = value_lines, label = value_text, hjust = 1.1,
+        vjust = -0.4, color = GG_AXIS_LABEL_COLOR, size = gg_px_size(10)
+      )
   }
 
   p

@@ -320,7 +320,7 @@ chart_arguments <- function() {
     ref_hi = new_arg_spec(
       paste0(
         "Column holding an UPPER reference limit, drawn as a dashed line ",
-        "(e.g. \"ANRHI\"). Unlike `hlines`, which takes values, this ",
+        "(e.g. \"ANRHI\"). Unlike `value_lines`, which takes values, this ",
         "names a column: a reference range is per-record and varies, so ",
         "the block reduces it to its median and labels the line with the ",
         "spread it reduced from. Empty (default) draws nothing."
@@ -423,21 +423,23 @@ chart_arguments <- function() {
         c("monotone", "straight", "step-start", "step-middle", "step-end")
       )
     ),
-    vlines = new_arg_spec(
+    value_lines = new_arg_spec(
       paste0(
-        "Helper lines: each number draws one dashed VERTICAL guide line at ",
-        "that x position (e.g. a threshold like 5). Plain numbers, never ",
-        "column names. Empty = no vertical lines. Scatter/line charts."
+        "Helper lines: each number draws one dashed guide line across the ",
+        "VALUE axis at that value (a target, a threshold, a normal-range ",
+        "limit). That is y on scatter/line charts and the value axis of ",
+        "bar, waterfall, boxplot and pointrange charts in either ",
+        "orientation. On a percent axis the numbers are percentages (50 = ",
+        "half). Plain numbers, never column names. Empty = no lines."
       ),
       example = NULL,
       type = arg_array(arg_number())
     ),
-    hlines = new_arg_spec(
+    x_lines = new_arg_spec(
       paste0(
-        "Helper lines: each number draws one dashed HORIZONTAL guide line ",
-        "at that y position (e.g. a normal-range limit). Plain numbers, ",
-        "never column names. Empty = no horizontal lines. Scatter/line ",
-        "charts."
+        "Helper lines: each number draws one dashed VERTICAL guide line at ",
+        "that x position (e.g. a threshold like 5). Plain numbers, never ",
+        "column names. Empty = no lines. Scatter/line charts only."
       ),
       example = NULL,
       type = arg_array(arg_number())
@@ -651,9 +653,10 @@ chart_guidance <- function() {
       "\n- \"scatter of X vs Y\" -> chart_type=\"scatter\", x=\"X\", y=\"Y\"",
       "\n- \"shift plot of X vs Y\" (baseline vs post-baseline, agreement)",
       "-> chart_type=\"scatter\", x=\"X\", y=\"Y\", identity_line=true",
-      "\n- \"line at x = 3\" / \"threshold at 3\" -> vlines=[3];",
-      "\"line at y = 2\" -> hlines=[2]. Several per axis is fine",
-      "(vlines=[2, 5]). An eDish / Hy's-Law cross is vlines=[3], hlines=[2].",
+      "\n- \"line at x = 3\" -> x_lines=[3]; \"line at y = 2\" or",
+      "\"target of 2\" -> value_lines=[2], also on bar/boxplot charts in",
+      "either orientation. Several are fine (value_lines=[2, 5]). An",
+      "eDish / Hy's-Law cross is x_lines=[3], value_lines=[2].",
       "\n- \"coloured by Z\" -> color=\"Z\"",
       "\n- \"faceted by Z\" -> facet=\"Z\". The panels share one scale by",
       "default, which is what makes them comparable. Set",

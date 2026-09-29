@@ -415,8 +415,8 @@ chart_state_field <- function(blk, field) {
 }
 
 chart_state <- function(blk) chart_state_field(blk, "identity_line")
-vline_state <- function(blk) chart_state_field(blk, "vlines")
-hline_state <- function(blk) chart_state_field(blk, "hlines")
+value_line_state <- function(blk) chart_state_field(blk, "value_lines")
+x_line_state <- function(blk) chart_state_field(blk, "x_lines")
 
 test_that("identity_line accepts the legacy \"on\"/\"off\" strings", {
   # Every chart board saved before identity_line became logical stored the
@@ -429,26 +429,28 @@ test_that("identity_line accepts the legacy \"on\"/\"off\" strings", {
   expect_true(chart_state(new_chart_block(identity_line = TRUE)))
 })
 
-test_that("ref_x/ref_y are legacy aliases for vlines/hlines", {
-  # Same reason as above: a board saved before the rename carries ref_x/ref_y
-  # in its state and hands them to the ctor.
-  b <- new_chart_block(chart_type = "scatter", x = "a", y = "b",
-                       ref_x = 3, ref_y = 2)
-  expect_equal(vline_state(b), 3)
-  expect_equal(hline_state(b), 2)
-
-  # The new name wins when both are present: a board that already saved
-  # `vlines` is newer than any ref_x it may still carry alongside it.
-  both <- new_chart_block(chart_type = "scatter", x = "a", y = "b",
-                          vlines = 9, ref_x = 1)
-  expect_equal(vline_state(both), 9)
-
-  # Several lines per axis, and the gear's comma-separated text.
-  expect_equal(vline_state(new_chart_block(vlines = c(2, 5))), c(2, 5))
-  expect_equal(vline_state(new_chart_block(vlines = "2, 5")), c(2, 5))
+test_that("value_lines / x_lines parse numbers and drop junk", {
+  # Several lines, and the gear's comma-separated text.
+  expect_equal(value_line_state(new_chart_block(value_lines = c(2, 5))),
+               c(2, 5))
+  expect_equal(value_line_state(new_chart_block(value_lines = "2, 5")),
+               c(2, 5))
+  expect_equal(x_line_state(new_chart_block(x_lines = 3)), 3)
 
   # A typo yields NO line rather than a line at NA.
-  expect_null(vline_state(new_chart_block(vlines = "junk")))
+  expect_null(value_line_state(new_chart_block(value_lines = "junk")))
+})
+
+test_that("a board carrying the retired vlines/hlines/ref_x/ref_y loads", {
+  # The old names are gone, not aliased: the board restores without its
+  # lines, and a re-save does not write them back out.
+  blk <- new_chart_block(chart_type = "scatter", x = "a", y = "b",
+                         vlines = 3, hlines = 2, ref_x = 1, ref_y = 1)
+  expect_null(value_line_state(blk))
+  expect_null(x_line_state(blk))
+  payload <- blockr.core::blockr_ser(blk)[["payload"]]
+  expect_false(any(c("vlines", "hlines", "ref_x", "ref_y") %in%
+                     names(payload)))
 })
 
 test_that("unset drill emits no downstream filter (inert)", {
@@ -549,7 +551,7 @@ test_that("empty-list state from a pre-#144 DAG paste normalizes back to NULL", 
     sort_by = "value",
     group = list(), color = list(), xend = list(), series = list(),
     label = list(), tt_fields = list(), drill = list(),
-    ref_x = list(), ref_y = list(), waterfall_totals = list(),
+    value_lines = list(), x_lines = list(), waterfall_totals = list(),
     filter_column = list(), filter_values = list(), filter_range = list(),
     filter_point = list()
   )

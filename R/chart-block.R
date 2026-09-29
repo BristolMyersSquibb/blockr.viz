@@ -128,15 +128,14 @@
 #'   observations, jump at the named point -- dose levels, on/off states).
 #'   One control replacing the old `step` + `smooth` pair. Consumed by the JS
 #'   renderer.
-#' @param vlines,hlines Helper lines at fixed positions: numeric vectors,
-#'   each entry drawing one dashed guide line -- `vlines` VERTICAL (at that x),
-#'   `hlines` HORIZONTAL (at that y). Plain numbers, never column names (a
-#'   Hy's-Law eDish cross is `vlines = 3, hlines = 2`). Default `NULL` (none).
-#' @param ref_x,ref_y LEGACY aliases for `vlines` / `hlines`, mapped on
-#'   construction. Kept as formals so boards saved before the rename restore
-#'   (block state restores through the constructor). Do not use in new code:
-#'   the names said neither "line" nor which way it ran, and they were the only
-#'   array-valued args in the registry that were not plural.
+#' @param value_lines,x_lines Helper lines at fixed positions: numeric
+#'   vectors, each entry drawing one dashed guide line. `value_lines` run
+#'   across the VALUE axis: y on a scatter or line chart, and the value axis
+#'   of a bar, waterfall, boxplot or point range in either orientation (a
+#'   target, a threshold). On a percent axis they are percentages (`50` is
+#'   half). `x_lines` run across a numeric x axis, so scatter and line only.
+#'   Plain numbers, never column names (a Hy's-Law eDish cross is
+#'   `x_lines = 3, value_lines = 2`). Default `NULL` (none).
 #' @param smoother Trend overlay for scatter charts: one of `"none"`
 #'   (default), `"lm"`, or `"loess"`. Fit per `color`/`series` group, and per
 #'   `facet` panel, via [compute_smoother_series()].
@@ -185,7 +184,7 @@
 #'   same window -- so set it for repeated-measures data.
 #' @param ref_hi,ref_lo Column names holding an upper / lower reference
 #'   limit, drawn as dashed lines (e.g. `"ANRHI"` / `"ANRLO"`). Unlike
-#'   `hlines`, which takes values, these name a COLUMN: an ADaM reference
+#'   `value_lines`, which takes values, these name a COLUMN: an ADaM reference
 #'   range is per-record and varies by lab, sex and age, so the block reduces
 #'   the column to its median and the label carries the spread it reduced
 #'   from ("ANRHI 34 (32-43)"). `NULL` (default) or `""` draws nothing. A
@@ -324,10 +323,8 @@ new_chart_block <- function(
     line_width_mult = 1.0,
     dot_size_mult = 1.0,
     connect = "monotone",
-    vlines = NULL,
-    hlines = NULL,
-    ref_x = NULL,
-    ref_y = NULL,
+    value_lines = NULL,
+    x_lines = NULL,
     smoother = "none",
     identity_line = FALSE,
     # Boxplot observation overlay: "none" (box only) or "outliers" (only the
@@ -356,7 +353,7 @@ new_chart_block <- function(
     band_min_n = 12,
     band_id = NULL,
     # Reference lines read from a COLUMN rather than given as values (which
-    # is what vlines/hlines take). An ADaM range (ANRHI, A1LO, ...) is
+    # is what value_lines/x_lines take). An ADaM range (ANRHI, A1LO, ...) is
     # per-record and genuinely varies, so the block reduces the column and
     # the label admits it did. NULL / "" draws nothing.
     ref_hi = NULL,
@@ -563,23 +560,8 @@ new_chart_block <- function(
   # NULL (auto) or a whole number as a string; junk heals to auto rather than
   # erroring, because this value also arrives from MCP and from saved state.
   facet_cols <- facet_cols_state(facet_cols)
-  # Legacy aliases mapped on construction (old saved boards restore through the
-  # ctor, and every chart saved before the rename carries ref_x / ref_y). The
-  # new name wins when both are given: a board that already saved `vlines` is
-  # newer than whatever ref_x it may also still carry.
-  if (is.null(vlines)) vlines <- ref_x
-  if (is.null(hlines)) hlines <- ref_y
-
-  vlines <- num_vec_state(vlines)
-  hlines <- num_vec_state(hlines)
-
-  # The alias is CONSUMED here: the block stores only the new names, so a board
-  # restored from the old ones is migrated on load and re-saves as
-  # vlines/hlines. Leaving the legacy value in place would serialize it forever
-  # (and a pre-#144 DAG paste hands us list(), which must heal to NULL like
-  # every other slot -- see state-normalize.R).
-  ref_x <- NULL
-  ref_y <- NULL
+  value_lines <- num_vec_state(value_lines)
+  x_lines <- num_vec_state(x_lines)
 
   # `identity_line` is a LOGICAL. The gear's segmented control sends the
   # strings "on"/"off" (that is the control's transport, see chart.js ROLES),
@@ -790,8 +772,8 @@ new_chart_block <- function(
         # Line-connect mode (straight / monotone / step-*), the single gear
         # select that replaced step + smooth. Fixed-option, so never empty.
         r_connect <- shiny::reactiveVal(connect)
-        r_vlines <- shiny::reactiveVal(vlines)
-        r_hlines <- shiny::reactiveVal(hlines)
+        r_value_lines <- shiny::reactiveVal(value_lines)
+        r_x_lines <- shiny::reactiveVal(x_lines)
         r_smoother <- shiny::reactiveVal(smoother)
         r_identity_line <- shiny::reactiveVal(identity_line)
         r_box_points <- shiny::reactiveVal(box_points)
@@ -1044,7 +1026,11 @@ new_chart_block <- function(
             # Not a mapping, but a setting a reader may want on the face: a
             # 12-panel grid is the one chart where the shape of the page is
             # the reader's call, not the author's.
-            facet_cols = r_facet_cols()
+            facet_cols = r_facet_cols(),
+            # Reference lines, typed in place on the word
+            # ("[, target {@value_lines}]").
+            value_lines = num_list_text(r_value_lines()),
+            x_lines = num_list_text(r_x_lines())
           )
           # The prepare script's declared values are settings too, named in a
           # template by the variable the script uses: `{@param}` for
@@ -1182,7 +1168,8 @@ new_chart_block <- function(
               bar_mode = r_bar_mode(),
               line_width_mult = r_line_width_mult(),
               dot_size_mult = r_dot_size_mult(), connect = r_connect(),
-              vlines = as.list(r_vlines()), hlines = as.list(r_hlines()),
+              value_lines = as.list(r_value_lines()),
+              x_lines = as.list(r_x_lines()),
               smoother = r_smoother(),
               # The gear's segmented control speaks "on"/"off"; the R state is
               # a logical (bool_state). Convert on the way OUT so the control
@@ -1459,11 +1446,11 @@ new_chart_block <- function(
             # ("2, 5"); num_vec_state parses it and drops non-numeric junk. ""
             # is a real value here (clearing every line), so it must reach the
             # slot as NULL rather than being skipped -- hence no nn() guard.
-            if (!is.null(msg$vlines)) {
-              upd(r_vlines, num_vec_state(msg$vlines))
+            if (!is.null(msg$value_lines)) {
+              upd(r_value_lines, num_vec_state(msg$value_lines))
             }
-            if (!is.null(msg$hlines)) {
-              upd(r_hlines, num_vec_state(msg$hlines))
+            if (!is.null(msg$x_lines)) {
+              upd(r_x_lines, num_vec_state(msg$x_lines))
             }
             if (!is.null(msg$box_points)) upd(r_box_points, msg$box_points)
             if (!is.null(msg$summary))    upd(r_summary, msg$summary)
@@ -1792,8 +1779,8 @@ new_chart_block <- function(
             facet_scales = r_facet_scales(), facet_cols = r_facet_cols(),
             box_points = r_box_points(),
             smoother = r_smoother(), identity_line = r_identity_line(),
-            lo = r_lo(), hi = r_hi(), vlines = r_vlines(),
-            hlines = r_hlines(),
+            lo = r_lo(), hi = r_hi(), value_lines = r_value_lines(),
+            x_lines = r_x_lines(),
             title = r_title(), subtitle = r_subtitle(),
             caption = r_caption()
           )
@@ -2020,13 +2007,8 @@ new_chart_block <- function(
             # script written as lines loads fine.
             script = r_script,
             values = r_values,
-            vlines = r_vlines,
-            hlines = r_hlines,
-            # Legacy alias formals (mapped on construction): serialized as
-            # NULL so restored boards re-enter through the new names;
-            # blockr.core requires every ctor formal in the state.
-            ref_x = function() NULL,
-            ref_y = function() NULL,
+            value_lines = r_value_lines,
+            x_lines = r_x_lines,
             smoother = r_smoother,
             identity_line = r_identity_line,
             box_points = r_box_points,
@@ -2097,7 +2079,7 @@ new_chart_block <- function(
     allow_empty_state = c("group", "color", "facet", "filter_column",
       "filter_values", "value", "x", "y", "xend", "series", "label",
       "tt_fields", "drill", "sort_by", "sort_dir", "filter_range",
-      "filter_point", "vlines", "hlines", "smoother", "identity_line",
+      "filter_point", "value_lines", "x_lines", "smoother", "identity_line",
       # `summary`, `whiskers` and `orientation` are NULL until their per-mark
       # default is resolved where it is consumed; `band_id` / `ref_hi` /
       # `ref_lo` are optional band columns, empty on every chart that is not a
@@ -2119,11 +2101,6 @@ new_chart_block <- function(
       # case, so it MUST be listed or every chart block wedges.
       "facet_cols",
       "title", "subtitle", "caption",
-      # Legacy alias formals: permanently NULL in state (mapped onto
-      # vlines/hlines at construction), so they MUST be allowed to be empty --
-      # a non-allow_empty_state field holding NULL wedges the whole block
-      # (state_ready never goes TRUE and result() stays NULL).
-      "ref_x", "ref_y",
       # No script is the default and the common case, so both MUST be allowed
       # to be empty or every chart block wedges
       # (reference_blockr_allow_empty_state_wedge).
@@ -2134,7 +2111,7 @@ new_chart_block <- function(
       "sort_by", "sort_dir", "orientation", "bar_mode", "filter_type",
       "filter_column",
       "filter_values", "filter_range", "filter_point", "line_width_mult",
-      "dot_size_mult", "connect", "vlines", "hlines", "smoother",
+      "dot_size_mult", "connect", "value_lines", "x_lines", "smoother",
       "identity_line",
       "box_points", "summary", "whiskers", "connect_centers",
       "lo", "hi", "baseline", "waterfall_totals",
@@ -2175,6 +2152,12 @@ new_chart_block <- function(
   # is what says a board has not been.
   attr(res, "metric") <- NULL
   attr(res, "agg_fn") <- NULL
+  # RETIRED helper-line names, replaced by `value_lines` / `x_lines`. A saved
+  # board that carries them loads without its lines rather than failing.
+  attr(res, "vlines") <- NULL
+  attr(res, "hlines") <- NULL
+  attr(res, "ref_x") <- NULL
+  attr(res, "ref_y") <- NULL
 
   res
 }
