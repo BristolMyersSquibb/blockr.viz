@@ -429,6 +429,10 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   facet_cols <- unique(unlist(lapply(summaries, function(s) s$.facet)))
   shared_facet <- if (length(facet_cols) == 1L) facet_cols else NULL
   qualify <- length(facet_cols) > 1L
+  # Several faceted columns: each copy's header keeps its summary's name
+  # beside its N, or two "Placebo / N = 86" columns could not be told apart.
+  n_faceted <- sum(vapply(summaries, function(s) !is.null(s$.facet),
+                          logical(1L)))
   facet_levels <- if (is.null(shared_facet)) {
     character()
   } else {
@@ -436,7 +440,12 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   }
 
   # --- leaf / parent skeletons ----------------------------------------------
+  # A row whose grouping value is missing (NA) is not a group. It is what
+  # blockr.pharma's population join appends for a subject with no record:
+  # it counts toward a column's N (below, over the full slice) and draws no
+  # row. A blank string is a value and keeps its row.
   skel <- unique(data[keys])
+  skel <- skel[stats::complete.cases(skel), , drop = FALSE]
   skel <- skel[do.call(order, unname(as.list(skel))), , drop = FALSE]
   leaf <- data.frame(.label = as.character(skel[[group]]),
                      .parent = if (is.null(parent)) NA_character_ else
@@ -604,10 +613,21 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         list(suffix = paste0(".s", i, "f", j),
              slice = data[as.character(data[[s$.facet]]) == lv, ,
                           drop = FALSE],
-             level = lv, fcol = s$.facet, qualify = qualify)
+             level = lv, fcol = s$.facet, qualify = qualify,
+             named = n_faceted > 1L)
       })
     }
     for (cp in copies) {
+      # A count's N: the subjects (count distinct) or rows (count) in this
+      # copy's slice -- the whole data for an unfaceted column, one level's
+      # rows for a facet copy. Over the full slice, so rows without a group
+      # (the population join's) are in it: the same N the ranked-bar
+      # surface's facets print (rank_denom()).
+      if (identical(s$type, "simple") &&
+            rank_has_pct(rank_chr1(s$func) %||% "count")) {
+        cp$den <- rank_denom(cp$slice, rank_chr1(s$func) %||% "count",
+                             rank_chr1(s$col))
+      }
       leaf <- fill(leaf, keys, cp$slice, s, cp$suffix)
       if (!is.null(par_rows)) {
         par_rows <- fill(par_rows, parent, cp$slice, s, cp$suffix)
@@ -759,6 +779,20 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
   sub <- if (is.null(cp$level)) NULL else s$name
   base <- list(label = label, sub_label = sub, sid = sid, stype = s$type,
                flevel = cp$level, sname = s$name, meas = s$name)
+  # A count with an N (see lane_prepare_summaries): the header's second line
+  # says N, the value reads "8 (12%)", and a bar's length is the percentage,
+  # so arms of different size compare on one scale. The ranked-bar
+  # surface's faceted columns, for the column list.
+  den <- cp$den
+  pct <- is.numeric(den) && length(den) == 1L && is.finite(den) && den > 0
+  if (pct) {
+    base$sub_label <- if (isTRUE(cp$named)) {
+      paste0(s$name, " \u00b7 N = ", den)
+    } else {
+      paste0("N = ", den)
+    }
+    base$val_denom <- den
+  }
   if (identical(s$type, "simple")) {
     if (identical(s$show, "dot")) {
       # A single value as a positioned point on the zero-based lane: the
@@ -796,6 +830,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                      "grouped"
                    },
                    show_val = TRUE,
+                   denom = if (pct) den,
                    fills = unname(rank_level_colors(
                      scale_map, s$.color, s$.levels, data[[s$.color]]
                    )[s$.levels])))
@@ -803,7 +838,11 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       kind <- if (identical(s$show, "bar")) "bar" else "num"
       c(base, list(kind = kind, key = paste0(sid, "_v"),
                    fill = if (identical(kind, "bar")) dd_palette(1L),
-                   show_val = identical(kind, "bar")))
+                   show_val = identical(kind, "bar"),
+                   # A bar's length is the percentage; a number column
+                   # prints "54 (18%)", the table's own "n (%)" cell.
+                   denom = if (pct) den,
+                   combined = pct && identical(kind, "num")))
     }
   } else if (identical(s$type, "dist")) {
     stat <- rank_chr1(s$stat) %||% "median_q1_q3"
@@ -1124,7 +1163,11 @@ lane_summary_domains <- function(plan, rows) {
           # glyph is read against the same axis, or the split lies.
           c(pos(p$cols), unlist(lapply(p$lcols %||% list(), pos)))
         }
-        for (cn in cols) vals <- c(vals, rows[[cn]])
+        # A count with an N is drawn as a percentage of it (rank_cells()),
+        # so its domain is one too: the copies share a percentage scale.
+        scale <- if (is.numeric(p$denom) && length(p$denom) == 1L &&
+                       is.finite(p$denom) && p$denom > 0) 100 / p$denom else 1
+        for (cn in cols) vals <- c(vals, rows[[cn]] * scale)
       }
       vals <- vals[is.finite(vals)]
       # Zero belongs to marks that encode value as LENGTH from a baseline --
