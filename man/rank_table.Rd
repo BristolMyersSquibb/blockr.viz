@@ -22,7 +22,7 @@ rank_table(
   sort_by = "value",
   sort_dir = "desc",
   top_n = NULL,
-  max_height = "600px",
+  max_height = NULL,
   search = TRUE,
   sortable = TRUE,
   axis = TRUE,
@@ -78,7 +78,8 @@ facet level name; \code{sort_dir} is \code{"desc"} or \code{"asc"}.}
 \item{top_n}{Optional cap. Off by default -- the table scrolls instead.
 When set, the rows below the cut are reported in a visible fold row.}
 
-\item{max_height}{CSS max-height of the scroll container.}
+\item{max_height}{\code{NULL} (default): the table runs its full length and
+scrolls with what is around it. A CSS length: a box of that height.}
 
 \item{search}{Show the search input.}
 

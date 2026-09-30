@@ -23,7 +23,7 @@ new_summarize_table_block(
   sort_by = "value",
   sort_dir = "desc",
   top_n = NULL,
-  max_height = "600px",
+  max_height = NULL,
   search = TRUE,
   sortable = TRUE,
   axis = TRUE,
@@ -32,6 +32,8 @@ new_summarize_table_block(
   subtitle = NULL,
   caption = getOption("blockr.viz.default_caption"),
   drill = NULL,
+  script = NULL,
+  values = list(),
   ctrl_target = "",
   ctrl_table = "",
   filter_type = "categorical",
@@ -126,7 +128,11 @@ beside the bar -- the chart's tooltip fields. Only meaningful with
 
 \item{top_n}{Optional cap (\code{NULL} = off, the table scrolls instead).}
 
-\item{max_height}{CSS max-height of the scroll container.}
+\item{max_height}{\code{NULL} (default): the table runs its full length and
+scrolls with the panel around it, the header following, as the composer
+table does. A CSS length (\code{"600px"}) keeps it in a box of that height
+that scrolls on its own. \code{"600px"}, the default before, is read as
+\code{NULL}: boards saved with it scroll with their panel too.}
 
 \item{search}{Show the search input.}
 
@@ -162,6 +168,12 @@ defaults to the option \code{blockr.viz.default_caption} (unset = \code{NULL}).}
 \item{drill}{Column a row click filters on. The emitted filter is the same
 categorical contract as \code{\link[=new_chart_block]{new_chart_block()}}, so existing filter links
 compose.}
+
+\item{script, values}{Prepare script, as in \code{\link[=new_chart_block]{new_chart_block()}}: R code run
+on the incoming rows before the table is built, whose top assignments
+become controls on the card (\code{x <- value #| label = "..."}). \code{values}
+holds their current settings. The block's result is the prepared rows,
+filtered by a row click. \code{{@x}} in a title template names a script value.}
 
 \item{ctrl_target}{Character(1), beta. Block id of a value filter block on
 the same board: the drill's claim is ALSO pushed into that block over
