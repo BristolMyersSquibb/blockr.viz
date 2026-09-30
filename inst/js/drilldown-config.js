@@ -2488,6 +2488,16 @@
       return Array.from(out).sort((x, y) => x - y);
     }
 
+    /** Is this word typed over in place? For a value no list can carry (a
+     * reference line at 32.5): the role opts in with `slot: 'entry'`. Free
+     * text in general stays in the gear.
+     * @param {string} key
+     */
+    _slotEntry(key) {
+      const role = this._role(this._slotCfgKey(key));
+      return !!(role && role.slot === 'entry');
+    }
+
     /** Is this word a flag? A flag toggles in place: a menu of two words is a
      * menu too many (blockr.docs design-system/pinned-controls.md).
      * @param {string} key
@@ -2842,6 +2852,10 @@
         ddc._setRoleValue(key, on ? 'off' : 'on');
         return;
       }
+      if (ddc._slotEntry && ddc._slotEntry(key)) {
+        this._edit(key, anchor);
+        return;
+      }
       const opts = ddc._slotOptionsFor(key);
       if (!opts) return;
       const B = (typeof Blockr !== 'undefined') ? Blockr : null;
@@ -2872,6 +2886,51 @@
           this._key = null;
         }
       });
+    }
+
+    /** Type the value over the word. The word becomes an input holding the
+     * current value, selected; Enter or leaving the field commits, Escape
+     * puts the word back unchanged, and an emptied field clears the setting.
+     * The gear's text row has the same commit model. An offer chip edits the
+     * same way, starting empty.
+     * @param {string} key @param {HTMLElement} anchor */
+    _edit(key, anchor) {
+      const ddc = this.h.ddc();
+      const cur = this.h.config()[key];
+      const before = cur == null ? ''
+        : (Array.isArray(cur) ? cur.join(', ') : String(cur));
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'blockr-slot-input';
+      input.value = before;
+      input.placeholder = '50';
+      input.setAttribute('aria-label', this.label(key) || key);
+      const fit = () => { input.size = Math.max(3, input.value.length + 1); };
+      fit();
+      let done = false;
+      /** @param {boolean} commit */
+      const finish = (commit) => {
+        if (done) return;
+        done = true;
+        const val = input.value.trim();
+        input.replaceWith(anchor);
+        if (commit && val !== before) {
+          ddc._setRoleValue(key, val);
+        } else {
+          anchor.focus();
+        }
+      };
+      input.addEventListener('input', fit);
+      input.addEventListener('click', (e) => e.stopPropagation());
+      input.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+        if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+      });
+      input.addEventListener('blur', () => finish(true));
+      anchor.replaceWith(input);
+      input.focus();
+      input.select();
     }
 
     close() {

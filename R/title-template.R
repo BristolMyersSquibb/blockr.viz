@@ -290,6 +290,16 @@ resolve_title_token <- function(token, data, args = list()) {
 # The printed value of a block argument. Everything the roles use for "unset"
 # collapses to "", which is what makes an optional segment disappear: NULL,
 # "", NA, and the literal "(none)" sentinel the config engine writes.
+# A numeric list the way a sentence prints it and the gear takes it back:
+# "40, 70". NULL when empty, so a clause naming it drops.
+num_list_text <- function(v) {
+  if (!length(v)) {
+    return(NULL)
+  }
+  paste(vapply(v, format, character(1L), scientific = FALSE, trim = TRUE),
+        collapse = ", ")
+}
+
 arg_token_value <- function(name, args) {
   v <- args[[name]]
   if (is.null(v) || !length(v)) return("")

@@ -210,7 +210,7 @@
   // surface: the halo under a band's centre line (the ribbons are translucent,
   // so a surface-coloured underlay separates crossing lines without a second
   // hue), and the separators between pie slices and treemap tiles.
-  // danger: reference limits and vlines/hlines. A normal range is a
+  // danger: the band's reference limits. A normal range is a
   // threshold, not another series, so it never wears a series hue.
   const INK = {
     muted: '#6b7280',
@@ -401,6 +401,25 @@
       maximumFractionDigits: 4
     });
   };
+
+  // One helper line (x_lines / value_lines) as a markLine datum: a quiet ink
+  // rule in a long dash, so it reads apart from the short-dash gridlines and
+  // stays behind the data, with its value at the end in axis-label grey.
+  // `text` overrides the label where the axis unit is not what was typed (a
+  // percent axis runs 0..1). `flipped`: the y axis runs top-down (a
+  // horizontal bar's inverse category axis), so a vertical line's top is its
+  // START, and labelling the end would put it on the tick labels.
+  /** @param {number} v @param {boolean} vertical @param {number} [width] @param {string} [text] @param {boolean} [flipped] */
+  const guideLine = (v, vertical, width = 1, text, flipped = false) => ({
+    [vertical ? 'xAxis' : 'yAxis']: v,
+    lineStyle: { color: INK.text, opacity: 0.55, type: [8, 4], width },
+    label: {
+      show: true,
+      position: vertical ? (flipped ? 'start' : 'end') : 'insideEndTop',
+      formatter: text != null ? text : String(ddNum(v)),
+      color: INK.muted, fontSize: 10, opacity: 1
+    }
+  });
 
   // Identity of a category-axis label LAYOUT (see _xAxisLabels): orientation,
   // how many labels are skipped, and the truncation width. Everything else in
@@ -670,8 +689,8 @@
                 options: [{ value: 'zero', label: 'Standard' },
                           { value: 'cumulative', label: 'Waterfall' }] },
     smoother: { label: 'Smoother', kind: 'select', options: ['none', 'lm', 'loess'] },
-    // Helper lines. `identity_line` is the computed diagonal; vlines/hlines are
-    // fixed positions the user types. All three draw a dashed guide, so the
+    // Helper lines. `identity_line` is the computed diagonal; x_lines /
+    // value_lines are fixed positions the user types. All three draw a dashed guide, so the
     // gear groups them in one "Helper lines" section (see SECTIONS below).
     //
     // Boolean on/off segmented -> rendered as a checkbox (see _isBoolSegmented).
@@ -686,8 +705,16 @@
     // commit model we want (Enter/blur to apply, Escape to revert) and R parses
     // the string with num_vec_state() -- which drops junk, so a typo yields no
     // line rather than a line at NA.
-    vlines: { label: 'Vertical', kind: 'text', ph: 'e.g. 3 or 2, 5' },
-    hlines: { label: 'Horizontal', kind: 'text', ph: 'e.g. 2 or 1, 4' },
+    // `slot: 'entry'`: named in the block's sentence, the word is typed over
+    // in place (a line at 32.5 is not in any list). See SentenceSlots._edit.
+    x_lines: { label: 'Vertical', kind: 'text', ph: 'e.g. 3 or 2, 5', slot: 'entry' },
+    // Across the value axis. On scatter/line that is y, so the pair reads
+    // Vertical / Horizontal; on the aggregated family it follows
+    // `orientation` and is the only helper line, so it is named by its job.
+    value_lines: { label: (/** @type {any} */ cfg) =>
+                     (cfg.chart_type === 'scatter' || cfg.chart_type === 'line'
+                       ? 'Horizontal' : 'Reference lines'),
+                   kind: 'text', ph: 'e.g. 2 or 1, 4', slot: 'entry' },
     // Boxplot observation overlay. "none" = box only; "outliers" = only the
     // points beyond the whisker extent. (A former "all" strip was dropped:
     // on a category axis every point sat on the box's centre line, an opaque
@@ -964,6 +991,8 @@
         { role: 'whiskers', types: ['boxplot'] },
         { role: 'connect_centers', types: ['pointrange'] },
         { role: 'box_points', types: ['boxplot'] },
+        // Across the value axis, whichever way the chart lies.
+        { role: 'value_lines', types: ['bar', 'waterfall', 'boxplot', 'pointrange'] },
         // Count labels: the axis surface applies to the category-axis charts
         // (bar and waterfall per group/step; boxplot per drawn box slot);
         // facet applies to any faceted family. Pie/treemap/radar have no
@@ -1006,11 +1035,11 @@
         // diagonal, then the fixed positions. They are NOT a titled section --
         // `presentation` is a flat list and a real header needs a change to the
         // shared engine (drilldown-config.js), which is a follow-up.
-        // vlines/hlines are offered on line charts too: a normal-range or
-        // threshold marker on a trajectory is the same need as on a scatter.
+        // x_lines/value_lines are offered on line charts too: a normal-range
+        // or threshold marker on a trajectory is the same need as on a scatter.
         { role: 'identity_line', types: ['scatter'] },
-        { role: 'vlines', types: ['scatter', 'line'] },
-        { role: 'hlines', types: ['scatter', 'line'] },
+        { role: 'x_lines', types: ['scatter', 'line'] },
+        { role: 'value_lines', types: ['scatter', 'line'] },
         // Line-connect mode (straight / monotone / step-*): line-only, so it
         // sits with the other line presentation options.
         { role: 'connect', types: ['line'] },
@@ -3579,6 +3608,66 @@
       this._updateHighlight();
     }
 
+    // `value_lines` on the aggregated family: dashed guides across the value
+    // axis, x when the chart lies horizontal. A percent axis runs 0..1 while
+    // the reader types the percentage (`fraction`). ECharts sizes an axis on
+    // series data only and clips a markLine outside it, so the axis is
+    // widened to take in a line past the data, rounded outward to a nice
+    // step because a fixed min/max turns ECharts' own rounding off. A line
+    // inside the data leaves the axis to ECharts (undefined = auto).
+    /** @param {any[]} series @param {any} valAxis @param {boolean} onX @param {boolean} [fraction] */
+    _addValueLines(series, valAxis, onX, fraction) {
+      const raw = Array.isArray(this.config.value_lines) ? this.config.value_lines : [];
+      const typed = raw.map(Number).filter(Number.isFinite);
+      const vals = typed.map(v => (fraction ? v / 100 : v));
+      if (!vals.length || !series.length) return;
+      series[0].markLine = {
+        silent: true, symbol: 'none',
+        // onX means a horizontal chart, whose category axis is inverse.
+        data: vals.map((v, i) => guideLine(v, onX, 1,
+          fraction ? ddNum(typed[i]) + '%' : undefined, onX))
+      };
+      // A bar axis keeps 0 in range (ECharts crosses zero only while min and
+      // max are its own); `scale: true` axes (boxplot) fit the data. A line
+      // that lands exactly on a rounded edge would read as the frame, so the
+      // edge moves one step past it.
+      const zero = !valAxis.scale;
+      const lo = Math.min(...vals), hi = Math.max(...vals);
+      /** @param {{min: number, max: number}} e */
+      const ext = (e) => ({
+        lo: Math.min(lo, e.min, zero ? 0 : Infinity),
+        hi: Math.max(hi, e.max, zero ? 0 : -Infinity)
+      });
+      /** @param {{min: number, max: number}} e */
+      const step = (e) => {
+        const d = ext(e), span = d.hi - d.lo;
+        if (!(span > 0)) return 0;
+        const mag = Math.pow(10, Math.floor(Math.log10(span)));
+        const rel = span / mag;
+        return rel >= 5 ? mag : (rel >= 2 ? mag / 2 : mag / 5);
+      };
+      /** @param {number} at @param {number} st */
+      const onLine = (at, st) => vals.some(v => Math.abs(v - at) < st * 1e-6);
+      if (valAxis.max == null) {
+        valAxis.max = (/** @type {any} */ e) => {
+          const st = step(e);
+          if (!st) return undefined;
+          const at = Math.ceil(ext(e).hi / st) * st;
+          return onLine(at, st) ? at + st : at;
+        };
+      }
+      if (valAxis.min == null) {
+        valAxis.min = (/** @type {any} */ e) => {
+          const st = step(e);
+          if (!st) return undefined;
+          const at = Math.floor(ext(e).lo / st) * st;
+          // A line at 0 on a bar axis is the baseline itself.
+          if (zero && at === 0) return undefined;
+          return onLine(at, st) ? at - st : at;
+        };
+      }
+    }
+
     /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {number} [plotW] container width in px @param {string} [facet] current facet value ('__all__' when unfaceted) @param {number | null} [sharedMax] radar only: the grid-wide spoke max under fixed panel scales */
     _buildAggregatedOption(facetData, groups, colors, palette, plotW, facet, sharedMax) {
       const ct = this.config.chart_type;
@@ -3811,6 +3900,7 @@
         axisLine: { lineStyle: { color: INK.strong } },
         splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } }
       };
+      this._addValueLines(series, valAxis, !vertical, asFraction);
       // Percent tooltip shows both the share and the raw value (carried on the
       // datum as {value, raw}); default axis tooltip otherwise.
       const fmtRaw = (/** @type {number} */ n) =>
@@ -4023,6 +4113,19 @@
         axisLine: { lineStyle: { color: INK.strong } },
         splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } }
       };
+      /** @type {any[]} */
+      const wfSeries = [
+        { name: 'base', type: 'bar', stack: 'waterfall', barWidth: '60%',
+          itemStyle: { color: 'transparent', borderColor: 'transparent' },
+          emphasis: { disabled: true }, silent: true,
+          tooltip: { show: false }, data: base },
+        // borderRadius rides on each DATUM (see the delta loop above): a
+        // total is anchored to the axis and a floating step is not, so the
+        // corners differ per bar and cannot be set once for the series.
+        { name: 'delta', type: 'bar', stack: 'waterfall', barWidth: '60%',
+          emphasis: { focus: 'self' }, data: delta }
+      ];
+      this._addValueLines(wfSeries, valAxis, false);
       return {
         // Default canvas plus the rotated step-label gutter that grid.bottom
         // above already reserves — same rule as the vertical bar.
@@ -4050,17 +4153,7 @@
         grid: { left: 55, right: 10, top: 30, bottom: 40 + 26 + xlab.bottom },
         xAxis: catAxis,
         yAxis: valAxis,
-        series: [
-          { name: 'base', type: 'bar', stack: 'waterfall', barWidth: '60%',
-            itemStyle: { color: 'transparent', borderColor: 'transparent' },
-            emphasis: { disabled: true }, silent: true,
-            tooltip: { show: false }, data: base },
-          // borderRadius rides on each DATUM (see the delta loop above): a
-          // total is anchored to the axis and a floating step is not, so the
-          // corners differ per bar and cannot be set once for the series.
-          { name: 'delta', type: 'bar', stack: 'waterfall', barWidth: '60%',
-            emphasis: { focus: 'self' }, data: delta }
-        ]
+        series: wfSeries
       };
     }
 
@@ -4504,6 +4597,7 @@
       const catAxes = (isBox && split)
         ? seriesLevels.map((_, i) => (i === 0 ? catAxis : { ...catAxis, show: false }))
         : catAxis;
+      this._addValueLines(series, valAxis, !vertical);
       return {
         // Horizontal sizing: one 28px row per DRAWN slot — cats, not groups: a color-split
         // boxplot draws a (group x level) row each, so sizing off the group
@@ -4779,8 +4873,8 @@
         const smootherSeries = this.config.smoother_series || null;
         const loCol = this.config.lo;
         const hiCol = this.config.hi;
-        const refX = Array.isArray(this.config.vlines) ? this.config.vlines : [];
-        const refY = Array.isArray(this.config.hlines) ? this.config.hlines : [];
+        const refX = Array.isArray(this.config.x_lines) ? this.config.x_lines : [];
+        const refY = Array.isArray(this.config.value_lines) ? this.config.value_lines : [];
         // Band reference limits, reduced R-side from their columns. Labelled
         // with the column name and, when the column is not constant, the range
         // it was reduced from -- "ANRHI 34 (32–43)". Showing only the reduced
@@ -5101,7 +5195,7 @@
           }
         }
 
-        // Helper lines (vlines vertical, hlines horizontal) and the identity
+        // Helper lines (x_lines vertical, value_lines horizontal) and the identity
         // line share one markLine on series[0] (echarts allows one markLine
         // per series).
         //
@@ -5179,8 +5273,8 @@
 
         /** @type {any[]} */
         const refData = [];
-        for (const v of refX) refData.push({ xAxis: Number(v) });
-        for (const v of refY) refData.push({ yAxis: Number(v) });
+        for (const v of refX) refData.push(guideLine(Number(v), true, lm));
+        for (const v of refY) refData.push(guideLine(Number(v), false, lm));
         /** @type {any[]} */
         const refLabels = [];
         if (bandRefs) {
@@ -6810,8 +6904,8 @@
         // always sent rather than omitted when empty -- same rule as ctrl_target
         // below. String() flattens the array R sent us ([2,5] -> "2,5") so the
         // round-trip is stable when nothing was edited.
-        vlines: this.config.vlines == null ? '' : String(this.config.vlines),
-        hlines: this.config.hlines == null ? '' : String(this.config.hlines),
+        value_lines: this.config.value_lines == null ? '' : String(this.config.value_lines),
+        x_lines: this.config.x_lines == null ? '' : String(this.config.x_lines),
         box_points: this.config.box_points || 'none',
         // Distribution band. band_series / band_refs are NOT sent back: they
         // are R's output, not user config, and echoing them would round-trip a

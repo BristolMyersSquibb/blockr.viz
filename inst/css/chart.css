@@ -1334,3 +1334,18 @@
   margin: 3px 0 2px;
   border-top: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
+
+/* A slot being typed over (SentenceSlots._edit): sits in the line where the
+   word was, the word's colour and weight, a box instead of the underline. */
+.blockr-slot-input {
+  font: inherit;
+  font-weight: 500;
+  color: var(--blockr-blue-700, #1d4ed8);
+  padding: 0 4px;
+  margin: 0 1px;
+  border: 1px solid var(--blockr-color-primary, #2563eb);
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: var(--blockr-color-bg-surface, #fff);
+  line-height: inherit;
+  outline: none;
+}

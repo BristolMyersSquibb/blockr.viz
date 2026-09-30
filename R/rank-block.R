@@ -88,7 +88,11 @@
 #'   `"label"`, a summary column name or a facet level name; and `"desc"` /
 #'   `"asc"`.
 #' @param top_n Optional cap (`NULL` = off, the table scrolls instead).
-#' @param max_height CSS max-height of the scroll container.
+#' @param max_height `NULL` (default): the table runs its full length and
+#'   scrolls with the panel around it, the header following, as the composer
+#'   table does. A CSS length (`"600px"`) keeps it in a box of that height
+#'   that scrolls on its own. `"600px"`, the default before, is read as
+#'   `NULL`: boards saved with it scroll with their panel too.
 #' @param search Show the search input.
 #' @param sortable Allow click-to-sort on the column headers. `FALSE` freezes
 #'   the table in the configured `sort_by` order -- for exhibits whose row
@@ -118,6 +122,11 @@
 #' @param drill Column a row click filters on. The emitted filter is the same
 #'   categorical contract as [new_chart_block()], so existing filter links
 #'   compose.
+#' @param script,values Prepare script, as in [new_chart_block()]: R code run
+#'   on the incoming rows before the table is built, whose top assignments
+#'   become controls on the card (`x <- value #| label = "..."`). `values`
+#'   holds their current settings. The block's result is the prepared rows,
+#'   filtered by a row click. `{@x}` in a title template names a script value.
 #' @param ctrl_target Character(1), beta. Block id of a value filter block on
 #'   the same board: the drill's claim is ALSO pushed into that block over
 #'   the board's control channel (same feature as the chart and table
@@ -159,7 +168,7 @@ new_summarize_table_block <- function(group = NULL,
                                  sort_by = "value",
                                  sort_dir = "desc",
                                  top_n = NULL,
-                                 max_height = "600px",
+                                 max_height = NULL,
                                  search = TRUE,
                                  sortable = TRUE,
                                  axis = TRUE,
@@ -173,6 +182,12 @@ new_summarize_table_block <- function(group = NULL,
                                    "blockr.viz.default_caption"
                                  ),
                                  drill = NULL,
+                                 # The prepare step, as on the chart block:
+                                 # R code run on the incoming rows before
+                                 # the table is built; its top assignments
+                                 # become controls on the card.
+                                 script = NULL,
+                                 values = list(),
                                  ctrl_target = "",
                                  ctrl_table = "",
                                  # Runtime filter transport (NOT creation-time
@@ -199,6 +214,12 @@ new_summarize_table_block <- function(group = NULL,
   drill <- chr_state(drill)
   filter_column <- chr_state(filter_column)
   filter_values <- null_state(filter_values)
+  script <- cb_script_text(script)
+  values <- if (is.list(values)) values else list()
+  # LEGACY: the old default. Every board saved before the table scrolled with
+  # its panel carries it, not a choice anyone made.
+  max_height <- chr_state(max_height)
+  if (identical(max_height, "600px")) max_height <- NULL
   cols <- chr_vec_state(cols)
   fields <- chr_vec_state(fields)
   # The summarize table groups by `by`; the ranked bar by `group` (+ `parent`).
@@ -294,9 +315,42 @@ new_summarize_table_block <- function(group = NULL,
         # A composer table (or anything with an as_annotated_df method) is
         # coerced once, like the table block does, so such inputs connect
         # without an explicit conversion step.
-        ann_data <- shiny::reactive({
+        raw_ann <- shiny::reactive({
           d <- data()
           if (is.data.frame(d)) d else as_annotated_df(d)
+        })
+
+        # --- prepare script ------------------------------------------------
+        # The chart block's step (R/prepare-apply.R), as the heatmap uses it:
+        # the script runs on the input and the table is built from what it
+        # returns. Specs keep their last good value while the data is
+        # momentarily gone, or a hidden panel would flip the compiled script.
+        r_script <- shiny::reactiveVal(script)
+        r_values <- shiny::reactiveVal(values)
+        r_parsed <- shiny::reactive(cb_parse(r_script()))
+        last_specs <- new.env(parent = emptyenv())
+        last_specs$value <- list()
+        r_specs <- shiny::reactive({
+          d <- tryCatch(raw_ann(), error = function(e) NULL)
+          parsed <- r_parsed()
+          if (is.null(d) && length(last_specs$value)) {
+            return(last_specs$value)
+          }
+          out <- cb_specs(parsed, d)
+          if (!identical(out, last_specs$value)) last_specs$value <- out
+          last_specs$value
+        })
+        r_prepared <- shiny::reactive({
+          dd_prepare_run(raw_ann(), r_parsed(), r_specs(), r_values())
+        })
+        # What the table is built from. A failed script leaves an empty frame
+        # with the input's columns, so the error reaches the card and the
+        # gear instead of a blank block.
+        ann_data <- shiny::reactive({
+          prep <- r_prepared()
+          if (is.null(prep$error)) return(prep$data)
+          d <- tryCatch(raw_ann(), error = function(e) NULL)
+          if (is.data.frame(d)) d[0, , drop = FALSE] else NULL
         })
 
         # Auto-tier title sources: the input's own display attributes.
@@ -320,12 +374,17 @@ new_summarize_table_block <- function(group = NULL,
         # the sentence. Resolved against the block's input, which carries the
         # filter trail `{filters}` reads.
         title_args <- shiny::reactive({
-          rank_title_args(list(
-            by = r_by(), group = r_group(), parent = r_parent(),
-            value = r_value(), func = r_func(), id_var = r_id_var(),
-            color = r_color(), facet = r_facet(), sort_by = r_sort_by(),
-            top_n = r_top_n(), drill = r_drill()
-          ))
+          # The prepare script's declared values are settings too, named in a
+          # template by their variable: `{@min_patients}` (chart parity).
+          script_title_args(
+            rank_title_args(list(
+              by = r_by(), group = r_group(), parent = r_parent(),
+              value = r_value(), func = r_func(), id_var = r_id_var(),
+              color = r_color(), facet = r_facet(), sort_by = r_sort_by(),
+              top_n = r_top_n(), drill = r_drill()
+            )),
+            r_specs(), r_values()
+          )
         })
         r_titles <- shiny::reactive({
           d <- tryCatch(ann_data(), error = function(e) NULL)
@@ -357,7 +416,11 @@ new_summarize_table_block <- function(group = NULL,
             # A named list, so it arrives as an object (chart-block.R).
             title_arg_values = lapply(
               stats::setNames(nm = names(a)), arg_token_value, args = a
-            )
+            ),
+            # Every setting the text names: a script value the sentence
+            # names is a word, so the control strip leaves it out.
+            sentence_args = sentence_args(parts$title, parts$subtitle,
+                                          parts$caption)
           )
         })
 
@@ -393,6 +456,18 @@ new_summarize_table_block <- function(group = NULL,
           if (identical(act$action, "config")) {
             key <- as.character(act$param %||% "")[1L]
             if (!nzchar(key)) return()
+            if (identical(key, "script")) {
+              # Committed on blur or Apply, never per keystroke.
+              r_script(cb_script_text(as.character(act$value %||% "")))
+              return()
+            }
+            if (startsWith(key, "sv_")) {
+              # A script value, read against the declared type.
+              sv <- dd_script_values(stats::setNames(list(act$value), key),
+                                     r_specs(), r_values())
+              if (!identical(sv, r_values())) r_values(sv)
+              return()
+            }
             if (!key %in% c("search", "sortable", "axis", "download") &&
                   is.null(setters[[key]])) return()
             val <- act$value
@@ -599,7 +674,17 @@ new_summarize_table_block <- function(group = NULL,
               # the table as drawn, at full height, instead of a server
               # repaint that has to match it.
               capture_export = canvas_capture_on(),
-              capture_ratio = canvas_capture_ratio()
+              capture_ratio = canvas_capture_ratio(),
+              # The prepare script: its text for the gear's editor, what it
+              # declared (the controls, in the gear engine's vocabulary),
+              # its error, and each control's current value (sv_*).
+              script = r_script() %||% "",
+              script_inputs = dd_script_roles(r_specs()),
+              script_error = r_prepared()$error,
+              sentence_args = as.list(tt$sentence_args),
+              # Named sv_<name>; rank-table.js spreads them onto the gear's
+              # config, where the engine's script roles read them.
+              script_values = dd_script_cfg(r_specs(), r_values())
             ),
             group = r_group(), value = r_value(), func = r_func(),
             id_var = r_id_var(), parent = r_parent(), color = r_color(),
@@ -690,6 +775,7 @@ new_summarize_table_block <- function(group = NULL,
               sortable = r_sortable(),
               title = r_title(), subtitle = r_subtitle(),
               caption = r_caption(),
+              .title_args = title_args(),
               scale_map = board_scale_map()
             )
           ))
@@ -799,12 +885,18 @@ new_summarize_table_block <- function(group = NULL,
             vals <- filter_members(col, vals) %||% vals
             # Display-only until a row is clicked: downstream receives the
             # input untouched. The expr must be a call, so identity() wraps it.
-            if (is.null(col) || !length(vals)) {
-              return(quote(identity(data)))
+            ex <- if (is.null(col) || !length(vals)) {
+              quote(identity(data))
+            } else {
+              bquote(
+                dplyr::filter(data, .data[[.(col)]] %in% .(as.character(vals)))
+              )
             }
-            bquote(
-              dplyr::filter(data, .data[[.(col)]] %in% .(as.character(vals)))
-            )
+            # The prepare script wraps the filter (chart parity): a click
+            # filters the source rows, and downstream receives what the table
+            # was built from, filtered.
+            sx <- cb_expr(r_parsed(), r_specs(), r_values(), slot = TRUE)
+            if (is.null(sx)) ex else dd_splice_slot(sx, ex)
           }),
           # Every constructor formal needs a state entry: blockr.core
           # serializes from formals and restores by re-calling the
@@ -823,7 +915,8 @@ new_summarize_table_block <- function(group = NULL,
             title = r_title, subtitle = r_subtitle, caption = r_caption,
             drill = r_drill, ctrl_target = r_ctrl_target,
             ctrl_table = r_ctrl_table, filter_type = r_filter_type,
-            filter_column = r_filter_column, filter_values = r_filter_values
+            filter_column = r_filter_column, filter_values = r_filter_values,
+            script = r_script, values = r_values
           )
         )
       })
@@ -853,7 +946,11 @@ new_summarize_table_block <- function(group = NULL,
       "group", "value", "id_var", "summaries", "by",
       "parent", "color", "facet",
       "cols", "fields", "top_n", "title", "subtitle", "caption", "drill",
-      "ctrl_target", "ctrl_table", "filter_column", "filter_values"
+      "max_height",
+      "ctrl_target", "ctrl_table", "filter_column", "filter_values",
+      # NULL / empty until a board writes a prepare script; a NULL outside
+      # this list wedges the block.
+      "script", "values"
     ),
     external_ctrl = c(
       "group", "value", "func", "id_var", "summaries", "by", "facet_layout",
@@ -863,7 +960,10 @@ new_summarize_table_block <- function(group = NULL,
       "subtitle",
       "caption",
       "drill",
-      "ctrl_target", "ctrl_table"
+      "ctrl_target", "ctrl_table",
+      # Externally controllable (MCP, restore) but, as on the chart block,
+      # not in the registry's argument spec: the assistant never sees it.
+      "script", "values"
     ),
     ...
   )
@@ -1097,14 +1197,17 @@ rank_arguments <- function() {
       paste0(
         "Optional cap on the number of ranked rows, with a visible fold row ",
         "for what falls below the cut. Leave unset for the default ",
-        "behaviour: every row rendered, scrolling at `max_height`. Set it ",
+        "behaviour: every row rendered, scrolling with the panel. Set it ",
         "only for report exhibits, where there is no scrollbar."
       ),
       example = 10L,
       type = arg_integer()
     ),
     max_height = new_arg_spec(
-      "CSS max-height of the scroll container.",
+      paste0(
+        "Leave unset: the table scrolls with its panel. A CSS length ",
+        "puts it in a box of that height instead."
+      ),
       example = "600px",
       type = arg_string()
     ),

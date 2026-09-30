@@ -30,10 +30,8 @@ new_chart_block(
   line_width_mult = 1,
   dot_size_mult = 1,
   connect = "monotone",
-  vlines = NULL,
-  hlines = NULL,
-  ref_x = NULL,
-  ref_y = NULL,
+  value_lines = NULL,
+  x_lines = NULL,
   smoother = "none",
   identity_line = FALSE,
   box_points = "none",
@@ -170,16 +168,14 @@ observations, jump at the named point -- dose levels, on/off states).
 One control replacing the old \code{step} + \code{smooth} pair. Consumed by the JS
 renderer.}
 
-\item{vlines, hlines}{Helper lines at fixed positions: numeric vectors,
-each entry drawing one dashed guide line -- \code{vlines} VERTICAL (at that x),
-\code{hlines} HORIZONTAL (at that y). Plain numbers, never column names (a
-Hy's-Law eDish cross is \verb{vlines = 3, hlines = 2}). Default \code{NULL} (none).}
-
-\item{ref_x, ref_y}{LEGACY aliases for \code{vlines} / \code{hlines}, mapped on
-construction. Kept as formals so boards saved before the rename restore
-(block state restores through the constructor). Do not use in new code:
-the names said neither "line" nor which way it ran, and they were the only
-array-valued args in the registry that were not plural.}
+\item{value_lines, x_lines}{Helper lines at fixed positions: numeric
+vectors, each entry drawing one dashed guide line. \code{value_lines} run
+across the VALUE axis: y on a scatter or line chart, and the value axis
+of a bar, waterfall, boxplot or point range in either orientation (a
+target, a threshold). On a percent axis they are percentages (\code{50} is
+half). \code{x_lines} run across a numeric x axis, so scatter and line only.
+Plain numbers, never column names (a Hy's-Law eDish cross is
+\verb{x_lines = 3, value_lines = 2}). Default \code{NULL} (none).}
 
 \item{smoother}{Trend overlay for scatter charts: one of \code{"none"}
 (default), \code{"lm"}, or \code{"loess"}. Fit per \code{color}/\code{series} group, and per
@@ -238,7 +234,7 @@ same window -- so set it for repeated-measures data.}
 
 \item{ref_hi, ref_lo}{Column names holding an upper / lower reference
 limit, drawn as dashed lines (e.g. \code{"ANRHI"} / \code{"ANRLO"}). Unlike
-\code{hlines}, which takes values, these name a COLUMN: an ADaM reference
+\code{value_lines}, which takes values, these name a COLUMN: an ADaM reference
 range is per-record and varies by lab, sex and age, so the block reduces
 the column to its median and the label carries the spread it reduced
 from ("ANRHI 34 (32-43)"). \code{NULL} (default) or \code{""} draws nothing. A

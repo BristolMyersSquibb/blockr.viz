@@ -30,8 +30,8 @@ chart_expr(
   lo = NULL,
   hi = NULL,
   step = NULL,
-  vlines = NULL,
-  hlines = NULL,
+  value_lines = NULL,
+  x_lines = NULL,
   line_width_mult = 1,
   dot_size_mult = 1,
   title = NULL,
@@ -76,7 +76,9 @@ as in \code{\link[=new_chart_block]{new_chart_block()}}.}
 \item{step}{Deprecated spelling of the step modes (\code{"start"} /
 \code{"middle"} / \code{"end"}); folded into \code{connect} when that is unset.}
 
-\item{vlines, hlines}{Numeric helper-line positions.}
+\item{value_lines, x_lines}{Numeric helper-line positions, as in
+\code{\link[=new_chart_block]{new_chart_block()}}: \code{value_lines} across the value axis (bar and
+boxplot too), \code{x_lines} across a numeric x (scatter and line).}
 
 \item{line_width_mult, dot_size_mult}{Size multipliers.}
 

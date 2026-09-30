@@ -297,3 +297,19 @@ test_that("an empty label(@arg) is still that argument's slot", {
   p2 <- block_title_parts("max[, {n_distinct(@facet)} levels]", d, args = list())
   expect_equal(attr(p2, "offers"), character())
 })
+
+test_that("reference lines print as a list and drop their clause when unset", {
+  d <- data.frame(a = 1)
+  tpl <- "Count[, target {@value_lines}]"
+
+  set <- title_template_parts(tpl, d,
+                              args = list(value_lines = num_list_text(c(40, 32.5))))
+  expect_identical(paste0(vapply(set, `[[`, "", "text"), collapse = ""),
+                   "Count, target 40, 32.5")
+  expect_identical(set[[2L]]$arg, "value_lines")
+
+  unset <- title_template_parts(tpl, d,
+                                args = list(value_lines = num_list_text(NULL)))
+  expect_identical(unset[[1L]]$text, "Count")
+  expect_identical(attr(unset, "offers"), "value_lines")
+})

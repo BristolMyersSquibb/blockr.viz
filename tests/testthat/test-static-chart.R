@@ -308,3 +308,38 @@ test_that("long category labels wrap rather than turn, and never cut", {
   expect_identical(built(h)$layout$panel_params[[1L]]$y$get_labels(),
                    rev(long))
 })
+
+test_that("value_lines cross the value axis in either orientation", {
+  d <- gg_iris()
+  layer_classes <- function(p) {
+    vapply(p$layers, function(l) class(l$geom)[1L], character(1L))
+  }
+
+  # Bars lie horizontal by default: the value axis is x, so a vertical line.
+  h <- static_chart(d, "bar", group = "Species", value_lines = 100)
+  expect_true("GeomVline" %in% layer_classes(h))
+  expect_false("GeomHline" %in% layer_classes(h))
+  # 100 is past the counts (50 each); the axis stretches to show it.
+  expect_gte(built(h)$layout$panel_params[[1L]]$x.range[2L], 100)
+
+  v <- static_chart(d, "boxplot", group = "Species", value = "Sepal.Width",
+                    value_lines = c(2, 4))
+  expect_true("GeomHline" %in% layer_classes(v))
+  expect_equal(built(v)$data[[which(layer_classes(v) == "GeomHline")]]$yintercept,
+               c(2, 4))
+
+  # A percent axis runs 0..1; the typed number is a percentage.
+  pct <- static_chart(d, "bar", group = "Species", color = "Grp",
+                      bar_mode = "percent", value_lines = 50)
+  vl <- built(pct)$data[[which(layer_classes(pct) == "GeomVline")]]
+  expect_equal(vl$xintercept, 0.5)
+  # Labelled with what was typed, not the axis unit.
+  tx <- built(pct)$data[[which(layer_classes(pct) == "GeomText")]]
+  expect_equal(tx$label, "50%")
+
+  # Scatter keeps both: x_lines vertical, value_lines horizontal.
+  s <- static_chart(d, "scatter", x = "Sepal.Length", y = "Sepal.Width",
+                    x_lines = 6, value_lines = 3)
+  expect_setequal(intersect(layer_classes(s), c("GeomVline", "GeomHline")),
+                  c("GeomVline", "GeomHline"))
+})

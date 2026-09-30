@@ -152,9 +152,13 @@ test_that("the colour dimension reaches every lane mark, dot included", {
   # The split bar scales on its own column max, not the prep-level bar_max
   # (which is 0 on this path) -- otherwise every segment ships width 0.
   expect_true(max(unlist(m$cols[[2L]]$seg), na.rm = TRUE) > 0)
-  # Segments carry the level colours, and they sum to the bar's value.
+  # Segments carry the level colours, and they sum to the bar's count (the
+  # sort value is its percentage of N: a count column carries a denominator).
   expect_identical(m$cols[[2L]]$fills, p$plan[[2L]]$fills)
-  expect_equal(Reduce(`+`, m$cols[[2L]]$segv), m$cols[[2L]]$v)
+  expect_equal(Reduce(`+`, m$cols[[2L]]$segv),
+               as.numeric(p$rows[[p$plan[[2L]]$key]]))
+  expect_equal(m$cols[[2L]]$v, round(as.numeric(p$rows[[p$plan[[2L]]$key]]) /
+                                       p$plan[[2L]]$denom * 100, 4L))
 
   # A group whose rows are all ONE level draws that level alone: grouping by
   # subject (every subject has one SEX) is a single bar in its own colour,
@@ -188,7 +192,9 @@ test_that("a split bar only stacks an additive measure", {
                   col = "DUR", show = "bar"))
   pc <- lane_prepare_summaries(ae, by = "TERM", summaries = cs, color = "ARM")
   expect_identical(pc$plan[[1L]]$mode, "stacked")
-  expect_equal(pc$plan[[1L]]$dmax, max(pc$rows[[pc$plan[[1L]]$key]]))
+  # Its domain is in percent of N, the unit its bars are drawn in.
+  expect_equal(pc$plan[[1L]]$dmax,
+               max(pc$rows[[pc$plan[[1L]]$key]]) / pc$plan[[1L]]$denom * 100)
 })
 
 test_that("the column axis prints the domain once, on glyph columns only", {
@@ -392,11 +398,14 @@ test_that("facet is the SUMMARY's mapping: only mapped columns repeat", {
   p <- rank_prepare(ae, group = NULL, by = "TERM", summaries = S)
   # Two copies of the faceted column, one of the plain one.
   expect_length(p$plan, 3L)
-  # With one facet column across the table the level alone labels a copy,
-  # the summary name moving to the sub-label.
+  # With one facet column across the table the level alone labels a copy.
+  # A count's sub-label is its N (the arm's subjects), as on the ranked-bar
+  # surface's facets.
   expect_identical(vapply(p$plan, function(x) x$label, ""),
                    c("Active", "Placebo", "Rows"))
-  expect_identical(p$plan[[1L]]$sub_label, "Subjects")
+  expect_identical(p$plan[[1L]]$sub_label,
+                   paste0("N = ", dplyr::n_distinct(
+                     ae$USUBJID[ae$ARM == "Active"])))
   # One shared facet column, so the by-level reading is still available.
   expect_identical(p$facet, "ARM")
 })
@@ -830,4 +839,35 @@ test_that("a numeric grouping column orders numerically, not as text", {
   expect_identical(rank_levels(c(2, 10, 1, 100)), c("1", "2", "10", "100"))
   expect_identical(rank_levels(as.Date(c("2024-01-10", "2024-01-02"))),
                    c("2024-01-02", "2024-01-10"))
+})
+
+test_that("a count column carries its N and draws no row for a missing group", {
+  ae <- sum_fixture()
+  # The population join's shape: one row per subject without a record, the
+  # grouping column NA.
+  extra <- ae[1:2, ]
+  extra$TERM <- NA
+  extra$USUBJID <- c("NEW-1", "NEW-2")
+  extra$ARM <- c("Active", "Placebo")
+  pop <- rbind(ae, extra)
+  S <- list(
+    list(type = "simple", name = "Total", func = "count_distinct",
+         col = "USUBJID", show = "bar"),
+    list(type = "simple", name = "Patients", func = "count_distinct",
+         col = "USUBJID", show = "bar", facet = "ARM")
+  )
+  p <- rank_prepare(pop, group = NULL, by = "TERM", summaries = S)
+  expect_false(anyNA(p$rows$.label))
+  n_all <- dplyr::n_distinct(pop$USUBJID)
+  expect_identical(p$plan[[1L]]$sub_label, paste0("N = ", n_all))
+  expect_equal(p$plan[[1L]]$val_denom, n_all)
+  expect_equal(p$plan[[2L]]$val_denom,
+               dplyr::n_distinct(pop$USUBJID[pop$ARM == "Active"]))
+  # The label reads "n (x%)".
+  m <- rank_cells(p)
+  expect_true(all(grepl("^\\(\\d+%\\)$", m$cols[[1L]]$pct[nzchar(m$cols[[1L]]$pct)])))
+  # Two faceted columns keep their names beside N.
+  S2 <- c(S[2L], list(modifyList(S[[2L]], list(name = "Again"))))
+  p2 <- rank_prepare(pop, group = NULL, by = "TERM", summaries = S2)
+  expect_match(p2$plan[[1L]]$sub_label, "^Patients · N = ")
 })

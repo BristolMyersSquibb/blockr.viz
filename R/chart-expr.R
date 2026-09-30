@@ -85,8 +85,8 @@ chart_expr <- function(var = "data",
                        lo = NULL,
                        hi = NULL,
                        step = NULL,
-                       vlines = NULL,
-                       hlines = NULL,
+                       value_lines = NULL,
+                       x_lines = NULL,
                        line_width_mult = 1,
                        dot_size_mult = 1,
                        title = NULL,
@@ -142,7 +142,7 @@ chart_expr <- function(var = "data",
     # Panels per row: NULL (auto) leaves facet_wrap() its own grid, and the
     # label geometry below its square-ish guess.
     facet_cols = facet_cols_state(facet_cols),
-    vlines = vlines, hlines = hlines,
+    value_lines = value_lines, x_lines = x_lines,
     line_width_mult = line_width_mult %||% 1,
     dot_size_mult = dot_size_mult %||% 1
   )
@@ -768,6 +768,10 @@ ce_bar <- function(st) {
   layers <- list(do.call(ce_call, c(list("ggplot2::geom_col"), col_args), quote = TRUE))
 
   pct <- identical(st$bar_mode, "percent") && !is.null(st$color)
+
+  layers <- c(layers, ce_helper_lines(
+    st, horiz, fraction = pct || identical(st$func, "pct_distinct")
+  ))
   pct_labels <- quote(function(v) paste0(round(100 * v), "%"))
 
   # A turned axis carries its own label text: cut to the cap, and baked as
@@ -878,6 +882,8 @@ ce_boxplot <- function(st) {
       position = pos, size = 0.7, alpha = 0.45, color = "#4b5563"
     )))
   }
+
+  layers <- c(layers, ce_helper_lines(st, horiz))
 
   turned <- ce_turned_labels(st, horiz)
   cat_labels <- if (is.null(turned)) ce_axis_labels(st) else ce_vec(turned)
@@ -1031,25 +1037,49 @@ ce_line <- function(st) {
   )
 }
 
-ce_helper_lines <- function(st) {
+# `value_lines` cross the value axis, which is x on a horizontal bar or
+# boxplot (`horiz`); `x_lines` cross a numeric x. A percent axis runs 0..1
+# while the state holds percentages (`fraction`). Same style as
+# gg_helper_lines(): ink long dash at 55%, the value at the line's end.
+ce_helper_lines <- function(st, horiz = FALSE, fraction = FALSE) {
 
-  vlines <- suppressWarnings(as.numeric(unlist(st$vlines %||% list())))
-  hlines <- suppressWarnings(as.numeric(unlist(st$hlines %||% list())))
-  vlines <- vlines[is.finite(vlines)]
-  hlines <- hlines[is.finite(hlines)]
+  num <- function(v) vapply(v, gg_comma, character(1L))
+  x_lines <- gg_line_values(st$x_lines)
+  value_lines <- gg_line_values(st$value_lines)
+  x_text <- num(x_lines)
+  value_text <- num(value_lines)
+  if (fraction) {
+    value_text <- paste0(value_text, rep("%", length(value_text)))
+    value_lines <- value_lines / 100
+  }
+
+  if (horiz) {
+    x_lines <- c(x_lines, value_lines)
+    x_text <- c(x_text, value_text)
+    value_lines <- numeric()
+  }
+
+  line <- function(fn, ...) {
+    ce_call(fn, ..., linetype = "84", color = "#111827", alpha = 0.55)
+  }
+  label <- function(...) {
+    ce_call("ggplot2::annotate", "text", ..., color = "#6b7280", size = 2.6)
+  }
 
   c(
-    if (length(vlines)) {
-      list(ce_call(
-        "ggplot2::geom_vline", xintercept = ce_vec(vlines),
-        linetype = "dashed", color = "#9ca3af"
-      ))
+    if (length(x_lines)) {
+      list(
+        line("ggplot2::geom_vline", xintercept = ce_vec(x_lines)),
+        label(x = ce_vec(x_lines), y = Inf, label = ce_vec(x_text),
+              hjust = -0.2, vjust = 1.3)
+      )
     },
-    if (length(hlines)) {
-      list(ce_call(
-        "ggplot2::geom_hline", yintercept = ce_vec(hlines),
-        linetype = "dashed", color = "#9ca3af"
-      ))
+    if (length(value_lines)) {
+      list(
+        line("ggplot2::geom_hline", yintercept = ce_vec(value_lines)),
+        label(x = Inf, y = ce_vec(value_lines), label = ce_vec(value_text),
+              hjust = 1.1, vjust = -0.4)
+      )
     }
   )
 }
