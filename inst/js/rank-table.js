@@ -2072,8 +2072,22 @@
       cfg = s3.cfg;
       cols = s3.cols;
     };
+    // The strip is decided by what the sentence names and what the script
+    // declares. The gear writes none of those keys, so they are copied onto
+    // its config object even while it is open (replacing the object would
+    // orphan the open controls): a word added to the subtitle in the gear
+    // takes its control off the strip at once, a word removed puts it back.
+    var BAND_KEYS = ["sentence_args", "script_inputs", "script_error"];
     root._rankBand = function () {
-      sync();
+      if (pop.classList.contains("blockr-settings--open")) {
+        var t = root.querySelector("table.blockr-rank-table");
+        if (t) {
+          var fresh = readGearState(t).cfg;
+          BAND_KEYS.forEach(function (k) { cfg[k] = fresh[k]; });
+        }
+      } else {
+        sync();
+      }
       engine.renderBand();
     };
 
@@ -2124,6 +2138,8 @@
     function closePop() {
       pop.classList.remove("blockr-settings--open");
       btn.setAttribute("aria-expanded", "false");
+      // Back to the server's state for everything the gear held.
+      if (root._rankBand) root._rankBand();
     }
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
