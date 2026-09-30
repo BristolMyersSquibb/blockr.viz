@@ -34,8 +34,8 @@ static_chart(
   hi = NULL,
   connect = "monotone",
   step = NULL,
-  vlines = NULL,
-  hlines = NULL,
+  value_lines = NULL,
+  x_lines = NULL,
   line_width_mult = 1,
   dot_size_mult = 1,
   title = NULL,
@@ -94,7 +94,9 @@ outer rule (\code{NULL} = \code{"tukey"}; also \code{"min_max"}, \code{"p10_p90"
 \item{step}{Deprecated spelling of the step modes (\code{"start"} /
 \code{"middle"} / \code{"end"}); folded into \code{connect} when that is unset.}
 
-\item{vlines, hlines}{Numeric helper-line positions.}
+\item{value_lines, x_lines}{Numeric helper-line positions, as in
+\code{\link[=new_chart_block]{new_chart_block()}}: \code{value_lines} across the value axis (bar and
+boxplot too), \code{x_lines} across a numeric x (scatter and line).}
 
 \item{line_width_mult, dot_size_mult}{Size multipliers.}
 
@@ -130,8 +132,8 @@ the same level ordering (factor levels, else sorted unique), and a board
 scale map (arm colors) resolves through the same blockr.theme resolver.
 
 The look mirrors the canvas chart, constant for constant (chart.js is the
-source of truth): 11px \verb{#666} tick labels, dashed \verb{#f3f4f6} gridlines on
-the value axis only, \verb{#ccc} axis lines, the category-first-at-the-top
+source of truth): 11px \verb{#6b7280} tick labels, dashed \verb{#e5e7eb} gridlines on
+the value axis only, \verb{#d1d5db} axis lines, the category-first-at-the-top
 horizontal layout, 60\%-band bars with no rounding and no value labels,
 boxes filled at the series color over a full-strength border, monotone
 interpolation on lines, and the bottom-centered legend band.

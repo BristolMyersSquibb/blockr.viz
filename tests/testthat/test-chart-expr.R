@@ -293,3 +293,25 @@ test_that("the compiled chart wraps the same labels the renderer does", {
                      data = short, qualify = TRUE)
   expect_no_match(chart_code(flat), "angle", fixed = TRUE)
 })
+
+test_that("value_lines compile onto the value axis and match the renderer", {
+  d <- ce_iris()
+  has <- function(ex, fn) grepl(fn, paste(deparse(ex), collapse = ""), fixed = TRUE)
+
+  h <- chart_expr("chart1", "bar", group = "Species", value_lines = 40,
+                  data = d, qualify = TRUE)
+  expect_true(has(h, "geom_vline(xintercept = 40"))
+  expect_no_error(built(ce_eval(h, d)))
+
+  v <- chart_expr("chart1", "boxplot", group = "Species",
+                  value = "Sepal.Width", value_lines = 3, data = d,
+                  qualify = TRUE)
+  expect_true(has(v, "geom_hline(yintercept = 3"))
+
+  pct <- chart_expr("chart1", "bar", group = "Species", color = "Grp",
+                    bar_mode = "percent", value_lines = 50, data = d,
+                    qualify = TRUE)
+  expect_true(has(pct, "geom_vline(xintercept = 0.5"))
+  expect_true(has(pct, "label = \"50%\""))
+  expect_no_error(built(ce_eval(pct, d)))
+})

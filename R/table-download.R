@@ -11,13 +11,13 @@
 # thing that differs: which frame to write, and under which titles.
 
 #' The download glyph. Inline SVG rather than an icon font, so the control
-#' carries no dependency and inherits `currentColor` from the toolbar.
+#' carries no dependency and inherits `currentColor` from the tool.
 #' @noRd
 dt_dl_icon <- function() {
   htmltools::HTML(paste0(
-    '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ',
-    'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" ',
-    'stroke-linejoin="round">',
+    '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" ',
+    'fill="none" stroke="currentColor" stroke-width="1.6" ',
+    'stroke-linecap="round" stroke-linejoin="round">',
     '<path d="M8 2.5 V10 M4.8 7 L8 10.2 L11.2 7"/>',
     '<path d="M2.5 11.5 V12.8 A1.2 1.2 0 0 0 3.7 14 H12.3 ',
     'A1.2 1.2 0 0 0 13.5 12.8 V11.5"/></svg>'
@@ -36,64 +36,54 @@ dt_dl_icon <- function() {
 #' @noRd
 dt_dl_specs <- function() {
   specs <- list(
-    list(id = "dl_xlsx", ext = "xlsx", label = "Excel (.xlsx)",
+    list(id = "dl_xlsx", ext = "xlsx", label = "Excel",
          ok = dt_has_openxlsx()),
-    list(id = "dl_html", ext = "html", label = "Web page (.html)",
+    list(id = "dl_html", ext = "html", label = "Web page",
          ok = TRUE),
-    list(id = "dl_pptx", ext = "pptx", label = "PowerPoint (.pptx)",
+    list(id = "dl_pptx", ext = "pptx", label = "PowerPoint",
          ok = dt_has_officer())
   )
   Filter(function(s) isTRUE(s$ok), specs)
 }
 
-#' One download link.
+#' The download control of the table, the summarize table and the chart.
 #'
-#' Hand-built (the `shiny-download-link` class is what shiny's download
-#' binding attaches to) instead of shiny::downloadButton, so it renders as a
-#' quiet design-system control rather than a stock Bootstrap .btn with a
-#' FontAwesome icon.
+#' One format is a tool that downloads; several are a tool that opens an
+#' action menu with one row per format, the extension as meta text (design
+#' system, Menus). Both are blockr.ui's controls, so every block shows the
+#' same 26px tool and the same menu. `specs` are lists of `id` (the
+#' download handler's output id), `ext` and `label`.
 #' @noRd
-dt_dl_link <- function(ns, spec, menu = FALSE) {
-  htmltools::tags$a(
-    id = ns(spec$id),
-    class = paste(if (menu) "blockr-dl-item" else "blockr-dl-xlsx",
-                  "shiny-download-link"),
-    href = "",
-    target = "_blank",
-    download = NA,
-    title = paste0("Download as ", spec$label),
-    `aria-label` = paste0("Download as ", spec$label),
-    if (menu) spec$label else dt_dl_icon()
-  )
-}
-
-#' One writable format is a button; several are a menu. Both are the same 30px
-#' icon control, so a machine with officer installed does not get a
-#' differently-shaped toolbar. The button just gains somewhere to open.
-#'
-#' `<details>` rather than a scripted popover: the open / close behaviour, the
-#' keyboard handling and the focus order are the browser's, so the menu needs
-#' no JS of its own and cannot fall out of step with the table's own script.
-#' @noRd
-dt_dl_ui <- function(ns, specs) {
+dl_control_ui <- function(ns, specs) {
   if (!length(specs)) {
     return(NULL)
   }
   if (length(specs) == 1L) {
-    return(dt_dl_link(ns, specs[[1L]]))
+    return(dl_tool(ns, specs[[1L]]))
   }
-  htmltools::tags$details(
-    class = "blockr-dl-menu",
-    htmltools::tags$summary(
-      class = "blockr-dl-xlsx",
-      title = "Download",
-      `aria-label` = "Download",
-      dt_dl_icon()
+  do.call(blockr.ui::action_menu, c(
+    list(blockr.ui::tool_button(dt_dl_icon(), "Download")),
+    lapply(specs, function(s) {
+      blockr.ui::menu_item(
+        shiny::downloadLink(ns(s$id), s$label),
+        meta = paste0(".", s$ext)
+      )
+    })
+  ))
+}
+
+#' A tool that downloads one format. blockr.ui's tool, as a Shiny download
+#' link: a download needs an `<a>`, which [blockr.ui::tool_button()] is not.
+#' @noRd
+dl_tool <- function(ns, spec) {
+  tip <- paste0("Download as ", spec$label, " (.", spec$ext, ")")
+  htmltools::attachDependencies(
+    shiny::downloadLink(
+      ns(spec$id), dt_dl_icon(), class = "blockr-tool",
+      `aria-label` = tip, `data-blockr-tooltip` = tip
     ),
-    htmltools::tags$div(
-      class = "blockr-dl-menu-list", role = "menu",
-      lapply(specs, function(s) dt_dl_link(ns, s, menu = TRUE))
-    )
+    htmltools::findDependencies(blockr.ui::controls_dep()),
+    append = TRUE
   )
 }
 
@@ -148,7 +138,7 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
     if (!is.null(enabled) && !isTRUE(enabled())) list() else dt_dl_specs()
   })
 
-  session$output[[slot_id]] <- shiny::renderUI(dt_dl_ui(ns, specs()))
+  session$output[[slot_id]] <- shiny::renderUI(dl_control_ui(ns, specs()))
 
   # One handler per format, registered whether or not the format is currently
   # offered: what is installed does not change inside a session, and a handler

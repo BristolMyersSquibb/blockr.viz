@@ -384,3 +384,21 @@ test_that("stub_header_rows() aligns labels to the header rows", {
                list(label = c("SOC", "PT"), bold = c(TRUE, FALSE)))
   expect_equal(stub_header_rows("x", 2L)$label, c("", ""))
 })
+
+test_that("numbers are right-aligned, spanners centred, the stub left", {
+  skip_if_not_installed("flextable")
+
+  tbl <- summary_table(transform(iris, Sex = rep(c("F", "M"), 75)),
+                       vars = "Sepal.Length", by = c("Species", "Sex"))
+  ft <- static_table(tbl, title = "", subtitle = "", caption = "")
+  body_align <- ft$body$styles$pars$text.align$data
+  hdr_align <- ft$header$styles$pars$text.align$data
+  n <- ncol(body_align)
+
+  expect_true(all(body_align[, 1L] == "left"))
+  expect_true(all(body_align[, -1L] == "right"))
+  leaf <- attr(ft, "leaf_row")
+  expect_true(all(hdr_align[leaf, -1L] == "right"))
+  expect_true(all(hdr_align[leaf - 1L, -1L] == "center"))
+  expect_equal(n, flextable::ncol_keys(ft))
+})

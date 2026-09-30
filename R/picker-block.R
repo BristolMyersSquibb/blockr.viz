@@ -217,12 +217,7 @@ new_picker_block <- function(
     function(id) {
       ns <- shiny::NS(id)
       shiny::tagList(
-        # Select component + shared block CSS from blockr.dplyr (exported
-        # helpers); settings band from the LOCAL copy -- blockr.viz is the
-        # canonical source of settings-band.css/js (see viz-block-dep.R).
-        blockr.dplyr::blockr_select_dep(),
-        blockr.dplyr::blockr_blocks_css_dep(),
-        settings_band_dep(),
+        blockr.ui::controls_dep(),
         shiny::div(
           class = "block-container blockr-picker",
           shiny::div(
@@ -231,7 +226,8 @@ new_picker_block <- function(
               id = ns("gear"),
               type = "button",
               class = "blockr-gear-btn",
-              title = "Pickers"
+              `aria-label` = "Pickers",
+              `data-blockr-tooltip` = "Settings"
             )
           ),
           shiny::div(
@@ -640,7 +636,9 @@ picker_block_assets <- function(ns) {
         var b = document.createElement('button');
         b.type = 'button';
         b.className = 'pk-row-move pk-row-move--' + dir;
-        b.title = dir === 'up' ? 'Move picker up' : 'Move picker down';
+        var tip = dir === 'up' ? 'Move picker up' : 'Move picker down';
+        b.setAttribute('data-blockr-tooltip', tip);
+        b.setAttribute('aria-label', tip);
         b.innerHTML = Blockr.icons.chevron;
         if (to < 0 || to >= state.pickers.length) {
           b.disabled = true;
@@ -757,7 +755,8 @@ picker_block_assets <- function(ns) {
           var rm = document.createElement('button');
           rm.type = 'button';
           rm.className = 'blockr-row-remove';
-          rm.title = 'Remove picker';
+          rm.setAttribute('data-blockr-tooltip', 'Remove picker');
+          rm.setAttribute('aria-label', 'Remove picker');
           rm.innerHTML = Blockr.icons.x;
           rm.addEventListener('click', function () {
             if (state.pickers.length <= 1) return;

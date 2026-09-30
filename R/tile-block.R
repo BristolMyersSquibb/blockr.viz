@@ -449,32 +449,14 @@ tk_group <- function(v) {
 
 #' HTML dependency for the tile renderer.
 #'
-#' Mirrors the table block dependency: the shared blockr.dplyr CSS/JS (gear,
-#' popover, Blockr.Select, icons), the drilldown-chart popover CSS (the dd-*
-#' classes the config engine emits), then the shared config engine
-#' (drilldown-config.js) which must load before the tile JS.
+#' Mirrors the table block dependency: blockr.ui's shared controls, the
+#' chart's CSS (the dd-* classes the config engine emits), then the shared
+#' config engine (drilldown-config.js), which must load before the tile JS.
 #' @noRd
 tile_block_dep <- memoise0(function() {
   htmltools::tagList(
-    htmltools::htmlDependency(
-      name = "blockr-blocks-css",
-      version = paste0(utils::packageVersion("blockr.dplyr"), ".3"),
-      src = system.file("css", package = "blockr.dplyr"),
-      stylesheet = c("blockr-blocks.css", "blockr-select.css")
-    ),
-    htmltools::htmlDependency(
-      name = "blockr-select-js",
-      version = paste0(utils::packageVersion("blockr.dplyr"), ".3"),
-      src = system.file("js", package = "blockr.dplyr"),
-      script = c("blockr-core.js", "blockr-select.js")
-    ),
-    htmltools::htmlDependency(
-      name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.viz"), ".26"),
-      src = system.file("css", package = "blockr.viz"),
-      stylesheet = "chart.css"
-    ),
-    settings_band_dep(),
+    blockr.ui::controls_dep(),
+    chart_css_dep(),
     # Shared aggregation vocabulary + gear engine (one dep, one version -- see
     # drilldown_shared_dep()). Before tile-block.js, which reads both globals.
     drilldown_shared_dep(),

@@ -14,8 +14,8 @@
 #' scale map (arm colors) resolves through the same blockr.theme resolver.
 #'
 #' The look mirrors the canvas chart, constant for constant (chart.js is the
-#' source of truth): 11px `#666` tick labels, dashed `#f3f4f6` gridlines on
-#' the value axis only, `#ccc` axis lines, the category-first-at-the-top
+#' source of truth): 11px `#6b7280` tick labels, dashed `#e5e7eb` gridlines on
+#' the value axis only, `#d1d5db` axis lines, the category-first-at-the-top
 #' horizontal layout, 60%-band bars with no rounding and no value labels,
 #' boxes filled at the series color over a full-strength border, monotone
 #' interpolation on lines, and the bottom-centered legend band.
@@ -64,7 +64,9 @@
 #'   `"straight"`, or `"step-start"` / `"step-middle"` / `"step-end"`.
 #' @param step Deprecated spelling of the step modes (`"start"` /
 #'   `"middle"` / `"end"`); folded into `connect` when that is unset.
-#' @param vlines,hlines Numeric helper-line positions.
+#' @param value_lines,x_lines Numeric helper-line positions, as in
+#'   [new_chart_block()]: `value_lines` across the value axis (bar and
+#'   boxplot too), `x_lines` across a numeric x (scatter and line).
 #' @param line_width_mult,dot_size_mult Size multipliers.
 #' @param title,subtitle,caption Title band text; `{token}` templates
 #'   resolve against `data` (same resolver as the app), `NULL` falls back
@@ -119,8 +121,8 @@ static_chart <- function(data,
                      hi = NULL,
                      connect = "monotone",
                      step = NULL,
-                     vlines = NULL,
-                     hlines = NULL,
+                     value_lines = NULL,
+                     x_lines = NULL,
                      line_width_mult = 1,
                      dot_size_mult = 1,
                      title = NULL,
@@ -197,19 +199,20 @@ static_chart <- function(data,
     bar = gg_bar(
       data, group, color, facet, value_col, func, bar_mode, horiz,
       sort_by, sort_dir, count_on, count_col, scale_map, na_group, pct_of,
-      facet_cols
+      facet_cols, value_lines, line_width_mult
     ),
     boxplot = gg_boxplot(
       data, group, color, facet, value_col, box_points, summary, whiskers,
-      horiz, sort_by, sort_dir, count_on, count_col, scale_map, facet_cols
+      horiz, sort_by, sort_dir, count_on, count_col, scale_map, facet_cols,
+      value_lines, line_width_mult
     ),
     scatter = gg_scatter(
-      data, x, y, color, facet, smoother, identity_line, vlines, hlines,
-      line_width_mult, dot_size_mult, scale_map
+      data, x, y, color, facet, smoother, identity_line, x_lines,
+      value_lines, line_width_mult, dot_size_mult, scale_map
     ),
     line = gg_line(
-      data, x, y, series, color, facet, lo, hi, connect, vlines, hlines,
-      line_width_mult, dot_size_mult, scale_map
+      data, x, y, series, color, facet, lo, hi, connect, x_lines,
+      value_lines, line_width_mult, dot_size_mult, scale_map
     ),
     NULL
   )
@@ -257,14 +260,6 @@ static_chart <- function(data,
   p <- p + gg_theme() + gg_grid_theme(chart_type, horiz) +
     gg_x_label_theme(data, chart_type, horiz, group, facet,
                      count_on, count_col, func, facet_cols)
-
-  if (!is.null(facet)) {
-    # The canvas boxes each panel in a hairline (.dd-facet border); added
-    # after the theme because theme_minimal blanks panel.border.
-    p <- p + ggplot2::theme(panel.border = ggplot2::element_rect(
-      fill = NA, color = GG_SPLIT_LINE_COLOR, linewidth = gg_px_lw(1)
-    ))
-  }
 
   gg_attach_pptx_size(p, data, chart_type, horiz, group, color,
                       facet, bar_mode, facet_cols)
@@ -485,12 +480,14 @@ gg_x_label_theme <- function(data, chart_type, horiz, group, facet,
   ))
 }
 
-# Structural colors, verbatim from chart.js.
-GG_AXIS_LABEL_COLOR <- "#666666"
-GG_AXIS_LINE_COLOR <- "#cccccc"
-GG_SPLIT_LINE_COLOR <- "#f3f4f6"
-GG_REF_LINE_COLOR <- "#dc2626"
-GG_IDENTITY_LINE_COLOR <- "#64748b"
+# Structural colors: the light values of the tokens chart.js reads at render
+# (text-muted, border-strong, border-default, border-danger). Exports always
+# take the light scheme.
+GG_AXIS_LABEL_COLOR <- "#6b7280"
+GG_AXIS_LINE_COLOR <- "#d1d5db"
+GG_SPLIT_LINE_COLOR <- "#e5e7eb"
+GG_REF_LINE_COLOR <- "#111827"
+GG_IDENTITY_LINE_COLOR <- "#6b7280"
 
 # -- column handling ---------------------------------------------------------
 
@@ -865,7 +862,8 @@ gg_bar <- function(data, group, color, facet, value_col, func,
                          bar_mode, horiz, sort_by, sort_dir,
                          count_on, count_col, scale_map,
                          na_group = "level", pct_of = "facet",
-                         facet_cols = NULL) {
+                         facet_cols = NULL, value_lines = NULL,
+                         line_width_mult = 1) {
 
   if (is.null(group)) {
     return(NULL)
@@ -957,7 +955,16 @@ gg_bar <- function(data, group, color, facet, value_col, func,
     agg$.value
   }
 
-  p <- p + gg_bar_value_scale(as.numeric(vals), horiz, val_lab, percent = pct)
+  # A percent axis runs 0..1, but a reader types the percentage.
+  fraction <- pct || identical(func, "pct_distinct")
+  p <- gg_helper_lines(p, value_lines = value_lines,
+                       line_width_mult = line_width_mult, horiz = horiz,
+                       fraction = fraction)
+  lines <- gg_line_values(value_lines) / if (fraction) 100 else 1
+  vals <- as.numeric(vals)
+
+  p <- p + gg_bar_value_scale(c(vals, gg_line_room(lines, vals, zero = TRUE)),
+                              horiz, val_lab, percent = pct)
 
   if (horiz) {
     p + ggplot2::scale_y_discrete(
@@ -1040,7 +1047,8 @@ gg_box_stats <- function(vals, summary, whiskers) {
 gg_boxplot <- function(data, group, color, facet, value_col,
                              box_points, summary, whiskers, horiz,
                              sort_by, sort_dir, count_on,
-                             count_col, scale_map, facet_cols = NULL) {
+                             count_col, scale_map, facet_cols = NULL,
+                             value_lines = NULL, line_width_mult = 1) {
 
   if (is.null(group) || is.null(value_col) ||
         !is.numeric(data[[value_col]])) {
@@ -1204,8 +1212,13 @@ gg_boxplot <- function(data, group, color, facet, value_col,
     }
   }
 
+  lines <- gg_line_values(value_lines)
+  p <- gg_helper_lines(p, value_lines = lines,
+                       line_width_mult = line_width_mult, horiz = horiz)
+
   val_lab <- gg_axis_title(value_col, data)
   vals <- c(box$ymin, box$ymax, if (!is.null(out)) out$.value)
+  vals <- c(vals, gg_line_room(lines, vals))
 
   if (horiz) {
     p + ggplot2::scale_y_discrete(
@@ -1225,7 +1238,7 @@ gg_boxplot <- function(data, group, color, facet, value_col,
 }
 
 gg_scatter <- function(data, x, y, color, facet, smoother,
-                             identity_line, vlines, hlines,
+                             identity_line, x_lines, value_lines,
                              line_width_mult, dot_size_mult, scale_map) {
 
   if (is.null(x) || is.null(y)) {
@@ -1285,7 +1298,7 @@ gg_scatter <- function(data, x, y, color, facet, smoother,
     }
   }
 
-  p <- gg_helper_lines(p, vlines, hlines, line_width_mult)
+  p <- gg_helper_lines(p, x_lines, value_lines, line_width_mult)
 
   xv <- data[[x]]
   yv <- data[[y]]
@@ -1377,7 +1390,7 @@ gg_series_color_values <- function(map, color, series, data) {
 }
 
 gg_line <- function(data, x, y, series, color, facet, lo, hi, connect,
-                          vlines, hlines, line_width_mult, dot_size_mult,
+                          x_lines, value_lines, line_width_mult, dot_size_mult,
                           scale_map) {
 
   if (is.null(x) || is.null(y)) {
@@ -1497,7 +1510,7 @@ gg_line <- function(data, x, y, series, color, facet, lo, hi, connect,
     ))
   }
 
-  p <- gg_helper_lines(p, vlines, hlines, line_width_mult)
+  p <- gg_helper_lines(p, x_lines, value_lines, line_width_mult)
 
   p <- p + gg_nice_scale(
     c(data[[y]], if (!is.null(lo)) data[[lo]],
@@ -1516,26 +1529,65 @@ gg_line <- function(data, x, y, series, color, facet, lo, hi, connect,
   p
 }
 
-gg_helper_lines <- function(p, vlines, hlines, line_width_mult = 1) {
+# Helper-line positions as finite numbers; junk and NULL give none.
+gg_line_values <- function(v) {
+  v <- suppressWarnings(as.numeric(unlist(v %||% list())))
+  v[is.finite(v)]
+}
 
-  vlines <- suppressWarnings(as.numeric(unlist(vlines %||% list())))
-  hlines <- suppressWarnings(as.numeric(unlist(hlines %||% list())))
-  vlines <- vlines[is.finite(vlines)]
-  hlines <- hlines[is.finite(hlines)]
-
-  lw <- gg_px_lw(1.5 * (line_width_mult %||% 1))
-
-  if (length(vlines)) {
-    p <- p + ggplot2::geom_vline(
-      xintercept = vlines, linetype = "dashed",
-      color = GG_REF_LINE_COLOR, linewidth = lw
-    )
+# Values that pull the value axis past every helper line. A line exactly on
+# a rounded limit would draw as the frame (or clip, label and all), so each
+# is nudged outward and the nice extent rounds on to the next step. On a bar
+# axis (`zero`) a line at 0 is the baseline and stays put.
+gg_line_room <- function(lines, vals, zero = FALSE) {
+  if (!length(lines)) {
+    return(numeric())
   }
-  if (length(hlines)) {
-    p <- p + ggplot2::geom_hline(
-      yintercept = hlines, linetype = "dashed",
-      color = GG_REF_LINE_COLOR, linewidth = lw
-    )
+  eps <- 1e-6 * max(abs(c(vals, lines)), 1, na.rm = TRUE)
+  moved <- if (zero) lines[lines != 0] else lines
+  c(lines, moved + eps, moved - eps)
+}
+
+# `value_lines` cross the value axis, which is x on a horizontal bar or
+# boxplot; `x_lines` cross a numeric x. The canvas style: a 1px ink rule in a
+# long dash at 55%, the value at the line's end in axis-label grey. A percent
+# axis runs 0..1 while the reader typed the percentage (`fraction`).
+gg_helper_lines <- function(p, x_lines = NULL, value_lines = NULL,
+                            line_width_mult = 1, horiz = FALSE,
+                            fraction = FALSE) {
+
+  x_lines <- gg_line_values(x_lines)
+  value_lines <- gg_line_values(value_lines)
+  num <- function(v) vapply(v, gg_comma, character(1L))
+  x_text <- num(x_lines)
+  value_text <- num(value_lines)
+  if (fraction) value_text <- paste0(value_text, rep("%", length(value_text)))
+  if (fraction) value_lines <- value_lines / 100
+
+  if (horiz) {
+    x_lines <- c(x_lines, value_lines)
+    x_text <- c(x_text, value_text)
+    value_lines <- numeric()
+    value_text <- character()
+  }
+
+  line <- function(geom, ...) {
+    geom(..., linetype = "84", color = GG_REF_LINE_COLOR, alpha = 0.55,
+         linewidth = gg_px_lw(line_width_mult %||% 1))
+  }
+  if (length(x_lines)) {
+    p <- p + line(ggplot2::geom_vline, xintercept = x_lines) +
+      ggplot2::annotate(
+        "text", x = x_lines, y = Inf, label = x_text, hjust = -0.2,
+        vjust = 1.3, color = GG_AXIS_LABEL_COLOR, size = gg_px_size(10)
+      )
+  }
+  if (length(value_lines)) {
+    p <- p + line(ggplot2::geom_hline, yintercept = value_lines) +
+      ggplot2::annotate(
+        "text", x = Inf, y = value_lines, label = value_text, hjust = 1.1,
+        vjust = -0.4, color = GG_AXIS_LABEL_COLOR, size = gg_px_size(10)
+      )
   }
 
   p
@@ -1573,8 +1625,8 @@ gg_apply_titles <- function(p, title, subtitle, caption, data) {
 # The canvas chrome, constant for constant. Text sizes are the CSS pixel
 # values converted to pt (x 0.75): title 15px/600/#1f2937, subtitle
 # 13px/#6b7280, caption 12px italic/#6b7280 (left-aligned, like the HTML
-# band), ticks and axis names 11px/#666. Gridlines dashed #f3f4f6, axis
-# lines #ccc. Legend: a bottom-centered band, 11px labels over 25x14px
+# band), ticks and axis names 11px/#6b7280. Gridlines dashed #e5e7eb, axis
+# lines #d1d5db. Legend: a bottom-centered band, 11px labels over 25x14px
 # rounded swatches, semibold #6b7280 title. Facet strips: uppercase
 # semibold #6b7280 on #f9fafb.
 gg_theme <- function() {
@@ -1611,25 +1663,24 @@ gg_theme <- function() {
         size = gg_px_pt(11), face = "bold", color = "#6b7280"
       ),
       legend.text = ggplot2::element_text(
-        size = gg_px_pt(11), color = "#333333"
+        size = gg_px_pt(11), color = GG_AXIS_LABEL_COLOR
       ),
       legend.key.width = grid::unit(25 / 96, "in"),
       legend.key.height = grid::unit(14 / 96, "in"),
-      strip.background = ggplot2::element_rect(
-        fill = "#f9fafb", color = GG_SPLIT_LINE_COLOR,
-        linewidth = gg_px_lw(1)
-      ),
+      # The strip is a section title over its panel, as on the canvas: no
+      # band, no box.
+      strip.background = ggplot2::element_blank(),
       strip.text = ggplot2::element_text(
         face = "bold", color = "#6b7280", size = gg_px_pt(12)
       ),
-      panel.spacing = grid::unit(8 / 96, "in")
+      panel.spacing = grid::unit(24 / 96, "in")
     )
 }
 
 # Per-family grid and axis-line pruning: the canvas draws gridlines on the
-# VALUE axis only (dashed #f3f4f6) -- never on a category axis, and not at
+# VALUE axis only (dashed #e5e7eb) -- never on a category axis, and not at
 # all on a horizontal boxplot. The individual charts (scatter / line) grid
-# both axes. Axis lines are #ccc; horizontal layouts hide the category
+# both axes. Axis lines are #d1d5db; horizontal layouts hide the category
 # axis line, like the canvas.
 gg_grid_theme <- function(chart_type, horiz) {
 

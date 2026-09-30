@@ -312,6 +312,10 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
 
   # --- leaf rows -----------------------------------------------------------
   leaf <- rank_aggregate(data, keys, func, value, id_var)
+  # A missing group (NA) draws no row: it is what blockr.pharma's population
+  # join appends for a subject with no record. Those rows stay in `data`, so
+  # the N below and the facets' N count them. A blank string is a value.
+  leaf <- leaf[stats::complete.cases(leaf[keys]), , drop = FALSE]
   if (!nrow(leaf)) return(bad("No rows to display"))
   leaf$.label <- as.character(leaf[[group]])
   leaf$.parent <- if (is.null(parent)) NA_character_ else as.character(leaf[[parent]])
@@ -378,6 +382,7 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
   show_val <- !length(cols)
   if (identical(layout, "simple")) {
     plan <- list(list(kind = "bar", label = rank_measure_label(func, value),
+                      meas = rank_measure_label(func, value),
                       key = ".v", sub_label = measure_sub, fill = solo_fill,
                       show_val = show_val,
                       val_denom = if (pct_ok) denom))
@@ -391,6 +396,7 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
       leaf[[paste0(".s_", lv)]] <- rank_match(leaf, s, keys, absent)
     }
     plan <- list(list(kind = "barsplit", label = rank_measure_label(func, value),
+                      meas = rank_measure_label(func, value), cvar = color,
                       key = ".v", series = series, mode = bar_mode,
                       sub_label = measure_sub, show_val = show_val,
                       val_denom = if (pct_ok) denom))
@@ -429,6 +435,7 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
         }
         plan <- c(plan, list(list(
           kind = "barsplit", label = fv, key = paste0(".f_", fv),
+          meas = rank_measure_label(func, value), cvar = color,
           prefix = paste0(".f", fi, "s_"), series = series, mode = bar_mode,
           denom = if (pct_ok) denoms[[fv]],
           sub_label = paste0("N = ", denoms[[fv]]),
@@ -445,6 +452,7 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
       for (lv in facet_levels) {
         plan <- c(plan, list(list(
           kind = "bar", label = lv, key = paste0(".f_", lv),
+          meas = rank_measure_label(func, value),
           fill = solo_fill,
           denom = if (pct_ok) denoms[[lv]],
           sub_label = paste0("N = ", denoms[[lv]]),
@@ -504,6 +512,7 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
   par_rows <- NULL
   if (!is.null(parent)) {
     par_rows <- rank_aggregate(data, parent, func, value, id_var)
+    par_rows <- par_rows[!is.na(par_rows[[parent]]), , drop = FALSE]
     par_rows$.label <- as.character(par_rows[[parent]])
     par_rows$.ord <- rank_data_ord(data[[parent]], par_rows$.label)
     par_rows$.parent <- NA_character_

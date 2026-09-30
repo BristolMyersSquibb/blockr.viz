@@ -128,15 +128,14 @@
 #'   observations, jump at the named point -- dose levels, on/off states).
 #'   One control replacing the old `step` + `smooth` pair. Consumed by the JS
 #'   renderer.
-#' @param vlines,hlines Helper lines at fixed positions: numeric vectors,
-#'   each entry drawing one dashed guide line -- `vlines` VERTICAL (at that x),
-#'   `hlines` HORIZONTAL (at that y). Plain numbers, never column names (a
-#'   Hy's-Law eDish cross is `vlines = 3, hlines = 2`). Default `NULL` (none).
-#' @param ref_x,ref_y LEGACY aliases for `vlines` / `hlines`, mapped on
-#'   construction. Kept as formals so boards saved before the rename restore
-#'   (block state restores through the constructor). Do not use in new code:
-#'   the names said neither "line" nor which way it ran, and they were the only
-#'   array-valued args in the registry that were not plural.
+#' @param value_lines,x_lines Helper lines at fixed positions: numeric
+#'   vectors, each entry drawing one dashed guide line. `value_lines` run
+#'   across the VALUE axis: y on a scatter or line chart, and the value axis
+#'   of a bar, waterfall, boxplot or point range in either orientation (a
+#'   target, a threshold). On a percent axis they are percentages (`50` is
+#'   half). `x_lines` run across a numeric x axis, so scatter and line only.
+#'   Plain numbers, never column names (a Hy's-Law eDish cross is
+#'   `x_lines = 3, value_lines = 2`). Default `NULL` (none).
 #' @param smoother Trend overlay for scatter charts: one of `"none"`
 #'   (default), `"lm"`, or `"loess"`. Fit per `color`/`series` group, and per
 #'   `facet` panel, via [compute_smoother_series()].
@@ -185,7 +184,7 @@
 #'   same window -- so set it for repeated-measures data.
 #' @param ref_hi,ref_lo Column names holding an upper / lower reference
 #'   limit, drawn as dashed lines (e.g. `"ANRHI"` / `"ANRLO"`). Unlike
-#'   `hlines`, which takes values, these name a COLUMN: an ADaM reference
+#'   `value_lines`, which takes values, these name a COLUMN: an ADaM reference
 #'   range is per-record and varies by lab, sex and age, so the block reduces
 #'   the column to its median and the label carries the spread it reduced
 #'   from ("ANRHI 34 (32-43)"). `NULL` (default) or `""` draws nothing. A
@@ -207,13 +206,9 @@
 #'   whether a column is a population split (arm, sex, country) or an event
 #'   attribute (grade), and dividing grade-2 subjects by subjects-with-grade-2
 #'   is circular. A vector is accepted, though the gear offers one role.
-#' @param func_toggle Offer the aggregation as a control on the chart itself,
-#'   beside the download button, instead of only inside the gear. `NULL`
-#'   (default) = no control. `TRUE` = counts vs percent, i.e.
-#'   `c("count_distinct", "pct_distinct")`. A character vector names exactly
-#'   which aggregations to offer, so the same argument grows without being
-#'   replaced. The choice is block STATE: it is what the chart shows, not a
-#'   viewing gesture, so it survives a save and a reload.
+#' @param func_toggle LEGACY, ignored. Put the aggregation on the face as a
+#'   slot in the sentence (`{@func}` in `subtitle`), or declare a switch in
+#'   the prepare `script` and name it in the sentence (`{@measure}`).
 #' @param count_on Which label surfaces carry an observation count in
 #'   parentheses ("Female (12)"): `"off"` (default), `"axis"` (the category
 #'   axis ticks), `"facet"` (the facet strip labels), or `"both"`.
@@ -328,10 +323,8 @@ new_chart_block <- function(
     line_width_mult = 1.0,
     dot_size_mult = 1.0,
     connect = "monotone",
-    vlines = NULL,
-    hlines = NULL,
-    ref_x = NULL,
-    ref_y = NULL,
+    value_lines = NULL,
+    x_lines = NULL,
     smoother = "none",
     identity_line = FALSE,
     # Boxplot observation overlay: "none" (box only) or "outliers" (only the
@@ -360,7 +353,7 @@ new_chart_block <- function(
     band_min_n = 12,
     band_id = NULL,
     # Reference lines read from a COLUMN rather than given as values (which
-    # is what vlines/hlines take). An ADaM range (ANRHI, A1LO, ...) is
+    # is what value_lines/x_lines take). An ADaM range (ANRHI, A1LO, ...) is
     # per-record and genuinely varies, so the block reduces the column and
     # the label admits it did. NULL / "" draws nothing.
     ref_hi = NULL,
@@ -404,10 +397,8 @@ new_chart_block <- function(
     # faceted by arm), "group" when it is the bars (countries grouped, faceted
     # by action). Getting it wrong is plausible-but-wrong, not an error.
     pct_of = "facet",
-    # Aggregation offered on the chart's own chrome rather than only in the
-    # gear. NULL = off; TRUE = the counts/percent pair; a character vector =
-    # exactly those. Normalised to a character vector below so the saved board
-    # records the actual choices rather than a bare TRUE.
+    # LEGACY: the on-chart aggregation switch, retired. Ignored; kept so old
+    # boards restore.
     func_toggle = NULL,
     # Panel scales for a facet grid. "fixed" (default) = one shared numeric
     # domain and one shared category set/order across the panels, so a
@@ -558,24 +549,8 @@ new_chart_block <- function(
     stop("`pct_of` must name mapped roles: facet, group or color. Got ",
          paste0("\"", bad, "\"", collapse = ", "), ".", call. = FALSE)
   }
-  # TRUE is sugar for the pair this exists to offer. Expanding it here (rather
-  # than in the browser) means a saved board carries the actual aggregations,
-  # so widening the sugar later cannot silently change an existing board.
-  # "on" rather than the expanded pair: the gear's select binds to the stored
-  # value, so storing the sugar is what makes the control show the right
-  # position. The browser expands it (_funcToggleChoices). An explicit vector
-  # passed from R survives untouched and simply is not editable in the gear.
-  func_toggle <- if (isTRUE(func_toggle)) {
-    "on"
-  } else if (isFALSE(func_toggle)) {
-    NULL
-  } else {
-    # chr_vec_state, NOT chr_state: this is a multi-value slot like
-    # `tt_fields` / `waterfall_totals`. chr_state keeps only the first
-    # element, which would silently reduce every explicit set to one choice
-    # and leave the toggle with nothing to switch between.
-    chr_vec_state(func_toggle)
-  }
+  # LEGACY: retired on-chart aggregation switch; a saved value is dropped.
+  func_toggle <- NULL
   # Fixed-option select; a saved board predating it (or a DAG-poisoned list())
   # backfills to the shared-scale default.
   facet_scales <- match.arg(
@@ -585,23 +560,8 @@ new_chart_block <- function(
   # NULL (auto) or a whole number as a string; junk heals to auto rather than
   # erroring, because this value also arrives from MCP and from saved state.
   facet_cols <- facet_cols_state(facet_cols)
-  # Legacy aliases mapped on construction (old saved boards restore through the
-  # ctor, and every chart saved before the rename carries ref_x / ref_y). The
-  # new name wins when both are given: a board that already saved `vlines` is
-  # newer than whatever ref_x it may also still carry.
-  if (is.null(vlines)) vlines <- ref_x
-  if (is.null(hlines)) hlines <- ref_y
-
-  vlines <- num_vec_state(vlines)
-  hlines <- num_vec_state(hlines)
-
-  # The alias is CONSUMED here: the block stores only the new names, so a board
-  # restored from the old ones is migrated on load and re-saves as
-  # vlines/hlines. Leaving the legacy value in place would serialize it forever
-  # (and a pre-#144 DAG paste hands us list(), which must heal to NULL like
-  # every other slot -- see state-normalize.R).
-  ref_x <- NULL
-  ref_y <- NULL
+  value_lines <- num_vec_state(value_lines)
+  x_lines <- num_vec_state(x_lines)
 
   # `identity_line` is a LOGICAL. The gear's segmented control sends the
   # strings "on"/"off" (that is the control's transport, see chart.js ROLES),
@@ -812,8 +772,8 @@ new_chart_block <- function(
         # Line-connect mode (straight / monotone / step-*), the single gear
         # select that replaced step + smooth. Fixed-option, so never empty.
         r_connect <- shiny::reactiveVal(connect)
-        r_vlines <- shiny::reactiveVal(vlines)
-        r_hlines <- shiny::reactiveVal(hlines)
+        r_value_lines <- shiny::reactiveVal(value_lines)
+        r_x_lines <- shiny::reactiveVal(x_lines)
         r_smoother <- shiny::reactiveVal(smoother)
         r_identity_line <- shiny::reactiveVal(identity_line)
         r_box_points <- shiny::reactiveVal(box_points)
@@ -843,7 +803,6 @@ new_chart_block <- function(
         # Missing-key handling and the on-chart aggregation control.
         r_na_group <- shiny::reactiveVal(na_group)
         r_pct_of <- shiny::reactiveVal(pct_of)
-        r_func_toggle <- shiny::reactiveVal(func_toggle)
         # Facet-grid panel scales and panels per row (see constructor args).
         r_facet_scales <- shiny::reactiveVal(facet_scales)
         r_facet_cols <- shiny::reactiveVal(facet_cols)
@@ -1067,46 +1026,16 @@ new_chart_block <- function(
             # Not a mapping, but a setting a reader may want on the face: a
             # 12-panel grid is the one chart where the shape of the page is
             # the reader's call, not the author's.
-            facet_cols = r_facet_cols()
+            facet_cols = r_facet_cols(),
+            # Reference lines, typed in place on the word
+            # ("[, target {@value_lines}]").
+            value_lines = num_list_text(r_value_lines()),
+            x_lines = num_list_text(r_x_lines())
           )
           # The prepare script's declared values are settings too, named in a
           # template by the variable the script uses: `{@param}` for
-          # `param <- factor(...)`. A role wins a collision, so a script
-          # variable called `color` cannot quietly shadow the colour mapping.
-          # A value the reader has not touched is still the value the script
-          # is running with, and the sentence has to say it: `r_values()` only
-          # holds what the controls have CHANGED, so an untouched `param`
-          # resolved to "" and its word vanished from the caption while the
-          # strip's own control showed the declaration's value. Same fallback
-          # `dd_script_cfg()` makes for that control.
-          vals <- r_values()
-          for (s in r_specs()) {
-            if (!is.null(s$error) || is.na(s$kind)) next
-            if (is.null(vals[[s$name]])) vals[[s$name]] <- s$default
-          }
-          if (!length(vals)) return(roles)
-          vals <- vals[setdiff(names(vals), names(roles))]
-          # A flag reads as a WORD or as nothing, which is what lets a clause
-          # carry it: `[{@scheduled} visits only]` says so when it is on and
-          # says nothing at all when it is off. TRUE prints the control's own
-          # label, because that is the name the reader saw when setting it.
-          labs <- vapply(
-            dd_script_roles(r_specs()),
-            function(r) as.character(r$label %||% r$name)[[1L]],
-            character(1L)
-          )
-          names(labs) <- vapply(
-            dd_script_roles(r_specs()),
-            function(r) as.character(r$name)[[1L]], character(1L)
-          )
-          for (nm in names(vals)) {
-            v <- vals[[nm]]
-            if (is.logical(v) && length(v) == 1L) {
-              w <- if (nm %in% names(labs)) unname(labs[[nm]]) else nm
-              vals[[nm]] <- if (isTRUE(v)) w else ""
-            }
-          }
-          c(roles, vals)
+          # `param <- factor(...)`. See script_title_args().
+          script_title_args(roles, r_specs(), r_values())
         })
 
         r_titles_resolved <- shiny::reactive({
@@ -1239,7 +1168,8 @@ new_chart_block <- function(
               bar_mode = r_bar_mode(),
               line_width_mult = r_line_width_mult(),
               dot_size_mult = r_dot_size_mult(), connect = r_connect(),
-              vlines = as.list(r_vlines()), hlines = as.list(r_hlines()),
+              value_lines = as.list(r_value_lines()),
+              x_lines = as.list(r_x_lines()),
               smoother = r_smoother(),
               # The gear's segmented control speaks "on"/"off"; the R state is
               # a logical (bool_state). Convert on the way OUT so the control
@@ -1275,10 +1205,9 @@ new_chart_block <- function(
               # Observation-count labels: which surface(s) get the "(n)" and the
               # DISTINCT id column to count (browser-side, per label group).
               count_on = r_count_on(), count_col = r_count_col(),
-              # Missing group keys, and whether the aggregation is offered on
-              # the chart's own chrome. Both are read by chart.js.
+              # Missing group keys and the percent denominator, read by
+              # chart.js.
               na_group = r_na_group(), pct_of = r_pct_of(),
-              func_toggle = r_func_toggle(),
               # Facet-grid panel scales: shared numeric domain + shared
               # category set across the panels ("fixed"), or per-panel
               # ("free" / "free_y").
@@ -1517,11 +1446,11 @@ new_chart_block <- function(
             # ("2, 5"); num_vec_state parses it and drops non-numeric junk. ""
             # is a real value here (clearing every line), so it must reach the
             # slot as NULL rather than being skipped -- hence no nn() guard.
-            if (!is.null(msg$vlines)) {
-              upd(r_vlines, num_vec_state(msg$vlines))
+            if (!is.null(msg$value_lines)) {
+              upd(r_value_lines, num_vec_state(msg$value_lines))
             }
-            if (!is.null(msg$hlines)) {
-              upd(r_hlines, num_vec_state(msg$hlines))
+            if (!is.null(msg$x_lines)) {
+              upd(r_x_lines, num_vec_state(msg$x_lines))
             }
             if (!is.null(msg$box_points)) upd(r_box_points, msg$box_points)
             if (!is.null(msg$summary))    upd(r_summary, msg$summary)
@@ -1551,12 +1480,6 @@ new_chart_block <- function(
             if (!is.null(msg$count_on))   upd(r_count_on, msg$count_on)
             if (!is.null(msg$na_group))   upd(r_na_group, msg$na_group)
             if (!is.null(msg$pct_of))     upd(r_pct_of, msg$pct_of)
-            # "off" is the gear saying no switch; store NULL so the state
-            # reads the same as a block that never asked for one.
-            if (!is.null(msg$func_toggle)) {
-              upd(r_func_toggle,
-                  if (identical(msg$func_toggle, "off")) NULL else msg$func_toggle)
-            }
             # nn(): "" (picker cleared) means "no id column" -> row count.
             if (!is.null(msg$count_col))  upd(r_count_col, nn(msg$count_col))
             if (!is.null(msg$facet_scales)) {
@@ -1853,12 +1776,11 @@ new_chart_block <- function(
             sort_by = r_sort_by(), sort_dir = r_sort_dir(),
             count_on = r_count_on(), count_col = r_count_col(),
             na_group = r_na_group(), pct_of = r_pct_of(),
-            func_toggle = r_func_toggle(),
             facet_scales = r_facet_scales(), facet_cols = r_facet_cols(),
             box_points = r_box_points(),
             smoother = r_smoother(), identity_line = r_identity_line(),
-            lo = r_lo(), hi = r_hi(), vlines = r_vlines(),
-            hlines = r_hlines(),
+            lo = r_lo(), hi = r_hi(), value_lines = r_value_lines(),
+            x_lines = r_x_lines(),
             title = r_title(), subtitle = r_subtitle(),
             caption = r_caption()
           )
@@ -1898,36 +1820,21 @@ new_chart_block <- function(
           Filter(
             function(s) isTRUE(s$ok),
             list(
-              list(id = "dl_xlsx", ext = "xlsx", label = "Excel (.xlsx)",
+              list(id = "dl_xlsx", ext = "xlsx", label = "Excel",
                    ok = requireNamespace("openxlsx", quietly = TRUE)),
-              list(id = "dl_html", ext = "html", label = "Web page (.html)",
+              list(id = "dl_html", ext = "html", label = "Web page",
                    ok = TRUE),
-              list(id = "dl_pptx", ext = "pptx", label = "PowerPoint (.pptx)",
+              list(id = "dl_pptx", ext = "pptx", label = "PowerPoint",
                    ok = requireNamespace("officer", quietly = TRUE)),
-              list(id = "dl_png", ext = "png", label = "Image (.png)",
+              list(id = "dl_png", ext = "png", label = "Image",
                    ok = TRUE)
             )
           )
         })
 
-        output$chart_download <- shiny::renderUI({
-          specs <- dl_formats()
-          if (!length(specs)) return(NULL)
-          if (length(specs) == 1L) {
-            return(rank_dl_link(ns, specs[[1L]]))
-          }
-          htmltools::tags$details(
-            class = "blockr-dl-menu",
-            htmltools::tags$summary(
-              class = "blockr-dl-xlsx", title = "Download",
-              `aria-label` = "Download", rank_dl_icon()
-            ),
-            htmltools::tags$div(
-              class = "blockr-dl-menu-list", role = "menu",
-              lapply(specs, function(s) rank_dl_link(ns, s, menu = TRUE))
-            )
-          )
-        })
+        output$chart_download <- shiny::renderUI(
+          dl_control_ui(ns, dl_formats())
+        )
 
         output$dl_xlsx <- shiny::downloadHandler(
           filename = function() "chart.xlsx",
@@ -2100,13 +2007,8 @@ new_chart_block <- function(
             # script written as lines loads fine.
             script = r_script,
             values = r_values,
-            vlines = r_vlines,
-            hlines = r_hlines,
-            # Legacy alias formals (mapped on construction): serialized as
-            # NULL so restored boards re-enter through the new names;
-            # blockr.core requires every ctor formal in the state.
-            ref_x = function() NULL,
-            ref_y = function() NULL,
+            value_lines = r_value_lines,
+            x_lines = r_x_lines,
             smoother = r_smoother,
             identity_line = r_identity_line,
             box_points = r_box_points,
@@ -2123,7 +2025,9 @@ new_chart_block <- function(
             count_col = r_count_col,
             na_group = r_na_group,
             pct_of = r_pct_of,
-            func_toggle = r_func_toggle,
+            # LEGACY: serialized as NULL (blockr.core requires every ctor
+            # formal in the state).
+            func_toggle = function() NULL,
             facet_scales = r_facet_scales,
             facet_cols = r_facet_cols,
             download = r_download,
@@ -2157,10 +2061,6 @@ new_chart_block <- function(
         # header by chart.js -- the same shape rank-table.js uses for the
         # search box. It has to be a Shiny output (download links are
         # server-driven), and the gear header is built by the widget's JS.
-        # The download chrome (the icon button and its menu) comes from the
-        # table's stylesheet, which a chart-only page does not load. One
-        # shared definition, carried by both blocks.
-        htmltools::tags$style(htmltools::HTML(dl_chrome_css())),
         shiny::div(class = "dd-chart-dl-host", style = "display:none",
                    shiny::uiOutput(ns("chart_download"), inline = TRUE))
       )
@@ -2179,7 +2079,7 @@ new_chart_block <- function(
     allow_empty_state = c("group", "color", "facet", "filter_column",
       "filter_values", "value", "x", "y", "xend", "series", "label",
       "tt_fields", "drill", "sort_by", "sort_dir", "filter_range",
-      "filter_point", "vlines", "hlines", "smoother", "identity_line",
+      "filter_point", "value_lines", "x_lines", "smoother", "identity_line",
       # `summary`, `whiskers` and `orientation` are NULL until their per-mark
       # default is resolved where it is consumed; `band_id` / `ref_hi` /
       # `ref_lo` are optional band columns, empty on every chart that is not a
@@ -2192,8 +2092,8 @@ new_chart_block <- function(
       "band_id", "ref_hi", "ref_lo", "lo", "hi", "waterfall_totals",
       # count_col is optional (blank = row count); count_on is a fixed-option
       # select (always "off"/"axis"/"facet"/"both"), so it is not listed here.
-      # `func_toggle` is NULL whenever the on-chart control is off, which is
-      # the default -- so it MUST be listed, or every chart block wedges.
+      # `func_toggle` is LEGACY and always NULL, so it MUST be listed, or
+      # every chart block wedges.
       # `na_group` is not: it is a fixed-option select like count_on, always
       # "level" or "drop".
       "count_col", "func_toggle",
@@ -2201,11 +2101,6 @@ new_chart_block <- function(
       # case, so it MUST be listed or every chart block wedges.
       "facet_cols",
       "title", "subtitle", "caption",
-      # Legacy alias formals: permanently NULL in state (mapped onto
-      # vlines/hlines at construction), so they MUST be allowed to be empty --
-      # a non-allow_empty_state field holding NULL wedges the whole block
-      # (state_ready never goes TRUE and result() stays NULL).
-      "ref_x", "ref_y",
       # No script is the default and the common case, so both MUST be allowed
       # to be empty or every chart block wedges
       # (reference_blockr_allow_empty_state_wedge).
@@ -2216,11 +2111,11 @@ new_chart_block <- function(
       "sort_by", "sort_dir", "orientation", "bar_mode", "filter_type",
       "filter_column",
       "filter_values", "filter_range", "filter_point", "line_width_mult",
-      "dot_size_mult", "connect", "vlines", "hlines", "smoother",
+      "dot_size_mult", "connect", "value_lines", "x_lines", "smoother",
       "identity_line",
       "box_points", "summary", "whiskers", "connect_centers",
       "lo", "hi", "baseline", "waterfall_totals",
-      "count_on", "count_col", "na_group", "pct_of", "func_toggle",
+      "count_on", "count_col", "na_group", "pct_of",
       "facet_scales", "facet_cols",
       "title", "subtitle", "caption",
       # Externally controllable (MCP, restore) but deliberately NOT on the AI
@@ -2257,6 +2152,12 @@ new_chart_block <- function(
   # is what says a board has not been.
   attr(res, "metric") <- NULL
   attr(res, "agg_fn") <- NULL
+  # RETIRED helper-line names, replaced by `value_lines` / `x_lines`. A saved
+  # board that carries them loads without its lines rather than failing.
+  attr(res, "vlines") <- NULL
+  attr(res, "hlines") <- NULL
+  attr(res, "ref_x") <- NULL
+  attr(res, "ref_y") <- NULL
 
   res
 }

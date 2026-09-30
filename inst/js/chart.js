@@ -201,15 +201,78 @@
   // Individual-family render baselines. Multipliers (`line_width_mult`,
   // `dot_size_mult`) scale these so slider 1.0× matches echarts' default
   // look. Values mirror the literals previously hardcoded in mkSeries.
-  // Halo drawn under a band's centre line. The ribbons are translucent
-  // fills, so a light palette step laid straight over one is unreadable and
-  // crossing centre lines merge; a surface-coloured underlay separates them
-  // without inventing a second hue.
-  const SURFACE_HALO = '#ffffff';
-  // Reference limits wear the status-critical red, not a series hue: a normal
-  // range is a threshold, not another series, and must never be mistaken for
-  // one. Same red the vlines/hlines guides already use.
-  const REF_LINE_COLOR = '#dc2626';
+  // Canvas ink. ECharts cannot resolve var(), so _render() reads the design
+  // tokens into INK once per render (readInk) and every axis, label and guide
+  // takes its colour from here. That makes the canvas follow the scheme (light
+  // or dark) and a theme's greys. The values below are the light tokens, used
+  // when the page loads no token sheet.
+  //
+  // surface: the halo under a band's centre line (the ribbons are translucent,
+  // so a surface-coloured underlay separates crossing lines without a second
+  // hue), and the separators between pie slices and treemap tiles.
+  // danger: the band's reference limits. A normal range is a
+  // threshold, not another series, so it never wears a series hue.
+  const INK = {
+    muted: '#6b7280',
+    strong: '#d1d5db',
+    border: '#e5e7eb',
+    surface: '#ffffff',
+    danger: '#dc2626',
+    raised: '#ffffff',
+    text: '#111827',
+    shadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+    fontSize: 11,
+    face: "'Open Sans', system-ui, sans-serif"
+  };
+  /** @param {Element} el */
+  const readInk = (el) => {
+    const cs = getComputedStyle(el);
+    /** @param {string} name @param {string} fb */
+    const tok = (name, fb) => cs.getPropertyValue('--blockr-' + name).trim() || fb;
+    INK.muted = tok('color-text-muted', '#6b7280');
+    INK.strong = tok('color-border-strong', '#d1d5db');
+    INK.border = tok('color-border-default', '#e5e7eb');
+    INK.surface = tok('color-bg-surface', '#ffffff');
+    INK.danger = tok('color-border-danger', '#dc2626');
+    INK.raised = tok('color-bg-raised', '#ffffff');
+    INK.text = tok('color-text-default', '#111827');
+    INK.shadow = tok('shadow-md', '0 4px 12px rgba(0, 0, 0, 0.1)');
+    INK.fontSize = parseFloat(tok('mark-font-size', '11')) || 11;
+    INK.face = getComputedStyle(document.body).fontFamily || INK.face;
+  };
+
+  // The data tooltip (design system, Charts). Its box is the raised card
+  // (cardTooltip, applied to every option); its content is a headline at
+  // 13px/600 and rows at 12px with a muted label and a 500 tabular value,
+  // drawn by chart.css. A swatch marks the headline or the row that stands
+  // for one series. Callers pass escaped HTML.
+  /** @param {any} c */
+  const tipSwatch = (c) => typeof c === 'string' && c
+    ? '<span class="dd-tt-sw" style="background:' + c + '"></span>' : '';
+  /** @param {string} text @param {any} [color] */
+  const tipHead = (text, color) =>
+    '<div class="dd-tt-head">' + tipSwatch(color) + '<span>' + text + '</span></div>';
+  /** @param {string} label @param {any} value @param {any} [color] */
+  const tipRow = (label, value, color) =>
+    '<div class="dd-tt-row">' + tipSwatch(color) + '<span class="dd-tt-label">' +
+    label + '</span><span class="dd-tt-value">' + value + '</span></div>';
+  /** @param {string} text */
+  const tipNote = (text) => '<div class="dd-tt-row dd-tt-label">' + text + '</div>';
+  const TIP_SEP = '<div class="dd-tt-sep"></div>';
+  /** @param {any} option */
+  const cardTooltip = (option) => {
+    const tts = Array.isArray(option.tooltip) ? option.tooltip
+      : option.tooltip ? [option.tooltip] : [];
+    for (const t of tts) {
+      Object.assign(t, {
+        backgroundColor: INK.raised, borderColor: INK.border, borderWidth: 1,
+        padding: [6, 10],
+        textStyle: { color: INK.text, fontSize: 12, fontFamily: INK.face },
+        extraCssText: 'border-radius:8px;box-shadow:' + INK.shadow + ';'
+      });
+    }
+    return option;
+  };
   const BASE_LINE_WIDTH   = 1.4;
   const BASE_SCATTER_SIZE = 6;
   const BASE_LINE_MARKER  = 4;
@@ -289,7 +352,6 @@
   const PALETTE_OVERFLOW = '#9AA0A6';
   /** @param {string[]} pal @param {number} i */
   const paletteAt = (pal, i) => (i < pal.length ? pal[i] : PALETTE_OVERFLOW);
-  const BLOCKR_FONT = "'Open Sans', system-ui, sans-serif";
   // A color-split boxplot dodges its boxes by giving each (group, color) box
   // its own category slot; the slot value is `group + SEP + level`. ECharts
   // dedupes a category axis by value, so a bare group label would collapse the
@@ -339,9 +401,25 @@
       maximumFractionDigits: 4
     });
   };
-  const AXIS_LABEL_COLOR = '#666';
-  const AXIS_LINE_COLOR = '#ccc';
-  const SPLIT_LINE_COLOR = '#f3f4f6';
+
+  // One helper line (x_lines / value_lines) as a markLine datum: a quiet ink
+  // rule in a long dash, so it reads apart from the short-dash gridlines and
+  // stays behind the data, with its value at the end in axis-label grey.
+  // `text` overrides the label where the axis unit is not what was typed (a
+  // percent axis runs 0..1). `flipped`: the y axis runs top-down (a
+  // horizontal bar's inverse category axis), so a vertical line's top is its
+  // START, and labelling the end would put it on the tick labels.
+  /** @param {number} v @param {boolean} vertical @param {number} [width] @param {string} [text] @param {boolean} [flipped] */
+  const guideLine = (v, vertical, width = 1, text, flipped = false) => ({
+    [vertical ? 'xAxis' : 'yAxis']: v,
+    lineStyle: { color: INK.text, opacity: 0.55, type: [8, 4], width },
+    label: {
+      show: true,
+      position: vertical ? (flipped ? 'start' : 'end') : 'insideEndTop',
+      formatter: text != null ? text : String(ddNum(v)),
+      color: INK.muted, fontSize: 10, opacity: 1
+    }
+  });
 
   // Identity of a category-axis label LAYOUT (see _xAxisLabels): orientation,
   // how many labels are skipped, and the truncation width. Everything else in
@@ -468,7 +546,7 @@
         top: 4,
         itemSize: 11,
         feature: { brush: { type: ['rect', 'lineX', 'clear'] } },
-        iconStyle: { borderColor: '#bbb' }
+        iconStyle: { borderColor: INK.muted }
       }
     : undefined;
 
@@ -503,7 +581,7 @@
         title: { zoom: 'Zoom to range', back: 'Reset zoom' }
       }
     },
-    iconStyle: { borderColor: '#bbb' }
+    iconStyle: { borderColor: INK.muted }
   });
 
   // Aggregation vocabulary + the group/value/func role triple + the
@@ -611,8 +689,8 @@
                 options: [{ value: 'zero', label: 'Standard' },
                           { value: 'cumulative', label: 'Waterfall' }] },
     smoother: { label: 'Smoother', kind: 'select', options: ['none', 'lm', 'loess'] },
-    // Helper lines. `identity_line` is the computed diagonal; vlines/hlines are
-    // fixed positions the user types. All three draw a dashed guide, so the
+    // Helper lines. `identity_line` is the computed diagonal; x_lines /
+    // value_lines are fixed positions the user types. All three draw a dashed guide, so the
     // gear groups them in one "Helper lines" section (see SECTIONS below).
     //
     // Boolean on/off segmented -> rendered as a checkbox (see _isBoolSegmented).
@@ -627,8 +705,16 @@
     // commit model we want (Enter/blur to apply, Escape to revert) and R parses
     // the string with num_vec_state() -- which drops junk, so a typo yields no
     // line rather than a line at NA.
-    vlines: { label: 'Vertical', kind: 'text', ph: 'e.g. 3 or 2, 5' },
-    hlines: { label: 'Horizontal', kind: 'text', ph: 'e.g. 2 or 1, 4' },
+    // `slot: 'entry'`: named in the block's sentence, the word is typed over
+    // in place (a line at 32.5 is not in any list). See SentenceSlots._edit.
+    x_lines: { label: 'Vertical', kind: 'text', ph: 'e.g. 3 or 2, 5', slot: 'entry' },
+    // Across the value axis. On scatter/line that is y, so the pair reads
+    // Vertical / Horizontal; on the aggregated family it follows
+    // `orientation` and is the only helper line, so it is named by its job.
+    value_lines: { label: (/** @type {any} */ cfg) =>
+                     (cfg.chart_type === 'scatter' || cfg.chart_type === 'line'
+                       ? 'Horizontal' : 'Reference lines'),
+                   kind: 'text', ph: 'e.g. 2 or 1, 4', slot: 'entry' },
     // Boxplot observation overlay. "none" = box only; "outliers" = only the
     // points beyond the whisker extent. (A former "all" strip was dropped:
     // on a category axis every point sat on the box's centre line, an opaque
@@ -856,32 +942,6 @@
               { value: 'drop',  label: 'Not a category' }]
   });
 
-  // Whether the aggregation is also offered on the CARD, for a reader rather
-  // than a board author. 'on' is sugar the browser expands (see
-  // _funcToggleChoices) so this select can bind straight to the config value;
-  // an explicit set passed from R stays a list of aggregations and is simply
-  // not editable here, which is the right trade for the advanced case.
-  // Short labels for the on-card square. The gear's option labels name the
-  // aggregation for someone configuring a board ("Count distinct", "% of
-  // panel"); a reader flipping between two views wants the thing on the axis.
-  // Anything not listed keeps its full label and the button widens -- the CSS
-  // uses min-width for exactly that, since a truncated aggregation would be
-  // worse than a wide button.
-  /** @type {Record<string, string>} */
-  const FUNC_SHORT = {
-    count: 'n', count_distinct: 'N', pct_distinct: '%', sum: '\u03a3'
-  };
-
-  // Rendered as a CHECKBOX (_isBoolSegmented), whose caption is the "on"
-  // option's label, not the role's -- so that label has to read on its own,
-  // the way identity_line's does. "off" stays first so an absent value (the
-  // default) falls back to unchecked.
-  ROLES.func_toggle = /** @type {any} */ ({
-    label: 'Counts / % switch', kind: 'segmented',
-    options: [{ value: 'off', label: 'Off' },
-              { value: 'on',  label: 'Offer counts / % on the chart' }]
-  });
-
   // FAMILY_ROLES — per family, ordered. A section entry is either a role key
   // (always shown for the family) or { role, types:[...] } (shown only for
   // those chart types). requiredMap rows render immediately; optionalMap rows
@@ -929,6 +989,8 @@
         { role: 'whiskers', types: ['boxplot'] },
         { role: 'connect_centers', types: ['pointrange'] },
         { role: 'box_points', types: ['boxplot'] },
+        // Across the value axis, whichever way the chart lies.
+        { role: 'value_lines', types: ['bar', 'waterfall', 'boxplot', 'pointrange'] },
         // Count labels: the axis surface applies to the category-axis charts
         // (bar and waterfall per group/step; boxplot per drawn box slot);
         // facet applies to any faceted family. Pie/treemap/radar have no
@@ -940,7 +1002,6 @@
         // chart anyone wants).
         { role: 'na_group', types: ['bar'] },
         { role: 'pct_of', types: ['bar'] },
-        { role: 'func_toggle', types: ['bar'] },
         // Facet-grid shape; both hidden until a facet is mapped (role
         // `when`).
         'facet_scales', 'facet_cols', 'download'],
@@ -972,11 +1033,11 @@
         // diagonal, then the fixed positions. They are NOT a titled section --
         // `presentation` is a flat list and a real header needs a change to the
         // shared engine (drilldown-config.js), which is a follow-up.
-        // vlines/hlines are offered on line charts too: a normal-range or
-        // threshold marker on a trajectory is the same need as on a scatter.
+        // x_lines/value_lines are offered on line charts too: a normal-range
+        // or threshold marker on a trajectory is the same need as on a scatter.
         { role: 'identity_line', types: ['scatter'] },
-        { role: 'vlines', types: ['scatter', 'line'] },
-        { role: 'hlines', types: ['scatter', 'line'] },
+        { role: 'x_lines', types: ['scatter', 'line'] },
+        { role: 'value_lines', types: ['scatter', 'line'] },
         // Line-connect mode (straight / monotone / step-*): line-only, so it
         // sits with the other line presentation options.
         { role: 'connect', types: ['line'] },
@@ -1093,16 +1154,9 @@
       this._legendOff = new Set();
       /** @type {string | null} */
       this._legendKey = null;
-      // The caption word whose menu is open, its anchor and the menu handle.
-      /** @type {string | null} */
-      this._slotKey = null;
-      /** @type {HTMLElement | null} */
-      this._slotAnchor = null;
-      /** @type {{ close(): void } | null} */
-      this._slotMenu = null;
-      // Choices the func toggle was last built for, joined.
-      /** @type {string | null} */
-      this._funcToggleKey = null;
+      // The sentence painter and its open menu (Blockr.SentenceSlots).
+      /** @type {any} */
+      this._slotsInst = null;
       // Per-render one-pass caches for the per-panel raw-data scans (axis
       // counts / tooltip representative values); reset in _renderAggregated.
       /** @type {Map<string, Map<string, any>> | null} */
@@ -1561,7 +1615,7 @@
       this.gearBtn.className = 'blockr-gear-btn';
       this.gearBtn.innerHTML = (typeof Blockr !== 'undefined' && Blockr.icons)
         ? Blockr.icons.gear : '\u2699';
-      this.gearBtn.title = 'Chart settings';
+      this.gearBtn.setAttribute('data-blockr-tooltip', 'Settings');
       this.gearBtn.setAttribute('aria-label', 'Chart settings');
       this.gearBtn.setAttribute('aria-haspopup', 'dialog');
       this.gearBtn.setAttribute('aria-expanded', 'false');
@@ -1586,18 +1640,14 @@
       // PROTOTYPE (config.capture_export, R/chart-capture.R): composing on
       // the menu OPEN rather than on the format click means the bitmap is
       // already in R by the time a format is picked, so the download handlers
-      // need no round trip of their own. Capture phase, because the <details>
-      // summary is R-rendered markup this binding does not own.
+      // need no round trip of their own. Capture phase, because the download
+      // tool is R-rendered markup this binding does not own.
       gearHeader.addEventListener('click', (e) => {
         const t = /** @type {Element} */ (e.target);
         if (!this.config || !this.config.capture_export || !t.closest) return;
-        const host = t.closest('.blockr-dl-menu, .blockr-dl-xlsx');
+        const host = t.closest('.blockr-action-menu__trigger, .dd-chart-dl .blockr-tool');
         if (host) this._downloadImage(true);
       }, true);
-      // The aggregation toggle goes here too, but it cannot be built yet:
-      // _buildDOM() runs at construction and `func_toggle` arrives with the
-      // first setData(). _refreshFuncToggle() inserts it then, which is why
-      // the header is kept.
       this.gearHeader = gearHeader;
       gearHeader.appendChild(this.gearBtn);
       this.card.appendChild(gearHeader);
@@ -1611,7 +1661,7 @@
       // fixed positioning, no outside-click dismissal — it is a panel, not a
       // menu; opening pushes the chart down so the result stays visible.
       // --beak: connector T1 of the type-picker proposals — the open band
-      // grows a notch pointing at the gear that opened it (settings-band.css).
+      // grows a notch pointing at the gear that opened it (blockr.ui's blockr-settings-band.css).
       this.popoverEl = document.createElement('div');
       this.popoverEl.className = 'blockr-settings blockr-settings--beak dd-popover';
       this.card.appendChild(this.popoverEl);
@@ -1704,7 +1754,7 @@
     // HTML title / subtitle / caption bands (and the facet labels) would be
     // missing from the artifact — and a facet grid would offer one dead-end
     // button per panel. Instead ONE design-system button in the gear header
-    // (the table's .blockr-dl-xlsx chrome) composes the full block on an
+    // (the shared download tool, dl_control_ui()) composes the full block on an
     // offscreen canvas: title block, every facet panel at its on-screen grid
     // position (facet labels redrawn), caption. Purely download-time — reads
     // the canvases via getDataURL and never touches the chart option, config
@@ -1736,7 +1786,7 @@
       /** @param {Element | undefined} el @param {string} fb */
       const fontOf = (el, fb) => {
         const cs = el ? getComputedStyle(el) : null;
-        if (!cs || !cs.fontSize) return fb + ' ' + BLOCKR_FONT;
+        if (!cs || !cs.fontSize) return fb + ' ' + INK.face;
         const style = cs.fontStyle === 'italic' ? 'italic ' : '';
         return style + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
       };
@@ -1962,158 +2012,34 @@
       this.captionEl.style.display = (cap || capOffered) ? '' : 'none';
     }
 
-    // One band's text. Plain string unless R sent pieces, which it does when
-    // the template holds an `{@arg}` token: those words are the block's own
-    // controls, drawn in the sentence instead of in a band. Text nodes and
-    // textContent throughout -- titles are data-derived text.
+    // One band's text, and the offers for settings whose clause dropped. The
+    // painter is shared with the heatmap (Blockr.SentenceSlots in
+    // drilldown-config.js), so a word means the same thing on both.
     /** @param {HTMLElement} el @param {string} text @param {any[]} [parts] @param {any[]} [offers] */
     _paintTitle(el, text, parts, offers) {
-      el.textContent = '';
-      if (!Array.isArray(parts) || !parts.length) {
-        el.textContent = text;
-        this._paintOffers(el, offers);
-        return;
-      }
-      for (const p of parts) {
-        if (!p || !p.text) continue;
-        if (!p.arg) { el.appendChild(document.createTextNode(p.text)); continue; }
-        const w = document.createElement('span');
-        w.className = 'blockr-slot';
-        w.textContent = p.text;
-        w.setAttribute('role', 'button');
-        w.setAttribute('tabindex', '0');
-        w.title = 'Change ' + (this._slotLabel(p.arg) || p.arg);
-        w.addEventListener('click', (e) => { e.stopPropagation(); this._openSlot(p.arg, w, p.by); });
-        w.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
-          if (e.key !== 'Enter' && e.key !== ' ') return;
-          e.preventDefault();
-          this._openSlot(p.arg, w, p.by);
-        });
-        el.appendChild(w);
-      }
-      this._paintOffers(el, offers);
+      const s = this._sentence();
+      s.paint(el, text, parts);
+      s.paintOffers(el, offers);
     }
 
-    /** The settings the sentence would name if they were set.
-     *
-     * A clause in brackets leaves with its value, and takes the word that
-     * would open it: promoting `facet` on a chart that has no facet promotes
-     * nothing. So the sentence ends with one dashed chip per dropped setting,
-     * opening exactly the menu the word would have opened, and each chip
-     * disappears the moment its clause comes back. Past three the block has
-     * more unset settings than a caption can offer, and the gear is the right
-     * surface for that.
-     *
-     * @param {HTMLElement} el
-     * @param {any[]} [offers]
-     */
-    _paintOffers(el, offers) {
-      if (!Array.isArray(offers) || !offers.length) return;
-      const MAX = 3;
-      const shown = offers.slice(0, MAX);
-      for (const key of shown) {
-        if (typeof key !== 'string') continue;
-        const label = this._slotLabel(key) || key;
-        const c = document.createElement('span');
-        c.className = 'blockr-slot-offer';
-        c.textContent = '+ ' + label;
-        c.setAttribute('role', 'button');
-        c.setAttribute('tabindex', '0');
-        c.title = 'Add ' + label.toLowerCase() + ' to this chart';
-        c.addEventListener('click', (e) => { e.stopPropagation(); this._openSlot(key, c); });
-        c.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
-          if (e.key !== 'Enter' && e.key !== ' ') return;
-          e.preventDefault();
-          this._openSlot(key, c);
+    _sentence() {
+      if (!this._slotsInst) {
+        this._slotsInst = new Blockr.SentenceSlots({
+          ddc: () => this._cfg,
+          config: () => this.config,
+          openGear: () => this._openPopover()
         });
-        el.appendChild(c);
       }
-      if (offers.length > MAX) {
-        const more = document.createElement('span');
-        more.className = 'blockr-slot-offer blockr-slot-offer--more';
-        more.textContent = '+' + (offers.length - MAX);
-        more.setAttribute('role', 'button');
-        more.setAttribute('tabindex', '0');
-        more.title = 'The rest, in the settings';
-        more.addEventListener('click', (e) => { e.stopPropagation(); this._openPopover(); });
-        el.appendChild(more);
-      }
+      return this._slotsInst;
     }
 
-    // A role.label may be a function of the current config (the x role reads
-    // "Timeline" on a band chart), exactly as the gear's rows resolve it.
     /** @param {string} key */
-    _slotLabel(key) {
-      const role = this._cfg && this._cfg._role ? this._cfg._role(key) : null;
-      if (!role || !role.label) return '';
-      return (typeof role.label === 'function') ? role.label(this.config) : role.label;
-    }
+    _slotLabel(key) { return this._sentence().label(key); }
 
-    // The slot's editor is the list, hung off the word: no popover, no
-    // control to click a second time. Blockr.Select.menu() is the same
-    // dropdown every select in the product opens, so the tick, the filter
-    // box, the keyboard and the edge flip come with it.
     /** @param {string} key @param {HTMLElement} anchor @param {string} [by] */
-    _openSlot(key, anchor, by) {
-      const wasKey = this._slotKey;
-      this._closeSlot();
-      if (wasKey === key) return;              // the word toggles its own menu
-      if (!this._cfg) return;
-      // A flag has no list: the word IS the switch, and it says which state it
-      // is in. Its clause disappears when it goes off, and comes back as an
-      // offer chip.
-      const flag = this._cfg._slotFlag && this._cfg._slotFlag(key);
-      if (flag) {
-        const on = this.config[flag.key] !== 'off';
-        this._cfg._setRoleValue(key, on ? 'off' : 'on');
-        return;
-      }
-      const opts = this._cfg._slotOptionsFor(key);
-      // No list to open: a number, a text field, a multi-select. Those keep
-      // their row in the strip, so there is nothing to do here.
-      if (!opts) return;
-      const B = (typeof Blockr !== 'undefined') ? Blockr : null;
-      if (!B || !B.Select || !B.Select.menu) {
-        // LOUD on purpose. This is a version skew, not a capability to feel
-        // out at runtime: blockr.viz paints the words and blockr.dplyr owns
-        // the menu they open, so a deployment carrying one without the other
-        // gives words that do nothing and no other symptom at all. A silent
-        // return here cost an afternoon on prod. See blockr.docs
-        // design-system/pinned-controls.md.
-        throw new Error(
-          'Blockr.Select.menu() is missing: this blockr.dplyr predates the ' +
-          'title-slot menu. The words in a block\'s sentence cannot open ' +
-          'their list until blockr.dplyr is updated alongside blockr.viz.'
-        );
-      }
-      this._slotKey = key;
-      this._slotAnchor = anchor;
-      anchor.classList.add('blockr-slot--open');
-      this._slotMenu = B.Select.menu(anchor, {
-        options: opts.options,
-        selected: opts.selected,
-        title: this._slotLabel(key) || key,
-        // Lead with the half the sentence printed.
-        labelFirst: by === 'label',
-        searchPlaceholder: 'Filter columns',
-        onChange: (/** @type {string} */ val) => this._cfg._setRoleValue(key, val),
-        onClose: () => {
-          if (this._slotAnchor) this._slotAnchor.classList.remove('blockr-slot--open');
-          this._slotAnchor = null;
-          this._slotMenu = null;
-          this._slotKey = null;
-        }
-      });
-    }
+    _openSlot(key, anchor, by) { this._sentence().open(key, anchor, by); }
 
-    _closeSlot() {
-      if (this._slotMenu) { this._slotMenu.close(); this._slotMenu = null; }
-      if (this._slotAnchor) {
-        this._slotAnchor.classList.remove('blockr-slot--open');
-        this._slotAnchor = null;
-      }
-      this._slotKey = null;
-    }
+    _closeSlot() { if (this._slotsInst) this._slotsInst.close(); }
 
     // -- Shared facet legend ---------------------------------------------------
     //
@@ -2319,23 +2245,17 @@
       return String(Math.round((e - s) * 100) / 100);
     }
 
-    // Shared row-level tooltip: a bold headline over a list of label/value
-    // rows (nullish/empty values dropped). Used by the gantt and scatter
+    // Shared row-level tooltip: a headline over a list of label/value rows
+    // (nullish/empty values dropped), with the series swatch in the headline
+    // when `color` is given. Used by the gantt, scatter, pie and treemap
     // tooltips so a hovered mark reports every dimension mapped to it, not
     // just one. `pairs` is an array of [label, value].
-    /** @param {any} headline @param {Array<[string, any]>} pairs */
-    _rowTooltip(headline, pairs) {
-      const rows = pairs
+    /** @param {any} headline @param {Array<[string, any]>} pairs @param {any} [color] */
+    _rowTooltip(headline, pairs, color) {
+      return tipHead(this._esc(headline), color) + pairs
         .filter(p => p[1] != null && p[1] !== '')
-        .map(p =>
-          '<div style="display:flex;gap:16px;font-size:11px;line-height:1.6">' +
-          '<span style="color:#888">' + this._esc(p[0]) + '</span>' +
-          '<span style="margin-left:auto;font-weight:500;text-align:right">' +
-          this._esc(p[1]) + '</span></div>')
+        .map(p => tipRow(this._esc(p[0]), this._esc(p[1])))
         .join('');
-      return '<div style="min-width:170px">' +
-        '<div style="font-weight:700;margin-bottom:4px">' +
-        this._esc(headline) + '</div>' + rows + '</div>';
     }
 
     /** @param {any} v */
@@ -2361,7 +2281,7 @@
       const DC = /** @type {any} */ (DrilldownChart);
       const ctx = DC._measureCtx ||
         (DC._measureCtx = document.createElement('canvas').getContext('2d'));
-      ctx.font = `11px ${BLOCKR_FONT}`;
+      ctx.font = `${INK.fontSize}px ${INK.face}`;
       let w = 0;
       for (const l of labels) {
         const tw = ctx.measureText(String(l ?? '')).width;
@@ -2397,7 +2317,7 @@
       const DC = /** @type {any} */ (DrilldownChart);
       const ctx = DC._measureCtx ||
         (DC._measureCtx = document.createElement('canvas').getContext('2d'));
-      ctx.font = `11px ${BLOCKR_FONT}`;
+      ctx.font = `${INK.fontSize}px ${INK.face}`;
       let widest = 0;
       for (const l of labels) {
         const tw = ctx.measureText(String(l ?? '')).width;
@@ -2415,7 +2335,7 @@
       // and buys a layout that never depends on its own height.
       const SCROLLBAR = 16;
       const slot = ((availW > 0 ? availW : 600) - SCROLLBAR) / n;
-      const base = { color: AXIS_LABEL_COLOR, fontSize: 11, interval: 0,
+      const base = { color: INK.muted, fontSize: INK.fontSize, interval: 0,
                      lineHeight: LABEL_LINE_H };
       const measure = (/** @type {any} */ s) => ctx.measureText(String(s ?? '')).width;
 
@@ -2742,7 +2662,6 @@
       this.columns = columns || [];
       this.config = config || {};
       if (args) this.argHelp = args;
-      this._refreshFuncToggle();
 
       // Convert column-oriented data to row-oriented array.
       // Data may arrive as: JSON string (pre-encoded), column object, or row
@@ -3355,6 +3274,7 @@
     }
 
     _render() {
+      readInk(this.el);
       if (this.data.length === 0) {
         this._showEmpty('<div class="vd-empty-state"><p class="vd-empty-text">No data to chart</p></div>');
         return;
@@ -3643,7 +3563,7 @@
           ? { ...anyOption.__xFit, slot, baseH: panelH - anyOption.__xFit.gutter }
           : undefined;
         delete anyOption.__xFit;
-        chart.setOption(this._applyDrillEmphasis(option), true);
+        chart.setOption(cardTooltip(this._applyDrillEmphasis(option)), true);
         if (existed && hChanged) chart.resize();
       }
       this.charts = this._slots.map(s => s.chart).filter(Boolean);
@@ -3686,10 +3606,70 @@
       this._updateHighlight();
     }
 
+    // `value_lines` on the aggregated family: dashed guides across the value
+    // axis, x when the chart lies horizontal. A percent axis runs 0..1 while
+    // the reader types the percentage (`fraction`). ECharts sizes an axis on
+    // series data only and clips a markLine outside it, so the axis is
+    // widened to take in a line past the data, rounded outward to a nice
+    // step because a fixed min/max turns ECharts' own rounding off. A line
+    // inside the data leaves the axis to ECharts (undefined = auto).
+    /** @param {any[]} series @param {any} valAxis @param {boolean} onX @param {boolean} [fraction] */
+    _addValueLines(series, valAxis, onX, fraction) {
+      const raw = Array.isArray(this.config.value_lines) ? this.config.value_lines : [];
+      const typed = raw.map(Number).filter(Number.isFinite);
+      const vals = typed.map(v => (fraction ? v / 100 : v));
+      if (!vals.length || !series.length) return;
+      series[0].markLine = {
+        silent: true, symbol: 'none',
+        // onX means a horizontal chart, whose category axis is inverse.
+        data: vals.map((v, i) => guideLine(v, onX, 1,
+          fraction ? ddNum(typed[i]) + '%' : undefined, onX))
+      };
+      // A bar axis keeps 0 in range (ECharts crosses zero only while min and
+      // max are its own); `scale: true` axes (boxplot) fit the data. A line
+      // that lands exactly on a rounded edge would read as the frame, so the
+      // edge moves one step past it.
+      const zero = !valAxis.scale;
+      const lo = Math.min(...vals), hi = Math.max(...vals);
+      /** @param {{min: number, max: number}} e */
+      const ext = (e) => ({
+        lo: Math.min(lo, e.min, zero ? 0 : Infinity),
+        hi: Math.max(hi, e.max, zero ? 0 : -Infinity)
+      });
+      /** @param {{min: number, max: number}} e */
+      const step = (e) => {
+        const d = ext(e), span = d.hi - d.lo;
+        if (!(span > 0)) return 0;
+        const mag = Math.pow(10, Math.floor(Math.log10(span)));
+        const rel = span / mag;
+        return rel >= 5 ? mag : (rel >= 2 ? mag / 2 : mag / 5);
+      };
+      /** @param {number} at @param {number} st */
+      const onLine = (at, st) => vals.some(v => Math.abs(v - at) < st * 1e-6);
+      if (valAxis.max == null) {
+        valAxis.max = (/** @type {any} */ e) => {
+          const st = step(e);
+          if (!st) return undefined;
+          const at = Math.ceil(ext(e).hi / st) * st;
+          return onLine(at, st) ? at + st : at;
+        };
+      }
+      if (valAxis.min == null) {
+        valAxis.min = (/** @type {any} */ e) => {
+          const st = step(e);
+          if (!st) return undefined;
+          const at = Math.floor(ext(e).lo / st) * st;
+          // A line at 0 on a bar axis is the baseline itself.
+          if (zero && at === 0) return undefined;
+          return onLine(at, st) ? at - st : at;
+        };
+      }
+    }
+
     /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {number} [plotW] container width in px @param {string} [facet] current facet value ('__all__' when unfaceted) @param {number | null} [sharedMax] radar only: the grid-wide spoke max under fixed panel scales */
     _buildAggregatedOption(facetData, groups, colors, palette, plotW, facet, sharedMax) {
       const ct = this.config.chart_type;
-      const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
+      const ax = { labelColor: INK.muted, fontSize: INK.fontSize, splitLineColor: INK.border };
 
       // Value-axis title (the numeric axis on bar / boxplot): the value's
       // variable label, or "Count" for a row count. Same rationale as the
@@ -3734,8 +3714,8 @@
         for (let i = 0; i < ttFields.length; i++) {
           const v = extra[i];
           if (v != null && v !== '') {
-            out.push(this._esc(this._axisTitle(ttFields[i]) || ttFields[i]) +
-              ': ' + this._esc(v));
+            out.push(tipRow(this._esc(this._axisTitle(ttFields[i]) || ttFields[i]),
+              this._esc(v)));
           }
         }
         return out;
@@ -3878,8 +3858,8 @@
       // labels (never diagonal), all shown. Grid bottom grows for rotated text.
       const xlab = vertical ? this._xAxisLabels(catLabels, (plotW || 0) - 65) : null;
       const catAxis = vertical
-        ? { type: 'category', data: groups, axisLabel: axisLabelWithDisplay(xlab?.axisLabel, catFmt), axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
-        : { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, interval: 0, hideOverlap: false, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false }, axisTick: { show: false } };
+        ? { type: 'category', data: groups, axisLabel: axisLabelWithDisplay(xlab?.axisLabel, catFmt), axisLine: { lineStyle: { color: INK.strong } }, axisTick: { show: false } }
+        : { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, interval: 0, hideOverlap: false, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\\u2026', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false }, axisTick: { show: false } };
       // Percent display only applies when a color split is actually present
       // (a single series is trivially 100% of itself).
       const showPercent = isPercent && colors.length > 0;
@@ -3915,15 +3895,19 @@
             : {})
         },
         ...(asFraction ? { max: 1 } : {}),
-        axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+        axisLine: { lineStyle: { color: INK.strong } },
         splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } }
       };
+      this._addValueLines(series, valAxis, !vertical, asFraction);
       // Percent tooltip shows both the share and the raw value (carried on the
       // datum as {value, raw}); default axis tooltip otherwise.
       const fmtRaw = (/** @type {number} */ n) =>
         Number.isInteger(n) ? n : Math.round(n * 100) / 100;
       /** @type {Record<string, any>} */
       const tooltip = { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true };
+      // A split bar's rows name the colour column with the level ("drv 4").
+      const colorName = colors.length
+        ? this._esc(this._axisTitle(this.config.color) || this.config.color) + ' ' : '';
       if (showPercent) {
         tooltip.formatter = (/** @type {any[]} */ ps) => {
           if (!ps || !ps.length) return '';
@@ -3933,10 +3917,10 @@
             .map(p => {
               const pct = Math.round((Number(p.value) || 0) * 100);
               const raw = p.data && p.data.raw != null ? fmtRaw(p.data.raw) : null;
-              return p.marker + p.seriesName + ': ' + pct + '%' +
-                (raw != null ? ' (' + raw + ')' : '');
+              return tipRow(colorName + this._esc(p.seriesName),
+                pct + '%' + (raw != null ? ' (' + raw + ')' : ''), p.color);
             });
-          return head + '<br/>' + rows.concat(ttExtraRows(head)).join('<br/>');
+          return tipHead(this._esc(head)) + rows.concat(ttExtraRows(head)).join('');
         };
       } else {
         // Non-percent bar: name the value by the aggregation (a bare number
@@ -3948,6 +3932,9 @@
         for (const a of facetData) nOf[a.group + '|||' + a.color] = a.n;
         const aggLabel = this._aggLabel();
         const showN = this.config.func !== 'count' && this.config.func !== 'identity';
+        // A split bar's rows add up to its total only for a count or a sum.
+        // Otherwise the headline names what the numbers are ("Mean of hwy").
+        const additive = this.config.func === 'count' || this.config.func === 'sum';
         tooltip.formatter = (/** @type {any[]} */ ps) => {
           if (!ps || !ps.length) return '';
           const head = ps[0].axisValueLabel || ps[0].name || '';
@@ -3968,11 +3955,24 @@
               const shown = pctFunc
                 ? Math.round(Number(p.value) * 1000) / 10 + '%'
                 : fmtRaw(Number(p.value));
-              return p.marker + this._esc(nm) + ': ' + shown +
-                (pctFunc && n != null ? '  (' + n + ')' : '') +
-                (!pctFunc && withN && n != null ? '  (n=' + n + ')' : '');
+              return tipRow(colors.length ? colorName + this._esc(nm) : this._esc(nm),
+                shown +
+                (pctFunc && n != null ? ' (' + n + ')' : '') +
+                (!pctFunc && withN && n != null ? ' (n=' + n + ')' : ''),
+                colors.length ? p.color : null);
             });
-          return this._esc(head) + '<br/>' + rows.concat(ttExtraRows(head)).join('<br/>');
+          const vals = ps.filter(p => p && p.value != null);
+          let foot = '';
+          if (colors.length && vals.length > 1) {
+            foot = additive && !pctFunc
+              ? TIP_SEP + tipRow(this._esc(aggLabel),
+                fmtRaw(vals.reduce((a, p) => a + Number(p.value || 0), 0)))
+              : '';
+          }
+          const note = colors.length && !(additive && !pctFunc)
+            ? tipNote(this._esc(aggLabel)) : '';
+          return tipHead(this._esc(head)) + note + rows.join('') + foot +
+            ttExtraRows(head).join('');
         };
       }
       // The HTML band shows the chips; the panel keeps only a HIDDEN legend
@@ -4001,7 +4001,7 @@
           : 30 + Math.min(PANEL_H_CAP, rowsH) + bottomBase,
         __labelNote: labelNote,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
-        textStyle: { fontFamily: BLOCKR_FONT },
+        textStyle: { fontFamily: INK.face },
         tooltip,
         legend: legendOn ? { show: false, data: colors } : undefined,
         grid: vertical
@@ -4101,16 +4101,29 @@
             ? (/** @type {any} */ v) => this._withCount(v, axisCounts)
             : null
         ),
-        axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+        axisLine: { lineStyle: { color: INK.strong } },
         axisTick: { show: false }, splitLine: { show: false }
       };
       const valAxis = {
         type: 'value', name: valueTitle, nameLocation: 'middle', nameGap: 45,
         nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
         axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
-        axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+        axisLine: { lineStyle: { color: INK.strong } },
         splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } }
       };
+      /** @type {any[]} */
+      const wfSeries = [
+        { name: 'base', type: 'bar', stack: 'waterfall', barWidth: '60%',
+          itemStyle: { color: 'transparent', borderColor: 'transparent' },
+          emphasis: { disabled: true }, silent: true,
+          tooltip: { show: false }, data: base },
+        // borderRadius rides on each DATUM (see the delta loop above): a
+        // total is anchored to the axis and a floating step is not, so the
+        // corners differ per bar and cannot be set once for the series.
+        { name: 'delta', type: 'bar', stack: 'waterfall', barWidth: '60%',
+          emphasis: { focus: 'self' }, data: delta }
+      ];
+      this._addValueLines(wfSeries, valAxis, false);
       return {
         // Default canvas plus the rotated step-label gutter that grid.bottom
         // above already reserves — same rule as the vertical bar.
@@ -4121,7 +4134,7 @@
                     ? (/** @type {any} */ v) => this._withCount(v, axisCounts)
                     : null },
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
-        textStyle: { fontFamily: BLOCKR_FONT },
+        textStyle: { fontFamily: INK.face },
         tooltip: {
           trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true,
           // Only report the visible delta series (the transparent base is an
@@ -4130,25 +4143,15 @@
             const p = (params || []).find((/** @type {any} */ x) => x.seriesName === 'delta');
             if (!p) return '';
             // A null step (gap) has no delta to report.
-            return '<b>' + p.name + '</b><br>' +
-              (p.value == null ? '–' : ddNum(p.value));
+            return tipHead(this._esc(p.name)) + tipRow(this._esc(this._aggLabel()),
+              p.value == null ? '–' : ddNum(p.value));
           }
         },
         legend: { show: false },
         grid: { left: 55, right: 10, top: 30, bottom: 40 + 26 + xlab.bottom },
         xAxis: catAxis,
         yAxis: valAxis,
-        series: [
-          { name: 'base', type: 'bar', stack: 'waterfall', barWidth: '60%',
-            itemStyle: { color: 'transparent', borderColor: 'transparent' },
-            emphasis: { disabled: true }, silent: true,
-            tooltip: { show: false }, data: base },
-          // borderRadius rides on each DATUM (see the delta loop above): a
-          // total is anchored to the axis and a floating step is not, so the
-          // corners differ per bar and cannot be set once for the series.
-          { name: 'delta', type: 'bar', stack: 'waterfall', barWidth: '60%',
-            emphasis: { focus: 'self' }, data: delta }
-        ]
+        series: wfSeries
       };
     }
 
@@ -4161,7 +4164,7 @@
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || paletteAt(palette, i) } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n, p.percent)) }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: 10, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: INK.face }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n, p.percent), p.color) }, series: [{ type: 'pie', radius: ['30%', '70%'], data: pieData, label: { show: true, fontSize: INK.fontSize, formatter: '{b}' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }] };
     }
 
     /** @param {any[]} facetData @param {any[]} groups @param {any[]} palette */
@@ -4173,7 +4176,7 @@
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || paletteAt(palette, i) } };
       }).filter(d => d.value > 0);
-      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: BLOCKR_FONT }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n)) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: 12, formatter: (/** @type {any} */ p) => p.name + '\n' + ddNum(Number(p.value)) }, itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
+      return { ...(this.theme ? {} : { backgroundColor: 'transparent' }), textStyle: { fontFamily: INK.face }, tooltip: { trigger: 'item', confine: true, formatter: (/** @type {any} */ p) => this._rowTooltip(p.name, this._aggPairs(p.value, p.data && p.data.n), p.color) }, series: [{ type: 'treemap', data: tmData, left: 10, right: 10, top: 2, bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false }, label: { show: true, fontSize: INK.fontSize, formatter: (/** @type {any} */ p) => p.name + '\n' + ddNum(Number(p.value)) }, itemStyle: { borderColor: INK.surface, borderWidth: 2, gapWidth: 2 }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }] };
     }
 
     // Radar = an aggregated chart in polar coords: the group levels are the
@@ -4222,17 +4225,17 @@
       const legendOn = colors.length > 0;
       return {
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
-        textStyle: { fontFamily: BLOCKR_FONT },
+        textStyle: { fontFamily: INK.face },
         tooltip: {
           trigger: 'item',
           confine: true,
-          formatter: (/** @type {any} */ p) => '<b>' + this._esc(p.name) +
-            '</b> <span style="color:#888;font-size:11px">(' +
-            this._esc(this._aggLabel()) + ')</span><br>' +
+          formatter: (/** @type {any} */ p) =>
+            tipHead(this._esc(p.name), legendOn ? p.color : null) +
+            tipNote(this._esc(this._aggLabel())) +
             groups.map((g, i) => {
               const v = p.value ? p.value[i] : null;
-              return this._esc(g) + ': ' + (v == null ? '–' : ddNum(v));
-            }).join('<br>')
+              return tipRow(this._esc(g), v == null ? '–' : ddNum(v));
+            }).join('')
         },
         legend: legendOn ? { show: false, data: colors } : { show: false },
         radar: {
@@ -4242,11 +4245,11 @@
           radius: '62%',
           center: ['50%', '50%'],
           axisName: {
-            color: AXIS_LABEL_COLOR, fontSize: 11,
+            color: INK.muted, fontSize: INK.fontSize,
             overflow: 'truncate', width: 90
           },
-          axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
-          splitLine: { lineStyle: { color: SPLIT_LINE_COLOR } },
+          axisLine: { lineStyle: { color: INK.strong } },
+          splitLine: { lineStyle: { color: INK.border } },
           splitArea: { show: false }
         },
         series: [{
@@ -4548,11 +4551,11 @@
         // [dataIndex, wLo, bLo, center, bHi, wHi] — read the last five.
         const five = d.value.slice(-5);
         const h = ttHead(p);
-        return (h ? h + '<br/>' : '') +
-          'n: ' + d.n +
-          '<br/>' + bodyMeta.center + ': ' + ddNum(five[2]) +
-          '<br/>Box (' + bodyMeta.range + '): ' + ddNum(five[1]) + ', ' + ddNum(five[3]) +
-          '<br/>Whiskers (' + whiskMeta.range + '): ' + ddNum(five[0]) + ' \u2013 ' + ddNum(five[4]);
+        return (h ? tipHead(this._esc(h), split ? p.color : null) : '') +
+          tipRow('n', d.n) +
+          tipRow(this._esc(bodyMeta.center), ddNum(five[2])) +
+          tipRow('Box (' + this._esc(bodyMeta.range) + ')', ddNum(five[1]) + ', ' + ddNum(five[3])) +
+          tipRow('Whiskers (' + this._esc(whiskMeta.range) + ')', ddNum(five[0]) + ' \u2013 ' + ddNum(five[4]));
       };
       // Pointrange center datum: {value, center, n, lo, hi} (the whisker +
       // connect series are silent, only the centers hit-test). `center` is
@@ -4562,10 +4565,10 @@
         const d = p.data;
         if (!d || !d.n) return '';
         const h = ttHead(p);
-        return (h ? h + '<br/>' : '') +
-          'n: ' + d.n +
-          '<br/>' + bodyMeta.center + ': ' + ddNum(d.center) +
-          '<br/>' + bodyMeta.range + ': ' + ddNum(d.lo) + ' \u2013 ' + ddNum(d.hi);
+        return (h ? tipHead(this._esc(h), split ? p.color : null) : '') +
+          tipRow('n', d.n) +
+          tipRow(this._esc(bodyMeta.center), ddNum(d.center)) +
+          tipRow(this._esc(bodyMeta.range), ddNum(d.lo) + ' \u2013 ' + ddNum(d.hi));
       };
       const legendOn = split;
       const bottomBase = 46 + (vertical && xlab ? xlab.bottom : 0);
@@ -4574,9 +4577,9 @@
       // forcing 0 in: a distribution reads by position/spread, not
       // length-from-zero (unlike a bar), so pinning 0 just squashes marks far
       // from 0. Matches scatter/line; bars/waterfall keep the 0 baseline.
-      const valAxis = { type: 'value', scale: true, name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: vertical ? 45 : 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, ...(vertical ? { splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } } } : {}) };
+      const valAxis = { type: 'value', scale: true, name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: vertical ? 45 : 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: INK.strong } }, ...(vertical ? { splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } } } : {}) };
       const catAxis = vertical
-        ? { type: 'category', data: cats, axisLabel: axisLabelWithDisplay(xlab?.axisLabel, catFmt), axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
+        ? { type: 'category', data: cats, axisLabel: axisLabelWithDisplay(xlab?.axisLabel, catFmt), axisLine: { lineStyle: { color: INK.strong } }, axisTick: { show: false } }
         : { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, interval: 0, hideOverlap: false, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '…', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false } };
       // ECharts lays out every boxplot series that shares one category axis
       // as a dodged group: the band is cut into one sub-band per series and
@@ -4592,6 +4595,7 @@
       const catAxes = (isBox && split)
         ? seriesLevels.map((_, i) => (i === 0 ? catAxis : { ...catAxis, show: false }))
         : catAxis;
+      this._addValueLines(series, valAxis, !vertical);
       return {
         // Horizontal sizing: one 28px row per DRAWN slot — cats, not groups: a color-split
         // boxplot draws a (group x level) row each, so sizing off the group
@@ -4619,7 +4623,7 @@
         __labelNote: (!vertical && cats.length * 28 > PANEL_H_CAP)
           ? this._thinnedLabelNote(PANEL_H_CAP, cats.length) : null,
         ...(this.theme ? {} : { backgroundColor: 'transparent' }),
-        textStyle: { fontFamily: BLOCKR_FONT },
+        textStyle: { fontFamily: INK.face },
         tooltip: { trigger: 'item', confine: true, formatter: isBox ? boxTooltipFmt : rangeTooltipFmt },
         legend: legendOn ? { show: false, data: levels } : undefined,
         grid: vertical
@@ -4681,7 +4685,7 @@
       let bandMarkLineIdx = -1;
       let bandMany = false;
       const palette = this._palette();
-      const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
+      const ax = { labelColor: INK.muted, fontSize: INK.fontSize, splitLineColor: INK.border };
 
       const facets = facet
         ? [...new Set(this.data.map(r => String(r[facet] ?? '')))].sort()
@@ -4867,8 +4871,8 @@
         const smootherSeries = this.config.smoother_series || null;
         const loCol = this.config.lo;
         const hiCol = this.config.hi;
-        const refX = Array.isArray(this.config.vlines) ? this.config.vlines : [];
-        const refY = Array.isArray(this.config.hlines) ? this.config.hlines : [];
+        const refX = Array.isArray(this.config.x_lines) ? this.config.x_lines : [];
+        const refY = Array.isArray(this.config.value_lines) ? this.config.value_lines : [];
         // Band reference limits, reduced R-side from their columns. Labelled
         // with the column name and, when the column is not constant, the range
         // it was reduced from -- "ANRHI 34 (32–43)". Showing only the reduced
@@ -5146,7 +5150,7 @@
                 data: cpts, symbol: 'none', showSymbol: false,
                 z: 6, silent: true, legendHoverLink: false,
                 itemStyle: { color: clr },
-                lineStyle: { color: SURFACE_HALO, width: (BASE_LINE_WIDTH + 2) * lm },
+                lineStyle: { color: INK.surface, width: (BASE_LINE_WIDTH + 2) * lm },
                 emphasis: { disabled: true }
               });
               centerIdx[cl] = series.length;
@@ -5189,7 +5193,7 @@
           }
         }
 
-        // Helper lines (vlines vertical, hlines horizontal) and the identity
+        // Helper lines (x_lines vertical, value_lines horizontal) and the identity
         // line share one markLine on series[0] (echarts allows one markLine
         // per series).
         //
@@ -5267,8 +5271,8 @@
 
         /** @type {any[]} */
         const refData = [];
-        for (const v of refX) refData.push({ xAxis: Number(v) });
-        for (const v of refY) refData.push({ yAxis: Number(v) });
+        for (const v of refX) refData.push(guideLine(Number(v), true, lm));
+        for (const v of refY) refData.push(guideLine(Number(v), false, lm));
         /** @type {any[]} */
         const refLabels = [];
         if (bandRefs) {
@@ -5299,12 +5303,12 @@
             // cannot be read positionally, so they have to be findable.
             refLabels.push({
               yAxis: at,
-              lineStyle: { color: REF_LINE_COLOR, width: 1 * lm,
+              lineStyle: { color: INK.danger, width: 1 * lm,
                            type: off ? 'dotted' : 'dashed',
                            opacity: off ? 0.6 : 0.45 },
               label: {
-                show: true, position: 'insideEndTop', color: AXIS_LABEL_COLOR,
-                fontSize: 10, fontWeight: 400, formatter: base + off
+                show: true, position: 'insideEndTop', color: INK.muted,
+                fontSize: INK.fontSize, fontWeight: 400, formatter: base + off
               }
             });
           }
@@ -5343,7 +5347,7 @@
             // Diagonal now spans the full shared domain, corner to corner.
             refData.push([
               { coord: [idMin, idMin],
-                lineStyle: { color: '#64748b', type: 'dashed', width: guideW } },
+                lineStyle: { color: INK.muted, type: 'dashed', width: guideW } },
               { coord: [idMax, idMax] }
             ]);
           }
@@ -5354,7 +5358,7 @@
           series[mlTarget].markLine = {
             silent: true,
             symbol: 'none',
-            lineStyle: { color: '#dc2626', type: 'dashed', width: guideW },
+            lineStyle: { color: INK.danger, type: 'dashed', width: guideW },
             label: { show: false },
             data: refData
           };
@@ -5449,7 +5453,7 @@
           axisLabel: xlab
             ? xlab.axisLabel
             : { color: ax.labelColor, fontSize: ax.fontSize },
-          axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+          axisLine: { lineStyle: { color: INK.strong } },
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
           scale: true
         };
@@ -5469,7 +5473,7 @@
           nameRotate: 90,
           nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
           axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
-          axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+          axisLine: { lineStyle: { color: INK.strong } },
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
           scale: true
         };
@@ -5599,12 +5603,13 @@
               // Without a series split there is one unnamed series and
               // ECharts invents "series0" — label the y column instead.
               const nm = splitCol ? p.seriesName : this._axisTitle(y);
-              return p.marker + nm + ': ' + ddNum3(p.value[1]) + ttSuffix(p.value);
+              return tipRow(this._esc(nm), ddNum3(p.value[1]) + ttSuffix(p.value),
+                splitCol ? p.color : null);
             });
             if (ttRows.length > TT_ROW_CAP) {
-              lines.push('… +' + (ttRows.length - TT_ROW_CAP) + ' more');
+              lines.push(tipNote('+' + (ttRows.length - TT_ROW_CAP) + ' more'));
             }
-            return head + '<br/>' + lines.join('<br/>');
+            return tipHead(this._esc(head)) + lines.join('');
           }
         };
         // The panel draws no legend at all: the option keeps a hidden legend
@@ -5646,8 +5651,8 @@
           // datum is a constant that nothing filters and nothing rescales, and
           // renderItem still gets the grid rect because both axis pairs share
           // grid 0.
-          const scrimFill = /dark/i.test(this.theme || '')
-            ? 'rgba(20,20,20,0.55)' : 'rgba(255,255,255,0.6)';
+          // The fill is read from slot.focus at draw time, which _promoteFocus
+          // sets from the surface the plot is painted on (see _plotSurface).
           series.push({
             id: '__scrim__',
             type: 'custom',
@@ -5662,7 +5667,8 @@
               const cs = params.coordSys;   // { x, y, width, height } of the grid
               return { type: 'rect',
                 shape: { x: cs.x, y: cs.y, width: cs.width, height: cs.height },
-                style: { fill: scrimFill } };
+                style: { fill: (slot.focus && slot.focus.veil) ||
+                                'rgba(255,255,255,0.6)' } };
             }
           });
           series.push({
@@ -5714,7 +5720,7 @@
 
         const option = {
           ...(this.theme ? {} : { backgroundColor: 'transparent' }),
-          textStyle: { fontFamily: BLOCKR_FONT },
+          textStyle: { fontFamily: INK.face },
           tooltip: isLine
             ? lineTooltip
             : { trigger: 'item', confine: true,
@@ -5734,7 +5740,7 @@
                   // the mapped roles. _rowTooltip drops empties.
                   ttFields.forEach((c, i) =>
                     pairs.push([this._axisTitle(c) || c, ttVal(p.value[2 + i])]));
-                  return this._rowTooltip(headline, pairs);
+                  return this._rowTooltip(headline, pairs, lvl ? p.color : null);
                 } },
           // Always set explicitly; leaving legend undefined lets echarts
           // auto-render one per series, which eats the plot area when
@@ -5763,7 +5769,7 @@
         slot.seriesByColorByVal =
           (useColorByLegend && seriesByColorByVal) ? seriesByColorByVal : null;
 
-        chart.setOption(this._applyDrillEmphasis(option), true);
+        chart.setOption(cardTooltip(this._applyDrillEmphasis(option)), true);
         // A RETAINED instance measured the old height at init; a fresh one
         // already measured the new one (set above _ensureSlotChart).
         if (existed && hChanged) chart.resize();
@@ -5848,7 +5854,7 @@
         return;
       }
 
-      const ax = { labelColor: AXIS_LABEL_COLOR, fontSize: 11, splitLineColor: SPLIT_LINE_COLOR };
+      const ax = { labelColor: INK.muted, fontSize: INK.fontSize, splitLineColor: INK.border };
       const palette = this._palette();
       const xAxisType = this._axisTypeFor(x);
       const xCats = xAxisType === 'category' ? this._orderedCategories(x) : null;
@@ -6012,7 +6018,7 @@
           nameGap: 28,
           nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
           axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
-          axisLine: { lineStyle: { color: AXIS_LINE_COLOR } },
+          axisLine: { lineStyle: { color: INK.strong } },
           splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
           scale: true
         };
@@ -6055,9 +6061,9 @@
                 x: rect.x + 6,
                 y: rect.y + rect.height / 2,
                 fill: '#fff',
-                fontSize: 10,
+                fontSize: INK.fontSize,
                 fontWeight: 500,
-                fontFamily: BLOCKR_FONT,
+                fontFamily: INK.face,
                 textVerticalAlign: 'middle',
                 truncate: { outerWidth: barW - 12 }
               }
@@ -6102,7 +6108,7 @@
             ? colorLevels.map((/** @type {any} */ lvl, /** @type {number} */ i) =>
                 colorScale.color[lvl] || paletteAt(palette, i))
             : palette,
-          textStyle: { fontFamily: BLOCKR_FONT },
+          textStyle: { fontFamily: INK.face },
           tooltip: {
             trigger: 'item',
             confine: true,
@@ -6172,7 +6178,7 @@
           series: seriesArray
         };
 
-        chart.setOption(this._applyDrillEmphasis(option), true);
+        chart.setOption(cardTooltip(this._applyDrillEmphasis(option)), true);
         if (existed && hChanged) chart.resize();
       }
 
@@ -6295,102 +6301,6 @@
       this.gearBtn.classList.remove('blockr-gear-active');
       this.gearBtn.setAttribute('aria-expanded', 'false');
       this._resizeCharts();
-    }
-
-    // -- On-chart aggregation switch -----------------------------------------
-
-    /**
-     * One square showing the CURRENT aggregation, cycling on click. Sized as
-     * the download and gear it sits between.
-     *
-     * Called on every setData() rather than once at construction: the config
-     * arrives after the DOM is built, and `func_toggle` can change on a gear
-     * edit or a board restore. Keyed on the choices so an unchanged switch is
-     * repainted rather than rebuilt (a rebuild would drop focus mid-click).
-     */
-    _refreshFuncToggle() {
-      const choices = this._funcToggleChoices();
-      const key = choices.join('|');
-      if (key !== this._funcToggleKey) {
-        this._funcToggleKey = key;
-        if (this.funcToggleEl) { this.funcToggleEl.remove(); this.funcToggleEl = null; }
-        if (choices.length < 2 || !this.gearHeader) return;
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'dd-func-btn';
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const cs = this._funcToggleChoices();
-          const at = cs.indexOf(this.config.func);
-          this._setFunc(cs[(at + 1) % cs.length]);
-        });
-        this.funcToggleEl = btn;
-        // Before the gear, after the download: the order the header already
-        // reads in, most-used control nearest the content.
-        this.gearHeader.insertBefore(btn, this.gearBtn);
-      }
-      this._syncFuncToggle();
-    }
-
-    /**
-     * The aggregations the switch cycles through. 'on' is sugar for the pair
-     * this exists for, expanded here rather than in R so the gear's select can
-     * bind straight to the stored value; 'off' and anything under two entries
-     * mean no switch.
-     * @returns {string[]}
-     */
-    _funcToggleChoices() {
-      const ft = this.config.func_toggle;
-      if (!ft) return [];
-      const v = (Array.isArray(ft) ? ft : [ft]).map(String).filter(Boolean);
-      if (v.length === 1 && v[0] === 'on') return ['count_distinct', 'pct_distinct'];
-      if (v.length === 1 && v[0] === 'off') return [];
-      return v;
-    }
-
-    /** @param {string} value @returns {string} */
-    _funcLabel(value) {
-      const opts = (ROLES.func && ROLES.func.options) || [];
-      const opt = opts.find((/** @type {any} */ o) => o.value === value);
-      return opt ? opt.label : value;
-    }
-
-    /**
-     * Paint the square with the CURRENT aggregation, and say in the tooltip
-     * both what it is showing and what a click does — the standing weakness of
-     * a click-through control is that the label alone reads either way.
-     */
-    _syncFuncToggle() {
-      const btn = this.funcToggleEl;
-      if (!btn) return;
-      const cs = this._funcToggleChoices();
-      const at = cs.indexOf(this.config.func);
-      const cur = at >= 0 ? cs[at] : cs[0];
-      const next = cs[((at < 0 ? 0 : at) + 1) % cs.length];
-      btn.textContent = FUNC_SHORT[cur] || this._funcLabel(cur);
-      const title = 'Showing ' + this._funcLabel(cur) +
-        ' \u2014 click for ' + this._funcLabel(next);
-      btn.title = title;
-      btn.setAttribute('aria-label', title);
-    }
-
-    /**
-     * Switch the aggregation and tell R, so the choice is block state rather
-     * than a local flip the next re-render undoes. `value` follows `func`
-     * through the shared reconciler — count_distinct and pct_distinct both
-     * want a column, plain count wants none — so the switch cannot leave the
-     * pair in a combination the gear would refuse.
-     * @param {string} value
-     */
-    _setFunc(value) {
-      const cfg = { ...this.config, func: value };
-      if (DAgg && DAgg.reconcileValue) DAgg.reconcileValue(cfg, this.columns || []);
-      this.config = cfg;
-      this._syncFuncToggle();
-      this._render();
-      // The gear's own transport, not a hand-rolled subset: a partial config
-      // message would drift from it the first time either side gains a field.
-      this._sendConfig();
     }
 
     // -- Status footer --------------------------------------------------------
@@ -6871,6 +6781,11 @@
       const n = m ? parseInt(m[1], 16) : null;
       const rgba = (/** @type {number} */ a) => n == null ? 'rgba(0,0,0,0)'
         : 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
+      // Veil and dot ring take the colour the plot is painted on, read at hover
+      // time so a light/dark switch after the render is picked up. A fixed
+      // white veil turned a dark board grey.
+      const bg = this._plotSurface(slot);
+      f.veil = 'rgba(' + bg.join(',') + ',0.6)';
       // One atomic, animation-free setOption raises the scrim (one datum ->
       // renderItem draws the veil once) and fills BOTH overlay series -- the
       // line (thick, gradient, no symbols) and the scatter (the dots). All carry
@@ -6908,9 +6823,39 @@
           data: s.data,
           symbol: 'circle',
           symbolSize: f.markerPx,
-          itemStyle: { color: clr, borderColor: '#fff', borderWidth: 2 }
+          itemStyle: { color: clr, borderColor: 'rgb(' + bg.join(',') + ')',
+                       borderWidth: 2 }
         }]
       });
+    }
+
+    /**
+     * RGB of the surface a chart slot is painted on: the ECharts theme's
+     * backgroundColor when a named theme is set, else the first ancestor with
+     * an opaque computed background (the card, which follows the board's
+     * light/dark tokens). White when nothing resolves.
+     * @param {any} slot
+     * @returns {number[]}
+     */
+    _plotSurface(slot) {
+      /** @param {string} s */
+      const rgbOf = (s) => {
+        const m = /rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?/.exec(s || '');
+        if (m && (m[4] == null || +m[4] > 0)) return [+m[1], +m[2], +m[3]];
+        const h = /^#([0-9a-f]{6})$/i.exec(s || '');
+        if (h) { const n = parseInt(h[1], 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+        return null;
+      };
+      if (this.theme && slot.chart) {
+        const opt = slot.chart.getOption();
+        const got = rgbOf(String(opt && opt.backgroundColor || ''));
+        if (got) return got;
+      }
+      for (let el = slot.chartDiv; el && el.nodeType === 1; el = el.parentElement) {
+        const got = rgbOf(getComputedStyle(el).backgroundColor);
+        if (got) return got;
+      }
+      return [255, 255, 255];
     }
 
     /** @param {any} slot @param {any} chart */
@@ -6946,7 +6891,6 @@
         bar_mode: this.config.bar_mode || 'stacked',
         na_group: this.config.na_group || 'level',
         pct_of: this.config.pct_of || 'facet',
-        func_toggle: this.config.func_toggle || 'off',
         baseline: this.config.baseline || 'zero',
         series: this.config.series || '',
         label: this.config.label || '',
@@ -6959,8 +6903,8 @@
         // always sent rather than omitted when empty -- same rule as ctrl_target
         // below. String() flattens the array R sent us ([2,5] -> "2,5") so the
         // round-trip is stable when nothing was edited.
-        vlines: this.config.vlines == null ? '' : String(this.config.vlines),
-        hlines: this.config.hlines == null ? '' : String(this.config.hlines),
+        value_lines: this.config.value_lines == null ? '' : String(this.config.value_lines),
+        x_lines: this.config.x_lines == null ? '' : String(this.config.x_lines),
         box_points: this.config.box_points || 'none',
         // Distribution band. band_series / band_refs are NOT sent back: they
         // are R's output, not user config, and echoing them would round-trip a
@@ -7127,6 +7071,21 @@
   const pendingData = {};
   /** @type {Record<string, any>} */
   const pendingTheme = {};
+
+  // The canvas cannot resolve var(), so readInk() copies the tokens into INK
+  // at every render. A scheme switch changes the tokens without a render
+  // (bslib's dark mode writes data-bs-theme on <html>), and every chart kept
+  // drawing its grid and labels in the old scheme's values. So a switch
+  // redraws each chart once, reading the new values. Scoped by attribute, so
+  // no other mutation reaches the callback.
+  new MutationObserver(() => {
+    document.querySelectorAll('.drilldown-chart-container').forEach((el) => {
+      const blk = /** @type {any} */ (el)._block;
+      if (blk && blk.data && blk.data.length) blk._render();
+    });
+  }).observe(document.documentElement, {
+    attributes: true, attributeFilter: ['data-bs-theme'], subtree: true
+  });
 
   const binding = new Shiny.InputBinding();
   Object.assign(binding, {

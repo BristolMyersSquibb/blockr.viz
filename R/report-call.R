@@ -113,8 +113,8 @@ static_chart_call <- function(x, var) {
     lo = NULL,
     hi = NULL,
     connect = "monotone",
-    vlines = NULL,
-    hlines = NULL,
+    value_lines = NULL,
+    x_lines = NULL,
     line_width_mult = 1,
     dot_size_mult = 1
   )
@@ -168,7 +168,7 @@ chart_report_state <- function(x) {
     "series", "bar_mode", "orientation", "sort_by", "sort_dir", "count_on",
     "count_col", "facet_scales", "facet_cols", "box_points", "smoother",
     "identity_line",
-    "lo", "hi", "step", "vlines", "hlines", "line_width_mult",
+    "lo", "hi", "step", "value_lines", "x_lines", "line_width_mult",
     "dot_size_mult", "title", "subtitle", "caption"
   )
 

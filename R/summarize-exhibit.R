@@ -56,6 +56,10 @@
 static_summarize_table <- function(data, ...) {
 
   args <- list(...)
+  # The block hands over the settings its text names, script values
+  # included; a direct call names only the table's own arguments.
+  targs <- args$.title_args %||% rank_title_args(args)
+  args$.title_args <- NULL
 
   # The block resolves its title tier against the data before calling; doing
   # it again is a no-op for a plain string and gives a direct call the same
@@ -73,13 +77,33 @@ static_summarize_table <- function(data, ...) {
       prep = prep,
       cells = cells,
       title = resolve_block_title(args$title, data,
-                                  auto = rank_attr(data, "label")),
+                                  auto = rank_attr(data, "label"),
+                                  args = targs),
       subtitle = resolve_block_title(args$subtitle, data,
-                                     auto = rank_attr(data, "subtitle")),
+                                     auto = rank_attr(data, "subtitle"),
+                                     args = targs),
       caption = resolve_block_title(args$caption, data,
-                                    auto = rank_attr(data, "caption"))
+                                    auto = rank_attr(data, "caption"),
+                                    args = targs)
     ),
     class = c("summarize_exhibit", "blockr_exhibit")
+  )
+}
+
+# The settings a summarize table's title, subtitle and caption can name as
+# `{@arg}` / `{label(@arg)}`: the chart block's title_args(), for this block's
+# roles. `by` names its innermost column, the one each row is: the outer one
+# is the parent a row sits under. The block and the exhibit both call this,
+# so a downloaded table says what the one on screen says.
+#' @noRd
+rank_title_args <- function(args) {
+  by <- as.character(unlist(args$by %||% character()))
+  list(
+    by = if (length(by)) by[[length(by)]],
+    group = args$group, parent = args$parent, value = args$value,
+    func = args$func, id_var = args$id_var, color = args$color,
+    facet = args$facet, sort_by = args$sort_by, top_n = args$top_n,
+    drill = args$drill
   )
 }
 
