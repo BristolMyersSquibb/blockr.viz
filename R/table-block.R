@@ -1401,6 +1401,16 @@ table_arguments <- function() {
       ),
       example = "N = {n_distinct(USUBJID)} subjects",
       type = arg_string()
+    ),
+    download_filename = new_arg_spec(
+      paste0(
+        "Download filename pattern. Unset uses ",
+        "\"{study}_{kind}_{title}_{datetime}\". Supports {study}, ",
+        "{kind}, {title}, {datetime}, and the same data tokens as `title`; ",
+        "the selected download format adds the file extension."
+      ),
+      example = "{study}_{kind}_{title}_{datetime}",
+      type = arg_string()
     )
   )
 }
@@ -1528,6 +1538,10 @@ table_guidance <- function() {
 #'   carrying a native, editable PowerPoint table, over as many slides as it
 #'   takes (needs `officer` and `flextable`). One writable format renders a button, several render a menu;
 #'   a format whose writer is not installed is left out.
+#' @param download_filename Optional download filename pattern. Unset uses
+#'   `"{study}_{kind}_{title}_{datetime}"`. Supports `{study}`, `{kind}`,
+#'   `{title}`, `{datetime}`, and data/title-template tokens. The selected
+#'   download format adds the file extension.
 #' @param excel_download,html_download,pptx_download LEGACY per-format
 #'   toggles, folded on construction: downloads were three switches before they
 #'   became one. Kept as formals so boards saved before `download` still
@@ -1601,6 +1615,7 @@ new_table_block <- function(rowname = NULL,
                                       collapsible = TRUE,
                                       search = TRUE,
                                       download = FALSE,
+                                      download_filename = NULL,
                                       # LEGACY (folded below): downloads were
                                       # three per-format toggles before they
                                       # became one. NULL default = not a
@@ -1645,6 +1660,7 @@ new_table_block <- function(rowname = NULL,
   title <- title_state(title)
   subtitle <- title_state(subtitle)
   caption <- title_state(caption)
+  download_filename <- download_filename_state(download_filename)
 
   # LEGACY args, all mapped here and nowhere else -- the only place in the
   # block that reads them, so everything downstream sees today's arguments
@@ -1694,6 +1710,7 @@ new_table_block <- function(rowname = NULL,
         r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
         r_search         <- shiny::reactiveVal(isTRUE(search))
         r_download       <- shiny::reactiveVal(isTRUE(download))
+        r_download_filename <- shiny::reactiveVal(download_filename)
         r_rotate_titles  <- shiny::reactiveVal(isTRUE(rotate_titles))
         r_title    <- shiny::reactiveVal(title)
         r_subtitle <- shiny::reactiveVal(subtitle)
@@ -1828,6 +1845,8 @@ new_table_block <- function(rowname = NULL,
               upd(r_search, as_toggle(v))
             } else if (identical(p, "download")) {
               upd(r_download, as_toggle(v))
+            } else if (identical(p, "download_filename")) {
+              upd(r_download_filename, download_filename_state(v))
             } else if (identical(p, "rotate_titles")) {
               upd(r_rotate_titles, as_toggle(v))
             } else if (identical(p, "ctrl_target")) {
@@ -1961,7 +1980,8 @@ new_table_block <- function(rowname = NULL,
         # every other renderer that offers the same three formats (see
         # dt_download_control), so the reader meets one control.
         dl_slot <- dt_download_control(session, dl_exhibit,
-                                       enabled = r_download)
+                                       enabled = r_download,
+                                       download_filename = r_download_filename)
 
         # Split render so a filter (or gear edit) re-renders ONLY the <table>,
         # never the search bar / gear / scroll container -- no whole-panel
@@ -2105,7 +2125,8 @@ new_table_block <- function(rowname = NULL,
               caption  = resolve_block_title(r_caption(), d, auto = auto$caption),
               title_state    = r_title(),
               subtitle_state = r_subtitle(),
-              caption_state  = r_caption()
+              caption_state  = r_caption(),
+              download_filename_state = r_download_filename()
               # No *_auto fields: while a slot's state is null (auto), its
               # resolved value above IS the inherited text -- the gear derives
               # the clearable auto content from exactly that (readGearState).
@@ -2407,6 +2428,7 @@ new_table_block <- function(rowname = NULL,
             collapsible    = r_collapsible,
             search         = r_search,
             download       = r_download,
+            download_filename = r_download_filename,
             rotate_titles  = r_rotate_titles,
             # LEGACY per-format download formals (one `download` toggle now):
             # serialized as NULL, kept as ctor formals so a board saved with
@@ -2441,6 +2463,7 @@ new_table_block <- function(rowname = NULL,
     # at eval time instead; core surfaces both the same way.
     dat_valid = validate_annotated_df_input,
     allow_empty_state = c("rowname", "value", "group", "summaries", "color",
+                          "download_filename",
       "shadings", "cell_color", "row_color", "drill", "filter_column",
       "filter_values", "filter_type", "filter_range",
       "filter_group_cols", "filter_group_vals",
@@ -2453,7 +2476,7 @@ new_table_block <- function(rowname = NULL,
       "digits", "max_height",
       "filter_column", "filter_values",
       "filter_group_cols", "filter_group_vals",
-      "sortable", "collapsible", "search", "download", "rotate_titles",
+      "sortable", "collapsible", "search", "download", "download_filename", "rotate_titles",
       "title", "subtitle", "caption",
       "ctrl_target", "ctrl_table"),
     expr_type = "bquoted",

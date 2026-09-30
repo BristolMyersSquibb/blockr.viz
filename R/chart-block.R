@@ -432,6 +432,7 @@ new_chart_block <- function(
     # changed is WHAT it writes -- the chart a report would print, in four
     # formats, instead of a capture of the live canvas (see R/chart-exhibit.R).
     download = TRUE,
+    download_filename = NULL,
     ctrl_target = "",
     ctrl_table = "",
     # Mapping roles promoted out of the gear onto the block's face, where a
@@ -537,6 +538,7 @@ new_chart_block <- function(
   title <- title_state(title)
   subtitle <- title_state(subtitle)
   caption <- title_state(caption)
+  download_filename <- download_filename_state(download_filename)
   # `count_col` is an optional column role (heal a DAG-poisoned list() to NULL,
   # coerce to character); `count_on` is a fixed-option select, backfilled to
   # "off" when absent.
@@ -825,6 +827,7 @@ new_chart_block <- function(
         r_facet_scales <- shiny::reactiveVal(facet_scales)
         r_facet_cols <- shiny::reactiveVal(facet_cols)
         r_download <- shiny::reactiveVal(isTRUE(download))
+        r_download_filename <- shiny::reactiveVal(download_filename)
         # Prepare script. Externally controllable, so a write can arrive from
         # MCP or a restore as a vector of lines rather than one string;
         # cb_script_text() collapses it at the one place every write passes
@@ -1230,6 +1233,7 @@ new_chart_block <- function(
               # Downloads: the gear's toggle, and what decides whether the
               # hoisted control renders at all.
               download = if (isTRUE(r_download())) "on" else "off",
+              download_filename = r_download_filename(),
               # PROTOTYPE (R/chart-capture.R): opening the download menu makes
               # the canvas compose itself and send the bitmap up, and the
               # files carry that instead of a server-side re-render.
@@ -1504,6 +1508,9 @@ new_chart_block <- function(
             }
             if (!is.null(msg$download)) {
               upd(r_download, identical(as.character(msg$download)[[1L]], "on"))
+            }
+            if (!is.null(msg$download_filename)) {
+              upd(r_download_filename, download_filename_state(msg$download_filename))
             }
             if (!is.null(msg$lo))         upd(r_lo, nn(msg$lo))
             if (!is.null(msg$hi))         upd(r_hi, nn(msg$hi))
@@ -1849,8 +1856,21 @@ new_chart_block <- function(
           dl_control_ui(ns, dl_formats())
         )
 
+        chart_download_filename <- function(ext) {
+          d <- tryCatch(plain_data(), error = function(e) NULL)
+          auto <- tryCatch(r_data_titles(), error = function(e) list())
+          title <- tryCatch(
+            resolve_block_title(r_title(), d, auto = auto$label),
+            error = function(e) NULL
+          )
+          viz_download_filename(
+            kind = "plot", ext = ext, title = title, data = d,
+            id = ns(""), pattern = r_download_filename()
+          )
+        }
+
         output$dl_xlsx <- shiny::downloadHandler(
-          filename = function() "chart.xlsx",
+          filename = function() chart_download_filename("xlsx"),
           content = function(file) {
             dl_guard("Excel", {
               # The numbers, never the picture: xlsx reads the aggregated frame
@@ -1875,7 +1895,7 @@ new_chart_block <- function(
           }
         )
         output$dl_html <- shiny::downloadHandler(
-          filename = function() "chart.html",
+          filename = function() chart_download_filename("html"),
           content = function(file) {
             dl_guard("web page", {
               p <- dl_chart()
@@ -1891,7 +1911,7 @@ new_chart_block <- function(
           }
         )
         output$dl_pptx <- shiny::downloadHandler(
-          filename = function() "chart.pptx",
+          filename = function() chart_download_filename("pptx"),
           content = function(file) {
             dl_guard("PowerPoint", {
               p <- dl_chart()
@@ -1906,7 +1926,7 @@ new_chart_block <- function(
           }
         )
         output$dl_png <- shiny::downloadHandler(
-          filename = function() "chart.png",
+          filename = function() chart_download_filename("png"),
           content = function(file) {
             dl_guard("image", {
               p <- dl_chart()
@@ -2049,6 +2069,7 @@ new_chart_block <- function(
             facet_scales = r_facet_scales,
             facet_cols = r_facet_cols,
             download = r_download,
+            download_filename = r_download_filename,
             lo = r_lo,
             hi = r_hi,
             baseline = r_baseline,
@@ -2095,6 +2116,7 @@ new_chart_block <- function(
     # `func` is NOT listed: the JS side never emits it empty (a fixed-option
     # select, backfilled to "count"/"mean" wherever unset).
     allow_empty_state = c("group", "color", "facet", "filter_column",
+                          "download_filename",
       "filter_values", "value", "x", "y", "xend", "series", "label",
       "tt_fields", "drill", "sort_by", "sort_dir", "filter_range",
       "filter_point", "vlines", "hlines", "smoother", "identity_line",
@@ -2140,7 +2162,7 @@ new_chart_block <- function(
       "lo", "hi", "baseline", "waterfall_totals",
       "count_on", "count_col", "na_group", "pct_of",
       "facet_scales", "facet_cols",
-      "title", "subtitle", "caption",
+      "title", "subtitle", "caption", "download_filename",
       # Externally controllable (MCP, restore) but deliberately NOT on the AI
       # surface: `script` is absent from the registry argument spec, so the
       # assistant never sees it. A general escape hatch on a block that appears

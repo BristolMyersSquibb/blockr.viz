@@ -605,6 +605,16 @@ chart_arguments <- function() {
       ),
       example = "N = {n_distinct(USUBJID)} subjects",
       type = arg_string()
+    ),
+    download_filename = new_arg_spec(
+      paste0(
+        "Download filename pattern. Unset uses ",
+        "\"{study}_{kind}_{title}_{datetime}\". Supports {study}, ",
+        "{kind}, {title}, {datetime}, and the same data tokens as `title`; ",
+        "the selected download format adds the file extension."
+      ),
+      example = "{study}_{kind}_{title}_{datetime}",
+      type = arg_string()
     )
   )
 }

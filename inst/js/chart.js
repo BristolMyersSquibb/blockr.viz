@@ -769,6 +769,8 @@
     download: { label: 'Download', kind: 'segmented', options: [
                   { value: 'on', label: 'Downloads' },
                   { value: 'off', label: 'No downloads' }] },
+    download_filename: { label: 'Filename', kind: 'text',
+                         ph: '{study}_{kind}_{title}_{datetime}' },
     facet_scales: { label: 'Panel scales', kind: 'select',
                     when: (/** @type {any} */ cfg) => !!cfg.facet,
                     optionsBy: {
@@ -975,7 +977,7 @@
         { role: 'pct_of', types: ['bar'] },
         // Facet-grid shape; both hidden until a facet is mapped (role
         // `when`).
-        'facet_scales', 'facet_cols', 'download'],
+        'facet_scales', 'facet_cols', 'download', 'download_filename'],
       titles: ['title', 'subtitle', 'caption']
     },
     individual: {
@@ -1020,7 +1022,7 @@
         'count_on', 'count_col',
         // Facet-grid shape; both hidden until a facet is mapped (role
         // `when`).
-        'facet_scales', 'facet_cols', 'download'
+        'facet_scales', 'facet_cols', 'download', 'download_filename'
       ],
       titles: ['title', 'subtitle', 'caption']
     },
@@ -1032,7 +1034,7 @@
       presentation: ['sort_by', 'sort_dir', 'count_on', 'count_col',
         // Facet-grid shape; both hidden until a facet is mapped (role
         // `when`).
-        'facet_scales', 'facet_cols', 'download'],
+        'facet_scales', 'facet_cols', 'download', 'download_filename'],
       titles: ['title', 'subtitle', 'caption']
     }
   };
@@ -6844,6 +6846,7 @@
         title: this.config.title ?? null,
         subtitle: this.config.subtitle ?? null,
         caption: this.config.caption ?? null,
+        download_filename: this.config.download_filename ?? null,
         // External-control send (beta). "" is a real value on both (un-targeting
         // the sender / a plain-data target that names no table), so they are
         // always sent rather than omitted when empty.

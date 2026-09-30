@@ -1181,6 +1181,8 @@
     // format it can write (xlsx, html, pptx) -- a button for one, a menu for
     // several.
     download:    { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
+    download_filename: { label: "Filename", kind: "text",
+      ph: "{study}_{kind}_{title}_{datetime}" },
     // Matrix display mode: value-column titles stand upright and columns
     // size on cell content — a wide subject x term matrix (AE heatmap)
     // fits several times more columns per viewport.
@@ -1225,7 +1227,7 @@
     pres.push("sortable");
     if (hasCols) pres.push("rotate_titles");   // flat tables only
     if (!hasCols) pres.push("collapsible");   // only sectioned tables collapse
-    pres.push("search", "download");
+    pres.push("search", "download", "download_filename");
     var spec = /** @type {Record<string, any>} */ ({ requiredMap: [], optionalMap: [],
                  mapping: hasCols ? ["group"] : [],
                  summaries: hasCols,         // offer the summaries list whenever the box is on
@@ -1383,6 +1385,7 @@
     tlState("title");
     tlState("subtitle");
     tlState("caption");
+    cfg.download_filename = titles.download_filename_state === undefined ? null : titles.download_filename_state;
     return { cols: cols, cfg: cfg };
   }
 
