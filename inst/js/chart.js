@@ -3879,7 +3879,7 @@
       const xlab = vertical ? this._xAxisLabels(catLabels, (plotW || 0) - 65) : null;
       const catAxis = vertical
         ? { type: 'category', data: groups, axisLabel: axisLabelWithDisplay(xlab?.axisLabel, catFmt), axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
-        : { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false }, axisTick: { show: false } };
+        : { type: 'category', data: groups, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, interval: 0, hideOverlap: false, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '\u2026', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false }, axisTick: { show: false } };
       // Percent display only applies when a color split is actually present
       // (a single series is trivially 100% of itself).
       const showPercent = isPercent && colors.length > 0;
@@ -4577,7 +4577,7 @@
       const valAxis = { type: 'value', scale: true, name: this._axisTitle(this.config.value), nameLocation: 'middle', nameGap: vertical ? 45 : 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize }, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize }, axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, ...(vertical ? { splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } } } : {}) };
       const catAxis = vertical
         ? { type: 'category', data: cats, axisLabel: axisLabelWithDisplay(xlab?.axisLabel, catFmt), axisLine: { lineStyle: { color: AXIS_LINE_COLOR } }, axisTick: { show: false } }
-        : { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '…', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false } };
+        : { type: 'category', data: cats, inverse: true, axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, interval: 0, hideOverlap: false, align: 'left', margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '…', ...(catFmt ? { formatter: catFmt } : {}) }, axisLine: { show: false } };
       // ECharts lays out every boxplot series that shares one category axis
       // as a dodged group: the band is cut into one sub-band per series and
       // series i draws in sub-band i (boxplotLayout's calculateBase). With
@@ -6158,6 +6158,7 @@
             inverse: true,
             axisLabel: {
               color: ax.labelColor, fontSize: ax.fontSize,
+              interval: 0, hideOverlap: false,
               align: 'left', margin: gut.margin, width: gut.width,
               overflow: 'truncate', ellipsis: '\u2026',
               ...(laneCounts
