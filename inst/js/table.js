@@ -1385,7 +1385,7 @@
     tlState("title");
     tlState("subtitle");
     tlState("caption");
-    cfg.download_filename = titles.download_filename_state === undefined ? null : titles.download_filename_state;
+    cfg.download_filename = tl.download_filename_state === undefined ? null : tl.download_filename_state;
     return { cols: cols, cfg: cfg };
   }
 
