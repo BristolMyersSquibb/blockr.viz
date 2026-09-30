@@ -1097,7 +1097,7 @@
    *             focus: { series: any[], stepMode: string | null,
    *                      smoothOn: boolean, xAxisType: string,
    *                      xOrder: Map<string, number> | null,
-   *                      markerPx: number, focusW: number } | null,
+   *                      markerPx: number, focusW: number, veil?: string } | null,
    *             focusSi: number | null,
    *             band: { centerIdx: Record<string, number>,
    *                     ribbonIdx: Record<string, { idx: number, item: any }>,
