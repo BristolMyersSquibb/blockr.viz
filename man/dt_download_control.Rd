@@ -9,7 +9,8 @@ dt_download_control(
   exhibit,
   enabled = NULL,
   slot_id = "dt_download",
-  filename = "table"
+  filename = "table",
+  download_filename = NULL
 )
 }
 \arguments{
@@ -28,7 +29,11 @@ caller with no gear to switch them off in.}
 
 \item{slot_id}{Output id for the control itself.}
 
-\item{filename}{Base name for the written file, without extension.}
+\item{filename}{Fallback base name for the written file, without extension.}
+
+\item{download_filename}{Optional filename pattern. Supports \code{{study}},
+\code{{kind}}, \code{{title}} and \code{{datetime}}; extension is appended by the
+selected format.}
 }
 \value{
 A \code{\link[shiny:htmlOutput]{shiny::uiOutput()}} to place on the toolbar.

@@ -59,6 +59,7 @@ new_chart_block(
   facet_scales = "fixed",
   facet_cols = getOption("blockr.viz.facet_cols"),
   download = TRUE,
+  download_filename = NULL,
   ctrl_target = "",
   ctrl_table = "",
   script = NULL,
@@ -335,6 +336,11 @@ takes it as its default.}
 control in the gear header that writes the chart a report would print --
 image, HTML, PowerPoint and the plotted numbers -- rather than a capture
 of the live canvas. \code{FALSE} shows no control.}
+
+\item{download_filename}{Optional download filename pattern. Unset uses
+\code{"{study}_{kind}_{title}_{datetime}"}. Supports \code{{study}}, \code{{kind}},
+\code{{title}}, \code{{datetime}}, and data/title-template tokens. The selected
+download format adds the file extension.}
 
 \item{ctrl_target}{Character(1), beta. Block id of a value filter block on
 the board: a categorical drill click's claim is pushed there over the

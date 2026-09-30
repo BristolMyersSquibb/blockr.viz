@@ -28,6 +28,7 @@ new_table_block(
   collapsible = TRUE,
   search = TRUE,
   download = FALSE,
+  download_filename = NULL,
   excel_download = NULL,
   html_download = NULL,
   pptx_download = NULL,
@@ -105,6 +106,11 @@ every section starts expanded), and \code{\link[=write_exhibit_pptx]{write_exhib
 carrying a native, editable PowerPoint table, over as many slides as it
 takes (needs \code{officer} and \code{flextable}). One writable format renders a button, several render a menu;
 a format whose writer is not installed is left out.}
+
+\item{download_filename}{Optional download filename pattern. Unset uses
+\code{"{study}_{kind}_{title}_{datetime}"}. Supports \code{{study}}, \code{{kind}},
+\code{{title}}, \code{{datetime}}, and data/title-template tokens. The selected
+download format adds the file extension.}
 
 \item{excel_download, html_download, pptx_download}{LEGACY per-format
 toggles, folded on construction: downloads were three switches before they
