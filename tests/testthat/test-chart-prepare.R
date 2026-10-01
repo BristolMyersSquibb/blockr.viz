@@ -332,3 +332,23 @@ test_that("the filter trail survives a script that regroups", {
   out <- dd_prepare_run(d, ps$parsed, ps$specs, list())
   expect_identical(attr(out$data, "blockr_filters"), c(mine = "AGE > 65"))
 })
+
+
+test_that("column labels survive a script that filters with base `[`", {
+  d <- data.frame(AVISIT = c("WEEK 1", "UNSCHEDULED"), AVAL = c(1, 2))
+  attr(d$AVISIT, "label") <- "Analysis Visit"
+  attr(d$AVAL, "label") <- "Analysis Value"
+  txt <- script_of(
+    ".keep <- !grepl(\"UNSCH\", data$AVISIT)",
+    "out <- data[.keep, , drop = FALSE]",
+    "attr(out$AVAL, \"label\") <- \"Result\"",
+    "out"
+  )
+  ps <- parsed_of(txt, d)
+  out <- dd_prepare_run(d, ps$parsed, ps$specs, list())
+  expect_null(out$error)
+  expect_equal(nrow(out$data), 1L)
+  expect_identical(attr(out$data$AVISIT, "label"), "Analysis Visit")
+  # A label the script sets is its own.
+  expect_identical(attr(out$data$AVAL, "label"), "Result")
+})

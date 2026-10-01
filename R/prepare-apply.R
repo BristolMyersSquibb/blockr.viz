@@ -81,6 +81,17 @@ dd_prepare_run <- function(data, parsed, specs, values = list()) {
     attr(out, "blockr_filters") <- attr(data, "blockr_filters", exact = TRUE)
   }
 
+  # Base `[` on a data.frame strips every column's attributes, so a script
+  # that filters with `data[keep, , drop = FALSE]` hands back columns without
+  # their labels, and the axes fall back to variable names. A column that
+  # kept its name gets its label back; one the script labelled keeps its own.
+  for (nm in intersect(names(out), names(data))) {
+    lbl <- attr(data[[nm]], "label", exact = TRUE)
+    if (!is.null(lbl) && is.null(attr(out[[nm]], "label", exact = TRUE))) {
+      attr(out[[nm]], "label") <- lbl
+    }
+  }
+
   list(data = out, error = NULL)
 }
 
