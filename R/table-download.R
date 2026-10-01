@@ -116,12 +116,18 @@ dl_tool <- function(ns, spec) {
 #'   caller with no gear to switch them off in.
 #' @param slot_id Output id for the control itself.
 #' @param filename Base name for the written file, without extension.
+#' @param picture Optional function of no arguments returning the block as
+#'   the browser drew it (a `chart_capture`, see R/chart-capture.R), or
+#'   `NULL` while there is none. When given, the menu gains an Image entry,
+#'   and the web page and the deck carry the picture instead of a re-typeset
+#'   table. The heatmap passes one: it is a graphic table, exported like the
+#'   chart and the summarize table. The spreadsheet always gets values.
 #'
 #' @return A [shiny::uiOutput()] to place on the toolbar.
 #' @export
 dt_download_control <- function(session, exhibit, enabled = NULL,
                                 slot_id = "dt_download",
-                                filename = "table") {
+                                filename = "table", picture = NULL) {
   stopifnot(is.function(exhibit))
   ns <- session$ns
   slot <- shiny::uiOutput(ns(slot_id), inline = TRUE)
@@ -135,8 +141,16 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
   # The format set is reactive on `enabled` so a gear toggle takes effect
   # without rebuilding the chrome around it.
   specs <- shiny::reactive({
-    if (!is.null(enabled) && !isTRUE(enabled())) list() else dt_dl_specs()
+    if (!is.null(enabled) && !isTRUE(enabled())) {
+      list()
+    } else if (is.function(picture)) {
+      c(dt_dl_specs(),
+        list(list(id = "dl_png", ext = "png", label = "Image", ok = TRUE)))
+    } else {
+      dt_dl_specs()
+    }
   })
+  pic <- function() if (is.function(picture)) picture()
 
   session$output[[slot_id]] <- shiny::renderUI(dl_control_ui(ns, specs()))
 
@@ -157,6 +171,11 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
     filename = function() paste0(filename, ".html"),
     content = function(file) {
             dl_guard("web page", {
+              p <- pic()
+              if (!is.null(p)) {
+                e <- exhibit()
+                return(write_exhibit_html(p, file, title = e$title))
+              }
               e <- exhibit()
               write_exhibit_html(e$data, file, title = e$title,
                                  subtitle = e$subtitle, caption = e$caption,
@@ -169,9 +188,24 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
     filename = function() paste0(filename, ".pptx"),
     content = function(file) {
             dl_guard("PowerPoint", {
+              p <- pic()
+              if (!is.null(p)) return(write_exhibit_pptx(p, file))
               e <- exhibit()
               write_exhibit_pptx(e$data, file, title = e$title,
                                  subtitle = e$subtitle, caption = e$caption)
+            })
+          }
+        )
+  session$output$dl_png <- shiny::downloadHandler(
+    filename = function() paste0(filename, ".png"),
+    content = function(file) {
+            dl_guard("image", {
+              p <- pic()
+              if (is.null(p)) {
+                stop("the picture is not ready yet; open the menu again",
+                     call. = FALSE)
+              }
+              chart_capture_file(p, file)
             })
           }
         )
@@ -180,7 +214,7 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
   # display:none until the JS hoists it. A hidden output is a SUSPENDED
   # output, so the download handler never registers and the click comes back
   # 404 -- the prod failure that saves "<block>-expr-dl_pptx.htm".
-  for (nm in c(slot_id, "dl_xlsx", "dl_html", "dl_pptx")) {
+  for (nm in c(slot_id, "dl_xlsx", "dl_html", "dl_pptx", "dl_png")) {
     try(
       shiny::outputOptions(session$output, nm, suspendWhenHidden = FALSE),
       silent = TRUE

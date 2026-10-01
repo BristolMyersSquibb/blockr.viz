@@ -16,6 +16,13 @@
  * Mirrors tile-block.js (scan + MutationObserver init, idempotent per root).
  */
 (function () {
+  // Where this file was served from: snapdom.js sits next to it and is loaded
+  // only when a picture is first asked for.
+  var JS_BASE = (function () {
+    var sc = /** @type {HTMLScriptElement|null} */ (document.currentScript);
+    return sc && sc.src ? sc.src.replace(/[^\/]*$/, '') : '';
+  })();
+
   /** @param {string} elemId @param {string} param @param {*} value */
   function sendConfig(elemId, param, value) {
     if (!elemId || !window.Shiny || !Shiny.setInputValue) return;
@@ -27,7 +34,7 @@
    * everything that changes with a payload lives here.
    * @typedef {{ elemId: string, cfg: Record<string, any>, cols: any[],
    *   ddc: any, slots: any, tray: any, model: any, pos: Record<number, number>,
-   *   groupOf: string[] }} HmbState
+   *   groupOf: string[], capture?: boolean, captureRatio?: number }} HmbState
    */
   /** @type {WeakMap<Element, HmbState>} */
   var states = new WeakMap();
@@ -446,6 +453,8 @@
       try { st.cfg = JSON.parse(p.config); } catch (e) { st.cfg = {}; }
     }
     root.setAttribute('data-hmb-drill', p.drill ? '1' : '0');
+    st.capture = !!p.capture;
+    st.captureRatio = Number(p.captureRatio) || 2;
     root.setAttribute('data-hmb-row-col', p.rowCol || '');
     root.classList.toggle('hmb-nonum', !p.cellNumbers);
 
@@ -516,6 +525,124 @@
     if (st.ddc) st.ddc.render();
   }
 
+  // ---- the export picture ---------------------------------------------
+  // The heatmap a download carries is the one the browser drew (the chart's
+  // and the summarize table's rule, R/chart-capture.R): the block cloned
+  // offscreen without its tools, every row, the sideways scroll opened up,
+  // the sentence as plain text, turned into one PNG by snapdom.
+  /** @type {Promise<any> | null} */
+  var snapdomLoading = null;
+  function loadSnapdom() {
+    var w = /** @type {any} */ (window);
+    if (w.snapdom) return Promise.resolve(w.snapdom);
+    if (!snapdomLoading) {
+      snapdomLoading = new Promise(function (resolve, reject) {
+        var sc = document.createElement('script');
+        sc.src = JS_BASE + 'snapdom.js';
+        sc.onload = function () {
+          if (w.snapdom) resolve(w.snapdom);
+          else reject(new Error('snapdom.js loaded but defined nothing'));
+        };
+        sc.onerror = function () {
+          snapdomLoading = null;
+          reject(new Error('snapdom.js could not be loaded'));
+        };
+        document.head.appendChild(sc);
+      });
+    }
+    return snapdomLoading;
+  }
+
+  /** One picture of the drawn block: {png, width, height}, the size in CSS
+   * px (R turns it into inches at 96 dpi).
+   * @param {Element} root @param {HmbState} st */
+  function heatmapPicture(root, st) {
+    return loadSnapdom().then(function (snap) {
+      var table = root.querySelector('table.hmb-table');
+      var width = Math.max(Math.ceil(root.getBoundingClientRect().width),
+                           table ? table.scrollWidth : 0) || 900;
+      var host = document.createElement('div');
+      host.style.cssText = 'position:fixed;left:-20000px;top:0;width:' +
+        width + 'px;background:#ffffff;';
+      var clone = /** @type {HTMLElement} */ (root.cloneNode(true));
+      clone.removeAttribute('data-hmb-elem-id');
+      clone.classList.remove('hmb-search-open');
+      clone.style.padding = '12px';
+      clone.querySelectorAll('.hmb-tools, .hmb-tray, .hmb-search-row, ' +
+        '.hmb-offers, .hmb-footer').forEach(function (n) { n.remove(); });
+      clone.querySelectorAll('[id]').forEach(function (n) {
+        n.removeAttribute('id');
+      });
+      /** @type {[string, string][]} */
+      var texts = [['.hmb-title', 'title_resolved'],
+                   ['.hmb-subtitle', 'subtitle_resolved'],
+                   ['.hmb-caption', 'caption_resolved']];
+      texts.forEach(function (t) {
+        var el = /** @type {HTMLElement|null} */ (clone.querySelector(t[0]));
+        if (!el) return;
+        el.textContent = st.cfg[t[1]] || '';
+        el.style.display = el.textContent ? '' : 'none';
+      });
+      var sc = /** @type {HTMLElement|null} */ (clone.querySelector('.hmb-scroll'));
+      if (sc) {
+        sc.style.overflow = 'visible';
+        sc.classList.remove('hmb-scrolled');
+      }
+      var thead = /** @type {HTMLElement|null} */ (clone.querySelector('thead'));
+      if (thead) thead.style.transform = '';
+      clone.querySelectorAll('tr').forEach(function (tr) {
+        tr.classList.remove('hmb-flash');
+        (/** @type {HTMLElement} */ (tr)).style.display = '';
+      });
+      host.appendChild(clone);
+      document.body.appendChild(host);
+      var drop = function () {
+        if (host.parentNode) host.parentNode.removeChild(host);
+      };
+      var fonts = (document.fonts && document.fonts.ready) ?
+        document.fonts.ready : Promise.resolve();
+      return fonts.then(function () {
+        return new Promise(function (r) {
+          requestAnimationFrame(function () { requestAnimationFrame(r); });
+        });
+      }).then(function () {
+        var w = Math.ceil(clone.offsetWidth);
+        var h = Math.ceil(clone.offsetHeight);
+        // dpr 1: snapdom multiplies the scale by the device pixel ratio, and
+        // the ratio is already the export's to choose.
+        return snap.toCanvas(clone, {
+          scale: st.captureRatio || 2, dpr: 1, embedFonts: true,
+          backgroundColor: '#ffffff'
+        }).then(function (/** @type {HTMLCanvasElement} */ canvas) {
+          drop();
+          return { png: canvas.toDataURL('image/png'), width: w, height: h };
+        });
+      }).catch(function (/** @type {any} */ e) { drop(); throw e; });
+    });
+  }
+
+  // Opening the download menu posts the picture, so it is in R before a
+  // format is picked (the chart and the summarize table do the same).
+  /** @param {Element} root @param {HmbState} st */
+  function wireCapture(root, st) {
+    var tools = root.querySelector('.hmb-tools');
+    if (!tools) return;
+    tools.addEventListener('click', function (e) {
+      var t = /** @type {Element|null} */ (e.target);
+      if (!t || !t.closest || !st.capture || !st.model ||
+          !t.closest('.blockr-action-menu__trigger, a.shiny-download-link')) {
+        return;
+      }
+      heatmapPicture(root, st).then(function (r) {
+        if (window.Shiny && Shiny.setInputValue) {
+          Shiny.setInputValue(st.elemId + '_capture', r, { priority: 'event' });
+        }
+      }, function (err) {
+        if (window.console) console.warn('heatmap picture:', err);
+      });
+    }, true);
+  }
+
   /** @param {Element} root */
   function init(root) {
     if (!root || root.getAttribute('data-hmb-initialized') === '1') return;
@@ -538,6 +665,7 @@
     wireSearch(root);
     wireDrill(root, elemId);
     wireTooltip(root);
+    wireCapture(root, st);
     if (store[elemId]) {
       applyPayload(root, store[elemId]);
     } else if (window.Shiny && Shiny.setInputValue) {

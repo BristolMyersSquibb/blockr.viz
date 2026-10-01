@@ -286,14 +286,33 @@ new_heatmap_block <- function(row = character(),
           if (!is.null(p$err)) {
             return(list(data = data.frame(message = p$err)))
           }
-          out <- hmb_matrix_frame(p, empty = NA_integer_)
+          out <- hmb_exhibit_frame(
+            p, d, tryCatch(board_scale_map(), error = function(e) NULL)
+          )
           tt <- tryCatch(r_titles(), error = function(e) list())
           list(data = out, title = tt$title, subtitle = tt$subtitle,
                caption = tt$caption)
         }
+        # The export picture: the heatmap as the browser drew it, posted by
+        # heatmap-block.js when the download menu opens (the summarize
+        # table's route, R/chart-capture.R). The deck and the image carry
+        # it; without one the exhibit above is the fallback.
+        capture <- shiny::reactiveVal(NULL)
+        shiny::observeEvent(input$heatmap_block_capture, {
+          msg <- input$heatmap_block_capture
+          capture(new_chart_capture(chart_capture_decode(msg$png),
+                                    msg$width, msg$height))
+        })
+        dl_picture <- function() {
+          if (canvas_capture_on()) capture()
+        }
+
         dl_slot <- dt_download_control(session, dl_exhibit,
                                        enabled = r_download,
-                                       filename = "heatmap")
+                                       filename = "heatmap",
+                                       picture = if (canvas_capture_on()) {
+                                         dl_picture
+                                       })
 
         board_scale_map <- dd_board_scale_map()
 
@@ -398,13 +417,17 @@ new_heatmap_block <- function(row = character(),
               # restore -- or a panel re-mount off the client-side cache --
               # comes back in the state the server holds.
               cellNumbers = isTRUE(shiny::isolate(r_numbers())),
-              drill = nzchar(r_target())
+              drill = nzchar(r_target()),
+              capture = canvas_capture_on(),
+              captureRatio = canvas_capture_ratio()
             ),
             auto_unbox = TRUE, null = "null"
           ))
           if (identical(json, last_msg$json)) return()
           last_msg$json <- json
           last_msg$rev <- last_msg$rev + 1L
+          # A picture of the old matrix must not reach a download.
+          capture(NULL)
           push(json)
         })
 

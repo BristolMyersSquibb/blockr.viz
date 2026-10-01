@@ -255,6 +255,24 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
       openxlsx::addStyle(wb, sheet, num_bold, rows = data_xl[bold_row],
                          cols = data_cols_xl, gridExpand = TRUE)
     }
+    # Per-cell paint (`.bg:<col>` / `.fg:<col>`, see annotation_cell_paint()):
+    # one style per distinct (fill, text colour, bold), stacked on the
+    # alignment above.
+    for (j in seq_len(n_data)) {
+      paint <- annotation_cell_paint(df, data_cols[j])
+      if (is.null(paint)) next
+      on <- which(!is.na(paint$bg))
+      key <- paste(paint$bg[on], paint$fg[on], bold_row[on])
+      for (g in split(on, key)) {
+        i <- g[1L]
+        st <- openxlsx::createStyle(
+          fgFill = paint$bg[i],
+          fontColour = if (!is.na(paint$fg[i])) paint$fg[i],
+          textDecoration = if (bold_row[i]) "bold")
+        openxlsx::addStyle(wb, sheet, st, rows = data_xl[g], cols = j + 1L,
+                           stack = TRUE)
+      }
+    }
   }
 
   # Caption (optional): an italic footnote line one blank row below the body,

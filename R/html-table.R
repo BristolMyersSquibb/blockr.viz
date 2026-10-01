@@ -995,6 +995,17 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
     out <- paste0("<td class=\"blockr-data\">", esc(col), "</td>")
     # Missing values get a muted em-dash so they read as 'no data'.
     out[is.na(col)] <- "<td class=\"blockr-data blockr-dash\">&mdash;</td>"
+    paint <- annotation_cell_paint(data, cn)
+    if (!is.null(paint)) {
+      on <- !is.na(paint$bg)
+      style <- paste0("background:", paint$bg[on],
+                      ifelse(is.na(paint$fg[on]), "",
+                             paste0(";color:", paint$fg[on])))
+      # A painted empty cell is part of the picture, not missing data.
+      txt <- ifelse(is.na(col[on]), "", esc(col[on]))
+      out[on] <- paste0("<td class=\"blockr-data\" style=\"", style, "\">",
+                        txt, "</td>")
+    }
     out
   })
 

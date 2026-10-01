@@ -463,6 +463,20 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   if (any(emph_row)) {
     ft <- flextable::italic(ft, i = data_pos[emph_row], part = "body")
   }
+  # Per-cell paint (`.bg:<col>` / `.fg:<col>`, see annotation_cell_paint()),
+  # one bg() / color() call per distinct colour in the column.
+  for (j in seq_len(n_data)) {
+    paint <- annotation_cell_paint(df, data_cols[j])
+    if (is.null(paint)) next
+    for (hex in unique(stats::na.omit(paint$bg))) {
+      ft <- flextable::bg(ft, i = data_pos[which(paint$bg == hex)],
+                          j = j + 1L, bg = hex, part = "body")
+    }
+    for (hex in unique(stats::na.omit(paint$fg))) {
+      ft <- flextable::color(ft, i = data_pos[which(paint$fg == hex)],
+                             j = j + 1L, color = hex, part = "body")
+    }
+  }
 
   # ---- widths -----------------------------------------------------------
   # PowerPoint never autofits a flextable; manual widths sized for the slide

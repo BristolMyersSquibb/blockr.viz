@@ -452,3 +452,47 @@ test_that("the old drill arguments are legacy and restore quietly", {
     args = list(x = blk, data = list(data = function() hm_toy()))
   )
 })
+
+test_that("the download frame carries the cell paint into every format (#166)", {
+  p <- heatmap_prep(hm_toy(), "USUBJID", "AEDECOD", "AESEV", "ARM")
+  ex <- hmb_exhibit_frame(p, hm_toy())
+  # s1 RASH worst MODERATE, s3 RASH worst SEVERE, s3 NAUSEA empty
+  s1 <- ex$USUBJID == "s1"
+  s3 <- ex$USUBJID == "s3"
+  expect_false(is.na(ex[[".bg:RASH"]][s1]))
+  expect_false(identical(ex[[".bg:RASH"]][s1], ex[[".bg:RASH"]][s3]))
+  expect_true(is.na(ex[[".bg:NAUSEA"]][s3]))
+  # the companions are structure, not columns
+  expect_false(any(grepl("^\\.(bg|fg):", names(as_plain_df(ex)))))
+
+  hexes <- toupper(sub("^#", "", unique(stats::na.omit(ex[[".bg:RASH"]]))))
+
+  skip_if_not_installed("openxlsx")
+  fx <- withr::local_tempfile(fileext = ".xlsx")
+  write_annotated_xlsx(ex, fx)
+  td <- withr::local_tempdir()
+  utils::unzip(fx, exdir = td)
+  st <- paste(readLines(file.path(td, "xl/styles.xml"), warn = FALSE),
+              collapse = "")
+  for (h in hexes) expect_match(st, h, fixed = TRUE)
+
+  fh <- withr::local_tempfile(fileext = ".html")
+  write_exhibit_html(ex, fh)
+  h <- paste(readLines(fh, warn = FALSE), collapse = "")
+  for (hex in unique(stats::na.omit(ex[[".bg:RASH"]]))) {
+    expect_match(h, paste0("background:", hex), fixed = TRUE)
+  }
+  expect_false(grepl(".bg:", h, fixed = TRUE))
+
+  skip_if_not_installed("officer")
+  skip_if_not_installed("flextable")
+  fp <- withr::local_tempfile(fileext = ".pptx")
+  write_exhibit_pptx(ex, fp)
+  tp <- withr::local_tempdir()
+  utils::unzip(fp, exdir = tp)
+  sl <- paste(unlist(lapply(
+    list.files(file.path(tp, "ppt/slides"), "xml$", full.names = TRUE),
+    readLines, warn = FALSE
+  )), collapse = "")
+  for (h in hexes) expect_match(toupper(sl), h, fixed = TRUE)
+})

@@ -111,13 +111,28 @@ ANNOTATION_COLS <- c(".label", ".indent", ".strong", ".emph", ".fmt",
                      ".variable", ".variable_level", ".variable_label",
                      ".filter")
 ANNOTATION_GROUP_RE <- "^\\.group\\d+(_level|_label)?$"
+# Per-cell paint: `.bg:<col>` / `.fg:<col>` hold one hex colour per row for
+# data column `<col>`, NA where the cell is unpainted. Columns, not attributes,
+# so they survive the row and column slicing the pptx pager does. This is how
+# the heatmap's colours reach the downloads.
+ANNOTATION_PAINT_RE <- "^\\.(bg|fg):"
 
 # All reserved annotation column names present in `data` (fixed names plus
 # the numbered group pairs). What renderers exclude from the data cells and
 # as_plain_df() strips.
 annotation_cols_in <- function(data) {
   names(data)[names(data) %in% ANNOTATION_COLS |
-                grepl(ANNOTATION_GROUP_RE, names(data))]
+                grepl(ANNOTATION_GROUP_RE, names(data)) |
+                grepl(ANNOTATION_PAINT_RE, names(data))]
+}
+
+# The paint of data column `col` as list(bg =, fg =), one entry per row, NA
+# where unpainted; NULL when the column carries no paint at all.
+annotation_cell_paint <- function(data, col) {
+  bg <- data[[paste0(".bg:", col)]]
+  if (is.null(bg) || all(is.na(bg))) return(NULL)
+  fg <- data[[paste0(".fg:", col)]] %||% rep(NA_character_, length(bg))
+  list(bg = as.character(bg), fg = as.character(fg))
 }
 
 # The `.group<k>_level` columns in `data`, ordered by level number. These are

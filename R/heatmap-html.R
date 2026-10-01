@@ -203,6 +203,28 @@ hmb_matrix_frame <- function(p, empty = 0L) {
   out
 }
 
+#' The download's frame: [hmb_matrix_frame()] plus each cell's paint as
+#' `.bg:<term>` / `.fg:<term>` companions (see annotation_cell_paint()), so
+#' the xlsx, html and pptx writers colour the cells the screen colours.
+#' Same paint as the screen: [hmb_paint()] through [hmb_cell_model()].
+#' @noRd
+hmb_exhibit_frame <- function(prep, data = NULL, scale_map = NULL) {
+  out <- hmb_matrix_frame(prep, empty = NA_integer_)
+  m <- hmb_cell_model(prep, hmb_paint(prep, data, scale_map))
+  n <- length(prep$rows)
+  k <- length(prep$terms)
+  bg <- fg <- matrix(NA_character_, n, k)
+  if (length(m$idx)) {
+    bg[m$idx + 1L] <- m$bg[m$pal]
+    fg[m$idx + 1L] <- m$fg[m$pal]
+  }
+  for (j in seq_len(k)) {
+    out[[paste0(".bg:", prep$terms[j])]] <- bg[, j]
+    out[[paste0(".fg:", prep$terms[j])]] <- fg[, j]
+  }
+  out
+}
+
 #' The cell paint, as one vectorized `function(v) list(bg =, fg =)`.
 #'
 #' TWO sources, and the board wins. When the board's scale map binds the
