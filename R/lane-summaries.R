@@ -446,6 +446,10 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   # row. A blank string is a value and keeps its row.
   skel <- unique(data[keys])
   skel <- skel[stats::complete.cases(skel), , drop = FALSE]
+  # Nothing left to draw: no rows at all, or every row without a group (a
+  # population join with no events in it, or a prepare script that cleared
+  # every term). The ranked-bar surface says the same.
+  if (!nrow(skel)) return(bad("No rows to display"))
   skel <- skel[do.call(order, unname(as.list(skel))), , drop = FALSE]
   leaf <- data.frame(.label = as.character(skel[[group]]),
                      .parent = if (is.null(parent)) NA_character_ else

@@ -871,3 +871,16 @@ test_that("a count column carries its N and draws no row for a missing group", {
   p2 <- rank_prepare(pop, group = NULL, by = "TERM", summaries = S2)
   expect_match(p2$plan[[1L]]$sub_label, "^Patients · N = ")
 })
+
+test_that("a table whose every row lacks a group says so instead of failing", {
+  ae <- sum_fixture()
+  ae$TERM <- NA
+  S <- list(list(type = "simple", name = "n", func = "count_distinct",
+                 col = "USUBJID", show = "bar"))
+  p <- rank_prepare(ae, group = NULL, by = "TERM", summaries = S)
+  expect_identical(p$err, "No rows to display")
+  p2 <- rank_prepare(ae, group = NULL, by = c("ARM", "TERM"), summaries = S)
+  expect_false(is.null(p2$err) && anyNA(p2$rows$.label))
+  # the payload the block builds carries the message, it does not throw
+  expect_silent(rank_build_payload(ae, by = "TERM", summaries = S))
+})
