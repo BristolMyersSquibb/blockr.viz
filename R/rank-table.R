@@ -435,6 +435,7 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
         }
         plan <- c(plan, list(list(
           kind = "barsplit", label = fv, key = paste0(".f_", fv),
+          flevel = fv, zero_empty = pct_ok,
           meas = rank_measure_label(func, value), cvar = color,
           prefix = paste0(".f", fi, "s_"), series = series, mode = bar_mode,
           denom = if (pct_ok) denoms[[fv]],
@@ -452,6 +453,7 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
       for (lv in facet_levels) {
         plan <- c(plan, list(list(
           kind = "bar", label = lv, key = paste0(".f_", lv),
+          flevel = lv, zero_empty = pct_ok,
           meas = rank_measure_label(func, value),
           fill = solo_fill,
           denom = if (pct_ok) denoms[[lv]],
@@ -555,6 +557,10 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
   # order, each followed by its own children in rank order (a cap applies to
   # parents, since capping inside a class would hide a class's own drivers).
   # One shared implementation for every mark: rank_assemble_rows().
+  plan <- rank_drop_empty_facets(plan, leaf, par_rows)
+  facet_levels <- intersect(facet_levels,
+                            unlist(lapply(plan, function(p) p$flevel)))
+
   srt <- rank_resolve_sort(sort_by, plan, data, leaf, par_rows, group, parent)
   asm <- rank_assemble_rows(srt$leaf, srt$par_rows, parent, srt$key, sort_dir,
                             top_n)
@@ -580,6 +586,26 @@ rank_prepare <- function(data, group = NULL, value = ".count", func = "count",
     n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows),
     note = note, pct_ok = pct_ok, func = func
   )
+}
+
+# Facet columns with nothing to draw, left out: the chart draws no panel for a
+# level without data, and a column of empty tracks reads as a broken table.
+# Empty = every cell missing, or for a count (`zero_empty`) every cell zero --
+# a group filtered away but kept as a factor level, or one whose rows carry no
+# record (the population join's). Checked over ALL rows, never the Top N cut,
+# so a cut cannot drop a column. A table left with no column keeps them all.
+#' @noRd
+rank_drop_empty_facets <- function(plan, leaf, par_rows = NULL) {
+  frames <- Filter(Negate(is.null), list(leaf, par_rows))
+  empty <- vapply(plan, function(p) {
+    if (is.null(p$flevel) || is.null(p$key)) return(FALSE)
+    v <- unlist(lapply(frames, function(f) f[[p$key]]), use.names = FALSE)
+    if (is.null(v)) return(FALSE)
+    v <- suppressWarnings(as.numeric(v))
+    all(is.na(v) | (isTRUE(p$zero_empty) & !is.na(v) & v == 0))
+  }, logical(1L))
+  if (all(empty)) return(plan)
+  plan[!empty]
 }
 
 # `sort_by` is either a plan-independent keyword or a facet level name.

@@ -884,3 +884,36 @@ test_that("a table whose every row lacks a group says so instead of failing", {
   # the payload the block builds carries the message, it does not throw
   expect_silent(rank_build_payload(ae, by = "TERM", summaries = S))
 })
+
+test_that("facet columns with nothing to draw are left out, as the chart does", {
+  ae <- sum_fixture()
+  # a level kept by the factor after its rows were filtered away, and a level
+  # whose rows carry no record (the population join's shape)
+  ae$ARM <- factor(ae$ARM, levels = c(sort(unique(ae$ARM)), "Gone", "Empty"))
+  extra <- ae[1:2, ]
+  extra$TERM <- NA
+  extra$USUBJID <- c("E-1", "E-2")
+  extra$ARM <- factor("Empty", levels = levels(ae$ARM))
+  pop <- rbind(ae, extra)
+
+  S <- list(list(type = "simple", name = "n", func = "count_distinct",
+                 col = "USUBJID", show = "bar", facet = "ARM"))
+  p <- rank_prepare(pop, group = NULL, by = "TERM", summaries = S)
+  labels <- vapply(p$plan, function(x) x$label, "")
+  expect_false(any(c("Gone", "Empty") %in% labels))
+  expect_setequal(labels, c("Active", "Placebo"))
+
+  # a distribution column: a level with no values goes too
+  D <- list(list(type = "dist", name = "Dur", col = "DUR", show = "box",
+                 facet = "ARM"))
+  pd <- rank_prepare(pop, group = NULL, by = "TERM", summaries = D)
+  expect_false(any(c("Gone", "Empty") %in%
+                     vapply(pd$plan, function(x) x$label, "")))
+
+  # the ranked-bar surface the same
+  pf <- rank_prepare(pop, group = "TERM", facet = "ARM",
+                     func = "count_distinct", id_var = "USUBJID")
+  expect_false(any(c("Gone", "Empty") %in%
+                     vapply(pf$plan, function(x) x$label, "")))
+  expect_false(any(c("Gone", "Empty") %in% pf$facet_levels))
+})

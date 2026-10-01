@@ -662,6 +662,10 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     par_rows$.v <- lane_primary_value(par_rows, s_primary$s, primary_col)
   }
 
+  plan <- rank_drop_empty_facets(plan, leaf, par_rows)
+  facet_levels <- intersect(facet_levels,
+                            unlist(lapply(plan, function(p) p$flevel)))
+
   srt <- rank_resolve_sort(sort_by, plan, data, leaf, par_rows, group, parent)
   asm <- rank_assemble_rows(srt$leaf, srt$par_rows, parent, srt$key, sort_dir,
                             top_n)
@@ -782,7 +786,11 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
   }
   sub <- if (is.null(cp$level)) NULL else s$name
   base <- list(label = label, sub_label = sub, sid = sid, stype = s$type,
-               flevel = cp$level, sname = s$name, meas = s$name)
+               flevel = cp$level, sname = s$name, meas = s$name,
+               # a count with nothing in it is an empty column
+               # (rank_drop_empty_facets)
+               zero_empty = identical(s$type, "simple") &&
+                 rank_has_pct(rank_chr1(s$func) %||% "count"))
   # A count with an N (see lane_prepare_summaries): the header's second line
   # says N, the value reads "8 (12%)", and a bar's length is the percentage,
   # so arms of different size compare on one scale. The ranked-bar
