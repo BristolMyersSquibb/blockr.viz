@@ -111,9 +111,11 @@ test_that("faceting gives one bar column per level with its own denominator", {
                     func = "count_distinct", id_var = "USUBJID")
 
   expect_identical(p$layout, "facet")
-  expect_identical(p$facet_levels, c("Placebo", "Low", "High"))
+  # "High" is a level of the factor with no rows in this fixture: an empty
+  # column, left out as the chart leaves out the panel.
+  expect_identical(p$facet_levels, c("Placebo", "Low"))
   bars <- vapply(p$plan, function(x) identical(x$kind, "bar"), logical(1L))
-  expect_identical(sum(bars), 3L)
+  expect_identical(sum(bars), 2L)
   # Each arm's percentage is over that arm's own N, never the pooled total.
   expect_identical(unname(p$denoms[["Placebo"]]), 20L)
   expect_true(p$bar_max <= 100)
@@ -126,7 +128,8 @@ test_that("facet and colour compose: split bars inside each facet column", {
   expect_identical(p$layout, "facet")
   expect_null(p$note)
   splits <- Filter(function(x) identical(x$kind, "barsplit"), p$plan)
-  expect_length(splits, 3L)
+  # "High" has no rows (see above), so it has no column
+  expect_length(splits, 2L)
   expect_identical(splits[[1]]$label, "Placebo")
   expect_identical(as.character(splits[[1]]$series), c("MILD", "MODERATE"))
   # Column keys are facet-INDEXED so level names can never collide.
