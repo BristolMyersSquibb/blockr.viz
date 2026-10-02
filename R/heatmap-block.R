@@ -299,9 +299,7 @@ new_heatmap_block <- function(row = character(),
         # it; without one the exhibit above is the fallback.
         capture <- shiny::reactiveVal(NULL)
         shiny::observeEvent(input$heatmap_block_capture, {
-          msg <- input$heatmap_block_capture
-          capture(new_chart_capture(chart_capture_decode(msg$png),
-                                    msg$width, msg$height))
+          capture(chart_capture_from_msg(input$heatmap_block_capture))
         })
         dl_picture <- function() {
           if (canvas_capture_on()) capture()
@@ -419,7 +417,8 @@ new_heatmap_block <- function(row = character(),
               cellNumbers = isTRUE(shiny::isolate(r_numbers())),
               drill = nzchar(r_target()),
               capture = canvas_capture_on(),
-              captureRatio = canvas_capture_ratio()
+              captureRatio = canvas_capture_ratio(),
+              capturePage = capture_page_box()
             ),
             auto_unbox = TRUE, null = "null"
           ))

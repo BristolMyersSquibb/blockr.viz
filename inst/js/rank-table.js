@@ -943,8 +943,10 @@
   }
 
   /** One picture of a payload at `width` CSS px: {png, width, height}, the
-   * size in CSS px (R turns it into inches at 96 dpi). */
-  function rankPicture(payload, width, ratio, css) {
+   * size in CSS px (R turns it into inches at 96 dpi). With a slide `box`
+   * (R: capture_page_box()) it also carries `pages` when the table is too
+   * long for one slide (capture-pages.js), and the title they repeat. */
+  function rankPicture(payload, width, ratio, css, box) {
     return loadSnapdom().then(function (snap) {
       var root = captureRoot(width, css);
       var host = root.parentNode;
@@ -973,8 +975,12 @@
           scale: Number(ratio) || 2, dpr: 1, embedFonts: true,
           backgroundColor: "#ffffff"
         }).then(function (canvas) {
+          var cut = window.BlockrCapturePages;
+          var pages = (box && cut) ? cut(canvas, root, box, null) : [];
+          var t = root.querySelector(".dd-table-title");
           drop();
-          return { png: canvas.toDataURL("image/png"), width: w, height: h };
+          return { png: canvas.toDataURL("image/png"), width: w, height: h,
+                   pages: pages, title: t ? t.textContent : "" };
         });
       }, function (e) { drop(); throw e; });
     });
@@ -996,7 +1002,8 @@
       var stored = storedFor(root);
       if (!c.capture_export || !stored || !elemId) return;
       var w = Math.round(root.getBoundingClientRect().width) || 900;
-      rankPicture(stored, w, c.capture_ratio, null).then(function (r) {
+      var box = c.capture_page;
+      rankPicture(stored, w, c.capture_ratio, null, box).then(function (r) {
         if (window.Shiny && Shiny.setInputValue) {
           Shiny.setInputValue(elemId + "_capture", r, { priority: "event" });
         }

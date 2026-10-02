@@ -675,6 +675,7 @@ new_summarize_table_block <- function(group = NULL,
               # repaint that has to match it.
               capture_export = canvas_capture_on(),
               capture_ratio = canvas_capture_ratio(),
+              capture_page = capture_page_box(),
               # The prepare script: its text for the gear's editor, what it
               # declared (the controls, in the gear engine's vocabulary),
               # its error, and each control's current value (sv_*).
@@ -717,9 +718,7 @@ new_summarize_table_block <- function(group = NULL,
         # fallback where no browser has drawn one.
         capture <- shiny::reactiveVal(NULL)
         shiny::observeEvent(input$rank_block_capture, {
-          msg <- input$rank_block_capture
-          capture(new_chart_capture(chart_capture_decode(msg$png),
-                                    msg$width, msg$height))
+          capture(chart_capture_from_msg(input$rank_block_capture))
         })
         dl_picture <- function() {
           if (canvas_capture_on() && !is.null(capture())) {
