@@ -1938,11 +1938,15 @@ new_table_block <- function(rowname = NULL,
 
         # The three writers see the same frame and the same resolved text the
         # on-screen bands show -- the point of a clinical title is the export.
+        # The frame is the displayed one, with the shaded cells' paint as
+        # `.bg:` / `.fg:` columns (dt_exhibit_frame), so the downloads carry
+        # the colours and not the hidden colour-source columns.
         dl_exhibit <- function() {
           d <- ann_data()
           auto <- r_data_titles()
           list(
-            data = d,
+            data = dt_exhibit_frame(d, r_rowname(), r_value(), r_group(),
+                                    r_summaries(), r_shadings()),
             title = resolve_block_title(r_title(), d, auto = auto$label),
             subtitle = resolve_block_title(r_subtitle(), d,
                                            auto = auto$subtitle),
@@ -2127,19 +2131,14 @@ new_table_block <- function(rowname = NULL,
           # output stays the raw input filtered by the click (see `expr`), and
           # a row click drills on the group keys. No group -> the raw table,
           # exactly as before.
-          agg <- dd_table_aggregate(d, r_group(), r_summaries())
+          # The projection itself lives in dt_display_frame(), shared with the
+          # downloads (dt_exhibit_frame), so both see the same frame.
+          disp <- dt_display_frame(d, group = r_group(),
+                                   summaries = r_summaries())
+          agg <- disp$agg
           if (isTRUE(agg$aggregated)) {
             gl <- length(agg$group)
-            # Grand totals (no group): prepend a "Total" stub so there is always
-            # a row label plus at least one metric column to render.
-            ad <- agg$data
-            if (!gl) {
-              ad <- cbind(
-                stats::setNames(data.frame("Total", stringsAsFactors = FALSE,
-                                           check.names = FALSE), " "),
-                ad
-              )
-            }
+            ad <- disp$data
             # COLOR applies to the AGGREGATED frame too: shadings resolve
             # against the displayed (aggregated) columns, and "Color by"
             # tints rows whose color column survived the aggregation (a
@@ -2163,9 +2162,8 @@ new_table_block <- function(rowname = NULL,
                 # must keep offering the RAW input schema (group / value /
                 # drill choices act on `d`, not on the aggregate).
                 gear_cols  = dt_gear_cols_json(d),
-                label_col  = if (gl) agg$group[1L] else " ",
-                value_cols = if (gl) c(setdiff(agg$group, agg$group[1L]), agg$metric_cols)
-                             else agg$metric_cols,
+                label_col  = disp$label_col,
+                value_cols = disp$value_cols,
                 shadings   = r_shadings(),
                 drill      = NULL,
                 # Group-keys drill is OPT-IN (checkbox default off, like every
