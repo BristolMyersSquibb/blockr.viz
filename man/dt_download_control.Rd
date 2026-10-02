@@ -9,7 +9,8 @@ dt_download_control(
   exhibit,
   enabled = NULL,
   slot_id = "dt_download",
-  filename = "table"
+  filename = "table",
+  picture = NULL
 )
 }
 \arguments{
@@ -19,8 +20,10 @@ on its \code{output}, so the caller must own the namespace.}
 \item{exhibit}{A function of no arguments returning the list the writers
 are called with: \code{data} (the annotated frame), \code{title}, \code{subtitle},
 \code{caption}, and the \code{collapsible} / \code{sortable} display toggles the HTML
-page carries over. Read at click time, so a stale snapshot is never
-written.}
+page carries over. An optional \code{digits} rounds the numbers the way the
+table block's screen does: the web page and the deck show the rounded
+text, the spreadsheet keeps the full value under a rounding number
+format. Read at click time, so a stale snapshot is never written.}
 
 \item{enabled}{A function of no arguments returning \code{TRUE} when downloads
 are on. \code{NULL} (the default) means always on, which is the answer for a
@@ -29,6 +32,13 @@ caller with no gear to switch them off in.}
 \item{slot_id}{Output id for the control itself.}
 
 \item{filename}{Base name for the written file, without extension.}
+
+\item{picture}{Optional function of no arguments returning the block as
+the browser drew it (a \code{chart_capture}, see R/chart-capture.R), or
+\code{NULL} while there is none. When given, the menu gains an Image entry,
+and the web page and the deck carry the picture instead of a re-typeset
+table. The heatmap passes one: it is a graphic table, exported like the
+chart and the summarize table. The spreadsheet always gets values.}
 }
 \value{
 A \code{\link[shiny:htmlOutput]{shiny::uiOutput()}} to place on the toolbar.

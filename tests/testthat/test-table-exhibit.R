@@ -129,3 +129,134 @@ test_that("the three downloads of the issue's table are coloured (#43)", {
     for (x in hex) expect_match(sl, x, fixed = TRUE)
   })
 })
+
+# --- digits (#37) -------------------------------------------------------------
+
+coef_frame <- function() {
+  data.frame(term = "A", times_more = 3.81427057462906,
+             ci_low = 2.70122773653209, n = 12L)
+}
+
+xlsx_num_formats <- function(f) {
+  wb <- openxlsx::loadWorkbook(f)
+  out <- list()
+  for (s in wb$styleObjects) {
+    code <- s$style$numFmt$formatCode
+    if (is.null(code)) next
+    for (cc in unique(s$cols)) out[[as.character(cc)]] <- code
+  }
+  out
+}
+
+test_that("exports format numbers like the screen (#37)", {
+  d <- coef_frame()
+  attr(d$times_more, "label") <- "Times more"
+  out <- dt_format_digits(d, 2L)
+  expect_identical(as.character(out$times_more), "3.81")
+  expect_identical(out$ci_low, "2.7")
+  expect_identical(out$n, "12")
+  expect_identical(attr(out$times_more, "label"), "Times more")
+  # the screen's own formatter, cell for cell
+  b <- dt_flat_build(d, "term", NULL, toggles = list(), digits = 2L)
+  expect_identical(b$cells[[1]]$disp, "3.81")
+  expect_identical(b$cells[[2]]$disp, "2.7")
+
+  # NA stays missing, a numeric stub is left alone, NULL is a no-op
+  d2 <- data.frame(id = c(1.234, 2), v = c(NA, 1.005))
+  out2 <- dt_format_digits(d2, 1L)
+  expect_identical(out2$id, d2$id)
+  expect_identical(out2$v, c(NA, "1"))
+  expect_identical(dt_format_digits(d2, NULL), d2)
+})
+
+test_that("Excel keeps the full value under a rounding number format (#37)", {
+  skip_if_not_installed("openxlsx")
+  f <- withr::local_tempfile(fileext = ".xlsx")
+  write_annotated_xlsx(coef_frame(), f, digits = 2L)
+
+  back <- openxlsx::read.xlsx(f)
+  expect_equal(back$times_more, 3.81427057462906)
+  fmts <- xlsx_num_formats(f)
+  expect_identical(fmts[["2"]], "0.00")
+  expect_identical(fmts[["3"]], "0.00")
+  # a count column keeps the general format (3, not 3.00)
+  expect_null(fmts[["4"]])
+
+  # the format survives the paint stacked over it
+  ex <- dt_exhibit_frame(coef_frame(), shadings = list(list(
+    mode = "sequential", cols = list("times_more", "ci_low")
+  )))
+  write_annotated_xlsx(ex, f, digits = 0L)
+  expect_identical(xlsx_num_formats(f)[["2"]], "0")
+})
+
+test_that("the block's downloads round to its digits (#37)", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("officer")
+  skip_if_not_installed("flextable")
+
+  blk <- new_table_block(digits = 2L, download = TRUE)
+  shiny::testServer(blk$expr_server,
+                    args = list(data = shiny::reactive(coef_frame())), {
+    session$flushReact()
+
+    h <- paste(readLines(output$dl_html, warn = FALSE), collapse = "")
+    expect_match(h, ">3.81<", fixed = TRUE)
+    expect_match(h, ">2.7<", fixed = TRUE)
+    expect_false(grepl("3.8142", h, fixed = TRUE))
+
+    sl <- slide_xml(output$dl_pptx)
+    expect_match(sl, ">3.81<", fixed = TRUE)
+    expect_match(sl, ">2.7<", fixed = TRUE)
+    expect_false(grepl("3.8142", sl, fixed = TRUE))
+
+    fx <- output$dl_xlsx
+    expect_equal(openxlsx::read.xlsx(fx)$times_more, 3.81427057462906)
+    expect_identical(xlsx_num_formats(fx)[["2"]], "0.00")
+  })
+})
+
+test_that("table_exhibit() is the block as a printed table", {
+  d <- coef_frame()
+  attr(d, "label") <- "From upstream"
+  ex <- table_exhibit(d, digits = 2L, subtitle = "GLMM", caption = "",
+                      shadings = drilldown_table_color("sequential"))
+  expect_identical(ex$times_more, "3.81")
+  expect_false(anyNA(ex[[".bg:times_more"]]))
+  # title tiers: NULL takes the input's label, "" none, else a template
+  expect_identical(attr(ex, "label"), "From upstream")
+  expect_identical(attr(ex, "subtitle"), "GLMM")
+  expect_null(attr(ex, "caption"))
+
+  skip_if_not_installed("flextable")
+  ft <- static_exhibit(ex)
+  expect_s3_class(ft, "flextable")
+  body <- ft$body$dataset
+  expect_true("3.81" %in% unlist(body))
+  expect_false(any(grepl("^\\.(bg|fg):", names(body))))
+})
+
+test_that("the table block's report call carries digits, text and colours (#37)", {
+  blk <- new_table_block(digits = 1L, title = "Area effect", subtitle = "",
+                         cell_color = drilldown_table_color("sequential"))
+  cl <- report_call(blk, "gtbl")
+  expect_identical(cl[[1]], quote(blockr.viz::static_exhibit))
+  inner <- cl[[2]]
+  expect_identical(inner[[1]], quote(blockr.viz::table_exhibit))
+  expect_identical(inner[[2]], as.name("gtbl"))
+  expect_identical(inner$digits, 1L)
+  expect_identical(inner$title, "Area effect")
+  expect_identical(inner$subtitle, "")
+  expect_identical(inner$shadings[[1]]$mode, "sequential")
+  expect_null(inner$caption)
+
+  # defaults stay out of the emitted call
+  plain <- report_call(new_table_block(), "x")[[2]]
+  expect_identical(length(plain), 2L)
+
+  # and the emitted call runs
+  gtbl <- coef_frame()
+  skip_if_not_installed("flextable")
+  ft <- eval(cl)
+  expect_true("3.8" %in% unlist(ft$body$dataset))
+})

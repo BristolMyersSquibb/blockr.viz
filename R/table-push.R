@@ -111,8 +111,7 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
     if (any(keep)) {
       vk <- col[keep]
       disp <- if (num_flag[j]) {
-        formatC(round(as.numeric(vk), digits), format = "f", digits = digits,
-                drop0trailing = TRUE, big.mark = "")
+        dt_format_num(vk, digits)
       } else {
         as.character(vk)
       }
@@ -227,6 +226,16 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
                          nzchar(drill)) drill
     )
   )
+}
+
+#' A numeric cell as the flat table displays it: rounded to `digits`, trailing
+#' zeros dropped, each value on its own (1.5 stays "1.5" next to 2.25). The
+#' downloads and the report format through here too (dt_format_digits), so
+#' the screen and the file show the same number. Expects non-NA values.
+#' @noRd
+dt_format_num <- function(v, digits) {
+  formatC(round(as.numeric(v), digits), format = "f", digits = digits,
+          drop0trailing = TRUE, big.mark = "")
 }
 
 #' Paste the cell model into the historical flat `<table>` tag.

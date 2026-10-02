@@ -1956,7 +1956,10 @@ new_table_block <- function(rowname = NULL,
             # downloads that way too. Reading them here rather than in the
             # handler keeps every writer looking at one snapshot of the block.
             collapsible = isTRUE(r_collapsible()),
-            sortable = isTRUE(r_sortable())
+            sortable = isTRUE(r_sortable()),
+            # Rounded like the screen (see dt_download_control). A structured
+            # frame shows its cells as they come, so it is not rounded.
+            digits = if (!dt_is_structured(d)) r_digits()
           )
         }
 

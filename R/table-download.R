@@ -109,8 +109,10 @@ dl_tool <- function(ns, spec) {
 #' @param exhibit A function of no arguments returning the list the writers
 #'   are called with: `data` (the annotated frame), `title`, `subtitle`,
 #'   `caption`, and the `collapsible` / `sortable` display toggles the HTML
-#'   page carries over. Read at click time, so a stale snapshot is never
-#'   written.
+#'   page carries over. An optional `digits` rounds the numbers the way the
+#'   table block's screen does: the web page and the deck show the rounded
+#'   text, the spreadsheet keeps the full value under a rounding number
+#'   format. Read at click time, so a stale snapshot is never written.
 #' @param enabled A function of no arguments returning `TRUE` when downloads
 #'   are on. `NULL` (the default) means always on, which is the answer for a
 #'   caller with no gear to switch them off in.
@@ -163,7 +165,8 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
             dl_guard("Excel", {
               e <- exhibit()
               write_annotated_xlsx(e$data, file, title = e$title,
-                                   subtitle = e$subtitle, caption = e$caption)
+                                   subtitle = e$subtitle, caption = e$caption,
+                                   digits = e$digits)
             })
           }
         )
@@ -177,7 +180,8 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
                 return(write_exhibit_html(p, file, title = e$title))
               }
               e <- exhibit()
-              write_exhibit_html(e$data, file, title = e$title,
+              write_exhibit_html(dt_format_digits(e$data, e$digits), file,
+                                 title = e$title,
                                  subtitle = e$subtitle, caption = e$caption,
                                  collapsible = !identical(e$collapsible, FALSE),
                                  sortable = !identical(e$sortable, FALSE))
@@ -191,7 +195,8 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
               p <- pic()
               if (!is.null(p)) return(write_exhibit_pptx(p, file))
               e <- exhibit()
-              write_exhibit_pptx(e$data, file, title = e$title,
+              write_exhibit_pptx(dt_format_digits(e$data, e$digits), file,
+                                 title = e$title,
                                  subtitle = e$subtitle, caption = e$caption)
             })
           }
