@@ -38,8 +38,9 @@
 #'   centerpiece); a swimlane), `expr`
 #'   (free R code over the group's
 #'   rows; text). Each row takes `name`, `show` and its OWN optional
-#'   `color` (a categorical column: the cell is split into one glyph per
-#'   level, a bar into segments, a swimlane's events tinted) and `facet`
+#'   `color` (a categorical column: the cell is split into one glyph or
+#'   dumbbell per level, a bar into segments, a swimlane's events tinted)
+#'   and `facet`
 #'   (a categorical column: the column repeats once per level). Both are
 #'   per column, so one column may split by severity while the next
 #'   repeats per sex and a third carries neither. A `field` row never
@@ -1021,9 +1022,19 @@ rank_arguments <- function() {
         "dashed: a dumbbell per row, e.g. baseline to peak per subject), ",
         "expr (free R ",
         "code over the ",
-        "group's rows, text). ",
+        "group's rows, text), custom (fn = a function of one cell's rows, ",
+        "`\\(d) ...`, returning a data frame whose columns name what they ",
+        "are: value; from, to; lo, q1, mid, q3, hi; text. One other column ",
+        "is the split, one mark per level. The function runs per cell at ",
+        "every level of `by` and per facet level, so a per-patient ",
+        "reduction such as the worst grade nests correctly. show picks the ",
+        "mark: bar, number, dumbbell, box, pointrange, text; read off the ",
+        "returned columns when absent; denom = a column whose distinct ",
+        "values are the N, so a count prints \"54 (18%)\" and its header ",
+        "N). ",
         "Optional per object: name (the column header), show, color (a ",
-        "categorical column: the cell is split into one glyph per level, a ",
+        "categorical column: the cell is split into one glyph or dumbbell ",
+        "per level, a ",
         "bar into segments, a swimlane's events tinted) and facet (a ",
         "categorical column: the column repeats once per level, on one ",
         "shared scale). Colour and facet are per COLUMN, not per table, so ",
@@ -1041,7 +1052,7 @@ rank_arguments <- function() {
       ),
       type = arg_array(arg_object(
         type = arg_enum(c("simple", "dist", "field", "series", "spans",
-                          "pair", "expr")),
+                          "pair", "expr", "custom")),
         name = arg_string(required = FALSE),
         show = arg_string(required = FALSE),
         scope = arg_enum(c("cell", "pooled"), required = FALSE),
@@ -1070,7 +1081,9 @@ rank_arguments <- function() {
         label = arg_string(required = FALSE),
         fields = arg_array(arg_string(), required = FALSE),
         size = arg_enum(c("md", "lg"), required = FALSE),
-        expr = arg_string(required = FALSE)
+        expr = arg_string(required = FALSE),
+        fn = arg_string(required = FALSE),
+        denom = arg_string(required = FALSE)
       ))
     ),
     by = new_arg_spec(

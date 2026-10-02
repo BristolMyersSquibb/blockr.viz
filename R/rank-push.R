@@ -301,51 +301,83 @@ rank_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       # The dumbbell: `from` and `to` as positions, the segment between them
       # as [left, width] (either direction), the band per row, the reference
       # line once per column. Every number rounded here; emitters only print.
-      a <- rows[[p$cols[["a"]]]]
-      b <- rows[[p$cols[["b"]]]]
-      lo <- rows[[p$cols[["lo"]]]]
-      hi <- rows[[p$cols[["hi"]]]]
       dmn <- p$dmin %||% mn
       dmx <- p$dmax %||% mx
-      band <- !(is.na(lo) & is.na(hi))
-      blo <- ifelse(is.na(lo), dmn, lo)
-      bhi <- ifelse(is.na(hi), dmx, hi)
-      both <- !is.na(a) & !is.na(b)
-      fi <- rows[[p$fidx]]
-      di <- rows[[p$didx]]
-      # A `to` outside the band is drawn open: the range is the question the
-      # band asks, so the mark answers it without a tooltip.
-      open <- band & !is.na(b) & (b < blo | b > bhi)
       wd <- p$words %||% list(from = "From", to = "To")
-      delta <- b - a
-      tip <- ifelse(is.na(a) & is.na(b), "", rank_esc(paste0(
-        ifelse(is.na(a), "", paste0(wd$from, " ", lane_fmt(a))),
-        ifelse(both, " \u2192 ", ""),
-        ifelse(is.na(b), "", paste0(wd$to, " ", lane_fmt(b))),
-        ifelse(both, paste0(" (", ifelse(delta >= 0, "+", ""),
-                            lane_fmt(delta), ")"), ""),
-        ifelse(band, paste0(" \u00b7 range ",
-                            ifelse(is.na(lo), "", lane_fmt(lo)), "\u2013",
-                            ifelse(is.na(hi), "", lane_fmt(hi))), "")
-      )))
-      disp <- ifelse(both, paste0(ifelse(delta >= 0, "+", ""),
-                                  lane_fmt(delta)), "")
       fills <- as.character(p$fills %||% character())
-      list(kind = "pair",
-           a = pos_w(a), b = pos_w(b),
-           l = ifelse(both, pos_w(pmin(a, b)), NA_real_),
-           w = ifelse(both, span_w(pmin(a, b), pmax(a, b)), NA_real_),
-           bl = ifelse(band, pos_w(blo), NA_real_),
-           bw = ifelse(band, span_w(blo, bhi), NA_real_),
-           rf = if (!is.null(p$ref)) pos_w(p$ref) else NA_real_,
-           fill = if (length(fills)) {
-             ifelse(is.na(fi), NA_character_, fills[pmax(1L, fi)])
-           } else {
-             rep(NA_character_, n)
-           },
-           dash = !is.na(di) & di > 1L,
-           open = open, tip = tip, v = sortv(b),
-           disp = disp, dw = max(c(1L, nchar(disp))))
+      # One dumbbell from one set of end columns, like the glyph above:
+      # once for a plain column, once per level for a colour-split one.
+      dumbbell <- function(cn, didx, fill, lvl = NULL) {
+        a <- rows[[cn[["a"]]]]
+        b <- rows[[cn[["b"]]]]
+        lo <- rows[[cn[["lo"]]]]
+        hi <- rows[[cn[["hi"]]]]
+        band <- !(is.na(lo) & is.na(hi))
+        blo <- ifelse(is.na(lo), dmn, lo)
+        bhi <- ifelse(is.na(hi), dmx, hi)
+        both <- !is.na(a) & !is.na(b)
+        di <- rows[[didx]]
+        # A `to` outside the band is drawn open: the range is the question
+        # the band asks, so the mark answers it without a tooltip.
+        open <- band & !is.na(b) & (b < blo | b > bhi)
+        delta <- b - a
+        pre <- if (is.null(lvl)) "" else paste0(lvl, " \u00b7 ")
+        tip <- ifelse(is.na(a) & is.na(b), "", rank_esc(paste0(
+          pre,
+          ifelse(is.na(a), "", paste0(wd$from, " ", lane_fmt(a))),
+          ifelse(both, " \u2192 ", ""),
+          ifelse(is.na(b), "", paste0(wd$to, " ", lane_fmt(b))),
+          ifelse(both, paste0(" (", ifelse(delta >= 0, "+", ""),
+                              lane_fmt(delta), ")"), ""),
+          ifelse(band, paste0(" \u00b7 range ",
+                              ifelse(is.na(lo), "", lane_fmt(lo)), "\u2013",
+                              ifelse(is.na(hi), "", lane_fmt(hi))), "")
+        )))
+        disp <- ifelse(both, paste0(ifelse(delta >= 0, "+", ""),
+                                    lane_fmt(delta)), "")
+        list(kind = "pair",
+             a = pos_w(a), b = pos_w(b),
+             l = ifelse(both, pos_w(pmin(a, b)), NA_real_),
+             w = ifelse(both, span_w(pmin(a, b), pmax(a, b)), NA_real_),
+             bl = ifelse(band, pos_w(blo), NA_real_),
+             bw = ifelse(band, span_w(blo, bhi), NA_real_),
+             rf = if (!is.null(p$ref)) pos_w(p$ref) else NA_real_,
+             fill = fill,
+             dash = !is.na(di) & di > 1L,
+             open = open, tip = tip, v = sortv(b),
+             disp = disp, dw = max(c(1L, nchar(disp))))
+      }
+      fi <- rows[[p$fidx]]
+      base <- dumbbell(p$cols, p$didx, if (length(fills)) {
+        ifelse(is.na(fi), NA_character_, fills[pmax(1L, fi)])
+      } else {
+        rep(NA_character_, n)
+      })
+      if (is.null(p$lcols)) {
+        base
+      } else {
+        # Colour split: one dumbbell per level, in level order, on the
+        # column's one scale; a level with no rows in the group draws none.
+        # The pooled pair supplies the sort value. The value label stays only
+        # when NO row draws two levels (a table by subject): there it is
+        # that level's change, while beside two dumbbells it would match
+        # neither, and labelling just the one-level rows of a mixed column
+        # reads as if the others had no value.
+        lv <- lapply(seq_along(p$lcols), function(j) {
+          g <- dumbbell(p$lcols[[j]], p$ldidx[[j]], rep(fills[[j]], n),
+                        p$levels[[j]])
+          g[c("kind", "rf", "v", "disp", "dw")] <- NULL
+          g
+        })
+        drawn <- Reduce(`+`, lapply(lv, function(g) {
+          !is.na(g$a) | !is.na(g$b)
+        }), 0L)
+        disp <- if (any(drawn > 1L)) rep("", n) else base$disp
+        list(kind = "pair", multi = TRUE,
+             levels = as.character(p$levels), fills = fills,
+             rf = base$rf, v = base$v, lv = lv,
+             disp = disp, dw = max(c(1L, nchar(disp))))
+      }
     } else if (identical(p$kind, "interval")) {
       # Swimlane segments: [left, width, fill-index] triples per row, plus a
       # pre-escaped tooltip per segment. The domain is the observed x/xend
@@ -801,8 +833,9 @@ rank_cells_html <- function(m, expanded = FALSE) {
       paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
              rank_barwrap(inner, c), "</td>")
     } else if (identical(c$kind, "pair")) {
+      inner <- if (isTRUE(c$multi)) rank_multi_html(c) else rank_pair_html(c)
       paste0("<td class=\"blockr-rank-bar-col\"", rank_data_v(c$v), ">",
-             rank_barwrap(rank_pair_html(c), c), "</td>")
+             rank_barwrap(inner, c), "</td>")
     } else if (identical(c$kind, "interval")) {
       paste0("<td class=\"blockr-rank-bar-col",
              if (isTRUE(c$lg)) " blockr-rank-wide" else "", "\"",
@@ -1089,8 +1122,9 @@ rank_pair_html <- function(c) {
   }, character(1L))
 }
 
-#' A colour-split distribution cell: one lane per level, in level order,
-#' each in the level's colour and each carrying its own tooltip. A level
+#' A colour-split cell (a distribution glyph or a pair): one lane per level,
+#' in level order, each in the level's colour and each carrying its own
+#' tooltip. A level
 #' with no rows in this group draws NO lane, so a table grouped by subject
 #' (where every row belongs to exactly one level) reads as one coloured
 #' glyph per row rather than one glyph and a gap.
@@ -1102,8 +1136,15 @@ rank_pair_html <- function(c) {
 rank_multi_html <- function(c) {
   parts <- lapply(seq_along(c$lv), function(j) {
     g <- c$lv[[j]]
-    html <- if (identical(c$kind, "box")) rank_box_html(g) else rank_pr_html(g)
-    key <- if (identical(c$kind, "box")) g$bc else g$c
+    if (identical(c$kind, "pair")) {
+      g$rf <- c$rf
+      html <- rank_pair_html(g)
+      key <- ifelse(is.na(g$a) & is.na(g$b), NA_real_, 0)
+    } else {
+      html <- if (identical(c$kind, "box")) rank_box_html(g) else
+        rank_pr_html(g)
+      key <- if (identical(c$kind, "box")) g$bc else g$c
+    }
     ifelse(is.na(key), "",
            paste0("<div class=\"blockr-rank-lv\" style=\"--blockr-rank-fill:",
                   c$fills[[j]], "\">", html, "</div>"))
@@ -1291,12 +1332,24 @@ rank_flat_payload <- function(m) {
         out <- c(out, pack(c))
       }
     } else if (identical(c$kind, "pair")) {
-      for (nm in c("a", "b", "l", "w", "bl", "bw")) out[[nm]] <- arr(c[[nm]])
-      out$fill <- arr(c$fill)
-      out$dash <- arr(c$dash)
-      out$open <- arr(c$open)
-      out$tip <- arr(as.character(c$tip))
+      pack_pair <- function(g) {
+        o <- list()
+        for (nm in c("a", "b", "l", "w", "bl", "bw")) o[[nm]] <- arr(g[[nm]])
+        o$fill <- arr(g$fill)
+        o$dash <- arr(g$dash)
+        o$open <- arr(g$open)
+        o$tip <- arr(as.character(g$tip))
+        o
+      }
       if (!is.na(c$rf)) out$rf <- c$rf
+      if (isTRUE(c$multi)) {
+        out$multi <- TRUE
+        out$levels <- arr(as.character(c$levels))
+        out$fills <- arr(as.character(c$fills))
+        out$lv <- lapply(c$lv, pack_pair)
+      } else {
+        out <- c(out, pack_pair(c))
+      }
     } else if (identical(c$kind, "interval")) {
       # Per-row lists stay arrays even at length one: a collapsed tips vector
       # would index as characters in JS (the auto_unbox trap).

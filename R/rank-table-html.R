@@ -490,6 +490,7 @@ rank_table_attrs <- function(prep, cfg) {
   cfg$search <- if (isTRUE(cfg$search)) "on" else "off"
   cfg$sortable <- if (isTRUE(cfg$sortable %||% TRUE)) "on" else "off"
   cfg$axis <- if (isTRUE(cfg$axis %||% TRUE)) "on" else "off"
+  cfg$download <- if (isTRUE(cfg$download)) "on" else "off"
   json <- as.character(jsonlite::toJSON(cfg, auto_unbox = TRUE, null = "null"))
   paste0(" data-rank-cfg=\"", rank_esc(json), "\"")
 }

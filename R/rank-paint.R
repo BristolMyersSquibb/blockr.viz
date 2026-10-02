@@ -317,7 +317,8 @@ rp_pair <- function(c, i, x, w, ytop, gl) {
       gp = grid::gpar(col = fill, lwd = 1.6,
                       lty = if (isTRUE(c$dash[[i]])) "dashed" else "solid"))))
   }
-  r <- gl$px * 4
+  # A thinned split lane (three or more levels) takes smaller marks.
+  r <- min(gl$px * 4, h * 0.45)
   if (!is.na(c$a[[i]])) {
     ax <- rp_lane_x(c$a[[i]], x, w)
     out <- c(out, list(grid::polygonGrob(
@@ -402,19 +403,41 @@ rp_sparkline <- function(c, i, x, w, ytop, gl, fill = RP_FILL) {
   out
 }
 
+# Only the levels the row HAS are stacked, as on screen (rank_multi_html()
+# skips the rest), so a row of one level draws one full-height lane.
 rp_multi <- function(c, i, x, w, ytop, gl) {
-  k <- length(c$lv)
+  drawn <- Filter(function(j) {
+    g <- c$lv[[j]]
+    if (identical(c$kind, "pair")) {
+      !is.na(g$a[[i]]) || !is.na(g$b[[i]])
+    } else {
+      !is.na((if (identical(c$kind, "box")) g$bc else g$c)[[i]])
+    }
+  }, seq_along(c$lv))
+  k <- length(drawn)
+  if (!k) return(list())
   h <- if (k > 2) gl$px * 8 else gl$lane
   gap <- gl$px * 2
+  # A slide row has one fixed height (the pager divides by it), so where
+  # the screen's row would grow the lanes thin to fit instead.
+  room <- gl$row_h - gl$px * 2
+  if (k * h + (k - 1) * gap > room) h <- (room - (k - 1) * gap) / k
   tot <- k * h + (k - 1) * gap
   y0 <- ytop + (gl$row_h - tot) / 2
-  unlist(lapply(seq_len(k), function(j) {
+  unlist(lapply(seq_len(k), function(jj) {
+    j <- drawn[[jj]]
     lv <- c$lv[[j]]
-    yy <- y0 + (j - 1) * (h + gap) - (gl$row_h - h) / 2
+    yy <- y0 + (jj - 1) * (h + gap) - (gl$row_h - h) / 2
     sub <- gl
     sub$lane <- h
-    if (identical(c$kind, "box")) rp_box(lv, i, x, w, yy, sub, lv$fill %||% RP_FILL)
-    else rp_pr(lv, i, x, w, yy, sub, lv$fill %||% RP_FILL)
+    if (identical(c$kind, "pair")) {
+      lv$rf <- c$rf
+      rp_pair(lv, i, x, w, yy, sub)
+    } else if (identical(c$kind, "box")) {
+      rp_box(lv, i, x, w, yy, sub, lv$fill %||% RP_FILL)
+    } else {
+      rp_pr(lv, i, x, w, yy, sub, lv$fill %||% RP_FILL)
+    }
   }), recursive = FALSE)
 }
 

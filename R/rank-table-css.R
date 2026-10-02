@@ -358,6 +358,18 @@ rank_table_css <- function() {
   box-sizing: border-box;
 }
 .blockr-rank-pacell .lane-to.is-open { background: var(--blockr-color-bg-surface, #ffffff); }
+/* A split pair thinned to 8px lanes (three or more levels) takes smaller
+   marks, or neighbouring levels' dots would touch. */
+.blockr-rank-multi .blockr-rank-lv:nth-child(n+3) .lane-to,
+.blockr-rank-multi .blockr-rank-lv:nth-child(n+3) ~ .blockr-rank-lv .lane-to {
+  width: 7px;
+  height: 7px;
+}
+.blockr-rank-multi .blockr-rank-lv:nth-child(n+3) .lane-from,
+.blockr-rank-multi .blockr-rank-lv:nth-child(n+3) ~ .blockr-rank-lv .lane-from {
+  width: 6px;
+  height: 6px;
+}
 /* Interval: the swimlane. Colour = the mapped level, and BOTH ends round.
    A timeline is not a stack. A stack tiles by construction -- its segments
    always share edges, they compose one quantity, and a seam between them
@@ -453,77 +465,110 @@ rank_table_css <- function() {
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 2px var(--blockr-color-bg-surface, #ffffff);
 }
-/* The summarize-table columns editor (the gear's custom section): one row
-   per summary, expand to edit. Chips are categorical identity of the ROW
-   TYPE (muted pastels, not the data palette). */
-.lane-summaries { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+/* The summarize-table columns editor (the gear's Columns section), on the
+   design system's rows: one 42px row per column that reads as a sentence
+   (mark glyph, name, what it computes, badges), one column open at a time as
+   a card in place. The drag handle sits in the list's left padding and
+   shows on hover, as on every row list. */
+.lane-summaries { display: flex; flex-direction: column; gap: 6px; width: 100%; padding-left: 14px; margin-left: -14px; }
 .lane-sum-row {
+  position: relative;
   border: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  border-radius: 5px;
+  border-radius: var(--blockr-radius-lg, 8px);
   background: var(--blockr-color-bg-surface, #ffffff);
+  transition: border-color var(--blockr-transition, 0.15s ease);
 }
+.lane-sum-row:hover { border-color: var(--blockr-color-border-strong, #d1d5db); }
+.lane-sum-row.is-open { border-color: var(--blockr-color-border-accent-subtle, #bfdbfe); }
+.lane-sum-row.is-dragging { opacity: 0.5; }
+.lane-sum-row.is-drop { box-shadow: 0 -2px 0 var(--blockr-color-border-accent, #2563eb); }
 .lane-sum-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 9px;
+  height: 40px;
+  padding: 0 6px 0 12px;
   cursor: pointer;
   min-width: 0;
+  font-size: var(--blockr-font-size-base, 14px);
 }
-.lane-sum-chip {
-  font-size: 0.64rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border-radius: 3px;
-  padding: 2px 6px;
-  flex: none;
+.lane-sum-grip {
+  position: absolute;
+  left: -14px;
+  top: 12px;
+  width: 10px;
+  height: 16px;
+  display: inline-flex;
+  color: var(--blockr-color-text-muted, #6b7280);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.12s;
 }
-.lane-sum-chip-simple { background: #e3edfa; color: #1d5cab; }
-.lane-sum-chip-dist { background: #ece5f7; color: #5b3b9e; }
-.lane-sum-chip-field { background: #efeee8; color: #6b6a63; }
-.lane-sum-chip-series { background: #e0f0ee; color: #17635a; }
-.lane-sum-chip-spans { background: #fbeadd; color: #9a5416; }
-.lane-sum-chip-expr { background: #f6e8ec; color: #93314f; }
-.lane-sum-name { font-weight: 500; font-size: 0.82rem; flex: none; }
+.lane-sum-row:hover .lane-sum-grip { opacity: 1; }
+.lane-sum-glyph { display: inline-flex; flex: none; width: 18px; justify-content: center; color: var(--blockr-color-text-muted, #6b7280); }
+.lane-sum-name { font-weight: 500; flex: none; white-space: nowrap; }
+.lane-sum-row.is-open .lane-sum-name { font-weight: 600; }
 .lane-sum-line {
   color: var(--blockr-color-text-muted, #6b7280);
-  font-size: 0.76rem;
+  font-size: var(--blockr-font-size-sm, 13px);
   flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.lane-sum-rm, .lane-sum-move {
-  border: 0;
-  background: none;
-  color: var(--blockr-color-text-muted, #6b7280);
-  cursor: pointer;
-  padding: 0;
+.lane-sum-badge {
   flex: none;
-  /* A real hit target: the glyphs are small, the button must not be. */
-  min-width: 24px;
-  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--blockr-color-text-muted, #6b7280);
+  white-space: nowrap;
+}
+.lane-sum-rm, .lane-sum-code {
+  flex: none;
+  width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: transparent;
+  color: var(--blockr-color-text-muted, #6b7280);
+  cursor: pointer;
 }
+.lane-sum-rm { opacity: 0; transition: opacity 0.12s; }
+.lane-sum-row:hover .lane-sum-rm, .lane-sum-rm:focus-visible { opacity: 1; }
 .lane-sum-rm:hover { color: var(--blockr-color-text-danger, #b91c1c); }
-.lane-sum-move:hover { color: var(--blockr-color-text-default, #111827); }
-.lane-sum-move:disabled { opacity: 0.3; cursor: default; }
+.lane-sum-code:hover { background: var(--blockr-color-bg-hover, rgba(17, 24, 39, 0.06)); color: var(--blockr-color-text-default, #111827); }
+.lane-sum-code[aria-pressed='true'] {
+  color: var(--blockr-color-text-accent, #2563eb);
+  background: var(--blockr-color-bg-accent-subtle, #eff6ff);
+  border-color: var(--blockr-color-border-accent-subtle, #bfdbfe);
+}
+.lane-sum-code:disabled { opacity: 0.4; cursor: default; background: transparent; }
+.lane-sum-chev { flex: none; display: inline-flex; width: 26px; justify-content: center; color: var(--blockr-color-text-muted, #6b7280); transform: rotate(-90deg); transition: transform var(--blockr-transition, 0.15s ease); }
+.lane-sum-row.is-open .lane-sum-chev { transform: none; }
 .lane-sum-body {
-  border-top: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  padding: 9px 11px 10px;
+  padding: 4px 12px 16px;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 14px;
+  align-items: flex-end;
+  gap: 16px 12px;
 }
-.lane-sum-ctl { display: flex; flex-direction: column; gap: 3px; }
+.lane-sum-ctl { display: flex; flex-direction: column; gap: 4px; min-width: 200px; }
+.lane-sum-ctl > .blockr-label { font-size: var(--blockr-font-size-xs, 12px); color: var(--blockr-color-text-muted, #6b7280); }
 .lane-sum-ctl-wide { flex: 1 1 100%; }
-/* The optional mappings (colour, facet): the add buttons sit on the label
-   line's baseline so the row reads as one band of controls, and an added
-   mapping carries its remove button in the label, the way a grouping role
-   does. */
-.lane-sum-addmaps { flex-direction: row; gap: 5px; align-self: flex-end; }
+/* The optional mappings (colour, facet, percent): quiet add buttons on the
+   controls' line; an added mapping carries its remove button in the label. */
+.lane-sum-addmaps { flex-direction: row; gap: 6px; align-self: flex-end; min-width: 0; padding-bottom: 8px; }
 .lane-sum-map-rm {
   border: 0;
   background: none;
@@ -535,47 +580,89 @@ rank_table_css <- function() {
 }
 .lane-sum-map-rm:hover { color: var(--blockr-color-text-danger, #b91c1c); }
 .lane-sum-name-input {
-  height: 28px;
+  height: var(--blockr-control-h, 42px);
   border: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  border-radius: 4px;
-  padding: 0 8px;
+  border-radius: var(--blockr-radius-lg, 8px);
+  padding: 0 12px;
   font: inherit;
-  font-size: 0.8rem;
+  font-size: var(--blockr-font-size-base, 14px);
   background: var(--blockr-color-bg-field, #f9fafb);
 }
+.lane-sum-name-input:focus { outline: 0; border-color: var(--blockr-color-border-accent, #2563eb); box-shadow: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12)); background: var(--blockr-color-bg-surface, #fff); }
 .lane-sum-seg {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  height: var(--blockr-control-h, 42px);
+  padding: 3px;
+  gap: 3px;
   border: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  border-radius: 4px;
-  overflow: hidden;
+  border-radius: var(--blockr-radius-lg, 8px);
+  background: var(--blockr-color-bg-field, #f9fafb);
 }
 .lane-sum-seg-btn {
-  border: 0;
-  background: var(--blockr-color-bg-surface, #ffffff);
+  border: 1px solid transparent;
+  border-radius: var(--blockr-radius-md, 6px);
+  background: transparent;
   color: var(--blockr-color-text-muted, #6b7280);
-  font-size: 0.76rem;
-  padding: 4px 10px;
+  font-size: var(--blockr-font-size-base, 14px);
+  padding: 0 12px;
   cursor: pointer;
-  border-left: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
-.lane-sum-seg-btn:first-child { border-left: 0; }
+.lane-sum-seg-btn:hover { color: var(--blockr-color-text-default, #111827); background: var(--blockr-color-bg-hover, rgba(17, 24, 39, 0.06)); }
 .lane-sum-seg-btn.is-on {
-  background: var(--blockr-color-bg-accent, #2563eb);
-  color: var(--blockr-color-text-on-accent, #ffffff);
+  color: var(--blockr-color-text-accent, #2563eb);
+  background: var(--blockr-color-bg-accent-subtle, #eff6ff);
+  border-color: var(--blockr-color-border-accent-subtle, #bfdbfe);
+  font-weight: 500;
 }
 /* Display tiles: outside the engine's type grid the tiles shrink to their
    caption (bar collapsed to 30px), so give them the grid's footprint. */
 .lane-sum-tiles { display: flex; gap: 5px; }
 .lane-sum-tiles .dd-type-tile { min-width: 64px; }
-.lane-sum-addrow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.lane-sum-addrow { display: flex; align-items: center; margin-top: 2px; }
+.lane-sum-addcol {
+  display: inline-flex;
   align-items: center;
-  margin-top: 7px;
-  justify-content: space-between;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: transparent;
+  color: var(--blockr-color-text-muted, #6b7280);
+  font-size: var(--blockr-font-size-xs, 12px);
+  font-weight: 500;
+  cursor: pointer;
 }
+.lane-sum-addcol:hover { background: var(--blockr-color-bg-hover, rgba(17, 24, 39, 0.06)); color: var(--blockr-color-text-default, #111827); }
 .lane-sum-add-types { display: flex; flex-wrap: wrap; gap: 5px; }
+/* A custom column's function: the prepare script's editor look, an Apply
+   button under it (code commits on its own button, design system). */
+.lane-sum-fn {
+  width: 100%;
+  font-family: var(--blockr-font-mono, ui-monospace, monospace);
+  font-size: 13px;
+}
+.lane-sum-fn-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+}
+.lane-sum-apply {
+  flex: none;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--blockr-color-text-accent, #2563eb);
+  background: var(--blockr-color-bg-accent-subtle, #eff6ff);
+  border: 1px solid var(--blockr-color-border-accent-subtle, #bfdbfe);
+}
+.lane-sum-apply:hover { border-color: var(--blockr-color-border-accent, #2563eb); }
 .lane-sum-add {
   border: 1px solid var(--blockr-color-border-default, #e5e7eb);
   border-radius: 4px;
@@ -587,20 +674,6 @@ rank_table_css <- function() {
   cursor: pointer;
 }
 .lane-sum-add:hover {
-  border-color: var(--blockr-color-border-accent, #2563eb);
-  color: var(--blockr-color-text-accent, #2563eb);
-}
-.lane-sum-presets { display: flex; flex-wrap: wrap; gap: 5px; }
-.lane-sum-preset {
-  border: 1px dashed var(--blockr-color-border-default, #e5e7eb);
-  border-radius: 4px;
-  background: none;
-  color: var(--blockr-color-text-muted, #6b7280);
-  font-size: 0.76rem;
-  padding: 3px 9px;
-  cursor: pointer;
-}
-.lane-sum-preset:hover {
   border-color: var(--blockr-color-border-accent, #2563eb);
   color: var(--blockr-color-text-accent, #2563eb);
 }
