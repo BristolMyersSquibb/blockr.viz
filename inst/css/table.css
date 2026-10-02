@@ -28,12 +28,12 @@
 :is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.blockr-stub {
   text-align: left;
 }
-/* Table-block rows at 30px, with no rules in the body, like the preview:
-   5px above and below a 20px line. The header cells take 7px. Structured
+/* Table-block rows at 28px, with no rules in the body, like the preview:
+   4px above and below a 20px line. The header cells take 7px. Structured
    tables set their own cell padding in html_table_delta_css(); these are the
    flat table's. The rank table keeps its own rows. */
 .drilldown-table-container .blockr-table tbody td {
-  padding: 5px 12px;
+  padding: 4px 12px;
   line-height: 20px;
 }
 .drilldown-table-container .blockr-table thead th {
