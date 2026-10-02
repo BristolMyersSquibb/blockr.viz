@@ -683,6 +683,12 @@
                 options: [{ value: 'stacked', label: 'Stacked' },
                           { value: 'grouped', label: 'Grouped' },
                           { value: 'percent', label: '100%' }] },
+    // Bar value labels (bar + waterfall). Boolean on/off segmented -> a
+    // checkbox, "on"/"off" wire format like identity_line below; R stores a
+    // logical (bool_state). Drawn by _barValueLabels.
+    value_labels: { label: 'Values', kind: 'segmented',
+                    options: [{ value: 'on', label: 'Show values' },
+                              { value: 'off', label: 'Off' }] },
     // A waterfall is a bar with a cumulative baseline — exposed here as a bar
     // option, not its own chart_type. "Waterfall" sets baseline='cumulative'.
     baseline: { label: 'Bars', kind: 'segmented',
@@ -981,6 +987,7 @@
       presentation: ['sort_by', 'sort_dir',
         { role: 'orientation', types: ['bar', 'boxplot', 'pointrange'] },
         { role: 'bar_mode', types: ['bar'] },
+        { role: 'value_labels', types: ['bar', 'waterfall'] },
         { role: 'baseline', types: ['bar'] },
         // Distribution statistics: the shared interval pick (box body /
         // point-range interval), the box's outer whisker rule, and the
@@ -1405,6 +1412,13 @@
       if (!cfg.sort_by) cfg.sort_by = 'data';
       if (!cfg.sort_dir) cfg.sort_dir = 'asc';
       return true;
+    }
+
+    // Bar value labels: the gear's "on"/"off", or a plain logical from an
+    // older payload.
+    _valueLabelsOn() {
+      const v = this.config.value_labels;
+      return v === 'on' || v === true;
     }
 
     // The bar baseline mode: "zero" (a plain bar, every bar starts at 0) or
@@ -3898,6 +3912,20 @@
         axisLine: { lineStyle: { color: INK.strong } },
         splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } }
       };
+      // Value labels, sized off the plot: horizontal runs from the category
+      // gutter to the grid's right edge; vertical is the 350px canvas minus
+      // the grid's top and bottom (the rotated-label gutter cancels out).
+      const labelRight = this._valueLabelsOn()
+        ? this._barValueLabels(series, valAxis, {
+            ax, vertical, stacked: !isGrouped && !isPercent && colors.length > 0,
+            percent: showPercent, fraction: pctFunc,
+            plotPx: vertical ? 350 - 30 - 66
+              : (plotW ? plotW - gut.gridLeft - 5 : 0),
+            bandPx: vertical
+              ? (plotW ? (plotW - 65) / Math.max(1, groups.length) : 0)
+              : ROW_BAND
+          })
+        : 0;
       this._addValueLines(series, valAxis, !vertical, asFraction);
       // Percent tooltip shows both the share and the raw value (carried on the
       // datum as {value, raw}); default axis tooltip otherwise.
@@ -4005,12 +4033,118 @@
         tooltip,
         legend: legendOn ? { show: false, data: colors } : undefined,
         grid: vertical
-          ? { left: 55, right: 10, top: 30, bottom: bottomBase }
-          : { left: gut.gridLeft, right: 5, top: 30, bottom: bottomBase },
+          ? { left: 55, right: 10 + labelRight, top: 30, bottom: bottomBase }
+          : { left: gut.gridLeft, right: 5 + labelRight, top: 30, bottom: bottomBase },
         xAxis: vertical ? catAxis : valAxis,
         yAxis: vertical ? valAxis : catAxis,
         series: series
       };
+    }
+
+    // Value labels on a bar (`value_labels`). The value sits at the bar's own
+    // end: ECharts' 'outside' is sign-aware, right of / above a positive bar
+    // and left of / below a negative one. A stack is labelled once, with its
+    // total at its end; a grouped bar labels every bar; a percent bar writes
+    // each segment's share inside the segment, where it fits. Labels that
+    // would collide are left out (hideOverlap), so a 100-bar axis thins
+    // instead of smearing, and the tooltip keeps every value. The value axis
+    // gets 12% of headroom on the side(s) the bars reach, the room
+    // static_chart() leaves. Returns the extra px a horizontal grid needs on
+    // its right for the widest label.
+    /** @param {any[]} series @param {any} valAxis @param {{ax: any, vertical: boolean, stacked: boolean, percent: boolean, fraction: boolean, plotPx: number, bandPx: number}} o @returns {number} */
+    _barValueLabels(series, valAxis, o) {
+      const DC = /** @type {any} */ (DrilldownChart);
+      const ctx = DC._measureCtx ||
+        (DC._measureCtx = document.createElement('canvas').getContext('2d'));
+      ctx.font = `${o.ax.fontSize}px ${INK.face}`;
+      const textW = (/** @type {string} */ t) => ctx.measureText(t).width;
+      // `|| 0` folds a negative zero, which would print as "-0".
+      const fmt = o.fraction
+        ? (/** @type {number} */ v) => (Math.round(v * 1000) / 10 || 0) + '%'
+        : (/** @type {number} */ v) => String(ddNum(v || 0));
+      /** @param {any} d */
+      const valOf = (d) => (d != null && typeof d === 'object') ? d.value : d;
+      const style = { color: o.ax.labelColor, fontSize: o.ax.fontSize,
+                      fontFamily: INK.face };
+
+      if (o.percent) {
+        // A share fits when the segment is longer than its text (and, on a
+        // vertical bar, the bar wider). Without a measured plot every label
+        // is offered and hideOverlap sorts out the collisions.
+        const barW = Math.min(48, 0.6 * o.bandPx);
+        /** @param {number} v @param {string} t */
+        const fits = (v, t) => !o.plotPx || (o.vertical
+          ? v * o.plotPx >= o.ax.fontSize + 4 && (!o.bandPx || barW >= textW(t) + 4)
+          : v * o.plotPx >= textW(t) + 6);
+        for (const s of series) {
+          s.label = { show: true, position: 'inside', ...style, color: '#fff',
+            formatter: (/** @type {any} */ p) => {
+              const v = Number(p.value);
+              if (!Number.isFinite(v)) return '';
+              const t = Math.round(v * 100) + '%';
+              return fits(v, t) ? t : '';
+            } };
+          s.labelLayout = { hideOverlap: true };
+        }
+        return 0;
+      }
+
+      /** @type {number[]} */
+      const ends = [];
+      for (const s of series) {
+        s.label = { show: !o.stacked, position: 'outside', distance: 4, ...style,
+          formatter: (/** @type {any} */ p) =>
+            p.value == null ? '' : fmt(Number(p.value)) };
+        s.labelLayout = { hideOverlap: true };
+        if (!o.stacked) {
+          for (const d of s.data) {
+            const v = valOf(d);
+            if (v != null) ends.push(Number(v));
+          }
+        }
+      }
+      if (o.stacked) {
+        const n = series.length ? series[0].data.length : 0;
+        for (let gi = 0; gi < n; gi++) {
+          let tot = 0, any = false;
+          for (const s of series) {
+            const v = valOf(s.data[gi]);
+            if (v != null) { tot += Number(v); any = true; }
+          }
+          if (!any) continue;
+          ends.push(tot);
+          // The stack ends on the total's side: ECharts stacks negative
+          // segments below zero, so the label goes on the outermost segment
+          // of the total's sign.
+          for (let si = series.length - 1; si >= 0; si--) {
+            const d = series[si].data[gi];
+            const v = valOf(d);
+            if (v == null || (tot < 0 ? v > 0 : v < 0)) continue;
+            series[si].data[gi] = {
+              ...((typeof d === 'object') ? d : { value: d }),
+              label: { show: true, formatter: fmt(tot) }
+            };
+            break;
+          }
+        }
+      }
+
+      const hasPos = ends.some(v => v > 0);
+      const hasNeg = ends.some(v => v < 0);
+      valAxis.boundaryGap = [hasNeg ? '12%' : 0, hasPos ? '12%' : 0];
+      let w = 0;
+      for (const v of ends) {
+        if (o.vertical || v > 0) w = Math.max(w, textW(fmt(v)));
+      }
+      // A vertical bar's label is centred on it, so the last one can
+      // overhang the plot by half its width.
+      if (o.vertical) return Math.max(0, Math.ceil(w / 2 - 10));
+      if (!hasPos) return 0;
+      // 12% of headroom is ~10.7% of the plot past the longest bar; a label
+      // wider than that borrows the rest from the grid's right margin. A
+      // fraction axis is pinned at 100% and has no headroom to lend.
+      const room = valAxis.max === 1 ? 0 : 0.107 * o.plotPx;
+      return Math.max(0, Math.ceil(w + 8 - room));
     }
 
     // Waterfall / bridge: a bar chart with baseline="cumulative". Each step's
@@ -4049,6 +4183,20 @@
       /** @type {any[]} */
       const delta = [];    // visible bar height, sign-colored per datum
       let cum = 0;
+      // Value labels (`value_labels`): the step's signed delta, or a total's
+      // running cumulative, at the bar's own end -- below a step that goes
+      // down. The delta datum carries its height as a positive number, so
+      // the side is set per datum rather than left to 'outside'.
+      const labelsOn = this._valueLabelsOn();
+      const fmt = this.config.func === 'pct_distinct'
+        ? (/** @type {number} */ v) => (Math.round(v * 1000) / 10 || 0) + '%'
+        : (/** @type {number} */ v) => String(ddNum(v || 0));
+      /** @param {number} v @param {boolean} up */
+      const lab = (v, up) => labelsOn
+        ? { label: { show: true, position: up ? 'top' : 'bottom',
+                     formatter: fmt(v) } }
+        : {};
+      let lo = 0, hi = 0;
       for (let i = 0; i < groups.length; i++) {
         const g = groups[i];
         const v = valOf(g);
@@ -4068,20 +4216,22 @@
           // Total / subtotal bar: from 0 up to the running cumulative.
           base.push(0);
           delta.push({ value: cum, itemStyle: { color: WATERFALL_COLORS.total,
-            borderRadius: barRadius(true) } });
+            borderRadius: barRadius(true) }, ...lab(cum, cum >= 0) });
           // A total bar does not advance the cumulative (it restates it).
         } else if (v >= 0) {
           base.push(cum);
           delta.push({ value: v, itemStyle: { color: WATERFALL_COLORS.increase,
-            borderRadius: barRadius(true, cum !== 0) } });
+            borderRadius: barRadius(true, cum !== 0) }, ...lab(v, true) });
           cum += v;
         } else {
           // Negative delta: the bar hangs down from the prior cumulative.
           base.push(cum + v);
           delta.push({ value: -v, itemStyle: { color: WATERFALL_COLORS.decrease,
-            borderRadius: barRadius(true, (cum + v) !== 0) } });
+            borderRadius: barRadius(true, (cum + v) !== 0) }, ...lab(v, false) });
           cum += v;
         }
+        lo = Math.min(lo, cum);
+        hi = Math.max(hi, cum);
       }
 
       // Step labels on the x-axis: horizontal-or-vertical (never diagonal),
@@ -4121,8 +4271,29 @@
         // total is anchored to the axis and a floating step is not, so the
         // corners differ per bar and cannot be set once for the series.
         { name: 'delta', type: 'bar', stack: 'waterfall', barWidth: '60%',
-          emphasis: { focus: 'self' }, data: delta }
+          emphasis: { focus: 'self' }, data: delta,
+          ...(labelsOn
+            ? { label: { show: false, distance: 4, color: ax.labelColor,
+                         fontSize: ax.fontSize, fontFamily: INK.face },
+                labelLayout: { hideOverlap: true } }
+            : {}) }
       ];
+      // Headroom for the labels, and room for the last one's overhang, as on
+      // a plain bar (_barValueLabels).
+      let labelRight = 0;
+      if (labelsOn) {
+        /** @type {any} */ (valAxis).boundaryGap =
+          [lo < 0 ? '12%' : 0, hi > 0 ? '12%' : 0];
+        const DC = /** @type {any} */ (DrilldownChart);
+        const ctx = DC._measureCtx ||
+          (DC._measureCtx = document.createElement('canvas').getContext('2d'));
+        ctx.font = `${ax.fontSize}px ${INK.face}`;
+        let w = 0;
+        for (const d of delta) {
+          if (d && d.label) w = Math.max(w, ctx.measureText(d.label.formatter).width);
+        }
+        labelRight = Math.max(0, Math.ceil(w / 2 - 10));
+      }
       this._addValueLines(wfSeries, valAxis, false);
       return {
         // Default canvas plus the rotated step-label gutter that grid.bottom
@@ -4148,7 +4319,8 @@
           }
         },
         legend: { show: false },
-        grid: { left: 55, right: 10, top: 30, bottom: 40 + 26 + xlab.bottom },
+        grid: { left: 55, right: 10 + labelRight, top: 30,
+                bottom: 40 + 26 + xlab.bottom },
         xAxis: catAxis,
         yAxis: valAxis,
         series: wfSeries
@@ -6263,9 +6435,12 @@
             // carry the percent-mode `raw` value (used by the tooltip) — the
             // rebuild below would otherwise drop it on the first highlight pass.
             const baseStyle = isObj ? v.itemStyle : undefined;
+            // A per-datum label (a stack total, a waterfall step) rides along
+            // for the same reason.
             return {
               value: val,
               ...(isObj && v.raw != null ? { raw: v.raw } : {}),
+              ...(isObj && v.label ? { label: v.label } : {}),
               itemStyle: { ...baseStyle, opacity: sel ? (cats[i] === sel ? 1 : 0.15) : 1 }
             };
           });
@@ -6888,6 +7063,7 @@
         sort_dir: this.config.sort_dir || 'asc',
         orientation: this.config.orientation || 'horizontal',
         bar_mode: this.config.bar_mode || 'stacked',
+        value_labels: this._valueLabelsOn() ? 'on' : 'off',
         na_group: this.config.na_group || 'level',
         pct_of: this.config.pct_of || 'facet',
         baseline: this.config.baseline || 'zero',
