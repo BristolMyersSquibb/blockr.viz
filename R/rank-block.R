@@ -805,8 +805,17 @@ new_summarize_table_block <- function(group = NULL,
           dl_control_ui(ns, dl_formats())
         )
 
+        # Named for the title the table shows (see R/download-filename.R).
+        dl_name <- function(ext) {
+          dl_filename(
+            tryCatch(dl_dataset(data()), error = function(e) NULL),
+            tryCatch(r_titles()$title, error = function(e) NULL),
+            "table", ext
+          )
+        }
+
         output$dl_xlsx <- shiny::downloadHandler(
-          filename = function() "summarize-table.xlsx",
+          filename = function() dl_name("xlsx"),
           content = function(file) {
             dl_guard("Excel", {
               e <- dl_exhibit()
@@ -821,7 +830,7 @@ new_summarize_table_block <- function(group = NULL,
           }
         )
         output$dl_html <- shiny::downloadHandler(
-          filename = function() "summarize-table.html",
+          filename = function() dl_name("html"),
           content = function(file) {
             dl_guard("web page", {
               e <- dl_exhibit()
@@ -833,7 +842,7 @@ new_summarize_table_block <- function(group = NULL,
           }
         )
         output$dl_pptx <- shiny::downloadHandler(
-          filename = function() "summarize-table.pptx",
+          filename = function() dl_name("pptx"),
           content = function(file) {
             dl_guard("PowerPoint", {
               e <- dl_picture()
@@ -849,7 +858,7 @@ new_summarize_table_block <- function(group = NULL,
           }
         )
         output$dl_png <- shiny::downloadHandler(
-          filename = function() "summarize-table.png",
+          filename = function() dl_name("png"),
           content = function(file) {
             dl_guard("image", {
               e <- dl_picture()
