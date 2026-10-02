@@ -344,8 +344,10 @@
       const out = [];
       for (const o of raw) {
         if (o === '#num') {
+          // `col` marks a column among fixed options: it keeps its name and
+          // label in the select, the fixed ones show the label alone.
           for (const c of this._cols().filter(cc => cc.type === 'numeric')) {
-            out.push(c.label ? { value: c.name, label: c.label } : c.name);
+            out.push(c.label ? { value: c.name, label: c.label, col: true } : c.name);
           }
         } else { out.push(o); }
       }
@@ -413,17 +415,12 @@
 
       pop.innerHTML = '';
 
-      // a11y: the gear popover is a configuration dialog. Label it so screen
-      // readers announce it; the title element is its accessible name.
+      // a11y: the gear tray is a configuration dialog. The design system
+      // gives the tray no visible heading ("The gear tray"), so the host's
+      // title is its accessible name only.
       pop.setAttribute('role', 'dialog');
       pop.setAttribute('aria-label', (this.h.title || 'Settings'));
-
-      const title = document.createElement('div');
-      title.className = 'blockr-label dd-popover-title';
-      title.id = (pop.id || 'dd-pop') + '-title';
-      title.textContent = this.h.title || 'Settings';
-      pop.setAttribute('aria-labelledby', title.id);
-      pop.appendChild(title);
+      pop.removeAttribute('aria-labelledby');
 
       // Type picker (optional — chart only)
       if (this.h.typeGroups && this.h.typeGroups.length && this.h.typeTiles) {
@@ -511,6 +508,8 @@
       // block's substance; grouping follows them.
       for (const cs of (spec.customSections || [])) {
         const sec = this._sectionEl(cs.title);
+        // The host owns the body's layout, so it takes the whole row.
+        sec.classList.add('dd-section--custom');
         cs.render(sec);
       }
 
@@ -569,6 +568,24 @@
       // looks, what it can do.
       this._renderSection('Presentation', spec.presentation);
 
+      // COLOR (before the optional sections, so every tray ends with
+      // Titles, the folds, then the prepare script) — a PLAIN section (deliberately NOT a checkbox capability:
+      // unlike Aggregation/Drill, checking would seed nothing real — color's
+      // activation lives in the picks; "(none)" / no shading rows IS off).
+      // spec.colorSection = { colorKey, shadings }:
+      //   colorKey — the categorical IDENTITY color ("Color by"): the chart's
+      //     color aesthetic applied to rows/cards via the board scale map.
+      //   shadings — true renders the repeatable VALUE-encoding rules
+      //     ("Shade cells [mode] on [cols]") via shadingsList()/
+      //     onShadingsChange() (table only; a tile has no cell matrix).
+      if (spec.colorSection) {
+        const sec = this._sectionEl('Color');
+        this._renderRole(sec, spec.colorSection.colorKey);
+        if (spec.colorSection.shadings && this.h.shadingsList) {
+          this._renderShadings(sec);
+        }
+      }
+
       // Titles — chart/table text (title, subtitle, caption). Its own titled
       // section so the free-text rows don't read as layout options; hosts
       // opt in via spec.titles.
@@ -598,15 +615,25 @@
           cfg.group = Array.isArray(cfg.group) ? [] : '';
           this.h.onChange('group');
         };
-        const sec = this._sectionEl(this._mappingTitle('Aggregation'), {
-          toggle: { checked: open, onToggle: (on) => this._toggleSection('agg', on,
-            () => { clearGroup(); if (this.h.onMetricsChange) this.h.onMetricsChange([]); },
-            () => { if (this.h.onMetricsChange && !hasMetrics)
-                      this.h.onMetricsChange([{ func: 'count', cols: [] }]); }) }
-        });
-        if (open) {
-          this._renderEntries(sec, mapExtra);
-          if (spec.summaries && this.h.metricsList) this._renderMetrics(sec);
+        // An optional section like Drill-down: it folds, the closed header
+        // says whether rows are aggregated, and the switch is inside.
+        const grpCols = groupIsAgg
+          ? [].concat(cfg.group || []).filter((/** @type {string} */ g) => g) : [];
+        const aggState = !open ? 'Off'
+          : (grpCols.length ? 'By ' + grpCols.map((/** @type {string} */ g) =>
+              this._colDisplay(g)).join(', ') : 'Totals');
+        const sec = this._foldSection(this._mappingTitle('Aggregation'), 'agg',
+          open, aggState);
+        if (sec) {
+          this._enableRow(sec, 'Aggregate rows', open, (on) =>
+            this._toggleSection('agg', on,
+              () => { clearGroup(); if (this.h.onMetricsChange) this.h.onMetricsChange([]); },
+              () => { if (this.h.onMetricsChange && !hasMetrics)
+                        this.h.onMetricsChange([{ func: 'count', cols: [] }]); }));
+          if (open) {
+            this._renderEntries(sec, mapExtra);
+            if (spec.summaries && this.h.metricsList) this._renderMetrics(sec);
+          }
         }
       }
 
@@ -628,23 +655,6 @@
       // The external-control send nests inside here too (see above).
       if (this.h.drillAutoLabel || this.h.drillHint) this._renderDrillSection();
 
-      // COLOR — a PLAIN section (deliberately NOT a checkbox capability:
-      // unlike Aggregation/Drill, checking would seed nothing real — color's
-      // activation lives in the picks; "(none)" / no shading rows IS off).
-      // spec.colorSection = { colorKey, shadings }:
-      //   colorKey — the categorical IDENTITY color ("Color by"): the chart's
-      //     color aesthetic applied to rows/cards via the board scale map.
-      //   shadings — true renders the repeatable VALUE-encoding rules
-      //     ("Shade cells [mode] on [cols]") via shadingsList()/
-      //     onShadingsChange() (table only; a tile has no cell matrix).
-      if (spec.colorSection) {
-        const sec = this._sectionEl('Color');
-        this._renderRole(sec, spec.colorSection.colorKey);
-        if (spec.colorSection.shadings && this.h.shadingsList) {
-          this._renderShadings(sec);
-        }
-      }
-
       this._renderScriptSection();
 
       if (this.h.afterTypeChange) this.h.afterTypeChange();
@@ -658,9 +668,11 @@
     // reader never touches: the board builder writes it once, and what the
     // reader gets is the controls it puts on the band.
     //
-    // A checkbox capability, not an always-open box. Nineteen chart blocks in
-    // twenty carry no script, and a permanently visible code editor in all of
-    // them is a bigger tax than one header line.
+    // An optional section, folded like Titles. Nineteen chart blocks in twenty
+    // carry no script, and a permanently visible code editor in all of them is
+    // a bigger tax than one header line. The closed row says "None" or how
+    // long the script is; the checkbox inside switches it on, and switching it
+    // off clears the script.
     //
     // No-ops entirely where the host does not support it (the copy of this
     // engine vendored into blockr.ggplot), because `script` is then absent
@@ -668,16 +680,19 @@
     _renderScriptSection() {
       const cfg = this._cfg();
       if (cfg.script === undefined) return;
-      const has = !!(cfg.script && String(cfg.script).trim());
-      const open = this._secOpen('script', () => has);
-      const sec = this._sectionEl('Prepare script', {
-        toggle: { checked: open, onToggle: (on) =>
-          this._toggleSection('script', on, () => {
-            cfg.script = '';
-            this.h.onChange('script');
-          }) }
-      });
-      if (!open) return;
+      const text = cfg.script == null ? '' : String(cfg.script);
+      const has = !!text.trim();
+      const on = this._secOpen('script', () => has);
+      const lines = has ? text.replace(/\s+$/, '').split('\n').length : 0;
+      const sec = this._foldSection('Prepare script', 'script', on,
+        has ? (lines + (lines === 1 ? ' line' : ' lines')) : 'None');
+      if (!sec) return;
+      this._enableRow(sec, 'Use a prepare script', on, (enabled) =>
+        this._toggleSection('script', enabled, () => {
+          cfg.script = '';
+          this.h.onChange('script');
+        }));
+      if (!on) return;
 
       const row = document.createElement('div');
       row.className = 'dd-form-row dd-script-row';
@@ -772,13 +787,15 @@
     //
     // Folded away by default: three full-width rows at the bottom of every
     // gear is a lot of gear for something a board author sets once, and the
-    // closed header prints the current subtitle.
+    // closed header prints the current title.
     /** @param {string[]} keys */
     _renderTitles(keys) {
       const open = this._secOpen('titles', () => false);
+      const shown = keys.indexOf('title') >= 0 ? this._resolvedText('title').trim() : '';
       const sec = this._sectionEl('Titles', {
         fold: {
           open,
+          summary: shown || 'None',
           onToggle: (on) => { this._setSecOpen('titles', on); this._rerender(); }
         }
       });
@@ -1277,7 +1294,7 @@
     /**
      * @param {string} titleText
      * @param {{ toggle?: { checked: boolean, onToggle: (on: boolean) => void },
-     *          fold?: { open: boolean, onToggle: (on: boolean) => void },
+     *          fold?: { open: boolean, summary?: string, onToggle: (on: boolean) => void },
      *          action?: HTMLElement }} [opts]
      *   When `toggle` is given the header carries a checkbox (Variant A): the
      *   section is a capability that is off by default and reveals its body only
@@ -1313,19 +1330,19 @@
           flip(e);
         });
       } else if (opts.fold) {
-        // A section that is CLOSED by default and opens on the header. Not the
-        // checkbox above: that one owns a capability, and unchecking it clears
-        // the thing it holds. Folding hides rows, it does not turn anything
-        // off, so it gets a chevron and no checkbox.
+        // A section that opens on the header. Not the checkbox above: that
+        // one owns a capability, and unchecking it clears the thing it holds.
+        // Folding hides rows, it does not turn anything off, so it gets a
+        // chevron and no checkbox. An optional section that can be switched
+        // on carries its checkbox as the first field inside (see
+        // _foldSection), and the closed header prints the section's state.
         const fold = opts.fold;
         h.classList.add('dd-section-title--fold');
         h.setAttribute('role', 'button');
         h.setAttribute('tabindex', '0');
         h.setAttribute('aria-expanded', fold.open ? 'true' : 'false');
-        // The shared chevron (blockr.dplyr blockr-core.js), pointing down
-        // closed and flipped 180 open -- the same glyph and the same gesture
-        // the select's arrow uses, which is the only chevron convention this
-        // codebase has.
+        // The shared chevron (blockr.ui Blockr.icons.chevron). A fold points
+        // right when closed and down when open (design system, "Chevrons").
         const chev = document.createElement('span');
         chev.className = 'dd-fold-chev';
         if (typeof Blockr !== 'undefined' && Blockr.icons && Blockr.icons.chevron) {
@@ -1335,6 +1352,12 @@
         label.textContent = titleText;
         h.appendChild(chev);
         h.appendChild(label);
+        if (!fold.open && fold.summary) {
+          const sum = document.createElement('span');
+          sum.className = 'dd-fold-sum';
+          sum.textContent = fold.summary;
+          h.appendChild(sum);
+        }
         const flip = (/** @type {Event} */ e) => {
           e.stopPropagation();
           fold.onToggle(!fold.open);
@@ -1376,6 +1399,55 @@
       if (!this._openSec) this._openSec = /** @type {Record<string, boolean>} */ ({});
       this._openSec[key] = on;
     }
+    // An optional section that folds (design: options.html, variant B). Its
+    // header is a chevron row; closed, it prints `summary` (the section's
+    // state: "Off", "None", "4 lines") after the title. Folding is view state
+    // only: it never changes the output or clears a value. The fold's open
+    // state is kept apart from the feature's on state (`key`), and a section
+    // that is on starts open, as it did when the header was its checkbox.
+    // Returns the section when open, else null (only the header was drawn).
+    /**
+     * @param {string} title @param {string} key @param {boolean} on
+     * @param {string} summary @returns {HTMLElement | null}
+     */
+    _foldSection(title, key, on, summary) {
+      const foldKey = key + ':fold';
+      const open = this._secOpen(foldKey, () => on);
+      const sec = this._sectionEl(title, {
+        fold: {
+          open,
+          summary,
+          onToggle: (o) => { this._setSecOpen(foldKey, o); this._rerender(); }
+        }
+      });
+      return open ? sec : null;
+    }
+
+    // The checkbox that switches an optional section's feature on: the first
+    // field inside the opened section. Switching it off is what clears the
+    // feature, as the header checkbox did before.
+    /**
+     * @param {HTMLElement} sec @param {string} label @param {boolean} on
+     * @param {(on: boolean) => void} onToggle
+     */
+    _enableRow(sec, label, on, onToggle) {
+      const row = document.createElement('div');
+      row.className = 'dd-form-row dd-form-row--check dd-section-enable';
+      if (typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
+        row.appendChild(Blockr.checkbox(label, on, onToggle).el);
+      } else {
+        const lab = document.createElement('label');
+        const inp = document.createElement('input');
+        inp.type = 'checkbox';
+        inp.checked = on;
+        inp.addEventListener('change', () => onToggle(inp.checked));
+        lab.appendChild(inp);
+        lab.appendChild(document.createTextNode(' ' + label));
+        row.appendChild(lab);
+      }
+      sec.appendChild(row);
+    }
+
     // Flip a toggle section; when turning OFF run offFn to clear the capability
     // (raw table / no drill / no coloring), when turning ON run the optional
     // onFn to seed a default (e.g. the coloring mode), then re-render preserving
@@ -1405,28 +1477,38 @@
      */
     _renderToggleColumnSection(title, secKey, cfgKey, seed, extras) {
       const cfg = this._cfg();
-      const open = this._secOpen(secKey,
+      const on = this._secOpen(secKey,
         () => this._hasVal(cfg[cfgKey]) && cfg[cfgKey] !== '(none)');
-      const sec = this._sectionEl(title, {
-        toggle: { checked: open, onToggle: (on) =>
-          this._toggleSection(secKey, on,
-            // Unchecking the capability also clears the active emitted
-            // filter (single source of truth: the engine's off-branch, same
-            // as _renderDrillSection) — otherwise downstream stays filtered
-            // on the last click with clicks now inert.
-            () => { cfg[cfgKey] = ''; this.h.onChange(cfgKey);
-                    this.h.onClearFilter(); },
-            () => {
-              if (!this._hasVal(cfg[cfgKey]) && seed && this._colExists(seed)) {
-                cfg[cfgKey] = seed;
-                this.h.onChange(cfgKey);
-              }
-            }) }
-      });
-      if (open) {
+      const cur = this._hasVal(cfg[cfgKey]) ? String(cfg[cfgKey]) : '';
+      const sec = this._foldSection(title, secKey, on,
+        on ? (cur ? this._colDisplay(cur) : 'On') : 'Off');
+      if (!sec) return;
+      this._enableRow(sec, 'Filter downstream on a click', on, (enabled) =>
+        this._toggleSection(secKey, enabled,
+          // Unchecking the capability also clears the active emitted
+          // filter (single source of truth: the engine's off-branch, same
+          // as _renderDrillSection), otherwise downstream stays filtered
+          // on the last click with clicks now inert.
+          () => { cfg[cfgKey] = ''; this.h.onChange(cfgKey);
+                  this.h.onClearFilter(); },
+          () => {
+            if (!this._hasVal(cfg[cfgKey]) && seed && this._colExists(seed)) {
+              cfg[cfgKey] = seed;
+              this.h.onChange(cfgKey);
+            }
+          }));
+      if (on) {
         this._renderRole(sec, cfgKey, { required: true });
         if (extras) extras(sec);
       }
+    }
+
+    // A column as the closed header of a section names it: its variable label
+    // when it has one, else its name.
+    /** @param {string} name @returns {string} */
+    _colDisplay(name) {
+      const c = this._cols().find(x => x.name === name);
+      return (c && c.label) ? c.label : name;
     }
 
     // Resolve the mapping-section header title. A host may supply a plain string
@@ -1506,11 +1588,21 @@
       // usual head label would just repeat it.
       if (!opts.removable && this._isBoolSegmented(role) &&
           typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
+        row.classList.add('dd-form-row--check');
         const controls = document.createElement('div');
         controls.className = 'dd-row-controls';
         this._buildControl(controls, key, { onChange: () => {} });
         row.appendChild(controls);
         container.appendChild(row);
+        return;
+      }
+
+      // In the gear a verb-object pair is two fields of the grid: the
+      // aggregation under its own label, then the column it reads ("Of"),
+      // only when the aggregation reads one. The band keeps the one-row
+      // "[agg] of [column]" phrase below.
+      if (reversed && !opts.band) {
+        this._renderAggPair(container, key, role, opts);
         return;
       }
 
@@ -1604,6 +1696,62 @@
       container.appendChild(row);
     }
 
+    // "Aggregate [Count]" and, for an aggregation that reads a column,
+    // "Of [AVAL]" beside it: two fields, each with its own label. The column
+    // field carries the required cue (the aggregation always has a value).
+    /**
+     * @param {HTMLElement} container @param {string} key @param {any} role
+     * @param {{ required?: boolean }} opts
+     */
+    _renderAggPair(container, key, role, opts) {
+      const cfg = this._cfg();
+      const fnKey = role.pairedWith;
+      const fnRole = this._role(fnKey) || {};
+      /** @param {string} cls @param {string} text */
+      const field = (cls, text) => {
+        const row = document.createElement('div');
+        row.className = 'dd-form-row ' + cls;
+        const head = document.createElement('div');
+        head.className = 'dd-row-head';
+        const lbl = document.createElement('span');
+        lbl.className = 'blockr-label';
+        lbl.textContent = text;
+        head.appendChild(lbl);
+        row.appendChild(head);
+        const controls = document.createElement('div');
+        controls.className = 'dd-row-controls';
+        row.appendChild(controls);
+        return { row, controls };
+      };
+
+      const fnLabel = (typeof fnRole.label === 'function')
+        ? fnRole.label(cfg) : (fnRole.label || 'Aggregate');
+      const fn = field('dd-role-' + fnKey, fnLabel);
+      this._buildControl(fn.controls, fnKey, { onChange: () => {} });
+      container.appendChild(fn.row);
+
+      const a = cfg[fnKey];
+      if (!a || a === 'count') return;
+
+      const unset = !this._hasVal(cfg[key]);
+      const of = field('dd-role-' + key + (unset ? ' dd-role-unset' : ''),
+        'Of' + (opts.required ? ' *' : ''));
+      const helpEl = document.createElement('span');
+      helpEl.className = 'dd-form-help';
+      const sync = () => {
+        const empty = !this._hasVal(this._cfg()[key]);
+        of.row.classList.toggle('dd-role-required-empty', !!opts.required && empty);
+        of.row.classList.toggle('dd-role-unset', empty);
+        const txt = this._fieldHelp(key);
+        helpEl.textContent = txt;
+        helpEl.style.display = txt ? '' : 'none';
+      };
+      this._buildControl(of.controls, key, { required: opts.required, onChange: sync });
+      of.row.appendChild(helpEl);
+      sync();
+      container.appendChild(of.row);
+    }
+
     // Re-render the popover, preserving the open state (used by the repeatable
     // summaries group when a row is added / removed / its function changes).
     _rerender() {
@@ -1695,9 +1843,11 @@
         const aggWrap = document.createElement('div');
         aggWrap.className = 'dd-picker-wrap dd-value-agg';
         if (S && S.single) {
+          const lo = this._labelOnly(aggOpts, m.func || 'count');
           S.single(aggWrap, {
-            options: aggOpts, selected: m.func || 'count',
-            onChange: (/** @type {string} */ val) => {
+            options: lo.options, selected: lo.selected,
+            onChange: (/** @type {string} */ v) => {
+              const val = lo.toValue(v);
               m.func = val;
               // Keep the columns consistent with the new function: count drops
               // them; a numeric aggregation keeps only numeric columns.
@@ -1810,9 +1960,10 @@
         const modeWrap = document.createElement('div');
         modeWrap.className = 'dd-picker-wrap dd-value-agg';
         if (S && S.single) {
+          const lo = this._labelOnly(modeOpts, s.mode || 'diverging');
           S.single(modeWrap, {
-            options: modeOpts, selected: s.mode || 'diverging',
-            onChange: (/** @type {string} */ val) => { s.mode = val; commit(); }
+            options: lo.options, selected: lo.selected,
+            onChange: (/** @type {string} */ v) => { s.mode = lo.toValue(v); commit(); }
           });
         }
         row.appendChild(modeWrap);
@@ -1869,20 +2020,27 @@
       // grand totals) -- then the whole section is hidden: nothing to enable.
       const hint = this.h.drillHint ? this.h.drillHint() : undefined;
       if (this.h.drillHint && hint == null) return;
-      // Variant A: the enable checkbox lives in the section header (matches the
-      // table's Drill-down), replacing the old separate "Filter downstream on
-      // selection" checkbox row that read as a different control style. `on` here
-      // is the section-open state; unchecking clears drill, checking defaults it
-      // to 'auto'.
+      // An optional section that folds (options.html, variant B), the same
+      // shape as the table's Drill-down. The closed header says "Off" or what
+      // a click filters on; the checkbox inside switches the drill. `on` is
+      // the feature's state: unchecking clears drill, checking defaults it to
+      // 'auto'.
       const on = this._secOpen('chartdrill', () => this._hasVal(cfg.drill));
-      const sec = this._sectionEl('Drill-down', {
-        toggle: { checked: on, onToggle: (/** @type {boolean} */ enabled) => {
-          this._setSecOpen('chartdrill', enabled);
-          if (!enabled) cfg.drill = '';
-          else if (!this._hasVal(cfg.drill)) cfg.drill = 'auto';
-          this._rerender();
-          this.h.onChange('drill'); this.h.onClearFilter();
-        } }
+      const autoLabel = this.h.drillAutoLabel ? this.h.drillAutoLabel() : null;
+      let summary = 'Off';
+      if (on) {
+        if (this.h.drillHint) summary = 'On';
+        else if (this._hasVal(cfg.drill) && cfg.drill !== 'auto') summary = this._colDisplay(cfg.drill);
+        else summary = autoLabel || 'On';
+      }
+      const sec = this._foldSection('Drill-down', 'chartdrill', on, summary);
+      if (!sec) return;
+      this._enableRow(sec, 'Filter downstream on a click', on, (enabled) => {
+        this._setSecOpen('chartdrill', enabled);
+        if (!enabled) cfg.drill = '';
+        else if (!this._hasVal(cfg.drill)) cfg.drill = 'auto';
+        this._rerender();
+        this.h.onChange('drill'); this.h.onClearFilter();
       });
 
       // Hint-only body: the drill target is implied by the block's structure
@@ -1899,7 +2057,6 @@
       }
 
       if (on) {
-        const autoLabel = this.h.drillAutoLabel();
         const row = document.createElement('div');
         row.className = 'dd-form-row';
         const head = document.createElement('div');
@@ -1913,12 +2070,17 @@
         controls.className = 'dd-row-controls';
         const wrap = document.createElement('div');
         wrap.className = 'dd-picker-wrap';
-        const colOpt = (/** @type {VizColumn} */ c) => c.label ? { value: c.name, label: c.label } : c.name;
+        const colOpt = (/** @type {VizColumn} */ c) => c.label ? { value: c.name, label: c.label, col: true } : c.name;
         const opts = [{ value: 'auto', label: autoLabel }, ...this._cols().map(colOpt)];
         const sel = (this._hasVal(cfg.drill) && cfg.drill !== 'auto') ? cfg.drill : 'auto';
         const onSel = (/** @type {string} */ val) => { cfg.drill = val; this.h.onChange('drill'); this.h.onClearFilter(); };
         if (typeof Blockr !== 'undefined' && Blockr.Select) {
-          this._selects['drill'] = Blockr.Select.single(wrap, { bordered: true, options: opts, selected: sel, onChange: onSel });
+          // "Auto" is a fixed option: its label alone. Columns keep their
+          // name and label.
+          const lo = this._labelOnly(opts, sel);
+          this._selects['drill'] = Blockr.Select.single(wrap, { bordered: true,
+            options: lo.options, selected: lo.selected,
+            onChange: (/** @type {string} */ v) => onSel(lo.toValue(v)) });
         } else {
           const s = document.createElement('select');
           s.className = 'dd-cfg-select';
@@ -1959,7 +2121,7 @@
         this.h.onClearFilter();
       };
       const row = document.createElement('div');
-      row.className = 'dd-form-row';
+      row.className = 'dd-form-row dd-form-row--check';
       if (typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
         // Returns a WRAPPER, not a node -- append its .el (same as the
         // "Send to filter" row below). Passing the wrapper to appendChild
@@ -2020,7 +2182,7 @@
         this._rerender();
       };
       const boxRow = document.createElement('div');
-      boxRow.className = 'dd-form-row dd-ctrl-toggle';
+      boxRow.className = 'dd-form-row dd-form-row--check dd-ctrl-toggle';
       if (typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
         const box = Blockr.checkbox('Send to filter (beta)', on, onToggle);
         boxRow.appendChild(box.el);
@@ -2220,7 +2382,11 @@
         }
         parent.appendChild(wrap);
       } else if (role.kind === 'segmented') {
-        const cur = this._hasVal(cfg[key]) ? cfg[key] : role.options[0].value;
+        // `dflt` names the option an unset value means, when that is not the
+        // first one shown (the chart's Order lists Descending first, and an
+        // unset order sorts ascending).
+        const cur = this._hasVal(cfg[key]) ? cfg[key]
+          : (role.dflt != null ? role.dflt : role.options[0].value);
         if (this._isBoolSegmented(role) &&
             typeof Blockr !== 'undefined' && typeof Blockr.checkbox === 'function') {
           const onOpt = role.options.find((/** @type {any} */ o) => o.value === 'on');
@@ -2549,7 +2715,14 @@
         // what to supply. `phBy` keys it by context, like colTypeBy.
         const role = this._role(key) || {};
         const ph = (role.phBy && role.phBy[this.h.context()]) || role.ph;
-        this._selects[key] = Blockr.Select.single(wrap, { bordered: true, options: opts, selected, placeholder: ph, onChange: onSel });
+        if (decorate) {
+          this._selects[key] = Blockr.Select.single(wrap, { bordered: true, options: opts, selected, placeholder: ph, onChange: onSel });
+        } else {
+          const lo = this._labelOnly(opts, selected);
+          this._selects[key] = Blockr.Select.single(wrap, { bordered: true,
+            options: lo.options, selected: lo.selected, placeholder: ph,
+            onChange: (/** @type {string} */ v) => onSel(lo.toValue(v)) });
+        }
       } else {
         const s = document.createElement('select');
         s.className = 'dd-cfg-select';
@@ -2565,6 +2738,37 @@
         s.addEventListener('change', () => onSel(s.value));
         wrap.appendChild(s);
       }
+    }
+
+    /** A select over a FIXED option set shows each option's label alone
+     * ("Descending", not "desc Descending"): the stored value is a code the
+     * reader never needs. Columns (plain names, or entries marked `col`) keep
+     * name and label. Blockr.Select prints `value label` for an object, so
+     * a fixed option goes in as its label string and the pick is mapped
+     * back. A label that is also another option's value keeps the object
+     * form, so no pick can be read as the wrong option.
+     *
+     * @param {any[]} opts @param {string} selected
+     * @returns {{ options: any[], selected: string, toValue: (v: string) => string }}
+     */
+    _labelOnly(opts, selected) {
+      const vals = new Set(opts.map(o => (o && typeof o === 'object') ? o.value : o));
+      /** @type {Map<string, string>} */
+      const toVal = new Map();
+      let sel = selected;
+      const out = opts.map(o => {
+        if (!o || typeof o !== 'object' || o.col || !o.label) return o;
+        const lab = String(o.label);
+        if (toVal.has(lab) || (vals.has(lab) && lab !== o.value)) return o;
+        toVal.set(lab, o.value);
+        if (o.value === selected) sel = lab;
+        return lab;
+      });
+      return {
+        options: out,
+        selected: sel,
+        toValue: (v) => (toVal.has(v) ? /** @type {string} */ (toVal.get(v)) : v)
+      };
     }
 
     /** @param {HTMLElement} parent @param {string} key */
