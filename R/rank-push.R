@@ -627,8 +627,11 @@ rank_axis_strip <- function(p, cl = NULL, prep = NULL) {
       t$labels[[k]]
     )
   })
+  # `has-val`: the strip of a column whose cells carry a value label, so its
+  # ticked span is the bar width's lane (`bar_width`, rank-table-css.R). A
+  # swimlane's spans the cell.
   htmltools::tags$div(
-    class = "blockr-rank-axis",
+    class = paste0("blockr-rank-axis", if (!is.null(cl$dw)) " has-val"),
     htmltools::tags$span(class = "blockr-rank-axis-in", ticks),
     if (!is.null(cl$dw)) {
       htmltools::tags$span(class = "blockr-rank-axis-pad",

@@ -52,6 +52,8 @@
 #' @param axis Print each glyph column's domain as a tick strip under its
 #'   header (default `TRUE`): the value domain for bars, boxes and dot
 #'   ranges, the x domain (dates as dates) for swimlanes and sparklines.
+#' @param bar_width `"fit"` (default), `"narrow"`, `"medium"` or `"wide"`:
+#'   the length of the labelled marks. See [new_summarize_table_block()].
 #' @param title,subtitle,caption Display text, already resolved (see
 #'   `resolve_block_title()`).
 #' @param drill Column a row click filters on, or `NULL` for a display-only
@@ -77,7 +79,7 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
                        cols = NULL, fields = NULL, sort_by = "value",
                        sort_dir = "desc", top_n = NULL, max_height = NULL,
                        search = TRUE, sortable = TRUE, axis = TRUE,
-                       title = NULL, subtitle = NULL,
+                       bar_width = "fit", title = NULL, subtitle = NULL,
                        caption = NULL, drill = NULL, scale_map = NULL,
                        elem_id = NULL, active = NULL, expanded = FALSE) {
   prep <- rank_prepare(
@@ -110,7 +112,7 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
     summaries = summaries, by = by, facet_layout = facet_layout,
     bar_mode = bar_mode, cols = cols, fields = fields, sort_by = sort_by,
     sort_dir = sort_dir, top_n = top_n, search = search,
-    sortable = sortable, axis = axis, drill = drill,
+    sortable = sortable, axis = axis, bar_width = bar_width, drill = drill,
     titles = list(
       title = title, subtitle = subtitle, caption = caption,
       title_state = title_raw, subtitle_state = subtitle_raw,
@@ -490,8 +492,21 @@ rank_table_attrs <- function(prep, cfg) {
   cfg$search <- if (isTRUE(cfg$search)) "on" else "off"
   cfg$sortable <- if (isTRUE(cfg$sortable %||% TRUE)) "on" else "off"
   cfg$axis <- if (isTRUE(cfg$axis %||% TRUE)) "on" else "off"
+  cfg$bar_width <- rank_bar_width(cfg$bar_width)
   json <- as.character(jsonlite::toJSON(cfg, auto_unbox = TRUE, null = "null"))
-  paste0(" data-rank-cfg=\"", rank_esc(json), "\"")
+  # A preset is a CSS hook on the table; "fit" is the stylesheet's default
+  # and needs none.
+  width <- if (!identical(cfg$bar_width, "fit")) {
+    paste0(" data-rank-width=\"", cfg$bar_width, "\"")
+  }
+  paste0(" data-rank-cfg=\"", rank_esc(json), "\"", width)
+}
+
+#' The `bar_width` vocabulary: an unknown or empty value reads as "fit".
+#' @noRd
+rank_bar_width <- function(x) {
+  x <- rank_chr1(x) %||% "fit"
+  if (x %in% c("narrow", "medium", "wide", "fit")) x else "fit"
 }
 
 #' The chrome alone: container, control row, empty bands, empty scroll wrapper.

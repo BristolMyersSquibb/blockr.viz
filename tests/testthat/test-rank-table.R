@@ -498,3 +498,32 @@ test_that("the glyph, not the cell, carries the column's minimum width", {
   expect_length(rule, 1L)
   expect_match(rule, "min-width: var(--blockr-rank-lane-min", fixed = TRUE)
 })
+
+test_that("bar_width: fit needs no hook, a preset stamps the table", {
+  ae <- data.frame(SOC = c("A", "A", "B"), TRT = c("x", "y", "x"))
+  html <- function(...) as.character(rank_table(ae, group = "SOC", ...))
+  # Fit is the stylesheet's default (the lanes fill, up to the ceiling).
+  expect_false(grepl("data-rank-width=\"", html(), fixed = TRUE))
+  expect_match(html(bar_width = "medium"), "data-rank-width=\"medium\"",
+               fixed = TRUE)
+  # The gear reads the value back off the cfg, normalised.
+  expect_match(html(bar_width = "wide"), "&quot;bar_width&quot;:&quot;wide&quot;",
+               fixed = TRUE)
+  expect_identical(rank_bar_width(NULL), "fit")
+  expect_identical(rank_bar_width("huge"), "fit")
+  expect_identical(rank_bar_width("narrow"), "narrow")
+
+  css <- rank_table_css()
+  expect_match(css, "--blockr-rank-lane-max:\\s*\\d+px")
+  for (w in c("narrow", "medium", "wide")) {
+    expect_match(css, paste0("data-rank-width='", w, "'"), fixed = TRUE)
+  }
+})
+
+test_that("only a labelled column's axis follows the bar width", {
+  bar <- as.character(rank_axis_strip(list(kind = "bar", dmin = 0, dmax = 10),
+                                      list(dw = 6L)))
+  expect_match(bar, "blockr-rank-axis has-val", fixed = TRUE)
+  span <- as.character(rank_axis_strip(list(kind = "interval", dom = c(0, 9))))
+  expect_false(grepl("has-val", span))
+})

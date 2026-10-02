@@ -28,6 +28,9 @@ rank_table_css <- function() {
   /* The floor under a GLYPH -- see .blockr-rank-barwrap below. A board that
      wants shorter marks and less scrolling overrides it on the container. */
   --blockr-rank-lane-min: 80px;
+  /* The ceiling over it, in the default `bar_width = 'fit'`: past it a wide
+     panel's slack stays blank instead of stretching the marks. */
+  --blockr-rank-lane-max: 320px;
 }
 /* Title / subtitle / caption: the canonical .dd-table-* bands, styled by
    inst/css/table.css (shipped with the table dep). Nothing to add here. */
@@ -84,6 +87,29 @@ rank_table_css <- function() {
 .blockr-rank-barwrap .blockr-rank-lane {
   flex: 1 1 auto;
   min-width: var(--blockr-rank-lane-min, 80px);
+  max-width: var(--blockr-rank-lane-max, 320px);
+}
+/* Bar width (`bar_width`). Fit, the default, is the rule above: the lanes
+   take the panel's slack, between the floor and the ceiling. A preset fixes
+   the lane instead, and the table drops to its natural width: every cell's
+   width goes back to auto, because one percentage cell (the 1% shrink-to-fit
+   idiom, the 26% glyph column) stretches an auto-width table to the panel
+   again. The slack stays blank on the right; a panel narrower than the table
+   scrolls. Only the labelled marks follow it: a swimlane spans its cell. */
+.blockr-rank-table[data-rank-width='narrow'] { --blockr-rank-lane-w: 90px; }
+.blockr-rank-table[data-rank-width='medium'] { --blockr-rank-lane-w: 150px; }
+.blockr-rank-table[data-rank-width='wide'] { --blockr-rank-lane-w: 240px; }
+.blockr-rank-table[data-rank-width] { width: auto; }
+.blockr-rank-table[data-rank-width] th,
+.blockr-rank-table[data-rank-width] td {
+  width: auto;
+  min-width: 0;
+}
+.blockr-rank-table[data-rank-width] .blockr-rank-barwrap > :not(.blockr-rank-barval),
+.blockr-rank-table[data-rank-width] .blockr-rank-axis.has-val .blockr-rank-axis-in {
+  flex: 0 0 var(--blockr-rank-lane-w);
+  min-width: 0;
+  max-width: none;
 }
 .blockr-rank-barval {
   flex: 0 0 auto;
@@ -105,17 +131,24 @@ rank_table_css <- function() {
   align-items: center;
   margin-top: 5px;
   height: 12px;
-  font-size: 9.5px;
   font-weight: var(--blockr-font-weight-normal, 400);
   letter-spacing: 0;
   color: var(--blockr-color-text-muted, #6b7280);
   font-variant-numeric: tabular-nums;
 }
+/* The small type sits on the ticks, not on the strip: the pad is sized in
+   ch, and a ch at 9.5px is two thirds of the cell's, so a strip-wide font
+   size left the ticked span ~20px longer than the lane under it. At the
+   header's size (the cells') the pad and the value slot are one width. */
 .blockr-rank-axis-in {
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
   height: 100%;
+  font-size: 9.5px;
+}
+.blockr-rank-axis.has-val .blockr-rank-axis-in {
+  max-width: var(--blockr-rank-lane-max, 320px);
 }
 .blockr-rank-axis-pad { flex: 0 0 auto; }
 .blockr-rank-axis-in span {

@@ -1017,6 +1017,12 @@
   // scale in the numbers beside the marks.
   var AXIS_OPT = [{ value: "on", label: "Column axis" },
                   { value: "off", label: "No column axis" }];
+  // The length of the labelled marks (R: rank_bar_width). Fit fills the
+  // panel up to a ceiling; the others are fixed and leave the slack blank.
+  var BAR_WIDTH_OPT = [{ value: "narrow", label: "Narrow" },
+                       { value: "medium", label: "Medium" },
+                       { value: "wide", label: "Wide" },
+                       { value: "fit", label: "Fit" }];
   // One toggle, every format the machine can write: "can people take this
   // table away" is one decision, and which file the reader wants is theirs.
   // (The table block settled this the same way.)
@@ -1101,6 +1107,8 @@
     sortable: { label: "Header sorting", kind: "segmented",
                 options: SORTABLE_OPT },
     axis:     { label: "Column axis", kind: "segmented", options: AXIS_OPT },
+    bar_width: { label: "Bar width", kind: "segmented",
+                 options: BAR_WIDTH_OPT },
     download: { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
     // Drill-down: a plain column role, like the table block's.
     drill:    { label: "Filter on", kind: "column", colType: "any" },
@@ -1813,8 +1821,9 @@
         }] : [],
         presentation: fcols.length === 1
           ? ["sort_by", "sort_dir", "facet_layout", "search", "sortable",
-             "axis", "download"]
-          : ["sort_by", "sort_dir", "search", "sortable", "axis", "download"],
+             "axis", "download", "bar_width"]
+          : ["sort_by", "sort_dir", "search", "sortable", "axis", "download",
+             "bar_width"],
         drillToggle: "drill",
         drillDefault: (cfg.by && cfg.by.length)
           ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),
@@ -1847,6 +1856,9 @@
     pres.push("sortable");
     pres.push("axis");
     pres.push("download");
+    // Last: four segments overflow a grid cell, and the end of the row is
+    // the one place with nothing to their right.
+    pres.push("bar_width");
 
     return {
       requiredMap: ["group"],
