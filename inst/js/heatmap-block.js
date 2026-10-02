@@ -553,6 +553,42 @@
     return snapdomLoading;
   }
 
+  /** The picture shows every column label in full: the rotated header
+   * grows to the longest term (up to 320px) instead of cutting it off.
+   * @param {HTMLElement} clone */
+  function openColumnLabels(clone) {
+    var spans = clone.querySelectorAll('th.hmb-rot > span');
+    if (!spans.length) return;
+    var tall = 0;
+    spans.forEach(function (s) {
+      var el = /** @type {HTMLElement} */ (s);
+      el.style.maxHeight = '314px';
+      tall = Math.max(tall, el.scrollHeight);
+    });
+    var h = Math.min(320, Math.ceil(tall) + 6);
+    if (h <= 150) return;
+    clone.querySelectorAll('th.hmb-rot').forEach(function (th) {
+      (/** @type {HTMLElement} */ (th)).style.height = h + 'px';
+    });
+  }
+
+  /** The picture is as wide as the matrix, whatever the panel's width: the
+   * host starts at the panel's width and grows until no table runs past the
+   * clone's right edge (snapdom draws only the clone's box).
+   * @param {HTMLElement} host @param {HTMLElement} clone */
+  function widenToContent(host, clone) {
+    for (var i = 0; i < 4; i++) {
+      var box = clone.getBoundingClientRect();
+      var edge = box.right - (parseFloat(getComputedStyle(clone).paddingRight) || 0);
+      var over = 0;
+      clone.querySelectorAll('table').forEach(function (t) {
+        over = Math.max(over, t.getBoundingClientRect().right - edge);
+      });
+      if (over < 0.5) return;
+      host.style.width = Math.ceil(host.offsetWidth + over) + 'px';
+    }
+  }
+
   /** One picture of the drawn block: {png, width, height}, the size in CSS
    * px (R turns it into inches at 96 dpi).
    * @param {Element} root @param {HmbState} st */
@@ -606,6 +642,8 @@
           requestAnimationFrame(function () { requestAnimationFrame(r); });
         });
       }).then(function () {
+        openColumnLabels(clone);
+        widenToContent(host, clone);
         var w = Math.ceil(clone.offsetWidth);
         var h = Math.ceil(clone.offsetHeight);
         // dpr 1: snapdom multiplies the scale by the device pixel ratio, and

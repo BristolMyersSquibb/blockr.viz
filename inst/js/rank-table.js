@@ -925,6 +925,23 @@
     return root;
   }
 
+  // The picture is as wide as the table, whatever the panel's width: laid
+  // out at `width` first, then the host grows until no table runs past the
+  // root's right edge (the wrapper would scroll it, and snapdom draws only
+  // the root's box). A table that fits keeps the panel's width.
+  function widenToContent(host, root) {
+    for (var i = 0; i < 4; i++) {
+      var box = root.getBoundingClientRect();
+      var edge = box.right - (parseFloat(getComputedStyle(root).paddingRight) || 0);
+      var over = 0;
+      root.querySelectorAll("table").forEach(function (t) {
+        over = Math.max(over, t.getBoundingClientRect().right - edge);
+      });
+      if (over < 0.5) return;
+      host.style.width = Math.ceil(host.offsetWidth + over) + "px";
+    }
+  }
+
   /** One picture of a payload at `width` CSS px: {png, width, height}, the
    * size in CSS px (R turns it into inches at 96 dpi). */
   function rankPicture(payload, width, ratio, css) {
@@ -947,6 +964,7 @@
           requestAnimationFrame(function () { requestAnimationFrame(r); });
         });
       }).then(function () {
+        widenToContent(host, root);
         var w = Math.ceil(root.offsetWidth);
         var h = Math.ceil(root.offsetHeight);
         // dpr 1: snapdom multiplies the scale by the device pixel ratio, and
