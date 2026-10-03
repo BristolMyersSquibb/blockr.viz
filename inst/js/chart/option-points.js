@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: the scatter and line series of the individual option.
+ * Chart block: the scatter and line series of the individual option.
  *
  * Per model series: the points (a scatter, or a line in its connect mode),
  * then R's smoother for that series (scatter only) and its lo/hi error

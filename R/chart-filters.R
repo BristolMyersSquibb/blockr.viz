@@ -1,12 +1,12 @@
 # The chart block's click filter.
 #
-# A click in chart engine v2 sends the clicked mark's keys as a named list,
+# A click sends the clicked mark's keys as a named list,
 # `{AETERM: ["Rash"], AESEV: ["MODERATE"]}`; a value may be JSON null, a
-# missing key. v1 sends one `column` and its `values`. Both are held as one
-# shape, the block's `filters` state: a named list of character vectors, NA
-# for a missing value, NULL when nothing is filtered. The columns AND
-# together, in the block's own output and in a claim sent to a drill target
-# (dd_ctrl_claims()).
+# missing key. The older one-column form is a `column` and its `values`.
+# Both are held as one shape, the block's `filters` state: a named list of
+# character vectors, NA for a missing value, NULL when nothing is filtered.
+# The columns AND together, in the block's own output and in a claim sent to
+# a drill target (dd_ctrl_claims()).
 
 # A filter from the constructor, saved state or a message, as a named list of
 # character vectors (NA = missing), or NULL. A JSON null arrives from Shiny
@@ -42,8 +42,9 @@ chart_filter_values <- function(v) {
   unique(unname(as.character(v)))
 }
 
-# v1's filter_column + filter_values (a saved board, or v1's message) as a
-# filter. v1 never sends a missing value.
+# The older one-column filter_column + filter_values (a board saved before
+# `filters`, or a `column` / `values` message) as a filter. That form has no
+# missing value.
 chart_legacy_filters <- function(column, values) {
   col <- chr_state(column)
   vals <- as.character(unlist(values, use.names = FALSE))
@@ -54,7 +55,7 @@ chart_legacy_filters <- function(column, values) {
   stats::setNames(list(vals), col)
 }
 
-# The filter a categorical message carries: v2's `filters`, else v1's
+# The filter a categorical message carries: `filters`, else the older
 # `column` / `values`. NULL clears.
 chart_msg_filters <- function(msg) {
   if (!is.null(msg$filters)) {
@@ -72,9 +73,10 @@ chart_filters_json <- function(filters) {
   lapply(filters, as.list)
 }
 
-# v1 reads one column and its values. A filter v1 cannot show (several
-# columns, a missing value, a range) gives it none.
-chart_filters_v1 <- function(filters, type) {
+# The filter in the older one-column form the chart config also carries
+# (filter_column + filter_values). A filter that form cannot hold (several
+# columns, a missing value, a range) gives none.
+chart_filters_one_column <- function(filters, type) {
   if (!identical(type, "categorical") || length(filters) != 1L ||
         anyNA(filters[[1L]])) {
     return(list(column = NULL, values = NULL))

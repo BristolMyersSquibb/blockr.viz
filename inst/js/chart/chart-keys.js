@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: a mark's keys and the filters made of them.
+ * Chart block: a mark's keys and the filters made of them.
  *
  * Every mark carries its keys, the column values that define it
  * ({AETERM: "Rash"}, plus the facet column inside a facet panel). One rule
@@ -18,7 +18,7 @@
  * both).
  *
  * A range filter (a point or a brush on numeric axes) is
- * {x_col, y_col, x_range, y_range}, as v1 sends it. In a facet panel it
+ * {x_col, y_col, x_range, y_range}. In a facet panel it
  * carries the panel's key in the same `filters` field a click uses (D10).
  */
 (function () {
@@ -78,8 +78,8 @@
   };
 
   /**
-   * The categorical filter a saved board restores: `filters`, else v1's
-   * filter_column + filter_values. Null for a saved range, and without a
+   * The categorical filter a saved board restores: `filters`, else the
+   * older one-column filter_column + filter_values. Null for a saved range, and without a
    * column or values.
    * @param {Record<string, any>} cfg @returns {Filters | null}
    */
@@ -116,7 +116,7 @@
   });
 
   /**
-   * The message for a range: v1's fields, plus the facet key in `filters`
+   * The message for a range: its x and y fields, plus the facet key in `filters`
    * when the range was taken in a facet panel (D10).
    * @param {{ x_col: any, y_col: any, x_range: any, y_range: any }} range
    * @param {Filters | null} [filters]
@@ -134,7 +134,7 @@
 
   /**
    * The message that clears a filter. It names the type of the filter it
-   * clears (B1); every other field is as v1 sends it.
+   * clears (B1); every other field is null.
    * @param {'categorical' | 'range' | 'point'} type
    */
   const clearMessage = (type) => ({
@@ -289,7 +289,7 @@
   };
 
   /**
-   * The v1 view of a filter, for code that reads one column and its values:
+   * A filter seen as one column and its values, for code that reads that:
    * the column (several: their names) and the value (several: the array; on
    * several columns: the filter itself).
    * @param {Filters | null} filters

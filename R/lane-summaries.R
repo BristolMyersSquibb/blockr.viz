@@ -53,12 +53,12 @@ LANE_PAIR_FUNCS <- c("identity", "mean", "median", "min", "max")
 LANE_DIST_STYLES <- c("dot", "box")
 
 # The ceiling on a mapped dimension's levels, the chart block's exactly
-# (MAX_COLOR_LEVELS in inst/js/chart.js): a palette has about seven readable
-# colours and fifteen is the hard stop. Facet shares it for a different
-# reason -- a level is a COLUMN there, and a table sixty columns wide is not
-# a reading. Colour and facet are per column now, so pointing either at a
-# subject id is one click away; it must fail loudly, naming the column, not
-# render two hundred glyphs per cell.
+# (MAX_COLOR_LEVELS in chart/model-common.js): a palette has about seven
+# readable colours and fifteen is the hard stop. Facet shares it for a
+# different reason -- a level is a COLUMN there, and a table sixty columns
+# wide is not a reading. Colour and facet are per column now, so pointing
+# either at a subject id is one click away; it must fail loudly, naming the
+# column, not render two hundred glyphs per cell.
 LANE_MAX_LEVELS <- 15L
 
 #' Normalize a summaries list: known types, per-type required fields,

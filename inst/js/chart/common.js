@@ -1,11 +1,14 @@
 // @ts-check
 /**
- * Chart block v2: the namespace and what every other file shares.
+ * Chart block: the namespace and what every other file shares.
  *
- * The v2 engine is a set of plain scripts, loaded in the order listed in
+ * The chart is a set of plain scripts, loaded in the order listed in
  * scripts.txt, that share one namespace: window.Blockr.chart. In node the
  * pure files run in a vm context without a window, so the namespace hangs
  * off whatever global object the script runs in.
+ *
+ * Comments cite the click rules (D1-D11) and fixes (B1-B11) by their IDs
+ * in blockr.design open/chart-block-v2/decisions.md.
  *
  * This file holds no chart rules: chart types and families, the ink the
  * canvas draws with, number and tooltip formatting, the palette.

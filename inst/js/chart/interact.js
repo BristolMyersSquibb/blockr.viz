@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: clicks, the selection and what goes to R.
+ * Chart block: clicks, the selection and what goes to R.
  *
  * A click turns the clicked mark into a filter (the family's model says
  * how, from the mark's keys), latches it or, with a ctrl_target, sends it
@@ -84,8 +84,8 @@
         NS.keys.filterMessage(filters, ++this._drillSeq), { priority: 'event' });
     },
 
-    // The type of what a clear clears (B1); with nothing latched, the type
-    // v1 sends: categorical on an aggregated chart, else range.
+    // The type of what a clear clears (B1); with nothing latched,
+    // categorical on an aggregated chart, else range.
     /** @this {any} */
     _clearType() {
       if (this._filter) return this._filter.type;

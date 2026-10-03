@@ -1,4 +1,4 @@
-/* v2 model-timeline.js: lanes, marks, facets and the click filter, on
+/* model-timeline.js: lanes, marks, facets and the click filter, on
  * small frames. */
 'use strict';
 
@@ -31,8 +31,8 @@ test('one mark per row with an x; a missing end makes a dot', () => {
   assert.strictEqual(m.empty, null);
   assert.strictEqual(m.panels.length, 1);
   const p = m.panels[0];
-  // By onset. Fever's x is missing, which sorts as 0 (Number(null), as v1
-  // does): its lane is first and empty.
+  // By onset. Fever's x is missing, which sorts as 0 (Number(null)): its
+  // lane is first and empty.
   assert.deepStrictEqual(plain(p.lanes), ['Fever', 'Rash', 'Nausea', '']);
   assert.deepStrictEqual(plain(p.marks), [
     [4, 9, 1, 'Rash', '', '', '', 'Rash', 0],

@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: the aggregated option.
+ * Chart block: the aggregated option.
  *
  * The aggregated model and how it should look in, one ECharts option per
  * panel out, built by the chart type's builder (option-bar.js,
@@ -122,9 +122,8 @@
 
   // -- Highlight (D5) ----------------------------------------------------------
 
-  // Series v1 never dimmed. They are patched only while a filter dims
-  // something (or to undo it), so a chart without one gets the same empty
-  // patch as before.
+  // Series patched only while a filter dims something (or to undo it), so
+  // a chart without one gets an empty patch.
   const QUIET_TYPES = ['line', 'scatter', 'custom'];
 
   /**

@@ -5,9 +5,9 @@
  * R starts it with the "blockr-busy" message, sent BEFORE the slow work: a
  * custom message reaches the browser while R is still computing, whereas
  * Shiny's own .recalculating only arrives after blockr.core's compute. The
- * owner of the output ends it once the new picture is on screen (chart.js
- * after a draw), or R sends "blockr-busy-done" when no new picture is coming
- * (an identical payload, an error).
+ * owner of the output ends it once the new picture is on screen
+ * (chart/binding.js after a draw), or R sends "blockr-busy-done" when no new
+ * picture is coming (an identical payload, an error).
  *
  * Nothing shows for the first BUSY_AFTER ms: a cue that flashes for a few
  * frames is noise. The output the cue belongs to is found by element id, or

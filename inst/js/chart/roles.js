@@ -1,14 +1,12 @@
 // @ts-check
 /**
- * Chart block v2: the gear's role spec.
+ * Chart block: the gear's role spec.
  *
  * What the settings band offers per chart family: ROLES (one entry per
  * config key: its label, control kind and column filter) and FAMILY_ROLES
  * (which roles each family shows, in which section). The gear engine,
  * drilldown-config.js, renders from these; it is shared with the table,
  * tile and heatmap blocks and used as it is.
- *
- * Copied from chart.js, which keeps its own copy until v1 is deleted.
  */
 (function () {
   'use strict';
@@ -111,8 +109,8 @@
   //   when: (cfg) => bool — hide the row while the rest of the config makes
   //         it inert (facet_scales without a facet)
   //   optionsBy / colTypeBy / phBy: per-family overrides (key = family)
-  // Inlined here for v1; extract to a shared module when the table/ggplot
-  // blocks adopt it (follow-up specs).
+  // Inlined here; extract to a shared module when the table/ggplot blocks
+  // adopt it (follow-up specs).
   const ROLES = {
     // group / value / func are shared with the table + tile so all three
     // render the identical aggregation control — see drilldown-agg.js.
@@ -242,7 +240,8 @@
     // raw value column). One shared vocabulary, picked once or twice: the
     // point range's single interval, or the box's body — with `whiskers` as
     // the box's second, outer pick. Defaults per mark (mean_se / Tukey box)
-    // resolve in _ensureDistributionMetric, so the roles carry none.
+    // resolve in ensureDistributionMetric (model-common.js), so the roles
+    // carry none.
     summary: { label: (/** @type {any} */ cfg) =>
                  cfg.chart_type === 'boxplot' ? 'Box' : 'Interval',
                kind: 'select',
@@ -275,8 +274,8 @@
     // the surface: the category axis, the facet strip, or both. `count_col` is
     // the id column counted DISTINCT per label group (blank = raw row count) —
     // distinct counts CANNOT sum from the per-cell n (a subject can appear in
-    // several colour/facet cells), so _labelCounts recomputes over the raw
-    // rows. `rerender:true` so clearing count_on hides the id picker live.
+    // several colour/facet cells), so labelCounts (chart-index.js)
+    // recomputes over the raw rows. `rerender:true` so clearing count_on hides the id picker live.
     count_on: { label: 'Group counts', kind: 'select', rerender: true,
                 options: [{ value: 'off',   label: 'Off' },
                           { value: 'axis',  label: 'On category axis' },
@@ -504,7 +503,7 @@
         { role: 'pct_of', types: ['bar'] }],
       // orientation: bar + the distribution marks (which default vertical —
       // groups on x — while bar defaults horizontal; see
-      // _ensureDistributionMetric). Waterfall is vertical-only (a bridge
+      // ensureDistributionMetric). Waterfall is vertical-only (a bridge
       // reads left-to-right along the value axis), so it does not expose
       // orientation.
       presentation: ['sort_by', 'sort_dir',

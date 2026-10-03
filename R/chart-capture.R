@@ -1,11 +1,11 @@
 # The chart as the browser drew it -------------------------------------------
 #
 # A chart's downloads and slides carry the picture the browser drew.
-# chart.js `_downloadImage()` composes the whole block on an offscreen canvas
-# (title band, every facet panel at its grid position, facet labels, legend
-# chips, caption) and sends the bitmap up; the png / html / pptx downloads
-# write that. A chart whose panel was never drawn is drawn offscreen by the
-# capture service further down.
+# `_downloadImage()` in chart/export.js composes the whole block on an
+# offscreen canvas (title band, every facet panel at its grid position, facet
+# labels, legend chips, caption) and sends the bitmap up; the png / html /
+# pptx downloads write that. A chart whose panel was never drawn is drawn
+# offscreen by the capture service further down.
 
 # How many device pixels per CSS pixel the canvas composes with. 2 is what
 # the screen wants; a bitmap headed for an 11.9in slide is placed four times

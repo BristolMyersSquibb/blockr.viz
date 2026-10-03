@@ -1,8 +1,9 @@
 # Distribution-marks state (spec: _blockr.design/open/distribution-marks):
 # the summary / whiskers / connect_centers constructor args and the
-# box_points "all" removal. Rendering itself is browser-side (chart.js
-# summarizeStat); what R owns is normalization, save/restore round-trips and
-# the gear's config transport, so that is what these cover.
+# box_points "all" removal. Rendering itself is browser-side
+# (chart/model-aggregated.js summarizeStat); what R owns is normalization,
+# save/restore round-trips and the gear's config transport, so that is what
+# these cover.
 
 # Read one state field off a constructed chart block (same rationale as
 # chart_state_field in test-chart-block.R: state only materializes in the

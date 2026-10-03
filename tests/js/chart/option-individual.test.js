@@ -1,4 +1,4 @@
-/* v2 option-individual.js, option-points.js and option-band.js: the
+/* option-individual.js, option-points.js and option-band.js: the
  * ECharts option per panel of a scatter, line and band, the slot state it
  * carries, the legend chips and the highlight patch (D5). */
 'use strict';

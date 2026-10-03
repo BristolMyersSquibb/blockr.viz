@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: the individual model (scatter, line, band).
+ * Chart block: the individual model (scatter, line, band).
  *
  * Rows and config in, what to draw out: the axes (type, categories), the
  * series levels (the series column, else the colour column) with their
@@ -158,8 +158,8 @@
 
     const labels = model.facetLabels(rows, cfg, facets);
     for (const fv of facets) {
-      // As v1: a facet's rows by the raw value, so the panel of a missing
-      // facet value holds none.
+      // A facet's rows by the raw value, so the panel of a missing facet
+      // value holds none.
       const prow = fv === '__all__' ? rows : ix.get(rows, /** @type {string} */ (facet), 'raw', fv);
       /** @type {IndSeries[]} */
       const series = [];

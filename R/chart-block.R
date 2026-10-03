@@ -348,10 +348,10 @@ new_chart_block <- function(
     # points past the whisker extent). No-op for non-boxplot charts.
     box_points = "none",
     # Distribution statistics (boxplot / pointrange, see SUMMARY_STATS in
-    # chart.js): `summary` is the box body / point-range interval (NULL =
-    # per-mark default, resolved JS-side in _ensureDistributionMetric);
-    # `whiskers` is the box's outer rule; `connect_centers` joins the
-    # point-range centers in slot order.
+    # chart/roles.js): `summary` is the box body / point-range interval
+    # (NULL = per-mark default, resolved JS-side in ensureDistributionMetric,
+    # chart/model-common.js); `whiskers` is the box's outer rule;
+    # `connect_centers` joins the point-range centers in slot order.
     summary = NULL,
     # NULL = per-mark default, like `summary` above: "tukey" for the boxplot
     # (the textbook rule), "p10_p90" for the band. Saved boards carrying an
@@ -400,7 +400,8 @@ new_chart_block <- function(
     # column counted DISTINCT (e.g. USUBJID -> unique subjects); NULL / "" falls
     # back to the raw row count. The distinct counts are computed per label
     # group in the browser -- they do NOT sum from the per-cell n, since one
-    # subject can span several colour / facet cells (see chart.js _labelCounts).
+    # subject can span several colour / facet cells (see labelCounts in
+    # chart/chart-index.js).
     count_on = "off",
     count_col = NULL,
     # Missing group keys: their own category ("level", the long-standing
@@ -534,8 +535,8 @@ new_chart_block <- function(
   series <- chr_state(series)
   label <- chr_state(label)
   drill <- chr_state(drill)
-  # LEGACY: v1 saved one filter column and its values; they fold into
-  # `filters` here, and are never state again.
+  # LEGACY: older boards saved one filter column and its values; they fold
+  # into `filters` here, and are never state again.
   filters <- chart_filters_state(filters) %||%
     chart_legacy_filters(filter_column, filter_values)
   filter_column <- NULL
@@ -584,10 +585,11 @@ new_chart_block <- function(
   x_lines <- num_vec_state(x_lines)
 
   # `identity_line` is a LOGICAL. The gear's segmented control sends the
-  # strings "on"/"off" (that is the control's transport, see chart.js ROLES),
-  # and every board saved before this change stored that string verbatim --
-  # 90 of them, all "off". Coerce both shapes to a plain logical here, the way
-  # table-block's as_toggle() already does for sortable/collapsible/search.
+  # strings "on"/"off" (that is the control's transport, see chart/roles.js
+  # ROLES), and every board saved before this change stored that string
+  # verbatim -- 90 of them, all "off". Coerce both shapes to a plain logical
+  # here, the way table-block's as_toggle() already does for
+  # sortable/collapsible/search.
   identity_line <- bool_state(identity_line)
   # box_points lost its "all" option; anything outside the enum (old saved
   # boards) degrades to "none" -- no crash, no behaviour preservation.
@@ -614,7 +616,7 @@ new_chart_block <- function(
         # the input is read after it, so a rerun -- which is what an
         # invalidated input causes -- tells the browser before the upstream
         # recompute this read then triggers. Ahead of every other observer,
-        # core's evaluation included. chart.js ends the cue once it has drawn;
+        # core's evaluation included. The chart ends the cue once it has drawn;
         # the push observer below ends it when no new picture is coming.
         shiny::observe({
           busy_cue_start(session, ns("drilldown_block"), "drawing")
@@ -934,8 +936,8 @@ new_chart_block <- function(
         # splices the json-classed string verbatim into the websocket
         # message (json_verbatim), so the browser receives a parsed OBJECT
         # and cannot use string identity -- an unchanged rev is its signal
-        # to skip the row conversion (see setData in chart.js). Ticking per
-        # recompute defeated that. Visiting a dock panel re-evaluates the
+        # to skip the row conversion (see setData in chart/view.js). Ticking
+        # per recompute defeated that. Visiting a dock panel re-evaluates the
         # block, and an equal-but-new result invalidates this reactive, so
         # coming back to a chart shipped a fresh rev for bytes the browser
         # already held and made it rebuild every row object. Read
@@ -1050,7 +1052,8 @@ new_chart_block <- function(
         # facet_by is not decoration: without it every panel was handed the
         # same pooled fit (see compute_smoother_series()).
         # Keyed like the band above, so a panel visit does not refit. Only a
-        # scatter draws the line (chart.js), so no other type pays for a fit.
+        # scatter draws the line (chart/option-points.js), so no other type
+        # pays for a fit.
         smoother_cache <- last_value_cache()
         r_smoother_series <- shiny::reactive({
           sm <- r_smoother()
@@ -1235,7 +1238,7 @@ new_chart_block <- function(
             type = r_filter_type(), filters = r_filters(),
             range = r_filter_range()
           ))
-          sel_v1 <- chart_filters_v1(sel$filters, sel$type)
+          sel_one <- chart_filters_one_column(sel$filters, sel$type)
           chart_msg <- list(
             id = ns("drilldown_block"),
             columns = col_meta,
@@ -1259,15 +1262,15 @@ new_chart_block <- function(
               # guard above). Only a genuine re-send (restore at session
               # start, config/data change) carries it -- exactly what the JS
               # restore branch needs to re-select the mark and label the
-              # footer. v2 reads `filters` (and a range with the panel it
-              # was taken in); v1 reads one column and its values, so it
-              # gets them when the filter is one it can show. as.list() so a
+              # footer. The chart reads `filters` (and a range with the
+              # panel it was taken in); the same filter also goes in the
+              # older one-column form when it fits one. as.list() so a
               # length-1 value stays a JSON array.
               filter_type = sel$type,
               filters = chart_filters_json(sel$filters),
               filter_range = if (identical(sel$type, "range")) sel$range,
-              filter_column = sel_v1$column,
-              filter_values = as.list(sel_v1$values),
+              filter_column = sel_one$column,
+              filter_values = as.list(sel_one$values),
               sort_dir = r_sort_dir(), orientation = r_orientation(),
               bar_mode = r_bar_mode(),
               # Logical in state, "on"/"off" for the gear's switch, like
@@ -1313,7 +1316,7 @@ new_chart_block <- function(
               # DISTINCT id column to count (browser-side, per label group).
               count_on = r_count_on(), count_col = r_count_col(),
               # Missing group keys and the percent denominator, read by
-              # chart.js.
+              # chart/model-aggregated.js.
               na_group = r_na_group(), pct_of = r_pct_of(),
               # Facet-grid panel scales: shared numeric domain + shared
               # category set across the panels ("fixed"), or per-panel
@@ -1407,7 +1410,7 @@ new_chart_block <- function(
         # Rows travel only when the client does not already hold them. A
         # gear edit changes the config and leaves the payload's rev alone, so
         # it goes out without `data` (the rows were 2.7 MB of the 2.7 MB
-        # message on a 120k-row bar chart). chart.js keeps the rows it has
+        # message on a 120k-row bar chart). The chart keeps the rows it has
         # for that rev, or asks for them through `_need` when it has none (a
         # panel the dock re-mounted).
         send_chart_msg <- function(msg) {
@@ -1485,13 +1488,14 @@ new_chart_block <- function(
         })
 
         # The client announces itself when it binds with no payload waiting.
-        # chart.js's `pendingData` only catches a message that arrived while the
-        # SCRIPT was already loaded; Shiny drops a custom message that has no
-        # registered handler at all, and chart.js only loads with the first
-        # chart block UI in the page. On a board whose opening view carries no
-        # chart -- a config or population view, typical of clinical boards --
-        # every chart's startup payload was dropped and nothing re-sent it, so
-        # the chart stayed blank until an unrelated edit re-pumped it.
+        # `pendingData` (chart/binding.js) only catches a message that
+        # arrived while the SCRIPT was already loaded; Shiny drops a custom
+        # message that has no registered handler at all, and the chart
+        # scripts only load with the first chart block UI in the page. On a
+        # board whose opening view carries no chart -- a config or population
+        # view, typical of clinical boards -- every chart's startup payload
+        # was dropped and nothing re-sent it, so the chart stayed blank until
+        # an unrelated edit re-pumped it.
         # The reply is only the rev. A push already in flight reaches the
         # client before it (one websocket, in order), and a client that got it
         # does nothing; re-sending the whole message here drew the same picture
@@ -1686,10 +1690,10 @@ new_chart_block <- function(
             # blind set to an unchanged value would invalidate (and re-pump)
             # needlessly on an echoed filter.
             #
-            # A categorical filter arrives as v2's `filters` (a named list,
-            # a JSON null for a missing value) or as v1's `column` +
+            # A categorical filter arrives as `filters` (a named list, a
+            # JSON null for a missing value) or as the older `column` +
             # `values`; chart_msg_filters() reads both. A range may carry
-            # the facet panel it was taken in as `filters` (v2).
+            # the facet panel it was taken in as `filters`.
             ft <- msg$filter_type %||% "categorical"
 
             if (transient_drill() && ft == "categorical") {
@@ -2014,7 +2018,7 @@ new_chart_block <- function(
         # "<block>-expr-dl_pptx.htm" and reports "Couldn't download".
         #
         # Which is exactly what prod does. It never shows up locally, because
-        # there the host is hoisted into the gear header (chart.js
+        # there the host is hoisted into the gear header (chart/chrome.js
         # _hoistDownload) before the output would have been suspended, so the
         # registration happens anyway.
         #
@@ -2037,11 +2041,12 @@ new_chart_block <- function(
             # mapped column that was renamed or dropped upstream leaves the
             # filter (and the downstream data) perfectly valid. That is a
             # presentation concern, surfaced by the renderer's own in-canvas
-            # message (see chart.js: "Mapped column not in data ... re-pick it
-            # in the gear"), NOT an expr-level failure. Validating aesthetics
-            # here would fail a correct expression; a broken *filter* column,
-            # by contrast, fails hard on its own when the emitted filter is
-            # evaluated (caught by core's capture_conditions("eval")).
+            # message (see chart/model-common.js: "Mapped column not in data
+            # ... re-pick it in the gear"), NOT an expr-level failure.
+            # Validating aesthetics here would fail a correct expression; a
+            # broken *filter* column, by contrast, fails hard on its own when
+            # the emitted filter is evaluated (caught by core's
+            # capture_conditions("eval")).
             d <- data()
             # Non-data-frame input under the shared contract (a composer
             # table et al.): the emitted code must coerce the same way the
@@ -2154,7 +2159,7 @@ new_chart_block <- function(
         viz_block_css_dep(),
         drilldown_chart_dep(),
         # The prepare script's control strip. Always in the DOM, empty and
-        # display:none until a script declares a value -- chart.js fills it.
+        # display:none until a script declares a value -- the chart fills it.
         # It used to hold promoted mapping rows too (`expose`, retired): a
         # mapping is named in the block's sentence now.
         shiny::div(id = ns("mapping_band"), class = "dd-mapping-band",
@@ -2164,8 +2169,8 @@ new_chart_block <- function(
           class = "drilldown-chart-container"
         ),
         # The download control is rendered HERE and hoisted into the gear
-        # header by chart.js -- the same shape rank-table.js uses for the
-        # search box. It has to be a Shiny output (download links are
+        # header by chart/chrome.js -- the same shape rank-table.js uses for
+        # the search box. It has to be a Shiny output (download links are
         # server-driven), and the gear header is built by the widget's JS.
         shiny::div(class = "dd-chart-dl-host", style = "display:none",
                    shiny::uiOutput(ns("chart_download"), inline = TRUE))
@@ -2176,10 +2181,11 @@ new_chart_block <- function(
     # then charts the coerced frame's data columns (as_plain_df()).
     dat_valid = validate_annotated_df_input,
     # `value` must stay listed: the gear legitimately empties it mid-config
-    # (reconcileValue in drilldown-agg.js / _ensureDistributionMetric in chart.js
-    # set value = '' when the aggregation changes and the old column no longer
-    # fits) and the observer stores that verbatim -- without the entry the
-    # block silently wedges (reference_blockr_allow_empty_state_wedge).
+    # (reconcileValue in drilldown-agg.js / ensureDistributionMetric in
+    # chart/model-common.js set value = '' when the aggregation changes and
+    # the old column no longer fits) and the observer stores that verbatim --
+    # without the entry the block silently wedges
+    # (reference_blockr_allow_empty_state_wedge).
     # `func` is NOT listed: the JS side never emits it empty (a fixed-option
     # select, backfilled to "count"/"mean" wherever unset).
     # `filter_column` / `filter_values` are LEGACY and always NULL.

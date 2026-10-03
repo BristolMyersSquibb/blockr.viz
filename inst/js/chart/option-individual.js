@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: the individual option (scatter, line, band).
+ * Chart block: the individual option (scatter, line, band).
  *
  * The model and how it should look in, one ECharts option per panel out.
  * The series come from option-points.js (scatter, line) or option-band.js;
@@ -281,7 +281,7 @@
    * inside it, and the lines and band levels with a point inside it; its
    * facet key, in `filters`, lights the panel. Overlays follow their
    * series. Without a filter, and nothing dimmed from before, the patch is
-   * empty, as v1's.
+   * empty.
    * @param {any} m @param {any} panel @param {any[]} drawn the panel option's series
    * @param {((keys: Record<string, any>, rows: any) => boolean) | null} lit
    * @param {boolean} wasDimmed

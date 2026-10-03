@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: the aggregated model (bar, waterfall, pie, treemap,
+ * Chart block: the aggregated model (bar, waterfall, pie, treemap,
  * radar, and the distribution marks boxplot and point range).
  *
  * Rows and config in, what to draw out: the cells of the shared aggregation
@@ -36,8 +36,7 @@
    * {center, lo, hi} of a statistic over ascending values, or null for none.
    * One implementation for the box body, its whiskers and the point range,
    * so they cannot disagree. sd is the sample sd, 0 for one value.
-   * 'p10_p90' draws the 10th to 90th percentile around the median (B8; v1
-   * read it as Q1-Q3).
+   * 'p10_p90' draws the 10th to 90th percentile around the median (B8).
    * @param {number[]} vals @param {string} stat
    * @returns {{center: number, lo: number, hi: number} | null}
    */

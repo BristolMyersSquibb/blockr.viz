@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: the band series of the individual option.
+ * Chart block: the band series of the individual option.
  *
  * A band draws R's windowed statistics (config.band_series: per facet, per
  * level, x with a centre line and inner and outer intervals), not rows, so

@@ -1,4 +1,4 @@
-/* v2 chart-keys.js: filters from mark keys, the messages, the footer words
+/* chart-keys.js: filters from mark keys, the messages, the footer words
  * (D4) and which marks a restored filter lights (D5). */
 'use strict';
 
@@ -90,7 +90,7 @@ test('a filter on a column the chart does not draw lights marks holding its rows
   assert.strictEqual(K.markLit({ AETERM: 'Nausea' }, nausea, g), false);
 });
 
-test('the v1 view of a selection: column and value(s)', () => {
+test('a selection seen as one column: column and value(s)', () => {
   assert.deepStrictEqual(plain(K.selectionView(null)), { column: null, selected: null });
   assert.deepStrictEqual(plain(K.selectionView({ AETERM: ['Rash'] })),
                          { column: 'AETERM', selected: 'Rash' });
@@ -161,7 +161,7 @@ test('a restored range carries the facet key it was taken in (D10, D11)', () => 
   assert.strictEqual(K.restoredRange({ filter_type: 'range' }), null);
 });
 
-test('the range message: v1 fields, the facet key in filters only in a panel (D10)', () => {
+test('the range message: x and y fields, the facet key in filters only in a panel (D10)', () => {
   const r = { x_col: 'ADY', y_col: 'AVAL', x_range: [28, 28], y_range: [41, 41] };
   assert.deepStrictEqual(plain(K.rangeMessage(r, null)), {
     action: 'filter', filter_type: 'range', x_col: 'ADY', y_col: 'AVAL',

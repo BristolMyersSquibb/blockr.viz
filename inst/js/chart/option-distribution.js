@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: the boxplot and point range options.
+ * Chart block: the boxplot and point range options.
  *
  * The model has already summarised every category slot (one per group, or
  * per group and colour level); this lays the slots on a category axis and

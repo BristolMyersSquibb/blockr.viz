@@ -1,4 +1,4 @@
-/* v2 model-individual.js: series, colours, legend, facets, the line cap,
+/* model-individual.js: series, colours, legend, facets, the line cap,
  * clicks (D6, D7, D3, missing keys), the brush and the hover picker's
  * interpolation, from small frames. */
 'use strict';
@@ -92,7 +92,7 @@ test('a numeric line is drawn in x order, a scatter in row order', () => {
                          [14, 1, 2, 28, 15]);
 });
 
-test('facets: sorted levels, a panel each; the missing facet\'s panel is empty, as v1', () => {
+test('facets: sorted levels, a panel each; the missing facet\'s panel is empty', () => {
   const m = model({ facet: 'SEX', count_on: 'facet', count_col: 'ID' });
   assert.deepStrictEqual(plain(m.panels.map((p) => p.facet)), ['', 'F', 'M']);
     // No patient has a missing sex, so that strip has no count.

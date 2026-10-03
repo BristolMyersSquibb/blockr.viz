@@ -1,4 +1,4 @@
-/* v2 model-aggregated.js: panels, group order, colour levels, counts,
+/* model-aggregated.js: panels, group order, colour levels, counts,
  * distribution slots and the click filter, on small frames. */
 'use strict';
 

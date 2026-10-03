@@ -312,7 +312,7 @@ rank_footer_tag <- function(spec) {
   htmltools::tags$div(
     class = "blockr-rank-footer",
     htmltools::tags$span(class = "blockr-rank-note", spec$note %||% ""),
-    # The drill's line, the chart's own markup and words (chart.js
+    # The drill's line, the chart's own markup and words (chart/chrome.js
     # _updateStatus): rank-table.js fills it, because what it says depends on
     # clicks the server never hears about in transient mode.
     htmltools::tags$div(class = "dd-status-footer")

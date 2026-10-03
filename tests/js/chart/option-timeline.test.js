@@ -1,4 +1,4 @@
-/* v2 option-timeline.js: the ECharts option per panel, from a model. */
+/* option-timeline.js: the ECharts option per panel, from a model. */
 'use strict';
 
 const test = require('node:test');

@@ -624,10 +624,10 @@ rank_sort_key <- function(sort_by, plan) {
 }
 
 # A raw data column as the ordering key: the group's MINIMUM of that column
-# (chart parity: `mins` in chart.js orderGroups). AVISITN orders the visits
-# that a character AVISIT cannot -- first appearance breaks down as soon as
-# one subject discontinues early. Groups the column has nothing for keep NA
-# and sort last in both directions (na.last in rank_assemble_rows).
+# (chart parity: `mins` in orderGroups, chart/model-aggregated.js). AVISITN
+# orders the visits that a character AVISIT cannot -- first appearance breaks
+# down as soon as one subject discontinues early. Groups the column has nothing
+# for keep NA and sort last in both directions (na.last in rank_assemble_rows).
 #' @noRd
 rank_min_ord <- function(data, keycol, sortcol, labels) {
   v <- suppressWarnings(as.numeric(data[[sortcol]]))

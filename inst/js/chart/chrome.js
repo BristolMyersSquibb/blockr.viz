@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: everything around the canvases.
+ * Chart block: everything around the canvases.
  *
  * The card (gear header, settings band, title band, panel grid, legend
  * band, caption, footer), the gear host for drilldown-config.js, the titles

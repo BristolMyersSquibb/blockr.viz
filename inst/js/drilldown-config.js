@@ -8,7 +8,7 @@
  * driven popover (Mapping / Presentation + a Drill-down section) and calls
  * back into a host for everything block-specific.
  *
- * A host provides (see DrilldownChart for the chart implementation):
+ * A host provides (see _makeConfig in chart/chrome.js for the chart):
  *   popoverEl()      -> the <body>-portaled popover element
  *   roles            -> the ROLES dict (key -> {label,kind,colType,...};
  *                       an optional `when(cfg)` hides the row while the rest

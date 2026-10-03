@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: the timeline (gantt) option.
+ * Chart block: the timeline (gantt) option.
  *
  * The model and how it should look in, one ECharts option and one canvas
  * height per panel out. Nothing here touches the DOM or ECharts: the bar
@@ -209,7 +209,7 @@
   /**
    * The highlight patch for one panel (D5): every bar's opacity from whether
    * its mark (lane and facet) is lit. Without a filter, and nothing dimmed
-   * from before, the patch is empty, as v1's.
+   * from before, the patch is empty.
    * @param {any} m @param {any} panel @param {Record<string, any>} cfg
    * @param {((keys: Record<string, any>, rows: () => any[]) => boolean) | null} lit
    * @param {boolean} wasDimmed

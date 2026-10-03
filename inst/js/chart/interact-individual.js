@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: clicks, the brush and the hover pickers of the
+ * Chart block: clicks, the brush and the hover pickers of the
  * individual family (scatter, line, band). Methods of the chart view, like
  * interact.js, whose handler table this adds to.
  *

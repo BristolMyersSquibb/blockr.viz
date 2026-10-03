@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: the model rules every family shares.
+ * Chart block: the model rules every family shares.
  *
  * The defaults a config gets when R sends it or when the gear switches the
  * chart type, and the gate in front of every draw: the empty states for no

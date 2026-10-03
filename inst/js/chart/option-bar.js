@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: the bar and waterfall options.
+ * Chart block: the bar and waterfall options.
  *
  * One panel of the aggregated model in, its ECharts option out, plus what
  * the view needs beside it: the panel height, the x-label fit inputs a

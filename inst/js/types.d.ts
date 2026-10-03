@@ -2,7 +2,7 @@
  * Protocol / ambient types for blockr.viz's hand-written JS.
  *
  * This file is the contract between the R side (block servers, *-dep.R) and
- * the JS in inst/js/ (chart.js, table.js, tile-block.js, summary-table-block.js,
+ * the JS in inst/js/ (chart/, table.js, tile-block.js, summary-table-block.js,
  * drilldown-config.js). It is dev-tooling only: type-checked via tsconfig.json /
  * `tsc`, never referenced by an htmlDependency, never run in the browser.
  *
@@ -66,7 +66,7 @@ interface VizTablePayload {
 }
 
 /* --- Drilldown gear-popover engine (drilldown-config.js) ---
-   The engine is host-agnostic: chart.js, table.js and tile-block.js each build
+   The engine is host-agnostic: chart/chrome.js, table.js and tile-block.js each build
    a `host` object and do `new Blockr.DrilldownConfig(host)`. Role keys are the
    R-side config params. Typed permissively here; the class body refines it. */
 
@@ -124,7 +124,7 @@ declare class VizSentenceSlots {
 
 /* --- Shared aggregation vocabulary (drilldown-agg.js) ---
    The group/value/func role triple + AGG_FNS + value-follows-agg reconcile,
-   consumed identically by chart.js, table.js and tile-block.js. Exposed as
+   consumed identically by the chart (chart/), table.js and tile-block.js. Exposed as
    Blockr.DrilldownAgg (and window.DrilldownAgg). */
 
 interface VizDrilldownAgg {

@@ -1,4 +1,4 @@
-/* v2 option-aggregated.js and its builders: the ECharts option per panel,
+/* option-aggregated.js and its builders: the ECharts option per panel,
  * the legend chips and the highlight patch (D5), from small models. */
 'use strict';
 
@@ -172,7 +172,7 @@ test('D5: a segment filter lights that segment, a group filter the whole bar', (
   // Fever has no SEVERE cell; its empty slot is lit with the group.
   assert.deepStrictEqual(opacities(patch({ color: 'SEV' }, { T: ['Rash', 'Fever'] })),
                          [[1, 0.15, 1], [1, 0.15, 1]]);
-  // No filter: every mark at full strength, as v1 patches it.
+  // No filter: every mark at full strength.
   assert.deepStrictEqual(opacities(patch({ color: 'SEV' }, null)), [[1, 1, 1], [1, 1, 1]]);
 });
 

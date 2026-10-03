@@ -1,17 +1,17 @@
 // @ts-check
 /**
- * Chart block v2: the chart view.
+ * Chart block: the chart view.
  *
  * One view per chart container. It holds what R sent (columns, rows,
  * config) and the reader's state (the selection, legend toggles, the gear),
  * and draws by running the family's model and option and applying the
- * result: one ECharts instance per facet panel in a CSS grid, as v1 does.
+ * result: one ECharts instance per facet panel in a CSS grid.
  * The view decides nothing about the picture.
  *
  * What reruns (3-design.md): new rows rebuild the index; the model is
  * memoised on the rows and the config fields it reads, the option on the
  * model and the fields it reads; a click patches opacities; a resize only
- * resizes. Every draw still hands the option to ECharts, as v1 does.
+ * resizes. Every draw still hands the option to ECharts.
  *
  * The chrome, the interactions and the export are mixed in from
  * chrome.js, interact.js and export.js.
@@ -22,10 +22,10 @@
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
   const NS = /** @type {any} */ (B.chart = B.chart || {});
 
-  // The families v2 draws; the rest show an empty state until built.
+  // The chart families.
   // `widths`: the option reads each panel's width (x labels, value labels).
-  // `alwaysHighlight`: every draw ends with a highlight patch, as v1's
-  // aggregated draw did; the others patch only while a filter dims.
+  // `alwaysHighlight`: every draw ends with a highlight patch; the others
+  // patch only while a filter dims.
   // `prepare` / `after`: view methods run on a panel's slot before and
   // after its option is set.
   // `actions`: a view method telling whether `after` dispatches an action.
@@ -150,8 +150,8 @@
       this._cfg = this._makeConfig();
     }
 
-    // The selection as v1 kept it: a value (or values) and a column. Read
-    // by code and tests that know one column.
+    // The selection as a value (or values) and a column. Read by code and
+    // tests that know one column.
     get _selected() { return NS.keys.selectionView(this._filter && this._filter.filters).selected; }
     get _selectedColumn() { return NS.keys.selectionView(this._filter && this._filter.filters).column; }
 
@@ -214,13 +214,7 @@
       const empty = NS.model.gate(this.data, this.columns, this.config);
       if (empty) { this._showEmpty(empty); return; }
       const fam = this._family();
-      const impl = FAMILIES[fam];
-      if (!impl) {
-        this._showEmpty(NS.model.emptyState(
-          'The v2 chart engine does not draw ' + this.config.chart_type + ' charts yet.'));
-        return;
-      }
-      this._draw(fam, impl);
+      this._draw(fam, FAMILIES[fam]);
       // Once more after layout settles, and again whenever the grid resizes
       // (a dock tab coming to the front).
       setTimeout(() => { this._resizeCharts(); }, 300);

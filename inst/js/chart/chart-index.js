@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: rows and the lookups over them.
+ * Chart block: rows and the lookups over them.
  *
  * rowsFromPayload() turns the column object R sends into rows. RowIndex
  * buckets rows by a column once and answers every later lookup from a Map,

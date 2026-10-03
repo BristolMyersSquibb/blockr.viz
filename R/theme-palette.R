@@ -11,8 +11,8 @@
 # without theme_palette(), or no theme applied, every call returns the
 # hard-coded fallback and the board renders exactly as it did before.
 
-# Mirrors the JS BLOCKR_PALETTE (inst/js/chart.js) -- the pool the chart
-# cycles when no scale applies, so hash assignment draws from the same
+# Mirrors the JS BLOCKR_PALETTE (inst/js/chart/common.js) -- the pool the
+# chart cycles when no scale applies, so hash assignment draws from the same
 # colours. Now only the FALLBACK: an applied theme's `categorical` role wins,
 # and the resolved vector is sent to JS with the chart config so both sides
 # stay in step without hand-syncing.
@@ -20,8 +20,9 @@ DD_PALETTE_FALLBACK <- c(
   "#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00", "#CC79A7"
 )
 
-# Mirrors PALETTE_OVERFLOW / paletteAt() in inst/js/chart.js. Static exports
-# (PPTX, report code) go through here, so a deck agrees with the screen.
+# Mirrors PALETTE_OVERFLOW / paletteAt() in inst/js/chart/common.js. Static
+# exports (PPTX, report code) go through here, so a deck agrees with the
+# screen.
 DD_PALETTE_OVERFLOW <- "#9AA0A6"
 
 #' Colours for `n` levels: the palette while it lasts, then grey

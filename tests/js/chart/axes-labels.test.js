@@ -1,4 +1,4 @@
-/* v2 axes-labels.js: the x label ladder, the thinned-label note and the
+/* axes-labels.js: the x label ladder, the thinned-label note and the
  * helper lines on a value axis. */
 'use strict';
 

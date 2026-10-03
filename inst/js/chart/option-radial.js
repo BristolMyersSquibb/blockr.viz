@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: the pie, treemap and radar options.
+ * Chart block: the pie, treemap and radar options.
  *
  * None of them has a category axis: a pie slice and a treemap tile label
  * themselves, and a radar puts the groups on its spokes and draws one

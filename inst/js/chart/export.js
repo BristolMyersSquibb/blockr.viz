@@ -1,12 +1,11 @@
 // @ts-check
 /**
- * Chart block v2: the chart as one picture.
+ * Chart block: the chart as one picture.
  *
  * _downloadImage() composes the title band, every panel at its place in the
  * grid (facet labels redrawn), the legend band and the caption on one
  * canvas, from each panel's own bitmap. The capture service draws a chart R
- * asks for in a hidden host and answers with that picture. Ported from v1
- * as it is; the export step of the rewrite revisits it.
+ * asks for in a hidden host and answers with that picture.
  */
 (function () {
   'use strict';

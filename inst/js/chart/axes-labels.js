@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: axes and their labels, as plain functions.
+ * Chart block: axes and their labels, as plain functions.
  *
  * Axis types and category order from the column metadata, axis titles,
  * the category label gutter and the x label ladder (measured with a

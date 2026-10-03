@@ -1,7 +1,8 @@
 # Lane chart statistics: hand-computed values, the n < 2 guard, and the
 # R/JS enum drift guards.
 #
-# The definitions are MIRRORED in chart.js (summarizeStat) rather than shared
+# The definitions are MIRRORED in chart/model-aggregated.js (summarizeStat)
+# rather than shared
 # -- one language per surface -- so behaviour is pinned by the same
 # hand-computed table on both sides, and the enum by parsing the JS literals.
 
@@ -54,7 +55,7 @@ test_that("degenerate n: NA bounds below n = 2, sd 0 at n = 1, NA at n = 0", {
   expect_true(is.na(s$lo) && is.na(s$hi))
   expect_identical(s$n, 1L)
 
-  # n = 1 arithmetic stats: sd is 0 (chart.js parity), a zero-width interval.
+  # n = 1 arithmetic stats: sd is 0 (chart parity), a zero-width interval.
   s <- lane_summarize(5, "mean_sd")
   expect_equal(c(s$center, s$lo, s$hi), c(5, 5, 5))
 
@@ -98,7 +99,7 @@ test_that("lane_stat_basis drops non-finite values and sorts", {
   expect_true(is.na(lane_stat_basis(numeric())$sd))
 })
 
-test_that("an unknown statistic falls back to median_q1_q3 (chart.js parity)", {
+test_that("an unknown statistic falls back to median_q1_q3 (chart parity)", {
   x <- c(1, 2, 3, 4, 10)
   expect_equal(lane_summarize(x, "no_such_stat"),
                lane_summarize(x, "median_q1_q3"))

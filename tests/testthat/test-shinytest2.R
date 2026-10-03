@@ -69,7 +69,7 @@ skip_if_no_app <- function() {
 # on `<that id>_action`; on a board the id resolves deterministically. We send
 # that message directly — the same contract the row/bar/card-click and gear
 # popover JS use. (The chart's *real canvas click* is driven separately by
-# echarts_canvas_click(), which exercises the chart.js click handler too.)
+# echarts_canvas_click(), which exercises the chart's click handler too.)
 send_action <- function(input_id, payload) {
   json <- jsonlite::toJSON(payload, auto_unbox = TRUE, null = "null")
   app$run_js(sprintf(
@@ -88,18 +88,19 @@ send_table_action <- function(block_id, payload) {
 }
 
 # Fire a GENUINE click on an ECharts chart at a data point's pixel, driving the
-# real chart.js `chart.on('click')` handler in headless chromium. ECharts paints
-# to <canvas> and its high-level click is synthesized from native press/release
-# (a bare DOM event or zrender handler.dispatch doesn't trigger it), so we use a
-# true CDP Input.dispatchMouseEvent through shinytest2's own chromote session —
-# no Playwright. `at` is the [value, category] data point passed to the chart's
-# convertToPixel(); computed right before the click so the layout is current.
+# real chart/interact.js `chart.on('click')` handler in headless chromium.
+# ECharts paints to <canvas> and its high-level click is synthesized from
+# native press/release (a bare DOM event or zrender handler.dispatch doesn't
+# trigger it), so we use a true CDP Input.dispatchMouseEvent through
+# shinytest2's own chromote session — no Playwright. `at` is the [value,
+# category] data point passed to the chart's convertToPixel(); computed right
+# before the click so the layout is current.
 #
-# NB: chart.js schedules a delayed resize() ~300ms after each (re)render, so we
-# settle past it before reading coordinates, otherwise convertToPixel reads a
-# stale layout and the click lands on the wrong bar.
-# Scroll a chart block into view, wait for its canvas, and settle past chart.js's
-# deferred resize(); returns the chart-container selector.
+# NB: chart/view.js schedules a delayed resize() ~300ms after each
+# (re)render, so we settle past it before reading coordinates, otherwise
+# convertToPixel reads a stale layout and the click lands on the wrong bar.
+# Scroll a chart block into view, wait for its canvas, and settle past the
+# chart's deferred resize(); returns the chart-container selector.
 chart_settle <- function(block_id) {
   sel <- sprintf("#board-block_%s-expr-drilldown_block", block_id)
   app$run_js(sprintf(
@@ -108,7 +109,7 @@ chart_settle <- function(block_id) {
   app$wait_for_js(sprintf("!!document.querySelector('%s canvas')", sel),
                   timeout = 15000)
   app$wait_for_idle()
-  Sys.sleep(0.8) # past chart.js's deferred resize()
+  Sys.sleep(0.8) # past the chart's deferred resize()
   sel
 }
 
@@ -474,7 +475,7 @@ test_that("chart: a real ECharts canvas click drills the bar (no Playwright)", {
   expect_equal(nrow(get_block_result("chart")), 6L)
 
   # Click the middle of the "North" bar (sum revenue 150; value 75 is mid-bar).
-  # This runs chart.js's chart.on('click') -> _sendCategoricalFilter path for real.
+  # This runs chart/interact.js chart.on('click') -> _select path for real.
   echarts_canvas_click("chart", at = list(75, "North"))
 
   res <- get_block_result("chart")
@@ -920,7 +921,7 @@ test_that("tile drill: unchecking the gear's Drill-down clears the filter", {
 })
 
 # ===========================================================================
-# FACET SCALES (chart.js _harmoniseAxes + the shared category set)
+# FACET SCALES (chart/view.js _harmoniseAxes + the shared category set)
 # ===========================================================================
 
 # Per-panel value-axis extents and category sets, read off the LIVE echarts

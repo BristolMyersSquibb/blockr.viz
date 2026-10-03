@@ -1,9 +1,10 @@
 # Distribution band: the statistics, the windowing, and the guards.
 #
-# summarize_stat() is the R twin of summarizeStat() in inst/js/chart.js. The
-# two are mirrored, not shared (one language per surface), so the values are
-# pinned here by hand and the vocabulary is drift-tested against the JS enum --
-# the same arrangement test-lane-stats.R uses for LANE_STATS.
+# summarize_stat() is the R twin of summarizeStat() in
+# inst/js/chart/model-aggregated.js. The two are mirrored, not shared (one
+# language per surface), so the values are pinned here by hand and the
+# vocabulary is drift-tested against the JS enum -- the same arrangement
+# test-lane-stats.R uses for LANE_STATS.
 
 # Values on 1:10 under quantile type 7, which is what BOTH sides compute:
 # i = p * (n - 1), interpolate between the bracketing order statistics.
@@ -29,7 +30,7 @@ test_that("summarize_stat pins each statistic on a known vector", {
                list(center = m, lo = m - s / sqrt(10), hi = m + s / sqrt(10)))
 
   # Tukey: the fences (Q1 - 1.5 IQR, Q3 + 1.5 IQR) CLIPPED to the observed
-  # range -- chart.js's long-standing definition, mirrored here for parity.
+  # range -- the chart's long-standing definition, mirrored here for parity.
   # Note this is not the strict textbook whisker (the most extreme observation
   # inside the fence); the two differ unless a point sits on the fence.
   expect_equal(summarize_stat(v, "tukey"),
@@ -47,7 +48,7 @@ test_that("summarize_stat degrades on thin and empty input", {
   expect_equal(summarize_stat(7, "mean_sd"), list(center = 7, lo = 7, hi = 7))
   expect_equal(summarize_stat(7, "median_q1_q3"),
                list(center = 7, lo = 7, hi = 7))
-  # Unknown value falls back to the box, matching chart.js's switch default.
+  # Unknown value falls back to the box, matching the chart's switch default.
   expect_equal(summarize_stat(1:10, "not_a_stat"),
                summarize_stat(1:10, "median_q1_q3"))
 })
@@ -115,7 +116,8 @@ test_that("compute_band_series emits exactly the keys the renderer reads", {
   b <- compute_band_series(d, "day", "val", NULL, NULL, id_col = "id",
                            window = "fixed", window_size = 15,
                            min_n = 2)[["__all__"]][["__all__"]]
-  # inst/js/chart.js reads these by name; a rename here is a silent blank chart.
+  # inst/js/chart/option-band.js reads these by name; a rename here is a
+  # silent blank chart.
   expect_true(all(c("x", "center", "lo", "hi", "olo", "ohi", "n", "hw") %in%
                     names(b)))
   expect_length(b$center, length(b$x))

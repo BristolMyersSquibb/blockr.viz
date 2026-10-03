@@ -1,4 +1,4 @@
-/* v2 chart-index.js: the row index, payload decoding and label counts. */
+/* chart-index.js: the row index, payload decoding and label counts. */
 'use strict';
 
 const test = require('node:test');

@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block v2: the timeline (gantt) model.
+ * Chart block: the timeline (gantt) model.
  *
  * Rows and config in, what to draw out: the panels (one per facet level
  * holding rows), the lanes of each panel in their sort order, the lane and
@@ -112,7 +112,7 @@
       }
       const sortCol = (sb === 'onset') ? x : sb;
       // A plain object on purpose: its key order (integer-like keys first)
-      // is the tie order v1 drew.
+      // is the tie order.
       /** @type {Record<string, number>} */
       const mins = {};
       for (const r of rs) {
