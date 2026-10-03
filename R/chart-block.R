@@ -897,7 +897,7 @@ new_chart_block <- function(
           #
           # Bounded by the marks: this only fires when the frame carries
           # kinds (mark_column_kinds()), which is a curated set an author
-          # chose -- on the CEDX lab chain, ~16 columns of 40. An unmarked
+          # chose -- on a clinical lab chain, ~16 columns of 40. An unmarked
           # frame offers EVERY column, so nothing extra is shipped there and
           # the client falls back to holding the last picture until the data
           # catches up.
@@ -1473,7 +1473,7 @@ new_chart_block <- function(
         # SCRIPT was already loaded; Shiny drops a custom message that has no
         # registered handler at all, and chart.js only loads with the first
         # chart block UI in the page. On a board whose opening view carries no
-        # chart -- a config or population view, which is how CDEx boards open --
+        # chart -- a config or population view, typical of clinical boards --
         # every chart's startup payload was dropped and nothing re-sent it, so
         # the chart stayed blank until an unrelated edit re-pumped it.
         # The reply is only the rev. A push already in flight reaches the

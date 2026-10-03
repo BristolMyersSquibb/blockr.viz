@@ -380,7 +380,7 @@ test_that("the assemblers agree on markup that has to be escaped", {
 test_that("the chrome renders before the upstream data exists", {
   # The chrome is rendered once, isolated. A read in it that throws on a
   # missing upstream (the prepare script, the titles) leaves an empty panel
-  # that never comes back -- what the CEDX board showed.
+  # that never comes back -- what a clinical board showed.
   blk <- new_heatmap_block(row = "USUBJID", col = "AEDECOD",
                            script = "top_n <- 2\ndata")
   shiny::testServer(

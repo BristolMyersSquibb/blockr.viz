@@ -1,6 +1,4 @@
-# Repro for CDEx round-2 item 50, "Not all labels are visible" on Most
-# Frequent AE. See _team-ops/tasks/2026-08-david-cdex-ae-round2 (item 50 is
-# Christoph's, listed in feedback-round2.md).
+# Repro for "Not all labels are visible" on Most Frequent AE.
 #
 #   Rscript blockr.viz/dev/probe-many-category-labels.R
 #

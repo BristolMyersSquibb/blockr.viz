@@ -1,7 +1,7 @@
 # Picker block demo — curated controls, everything else fixed.
 #
 # The scenario from the design records (blockr.docs/design-system/target/
-# measure-switch-proposals.html + select-controls.html): locked CDEX-style
+# measure-switch-proposals.html + select-controls.html): locked clinical
 # views where the viewer picks WHICH column(s) a chart shows, and nothing
 # else. Each picker lands its pick in a stable, named output column (`into`),
 # so the downstream chart's mappings never change. Picker definitions live
