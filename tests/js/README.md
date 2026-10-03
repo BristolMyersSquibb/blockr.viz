@@ -11,7 +11,7 @@ message handler. echarts is a fake that records what the chart asks of it
 
 ```sh
 npm ci
-npm test                      # everything, about 25 s
+npm test                      # everything, about 70 s
 SKIP_SCALING=1 npm test       # snapshots only, about 3 s
 node --test tests/js/chart-aggregated.test.js
 ```
@@ -51,7 +51,8 @@ update the snapshots.
 4 times as long, quadratic work about 16 times; the test fails above 8
 (`t(4n) / t(n) > 8`).
 
-The four known quadratic cases are marked `todo`: they print their ratio but
-do not fail the run. `SCALING_STRICT=1` runs them as ordinary tests.
-`SCALING_ONLY="<case name>"` runs one case, and `CHART_JS=<path>` times
-another copy of `chart.js`, for trying a change out before making it.
+The cases with a level per patient (series, group, categorical x) are the
+ones that used to be quadratic, before chart.js read rows through its
+`RowIndex`. `SCALING_ONLY="<case name>"` runs one case, and
+`CHART_JS=<path>` times another copy of `chart.js`, for trying a change out
+before making it.

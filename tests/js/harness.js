@@ -527,7 +527,9 @@ function createEnv(opts = {}) {
         for (const t of due) t.fn();
       }
     },
-    close() { win.happyDOM.abort(); win.close(); }
+    /** Close the window. The memory is only released once the returned
+     *  promise settles; a test that opens many windows awaits it. */
+    close() { win.happyDOM.abort(); return win.happyDOM.close(); }
   };
 }
 
