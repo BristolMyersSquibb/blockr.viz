@@ -88,6 +88,10 @@
     '<div class="dd-tt-row">' + tipSwatch(color) + '<span class="dd-tt-label">' +
     label + '</span><span class="dd-tt-value">' + value + '</span></div>';
 
+  /** A muted line of its own, for what the rows below it are. @param {string} text */
+  const tipNote = (text) => '<div class="dd-tt-row dd-tt-label">' + text + '</div>';
+  const TIP_SEP = '<div class="dd-tt-sep"></div>';
+
   /**
    * A headline over label/value rows; empty values are dropped.
    * @param {any} headline @param {Array<[string, any]>} pairs @param {any} [color]
@@ -261,7 +265,7 @@
 
   Object.assign(NS, {
     AGGREGATED_TYPES, INDIVIDUAL_TYPES, TIMELINE_TYPES, DISTRIBUTION_TYPES, familyOf,
-    INK_DEFAULT, readInk, esc, tipHead, tipRow, rowTooltip, cardTooltip, ddNum, ddNum3,
+    INK_DEFAULT, readInk, esc, tipHead, tipRow, tipNote, TIP_SEP, rowTooltip, cardTooltip, ddNum, ddNum3,
     BLOCKR_PALETTE, PALETTE_OVERFLOW, paletteAt, paletteOf, scaleFor, levelColors,
     hasVal, maxOf, minOf, firstIndex, drillState, drillColumn, transientDrill,
     applyDrillEmphasis, facetScales, PANEL_H_CAP
