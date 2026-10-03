@@ -648,13 +648,24 @@
     var s = '<div class="blockr-rank-multi">';
     for (var j = 0; j < c.lv.length; j++) {
       var g = c.lv[j];
-      var key = c.kind === "box" ? g.bc[i] : g.c[i];
-      if (key == null) continue;
+      if (!lvDrawn(c, g, i)) continue;
+      var inner;
+      if (c.kind === "pair") {
+        g.rf = c.rf;
+        inner = pairHtml(g, i);
+      } else {
+        inner = c.kind === "box" ? boxHtml(g, i) : prHtml(g, i);
+      }
       s += '<div class="blockr-rank-lv" style="--blockr-rank-fill:' +
-        c.fills[j] + '">' +
-        (c.kind === "box" ? boxHtml(g, i) : prHtml(g, i)) + "</div>";
+        c.fills[j] + '">' + inner + "</div>";
     }
     return s + "</div>";
+  }
+
+  // Does level `g` of a colour-split cell draw anything in row i?
+  function lvDrawn(c, g, i) {
+    if (c.kind === "pair") return g.a[i] != null || g.b[i] != null;
+    return (c.kind === "box" ? g.bc[i] : g.c[i]) != null;
   }
 
   /** Assemble the whole tbody from the cell model. */
@@ -703,7 +714,8 @@
             barWrap(glyph, c, i) + "</td>";
         } else if (c.kind === "pair") {
           row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(pairHtml(c, i), c, i) + "</td>";
+            barWrap(c.multi ? multiHtml(c, i) : pairHtml(c, i), c, i) +
+            "</td>";
         } else if (c.kind === "interval") {
           row += '<td class="blockr-rank-bar-col' +
             (c.lg ? " blockr-rank-wide" : "") + '"' + dataV(c.v[i]) + ">" +
@@ -925,9 +937,28 @@
     return root;
   }
 
+  // The picture is as wide as the table, whatever the panel's width: laid
+  // out at `width` first, then the host grows until no table runs past the
+  // root's right edge (the wrapper would scroll it, and snapdom draws only
+  // the root's box). A table that fits keeps the panel's width.
+  function widenToContent(host, root) {
+    for (var i = 0; i < 4; i++) {
+      var box = root.getBoundingClientRect();
+      var edge = box.right - (parseFloat(getComputedStyle(root).paddingRight) || 0);
+      var over = 0;
+      root.querySelectorAll("table").forEach(function (t) {
+        over = Math.max(over, t.getBoundingClientRect().right - edge);
+      });
+      if (over < 0.5) return;
+      host.style.width = Math.ceil(host.offsetWidth + over) + "px";
+    }
+  }
+
   /** One picture of a payload at `width` CSS px: {png, width, height}, the
-   * size in CSS px (R turns it into inches at 96 dpi). */
-  function rankPicture(payload, width, ratio, css) {
+   * size in CSS px (R turns it into inches at 96 dpi). With a slide `box`
+   * (R: capture_page_box()) it also carries `pages` when the table is too
+   * long for one slide (capture-pages.js), and the title they repeat. */
+  function rankPicture(payload, width, ratio, css, box) {
     return loadSnapdom().then(function (snap) {
       var root = captureRoot(width, css);
       var host = root.parentNode;
@@ -947,6 +978,7 @@
           requestAnimationFrame(function () { requestAnimationFrame(r); });
         });
       }).then(function () {
+        widenToContent(host, root);
         var w = Math.ceil(root.offsetWidth);
         var h = Math.ceil(root.offsetHeight);
         // dpr 1: snapdom multiplies the scale by the device pixel ratio, and
@@ -955,8 +987,12 @@
           scale: Number(ratio) || 2, dpr: 1, embedFonts: true,
           backgroundColor: "#ffffff"
         }).then(function (canvas) {
+          var cut = window.BlockrCapturePages;
+          var pages = (box && cut) ? cut(canvas, root, box, null) : [];
+          var t = root.querySelector(".dd-table-title");
           drop();
-          return { png: canvas.toDataURL("image/png"), width: w, height: h };
+          return { png: canvas.toDataURL("image/png"), width: w, height: h,
+                   pages: pages, title: t ? t.textContent : "" };
         });
       }, function (e) { drop(); throw e; });
     });
@@ -978,7 +1014,8 @@
       var stored = storedFor(root);
       if (!c.capture_export || !stored || !elemId) return;
       var w = Math.round(root.getBoundingClientRect().width) || 900;
-      rankPicture(stored, w, c.capture_ratio, null).then(function (r) {
+      var box = c.capture_page;
+      rankPicture(stored, w, c.capture_ratio, null, box).then(function (r) {
         if (window.Shiny && Shiny.setInputValue) {
           Shiny.setInputValue(elemId + "_capture", r, { priority: "event" });
         }
@@ -1004,8 +1041,9 @@
   var BAR_MODE_OPT = [{ value: "stacked", label: "Stacked" },
                       { value: "grouped", label: "Grouped" },
                       { value: "percent", label: "100%" }];
-  var SORT_DIR_OPT = [{ value: "desc", label: "Largest first" },
-                      { value: "asc", label: "Smallest first" }];
+  // The chart's words, so the two trays read alike.
+  var SORT_DIR_OPT = [{ value: "desc", label: "Descending" },
+                      { value: "asc", label: "Ascending" }];
   var SEARCH_OPT = [{ value: "on", label: "Search bar" },
                     { value: "off", label: "No search bar" }];
   // Header sorting off: the configured order is the exhibit. A visit table
@@ -1017,6 +1055,12 @@
   // scale in the numbers beside the marks.
   var AXIS_OPT = [{ value: "on", label: "Column axis" },
                   { value: "off", label: "No column axis" }];
+  // The length of the labelled marks (R: rank_bar_width). Fit fills the
+  // panel up to a ceiling; the others are fixed and leave the slack blank.
+  var BAR_WIDTH_OPT = [{ value: "narrow", label: "Narrow" },
+                       { value: "medium", label: "Medium" },
+                       { value: "wide", label: "Wide" },
+                       { value: "fit", label: "Fit" }];
   // One toggle, every format the machine can write: "can people take this
   // table away" is one decision, and which file the reader wants is theirs.
   // (The table block settled this the same way.)
@@ -1101,6 +1145,8 @@
     sortable: { label: "Header sorting", kind: "segmented",
                 options: SORTABLE_OPT },
     axis:     { label: "Column axis", kind: "segmented", options: AXIS_OPT },
+    bar_width: { label: "Bar width", kind: "segmented",
+                 options: BAR_WIDTH_OPT },
     download: { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
     // Drill-down: a plain column role, like the table block's.
     drill:    { label: "Filter on", kind: "column", colType: "any" },
@@ -1133,7 +1179,12 @@
     series: { label: "series", shows: ["sparkline"] },
     spans:  { label: "spans", shows: ["interval"] },
     pair:   { label: "pair", shows: ["dumbbell"] },
-    expr:   { label: "expr", shows: ["text"] }
+    expr:   { label: "expr", shows: ["text"] },
+    // A function of one cell's rows. "auto" reads the mark off what the
+    // function returns (R's lane_custom_setup()); the rest name one.
+    custom: { label: "custom",
+              shows: ["auto", "bar", "number", "dumbbell", "box",
+                      "pointrange", "text"] }
   };
   var SHOW_ICONS = {
     number: '<svg width="14" height="14" viewBox="0 0 16 16">' +
@@ -1153,8 +1204,13 @@
       ' stroke-width="1.2" transform="rotate(45 4 8)"/>' +
       '<circle cx="12" cy="8" r="2.6" fill="currentColor"/></svg>'
   };
+  SHOW_ICONS.auto = '<svg width="14" height="14" viewBox="0 0 16 16">' +
+    '<text x="1" y="12" font-size="9" font-style="italic" fill="currentColor">fx</text></svg>';
   // Tile captions: friendlier than the raw enum where it helps.
-  var SHOW_LABELS = { pointrange: "dot range", interval: "swimlane" };
+  var SHOW_LABELS = { pointrange: "dot range", interval: "swimlane",
+                      auto: "from result" };
+  // The seed a new custom column starts from: a working function.
+  var CUSTOM_SEED = "\\(d) data.frame(value = nrow(d))";
 
   // A distribution glyph is ONE mark -- a centre, an inner range and an
   // outer range -- and `show` picks the STYLE it is drawn in. "(none)" on a
@@ -1180,14 +1236,36 @@
     { key: "color", label: "Color",
       hint: "Split this column by a column's levels",
       ok: function (s) {
+        // A custom column's split is a column of what it returns.
+        if (s.type === "custom") return false;
         if (s.type === "dist") return (s.show || "pointrange") !== "text";
         if (s.type === "simple") return (s.show || "bar") !== "number";
         return s.type === "spans" || s.type === "pair";
       } },
     { key: "facet",  label: "Facet",
       hint: "Repeat this column once per level of a column",
-      ok: function (s) { return s.type !== "field"; } }
+      ok: function (s) { return s.type !== "field"; } },
+    // A custom count's population: distinct values of this column in the
+    // cell's slice are its N, so it prints "54 (18%)".
+    { key: "denom", label: "Percent of", want: "any",
+      hint: "Show the count as a share of this column's distinct values",
+      badge: function (v) { return "% of " + v; },
+      seed: function (cols) {
+        for (var i = 0; i < cols.length; i++) {
+          if (/^USUBJID$|SUBJ/i.test(cols[i].name)) return cols[i].name;
+        }
+        return cols.length ? cols[0].name : "";
+      },
+      ok: function (s) {
+        return s.type === "custom" &&
+          ["auto", "bar", "number"].indexOf(markOf(s)) > -1;
+      } }
   ];
+  SUMMARY_MAPS.forEach(function (m) {
+    if (!m.badge) {
+      m.badge = function (v) { return m.label.toLowerCase() + " " + v; };
+    }
+  });
 
   // The mapped dimensions, appended to any type's line so a collapsed row
   // still says what it is split by and what it repeats over.
@@ -1234,9 +1312,134 @@
         (s.ref != null && s.ref !== "" ? ", ref " + s.ref : "") +
         (s.dash ? ", dashed by " + s.dash : "");
       case "expr": return s.expr || "";
+      case "custom": {
+        var first = String(s.fn || "").split("\n").map(function (x) {
+          return x.trim();
+        }).filter(function (x) { return x; }).join(" ");
+        if (first.length > 60) first = first.slice(0, 59) + "…";
+        return first + " · " + (SHOW_LABELS[s.show] || s.show || "from result");
+      }
       default: return "";
     }
   }
+
+  // ---- the column list as sentences (gear mock-up, mock-summary-mark) ----
+
+  var FUNC_WORDS = { count: "Count", count_distinct: "Count distinct",
+                     sum: "Sum", mean: "Mean", median: "Median", min: "Min",
+                     max: "Max", identity: "As is" };
+
+  /** One line saying what the column computes, in words. */
+  function summaryDesc(s) {
+    var fw = function (f) { return FUNC_WORDS[f] || f; };
+    switch (s.type) {
+      case "simple": {
+        var f = s.func || "count";
+        if (f === "count") return "Count of rows";
+        if (f === "identity") return (s.col || "?") + " as is";
+        return fw(f) + " " + (f === "count_distinct" ? "" : "of ") + (s.col || "?");
+      }
+      case "dist": return "Distribution of " + (s.col || "?");
+      case "field": return "Values of " + (s.col || "?");
+      case "series": return (s.col || "?") + " over " + (s.x || "?");
+      case "spans": return "Events, " + (s.x || "?") + " to " + (s.xend || "?");
+      case "pair": {
+        var a = s.from_func && s.from_func !== "identity"
+          ? fw(s.from_func) + " " + (s.from || "?") : (s.from || "?");
+        var b = (s.to_func || "max") === "identity" ? (s.to || "?")
+          : fw(s.to_func || "max").toLowerCase() + " " + (s.to || "?");
+        return a + " to " + b;
+      }
+      case "expr": return s.expr || "";
+      case "custom": return summaryBody(s).replace(/ · [^·]*$/, "");
+      default: return "";
+    }
+  }
+
+  /** The badges after the description: what splits or repeats the column. */
+  function summaryBadges(s) {
+    var out = "";
+    SUMMARY_MAPS.forEach(function (m) {
+      if (s[m.key] && m.ok(s)) {
+        out += '<span class="lane-sum-badge">' + esc(m.badge(s[m.key])) +
+          "</span>";
+      }
+    });
+    return out;
+  }
+
+  /** The mark a row draws: its `show`, or the type's first (custom: "auto"). */
+  function markOf(s) {
+    var t = SUMMARY_TYPES[s.type] || SUMMARY_TYPES.simple;
+    return s.show || t.shows[0];
+  }
+
+  /** A preset row as the custom function that computes the same frame, so
+   *  the code switch starts from working code. NULL where no custom mark
+   *  draws the preset's (series, spans). */
+  function presetToFn(s) {
+    var col = function (c) { return "d$" + (/^[A-Za-z.][A-Za-z0-9._]*$/.test(c) ? c : "`" + c + "`"); };
+    var agg = function (f, c) {
+      switch (f) {
+        case "count": return "dplyr::n()";
+        case "count_distinct": return "dplyr::n_distinct(" + c + ")";
+        case "identity": return "dplyr::first(" + c + ")";
+        default: return f + "(" + c + ", na.rm = TRUE)";
+      }
+    };
+    var by = s.color ? ", .by = " + s.color : "";
+    switch (s.type) {
+      case "simple": {
+        var f = s.func || "count";
+        var c = s.col || "";
+        return "\\(d) d |>\n  dplyr::summarise(value = " + agg(f, c) + by + ")";
+      }
+      case "pair":
+        return "\\(d) d |>\n  dplyr::summarise(\n    from = " +
+          agg(s.from_func || "identity", s.from || "") + ",\n    to = " +
+          agg(s.to_func || "max", s.to || "") + by + "\n  )";
+      case "dist": {
+        var v = s.col || "";
+        // Quartiles and the range: the presets' whisker rules (Tukey, the
+        // CIs) are statistics of their own; edit the function to match.
+        return "\\(d) d |>\n  dplyr::summarise(\n" +
+          "    lo = min(" + v + ", na.rm = TRUE),\n" +
+          "    q1 = stats::quantile(" + v + ", 0.25, na.rm = TRUE),\n" +
+          "    mid = stats::median(" + v + ", na.rm = TRUE),\n" +
+          "    q3 = stats::quantile(" + v + ", 0.75, na.rm = TRUE),\n" +
+          "    hi = max(" + v + ", na.rm = TRUE)" + by + "\n  )";
+      }
+      case "field":
+        return "\\(d) data.frame(text = unique(as.character(" + col(s.col || "") + ")))";
+      case "expr":
+        return "\\(d) d |>\n  dplyr::summarise(value = " + (s.expr || "NA") + ")";
+      default: return null;
+    }
+  }
+
+  /** The custom row a preset becomes under the code switch. */
+  function presetToCustom(s) {
+    var fn = presetToFn(s);
+    if (fn == null) return null;
+    var show = { bar: "bar", number: "number", dot: "bar", dumbbell: "dumbbell",
+                 box: "box", pointrange: "pointrange", text: "text" }[markOf(s)];
+    if (s.type === "field" || s.type === "expr") show = s.type === "field" ? "text" : "number";
+    if (s.type === "dist" && markOf(s) === "text") show = "box";
+    var out = { type: "custom", name: s.name || "", fn: fn };
+    if (show) out.show = show;
+    if (s.facet) out.facet = s.facet;
+    // A count against its population keeps its N and percent.
+    if (s.type === "simple" && s.func === "count_distinct" && s.col) out.denom = s.col;
+    return out;
+  }
+
+  var GRIP_SVG = '<svg width="10" height="16" viewBox="0 0 10 16"><g fill="currentColor">' +
+    '<circle cx="3" cy="3.5" r="1"/><circle cx="7" cy="3.5" r="1"/><circle cx="3" cy="8" r="1"/>' +
+    '<circle cx="7" cy="8" r="1"/><circle cx="3" cy="12.5" r="1"/><circle cx="7" cy="12.5" r="1"/></g></svg>';
+  var CHEV_SVG = '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3" fill="none" ' +
+    'stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var CODE_SVG = '<svg width="14" height="14" viewBox="0 0 16 16"><path d="M5.5 4.5L2 8l3.5 3.5M10.5 4.5L14 8l-3.5 3.5" ' +
+    'fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   /** The seed for a colour / facet mapping: the first categorical that a
    *  reader can actually decode. `n_lev` rides on the gear's column list
@@ -1263,26 +1466,7 @@
     return "";
   }
 
-  var SUMMARY_PRESETS = {
-    Rank: function (cols) {
-      return { type: "simple", name: "Rows", func: "count", show: "bar" };
-    },
-    Distribution: function (cols) {
-      var c = firstCol(cols, "num");
-      return { type: "dist", name: c || "Value", col: c, style: "dot",
-               inner: "median_q1_q3", outer: "tukey", show: "pointrange" };
-    },
-    Trajectory: function (cols) {
-      var x = firstCol(cols, "num");
-      var c = firstCol(cols, "num", [x]);
-      return { type: "series", name: c || "Value", x: x, col: c || x };
-    },
-    Swimlane: function (cols) {
-      var x = firstCol(cols, "num");
-      var e = firstCol(cols, "num", [x]);
-      return { type: "spans", name: "Spans", x: x, xend: e || x };
-    }
-  };
+
 
   /** The editor body. ctx: { cfg(), cols(), send(list), rerender(), open:Set } */
   function renderSummariesEditor(sec, ctx) {
@@ -1321,9 +1505,25 @@
       var wrap = document.createElement("div");
       wrap.className = "dd-picker-wrap";
       var opts = typeof want === "string" ? colOpts(want) : want;
+      var sel = selected || "";
+      var pick = onChange;
+      if (typeof want !== "string") {
+        // A fixed option set shows its label alone ("Mean", not "mean
+        // Mean"), as the chart tray does; columns keep name and label.
+        var toVal = {};
+        opts = opts.map(function (o) {
+          if (!o || typeof o !== "object" || !o.label) return o;
+          toVal[o.label] = o.value;
+          if (o.value === selected) sel = o.label;
+          return o.label;
+        });
+        pick = function (v) {
+          onChange(Object.prototype.hasOwnProperty.call(toVal, v) ? toVal[v] : v);
+        };
+      }
       if (S && S.single) {
-        S.single(wrap, { bordered: true, options: opts, selected: selected || "",
-                         onChange: onChange });
+        S.single(wrap, { bordered: true, options: opts, selected: sel,
+                         onChange: pick });
       }
       ctl.appendChild(wrap);
       parent.appendChild(ctl);
@@ -1383,42 +1583,95 @@
 
       var head = document.createElement("div");
       head.className = "lane-sum-head";
+      var isOpen = ctx.open.has(i);
+      // The row reads as a sentence: the mark it draws, its name, what it
+      // computes, what splits or repeats it.
       head.innerHTML =
-        '<span class="lane-sum-chip lane-sum-chip-' + (s.type || "simple") +
-        '">' + (SUMMARY_TYPES[s.type] || SUMMARY_TYPES.simple).label + "</span>" +
-        '<span class="lane-sum-name">' + esc(s.name || "") + "</span>" +
-        '<span class="lane-sum-line">' + esc(summaryLine(s)) + "</span>";
+        '<span class="lane-sum-grip" aria-hidden="true">' + GRIP_SVG + "</span>" +
+        '<span class="lane-sum-glyph">' + (SHOW_ICONS[markOf(s)] || "") + "</span>" +
+        '<span class="lane-sum-name">' + esc(s.name || "Untitled") + "</span>" +
+        '<span class="lane-sum-line">' + esc(summaryDesc(s)) + "</span>" +
+        summaryBadges(s);
+      if (isOpen) {
+        // The code switch: a preset becomes the function that computes the
+        // same frame; back again only to the preset it came from.
+        var code = document.createElement("button");
+        code.type = "button";
+        code.className = "lane-sum-code";
+        var asCode = s.type === "custom";
+        code.setAttribute("aria-pressed", asCode ? "true" : "false");
+        code.innerHTML = CODE_SVG;
+        var canGo = asCode ? !!ctx.stash[i] : presetToFn(s) != null;
+        code.disabled = !canGo;
+        code.setAttribute("data-blockr-tooltip", asCode
+          ? (canGo ? "Back to the preset" : "Started as code")
+          : (canGo ? "Edit as code" : "No code form for this mark"));
+        code.setAttribute("aria-label", code.getAttribute("data-blockr-tooltip"));
+        code.addEventListener("click", function (e) {
+          e.stopPropagation();
+          if (asCode) {
+            list[i] = ctx.stash[i];
+            delete ctx.stash[i];
+          } else {
+            var cu = presetToCustom(s);
+            if (!cu) return;
+            ctx.stash[i] = JSON.parse(JSON.stringify(s));
+            list[i] = cu;
+          }
+          commit();
+          ctx.rerender();
+        });
+        head.appendChild(code);
+      }
       var rm = document.createElement("button");
       rm.type = "button";
-      rm.className = "dd-role-remove lane-sum-rm";
+      rm.className = "lane-sum-rm";
       rm.setAttribute("data-blockr-tooltip", "Remove column");
       rm.setAttribute("aria-label", "Remove column");
-      rm.innerHTML = "✕";
+      rm.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" ' +
+        'fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
       rm.addEventListener("click", function (e) {
         e.stopPropagation();
         list.splice(i, 1);
-        ctx.open.delete(i);
+        ctx.open.clear();
+        ctx.stash = {};
         commit();
         ctx.rerender();
       });
       head.appendChild(rm);
-      var up = document.createElement("button");
-      up.type = "button";
-      up.className = "lane-sum-move";
-      up.setAttribute("data-blockr-tooltip", "Move up");
-      up.setAttribute("aria-label", "Move up");
-      up.innerHTML = "↑";
-      up.disabled = i === 0;
-      up.addEventListener("click", function (e) {
-        e.stopPropagation();
-        list.splice(i - 1, 0, list.splice(i, 1)[0]);
-        commit();
+      var chev = document.createElement("span");
+      chev.className = "lane-sum-chev";
+      chev.innerHTML = CHEV_SVG;
+      head.appendChild(chev);
+      // One column open at a time.
+      head.addEventListener("click", function () {
+        var was = ctx.open.has(i);
+        ctx.open.clear();
+        if (!was) ctx.open.add(i);
         ctx.rerender();
       });
-      head.appendChild(up);
-      head.addEventListener("click", function () {
-        if (ctx.open.has(i)) ctx.open.delete(i);
-        else ctx.open.add(i);
+      // Reorder by dragging the row (design system: rows drag, no arrows).
+      row.draggable = true;
+      row.addEventListener("dragstart", function (e) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(i));
+        row.classList.add("is-dragging");
+      });
+      row.addEventListener("dragend", function () { row.classList.remove("is-dragging"); });
+      row.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        row.classList.add("is-drop");
+      });
+      row.addEventListener("dragleave", function () { row.classList.remove("is-drop"); });
+      row.addEventListener("drop", function (e) {
+        e.preventDefault();
+        row.classList.remove("is-drop");
+        var from = Number(e.dataTransfer.getData("text/plain"));
+        if (isNaN(from) || from === i) return;
+        list.splice(i, 0, list.splice(from, 1)[0]);
+        ctx.open.clear();
+        ctx.stash = {};
+        commit();
         ctx.rerender();
       });
       row.appendChild(head);
@@ -1628,6 +1881,47 @@
           });
           exCtl.appendChild(exIn);
           body.appendChild(exCtl);
+        } else if (t === "custom") {
+          // Code commits on its own button (or Mod+Enter), never per
+          // keystroke: every commit reruns the function for every cell.
+          var fnCtl = document.createElement("div");
+          fnCtl.className = "lane-sum-ctl lane-sum-ctl-wide";
+          fnCtl.innerHTML = '<span class="blockr-label">Summary of one ' +
+            "cell's rows, <code>d</code></span>";
+          var fnIn = document.createElement("textarea");
+          fnIn.className = "blockr-text-input dd-script-editor lane-sum-fn";
+          fnIn.rows = Math.max(3, String(s.fn || "").split("\n").length + 1);
+          fnIn.spellcheck = false;
+          fnIn.value = s.fn || "";
+          fnIn.placeholder = "\\(d) d |> dplyr::count(AESEV, name = \"value\")";
+          var fnFoot = document.createElement("div");
+          fnFoot.className = "lane-sum-fn-foot";
+          var fnHint = document.createElement("span");
+          fnHint.className = "lane-sum-hint";
+          fnHint.textContent = "Return value; from, to; lo, q1, mid, q3, hi; " +
+            "or text. One more column splits the cell.";
+          var fnApply = document.createElement("button");
+          fnApply.type = "button";
+          fnApply.className = "lane-sum-apply";
+          fnApply.textContent = "Apply";
+          var applyFn = function () {
+            if (fnIn.value === (s.fn || "")) return;
+            s.fn = fnIn.value;
+            commit();
+            ctx.rerender();
+          };
+          fnApply.addEventListener("click", applyFn);
+          fnIn.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              applyFn();
+            }
+          });
+          fnFoot.appendChild(fnHint);
+          fnFoot.appendChild(fnApply);
+          fnCtl.appendChild(fnIn);
+          fnCtl.appendChild(fnFoot);
+          body.appendChild(fnCtl);
         }
 
         // Display tiles (only where the type offers a choice).
@@ -1635,7 +1929,7 @@
         if (shows.length > 1) {
           var dCtl = document.createElement("div");
           dCtl.className = "lane-sum-ctl";
-          dCtl.innerHTML = '<span class="blockr-label">Display</span>';
+          dCtl.innerHTML = '<span class="blockr-label">Mark</span>';
           var tiles = document.createElement("div");
           tiles.className = "dd-type-grid lane-sum-tiles";
           shows.forEach(function (sh) {
@@ -1643,11 +1937,20 @@
             b.type = "button";
             b.className = "dd-type-tile" +
               ((s.show || shows[0]) === sh ? " dd-type-active" : "");
+            if (t === "custom" && sh === "auto" && !s.show) {
+              b.className += " dd-type-active";
+            }
             b.innerHTML = '<span class="dd-type-tile-icon">' +
               (SHOW_ICONS[sh] || "") + '</span>' +
               '<span class="dd-type-tile-label">' +
               (SHOW_LABELS[sh] || sh) + "</span>";
             b.addEventListener("click", function () {
+              if (t === "custom" && sh === "auto") {
+                delete s.show;
+                commit();
+                ctx.rerender();
+                return;
+              }
               s.show = sh;
               // For a distribution the tiles are the STYLE: switching does
               // not change which numbers the column holds, so the ranges
@@ -1674,7 +1977,7 @@
         SUMMARY_MAPS.forEach(function (m) {
           if (!m.ok(s)) return;
           if (!s[m.key]) { addable.push(m); return; }
-          selectCtl(body, m.label, "cat", s[m.key], function (v) {
+          selectCtl(body, m.label, m.want || "cat", s[m.key], function (v) {
             s[m.key] = v;
             commit();
             ctx.rerender();
@@ -1694,9 +1997,12 @@
             b.textContent = "+ " + m.label.toLowerCase();
             // Nothing decodable to map: the button would only produce an
             // error message in the table.
-            b.disabled = !firstMapCol(cols);
+            var seedOf = function () {
+              return m.seed ? m.seed(cols) : firstMapCol(cols);
+            };
+            b.disabled = !seedOf();
             b.addEventListener("click", function () {
-              s[m.key] = firstMapCol(cols);
+              s[m.key] = seedOf();
               commit();
               ctx.rerender();
             });
@@ -1709,63 +2015,108 @@
       wrap.appendChild(row);
     });
 
-    // Add + presets.
+    // Add: one menu of summaries, each named by what it computes and shown
+    // with the mark it starts with; the last starts from code.
+    var seedFor = function (t, f) {
+      var ns = { type: t, name: "", show: SUMMARY_TYPES[t].shows[0] };
+      if (t === "simple") {
+        ns.func = f || "count";
+        if (ns.func === "count_distinct") {
+          ns.col = SUMMARY_MAPS.filter(function (m) { return m.key === "denom"; })[0].seed(cols);
+          ns.name = "Patients";
+        } else if (ns.func !== "count") {
+          ns.col = firstCol(cols, "num");
+          ns.show = "number";
+        } else {
+          ns.name = "Rows";
+        }
+      }
+      if (t === "custom") {
+        delete ns.show;
+        ns.name = "Value";
+        ns.fn = CUSTOM_SEED;
+      }
+      if (t === "dist") {
+        ns.col = firstCol(cols, "num");
+        ns.style = "dot";
+        ns.inner = "median_q1_q3";
+        ns.outer = "tukey";
+      }
+      if (t === "field") ns.col = firstCol(cols, "cat");
+      if (t === "series") {
+        ns.x = firstCol(cols, "num");
+        ns.col = firstCol(cols, "num", [ns.x]);
+      }
+      if (t === "spans") {
+        ns.x = firstCol(cols, "num");
+        ns.xend = firstCol(cols, "num", [ns.x]);
+      }
+      if (t === "pair") {
+        ns.from = firstCol(cols, "num");
+        ns.to = firstCol(cols, "num", [ns.from]) || ns.from;
+        ns.from_func = "identity";
+        ns.to_func = "max";
+      }
+      return ns;
+    };
+    var addOne = function (t, f) {
+      list.push(seedFor(t, f));
+      ctx.open.clear();
+      ctx.open.add(list.length - 1);
+      commit();
+      ctx.rerender();
+    };
+    var ADD_ITEMS = [
+      { title: "Counts" },
+      { label: "Count", meta: "rows", icon: SHOW_ICONS.bar, t: "simple", f: "count" },
+      { label: "Count distinct", meta: "patients", icon: SHOW_ICONS.bar, t: "simple", f: "count_distinct" },
+      { title: "Values" },
+      { label: "One value", meta: "mean, sum, max", icon: SHOW_ICONS.number, t: "simple", f: "mean" },
+      { label: "Distribution", meta: "box or dot range", icon: SHOW_ICONS.box, t: "dist" },
+      { label: "Two values, from \u2192 to", meta: "onset to end", icon: SHOW_ICONS.dumbbell, t: "pair" },
+      { title: "Rows of the cell" },
+      { label: "Events", meta: "a swimlane", icon: SHOW_ICONS.interval, t: "spans" },
+      { label: "Series", meta: "a sparkline", icon: SHOW_ICONS.sparkline, t: "series" },
+      { label: "Text", meta: "the distinct values", icon: SHOW_ICONS.text, t: "field" },
+      { label: "Expression", meta: "one R expression", icon: SHOW_ICONS.number, t: "expr" },
+      { divider: true },
+      { label: "Custom summary", meta: "a function of the cell's rows", icon: CODE_SVG, t: "custom" }
+    ];
     var addRow = document.createElement("div");
     addRow.className = "lane-sum-addrow";
-    var addWrap = document.createElement("div");
-    addWrap.className = "lane-sum-add-types";
-    Object.keys(SUMMARY_TYPES).forEach(function (t) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "lane-sum-add";
-      b.textContent = "+ " + t;
-      b.addEventListener("click", function () {
-        var s = { type: t, name: "", show: SUMMARY_TYPES[t].shows[0] };
-        if (t === "simple") s.func = "count";
-        if (t === "dist") {
-          s.col = firstCol(cols, "num");
-          s.style = "dot";
-          s.inner = "median_q1_q3";
-          s.outer = "tukey";
-        }
-        if (t === "field") s.col = firstCol(cols, "cat");
-        if (t === "series") {
-          s.x = firstCol(cols, "num");
-          s.col = firstCol(cols, "num", [s.x]);
-        }
-        if (t === "spans") {
-          s.x = firstCol(cols, "num");
-          s.xend = firstCol(cols, "num", [s.x]);
-        }
-        if (t === "pair") {
-          s.from = firstCol(cols, "num");
-          s.to = firstCol(cols, "num", [s.from]) || s.from;
-          s.from_func = "identity";
-          s.to_func = "max";
-        }
-        list.push(s);
-        ctx.open.add(list.length - 1);
-        commit();
-        ctx.rerender();
+    var addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "lane-sum-addcol";
+    addBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 2v8M2 6h8" ' +
+      'fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Add column';
+    var B = (typeof Blockr !== "undefined") ? Blockr : null;
+    if (B && B.menu) {
+      addBtn.addEventListener("click", function () {
+        B.menu(addBtn, {
+          minWidth: 340,
+          items: ADD_ITEMS.map(function (it) {
+            if (it.title || it.divider) return it;
+            return { label: it.label, meta: it.meta, icon: it.icon,
+                     onSelect: function () { addOne(it.t, it.f); } };
+          })
+        });
       });
-      addWrap.appendChild(b);
-    });
-    addRow.appendChild(addWrap);
-    var presets = document.createElement("div");
-    presets.className = "lane-sum-presets";
-    Object.keys(SUMMARY_PRESETS).forEach(function (nm) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "lane-sum-preset";
-      b.textContent = nm;
-      b.addEventListener("click", function () {
-        list.push(SUMMARY_PRESETS[nm](cols));
-        commit();
-        ctx.rerender();
+      addRow.appendChild(addBtn);
+    } else {
+      // Without blockr.ui's menu: the same entries as plain buttons.
+      var addWrap = document.createElement("div");
+      addWrap.className = "lane-sum-add-types";
+      ADD_ITEMS.forEach(function (it) {
+        if (it.title || it.divider) return;
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "lane-sum-add";
+        b.textContent = "+ " + it.label;
+        b.addEventListener("click", function () { addOne(it.t, it.f); });
+        addWrap.appendChild(b);
       });
-      presets.appendChild(b);
-    });
-    addRow.appendChild(presets);
+      addRow.appendChild(addWrap);
+    }
     wrap.appendChild(addRow);
 
     if (!list.length) {
@@ -1813,8 +2164,9 @@
         }] : [],
         presentation: fcols.length === 1
           ? ["sort_by", "sort_dir", "facet_layout", "search", "sortable",
-             "axis", "download"]
-          : ["sort_by", "sort_dir", "search", "sortable", "axis", "download"],
+             "axis", "download", "bar_width"]
+          : ["sort_by", "sort_dir", "search", "sortable", "axis", "download",
+             "bar_width"],
         drillToggle: "drill",
         drillDefault: (cfg.by && cfg.by.length)
           ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),
@@ -1840,13 +2192,16 @@
     // color + facet compose (split bars inside each facet column), so the
     // split layout applies whenever a colour split exists.
     if (cfg.color) pres.push("bar_mode");
-    // The measure is the aggregation step, so it gets the chart's trailing
-    // "Aggregation" section rather than sitting inside Mapping.
-    aggTitle = "Aggregation";
+    // The measure sits in Mapping, as the chart's does: no Aggregation
+    // section of its own.
+    aggTitle = null;
     pres.push("search");
     pres.push("sortable");
     pres.push("axis");
     pres.push("download");
+    // Last: four segments overflow a grid cell, and the end of the row is
+    // the one place with nothing to their right.
+    pres.push("bar_width");
 
     return {
       requiredMap: ["group"],
@@ -1973,7 +2328,10 @@
       cols: function () { return cols; },
       send: function (list) { sendConfig(elemId, "summaries", list); },
       rerender: function () {},
-      open: new Set()
+      open: new Set(),
+      // The preset a column was switched to code from, by row index, so the
+      // switch can go back (this session only; a saved board keeps the code).
+      stash: {}
     };
 
     var header = document.createElement("div");
@@ -2018,9 +2376,9 @@
       sections: function () { return rankSections(cfg, ctx); },
       sectionsForFamily: function () { return rankSections(cfg, ctx); },
       secondary: new Set(),
-      mappingTitle: function () {
-        return (cfg.summaries && cfg.summaries.length) ? "Grouping" : "Mapping";
-      },
+      // "Mapping" in both modes, as on the chart: the trays share their
+      // section names.
+      mappingTitle: function () { return "Mapping"; },
       // No block-level type picker: the type belongs to the COLUMN (the
       // columns editor's row types + display tiles).
       typeKey: null,
@@ -2383,8 +2741,7 @@
       var lvEl = t.closest(".blockr-rank-lv");
       var drawnLv = [];
       for (var k = 0; k < c.lv.length; k++) {
-        var gk = c.lv[k];
-        if ((c.kind === "box" ? gk.bc[i] : gk.c[i]) != null) drawnLv.push(k);
+        if (lvDrawn(c, c.lv[k], i)) drawnLv.push(k);
       }
       var pick = drawnLv;
       if (lvEl) {
@@ -2408,11 +2765,38 @@
       return h + body;
     }
     if (c.kind === "pair") {
-      var tip = c.tip && c.tip[i];
-      if (!tip) return "";
-      return h + String(tip).split(" \u00b7 ").map(function (x) {
-        return ttNote(x);
-      }).join("");
+      var notes = function (tip, skip) {
+        return String(tip).split(" \u00b7 ").slice(skip).map(function (x) {
+          return ttNote(x);
+        }).join("");
+      };
+      if (!c.multi) {
+        var tip = c.tip && c.tip[i];
+        return tip ? h + notes(tip, 0) : "";
+      }
+      // A colour-split cell, as for the glyph: the level under the pointer,
+      // else every level. Each level's tip starts with its level name,
+      // which the coloured row below already says.
+      var lvP = t.closest(".blockr-rank-lv");
+      var drawnP = [];
+      for (var q = 0; q < c.lv.length; q++) {
+        if (lvDrawn(c, c.lv[q], i)) drawnP.push(q);
+      }
+      var pickP = drawnP;
+      if (lvP) {
+        var allP = Array.prototype.slice.call(
+          lvP.parentNode.querySelectorAll(".blockr-rank-lv"));
+        var posP = allP.indexOf(lvP);
+        if (posP >= 0 && posP < drawnP.length) pickP = [drawnP[posP]];
+      }
+      if (!pickP.length) return "";
+      var bodyP = "";
+      pickP.forEach(function (k3, n3) {
+        if (n3) bodyP += TT_SEP;
+        bodyP += ttRow((tt.cvar ? tt.cvar + " " : "") + c.levels[k3], "",
+                       c.fills[k3]) + notes(c.lv[k3].tip[i], 1);
+      });
+      return h + bodyP;
     }
     return "";
   }

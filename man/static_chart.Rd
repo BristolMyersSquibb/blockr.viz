@@ -16,6 +16,7 @@ static_chart(
   y = NULL,
   series = NULL,
   bar_mode = "stacked",
+  value_labels = FALSE,
   orientation = NULL,
   sort_by = NULL,
   sort_dir = NULL,
@@ -55,6 +56,11 @@ as in \code{\link[=new_chart_block]{new_chart_block()}}.}
 ordering, as in \code{\link[=new_chart_block]{new_chart_block()}}. Unset values resolve per type like
 the canvas: a bar lies horizontal and sorts by value, descending; a
 boxplot stands vertical and keeps the data's own order, ascending.}
+
+\item{value_labels}{Write each bar's value at its end, as in
+\code{\link[=new_chart_block]{new_chart_block()}}: the stack total on a stacked bar, every bar when
+grouped, each segment's share inside a percent bar. Overlapping labels
+are left out (\code{check_overlap}). Bar only.}
 
 \item{count_on, count_col}{Observation-count labels, as in
 \code{\link[=new_chart_block]{new_chart_block()}}.}
@@ -134,7 +140,8 @@ scale map (arm colors) resolves through the same blockr.theme resolver.
 The look mirrors the canvas chart, constant for constant (chart.js is the
 source of truth): 11px \verb{#6b7280} tick labels, dashed \verb{#e5e7eb} gridlines on
 the value axis only, \verb{#d1d5db} axis lines, the category-first-at-the-top
-horizontal layout, 60\%-band bars with no rounding and no value labels,
+horizontal layout, 60\%-band bars with no rounding and value labels only
+on request (\code{value_labels}),
 boxes filled at the series color over a full-strength border, monotone
 interpolation on lines, and the bottom-centered legend band.
 

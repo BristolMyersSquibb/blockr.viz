@@ -100,30 +100,54 @@
   grid-column: 1 / -1;
 }
 
-/* A collapsible section header. Not the checkbox one above it: that owns a
-   capability and unchecking clears it, while folding only hides rows. */
+/* A collapsible section header (Titles, Drill-down, Prepare script). Not the
+   checkbox one above it: that owns a capability and unchecking clears it,
+   while folding only hides rows. Closed, it prints the section's state after
+   the title (.dd-fold-sum). */
 .dd-section-title--fold {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
+  min-width: 0;
   cursor: pointer;
   user-select: none;
 }
-.dd-section-title--fold:hover {
-  color: var(--blockr-color-text-muted, #6b7280);
+.dd-section-title--fold:hover,
+.dd-section-title--fold:hover .dd-fold-chev {
+  color: var(--blockr-color-text-default, #111827);
 }
-/* The shared chevron, drawn and flipped exactly like the select's arrow
-   (blockr.dplyr .blockr-select__arrow): down when closed, 180 when open. */
+/* The shared chevron. A fold points right when closed and down when open,
+   rotating -90deg (design system, "Chevrons"). */
 .dd-fold-chev {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   color: var(--blockr-color-text-muted, #6b7280);
-  transition: transform 150ms ease;
+  transform: rotate(-90deg);
+  transition: transform var(--blockr-transition, 150ms ease);
   pointer-events: none;
 }
+.dd-fold-chev svg {
+  width: 12px;
+  height: 12px;
+}
 .dd-section-title--fold[aria-expanded="true"] .dd-fold-chev {
-  transform: rotate(180deg);
+  transform: none;
+}
+/* The closed section's state: "Off", "None", the title, "4 lines". Body
+   text in the muted colour, so it reads as a value and not as part of the
+   section's name. */
+.dd-fold-sum {
+  min-width: 0;
+  margin-left: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-weight: var(--blockr-font-weight-normal, 400);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 
 /* The field: full width, monospace (a template is code-shaped), and NO room
@@ -406,6 +430,99 @@
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
   margin-top: -2px;
+}
+
+/* ===== The gear tray (design system: "The gear tray", "Layout") =====
+   Scoped to the in-flow tray (.blockr-settings) that every host of this
+   engine opens; the rules above stay the fallback for anything else.
+
+   - No heading, no rules: a section is its title and 24px of space.
+   - One field grid: about 130px columns, their number stepping on the
+     tray's width (2 from 290px, 4 from 560, 6 from 840, 8 from 1110). A
+     select, text field or segmented control takes two columns, a field with
+     a pair of controls four, anything list- or code-shaped the whole row.
+     12px between columns, 16px between rows, 10px under a section title.
+   The tray is the container (blockr-settings-band.css sets container-type).
+   Selectors carry .dd-popover to stay ahead of blockr.ui's narrow-band
+   rules, whichever file loads last. */
+.blockr-settings.dd-popover > .dd-popover-types {
+  margin-bottom: 0;
+}
+.blockr-settings.dd-popover > * + .dd-section {
+  margin-top: 24px;
+}
+.blockr-settings.dd-popover .dd-section {
+  --dd-cols: 1;
+  --dd-s2: 1;
+  --dd-s4: 1;
+  grid-template-columns: repeat(var(--dd-cols), minmax(0, 1fr));
+  gap: 16px 12px;
+  align-items: start;
+}
+@container (min-width: 290px) {
+  .blockr-settings.dd-popover .dd-section { --dd-cols: 2; --dd-s2: 2; --dd-s4: 2; }
+}
+@container (min-width: 560px) {
+  .blockr-settings.dd-popover .dd-section { --dd-cols: 4; --dd-s4: 4; }
+}
+@container (min-width: 840px) {
+  .blockr-settings.dd-popover .dd-section { --dd-cols: 6; }
+}
+@container (min-width: 1110px) {
+  .blockr-settings.dd-popover .dd-section { --dd-cols: 8; }
+}
+.blockr-settings.dd-popover .dd-section > * {
+  grid-column: span var(--dd-s2);
+}
+.blockr-settings.dd-popover .dd-section > .dd-role-paired {
+  grid-column: span var(--dd-s4);
+}
+.blockr-settings.dd-popover .dd-section > .dd-section-title,
+.blockr-settings.dd-popover .dd-section > .dd-summaries,
+.blockr-settings.dd-popover .dd-section > .dd-add-wrap,
+.blockr-settings.dd-popover .dd-section > .dd-script-row,
+.blockr-settings.dd-popover .dd-section > .dd-drill-hint,
+.blockr-settings.dd-popover .dd-section--titles > .dd-form-row,
+.blockr-settings.dd-popover .dd-section--custom > * {
+  grid-column: 1 / -1;
+}
+.blockr-settings.dd-popover .dd-section-title {
+  margin: 0 0 -6px;          /* 16px row gap - 6 = the 10px under a title */
+  padding: 0;
+  border: 0;
+  letter-spacing: 0.05em;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.blockr-settings.dd-popover .dd-section-title:last-child {
+  margin-bottom: 0;
+}
+.blockr-settings.dd-popover .dd-form-row,
+.blockr-settings.dd-popover .dd-add-wrap {
+  margin: 0;
+}
+/* A checkbox in the grid: the box and its words, no field shell, on the
+   controls' line of its grid row. */
+.blockr-settings.dd-popover .dd-form-row--check {
+  align-self: end;
+  min-height: var(--blockr-control-h, 42px);
+  justify-content: center;
+}
+.blockr-settings.dd-popover .dd-form-row--check > .dd-form-help {
+  margin-top: -4px;
+}
+/* A segmented control fills its two columns, and its segments share the
+   width, so "100%" fits beside "Stacked" and "Grouped". */
+.blockr-settings.dd-popover .dd-pill-wrap > .blockr-segmented {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+}
+.blockr-settings.dd-popover .dd-pill-wrap > .blockr-segmented > .blockr-segmented__seg {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Row head: label + remove button on one line above the control. */

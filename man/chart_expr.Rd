@@ -17,6 +17,7 @@ chart_expr(
   y = NULL,
   series = NULL,
   bar_mode = "stacked",
+  value_labels = FALSE,
   orientation = NULL,
   sort_by = NULL,
   sort_dir = NULL,
@@ -56,6 +57,11 @@ as in \code{\link[=new_chart_block]{new_chart_block()}}.}
 ordering, as in \code{\link[=new_chart_block]{new_chart_block()}}. Unset values resolve per type like
 the canvas: a bar lies horizontal and sorts by value, descending; a
 boxplot stands vertical and keeps the data's own order, ascending.}
+
+\item{value_labels}{Write each bar's value at its end, as in
+\code{\link[=new_chart_block]{new_chart_block()}}: the stack total on a stacked bar, every bar when
+grouped, each segment's share inside a percent bar. Overlapping labels
+are left out (\code{check_overlap}). Bar only.}
 
 \item{count_on, count_col}{Observation-count labels, as in
 \code{\link[=new_chart_block]{new_chart_block()}}.}

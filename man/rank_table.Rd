@@ -22,10 +22,11 @@ rank_table(
   sort_by = "value",
   sort_dir = "desc",
   top_n = NULL,
-  max_height = "600px",
+  max_height = NULL,
   search = TRUE,
   sortable = TRUE,
   axis = TRUE,
+  bar_width = "fit",
   title = NULL,
   subtitle = NULL,
   caption = NULL,
@@ -78,7 +79,8 @@ facet level name; \code{sort_dir} is \code{"desc"} or \code{"asc"}.}
 \item{top_n}{Optional cap. Off by default -- the table scrolls instead.
 When set, the rows below the cut are reported in a visible fold row.}
 
-\item{max_height}{CSS max-height of the scroll container.}
+\item{max_height}{\code{NULL} (default): the table runs its full length and
+scrolls with what is around it. A CSS length: a box of that height.}
 
 \item{search}{Show the search input.}
 
@@ -87,6 +89,9 @@ When set, the rows below the cut are reported in a visible fold row.}
 \item{axis}{Print each glyph column's domain as a tick strip under its
 header (default \code{TRUE}): the value domain for bars, boxes and dot
 ranges, the x domain (dates as dates) for swimlanes and sparklines.}
+
+\item{bar_width}{\code{"fit"} (default), \code{"narrow"}, \code{"medium"} or \code{"wide"}:
+the length of the labelled marks. See \code{\link[=new_summarize_table_block]{new_summarize_table_block()}}.}
 
 \item{title, subtitle, caption}{Display text, already resolved (see
 \code{resolve_block_title()}).}

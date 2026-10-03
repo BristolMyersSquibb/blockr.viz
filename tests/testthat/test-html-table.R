@@ -526,12 +526,12 @@ test_that("delta CSS draws the clinical table style", {
   expect_match(rule(".drilldown-table-structured .blockr-table tbody tr"),
                "border-bottom: 0;", fixed = TRUE)
 
-  # 30px rows: 5px above and below a 20px line, the line height set here.
+  # 26px rows: 3px above and below a 20px line, the line height set here.
   data_td <- rule(".drilldown-table-structured .blockr-table tbody td.blockr-data")
-  expect_match(data_td, "padding: 5px 12px;", fixed = TRUE)
+  expect_match(data_td, "padding: 3px 12px;", fixed = TRUE)
   expect_match(data_td, "line-height: 20px;", fixed = TRUE)
   stub <- rule(".drilldown-table-structured .blockr-table tbody td.blockr-stub")
-  expect_match(stub, "padding: 5px 18px 5px calc(24px + var(--blockr-card-inset, 0px));", fixed = TRUE)
+  expect_match(stub, "padding: 3px 18px 3px calc(24px + var(--blockr-card-inset, 0px));", fixed = TRUE)
   expect_match(stub, "line-height: 20px;", fixed = TRUE)
   expect_match(stub, "color: var(--blockr-color-text-default", fixed = TRUE)
   expect_match(rule(".drilldown-table-structured .blockr-section-btn"),
@@ -586,10 +586,10 @@ test_that("table CSS reads design-system meaning tokens only", {
   expect_length(lits, 0L)
 })
 
-test_that("flat table-block rows are 30px with no body rules", {
+test_that("flat table-block rows are 26px with no body rules", {
   sheet <- paste(readLines(system.file("css", "table.css", package = "blockr.viz")),
                  collapse = "\n")
-  expect_match(sheet, ".drilldown-table-container .blockr-table tbody td {\n  padding: 5px 12px;\n  line-height: 20px;",
+  expect_match(sheet, ".drilldown-table-container .blockr-table tbody td {\n  padding: 3px 12px;\n  line-height: 20px;",
                fixed = TRUE)
   expect_match(sheet, ".drilldown-table-container .blockr-table thead th {\n  padding: 7px 12px;",
                fixed = TRUE)

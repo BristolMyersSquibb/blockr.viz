@@ -284,14 +284,15 @@ new_heatmap_block <- function(row = character(),
           p <- heatmap_prep(d, one_or_null(r_row()), one_or_null(r_col()),
                             one_or_null(r_color()), one_or_null(r_group()))
           if (!is.null(p$err)) {
-            return(list(data = data.frame(message = p$err)))
+            return(list(data = data.frame(message = p$err),
+                        dataset = dl_dataset(d)))
           }
           out <- hmb_exhibit_frame(
             p, d, tryCatch(board_scale_map(), error = function(e) NULL)
           )
           tt <- tryCatch(r_titles(), error = function(e) list())
           list(data = out, title = tt$title, subtitle = tt$subtitle,
-               caption = tt$caption)
+               caption = tt$caption, dataset = dl_dataset(d))
         }
         # The export picture: the heatmap as the browser drew it, posted by
         # heatmap-block.js when the download menu opens (the summarize
@@ -299,9 +300,7 @@ new_heatmap_block <- function(row = character(),
         # it; without one the exhibit above is the fallback.
         capture <- shiny::reactiveVal(NULL)
         shiny::observeEvent(input$heatmap_block_capture, {
-          msg <- input$heatmap_block_capture
-          capture(new_chart_capture(chart_capture_decode(msg$png),
-                                    msg$width, msg$height))
+          capture(chart_capture_from_msg(input$heatmap_block_capture))
         })
         dl_picture <- function() {
           if (canvas_capture_on()) capture()
@@ -419,7 +418,8 @@ new_heatmap_block <- function(row = character(),
               cellNumbers = isTRUE(shiny::isolate(r_numbers())),
               drill = nzchar(r_target()),
               capture = canvas_capture_on(),
-              captureRatio = canvas_capture_ratio()
+              captureRatio = canvas_capture_ratio(),
+              capturePage = capture_page_box()
             ),
             auto_unbox = TRUE, null = "null"
           ))

@@ -28,12 +28,12 @@
 :is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.blockr-stub {
   text-align: left;
 }
-/* Table-block rows at 30px, with no rules in the body, like the preview:
-   5px above and below a 20px line. The header cells take 7px. Structured
+/* Table-block rows at 26px, with no rules in the body, like the preview:
+   3px above and below a 20px line. The header cells take 7px. Structured
    tables set their own cell padding in html_table_delta_css(); these are the
    flat table's. The rank table keeps its own rows. */
 .drilldown-table-container .blockr-table tbody td {
-  padding: 5px 12px;
+  padding: 3px 12px;
   line-height: 20px;
 }
 .drilldown-table-container .blockr-table thead th {
@@ -246,14 +246,12 @@
    table paints the lines between rows itself, in place, so a moved header
    left an unpainted strip between two header rows (spanner over leaf) where
    the body showed through. Separate borders belong to the cells and move
-   with them. The body's row lines sit on its rows, which separate borders do
-   not draw, so they move onto the cells; the table renders as before. */
+   with them. The body has no row lines (design system, Tables), so its cells
+   carry no border either: a transparent one made every row 31px, not the
+   preview's 30. */
 .dt-scroll-page .blockr-table {
   border-collapse: separate;
   border-spacing: 0;
-}
-.dt-scroll-page .blockr-table tbody tr > td {
-  border-bottom: 1px solid transparent;
 }
 /* Sort indicator placement, matching the html preview: the arrow flows on
    the lower row immediately to the right of the subtext (small gap, like the

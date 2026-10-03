@@ -1312,8 +1312,8 @@ input.blockr-search:focus {
    ink. The 24px left padding is the indent-0 BASE: nested rows add
    `row_indent * 16px` on top (build_html_tbody), so level 1 sits at 40px,
    level 2 at 56px, etc. Keeping this base BELOW the first indent step is what
-   makes the indentation visible. 4px above and below the 21px line, plus the
-   1px (transparent) row border, is a 30px row. */
+   makes the indentation visible. 3px above and below the 20px line is a
+   26px row, as in the preview. */
 .blockr-html-table-container .blockr-table tbody td.blockr-stub {
   text-align: left;
   vertical-align: top;
@@ -1321,7 +1321,7 @@ input.blockr-search:focus {
   overflow: visible;
   text-overflow: clip;
   max-width: none;
-  padding: 5px 18px 5px calc(24px + var(--blockr-card-inset, 0px));
+  padding: 3px 18px 3px calc(24px + var(--blockr-card-inset, 0px));
   line-height: 20px;
   font-size: var(--blockr-font-size-base, 0.875rem);
   font-weight: var(--blockr-font-weight-normal, 400);
@@ -1337,7 +1337,7 @@ input.blockr-search:focus {
   overflow: visible;
   text-overflow: clip;
   max-width: none;
-  padding: 5px 12px;
+  padding: 3px 12px;
   line-height: 20px;
   font-size: var(--blockr-font-size-base, 0.875rem);
   font-weight: var(--blockr-font-weight-normal, 400);
@@ -1349,7 +1349,7 @@ input.blockr-search:focus {
 .blockr-html-table-container .blockr-table tbody td.blockr-data.blockr-dash {
   color: var(--blockr-color-text-muted, #6b7280);
 }
-/* No rules in the body. 30px rows: 5px above and below a 20px line, set
+/* No rules in the body. 26px rows: 3px above and below a 20px line, set
    here rather than inherited, so the height does not depend on the base
    sheet's line height. Groups are set apart by space (the group's last row
    and the next heading's top padding). */

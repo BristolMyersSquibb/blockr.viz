@@ -111,8 +111,7 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
     if (any(keep)) {
       vk <- col[keep]
       disp <- if (num_flag[j]) {
-        formatC(round(as.numeric(vk), digits), format = "f", digits = digits,
-                drop0trailing = TRUE, big.mark = "")
+        dt_format_num(vk, digits)
       } else {
         as.character(vk)
       }
@@ -127,24 +126,12 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
           # concatenation (no per-cell DOM node / object).
           style_full[keep] <- dt_bar_style(as.numeric(vk), sv$max, sv$fill)
         } else {
-          # Heatmap: sv$fun is vectorized (see dt_color_fun) -- one call
-          # styles the whole column, like dt_bar_style above. With a color
-          # SOURCE (sv$src) the paint reads the companion column's values at
-          # the same rows while the cell keeps displaying its own; a row
-          # whose source is missing stays unpainted rather than lying.
-          pv <- if (is.null(sv$src)) {
-            as.numeric(vk)
-          } else {
-            suppressWarnings(as.numeric(data[[sv$src]]))[keep]
-          }
-          ok <- is.finite(pv)
-          sk <- rep("", sum(keep))
-          if (any(ok)) {
-            bg <- sv$fun(pv[ok])
-            sk[ok] <- paste0(" style=\"background:", bg$bg,
-                             ";color:", bg$fg, ";\"")
-          }
-          style_full[keep] <- sk
+          # Heatmap: one vectorized paint call for the whole column (see
+          # dt_bg_paint, which the downloads read too).
+          p <- dt_bg_paint(sv, data, value_cols[j])
+          on <- !is.na(p$bg)
+          style_full[on] <- paste0(" style=\"background:", p$bg[on],
+                                   ";color:", p$fg[on], ";\"")
         }
       }
     }
@@ -239,6 +226,16 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
                          nzchar(drill)) drill
     )
   )
+}
+
+#' A numeric cell as the flat table displays it: rounded to `digits`, trailing
+#' zeros dropped, each value on its own (1.5 stays "1.5" next to 2.25). The
+#' downloads and the report format through here too (dt_format_digits), so
+#' the screen and the file show the same number. Expects non-NA values.
+#' @noRd
+dt_format_num <- function(v, digits) {
+  formatC(round(as.numeric(v), digits), format = "f", digits = digits,
+          drop0trailing = TRUE, big.mark = "")
 }
 
 #' Paste the cell model into the historical flat `<table>` tag.

@@ -34,7 +34,8 @@
    * everything that changes with a payload lives here.
    * @typedef {{ elemId: string, cfg: Record<string, any>, cols: any[],
    *   ddc: any, slots: any, tray: any, model: any, pos: Record<number, number>,
-   *   groupOf: string[], capture?: boolean, captureRatio?: number }} HmbState
+   *   groupOf: string[], capture?: boolean, captureRatio?: number,
+   *   capturePage?: { w: number, h: number, minPt?: number } | null }} HmbState
    */
   /** @type {WeakMap<Element, HmbState>} */
   var states = new WeakMap();
@@ -455,6 +456,7 @@
     root.setAttribute('data-hmb-drill', p.drill ? '1' : '0');
     st.capture = !!p.capture;
     st.captureRatio = Number(p.captureRatio) || 2;
+    st.capturePage = p.capturePage || null;
     root.setAttribute('data-hmb-row-col', p.rowCol || '');
     root.classList.toggle('hmb-nonum', !p.cellNumbers);
 
@@ -553,17 +555,56 @@
     return snapdomLoading;
   }
 
+  /** The picture shows every column label in full: the rotated header
+   * grows to the longest term (up to 320px) instead of cutting it off.
+   * @param {HTMLElement} clone */
+  function openColumnLabels(clone) {
+    var spans = clone.querySelectorAll('th.hmb-rot > span');
+    if (!spans.length) return;
+    var tall = 0;
+    spans.forEach(function (s) {
+      var el = /** @type {HTMLElement} */ (s);
+      el.style.maxHeight = '314px';
+      tall = Math.max(tall, el.scrollHeight);
+    });
+    var h = Math.min(320, Math.ceil(tall) + 6);
+    if (h <= 150) return;
+    clone.querySelectorAll('th.hmb-rot').forEach(function (th) {
+      (/** @type {HTMLElement} */ (th)).style.height = h + 'px';
+    });
+  }
+
+  /** The picture is as wide as the matrix, whatever the panel's width: the
+   * host grows past the panel's width until no table runs past the clone's
+   * right edge (snapdom draws only the clone's box).
+   * @param {HTMLElement} host @param {HTMLElement} clone */
+  function widenToContent(host, clone) {
+    for (var i = 0; i < 4; i++) {
+      var box = clone.getBoundingClientRect();
+      var edge = box.right - (parseFloat(getComputedStyle(clone).paddingRight) || 0);
+      var over = 0;
+      clone.querySelectorAll('table').forEach(function (t) {
+        over = Math.max(over, t.getBoundingClientRect().right - edge);
+      });
+      if (over < 0.5) return;
+      var grown = Math.ceil(host.offsetWidth + over);
+      host.style.maxWidth = 'none';
+      host.style.width = grown + 'px';
+    }
+  }
+
   /** One picture of the drawn block: {png, width, height}, the size in CSS
    * px (R turns it into inches at 96 dpi).
    * @param {Element} root @param {HmbState} st */
   function heatmapPicture(root, st) {
     return loadSnapdom().then(function (snap) {
-      var table = root.querySelector('table.hmb-table');
-      var width = Math.max(Math.ceil(root.getBoundingClientRect().width),
-                           table ? table.scrollWidth : 0) || 900;
+      // As wide as what it shows: no wider than the panel, so the sentence
+      // wraps as on screen, but no blank either when the matrix is narrower
+      // (widenToContent() takes it past the panel for a wider one).
+      var width = Math.ceil(root.getBoundingClientRect().width) || 900;
       var host = document.createElement('div');
-      host.style.cssText = 'position:fixed;left:-20000px;top:0;width:' +
-        width + 'px;background:#ffffff;';
+      host.style.cssText = 'position:fixed;left:-20000px;top:0;' +
+        'width:fit-content;max-width:' + width + 'px;background:#ffffff;';
       var clone = /** @type {HTMLElement} */ (root.cloneNode(true));
       clone.removeAttribute('data-hmb-elem-id');
       clone.classList.remove('hmb-search-open');
@@ -606,6 +647,8 @@
           requestAnimationFrame(function () { requestAnimationFrame(r); });
         });
       }).then(function () {
+        openColumnLabels(clone);
+        widenToContent(host, clone);
         var w = Math.ceil(clone.offsetWidth);
         var h = Math.ceil(clone.offsetHeight);
         // dpr 1: snapdom multiplies the scale by the device pixel ratio, and
@@ -614,8 +657,14 @@
           scale: st.captureRatio || 2, dpr: 1, embedFonts: true,
           backgroundColor: '#ffffff'
         }).then(function (/** @type {HTMLCanvasElement} */ canvas) {
+          // Too long for one slide: the pages the deck puts on several
+          // (capture-pages.js), cut while the clone is still laid out.
+          var cut = /** @type {any} */ (window).BlockrCapturePages;
+          var pages = (st.capturePage && cut) ?
+            cut(canvas, clone, st.capturePage, 'tr.hmb-grp') : [];
           drop();
-          return { png: canvas.toDataURL('image/png'), width: w, height: h };
+          return { png: canvas.toDataURL('image/png'), width: w, height: h,
+                   pages: pages, title: st.cfg.title_resolved || '' };
         });
       }).catch(function (/** @type {any} */ e) { drop(); throw e; });
     });

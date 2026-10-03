@@ -114,7 +114,7 @@ ANNOTATION_GROUP_RE <- "^\\.group\\d+(_level|_label)?$"
 # Per-cell paint: `.bg:<col>` / `.fg:<col>` hold one hex colour per row for
 # data column `<col>`, NA where the cell is unpainted. Columns, not attributes,
 # so they survive the row and column slicing the pptx pager does. This is how
-# the heatmap's colours reach the downloads.
+# the heatmap's and the table block's colours reach the downloads.
 ANNOTATION_PAINT_RE <- "^\\.(bg|fg):"
 
 # All reserved annotation column names present in `data` (fixed names plus

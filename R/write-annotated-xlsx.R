@@ -34,12 +34,19 @@
 #' @param caption Optional caption / footnote line, written italic below the
 #'   table.
 #' @param sheet Worksheet name.
+#' @param digits Optional number of decimals to SHOW. Numeric data columns
+#'   that hold fractions get the cell number format `"0.00"` (for
+#'   `digits = 2`): the cell keeps the full value, so Excel computes on it,
+#'   and displays it rounded. Whole-number columns keep the general format.
+#'   `NULL` (default) writes every number in the general format. The table
+#'   block passes its own `digits` here.
 #'
 #' @return `file`, invisibly.
 #' @seealso [as_annotated_df()], [new_table_block()]
 #' @export
 write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
-                                 caption = NULL, sheet = "Table") {
+                                 caption = NULL, sheet = "Table",
+                                 digits = NULL) {
   if (!requireNamespace("openxlsx", quietly = TRUE)) {
     stop("write_annotated_xlsx() needs the 'openxlsx' package.", call. = FALSE)
   }
@@ -255,6 +262,22 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
       openxlsx::addStyle(wb, sheet, num_bold, rows = data_xl[bold_row],
                          cols = data_cols_xl, gridExpand = TRUE)
     }
+    # Number format for `digits`: one style per fractional column, stacked on
+    # the alignment above. Whole-number columns (counts) keep the general
+    # format, which shows 3 as 3 where "0.00" would show 3.00 -- the screen
+    # drops trailing zeros too.
+    num_fmt <- xlsx_num_format(digits)
+    if (!is.null(num_fmt)) {
+      fmt_style <- openxlsx::createStyle(numFmt = num_fmt)
+      for (j in seq_len(n_data)) {
+        v <- df[[data_cols[j]]]
+        if (!is.numeric(v)) next
+        v <- v[is.finite(v)]
+        if (!length(v) || all(v == round(v))) next
+        openxlsx::addStyle(wb, sheet, fmt_style, rows = data_xl, cols = j + 1L,
+                           stack = TRUE)
+      }
+    }
     # Per-cell paint (`.bg:<col>` / `.fg:<col>`, see annotation_cell_paint()):
     # one style per distinct (fill, text colour, bold), stacked on the
     # alignment above.
@@ -298,4 +321,12 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
 
   openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
   invisible(file)
+}
+
+# The Excel number format that shows `digits` decimals ("0", "0.0", "0.00",
+# ...), or NULL for none (the general format).
+xlsx_num_format <- function(digits) {
+  digits <- suppressWarnings(as.integer(digits))
+  if (length(digits) != 1L || is.na(digits) || digits < 0L) return(NULL)
+  if (digits == 0L) "0" else paste0("0.", strrep("0", digits))
 }

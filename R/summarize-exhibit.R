@@ -67,7 +67,8 @@ static_summarize_table <- function(data, ...) {
   prep <- do.call(rank_prepare, c(list(data), args[rank_prep_args(args)]))
   cells <- rank_cells(
     prep,
-    cfg = list(axis = args$axis %||% TRUE, sortable = args$sortable %||% TRUE)
+    cfg = list(axis = args$axis %||% TRUE, sortable = args$sortable %||% TRUE,
+               bar_width = args$bar_width)
   )
 
   structure(

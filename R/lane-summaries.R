@@ -23,7 +23,8 @@ LANE_ROW_TYPES <- list(
   series = "sparkline",
   spans = "interval",
   pair = "dumbbell",
-  expr = "text"
+  expr = "text",
+  custom = c("bar", "number", "dumbbell", "box", "pointrange", "text")
 )
 
 # The pair row: two summaries of the same group drawn as one segment, a
@@ -102,7 +103,8 @@ lane_norm_summaries <- function(summaries) {
       series = c("x", "col"),
       spans = c("x", "xend"),
       pair = c("from", "to"),
-      expr = "expr"
+      expr = "expr",
+      custom = "fn"
     )
     for (nm in need) {
       if (is.null(rank_chr1(s[[nm]]))) {
@@ -113,6 +115,9 @@ lane_norm_summaries <- function(summaries) {
 
     s$type <- type
     s$show <- show
+    # A custom row's mark is read off what its function returns unless one
+    # is named (lane_custom_setup()).
+    if (identical(type, "custom")) s$show <- show_given
     s$scope <- scope
     # Colour and facet are the summary's OWN optional mappings: absent means
     # the column carries no such dimension, and two columns may map different
@@ -194,11 +199,15 @@ lane_norm_summaries <- function(summaries) {
 #'                             subject) it degenerates to a single bar in
 #'                             that level's colour, which is the answer
 #'                             anyone looking at it expects
+#'   pair                      one dumbbell per level, like the glyph: a
+#'                             group of one level (a table by subject) draws
+#'                             a single dumbbell in that level's colour
 #'
 #' A number and a text cell have nothing to colour.
 #' @noRd
 lane_takes_color <- function(s) {
   if (identical(s$type, "dist")) return(!identical(s$show, "text"))
+  if (identical(s$type, "pair")) return(TRUE)
   identical(s$type, "simple") && s$show %in% c("dot", "bar")
 }
 
@@ -207,7 +216,7 @@ lane_takes_color <- function(s) {
 #' attribute rather than split into lanes.
 #' @noRd
 lane_color_capable <- function(s) {
-  lane_takes_color(s) || s$type %in% c("spans", "pair")
+  lane_takes_color(s) || identical(s$type, "spans")
 }
 
 #' A pair row's band bound: a finite number, a column name, or NULL. Numbers
@@ -277,6 +286,7 @@ lane_summary_auto_name <- function(s) {
     spans = paste0(rank_chr1(s$x), " \u2192 ", rank_chr1(s$xend)),
     pair = paste0(rank_chr1(s$from), " \u2192 ", rank_chr1(s$to)),
     expr = "Value",
+    custom = "Value",
     "Value"
   )
 }
@@ -375,6 +385,13 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   # copies and across every row.
   for (i in seq_along(summaries)) {
     s <- summaries[[i]]
+    # A custom row runs its function once over the whole data to learn what
+    # it returns, then stands in as the preset row that draws that shape.
+    if (identical(s$type, "custom")) {
+      cs <- lane_custom_setup(s, data)
+      if (!is.null(cs$err)) return(bad(cs$err))
+      s <- cs$s
+    }
     cc <- present(s$color)
     if (!is.null(cc) && lane_color_capable(s)) {
       lv <- rank_levels(data[[cc]])
@@ -479,6 +496,9 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   s_primary <- NULL
 
   fill <- function(target, tkeys, slice, s, sid) {
+    if (!is.null(s$.custom)) {
+      return(lane_custom_fill(target, tkeys, slice, s, sid))
+    }
     switch(s$type,
       simple = {
         f <- rank_chr1(s$func) %||% "count"
@@ -649,7 +669,9 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
           median_iqr = lane_summarize(ys, "median_q1_q3")
         )
       }
-      plan <- c(plan, list(lane_summary_plan(s, cp, data, scale_map)))
+      entry <- lane_summary_plan(s, cp, data, scale_map)
+      if (!is.null(s$.custom)) entry <- lane_custom_plan(entry, s, cp)
+      plan <- c(plan, list(entry))
     }
     if (is.null(s_primary)) s_primary <- list(s = s, sid = copies[[1L]]$suffix)
   }
@@ -922,9 +944,12 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
         ""
       }
     )
+    pcols <- function(prefix) {
+      c(a = paste0(prefix, "_from"), b = paste0(prefix, "_to"),
+        lo = paste0(prefix, "_lo"), hi = paste0(prefix, "_hi"))
+    }
     c(base, list(kind = "pair", key = paste0(sid, "_to"),
-                 cols = c(a = paste0(sid, "_from"), b = paste0(sid, "_to"),
-                          lo = paste0(sid, "_lo"), hi = paste0(sid, "_hi")),
+                 cols = pcols(sid),
                  fidx = paste0(sid, "_f"), didx = paste0(sid, "_d"),
                  ref = s$ref, levels = lv,
                  words = list(from = words[[1L]], to = words[[2L]]),
@@ -934,7 +959,16 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                      data[[rank_chr1(s$color)]]
                    )[lv])
                  },
-                 show_val = TRUE))
+                 show_val = TRUE),
+      # The colour split: one dumbbell per level, each with its own ends,
+      # band and dash index (lane_pair_fill() writes `<sid>_L<j>_*`).
+      if (!is.null(s$.color) && length(lv)) {
+        list(lcols = lapply(seq_along(lv), function(j) {
+               pcols(paste0(sid, "_L", j))
+             }),
+             ldidx = paste0(sid, "_L", seq_along(lv), "_d"),
+             cvar = s$.color)
+      })
   } else if (identical(s$type, "series")) {
     c(base, list(kind = "sparkline", key = paste0(sid, "_last"),
                  pts = paste0(sid, "_pts"), x = rank_chr1(s$x),
@@ -1261,7 +1295,7 @@ lane_summary_domains <- function(plan, rows) {
       vals <- numeric()
       for (i in idx) {
         p <- plan[[i]]
-        for (cn in p$cols) vals <- c(vals, rows[[cn]])
+        for (cn in c(p$cols, unlist(p$lcols))) vals <- c(vals, rows[[cn]])
         vals <- c(vals, p$ref)
       }
       vals <- vals[is.finite(vals)]
@@ -1298,51 +1332,33 @@ LANE_PAIR_WORDS <- c(identity = "", mean = "Mean", median = "Median",
 
 #' Fill one pair row's columns on `target`: `_from`, `_to`, the band `_lo` /
 #' `_hi` (NA where there is none), the colour level index `_f` and the dash
-#' level index `_d`.
+#' level index `_d`. A colour split adds the same set per level under
+#' `_L<j>`, from that level's rows only.
 #'
-#' A leaf row (one subject) summarises its own rows. A PARENT row (the dose
-#' group above its subjects) is the mean of its children's values: the
-#' identity of a group of subjects is not a number, and the maximum over every
-#' subject's rows would be one outlier standing in for the group.
+#' Every row summarises its own rows with the row's functions, a parent row
+#' (the SOC above its terms) over all of its rows, like every other column:
+#' the same group_by() + summarise() once per level of `by`.
 #' @noRd
 lane_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
-  agg_one <- function(func, col, kk) {
+  agg_one <- function(sl, func, col, kk) {
     if (identical(func, "identity")) {
-      g <- dplyr::group_by(slice, dplyr::across(dplyr::all_of(kk)))
+      g <- dplyr::group_by(sl, dplyr::across(dplyr::all_of(kk)))
       out <- as.data.frame(dplyr::summarise(
         g, .v = rank_agg_first(.data[[col]]), .groups = "drop"
       ))
       out$.v <- as.numeric(out$.v)
       out
     } else {
-      rank_aggregate(slice, kk, func, col, col)
+      rank_aggregate(sl, kk, func, col, col)
     }
   }
-  per <- function(func, col) {
-    if (identical(tkeys, keys) || !length(setdiff(keys, tkeys))) {
-      return(rank_match_col(target, agg_one(func, col, tkeys), tkeys, ".v"))
-    }
-    leaf <- agg_one(func, col, keys)
-    g <- dplyr::group_by(leaf, dplyr::across(dplyr::all_of(tkeys)))
-    up <- as.data.frame(dplyr::summarise(
-      g, .v = mean(.data$.v, na.rm = TRUE), .groups = "drop"
-    ))
-    up$.v[!is.finite(up$.v)] <- NA_real_
-    rank_match_col(target, up, tkeys, ".v")
+  per <- function(sl, func, col) {
+    rank_match_col(target, agg_one(sl, func, col, tkeys), tkeys, ".v")
   }
-  target[[paste0(sid, "_from")]] <- per(s$from_func, s$from)
-  target[[paste0(sid, "_to")]] <- per(s$to_func, s$to)
   n <- nrow(target)
-  bound <- function(b) {
-    if (is.null(b)) return(rep(NA_real_, n))
-    if (is.numeric(b)) return(rep(b, n))
-    per("mean", b)
-  }
-  target[[paste0(sid, "_lo")]] <- bound(s$lo)
-  target[[paste0(sid, "_hi")]] <- bound(s$hi)
-  level_idx <- function(col, lv) {
+  level_idx <- function(sl, col, lv) {
     if (is.null(col) || !length(lv)) return(rep(NA_integer_, n))
-    g <- dplyr::group_by(slice, dplyr::across(dplyr::all_of(tkeys)))
+    g <- dplyr::group_by(sl, dplyr::across(dplyr::all_of(tkeys)))
     agg <- as.data.frame(dplyr::summarise(
       g, .t = {
         x <- as.character(.data[[col]])
@@ -1353,12 +1369,328 @@ lane_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
     ))
     match(rank_match_field(target, agg, tkeys, ".t"), lv)
   }
-  target[[paste0(sid, "_f")]] <- level_idx(s$.color %||% s$color, s$.levels)
-  dash <- s$dash
-  target[[paste0(sid, "_d")]] <- if (!is.null(dash) && length(s$.dlevels)) {
-    level_idx(dash, s$.dlevels)
-  } else {
-    rep(NA_integer_, n)
+  # Both ends, the band and the dash index of one slice, under `prefix`:
+  # once for the pooled pair, once per colour level for the split.
+  ends <- function(target, sl, prefix) {
+    bound <- function(b) {
+      if (is.null(b)) return(rep(NA_real_, n))
+      if (is.numeric(b)) return(rep(b, n))
+      per(sl, "mean", b)
+    }
+    target[[paste0(prefix, "_from")]] <- per(sl, s$from_func, s$from)
+    target[[paste0(prefix, "_to")]] <- per(sl, s$to_func, s$to)
+    target[[paste0(prefix, "_lo")]] <- bound(s$lo)
+    target[[paste0(prefix, "_hi")]] <- bound(s$hi)
+    dash <- s$dash
+    target[[paste0(prefix, "_d")]] <- if (!is.null(dash) &&
+                                            length(s$.dlevels)) {
+      level_idx(sl, dash, s$.dlevels)
+    } else {
+      rep(NA_integer_, n)
+    }
+    target
+  }
+  target <- ends(target, slice, sid)
+  target[[paste0(sid, "_f")]] <- level_idx(slice, s$.color %||% s$color,
+                                           s$.levels)
+  cc <- s$.color
+  if (!is.null(cc)) {
+    for (j in seq_along(s$.levels)) {
+      target <- ends(target,
+                     slice[as.character(slice[[cc]]) == s$.levels[[j]], ,
+                           drop = FALSE],
+                     paste0(sid, "_L", j))
+    }
   }
   target
+}
+
+# --- custom summaries -----------------------------------------------------------
+# A custom row is a function of one cell's rows that returns a small data
+# frame. Its columns name what they are: `value`; `from`, `to`; `lo`, `q1`,
+# `mid`, `q3`, `hi`; `text`. One more column, if there is one, is the split:
+# the frame has a row per level of it, and each level draws its own mark (the
+# colour split of the preset rows). The block runs the function per cell, at
+# every level of `by` and per facet level, so a nested table needs nothing
+# from the function: a worst-grade count is right for the SOC and for its
+# terms alike.
+#
+# The function is read once over the whole data to learn its shape, and the
+# row then stands in as the preset row that draws that shape (a sum bar, a
+# pair, a distribution, an expr cell). Plan, sort, domains and every renderer
+# are the presets'; only the fill differs (lane_custom_fill()).
+
+LANE_CUSTOM_ROLES <- c("value", "from", "to", "lo", "q1", "mid", "q3", "hi",
+                       "text")
+
+# What each mark reads. The first mark whose columns are all present is the
+# default.
+LANE_CUSTOM_NEEDS <- list(
+  dumbbell = c("from", "to"),
+  box = "mid",
+  pointrange = "mid",
+  bar = "value",
+  number = "value",
+  text = "text"
+)
+
+#' Parse a custom row's code into a function of one argument. Takes a
+#' function (`\(d) d |> ...`) or a bare body that uses `d`.
+#' @noRd
+lane_custom_fn <- function(code) {
+  exprs <- tryCatch(rlang::parse_exprs(paste(code, collapse = "\n")),
+                    error = function(e) e)
+  if (inherits(exprs, "error")) {
+    return(paste0("does not parse: ", conditionMessage(exprs)))
+  }
+  if (!length(exprs)) return("is empty")
+  env <- new.env(parent = globalenv())
+  body <- if (length(exprs) == 1L) exprs[[1L]] else as.call(c(quote(`{`), exprs))
+  f <- tryCatch(eval(body, env), error = function(e) NULL)
+  if (is.function(f)) return(f)
+  # A bare body: `d` is the cell's rows.
+  fun <- function(d) NULL
+  formals(fun) <- alist(d = )
+  body(fun) <- body
+  environment(fun) <- env
+  fun
+}
+
+#' Run a custom function on one set of rows; a data frame, or an error.
+#' @noRd
+lane_custom_run <- function(fn, d) {
+  r <- tryCatch(fn(d), error = function(e) e)
+  if (inherits(r, "error")) return(r)
+  if (is.atomic(r) && !is.null(names(r)) && length(r)) {
+    # A named vector reads as one row.
+    r <- as.data.frame(as.list(r), check.names = FALSE)
+  }
+  if (!is.data.frame(r)) {
+    return(simpleError("must return a data frame (or a named vector)"))
+  }
+  as.data.frame(r, check.names = FALSE)
+}
+
+#' Learn a custom row's shape and rewrite it as the preset row that draws it.
+#' Returns `list(s =)` or `list(err =)`.
+#' @noRd
+lane_custom_setup <- function(s, data) {
+  who <- paste0("Summary \"", s$name, "\": ")
+  fn <- lane_custom_fn(s$fn)
+  if (is.character(fn)) return(list(err = paste0(who, "the function ", fn)))
+  probe <- lane_custom_run(fn, data)
+  if (inherits(probe, "error")) {
+    return(list(err = paste0(who, "the function failed on the whole data: ",
+                             conditionMessage(probe))))
+  }
+  cols <- names(probe)
+  split <- setdiff(cols, LANE_CUSTOM_ROLES)
+  if (length(split) > 1L) {
+    return(list(err = paste0(
+      who, "the function returns ", length(split), " columns that are not ",
+      "values (", paste(split, collapse = ", "), "). One is the split; name ",
+      "the others value, from, to, lo, q1, mid, q3, hi or text."
+    )))
+  }
+  split <- if (length(split)) split
+  fits <- names(LANE_CUSTOM_NEEDS)[vapply(LANE_CUSTOM_NEEDS, function(n) {
+    all(n %in% cols)
+  }, logical(1L))]
+  if (!length(fits)) {
+    return(list(err = paste0(
+      who, "the function returns ", paste(cols, collapse = ", "),
+      "; no mark reads that. Return value, from and to, mid, or text."
+    )))
+  }
+  mark <- rank_chr1(s$show)
+  if (is.null(mark)) mark <- fits[[1L]]
+  if (!mark %in% fits) {
+    return(list(err = paste0(
+      who, "the mark \"", mark, "\" reads ",
+      paste(LANE_CUSTOM_NEEDS[[mark]], collapse = ", "),
+      "; the function returns ", paste(cols, collapse = ", "), "."
+    )))
+  }
+  lv <- NULL
+  if (!is.null(split)) {
+    # Levels from the full data where the split is a data column, so a
+    # level's colour does not depend on which cells happen to return it.
+    lv <- rank_levels(if (split %in% names(data)) data[[split]] else
+                        probe[[split]])
+    if (length(lv) > LANE_MAX_LEVELS) {
+      return(list(err = paste0(
+        who, "the split column \"", split, "\" has ", length(lv),
+        " levels. At most ", LANE_MAX_LEVELS, "."
+      )))
+    }
+  }
+  keep <- s[intersect(names(s), c("name", "facet", "scope", "fn"))]
+  # `denom`: a column whose distinct values in the cell's slice are the N. A
+  # count then reads as the presets' counts do: "54 (18%)", N in the header,
+  # a bar as long as its share. The value stays the function's.
+  denom <- rank_chr1(s$denom)
+  if (!is.null(denom) && !denom %in% names(data)) {
+    return(list(err = paste0(who, "the percent column \"", denom,
+                             "\" is not in the data.")))
+  }
+  count <- if (is.null(denom)) list(func = "sum") else
+    list(func = "count_distinct", col = denom)
+  s2 <- switch(mark,
+    bar = c(list(type = "simple", show = "bar"), count),
+    number = c(list(type = "simple", show = "number"), count),
+    text = list(type = "expr", expr = "(custom)", show = "text"),
+    dumbbell = list(type = "pair", show = "dumbbell", from = "from",
+                    to = "to", from_func = "identity", to_func = "identity"),
+    {
+      inner <- if (all(c("q1", "q3") %in% cols)) "median_q1_q3" else "none"
+      outer <- if (all(c("lo", "hi") %in% cols)) "min_max" else "none"
+      list(type = "dist", col = "mid", style = if (identical(mark, "box"))
+             "box" else "dot", inner = inner, outer = outer,
+           stat = if (identical(inner, "none")) NULL else inner,
+           whiskers = if (identical(outer, "none")) NULL else outer,
+           show = mark)
+    }
+  )
+  s2 <- c(s2, keep)
+  if (!is.null(split) && mark %in% c("bar", "dumbbell", "box",
+                                     "pointrange")) {
+    s2$.color <- split
+    s2$.levels <- lv
+  }
+  s2$.custom <- list(fn = fn, mark = mark, split = split, cols = cols,
+                     levels = lv, denom = denom)
+  list(s = s2)
+}
+
+#' The function's frames for every cell of `slice`, keyed by `tkeys`.
+#' @noRd
+lane_custom_cells <- function(slice, tkeys, s) {
+  fn <- s$.custom$fn
+  g <- dplyr::group_by(slice, dplyr::across(dplyr::all_of(tkeys)))
+  out <- dplyr::group_modify(g, function(d, k) {
+    r <- lane_custom_run(fn, d)
+    if (inherits(r, "error")) {
+      stop("Summary \"", s$name, "\": the function failed for ",
+           paste(vapply(k, as.character, character(1L)), collapse = " / "),
+           ": ", conditionMessage(r), call. = FALSE)
+    }
+    # Grouping columns come back from group_modify(); a result column of the
+    # same name would collide.
+    r[setdiff(names(r), tkeys)]
+  }, .keep = TRUE)
+  as.data.frame(dplyr::ungroup(out), check.names = FALSE)
+}
+
+#' Fill a custom row's columns: the same `<sid>_*` columns the preset it
+#' stands in for would write, so the plan reads them unchanged.
+#' @noRd
+lane_custom_fill <- function(target, tkeys, slice, s, sid) {
+  cu <- s$.custom
+  cells <- lane_custom_cells(slice, tkeys, s)
+  n <- nrow(target)
+  per <- function(rows, col, f) {
+    if (!nrow(rows) || is.null(rows[[col]])) return(rep(NA_real_, n))
+    g <- dplyr::group_by(rows, dplyr::across(dplyr::all_of(tkeys)))
+    a <- as.data.frame(dplyr::summarise(g, .v = f(.data[[col]]),
+                                        .groups = "drop"))
+    a$.v <- as.numeric(a$.v)
+    a$.v[!is.finite(a$.v)] <- NA_real_
+    rank_match_col(target, a, tkeys, ".v")
+  }
+  mean_na <- function(x) mean(as.numeric(x), na.rm = TRUE)
+  sum_na <- function(x) {
+    x <- as.numeric(x)
+    if (all(is.na(x))) NA_real_ else sum(x, na.rm = TRUE)
+  }
+  level_rows <- function(j) {
+    if (!nrow(cells)) return(cells)
+    cells[as.character(cells[[cu$split]]) == cu$levels[[j]], , drop = FALSE]
+  }
+  split_on <- !is.null(s$.color)
+  switch(cu$mark,
+    bar = {
+      target[[paste0(sid, "_v")]] <- per(cells, "value", sum_na)
+      if (split_on) {
+        for (j in seq_along(cu$levels)) {
+          target[[paste0(sid, "_S_", cu$levels[[j]])]] <-
+            per(level_rows(j), "value", sum_na)
+        }
+      }
+    },
+    number = {
+      target[[paste0(sid, "_v")]] <- per(cells, "value", sum_na)
+    },
+    text = {
+      if (nrow(cells)) {
+        g <- dplyr::group_by(cells, dplyr::across(dplyr::all_of(tkeys)))
+        a <- as.data.frame(dplyr::summarise(
+          g, .t = lane_field_join(.data$text), .groups = "drop"
+        ))
+        m <- rank_match_field(target, a, tkeys, ".t")
+      } else {
+        m <- rep(NA_character_, n)
+      }
+      m[is.na(m)] <- ""
+      target[[paste0(sid, "_t")]] <- m
+    },
+    dumbbell = {
+      ends <- function(target, rows, prefix) {
+        target[[paste0(prefix, "_from")]] <- per(rows, "from", mean_na)
+        target[[paste0(prefix, "_to")]] <- per(rows, "to", mean_na)
+        target[[paste0(prefix, "_lo")]] <- rep(NA_real_, n)
+        target[[paste0(prefix, "_hi")]] <- rep(NA_real_, n)
+        target[[paste0(prefix, "_d")]] <- rep(NA_integer_, n)
+        target
+      }
+      # The pooled pair (the sort key, and the value label where a row draws
+      # one level) is the mean of the cell's rows.
+      target <- ends(target, cells, sid)
+      target[[paste0(sid, "_f")]] <- rep(NA_integer_, n)
+      if (split_on) {
+        for (j in seq_along(cu$levels)) {
+          target <- ends(target, level_rows(j), paste0(sid, "_L", j))
+        }
+      }
+    },
+    {
+      stats <- c(bc = "mid", bl = "q1", bh = "q3", wl = "lo", wh = "hi")
+      put <- function(target, rows, prefix) {
+        for (k in names(stats)) {
+          target[[paste0(prefix, "_", k)]] <- per(rows, stats[[k]], mean_na)
+        }
+        target
+      }
+      target <- put(target, cells, sid)
+      if (split_on) {
+        for (j in seq_along(cu$levels)) {
+          target <- put(target, level_rows(j), paste0(sid, "_L", j))
+        }
+      }
+    }
+  )
+  target
+}
+
+#' Words for a custom row's plan entry: the preset's describe the preset's
+#' statistics ("Median", "Q1-Q3"), which a custom function did not compute.
+#' @noRd
+lane_custom_plan <- function(entry, s, cp) {
+  cu <- s$.custom
+  # A count keeps the preset's second header line (its N); the other marks'
+  # preset lines name statistics the function did not compute.
+  if (!cu$mark %in% c("bar", "number")) {
+    entry$sub_label <- if (!is.null(cp$level)) s$name
+  }
+  if (cu$mark %in% c("box", "pointrange")) {
+    entry$words <- list(
+      center = "mid",
+      range = if (!identical(s$inner, "none")) "q1\u2013q3",
+      whisk = if (!identical(s$outer, "none")) "lo\u2013hi"
+    )
+  }
+  if (identical(cu$mark, "dumbbell")) {
+    entry$words <- list(from = "from \u25c7", to = "to \u25cf")
+  }
+  entry$stype <- "custom"
+  entry
 }

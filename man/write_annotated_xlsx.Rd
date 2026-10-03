@@ -10,7 +10,8 @@ write_annotated_xlsx(
   title = NULL,
   subtitle = NULL,
   caption = NULL,
-  sheet = "Table"
+  sheet = "Table",
+  digits = NULL
 )
 }
 \arguments{
@@ -28,6 +29,13 @@ title (or where the title would sit, when only a subtitle is given).}
 table.}
 
 \item{sheet}{Worksheet name.}
+
+\item{digits}{Optional number of decimals to SHOW. Numeric data columns
+that hold fractions get the cell number format \code{"0.00"} (for
+\code{digits = 2}): the cell keeps the full value, so Excel computes on it,
+and displays it rounded. Whole-number columns keep the general format.
+\code{NULL} (default) writes every number in the general format. The table
+block passes its own \code{digits} here.}
 }
 \value{
 \code{file}, invisibly.
