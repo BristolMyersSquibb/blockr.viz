@@ -476,6 +476,7 @@ function stepState(c) {
 /**
  * Open `config`, run `steps` ([label, (ctx) => void] each) and return, per
  * step, the new inputs, the new echarts calls and the state it leaves.
+ * `opts.extra(ctx)` adds fields of its own to each step.
  */
 function runSteps(config, steps, opts = {}) {
   const c = open(config, opts);
@@ -485,7 +486,8 @@ function runSteps(config, steps, opts = {}) {
       const m = c.mark();
       fn(c);
       const s = c.since(m);
-      out.steps.push({ step: label, inputs: s.inputs, calls: s.calls, ...stepState(c) });
+      out.steps.push({ step: label, inputs: s.inputs, calls: s.calls, ...stepState(c),
+                       ...(opts.extra ? opts.extra(c) : {}) });
     }
   } finally {
     c.close();

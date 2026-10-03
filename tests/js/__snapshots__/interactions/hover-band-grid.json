@@ -1,0 +1,213 @@
+{
+ "band": {
+  "centerIdx": {
+   "High Dose": 2,
+   "Low Dose": 5,
+   "Placebo": 8
+  },
+  "ribbonIdx": {
+   "High Dose": {
+    "idx": 0,
+    "item": [
+     0,
+     31.8375
+    ]
+   },
+   "Low Dose": {
+    "idx": 3,
+    "item": [
+     0,
+     29.37
+    ]
+   },
+   "Placebo": {
+    "idx": 6,
+    "item": [
+     0,
+     28.7725
+    ]
+   }
+  },
+  "total": 9
+ },
+ "grid": {
+  "xs": [
+   -5,
+   0,
+   1,
+   2,
+   3,
+   15,
+   16,
+   29,
+   30,
+   57,
+   58,
+   85,
+   86,
+   120
+  ],
+  "rows": {
+   "y=10": [
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo"
+   ],
+   "y=21.37": [
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo"
+   ],
+   "y=22": [
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo"
+   ],
+   "y=25": [
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Low Dose",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo"
+   ],
+   "y=27.37": [
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Low Dose",
+    "Low Dose",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo"
+   ],
+   "y=28.37": [
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "Low Dose",
+    "Low Dose",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo"
+   ],
+   "y=30": [
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo"
+   ],
+   "y=33": [
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "Low Dose",
+    "Low Dose",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Placebo"
+   ],
+   "y=45": [
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "Low Dose",
+    "Low Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose"
+   ],
+   "y=80": [
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "Low Dose",
+    "Low Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose",
+    "High Dose"
+   ]
+  }
+ }
+}

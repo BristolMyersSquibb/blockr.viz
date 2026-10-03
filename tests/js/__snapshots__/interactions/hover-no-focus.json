@@ -1,0 +1,81 @@
+{
+ "line": {
+  "focus": false,
+  "band": false,
+  "picked": null,
+  "calls": []
+ },
+ "scatter": {
+  "focus": false,
+  "band": false,
+  "picked": null,
+  "calls": []
+ },
+ "scatterSeries": {
+  "focus": false,
+  "band": false,
+  "picked": null,
+  "calls": []
+ },
+ "band": {
+  "focus": false,
+  "band": true,
+  "picked": null,
+  "calls": [
+   {
+    "instance": 0,
+    "calls": [
+     {
+      "op": "setOption",
+      "option": {
+       "series": [
+        {
+         "data": []
+        },
+        {},
+        {},
+        {
+         "data": [
+          [
+           0,
+           29.37
+          ]
+         ]
+        },
+        {},
+        {},
+        {
+         "data": []
+        },
+        {},
+        {}
+       ]
+      }
+     },
+     {
+      "op": "setOption",
+      "option": {
+       "series": [
+        {
+         "data": []
+        },
+        {},
+        {},
+        {
+         "data": []
+        },
+        {},
+        {},
+        {
+         "data": []
+        },
+        {},
+        {}
+       ]
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

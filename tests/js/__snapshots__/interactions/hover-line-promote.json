@@ -1,0 +1,663 @@
+{
+ "config": {
+  "chart_type": "line",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "series": "USUBJID",
+  "color": "ARM"
+ },
+ "steps": [
+  {
+   "step": "mousemove (2, 21.37)",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "id": "__scrim__",
+          "data": [
+           [
+            0.5,
+            0.5
+           ]
+          ]
+         },
+         {
+          "id": "__focus__",
+          "data": [
+           [
+            2,
+            21.37
+           ],
+           [
+            16,
+            23.24
+           ],
+           [
+            30,
+            25.11
+           ],
+           [
+            58,
+            28.48
+           ],
+           [
+            86,
+            30
+           ]
+          ],
+          "smooth": true,
+          "smoothMonotone": "x",
+          "showSymbol": false,
+          "lineStyle": {
+           "color": "#F0E442",
+           "width": 2.5,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "origin": "start",
+           "color": {
+            "type": "linear",
+            "x": 0,
+            "y": 0,
+            "x2": 0,
+            "y2": 1,
+            "colorStops": [
+             {
+              "offset": 0.05,
+              "color": "rgba(240,228,66,0.15)"
+             },
+             {
+              "offset": 0.95,
+              "color": "rgba(240,228,66,0)"
+             }
+            ]
+           }
+          }
+         },
+         {
+          "id": "__focus_dots__",
+          "data": [
+           [
+            2,
+            21.37
+           ],
+           [
+            16,
+            23.24
+           ],
+           [
+            30,
+            25.11
+           ],
+           [
+            58,
+            28.48
+           ],
+           [
+            86,
+            30
+           ]
+          ],
+          "symbol": "circle",
+          "symbolSize": 8,
+          "itemStyle": {
+           "color": "#F0E442",
+           "borderColor": "rgb(255,255,255)",
+           "borderWidth": 2
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "focus": [
+    {
+     "focusSi": 2,
+     "hoverSi": 2,
+     "bandFocus": null
+    }
+   ]
+  },
+  {
+   "step": "mousemove (2.5, 22)",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "focus": [
+    {
+     "focusSi": 2,
+     "hoverSi": 2,
+     "bandFocus": null
+    }
+   ]
+  },
+  {
+   "step": "mousemove (3, 28.37)",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "id": "__scrim__",
+          "data": [
+           [
+            0.5,
+            0.5
+           ]
+          ]
+         },
+         {
+          "id": "__focus__",
+          "data": [
+           [
+            3,
+            28.37
+           ],
+           [
+            17,
+            30.24
+           ],
+           [
+            31,
+            32.11
+           ],
+           [
+            59,
+            35.48
+           ],
+           [
+            87,
+            37
+           ]
+          ],
+          "smooth": true,
+          "smoothMonotone": "x",
+          "showSymbol": false,
+          "lineStyle": {
+           "color": "#009E73",
+           "width": 2.5,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "origin": "start",
+           "color": {
+            "type": "linear",
+            "x": 0,
+            "y": 0,
+            "x2": 0,
+            "y2": 1,
+            "colorStops": [
+             {
+              "offset": 0.05,
+              "color": "rgba(0,158,115,0.15)"
+             },
+             {
+              "offset": 0.95,
+              "color": "rgba(0,158,115,0)"
+             }
+            ]
+           }
+          }
+         },
+         {
+          "id": "__focus_dots__",
+          "data": [
+           [
+            3,
+            28.37
+           ],
+           [
+            17,
+            30.24
+           ],
+           [
+            31,
+            32.11
+           ],
+           [
+            59,
+            35.48
+           ],
+           [
+            87,
+            37
+           ]
+          ],
+          "symbol": "circle",
+          "symbolSize": 8,
+          "itemStyle": {
+           "color": "#009E73",
+           "borderColor": "rgb(255,255,255)",
+           "borderWidth": 2
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "focus": [
+    {
+     "focusSi": 3,
+     "hoverSi": 3,
+     "bandFocus": null
+    }
+   ]
+  },
+  {
+   "step": "mousemove (40, 80)",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "id": "__scrim__",
+          "data": []
+         },
+         {
+          "id": "__focus__",
+          "data": []
+         },
+         {
+          "id": "__focus_dots__",
+          "data": []
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "focus": [
+    {
+     "focusSi": null,
+     "hoverSi": null,
+     "bandFocus": null
+    }
+   ]
+  },
+  {
+   "step": "mousemove (40, 80)",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "focus": [
+    {
+     "focusSi": null,
+     "hoverSi": null,
+     "bandFocus": null
+    }
+   ]
+  },
+  {
+   "step": "mousemove (1, 27.37)",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "id": "__scrim__",
+          "data": [
+           [
+            0.5,
+            0.5
+           ]
+          ]
+         },
+         {
+          "id": "__focus__",
+          "data": [
+           [
+            1,
+            27.37
+           ],
+           [
+            15,
+            29.24
+           ],
+           [
+            29,
+            31.11
+           ],
+           [
+            57,
+            34.48
+           ],
+           [
+            85,
+            "NaN"
+           ]
+          ],
+          "smooth": true,
+          "smoothMonotone": "x",
+          "showSymbol": false,
+          "lineStyle": {
+           "color": "#D55E00",
+           "width": 2.5,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "origin": "start",
+           "color": {
+            "type": "linear",
+            "x": 0,
+            "y": 0,
+            "x2": 0,
+            "y2": 1,
+            "colorStops": [
+             {
+              "offset": 0.05,
+              "color": "rgba(213,94,0,0.15)"
+             },
+             {
+              "offset": 0.95,
+              "color": "rgba(213,94,0,0)"
+             }
+            ]
+           }
+          }
+         },
+         {
+          "id": "__focus_dots__",
+          "data": [
+           [
+            1,
+            27.37
+           ],
+           [
+            15,
+            29.24
+           ],
+           [
+            29,
+            31.11
+           ],
+           [
+            57,
+            34.48
+           ],
+           [
+            85,
+            "NaN"
+           ]
+          ],
+          "symbol": "circle",
+          "symbolSize": 8,
+          "itemStyle": {
+           "color": "#D55E00",
+           "borderColor": "rgb(255,255,255)",
+           "borderWidth": 2
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "focus": [
+    {
+     "focusSi": 1,
+     "hoverSi": 1,
+     "bandFocus": null
+    }
+   ]
+  },
+  {
+   "step": "globalout",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "id": "__scrim__",
+          "data": []
+         },
+         {
+          "id": "__focus__",
+          "data": []
+         },
+         {
+          "id": "__focus_dots__",
+          "data": []
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "focus": [
+    {
+     "focusSi": null,
+     "hoverSi": null,
+     "bandFocus": null
+    }
+   ]
+  },
+  {
+   "step": "globalout",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "focus": [
+    {
+     "focusSi": null,
+     "hoverSi": null,
+     "bandFocus": null
+    }
+   ]
+  }
+ ]
+}
