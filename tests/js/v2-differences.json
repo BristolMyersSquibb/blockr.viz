@@ -1,0 +1,26 @@
+{
+ "interactions/click-gantt": {
+  "ids": ["D2", "D4", "B1"],
+  "why": "Clicks send filters: {AETERM: [...]} (the message D2/D3 extend); the footer names the column label (Reported Term = Rash); Reset clears with filter_type categorical, the type it latched."
+ },
+ "interactions/click-gantt-drill-column": {
+  "ids": ["D2", "D4"],
+  "why": "The click sends filters: {USUBJID: [S01]}, and the footer names that filter (USUBJID = S01) instead of the lane (Rash)."
+ },
+ "interactions/click-gantt-facet": {
+  "ids": ["D3", "D4"],
+  "why": "A click in the Low Dose panel filters USUBJID = S02 and ARM = Low Dose, and the footer says both in column labels."
+ },
+ "interactions/click-gantt-transient": {
+  "ids": ["D2", "D4"],
+  "why": "The drill event sends filters: {AETERM: [Rash]}; the receipt reads Drilled down to Reported Term = Rash."
+ },
+ "interactions/gear-drive-gantt": {
+  "ids": ["B1"],
+  "why": "A gear edit that clears the filter sends filter_type categorical, not range."
+ },
+ "interactions/restore-gantt": {
+  "ids": ["D4"],
+  "why": "The restored filter reads Filtered: Reported Term = Rash, in the column's label."
+ }
+}

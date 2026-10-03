@@ -1,0 +1,58 @@
+{
+ "config": {
+  "chart_type": "gantt",
+  "x": "ASTDY",
+  "xend": "AENDY",
+  "y": "AETERM",
+  "drill": "auto",
+  "filter_column": "AETERM",
+  "filter_values": [
+   "Rash"
+  ]
+ },
+ "steps": [
+  {
+   "step": "R sends the saved selection",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "custom"
+       ]
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: Reported Term = Rash"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "Rash",
+    "selectedColumn": "AETERM",
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

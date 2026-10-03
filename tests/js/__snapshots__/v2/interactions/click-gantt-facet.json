@@ -1,0 +1,73 @@
+{
+ "config": {
+  "chart_type": "gantt",
+  "x": "ASTDY",
+  "xend": "AENDY",
+  "y": "USUBJID",
+  "drill": "auto",
+  "facet": "ARM"
+ },
+ "steps": [
+  {
+   "step": "click first bar in slot 1",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "USUBJID": [
+        "S02"
+       ],
+       "ARM": [
+        "Low Dose"
+       ]
+      },
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: USUBJID = S02, Planned Arm = Low Dose"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": {
+     "USUBJID": [
+      "S02"
+     ],
+     "ARM": [
+      "Low Dose"
+     ]
+    },
+    "selectedColumn": [
+     "USUBJID",
+     "ARM"
+    ],
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

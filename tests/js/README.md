@@ -72,3 +72,30 @@ ones that used to be quadratic, before chart.js read rows through its
 `RowIndex`. `SCALING_ONLY="<case name>"` runs one case, and
 `CHART_JS=<path>` times another copy of `chart.js`, for trying a change out
 before making it.
+
+## The v2 engine
+
+`inst/js/chart-v2/` is the rewrite of `chart.js`, built beside it one chart
+family at a time (spec: blockr.design `open/chart-block-v2`). The harness
+loads either engine:
+
+```sh
+npm run test:v2               # every test above, against v2
+CHART_ENGINE=v2 node --require ./tests/js/v2-preload.js --test tests/js/chart-timeline.test.js
+```
+
+Under v2 the snapshots are still v1's, and v2 has to reproduce them.
+`v2-differences.json` lists the ones it does not, each with the IDs of the
+decisions that explain the difference (D1-D7, B1-B7) and a line of why; what
+v2 draws instead is pinned in `__snapshots__/v2/`. An unlisted difference
+fails, and so does a listed one that v2 now reproduces.
+`UPDATE_SNAPSHOTS=1 npm run test:v2` rewrites `__snapshots__/v2/` only.
+
+`v2-pending.js` names the tests of families v2 does not draw yet; the
+preload (`v2-preload.js`) skips them. Each build step removes its family's
+entries. `V2_RUN_PENDING=1` runs them anyway.
+
+`tests/js/v2/` holds the node tests of v2's pure parts (the index, keys,
+models and options, loaded into a vm context without a DOM), a comparison of
+the v2 binding with v1's, and checks of the two lists above. `npm test` runs
+them.

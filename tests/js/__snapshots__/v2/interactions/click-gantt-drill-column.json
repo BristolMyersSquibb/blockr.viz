@@ -1,0 +1,59 @@
+{
+ "config": {
+  "chart_type": "gantt",
+  "x": "ASTDY",
+  "xend": "AENDY",
+  "y": "AETERM",
+  "drill": "USUBJID"
+ },
+ "steps": [
+  {
+   "step": "click bar in lane Rash",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "USUBJID": [
+        "S01"
+       ]
+      },
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: USUBJID = S01"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "S01",
+    "selectedColumn": "USUBJID",
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}
