@@ -1,0 +1,82 @@
+{
+ "hostsWhileDrawing": [
+  {
+   "style": "position: fixed; left: -20000px; top: 0px; width: 640px; height: 360px;",
+   "chart": {
+    "id": "blockr-capture-chart-1",
+    "style": "width: 640px; height: 360px;",
+    "cls": "drilldown-chart-container dd-family-aggregated"
+   }
+  }
+ ],
+ "pending": [
+  {
+   "ms": 20000,
+   "left": 20000
+  },
+  {
+   "ms": 300,
+   "left": 300
+  },
+  {
+   "ms": 1400,
+   "left": 1400
+  }
+ ],
+ "repliesBefore1400": [],
+ "replies": [
+  {
+   "name": "blockr_viz_capture_result",
+   "value": {
+    "req": "tok-1",
+    "png": "data:image/png;base64,COMPOSED-1600x810",
+    "width": 640,
+    "height": 324
+   },
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ],
+ "hostsAfter": [],
+ "canvas": {
+  "width": 1600,
+  "height": 810,
+  "ops": [
+   [
+    "scale",
+    2.5,
+    2.5
+   ],
+   [
+    "fillRect",
+    "#ffffff",
+    0,
+    0,
+    640,
+    324
+   ],
+   [
+    "fillText",
+    "Adverse events",
+    12,
+    12,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#1f2937",
+    "left",
+    "top",
+    1
+   ],
+   [
+    "drawImage",
+    "data:image/png;base64,PANEL0-r2.5",
+    0,
+    40,
+    640,
+    272
+   ]
+  ]
+ },
+ "repliesAfterBackstop": 1,
+ "otherInputs": []
+}

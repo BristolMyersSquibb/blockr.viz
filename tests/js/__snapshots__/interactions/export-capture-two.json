@@ -1,0 +1,47 @@
+{
+ "during": [
+  {
+   "style": "position: fixed; left: -20000px; top: 0px; width: 300px; height: 200px;",
+   "chart": {
+    "id": "blockr-capture-chart-1",
+    "style": "width: 300px; height: 200px;",
+    "cls": "drilldown-chart-container dd-family-aggregated"
+   }
+  },
+  {
+   "style": "position: fixed; left: -20000px; top: 0px; width: 500px; height: 300px;",
+   "chart": {
+    "id": "blockr-capture-chart-2",
+    "style": "width: 500px; height: 300px;",
+    "cls": "drilldown-chart-container dd-family-aggregated"
+   }
+  }
+ ],
+ "replies": [
+  {
+   "name": "blockr_viz_capture_result",
+   "value": {
+    "req": "a",
+    "png": "data:image/png;base64,COMPOSED-750x725",
+    "width": 300,
+    "height": 290
+   },
+   "opts": {
+    "priority": "event"
+   }
+  },
+  {
+   "name": "blockr_viz_capture_result",
+   "value": {
+    "req": "b",
+    "png": "data:image/png;base64,COMPOSED-1250x920",
+    "width": 500,
+    "height": 368
+   },
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ],
+ "after": []
+}

@@ -1,0 +1,17 @@
+{
+ "sent": [
+  {
+   "name": "blk-drilldown_block_capture",
+   "value": {
+    "png": "data:image/png;base64,COMPOSED-1200x1160",
+    "width": 300,
+    "height": 290
+   },
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ],
+ "withoutCaptureExport": [],
+ "hoisted": true
+}

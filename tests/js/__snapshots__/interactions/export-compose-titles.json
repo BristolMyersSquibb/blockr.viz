@@ -1,0 +1,91 @@
+{
+ "done": {
+  "url": "data:image/png;base64,COMPOSED-1200x1254",
+  "w": 400,
+  "h": 418
+ },
+ "lastCapture": "data:image/png;base64,COMPOSED-1200x1254",
+ "canvas": {
+  "width": 1200,
+  "height": 1254,
+  "ops": [
+   [
+    "scale",
+    3,
+    3
+   ],
+   [
+    "fillRect",
+    "#ffffff",
+    0,
+    0,
+    400,
+    418
+   ],
+   [
+    "fillText",
+    "Adverse events",
+    12,
+    12,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#1f2937",
+    "left",
+    "top",
+    1
+   ],
+   [
+    "fillText",
+    "Count of rows by Reported Term",
+    12,
+    34,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#6b7280",
+    "left",
+    "top",
+    1
+   ],
+   [
+    "drawImage",
+    "data:image/png;base64,PANEL0-r3-transparent-[\"toolbox\"]",
+    0,
+    62,
+    400,
+    272
+   ],
+   [
+    "fillText",
+    "Safety population",
+    12,
+    340,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#6b7280",
+    "left",
+    "top",
+    1
+   ],
+   [
+    "fillText",
+    "N = 60 records and a long second line that has to",
+    12,
+    362,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#6b7280",
+    "left",
+    "top",
+    1
+   ],
+   [
+    "fillText",
+    "wrap at the grid width",
+    12,
+    384,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#6b7280",
+    "left",
+    "top",
+    1
+   ]
+  ]
+ },
+ "inputs": []
+}

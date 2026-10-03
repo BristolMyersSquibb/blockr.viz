@@ -1,0 +1,189 @@
+{
+ "done": {
+  "url": "data:image/png;base64,COMPOSED-1600x1252",
+  "w": 800,
+  "h": 626
+ },
+ "canvas": {
+  "width": 1600,
+  "height": 1252,
+  "ops": [
+   [
+    "scale",
+    2,
+    2
+   ],
+   [
+    "fillRect",
+    "#ffffff",
+    0,
+    0,
+    800,
+    626
+   ],
+   [
+    "fillText",
+    "",
+    0,
+    -92,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#6b7280",
+    "center",
+    "top",
+    1
+   ],
+   [
+    "drawImage",
+    "data:image/png;base64,PANEL0-r2-transparent-[\"toolbox\"]",
+    0,
+    26,
+    400,
+    272
+   ],
+   [
+    "fillText",
+    "High Dose",
+    600,
+    8,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#6b7280",
+    "center",
+    "top",
+    1
+   ],
+   [
+    "drawImage",
+    "data:image/png;base64,PANEL1-r2-transparent-[\"toolbox\"]",
+    400,
+    26,
+    400,
+    272
+   ],
+   [
+    "fillText",
+    "Low Dose",
+    200,
+    300,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#6b7280",
+    "center",
+    "top",
+    1
+   ],
+   [
+    "drawImage",
+    "data:image/png;base64,PANEL2-r2-transparent-[\"toolbox\"]",
+    0,
+    318,
+    400,
+    272
+   ],
+   [
+    "fillText",
+    "Placebo",
+    600,
+    300,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#6b7280",
+    "center",
+    "top",
+    1
+   ],
+   [
+    "drawImage",
+    "data:image/png;base64,PANEL3-r2-transparent-[\"toolbox\"]",
+    400,
+    318,
+    400,
+    272
+   ],
+   [
+    "fillText",
+    "AESEV",
+    10,
+    602,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#333",
+    "left",
+    "middle",
+    1
+   ],
+   [
+    "fillRect",
+    "#0072B2",
+    90,
+    597,
+    10,
+    10
+   ],
+   [
+    "fillText",
+    "",
+    104,
+    602,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#333",
+    "left",
+    "middle",
+    1
+   ],
+   [
+    "fillRect",
+    "#D55E00",
+    170,
+    597,
+    10,
+    10
+   ],
+   [
+    "fillText",
+    "MILD",
+    184,
+    602,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#333",
+    "left",
+    "middle",
+    1
+   ],
+   [
+    "fillRect",
+    "#F0E442",
+    250,
+    597,
+    10,
+    10
+   ],
+   [
+    "fillText",
+    "MODERATE",
+    264,
+    602,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#333",
+    "left",
+    "middle",
+    1
+   ],
+   [
+    "fillRect",
+    "#009E73",
+    330,
+    597,
+    10,
+    10
+   ],
+   [
+    "fillText",
+    "SEVERE",
+    344,
+    602,
+    "normal 16px \"Open Sans\", system-ui, sans-serif",
+    "#333",
+    "left",
+    "middle",
+    1
+   ]
+  ]
+ }
+}

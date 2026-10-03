@@ -1,0 +1,25 @@
+{
+ "now": [
+  {
+   "name": "blockr_viz_capture_result",
+   "value": {
+    "req": "tok-3",
+    "error": "SyntaxError:…"
+   },
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ],
+ "later": 1,
+ "hosts": [
+  {
+   "style": "position: fixed; left: -20000px; top: 0px; width: 640px; height: 360px;",
+   "chart": {
+    "id": "blockr-capture-chart-1",
+    "style": "width: 640px; height: 360px;",
+    "cls": "drilldown-chart-container"
+   }
+  }
+ ]
+}
