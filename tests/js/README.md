@@ -12,7 +12,7 @@ message handler. echarts is a fake that records what the chart asks of it
 ```sh
 npm ci
 npm test                      # everything, about 70 s
-SKIP_SCALING=1 npm test       # snapshots only, about 3 s
+SKIP_SCALING=1 npm test       # snapshots only, about 7 s
 node --test tests/js/chart-aggregated.test.js
 ```
 
@@ -43,6 +43,22 @@ payload builders (`dd_col_meta()`, `chart_data_json()`,
 `compute_band_series()`, `compute_smoother_series()`). Rebuild it with
 `Rscript tests/js/fixtures/make-fixtures.R` from the package root, then
 update the snapshots.
+
+## Interactions
+
+The `interactions-*.test.js` files record everything the chart does besides
+drawing, as the reference for a rewrite of `chart.js`: clicks and drill,
+brush, the hover pickers, the gear, the sentence words, state restore,
+lifecycle, the messages R sends, and export. Snapshots are in
+`__snapshots__/interactions/` and update the same way as the drawing ones.
+`interact.js` holds the helpers: a chart opened on a virtual clock
+(`advance(ms)` runs timers, `performance.now()` follows it), click params
+built the way echarts builds them, and the step runner that records, per
+step, the inputs sent, the echarts calls (a full redraw is reduced to its
+series types), the footer and the selection.
+
+`CONTRACT.md` lists every input the chart sends to R and every message it
+handles, with the snapshots that pin each one.
 
 ## Scaling
 
