@@ -106,3 +106,26 @@ test('a container that binds to a message without rows asks for them', () => {
   assert.strictEqual((block.data || []).length, 0);
   env.close();
 });
+
+test('the reply to _ready does not redraw a client that got the push', () => {
+  const env = h.createEnv();
+  const { id } = h.mount(env);
+  assert.strictEqual(env.inputs().filter((i) => i.name === id + '_ready').length, 1);
+  // The push that was in flight when the client announced itself...
+  h.send(env, id, { columns: F.columns, data: F.data, config, dataRev: 4 });
+  const before = draws(env);
+  // ...and R's reply to the announce.
+  env.handlers['drilldown-ready'](env.win.JSON.parse(JSON.stringify({ id, data_rev: 4 })));
+  assert.strictEqual(draws(env), before);
+  assert.deepStrictEqual(needs(env, id), []);
+  env.close();
+});
+
+test('the reply to _ready makes a client without the rows ask for them', () => {
+  const env = h.createEnv();
+  const { id } = h.mount(env);
+  env.handlers['drilldown-ready'](env.win.JSON.parse(JSON.stringify({ id, data_rev: 4 })));
+  assert.strictEqual(needs(env, id).length, 1);
+  assert.strictEqual(needs(env, id)[0].value, 4);
+  env.close();
+});

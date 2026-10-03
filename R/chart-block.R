@@ -1400,11 +1400,17 @@ new_chart_block <- function(
         # chart block UI in the page. On a board whose opening view carries no
         # chart -- a config or population view, which is how CDEx boards open --
         # every chart's startup payload was dropped and nothing re-sent it, so
-        # the chart stayed blank until an unrelated edit re-pumped it. Re-send
-        # the last payload; JS's data_rev guard makes a duplicate a no-op.
+        # the chart stayed blank until an unrelated edit re-pumped it.
+        # The reply is only the rev. A push already in flight reaches the
+        # client before it (one websocket, in order), and a client that got it
+        # does nothing; re-sending the whole message here drew the same picture
+        # a second time. A client without those rows asks through `_need`.
         shiny::observeEvent(input$drilldown_block_ready, {
           if (!is.null(last_push$msg)) {
-            session$sendCustomMessage("drilldown-data", last_push$msg)
+            session$sendCustomMessage("drilldown-ready", list(
+              id = ns("drilldown_block"),
+              data_rev = last_push$msg$data_rev
+            ))
           }
         })
 

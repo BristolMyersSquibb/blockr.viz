@@ -129,3 +129,28 @@ test_that("a capture after a config edit still carries the rows", {
     args = list(x = blk, data = list(data = function() df))
   )
 })
+
+test_that("_ready is answered with the rev, not the whole message", {
+  blk <- new_chart_block(chart_type = "bar", group = "PARAMCD")
+  df <- push_df()
+
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      msgs <- spy_messages(session)
+      session$flushReact()
+      expect_length(msgs(), 1L)
+
+      expr <- session$makeScope("expr")
+      expr$setInputs(drilldown_block_ready = 1)
+      session$flushReact()
+      expect_length(msgs(), 1L)
+      ready <- msgs("drilldown-ready")
+      expect_length(ready, 1L)
+      expect_named(ready[[1L]], c("id", "data_rev"))
+      expect_identical(ready[[1L]]$data_rev, msgs()[[1L]]$data_rev)
+      expect_match(ready[[1L]]$id, "drilldown_block$")
+    },
+    args = list(x = blk, data = list(data = function() df))
+  )
+})
