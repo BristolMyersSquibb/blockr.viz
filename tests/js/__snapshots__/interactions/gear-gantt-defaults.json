@@ -1,0 +1,209 @@
+{
+ "config": {
+  "chart_type": "gantt"
+ },
+ "outline": {
+  "open": true,
+  "tiles": [
+   "bar",
+   "pie",
+   "treemap",
+   "boxplot",
+   "pointrange",
+   "radar",
+   "band",
+   "scatter",
+   "line",
+   "*gantt"
+  ],
+  "sections": [
+   {
+    "title": "Mapping",
+    "rows": [
+     {
+      "role": "x",
+      "label": "X *",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "AVISITN",
+        "placeholder": null,
+        "options": [
+         "USUBJID",
+         "ARM",
+         "SEX",
+         "AVISIT",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "AETERM",
+         "AESEV",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "xend",
+      "label": "X end *",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "interval end…",
+        "placeholder": "interval end…",
+        "options": [
+         "USUBJID",
+         "ARM",
+         "SEX",
+         "AVISIT",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "AETERM",
+         "AESEV",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "y",
+      "label": "Y *",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "USUBJID",
+        "placeholder": null,
+        "options": [
+         "USUBJID",
+         "ARM",
+         "SEX",
+         "AVISIT",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "AETERM",
+         "AESEV",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "add": [
+       "Series",
+       "Color",
+       "Facet",
+       "Label",
+       "Tooltip fields"
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Presentation",
+    "rows": [
+     {
+      "role": "sort_by",
+      "label": "Sort",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "By onset",
+        "placeholder": null,
+        "options": [
+         "By onset",
+         "A–Z",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "sort_dir",
+      "label": "Order",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Descending",
+         "Ascending"
+        ],
+        "selected": "Ascending"
+       }
+      ]
+     },
+     {
+      "role": "count_on",
+      "label": "Group counts",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Off",
+        "placeholder": null,
+        "options": [
+         "Off",
+         "On category axis",
+         "On facet labels",
+         "On axis + facets"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "download",
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Downloads",
+        "checked": false
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Titles",
+    "fold": "closed",
+    "summary": "None",
+    "rows": []
+   },
+   {
+    "title": "Drill-down",
+    "fold": "closed",
+    "summary": "Off",
+    "rows": []
+   },
+   {
+    "title": "Prepare script",
+    "fold": "closed",
+    "summary": "None",
+    "rows": []
+   }
+  ]
+ },
+ "sent": []
+}

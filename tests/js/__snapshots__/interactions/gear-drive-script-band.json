@@ -1,0 +1,624 @@
+{
+ "config": {
+  "script": "top_n <- 5",
+  "ctrl_target": "",
+  "ctrl_table": "",
+  "ctrl_choices": [
+   {
+    "value": "auto",
+    "label": "Automatic (Filter AE)"
+   },
+   {
+    "value": "flt_ae",
+    "label": "Filter AE"
+   }
+  ],
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "auto",
+  "script_inputs": [
+   {
+    "name": "top_n",
+    "key": "sv_top_n",
+    "label": "Top n",
+    "kind": "number",
+    "min": 1,
+    "max": 20
+   },
+   {
+    "name": "arm",
+    "key": "sv_arm",
+    "label": "Arm",
+    "kind": "select",
+    "options": [
+     "Placebo",
+     "Low Dose",
+     "High Dose"
+    ]
+   },
+   {
+    "name": "arms",
+    "key": "sv_arms",
+    "label": "Arms",
+    "kind": "multi",
+    "options": [
+     "Placebo",
+     "Low Dose",
+     "High Dose"
+    ]
+   }
+  ],
+  "sv_top_n": 5,
+  "sv_arm": "Placebo",
+  "sv_arms": [
+   "Placebo"
+  ]
+ },
+ "steps": [
+  {
+   "step": "band: Top n = 7 (change)",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": "top_n <- 5",
+      "sv_top_n": 7,
+      "sv_arm": "Placebo",
+      "sv_arms": [
+       "Placebo"
+      ]
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 10,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "closed | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  + Color, Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (open)",
+    "  [x] Use a prepare script",
+    "  textarea=\"top_n <- 5\""
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "band: Arm = Low Dose",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": "top_n <- 5",
+      "sv_top_n": 7,
+      "sv_arm": "Low Dose",
+      "sv_arms": [
+       "Placebo"
+      ]
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 10,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "closed | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  + Color, Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (open)",
+    "  [x] Use a prepare script",
+    "  textarea=\"top_n <- 5\""
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "band: Arms untick Placebo",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": "top_n <- 5",
+      "sv_top_n": 7,
+      "sv_arm": "Low Dose",
+      "sv_arms": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 10,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "closed | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  + Color, Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (open)",
+    "  [x] Use a prepare script",
+    "  textarea=\"top_n <- 5\""
+   ],
+   "awaitData": false
+  }
+ ]
+}

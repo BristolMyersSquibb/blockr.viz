@@ -1,0 +1,751 @@
+{
+ "config": {
+  "script": "",
+  "ctrl_target": "",
+  "ctrl_table": "",
+  "ctrl_choices": [
+   {
+    "value": "auto",
+    "label": "Automatic (Filter AE)"
+   },
+   {
+    "value": "flt_ae",
+    "label": "Filter AE"
+   }
+  ],
+  "chart_type": "gantt",
+  "x": "ASTDY",
+  "xend": "AENDY",
+  "y": "AETERM",
+  "drill": "auto"
+ },
+ "steps": [
+  {
+   "step": "open the gear",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "gear": [
+    "open | *gantt",
+    "## Mapping",
+    "  x \"X *\" select=\"ASTDY\"",
+    "  xend \"X end *\" select=\"AENDY\"",
+    "  y \"Y *\" select=\"AETERM (Reported Term)\"",
+    "  + Series, Color, Facet, Label, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By onset\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked lane\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select sort_by = A–Z",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "color": "",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "gantt",
+      "x": "ASTDY",
+      "y": "AETERM",
+      "xend": "AENDY",
+      "sort_by": "alpha",
+      "sort_dir": "asc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "custom"
+       ]
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *gantt",
+    "## Mapping",
+    "  x \"X *\" select=\"ASTDY\"",
+    "  xend \"X end *\" select=\"AENDY\"",
+    "  y \"Y *\" select=\"AETERM (Reported Term)\"",
+    "  + Series, Color, Facet, Label, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked lane\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "segment sort_dir = Descending",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "color": "",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "gantt",
+      "x": "ASTDY",
+      "y": "AETERM",
+      "xend": "AENDY",
+      "sort_by": "alpha",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "custom"
+       ]
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *gantt",
+    "## Mapping",
+    "  x \"X *\" select=\"ASTDY\"",
+    "  xend \"X end *\" select=\"AENDY\"",
+    "  y \"Y *\" select=\"AETERM (Reported Term)\"",
+    "  + Series, Color, Facet, Label, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked lane\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select xend = ADY",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "color": "",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "gantt",
+      "x": "ASTDY",
+      "y": "AETERM",
+      "xend": "ADY",
+      "sort_by": "alpha",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "range",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "custom"
+       ]
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *gantt",
+    "## Mapping",
+    "  x \"X *\" select=\"ASTDY\"",
+    "  xend \"X end *\" select=\"ADY (Analysis Relative Day)\"",
+    "  y \"Y *\" select=\"AETERM (Reported Term)\"",
+    "  + Series, Color, Facet, Label, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked lane\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "add mapping Label",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    }
+   ],
+   "gear": [
+    "open | *gantt",
+    "## Mapping",
+    "  x \"X *\" select=\"ASTDY\"",
+    "  xend \"X end *\" select=\"ADY (Analysis Relative Day)\"",
+    "  y \"Y *\" select=\"AETERM (Reported Term)\"",
+    "  label \"Label\" select=\"(none)\" (x)",
+    "  + Series, Color, Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked lane\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "advance 0 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *gantt",
+    "## Mapping",
+    "  x \"X *\" select=\"ASTDY\"",
+    "  xend \"X end *\" select=\"ADY (Analysis Relative Day)\"",
+    "  y \"Y *\" select=\"AETERM (Reported Term)\"",
+    "  label \"Label\" select=\"(none)\" (x)",
+    "  + Series, Color, Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked lane\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select label = AESEV",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "color": "",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "gantt",
+      "x": "ASTDY",
+      "y": "AETERM",
+      "xend": "ADY",
+      "sort_by": "alpha",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "AESEV",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "range",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "custom"
+       ]
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *gantt",
+    "## Mapping",
+    "  x \"X *\" select=\"ASTDY\"",
+    "  xend \"X end *\" select=\"ADY (Analysis Relative Day)\"",
+    "  y \"Y *\" select=\"AETERM (Reported Term)\"",
+    "  label \"Label\" select=\"AESEV\" (x)",
+    "  + Series, Color, Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked lane\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  }
+ ]
+}

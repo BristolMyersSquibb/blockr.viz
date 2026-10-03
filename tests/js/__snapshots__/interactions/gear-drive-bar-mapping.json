@@ -1,0 +1,3600 @@
+{
+ "config": {
+  "script": "",
+  "ctrl_target": "",
+  "ctrl_table": "",
+  "ctrl_choices": [
+   {
+    "value": "auto",
+    "label": "Automatic (Filter AE)"
+   },
+   {
+    "value": "flt_ae",
+    "label": "Filter AE"
+   }
+  ],
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "auto",
+  "color": "AESEV"
+ },
+ "steps": [
+  {
+   "step": "open the gear",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select group = AVISIT",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "AESEV",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar",
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 4,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "remove color",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  + Color, Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "advance 0 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  + Color, Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "add mapping Facet",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  facet \"Facet\" select=\"(none)\" (x)",
+    "  + Color, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "advance 0 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  facet \"Facet\" select=\"(none)\" (x)",
+    "  + Color, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select facet = SEX",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "",
+      "facet": "SEX",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 6
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 6
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  facet \"Facet\" select=\"SEX\" (x)",
+    "  + Color, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "R echoes the config",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 6
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 6
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  facet \"Facet\" select=\"SEX\" (x)",
+    "  + Color, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  facet_scales \"Panel scales\" select=\"Shared across panels\"",
+    "  facet_cols \"Panel columns\" select=\"Auto (fits the width)\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select facet_cols = 1 per row",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "",
+      "facet": "SEX",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "1",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 6
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 6
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  facet \"Facet\" select=\"SEX\" (x)",
+    "  + Color, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  facet_scales \"Panel scales\" select=\"Shared across panels\"",
+    "  facet_cols \"Panel columns\" select=\"1 per row\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select facet_scales = Free per panel",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "",
+      "facet": "SEX",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "free",
+      "facet_cols": "1",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  facet \"Facet\" select=\"SEX\" (x)",
+    "  + Color, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  facet_scales \"Panel scales\" select=\"Free per panel\"",
+    "  facet_cols \"Panel columns\" select=\"1 per row\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select func = Mean",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "",
+      "facet": "SEX",
+      "value": "",
+      "func": "mean",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "free",
+      "facet_cols": "1",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Mean\"",
+    "  value \"Of *\" select=\"column to aggregate…\"",
+    "  facet \"Facet\" select=\"SEX\" (x)",
+    "  + Color, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  facet_scales \"Panel scales\" select=\"Free per panel\"",
+    "  facet_cols \"Panel columns\" select=\"1 per row\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "R echoes the config",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Mean\"",
+    "  value \"Of *\" select=\"column to aggregate…\"",
+    "  facet \"Facet\" select=\"SEX\" (x)",
+    "  + Color, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  facet_scales \"Panel scales\" select=\"Free per panel\"",
+    "  facet_cols \"Panel columns\" select=\"1 per row\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select value = AVAL",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "",
+      "facet": "SEX",
+      "value": "AVAL",
+      "func": "mean",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "free",
+      "facet_cols": "1",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 32.5,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 30.98,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 27.61,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 25.44,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 23.87,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 39,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 36.98,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 33.61,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 31.84,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 29.87,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Mean\"",
+    "  value \"Of *\" select=\"AVAL (Analysis Value)\"",
+    "  facet \"Facet\" select=\"SEX\" (x)",
+    "  + Color, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  facet_scales \"Panel scales\" select=\"Free per panel\"",
+    "  facet_cols \"Panel columns\" select=\"1 per row\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select func = % of panel",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "",
+      "facet": "SEX",
+      "value": "AVAL",
+      "func": "pct_distinct",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "free",
+      "facet_cols": "1",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 0.2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 0.206897,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.206897,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.206897,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.206897,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.206897,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"% of panel\"",
+    "  value \"Of *\" select=\"AVAL (Analysis Value)\"",
+    "  pct_of \"Percent within\" select=\"Facet\"",
+    "  facet \"Facet\" select=\"SEX\" (x)",
+    "  + Color, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  facet_scales \"Panel scales\" select=\"Free per panel\"",
+    "  facet_cols \"Panel columns\" select=\"1 per row\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "R echoes the config",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 0.2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 0.206897,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.206897,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.206897,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.206897,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.206897,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"% of panel\"",
+    "  value \"Of *\" select=\"AVAL (Analysis Value)\"",
+    "  pct_of \"Percent within\" select=\"Facet\"",
+    "  facet \"Facet\" select=\"SEX\" (x)",
+    "  + Color, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  facet_scales \"Panel scales\" select=\"Free per panel\"",
+    "  facet_cols \"Panel columns\" select=\"1 per row\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select pct_of = Group",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "",
+      "facet": "SEX",
+      "value": "AVAL",
+      "func": "pct_distinct",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "group",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "free",
+      "facet_cols": "1",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 0.545455,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.5,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.5,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.5,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.5,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 0.545455,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.5,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.5,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.5,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.5,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"% of panel\"",
+    "  value \"Of *\" select=\"AVAL (Analysis Value)\"",
+    "  pct_of \"Percent within\" select=\"Group\"",
+    "  facet \"Facet\" select=\"SEX\" (x)",
+    "  + Color, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  facet_scales \"Panel scales\" select=\"Free per panel\"",
+    "  facet_cols \"Panel columns\" select=\"1 per row\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "add mapping Tooltip fields",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"% of panel\"",
+    "  value \"Of *\" select=\"AVAL (Analysis Value)\"",
+    "  pct_of \"Percent within\" select=\"Group\"",
+    "  facet \"Facet\" select=\"SEX\" (x)",
+    "  tt_fields \"Tooltip fields\" multi[] (x)",
+    "  + Color",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  facet_scales \"Panel scales\" select=\"Free per panel\"",
+    "  facet_cols \"Panel columns\" select=\"1 per row\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "advance 0 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AVISIT\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"% of panel\"",
+    "  value \"Of *\" select=\"AVAL (Analysis Value)\"",
+    "  pct_of \"Percent within\" select=\"Group\"",
+    "  facet \"Facet\" select=\"SEX\" (x)",
+    "  tt_fields \"Tooltip fields\" multi[] (x)",
+    "  + Color",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  facet_scales \"Panel scales\" select=\"Free per panel\"",
+    "  facet_cols \"Panel columns\" select=\"1 per row\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  }
+ ]
+}

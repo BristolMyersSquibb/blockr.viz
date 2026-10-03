@@ -1,0 +1,1444 @@
+{
+ "config": {
+  "script": "",
+  "ctrl_target": "",
+  "ctrl_table": "",
+  "ctrl_choices": [
+   {
+    "value": "auto",
+    "label": "Automatic (Filter AE)"
+   },
+   {
+    "value": "flt_ae",
+    "label": "Filter AE"
+   }
+  ],
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "auto",
+  "color": "AESEV"
+ },
+ "steps": [
+  {
+   "step": "open the gear",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "type tile pie",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "pie",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "pie"
+       ]
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "Upper respiratory tract infection",
+            "value": 10,
+            "n": 10,
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Nausea",
+            "value": 10,
+            "n": 10,
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Headache",
+            "value": 10,
+            "n": 10,
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Rash",
+            "value": 9,
+            "n": 9,
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Fatigue",
+            "value": 9,
+            "n": 9,
+            "itemStyle": {
+             "color": "#56B4E9",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Dizziness",
+            "value": 9,
+            "n": 9,
+            "itemStyle": {
+             "color": "#E69F00",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "",
+            "value": 3,
+            "n": 3,
+            "itemStyle": {
+             "color": "#CC79A7",
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *pie",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  + Facet",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "advance 0 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *pie",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  + Facet",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "type tile boxplot",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": "",
+      "func": "mean",
+      "chart_type": "boxplot",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *boxplot",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  value \"Value *\" select=\"column to aggregate…\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  summary \"Box\" select=\"Median · Q1–Q3\"",
+    "  whiskers \"Whiskers\" select=\"Tukey (1.5×IQR)\"",
+    "  box_points \"Points\" seg[*None|Outliers]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "advance 0 ms",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *boxplot",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  value \"Value *\" select=\"column to aggregate…\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  summary \"Box\" select=\"Median · Q1–Q3\"",
+    "  whiskers \"Whiskers\" select=\"Tukey (1.5×IQR)\"",
+    "  box_points \"Points\" seg[*None|Outliers]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "type tile scatter",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "range",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "",
+      "color": "AESEV",
+      "facet": "",
+      "value": "",
+      "func": "mean",
+      "chart_type": "scatter",
+      "x": "AVISITN",
+      "y": "ADY",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "scatter",
+        "scatter",
+        "scatter",
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "brush",
+        "brushOption": {
+         "brushType": "rect",
+         "brushMode": "single"
+        }
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *scatter",
+    "## Mapping",
+    "  x \"X *\" select=\"AVISITN\"",
+    "  y \"Y *\" select=\"ADY (Analysis Relative Day)\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Series, Facet, Tooltip fields",
+    "## Presentation",
+    "  smoother \"Smoother\" select=\"none\"",
+    "  identity_line [ ] Identity line (y = x)",
+    "  x_lines \"Vertical\" text=\"\"",
+    "  value_lines \"Horizontal\" text=\"\"",
+    "  line_width_mult \"Line width\" slider=\"1\"",
+    "  dot_size_mult \"Dot size\" slider=\"1\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the selected point\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "advance 0 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *scatter",
+    "## Mapping",
+    "  x \"X *\" select=\"AVISITN\"",
+    "  y \"Y *\" select=\"ADY (Analysis Relative Day)\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Series, Facet, Tooltip fields",
+    "## Presentation",
+    "  smoother \"Smoother\" select=\"none\"",
+    "  identity_line [ ] Identity line (y = x)",
+    "  x_lines \"Vertical\" text=\"\"",
+    "  value_lines \"Horizontal\" text=\"\"",
+    "  line_width_mult \"Line width\" slider=\"1\"",
+    "  dot_size_mult \"Dot size\" slider=\"1\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the selected point\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "type tile gantt",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "range",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "",
+      "color": "AESEV",
+      "facet": "",
+      "value": "",
+      "func": "mean",
+      "chart_type": "gantt",
+      "x": "AVISITN",
+      "y": "ADY",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "custom",
+        "custom",
+        "custom",
+        "custom"
+       ]
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *gantt",
+    "## Mapping",
+    "  x \"X *\" select=\"AVISITN\"",
+    "  xend \"X end *\" select=\"interval end…\"",
+    "  y \"Y *\" select=\"ADY (Analysis Relative Day)\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Series, Facet, Label, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked lane\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "advance 0 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *gantt",
+    "## Mapping",
+    "  x \"X *\" select=\"AVISITN\"",
+    "  xend \"X end *\" select=\"interval end…\"",
+    "  y \"Y *\" select=\"ADY (Analysis Relative Day)\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Series, Facet, Label, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked lane\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "type tile bar",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": "",
+      "func": "mean",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar",
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Mean\"",
+    "  value \"Of *\" select=\"column to aggregate…\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "advance 0 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Mean\"",
+    "  value \"Of *\" select=\"column to aggregate…\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  }
+ ]
+}

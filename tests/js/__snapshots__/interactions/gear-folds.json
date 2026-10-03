@@ -1,0 +1,511 @@
+{
+ "before": {
+  "open": true,
+  "tiles": [
+   "*bar",
+   "pie",
+   "treemap",
+   "boxplot",
+   "pointrange",
+   "radar",
+   "band",
+   "scatter",
+   "line",
+   "gantt"
+  ],
+  "sections": [
+   {
+    "title": "Mapping",
+    "rows": [
+     {
+      "role": "group",
+      "label": "Group *",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "AETERM (Reported Term)",
+        "placeholder": null
+       }
+      ]
+     },
+     {
+      "role": "na_group",
+      "label": "Missing group",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Own category",
+        "placeholder": null
+       }
+      ]
+     },
+     {
+      "role": "func",
+      "label": "Aggregate",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Count",
+        "placeholder": null
+       }
+      ]
+     },
+     {
+      "add": [
+       "Color",
+       "Facet",
+       "Tooltip fields"
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Presentation",
+    "rows": [
+     {
+      "role": "sort_by",
+      "label": "Sort",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "By value",
+        "placeholder": null
+       }
+      ]
+     },
+     {
+      "role": "sort_dir",
+      "label": "Order",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Descending",
+         "Ascending"
+        ],
+        "selected": "Descending"
+       }
+      ]
+     },
+     {
+      "role": "orientation",
+      "label": "Orientation",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Horizontal",
+         "Vertical"
+        ],
+        "selected": "Horizontal"
+       }
+      ]
+     },
+     {
+      "role": "bar_mode",
+      "label": "Stacking",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Stacked",
+         "Grouped",
+         "100%"
+        ],
+        "selected": "Stacked"
+       }
+      ]
+     },
+     {
+      "role": "value_labels",
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Show values",
+        "checked": false
+       }
+      ]
+     },
+     {
+      "role": "baseline",
+      "label": "Bars",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Standard",
+         "Waterfall"
+        ],
+        "selected": "Standard"
+       }
+      ]
+     },
+     {
+      "role": "value_lines",
+      "label": "Reference lines",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. 2 or 1, 4"
+       }
+      ]
+     },
+     {
+      "role": "count_on",
+      "label": "Group counts",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Off",
+        "placeholder": null
+       }
+      ]
+     },
+     {
+      "role": "download",
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Downloads",
+        "checked": false
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Titles",
+    "fold": "closed",
+    "summary": "AEs by Placebo",
+    "rows": []
+   },
+   {
+    "title": "Drill-down",
+    "fold": "open",
+    "rows": [
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Filter downstream on a click",
+        "checked": true
+       }
+      ]
+     },
+     {
+      "label": "Filter on",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Auto, the clicked group",
+        "placeholder": null
+       }
+      ]
+     },
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Send to filter (beta)",
+        "checked": false
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Prepare script",
+    "fold": "open",
+    "rows": [
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Use a prepare script",
+        "checked": true
+       }
+      ]
+     },
+     {
+      "controls": [
+       {
+        "kind": "textarea",
+        "value": "data <- data\n# two lines"
+       }
+      ],
+      "help": [
+       "No controls declared."
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "after": {
+  "open": true,
+  "tiles": [
+   "*bar",
+   "pie",
+   "treemap",
+   "boxplot",
+   "pointrange",
+   "radar",
+   "band",
+   "scatter",
+   "line",
+   "gantt"
+  ],
+  "sections": [
+   {
+    "title": "Mapping",
+    "rows": [
+     {
+      "role": "group",
+      "label": "Group *",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "AETERM (Reported Term)",
+        "placeholder": null
+       }
+      ]
+     },
+     {
+      "role": "na_group",
+      "label": "Missing group",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Own category",
+        "placeholder": null
+       }
+      ]
+     },
+     {
+      "role": "func",
+      "label": "Aggregate",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Count",
+        "placeholder": null
+       }
+      ]
+     },
+     {
+      "add": [
+       "Color",
+       "Facet",
+       "Tooltip fields"
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Presentation",
+    "rows": [
+     {
+      "role": "sort_by",
+      "label": "Sort",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "By value",
+        "placeholder": null
+       }
+      ]
+     },
+     {
+      "role": "sort_dir",
+      "label": "Order",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Descending",
+         "Ascending"
+        ],
+        "selected": "Descending"
+       }
+      ]
+     },
+     {
+      "role": "orientation",
+      "label": "Orientation",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Horizontal",
+         "Vertical"
+        ],
+        "selected": "Horizontal"
+       }
+      ]
+     },
+     {
+      "role": "bar_mode",
+      "label": "Stacking",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Stacked",
+         "Grouped",
+         "100%"
+        ],
+        "selected": "Stacked"
+       }
+      ]
+     },
+     {
+      "role": "value_labels",
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Show values",
+        "checked": false
+       }
+      ]
+     },
+     {
+      "role": "baseline",
+      "label": "Bars",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Standard",
+         "Waterfall"
+        ],
+        "selected": "Standard"
+       }
+      ]
+     },
+     {
+      "role": "value_lines",
+      "label": "Reference lines",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. 2 or 1, 4"
+       }
+      ]
+     },
+     {
+      "role": "count_on",
+      "label": "Group counts",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Off",
+        "placeholder": null
+       }
+      ]
+     },
+     {
+      "role": "download",
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Downloads",
+        "checked": false
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Titles",
+    "fold": "open",
+    "rows": [
+     {
+      "role": "title",
+      "label": "Title",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "AEs by {ARM}",
+        "placeholder": "e.g. AEs by {ARM}"
+       }
+      ],
+      "help": [
+       "Type @ for a setting or a value"
+      ]
+     },
+     {
+      "role": "subtitle",
+      "label": "Subtitle",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "Count of rows by Reported Term",
+        "placeholder": "e.g. {func} of {label(@y)}[, by {@color}]"
+       }
+      ],
+      "help": [
+       "Type @ for a setting or a value. A setting becomes a control on the block. [ ] drops its clause when the setting is empty."
+      ]
+     },
+     {
+      "role": "caption",
+      "label": "Caption",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. {filters} or N = {n} records"
+       }
+      ],
+      "help": [
+       "Type @ for a setting or a value"
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Drill-down",
+    "fold": "open",
+    "rows": [
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Filter downstream on a click",
+        "checked": true
+       }
+      ]
+     },
+     {
+      "label": "Filter on",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Auto, the clicked group",
+        "placeholder": null
+       }
+      ]
+     },
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Send to filter (beta)",
+        "checked": false
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Prepare script",
+    "fold": "closed",
+    "summary": "2 lines",
+    "rows": []
+   }
+  ]
+ },
+ "sent": []
+}

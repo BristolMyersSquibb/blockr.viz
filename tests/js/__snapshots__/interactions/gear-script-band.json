@@ -1,0 +1,69 @@
+{
+ "band": {
+  "shown": true,
+  "rows": [
+   {
+    "role": "sv_top_n",
+    "label": "Top n",
+    "controls": [
+     {
+      "kind": "number",
+      "value": "5",
+      "placeholder": null
+     }
+    ]
+   },
+   {
+    "role": "sv_arm",
+    "label": "Arm",
+    "controls": [
+     {
+      "kind": "select",
+      "value": "Placebo",
+      "placeholder": null,
+      "options": [
+       "Placebo",
+       "Low Dose",
+       "High Dose"
+      ]
+     }
+    ]
+   },
+   {
+    "role": "sv_arms",
+    "label": "Arms",
+    "controls": [
+     {
+      "kind": "multi",
+      "value": [
+       "Placebo"
+      ],
+      "placeholder": null,
+      "options": [
+       "Placebo",
+       "Low Dose",
+       "High Dose"
+      ]
+     }
+    ]
+   },
+   {
+    "role": "sv_flag",
+    "controls": [
+     {
+      "kind": "checkbox",
+      "label": "Serious only",
+      "checked": false
+     }
+    ]
+   },
+   {
+    "label": "Bad",
+    "controls": [],
+    "help": [
+     "no such level"
+    ]
+   }
+  ]
+ }
+}

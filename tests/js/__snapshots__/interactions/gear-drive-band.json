@@ -1,0 +1,1097 @@
+{
+ "config": {
+  "script": "",
+  "ctrl_target": "",
+  "ctrl_table": "",
+  "ctrl_choices": [
+   {
+    "value": "auto",
+    "label": "Automatic (Filter AE)"
+   },
+   {
+    "value": "flt_ae",
+    "label": "Filter AE"
+   }
+  ],
+  "chart_type": "band",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "color": "ARM",
+  "band_series": {
+   "__all__": {
+    "High Dose": {
+     "x": [
+      0,
+      7.909090909090909,
+      15.81818181818182,
+      23.72727272727273,
+      31.63636363636364,
+      39.54545454545455,
+      47.45454545454545,
+      55.36363636363637,
+      63.27272727272727,
+      71.18181818181819,
+      79.0909090909091,
+      87
+     ],
+     "center": [
+      29.87,
+      29.305,
+      29.305,
+      31.175,
+      31.175,
+      32.11,
+      35.48,
+      35.48,
+      35.48,
+      35.48,
+      37,
+      37
+     ],
+     "lo": [
+      27.12,
+      26.0225,
+      26.6425,
+      27.8925,
+      29.4575,
+      29.61,
+      32.98,
+      32.98,
+      32.98,
+      32,
+      34.5,
+      34.5
+     ],
+     "hi": [
+      31.8375,
+      31.0875,
+      31.8375,
+      32.9575,
+      32.86,
+      33.61,
+      36.98,
+      36.98,
+      36.98,
+      38.48,
+      38.5,
+      38.5
+     ],
+     "n": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3
+     ],
+     "hw": [
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15
+     ],
+     "olo": [
+      24.87,
+      24.305,
+      24.679,
+      26.175,
+      28.049,
+      28.11,
+      31.48,
+      31.48,
+      31.48,
+      31.088,
+      33,
+      33
+     ],
+     "ohi": [
+      32.679,
+      32.305,
+      33.801,
+      34.175,
+      34.21,
+      34.51,
+      37.88,
+      37.88,
+      37.88,
+      39.392,
+      39.4,
+      39.4
+     ]
+    },
+    "Low Dose": {
+     "x": [
+      0,
+      7.909090909090909,
+      15.81818181818182,
+      23.72727272727273,
+      31.63636363636364,
+      39.54545454545455,
+      47.45454545454545,
+      55.36363636363637,
+      63.27272727272727,
+      71.18181818181819,
+      79.0909090909091,
+      87
+     ],
+     "center": [
+      26.24,
+      26.24,
+      28.11,
+      28.11,
+      33.11,
+      30.61,
+      33.98,
+      33.98,
+      33.98,
+      34.73999999999999,
+      35.5,
+      35.5
+     ],
+     "lo": [
+      24.37,
+      23.805,
+      25.11,
+      25.675,
+      28.11,
+      27.36,
+      30.73,
+      30.73,
+      30.73,
+      30.75,
+      32.25,
+      32.25
+     ],
+     "hi": [
+      29.37,
+      30.87,
+      32.37,
+      33.675,
+      34.24,
+      33.86,
+      37.23,
+      37.23,
+      37.23,
+      37.62,
+      38.75,
+      38.75
+     ],
+     "n": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "hw": [
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15
+     ],
+     "olo": [
+      22.57,
+      22.492,
+      22.866,
+      24.362,
+      26.31,
+      26.01,
+      29.38,
+      29.38,
+      29.38,
+      29.24,
+      30.9,
+      30.9
+     ],
+     "ohi": [
+      31.16999999999999,
+      33.11799999999999,
+      33.336,
+      34.988,
+      35.36199999999999,
+      35.21,
+      38.58,
+      38.58,
+      38.58,
+      38.73999999999999,
+      40.1,
+      40.1
+     ]
+    },
+    "Placebo": {
+     "x": [
+      0,
+      7.909090909090909,
+      15.81818181818182,
+      23.72727272727273,
+      31.63636363636364,
+      39.54545454545455,
+      47.45454545454545,
+      55.36363636363637,
+      63.27272727272727,
+      71.18181818181819,
+      79.0909090909091,
+      87
+     ],
+     "center": [
+      26.37,
+      27.37,
+      29.11,
+      29.24,
+      31.11,
+      30.11,
+      33.48,
+      33.48,
+      33.48,
+      34,
+      34,
+      34
+     ],
+     "lo": [
+      24.5225,
+      24.805,
+      26.11,
+      27.61,
+      29.11,
+      28.36,
+      31.73,
+      31.73,
+      31.73,
+      32.48,
+      32.5,
+      32.5
+     ],
+     "hi": [
+      28.7725,
+      29.805,
+      30.37,
+      31.675,
+      32.24,
+      31.86,
+      35.23,
+      35.23,
+      35.23,
+      34.48,
+      36.5,
+      36.5
+     ],
+     "n": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      3,
+      3
+     ],
+     "hw": [
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15
+     ],
+     "olo": [
+      23.305,
+      23.492,
+      25.144,
+      25.362,
+      27.31,
+      27.01,
+      30.38,
+      30.38,
+      30.38,
+      31.592,
+      31.6,
+      31.6
+     ],
+     "ohi": [
+      29.805,
+      31.118,
+      31.336,
+      32.988,
+      33.36199999999999,
+      33.21,
+      36.58,
+      36.58,
+      36.58,
+      36.27999999999999,
+      38,
+      38
+     ]
+    }
+   }
+  },
+  "whiskers": "p10_p90"
+ },
+ "steps": [
+  {
+   "step": "open the gear",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "gear": [
+    "open | *band",
+    "## Mapping",
+    "  x \"Timeline *\" select=\"ADY (Analysis Relative Day)\"",
+    "  y \"Value *\" select=\"AVAL (Analysis Value)\"",
+    "  color \"Color\" select=\"ARM (Planned Arm)\" (x)",
+    "  + Series, Facet, Tooltip fields",
+    "## Presentation",
+    "  band_window \"Window\" select=\"Adaptive (by subjects)\"",
+    "  band_size \"Subjects per window\" text=\"\"",
+    "  band_min_n \"Cut below n\" text=\"\"",
+    "  band_id \"Subject id\" select=\"(none)\"",
+    "  summary \"Interval\" select=\"Median · Q1–Q3\"",
+    "  whiskers \"Whiskers\" select=\"10th–90th percentile\"",
+    "  box_points \"Points\" seg[*None|Outliers]",
+    "  ref_hi \"Upper limit\" select=\"(none)\"",
+    "  ref_lo \"Lower limit\" select=\"(none)\"",
+    "  line_width_mult \"Line width\" slider=\"1\"",
+    "  dot_size_mult \"Dot size\" slider=\"1\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the selected point\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select band_window = Fixed (x units)",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "color": "ARM",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "band",
+      "x": "ADY",
+      "y": "AVAL",
+      "xend": "",
+      "sort_by": "",
+      "sort_dir": "asc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "fixed",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "custom",
+        "line",
+        "line",
+        "custom",
+        "line",
+        "line",
+        "custom",
+        "line",
+        "line"
+       ]
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    }
+   ],
+   "gear": [
+    "open | *band",
+    "## Mapping",
+    "  x \"Timeline *\" select=\"ADY (Analysis Relative Day)\"",
+    "  y \"Value *\" select=\"AVAL (Analysis Value)\"",
+    "  color \"Color\" select=\"ARM (Planned Arm)\" (x)",
+    "  + Series, Facet, Tooltip fields",
+    "## Presentation",
+    "  band_window \"Window\" select=\"Fixed (x units)\"",
+    "  band_size \"Half-width (x units)\" text=\"\"",
+    "  band_min_n \"Cut below n\" text=\"\"",
+    "  band_id \"Subject id\" select=\"(none)\"",
+    "  summary \"Interval\" select=\"Median · Q1–Q3\"",
+    "  whiskers \"Whiskers\" select=\"10th–90th percentile\"",
+    "  box_points \"Points\" seg[*None|Outliers]",
+    "  ref_hi \"Upper limit\" select=\"(none)\"",
+    "  ref_lo \"Lower limit\" select=\"(none)\"",
+    "  line_width_mult \"Line width\" slider=\"1\"",
+    "  dot_size_mult \"Dot size\" slider=\"1\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the selected point\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "advance 0 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *band",
+    "## Mapping",
+    "  x \"Timeline *\" select=\"ADY (Analysis Relative Day)\"",
+    "  y \"Value *\" select=\"AVAL (Analysis Value)\"",
+    "  color \"Color\" select=\"ARM (Planned Arm)\" (x)",
+    "  + Series, Facet, Tooltip fields",
+    "## Presentation",
+    "  band_window \"Window\" select=\"Fixed (x units)\"",
+    "  band_size \"Half-width (x units)\" text=\"\"",
+    "  band_min_n \"Cut below n\" text=\"\"",
+    "  band_id \"Subject id\" select=\"(none)\"",
+    "  summary \"Interval\" select=\"Median · Q1–Q3\"",
+    "  whiskers \"Whiskers\" select=\"10th–90th percentile\"",
+    "  box_points \"Points\" seg[*None|Outliers]",
+    "  ref_hi \"Upper limit\" select=\"(none)\"",
+    "  ref_lo \"Lower limit\" select=\"(none)\"",
+    "  line_width_mult \"Line width\" slider=\"1\"",
+    "  dot_size_mult \"Dot size\" slider=\"1\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the selected point\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "type band_size = \"30\" + Enter",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "color": "ARM",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "band",
+      "x": "ADY",
+      "y": "AVAL",
+      "xend": "",
+      "sort_by": "",
+      "sort_dir": "asc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "fixed",
+      "band_size": "30",
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "custom",
+        "line",
+        "line",
+        "custom",
+        "line",
+        "line",
+        "custom",
+        "line",
+        "line"
+       ]
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *band",
+    "## Mapping",
+    "  x \"Timeline *\" select=\"ADY (Analysis Relative Day)\"",
+    "  y \"Value *\" select=\"AVAL (Analysis Value)\"",
+    "  color \"Color\" select=\"ARM (Planned Arm)\" (x)",
+    "  + Series, Facet, Tooltip fields",
+    "## Presentation",
+    "  band_window \"Window\" select=\"Fixed (x units)\"",
+    "  band_size \"Half-width (x units)\" text=\"30\"",
+    "  band_min_n \"Cut below n\" text=\"\"",
+    "  band_id \"Subject id\" select=\"(none)\"",
+    "  summary \"Interval\" select=\"Median · Q1–Q3\"",
+    "  whiskers \"Whiskers\" select=\"10th–90th percentile\"",
+    "  box_points \"Points\" seg[*None|Outliers]",
+    "  ref_hi \"Upper limit\" select=\"(none)\"",
+    "  ref_lo \"Lower limit\" select=\"(none)\"",
+    "  line_width_mult \"Line width\" slider=\"1\"",
+    "  dot_size_mult \"Dot size\" slider=\"1\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the selected point\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "type band_min_n = \"5\" + Enter",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "color": "ARM",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "band",
+      "x": "ADY",
+      "y": "AVAL",
+      "xend": "",
+      "sort_by": "",
+      "sort_dir": "asc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "fixed",
+      "band_size": "30",
+      "band_min_n": "5",
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "custom",
+        "line",
+        "line",
+        "custom",
+        "line",
+        "line",
+        "custom",
+        "line",
+        "line"
+       ]
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *band",
+    "## Mapping",
+    "  x \"Timeline *\" select=\"ADY (Analysis Relative Day)\"",
+    "  y \"Value *\" select=\"AVAL (Analysis Value)\"",
+    "  color \"Color\" select=\"ARM (Planned Arm)\" (x)",
+    "  + Series, Facet, Tooltip fields",
+    "## Presentation",
+    "  band_window \"Window\" select=\"Fixed (x units)\"",
+    "  band_size \"Half-width (x units)\" text=\"30\"",
+    "  band_min_n \"Cut below n\" text=\"5\"",
+    "  band_id \"Subject id\" select=\"(none)\"",
+    "  summary \"Interval\" select=\"Median · Q1–Q3\"",
+    "  whiskers \"Whiskers\" select=\"10th–90th percentile\"",
+    "  box_points \"Points\" seg[*None|Outliers]",
+    "  ref_hi \"Upper limit\" select=\"(none)\"",
+    "  ref_lo \"Lower limit\" select=\"(none)\"",
+    "  line_width_mult \"Line width\" slider=\"1\"",
+    "  dot_size_mult \"Dot size\" slider=\"1\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the selected point\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select ref_hi = HI",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "color": "ARM",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "band",
+      "x": "ADY",
+      "y": "AVAL",
+      "xend": "",
+      "sort_by": "",
+      "sort_dir": "asc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "fixed",
+      "band_size": "30",
+      "band_min_n": "5",
+      "band_id": "",
+      "ref_hi": "HI",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "range",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "custom",
+        "line",
+        "line",
+        "custom",
+        "line",
+        "line",
+        "custom",
+        "line",
+        "line"
+       ]
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *band",
+    "## Mapping",
+    "  x \"Timeline *\" select=\"ADY (Analysis Relative Day)\"",
+    "  y \"Value *\" select=\"AVAL (Analysis Value)\"",
+    "  color \"Color\" select=\"ARM (Planned Arm)\" (x)",
+    "  + Series, Facet, Tooltip fields",
+    "## Presentation",
+    "  band_window \"Window\" select=\"Fixed (x units)\"",
+    "  band_size \"Half-width (x units)\" text=\"30\"",
+    "  band_min_n \"Cut below n\" text=\"5\"",
+    "  band_id \"Subject id\" select=\"(none)\"",
+    "  summary \"Interval\" select=\"Median · Q1–Q3\"",
+    "  whiskers \"Whiskers\" select=\"10th–90th percentile\"",
+    "  box_points \"Points\" seg[*None|Outliers]",
+    "  ref_hi \"Upper limit\" select=\"HI\"",
+    "  ref_lo \"Lower limit\" select=\"(none)\"",
+    "  line_width_mult \"Line width\" slider=\"1\"",
+    "  dot_size_mult \"Dot size\" slider=\"1\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the selected point\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  }
+ ]
+}

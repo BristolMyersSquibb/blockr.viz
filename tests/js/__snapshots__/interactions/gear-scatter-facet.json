@@ -1,0 +1,350 @@
+{
+ "config": {
+  "chart_type": "scatter",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "facet": "SEX",
+  "facet_scales": "free_y",
+  "count_on": "facet",
+  "count_col": "USUBJID"
+ },
+ "outline": {
+  "open": true,
+  "tiles": [
+   "bar",
+   "pie",
+   "treemap",
+   "boxplot",
+   "pointrange",
+   "radar",
+   "band",
+   "*scatter",
+   "line",
+   "gantt"
+  ],
+  "sections": [
+   {
+    "title": "Mapping",
+    "rows": [
+     {
+      "role": "x",
+      "label": "X *",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "ADY (Analysis Relative Day)",
+        "placeholder": null,
+        "options": [
+         "USUBJID",
+         "ARM",
+         "SEX",
+         "AVISIT",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "AETERM",
+         "AESEV",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "y",
+      "label": "Y *",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "AVAL (Analysis Value)",
+        "placeholder": null,
+        "options": [
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "facet",
+      "label": "Facet",
+      "removable": true,
+      "controls": [
+       {
+        "kind": "select",
+        "value": "SEX",
+        "placeholder": null,
+        "options": [
+         "(none)",
+         "ARM",
+         "SEX",
+         "AVISIT",
+         "AVISITN",
+         "AETERM",
+         "AESEV",
+         "ANRHI"
+        ]
+       }
+      ]
+     },
+     {
+      "add": [
+       "Series",
+       "Color",
+       "Tooltip fields"
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Presentation",
+    "rows": [
+     {
+      "role": "smoother",
+      "label": "Smoother",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "none",
+        "placeholder": null,
+        "options": [
+         "none",
+         "lm",
+         "loess"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "identity_line",
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Identity line (y = x)",
+        "checked": false
+       }
+      ]
+     },
+     {
+      "role": "x_lines",
+      "label": "Vertical",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. 3 or 2, 5"
+       }
+      ]
+     },
+     {
+      "role": "value_lines",
+      "label": "Horizontal",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. 2 or 1, 4"
+       }
+      ]
+     },
+     {
+      "role": "line_width_mult",
+      "label": "Line width",
+      "controls": [
+       {
+        "kind": "slider",
+        "value": "1",
+        "min": "0.5",
+        "max": "3",
+        "step": "0.1",
+        "shown": "1.0×"
+       }
+      ]
+     },
+     {
+      "role": "dot_size_mult",
+      "label": "Dot size",
+      "controls": [
+       {
+        "kind": "slider",
+        "value": "1",
+        "min": "0.5",
+        "max": "3",
+        "step": "0.1",
+        "shown": "1.0×"
+       }
+      ]
+     },
+     {
+      "role": "count_on",
+      "label": "Group counts",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "On facet labels",
+        "placeholder": null,
+        "options": [
+         "Off",
+         "On category axis",
+         "On facet labels",
+         "On axis + facets"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "count_col",
+      "label": "Count distinct of",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "USUBJID",
+        "placeholder": null,
+        "options": [
+         "(none)",
+         "USUBJID",
+         "ARM",
+         "SEX",
+         "AVISIT",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "AETERM",
+         "AESEV",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "facet_scales",
+      "label": "Panel scales",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Free y per panel",
+        "placeholder": null,
+        "options": [
+         "Shared across panels",
+         "Free y per panel",
+         "Free x and y per panel"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "facet_cols",
+      "label": "Panel columns",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Auto (fits the width)",
+        "placeholder": null,
+        "options": [
+         "Auto (fits the width)",
+         "1 per row",
+         "2 per row",
+         "3 per row",
+         "4 per row",
+         "6 per row"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "download",
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Downloads",
+        "checked": false
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Titles",
+    "fold": "closed",
+    "summary": "None",
+    "rows": []
+   },
+   {
+    "title": "Drill-down",
+    "fold": "open",
+    "rows": [
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Filter downstream on a click",
+        "checked": true
+       }
+      ]
+     },
+     {
+      "label": "Filter on",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Auto, the selected point",
+        "placeholder": null,
+        "options": [
+         "Auto, the selected point",
+         "USUBJID",
+         "ARM",
+         "SEX",
+         "AVISIT",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "AETERM",
+         "AESEV",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Send to filter (beta)",
+        "checked": false
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Prepare script",
+    "fold": "closed",
+    "summary": "None",
+    "rows": []
+   }
+  ]
+ },
+ "sent": []
+}

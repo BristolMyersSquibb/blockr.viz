@@ -1,0 +1,275 @@
+{
+ "config": {
+  "chart_type": "pointrange",
+  "group": "AVISIT",
+  "value": "AVAL",
+  "connect_centers": "on",
+  "drill": "auto"
+ },
+ "outline": {
+  "open": true,
+  "tiles": [
+   "bar",
+   "pie",
+   "treemap",
+   "boxplot",
+   "*pointrange",
+   "radar",
+   "band",
+   "scatter",
+   "line",
+   "gantt"
+  ],
+  "sections": [
+   {
+    "title": "Mapping",
+    "rows": [
+     {
+      "role": "group",
+      "label": "Group *",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "AVISIT",
+        "placeholder": null,
+        "options": [
+         "USUBJID",
+         "ARM",
+         "SEX",
+         "AVISIT",
+         "AVISITN",
+         "ADY",
+         "AETERM",
+         "AESEV",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "value",
+      "label": "Value *",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "AVAL (Analysis Value)",
+        "placeholder": null,
+        "options": [
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "add": [
+       "Color",
+       "Facet"
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Presentation",
+    "rows": [
+     {
+      "role": "sort_by",
+      "label": "Sort",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Data order",
+        "placeholder": null,
+        "options": [
+         "By value",
+         "Data order",
+         "A–Z",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "sort_dir",
+      "label": "Order",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Descending",
+         "Ascending"
+        ],
+        "selected": "Ascending"
+       }
+      ]
+     },
+     {
+      "role": "orientation",
+      "label": "Orientation",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Horizontal",
+         "Vertical"
+        ],
+        "selected": "Vertical"
+       }
+      ]
+     },
+     {
+      "role": "summary",
+      "label": "Interval",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Mean ± SE",
+        "placeholder": null,
+        "options": [
+         "Median · Q1–Q3",
+         "Mean ± SD",
+         "Mean ± 2 SD",
+         "Mean ± SE",
+         "5th–95th percentile",
+         "10th–90th percentile",
+         "Min–Max"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "connect_centers",
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Connect centers",
+        "checked": true
+       }
+      ]
+     },
+     {
+      "role": "value_lines",
+      "label": "Reference lines",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. 2 or 1, 4"
+       }
+      ]
+     },
+     {
+      "role": "count_on",
+      "label": "Group counts",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Off",
+        "placeholder": null,
+        "options": [
+         "Off",
+         "On category axis",
+         "On facet labels",
+         "On axis + facets"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "download",
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Downloads",
+        "checked": false
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Titles",
+    "fold": "closed",
+    "summary": "None",
+    "rows": []
+   },
+   {
+    "title": "Drill-down",
+    "fold": "open",
+    "rows": [
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Filter downstream on a click",
+        "checked": true
+       }
+      ]
+     },
+     {
+      "label": "Filter on",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Auto, the clicked group",
+        "placeholder": null,
+        "options": [
+         "Auto, the clicked group",
+         "USUBJID",
+         "ARM",
+         "SEX",
+         "AVISIT",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "AETERM",
+         "AESEV",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Send to filter (beta)",
+        "checked": false
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Prepare script",
+    "fold": "closed",
+    "summary": "None",
+    "rows": []
+   }
+  ]
+ },
+ "sent": []
+}

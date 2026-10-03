@@ -1,0 +1,4258 @@
+{
+ "config": {
+  "script": "",
+  "ctrl_target": "",
+  "ctrl_table": "",
+  "ctrl_choices": [
+   {
+    "value": "auto",
+    "label": "Automatic (Filter AE)"
+   },
+   {
+    "value": "flt_ae",
+    "label": "Filter AE"
+   }
+  ],
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "auto",
+  "color": "AESEV"
+ },
+ "steps": [
+  {
+   "step": "open the gear",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"By value\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select sort_by = A–Z",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "alpha",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar",
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 8,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 8,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[*Descending|Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "segment sort_dir = Ascending",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "alpha",
+      "sort_dir": "asc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar",
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 8,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 8,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  orientation \"Orientation\" seg[*Horizontal|Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "segment orientation = Vertical",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "alpha",
+      "sort_dir": "asc",
+      "orientation": "vertical",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar",
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 8,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 8,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  orientation \"Orientation\" seg[Horizontal|*Vertical]",
+    "  bar_mode \"Stacking\" seg[*Stacked|Grouped|100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "segment bar_mode = 100%",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "alpha",
+      "sort_dir": "asc",
+      "orientation": "vertical",
+      "bar_mode": "percent",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar",
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.111111,
+            "raw": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.111111,
+            "raw": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 0.333333,
+            "raw": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "raw": 9,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "raw": 10,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 0.666667,
+            "raw": 2,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.888889,
+            "raw": 8,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.888889,
+            "raw": 8,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "raw": 10,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "raw": 10,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  orientation \"Orientation\" seg[Horizontal|*Vertical]",
+    "  bar_mode \"Stacking\" seg[Stacked|Grouped|*100%]",
+    "  value_labels [ ] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "toggle checkbox value_labels",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "alpha",
+      "sort_dir": "asc",
+      "orientation": "vertical",
+      "bar_mode": "percent",
+      "value_labels": "on",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar",
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.111111,
+            "raw": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.111111,
+            "raw": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 0.333333,
+            "raw": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "raw": 9,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "raw": 10,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 0.666667,
+            "raw": 2,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.888889,
+            "raw": 8,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 0.888889,
+            "raw": 8,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "raw": 10,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "raw": 10,
+            "itemStyle": {
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  orientation \"Orientation\" seg[Horizontal|*Vertical]",
+    "  bar_mode \"Stacking\" seg[Stacked|Grouped|*100%]",
+    "  value_labels [x] Show values",
+    "  baseline \"Bars\" seg[*Standard|Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "segment baseline = Waterfall",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "alpha",
+      "sort_dir": "asc",
+      "orientation": "vertical",
+      "bar_mode": "percent",
+      "value_labels": "on",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "cumulative",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 0,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 19,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 28,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 31,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 41,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 51,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "3"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  orientation \"Orientation\" seg[Horizontal|*Vertical]",
+    "  bar_mode \"Stacking\" seg[Stacked|Grouped|*100%]",
+    "  value_labels [x] Show values",
+    "  baseline \"Bars\" seg[Standard|*Waterfall]",
+    "  value_lines \"Reference lines\" text=\"\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "type value_lines = \"5, 12\" + Enter",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "alpha",
+      "sort_dir": "asc",
+      "orientation": "vertical",
+      "bar_mode": "percent",
+      "value_labels": "on",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "cumulative",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "5, 12",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 0,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 19,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 28,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 31,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 41,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 51,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "3"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  orientation \"Orientation\" seg[Horizontal|*Vertical]",
+    "  bar_mode \"Stacking\" seg[Stacked|Grouped|*100%]",
+    "  value_labels [x] Show values",
+    "  baseline \"Bars\" seg[Standard|*Waterfall]",
+    "  value_lines \"Reference lines\" text=\"5, 12\"",
+    "  count_on \"Group counts\" select=\"Off\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select count_on = On category axis",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "alpha",
+      "sort_dir": "asc",
+      "orientation": "vertical",
+      "bar_mode": "percent",
+      "value_labels": "on",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "cumulative",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "5, 12",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "axis",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 0,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 19,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 28,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 31,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 41,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 51,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "3"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  orientation \"Orientation\" seg[Horizontal|*Vertical]",
+    "  bar_mode \"Stacking\" seg[Stacked|Grouped|*100%]",
+    "  value_labels [x] Show values",
+    "  baseline \"Bars\" seg[Standard|*Waterfall]",
+    "  value_lines \"Reference lines\" text=\"5, 12\"",
+    "  count_on \"Group counts\" select=\"On category axis\"",
+    "  count_col \"Count distinct of\" select=\"(none)\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "advance 0 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  orientation \"Orientation\" seg[Horizontal|*Vertical]",
+    "  bar_mode \"Stacking\" seg[Stacked|Grouped|*100%]",
+    "  value_labels [x] Show values",
+    "  baseline \"Bars\" seg[Standard|*Waterfall]",
+    "  value_lines \"Reference lines\" text=\"5, 12\"",
+    "  count_on \"Group counts\" select=\"On category axis\"",
+    "  count_col \"Count distinct of\" select=\"(none)\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select count_col = USUBJID",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "alpha",
+      "sort_dir": "asc",
+      "orientation": "vertical",
+      "bar_mode": "percent",
+      "value_labels": "on",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "cumulative",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "5, 12",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "axis",
+      "count_col": "USUBJID",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 0,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 19,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 28,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 31,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 41,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 51,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "3"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  orientation \"Orientation\" seg[Horizontal|*Vertical]",
+    "  bar_mode \"Stacking\" seg[Stacked|Grouped|*100%]",
+    "  value_labels [x] Show values",
+    "  baseline \"Bars\" seg[Standard|*Waterfall]",
+    "  value_lines \"Reference lines\" text=\"5, 12\"",
+    "  count_on \"Group counts\" select=\"On category axis\"",
+    "  count_col \"Count distinct of\" select=\"USUBJID\"",
+    "  download [ ] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "toggle checkbox download",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "alpha",
+      "sort_dir": "asc",
+      "orientation": "vertical",
+      "bar_mode": "percent",
+      "value_labels": "on",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "cumulative",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "5, 12",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "axis",
+      "count_col": "USUBJID",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "on",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 0,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 19,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 28,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 31,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 41,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 51,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "3"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Own category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  orientation \"Orientation\" seg[Horizontal|*Vertical]",
+    "  bar_mode \"Stacking\" seg[Stacked|Grouped|*100%]",
+    "  value_labels [x] Show values",
+    "  baseline \"Bars\" seg[Standard|*Waterfall]",
+    "  value_lines \"Reference lines\" text=\"5, 12\"",
+    "  count_on \"Group counts\" select=\"On category axis\"",
+    "  count_col \"Count distinct of\" select=\"USUBJID\"",
+    "  download [x] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "select na_group = Not a category",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "AESEV",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "alpha",
+      "sort_dir": "asc",
+      "orientation": "vertical",
+      "bar_mode": "percent",
+      "value_labels": "on",
+      "na_group": "drop",
+      "pct_of": "facet",
+      "baseline": "cumulative",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "5, 12",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "axis",
+      "count_col": "USUBJID",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "on",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": ""
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 0,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 8,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 18,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 27,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 37,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 47,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 8,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "8"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              0,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 9,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "9"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "10"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 8,
+            "label": {
+             "show": true,
+             "position": "top",
+             "formatter": "8"
+            },
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Not a category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  orientation \"Orientation\" seg[Horizontal|*Vertical]",
+    "  bar_mode \"Stacking\" seg[Stacked|Grouped|*100%]",
+    "  value_labels [x] Show values",
+    "  baseline \"Bars\" seg[Standard|*Waterfall]",
+    "  value_lines \"Reference lines\" text=\"5, 12\"",
+    "  count_on \"Group counts\" select=\"On category axis\"",
+    "  count_col \"Count distinct of\" select=\"USUBJID\"",
+    "  download [x] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "advance 300 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [],
+   "gear": [
+    "open | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Not a category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  orientation \"Orientation\" seg[Horizontal|*Vertical]",
+    "  bar_mode \"Stacking\" seg[Stacked|Grouped|*100%]",
+    "  value_labels [x] Show values",
+    "  baseline \"Bars\" seg[Standard|*Waterfall]",
+    "  value_lines \"Reference lines\" text=\"5, 12\"",
+    "  count_on \"Group counts\" select=\"On category axis\"",
+    "  count_col \"Count distinct of\" select=\"USUBJID\"",
+    "  download [x] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  },
+  {
+   "step": "close the gear",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [],
+   "gear": [
+    "closed | *bar",
+    "## Mapping",
+    "  group \"Group *\" select=\"AETERM (Reported Term)\"",
+    "  na_group \"Missing group\" select=\"Not a category\"",
+    "  func \"Aggregate\" select=\"Count\"",
+    "  color \"Color\" select=\"AESEV\" (x)",
+    "  + Facet, Tooltip fields",
+    "## Presentation",
+    "  sort_by \"Sort\" select=\"A–Z\"",
+    "  sort_dir \"Order\" seg[Descending|*Ascending]",
+    "  orientation \"Orientation\" seg[Horizontal|*Vertical]",
+    "  bar_mode \"Stacking\" seg[Stacked|Grouped|*100%]",
+    "  value_labels [x] Show values",
+    "  baseline \"Bars\" seg[Standard|*Waterfall]",
+    "  value_lines \"Reference lines\" text=\"5, 12\"",
+    "  count_on \"Group counts\" select=\"On category axis\"",
+    "  count_col \"Count distinct of\" select=\"USUBJID\"",
+    "  download [x] Downloads",
+    "## Titles (closed: None)",
+    "## Drill-down (open)",
+    "  [x] Filter downstream on a click",
+    "  \"Filter on\" select=\"Auto, the clicked group\"",
+    "  [ ] Send to filter (beta)",
+    "## Prepare script (closed: None)"
+   ],
+   "awaitData": false
+  }
+ ]
+}

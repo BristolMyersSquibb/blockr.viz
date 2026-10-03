@@ -294,9 +294,15 @@ function control(c) {
     const tags = Array.from(c.querySelectorAll('.blockr-select__tag'),
       (t) => t.getAttribute('data-value') || txt(t));
     const search = c.querySelector('.blockr-select__search');
+    // A column option shows its name, then its label in a span of its own.
+    let v = null;
+    if (value) {
+      const lab = value.querySelector('.blockr-select__opt-label');
+      v = lab ? `${txt(value).slice(0, -txt(lab).length)} (${txt(lab)})` : txt(value);
+    }
     return {
       kind: multi ? 'multi' : 'select',
-      value: multi ? tags : (value ? txt(value) : null),
+      value: multi ? tags : v,
       placeholder: (search && search.getAttribute('placeholder')) || null
     };
   }
@@ -314,6 +320,7 @@ function control(c) {
     return { kind: 'slider', value: c.value, min: c.min, max: c.max, step: c.step,
              shown: txt(v) };
   }
+  if (c.tagName === 'TEXTAREA') return { kind: 'textarea', value: c.value };
   if (c.tagName === 'INPUT') {
     return { kind: c.type === 'text' ? 'text' : c.type, value: c.value,
              placeholder: c.getAttribute('placeholder') || null };
@@ -322,10 +329,11 @@ function control(c) {
 }
 
 const CONTROLS = '.blockr-select, .blockr-segmented, .blockr-checkbox, ' +
-  'input.blockr-text-input, input.dd-slider, input[type=color]';
+  'input.blockr-text-input, input.dd-slider, input[type=color], textarea';
 
-/** A row: its role, label, controls, and what it says. */
-function row(r) {
+/** A row: its role, label, controls, and what it says. With `env`, each
+ *  select also lists the options it offers. */
+function row(r, env) {
   if (r.classList.contains('dd-add-wrap')) {
     return { add: Array.from(r.querySelectorAll('.dd-add-item'), txt) };
   }
@@ -344,7 +352,11 @@ function row(r) {
   // part of it, not separate controls.
   out.controls = Array.from(r.querySelectorAll(CONTROLS))
     .filter((c) => !c.parentElement.closest('.blockr-select, .blockr-checkbox'))
-    .map(control);
+    .map((c) => {
+      const o = control(c);
+      if (env && c.classList.contains('blockr-select')) o.options = selectOptions(env, c);
+      return o;
+    });
   const help = Array.from(r.querySelectorAll('.dd-form-help')).filter(shown).map(txt)
     .filter(Boolean);
   if (help.length) out.help = help;
@@ -355,7 +367,7 @@ function row(r) {
  * The gear as a reader sees it: the type tiles, then each section with its
  * title, fold state and rows.
  */
-function gearOutline(block) {
+function gearOutline(block, env) {
   const pop = block.popoverEl;
   const tiles = Array.from(pop.querySelectorAll('.dd-type-tile'), (b) =>
     (b.classList.contains('dd-type-active') ? '*' : '') + txt(b));
@@ -374,17 +386,42 @@ function gearOutline(block) {
         if (sum) s.summary = txt(sum);
       }
     }
-    s.rows = Array.from(sec.children).filter((c) => c !== t).map(row);
+    s.rows = Array.from(sec.children).filter((c) => c !== t).map((r) => row(r, env));
     return s;
   });
   return { open: pop.classList.contains('blockr-settings--open'), tiles, sections };
 }
 
 /** The script's control strip (the mapping band moved into the card). */
-function bandOutline(block) {
+function bandOutline(block, env) {
   const band = block.el.querySelector('.dd-mapping-band');
   if (!band) return null;
-  return { shown: shown(band), rows: Array.from(band.children).map(row) };
+  return { shown: shown(band), rows: Array.from(band.children).map((r) => row(r, env)) };
+}
+
+/** The outline as one line per row, for step records. */
+function gearLines(block) {
+  const o = gearOutline(block);
+  const lines = [(o.open ? 'open' : 'closed') + ' | ' + o.tiles.filter((t) => t[0] === '*').join('')];
+  const ctl = (c) => {
+    if (c.kind === 'segmented') {
+      return 'seg[' + c.options.map((x) => (x === c.selected ? '*' : '') + x).join('|') + ']';
+    }
+    if (c.kind === 'checkbox') return `[${c.checked ? 'x' : ' '}] ${c.label}`;
+    if (c.kind === 'multi') return `multi[${c.value.join(', ')}]`;
+    return `${c.kind}=${JSON.stringify(c.value)}`;
+  };
+  for (const s of o.sections) {
+    lines.push(`## ${s.title}` + (s.fold ? ` (${s.fold}${s.summary ? ': ' + s.summary : ''})` : ''));
+    for (const r of s.rows) {
+      if (r.add) { lines.push('  + ' + r.add.join(', ')); continue; }
+      if (r.other) { lines.push('  ' + r.other + ': ' + r.text); continue; }
+      lines.push('  ' + (r.role ? r.role + ' ' : '') + (r.label ? `"${r.label}" ` : '') +
+        r.controls.map(ctl).join(' ') + (r.hidden ? ' (hidden)' : '') +
+        (r.removable ? ' (x)' : ''));
+    }
+  }
+  return lines;
 }
 
 // ---------------------------------------------------------------------------
@@ -397,27 +434,51 @@ function roleRow(block, key) {
   return r;
 }
 
-/** Pick `value` in the select inside `scope` (opens it, clicks the option). */
-function pickSelect(env, scope, value) {
+/** The select in `scope` (or `scope` itself). */
+const selectIn = (scope) => {
   const sel = scope.classList.contains('blockr-select') ? scope : scope.querySelector('.blockr-select');
   if (!sel) throw new Error('no select');
-  sel.querySelector('.blockr-select__control').click();
-  const opts = Array.from(env.win.document.querySelectorAll('.blockr-select__option'));
+  return sel;
+};
+
+/** Open the select and return its option rows (its own listbox only). */
+function openOptions(env, sel) {
+  const search = sel.querySelector('.blockr-select__search');
+  const wasOpen = search.getAttribute('aria-expanded') === 'true';
+  if (!wasOpen) sel.querySelector('.blockr-select__control').click();
+  const lb = env.win.document.getElementById(search.getAttribute('aria-controls'));
+  return Array.from(lb ? lb.querySelectorAll('.blockr-select__option') : []);
+}
+
+/** Close an open select without picking: a single closes on a second click
+ *  on its control, a multi on its chevron. */
+function closeSelect(sel) {
+  const search = sel.querySelector('.blockr-select__search');
+  if (search.getAttribute('aria-expanded') !== 'true') return;
+  if (sel.classList.contains('blockr-select--multi')) {
+    sel.querySelector('.blockr-select__arrow').click();
+  } else {
+    sel.querySelector('.blockr-select__control').click();
+  }
+}
+
+/** Pick `value` (an option's data-value) in the select inside `scope`. */
+function pickSelect(env, scope, value) {
+  const sel = selectIn(scope);
+  const opts = openOptions(env, sel);
   const o = opts.find((x) => x.getAttribute('data-value') === value);
   if (!o) {
     throw new Error(`no option ${value} in [${opts.map((x) => x.getAttribute('data-value'))}]`);
   }
   o.click();
+  closeSelect(sel);
 }
 
 /** The options a select offers (opens it, reads, closes it again). */
 function selectOptions(env, scope) {
-  const sel = scope.classList.contains('blockr-select') ? scope : scope.querySelector('.blockr-select');
-  const ctl = sel.querySelector('.blockr-select__control');
-  ctl.click();
-  const out = Array.from(env.win.document.querySelectorAll('.blockr-select__option'),
-    (o) => o.getAttribute('data-value'));
-  ctl.click();
+  const sel = selectIn(scope);
+  const out = openOptions(env, sel).map((o) => o.getAttribute('data-value'));
+  closeSelect(sel);
   return out;
 }
 
@@ -511,6 +572,6 @@ const rectTarget = (x, y, width, height, r) => ({
 
 module.exports = {
   ID, F, BASE, open, mountRoot, useClock, makeCtx, paramsAt, footer, signal, legendOff,
-  gearOutline, bandOutline, roleRow, pickSelect, selectOptions, pickSegment,
+  gearOutline, gearLines, bandOutline, roleRow, pickSelect, selectOptions, pickSegment,
   toggleCheckbox, typeText, section, snap, runSteps, stepState, cleanInput, summarizeCall, rectTarget, txt
 };

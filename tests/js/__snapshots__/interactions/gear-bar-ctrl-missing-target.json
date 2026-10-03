@@ -1,0 +1,329 @@
+{
+ "config": {
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "auto",
+  "ctrl_target": "gone",
+  "ctrl_choices": []
+ },
+ "outline": {
+  "open": true,
+  "tiles": [
+   "*bar",
+   "pie",
+   "treemap",
+   "boxplot",
+   "pointrange",
+   "radar",
+   "band",
+   "scatter",
+   "line",
+   "gantt"
+  ],
+  "sections": [
+   {
+    "title": "Mapping",
+    "rows": [
+     {
+      "role": "group",
+      "label": "Group *",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "AETERM (Reported Term)",
+        "placeholder": null,
+        "options": [
+         "USUBJID",
+         "ARM",
+         "SEX",
+         "AVISIT",
+         "AVISITN",
+         "ADY",
+         "AETERM",
+         "AESEV",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "na_group",
+      "label": "Missing group",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Own category",
+        "placeholder": null,
+        "options": [
+         "Own category",
+         "Not a category"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "func",
+      "label": "Aggregate",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Count",
+        "placeholder": null,
+        "options": [
+         "Count",
+         "Count distinct",
+         "Mean",
+         "Median",
+         "Sum",
+         "Min",
+         "Max",
+         "% of panel",
+         "None (as is)"
+        ]
+       }
+      ]
+     },
+     {
+      "add": [
+       "Color",
+       "Facet",
+       "Tooltip fields"
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Presentation",
+    "rows": [
+     {
+      "role": "sort_by",
+      "label": "Sort",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "By value",
+        "placeholder": null,
+        "options": [
+         "By value",
+         "Data order",
+         "A–Z",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "sort_dir",
+      "label": "Order",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Descending",
+         "Ascending"
+        ],
+        "selected": "Descending"
+       }
+      ]
+     },
+     {
+      "role": "orientation",
+      "label": "Orientation",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Horizontal",
+         "Vertical"
+        ],
+        "selected": "Horizontal"
+       }
+      ]
+     },
+     {
+      "role": "bar_mode",
+      "label": "Stacking",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Stacked",
+         "Grouped",
+         "100%"
+        ],
+        "selected": "Stacked"
+       }
+      ]
+     },
+     {
+      "role": "value_labels",
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Show values",
+        "checked": false
+       }
+      ]
+     },
+     {
+      "role": "baseline",
+      "label": "Bars",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Standard",
+         "Waterfall"
+        ],
+        "selected": "Standard"
+       }
+      ]
+     },
+     {
+      "role": "value_lines",
+      "label": "Reference lines",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. 2 or 1, 4"
+       }
+      ]
+     },
+     {
+      "role": "count_on",
+      "label": "Group counts",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Off",
+        "placeholder": null,
+        "options": [
+         "Off",
+         "On category axis",
+         "On facet labels",
+         "On axis + facets"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "download",
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Downloads",
+        "checked": false
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Titles",
+    "fold": "closed",
+    "summary": "None",
+    "rows": []
+   },
+   {
+    "title": "Drill-down",
+    "fold": "open",
+    "rows": [
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Filter downstream on a click",
+        "checked": true
+       }
+      ]
+     },
+     {
+      "label": "Filter on",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Auto, the clicked group",
+        "placeholder": null,
+        "options": [
+         "Auto, the clicked group",
+         "USUBJID",
+         "ARM",
+         "SEX",
+         "AVISIT",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "AETERM",
+         "AESEV",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Send to filter (beta)",
+        "checked": true
+       }
+      ]
+     },
+     {
+      "label": "Target filter",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "gone (gone (missing))",
+        "placeholder": null,
+        "options": [
+         "gone"
+        ]
+       }
+      ],
+      "help": [
+       "No filter block found on this board (is the control bridge installed?)."
+      ]
+     },
+     {
+      "label": "Table",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "dm only — e.g. adsl"
+       }
+      ],
+      "help": [
+       "Only when the target filters a dm; leave empty for plain data."
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Prepare script",
+    "fold": "closed",
+    "summary": "None",
+    "rows": []
+   }
+  ]
+ },
+ "sent": []
+}

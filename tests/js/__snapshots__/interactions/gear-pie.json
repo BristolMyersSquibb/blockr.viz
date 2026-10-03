@@ -1,0 +1,217 @@
+{
+ "config": {
+  "chart_type": "pie",
+  "group": "AESEV",
+  "drill": "auto"
+ },
+ "outline": {
+  "open": true,
+  "tiles": [
+   "bar",
+   "*pie",
+   "treemap",
+   "boxplot",
+   "pointrange",
+   "radar",
+   "band",
+   "scatter",
+   "line",
+   "gantt"
+  ],
+  "sections": [
+   {
+    "title": "Mapping",
+    "rows": [
+     {
+      "role": "group",
+      "label": "Group *",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "AESEV",
+        "placeholder": null,
+        "options": [
+         "USUBJID",
+         "ARM",
+         "SEX",
+         "AVISIT",
+         "AVISITN",
+         "ADY",
+         "AETERM",
+         "AESEV",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "func",
+      "label": "Aggregate",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Count",
+        "placeholder": null,
+        "options": [
+         "Count",
+         "Count distinct",
+         "Mean",
+         "Median",
+         "Sum",
+         "Min",
+         "Max",
+         "% of panel",
+         "None (as is)"
+        ]
+       }
+      ]
+     },
+     {
+      "add": [
+       "Facet"
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Presentation",
+    "rows": [
+     {
+      "role": "sort_by",
+      "label": "Sort",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "By value",
+        "placeholder": null,
+        "options": [
+         "By value",
+         "Data order",
+         "A–Z",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "sort_dir",
+      "label": "Order",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Descending",
+         "Ascending"
+        ],
+        "selected": "Descending"
+       }
+      ]
+     },
+     {
+      "role": "count_on",
+      "label": "Group counts",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Off",
+        "placeholder": null,
+        "options": [
+         "Off",
+         "On category axis",
+         "On facet labels",
+         "On axis + facets"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "download",
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Downloads",
+        "checked": false
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Titles",
+    "fold": "closed",
+    "summary": "None",
+    "rows": []
+   },
+   {
+    "title": "Drill-down",
+    "fold": "open",
+    "rows": [
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Filter downstream on a click",
+        "checked": true
+       }
+      ]
+     },
+     {
+      "label": "Filter on",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "Auto, the clicked group",
+        "placeholder": null,
+        "options": [
+         "Auto, the clicked group",
+         "USUBJID",
+         "ARM",
+         "SEX",
+         "AVISIT",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "AETERM",
+         "AESEV",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Send to filter (beta)",
+        "checked": false
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Prepare script",
+    "fold": "closed",
+    "summary": "None",
+    "rows": []
+   }
+  ]
+ },
+ "sent": []
+}
