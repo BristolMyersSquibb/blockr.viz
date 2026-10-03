@@ -3672,7 +3672,7 @@
       // Radar sizes its spokes on one shared max; with fixed scales that max
       // spans the grid, so a shape means the same area in every panel.
       const sharedMax = (sharedGroups && aggCt === 'radar')
-        ? (Math.max(...agg.map(a => a.value ?? 0), 0) || 1) : null;
+        ? (Math.max(maxOf(agg.map(a => a.value ?? 0)), 0) || 1) : null;
 
       // Facet strip labels, with optional "(n)" counts (see _facetLabelMap).
       const facetLabels = this._facetLabelMap(facets);
@@ -3684,7 +3684,7 @@
       let labelNote = null;
       for (let fi = 0; fi < facets.length; fi++) {
         const facet = facets[fi];
-        const facetData = agg.filter(a => a.facet === facet);
+        const facetData = this._ix.get(agg, 'facet', 'raw', facet);
         const groups = sharedGroups || orderGroups(facetData);
 
         const slot = this._ensureSlot(fi,
@@ -3839,6 +3839,9 @@
     /** @param {any[]} facetData @param {any[]} groups @param {any[]} colors @param {any[]} palette @param {number} [plotW] container width in px @param {string} [facet] current facet value ('__all__' when unfaceted) @param {number | null} [sharedMax] radar only: the grid-wide spoke max under fixed panel scales */
     _buildAggregatedOption(facetData, groups, colors, palette, plotW, facet, sharedMax) {
       const ct = this.config.chart_type;
+      // facetData is one facet's aggregate cells; a cell per (group, colour)
+      // is looked up in it by key, never by a scan per group.
+      const ix = this._ix;
       const ax = { labelColor: INK.muted, fontSize: INK.fontSize, splitLineColor: INK.border };
 
       // Value-axis title (the numeric axis on bar / boxplot): the value's
@@ -3947,7 +3950,7 @@
       if (colors.length === 0) {
         // A null aggregate (no usable value in the group) stays null — ECharts
         // renders a gap, not a zero bar.
-        series.push({ type: 'bar', data: groups.map(g => { const d = facetData.find(a => a.group === g); return d ? d.value : null; }), itemStyle: { color: palette[0], borderRadius: barRadius(vertical) }, barWidth: '60%', barMaxWidth: BAR_MAX, emphasis: { focus: 'self' } });
+        series.push({ type: 'bar', data: groups.map(g => { const d = ix.get(facetData, 'group', 'raw', g)[0]; return d ? d.value : null; }), itemStyle: { color: palette[0], borderRadius: barRadius(vertical) }, barWidth: '60%', barMaxWidth: BAR_MAX, emphasis: { focus: 'self' } });
       } else {
         const colorScale = this._scaleFor(this.config.color);
         // Per-group total across colors, for percent normalization only.
@@ -3955,8 +3958,8 @@
         const groupTotals = {};
         if (isPercent) {
           for (const g of groups) {
-            groupTotals[g] = facetData
-              .filter(a => a.group === g && a.value != null)
+            groupTotals[g] = ix.get(facetData, 'group', 'raw', g)
+              .filter(a => a.value != null)
               .reduce((s, a) => s + a.value, 0);
           }
         }
@@ -3971,7 +3974,7 @@
             // the datum is an object {value: share, raw} so the tooltip can
             // show both the percentage and the underlying value.
             data: groups.map(g => {
-              const d = facetData.find(a => a.group === g && a.color === color);
+              const d = ix.get2(facetData, 'group', 'raw', 'color', 'raw', g, color)[0];
               const raw = d ? d.value : null;
               if (raw == null) return null;
               if (isPercent) {
@@ -4321,8 +4324,8 @@
       // cells are ALL null (no usable value) is null, not 0.
       /** @param {any} g */
       const valOf = (g) => {
-        const vals = facetData
-          .filter(a => a.group === g && a.value != null)
+        const vals = this._ix.get(facetData, 'group', 'raw', g)
+          .filter(a => a.value != null)
           .map(a => a.value);
         return vals.length
           ? vals.reduce((/** @type {number} */ s, /** @type {number} */ v) => s + v, 0)
@@ -4487,7 +4490,7 @@
     _buildPie(facetData, groups, palette) {
       const gScale = this._scaleFor(this.config.group);
       const pieData = groups.map((g, i) => {
-        const cells = facetData.filter(a => a.group === g);
+        const cells = this._ix.get(facetData, 'group', 'raw', g);
         const total = cells.reduce((s, a) => s + (a.value ?? 0), 0);
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || paletteAt(palette, i) } };
@@ -4499,7 +4502,7 @@
     _buildTreemap(facetData, groups, palette) {
       const gScale = this._scaleFor(this.config.group);
       const tmData = groups.map((g, i) => {
-        const cells = facetData.filter(a => a.group === g);
+        const cells = this._ix.get(facetData, 'group', 'raw', g);
         const total = cells.reduce((s, a) => s + (a.value ?? 0), 0);
         const n = cells.reduce((s, a) => s + (a.n || 0), 0);
         return { name: g, value: total, n: n, itemStyle: { color: (gScale && gScale.color && gScale.color[g]) || paletteAt(palette, i) } };
@@ -4521,7 +4524,7 @@
       // shape the scale. Guard 0/negative-only data with 1. `sharedMax` (fixed
       // panel scales) widens that from this panel to the whole facet grid.
       const maxVal = sharedMax ||
-        (Math.max(...facetData.map(a => a.value ?? 0), 0) || 1);
+        (Math.max(maxOf(facetData.map(a => a.value ?? 0)), 0) || 1);
       const indicator = groups.map(g => ({ name: g, max: maxVal }));
       // A missing (group, color) cell is a true zero for counting
       // aggregations; for mean/median/min/max there is no value — null
@@ -4532,8 +4535,8 @@
       /** @param {any} g @param {any} c */
       const cellVal = (g, c) => {
         const d = c == null
-          ? facetData.find(a => a.group === g)
-          : facetData.find(a => a.group === g && a.color === c);
+          ? this._ix.get(facetData, 'group', 'raw', g)[0]
+          : this._ix.get2(facetData, 'group', 'raw', 'color', 'raw', g, c)[0];
         return d ? d.value : gapVal;
       };
       /** @param {any} name @param {any} vals @param {any} col @returns {any} */
