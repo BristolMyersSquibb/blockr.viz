@@ -229,6 +229,12 @@
       if (po.focus) po.focus.veil = undefined;
     },
 
+    // Does _individualAfter dispatch an action on this slot?
+    /** @this {any} @param {any} slot @param {any} po */
+    _individualActions(slot, po) {
+      return !!(po.brushable || slot.brushable || po.zoomable || slot.zoomArmed);
+    },
+
     // The brush cursor on a brushable scatter, the zoom drag on a line
     // (it does not swallow clicks), each released when the panel stops
     // being one; the zoom window back; a hovered band level's ribbon.

@@ -125,20 +125,21 @@
       for (const chart of this.charts) chart.dispatchAction({ type: 'brush', areas: [] });
     },
 
-    /** The footer, the legend chips, then the marks. @this {any} */
-    _updateHighlight() {
+    /** The footer, the legend chips, then the marks. @this {any} @param {boolean} [lazy] */
+    _updateHighlight(lazy) {
       this._updateStatus();
       this._markLegendChips();
-      this._applyHighlight();
+      this._applyHighlight(lazy);
     },
 
     // The selection as opacities, one patch per panel and nothing redrawn:
     // a mark is lit when its keys match the filter, or, for a filter on a
     // column it does not carry, when one of its rows does (D5). A range
     // filter dims the points outside it (D11). Every latched filter dims,
-    // a brush's too.
-    /** @this {any} */
-    _applyHighlight() {
+    // a brush's too. `lazy`: part of a draw, so ECharts applies the patch
+    // with the draw's other follow-ups in one update on the next frame.
+    /** @this {any} @param {boolean} [lazy] */
+    _applyHighlight(lazy) {
       const fam = this._family();
       const m = this._memo.model;
       const sel = this._filter;
@@ -172,7 +173,7 @@
           patch = { series: current.series.map(() => ({})), dimmed: false };
         }
         slot.dimmed = patch.dimmed;
-        chart.setOption({ series: patch.series }, false);
+        chart.setOption({ series: patch.series }, lazy ? { lazyUpdate: true } : false);
       });
     },
 

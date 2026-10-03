@@ -28,8 +28,10 @@
   // aggregated draw did; the others patch only while a filter dims.
   // `prepare` / `after`: view methods run on a panel's slot before and
   // after its option is set.
+  // `actions`: a view method telling whether `after` dispatches an action.
   /** @typedef {{ model: any, option: any, legend: any, widths: boolean,
-   *              alwaysHighlight: boolean, prepare?: string, after?: string }} FamilyImpl */
+   *              alwaysHighlight: boolean, prepare?: string, after?: string,
+   *              actions?: string }} FamilyImpl */
   /** @type {Record<string, FamilyImpl>} */
   const FAMILIES = {
     aggregated: { model: NS.model.aggregated, option: NS.option.aggregated,
@@ -38,7 +40,8 @@
                 legend: NS.option.timelineLegend, widths: false, alwaysHighlight: false },
     individual: { model: NS.model.individual, option: NS.option.individual,
                   legend: NS.option.individualLegend, widths: true, alwaysHighlight: false,
-                  prepare: '_individualPrepare', after: '_individualAfter' }
+                  prepare: '_individualPrepare', after: '_individualAfter',
+                  actions: '_individualActions' }
   };
 
   // What a distribution panel draws without a numeric value.
@@ -258,21 +261,27 @@
         chart.__xFit = po.xFit
           ? { ...po.xFit, slot, baseH: po.panelH - po.xFit.gutter } : undefined;
         if (impl.prepare) this[impl.prepare](slot, po);
-        chart.setOption(po.option, true);
+        // When an action follows (the brush or zoom cursor), ECharts runs
+        // the option and the action in one update instead of two.
+        const actionFollows = !!impl.actions && this[impl.actions](slot, po);
+        chart.setOption(po.option, actionFollows ? { notMerge: true, lazyUpdate: true } : true);
         slot.dimmed = false;
         // A fresh instance measures its height; a kept one needs telling.
         if (existed && hChanged) chart.resize();
         if (impl.after) this[impl.after](slot, po);
       });
       this.charts = this._slots.map((s) => s.chart).filter(Boolean);
+      // The shared axes and the highlight are patches on what each panel
+      // just drew: ECharts applies them together in one update on the next
+      // frame, instead of one full update per patch and panel.
       this._harmoniseAxes();
       this._updateLegendBand(impl.legend(m, this.config));
       this._capMessage = o.labelNote || null;
       if (impl.alwaysHighlight) {
-        this._updateHighlight();
+        this._updateHighlight(true);
       } else {
         this._updateStatus();
-        if (this._filter) this._applyHighlight();
+        if (this._filter) this._applyHighlight(true);
       }
     }
 
@@ -329,7 +338,7 @@
         });
         const d = NS.axes.sharedDomain(extents);
         if (!d) continue;
-        for (const c of charts) c.setOption({ [key]: [{ min: d[0], max: d[1] }] });
+        for (const c of charts) c.setOption({ [key]: [{ min: d[0], max: d[1] }] }, { lazyUpdate: true });
       }
     }
 
