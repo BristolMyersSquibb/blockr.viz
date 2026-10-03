@@ -315,7 +315,7 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
 report_call.summarize_table_block <- function(x, var, ...) {
 
   # The committed block's state lives in its constructor closure, the same
-  # values serialization reads (see report_call.chart_block).
+  # values serialization reads.
   env <- environment(x[["expr_server"]])
 
   state <- function(nm) {

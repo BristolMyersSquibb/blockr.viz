@@ -1,27 +1,13 @@
-# The chart as an exhibit ------------------------------------------------------
+# A ggplot as an exhibit -----------------------------------------------------
 #
-# A chart already had a printed form -- report_call.chart_block() compiles the
-# block's state to a plain dplyr + ggplot2 pipeline, which is what a deck
-# evaluates and places. What it did not have was a way to take that same thing
-# out of the BLOCK: the download button in the gear header captured the live
-# ECharts canvases instead, so the file you got from the block and the picture
-# on the slide were two different renderings of one chart.
-#
-# These methods close that. `static_chart()` (or the compiled pipeline) is the
-# one renderer; every target draws from its ggplot:
-#
-#   xlsx  the aggregated frame the plot was built from
-#   html  that plot as an image, in the exhibit document shell
-#   pptx  that plot on a slide, sized as the deck sizes it
-#   png   that plot as an image file
-#
-# Same rule as the summarize table's exhibit next door: an exhibit carries its
-# source and each target renders from it, rather than each caller inventing a
-# rendering.
+# The exhibit writers (write_exhibit_html(), write_exhibit_pptx(),
+# write_exhibit_png()) take any ggplot a block hands them: the patient
+# profile's static plots, say, or a ggplot block's result. A plot goes into
+# HTML as an image and onto a slide as a vector drawing, sized from the
+# `pptx_width` / `pptx_height` it carries, or the deck default.
 
-# The box a chart is drawn into. static_chart() measures it from the chart's
-# own row geometry and leaves it on the plot, so a download and a slide agree
-# about the aspect; a plain ggplot from anywhere else takes the deck default.
+# The box a plot is drawn into: the size it carries as attributes, or the
+# deck default.
 #' @noRd
 gg_exhibit_size <- function(p, max_width = NULL) {
 
@@ -146,8 +132,8 @@ pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
     stripped <- tryCatch(x + ggplot2::labs(title = NULL),
                          error = function(e) NULL)
     if (!is.null(stripped)) {
-      # `+` returns a bare ggplot: the size attributes static_chart() left on
-      # the original do not survive it, and they are the placement.
+      # `+` returns a bare ggplot: the size attributes on the original do not
+      # survive it, and they are the placement.
       attributes(stripped) <- utils::modifyList(
         attributes(stripped),
         attributes(x)[setdiff(names(attributes(x)), names(attributes(stripped)))]
@@ -160,9 +146,8 @@ pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
 
   # FILL the box that is left, keeping the aspect the chart asked for.
   #
-  # `pptx_width` / `pptx_height` are the size the chart wants to be READ at
-  # (static_chart() derives them from its row geometry), not the size of the
-  # slide it lands on. Placing a plot at that size and stopping left an 8in
+  # `pptx_width` / `pptx_height` are the size the chart wants to be READ at,
+  # not the size of the slide it lands on. Placing a plot at that size and stopping left an 8in
   # figure floating in the middle of a 12.5in slide with a hand's width of
   # margin on each side -- the deck looked unfinished, and the axis labels
   # were smaller than they needed to be for no reason.
@@ -198,69 +183,4 @@ pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
     location = officer::ph_location(left = (slide_w - w) / 2, top = top,
                                     width = w, height = h)
   )
-}
-
-#' The Numbers Behind a Chart
-#'
-#' The aggregated frame a chart was drawn from -- what `dplyr::count()` or
-#' `summarise()` produced inside the compiled pipeline, which is one row per
-#' mark rather than the block's input. This is what the chart block's Excel
-#' download writes.
-#'
-#' @param p A ggplot built by [static_chart()] or [chart_expr()].
-#' @return A data frame, or `NULL` when the plot carries no frame.
-#' @noRd
-chart_exhibit_data <- function(p) {
-
-  d <- tryCatch(p$data, error = function(e) NULL)
-
-  if (is.null(d) || !is.data.frame(d) || !nrow(d)) {
-    return(NULL)
-  }
-
-  as.data.frame(d, stringsAsFactors = FALSE)
-}
-
-#' The chart a report would print, built here.
-#'
-#' The block's downloads and blockr.outline's deck must not be two renderings
-#' of one chart. `report_call.chart_block()` EMITS a call (a document wants
-#' code it can read); this evaluates the same thing for a caller that wants the
-#' object. Both follow `getOption("blockr.viz.report_style")`, so whichever
-#' route a board is on, the picture is the same picture.
-#'
-#' @param data The block's (filtered) input.
-#' @param state The chart's print-relevant state, as `chart_report_state()`
-#'   collects it.
-#' @return A ggplot, or `NULL` when the state describes no chart.
-#' @noRd
-chart_static_exhibit <- function(data, state) {
-
-  if (!is.data.frame(data) || !nrow(data)) {
-    return(NULL)
-  }
-
-  style <- getOption("blockr.viz.report_style", "code")
-
-  if (identical(style, "code")) {
-    ex <- tryCatch(
-      do.call(chart_expr, c(list(var = "data", data = data, qualify = TRUE),
-                            state)),
-      error = function(e) NULL
-    )
-    if (!is.null(ex)) {
-      # Self-qualified by construction, so the only thing the evaluation
-      # environment has to carry is the data itself.
-      out <- tryCatch(eval(ex, list(data = data), baseenv()),
-                      error = function(e) NULL)
-      if (!is.null(out)) {
-        return(out)
-      }
-    }
-  }
-
-  keep <- names(state) %in% names(formals(static_chart))
-
-  tryCatch(do.call(static_chart, c(list(data), state[keep])),
-           error = function(e) NULL)
 }

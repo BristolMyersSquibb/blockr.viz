@@ -55,9 +55,7 @@ level then by group. \strong{A fit belongs to its panel}: a faceted chart draws
 one panel per level, so a single fit over the pooled rows is an estimate of
 a relationship no panel shows — it can carry a slope, an x range, and even a
 sign that contradict every panel it is drawn into (Simpson's paradox). This
-mirrors \code{ggplot2::geom_smooth()} under \code{facet_wrap()}, which is what
-\code{\link[=static_chart]{static_chart()}} and the emitted code use, so the canvas and the export
-cannot disagree.
+mirrors \code{ggplot2::geom_smooth()} under \code{facet_wrap()}.
 }
 \examples{
 compute_smoother_series(

@@ -1,9 +1,7 @@
 # `facet_cols`: how many facet panels sit in a row.
 #
-# Auto (unset) is what a faceted chart has always drawn -- the canvas fits
-# panels to the card width, ggplot2 picks its own square-ish grid. The setting
-# pins the row, and the point of it is that ONE value reaches both renderers,
-# so the picture in a deck keeps the shape it had on screen.
+# Auto (unset) is what a faceted chart has always drawn: the canvas fits
+# panels to the card width. The setting pins the row.
 
 test_that("facet_cols_state keeps whole numbers and heals everything else", {
   expect_null(facet_cols_state(NULL))
@@ -27,58 +25,6 @@ test_that("facet_cols_state keeps whole numbers and heals everything else", {
 
   expect_equal(facet_cols_n("4"), 4L)
   expect_null(facet_cols_n(""))
-})
-
-test_that("gg_facet_ncol caps at the panel count and leaves auto alone", {
-  # Auto: facet_wrap's own square-ish grid for the geometry, and NULL where
-  # the answer goes to facet_wrap itself.
-  expect_equal(gg_facet_ncol(9L, NULL), 3L)
-  expect_null(gg_facet_ncol(9L, NULL, auto = NULL))
-
-  expect_equal(gg_facet_ncol(9L, "2"), 2L)
-  # Four columns over two panels would leave two empty tracks.
-  expect_equal(gg_facet_ncol(2L, "4"), 2L)
-})
-
-test_that("static_chart pins facet_wrap's ncol, and omits it when unset", {
-  skip_if_not_installed("ggplot2")
-  d <- transform(datasets::iris, Grp = rep(c("A", "B"), 75))
-
-  p <- static_chart(d, "bar", group = "Grp", facet = "Species",
-                    facet_cols = 2)
-  expect_equal(p$facet$params$ncol, 2L)
-
-  auto <- static_chart(d, "bar", group = "Grp", facet = "Species")
-  expect_null(auto$facet$params$ncol)
-
-  # Capped at the panel count: iris has three species.
-  wide <- static_chart(d, "bar", group = "Grp", facet = "Species",
-                       facet_cols = 6)
-  expect_equal(wide$facet$params$ncol, 3L)
-})
-
-test_that("the emitted code carries ncol only when the block pinned one", {
-  d <- transform(datasets::iris, Grp = rep(c("A", "B"), 75))
-
-  code <- chart_code(
-    chart_expr("d", chart_type = "bar", group = "Grp", facet = "Species",
-               facet_cols = 2, data = d)
-  )
-  expect_match(code, "facet_wrap\\(~Species, ncol = 2\\)")
-
-  auto <- chart_code(
-    chart_expr("d", chart_type = "bar", group = "Grp", facet = "Species",
-               data = d)
-  )
-  expect_match(auto, "facet_wrap\\(~Species\\)")
-
-  # Without a data snapshot there is no panel count to cap against, so the
-  # pick travels as it was given rather than being capped to 1.
-  blind <- chart_code(
-    chart_expr("d", chart_type = "bar", group = "Grp", facet = "Species",
-               facet_cols = 4)
-  )
-  expect_match(blind, "ncol = 4")
 })
 
 test_that("the chart block stores facet_cols and takes a deployment default", {

@@ -36,7 +36,7 @@
 #'
 #' # ... anything else is returned as-is
 #' identical(static_exhibit(1:3), 1:3)
-#' @seealso [static_table()], [static_chart()], [as_annotated_df()]
+#' @seealso [static_table()], [as_annotated_df()]
 #' @export
 static_exhibit <- function(x, ...) {
 

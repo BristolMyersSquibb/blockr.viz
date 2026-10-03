@@ -206,7 +206,7 @@ table_exhibit <- function(data, rowname = NULL, value = NULL,
 report_call.table_block <- function(x, var, ...) {
 
   # The committed block's state lives in its constructor closure, the same
-  # values serialization reads (see report_call.chart_block). The legacy
+  # values serialization reads. The legacy
   # `cell_color` is already folded into `shadings` there.
   env <- environment(x[["expr_server"]])
 

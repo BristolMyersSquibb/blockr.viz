@@ -357,8 +357,7 @@ new_chart_block <- function(
     # per category level. The window is the only genuinely new idea here --
     # `summary` / `whiskers` above carry over unchanged, so a band and a
     # boxplot of the same data agree. Computed in R (compute_band_series),
-    # like the smoother, so the canvas and static_chart share one
-    # implementation. No-op for other chart types.
+    # like the smoother. No-op for other chart types.
     band_window = "adaptive",
     band_size = 45,
     band_min_n = 12,
@@ -413,8 +412,7 @@ new_chart_block <- function(
     func_toggle = NULL,
     # Panel scales for a facet grid. "fixed" (default) = one shared numeric
     # domain and one shared category set/order across the panels, so a
-    # position means the same thing in every one of them (and the canvas
-    # agrees with static_chart(), whose facet_wrap() has always been fixed).
+    # position means the same thing in every one of them.
     # "free" = each panel sizes itself off its own subset, for panels that do
     # not share a unit (faceting by PARAM). "free_y" frees the value axis but
     # keeps a shared x; it is offered on scatter / line / band only, where the
@@ -1306,10 +1304,10 @@ new_chart_block <- function(
               # Downloads: the gear's toggle, and what decides whether the
               # hoisted control renders at all.
               download = if (isTRUE(r_download())) "on" else "off",
-              # PROTOTYPE (R/chart-capture.R): opening the download menu makes
-              # the canvas compose itself and send the bitmap up, and the
-              # files carry that instead of a server-side re-render.
-              capture_export = canvas_capture_on(),
+              # Opening the download menu makes the canvas compose itself
+              # and send the bitmap up; the files carry that
+              # (R/chart-capture.R).
+              capture_export = TRUE,
               capture_ratio = canvas_capture_ratio(),
               # Bar baseline mode. chart_type "waterfall" implies "cumulative"
               # on the JS side (sugar); also send the flag explicitly so a plain
@@ -1442,31 +1440,29 @@ new_chart_block <- function(
         # export can ask for a picture of it whether or not its panel is
         # open. The payload is the one the browser already renders from;
         # the box comes from whoever is exporting (the slide, say).
-        if (canvas_capture_on()) {
-          # Keyed by the chart's own element id, which is the only thing
-          # unique per block here: `id` is the module id every chart block
-          # shares ("expr"), so registering under it would leave one entry
-          # for the whole board.
-          register_chart_capture(ns("drilldown_block"), function(token, width,
-                                                                 height) {
-            # The last payload when there is one, a fresh one when there is
-            # not: a chart in a view nobody opened has pushed nothing, and
-            # that is exactly the chart an export cannot afford to skip.
-            msg <- last_push$msg %||% tryCatch(
-              shiny::isolate(build_chart_msg()),
-              error = function(e) NULL
-            )
-            if (is.null(msg)) {
-              stop("chart block '", ns("drilldown_block"),
-                   "' has no data to draw yet", call. = FALSE)
-            }
-            session$sendCustomMessage("drilldown-capture", c(
-              msg[c("columns", "data", "data_rev", "config")],
-              list(req = token, width = width, height = height,
-                   ratio = canvas_capture_ratio())
-            ))
-          })
-        }
+        # Keyed by the chart's own element id, which is the only thing
+        # unique per block here: `id` is the module id every chart block
+        # shares ("expr"), so registering under it would leave one entry
+        # for the whole board.
+        register_chart_capture(ns("drilldown_block"), function(token, width,
+                                                               height) {
+          # The last payload when there is one, a fresh one when there is
+          # not: a chart in a view nobody opened has pushed nothing, and
+          # that is exactly the chart an export cannot afford to skip.
+          msg <- last_push$msg %||% tryCatch(
+            shiny::isolate(build_chart_msg()),
+            error = function(e) NULL
+          )
+          if (is.null(msg)) {
+            stop("chart block '", ns("drilldown_block"),
+                 "' has no data to draw yet", call. = FALSE)
+          }
+          session$sendCustomMessage("drilldown-capture", c(
+            msg[c("columns", "data", "data_rev", "config")],
+            list(req = token, width = width, height = height,
+                 ratio = canvas_capture_ratio())
+          ))
+        })
 
         # The client announces itself when it binds with no payload waiting.
         # chart.js's `pendingData` only catches a message that arrived while the
@@ -1889,61 +1885,52 @@ new_chart_block <- function(
 
         # --- downloads ------------------------------------------------------
         #
-        # The chart a REPORT would print, in four formats. Not the live
-        # canvas: a slide and a download were two different renderings of one
-        # chart while this went through ECharts' getDataURL, and the file you
-        # sent on did not match the deck you sent with it. Both routes now
-        # build the ggplot through chart_static_exhibit(), which follows the
-        # same `blockr.viz.report_style` the deck's report call does.
-        #
-        # What that costs, said plainly: the download no longer carries the
-        # live view's zoom, hidden series or drill highlight. It carries the
-        # chart the block is configured to show.
-        dl_state <- function() {
-          st <- list(
-            chart_type = r_chart_type(), group = r_group(), color = r_color(),
-            facet = r_facet(), value = r_value(), func = r_func(),
-            x = r_x(), y = r_y(), series = r_series(),
-            bar_mode = r_bar_mode(), orientation = r_orientation(),
-            value_labels = r_value_labels(),
-            sort_by = r_sort_by(), sort_dir = r_sort_dir(),
-            count_on = r_count_on(), count_col = r_count_col(),
-            na_group = r_na_group(), pct_of = r_pct_of(),
-            facet_scales = r_facet_scales(), facet_cols = r_facet_cols(),
-            box_points = r_box_points(),
-            smoother = r_smoother(), identity_line = r_identity_line(),
-            lo = r_lo(), hi = r_hi(), value_lines = r_value_lines(),
-            x_lines = r_x_lines(),
-            title = r_title(), subtitle = r_subtitle(),
-            caption = r_caption()
-          )
-          st[!vapply(st, is.null, logical(1L))]
-        }
-
-        # PROTOTYPE (R/chart-capture.R). The canvas posts its composed
-        # bitmap when the download menu opens, so by the time a format is
-        # picked the picture on screen is already here. Kept OUT of the
-        # reactive graph deliberately: it is an artifact of the last render,
-        # not state anything should recompute from.
+        # The png, web page and PowerPoint downloads carry the chart as the
+        # browser drew it. The canvas composes itself and posts the bitmap
+        # when the download menu opens, so by the time a format is picked the
+        # picture is here. Kept OUT of the reactive graph: it is an artifact
+        # of the last render, not state anything should recompute from.
         capture <- shiny::reactiveVal(NULL)
 
         shiny::observeEvent(input$drilldown_block_capture, {
           msg <- input$drilldown_block_capture
           capture(new_chart_capture(chart_capture_decode(msg$png),
                                     msg$width, msg$height))
-          # Nothing in the UI says the picture came off the canvas rather
-          # than out of R, so the console does while this is a prototype.
-          message("chart capture: ", msg$width, " x ", msg$height, " px")
         })
 
-        # The chart an export should carry: what the browser drew when we
-        # have it, the server-side render otherwise (no canvas has been
-        # mounted, or the flag is off).
-        dl_chart <- function() {
-          if (canvas_capture_on() && !is.null(capture())) {
-            return(capture())
+        # No picture when a format is clicked: the chart had not drawn when
+        # the menu opened, or the bitmap is still on its way. The capture
+        # service then draws it offscreen. Its reply cannot land while the
+        # download is in flight (Shiny holds inputs back until it returns),
+        # so this click says so and the next one finds the picture.
+        capture_token <- shiny::reactiveVal(NULL)
+
+        shiny::observe({
+          tok <- capture_token()
+          shiny::req(tok)
+          cap <- tryCatch(chart_capture_collect(tok), error = function(e) {
+            capture_token(NULL)
+            NULL
+          })
+          shiny::req(cap)
+          capture_token(NULL)
+          if (is.null(shiny::isolate(capture()))) {
+            capture(cap)
           }
-          chart_static_exhibit(plain_data(), dl_state())
+        })
+
+        dl_chart <- function() {
+          cap <- capture()
+          if (!is.null(cap)) {
+            return(cap)
+          }
+          if (is.null(shiny::isolate(capture_token()))) {
+            capture_token(
+              chart_capture_request(ns("drilldown_block"), 960, 540)
+            )
+          }
+          stop("the chart has not been drawn yet; try again in a moment",
+               call. = FALSE)
         }
 
         dl_formats <- shiny::reactive({
@@ -1982,14 +1969,9 @@ new_chart_block <- function(
           filename = function() dl_name("xlsx"),
           content = function(file) {
             dl_guard("Excel", {
-              # The numbers, never the picture: xlsx reads the aggregated frame
-              # off the server-side render even when a capture is in hand.
-              p <- chart_static_exhibit(plain_data(), dl_state())
-              shiny::req(!is.null(p))
-              # The AGGREGATED frame, one row per mark -- the numbers the chart
-              # draws, not the block's input rows.
-              d <- chart_exhibit_data(p)
-              shiny::req(!is.null(d))
+              # The rows the chart is drawn from.
+              d <- plain_data()
+              shiny::req(is.data.frame(d))
               auto <- r_data_titles()
               write_annotated_xlsx(
                 d, file,
@@ -2008,7 +1990,6 @@ new_chart_block <- function(
           content = function(file) {
             dl_guard("web page", {
               p <- dl_chart()
-              shiny::req(!is.null(p))
               auto <- r_data_titles()
               write_exhibit_html(
                 p, file,
@@ -2024,7 +2005,6 @@ new_chart_block <- function(
           content = function(file) {
             dl_guard("PowerPoint", {
               p <- dl_chart()
-              shiny::req(!is.null(p))
               auto <- r_data_titles()
               write_exhibit_pptx(
                 p, file,
@@ -2038,13 +2018,7 @@ new_chart_block <- function(
           filename = function() dl_name("png"),
           content = function(file) {
             dl_guard("image", {
-              p <- dl_chart()
-              shiny::req(!is.null(p))
-              if (inherits(p, "chart_capture")) {
-                chart_capture_file(p, file)
-              } else {
-                write_exhibit_png(p, file)
-              }
+              chart_capture_file(dl_chart(), file)
             })
           }
         )
@@ -2318,9 +2292,7 @@ new_chart_block <- function(
 #' one panel per level, so a single fit over the pooled rows is an estimate of
 #' a relationship no panel shows — it can carry a slope, an x range, and even a
 #' sign that contradict every panel it is drawn into (Simpson's paradox). This
-#' mirrors `ggplot2::geom_smooth()` under `facet_wrap()`, which is what
-#' [static_chart()] and the emitted code use, so the canvas and the export
-#' cannot disagree.
+#' mirrors `ggplot2::geom_smooth()` under `facet_wrap()`.
 #'
 #' @param data Data frame.
 #' @param smoother One of `"none"`, `"lm"`, `"loess"`.

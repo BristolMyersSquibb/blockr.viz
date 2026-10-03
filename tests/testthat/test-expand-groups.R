@@ -162,41 +162,6 @@ test_that("group claims sit beside ordinary ones", {
   expect_equal(out[[2]]$values, "F")
 })
 
-# --- export path -------------------------------------------------------------
-
-test_that("chart_expr expands when a role binds a defined column", {
-  d <- grouped_df()
-  ex <- chart_expr("data", chart_type = "bar", group = "Group", data = d,
-                   qualify = TRUE)
-  code <- chart_code(ex)
-  expect_match(code, "blockr.viz::expand_groups(\"Group\")", fixed = TRUE)
-  p <- eval(ex, list(data = d))
-  expect_equal(nrow(p$data), 3)
-  expect_equal(sort(p$data$n), c(2, 2, 4))
-
-  # Not bound to a splitting role: no expansion.
-  ex <- chart_expr("data", chart_type = "bar", group = "TRT", data = d)
-  expect_no_match(chart_code(ex), "expand_groups")
-
-  # No snapshot: the board's group column by name.
-  ex <- chart_expr("data", chart_type = "bar", group = "Group")
-  expect_match(chart_code(ex), "expand_groups", fixed = TRUE)
-  ex <- chart_expr("data", chart_type = "bar", group = "Group",
-                   facet = "Subgroup")
-  expect_match(chart_code(ex), 'expand_groups\\(.*"Subgroup"\\)')
-  ex <- chart_expr("data", chart_type = "bar", group = "SEX")
-  expect_no_match(chart_code(ex), "expand_groups")
-})
-
-test_that("static_chart draws one bar per group", {
-  skip_if_not_installed("ggplot2")
-  d <- grouped_df()
-  p <- static_chart(d, chart_type = "bar", group = "Group")
-  expect_setequal(as.character(p$data$Group), c("All", "Pbo", "High"))
-  n <- p$data[[setdiff(names(p$data), "Group")[1]]]
-  expect_equal(sort(n), c(2, 2, 4))
-})
-
 # --- other blocks ------------------------------------------------------------
 
 test_that("heatmap rows repeat per group under an overlap definition", {

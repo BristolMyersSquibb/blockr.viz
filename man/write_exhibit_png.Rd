@@ -34,8 +34,8 @@ write_exhibit_png(
 )
 }
 \arguments{
-\item{x}{A \code{summarize_exhibit} from \code{\link[=static_summarize_table]{static_summarize_table()}}, or a ggplot
-from \code{\link[=static_chart]{static_chart()}}.}
+\item{x}{A \code{summarize_exhibit} from \code{\link[=static_summarize_table]{static_summarize_table()}}, or a
+ggplot.}
 
 \item{file}{Path to write the \code{.png} to.}
 
@@ -52,15 +52,13 @@ from \code{\link[=static_chart]{static_chart()}}.}
 The exhibit as one image: what \code{\link[=pptx_add_exhibit]{pptx_add_exhibit()}} places on a slide,
 without the slide. A summarize table is painted from its cell model and is
 as tall as the table is long (a file has no fixed box, so nothing is
-paged); a chart is its ggplot at the size the plot asks for.
+paged); a ggplot is drawn at the size the plot asks for.
 }
 \details{
 It is a re-render, not a screenshot. The summarize table's marks are drawn
-from the same cell model the browser gets and the chart from the same
-pipeline a report compiles, so the file is sharper than a capture -- and
-not pixel-identical to one, since neither carries the live view's zoom or
-hidden series.
+from the same cell model the browser gets, so the file is sharper than a
+capture, and not pixel-identical to one.
 }
 \seealso{
-\code{\link[=static_summarize_table]{static_summarize_table()}}, \code{\link[=static_chart]{static_chart()}}, \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}
+\code{\link[=static_summarize_table]{static_summarize_table()}}, \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}
 }
