@@ -200,7 +200,16 @@
        {
         "type": "line",
         "name": "",
-        "data": [],
+        "data": [
+         [
+          "Week 4",
+          30.11
+         ],
+         [
+          "Week 8",
+          33.48
+         ]
+        ],
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,

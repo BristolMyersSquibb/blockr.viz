@@ -738,7 +738,16 @@
        {
         "type": "scatter",
         "name": "",
-        "data": [],
+        "data": [
+         [
+          16,
+          23.24
+         ],
+         [
+          84,
+          33
+         ]
+        ],
         "symbol": "circle",
         "symbolSize": 6,
         "itemStyle": {
@@ -870,6 +879,8 @@
      },
      "probes": {
       "tooltip": [
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">16</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">23.2</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">84</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">33</span></div>",
        "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>MILD</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">21.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MILD</span></div>",
        "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>MILD</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">58</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.5</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MILD</span></div>",
        "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>MILD</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MILD</span></div>",

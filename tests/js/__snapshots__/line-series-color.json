@@ -212,7 +212,16 @@
        {
         "type": "line",
         "name": "",
-        "data": [],
+        "data": [
+         [
+          28,
+          30.11
+         ],
+         [
+          56,
+          33.48
+         ]
+        ],
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,

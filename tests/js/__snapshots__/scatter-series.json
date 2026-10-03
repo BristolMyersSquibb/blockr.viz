@@ -142,7 +142,16 @@
        {
         "type": "scatter",
         "name": "",
-        "data": [],
+        "data": [
+         [
+          28,
+          30.11
+         ],
+         [
+          56,
+          33.48
+         ]
+        ],
         "symbol": "circle",
         "symbolSize": 6,
         "itemStyle": {
@@ -569,6 +578,8 @@
      },
      "probes": {
       "tooltip": [
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">28</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">30.1</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">56</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">33.5</span></div>",
        "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">27.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div>",
        "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div>",
        "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">29</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div>",

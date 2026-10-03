@@ -3090,7 +3090,7 @@
       let selection;
       if (lineName) {
         hitRows = (this.data || []).filter(
-          r => inFacet(r) && String(r[splitCol]) === String(lineName));
+          r => inFacet(r) && String(r[splitCol] ?? '') === String(lineName));
         selection = lineName;
       } else {
         const v = params.value;
@@ -5077,8 +5077,9 @@
       const colorForLevel = (/** @type {any} */ level, /** @type {number} */ index) => {
         if (!color) return palette[0];
         if (seriesCol && seriesCol !== color) {
-          // The series' first row, as data.find() would return it.
-          const rep = ix.get(this.data, seriesCol, 'raw', level)[0];
+          // The series' first row. Keyed like the levels, so a null series
+          // value finds the '' level's rows.
+          const rep = ix.get(this.data, seriesCol, 'nz', level)[0];
           const cv = rep ? String(rep[color] ?? '') : '';
           if (colorScale && colorScale.color && colorScale.color[cv] != null) {
             return colorScale.color[cv];
@@ -5537,7 +5538,9 @@
         } else if (!isBand) {
           for (let ci = 0; ci < seriesLevels.length; ci++) {
             const cl = seriesLevels[ci];
-            const grpRows = ix.get(rows, splitCol, 'raw', cl)
+            // Keyed like the levels (String(v ?? '')), as the aggregate
+            // engine keys them: a null split value is drawn in the '' series.
+            const grpRows = ix.get(rows, splitCol, 'nz', cl)
               .filter(r => r[x] != null && r[y] != null);
             const pts = grpRows.map(packPt);
             sortLinePts(pts);
@@ -5769,7 +5772,7 @@
           seriesByColorByVal = {};
           for (const lvl of cbLevels) seriesByColorByVal[lvl] = [];
           for (const sl of seriesLevels) {
-            const rep = ix.get(this.data, seriesCol, 'raw', sl)[0];
+            const rep = ix.get(this.data, seriesCol, 'nz', sl)[0];
             const cv = rep ? String(rep[color] ?? '') : '';
             if (cv in seriesByColorByVal) seriesByColorByVal[cv].push(sl);
           }
