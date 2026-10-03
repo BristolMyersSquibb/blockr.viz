@@ -1,0 +1,686 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "radar",
+  "group": "AVISIT",
+  "color": "AESEV",
+  "facet": "SEX",
+  "drill": "auto"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": {
+   "title": "AESEV",
+   "chips": [
+    {
+     "name": "",
+     "color": "#0072B2",
+     "off": false
+    },
+    {
+     "name": "MILD",
+     "color": "#D55E00",
+     "off": false
+    },
+    {
+     "name": "MODERATE",
+     "color": "#F0E442",
+     "off": false
+    },
+    {
+     "name": "SEVERE",
+     "color": "#009E73",
+     "off": false
+    }
+   ]
+  },
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": false,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": "F",
+    "height": "350px",
+    "chart": true
+   },
+   {
+    "label": "M",
+    "height": "350px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false,
+       "data": [
+        "",
+        "MILD",
+        "MODERATE",
+        "SEVERE"
+       ]
+      },
+      "radar": {
+       "indicator": [
+        {
+         "name": "Baseline",
+         "max": 2
+        },
+        {
+         "name": "Week 2",
+         "max": 2
+        },
+        {
+         "name": "Week 4",
+         "max": 2
+        },
+        {
+         "name": "Week 8",
+         "max": 2
+        },
+        {
+         "name": "Week 12",
+         "max": 2
+        }
+       ],
+       "radius": "62%",
+       "center": [
+        "50%",
+        "50%"
+       ],
+       "axisName": {
+        "color": "#6b7280",
+        "fontSize": 11,
+        "overflow": "truncate",
+        "width": 90
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb"
+        }
+       },
+       "splitArea": {
+        "show": false
+       }
+      },
+      "series": [
+       {
+        "type": "radar",
+        "data": [
+         {
+          "name": "",
+          "value": [
+           0,
+           1,
+           0,
+           0,
+           1
+          ],
+          "itemStyle": {
+           "color": "#0072B2"
+          },
+          "lineStyle": {
+           "color": "#0072B2",
+           "width": 2
+          },
+          "areaStyle": {
+           "color": "#0072B2",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "MILD",
+          "value": [
+           2,
+           2,
+           2,
+           2,
+           2
+          ],
+          "itemStyle": {
+           "color": "#D55E00"
+          },
+          "lineStyle": {
+           "color": "#D55E00",
+           "width": 2
+          },
+          "areaStyle": {
+           "color": "#D55E00",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "MODERATE",
+          "value": [
+           2,
+           1,
+           2,
+           2,
+           1
+          ],
+          "itemStyle": {
+           "color": "#F0E442"
+          },
+          "lineStyle": {
+           "color": "#F0E442",
+           "width": 2
+          },
+          "areaStyle": {
+           "color": "#F0E442",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "SEVERE",
+          "value": [
+           2,
+           2,
+           2,
+           2,
+           2
+          ],
+          "itemStyle": {
+           "color": "#009E73"
+          },
+          "lineStyle": {
+           "color": "#009E73",
+           "width": 2
+          },
+          "areaStyle": {
+           "color": "#009E73",
+           "opacity": 0.15
+          }
+         }
+        ],
+        "symbol": "circle",
+        "symbolSize": 4,
+        "emphasis": {
+         "focus": "self"
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span></span></div><div class=\"dd-tt-row dd-tt-label\">Count</div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Baseline</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 2</span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 4</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 8</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 12</span><span class=\"dd-tt-value\">1</span></div>",
+       "<div class=\"dd-tt-head\"><span>MILD</span></div><div class=\"dd-tt-row dd-tt-label\">Count</div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Baseline</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 2</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 4</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 8</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 12</span><span class=\"dd-tt-value\">2</span></div>",
+       "<div class=\"dd-tt-head\"><span>MODERATE</span></div><div class=\"dd-tt-row dd-tt-label\">Count</div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Baseline</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 2</span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 4</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 8</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 12</span><span class=\"dd-tt-value\">1</span></div>",
+       "<div class=\"dd-tt-head\"><span>SEVERE</span></div><div class=\"dd-tt-row dd-tt-label\">Count</div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Baseline</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 2</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 4</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 8</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 12</span><span class=\"dd-tt-value\">2</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "series": [
+       {
+        "data": [
+         {
+          "name": "",
+          "value": [
+           0,
+           1,
+           0,
+           0,
+           1
+          ],
+          "itemStyle": {
+           "color": "#0072B2",
+           "opacity": 1
+          },
+          "lineStyle": {
+           "color": "#0072B2",
+           "width": 2,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "color": "#0072B2",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "MILD",
+          "value": [
+           2,
+           2,
+           2,
+           2,
+           2
+          ],
+          "itemStyle": {
+           "color": "#D55E00",
+           "opacity": 1
+          },
+          "lineStyle": {
+           "color": "#D55E00",
+           "width": 2,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "color": "#D55E00",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "MODERATE",
+          "value": [
+           2,
+           1,
+           2,
+           2,
+           1
+          ],
+          "itemStyle": {
+           "color": "#F0E442",
+           "opacity": 1
+          },
+          "lineStyle": {
+           "color": "#F0E442",
+           "width": 2,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "color": "#F0E442",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "SEVERE",
+          "value": [
+           2,
+           2,
+           2,
+           2,
+           2
+          ],
+          "itemStyle": {
+           "color": "#009E73",
+           "opacity": 1
+          },
+          "lineStyle": {
+           "color": "#009E73",
+           "width": 2,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "color": "#009E73",
+           "opacity": 0.15
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false,
+       "data": [
+        "",
+        "MILD",
+        "MODERATE",
+        "SEVERE"
+       ]
+      },
+      "radar": {
+       "indicator": [
+        {
+         "name": "Baseline",
+         "max": 2
+        },
+        {
+         "name": "Week 2",
+         "max": 2
+        },
+        {
+         "name": "Week 4",
+         "max": 2
+        },
+        {
+         "name": "Week 8",
+         "max": 2
+        },
+        {
+         "name": "Week 12",
+         "max": 2
+        }
+       ],
+       "radius": "62%",
+       "center": [
+        "50%",
+        "50%"
+       ],
+       "axisName": {
+        "color": "#6b7280",
+        "fontSize": 11,
+        "overflow": "truncate",
+        "width": 90
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb"
+        }
+       },
+       "splitArea": {
+        "show": false
+       }
+      },
+      "series": [
+       {
+        "type": "radar",
+        "data": [
+         {
+          "name": "",
+          "value": [
+           0,
+           0,
+           0,
+           0,
+           0
+          ],
+          "itemStyle": {
+           "color": "#0072B2"
+          },
+          "lineStyle": {
+           "color": "#0072B2",
+           "width": 2
+          },
+          "areaStyle": {
+           "color": "#0072B2",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "MILD",
+          "value": [
+           2,
+           2,
+           2,
+           2,
+           2
+          ],
+          "itemStyle": {
+           "color": "#D55E00"
+          },
+          "lineStyle": {
+           "color": "#D55E00",
+           "width": 2
+          },
+          "areaStyle": {
+           "color": "#D55E00",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "MODERATE",
+          "value": [
+           2,
+           2,
+           2,
+           2,
+           2
+          ],
+          "itemStyle": {
+           "color": "#F0E442"
+          },
+          "lineStyle": {
+           "color": "#F0E442",
+           "width": 2
+          },
+          "areaStyle": {
+           "color": "#F0E442",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "SEVERE",
+          "value": [
+           2,
+           2,
+           2,
+           2,
+           2
+          ],
+          "itemStyle": {
+           "color": "#009E73"
+          },
+          "lineStyle": {
+           "color": "#009E73",
+           "width": 2
+          },
+          "areaStyle": {
+           "color": "#009E73",
+           "opacity": 0.15
+          }
+         }
+        ],
+        "symbol": "circle",
+        "symbolSize": 4,
+        "emphasis": {
+         "focus": "self"
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span></span></div><div class=\"dd-tt-row dd-tt-label\">Count</div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Baseline</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 2</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 4</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 8</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 12</span><span class=\"dd-tt-value\">0</span></div>",
+       "<div class=\"dd-tt-head\"><span>MILD</span></div><div class=\"dd-tt-row dd-tt-label\">Count</div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Baseline</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 2</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 4</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 8</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 12</span><span class=\"dd-tt-value\">2</span></div>",
+       "<div class=\"dd-tt-head\"><span>MODERATE</span></div><div class=\"dd-tt-row dd-tt-label\">Count</div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Baseline</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 2</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 4</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 8</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 12</span><span class=\"dd-tt-value\">2</span></div>",
+       "<div class=\"dd-tt-head\"><span>SEVERE</span></div><div class=\"dd-tt-row dd-tt-label\">Count</div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Baseline</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 2</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 4</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 8</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 12</span><span class=\"dd-tt-value\">2</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "series": [
+       {
+        "data": [
+         {
+          "name": "",
+          "value": [
+           0,
+           0,
+           0,
+           0,
+           0
+          ],
+          "itemStyle": {
+           "color": "#0072B2",
+           "opacity": 1
+          },
+          "lineStyle": {
+           "color": "#0072B2",
+           "width": 2,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "color": "#0072B2",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "MILD",
+          "value": [
+           2,
+           2,
+           2,
+           2,
+           2
+          ],
+          "itemStyle": {
+           "color": "#D55E00",
+           "opacity": 1
+          },
+          "lineStyle": {
+           "color": "#D55E00",
+           "width": 2,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "color": "#D55E00",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "MODERATE",
+          "value": [
+           2,
+           2,
+           2,
+           2,
+           2
+          ],
+          "itemStyle": {
+           "color": "#F0E442",
+           "opacity": 1
+          },
+          "lineStyle": {
+           "color": "#F0E442",
+           "width": 2,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "color": "#F0E442",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "SEVERE",
+          "value": [
+           2,
+           2,
+           2,
+           2,
+           2
+          ],
+          "itemStyle": {
+           "color": "#009E73",
+           "opacity": 1
+          },
+          "lineStyle": {
+           "color": "#009E73",
+           "width": 2,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "color": "#009E73",
+           "opacity": 0.15
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

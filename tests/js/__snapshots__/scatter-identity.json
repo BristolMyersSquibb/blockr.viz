@@ -1,0 +1,500 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "on",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "scatter",
+  "x": "AVAL",
+  "y": "LO",
+  "drill": "auto"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "400px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 66,
+       "right": 5,
+       "top": 30,
+       "bottom": 52
+      },
+      "xAxis": {
+       "type": "value",
+       "name": "Analysis Value",
+       "nameLocation": "middle",
+       "nameGap": 28,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true,
+       "min": 15,
+       "max": 45
+      },
+      "yAxis": {
+       "type": "value",
+       "name": "LO",
+       "nameLocation": "middle",
+       "nameGap": 46,
+       "nameRotate": 90,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true,
+       "min": 15,
+       "max": 45
+      },
+      "toolbox": {
+       "show": true,
+       "right": 8,
+       "top": 4,
+       "itemSize": 11,
+       "feature": {
+        "brush": {
+         "type": [
+          "rect",
+          "lineX",
+          "clear"
+         ]
+        }
+       },
+       "iconStyle": {
+        "borderColor": "#6b7280"
+       }
+      },
+      "brush": {
+       "toolbox": [
+        "rect",
+        "lineX",
+        "clear"
+       ],
+       "xAxisIndex": 0,
+       "yAxisIndex": 0,
+       "brushStyle": {
+        "color": "rgba(0, 114, 178, 0.1)",
+        "borderColor": "rgba(0, 114, 178, 0.5)",
+        "borderWidth": 1
+       },
+       "throttleDelay": 300
+      },
+      "series": [
+       {
+        "type": "scatter",
+        "data": [
+         [
+          27.37,
+          25.87
+         ],
+         [
+          29.24,
+          27.74
+         ],
+         [
+          31.11,
+          29.61
+         ],
+         [
+          34.48,
+          32.98
+         ],
+         [
+          "NaN",
+          "NaN"
+         ],
+         [
+          21.37,
+          19.87
+         ],
+         [
+          23.24,
+          21.74
+         ],
+         [
+          25.11,
+          23.61
+         ],
+         [
+          28.48,
+          26.98
+         ],
+         [
+          30,
+          28.5
+         ],
+         [
+          28.37,
+          26.87
+         ],
+         [
+          30.24,
+          28.74
+         ],
+         [
+          32.11,
+          30.61
+         ],
+         [
+          35.48,
+          33.98
+         ],
+         [
+          37,
+          35.5
+         ],
+         [
+          22.37,
+          20.87
+         ],
+         [
+          24.24,
+          22.74
+         ],
+         [
+          26.11,
+          24.61
+         ],
+         [
+          29.48,
+          27.98
+         ],
+         [
+          31,
+          29.5
+         ],
+         [
+          29.37,
+          27.87
+         ],
+         [
+          "NaN",
+          "NaN"
+         ],
+         [
+          33.11,
+          31.61
+         ],
+         [
+          36.48,
+          34.98
+         ],
+         [
+          38,
+          36.5
+         ],
+         [
+          23.37,
+          21.87
+         ],
+         [
+          25.24,
+          23.74
+         ],
+         [
+          27.11,
+          25.61
+         ],
+         [
+          30.48,
+          28.98
+         ],
+         [
+          32,
+          30.5
+         ],
+         [
+          30.37,
+          28.87
+         ],
+         [
+          32.24,
+          30.74
+         ],
+         [
+          34.11,
+          32.61
+         ],
+         [
+          37.48,
+          35.98
+         ],
+         [
+          39,
+          37.5
+         ],
+         [
+          24.37,
+          22.87
+         ],
+         [
+          26.24,
+          24.74
+         ],
+         [
+          28.11,
+          26.61
+         ],
+         [
+          31.48,
+          29.98
+         ],
+         [
+          33,
+          31.5
+         ],
+         [
+          31.37,
+          29.87
+         ],
+         [
+          33.24,
+          31.74
+         ],
+         [
+          35.11,
+          33.61
+         ],
+         [
+          38.48,
+          36.98
+         ],
+         [
+          40,
+          38.5
+         ],
+         [
+          25.37,
+          23.87
+         ],
+         [
+          "NaN",
+          "NaN"
+         ],
+         [
+          29.11,
+          27.61
+         ],
+         [
+          32.48,
+          30.98
+         ],
+         [
+          34,
+          32.5
+         ],
+         [
+          32.37,
+          30.87
+         ],
+         [
+          34.24,
+          32.74
+         ],
+         [
+          36.11,
+          34.61
+         ],
+         [
+          39.48,
+          37.98
+         ],
+         [
+          41,
+          39.5
+         ],
+         [
+          26.37,
+          24.87
+         ],
+         [
+          28.24,
+          26.74
+         ],
+         [
+          30.11,
+          28.61
+         ],
+         [
+          33.48,
+          31.98
+         ],
+         [
+          35,
+          33.5
+         ]
+        ],
+        "symbol": "circle",
+        "symbolSize": 6,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "emphasis": {
+         "disabled": true
+        },
+        "markLine": {
+         "silent": true,
+         "symbol": "none",
+         "lineStyle": {
+          "color": "#dc2626",
+          "type": "dashed",
+          "width": 1.5
+         },
+         "label": {
+          "show": false
+         },
+         "data": [
+          [
+           {
+            "coord": [
+             15,
+             15
+            ],
+            "lineStyle": {
+             "color": "#6b7280",
+             "type": "dashed",
+             "width": 1.5
+            }
+           },
+           {
+            "coord": [
+             45,
+             45
+            ]
+           }
+          ]
+         ]
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>LO</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">27.37</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">LO</span><span class=\"dd-tt-value\">25.9</span></div>",
+       "<div class=\"dd-tt-head\"><span>LO</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.24</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">LO</span><span class=\"dd-tt-value\">27.7</span></div>",
+       "<div class=\"dd-tt-head\"><span>LO</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.11</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">LO</span><span class=\"dd-tt-value\">29.6</span></div>",
+       "<div class=\"dd-tt-head\"><span>LO</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">34.48</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">LO</span><span class=\"dd-tt-value\">33</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "dispatchAction",
+     "action": {
+      "type": "takeGlobalCursor",
+      "key": "brush",
+      "brushOption": {
+       "brushType": "rect",
+       "brushMode": "single"
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

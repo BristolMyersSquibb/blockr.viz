@@ -1,0 +1,717 @@
+{
+ "config": {
+  "value": "AVAL",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "on",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "pointrange",
+  "group": "AVISIT",
+  "color": "ARM",
+  "orientation": "horizontal",
+  "drill": "auto"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": {
+   "title": "Planned Arm",
+   "chips": [
+    {
+     "name": "High Dose",
+     "color": "#0072B2",
+     "off": false
+    },
+    {
+     "name": "Low Dose",
+     "color": "#D55E00",
+     "off": false
+    },
+    {
+     "name": "Placebo",
+     "color": "#F0E442",
+     "off": false
+    }
+   ]
+  },
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "496px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false,
+       "data": [
+        "High Dose",
+        "Low Dose",
+        "Placebo"
+       ]
+      },
+      "grid": {
+       "left": 81,
+       "right": 5,
+       "top": 30,
+       "bottom": 46
+      },
+      "xAxis": {
+       "type": "value",
+       "scale": true,
+       "name": "Analysis Value",
+       "nameLocation": "middle",
+       "nameGap": 30,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       }
+      },
+      "yAxis": {
+       "type": "category",
+       "data": [
+        "Baseline\u0000High Dose",
+        "Baseline\u0000Low Dose",
+        "Baseline\u0000Placebo",
+        "Week 2\u0000High Dose",
+        "Week 2\u0000Low Dose",
+        "Week 2\u0000Placebo",
+        "Week 4\u0000High Dose",
+        "Week 4\u0000Low Dose",
+        "Week 4\u0000Placebo",
+        "Week 8\u0000High Dose",
+        "Week 8\u0000Low Dose",
+        "Week 8\u0000Placebo",
+        "Week 12\u0000High Dose",
+        "Week 12\u0000Low Dose",
+        "Week 12\u0000Placebo"
+       ],
+       "inverse": true,
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11,
+        "align": "left",
+        "margin": 71,
+        "width": 66,
+        "overflow": "truncate",
+        "ellipsis": "…",
+        "formatter": "[fn]"
+       },
+       "axisLine": {
+        "show": false
+       }
+      },
+      "series": [
+       {
+        "type": "line",
+        "name": "High Dose",
+        "legendHoverLink": false,
+        "silent": true,
+        "z": 2,
+        "data": [
+         [
+          27.7033,
+          0
+         ],
+         [
+          29.5733,
+          3
+         ],
+         [
+          31.4433,
+          6
+         ],
+         [
+          34.8133,
+          9
+         ],
+         [
+          36.3333,
+          12
+         ]
+        ],
+        "showSymbol": false,
+        "lineStyle": {
+         "color": "#0072B2",
+         "width": 1.4
+        },
+        "itemStyle": {
+         "color": "#0072B2"
+        },
+        "emphasis": {
+         "disabled": true
+        },
+        "tooltip": {
+         "show": false
+        }
+       },
+       {
+        "type": "custom",
+        "name": "High Dose",
+        "legendHoverLink": false,
+        "silent": true,
+        "z": 1,
+        "data": [
+         [
+          0,
+          25.37,
+          30.0367
+         ],
+         [
+          3,
+          27.24,
+          31.9067
+         ],
+         [
+          6,
+          29.11,
+          33.7767
+         ],
+         [
+          9,
+          32.48,
+          37.1467
+         ],
+         [
+          12,
+          34,
+          38.6667
+         ]
+        ],
+        "encode": {
+         "y": 0,
+         "x": [
+          1,
+          2
+         ]
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "scatter",
+        "name": "High Dose",
+        "data": [
+         {
+          "value": [
+           27.7033,
+           0
+          ],
+          "name": "Baseline\u0000High Dose",
+          "center": 27.7033,
+          "n": 3,
+          "lo": 25.37,
+          "hi": 30.0367
+         },
+         {
+          "value": [
+           29.5733,
+           3
+          ],
+          "name": "Week 2\u0000High Dose",
+          "center": 29.5733,
+          "n": 3,
+          "lo": 27.24,
+          "hi": 31.9067
+         },
+         {
+          "value": [
+           31.4433,
+           6
+          ],
+          "name": "Week 4\u0000High Dose",
+          "center": 31.4433,
+          "n": 3,
+          "lo": 29.11,
+          "hi": 33.7767
+         },
+         {
+          "value": [
+           34.8133,
+           9
+          ],
+          "name": "Week 8\u0000High Dose",
+          "center": 34.8133,
+          "n": 3,
+          "lo": 32.48,
+          "hi": 37.1467
+         },
+         {
+          "value": [
+           36.3333,
+           12
+          ],
+          "name": "Week 12\u0000High Dose",
+          "center": 36.3333,
+          "n": 3,
+          "lo": 34,
+          "hi": 38.6667
+         }
+        ],
+        "z": 4,
+        "symbolSize": 7,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "Low Dose",
+        "legendHoverLink": false,
+        "silent": true,
+        "z": 2,
+        "data": [
+         [
+          26.87,
+          1
+         ],
+         [
+          27.9067,
+          4
+         ],
+         [
+          30.61,
+          7
+         ],
+         [
+          33.98,
+          10
+         ],
+         [
+          35.5,
+          13
+         ]
+        ],
+        "showSymbol": false,
+        "lineStyle": {
+         "color": "#D55E00",
+         "width": 1.4
+        },
+        "itemStyle": {
+         "color": "#D55E00"
+        },
+        "emphasis": {
+         "disabled": true
+        },
+        "tooltip": {
+         "show": false
+        }
+       },
+       {
+        "type": "custom",
+        "name": "Low Dose",
+        "legendHoverLink": false,
+        "silent": true,
+        "z": 1,
+        "data": [
+         [
+          1,
+          24.4036,
+          29.3364
+         ],
+         [
+          4,
+          24.6237,
+          31.1896
+         ],
+         [
+          7,
+          28.1436,
+          33.0764
+         ],
+         [
+          10,
+          31.5136,
+          36.4464
+         ],
+         [
+          13,
+          33.0336,
+          37.9664
+         ]
+        ],
+        "encode": {
+         "y": 0,
+         "x": [
+          1,
+          2
+         ]
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "scatter",
+        "name": "Low Dose",
+        "data": [
+         {
+          "value": [
+           26.87,
+           1
+          ],
+          "name": "Baseline\u0000Low Dose",
+          "center": 26.87,
+          "n": 4,
+          "lo": 24.4036,
+          "hi": 29.3364
+         },
+         {
+          "value": [
+           27.9067,
+           4
+          ],
+          "name": "Week 2\u0000Low Dose",
+          "center": 27.9067,
+          "n": 3,
+          "lo": 24.6237,
+          "hi": 31.1896
+         },
+         {
+          "value": [
+           30.61,
+           7
+          ],
+          "name": "Week 4\u0000Low Dose",
+          "center": 30.61,
+          "n": 4,
+          "lo": 28.1436,
+          "hi": 33.0764
+         },
+         {
+          "value": [
+           33.98,
+           10
+          ],
+          "name": "Week 8\u0000Low Dose",
+          "center": 33.98,
+          "n": 4,
+          "lo": 31.5136,
+          "hi": 36.4464
+         },
+         {
+          "value": [
+           35.5,
+           13
+          ],
+          "name": "Week 12\u0000Low Dose",
+          "center": 35.5,
+          "n": 4,
+          "lo": 33.0336,
+          "hi": 37.9664
+         }
+        ],
+        "z": 4,
+        "symbolSize": 7,
+        "itemStyle": {
+         "color": "#D55E00",
+         "cursor": "pointer"
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "Placebo",
+        "legendHoverLink": false,
+        "silent": true,
+        "z": 2,
+        "data": [
+         [
+          26.37,
+          2
+         ],
+         [
+          28.5733,
+          5
+         ],
+         [
+          30.11,
+          8
+         ],
+         [
+          33.48,
+          11
+         ],
+         [
+          34.6667,
+          14
+         ]
+        ],
+        "showSymbol": false,
+        "lineStyle": {
+         "color": "#F0E442",
+         "width": 1.4
+        },
+        "itemStyle": {
+         "color": "#F0E442"
+        },
+        "emphasis": {
+         "disabled": true
+        },
+        "tooltip": {
+         "show": false
+        }
+       },
+       {
+        "type": "custom",
+        "name": "Placebo",
+        "legendHoverLink": false,
+        "silent": true,
+        "z": 1,
+        "data": [
+         [
+          2,
+          24.6867,
+          28.0533
+         ],
+         [
+          5,
+          26.24,
+          30.9067
+         ],
+         [
+          8,
+          28.4267,
+          31.7933
+         ],
+         [
+          11,
+          31.7967,
+          35.1633
+         ],
+         [
+          14,
+          32.3333,
+          37
+         ]
+        ],
+        "encode": {
+         "y": 0,
+         "x": [
+          1,
+          2
+         ]
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "scatter",
+        "name": "Placebo",
+        "data": [
+         {
+          "value": [
+           26.37,
+           2
+          ],
+          "name": "Baseline\u0000Placebo",
+          "center": 26.37,
+          "n": 4,
+          "lo": 24.6867,
+          "hi": 28.0533
+         },
+         {
+          "value": [
+           28.5733,
+           5
+          ],
+          "name": "Week 2\u0000Placebo",
+          "center": 28.5733,
+          "n": 3,
+          "lo": 26.24,
+          "hi": 30.9067
+         },
+         {
+          "value": [
+           30.11,
+           8
+          ],
+          "name": "Week 4\u0000Placebo",
+          "center": 30.11,
+          "n": 4,
+          "lo": 28.4267,
+          "hi": 31.7933
+         },
+         {
+          "value": [
+           33.48,
+           11
+          ],
+          "name": "Week 8\u0000Placebo",
+          "center": 33.48,
+          "n": 4,
+          "lo": 31.7967,
+          "hi": 35.1633
+         },
+         {
+          "value": [
+           34.6667,
+           14
+          ],
+          "name": "Week 12\u0000Placebo",
+          "center": 34.6667,
+          "n": 3,
+          "lo": 32.3333,
+          "hi": 37
+         }
+        ],
+        "z": 4,
+        "symbolSize": 7,
+        "itemStyle": {
+         "color": "#F0E442",
+         "cursor": "pointer"
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       }
+      ]
+     },
+     "probes": {
+      "axisLabels": {
+       "yAxis0": [
+        "Baseline",
+        "Baseline",
+        "Baseline",
+        "Week 2",
+        "Week 2",
+        "Week 2",
+        "Week 4",
+        "Week 4",
+        "Week 4",
+        "Week 8",
+        "Week 8",
+        "Week 8"
+       ]
+      },
+      "tooltip": [
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span>Baseline · High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean</span><span class=\"dd-tt-value\">27.7033</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">±1 SE</span><span class=\"dd-tt-value\">25.37 – 30.0367</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span>Week 2 · High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean</span><span class=\"dd-tt-value\">29.5733</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">±1 SE</span><span class=\"dd-tt-value\">27.24 – 31.9067</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span>Week 4 · High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean</span><span class=\"dd-tt-value\">31.4433</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">±1 SE</span><span class=\"dd-tt-value\">29.11 – 33.7767</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span>Week 8 · High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean</span><span class=\"dd-tt-value\">34.8133</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">±1 SE</span><span class=\"dd-tt-value\">32.48 – 37.1467</span></div>",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>Baseline · Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean</span><span class=\"dd-tt-value\">26.87</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">±1 SE</span><span class=\"dd-tt-value\">24.4036 – 29.3364</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>Week 2 · Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean</span><span class=\"dd-tt-value\">27.9067</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">±1 SE</span><span class=\"dd-tt-value\">24.6237 – 31.1896</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>Week 4 · Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean</span><span class=\"dd-tt-value\">30.61</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">±1 SE</span><span class=\"dd-tt-value\">28.1436 – 33.0764</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>Week 8 · Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean</span><span class=\"dd-tt-value\">33.98</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">±1 SE</span><span class=\"dd-tt-value\">31.5136 – 36.4464</span></div>",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       ""
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "series": [
+       {},
+       {},
+       {},
+       {},
+       {},
+       {},
+       {},
+       {},
+       {}
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

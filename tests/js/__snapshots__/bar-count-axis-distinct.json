@@ -1,0 +1,260 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "axis",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "auto",
+  "count_col": "USUBJID"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "272px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "axis",
+       "axisPointer": {
+        "type": "shadow"
+       },
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "grid": {
+       "left": 160,
+       "right": 5,
+       "top": 30,
+       "bottom": 46
+      },
+      "xAxis": {
+       "type": "value",
+       "name": "Count",
+       "nameLocation": "middle",
+       "nameGap": 30,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       }
+      },
+      "yAxis": {
+       "type": "category",
+       "data": [
+        "Upper respiratory tract infection",
+        "Nausea",
+        "Headache",
+        "Rash",
+        "Fatigue",
+        "Dizziness",
+        ""
+       ],
+       "inverse": true,
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11,
+        "align": "left",
+        "margin": 150,
+        "width": 145,
+        "overflow": "truncate",
+        "ellipsis": "…",
+        "formatter": "[fn]"
+       },
+       "axisLine": {
+        "show": false
+       },
+       "axisTick": {
+        "show": false
+       }
+      },
+      "series": [
+       {
+        "type": "bar",
+        "data": [
+         10,
+         10,
+         10,
+         9,
+         9,
+         9,
+         3
+        ],
+        "itemStyle": {
+         "color": "#0072B2",
+         "borderRadius": [
+          0,
+          2,
+          2,
+          0
+         ]
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       }
+      ]
+     },
+     "probes": {
+      "axisLabels": {
+       "yAxis0": [
+        "Upper respiratory tract infection (10)",
+        "Nausea (9)",
+        "Headache (10)",
+        "Rash (9)",
+        "Fatigue (9)",
+        "Dizziness (8)",
+        " (3)"
+       ]
+      },
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">9</span></div>",
+       "<div class=\"dd-tt-head\"><span>Fatigue</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">9</span></div>",
+       "<div class=\"dd-tt-head\"><span>Dizziness</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">9</span></div>",
+       "<div class=\"dd-tt-head\"><span></span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">3</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "series": [
+       {
+        "data": [
+         {
+          "value": 10,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 10,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 10,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 9,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 9,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 9,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 3,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

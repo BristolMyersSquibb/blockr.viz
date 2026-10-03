@@ -1,0 +1,53 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "bar",
+  "group": "NOPE"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [
+   "Mapped column not in data: Group = \"NOPE\". Columns available here: USUBJID, ARM, SEX, AVISIT, AVISITN, ADY, AVAL, AETERM, AESEV, ASTDY, AENDY, ANRHI, CHG, LO, HI. A rename, flatten or pivot upstream may have changed the column name — re-pick it in the gear."
+  ],
+  "grid": {
+   "single": false,
+   "columns": null
+  },
+  "slots": []
+ },
+ "slots": [],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

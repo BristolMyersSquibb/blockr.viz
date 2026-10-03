@@ -1,0 +1,274 @@
+{
+ "config": {
+  "value": "AVAL",
+  "func": "sum",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "treemap",
+  "group": "AETERM",
+  "drill": "auto"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "350px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "series": [
+       {
+        "type": "treemap",
+        "data": [
+         {
+          "name": "Headache",
+          "value": 307.4,
+          "n": 10,
+          "itemStyle": {
+           "color": "#0072B2"
+          }
+         },
+         {
+          "name": "Upper respiratory tract infection",
+          "value": 303.4,
+          "n": 10,
+          "itemStyle": {
+           "color": "#D55E00"
+          }
+         },
+         {
+          "name": "Rash",
+          "value": 285.92,
+          "n": 9,
+          "itemStyle": {
+           "color": "#F0E442"
+          }
+         },
+         {
+          "name": "Fatigue",
+          "value": 283.29,
+          "n": 9,
+          "itemStyle": {
+           "color": "#009E73"
+          }
+         },
+         {
+          "name": "Nausea",
+          "value": 256.16,
+          "n": 10,
+          "itemStyle": {
+           "color": "#56B4E9"
+          }
+         },
+         {
+          "name": "Dizziness",
+          "value": 239.68,
+          "n": 9,
+          "itemStyle": {
+           "color": "#E69F00"
+          }
+         },
+         {
+          "name": "",
+          "value": 98.07,
+          "n": 3,
+          "itemStyle": {
+           "color": "#CC79A7"
+          }
+         }
+        ],
+        "left": 10,
+        "right": 10,
+        "top": 2,
+        "bottom": 2,
+        "roam": false,
+        "nodeClick": false,
+        "breadcrumb": {
+         "show": false
+        },
+        "label": {
+         "show": true,
+         "fontSize": 11,
+         "formatter": "[fn]"
+        },
+        "itemStyle": {
+         "borderColor": "#ffffff",
+         "borderWidth": 2,
+         "gapWidth": 2
+        },
+        "emphasis": {
+         "itemStyle": {
+          "shadowBlur": 10,
+          "shadowColor": "rgba(0,0,0,0.15)"
+         }
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of Analysis Value</span><span class=\"dd-tt-value\">307.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of Analysis Value</span><span class=\"dd-tt-value\">303.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of Analysis Value</span><span class=\"dd-tt-value\">285.92</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">9</span></div>",
+       "<div class=\"dd-tt-head\"><span>Fatigue</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of Analysis Value</span><span class=\"dd-tt-value\">283.29</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">9</span></div>"
+      ],
+      "seriesLabels": {
+       "series0": [
+        "undefined\n307.4",
+        "undefined\n303.4",
+        "undefined\n285.92",
+        "undefined\n283.29",
+        "undefined\n256.16",
+        "undefined\n239.68",
+        "undefined\n98.07"
+       ]
+      }
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "series": [
+       {
+        "data": [
+         {
+          "name": "Headache",
+          "value": 307.4,
+          "n": 10,
+          "itemStyle": {
+           "color": "#0072B2",
+           "opacity": 1
+          }
+         },
+         {
+          "name": "Upper respiratory tract infection",
+          "value": 303.4,
+          "n": 10,
+          "itemStyle": {
+           "color": "#D55E00",
+           "opacity": 1
+          }
+         },
+         {
+          "name": "Rash",
+          "value": 285.92,
+          "n": 9,
+          "itemStyle": {
+           "color": "#F0E442",
+           "opacity": 1
+          }
+         },
+         {
+          "name": "Fatigue",
+          "value": 283.29,
+          "n": 9,
+          "itemStyle": {
+           "color": "#009E73",
+           "opacity": 1
+          }
+         },
+         {
+          "name": "Nausea",
+          "value": 256.16,
+          "n": 10,
+          "itemStyle": {
+           "color": "#56B4E9",
+           "opacity": 1
+          }
+         },
+         {
+          "name": "Dizziness",
+          "value": 239.68,
+          "n": 9,
+          "itemStyle": {
+           "color": "#E69F00",
+           "opacity": 1
+          }
+         },
+         {
+          "name": "",
+          "value": 98.07,
+          "n": 3,
+          "itemStyle": {
+           "color": "#CC79A7",
+           "opacity": 1
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

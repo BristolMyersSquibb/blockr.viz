@@ -1,0 +1,985 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "gantt",
+  "x": "AVISIT",
+  "xend": null,
+  "y": "USUBJID",
+  "drill": "auto"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "444px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "color": [
+       "#0072B2",
+       "#D55E00",
+       "#F0E442",
+       "#009E73",
+       "#56B4E9",
+       "#E69F00",
+       "#CC79A7"
+      ],
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 46,
+       "right": 10,
+       "top": 20,
+       "bottom": 48
+      },
+      "xAxis": {
+       "type": "category",
+       "name": "AVISIT",
+       "nameLocation": "middle",
+       "nameGap": 28,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true,
+       "data": [
+        "Baseline",
+        "Week 2",
+        "Week 4",
+        "Week 8",
+        "Week 12"
+       ]
+      },
+      "yAxis": {
+       "type": "category",
+       "data": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        ""
+       ],
+       "inverse": true,
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11,
+        "align": "left",
+        "margin": 36,
+        "width": 31,
+        "overflow": "truncate",
+        "ellipsis": "…"
+       },
+       "axisLine": {
+        "show": false
+       },
+       "axisTick": {
+        "show": false
+       },
+       "splitLine": {
+        "show": false
+       }
+      },
+      "series": [
+       {
+        "type": "custom",
+        "data": [
+         {
+          "value": [
+           0,
+           0,
+           0,
+           "S01",
+           "",
+           "",
+           "",
+           "S01",
+           0
+          ]
+         },
+         {
+          "value": [
+           1,
+           1,
+           0,
+           "S01",
+           "",
+           "",
+           "",
+           "S01",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           0,
+           "S01",
+           "",
+           "",
+           "",
+           "S01",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           0,
+           "S01",
+           "",
+           "",
+           "",
+           "S01",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           0,
+           "S01",
+           "",
+           "",
+           "",
+           "S01",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           1,
+           "S02",
+           "",
+           "",
+           "",
+           "S02",
+           0
+          ]
+         },
+         {
+          "value": [
+           1,
+           1,
+           1,
+           "S02",
+           "",
+           "",
+           "",
+           "S02",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           1,
+           "S02",
+           "",
+           "",
+           "",
+           "S02",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           1,
+           "S02",
+           "",
+           "",
+           "",
+           "S02",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           1,
+           "S02",
+           "",
+           "",
+           "",
+           "S02",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           2,
+           "S03",
+           "",
+           "",
+           "",
+           "S03",
+           0
+          ]
+         },
+         {
+          "value": [
+           1,
+           1,
+           2,
+           "S03",
+           "",
+           "",
+           "",
+           "S03",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           2,
+           "S03",
+           "",
+           "",
+           "",
+           "S03",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           2,
+           "S03",
+           "",
+           "",
+           "",
+           "S03",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           2,
+           "S03",
+           "",
+           "",
+           "",
+           "S03",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           3,
+           "S04",
+           "",
+           "",
+           "",
+           "S04",
+           0
+          ]
+         },
+         {
+          "value": [
+           1,
+           1,
+           3,
+           "S04",
+           "",
+           "",
+           "",
+           "S04",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           3,
+           "S04",
+           "",
+           "",
+           "",
+           "S04",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           3,
+           "S04",
+           "",
+           "",
+           "",
+           "S04",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           3,
+           "S04",
+           "",
+           "",
+           "",
+           "S04",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           4,
+           "S05",
+           "",
+           "",
+           "",
+           "S05",
+           0
+          ]
+         },
+         {
+          "value": [
+           1,
+           1,
+           4,
+           "S05",
+           "",
+           "",
+           "",
+           "S05",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           4,
+           "S05",
+           "",
+           "",
+           "",
+           "S05",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           4,
+           "S05",
+           "",
+           "",
+           "",
+           "S05",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           4,
+           "S05",
+           "",
+           "",
+           "",
+           "S05",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           5,
+           "S06",
+           "",
+           "",
+           "",
+           "S06",
+           0
+          ]
+         },
+         {
+          "value": [
+           1,
+           1,
+           5,
+           "S06",
+           "",
+           "",
+           "",
+           "S06",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           5,
+           "S06",
+           "",
+           "",
+           "",
+           "S06",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           5,
+           "S06",
+           "",
+           "",
+           "",
+           "S06",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           5,
+           "S06",
+           "",
+           "",
+           "",
+           "S06",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           6,
+           "S07",
+           "",
+           "",
+           "",
+           "S07",
+           0
+          ]
+         },
+         {
+          "value": [
+           1,
+           1,
+           6,
+           "S07",
+           "",
+           "",
+           "",
+           "S07",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           6,
+           "S07",
+           "",
+           "",
+           "",
+           "S07",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           6,
+           "S07",
+           "",
+           "",
+           "",
+           "S07",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           6,
+           "S07",
+           "",
+           "",
+           "",
+           "S07",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           7,
+           "S08",
+           "",
+           "",
+           "",
+           "S08",
+           0
+          ]
+         },
+         {
+          "value": [
+           1,
+           1,
+           7,
+           "S08",
+           "",
+           "",
+           "",
+           "S08",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           7,
+           "S08",
+           "",
+           "",
+           "",
+           "S08",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           7,
+           "S08",
+           "",
+           "",
+           "",
+           "S08",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           7,
+           "S08",
+           "",
+           "",
+           "",
+           "S08",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           8,
+           "S09",
+           "",
+           "",
+           "",
+           "S09",
+           0
+          ]
+         },
+         {
+          "value": [
+           1,
+           1,
+           8,
+           "S09",
+           "",
+           "",
+           "",
+           "S09",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           8,
+           "S09",
+           "",
+           "",
+           "",
+           "S09",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           8,
+           "S09",
+           "",
+           "",
+           "",
+           "S09",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           8,
+           "S09",
+           "",
+           "",
+           "",
+           "S09",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           9,
+           "S10",
+           "",
+           "",
+           "",
+           "S10",
+           0
+          ]
+         },
+         {
+          "value": [
+           1,
+           1,
+           9,
+           "S10",
+           "",
+           "",
+           "",
+           "S10",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           9,
+           "S10",
+           "",
+           "",
+           "",
+           "S10",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           9,
+           "S10",
+           "",
+           "",
+           "",
+           "S10",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           9,
+           "S10",
+           "",
+           "",
+           "",
+           "S10",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           10,
+           "S11",
+           "",
+           "",
+           "",
+           "S11",
+           0
+          ]
+         },
+         {
+          "value": [
+           1,
+           1,
+           10,
+           "S11",
+           "",
+           "",
+           "",
+           "S11",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           10,
+           "S11",
+           "",
+           "",
+           "",
+           "S11",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           10,
+           "S11",
+           "",
+           "",
+           "",
+           "S11",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           10,
+           "S11",
+           "",
+           "",
+           "",
+           "S11",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           11,
+           "S12",
+           "",
+           "",
+           "",
+           "S12",
+           0
+          ]
+         },
+         {
+          "value": [
+           1,
+           1,
+           11,
+           "S12",
+           "",
+           "",
+           "",
+           "S12",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           12,
+           "",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           12,
+           "",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           11,
+           "S12",
+           "",
+           "",
+           "",
+           "S12",
+           0
+          ]
+         }
+        ],
+        "encode": {
+         "x": [
+          0,
+          1
+         ],
+         "y": 2
+        },
+        "renderItem": "[fn]"
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Baseline</span></div>",
+       "<div class=\"dd-tt-head\"><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 2</span></div>",
+       "<div class=\"dd-tt-head\"><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 4</span></div>",
+       "<div class=\"dd-tt-head\"><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 8</span></div>"
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

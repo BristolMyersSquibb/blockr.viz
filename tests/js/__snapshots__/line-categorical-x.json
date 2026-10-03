@@ -1,0 +1,792 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "line",
+  "x": "AVISIT",
+  "y": "AVAL",
+  "series": "USUBJID",
+  "drill": "auto"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "464px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "axis",
+       "axisPointer": {
+        "type": "line"
+       },
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 66,
+       "right": 5,
+       "top": 30,
+       "bottom": 116
+      },
+      "xAxis": [
+       {
+        "type": "category",
+        "name": "AVISIT",
+        "nameLocation": "middle",
+        "nameGap": 80,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 11,
+         "interval": 0,
+         "lineHeight": 15,
+         "rotate": 90,
+         "__wrapAt": 160,
+         "__lines": 1,
+         "formatter": "[fn]"
+        },
+        "axisLine": {
+         "lineStyle": {
+          "color": "#d1d5db"
+         }
+        },
+        "splitLine": {
+         "lineStyle": {
+          "color": "#e5e7eb",
+          "type": "dashed"
+         }
+        },
+        "scale": true,
+        "data": [
+         "Baseline",
+         "Week 2",
+         "Week 4",
+         "Week 8",
+         "Week 12"
+        ]
+       },
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
+        }
+       }
+      ],
+      "yAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Value",
+        "nameLocation": "middle",
+        "nameGap": 46,
+        "nameRotate": 90,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLine": {
+         "lineStyle": {
+          "color": "#d1d5db"
+         }
+        },
+        "splitLine": {
+         "lineStyle": {
+          "color": "#e5e7eb",
+          "type": "dashed"
+         }
+        },
+        "scale": true
+       },
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
+        }
+       }
+      ],
+      "toolbox": {
+       "show": true,
+       "right": 8,
+       "top": 4,
+       "itemSize": 11,
+       "feature": {
+        "dataZoom": {
+         "xAxisIndex": 0,
+         "yAxisIndex": false,
+         "filterMode": "filter",
+         "title": {
+          "zoom": "Zoom to range",
+          "back": "Reset zoom"
+         }
+        }
+       },
+       "iconStyle": {
+        "borderColor": "#6b7280"
+       }
+      },
+      "series": [
+       {
+        "type": "line",
+        "name": "",
+        "data": [],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S01",
+        "data": [
+         [
+          "Baseline",
+          27.37
+         ],
+         [
+          "Week 2",
+          29.24
+         ],
+         [
+          "Week 4",
+          31.11
+         ],
+         [
+          "Week 8",
+          34.48
+         ],
+         [
+          "Week 12",
+          "NaN"
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S02",
+        "data": [
+         [
+          "Baseline",
+          21.37
+         ],
+         [
+          "Week 2",
+          23.24
+         ],
+         [
+          "Week 4",
+          25.11
+         ],
+         [
+          "Week 8",
+          28.48
+         ],
+         [
+          "Week 12",
+          30
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S03",
+        "data": [
+         [
+          "Baseline",
+          28.37
+         ],
+         [
+          "Week 2",
+          30.24
+         ],
+         [
+          "Week 4",
+          32.11
+         ],
+         [
+          "Week 8",
+          35.48
+         ],
+         [
+          "Week 12",
+          37
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S04",
+        "data": [
+         [
+          "Baseline",
+          22.37
+         ],
+         [
+          "Week 2",
+          24.24
+         ],
+         [
+          "Week 4",
+          26.11
+         ],
+         [
+          "Week 8",
+          29.48
+         ],
+         [
+          "Week 12",
+          31
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S05",
+        "data": [
+         [
+          "Baseline",
+          29.37
+         ],
+         [
+          "Week 2",
+          "NaN"
+         ],
+         [
+          "Week 4",
+          33.11
+         ],
+         [
+          "Week 8",
+          36.48
+         ],
+         [
+          "Week 12",
+          38
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S06",
+        "data": [
+         [
+          "Baseline",
+          23.37
+         ],
+         [
+          "Week 2",
+          25.24
+         ],
+         [
+          "Week 4",
+          27.11
+         ],
+         [
+          "Week 8",
+          30.48
+         ],
+         [
+          "Week 12",
+          32
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S07",
+        "data": [
+         [
+          "Baseline",
+          30.37
+         ],
+         [
+          "Week 2",
+          32.24
+         ],
+         [
+          "Week 4",
+          34.11
+         ],
+         [
+          "Week 8",
+          37.48
+         ],
+         [
+          "Week 12",
+          39
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S08",
+        "data": [
+         [
+          "Baseline",
+          24.37
+         ],
+         [
+          "Week 2",
+          26.24
+         ],
+         [
+          "Week 4",
+          28.11
+         ],
+         [
+          "Week 8",
+          31.48
+         ],
+         [
+          "Week 12",
+          33
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S09",
+        "data": [
+         [
+          "Baseline",
+          31.37
+         ],
+         [
+          "Week 2",
+          33.24
+         ],
+         [
+          "Week 4",
+          35.11
+         ],
+         [
+          "Week 8",
+          38.48
+         ],
+         [
+          "Week 12",
+          40
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S10",
+        "data": [
+         [
+          "Baseline",
+          25.37
+         ],
+         [
+          "Week 2",
+          "NaN"
+         ],
+         [
+          "Week 4",
+          29.11
+         ],
+         [
+          "Week 8",
+          32.48
+         ],
+         [
+          "Week 12",
+          34
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S11",
+        "data": [
+         [
+          "Baseline",
+          32.37
+         ],
+         [
+          "Week 2",
+          34.24
+         ],
+         [
+          "Week 4",
+          36.11
+         ],
+         [
+          "Week 8",
+          39.48
+         ],
+         [
+          "Week 12",
+          41
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S12",
+        "data": [
+         [
+          "Baseline",
+          26.37
+         ],
+         [
+          "Week 2",
+          28.24
+         ],
+         [
+          "Week 12",
+          35
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "id": "__scrim__",
+        "type": "custom",
+        "xAxisIndex": 1,
+        "yAxisIndex": 1,
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 8,
+        "animation": false,
+        "renderItem": "[fn]"
+       },
+       {
+        "id": "__focus__",
+        "name": "__focus__",
+        "type": "line",
+        "data": [],
+        "silent": true,
+        "showSymbol": false,
+        "legendHoverLink": false,
+        "z": 9,
+        "animation": false
+       },
+       {
+        "id": "__focus_dots__",
+        "name": "__focus_dots__",
+        "type": "scatter",
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 10,
+        "animation": false
+       }
+      ]
+     },
+     "probes": {
+      "axisLabels": {
+       "xAxis0": [
+        "Baseline",
+        "Week 2",
+        "Week 4",
+        "Week 8",
+        "Week 12"
+       ]
+      },
+      "tooltip": [
+       "",
+       "",
+       "",
+       "",
+       ""
+      ]
+     }
+    },
+    {
+     "op": "dispatchAction",
+     "action": {
+      "type": "takeGlobalCursor",
+      "key": "dataZoomSelect",
+      "dataZoomSelectActive": true
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

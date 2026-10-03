@@ -1,0 +1,1014 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "outliers",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "band",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "facet": "SEX",
+  "band_series": {
+   "F": {
+    "__all__": {
+     "x": [
+      0,
+      7.909090909090909,
+      15.81818181818182,
+      23.72727272727273,
+      31.63636363636364,
+      39.54545454545455,
+      47.45454545454545,
+      55.36363636363637,
+      63.27272727272727,
+      71.18181818181819,
+      79.0909090909091,
+      87
+     ],
+     "center": [
+      24.37,
+      24.37,
+      25.74,
+      26.24,
+      27.61,
+      27.61,
+      30.98,
+      30.98,
+      30.98,
+      32,
+      32.5,
+      32.5
+     ],
+     "lo": [
+      23.37,
+      23.305,
+      24.4575,
+      25.175,
+      26.36,
+      26.36,
+      29.73,
+      29.73,
+      29.73,
+      30.48,
+      31.25,
+      31.25
+     ],
+     "hi": [
+      26.24,
+      25.805,
+      27.86,
+      28.175,
+      28.86,
+      28.86,
+      32.23,
+      32.23,
+      32.23,
+      33,
+      33.75,
+      33.75
+     ],
+     "n": [
+      6,
+      6,
+      7,
+      7,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6
+     ],
+     "hw": [
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15
+     ],
+     "olo": [
+      22.17,
+      22.37,
+      23.279,
+      24.24,
+      25.61,
+      25.61,
+      28.98,
+      28.98,
+      28.98,
+      29.696,
+      30.5,
+      30.5
+     ],
+     "ohi": [
+      26.744,
+      26.37,
+      28.849,
+      29.11,
+      29.61,
+      29.61,
+      32.98,
+      32.98,
+      32.98,
+      34.2,
+      34.5,
+      34.5
+     ]
+    }
+   },
+   "M": {
+    "__all__": {
+     "x": [
+      0,
+      7.909090909090909,
+      15.81818181818182,
+      23.72727272727273,
+      31.63636363636364,
+      39.54545454545455,
+      47.45454545454545,
+      55.36363636363637,
+      63.27272727272727,
+      71.18181818181819,
+      79.0909090909091,
+      87
+     ],
+     "center": [
+      29.87,
+      30.37,
+      31.24,
+      33.11,
+      33.11,
+      33.61,
+      36.98,
+      36.98,
+      36.98,
+      37.73999999999999,
+      39,
+      39
+     ],
+     "lo": [
+      29.0225,
+      29.305,
+      29.5875,
+      31.61,
+      32.11,
+      32.36,
+      35.73,
+      35.73,
+      35.73,
+      36.23,
+      38,
+      38
+     ],
+     "hi": [
+      31.62,
+      32.305,
+      32.925,
+      34.175,
+      34.24,
+      34.86,
+      38.23,
+      38.23,
+      38.23,
+      38.73,
+      40,
+      40
+     ],
+     "n": [
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      5,
+      5
+     ],
+     "hw": [
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15
+     ],
+     "olo": [
+      28.07,
+      28.37,
+      28.631,
+      30.24,
+      30.936,
+      31.61,
+      34.98,
+      34.98,
+      34.98,
+      35.18,
+      37.4,
+      37.4
+     ],
+     "ohi": [
+      32.631,
+      33.24,
+      33.94,
+      35.11,
+      35.31,
+      35.61,
+      38.98,
+      38.98,
+      38.98,
+      39.636,
+      40.6,
+      40.6
+     ]
+    }
+   }
+  },
+  "band_refs": {
+   "hi": {
+    "col": "ANRHI",
+    "value": 31,
+    "lo": 30,
+    "hi": 32,
+    "n_distinct": 3
+   }
+  },
+  "whiskers": "p10_p90"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": false,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": "F",
+    "height": "400px",
+    "chart": true
+   },
+   {
+    "label": "M",
+    "height": "400px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 66,
+       "right": 5,
+       "top": 30,
+       "bottom": 52
+      },
+      "xAxis": {
+       "type": "value",
+       "name": "Analysis Relative Day",
+       "nameLocation": "middle",
+       "nameGap": 28,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true
+      },
+      "yAxis": {
+       "type": "value",
+       "name": "Analysis Value",
+       "nameLocation": "middle",
+       "nameGap": 46,
+       "nameRotate": 90,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true,
+       "min": 20,
+       "max": 36
+      },
+      "series": [
+       {
+        "type": "custom",
+        "legendHoverLink": false,
+        "silent": true,
+        "itemStyle": {
+         "color": "#0072B2"
+        },
+        "__bandItem": [
+         0,
+         26.744
+        ],
+        "z": 2,
+        "data": [
+         [
+          0,
+          26.744
+         ]
+        ],
+        "encode": {
+         "x": 0,
+         "y": 1
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "custom",
+        "legendHoverLink": false,
+        "silent": true,
+        "itemStyle": {
+         "color": "#0072B2"
+        },
+        "__bandItem": [
+         0,
+         26.24
+        ],
+        "z": 2,
+        "data": [
+         [
+          0,
+          26.24
+         ]
+        ],
+        "encode": {
+         "x": 0,
+         "y": 1
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "line",
+        "data": [
+         [
+          0,
+          24.37
+         ],
+         [
+          7.90909,
+          24.37
+         ],
+         [
+          15.8182,
+          25.74
+         ],
+         [
+          23.7273,
+          26.24
+         ],
+         [
+          31.6364,
+          27.61
+         ],
+         [
+          39.5455,
+          27.61
+         ],
+         [
+          47.4545,
+          30.98
+         ],
+         [
+          55.3636,
+          30.98
+         ],
+         [
+          63.2727,
+          30.98
+         ],
+         [
+          71.1818,
+          32
+         ],
+         [
+          79.0909,
+          32.5
+         ],
+         [
+          87,
+          32.5
+         ]
+        ],
+        "symbol": "none",
+        "showSymbol": false,
+        "z": 6,
+        "silent": true,
+        "legendHoverLink": false,
+        "itemStyle": {
+         "color": "#0072B2"
+        },
+        "lineStyle": {
+         "color": "#ffffff",
+         "width": 3.4
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "data": [
+         [
+          0,
+          24.37
+         ],
+         [
+          7.90909,
+          24.37
+         ],
+         [
+          15.8182,
+          25.74
+         ],
+         [
+          23.7273,
+          26.24
+         ],
+         [
+          31.6364,
+          27.61
+         ],
+         [
+          39.5455,
+          27.61
+         ],
+         [
+          47.4545,
+          30.98
+         ],
+         [
+          55.3636,
+          30.98
+         ],
+         [
+          63.2727,
+          30.98
+         ],
+         [
+          71.1818,
+          32
+         ],
+         [
+          79.0909,
+          32.5
+         ],
+         [
+          87,
+          32.5
+         ]
+        ],
+        "symbol": "none",
+        "showSymbol": false,
+        "z": 7,
+        "triggerLineEvent": true,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "color": "#0072B2",
+         "width": 2.2
+        },
+        "emphasis": {
+         "disabled": true
+        },
+        "markLine": {
+         "silent": true,
+         "symbol": "none",
+         "lineStyle": {
+          "color": "#dc2626",
+          "type": "dashed",
+          "width": 1.5
+         },
+         "label": {
+          "show": false
+         },
+         "data": [
+          {
+           "yAxis": 31,
+           "lineStyle": {
+            "color": "#dc2626",
+            "width": 1,
+            "type": "dashed",
+            "opacity": 0.45
+           },
+           "label": {
+            "show": true,
+            "position": "insideEndTop",
+            "color": "#6b7280",
+            "fontSize": 11,
+            "fontWeight": 400,
+            "formatter": "ANRHI 31 (30–32)"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.7</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">24.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">24.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">25.7</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">24.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">24.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">25.7</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "xAxis": [
+       {
+        "min": 0,
+        "max": 90
+       }
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "yAxis": [
+       {
+        "min": 20,
+        "max": 42
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 66,
+       "right": 5,
+       "top": 30,
+       "bottom": 52
+      },
+      "xAxis": {
+       "type": "value",
+       "name": "Analysis Relative Day",
+       "nameLocation": "middle",
+       "nameGap": 28,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true
+      },
+      "yAxis": {
+       "type": "value",
+       "name": "Analysis Value",
+       "nameLocation": "middle",
+       "nameGap": 46,
+       "nameRotate": 90,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true,
+       "min": 26,
+       "max": 42
+      },
+      "series": [
+       {
+        "type": "custom",
+        "legendHoverLink": false,
+        "silent": true,
+        "itemStyle": {
+         "color": "#0072B2"
+        },
+        "__bandItem": [
+         0,
+         32.631
+        ],
+        "z": 2,
+        "data": [
+         [
+          0,
+          32.631
+         ]
+        ],
+        "encode": {
+         "x": 0,
+         "y": 1
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "custom",
+        "legendHoverLink": false,
+        "silent": true,
+        "itemStyle": {
+         "color": "#0072B2"
+        },
+        "__bandItem": [
+         0,
+         31.62
+        ],
+        "z": 2,
+        "data": [
+         [
+          0,
+          31.62
+         ]
+        ],
+        "encode": {
+         "x": 0,
+         "y": 1
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "line",
+        "data": [
+         [
+          0,
+          29.87
+         ],
+         [
+          7.90909,
+          30.37
+         ],
+         [
+          15.8182,
+          31.24
+         ],
+         [
+          23.7273,
+          33.11
+         ],
+         [
+          31.6364,
+          33.11
+         ],
+         [
+          39.5455,
+          33.61
+         ],
+         [
+          47.4545,
+          36.98
+         ],
+         [
+          55.3636,
+          36.98
+         ],
+         [
+          63.2727,
+          36.98
+         ],
+         [
+          71.1818,
+          37.74
+         ],
+         [
+          79.0909,
+          39
+         ],
+         [
+          87,
+          39
+         ]
+        ],
+        "symbol": "none",
+        "showSymbol": false,
+        "z": 6,
+        "silent": true,
+        "legendHoverLink": false,
+        "itemStyle": {
+         "color": "#0072B2"
+        },
+        "lineStyle": {
+         "color": "#ffffff",
+         "width": 3.4
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "data": [
+         [
+          0,
+          29.87
+         ],
+         [
+          7.90909,
+          30.37
+         ],
+         [
+          15.8182,
+          31.24
+         ],
+         [
+          23.7273,
+          33.11
+         ],
+         [
+          31.6364,
+          33.11
+         ],
+         [
+          39.5455,
+          33.61
+         ],
+         [
+          47.4545,
+          36.98
+         ],
+         [
+          55.3636,
+          36.98
+         ],
+         [
+          63.2727,
+          36.98
+         ],
+         [
+          71.1818,
+          37.74
+         ],
+         [
+          79.0909,
+          39
+         ],
+         [
+          87,
+          39
+         ]
+        ],
+        "symbol": "none",
+        "showSymbol": false,
+        "z": 7,
+        "triggerLineEvent": true,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "color": "#0072B2",
+         "width": 2.2
+        },
+        "emphasis": {
+         "disabled": true
+        },
+        "markLine": {
+         "silent": true,
+         "symbol": "none",
+         "lineStyle": {
+          "color": "#dc2626",
+          "type": "dashed",
+          "width": 1.5
+         },
+         "label": {
+          "show": false
+         },
+         "data": [
+          {
+           "yAxis": 31,
+           "lineStyle": {
+            "color": "#dc2626",
+            "width": 1,
+            "type": "dashed",
+            "opacity": 0.45
+           },
+           "label": {
+            "show": true,
+            "position": "insideEndTop",
+            "color": "#6b7280",
+            "fontSize": 11,
+            "fontWeight": 400,
+            "formatter": "ANRHI 31 (30–32)"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">32.6</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.6</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.9</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">30.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.2</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">33.1</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.9</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">30.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.2</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">33.1</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "xAxis": [
+       {
+        "min": 0,
+        "max": 90
+       }
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "yAxis": [
+       {
+        "min": 20,
+        "max": 42
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

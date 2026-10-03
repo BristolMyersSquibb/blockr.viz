@@ -1,0 +1,336 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [
+   "MILD"
+  ],
+  "chart_type": "pie",
+  "group": "AESEV",
+  "facet": "SEX",
+  "drill": "auto",
+  "filter_column": "AESEV"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "Filtered: AESEV = MILDReset",
+  "empty": [],
+  "grid": {
+   "single": false,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": "F",
+    "height": "350px",
+    "chart": true
+   },
+   {
+    "label": "M",
+    "height": "350px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "series": [
+       {
+        "type": "pie",
+        "radius": [
+         "30%",
+         "70%"
+        ],
+        "data": [
+         {
+          "name": "MILD",
+          "value": 10,
+          "n": 10,
+          "itemStyle": {
+           "color": "#0072B2"
+          }
+         },
+         {
+          "name": "SEVERE",
+          "value": 10,
+          "n": 10,
+          "itemStyle": {
+           "color": "#D55E00"
+          }
+         },
+         {
+          "name": "MODERATE",
+          "value": 8,
+          "n": 8,
+          "itemStyle": {
+           "color": "#F0E442"
+          }
+         },
+         {
+          "name": "",
+          "value": 2,
+          "n": 2,
+          "itemStyle": {
+           "color": "#009E73"
+          }
+         }
+        ],
+        "label": {
+         "show": true,
+         "fontSize": 11,
+         "formatter": "{b}"
+        },
+        "emphasis": {
+         "itemStyle": {
+          "shadowBlur": 10,
+          "shadowColor": "rgba(0,0,0,0.2)"
+         }
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>MILD</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>",
+       "<div class=\"dd-tt-head\"><span>SEVERE</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>",
+       "<div class=\"dd-tt-head\"><span>MODERATE</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">8</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>",
+       "<div class=\"dd-tt-head\"><span></span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "series": [
+       {
+        "data": [
+         {
+          "name": "MILD",
+          "value": 10,
+          "n": 10,
+          "itemStyle": {
+           "color": "#0072B2",
+           "opacity": 1
+          }
+         },
+         {
+          "name": "SEVERE",
+          "value": 10,
+          "n": 10,
+          "itemStyle": {
+           "color": "#D55E00",
+           "opacity": 0.2
+          }
+         },
+         {
+          "name": "MODERATE",
+          "value": 8,
+          "n": 8,
+          "itemStyle": {
+           "color": "#F0E442",
+           "opacity": 0.2
+          }
+         },
+         {
+          "name": "",
+          "value": 2,
+          "n": 2,
+          "itemStyle": {
+           "color": "#009E73",
+           "opacity": 0.2
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "series": [
+       {
+        "type": "pie",
+        "radius": [
+         "30%",
+         "70%"
+        ],
+        "data": [
+         {
+          "name": "MODERATE",
+          "value": 10,
+          "n": 10,
+          "itemStyle": {
+           "color": "#0072B2"
+          }
+         },
+         {
+          "name": "SEVERE",
+          "value": 10,
+          "n": 10,
+          "itemStyle": {
+           "color": "#D55E00"
+          }
+         },
+         {
+          "name": "MILD",
+          "value": 10,
+          "n": 10,
+          "itemStyle": {
+           "color": "#F0E442"
+          }
+         }
+        ],
+        "label": {
+         "show": true,
+         "fontSize": 11,
+         "formatter": "{b}"
+        },
+        "emphasis": {
+         "itemStyle": {
+          "shadowBlur": 10,
+          "shadowColor": "rgba(0,0,0,0.2)"
+         }
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>MODERATE</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>",
+       "<div class=\"dd-tt-head\"><span>SEVERE</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>",
+       "<div class=\"dd-tt-head\"><span>MILD</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "series": [
+       {
+        "data": [
+         {
+          "name": "MODERATE",
+          "value": 10,
+          "n": 10,
+          "itemStyle": {
+           "color": "#0072B2",
+           "opacity": 0.2
+          }
+         },
+         {
+          "name": "SEVERE",
+          "value": 10,
+          "n": 10,
+          "itemStyle": {
+           "color": "#D55E00",
+           "opacity": 0.2
+          }
+         },
+         {
+          "name": "MILD",
+          "value": 10,
+          "n": 10,
+          "itemStyle": {
+           "color": "#F0E442",
+           "opacity": 1
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

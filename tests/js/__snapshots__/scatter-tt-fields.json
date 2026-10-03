@@ -1,0 +1,636 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "scatter",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "color": "ARM",
+  "tt_fields": [
+   "USUBJID",
+   "AVISIT",
+   "AVAL"
+  ]
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": {
+   "title": "Planned Arm",
+   "chips": [
+    {
+     "name": "",
+     "color": "#0072B2",
+     "off": false
+    },
+    {
+     "name": "High Dose",
+     "color": "#D55E00",
+     "off": false
+    },
+    {
+     "name": "Low Dose",
+     "color": "#F0E442",
+     "off": false
+    },
+    {
+     "name": "Placebo",
+     "color": "#009E73",
+     "off": false
+    }
+   ]
+  },
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "400px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 66,
+       "right": 5,
+       "top": 30,
+       "bottom": 52
+      },
+      "xAxis": {
+       "type": "value",
+       "name": "Analysis Relative Day",
+       "nameLocation": "middle",
+       "nameGap": 28,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true
+      },
+      "yAxis": {
+       "type": "value",
+       "name": "Analysis Value",
+       "nameLocation": "middle",
+       "nameGap": 46,
+       "nameRotate": 90,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true
+      },
+      "toolbox": {
+       "show": true,
+       "right": 8,
+       "top": 4,
+       "itemSize": 11,
+       "feature": {
+        "brush": {
+         "type": [
+          "rect",
+          "lineX",
+          "clear"
+         ]
+        }
+       },
+       "iconStyle": {
+        "borderColor": "#6b7280"
+       }
+      },
+      "brush": {
+       "toolbox": [
+        "rect",
+        "lineX",
+        "clear"
+       ],
+       "xAxisIndex": 0,
+       "yAxisIndex": 0,
+       "brushStyle": {
+        "color": "rgba(0, 114, 178, 0.1)",
+        "borderColor": "rgba(0, 114, 178, 0.5)",
+        "borderWidth": 1
+       },
+       "throttleDelay": 300
+      },
+      "series": [
+       {
+        "type": "scatter",
+        "name": "",
+        "data": [],
+        "symbol": "circle",
+        "symbolSize": 6,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "scatter",
+        "name": "High Dose",
+        "data": [
+         [
+          3,
+          28.37,
+          "S03",
+          "Baseline"
+         ],
+         [
+          17,
+          30.24,
+          "S03",
+          "Week 2"
+         ],
+         [
+          31,
+          32.11,
+          "S03",
+          "Week 4"
+         ],
+         [
+          59,
+          35.48,
+          "S03",
+          "Week 8"
+         ],
+         [
+          87,
+          37,
+          "S03",
+          "Week 12"
+         ],
+         [
+          2,
+          23.37,
+          "S06",
+          "Baseline"
+         ],
+         [
+          16,
+          25.24,
+          "S06",
+          "Week 2"
+         ],
+         [
+          30,
+          27.11,
+          "S06",
+          "Week 4"
+         ],
+         [
+          58,
+          30.48,
+          "S06",
+          "Week 8"
+         ],
+         [
+          86,
+          32,
+          "S06",
+          "Week 12"
+         ],
+         [
+          1,
+          31.37,
+          "S09",
+          "Baseline"
+         ],
+         [
+          15,
+          33.24,
+          "S09",
+          "Week 2"
+         ],
+         [
+          29,
+          35.11,
+          "S09",
+          "Week 4"
+         ],
+         [
+          57,
+          38.48,
+          "S09",
+          "Week 8"
+         ],
+         [
+          85,
+          40,
+          "S09",
+          "Week 12"
+         ]
+        ],
+        "symbol": "circle",
+        "symbolSize": 6,
+        "itemStyle": {
+         "color": "#D55E00",
+         "cursor": "pointer"
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "scatter",
+        "name": "Low Dose",
+        "data": [
+         [
+          2,
+          21.37,
+          "S02",
+          "Baseline"
+         ],
+         [
+          16,
+          23.24,
+          "S02",
+          "Week 2"
+         ],
+         [
+          30,
+          25.11,
+          "S02",
+          "Week 4"
+         ],
+         [
+          58,
+          28.48,
+          "S02",
+          "Week 8"
+         ],
+         [
+          86,
+          30,
+          "S02",
+          "Week 12"
+         ],
+         [
+          1,
+          29.37,
+          "S05",
+          "Baseline"
+         ],
+         [
+          15,
+          "NaN",
+          "S05",
+          "Week 2"
+         ],
+         [
+          29,
+          33.11,
+          "S05",
+          "Week 4"
+         ],
+         [
+          57,
+          36.48,
+          "S05",
+          "Week 8"
+         ],
+         [
+          85,
+          38,
+          "S05",
+          "Week 12"
+         ],
+         [
+          0,
+          24.37,
+          "S08",
+          "Baseline"
+         ],
+         [
+          14,
+          26.24,
+          "S08",
+          "Week 2"
+         ],
+         [
+          28,
+          28.11,
+          "S08",
+          "Week 4"
+         ],
+         [
+          56,
+          31.48,
+          "S08",
+          "Week 8"
+         ],
+         [
+          84,
+          33,
+          "S08",
+          "Week 12"
+         ],
+         [
+          3,
+          32.37,
+          "S11",
+          "Baseline"
+         ],
+         [
+          17,
+          34.24,
+          "S11",
+          "Week 2"
+         ],
+         [
+          31,
+          36.11,
+          "S11",
+          "Week 4"
+         ],
+         [
+          59,
+          39.48,
+          "S11",
+          "Week 8"
+         ],
+         [
+          87,
+          41,
+          "S11",
+          "Week 12"
+         ]
+        ],
+        "symbol": "circle",
+        "symbolSize": 6,
+        "itemStyle": {
+         "color": "#F0E442",
+         "cursor": "pointer"
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "scatter",
+        "name": "Placebo",
+        "data": [
+         [
+          1,
+          27.37,
+          "S01",
+          "Baseline"
+         ],
+         [
+          15,
+          29.24,
+          "S01",
+          "Week 2"
+         ],
+         [
+          29,
+          31.11,
+          "S01",
+          "Week 4"
+         ],
+         [
+          57,
+          34.48,
+          "S01",
+          "Week 8"
+         ],
+         [
+          85,
+          "NaN",
+          "S01",
+          "Week 12"
+         ],
+         [
+          0,
+          22.37,
+          "S04",
+          "Baseline"
+         ],
+         [
+          14,
+          24.24,
+          "S04",
+          "Week 2"
+         ],
+         [
+          28,
+          26.11,
+          "S04",
+          "Week 4"
+         ],
+         [
+          56,
+          29.48,
+          "S04",
+          "Week 8"
+         ],
+         [
+          84,
+          31,
+          "S04",
+          "Week 12"
+         ],
+         [
+          3,
+          30.37,
+          "S07",
+          "Baseline"
+         ],
+         [
+          17,
+          32.24,
+          "S07",
+          "Week 2"
+         ],
+         [
+          31,
+          34.11,
+          "S07",
+          "Week 4"
+         ],
+         [
+          59,
+          37.48,
+          "S07",
+          "Week 8"
+         ],
+         [
+          87,
+          39,
+          "S07",
+          "Week 12"
+         ],
+         [
+          2,
+          25.37,
+          "S10",
+          "Baseline"
+         ],
+         [
+          16,
+          "NaN",
+          "S10",
+          "Week 2"
+         ],
+         [
+          30,
+          29.11,
+          "S10",
+          "Week 4"
+         ],
+         [
+          58,
+          32.48,
+          "S10",
+          "Week 8"
+         ],
+         [
+          86,
+          34,
+          "S10",
+          "Week 12"
+         ]
+        ],
+        "symbol": "circle",
+        "symbolSize": 6,
+        "itemStyle": {
+         "color": "#009E73",
+         "cursor": "pointer"
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S03</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Baseline</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">17</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">30.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S03</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 2</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">31</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">32.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S03</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 4</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">59</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">35.5</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S03</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 8</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">21.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S02</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Baseline</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">16</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">23.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S02</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 2</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">30</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">25.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S02</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 4</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">58</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.5</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S02</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 8</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">27.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Baseline</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 2</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">29</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 4</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">57</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">34.5</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 8</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "dispatchAction",
+     "action": {
+      "type": "takeGlobalCursor",
+      "key": "brush",
+      "brushOption": {
+       "brushType": "rect",
+       "brushMode": "single"
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

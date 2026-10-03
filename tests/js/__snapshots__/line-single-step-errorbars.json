@@ -1,0 +1,838 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "step-end",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "line",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "lo": "LO",
+  "hi": "HI"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "400px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "axis",
+       "axisPointer": {
+        "type": "line"
+       },
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 66,
+       "right": 5,
+       "top": 30,
+       "bottom": 52
+      },
+      "xAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Relative Day",
+        "nameLocation": "middle",
+        "nameGap": 28,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLine": {
+         "lineStyle": {
+          "color": "#d1d5db"
+         }
+        },
+        "splitLine": {
+         "lineStyle": {
+          "color": "#e5e7eb",
+          "type": "dashed"
+         }
+        },
+        "scale": true
+       },
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
+        }
+       }
+      ],
+      "yAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Value",
+        "nameLocation": "middle",
+        "nameGap": 46,
+        "nameRotate": 90,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLine": {
+         "lineStyle": {
+          "color": "#d1d5db"
+         }
+        },
+        "splitLine": {
+         "lineStyle": {
+          "color": "#e5e7eb",
+          "type": "dashed"
+         }
+        },
+        "scale": true
+       },
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
+        }
+       }
+      ],
+      "toolbox": {
+       "show": true,
+       "right": 8,
+       "top": 4,
+       "itemSize": 11,
+       "feature": {
+        "dataZoom": {
+         "xAxisIndex": 0,
+         "yAxisIndex": false,
+         "filterMode": "filter",
+         "title": {
+          "zoom": "Zoom to range",
+          "back": "Reset zoom"
+         }
+        }
+       },
+       "iconStyle": {
+        "borderColor": "#6b7280"
+       }
+      },
+      "series": [
+       {
+        "type": "line",
+        "data": [
+         [
+          0,
+          22.37
+         ],
+         [
+          0,
+          24.37
+         ],
+         [
+          0,
+          26.37
+         ],
+         [
+          1,
+          27.37
+         ],
+         [
+          1,
+          29.37
+         ],
+         [
+          1,
+          31.37
+         ],
+         [
+          2,
+          21.37
+         ],
+         [
+          2,
+          23.37
+         ],
+         [
+          2,
+          25.37
+         ],
+         [
+          3,
+          28.37
+         ],
+         [
+          3,
+          30.37
+         ],
+         [
+          3,
+          32.37
+         ],
+         [
+          14,
+          24.24
+         ],
+         [
+          14,
+          26.24
+         ],
+         [
+          14,
+          28.24
+         ],
+         [
+          15,
+          29.24
+         ],
+         [
+          15,
+          "NaN"
+         ],
+         [
+          15,
+          33.24
+         ],
+         [
+          16,
+          23.24
+         ],
+         [
+          16,
+          25.24
+         ],
+         [
+          16,
+          "NaN"
+         ],
+         [
+          17,
+          30.24
+         ],
+         [
+          17,
+          32.24
+         ],
+         [
+          17,
+          34.24
+         ],
+         [
+          28,
+          26.11
+         ],
+         [
+          28,
+          28.11
+         ],
+         [
+          28,
+          30.11
+         ],
+         [
+          29,
+          31.11
+         ],
+         [
+          29,
+          33.11
+         ],
+         [
+          29,
+          35.11
+         ],
+         [
+          30,
+          25.11
+         ],
+         [
+          30,
+          27.11
+         ],
+         [
+          30,
+          29.11
+         ],
+         [
+          31,
+          32.11
+         ],
+         [
+          31,
+          34.11
+         ],
+         [
+          31,
+          36.11
+         ],
+         [
+          56,
+          29.48
+         ],
+         [
+          56,
+          31.48
+         ],
+         [
+          56,
+          33.48
+         ],
+         [
+          57,
+          34.48
+         ],
+         [
+          57,
+          36.48
+         ],
+         [
+          57,
+          38.48
+         ],
+         [
+          58,
+          28.48
+         ],
+         [
+          58,
+          30.48
+         ],
+         [
+          58,
+          32.48
+         ],
+         [
+          59,
+          35.48
+         ],
+         [
+          59,
+          37.48
+         ],
+         [
+          59,
+          39.48
+         ],
+         [
+          84,
+          31
+         ],
+         [
+          84,
+          33
+         ],
+         [
+          84,
+          35
+         ],
+         [
+          85,
+          "NaN"
+         ],
+         [
+          85,
+          38
+         ],
+         [
+          85,
+          40
+         ],
+         [
+          86,
+          30
+         ],
+         [
+          86,
+          32
+         ],
+         [
+          86,
+          34
+         ],
+         [
+          87,
+          37
+         ],
+         [
+          87,
+          39
+         ],
+         [
+          87,
+          41
+         ]
+        ],
+        "step": "end",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "custom",
+        "name": "errbar",
+        "legendHoverLink": false,
+        "silent": true,
+        "z": 1,
+        "data": [
+         [
+          1,
+          25.87,
+          28.87
+         ],
+         [
+          15,
+          27.74,
+          30.74
+         ],
+         [
+          29,
+          29.61,
+          32.61
+         ],
+         [
+          57,
+          32.98,
+          35.98
+         ],
+         [
+          85,
+          "NaN",
+          "NaN"
+         ],
+         [
+          2,
+          19.87,
+          22.87
+         ],
+         [
+          16,
+          21.74,
+          24.74
+         ],
+         [
+          30,
+          23.61,
+          26.61
+         ],
+         [
+          58,
+          26.98,
+          29.98
+         ],
+         [
+          86,
+          28.5,
+          31.5
+         ],
+         [
+          3,
+          26.87,
+          29.87
+         ],
+         [
+          17,
+          28.74,
+          31.74
+         ],
+         [
+          31,
+          30.61,
+          33.61
+         ],
+         [
+          59,
+          33.98,
+          36.98
+         ],
+         [
+          87,
+          35.5,
+          38.5
+         ],
+         [
+          0,
+          20.87,
+          23.87
+         ],
+         [
+          14,
+          22.74,
+          25.74
+         ],
+         [
+          28,
+          24.61,
+          27.61
+         ],
+         [
+          56,
+          27.98,
+          30.98
+         ],
+         [
+          84,
+          29.5,
+          32.5
+         ],
+         [
+          1,
+          27.87,
+          30.87
+         ],
+         [
+          15,
+          "NaN",
+          "NaN"
+         ],
+         [
+          29,
+          31.61,
+          34.61
+         ],
+         [
+          57,
+          34.98,
+          37.98
+         ],
+         [
+          85,
+          36.5,
+          39.5
+         ],
+         [
+          2,
+          21.87,
+          24.87
+         ],
+         [
+          16,
+          23.74,
+          26.74
+         ],
+         [
+          30,
+          25.61,
+          28.61
+         ],
+         [
+          58,
+          28.98,
+          31.98
+         ],
+         [
+          86,
+          30.5,
+          33.5
+         ],
+         [
+          3,
+          28.87,
+          31.87
+         ],
+         [
+          17,
+          30.74,
+          33.74
+         ],
+         [
+          31,
+          32.61,
+          35.61
+         ],
+         [
+          59,
+          35.98,
+          38.98
+         ],
+         [
+          87,
+          37.5,
+          40.5
+         ],
+         [
+          0,
+          22.87,
+          25.87
+         ],
+         [
+          14,
+          24.74,
+          27.74
+         ],
+         [
+          28,
+          26.61,
+          29.61
+         ],
+         [
+          56,
+          29.98,
+          32.98
+         ],
+         [
+          84,
+          31.5,
+          34.5
+         ],
+         [
+          1,
+          29.87,
+          32.87
+         ],
+         [
+          15,
+          31.74,
+          34.74
+         ],
+         [
+          29,
+          33.61,
+          36.61
+         ],
+         [
+          57,
+          36.98,
+          39.98
+         ],
+         [
+          85,
+          38.5,
+          41.5
+         ],
+         [
+          2,
+          23.87,
+          26.87
+         ],
+         [
+          16,
+          "NaN",
+          "NaN"
+         ],
+         [
+          30,
+          27.61,
+          30.61
+         ],
+         [
+          58,
+          30.98,
+          33.98
+         ],
+         [
+          86,
+          32.5,
+          35.5
+         ],
+         [
+          3,
+          30.87,
+          33.87
+         ],
+         [
+          17,
+          32.74,
+          35.74
+         ],
+         [
+          31,
+          34.61,
+          37.61
+         ],
+         [
+          59,
+          37.98,
+          40.98
+         ],
+         [
+          87,
+          39.5,
+          42.5
+         ],
+         [
+          0,
+          24.87,
+          27.87
+         ],
+         [
+          14,
+          26.74,
+          29.74
+         ],
+         [
+          28,
+          28.61,
+          31.61
+         ],
+         [
+          56,
+          31.98,
+          34.98
+         ],
+         [
+          84,
+          33.5,
+          36.5
+         ]
+        ],
+        "encode": {
+         "x": 0,
+         "y": [
+          1,
+          2
+         ]
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "id": "__scrim__",
+        "type": "custom",
+        "xAxisIndex": 1,
+        "yAxisIndex": 1,
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 8,
+        "animation": false,
+        "renderItem": "[fn]"
+       },
+       {
+        "id": "__focus__",
+        "name": "__focus__",
+        "type": "line",
+        "data": [],
+        "silent": true,
+        "showSymbol": false,
+        "legendHoverLink": false,
+        "z": 9,
+        "animation": false
+       },
+       {
+        "id": "__focus_dots__",
+        "name": "__focus_dots__",
+        "type": "scatter",
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 10,
+        "animation": false
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">22.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">24.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">27.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">21.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">23.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">25.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">30.4</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">32.4</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "dispatchAction",
+     "action": {
+      "type": "takeGlobalCursor",
+      "key": "dataZoomSelect",
+      "dataZoomSelectActive": true
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

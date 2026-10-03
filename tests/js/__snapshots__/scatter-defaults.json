@@ -1,0 +1,461 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "scatter"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "400px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 66,
+       "right": 5,
+       "top": 30,
+       "bottom": 52
+      },
+      "xAxis": {
+       "type": "value",
+       "name": "AVISITN",
+       "nameLocation": "middle",
+       "nameGap": 28,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true
+      },
+      "yAxis": {
+       "type": "value",
+       "name": "Analysis Relative Day",
+       "nameLocation": "middle",
+       "nameGap": 46,
+       "nameRotate": 90,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true
+      },
+      "toolbox": {
+       "show": true,
+       "right": 8,
+       "top": 4,
+       "itemSize": 11,
+       "feature": {
+        "brush": {
+         "type": [
+          "rect",
+          "lineX",
+          "clear"
+         ]
+        }
+       },
+       "iconStyle": {
+        "borderColor": "#6b7280"
+       }
+      },
+      "brush": {
+       "toolbox": [
+        "rect",
+        "lineX",
+        "clear"
+       ],
+       "xAxisIndex": 0,
+       "yAxisIndex": 0,
+       "brushStyle": {
+        "color": "rgba(0, 114, 178, 0.1)",
+        "borderColor": "rgba(0, 114, 178, 0.5)",
+        "borderWidth": 1
+       },
+       "throttleDelay": 300
+      },
+      "series": [
+       {
+        "type": "scatter",
+        "data": [
+         [
+          0,
+          1
+         ],
+         [
+          2,
+          15
+         ],
+         [
+          4,
+          29
+         ],
+         [
+          8,
+          57
+         ],
+         [
+          12,
+          85
+         ],
+         [
+          0,
+          2
+         ],
+         [
+          2,
+          16
+         ],
+         [
+          4,
+          30
+         ],
+         [
+          8,
+          58
+         ],
+         [
+          12,
+          86
+         ],
+         [
+          0,
+          3
+         ],
+         [
+          2,
+          17
+         ],
+         [
+          4,
+          31
+         ],
+         [
+          8,
+          59
+         ],
+         [
+          12,
+          87
+         ],
+         [
+          0,
+          0
+         ],
+         [
+          2,
+          14
+         ],
+         [
+          4,
+          28
+         ],
+         [
+          8,
+          56
+         ],
+         [
+          12,
+          84
+         ],
+         [
+          0,
+          1
+         ],
+         [
+          2,
+          15
+         ],
+         [
+          4,
+          29
+         ],
+         [
+          8,
+          57
+         ],
+         [
+          12,
+          85
+         ],
+         [
+          0,
+          2
+         ],
+         [
+          2,
+          16
+         ],
+         [
+          4,
+          30
+         ],
+         [
+          8,
+          58
+         ],
+         [
+          12,
+          86
+         ],
+         [
+          0,
+          3
+         ],
+         [
+          2,
+          17
+         ],
+         [
+          4,
+          31
+         ],
+         [
+          8,
+          59
+         ],
+         [
+          12,
+          87
+         ],
+         [
+          0,
+          0
+         ],
+         [
+          2,
+          14
+         ],
+         [
+          4,
+          28
+         ],
+         [
+          8,
+          56
+         ],
+         [
+          12,
+          84
+         ],
+         [
+          0,
+          1
+         ],
+         [
+          2,
+          15
+         ],
+         [
+          4,
+          29
+         ],
+         [
+          8,
+          57
+         ],
+         [
+          12,
+          85
+         ],
+         [
+          0,
+          2
+         ],
+         [
+          2,
+          16
+         ],
+         [
+          4,
+          30
+         ],
+         [
+          8,
+          58
+         ],
+         [
+          12,
+          86
+         ],
+         [
+          0,
+          3
+         ],
+         [
+          2,
+          17
+         ],
+         [
+          4,
+          31
+         ],
+         [
+          8,
+          59
+         ],
+         [
+          12,
+          87
+         ],
+         [
+          0,
+          0
+         ],
+         [
+          2,
+          14
+         ],
+         [
+          4,
+          28
+         ],
+         [
+          8,
+          56
+         ],
+         [
+          12,
+          84
+         ]
+        ],
+        "symbol": "circle",
+        "symbolSize": 6,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "default"
+        },
+        "emphasis": {
+         "disabled": true
+        },
+        "cursor": "default"
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISITN</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">1</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISITN</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISITN</span><span class=\"dd-tt-value\">4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">29</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISITN</span><span class=\"dd-tt-value\">8</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">57</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "dispatchAction",
+     "action": {
+      "type": "takeGlobalCursor",
+      "key": "brush",
+      "brushOption": {
+       "brushType": "rect",
+       "brushMode": "single"
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

@@ -1,0 +1,1029 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "band",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "color": "ARM",
+  "band_series": {
+   "__all__": {
+    "High Dose": {
+     "x": [
+      0,
+      7.909090909090909,
+      15.81818181818182,
+      23.72727272727273,
+      31.63636363636364,
+      39.54545454545455,
+      47.45454545454545,
+      55.36363636363637,
+      63.27272727272727,
+      71.18181818181819,
+      79.0909090909091,
+      87
+     ],
+     "center": [
+      29.87,
+      29.305,
+      29.305,
+      31.175,
+      31.175,
+      32.11,
+      35.48,
+      35.48,
+      35.48,
+      35.48,
+      37,
+      37
+     ],
+     "lo": [
+      27.12,
+      26.0225,
+      26.6425,
+      27.8925,
+      29.4575,
+      29.61,
+      32.98,
+      32.98,
+      32.98,
+      32,
+      34.5,
+      34.5
+     ],
+     "hi": [
+      31.8375,
+      31.0875,
+      31.8375,
+      32.9575,
+      32.86,
+      33.61,
+      36.98,
+      36.98,
+      36.98,
+      38.48,
+      38.5,
+      38.5
+     ],
+     "n": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3
+     ],
+     "hw": [
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15
+     ],
+     "olo": [
+      24.87,
+      24.305,
+      24.679,
+      26.175,
+      28.049,
+      28.11,
+      31.48,
+      31.48,
+      31.48,
+      31.088,
+      33,
+      33
+     ],
+     "ohi": [
+      32.679,
+      32.305,
+      33.801,
+      34.175,
+      34.21,
+      34.51,
+      37.88,
+      37.88,
+      37.88,
+      39.392,
+      39.4,
+      39.4
+     ]
+    },
+    "Low Dose": {
+     "x": [
+      0,
+      7.909090909090909,
+      15.81818181818182,
+      23.72727272727273,
+      31.63636363636364,
+      39.54545454545455,
+      47.45454545454545,
+      55.36363636363637,
+      63.27272727272727,
+      71.18181818181819,
+      79.0909090909091,
+      87
+     ],
+     "center": [
+      26.24,
+      26.24,
+      28.11,
+      28.11,
+      33.11,
+      30.61,
+      33.98,
+      33.98,
+      33.98,
+      34.73999999999999,
+      35.5,
+      35.5
+     ],
+     "lo": [
+      24.37,
+      23.805,
+      25.11,
+      25.675,
+      28.11,
+      27.36,
+      30.73,
+      30.73,
+      30.73,
+      30.75,
+      32.25,
+      32.25
+     ],
+     "hi": [
+      29.37,
+      30.87,
+      32.37,
+      33.675,
+      34.24,
+      33.86,
+      37.23,
+      37.23,
+      37.23,
+      37.62,
+      38.75,
+      38.75
+     ],
+     "n": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "hw": [
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15
+     ],
+     "olo": [
+      22.57,
+      22.492,
+      22.866,
+      24.362,
+      26.31,
+      26.01,
+      29.38,
+      29.38,
+      29.38,
+      29.24,
+      30.9,
+      30.9
+     ],
+     "ohi": [
+      31.16999999999999,
+      33.11799999999999,
+      33.336,
+      34.988,
+      35.36199999999999,
+      35.21,
+      38.58,
+      38.58,
+      38.58,
+      38.73999999999999,
+      40.1,
+      40.1
+     ]
+    },
+    "Placebo": {
+     "x": [
+      0,
+      7.909090909090909,
+      15.81818181818182,
+      23.72727272727273,
+      31.63636363636364,
+      39.54545454545455,
+      47.45454545454545,
+      55.36363636363637,
+      63.27272727272727,
+      71.18181818181819,
+      79.0909090909091,
+      87
+     ],
+     "center": [
+      26.37,
+      27.37,
+      29.11,
+      29.24,
+      31.11,
+      30.11,
+      33.48,
+      33.48,
+      33.48,
+      34,
+      34,
+      34
+     ],
+     "lo": [
+      24.5225,
+      24.805,
+      26.11,
+      27.61,
+      29.11,
+      28.36,
+      31.73,
+      31.73,
+      31.73,
+      32.48,
+      32.5,
+      32.5
+     ],
+     "hi": [
+      28.7725,
+      29.805,
+      30.37,
+      31.675,
+      32.24,
+      31.86,
+      35.23,
+      35.23,
+      35.23,
+      34.48,
+      36.5,
+      36.5
+     ],
+     "n": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      3,
+      3
+     ],
+     "hw": [
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15,
+      15
+     ],
+     "olo": [
+      23.305,
+      23.492,
+      25.144,
+      25.362,
+      27.31,
+      27.01,
+      30.38,
+      30.38,
+      30.38,
+      31.592,
+      31.6,
+      31.6
+     ],
+     "ohi": [
+      29.805,
+      31.118,
+      31.336,
+      32.988,
+      33.36199999999999,
+      33.21,
+      36.58,
+      36.58,
+      36.58,
+      36.27999999999999,
+      38,
+      38
+     ]
+    }
+   }
+  },
+  "whiskers": "p10_p90"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": {
+   "title": "Planned Arm",
+   "chips": [
+    {
+     "name": "",
+     "color": "#0072B2",
+     "off": false
+    },
+    {
+     "name": "High Dose",
+     "color": "#D55E00",
+     "off": false
+    },
+    {
+     "name": "Low Dose",
+     "color": "#F0E442",
+     "off": false
+    },
+    {
+     "name": "Placebo",
+     "color": "#009E73",
+     "off": false
+    }
+   ]
+  },
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "400px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 66,
+       "right": 5,
+       "top": 30,
+       "bottom": 52
+      },
+      "xAxis": {
+       "type": "value",
+       "name": "Analysis Relative Day",
+       "nameLocation": "middle",
+       "nameGap": 28,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true
+      },
+      "yAxis": {
+       "type": "value",
+       "name": "Analysis Value",
+       "nameLocation": "middle",
+       "nameGap": 46,
+       "nameRotate": 90,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true,
+       "min": 22,
+       "max": 40
+      },
+      "series": [
+       {
+        "type": "custom",
+        "name": "High Dose",
+        "legendHoverLink": false,
+        "silent": true,
+        "itemStyle": {
+         "color": "#D55E00"
+        },
+        "__bandItem": [
+         0,
+         31.8375
+        ],
+        "z": 2,
+        "data": [],
+        "encode": {
+         "x": 0,
+         "y": 1
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "line",
+        "name": "High Dose",
+        "data": [
+         [
+          0,
+          29.87
+         ],
+         [
+          7.90909,
+          29.305
+         ],
+         [
+          15.8182,
+          29.305
+         ],
+         [
+          23.7273,
+          31.175
+         ],
+         [
+          31.6364,
+          31.175
+         ],
+         [
+          39.5455,
+          32.11
+         ],
+         [
+          47.4545,
+          35.48
+         ],
+         [
+          55.3636,
+          35.48
+         ],
+         [
+          63.2727,
+          35.48
+         ],
+         [
+          71.1818,
+          35.48
+         ],
+         [
+          79.0909,
+          37
+         ],
+         [
+          87,
+          37
+         ]
+        ],
+        "symbol": "none",
+        "showSymbol": false,
+        "z": 6,
+        "silent": true,
+        "legendHoverLink": false,
+        "itemStyle": {
+         "color": "#D55E00"
+        },
+        "lineStyle": {
+         "color": "#ffffff",
+         "width": 3.4
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "High Dose",
+        "data": [
+         [
+          0,
+          29.87
+         ],
+         [
+          7.90909,
+          29.305
+         ],
+         [
+          15.8182,
+          29.305
+         ],
+         [
+          23.7273,
+          31.175
+         ],
+         [
+          31.6364,
+          31.175
+         ],
+         [
+          39.5455,
+          32.11
+         ],
+         [
+          47.4545,
+          35.48
+         ],
+         [
+          55.3636,
+          35.48
+         ],
+         [
+          63.2727,
+          35.48
+         ],
+         [
+          71.1818,
+          35.48
+         ],
+         [
+          79.0909,
+          37
+         ],
+         [
+          87,
+          37
+         ]
+        ],
+        "symbol": "none",
+        "showSymbol": false,
+        "z": 7,
+        "triggerLineEvent": true,
+        "itemStyle": {
+         "color": "#D55E00",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "color": "#D55E00",
+         "width": 2.2
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "custom",
+        "name": "Low Dose",
+        "legendHoverLink": false,
+        "silent": true,
+        "itemStyle": {
+         "color": "#F0E442"
+        },
+        "__bandItem": [
+         0,
+         29.37
+        ],
+        "z": 2,
+        "data": [],
+        "encode": {
+         "x": 0,
+         "y": 1
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "line",
+        "name": "Low Dose",
+        "data": [
+         [
+          0,
+          26.24
+         ],
+         [
+          7.90909,
+          26.24
+         ],
+         [
+          15.8182,
+          28.11
+         ],
+         [
+          23.7273,
+          28.11
+         ],
+         [
+          31.6364,
+          33.11
+         ],
+         [
+          39.5455,
+          30.61
+         ],
+         [
+          47.4545,
+          33.98
+         ],
+         [
+          55.3636,
+          33.98
+         ],
+         [
+          63.2727,
+          33.98
+         ],
+         [
+          71.1818,
+          34.74
+         ],
+         [
+          79.0909,
+          35.5
+         ],
+         [
+          87,
+          35.5
+         ]
+        ],
+        "symbol": "none",
+        "showSymbol": false,
+        "z": 6,
+        "silent": true,
+        "legendHoverLink": false,
+        "itemStyle": {
+         "color": "#F0E442"
+        },
+        "lineStyle": {
+         "color": "#ffffff",
+         "width": 3.4
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "Low Dose",
+        "data": [
+         [
+          0,
+          26.24
+         ],
+         [
+          7.90909,
+          26.24
+         ],
+         [
+          15.8182,
+          28.11
+         ],
+         [
+          23.7273,
+          28.11
+         ],
+         [
+          31.6364,
+          33.11
+         ],
+         [
+          39.5455,
+          30.61
+         ],
+         [
+          47.4545,
+          33.98
+         ],
+         [
+          55.3636,
+          33.98
+         ],
+         [
+          63.2727,
+          33.98
+         ],
+         [
+          71.1818,
+          34.74
+         ],
+         [
+          79.0909,
+          35.5
+         ],
+         [
+          87,
+          35.5
+         ]
+        ],
+        "symbol": "none",
+        "showSymbol": false,
+        "z": 7,
+        "triggerLineEvent": true,
+        "itemStyle": {
+         "color": "#F0E442",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "color": "#F0E442",
+         "width": 2.2
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "custom",
+        "name": "Placebo",
+        "legendHoverLink": false,
+        "silent": true,
+        "itemStyle": {
+         "color": "#009E73"
+        },
+        "__bandItem": [
+         0,
+         28.7725
+        ],
+        "z": 2,
+        "data": [],
+        "encode": {
+         "x": 0,
+         "y": 1
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "line",
+        "name": "Placebo",
+        "data": [
+         [
+          0,
+          26.37
+         ],
+         [
+          7.90909,
+          27.37
+         ],
+         [
+          15.8182,
+          29.11
+         ],
+         [
+          23.7273,
+          29.24
+         ],
+         [
+          31.6364,
+          31.11
+         ],
+         [
+          39.5455,
+          30.11
+         ],
+         [
+          47.4545,
+          33.48
+         ],
+         [
+          55.3636,
+          33.48
+         ],
+         [
+          63.2727,
+          33.48
+         ],
+         [
+          71.1818,
+          34
+         ],
+         [
+          79.0909,
+          34
+         ],
+         [
+          87,
+          34
+         ]
+        ],
+        "symbol": "none",
+        "showSymbol": false,
+        "z": 6,
+        "silent": true,
+        "legendHoverLink": false,
+        "itemStyle": {
+         "color": "#009E73"
+        },
+        "lineStyle": {
+         "color": "#ffffff",
+         "width": 3.4
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "Placebo",
+        "data": [
+         [
+          0,
+          26.37
+         ],
+         [
+          7.90909,
+          27.37
+         ],
+         [
+          15.8182,
+          29.11
+         ],
+         [
+          23.7273,
+          29.24
+         ],
+         [
+          31.6364,
+          31.11
+         ],
+         [
+          39.5455,
+          30.11
+         ],
+         [
+          47.4545,
+          33.48
+         ],
+         [
+          55.3636,
+          33.48
+         ],
+         [
+          63.2727,
+          33.48
+         ],
+         [
+          71.1818,
+          34
+         ],
+         [
+          79.0909,
+          34
+         ],
+         [
+          87,
+          34
+         ]
+        ],
+        "symbol": "none",
+        "showSymbol": false,
+        "z": 7,
+        "triggerLineEvent": true,
+        "itemStyle": {
+         "color": "#009E73",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "color": "#009E73",
+         "width": 2.2
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.9</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.9</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">27.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div>"
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

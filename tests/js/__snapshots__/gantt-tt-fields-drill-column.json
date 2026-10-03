@@ -1,0 +1,1156 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "gantt",
+  "x": "ASTDY",
+  "xend": "AENDY",
+  "y": "AETERM",
+  "drill": "USUBJID",
+  "tt_fields": [
+   "USUBJID",
+   "AESEV"
+  ]
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "276px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "color": [
+       "#0072B2",
+       "#D55E00",
+       "#F0E442",
+       "#009E73",
+       "#56B4E9",
+       "#E69F00",
+       "#CC79A7"
+      ],
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 160,
+       "right": 10,
+       "top": 20,
+       "bottom": 48
+      },
+      "xAxis": {
+       "type": "value",
+       "name": "ASTDY",
+       "nameLocation": "middle",
+       "nameGap": 28,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true
+      },
+      "yAxis": {
+       "type": "category",
+       "data": [
+        "Dizziness",
+        "Fatigue",
+        "Upper respiratory tract infection",
+        "Headache",
+        "Rash",
+        "Nausea",
+        ""
+       ],
+       "inverse": true,
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11,
+        "align": "left",
+        "margin": 150,
+        "width": 145,
+        "overflow": "truncate",
+        "ellipsis": "…"
+       },
+       "axisLine": {
+        "show": false
+       },
+       "axisTick": {
+        "show": false
+       },
+       "splitLine": {
+        "show": false
+       }
+      },
+      "series": [
+       {
+        "type": "custom",
+        "data": [
+         {
+          "value": [
+           4,
+           5,
+           4,
+           "Rash",
+           "",
+           "",
+           "",
+           "S01",
+           [
+            "S01",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           7,
+           9,
+           2,
+           "Upper respiratory tract infection",
+           "",
+           "",
+           "",
+           "S01",
+           [
+            "S01",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           10,
+           10,
+           1,
+           "Fatigue",
+           "",
+           "",
+           "",
+           "S01",
+           [
+            "S01",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           13,
+           17,
+           6,
+           "",
+           "",
+           "",
+           "",
+           "S01",
+           [
+            "S01",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           16,
+           21,
+           5,
+           "Nausea",
+           "",
+           "",
+           "",
+           "S01",
+           [
+            "S01",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           19,
+           25,
+           3,
+           "Headache",
+           "",
+           "",
+           "",
+           "S02",
+           [
+            "S02",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           22,
+           29,
+           4,
+           "Rash",
+           "",
+           "",
+           "",
+           "S02",
+           [
+            "S02",
+            ""
+           ]
+          ]
+         },
+         {
+          "value": [
+           25,
+           33,
+           2,
+           "Upper respiratory tract infection",
+           "",
+           "",
+           "",
+           "S02",
+           [
+            "S02",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           28,
+           28,
+           1,
+           "Fatigue",
+           "",
+           "",
+           "",
+           "S02",
+           [
+            "S02",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           31,
+           31,
+           0,
+           "Dizziness",
+           "",
+           "",
+           "",
+           "S02",
+           [
+            "S02",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           34,
+           36,
+           5,
+           "Nausea",
+           "",
+           "",
+           "",
+           "S03",
+           [
+            "S03",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           37,
+           40,
+           3,
+           "Headache",
+           "",
+           "",
+           "",
+           "S03",
+           [
+            "S03",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           40,
+           44,
+           4,
+           "Rash",
+           "",
+           "",
+           "",
+           "S03",
+           [
+            "S03",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           3,
+           8,
+           2,
+           "Upper respiratory tract infection",
+           "",
+           "",
+           "",
+           "S03",
+           [
+            "S03",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           6,
+           12,
+           1,
+           "Fatigue",
+           "",
+           "",
+           "",
+           "S03",
+           [
+            "S03",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           9,
+           16,
+           0,
+           "Dizziness",
+           "",
+           "",
+           "",
+           "S04",
+           [
+            "S04",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           12,
+           20,
+           5,
+           "Nausea",
+           "",
+           "",
+           "",
+           "S04",
+           [
+            "S04",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           15,
+           15,
+           3,
+           "Headache",
+           "",
+           "",
+           "",
+           "S04",
+           [
+            "S04",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           18,
+           19,
+           6,
+           "",
+           "",
+           "",
+           "",
+           "S04",
+           [
+            "S04",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           21,
+           23,
+           2,
+           "Upper respiratory tract infection",
+           "",
+           "",
+           "",
+           "S04",
+           [
+            "S04",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           24,
+           27,
+           1,
+           "Fatigue",
+           "",
+           "",
+           "",
+           "S05",
+           [
+            "S05",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           27,
+           31,
+           0,
+           "Dizziness",
+           "",
+           "",
+           "",
+           "S05",
+           [
+            "S05",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           30,
+           35,
+           5,
+           "Nausea",
+           "",
+           "",
+           "",
+           "S05",
+           [
+            "S05",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           33,
+           39,
+           3,
+           "Headache",
+           "",
+           "",
+           "",
+           "S05",
+           [
+            "S05",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           36,
+           43,
+           4,
+           "Rash",
+           "",
+           "",
+           "",
+           "S05",
+           [
+            "S05",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           39,
+           39,
+           2,
+           "Upper respiratory tract infection",
+           "",
+           "",
+           "",
+           "S06",
+           [
+            "S06",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           1,
+           "Fatigue",
+           "",
+           "",
+           "",
+           "S06",
+           [
+            "S06",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           5,
+           6,
+           0,
+           "Dizziness",
+           "",
+           "",
+           "",
+           "S06",
+           [
+            "S06",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           8,
+           10,
+           5,
+           "Nausea",
+           "",
+           "",
+           "",
+           "S06",
+           [
+            "S06",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           11,
+           14,
+           3,
+           "Headache",
+           "",
+           "",
+           "",
+           "S06",
+           [
+            "S06",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           14,
+           18,
+           4,
+           "Rash",
+           "",
+           "",
+           "",
+           "S07",
+           [
+            "S07",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           17,
+           22,
+           2,
+           "Upper respiratory tract infection",
+           "",
+           "",
+           "",
+           "S07",
+           [
+            "S07",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           20,
+           26,
+           6,
+           "",
+           "",
+           "",
+           "",
+           "S07",
+           [
+            "S07",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           23,
+           30,
+           0,
+           "Dizziness",
+           "",
+           "",
+           "",
+           "S07",
+           [
+            "S07",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           26,
+           34,
+           5,
+           "Nausea",
+           "",
+           "",
+           "",
+           "S07",
+           [
+            "S07",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           29,
+           29,
+           3,
+           "Headache",
+           "",
+           "",
+           "",
+           "S08",
+           [
+            "S08",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           32,
+           33,
+           4,
+           "Rash",
+           "",
+           "",
+           "",
+           "S08",
+           [
+            "S08",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           35,
+           37,
+           2,
+           "Upper respiratory tract infection",
+           "",
+           "",
+           "",
+           "S08",
+           [
+            "S08",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           38,
+           41,
+           1,
+           "Fatigue",
+           "",
+           "",
+           "",
+           "S08",
+           [
+            "S08",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           1,
+           5,
+           0,
+           "Dizziness",
+           "",
+           "",
+           "",
+           "S08",
+           [
+            "S08",
+            ""
+           ]
+          ]
+         },
+         {
+          "value": [
+           4,
+           9,
+           5,
+           "Nausea",
+           "",
+           "",
+           "",
+           "S09",
+           [
+            "S09",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           7,
+           13,
+           3,
+           "Headache",
+           "",
+           "",
+           "",
+           "S09",
+           [
+            "S09",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           10,
+           17,
+           4,
+           "Rash",
+           "",
+           "",
+           "",
+           "S09",
+           [
+            "S09",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           13,
+           21,
+           2,
+           "Upper respiratory tract infection",
+           "",
+           "",
+           "",
+           "S09",
+           [
+            "S09",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           16,
+           16,
+           1,
+           "Fatigue",
+           "",
+           "",
+           "",
+           "S09",
+           [
+            "S09",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           19,
+           20,
+           0,
+           "Dizziness",
+           "",
+           "",
+           "",
+           "S10",
+           [
+            "S10",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           22,
+           24,
+           5,
+           "Nausea",
+           "",
+           "",
+           "",
+           "S10",
+           [
+            "S10",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           25,
+           28,
+           3,
+           "Headache",
+           "",
+           "",
+           "",
+           "S10",
+           [
+            "S10",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           28,
+           32,
+           4,
+           "Rash",
+           "",
+           "",
+           "",
+           "S10",
+           [
+            "S10",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           31,
+           36,
+           2,
+           "Upper respiratory tract infection",
+           "",
+           "",
+           "",
+           "S10",
+           [
+            "S10",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           34,
+           40,
+           1,
+           "Fatigue",
+           "",
+           "",
+           "",
+           "S11",
+           [
+            "S11",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           37,
+           44,
+           0,
+           "Dizziness",
+           "",
+           "",
+           "",
+           "S11",
+           [
+            "S11",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           40,
+           48,
+           5,
+           "Nausea",
+           "",
+           "",
+           "",
+           "S11",
+           [
+            "S11",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           3,
+           "Headache",
+           "",
+           "",
+           "",
+           "S11",
+           [
+            "S11",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           6,
+           7,
+           4,
+           "Rash",
+           "",
+           "",
+           "",
+           "S11",
+           [
+            "S11",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           9,
+           11,
+           2,
+           "Upper respiratory tract infection",
+           "",
+           "",
+           "",
+           "S12",
+           [
+            "S12",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           12,
+           15,
+           1,
+           "Fatigue",
+           "",
+           "",
+           "",
+           "S12",
+           [
+            "S12",
+            "MILD"
+           ]
+          ]
+         },
+         {
+          "value": [
+           15,
+           19,
+           0,
+           "Dizziness",
+           "",
+           "",
+           "",
+           "",
+           [
+            "",
+            "MODERATE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           18,
+           23,
+           5,
+           "Nausea",
+           "",
+           "",
+           "",
+           "",
+           [
+            "",
+            "SEVERE"
+           ]
+          ]
+         },
+         {
+          "value": [
+           21,
+           27,
+           3,
+           "Headache",
+           "",
+           "",
+           "",
+           "S12",
+           [
+            "S12",
+            "MILD"
+           ]
+          ]
+         }
+        ],
+        "encode": {
+         "x": [
+          0,
+          1
+         ],
+         "y": 2
+        },
+        "renderItem": "[fn]"
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">5 (1)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MODERATE</span></div>",
+       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">7</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">9 (2)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">SEVERE</span></div>",
+       "<div class=\"dd-tt-head\"><span>Fatigue</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MILD</span></div>",
+       "<div class=\"dd-tt-head\"><span></span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">13</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">17 (4)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MODERATE</span></div>"
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

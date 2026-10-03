@@ -1,0 +1,596 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [
+   "Nausea"
+  ],
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "auto",
+  "color": "AESEV",
+  "filter_column": "AETERM"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": {
+   "title": "AESEV",
+   "chips": [
+    {
+     "name": "",
+     "color": "#0072B2",
+     "off": false
+    },
+    {
+     "name": "MILD",
+     "color": "#D55E00",
+     "off": false
+    },
+    {
+     "name": "MODERATE",
+     "color": "#F0E442",
+     "off": false
+    },
+    {
+     "name": "SEVERE",
+     "color": "#009E73",
+     "off": false
+    }
+   ]
+  },
+  "status": "Filtered: AETERM = NauseaReset",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "272px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "axis",
+       "axisPointer": {
+        "type": "shadow"
+       },
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false,
+       "data": [
+        "",
+        "MILD",
+        "MODERATE",
+        "SEVERE"
+       ]
+      },
+      "grid": {
+       "left": 160,
+       "right": 5,
+       "top": 30,
+       "bottom": 46
+      },
+      "xAxis": {
+       "type": "value",
+       "name": "Count",
+       "nameLocation": "middle",
+       "nameGap": 30,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       }
+      },
+      "yAxis": {
+       "type": "category",
+       "data": [
+        "Upper respiratory tract infection",
+        "Nausea",
+        "Headache",
+        "Rash",
+        "Fatigue",
+        "Dizziness",
+        ""
+       ],
+       "inverse": true,
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11,
+        "align": "left",
+        "margin": 150,
+        "width": 145,
+        "overflow": "truncate",
+        "ellipsis": "…"
+       },
+       "axisLine": {
+        "show": false
+       },
+       "axisTick": {
+        "show": false
+       }
+      },
+      "series": [
+       {
+        "type": "bar",
+        "name": "",
+        "data": [
+         null,
+         null,
+         null,
+         1,
+         null,
+         1,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#0072B2"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "MILD",
+        "data": [
+         null,
+         null,
+         {
+          "value": 10,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         },
+         null,
+         {
+          "value": 9,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         },
+         null,
+         1
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#D55E00"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "MODERATE",
+        "data": [
+         null,
+         null,
+         null,
+         {
+          "value": 8,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         },
+         null,
+         {
+          "value": 8,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         },
+         {
+          "value": 2,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         }
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#F0E442"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "SEVERE",
+        "data": [
+         {
+          "value": 10,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         },
+         {
+          "value": 10,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         },
+         null,
+         null,
+         null,
+         null,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#009E73"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span class=\"dd-tt-label\">AESEV MILD</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">AESEV </span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span class=\"dd-tt-label\">AESEV MODERATE</span><span class=\"dd-tt-value\">8</span></div><div class=\"dd-tt-sep\"></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">9</span></div>",
+       "<div class=\"dd-tt-head\"><span>Fatigue</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span class=\"dd-tt-label\">AESEV MILD</span><span class=\"dd-tt-value\">9</span></div>",
+       "<div class=\"dd-tt-head\"><span>Dizziness</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">AESEV </span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span class=\"dd-tt-label\">AESEV MODERATE</span><span class=\"dd-tt-value\">8</span></div><div class=\"dd-tt-sep\"></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">9</span></div>",
+       "<div class=\"dd-tt-head\"><span></span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span class=\"dd-tt-label\">AESEV MILD</span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span class=\"dd-tt-label\">AESEV MODERATE</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-sep\"></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">3</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "series": [
+       {
+        "data": [
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 10,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": 9,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": 8,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": 8,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": 2,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 0.15
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": 10,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": 10,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

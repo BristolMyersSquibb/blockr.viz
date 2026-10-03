@@ -1,0 +1,1058 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "gantt",
+  "x": "ASTDY",
+  "xend": "AENDY",
+  "y": "AETERM",
+  "drill": "auto",
+  "color": "AESEV",
+  "label": "AETERM",
+  "series": "USUBJID"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": {
+   "title": "AESEV",
+   "chips": [
+    {
+     "name": "",
+     "color": "#0072B2",
+     "off": false
+    },
+    {
+     "name": "MILD",
+     "color": "#D55E00",
+     "off": false
+    },
+    {
+     "name": "MODERATE",
+     "color": "#F0E442",
+     "off": false
+    },
+    {
+     "name": "SEVERE",
+     "color": "#009E73",
+     "off": false
+    }
+   ]
+  },
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "276px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "color": [
+       "#0072B2",
+       "#D55E00",
+       "#F0E442",
+       "#009E73",
+       "#56B4E9",
+       "#E69F00",
+       "#CC79A7"
+      ],
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false,
+       "data": [
+        "",
+        "MILD",
+        "MODERATE",
+        "SEVERE"
+       ]
+      },
+      "grid": {
+       "left": 160,
+       "right": 10,
+       "top": 20,
+       "bottom": 48
+      },
+      "xAxis": {
+       "type": "value",
+       "name": "ASTDY",
+       "nameLocation": "middle",
+       "nameGap": 28,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true
+      },
+      "yAxis": {
+       "type": "category",
+       "data": [
+        "Dizziness",
+        "Fatigue",
+        "Upper respiratory tract infection",
+        "Headache",
+        "Rash",
+        "Nausea",
+        ""
+       ],
+       "inverse": true,
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11,
+        "align": "left",
+        "margin": 150,
+        "width": 145,
+        "overflow": "truncate",
+        "ellipsis": "…"
+       },
+       "axisLine": {
+        "show": false
+       },
+       "axisTick": {
+        "show": false
+       },
+       "splitLine": {
+        "show": false
+       }
+      },
+      "series": [
+       {
+        "type": "custom",
+        "name": "",
+        "data": [
+         {
+          "value": [
+           22,
+           29,
+           4,
+           "Rash",
+           "",
+           "Rash",
+           "S02",
+           "Rash",
+           0
+          ]
+         },
+         {
+          "value": [
+           1,
+           5,
+           0,
+           "Dizziness",
+           "",
+           "Dizziness",
+           "S08",
+           "Dizziness",
+           0
+          ]
+         }
+        ],
+        "encode": {
+         "x": [
+          0,
+          1
+         ],
+         "y": 2
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "custom",
+        "name": "MILD",
+        "data": [
+         {
+          "value": [
+           10,
+           10,
+           1,
+           "Fatigue",
+           "MILD",
+           "Fatigue",
+           "S01",
+           "Fatigue",
+           0
+          ]
+         },
+         {
+          "value": [
+           19,
+           25,
+           3,
+           "Headache",
+           "MILD",
+           "Headache",
+           "S02",
+           "Headache",
+           0
+          ]
+         },
+         {
+          "value": [
+           28,
+           28,
+           1,
+           "Fatigue",
+           "MILD",
+           "Fatigue",
+           "S02",
+           "Fatigue",
+           0
+          ]
+         },
+         {
+          "value": [
+           37,
+           40,
+           3,
+           "Headache",
+           "MILD",
+           "Headache",
+           "S03",
+           "Headache",
+           0
+          ]
+         },
+         {
+          "value": [
+           6,
+           12,
+           1,
+           "Fatigue",
+           "MILD",
+           "Fatigue",
+           "S03",
+           "Fatigue",
+           0
+          ]
+         },
+         {
+          "value": [
+           15,
+           15,
+           3,
+           "Headache",
+           "MILD",
+           "Headache",
+           "S04",
+           "Headache",
+           0
+          ]
+         },
+         {
+          "value": [
+           24,
+           27,
+           1,
+           "Fatigue",
+           "MILD",
+           "Fatigue",
+           "S05",
+           "Fatigue",
+           0
+          ]
+         },
+         {
+          "value": [
+           33,
+           39,
+           3,
+           "Headache",
+           "MILD",
+           "Headache",
+           "S05",
+           "Headache",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           1,
+           "Fatigue",
+           "MILD",
+           "Fatigue",
+           "S06",
+           "Fatigue",
+           0
+          ]
+         },
+         {
+          "value": [
+           11,
+           14,
+           3,
+           "Headache",
+           "MILD",
+           "Headache",
+           "S06",
+           "Headache",
+           0
+          ]
+         },
+         {
+          "value": [
+           20,
+           26,
+           6,
+           "",
+           "MILD",
+           "",
+           "S07",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           29,
+           29,
+           3,
+           "Headache",
+           "MILD",
+           "Headache",
+           "S08",
+           "Headache",
+           0
+          ]
+         },
+         {
+          "value": [
+           38,
+           41,
+           1,
+           "Fatigue",
+           "MILD",
+           "Fatigue",
+           "S08",
+           "Fatigue",
+           0
+          ]
+         },
+         {
+          "value": [
+           7,
+           13,
+           3,
+           "Headache",
+           "MILD",
+           "Headache",
+           "S09",
+           "Headache",
+           0
+          ]
+         },
+         {
+          "value": [
+           16,
+           16,
+           1,
+           "Fatigue",
+           "MILD",
+           "Fatigue",
+           "S09",
+           "Fatigue",
+           0
+          ]
+         },
+         {
+          "value": [
+           25,
+           28,
+           3,
+           "Headache",
+           "MILD",
+           "Headache",
+           "S10",
+           "Headache",
+           0
+          ]
+         },
+         {
+          "value": [
+           34,
+           40,
+           1,
+           "Fatigue",
+           "MILD",
+           "Fatigue",
+           "S11",
+           "Fatigue",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           3,
+           3,
+           "Headache",
+           "MILD",
+           "Headache",
+           "S11",
+           "Headache",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           15,
+           1,
+           "Fatigue",
+           "MILD",
+           "Fatigue",
+           "S12",
+           "Fatigue",
+           0
+          ]
+         },
+         {
+          "value": [
+           21,
+           27,
+           3,
+           "Headache",
+           "MILD",
+           "Headache",
+           "S12",
+           "Headache",
+           0
+          ]
+         }
+        ],
+        "encode": {
+         "x": [
+          0,
+          1
+         ],
+         "y": 2
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "custom",
+        "name": "MODERATE",
+        "data": [
+         {
+          "value": [
+           4,
+           5,
+           4,
+           "Rash",
+           "MODERATE",
+           "Rash",
+           "S01",
+           "Rash",
+           0
+          ]
+         },
+         {
+          "value": [
+           13,
+           17,
+           6,
+           "",
+           "MODERATE",
+           "",
+           "S01",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           31,
+           31,
+           0,
+           "Dizziness",
+           "MODERATE",
+           "Dizziness",
+           "S02",
+           "Dizziness",
+           0
+          ]
+         },
+         {
+          "value": [
+           40,
+           44,
+           4,
+           "Rash",
+           "MODERATE",
+           "Rash",
+           "S03",
+           "Rash",
+           0
+          ]
+         },
+         {
+          "value": [
+           9,
+           16,
+           0,
+           "Dizziness",
+           "MODERATE",
+           "Dizziness",
+           "S04",
+           "Dizziness",
+           0
+          ]
+         },
+         {
+          "value": [
+           18,
+           19,
+           6,
+           "",
+           "MODERATE",
+           "",
+           "S04",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           27,
+           31,
+           0,
+           "Dizziness",
+           "MODERATE",
+           "Dizziness",
+           "S05",
+           "Dizziness",
+           0
+          ]
+         },
+         {
+          "value": [
+           36,
+           43,
+           4,
+           "Rash",
+           "MODERATE",
+           "Rash",
+           "S05",
+           "Rash",
+           0
+          ]
+         },
+         {
+          "value": [
+           5,
+           6,
+           0,
+           "Dizziness",
+           "MODERATE",
+           "Dizziness",
+           "S06",
+           "Dizziness",
+           0
+          ]
+         },
+         {
+          "value": [
+           14,
+           18,
+           4,
+           "Rash",
+           "MODERATE",
+           "Rash",
+           "S07",
+           "Rash",
+           0
+          ]
+         },
+         {
+          "value": [
+           23,
+           30,
+           0,
+           "Dizziness",
+           "MODERATE",
+           "Dizziness",
+           "S07",
+           "Dizziness",
+           0
+          ]
+         },
+         {
+          "value": [
+           32,
+           33,
+           4,
+           "Rash",
+           "MODERATE",
+           "Rash",
+           "S08",
+           "Rash",
+           0
+          ]
+         },
+         {
+          "value": [
+           10,
+           17,
+           4,
+           "Rash",
+           "MODERATE",
+           "Rash",
+           "S09",
+           "Rash",
+           0
+          ]
+         },
+         {
+          "value": [
+           19,
+           20,
+           0,
+           "Dizziness",
+           "MODERATE",
+           "Dizziness",
+           "S10",
+           "Dizziness",
+           0
+          ]
+         },
+         {
+          "value": [
+           28,
+           32,
+           4,
+           "Rash",
+           "MODERATE",
+           "Rash",
+           "S10",
+           "Rash",
+           0
+          ]
+         },
+         {
+          "value": [
+           37,
+           44,
+           0,
+           "Dizziness",
+           "MODERATE",
+           "Dizziness",
+           "S11",
+           "Dizziness",
+           0
+          ]
+         },
+         {
+          "value": [
+           6,
+           7,
+           4,
+           "Rash",
+           "MODERATE",
+           "Rash",
+           "S11",
+           "Rash",
+           0
+          ]
+         },
+         {
+          "value": [
+           15,
+           19,
+           0,
+           "Dizziness",
+           "MODERATE",
+           "Dizziness",
+           "",
+           "Dizziness",
+           0
+          ]
+         }
+        ],
+        "encode": {
+         "x": [
+          0,
+          1
+         ],
+         "y": 2
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "custom",
+        "name": "SEVERE",
+        "data": [
+         {
+          "value": [
+           7,
+           9,
+           2,
+           "Upper respiratory tract infection",
+           "SEVERE",
+           "Upper respiratory tract infection",
+           "S01",
+           "Upper respiratory tract infection",
+           0
+          ]
+         },
+         {
+          "value": [
+           16,
+           21,
+           5,
+           "Nausea",
+           "SEVERE",
+           "Nausea",
+           "S01",
+           "Nausea",
+           0
+          ]
+         },
+         {
+          "value": [
+           25,
+           33,
+           2,
+           "Upper respiratory tract infection",
+           "SEVERE",
+           "Upper respiratory tract infection",
+           "S02",
+           "Upper respiratory tract infection",
+           0
+          ]
+         },
+         {
+          "value": [
+           34,
+           36,
+           5,
+           "Nausea",
+           "SEVERE",
+           "Nausea",
+           "S03",
+           "Nausea",
+           0
+          ]
+         },
+         {
+          "value": [
+           3,
+           8,
+           2,
+           "Upper respiratory tract infection",
+           "SEVERE",
+           "Upper respiratory tract infection",
+           "S03",
+           "Upper respiratory tract infection",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           20,
+           5,
+           "Nausea",
+           "SEVERE",
+           "Nausea",
+           "S04",
+           "Nausea",
+           0
+          ]
+         },
+         {
+          "value": [
+           21,
+           23,
+           2,
+           "Upper respiratory tract infection",
+           "SEVERE",
+           "Upper respiratory tract infection",
+           "S04",
+           "Upper respiratory tract infection",
+           0
+          ]
+         },
+         {
+          "value": [
+           30,
+           35,
+           5,
+           "Nausea",
+           "SEVERE",
+           "Nausea",
+           "S05",
+           "Nausea",
+           0
+          ]
+         },
+         {
+          "value": [
+           39,
+           39,
+           2,
+           "Upper respiratory tract infection",
+           "SEVERE",
+           "Upper respiratory tract infection",
+           "S06",
+           "Upper respiratory tract infection",
+           0
+          ]
+         },
+         {
+          "value": [
+           8,
+           10,
+           5,
+           "Nausea",
+           "SEVERE",
+           "Nausea",
+           "S06",
+           "Nausea",
+           0
+          ]
+         },
+         {
+          "value": [
+           17,
+           22,
+           2,
+           "Upper respiratory tract infection",
+           "SEVERE",
+           "Upper respiratory tract infection",
+           "S07",
+           "Upper respiratory tract infection",
+           0
+          ]
+         },
+         {
+          "value": [
+           26,
+           34,
+           5,
+           "Nausea",
+           "SEVERE",
+           "Nausea",
+           "S07",
+           "Nausea",
+           0
+          ]
+         },
+         {
+          "value": [
+           35,
+           37,
+           2,
+           "Upper respiratory tract infection",
+           "SEVERE",
+           "Upper respiratory tract infection",
+           "S08",
+           "Upper respiratory tract infection",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           9,
+           5,
+           "Nausea",
+           "SEVERE",
+           "Nausea",
+           "S09",
+           "Nausea",
+           0
+          ]
+         },
+         {
+          "value": [
+           13,
+           21,
+           2,
+           "Upper respiratory tract infection",
+           "SEVERE",
+           "Upper respiratory tract infection",
+           "S09",
+           "Upper respiratory tract infection",
+           0
+          ]
+         },
+         {
+          "value": [
+           22,
+           24,
+           5,
+           "Nausea",
+           "SEVERE",
+           "Nausea",
+           "S10",
+           "Nausea",
+           0
+          ]
+         },
+         {
+          "value": [
+           31,
+           36,
+           2,
+           "Upper respiratory tract infection",
+           "SEVERE",
+           "Upper respiratory tract infection",
+           "S10",
+           "Upper respiratory tract infection",
+           0
+          ]
+         },
+         {
+          "value": [
+           40,
+           48,
+           5,
+           "Nausea",
+           "SEVERE",
+           "Nausea",
+           "S11",
+           "Nausea",
+           0
+          ]
+         },
+         {
+          "value": [
+           9,
+           11,
+           2,
+           "Upper respiratory tract infection",
+           "SEVERE",
+           "Upper respiratory tract infection",
+           "S12",
+           "Upper respiratory tract infection",
+           0
+          ]
+         },
+         {
+          "value": [
+           18,
+           23,
+           5,
+           "Nausea",
+           "SEVERE",
+           "Nausea",
+           "",
+           "Nausea",
+           0
+          ]
+         }
+        ],
+        "encode": {
+         "x": [
+          0,
+          1
+         ],
+         "y": 2
+        },
+        "renderItem": "[fn]"
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S02</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">22</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">29 (7)</span></div>",
+       "<div class=\"dd-tt-head\"><span>Dizziness</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S08</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">5 (4)</span></div>",
+       "<div class=\"dd-tt-head\"><span>Fatigue</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MILD</span></div>",
+       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S02</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">19</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">25 (6)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MILD</span></div>",
+       "<div class=\"dd-tt-head\"><span>Fatigue</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S02</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">28</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MILD</span></div>",
+       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S03</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">37</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">40 (3)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MILD</span></div>",
+       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">5 (1)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MODERATE</span></div>",
+       "<div class=\"dd-tt-head\"><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">13</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">17 (4)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MODERATE</span></div>",
+       "<div class=\"dd-tt-head\"><span>Dizziness</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S02</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">31</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MODERATE</span></div>",
+       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S03</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">40</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">44 (4)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">MODERATE</span></div>",
+       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">7</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">9 (2)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">SEVERE</span></div>",
+       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">16</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">21 (5)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">SEVERE</span></div>",
+       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S02</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">25</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">33 (8)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">SEVERE</span></div>",
+       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">USUBJID</span><span class=\"dd-tt-value\">S03</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">ASTDY</span><span class=\"dd-tt-value\">34</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AENDY</span><span class=\"dd-tt-value\">36 (2)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AESEV</span><span class=\"dd-tt-value\">SEVERE</span></div>"
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

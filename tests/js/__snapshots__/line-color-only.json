@@ -1,0 +1,621 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "line",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "color": "SEX",
+  "tt_fields": [
+   "USUBJID"
+  ]
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": {
+   "title": "SEX",
+   "chips": [
+    {
+     "name": "M",
+     "color": "#0072B2",
+     "off": false
+    },
+    {
+     "name": "F",
+     "color": "#D55E00",
+     "off": false
+    }
+   ]
+  },
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "400px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "axis",
+       "axisPointer": {
+        "type": "line"
+       },
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 66,
+       "right": 5,
+       "top": 30,
+       "bottom": 52
+      },
+      "xAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Relative Day",
+        "nameLocation": "middle",
+        "nameGap": 28,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLine": {
+         "lineStyle": {
+          "color": "#d1d5db"
+         }
+        },
+        "splitLine": {
+         "lineStyle": {
+          "color": "#e5e7eb",
+          "type": "dashed"
+         }
+        },
+        "scale": true
+       },
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
+        }
+       }
+      ],
+      "yAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Value",
+        "nameLocation": "middle",
+        "nameGap": 46,
+        "nameRotate": 90,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLine": {
+         "lineStyle": {
+          "color": "#d1d5db"
+         }
+        },
+        "splitLine": {
+         "lineStyle": {
+          "color": "#e5e7eb",
+          "type": "dashed"
+         }
+        },
+        "scale": true
+       },
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
+        }
+       }
+      ],
+      "toolbox": {
+       "show": true,
+       "right": 8,
+       "top": 4,
+       "itemSize": 11,
+       "feature": {
+        "dataZoom": {
+         "xAxisIndex": 0,
+         "yAxisIndex": false,
+         "filterMode": "filter",
+         "title": {
+          "zoom": "Zoom to range",
+          "back": "Reset zoom"
+         }
+        }
+       },
+       "iconStyle": {
+        "borderColor": "#6b7280"
+       }
+      },
+      "series": [
+       {
+        "type": "line",
+        "name": "M",
+        "data": [
+         [
+          1,
+          27.37,
+          "S01"
+         ],
+         [
+          1,
+          29.37,
+          "S05"
+         ],
+         [
+          1,
+          31.37,
+          "S09"
+         ],
+         [
+          3,
+          28.37,
+          "S03"
+         ],
+         [
+          3,
+          30.37,
+          "S07"
+         ],
+         [
+          3,
+          32.37,
+          "S11"
+         ],
+         [
+          15,
+          29.24,
+          "S01"
+         ],
+         [
+          15,
+          "NaN",
+          "S05"
+         ],
+         [
+          15,
+          33.24,
+          "S09"
+         ],
+         [
+          17,
+          30.24,
+          "S03"
+         ],
+         [
+          17,
+          32.24,
+          "S07"
+         ],
+         [
+          17,
+          34.24,
+          "S11"
+         ],
+         [
+          29,
+          31.11,
+          "S01"
+         ],
+         [
+          29,
+          33.11,
+          "S05"
+         ],
+         [
+          29,
+          35.11,
+          "S09"
+         ],
+         [
+          31,
+          32.11,
+          "S03"
+         ],
+         [
+          31,
+          34.11,
+          "S07"
+         ],
+         [
+          31,
+          36.11,
+          "S11"
+         ],
+         [
+          57,
+          34.48,
+          "S01"
+         ],
+         [
+          57,
+          36.48,
+          "S05"
+         ],
+         [
+          57,
+          38.48,
+          "S09"
+         ],
+         [
+          59,
+          35.48,
+          "S03"
+         ],
+         [
+          59,
+          37.48,
+          "S07"
+         ],
+         [
+          59,
+          39.48,
+          "S11"
+         ],
+         [
+          85,
+          "NaN",
+          "S01"
+         ],
+         [
+          85,
+          38,
+          "S05"
+         ],
+         [
+          85,
+          40,
+          "S09"
+         ],
+         [
+          87,
+          37,
+          "S03"
+         ],
+         [
+          87,
+          39,
+          "S07"
+         ],
+         [
+          87,
+          41,
+          "S11"
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "F",
+        "data": [
+         [
+          0,
+          22.37,
+          "S04"
+         ],
+         [
+          0,
+          24.37,
+          "S08"
+         ],
+         [
+          0,
+          26.37,
+          "S12"
+         ],
+         [
+          2,
+          21.37,
+          "S02"
+         ],
+         [
+          2,
+          23.37,
+          "S06"
+         ],
+         [
+          2,
+          25.37,
+          "S10"
+         ],
+         [
+          14,
+          24.24,
+          "S04"
+         ],
+         [
+          14,
+          26.24,
+          "S08"
+         ],
+         [
+          14,
+          28.24,
+          "S12"
+         ],
+         [
+          16,
+          23.24,
+          "S02"
+         ],
+         [
+          16,
+          25.24,
+          "S06"
+         ],
+         [
+          16,
+          "NaN",
+          "S10"
+         ],
+         [
+          28,
+          26.11,
+          "S04"
+         ],
+         [
+          28,
+          28.11,
+          "S08"
+         ],
+         [
+          28,
+          30.11,
+          ""
+         ],
+         [
+          30,
+          25.11,
+          "S02"
+         ],
+         [
+          30,
+          27.11,
+          "S06"
+         ],
+         [
+          30,
+          29.11,
+          "S10"
+         ],
+         [
+          56,
+          29.48,
+          "S04"
+         ],
+         [
+          56,
+          31.48,
+          "S08"
+         ],
+         [
+          56,
+          33.48,
+          ""
+         ],
+         [
+          58,
+          28.48,
+          "S02"
+         ],
+         [
+          58,
+          30.48,
+          "S06"
+         ],
+         [
+          58,
+          32.48,
+          "S10"
+         ],
+         [
+          84,
+          31,
+          "S04"
+         ],
+         [
+          84,
+          33,
+          "S08"
+         ],
+         [
+          84,
+          35,
+          "S12"
+         ],
+         [
+          86,
+          30,
+          "S02"
+         ],
+         [
+          86,
+          32,
+          "S06"
+         ],
+         [
+          86,
+          34,
+          "S10"
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#D55E00",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "id": "__scrim__",
+        "type": "custom",
+        "xAxisIndex": 1,
+        "yAxisIndex": 1,
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 8,
+        "animation": false,
+        "renderItem": "[fn]"
+       },
+       {
+        "id": "__focus__",
+        "name": "__focus__",
+        "type": "line",
+        "data": [],
+        "silent": true,
+        "showSymbol": false,
+        "legendHoverLink": false,
+        "z": 9,
+        "animation": false
+       },
+       {
+        "id": "__focus_dots__",
+        "name": "__focus_dots__",
+        "type": "scatter",
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 10,
+        "animation": false
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       ""
+      ]
+     }
+    },
+    {
+     "op": "dispatchAction",
+     "action": {
+      "type": "takeGlobalCursor",
+      "key": "dataZoomSelect",
+      "dataZoomSelectActive": true
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

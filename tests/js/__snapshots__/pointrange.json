@@ -1,0 +1,285 @@
+{
+ "config": {
+  "value": "AVAL",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "pointrange",
+  "group": "AVISIT",
+  "drill": "auto"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "350px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "grid": {
+       "left": 55,
+       "right": 10,
+       "top": 30,
+       "bottom": 46
+      },
+      "xAxis": {
+       "type": "category",
+       "data": [
+        "Baseline",
+        "Week 2",
+        "Week 4",
+        "Week 8",
+        "Week 12"
+       ],
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11,
+        "interval": 0,
+        "lineHeight": 15,
+        "rotate": 0,
+        "__wrapAt": 0,
+        "__lines": 1
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "axisTick": {
+        "show": false
+       }
+      },
+      "yAxis": {
+       "type": "value",
+       "scale": true,
+       "name": "Analysis Value",
+       "nameLocation": "middle",
+       "nameGap": 45,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       }
+      },
+      "series": [
+       {
+        "type": "custom",
+        "legendHoverLink": false,
+        "silent": true,
+        "z": 1,
+        "data": [
+         [
+          0,
+          25.8292,
+          27.9108
+         ],
+         [
+          1,
+          27.418,
+          29.862
+         ],
+         [
+          2,
+          29.5692,
+          31.6508
+         ],
+         [
+          3,
+          32.9392,
+          35.0208
+         ],
+         [
+          4,
+          34.3155,
+          36.5936
+         ]
+        ],
+        "encode": {
+         "x": 0,
+         "y": [
+          1,
+          2
+         ]
+        },
+        "renderItem": "[fn]"
+       },
+       {
+        "type": "scatter",
+        "data": [
+         {
+          "value": [
+           0,
+           26.87
+          ],
+          "name": "Baseline",
+          "center": 26.87,
+          "n": 12,
+          "lo": 25.8292,
+          "hi": 27.9108
+         },
+         {
+          "value": [
+           1,
+           28.64
+          ],
+          "name": "Week 2",
+          "center": 28.64,
+          "n": 10,
+          "lo": 27.418,
+          "hi": 29.862
+         },
+         {
+          "value": [
+           2,
+           30.61
+          ],
+          "name": "Week 4",
+          "center": 30.61,
+          "n": 12,
+          "lo": 29.5692,
+          "hi": 31.6508
+         },
+         {
+          "value": [
+           3,
+           33.98
+          ],
+          "name": "Week 8",
+          "center": 33.98,
+          "n": 12,
+          "lo": 32.9392,
+          "hi": 35.0208
+         },
+         {
+          "value": [
+           4,
+           35.4545
+          ],
+          "name": "Week 12",
+          "center": 35.4545,
+          "n": 11,
+          "lo": 34.3155,
+          "hi": 36.5936
+         }
+        ],
+        "z": 4,
+        "symbolSize": 7,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "",
+       "",
+       "",
+       "",
+       "<div class=\"dd-tt-head\"><span>Baseline</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">12</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean</span><span class=\"dd-tt-value\">26.87</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">±1 SE</span><span class=\"dd-tt-value\">25.8292 – 27.9108</span></div>",
+       "<div class=\"dd-tt-head\"><span>Week 2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean</span><span class=\"dd-tt-value\">28.64</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">±1 SE</span><span class=\"dd-tt-value\">27.418 – 29.862</span></div>",
+       "<div class=\"dd-tt-head\"><span>Week 4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">12</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean</span><span class=\"dd-tt-value\">30.61</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">±1 SE</span><span class=\"dd-tt-value\">29.5692 – 31.6508</span></div>",
+       "<div class=\"dd-tt-head\"><span>Week 8</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">12</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean</span><span class=\"dd-tt-value\">33.98</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">±1 SE</span><span class=\"dd-tt-value\">32.9392 – 35.0208</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "series": [
+       {},
+       {}
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

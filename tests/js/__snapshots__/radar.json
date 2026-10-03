@@ -1,0 +1,382 @@
+{
+ "config": {
+  "value": "AVAL",
+  "func": "mean",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "radar",
+  "group": "AVISIT",
+  "color": "ARM",
+  "drill": "auto"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": {
+   "title": "Planned Arm",
+   "chips": [
+    {
+     "name": "",
+     "color": "#0072B2",
+     "off": false
+    },
+    {
+     "name": "High Dose",
+     "color": "#D55E00",
+     "off": false
+    },
+    {
+     "name": "Low Dose",
+     "color": "#F0E442",
+     "off": false
+    },
+    {
+     "name": "Placebo",
+     "color": "#009E73",
+     "off": false
+    }
+   ]
+  },
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "350px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false,
+       "data": [
+        "",
+        "High Dose",
+        "Low Dose",
+        "Placebo"
+       ]
+      },
+      "radar": {
+       "indicator": [
+        {
+         "name": "Week 12",
+         "max": 36.3333
+        },
+        {
+         "name": "Week 8",
+         "max": 36.3333
+        },
+        {
+         "name": "Week 4",
+         "max": 36.3333
+        },
+        {
+         "name": "Week 2",
+         "max": 36.3333
+        },
+        {
+         "name": "Baseline",
+         "max": 36.3333
+        }
+       ],
+       "radius": "62%",
+       "center": [
+        "50%",
+        "50%"
+       ],
+       "axisName": {
+        "color": "#6b7280",
+        "fontSize": 11,
+        "overflow": "truncate",
+        "width": 90
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb"
+        }
+       },
+       "splitArea": {
+        "show": false
+       }
+      },
+      "series": [
+       {
+        "type": "radar",
+        "data": [
+         {
+          "name": "",
+          "value": [
+           35,
+           33.48,
+           30.11,
+           28.24,
+           26.37
+          ],
+          "itemStyle": {
+           "color": "#0072B2"
+          },
+          "lineStyle": {
+           "color": "#0072B2",
+           "width": 2
+          },
+          "areaStyle": {
+           "color": "#0072B2",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "High Dose",
+          "value": [
+           36.3333,
+           34.8133,
+           31.4433,
+           29.5733,
+           27.7033
+          ],
+          "itemStyle": {
+           "color": "#D55E00"
+          },
+          "lineStyle": {
+           "color": "#D55E00",
+           "width": 2
+          },
+          "areaStyle": {
+           "color": "#D55E00",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "Low Dose",
+          "value": [
+           35.5,
+           33.98,
+           30.61,
+           27.9067,
+           26.87
+          ],
+          "itemStyle": {
+           "color": "#F0E442"
+          },
+          "lineStyle": {
+           "color": "#F0E442",
+           "width": 2
+          },
+          "areaStyle": {
+           "color": "#F0E442",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "Placebo",
+          "value": [
+           34.6667,
+           33.48,
+           30.11,
+           28.5733,
+           26.37
+          ],
+          "itemStyle": {
+           "color": "#009E73"
+          },
+          "lineStyle": {
+           "color": "#009E73",
+           "width": 2
+          },
+          "areaStyle": {
+           "color": "#009E73",
+           "opacity": 0.15
+          }
+         }
+        ],
+        "symbol": "circle",
+        "symbolSize": 4,
+        "emphasis": {
+         "focus": "self"
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span></span></div><div class=\"dd-tt-row dd-tt-label\">Mean of Analysis Value</div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 12</span><span class=\"dd-tt-value\">35</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 8</span><span class=\"dd-tt-value\">33.48</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 4</span><span class=\"dd-tt-value\">30.11</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 2</span><span class=\"dd-tt-value\">28.24</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Baseline</span><span class=\"dd-tt-value\">26.37</span></div>",
+       "<div class=\"dd-tt-head\"><span>High Dose</span></div><div class=\"dd-tt-row dd-tt-label\">Mean of Analysis Value</div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 12</span><span class=\"dd-tt-value\">36.3333</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 8</span><span class=\"dd-tt-value\">34.8133</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 4</span><span class=\"dd-tt-value\">31.4433</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 2</span><span class=\"dd-tt-value\">29.5733</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Baseline</span><span class=\"dd-tt-value\">27.7033</span></div>",
+       "<div class=\"dd-tt-head\"><span>Low Dose</span></div><div class=\"dd-tt-row dd-tt-label\">Mean of Analysis Value</div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 12</span><span class=\"dd-tt-value\">35.5</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 8</span><span class=\"dd-tt-value\">33.98</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 4</span><span class=\"dd-tt-value\">30.61</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 2</span><span class=\"dd-tt-value\">27.9067</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Baseline</span><span class=\"dd-tt-value\">26.87</span></div>",
+       "<div class=\"dd-tt-head\"><span>Placebo</span></div><div class=\"dd-tt-row dd-tt-label\">Mean of Analysis Value</div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 12</span><span class=\"dd-tt-value\">34.6667</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 8</span><span class=\"dd-tt-value\">33.48</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 4</span><span class=\"dd-tt-value\">30.11</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Week 2</span><span class=\"dd-tt-value\">28.5733</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Baseline</span><span class=\"dd-tt-value\">26.37</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "series": [
+       {
+        "data": [
+         {
+          "name": "",
+          "value": [
+           35,
+           33.48,
+           30.11,
+           28.24,
+           26.37
+          ],
+          "itemStyle": {
+           "color": "#0072B2",
+           "opacity": 1
+          },
+          "lineStyle": {
+           "color": "#0072B2",
+           "width": 2,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "color": "#0072B2",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "High Dose",
+          "value": [
+           36.3333,
+           34.8133,
+           31.4433,
+           29.5733,
+           27.7033
+          ],
+          "itemStyle": {
+           "color": "#D55E00",
+           "opacity": 1
+          },
+          "lineStyle": {
+           "color": "#D55E00",
+           "width": 2,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "color": "#D55E00",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "Low Dose",
+          "value": [
+           35.5,
+           33.98,
+           30.61,
+           27.9067,
+           26.87
+          ],
+          "itemStyle": {
+           "color": "#F0E442",
+           "opacity": 1
+          },
+          "lineStyle": {
+           "color": "#F0E442",
+           "width": 2,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "color": "#F0E442",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "Placebo",
+          "value": [
+           34.6667,
+           33.48,
+           30.11,
+           28.5733,
+           26.37
+          ],
+          "itemStyle": {
+           "color": "#009E73",
+           "opacity": 1
+          },
+          "lineStyle": {
+           "color": "#009E73",
+           "width": 2,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "color": "#009E73",
+           "opacity": 0.15
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

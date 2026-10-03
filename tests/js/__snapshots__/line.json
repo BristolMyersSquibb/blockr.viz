@@ -1,0 +1,770 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "line",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "series": "USUBJID"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "400px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "axis",
+       "axisPointer": {
+        "type": "line"
+       },
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 66,
+       "right": 5,
+       "top": 30,
+       "bottom": 52
+      },
+      "xAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Relative Day",
+        "nameLocation": "middle",
+        "nameGap": 28,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLine": {
+         "lineStyle": {
+          "color": "#d1d5db"
+         }
+        },
+        "splitLine": {
+         "lineStyle": {
+          "color": "#e5e7eb",
+          "type": "dashed"
+         }
+        },
+        "scale": true
+       },
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
+        }
+       }
+      ],
+      "yAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Value",
+        "nameLocation": "middle",
+        "nameGap": 46,
+        "nameRotate": 90,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 11
+        },
+        "axisLine": {
+         "lineStyle": {
+          "color": "#d1d5db"
+         }
+        },
+        "splitLine": {
+         "lineStyle": {
+          "color": "#e5e7eb",
+          "type": "dashed"
+         }
+        },
+        "scale": true
+       },
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
+        }
+       }
+      ],
+      "toolbox": {
+       "show": true,
+       "right": 8,
+       "top": 4,
+       "itemSize": 11,
+       "feature": {
+        "dataZoom": {
+         "xAxisIndex": 0,
+         "yAxisIndex": false,
+         "filterMode": "filter",
+         "title": {
+          "zoom": "Zoom to range",
+          "back": "Reset zoom"
+         }
+        }
+       },
+       "iconStyle": {
+        "borderColor": "#6b7280"
+       }
+      },
+      "series": [
+       {
+        "type": "line",
+        "name": "",
+        "data": [],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S01",
+        "data": [
+         [
+          1,
+          27.37
+         ],
+         [
+          15,
+          29.24
+         ],
+         [
+          29,
+          31.11
+         ],
+         [
+          57,
+          34.48
+         ],
+         [
+          85,
+          "NaN"
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S02",
+        "data": [
+         [
+          2,
+          21.37
+         ],
+         [
+          16,
+          23.24
+         ],
+         [
+          30,
+          25.11
+         ],
+         [
+          58,
+          28.48
+         ],
+         [
+          86,
+          30
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S03",
+        "data": [
+         [
+          3,
+          28.37
+         ],
+         [
+          17,
+          30.24
+         ],
+         [
+          31,
+          32.11
+         ],
+         [
+          59,
+          35.48
+         ],
+         [
+          87,
+          37
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S04",
+        "data": [
+         [
+          0,
+          22.37
+         ],
+         [
+          14,
+          24.24
+         ],
+         [
+          28,
+          26.11
+         ],
+         [
+          56,
+          29.48
+         ],
+         [
+          84,
+          31
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S05",
+        "data": [
+         [
+          1,
+          29.37
+         ],
+         [
+          15,
+          "NaN"
+         ],
+         [
+          29,
+          33.11
+         ],
+         [
+          57,
+          36.48
+         ],
+         [
+          85,
+          38
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S06",
+        "data": [
+         [
+          2,
+          23.37
+         ],
+         [
+          16,
+          25.24
+         ],
+         [
+          30,
+          27.11
+         ],
+         [
+          58,
+          30.48
+         ],
+         [
+          86,
+          32
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S07",
+        "data": [
+         [
+          3,
+          30.37
+         ],
+         [
+          17,
+          32.24
+         ],
+         [
+          31,
+          34.11
+         ],
+         [
+          59,
+          37.48
+         ],
+         [
+          87,
+          39
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S08",
+        "data": [
+         [
+          0,
+          24.37
+         ],
+         [
+          14,
+          26.24
+         ],
+         [
+          28,
+          28.11
+         ],
+         [
+          56,
+          31.48
+         ],
+         [
+          84,
+          33
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S09",
+        "data": [
+         [
+          1,
+          31.37
+         ],
+         [
+          15,
+          33.24
+         ],
+         [
+          29,
+          35.11
+         ],
+         [
+          57,
+          38.48
+         ],
+         [
+          85,
+          40
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S10",
+        "data": [
+         [
+          2,
+          25.37
+         ],
+         [
+          16,
+          "NaN"
+         ],
+         [
+          30,
+          29.11
+         ],
+         [
+          58,
+          32.48
+         ],
+         [
+          86,
+          34
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S11",
+        "data": [
+         [
+          3,
+          32.37
+         ],
+         [
+          17,
+          34.24
+         ],
+         [
+          31,
+          36.11
+         ],
+         [
+          59,
+          39.48
+         ],
+         [
+          87,
+          41
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "type": "line",
+        "name": "S12",
+        "data": [
+         [
+          0,
+          26.37
+         ],
+         [
+          14,
+          28.24
+         ],
+         [
+          84,
+          35
+         ]
+        ],
+        "smooth": true,
+        "smoothMonotone": "x",
+        "triggerLineEvent": true,
+        "symbol": "circle",
+        "symbolSize": 4,
+        "itemStyle": {
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "lineStyle": {
+         "width": 1.4,
+         "opacity": 1
+        },
+        "emphasis": {
+         "disabled": true
+        }
+       },
+       {
+        "id": "__scrim__",
+        "type": "custom",
+        "xAxisIndex": 1,
+        "yAxisIndex": 1,
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 8,
+        "animation": false,
+        "renderItem": "[fn]"
+       },
+       {
+        "id": "__focus__",
+        "name": "__focus__",
+        "type": "line",
+        "data": [],
+        "silent": true,
+        "showSymbol": false,
+        "legendHoverLink": false,
+        "z": 9,
+        "animation": false
+       },
+       {
+        "id": "__focus_dots__",
+        "name": "__focus_dots__",
+        "type": "scatter",
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 10,
+        "animation": false
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "",
+       "",
+       "",
+       "",
+       ""
+      ]
+     }
+    },
+    {
+     "op": "dispatchAction",
+     "action": {
+      "type": "takeGlobalCursor",
+      "key": "dataZoomSelect",
+      "dataZoomSelectActive": true
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

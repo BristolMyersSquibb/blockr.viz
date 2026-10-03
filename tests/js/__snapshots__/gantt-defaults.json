@@ -1,0 +1,978 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "gantt"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "444px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "color": [
+       "#0072B2",
+       "#D55E00",
+       "#F0E442",
+       "#009E73",
+       "#56B4E9",
+       "#E69F00",
+       "#CC79A7"
+      ],
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 46,
+       "right": 10,
+       "top": 20,
+       "bottom": 48
+      },
+      "xAxis": {
+       "type": "value",
+       "name": "AVISITN",
+       "nameLocation": "middle",
+       "nameGap": 28,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       },
+       "scale": true
+      },
+      "yAxis": {
+       "type": "category",
+       "data": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        ""
+       ],
+       "inverse": true,
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11,
+        "align": "left",
+        "margin": 36,
+        "width": 31,
+        "overflow": "truncate",
+        "ellipsis": "…"
+       },
+       "axisLine": {
+        "show": false
+       },
+       "axisTick": {
+        "show": false
+       },
+       "splitLine": {
+        "show": false
+       }
+      },
+      "series": [
+       {
+        "type": "custom",
+        "data": [
+         {
+          "value": [
+           0,
+           0,
+           0,
+           "S01",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           0,
+           "S01",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           0,
+           "S01",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           8,
+           8,
+           0,
+           "S01",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           12,
+           0,
+           "S01",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           1,
+           "S02",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           1,
+           "S02",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           1,
+           "S02",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           8,
+           8,
+           1,
+           "S02",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           12,
+           1,
+           "S02",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           2,
+           "S03",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           2,
+           "S03",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           2,
+           "S03",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           8,
+           8,
+           2,
+           "S03",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           12,
+           2,
+           "S03",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           3,
+           "S04",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           3,
+           "S04",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           3,
+           "S04",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           8,
+           8,
+           3,
+           "S04",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           12,
+           3,
+           "S04",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           4,
+           "S05",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           4,
+           "S05",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           4,
+           "S05",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           8,
+           8,
+           4,
+           "S05",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           12,
+           4,
+           "S05",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           5,
+           "S06",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           5,
+           "S06",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           5,
+           "S06",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           8,
+           8,
+           5,
+           "S06",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           12,
+           5,
+           "S06",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           6,
+           "S07",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           6,
+           "S07",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           6,
+           "S07",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           8,
+           8,
+           6,
+           "S07",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           12,
+           6,
+           "S07",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           7,
+           "S08",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           7,
+           "S08",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           7,
+           "S08",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           8,
+           8,
+           7,
+           "S08",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           12,
+           7,
+           "S08",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           8,
+           "S09",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           8,
+           "S09",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           8,
+           "S09",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           8,
+           8,
+           8,
+           "S09",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           12,
+           8,
+           "S09",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           9,
+           "S10",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           9,
+           "S10",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           9,
+           "S10",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           8,
+           8,
+           9,
+           "S10",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           12,
+           9,
+           "S10",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           10,
+           "S11",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           10,
+           "S11",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           10,
+           "S11",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           8,
+           8,
+           10,
+           "S11",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           12,
+           10,
+           "S11",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           0,
+           0,
+           11,
+           "S12",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           2,
+           2,
+           11,
+           "S12",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           4,
+           4,
+           12,
+           "",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           8,
+           8,
+           12,
+           "",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         },
+         {
+          "value": [
+           12,
+           12,
+           11,
+           "S12",
+           "",
+           "",
+           "",
+           "",
+           0
+          ]
+         }
+        ],
+        "encode": {
+         "x": [
+          0,
+          1
+         ],
+         "y": 2
+        },
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true
+        },
+        "cursor": "default"
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISITN</span><span class=\"dd-tt-value\">0</span></div>",
+       "<div class=\"dd-tt-head\"><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISITN</span><span class=\"dd-tt-value\">2</span></div>",
+       "<div class=\"dd-tt-head\"><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISITN</span><span class=\"dd-tt-value\">4</span></div>",
+       "<div class=\"dd-tt-head\"><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISITN</span><span class=\"dd-tt-value\">8</span></div>"
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}

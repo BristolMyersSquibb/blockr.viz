@@ -1,0 +1,376 @@
+{
+ "config": {
+  "value": "CHG",
+  "func": "sum",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "waterfall",
+  "group": "AVISIT",
+  "drill": "auto"
+ },
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "No filter active",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "350px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "axis",
+       "axisPointer": {
+        "type": "shadow"
+       },
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false
+      },
+      "grid": {
+       "left": 55,
+       "right": 10,
+       "top": 30,
+       "bottom": 66
+      },
+      "xAxis": {
+       "type": "category",
+       "data": [
+        "Baseline",
+        "Week 2",
+        "Week 4",
+        "Week 8",
+        "Week 12"
+       ],
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11,
+        "interval": 0,
+        "lineHeight": 15,
+        "rotate": 0,
+        "__wrapAt": 0,
+        "__lines": 1
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "axisTick": {
+        "show": false
+       },
+       "splitLine": {
+        "show": false
+       }
+      },
+      "yAxis": {
+       "type": "value",
+       "name": "CHG",
+       "nameLocation": "middle",
+       "nameGap": 45,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 11
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       }
+      },
+      "series": [
+       {
+        "name": "base",
+        "type": "bar",
+        "stack": "waterfall",
+        "barWidth": "60%",
+        "itemStyle": {
+         "color": "transparent",
+         "borderColor": "transparent"
+        },
+        "emphasis": {
+         "disabled": true
+        },
+        "silent": true,
+        "tooltip": {
+         "show": false
+        },
+        "data": [
+         -12,
+         -12,
+         -2.3,
+         30.58,
+         103.9
+        ]
+       },
+       {
+        "name": "delta",
+        "type": "bar",
+        "stack": "waterfall",
+        "barWidth": "60%",
+        "emphasis": {
+         "focus": "self"
+        },
+        "data": [
+         {
+          "value": 12,
+          "itemStyle": {
+           "color": "#dc2626",
+           "borderRadius": [
+            2,
+            2,
+            2,
+            2
+           ]
+          }
+         },
+         {
+          "value": 9.7,
+          "itemStyle": {
+           "color": "#009E73",
+           "borderRadius": [
+            2,
+            2,
+            2,
+            2
+           ]
+          }
+         },
+         {
+          "value": 32.88,
+          "itemStyle": {
+           "color": "#009E73",
+           "borderRadius": [
+            2,
+            2,
+            2,
+            2
+           ]
+          }
+         },
+         {
+          "value": 73.32,
+          "itemStyle": {
+           "color": "#009E73",
+           "borderRadius": [
+            2,
+            2,
+            2,
+            2
+           ]
+          }
+         },
+         {
+          "value": 83.93,
+          "itemStyle": {
+           "color": "#009E73",
+           "borderRadius": [
+            2,
+            2,
+            2,
+            2
+           ]
+          }
+         }
+        ]
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"dd-tt-head\"><span>Baseline</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of CHG</span><span class=\"dd-tt-value\">12</span></div>",
+       "<div class=\"dd-tt-head\"><span>Week 2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of CHG</span><span class=\"dd-tt-value\">9.7</span></div>",
+       "<div class=\"dd-tt-head\"><span>Week 4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of CHG</span><span class=\"dd-tt-value\">32.88</span></div>",
+       "<div class=\"dd-tt-head\"><span>Week 8</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of CHG</span><span class=\"dd-tt-value\">73.32</span></div>",
+       "<div class=\"dd-tt-head\"><span>Week 12</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of CHG</span><span class=\"dd-tt-value\">83.93</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "series": [
+       {
+        "data": [
+         {
+          "value": -12,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": -12,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": -2.3,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 30.58,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 103.9,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": 12,
+          "itemStyle": {
+           "color": "#dc2626",
+           "borderRadius": [
+            2,
+            2,
+            2,
+            2
+           ],
+           "opacity": 1
+          }
+         },
+         {
+          "value": 9.7,
+          "itemStyle": {
+           "color": "#009E73",
+           "borderRadius": [
+            2,
+            2,
+            2,
+            2
+           ],
+           "opacity": 1
+          }
+         },
+         {
+          "value": 32.88,
+          "itemStyle": {
+           "color": "#009E73",
+           "borderRadius": [
+            2,
+            2,
+            2,
+            2
+           ],
+           "opacity": 1
+          }
+         },
+         {
+          "value": 73.32,
+          "itemStyle": {
+           "color": "#009E73",
+           "borderRadius": [
+            2,
+            2,
+            2,
+            2
+           ],
+           "opacity": 1
+          }
+         },
+         {
+          "value": 83.93,
+          "itemStyle": {
+           "color": "#009E73",
+           "borderRadius": [
+            2,
+            2,
+            2,
+            2
+           ],
+           "opacity": 1
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": [
+  {
+   "name": "block-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ]
+}
