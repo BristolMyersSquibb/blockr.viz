@@ -24,3 +24,23 @@ jobs:
         with:
           node-version: 22
       - run: npx -y -p typescript@~6.0.0 tsc
+
+  # The chart's JavaScript in node with happy-dom: characterization
+  # snapshots and scaling checks (tests/js/README.md). blockr.ui's controls
+  # load from a checkout of its default branch.
+  test-js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: BristolMyersSquibb/blockr.ui
+          path: _blockr.ui
+          token: ${{ secrets.BLOCKR_PAT || github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test
+        env:
+          BLOCKR_UI_JS: ${{ github.workspace }}/_blockr.ui/inst/assets/js
