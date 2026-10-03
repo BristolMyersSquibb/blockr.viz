@@ -52,7 +52,6 @@
    *             palette: string[], colorScale: any, seriesCount: number,
    *             lineOpacity: number, symbol: string, capMessage: string | null,
    *             ttFields: string[], legend: any, byColor: boolean,
-   *             seriesByColorByVal: Record<string, string[]> | null,
    *             nFacets: number, single: boolean, ix: any,
    *             panels: IndividualPanel[] }} IndividualModel
    */
@@ -80,7 +79,7 @@
       seriesCol, color, splitCol, facet, levels: [], levelColors: [],
       palette: NS.paletteOf(cfg), colorScale: NS.scaleFor(cfg, color),
       seriesCount: 1, lineOpacity: 1, symbol: 'circle', capMessage: null,
-      ttFields: [], legend: null, byColor: false, seriesByColorByVal: null,
+      ttFields: [], legend: null, byColor: false,
       nFacets: 1, single: true, ix, panels: []
     };
     if (!x || !y) {
@@ -238,9 +237,8 @@
   /**
    * The legend band's chips, when the colour column has a readable number
    * of levels. With a series column apart from the colour, the chips are
-   * the colour's values (sorted) and a chip toggles every series of its
-   * value; the option adds an empty series per chip for the legend to
-   * bind to. Fills m.legend, m.byColor, m.seriesByColorByVal.
+   * the colour's values (sorted); the option adds an empty series per chip
+   * for the legend to bind to. Fills m.legend and m.byColor.
    * @param {any[]} rows @param {any} ix @param {IndividualModel} m
    * @param {Map<string, string>} lookup
    */
@@ -261,15 +259,6 @@
         ? colorScale.color[lvl] : (lookup.get(lvl) || palette[i % palette.length])
     }));
     m.legend = { col: color, items };
-    /** @type {Record<string, string[]>} */
-    const byVal = {};
-    for (const lvl of cbLevels) byVal[lvl] = [];
-    for (const sl of m.levels) {
-      const rep = ix.get(rows, /** @type {string} */ (seriesCol), 'nz', sl)[0];
-      const cv = rep ? String(rep[color] ?? '') : '';
-      if (cv in byVal) byVal[cv].push(sl);
-    }
-    m.seriesByColorByVal = byVal;
   };
 
   // -- Marks, keys and clicks ---------------------------------------------------
@@ -353,21 +342,39 @@
     if (m.seriesCol && !m.isLine && params.seriesName != null) {
       return wrap(NS.keys.fromKeys(individualKeys(m, panel.facet, params.seriesName)));
     }
-    return { range: { x_col: m.x.col, y_col: m.y.col, x_range: [v[0], v[0]], y_range: [v[1], v[1]] } };
+    return withPanel(m, panel,
+      { x_col: m.x.col, y_col: m.y.col, x_range: [v[0], v[0]], y_range: [v[1], v[1]] });
+  };
+
+  /**
+   * A range taken in a panel: in a facet panel it carries the panel's key
+   * as `filters`, as a click does (D10).
+   * @param {IndividualModel} m @param {IndividualPanel} panel @param {any} range
+   * @returns {{ range: any, filters?: Record<string, any[]> }}
+   */
+  const withPanel = (m, panel, range) => {
+    const keys = individualKeys(m, panel.facet, null);
+    return Object.keys(keys).length ? { range, filters: NS.keys.fromKeys(keys) } : { range };
   };
 
   /**
    * What a brush caught: the x and y of every brushed point (a dataIndex
-   * is its own series' index; one outside the series is skipped) and,
-   * with a drill column, the panel's rows at those points, each (x, y)
-   * taken once however many of its points were caught.
+   * is its own series' index; one outside the series is skipped); with an
+   * explicit drill column, the panel's rows at those points, each (x, y)
+   * taken once however many of its points were caught; with a series
+   * column, the series of the brushed points.
    * @param {IndividualModel} m @param {Record<string, any>} cfg
    * @param {IndividualPanel | null} panel @param {any[]} allSeries chart.getOption().series
    * @param {Array<{ seriesIndex: number, dataIndex: number }>} selected
-   * @returns {{ xVals: any[], yVals: any[], rows: any[], drill: string | null }}
+   * @returns {{ xVals: any[], yVals: any[], rows: any[], drill: string | null,
+   *             levels: string[] }}
    */
   const individualBrush = (m, cfg, panel, allSeries, selected) => {
-    const drill = NS.drillColumn(cfg);
+    // Colour never widens a brush (D9): only an explicit drill column
+    // reads the rows.
+    const drill = cfg.drill && cfg.drill !== 'auto' ? String(cfg.drill) : null;
+    /** @type {Set<string>} */
+    const levels = new Set();
     const xc = cfg.x, yc = cfg.y;
     /** @type {Map<string, any[]> | null} */
     let rowIndex = null;
@@ -391,6 +398,7 @@
       const vy = Array.isArray(pt) ? pt[1] : pt.value && pt.value[1];
       if (vx != null) xVals.push(vx);
       if (vy != null) yVals.push(vy);
+      if (m.seriesCol) levels.add(String(allSeries[sel.seriesIndex].name ?? ''));
       if (rowIndex) {
         const k = String(vx) + '|||' + String(vy);
         const hit = taken.has(k) ? null : rowIndex.get(k);
@@ -400,7 +408,42 @@
         }
       }
     }
-    return { xVals, yVals, rows, drill };
+    return { xVals, yVals, rows, drill, levels: [...levels] };
+  };
+
+  /**
+   * What a brush sends (D9), from what it caught, or null for nothing:
+   *
+   *   - an explicit drill column: its values in the rows at the points;
+   *   - a series column: the series of the brushed points;
+   *   - else the points' x (and, off a line, y) extent.
+   *
+   * Colour never widens it. In a facet panel the series and the range
+   * carry the panel's key, as a click does (D3, D10).
+   * @param {IndividualModel} m @param {Record<string, any>} cfg
+   * @param {IndividualPanel | null} panel
+   * @param {{ xVals: any[], yVals: any[], rows: any[], drill: string | null,
+   *           levels: string[] }} b
+   * @returns {{ filters: Record<string, any[]> } |
+   *           { range: any, filters?: Record<string, any[]> } | null}
+   */
+  const brushSelection = (m, cfg, panel, b) => {
+    if (b.drill) {
+      const f = NS.keys.fromRows(b.drill, b.rows);
+      if (f) return { filters: f };
+    }
+    const keys = panel ? individualKeys(m, panel.facet, null) : {};
+    if (!b.drill && m.seriesCol && b.levels.length) {
+      return { filters: { [m.seriesCol]: b.levels.map((lv) => (NS.keys.isMissing(lv) ? null : lv)),
+                          ...NS.keys.fromKeys(keys) } };
+    }
+    if (!b.xVals.length) return null;
+    const range = {
+      x_col: cfg.x, y_col: cfg.y,
+      x_range: [NS.minOf(b.xVals), NS.maxOf(b.xVals)],
+      y_range: (!m.isLine && b.yVals.length) ? [NS.minOf(b.yVals), NS.maxOf(b.yVals)] : null
+    };
+    return Object.keys(keys).length ? { range, filters: NS.keys.fromKeys(keys) } : { range };
   };
 
   /**
@@ -431,6 +474,6 @@
   };
 
   Object.assign(model, { individual, individualKeys, individualClick, individualBrush,
-                         pointRows, panelOf, interpYAtX, lineOrder,
+                         brushSelection, pointRows, panelOf, interpYAtX, lineOrder,
                          TRAJ_FULL_MAX, TRAJ_REDUCED_MAX, TRAJ_HARD_CAP });
 })();

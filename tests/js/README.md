@@ -86,7 +86,7 @@ CHART_ENGINE=v2 node --require ./tests/js/v2-preload.js --test tests/js/chart-ti
 
 Under v2 the snapshots are still v1's, and v2 has to reproduce them.
 `v2-differences.json` lists the ones it does not, each with the IDs of the
-decisions that explain the difference (D1-D7, B1-B7) and a line of why; what
+decisions that explain the difference (D1-D11, B1-B11) and a line of why; what
 v2 draws instead is pinned in `__snapshots__/v2/`. An unlisted difference
 fails, and so does a listed one that v2 now reproduces.
 `UPDATE_SNAPSHOTS=1 npm run test:v2` rewrites `__snapshots__/v2/` only.

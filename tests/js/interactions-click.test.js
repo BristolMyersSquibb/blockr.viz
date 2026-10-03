@@ -25,6 +25,10 @@ const click = (pred, slot = 0, extra) => [`click ${describe(pred)}${slot ? ' in 
 const clickAt = (slot, si, di, extra) => [`click series ${si} datum ${di} in slot ${slot}`,
   (c) => c.click(slot, si, di, extra)];
 const reset = () => ['Reset', (c) => c.reset()];
+// Reset where the chart shows one (v1 latches nothing on these).
+const resetIfShown = () => ['Reset, if shown', (c) => {
+  if (c.block.statusEl.querySelector('.dd-status-reset')) c.reset();
+}];
 const wait = (ms) => [`advance ${ms} ms`, (c) => c.advance(ms)];
 const describe = (pred) => pred.label || 'mark';
 const named = (label, pred) => Object.assign(pred, { label });
@@ -224,6 +228,13 @@ scenario('scatter-transient-geometric', { chart_type: 'scatter', ...LAB,
   click(point(15, 29.24), 0, ring)
 ]);
 
+// A point in a facet panel: v2 sends the panel's key with the point (D10)
+// and dims the points outside it (D11).
+scenario('scatter-facet-geometric', { chart_type: 'scatter', ...LAB, facet: 'ARM' }, [
+  click(named('first point', () => true), 1),
+  reset()
+]);
+
 scenario('scatter-non-series', { chart_type: 'scatter', ...LAB }, [
   ['click a markLine (componentType markLine)', (c) =>
     c.trigger('click', { componentType: 'markLine', seriesIndex: 0, value: 5 })]
@@ -343,3 +354,28 @@ scenario('legend-line-series-color-facet', { chart_type: 'line', ...LAB, series:
                                              color: 'ARM', facet: 'SEX' }, [
   chip('Placebo'), chip('Placebo')
 ]);
+
+// A chip on a chart without a facet: in v1 it hides its level, in v2 it
+// filters it (D8), also with an explicit drill column, with a ctrl_target,
+// and not at all with drill off.
+// The chips marked as the filter's level (v2 only).
+const chipsOn = { extra: (c) => ({ legendOn: Array.from(
+  c.block.legendEl.querySelectorAll('.dd-legend-chip-on'), (x) => x.textContent) }) };
+
+scenario('legend-scatter-color', { chart_type: 'scatter', ...LAB, color: 'ARM' }, [
+  chip('Placebo'), chip('Placebo'), chip('High Dose'), resetIfShown()
+], chipsOn);
+
+scenario('legend-bar-drill-column', { chart_type: 'bar', group: 'AETERM', color: 'AESEV',
+                                      drill: 'USUBJID' }, [
+  chip('SEVERE')
+], chipsOn);
+
+scenario('legend-bar-transient', { chart_type: 'bar', ...AE, color: 'AESEV',
+                                   ctrl_target: 'auto' }, [
+  chip('MILD'), wait(3100)
+], chipsOn);
+
+scenario('legend-gantt-drill-off', { ...GANTT, color: 'AESEV', drill: '' }, [
+  chip('MILD')
+], chipsOn);

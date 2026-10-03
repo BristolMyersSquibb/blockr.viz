@@ -176,11 +176,10 @@ test('a band reads its facet panel\'s own series', () => {
 test('the legend: the colour levels; by colour value with a separate series', () => {
   assert.deepStrictEqual(plain(C.option.individualLegend(build({ color: 'ARM' }).m)).items.map((i) => i.name),
                          ['A', 'B']);
-  const { m, opt, po } = build({ series: 'ID', color: 'ARM' });
+  const { m, opt } = build({ series: 'ID', color: 'ARM' });
   assert.deepStrictEqual(plain(C.option.individualLegend(m).items.map((i) => i.name)), ['A', 'B']);
   // An empty series per chip, for the legend to bind to.
   assert.deepStrictEqual(types(opt).slice(-2), [['scatter', 'A'], ['scatter', 'B']]);
-  assert.deepStrictEqual(plain(po.seriesByColorByVal), { A: ['S02'], B: ['S01'] });
   assert.strictEqual(C.option.individualLegend(build({ series: 'ID' }).m), null);
 });
 

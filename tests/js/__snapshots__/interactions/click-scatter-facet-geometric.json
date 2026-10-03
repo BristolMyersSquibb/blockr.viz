@@ -1,13 +1,14 @@
 {
  "config": {
-  "chart_type": "line",
+  "chart_type": "scatter",
   "x": "ADY",
   "y": "AVAL",
-  "drill": "auto"
+  "drill": "auto",
+  "facet": "ARM"
  },
  "steps": [
   {
-   "step": "brushSelected [[0,[0,3]]]",
+   "step": "click first point in slot 1",
    "inputs": [
     {
      "name": "blk-drilldown_block_action",
@@ -15,54 +16,33 @@
       "action": "filter",
       "filter_type": "range",
       "x_col": "ADY",
-      "y_col": null,
+      "y_col": "AVAL",
       "x_range": [
-       0,
-       1
+       3,
+       3
       ],
-      "y_range": null
+      "y_range": [
+       28.37,
+       28.37
+      ]
      },
      "opts": {
       "priority": "event"
      }
     }
    ],
-   "calls": [
-    {
-     "instance": 0,
-     "calls": [
-      {
-       "op": "setOption",
-       "option": {
-        "series": [
-         {
-          "lineStyle": {
-           "opacity": 1
-          },
-          "itemStyle": {
-           "opacity": 1
-          }
-         },
-         {},
-         {},
-         {}
-        ]
-       }
-      }
-     ]
-    }
-   ],
+   "calls": [],
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Analysis Relative Day 0 to 1"
+     "text": "Filtered: 3, 28.4"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": null,
+    "selected": "3, 28.4",
     "selectedColumn": null,
     "brush": true
    },
@@ -76,11 +56,15 @@
     {
      "ms": 16,
      "left": 16
+    },
+    {
+     "ms": 150,
+     "left": 150
     }
    ]
   },
   {
-   "step": "brushSelected with nothing selected",
+   "step": "Reset",
    "inputs": [
     {
      "name": "blk-drilldown_block_action",
@@ -104,19 +88,76 @@
      "instance": 0,
      "calls": [
       {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
        "op": "setOption",
        "option": {
         "series": [
-         {
-          "lineStyle": {
-           "opacity": 1
-          },
-          "itemStyle": {
-           "opacity": 1
-          }
-         },
-         {},
-         {},
+         {}
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {}
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {}
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
          {}
         ]
        }
@@ -145,6 +186,10 @@
     {
      "ms": 16,
      "left": 16
+    },
+    {
+     "ms": 150,
+     "left": 150
     }
    ]
   }

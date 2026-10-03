@@ -12,8 +12,8 @@ const pending = require('../v2-pending');
 
 // The behaviour changes and bug fixes v2 is written with (decisions.md in
 // the chart-block-v2 spec).
-const IDS = new Set(['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7',
-                     'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10']);
+const IDS = new Set(['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10', 'D11',
+                     'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10', 'B11']);
 
 const diffs = JSON.parse(fs.readFileSync(DIFF_FILE, 'utf8'));
 

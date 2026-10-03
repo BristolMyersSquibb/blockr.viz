@@ -90,9 +90,10 @@
       /** @type {any} */
       this._lastDataRev = null;
       // The selection (chart-keys.js): {type: 'categorical', filters} or
-      // {type: 'range', range}, `brush` when a brush made it; or null.
-      /** @type {{ type: 'categorical' | 'range', filters?: Record<string, any[]>, range?: any,
-       *           brush?: boolean } | null} */
+      // {type: 'range', range, filters} (filters: the facet key, or null),
+      // `brush` when a brush made it; or null.
+      /** @type {{ type: 'categorical' | 'range', filters?: Record<string, any[]> | null,
+       *           range?: any, brush?: boolean } | null} */
       this._filter = null;
       // A line click waits for a second click (interact-individual.js), and
       // a click guards against the brush clear that follows it.
@@ -111,10 +112,9 @@
       this._receiptTimer = null;
       this._returning = false;
       this._receiptAt = 0;
-      /** @type {Set<string>} */
-      this._legendOff = new Set();
+      // The legend band's column, for marking the chip a filter selects.
       /** @type {string | null} */
-      this._legendKey = null;
+      this._legendCol = null;
       /** @type {any} */
       this._slotsInst = null;
       /** @type {string | null} */
@@ -189,11 +189,14 @@
 
       NS.model.defaults(this.config, this.columns);
 
-      // A saved selection. A transient chart never latches, so it restores
-      // none.
-      const saved = NS.keys.restored(this.config);
-      if (saved && !NS.transientDrill(this.config)) {
-        this._filter = { type: 'categorical', filters: saved };
+      // A saved selection: a categorical filter, or a range with the facet
+      // key it was taken in. A transient chart never latches, so it
+      // restores none.
+      if (!NS.transientDrill(this.config)) {
+        const range = NS.keys.restoredRange(this.config);
+        const saved = range ? null : NS.keys.restored(this.config);
+        if (range) this._filter = { type: 'range', range: range.range, filters: range.filters };
+        else if (saved) this._filter = { type: 'categorical', filters: saved };
       }
 
       this._renderConfig();
@@ -269,8 +272,7 @@
         this._updateHighlight();
       } else {
         this._updateStatus();
-        const f = this._filter;
-        if (f && f.type === 'categorical' && !f.brush) this._applyHighlight();
+        if (this._filter) this._applyHighlight();
       }
     }
 
@@ -394,7 +396,7 @@
         chartDiv.className = 'dd-chart';
         container.appendChild(chartDiv);
         slot = { container, labelEl, chartDiv, chart: null, facetVal: null, dimmed: false,
-                 hover: { si: null }, seriesByColorByVal: null,
+                 hover: { si: null },
                  brushable: false, zoomArmed: false, zoom: null,
                  focus: null, focusSi: null, band: null, bandFocus: null };
         this._slots[i] = slot;

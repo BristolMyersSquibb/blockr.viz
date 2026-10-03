@@ -133,3 +133,62 @@ test('a range in column labels: both ends at one precision, a point with =', () 
                                        y_range: null }, cols, 'time'),
                      'ADT 1970-01-01 to 1970-01-02');
 });
+
+test('a restored filter: `filters` first, with missing values; a range is not one', () => {
+  assert.deepStrictEqual(plain(K.restored({ filters: { AETERM: ['Rash'], AESEV: [null] },
+                                            filter_column: 'AETERM', filter_values: ['Rash'] })),
+                         { AETERM: ['Rash'], AESEV: [null] });
+  // A scalar from R is one value; an empty column is dropped.
+  assert.deepStrictEqual(plain(K.restored({ filters: { AETERM: 'Rash', ARM: [] } })),
+                         { AETERM: ['Rash'] });
+  assert.strictEqual(K.restored({ filters: {} }), null);
+  assert.strictEqual(K.restored({ filter_type: 'range', filters: { ARM: ['Placebo'] } }), null);
+});
+
+test('a restored range carries the facet key it was taken in (D10, D11)', () => {
+  const cfg = { filter_type: 'range', filters: { ARM: ['Placebo'] },
+                filter_range: { x_col: 'ADY', y_col: 'AVAL', x_range: [2, 9], y_range: [1, 3] } };
+  assert.deepStrictEqual(plain(K.restoredRange(cfg)), {
+    range: { x_col: 'ADY', y_col: 'AVAL', x_range: [2, 9], y_range: [1, 3] },
+    filters: { ARM: ['Placebo'] }
+  });
+  // A line's x range: no y.
+  const line = plain(K.restoredRange({ filter_type: 'range', filters: null,
+    filter_range: { x_col: 'ADY', y_col: 'AVAL', x_range: [2, 9], y_range: null } }));
+  assert.deepStrictEqual(line, { range: { x_col: 'ADY', y_col: null, x_range: [2, 9], y_range: null },
+                                 filters: null });
+  assert.strictEqual(K.restoredRange({ filter_type: 'categorical', filter_range: cfg.filter_range }), null);
+  assert.strictEqual(K.restoredRange({ filter_type: 'range' }), null);
+});
+
+test('the range message: v1 fields, the facet key in filters only in a panel (D10)', () => {
+  const r = { x_col: 'ADY', y_col: 'AVAL', x_range: [28, 28], y_range: [41, 41] };
+  assert.deepStrictEqual(plain(K.rangeMessage(r, null)), {
+    action: 'filter', filter_type: 'range', x_col: 'ADY', y_col: 'AVAL',
+    x_range: [28, 28], y_range: [41, 41]
+  });
+  assert.deepStrictEqual(plain(K.rangeMessage(r, { ARM: ['Placebo'] })).filters, { ARM: ['Placebo'] });
+  // No y range: no y column.
+  assert.strictEqual(K.rangeMessage({ ...r, y_range: null }, null).y_col, null);
+});
+
+test('a point is in a range by its x and y; text compares as text (D11)', () => {
+  const r = { x_range: [2, 9], y_range: [1, 3] };
+  assert.strictEqual(K.pointInRange([2, 3], r), true);
+  assert.strictEqual(K.pointInRange([9.5, 2], r), false);
+  assert.strictEqual(K.pointInRange([5, 4], r), false);
+  assert.strictEqual(K.pointInRange([5, 99], { x_range: [2, 9], y_range: null }), true);
+  // A zero-width range holds its own point, also after a trip through text.
+  assert.strictEqual(K.pointInRange([0.30000000000000004, 1], { x_range: [0.3, 0.3], y_range: null }), true);
+  assert.strictEqual(K.pointInRange(['2024-02-01', 1],
+                                    { x_range: ['2024-01-01', '2024-03-01'], y_range: null }), true);
+});
+
+test('a range named in the footer with its panel (D10)', () => {
+  const cols = [{ name: 'ADY', type: 'numeric', label: 'Study Day' },
+                { name: 'AVAL', type: 'numeric', label: 'Value' },
+                { name: 'ARM', type: 'categorical', label: 'Arm' }];
+  assert.strictEqual(K.describeRange({ x_col: 'ADY', y_col: 'AVAL', x_range: [28, 28], y_range: [41, 41] },
+                                     cols, 'value', { ARM: ['Placebo'] }),
+                     'Study Day = 28, Value = 41, Arm = Placebo');
+});

@@ -72,7 +72,6 @@ test('a series apart from the colour: a series takes its colour value\'s colour'
   // Chips: the colour's values, sorted; scale first, then the cycled colour.
   assert.deepStrictEqual(plain(m.legend.items), [
     { name: '', color: P[1] }, { name: 'A', color: P[0] }, { name: 'B', color: '#123456' }]);
-  assert.deepStrictEqual(plain(m.seriesByColorByVal), { '': ['S03'], A: ['', 'S02'], B: ['S01'] });
 });
 
 test('categorical x: factor levels order the axis, a line runs in that order', () => {
@@ -198,7 +197,44 @@ test('a brush: the points\' x and y; with a drill column their rows, each (x, y)
   assert.deepStrictEqual(plain(r.rows.map((x) => x.ID)), ['a', 'b', 'c']);
   assert.strictEqual(r.drill, 'ID');
   const none = C.model.individualBrush(m, { ...cfg, drill: 'auto' }, m.panels[0], series, sel([9999]));
-  assert.deepStrictEqual(plain(none), { xVals: [], yVals: [], rows: [], drill: null });
+  assert.deepStrictEqual(plain(none), { xVals: [], yVals: [], rows: [], drill: null, levels: [] });
+});
+
+// D9: a brush takes the brushed points, never their colour; D10: in a facet
+// panel the panel's key rides with it.
+const brushOf = (cfg, idx, facet = '__all__') => {
+  const c = { ...BASE, ...cfg };
+  const m = model(cfg);
+  const panel = C.model.panelOf(m, facet);
+  const series = panel.series.map((s) => ({ name: s.level, data: s.pts }));
+  const sel = idx.map(([seriesIndex, dataIndex]) => ({ seriesIndex, dataIndex }));
+  return plain(C.model.brushSelection(m, c, panel,
+    C.model.individualBrush(m, c, panel, series, sel)));
+};
+
+test('D9: a brush in a coloured scatter is its range, not the colour levels', () => {
+  const r = brushOf({ color: 'ARM' }, [[1, 0], [2, 0]]);
+  assert.ok(r.range);
+  assert.strictEqual(r.filters, undefined);
+  assert.deepStrictEqual(r.range.x_col, 'DAY');
+});
+
+test('D9: with a series, a brush takes the series of the brushed points', () => {
+  const r = brushOf({ series: 'ID', color: 'ARM' }, [[1, 0], [2, 0]]);
+  assert.deepStrictEqual(r, { filters: { ID: ['S01', 'S02'] } });
+});
+
+test('D9: an explicit drill column still reads the rows at the brushed points', () => {
+  assert.deepStrictEqual(brushOf({ color: 'ARM', drill: 'ID' }, [[1, 0]]).filters, { ID: ['S02'] });
+});
+
+test('D10: a brush and a point in a facet panel carry the panel', () => {
+  const r = brushOf({ facet: 'SEX' }, [[0, 0]], 'F');
+  assert.deepStrictEqual(r.filters, { SEX: ['F'] });
+  assert.ok(r.range);
+  const p = click({ facet: 'SEX' }, { value: [2, 7] }, 'F');
+  assert.deepStrictEqual(p, { range: { x_col: 'DAY', y_col: 'VAL', x_range: [2, 2], y_range: [7, 7] },
+                              filters: { SEX: ['F'] } });
 });
 
 test('interpYAtX: between points, null outside; a category x by its position', () => {

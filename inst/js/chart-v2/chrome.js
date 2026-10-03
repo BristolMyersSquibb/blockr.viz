@@ -404,8 +404,9 @@
 
     // -- Legend band ---------------------------------------------------------
 
-    // One row of chips for every panel. A chip toggles its level in every
-    // panel; toggles survive a redraw with the same levels.
+    // One row of chips for every panel. A chip filters its level, as a
+    // click on a mark of that level would (D8): the other levels dim, a
+    // second click sends again (D1), Reset clears.
     /** @this {any}
      *  @param {{col: string, items: Array<{name: string, color: string}>} | null} spec */
     _updateLegendBand(spec) {
@@ -414,13 +415,10 @@
       if (!spec || !spec.items.length) {
         el.style.display = 'none';
         el.innerHTML = '';
-        this._legendKey = null;
-        this._legendOff.clear();
+        this._legendCol = null;
         return;
       }
-      const key = spec.col + '|' + spec.items.map((i) => i.name).join('');
-      if (key !== this._legendKey) this._legendOff.clear();
-      this._legendKey = key;
+      this._legendCol = spec.col;
 
       el.innerHTML = '';
       const title = this._legendTitleName(spec.items, spec.col);
@@ -434,7 +432,7 @@
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'dd-legend-chip';
-        chip.classList.toggle('dd-legend-chip-off', this._legendOff.has(it.name));
+        chip.dataset.level = it.name;
         const sw = document.createElement('span');
         sw.className = 'dd-legend-swatch';
         sw.style.background = it.color;
@@ -442,35 +440,37 @@
         lb.textContent = it.name;
         chip.appendChild(sw);
         chip.appendChild(lb);
-        chip.addEventListener('click', () => {
-          const off = !this._legendOff.has(it.name);
-          if (off) this._legendOff.add(it.name);
-          else this._legendOff.delete(it.name);
-          chip.classList.toggle('dd-legend-chip-off', off);
-          this._legendApply(it.name, !off);
-        });
+        chip.addEventListener('click', () => this._legendChipClick(spec.col, it.name));
         el.appendChild(chip);
       }
       el.style.display = '';
-      // The redraw made every series visible again; replay the toggles.
-      this._legendApply([...this._legendOff], false);
+      this._markLegendChips();
     },
 
-    // Show or hide levels in every panel, one batched action per panel.
-    /** @this {any} @param {string | string[]} names @param {boolean} on */
-    _legendApply(names, on) {
-      const list = Array.isArray(names) ? names : [names];
-      if (!list.length) return;
-      const action = on ? 'legendSelect' : 'legendUnSelect';
-      for (const s of this._slots) {
-        if (!s || !s.chart) continue;
-        const batch = [];
-        for (const name of list) {
-          const targets = (s.seriesByColorByVal && s.seriesByColorByVal[name]) || [name];
-          for (const n of targets) batch.push({ name: n });
-        }
-        if (batch.length === 1) s.chart.dispatchAction({ type: action, name: batch[0].name });
-        else if (batch.length) s.chart.dispatchAction({ type: action, batch });
+    // A chip click: its level as a filter, or with an explicit drill column
+    // that column's values in the level's rows. Nothing with drill off.
+    /** @this {any} @param {string} col @param {string} level */
+    _legendChipClick(col, level) {
+      const cfg = this.config;
+      if (NS.drillState(cfg) === 'off') return;
+      const filters = cfg.drill === 'auto'
+        ? NS.keys.fromKeys({ [col]: level })
+        : NS.keys.fromRows(cfg.drill, NS.model.rowsUnder(this.data, this._ix, { [col]: level }));
+      if (filters) this._select(null, null, filters);
+    },
+
+    // The chip whose level the latched filter selects is marked.
+    /** @this {any} */
+    _markLegendChips() {
+      const el = this.legendEl;
+      if (!el || !this._legendCol) return;
+      const f = this._filter && this._filter.filters;
+      const vals = f && f[this._legendCol];
+      const on = vals ? new Set(vals.map((/** @type {any} */ v) => (NS.keys.isMissing(v) ? '' : String(v))))
+        : null;
+      for (const chip of el.querySelectorAll('.dd-legend-chip')) {
+        const c = /** @type {HTMLElement} */ (chip);
+        c.classList.toggle('dd-legend-chip-on', !!on && on.has(c.dataset.level || ''));
       }
     },
 
@@ -523,7 +523,7 @@
       } else if (f && f.type === 'range') {
         const m = this._memo.model;
         text = 'Filtered: ' + NS.keys.describeRange(f.range, this.columns,
-          m && m.x ? m.x.type : undefined);
+          m && m.x ? m.x.type : undefined, f.filters);
       } else if (this._hasBrushFilter) {
         text = 'Brush filter active';
       }

@@ -282,38 +282,44 @@
  },
  "interactions/brush-scatter-geometric": {
   "ids": [
-   "D4"
+   "D4",
+   "D11"
   ],
-  "why": "The brush footer names the range that was sent (Analysis Relative Day 2 to 86, Analysis Value 21.4 to 30.0) instead of Brush filter active."
+  "why": "The brush footer names the range that was sent (Analysis Relative Day 2 to 86, Analysis Value 21.4 to 30.0) instead of Brush filter active. Each latched range dims the points outside it; a clear undims them (D11)."
  },
  "interactions/brush-scatter-ignored-events": {
   "ids": [
    "B4",
-   "D4"
+   "D4",
+   "D11"
   ],
-  "why": "A brush on points outside the data selects nothing and latches nothing (v1 showed Brush filter active and sent nothing); the brush that caught a point names its range in the footer."
+  "why": "A brush on points outside the data selects nothing and latches nothing (v1 showed Brush filter active and sent nothing); the brush that caught a point names its range in the footer. The point the last brush caught stays lit and the rest dim (D11)."
  },
  "interactions/brush-scatter-color": {
   "ids": [
-   "D2",
+   "D9",
+   "D11",
    "D4",
    "B1"
   ],
-  "why": "The brush sends filters: {ARM: [...]} and the footer names it; its clear carries filter_type categorical, the type it latched."
+  "why": "A brush over a scatter coloured by arm takes the brushed points, a range on x and y, instead of the arms of the brushed points (D9); the points outside the range dim (D11); the footer names the range (D4); its clear carries filter_type range, the type it latched (B1)."
  },
  "interactions/brush-scatter-facet": {
   "ids": [
-   "D2",
+   "D9",
+   "D10",
+   "D11",
    "D4"
   ],
-  "why": "The brush sends filters: {AESEV: [...]} and the footer names it."
+  "why": "A brush in a facet panel coloured by severity takes the brushed points, a range on x and y, instead of their severities (D9), and carries the panel's arm in filters (D10); the points outside the range, and every other panel, dim (D11); the footer names the range and the arm (D4)."
  },
  "interactions/brush-scatter-drill-column": {
   "ids": [
    "D2",
-   "D4"
+   "D4",
+   "D11"
   ],
-  "why": "The brush sends filters: {USUBJID: [...]} and the footer names it."
+  "why": "The brush sends filters: {USUBJID: [...]} and the footer names it. The points whose rows hold none of the sent USUBJID values dim (D11)."
  },
  "interactions/brush-scatter-drill-off": {
   "ids": [
@@ -323,44 +329,50 @@
  },
  "interactions/brush-scatter-transient": {
   "ids": [
-   "D2",
+   "D9",
+   "D11",
    "D4",
    "B1"
   ],
-  "why": "The brush sends filters: {ARM: [...]} and the footer names it; its clear carries filter_type categorical, the type it latched."
+  "why": "With a ctrl_target, a brush in a coloured scatter takes the brushed points, a latched range on x and y, instead of sending the arms (D9); the points outside the range dim (D11); the footer names the range (D4); its clear carries filter_type range, the type it latched (B1)."
  },
  "interactions/brush-scatter-click-guard": {
   "ids": [
    "B4",
-   "D4"
+   "D4",
+   "D11"
   ],
-  "why": "A brush clear after the click guard clears the latched point and the footer says No filter active (v1 kept naming the point); the point is named in column labels."
+  "why": "A brush clear after the click guard clears the latched point and the footer says No filter active (v1 kept naming the point); the point is named in column labels. The latched point dims every other point until the brush clear undims them (D11)."
  },
  "interactions/brush-line-event": {
   "ids": [
-   "D4"
+   "D4",
+   "D11"
   ],
-  "why": "The brush footer names the x range that was sent (Analysis Relative Day 0 to 1)."
+  "why": "The brush footer names the x range that was sent (Analysis Relative Day 0 to 1). The x range then patches the line's opacity (it has points inside it, so it stays lit) (D11)."
  },
  "interactions/brush-scatter-duplicate-points": {
   "ids": [
    "D2",
-   "D4"
+   "D4",
+   "D11"
   ],
-  "why": "The brush sends filters: {ID: [a, b, c, d]}; the footer names it (ID, 4 values)."
+  "why": "The brush sends filters: {ID: [a, b, c, d]}; the footer names it (ID, 4 values). The brushed points are patched as lit (D11)."
  },
  "interactions/click-scatter-geometric": {
   "ids": [
-   "D4"
+   "D4",
+   "D11"
   ],
-  "why": "The point click sends the same zero-width range; the footer names it in column labels (Analysis Relative Day = 15, Analysis Value = 29.2) instead of the bare coordinates."
+  "why": "The point click sends the same zero-width range; the footer names it in column labels (Analysis Relative Day = 15, Analysis Value = 29.2) instead of the bare coordinates. The latched point dims every other point; Reset undims them (D11)."
  },
  "interactions/click-scatter-color": {
   "ids": [
    "D6",
-   "D4"
+   "D4",
+   "D11"
   ],
-  "why": "Colour no longer widens a point click to its arm: each click sends a zero-width range at the point instead of ARM = Placebo; the footer names the point in column labels."
+  "why": "Colour no longer widens a point click to its arm: each click sends a zero-width range at the point instead of ARM = Placebo; the footer names the point in column labels. The latched point dims every other point (D11)."
  },
  "interactions/click-scatter-series": {
   "ids": [
@@ -382,15 +394,17 @@
  "interactions/click-scatter-transient": {
   "ids": [
    "D6",
-   "D4"
+   "D4",
+   "D11"
   ],
-  "why": "With colour only, a point click is the point itself, a zero-width range: no claim to send to the target, so it latches a local range filter (as a geometric click did) instead of sending ARM = Placebo; the footer names the point."
+  "why": "With colour only, a point click is the point itself, a zero-width range: no claim to send to the target, so it latches a local range filter (as a geometric click did) instead of sending ARM = Placebo; the footer names the point. The latched point dims every other point (D11)."
  },
  "interactions/click-scatter-transient-geometric": {
   "ids": [
-   "D4"
+   "D4",
+   "D11"
   ],
-  "why": "The footer names the latched point in column labels."
+  "why": "The footer names the latched point in column labels. The latched point dims every other point (D11)."
  },
  "interactions/click-line-series": {
   "ids": [
@@ -420,9 +434,10 @@
  },
  "interactions/click-line-no-split": {
   "ids": [
-   "D4"
+   "D4",
+   "D11"
   ],
-  "why": "The footer names the clicked point in column labels."
+  "why": "The footer names the clicked point in column labels. The clicked point's range then patches the line's opacity (it holds the point, so it stays lit) (D11)."
  },
  "interactions/click-line-transient": {
   "ids": [
@@ -459,9 +474,30 @@
  },
  "interactions/restore-brush": {
   "ids": [
+   "D4",
+   "D11"
+  ],
+  "why": "The brush footer names the range in column labels (Analysis Relative Day 1 to 15, Analysis Value 27.4 to 29.2) instead of Brush filter active. The brushed range dims the points outside it, and keeps doing so across the re-render (D11)."
+ },
+ "interactions/click-legend-bar-facet": {
+  "ids": [
+   "D8",
    "D4"
   ],
-  "why": "The brush footer names the range in column labels (Analysis Relative Day 1 to 15, Analysis Value 27.4 to 29.2) instead of Brush filter active."
+  "why": "A legend chip filters its level instead of hiding it: MILD sends filters: {AESEV: [MILD]}, the other severities dim in every panel and the chip is marked, a second chip replaces the filter, and the selection survives a redraw; nothing is hidden, so no chip is ever off (D8). The footer names the filter (D4)."
+ },
+ "interactions/click-legend-line-series-color-facet": {
+  "ids": [
+   "D8",
+   "D4"
+  ],
+  "why": "A legend chip filters its arm instead of hiding it: Placebo sends filters: {ARM: [Placebo]} and the other arms' lines dim in both panels; a second click sends it again rather than showing the arm again (D8, D1). The footer names the filter (D4)."
+ },
+ "interactions/gear-bar-facet-counts": {
+  "ids": [
+   "B6"
+  ],
+  "why": "With \"% of panel\" the value picker offers every column, the current value column USUBJID among them, as \"Count distinct\" does; v1 offered numeric columns only."
  },
  "interactions/sentence-slots": {
   "ids": [
@@ -469,10 +505,64 @@
   ],
   "why": "A pick through a sentence word closes its menu: the word is no longer marked open and the chart holds no open slot, so the next click on the word opens its menu again (v1 read it as a second click and closed it)."
  },
- "interactions/gear-bar-facet-counts": {
+ "interactions/click-legend-bar-drill-column": {
   "ids": [
-   "B6"
+   "D8",
+   "D4"
   ],
-  "why": "With \"% of panel\" the value picker offers every column, the current value column USUBJID among them, as \"Count distinct\" does; v1 offered numeric columns only."
+  "why": "With an explicit drill column a chip sends that column's values in the rows of its level (USUBJID, 12 values for SEVERE), as a mark click does, and the marks without those rows dim; v1 hid the level (D8). The footer names the filter (D4)."
+ },
+ "interactions/click-legend-bar-transient": {
+  "ids": [
+   "D8",
+   "D4"
+  ],
+  "why": "With a ctrl_target a chip sends its level as an event, filters: {AESEV: [MILD]}, and shows the drill receipt; nothing latches or dims and no level is hidden (D8). The receipt names the filter (D4)."
+ },
+ "interactions/click-legend-gantt-drill-off": {
+  "ids": [
+   "D8"
+  ],
+  "why": "With drill off a chip does nothing: hiding a level by its chip is gone, and a chip filters only where a click does (D8)."
+ },
+ "interactions/click-legend-scatter-color": {
+  "ids": [
+   "D8",
+   "D1",
+   "D4"
+  ],
+  "why": "A chip filters its arm instead of hiding it: Placebo sends filters: {ARM: [Placebo]}, the other arms dim and the chip is marked; the second click sends it again (D1); High Dose replaces it; Reset clears and undims (D8). The footer names the filter (D4)."
+ },
+ "interactions/click-scatter-facet-geometric": {
+  "ids": [
+   "D10",
+   "D11",
+   "D4"
+  ],
+  "why": "A point clicked in the High Dose panel sends its zero-width range with filters: {ARM: [High Dose]} (D10); every other point, and the other panels, dim until Reset (D11); the footer names the point in column labels and the arm (D4)."
+ },
+ "interactions/restore-bar-missing": {
+  "ids": [
+   "D2",
+   "D5",
+   "D4"
+  ],
+  "why": "A saved filter in `filters` with a missing severity (AETERM = Rash, AESEV = null) lights only the missing-severity segment of Rash; v1 does not read `filters` and restores nothing (D2, D5). The footer names it, the missing value as (missing) (D4)."
+ },
+ "interactions/restore-bar-two-columns": {
+  "ids": [
+   "D2",
+   "D5",
+   "D4"
+  ],
+  "why": "A saved filter on two columns (AETERM = Rash, AESEV = MODERATE) lights only that segment; v1 does not read `filters` and restores nothing (D2, D5). The footer names both columns (D4)."
+ },
+ "interactions/restore-scatter-range-facet": {
+  "ids": [
+   "D10",
+   "D11",
+   "D4"
+  ],
+  "why": "A saved range with the panel it was taken in (filter_type range, filter_range, filters: {ARM: [Placebo]}) lights the Placebo points inside the range and dims the rest and the other panels; Reset clears it as a range (D10, D11). v1 restores no range. The footer names the range and the arm (D4)."
  }
 }

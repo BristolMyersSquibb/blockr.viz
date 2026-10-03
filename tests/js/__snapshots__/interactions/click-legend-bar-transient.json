@@ -1,0 +1,77 @@
+{
+ "config": {
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "auto",
+  "color": "AESEV",
+  "ctrl_target": "auto"
+ },
+ "steps": [
+  {
+   "step": "legend chip MILD",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendUnSelect",
+        "name": "MILD"
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [
+    "MILD"
+   ],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "legendOn": []
+  },
+  {
+   "step": "advance 3100 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [
+    "MILD"
+   ],
+   "pending": [],
+   "legendOn": []
+  }
+ ]
+}

@@ -1073,6 +1073,13 @@
   flex: none;
 }
 
+/* The level a chip filter selects (chart engine v2): a ring round the chip. */
+.dd-legend-chip-on {
+  box-shadow: 0 0 0 1px var(--blockr-color-border-strong, #9ca3af);
+  border-radius: var(--blockr-radius-sm, 4px);
+  color: var(--blockr-color-text-default, #111827);
+}
+
 /* Toggled-off level: dimmed chip (ECharts greys inactive entries the same
    way); the dim rides computed opacity so the PNG export inherits it. */
 .dd-legend-chip-off {

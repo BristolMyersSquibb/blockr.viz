@@ -1,0 +1,262 @@
+{
+ "config": {
+  "chart_type": "scatter",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "facet": "ARM",
+  "filter_type": "range",
+  "filters": {
+   "ARM": [
+    "Placebo"
+   ]
+  },
+  "filter_range": {
+   "x_col": "ADY",
+   "y_col": "AVAL",
+   "x_range": [
+    1,
+    30
+   ],
+   "y_range": [
+    25,
+    32
+   ]
+  }
+ },
+ "steps": [
+  {
+   "step": "R sends a saved range taken in the Placebo panel",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "brush",
+        "brushOption": {
+         "brushType": "rect",
+         "brushMode": "single"
+        }
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 90
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "yAxis": [
+         {
+          "min": 20,
+          "max": 42
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "brush",
+        "brushOption": {
+         "brushType": "rect",
+         "brushMode": "single"
+        }
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 90
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "yAxis": [
+         {
+          "min": 20,
+          "max": 42
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "brush",
+        "brushOption": {
+         "brushType": "rect",
+         "brushMode": "single"
+        }
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 90
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "yAxis": [
+         {
+          "min": 20,
+          "max": 42
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "brush",
+        "brushOption": {
+         "brushType": "rect",
+         "brushMode": "single"
+        }
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 90
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "yAxis": [
+         {
+          "min": 20,
+          "max": 42
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "Reset, if shown",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

@@ -10,8 +10,8 @@
  *
  * A panel result also carries the state the view hands its slot: the
  * hover tracker the line tooltip reads, the line picker's registry
- * (`focus`), the band picker's ribbons (`band`), whether the panel is
- * brushed or zoomed, and the legend's fan-out map.
+ * (`focus`), the band picker's ribbons (`band`), and whether the panel
+ * is brushed or zoomed.
  *
  * Beside it: the legend band's chips and the highlight patch (D5).
  */
@@ -246,8 +246,7 @@
       panelH,
       xFit: xlab ? { labels: xCats, inset: X_INSET, decimate: true, nameGap: true,
                      gutter: xlab.bottom, key: xlab.key } : null,
-      hover, focus, band, brushable, zoomable,
-      seriesByColorByVal: m.byColor ? m.seriesByColorByVal : null
+      hover, focus, band, brushable, zoomable
     };
   };
 
@@ -278,16 +277,21 @@
    * with (the option's own, so an unnamed series is still unnamed): a line,
    * a band level or a scatter series is lit when its keys match the
    * filter; on a filter of a column a scatter series does not carry, each
-   * point by its own row. Overlays follow their series. Without a filter,
-   * and nothing dimmed from before, the patch is empty, as v1's.
+   * point by its own row. A range filter (D11) lights the scatter points
+   * inside it, and the lines and band levels with a point inside it; its
+   * facet key, in `filters`, lights the panel. Overlays follow their
+   * series. Without a filter, and nothing dimmed from before, the patch is
+   * empty, as v1's.
    * @param {any} m @param {any} panel @param {any[]} drawn the panel option's series
    * @param {((keys: Record<string, any>, rows: any) => boolean) | null} lit
    * @param {boolean} wasDimmed
    * @param {Record<string, any[]> | null} filters
+   * @param {{ x_range: any[], y_range: any[] | null } | null} [range]
    * @returns {{ series: any[], dimmed: boolean }}
    */
-  const individualPatch = (m, panel, drawn, lit, wasDimmed, filters) => {
-    if (!lit && !wasDimmed) return { series: drawn.map(() => ({})), dimmed: false };
+  const individualPatch = (m, panel, drawn, lit, wasDimmed, filters, range) => {
+    if (!lit && !range && !wasDimmed) return { series: drawn.map(() => ({})), dimmed: false };
+    const inRange = range ? (/** @type {any[]} */ p) => NS.keys.pointInRange(p, range) : null;
     const NONE = '\u0000';
     const keyOf = (/** @type {any} */ name) => (name == null ? NONE : String(name));
     /** @type {Map<string, any>} */
@@ -295,13 +299,13 @@
     for (const s of panel.series) byLevel.set(keyOf(s.level), s);
     const keyCols = new Set(m.splitCol ? [m.splitCol] : []);
     if (m.facet) keyCols.add(m.facet);
-    const perPoint = !!lit && !!filters && !m.isLine && !m.isBand &&
-      Object.keys(filters).some((c) => !keyCols.has(c));
+    const byRow = !!lit && !!filters && Object.keys(filters).some((c) => !keyCols.has(c));
+    const perPoint = (byRow || !!inRange) && !m.isLine && !m.isBand;
     /** @type {Map<string, boolean>} */
     const levelLit = new Map();
     /** @param {any} name */
     const onLevel = (name) => {
-      if (!lit) return true;
+      if (!lit && !inRange) return true;
       const k = keyOf(name);
       if (!levelLit.has(k)) {
         const ms = byLevel.get(k);
@@ -309,7 +313,10 @@
         const rows = () => (ms ? ms.rows
           : (m.splitCol && name != null ? m.ix.get(panel.rows, m.splitCol, 'nz', String(name))
             : panel.rows));
-        levelLit.set(k, lit(keys, rows));
+        let on = lit ? lit(keys, rows) : true;
+        // A line or a band level is lit when one of its points is in range.
+        if (on && inRange && ms) on = ms.pts.some(inRange);
+        levelLit.set(k, on);
       }
       return /** @type {boolean} */ (levelLit.get(k));
     };
@@ -321,8 +328,11 @@
       if (isMark(s) && s.type === 'scatter' && ms) {
         if (perPoint) {
           let any = false;
+          // The panel's key decides before the points do.
+          const keyOn = byRow || !lit || lit(NS.model.individualKeys(m, panel.facet, s.name), () => ms.rows);
           const data = ms.pts.map((/** @type {any} */ p, /** @type {number} */ j) => {
-            const on = NS.keys.rowMatches(ms.rows[j], filters);
+            const on = keyOn && (!byRow || NS.keys.rowMatches(ms.rows[j], filters)) &&
+              (!inRange || inRange(p));
             if (on) any = true;
             return { value: p, itemStyle: { opacity: on ? 1 : DIM } };
           });
@@ -345,7 +355,7 @@
       }
       return { itemStyle: { opacity: on ? 1 : DIM } };
     });
-    return { series, dimmed: !!lit };
+    return { series, dimmed: !!lit || !!inRange };
   };
 
   Object.assign(option, { individual, individualLegend, individualPatch });

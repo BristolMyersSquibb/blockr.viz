@@ -4,37 +4,130 @@
   "x": "ADY",
   "y": "AVAL",
   "drill": "auto",
-  "color": "ARM"
+  "facet": "ARM",
+  "filter_type": "range",
+  "filters": {
+   "ARM": [
+    "Placebo"
+   ]
+  },
+  "filter_range": {
+   "x_col": "ADY",
+   "y_col": "AVAL",
+   "x_range": [
+    1,
+    30
+   ],
+   "y_range": [
+    25,
+    32
+   ]
+  }
  },
  "steps": [
   {
-   "step": "brushSelected [[1,[0,1]],[3,[0]]]",
-   "inputs": [
-    {
-     "name": "blk-drilldown_block_action",
-     "value": {
-      "action": "filter",
-      "filter_type": "range",
-      "x_col": "ADY",
-      "y_col": "AVAL",
-      "x_range": [
-       1,
-       17
-      ],
-      "y_range": [
-       27.37,
-       30.24
-      ]
-     },
-     "opts": {
-      "priority": "event"
-     }
-    }
-   ],
+   "step": "R sends a saved range taken in the Placebo panel",
+   "inputs": [],
    "calls": [
     {
      "instance": 0,
      "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "brush",
+        "brushOption": {
+         "brushType": "rect",
+         "brushMode": "single"
+        }
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 90
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "yAxis": [
+         {
+          "min": 20,
+          "max": 42
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [],
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "brush",
+        "brushOption": {
+         "brushType": "rect",
+         "brushMode": "single"
+        }
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 90
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "yAxis": [
+         {
+          "min": 20,
+          "max": 42
+         }
+        ]
+       }
+      },
       {
        "op": "setOption",
        "option": {
@@ -43,63 +136,11 @@
           "data": [
            {
             "value": [
-             0,
-             26.37
-            ],
-            "itemStyle": {
-             "opacity": 0.15
-            }
-           },
-           {
-            "value": [
-             14,
-             28.24
-            ],
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": [
-             28,
-             30.11
-            ],
-            "itemStyle": {
-             "opacity": 0.15
-            }
-           },
-           {
-            "value": [
-             56,
-             33.48
-            ],
-            "itemStyle": {
-             "opacity": 0.15
-            }
-           },
-           {
-            "value": [
-             84,
-             35
-            ],
-            "itemStyle": {
-             "opacity": 0.15
-            }
-           }
-          ],
-          "itemStyle": {
-           "opacity": 1
-          }
-         },
-         {
-          "data": [
-           {
-            "value": [
              3,
              28.37
             ],
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -108,7 +149,7 @@
              30.24
             ],
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -232,7 +273,58 @@
           "itemStyle": {
            "opacity": 1
           }
-         },
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "brush",
+        "brushOption": {
+         "brushType": "rect",
+         "brushMode": "single"
+        }
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 90
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "yAxis": [
+         {
+          "min": 20,
+          "max": 42
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
          {
           "data": [
            {
@@ -286,7 +378,7 @@
              29.37
             ],
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -419,7 +511,58 @@
           "itemStyle": {
            "opacity": 1
           }
-         },
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "brush",
+        "brushOption": {
+         "brushType": "rect",
+         "brushMode": "single"
+        }
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 90
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "yAxis": [
+         {
+          "min": 20,
+          "max": 42
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
          {
           "data": [
            {
@@ -446,7 +589,7 @@
              31.11
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -491,7 +634,7 @@
              26.11
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -518,7 +661,7 @@
              30.37
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -563,7 +706,7 @@
              25.37
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -581,7 +724,7 @@
              29.11
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -616,19 +759,19 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Analysis Relative Day 1 to 17, Analysis Value 27.4 to 30.2"
+     "text": "Filtered: Analysis Relative Day 1 to 30, Analysis Value 25 to 32, Planned Arm = Placebo"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": null,
-    "selectedColumn": null,
-    "brush": true
+    "selected": "Placebo",
+    "selectedColumn": "ARM",
+    "brush": false
    },
    "signal": null,
-   "legendOff": [],
+   "legendOff": null,
    "pending": [
     {
      "ms": 300,
@@ -641,7 +784,7 @@
    ]
   },
   {
-   "step": "brushSelected with nothing selected",
+   "step": "Reset, if shown",
    "inputs": [
     {
      "name": "blk-drilldown_block_action",
@@ -665,36 +808,41 @@
      "instance": 0,
      "calls": [
       {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
        "op": "setOption",
        "option": {
         "series": [
          {
-          "data": [
-           [
-            0,
-            26.37
-           ],
-           [
-            14,
-            28.24
-           ],
-           [
-            28,
-            30.11
-           ],
-           [
-            56,
-            33.48
-           ],
-           [
-            84,
-            35
-           ]
-          ],
+          "data": [],
           "itemStyle": {
            "opacity": 1
           }
-         },
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
          {
           "data": [
            [
@@ -761,7 +909,26 @@
           "itemStyle": {
            "opacity": 1
           }
-         },
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
          {
           "data": [
            [
@@ -848,7 +1015,26 @@
           "itemStyle": {
            "opacity": 1
           }
-         },
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
          {
           "data": [
            [
@@ -954,7 +1140,7 @@
     "brush": false
    },
    "signal": null,
-   "legendOff": [],
+   "legendOff": null,
    "pending": [
     {
      "ms": 300,

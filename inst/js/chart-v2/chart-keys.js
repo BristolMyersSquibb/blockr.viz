@@ -18,7 +18,8 @@
  * both).
  *
  * A range filter (a point or a brush on numeric axes) is
- * {x_col, y_col, x_range, y_range}, as v1 sends it.
+ * {x_col, y_col, x_range, y_range}, as v1 sends it. In a facet panel it
+ * carries the panel's key in the same `filters` field a click uses (D10).
  */
 (function () {
   'use strict';
@@ -60,21 +61,76 @@
   };
 
   /**
-   * The filter a saved board restores: filter_column + filter_values, as
-   * R sends them. Null without a column or without values.
+   * A filter as R sends it back: {col: [values]}, a null value for a
+   * missing one. A scalar is one value. Null when no column has a value.
+   * @param {any} obj @returns {Filters | null}
+   */
+  const clean = (obj) => {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+    /** @type {Filters} */
+    const out = {};
+    for (const col of Object.keys(obj)) {
+      const v = obj[col];
+      const vals = (Array.isArray(v) ? v : [v]).map((x) => (isMissing(x) ? null : String(x)));
+      if (vals.length) out[col] = vals;
+    }
+    return Object.keys(out).length ? out : null;
+  };
+
+  /**
+   * The categorical filter a saved board restores: `filters`, else v1's
+   * filter_column + filter_values. Null for a saved range, and without a
+   * column or values.
    * @param {Record<string, any>} cfg @returns {Filters | null}
    */
   const restored = (cfg) => {
+    if (cfg.filter_type === 'range') return null;
+    const f = clean(cfg.filters);
+    if (f) return f;
     const col = cfg.filter_column;
     const vals = cfg.filter_values;
     if (!col || !Array.isArray(vals) || !vals.length) return null;
     return { [col]: vals.slice() };
   };
 
+  /**
+   * The range filter a saved board restores, with the facet key it was
+   * taken in (D10, D11), or null.
+   * @param {Record<string, any>} cfg
+   * @returns {{ range: { x_col: string, y_col: string | null, x_range: any[],
+   *                      y_range: any[] | null }, filters: Filters | null } | null}
+   */
+  const restoredRange = (cfg) => {
+    const r = cfg.filter_range;
+    if (cfg.filter_type !== 'range' || !r || !r.x_col || !Array.isArray(r.x_range)) return null;
+    const yr = Array.isArray(r.y_range) && r.y_range.length ? r.y_range : null;
+    return {
+      range: { x_col: r.x_col, y_col: yr ? (r.y_col || null) : null, x_range: r.x_range, y_range: yr },
+      filters: clean(cfg.filters)
+    };
+  };
+
   /** The filter message for a click. @param {Filters} filters @param {number} nonce */
   const filterMessage = (filters, nonce) => ({
     action: 'filter', filter_type: 'categorical', filters, nonce
   });
+
+  /**
+   * The message for a range: v1's fields, plus the facet key in `filters`
+   * when the range was taken in a facet panel (D10).
+   * @param {{ x_col: any, y_col: any, x_range: any, y_range: any }} range
+   * @param {Filters | null} [filters]
+   */
+  const rangeMessage = (range, filters) => {
+    /** @type {Record<string, any>} */
+    const msg = {
+      action: 'filter', filter_type: 'range',
+      x_col: range.x_col, y_col: range.y_range ? range.y_col : null,
+      x_range: range.x_range, y_range: range.y_range
+    };
+    if (filters && Object.keys(filters).length) msg.filters = filters;
+    return msg;
+  };
 
   /**
    * The message that clears a filter. It names the type of the filter it
@@ -140,17 +196,20 @@
 
   /**
    * The words for a range filter (D4): "Study Day 2 to 86, Value 21.4 to
-   * 30.0"; a point reads "Study Day = 15, Value = 29.2".
+   * 30.0"; a point reads "Study Day = 15, Value = 29.2". The facet key of
+   * a range taken in a panel follows: ", Arm = Placebo" (D10).
    * @param {{ x_col: string, y_col: string | null, x_range: any[],
    *           y_range: any[] | null }} range
    * @param {VizColumn[]} columns @param {string} [xAxisType]
+   * @param {Filters | null} [filters]
    */
-  const describeRange = (range, columns, xAxisType) => {
+  const describeRange = (range, columns, xAxisType, filters) => {
     const parts = [NS.axes.axisTitle(columns, range.x_col) + ' ' +
                    rangeWords(range.x_range, xAxisType)];
     if (range.y_range && range.y_col) {
       parts.push(NS.axes.axisTitle(columns, range.y_col) + ' ' + rangeWords(range.y_range));
     }
+    if (filters && Object.keys(filters).length) parts.push(describe(filters, columns));
     return parts.join(', ');
   };
 
@@ -184,6 +243,31 @@
     }
     return true;
   };
+
+  /**
+   * Is a value within [lo, hi]? Numbers compare as numbers, with a little
+   * slack for a value that came back from R as text; anything else as
+   * text (ISO dates sort that way).
+   * @param {any} v @param {any[] | null} r
+   */
+  const within = (v, r) => {
+    if (!r) return true;
+    const [lo, hi] = r;
+    if (typeof lo === 'number' && typeof hi === 'number') {
+      const n = Number(v);
+      const eps = 1e-12 * Math.max(1, Math.abs(lo), Math.abs(hi));
+      return n >= lo - eps && n <= hi + eps;
+    }
+    const s = String(v);
+    return s >= String(lo) && s <= String(hi);
+  };
+
+  /**
+   * Is a drawn point ([x, y, ...]) inside a range filter (D11)?
+   * @param {any[]} p @param {{ x_range: any[], y_range: any[] | null }} range
+   */
+  const pointInRange = (p, range) =>
+    within(p[0], range.x_range) && within(p[1], range.y_range);
 
   /**
    * Is a mark lit under a filter (D5)? When every filtered column is one of
@@ -221,7 +305,7 @@
     return { column: cols, selected: filters };
   };
 
-  NS.keys = { isMissing, fromKeys, fromRows, restored, filterMessage, clearMessage, describe,
-              describeRange, rangeWords, rowMatches, markLit, selectionView, MAX_LISTED,
-              MISSING_WORD };
+  NS.keys = { isMissing, fromKeys, fromRows, clean, restored, restoredRange, filterMessage,
+              rangeMessage, clearMessage, describe, describeRange, rangeWords, rowMatches,
+              pointInRange, markLit, selectionView, MAX_LISTED, MISSING_WORD };
 })();

@@ -7,8 +7,9 @@
  * as an event. The selection is one filter, {type, filters}; the footer and
  * every clear read it. Methods of the chart view, like chrome.js.
  *
- * A latched filter dims the marks it does not light (D5): the family's
- * option module builds the patch from each mark's keys.
+ * A latched filter dims the marks it does not light (D5), a range filter
+ * the points outside it (D11): the family's option module builds the
+ * patch from each mark's keys.
  */
 (function () {
   'use strict';
@@ -83,15 +84,6 @@
         NS.keys.filterMessage(filters, ++this._drillSeq), { priority: 'event' });
     },
 
-    // Rows a mark stands for, filtered on the drill column.
-    /** @this {any} @param {any[]} rows */
-    _emitDrill(rows) {
-      const c = NS.drillColumn(this.config);
-      if (!c) return;
-      const filters = NS.keys.fromRows(c, rows);
-      if (filters) this._sendFilter(filters);
-    },
-
     // The type of what a clear clears (B1); with nothing latched, the type
     // v1 sends: categorical on an aggregated chart, else range.
     /** @this {any} */
@@ -133,26 +125,31 @@
       for (const chart of this.charts) chart.dispatchAction({ type: 'brush', areas: [] });
     },
 
-    /** The footer, then the marks. @this {any} */
+    /** The footer, the legend chips, then the marks. @this {any} */
     _updateHighlight() {
       this._updateStatus();
+      this._markLegendChips();
       this._applyHighlight();
     },
 
-    // The selection as opacities, one patch per panel and nothing redrawn
-    // (D5): a mark is lit when its keys match the filter, or, for a filter
-    // on a column it does not carry, when one of its rows does.
+    // The selection as opacities, one patch per panel and nothing redrawn:
+    // a mark is lit when its keys match the filter, or, for a filter on a
+    // column it does not carry, when one of its rows does (D5). A range
+    // filter dims the points outside it (D11). Every latched filter dims,
+    // a brush's too.
     /** @this {any} */
     _applyHighlight() {
       const fam = this._family();
       const m = this._memo.model;
-      // A brush shows its own area; only a click or a restored filter dims.
-      const f = this._filter && this._filter.type === 'categorical' && !this._filter.brush
-        ? this._filter.filters : null;
+      const sel = this._filter;
+      const f = sel ? (sel.filters || null) : null;
+      const range = sel && sel.type === 'range' ? sel.range : null;
       const lit = f
         ? (/** @type {Record<string, any>} */ keys, /** @type {any} */ rows) => NS.keys.markLit(keys,
             rows || (() => NS.model.rowsUnder(this.data, this._ix, keys)), f)
         : null;
+      // A range is only ever taken on the individual family.
+      const catLit = range ? null : lit;
       this._slots.forEach((/** @type {any} */ slot, /** @type {number} */ i) => {
         if (!slot || !slot.chart) return;
         const chart = slot.chart;
@@ -162,15 +159,15 @@
         /** @type {{ series: any[], dimmed: boolean }} */
         let patch;
         if (panel && fam === 'aggregated') {
-          patch = NS.option.aggregatedPatch(m, panel, this.config, current, lit, !!slot.dimmed);
+          patch = NS.option.aggregatedPatch(m, panel, this.config, current, catLit, !!slot.dimmed);
         } else if (panel && fam === 'timeline') {
-          patch = NS.option.timelinePatch(m, panel, this.config, lit, !!slot.dimmed);
+          patch = NS.option.timelinePatch(m, panel, this.config, catLit, !!slot.dimmed);
         } else if (panel && fam === 'individual') {
           // The series the panel was drawn with, unnamed ones unnamed.
           const o = this._memo.option && this._memo.option.panels[i];
           const drawn = o && o.option && o.option.series && o.option.series.length === current.series.length
             ? o.option.series : current.series;
-          patch = NS.option.individualPatch(m, panel, drawn, lit, !!slot.dimmed, f);
+          patch = NS.option.individualPatch(m, panel, drawn, lit, !!slot.dimmed, f, range);
         } else {
           patch = { series: current.series.map(() => ({})), dimmed: false };
         }

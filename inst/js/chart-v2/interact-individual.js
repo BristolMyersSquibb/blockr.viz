@@ -7,8 +7,10 @@
  *   - A click sends what the model says the mark is (D6, D7): a level as a
  *     categorical filter, or a scatter point as a zero-width range. A line
  *     click waits 275 ms, so a double-click (the zoom reset) cancels it.
- *   - The scatter brush sends the brushed points' extent, or the drill
- *     column's values in their rows (B4: nothing outside the data).
+ *   - The scatter brush sends the brushed points' extent, their series,
+ *     or an explicit drill column's values in their rows (D9; B4: nothing
+ *     outside the data). A range taken in a facet panel carries the
+ *     panel's key (D10).
  *   - The hover pickers find the line (line chart) or the band level
  *     nearest the cursor from the cursor's position alone, every move, so a
  *     dropped mouseout cannot leave a line highlighted.
@@ -127,7 +129,8 @@
   const individual = {
     // A click on a mark: a level latches as a categorical filter (or, with
     // a ctrl_target, is sent as an event); a point latches a range, also
-    // with a ctrl_target, as it is no claim another block can take.
+    // with a ctrl_target, as it is no claim another block can take. In a
+    // facet panel the range carries the panel's key (D10).
     /** @this {any} @param {any} slot @param {any} params @param {string} [focusName] */
     _individualClick(slot, params, focusName) {
       const m = this._memo.model;
@@ -135,41 +138,41 @@
       const panel = NS.model.panelOf(m, slot.facetVal);
       const r = NS.model.individualClick(m, this.config, panel, params, focusName);
       if (!r) return;
-      if ('filters' in r) { this._select(slot, params, r.filters); return; }
-      this._selectRange(r.range, false);
+      if (!('range' in r)) { this._select(slot, params, r.filters); return; }
+      this._selectRange(r.range, false, r.filters || null);
     },
 
-    // A range filter, latched: a point click or a brush. Dims nothing.
-    /** @this {any} @param {any} range @param {boolean} brush */
-    _selectRange(range, brush) {
-      this._filter = { type: 'range', range, brush };
+    // A range filter, latched: a point click or a brush. It dims what lies
+    // outside it (D11).
+    /** @this {any} @param {any} range @param {boolean} brush
+     *  @param {Record<string, any[]> | null} filters the facet key */
+    _selectRange(range, brush, filters) {
+      this._filter = { type: 'range', range, filters, brush };
       this._hasBrushFilter = true;
       this._refreshSelection();
-      this._sendRangeFilter(range);
+      this._sendRangeFilter(range, filters);
     },
 
     // The footer, and the marks when something was dimmed or now dims.
     /** @this {any} */
     _refreshSelection() {
-      const f = this._filter;
-      const dims = f && f.type === 'categorical' && !f.brush;
-      if (dims || this._slots.some((/** @type {any} */ s) => s && s.dimmed)) this._updateHighlight();
-      else this._updateStatus();
+      if (this._filter || this._slots.some((/** @type {any} */ s) => s && s.dimmed)) {
+        this._updateHighlight();
+      } else {
+        this._updateStatus();
+      }
     },
 
-    /** @this {any} @param {{ x_col: any, y_col: any, x_range: any, y_range: any }} range */
-    _sendRangeFilter(range) {
+    /** @this {any} @param {any} range @param {Record<string, any[]> | null} filters */
+    _sendRangeFilter(range, filters) {
       if (!this.el.id) return;
-      Shiny.setInputValue(this.el.id + '_action', {
-        action: 'filter', filter_type: 'range',
-        x_col: range.x_col, y_col: range.y_range ? range.y_col : null,
-        x_range: range.x_range, y_range: range.y_range
-      }, { priority: 'event' });
+      Shiny.setInputValue(this.el.id + '_action', NS.keys.rangeMessage(range, filters),
+                          { priority: 'event' });
     },
 
-    // What the brush caught. With a drill column, its values in the rows
-    // at the brushed points; else their x (and, off a line, y) extent.
-    // Points outside the data select nothing and latch nothing (B4).
+    // What the brush caught (D9): an explicit drill column's values in the
+    // rows at the brushed points, the series of the points, or their
+    // extent. Points outside the data select nothing and latch nothing (B4).
     /** @this {any} @param {any} slot @param {Array<{ seriesIndex: number, dataIndex: number }>} selected */
     _brushed(slot, selected) {
       const m = this._memo.model;
@@ -179,24 +182,17 @@
       }
       const panel = NS.model.panelOf(m, slot.facetVal);
       const opt = slot.chart.getOption();
-      const r = NS.model.individualBrush(m, this.config, panel, (opt && opt.series) || [], selected);
-      if (r.drill && r.rows.length) {
-        const filters = NS.keys.fromRows(r.drill, r.rows);
-        if (filters) {
-          this._filter = { type: 'categorical', filters, brush: true };
-          this._hasBrushFilter = true;
-          this._refreshSelection();
-          this._emitDrill(r.rows);
-          return;
-        }
+      const caught = NS.model.individualBrush(m, this.config, panel, (opt && opt.series) || [], selected);
+      const r = NS.model.brushSelection(m, this.config, panel, caught);
+      if (!r) return;
+      if (!('range' in r)) {
+        this._filter = { type: 'categorical', filters: r.filters, brush: true };
+        this._hasBrushFilter = true;
+        this._refreshSelection();
+        this._sendFilter(r.filters);
+        return;
       }
-      if (!r.xVals.length) return;
-      const isLine = this.config.chart_type === 'line';
-      this._selectRange({
-        x_col: this.config.x, y_col: this.config.y,
-        x_range: [NS.minOf(r.xVals), NS.maxOf(r.xVals)],
-        y_range: (!isLine && r.yVals.length) ? [NS.minOf(r.yVals), NS.maxOf(r.yVals)] : null
-      }, true);
+      this._selectRange(r.range, true, r.filters || null);
     },
 
     // The brush was cleared: so is the filter, unless a click just made it
@@ -223,7 +219,6 @@
       slot.focusSi = null;
       slot.focus = po.focus;
       slot.band = po.band;
-      slot.seriesByColorByVal = po.seriesByColorByVal;
       if (po.focus) po.focus.veil = undefined;
     },
 
