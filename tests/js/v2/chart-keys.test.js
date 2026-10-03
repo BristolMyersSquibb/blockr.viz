@@ -100,3 +100,19 @@ test('the v1 view of a selection: column and value(s)', () => {
     column: ['USUBJID', 'ARM'], selected: { USUBJID: ['S02'], ARM: ['Low Dose'] }
   });
 });
+
+test('a missing value is a key too: sent as null, named (missing), matched by null', () => {
+  assert.deepStrictEqual(plain(K.fromKeys({ AETERM: 'Rash', AESEV: '' })),
+                         { AETERM: ['Rash'], AESEV: [null] });
+  assert.deepStrictEqual(plain(K.fromKeys({ ARM: null })), { ARM: [null] });
+  assert.strictEqual(K.describe({ AETERM: ['Rash'], AESEV: [null] }, columns),
+                     'Reported Term = Rash, Severity = (missing)');
+  const f = { AESEV: [null] };
+  assert.strictEqual(K.markLit({ AESEV: '' }, [], f), true);
+  assert.strictEqual(K.markLit({ AESEV: 'MILD' }, [], f), false);
+  // A row with the value missing, as null or as '', passes.
+  assert.strictEqual(K.markLit({ AETERM: 'Rash' }, [{ AESEV: null }], f), true);
+  assert.strictEqual(K.markLit({ AETERM: 'Rash' }, [{ AESEV: '' }], f), true);
+  assert.strictEqual(K.markLit({ AETERM: 'Rash' }, [{ AESEV: 'MILD' }], f), false);
+});
+

@@ -317,6 +317,9 @@
       "filters": {
        "AETERM": [
         "Rash"
+       ],
+       "AESEV": [
+        null
        ]
       },
       "nonce": 2
@@ -409,7 +412,7 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -467,7 +470,7 @@
               2,
               0
              ],
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -537,7 +540,7 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -569,15 +572,25 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Reported Term = Rash"
+     "text": "Filtered: Reported Term = Rash, AESEV = (missing)"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "Rash",
-    "selectedColumn": "AETERM",
+    "selected": {
+     "AETERM": [
+      "Rash"
+     ],
+     "AESEV": [
+      null
+     ]
+    },
+    "selectedColumn": [
+     "AETERM",
+     "AESEV"
+    ],
     "brush": false
    },
    "signal": null,

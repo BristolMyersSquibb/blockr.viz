@@ -127,16 +127,18 @@ test('a click filters the lane; in a facet panel the panel too (D3)', () => {
                          { T: ['Rash'] });
   assert.deepStrictEqual(plain(C.model.timelineClick(cfg, 'A', mark)),
                          { T: ['Rash'], ARM: ['A'] });
-  // A panel of missing facet values cannot be filtered on.
-  assert.deepStrictEqual(plain(C.model.timelineClick(cfg, '', mark)), { T: ['Rash'] });
+  // A panel of missing facet values filters the missing facet, as null.
+  assert.deepStrictEqual(plain(C.model.timelineClick(cfg, '', mark)), { T: ['Rash'], ARM: [null] });
   // An override column: the clicked event's own value, already in the panel.
   const byId = { ...cfg, drill: 'ID' };
   assert.deepStrictEqual(plain(C.model.timelineClick(byId, 'A', [1, 3, 0, 'Rash', '', '', '', 'S02', 0])),
                          { ID: ['S02'] });
-  // Nothing to send: drill off, or a mark without a drill value.
+  // A missing lane is a key too.
+  assert.deepStrictEqual(plain(C.model.timelineClick({ ...BASE }, '__all__',
+    [7, 8, 2, '', '', '', '', '', 0])), { T: [null] });
+  // Nothing to send: drill off, or an override column the event has no value of.
   assert.strictEqual(C.model.timelineClick({ ...BASE, drill: '' }, '__all__', mark), null);
-  assert.strictEqual(C.model.timelineClick({ ...BASE }, '__all__', [7, 8, 2, '', '', '', '', '', 0]),
-                     null);
+  assert.strictEqual(C.model.timelineClick(byId, 'A', [7, 8, 2, 'Rash', '', '', '', '', 0]), null);
 });
 
 test('the keys of a mark are its lane and facet, whatever the drill column', () => {

@@ -409,10 +409,9 @@
 
   /**
    * The filter a click on a mark sends, or null when it sends nothing.
-   * Auto: the mark's keys, a missing colour or facet value left out (R
-   * cannot filter on it); a mark whose group (a radar's colour) is missing
-   * sends nothing. An explicit drill column: that column's values in the
-   * rows under the mark.
+   * Auto: the mark's keys, a missing value sent as null (a missing value is
+   * a key too). An explicit drill column: that column's values in the rows
+   * under the mark.
    * @param {Record<string, any>} cfg @param {Record<string, string>} keys
    * @param {() => any[]} rows
    * @returns {Record<string, any[]> | null}
@@ -420,13 +419,8 @@
   const aggregatedClick = (cfg, keys, rows) => {
     const drill = NS.drillColumn(cfg);
     if (!drill) return null;
-    const primary = cfg.chart_type === 'radar' ? cfg.color : cfg.group;
-    if (!NS.hasVal(keys[primary])) return null;
     if (cfg.drill !== 'auto') return NS.keys.fromRows(drill, rows());
-    /** @type {Record<string, string>} */
-    const sent = {};
-    for (const col of Object.keys(keys)) if (NS.hasVal(keys[col])) sent[col] = keys[col];
-    return NS.keys.fromKeys(sent);
+    return NS.keys.fromKeys(keys);
   };
 
   Object.assign(model, { aggregated, summarizeStat, orderGroups, isCumulative, cellOf, cellsOf,

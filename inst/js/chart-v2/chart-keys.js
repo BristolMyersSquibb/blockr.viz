@@ -12,7 +12,10 @@
  *   - a restored filter lights the marks that hold filtered rows (D5).
  *
  * A filter here is a plain object {col: [values]}; the values are the
- * strings R compares against.
+ * strings R compares against. A missing value is a key too: a mark keyed
+ * on a missing value ('' or null) sends that column with null, which R
+ * matches with is.na() (and the empty string, as the aggregation folds
+ * both).
  */
 (function () {
   'use strict';
@@ -22,14 +25,22 @@
 
   /** @typedef {Record<string, any[]>} Filters */
 
+  /** Is a key value missing? The aggregation keys a missing value as ''.
+   *  @param {any} v */
+  const isMissing = (v) => v == null || v === '';
+
   /**
-   * A filter from a mark's keys: one value per column.
+   * A filter from a mark's keys: one value per column, null for a missing
+   * value.
    * @param {Record<string, any>} keys @returns {Filters}
    */
   const fromKeys = (keys) => {
     /** @type {Filters} */
     const out = {};
-    for (const col of Object.keys(keys)) out[col] = [String(keys[col])];
+    for (const col of Object.keys(keys)) {
+      const v = keys[col];
+      out[col] = [isMissing(v) ? null : String(v)];
+    }
     return out;
   };
 
@@ -76,17 +87,24 @@
   // Above this many values a column is named with its count, not its values.
   const MAX_LISTED = 3;
 
+  // How the footer names a missing value.
+  const MISSING_WORD = '(missing)';
+
   /**
    * The words for a filter, in column labels (D4): "Reported Term = Rash",
-   * "Reported Term = Rash, Severity = MODERATE", "Patient, 214 values".
+   * "Reported Term = Rash, Severity = MODERATE", "Severity = (missing)",
+   * "Patient, 214 values".
    * @param {Filters} filters @param {VizColumn[]} columns @returns {string}
    */
   const describe = (filters, columns) => Object.keys(filters).map((col) => {
     const label = NS.axes.axisTitle(columns, col);
     const vals = filters[col];
     if (vals.length > MAX_LISTED) return label + ', ' + vals.length + ' values';
-    return label + ' = ' + vals.join(', ');
+    return label + ' = ' + vals.map((v) => (isMissing(v) ? MISSING_WORD : v)).join(', ');
   }).join(', ');
+
+  /** A value as a filter compares it: missing folds to ''. @param {any} v */
+  const keyOf = (v) => (isMissing(v) ? '' : String(v));
 
   // The values of each filtered column as a set of strings, made once per
   // filter: a highlight asks for every mark.
@@ -97,21 +115,21 @@
     let s = valueSets.get(filters);
     if (!s) {
       s = {};
-      for (const col of Object.keys(filters)) s[col] = new Set(filters[col].map(String));
+      for (const col of Object.keys(filters)) s[col] = new Set(filters[col].map(keyOf));
       valueSets.set(filters, s);
     }
     return s;
   };
 
   /**
-   * Does a row satisfy every column of the filter?
+   * Does a row satisfy every column of the filter? A null in the filter
+   * takes the rows where the column is missing.
    * @param {any} row @param {Filters} filters
    */
   const rowMatches = (row, filters) => {
     const sets = setsOf(filters);
     for (const col of Object.keys(sets)) {
-      const v = row[col];
-      if (v == null || !sets[col].has(String(v))) return false;
+      if (!sets[col].has(keyOf(row[col]))) return false;
     }
     return true;
   };
@@ -128,7 +146,7 @@
     const sets = setsOf(filters);
     const cols = Object.keys(sets);
     if (cols.every((c) => c in keys)) {
-      return cols.every((c) => sets[c].has(String(keys[c])));
+      return cols.every((c) => sets[c].has(keyOf(keys[c])));
     }
     const rs = typeof rows === 'function' ? rows() : rows;
     for (const r of rs || []) if (rowMatches(r, filters)) return true;
@@ -152,6 +170,7 @@
     return { column: cols, selected: filters };
   };
 
-  NS.keys = { fromKeys, fromRows, restored, filterMessage, clearMessage, describe,
-              rowMatches, markLit, selectionView, MAX_LISTED };
+  NS.keys = { isMissing, fromKeys, fromRows, restored, filterMessage, clearMessage, describe,
+              rowMatches, markLit, selectionView, MAX_LISTED,
+              MISSING_WORD };
 })();

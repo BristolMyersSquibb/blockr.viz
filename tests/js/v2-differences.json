@@ -12,7 +12,7 @@
    "D4",
    "D5"
   ],
-  "why": "The MODERATE segment of Rash sends AETERM and AESEV and only that segment stays lit; the missing-severity segment has no value to send, so it sends Rash alone and lights the whole bar instead of clearing; the footer names both columns."
+  "why": "The MODERATE segment of Rash sends AETERM and AESEV and only that segment stays lit; the missing-severity segment sends AETERM = Rash and AESEV = null (a missing value is a key too) and lights only that segment instead of clearing; the footer names both columns, the missing one as (missing)."
  },
  "interactions/click-bar-facet-drill-column": {
   "ids": [

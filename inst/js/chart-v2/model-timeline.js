@@ -177,31 +177,31 @@
   /**
    * The keys of a timeline mark: its lane, and the facet in a facet panel
    * (D3). The colour is an attribute of the event, not a key. A missing
-   * facet value is left out, as R cannot filter on it.
+   * lane or facet value is a key too ('').
    * @param {Record<string, any>} cfg @param {any} facetVal @param {any[]} mark
    * @returns {Record<string, any>}
    */
   const timelineKeys = (cfg, facetVal, mark) => {
     /** @type {Record<string, any>} */
     const keys = { [cfg.y]: mark[3] };
-    if (cfg.facet && facetVal != null && facetVal !== '__all__' && facetVal !== '') {
-      keys[cfg.facet] = facetVal;
-    }
+    if (cfg.facet && facetVal != null && facetVal !== '__all__') keys[cfg.facet] = facetVal;
     return keys;
   };
 
   /**
    * The filter a click on a timeline mark sends, or null when it sends
-   * nothing (drill off, or no drill value on the mark). Auto: the mark's
-   * keys. An override column: the clicked event's own value of it.
+   * nothing. Auto: the mark's keys, a missing lane or facet sent as null.
+   * An override column: the clicked event's own value of it, nothing when
+   * the event has none.
    * @param {Record<string, any>} cfg @param {any} facetVal @param {any[]} mark
    * @returns {Record<string, any[]> | null}
    */
   const timelineClick = (cfg, facetVal, mark) => {
     const drill = NS.drillColumn(cfg);
-    const dv = mark[7];
-    if (!drill || dv == null || dv === '') return null;
+    if (!drill) return null;
     if (cfg.drill === 'auto') return NS.keys.fromKeys(timelineKeys(cfg, facetVal, mark));
+    const dv = mark[7];
+    if (dv == null || dv === '') return null;
     return { [drill]: [String(dv)] };
   };
 

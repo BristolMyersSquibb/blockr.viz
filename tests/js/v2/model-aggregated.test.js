@@ -206,15 +206,16 @@ test('keys: group, colour where it splits the mark, facet in a panel (D2, D3)', 
                          { SEV: 'MILD' });
 });
 
-test('a click sends the keys, without a missing value; a drill column its values', () => {
+test('a click sends the keys, a missing one as null; a drill column its values', () => {
   const ix = new C.RowIndex();
   const send = (cfg, keys) => plain(C.model.aggregatedClick({ ...BASE, ...cfg }, keys,
     () => C.model.rowsUnder(ROWS, ix, keys)));
   assert.deepStrictEqual(send({ color: 'SEV' }, { T: 'Rash', SEV: 'MILD' }),
                          { T: ['Rash'], SEV: ['MILD'] });
-  // A missing colour is left out; a missing group sends nothing.
-  assert.deepStrictEqual(send({ color: 'SEV' }, { T: 'Rash', SEV: '' }), { T: ['Rash'] });
-  assert.strictEqual(send({}, { T: '' }), null);
+  // A missing value is a key too: sent as null, for R's is.na().
+  assert.deepStrictEqual(send({ color: 'SEV' }, { T: 'Rash', SEV: '' }), { T: ['Rash'], SEV: [null] });
+  assert.deepStrictEqual(send({}, { T: '' }), { T: [null] });
+  assert.deepStrictEqual(send({ facet: 'ARM' }, { T: 'Rash', ARM: '' }), { T: ['Rash'], ARM: [null] });
   // An explicit drill column: its values in the rows under the mark only.
   assert.deepStrictEqual(send({ color: 'SEV', drill: 'ID' }, { T: 'Rash', SEV: 'SEVERE' }),
                          { ID: ['S03'] });
