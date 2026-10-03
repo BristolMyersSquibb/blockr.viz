@@ -1083,6 +1083,154 @@
   const DD_SECONDARY = new Set(
     Object.values(ROLES).map(r => /** @type {any} */ (r).pairedWith).filter(Boolean));
 
+  // Largest / smallest of an array without spreading it into arguments, which
+  // throws a RangeError past about 100k values. Same answers as Math.max /
+  // Math.min on the same values: -Infinity / Infinity when empty, NaN as soon
+  // as one value is NaN.
+  /** @param {ArrayLike<any>} xs */
+  const maxOf = (xs) => {
+    let m = -Infinity;
+    for (let i = 0; i < xs.length; i++) {
+      const v = +xs[i];
+      if (v !== v) return NaN;
+      if (v > m) m = v;
+    }
+    return m;
+  };
+  /** @param {ArrayLike<any>} xs */
+  const minOf = (xs) => {
+    let m = Infinity;
+    for (let i = 0; i < xs.length; i++) {
+      const v = +xs[i];
+      if (v !== v) return NaN;
+      if (v < m) m = v;
+    }
+    return m;
+  };
+
+  // Value -> its first position in `arr`, the answer arr.indexOf(value) gives,
+  // for a lookup made once per row.
+  /** @param {any[]} arr @returns {Map<any, number>} */
+  const firstIndex = (arr) => {
+    const m = new Map();
+    for (let i = 0; i < arr.length; i++) if (!m.has(arr[i])) m.set(arr[i], i);
+    return m;
+  };
+
+  /** @typedef {'nz' | 'raw'} KeyMode */
+  /** @type {any[]} */
+  const NO_ROWS = Object.freeze([]);
+
+  // Lookups over row arrays, for a draw. A render reads the same rows once
+  // per series level, per box, per bar cell; as a filter or find over the
+  // rows each of those made a level-per-patient chart quadratic. Here each
+  // (rows, column) is grouped once into a Map and every later read is a get.
+  //
+  // Results are memoized on the rows array itself, so they live as long as
+  // that array: this.data's for as long as the data rev does (setData makes a
+  // new index when the rows change), an aggregate's for one render. Callers
+  // share them and must not mutate what they get back.
+  //
+  // A key is the column value as a string, in one of the two forms the call
+  // sites use: 'nz' is String(v ?? '') (null joins the '' level), 'raw' is
+  // String(v) (null is "null"). Each caller keeps the form its scan used.
+  class RowIndex {
+    constructor() {
+      /** @type {WeakMap<any[], Map<string, any>>} */
+      this._memo = new WeakMap();
+    }
+
+    /** @param {any[]} rows @param {string} key @param {() => any} build */
+    _cached(rows, key, build) {
+      let m = this._memo.get(rows);
+      if (!m) { m = new Map(); this._memo.set(rows, m); }
+      if (!m.has(key)) m.set(key, build());
+      return m.get(key);
+    }
+
+    /** @param {KeyMode} mode @returns {(v: any) => string} */
+    static keyFn(mode) {
+      return mode === 'nz' ? (v) => String(v ?? '') : (v) => String(v);
+    }
+
+    /**
+     * Rows by key of `col`, row order kept inside each bucket. Map order is
+     * first-seen key order.
+     * @param {any[]} rows @param {string} col @param {KeyMode} mode
+     * @returns {Map<string, any[]>}
+     */
+    buckets(rows, col, mode) {
+      return this._cached(rows, 'b\u0000' + mode + '\u0000' + col, () => {
+        const key = RowIndex.keyFn(mode);
+        /** @type {Map<string, any[]>} */
+        const out = new Map();
+        for (const r of rows) {
+          const k = key(r[col]);
+          const b = out.get(k);
+          if (b) b.push(r); else out.set(k, [r]);
+        }
+        return out;
+      });
+    }
+
+    /**
+     * Rows by key of `colA`, then of `colB`. Nested rather than joined keys,
+     * so no separator can make two pairs collide.
+     * @param {any[]} rows @param {string} colA @param {KeyMode} modeA
+     * @param {string} colB @param {KeyMode} modeB
+     * @returns {Map<string, Map<string, any[]>>}
+     */
+    buckets2(rows, colA, modeA, colB, modeB) {
+      return this._cached(rows,
+        'b2\u0000' + modeA + '\u0000' + colA + '\u0000' + modeB + '\u0000' + colB, () => {
+          const keyA = RowIndex.keyFn(modeA), keyB = RowIndex.keyFn(modeB);
+          /** @type {Map<string, Map<string, any[]>>} */
+          const out = new Map();
+          for (const r of rows) {
+            const a = keyA(r[colA]);
+            let inner = out.get(a);
+            if (!inner) { inner = new Map(); out.set(a, inner); }
+            const b = keyB(r[colB]);
+            const bucket = inner.get(b);
+            if (bucket) bucket.push(r); else inner.set(b, [r]);
+          }
+          return out;
+        });
+    }
+
+    /**
+     * The rows whose `col` keys to `k` (an empty array when none), in row
+     * order: rows.filter(r => key(r[col]) === k).
+     * @param {any[]} rows @param {string} col @param {KeyMode} mode @param {string} k
+     * @returns {any[]}
+     */
+    get(rows, col, mode, k) {
+      return this.buckets(rows, col, mode).get(k) || NO_ROWS;
+    }
+
+    /**
+     * The rows keyed `a` on `colA` and `b` on `colB`, in row order.
+     * @param {any[]} rows @param {string} colA @param {KeyMode} modeA
+     * @param {string} colB @param {KeyMode} modeB @param {string} a @param {string} b
+     * @returns {any[]}
+     */
+    get2(rows, colA, modeA, colB, modeB, a, b) {
+      const inner = this.buckets2(rows, colA, modeA, colB, modeB).get(a);
+      return (inner && inner.get(b)) || NO_ROWS;
+    }
+
+    /**
+     * Distinct keys of `col` in first-seen order:
+     * [...new Set(rows.map(r => key(r[col])))].
+     * @param {any[]} rows @param {string} col @param {KeyMode} mode
+     * @returns {string[]}
+     */
+    levels(rows, col, mode) {
+      return this._cached(rows, 'l\u0000' + mode + '\u0000' + col,
+        () => Array.from(this.buckets(rows, col, mode).keys()));
+    }
+  }
+
   /**
    * A persistent per-facet render slot. The DOM container and the ECharts
    * instance survive re-renders — a data/config change swaps the option in
@@ -1126,6 +1274,9 @@
       this.el = el;
       /** @type {any[]} */
       this.data = [];
+      // Grouped lookups over this.data (and the arrays derived from it),
+      // replaced whenever setData brings new rows.
+      this._ix = new RowIndex();
       /** @type {VizColumn[]} */
       this.columns = [];
       /** @type {Record<string, any>} */
@@ -2695,6 +2846,7 @@
       if (unchanged) {
         data = this.data;
       } else {
+        this._ix = new RowIndex();
         this._lastDataStr = typeof data === 'string' ? data : null;
         if (typeof data === 'string') {
           data = JSON.parse(data);
@@ -4862,9 +5014,10 @@
       let bandMany = false;
       const palette = this._palette();
       const ax = { labelColor: INK.muted, fontSize: INK.fontSize, splitLineColor: INK.border };
+      const ix = this._ix;
 
       const facets = facet
-        ? [...new Set(this.data.map(r => String(r[facet] ?? '')))].sort()
+        ? ix.levels(this.data, facet, 'nz').slice().sort()
         : ['__all__'];
 
       // series is the primary per-entity splitter. If not set, fall back
@@ -4874,8 +5027,7 @@
       const splitCol = seriesCol || color;
       const colorScale = this._scaleFor(color);
       let seriesLevels = splitCol
-        ? this._orderLevels(
-            [...new Set(this.data.map(r => String(r[splitCol] ?? '')))],
+        ? this._orderLevels(ix.levels(this.data, splitCol, 'nz'),
             this._scaleFor(splitCol), splitCol)
         : [];
       const singleFacet = facets.length === 1;
@@ -4902,7 +5054,8 @@
       const colorForLevel = (/** @type {any} */ level, /** @type {number} */ index) => {
         if (!color) return palette[0];
         if (seriesCol && seriesCol !== color) {
-          const rep = this.data.find(r => String(r[seriesCol]) === level);
+          // The series' first row, as data.find() would return it.
+          const rep = ix.get(this.data, seriesCol, 'raw', level)[0];
           const cv = rep ? String(rep[color] ?? '') : '';
           if (colorScale && colorScale.color && colorScale.color[cv] != null) {
             return colorScale.color[cv];
@@ -4970,7 +5123,7 @@
       // r[<level>] (a column named e.g. "Female" — every panel empty).
       for (let fi = 0; fi < facets.length; fi++) {
         const fv = facets[fi];
-        const rows = fv === '__all__' ? this.data : this.data.filter(r => String(r[facet]) === fv);
+        const rows = fv === '__all__' ? this.data : ix.get(this.data, facet, 'raw', fv);
 
         const slot = this._ensureSlot(fi,
           (!singleFacet && fv !== '__all__') ? facetLabels.get(fv) : null, singleFacet);
@@ -5259,6 +5412,7 @@
             // its own band. Falls back to __all__ for an unfaceted chart.
             const panelBand = bandData[fv] || bandData['__all__'] || null;
             const allLevels = seriesLevels.length ? seriesLevels : ['__all__'];
+            const levelPos = firstIndex(allLevels);
             const levels = allLevels.filter(cl => panelBand && (
               panelBand[cl] || (allLevels.length === 1 && panelBand['__all__'])));
             const many = levels.length > 1;
@@ -5288,7 +5442,7 @@
               // variable means mapping it to the colored role, like ggplot".
               // Map the column to colour as well to get the board's colours.
               const clr = seriesLevels.length
-                ? colorForLevel(cl, allLevels.indexOf(cl))
+                ? colorForLevel(cl, /** @type {number} */ (levelPos.get(cl)))
                 : palette[0];
               const nm = cl === '__all__' ? undefined : cl;
               const live = !many || String(focus) === String(cl);
@@ -5360,7 +5514,8 @@
         } else if (!isBand) {
           for (let ci = 0; ci < seriesLevels.length; ci++) {
             const cl = seriesLevels[ci];
-            const grpRows = rows.filter(r => String(r[splitCol]) === cl && r[x] != null && r[y] != null);
+            const grpRows = ix.get(rows, splitCol, 'raw', cl)
+              .filter(r => r[x] != null && r[y] != null);
             const pts = grpRows.map(packPt);
             sortLinePts(pts);
             const clr = colorForLevel(cl, ci);
@@ -5547,7 +5702,7 @@
         // series ≠ color, legend reflects color cardinality, not
         // series. If color is unset, no legend at all.
         const legendCardinality = color
-          ? new Set(this.data.map(r => String(r[color] ?? ''))).size
+          ? ix.levels(this.data, color, 'nz').length
           : 0;
         const showLegend = color && legendCardinality > 0 && legendCardinality <= 15;
 
@@ -5566,9 +5721,7 @@
         if (useColorByLegend) {
           /** @type {Record<string, any>} */
           const lookup = this._colorLookup || {};
-          const cbLevels = [...new Set(this.data.map(
-            r => String(r[color] ?? '')
-          ))].sort();
+          const cbLevels = ix.levels(this.data, color, 'nz').slice().sort();
           // Chip colors resolve EXACTLY like the lines do: board scale map
           // first, then the cycling lookup. colorForLevel returns early on a
           // scale hit and never fills _colorLookup, so reading only the
@@ -5593,7 +5746,7 @@
           seriesByColorByVal = {};
           for (const lvl of cbLevels) seriesByColorByVal[lvl] = [];
           for (const sl of seriesLevels) {
-            const rep = this.data.find(r => String(r[seriesCol]) === sl);
+            const rep = ix.get(this.data, seriesCol, 'raw', sl)[0];
             const cv = rep ? String(rep[color] ?? '') : '';
             if (cv in seriesByColorByVal) seriesByColorByVal[cv].push(sl);
           }
