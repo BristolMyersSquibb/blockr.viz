@@ -1029,11 +1029,13 @@ new_chart_block <- function(
         # early return keeps the reactive off the data dependency entirely.
         # facet_by is not decoration: without it every panel was handed the
         # same pooled fit (see compute_smoother_series()).
-        # Keyed like the band above, so a panel visit does not refit.
+        # Keyed like the band above, so a panel visit does not refit. Only a
+        # scatter draws the line (chart.js), so no other type pays for a fit.
         smoother_cache <- last_value_cache()
         r_smoother_series <- shiny::reactive({
           sm <- r_smoother()
           if (is.null(sm) || identical(sm, "none")) return(NULL)
+          if (!identical(r_chart_type(), "scatter")) return(NULL)
           d <- plain_data()
           if (!is.data.frame(d)) return(NULL)
           args <- list(
@@ -2306,6 +2308,16 @@ new_chart_block <- function(
 #' @param facet_by Facet column name, or `NULL` for an unfaceted chart. When
 #'   given, each panel is fit on its own rows and the result is keyed by facet
 #'   level first.
+#' @param loess_max Most points a loess fit is run on. A loess fit with
+#'   `surface = "direct"` costs the square of its points (2 s at 12k rows,
+#'   minutes at 120k). A group with more rows is cut, in x order, into
+#'   `loess_max` bins of equal count, and the fit runs on each bin's mean x
+#'   and mean y with `surface = "interpolate"`. Every row still counts, and
+#'   equal counts keep the x density, so the span (a share of the points)
+#'   covers the same stretch of x. On 12k noisy rows the line moved by at
+#'   most 0.3 where the exact fit's own error was 1.8; keeping every k-th
+#'   point instead moved it by 0.9. No randomness, so the same data draws the
+#'   same line. A group at or below the limit is fit exactly as before.
 #' @return A named list or `NULL`.
 #' @examples
 #' compute_smoother_series(
@@ -2321,7 +2333,8 @@ new_chart_block <- function(
 #' @keywords internal
 #' @export
 compute_smoother_series <- function(data, smoother, x_col, y_col,
-                                     color_by, series_by, facet_by = NULL) {
+                                     color_by, series_by, facet_by = NULL,
+                                     loess_max = 5000L) {
   if (is.null(smoother) || identical(smoother, "none")) return(NULL)
   if (is.null(data) || nrow(data) == 0) return(NULL)
   if (is.null(x_col) || is.null(y_col)) return(NULL)
@@ -2329,6 +2342,9 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
   if (!is.numeric(data[[x_col]]) || !is.numeric(data[[y_col]])) return(NULL)
 
   split_col <- series_by %||% color_by
+  # Only the columns the fits read, so the splits below copy two to four
+  # columns rather than the whole frame.
+  data <- data[intersect(c(x_col, y_col, split_col, facet_by), names(data))]
 
   fit_one <- function(d) {
     d <- d[!is.na(d[[x_col]]) & !is.na(d[[y_col]]), , drop = FALSE]
@@ -2338,14 +2354,28 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
     if (length(unique(xv)) < 2L) return(NULL)
     rng <- range(xv, na.rm = TRUE)
     xs <- seq(rng[1L], rng[2L], length.out = 100L)
+    surface <- "direct"
+    at <- xs
+    if (identical(smoother, "loess") && length(xv) > loess_max) {
+      o <- order(xv)
+      bin <- ((seq_along(o) - 1) * loess_max) %/% length(o)
+      cnt <- tabulate(bin + 1L)
+      xv <- rowsum(xv[o], bin, reorder = FALSE)[, 1L] / cnt
+      yv <- rowsum(yv[o], bin, reorder = FALSE)[, 1L] / cnt
+      surface <- "interpolate"
+      # An interpolated surface is NA outside the fitted x, and the outer
+      # bin means sit just inside the data's range. Read the ends at the
+      # nearest fitted x so the line still spans the whole range.
+      at <- pmin(pmax(xs, min(xv)), max(xv))
+    }
     ys <- tryCatch({
       if (identical(smoother, "lm")) {
         coefs <- stats::coef(stats::lm(yv ~ xv))
         coefs[1L] + coefs[2L] * xs
       } else if (identical(smoother, "loess")) {
         fit <- stats::loess(yv ~ xv, span = 0.75,
-                            control = stats::loess.control(surface = "direct"))
-        as.numeric(stats::predict(fit, newdata = data.frame(xv = xs)))
+                            control = stats::loess.control(surface = surface))
+        as.numeric(stats::predict(fit, newdata = data.frame(xv = at)))
       } else {
         NULL
       }

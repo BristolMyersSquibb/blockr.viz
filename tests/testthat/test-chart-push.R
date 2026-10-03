@@ -318,3 +318,24 @@ test_that("a panel visit or a gear edit does not refit the band or the smoother"
                         smoother = "loess"),
         "smoother_series", "smooth")
 })
+
+test_that("only a scatter fits the smoother", {
+  d <- data.frame(day = rep(1:40, 5), val = sin(1:200))
+  for (type in c("scatter", "line")) {
+    blk <- new_chart_block(chart_type = type, x = "day", y = "val",
+                           smoother = "loess")
+    shiny::testServer(
+      blockr.core:::get_s3_method("block_server", blk),
+      {
+        msgs <- spy_messages(session)
+        session$flushReact()
+        if (type == "scatter") {
+          expect_false(is.null(msgs()[[1L]]$config$smoother_series))
+        } else {
+          expect_null(msgs()[[1L]]$config$smoother_series)
+        }
+      },
+      args = list(x = blk, data = list(data = function() d))
+    )
+  }
+})
