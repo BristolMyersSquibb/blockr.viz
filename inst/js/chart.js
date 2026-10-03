@@ -1733,7 +1733,8 @@
       if (meta && Array.isArray(meta.levels) && meta.levels.length) {
         const present = new Set(src.map((/** @type {any} */ r) => String(r[colName] ?? '')));
         const out = meta.levels.map(String).filter((/** @type {string} */ l) => present.has(l));
-        for (const k of present) if (!out.includes(k)) out.push(k);
+        const inOut = new Set(out);
+        for (const k of present) if (!inOut.has(k)) { inOut.add(k); out.push(k); }
         return out;
       }
       /** @type {Record<string, string>} */
@@ -6204,8 +6205,9 @@
       const xAxisType = this._axisTypeFor(x);
       const xCats = xAxisType === 'category' ? this._orderedCategories(x) : null;
 
+      const ix = this._ix;
       const facets = facet
-        ? [...new Set(this.data.map(r => String(r[facet] ?? '')))].sort()
+        ? ix.levels(this.data, facet, 'nz').slice().sort()
         : ['__all__'];
       const singleFacet = facets.length === 1;
       this._applyFacetGrid(facets.length);
@@ -6216,17 +6218,17 @@
       // cycling otherwise.
       const colorScale = this._scaleFor(color);
       const colorLevels = color
-        ? this._orderLevels(
-            [...new Set(this.data.map(r => String(r[color] ?? '')))],
-            colorScale, color)
+        ? this._orderLevels(ix.levels(this.data, color, 'nz'), colorScale, color)
         : [];
 
       // Convert an x-axis value to a numeric/time coord, or to a category
-      // index when the axis is categorical.
-      const xCoord = (/** @type {any} */ v, /** @type {any[]} */ cats) => {
+      // index when the axis is categorical. The index is the category's first
+      // position, as cats.indexOf() gave it, read from a map built once.
+      const xPos = xCats ? firstIndex(xCats) : null;
+      const xCoord = (/** @type {any} */ v) => {
         if (xAxisType === 'category') {
-          const i = cats.indexOf(String(v ?? ''));
-          return i < 0 ? 0 : i;
+          const i = /** @type {Map<any, number>} */ (xPos).get(String(v ?? ''));
+          return i === undefined ? 0 : i;
         }
         return Number(v);
       };
@@ -6245,7 +6247,7 @@
           const k = String(r[y] ?? '');
           let v = r[sortCol];
           if (xAxisType === 'category' && sortCol === x) {
-            v = xCoord(v, xCats);
+            v = xCoord(v);
           } else {
             v = Number(v);
           }
@@ -6268,7 +6270,7 @@
       const panels = [];
       for (const fv of facets) {
         const rows = fv === '__all__' ? this.data
-          : this.data.filter(r => String(r[facet]) === fv);
+          : ix.get(this.data, facet, 'raw', fv);
         if (rows.length) panels.push({ fv, rows });
       }
       this._syncShape('timeline', panels.length);
@@ -6340,10 +6342,10 @@
           const term = String(r[y] ?? '');
           const lane = laneOf.get(term);
           if (lane === undefined) continue;
-          const s = xCoord(r[x], xCats);
+          const s = xCoord(r[x]);
           let e;
           if (xend && r[xend] != null && !Number.isNaN(Number(r[xend]))) {
-            e = xCoord(r[xend], xCats);
+            e = xCoord(r[xend]);
           } else {
             // Single-day event — render a narrow dot.
             e = s;
