@@ -1,0 +1,19 @@
+{
+ "before": {
+  "instances": 0,
+  "disposed": 0,
+  "themes": []
+ },
+ "after": {
+  "instances": 1,
+  "disposed": 0,
+  "themes": [
+   "dark"
+  ]
+ },
+ "inputs": [],
+ "theme": "dark",
+ "rev": 3,
+ "rows": 60,
+ "familyClass": "drilldown-chart-container dd-family-aggregated"
+}

@@ -1,0 +1,110 @@
+{
+ "render queues a resize at 300 ms": [
+  {
+   "instance": 0,
+   "calls": [
+    {
+     "op": "resize",
+     "opts": null
+    }
+   ]
+  },
+  {
+   "instance": 1,
+   "calls": [
+    {
+     "op": "resize",
+     "opts": null
+    }
+   ]
+  }
+ ],
+ "resize()": [
+  {
+   "instance": 0,
+   "calls": [
+    {
+     "op": "resize",
+     "opts": null
+    }
+   ]
+  },
+  {
+   "instance": 1,
+   "calls": [
+    {
+     "op": "resize",
+     "opts": null
+    }
+   ]
+  }
+ ],
+ "hidden: offsetParent null": [],
+ "zero width": [],
+ "queuedAfterObserver": [
+  {
+   "ms": 16,
+   "left": 16
+  }
+ ],
+ "observer fires twice: one resize a frame later": [
+  {
+   "instance": 0,
+   "calls": [
+    {
+     "op": "resize",
+     "opts": null
+    }
+   ]
+  },
+  {
+   "instance": 1,
+   "calls": [
+    {
+     "op": "resize",
+     "opts": null
+    }
+   ]
+  }
+ ],
+ "open the gear": [
+  {
+   "instance": 0,
+   "calls": [
+    {
+     "op": "resize",
+     "opts": null
+    }
+   ]
+  },
+  {
+   "instance": 1,
+   "calls": [
+    {
+     "op": "resize",
+     "opts": null
+    }
+   ]
+  }
+ ],
+ "close the gear": [
+  {
+   "instance": 0,
+   "calls": [
+    {
+     "op": "resize",
+     "opts": null
+    }
+   ]
+  },
+  {
+   "instance": 1,
+   "calls": [
+    {
+     "op": "resize",
+     "opts": null
+    }
+   ]
+  }
+ ]
+}

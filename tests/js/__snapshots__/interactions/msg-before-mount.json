@@ -1,0 +1,43 @@
+{
+ "inputsBefore": [],
+ "afterMount": {
+  "inputs": [],
+  "rows": 60,
+  "rev": 1,
+  "orientation": "vertical",
+  "theme": "dark",
+  "instances": [
+   {
+    "theme": "dark",
+    "ops": [
+     "setOption",
+     "setOption"
+    ]
+   }
+  ]
+ },
+ "other": {
+  "rows": 0,
+  "inputs": [
+   {
+    "name": "other-drilldown_block_ready",
+    "value": "[time]",
+    "opts": {
+     "priority": "event"
+    }
+   }
+  ]
+ },
+ "newerRevWithoutRows": {
+  "rows": 0,
+  "inputs": [
+   {
+    "name": "later-drilldown_block_need",
+    "value": 2,
+    "opts": {
+     "priority": "event"
+    }
+   }
+  ]
+ }
+}

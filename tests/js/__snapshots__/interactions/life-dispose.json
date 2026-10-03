@@ -1,0 +1,19 @@
+{
+ "disposed": 2,
+ "instances": 2,
+ "observerDisconnected": 1,
+ "slots": 0,
+ "charts": 0,
+ "grid": "",
+ "pending": [
+  {
+   "ms": 300,
+   "left": 300
+  },
+  {
+   "ms": 16,
+   "left": 16
+  }
+ ],
+ "afterTimers": []
+}

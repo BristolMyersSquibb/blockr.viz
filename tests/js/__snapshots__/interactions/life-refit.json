@@ -1,0 +1,114 @@
+{
+ "first": {
+  "height": "477px",
+  "xFit": true
+ },
+ "width 1200": {
+  "calls": [
+   {
+    "instance": 0,
+    "calls": [
+     {
+      "op": "resize",
+      "opts": null
+     },
+     {
+      "op": "setOption",
+      "option": {
+       "xAxis": [
+        {
+         "axisLabel": {
+          "color": "#6b7280",
+          "fontSize": 11,
+          "interval": 0,
+          "lineHeight": 15,
+          "rotate": 0,
+          "__wrapAt": 152,
+          "__lines": 2,
+          "formatter": "[fn]"
+         }
+        }
+       ],
+       "grid": {
+        "bottom": 81
+       }
+      }
+     },
+     {
+      "op": "resize",
+      "opts": null
+     }
+    ]
+   }
+  ],
+  "height": "365px"
+ },
+ "width 320": {
+  "calls": [
+   {
+    "instance": 0,
+    "calls": [
+     {
+      "op": "resize",
+      "opts": null
+     },
+     {
+      "op": "setOption",
+      "option": {
+       "xAxis": [
+        {
+         "axisLabel": {
+          "color": "#6b7280",
+          "fontSize": 11,
+          "interval": 0,
+          "lineHeight": 15,
+          "rotate": 90,
+          "__wrapAt": 160,
+          "__lines": 2,
+          "formatter": "[fn]"
+         }
+        }
+       ],
+       "grid": {
+        "bottom": 193
+       }
+      }
+     },
+     {
+      "op": "resize",
+      "opts": null
+     }
+    ]
+   }
+  ],
+  "height": "477px"
+ },
+ "width 320 again": {
+  "calls": [
+   {
+    "instance": 0,
+    "calls": [
+     {
+      "op": "resize",
+      "opts": null
+     }
+    ]
+   }
+  ],
+  "height": "477px"
+ },
+ "width 600": {
+  "calls": [
+   {
+    "instance": 0,
+    "calls": [
+     {
+      "op": "resize",
+      "opts": null
+     }
+    ]
+   }
+  ],
+  "height": "477px"
+ }
+}

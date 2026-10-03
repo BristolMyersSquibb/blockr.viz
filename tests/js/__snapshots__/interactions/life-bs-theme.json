@@ -1,0 +1,43 @@
+{
+ "before": [
+  [
+   "redraw",
+   "setOption"
+  ]
+ ],
+ "sync": [
+  [
+   "redraw",
+   "setOption"
+  ]
+ ],
+ "afterHtml": [
+  [
+   "redraw",
+   "setOption",
+   "redraw",
+   "setOption"
+  ]
+ ],
+ "afterBody": [
+  [
+   "redraw",
+   "setOption",
+   "redraw",
+   "setOption",
+   "redraw",
+   "setOption"
+  ]
+ ],
+ "afterOther": [
+  [
+   "redraw",
+   "setOption",
+   "redraw",
+   "setOption",
+   "redraw",
+   "setOption"
+  ]
+ ],
+ "bHasChart": false
+}

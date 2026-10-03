@@ -1,0 +1,16 @@
+{
+ "before": {
+  "inputs": [],
+  "calls": [],
+  "newInstances": 0,
+  "disposed": 0
+ },
+ "theme": "dark",
+ "after": {
+  "instances": 1,
+  "disposed": 0,
+  "themes": [
+   "dark"
+  ]
+ }
+}

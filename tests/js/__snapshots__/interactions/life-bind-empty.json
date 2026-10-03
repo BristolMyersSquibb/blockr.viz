@@ -1,0 +1,79 @@
+{
+ "inputs": [
+  {
+   "name": "blk-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ],
+ "root": [
+  {
+   "div.drilldown-chart-container": [
+    {
+     "div.dd-card": [
+      {
+       "div.blockr-gear-header": [
+        {
+         "div.dd-chart-titles": null,
+         "hidden": true
+        },
+        {
+         "div.dd-chart-dl-host.dd-chart-dl": null
+        },
+        {
+         "button.blockr-gear-btn": null
+        }
+       ]
+      },
+      {
+       "div.blockr-busy-line": null
+      },
+      {
+       "div.blockr-settings.blockr-settings--beak.dd-popover": null
+      },
+      {
+       "div.dd-mapping-band": null,
+       "hidden": true
+      },
+      {
+       "div.dd-chart-grid": null
+      },
+      {
+       "div.dd-legend-band": null,
+       "hidden": true
+      },
+      {
+       "div.dd-chart-caption": null,
+       "hidden": true
+      },
+      {
+       "div.dd-status-footer": [
+        {
+         "span.dd-status-text": null
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "footer": [
+  {
+   "cls": "dd-status-text",
+   "text": "No filter active"
+  }
+ ],
+ "gear": {
+  "expanded": "false",
+  "label": "Chart settings"
+ },
+ "familyClass": "drilldown-chart-container",
+ "instances": {
+  "instances": 0,
+  "disposed": 0,
+  "themes": []
+ }
+}

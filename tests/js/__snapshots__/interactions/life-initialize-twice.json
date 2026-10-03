@@ -1,0 +1,19 @@
+{
+ "replaced": true,
+ "inputs": [
+  {
+   "name": "blk-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ],
+ "disposed": 0,
+ "cards": 1,
+ "bandInCard": true,
+ "oldInstanceAlive": [
+  true
+ ],
+ "newRows": 0
+}

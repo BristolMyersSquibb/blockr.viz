@@ -1,0 +1,344 @@
+{
+ "cols=null width=320": {
+  "grid": {
+   "single": false,
+   "columns": null
+  },
+  "panels": [
+   {
+    "facet": "",
+    "width": 320,
+    "height": "272px"
+   },
+   {
+    "facet": "High Dose",
+    "width": 320,
+    "height": "272px"
+   },
+   {
+    "facet": "Low Dose",
+    "width": 320,
+    "height": "272px"
+   },
+   {
+    "facet": "Placebo",
+    "width": 320,
+    "height": "272px"
+   }
+  ]
+ },
+ "cols=null width=640": {
+  "grid": {
+   "single": false,
+   "columns": null
+  },
+  "panels": [
+   {
+    "facet": "",
+    "width": 320,
+    "height": "272px"
+   },
+   {
+    "facet": "High Dose",
+    "width": 320,
+    "height": "272px"
+   },
+   {
+    "facet": "Low Dose",
+    "width": 320,
+    "height": "272px"
+   },
+   {
+    "facet": "Placebo",
+    "width": 320,
+    "height": "272px"
+   }
+  ]
+ },
+ "cols=null width=1200": {
+  "grid": {
+   "single": false,
+   "columns": null
+  },
+  "panels": [
+   {
+    "facet": "",
+    "width": 300,
+    "height": "272px"
+   },
+   {
+    "facet": "High Dose",
+    "width": 300,
+    "height": "272px"
+   },
+   {
+    "facet": "Low Dose",
+    "width": 300,
+    "height": "272px"
+   },
+   {
+    "facet": "Placebo",
+    "width": 300,
+    "height": "272px"
+   }
+  ]
+ },
+ "cols=1 width=320": {
+  "grid": {
+   "single": false,
+   "columns": "repeat(1, minmax(0, 1fr))"
+  },
+  "panels": [
+   {
+    "facet": "",
+    "width": 320,
+    "height": "272px"
+   },
+   {
+    "facet": "High Dose",
+    "width": 320,
+    "height": "272px"
+   },
+   {
+    "facet": "Low Dose",
+    "width": 320,
+    "height": "272px"
+   },
+   {
+    "facet": "Placebo",
+    "width": 320,
+    "height": "272px"
+   }
+  ]
+ },
+ "cols=1 width=640": {
+  "grid": {
+   "single": false,
+   "columns": "repeat(1, minmax(0, 1fr))"
+  },
+  "panels": [
+   {
+    "facet": "",
+    "width": 640,
+    "height": "272px"
+   },
+   {
+    "facet": "High Dose",
+    "width": 640,
+    "height": "272px"
+   },
+   {
+    "facet": "Low Dose",
+    "width": 640,
+    "height": "272px"
+   },
+   {
+    "facet": "Placebo",
+    "width": 640,
+    "height": "272px"
+   }
+  ]
+ },
+ "cols=1 width=1200": {
+  "grid": {
+   "single": false,
+   "columns": "repeat(1, minmax(0, 1fr))"
+  },
+  "panels": [
+   {
+    "facet": "",
+    "width": 1200,
+    "height": "272px"
+   },
+   {
+    "facet": "High Dose",
+    "width": 1200,
+    "height": "272px"
+   },
+   {
+    "facet": "Low Dose",
+    "width": 1200,
+    "height": "272px"
+   },
+   {
+    "facet": "Placebo",
+    "width": 1200,
+    "height": "272px"
+   }
+  ]
+ },
+ "cols=2 width=320": {
+  "grid": {
+   "single": false,
+   "columns": "repeat(2, minmax(0, 1fr))"
+  },
+  "panels": [
+   {
+    "facet": "",
+    "width": 160,
+    "height": "272px"
+   },
+   {
+    "facet": "High Dose",
+    "width": 160,
+    "height": "272px"
+   },
+   {
+    "facet": "Low Dose",
+    "width": 160,
+    "height": "272px"
+   },
+   {
+    "facet": "Placebo",
+    "width": 160,
+    "height": "272px"
+   }
+  ]
+ },
+ "cols=2 width=640": {
+  "grid": {
+   "single": false,
+   "columns": "repeat(2, minmax(0, 1fr))"
+  },
+  "panels": [
+   {
+    "facet": "",
+    "width": 320,
+    "height": "272px"
+   },
+   {
+    "facet": "High Dose",
+    "width": 320,
+    "height": "272px"
+   },
+   {
+    "facet": "Low Dose",
+    "width": 320,
+    "height": "272px"
+   },
+   {
+    "facet": "Placebo",
+    "width": 320,
+    "height": "272px"
+   }
+  ]
+ },
+ "cols=2 width=1200": {
+  "grid": {
+   "single": false,
+   "columns": "repeat(2, minmax(0, 1fr))"
+  },
+  "panels": [
+   {
+    "facet": "",
+    "width": 600,
+    "height": "272px"
+   },
+   {
+    "facet": "High Dose",
+    "width": 600,
+    "height": "272px"
+   },
+   {
+    "facet": "Low Dose",
+    "width": 600,
+    "height": "272px"
+   },
+   {
+    "facet": "Placebo",
+    "width": 600,
+    "height": "272px"
+   }
+  ]
+ },
+ "cols=5 width=320": {
+  "grid": {
+   "single": false,
+   "columns": "repeat(4, minmax(0, 1fr))"
+  },
+  "panels": [
+   {
+    "facet": "",
+    "width": 80,
+    "height": "272px"
+   },
+   {
+    "facet": "High Dose",
+    "width": 80,
+    "height": "272px"
+   },
+   {
+    "facet": "Low Dose",
+    "width": 80,
+    "height": "272px"
+   },
+   {
+    "facet": "Placebo",
+    "width": 80,
+    "height": "272px"
+   }
+  ]
+ },
+ "cols=5 width=640": {
+  "grid": {
+   "single": false,
+   "columns": "repeat(4, minmax(0, 1fr))"
+  },
+  "panels": [
+   {
+    "facet": "",
+    "width": 160,
+    "height": "272px"
+   },
+   {
+    "facet": "High Dose",
+    "width": 160,
+    "height": "272px"
+   },
+   {
+    "facet": "Low Dose",
+    "width": 160,
+    "height": "272px"
+   },
+   {
+    "facet": "Placebo",
+    "width": 160,
+    "height": "272px"
+   }
+  ]
+ },
+ "cols=5 width=1200": {
+  "grid": {
+   "single": false,
+   "columns": "repeat(4, minmax(0, 1fr))"
+  },
+  "panels": [
+   {
+    "facet": "",
+    "width": 300,
+    "height": "272px"
+   },
+   {
+    "facet": "High Dose",
+    "width": 300,
+    "height": "272px"
+   },
+   {
+    "facet": "Low Dose",
+    "width": 300,
+    "height": "272px"
+   },
+   {
+    "facet": "Placebo",
+    "width": 300,
+    "height": "272px"
+   }
+  ]
+ },
+ "one panel, cols=3": {
+  "grid": {
+   "single": true,
+   "columns": null
+  }
+ }
+}
