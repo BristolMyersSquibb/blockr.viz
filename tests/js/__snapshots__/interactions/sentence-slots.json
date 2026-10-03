@@ -1,0 +1,3950 @@
+{
+ "config": {
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "auto",
+  "color": "AESEV",
+  "value_lines": [
+   5
+  ],
+  "subtitle_resolved": "Count of rows by Reported Term, coloured by AESEV, line at 5",
+  "subtitle_parts": [
+   {
+    "text": "Count of rows by "
+   },
+   {
+    "text": "Reported Term",
+    "arg": "group",
+    "by": "label"
+   },
+   {
+    "text": ", coloured by "
+   },
+   {
+    "text": "AESEV",
+    "arg": "color"
+   },
+   {
+    "text": ", line at "
+   },
+   {
+    "text": "5",
+    "arg": "value_lines"
+   },
+   {
+    "text": ", "
+   },
+   {
+    "text": "Serious only",
+    "arg": "serious"
+   },
+   {
+    "text": ", "
+   },
+   {
+    "text": "Count",
+    "arg": "func"
+   }
+  ],
+  "subtitle_offers": [
+   "facet",
+   "count_on",
+   "tt_fields",
+   "sort_by"
+  ],
+  "title_resolved": "Adverse events",
+  "title_offers": [
+   "facet"
+  ],
+  "script": "serious <- TRUE",
+  "script_inputs": [
+   {
+    "name": "serious",
+    "key": "sv_serious",
+    "label": "Serious only",
+    "kind": "segmented",
+    "options": [
+     {
+      "value": "on",
+      "label": "Serious only"
+     },
+     {
+      "value": "off",
+      "label": "Serious only"
+     }
+    ]
+   }
+  ],
+  "sv_serious": "on",
+  "sentence_args": [
+   "serious"
+  ]
+ },
+ "steps": [
+  {
+   "step": "painted",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": null
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "click word \"AESEV\"",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": true
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": "color",
+    "title": "Color",
+    "options": [
+     "(none)",
+     "USUBJID",
+     "ARM",
+     "SEX",
+     "AVISIT",
+     "AVISITN",
+     "ADY",
+     "AVAL",
+     "AETERM",
+     "*AESEV",
+     "ASTDY",
+     "AENDY",
+     "ANRHI",
+     "CHG",
+     "LO",
+     "HI"
+    ]
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "click word \"AESEV\"",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": null
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "click word \"AESEV\"",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": true
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": "color",
+    "title": "Color",
+    "options": [
+     "(none)",
+     "USUBJID",
+     "ARM",
+     "SEX",
+     "AVISIT",
+     "AVISITN",
+     "ADY",
+     "AVAL",
+     "AETERM",
+     "*AESEV",
+     "ASTDY",
+     "AENDY",
+     "ANRHI",
+     "CHG",
+     "LO",
+     "HI"
+    ]
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "pick SEX",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AETERM",
+      "color": "SEX",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "5",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": "serious <- TRUE",
+      "sv_serious": "on"
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 5,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 6,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": true
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": "color",
+    "title": null,
+    "options": null
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "click word \"AESEV\"",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": null
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "click word \"Reported Term\"",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": true
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": "group",
+    "title": "Group",
+    "options": [
+     "USUBJID",
+     "ARM",
+     "SEX",
+     "AVISIT",
+     "AVISITN",
+     "ADY",
+     "*AETERM",
+     "AESEV",
+     "ASTDY",
+     "AENDY",
+     "ANRHI",
+     "CHG"
+    ]
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "pick AVISIT",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "SEX",
+      "facet": "",
+      "value": ".count",
+      "func": "count",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "5",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": "serious <- TRUE",
+      "sv_serious": "on"
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "resize",
+       "opts": null
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 6,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 6,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": true
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": "group",
+    "title": null,
+    "options": null
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "click word \"Count\"",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": true
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": "func",
+    "title": "Aggregate",
+    "options": [
+     "*count",
+     "count_distinct",
+     "mean",
+     "median",
+     "sum",
+     "min",
+     "max",
+     "pct_distinct",
+     "identity"
+    ]
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "pick mean",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "SEX",
+      "facet": "",
+      "value": "",
+      "func": "mean",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "5",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": "serious <- TRUE",
+      "sv_serious": "on"
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": true
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": "func",
+    "title": null,
+    "options": null
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "click word \"5\"",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "input": "5"
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": null
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "type \"7, 9\" + Enter over the word",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "SEX",
+      "facet": "",
+      "value": "",
+      "func": "mean",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "7, 9",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": "serious <- TRUE",
+      "sv_serious": "on"
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": null
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "click word \"Serious only\"",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "SEX",
+      "facet": "",
+      "value": "",
+      "func": "mean",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "7, 9",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": "serious <- TRUE",
+      "sv_serious": "off"
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": null
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "click word \"Serious only\"",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "SEX",
+      "facet": "",
+      "value": "",
+      "func": "mean",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "7, 9",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": "serious <- TRUE",
+      "sv_serious": "on"
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": null
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "click offer \"+ Facet\"",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": "facet",
+    "title": "Facet",
+    "options": [
+     "*(none)",
+     "ARM",
+     "SEX",
+     "AVISIT",
+     "AVISITN",
+     "AETERM",
+     "AESEV",
+     "ANRHI"
+    ]
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "pick ARM",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "config",
+      "group": "AVISIT",
+      "color": "SEX",
+      "facet": "ARM",
+      "value": "",
+      "func": "mean",
+      "chart_type": "bar",
+      "x": "",
+      "y": "",
+      "xend": "",
+      "sort_by": "value",
+      "sort_dir": "desc",
+      "orientation": "horizontal",
+      "bar_mode": "stacked",
+      "value_labels": "off",
+      "na_group": "level",
+      "pct_of": "facet",
+      "baseline": "zero",
+      "series": "",
+      "label": "",
+      "drill": "auto",
+      "smoother": "none",
+      "connect": "monotone",
+      "identity_line": "off",
+      "value_lines": "7, 9",
+      "x_lines": "",
+      "box_points": "none",
+      "band_window": "adaptive",
+      "band_size": 45,
+      "band_min_n": 12,
+      "band_id": "",
+      "ref_hi": "",
+      "ref_lo": "",
+      "count_on": "off",
+      "count_col": "",
+      "facet_scales": "fixed",
+      "facet_cols": "",
+      "download": "off",
+      "lo": "",
+      "hi": "",
+      "tt_fields": [],
+      "title": null,
+      "subtitle": null,
+      "caption": null,
+      "ctrl_target": "",
+      "ctrl_table": "",
+      "script": "serious <- TRUE",
+      "sv_serious": "on"
+     },
+     "opts": {
+      "priority": "event"
+     }
+    },
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 4,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": "facet",
+    "title": null,
+    "options": null
+   },
+   "gearOpen": false,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "click offer \"More settings\"",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    },
+    {
+     "instance": 4,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": "facet",
+    "title": null,
+    "options": null
+   },
+   "gearOpen": true,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  },
+  {
+   "step": "R echoes the config",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 4,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 0,
+     "left": 0
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "sentence": {
+    "title": [
+     "Adverse events",
+     {
+      "offer": "+ Facet",
+      "more": false
+     }
+    ],
+    "subtitle": [
+     "Count of rows by ",
+     {
+      "slot": "Reported Term",
+      "open": false
+     },
+     ", coloured by ",
+     {
+      "slot": "AESEV",
+      "open": false
+     },
+     ", line at ",
+     {
+      "slot": "5",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Serious only",
+      "open": false
+     },
+     ", ",
+     {
+      "slot": "Count",
+      "open": false
+     },
+     {
+      "offer": "+ Facet",
+      "more": false
+     },
+     {
+      "offer": "+ Group counts",
+      "more": false
+     },
+     {
+      "offer": "More settings",
+      "more": true
+     }
+    ],
+    "caption": null
+   },
+   "menu": {
+    "key": null
+   },
+   "gearOpen": true,
+   "band": {
+    "shown": false,
+    "rows": []
+   }
+  }
+ ]
+}
