@@ -752,16 +752,17 @@ test_that("table drill: unchecking the gear's Drill-down clears the filter", {
   dt_click_raw("table", "East")
   expect_equal(nrow(get_block_result("table")), 1L)
 
-  # Open the gear and uncheck the Drill-down capability section.
+  # Open the gear and uncheck the switch inside the Drill-down section (open,
+  # since drill is on).
   app$run_js(sprintf(
     "document.querySelector('%s .blockr-gear-btn').click();", scope
   ))
   app$wait_for_idle()
   app$run_js(sprintf(
-    "(function(){var t=Array.from(document.querySelectorAll(
-        '%s .dd-section-title--toggle'))
-       .filter(function(x){return /Drill-down/.test(x.textContent);})[0];
-     t.click();})()",
+    "(function(){var s=Array.from(document.querySelectorAll('%s .dd-section'))
+       .filter(function(x){var t=x.querySelector('.dd-section-title');
+         return t && /Drill-down/.test(t.textContent);})[0];
+     s.querySelector('.dd-section-enable input[type=checkbox]').click();})()",
     scope
   ))
   app$wait_for_idle()
@@ -892,7 +893,7 @@ test_that("tile drill: unchecking the gear's Drill-down clears the filter", {
   expect_equal(nrow(get_block_result("tile")), 1L)
 
   # Open the gear (the band was rebuilt by the filter re-render) and uncheck
-  # the picker-less Drill-down section: the engine's off-branch must clear
+  # the switch in the Drill-down section: the engine's off-branch must clear
   # the drill config AND the active filter, so downstream recovers.
   app$run_js(sprintf(
     "document.querySelector('%s .blockr-gear-btn').click();", scope
@@ -900,10 +901,10 @@ test_that("tile drill: unchecking the gear's Drill-down clears the filter", {
   app$wait_for_idle()
   Sys.sleep(0.3)
   app$run_js(sprintf(
-    "(function(){var t=Array.from(document.querySelectorAll(
-        '%s .dd-section-title--toggle'))
-       .filter(function(x){return /Drill-down/.test(x.textContent);})[0];
-     t.click();})()",
+    "(function(){var s=Array.from(document.querySelectorAll('%s .dd-section'))
+       .filter(function(x){var t=x.querySelector('.dd-section-title');
+         return t && /Drill-down/.test(t.textContent);})[0];
+     s.querySelector('.dd-section-enable input[type=checkbox]').click();})()",
     scope
   ))
   app$wait_for_idle()

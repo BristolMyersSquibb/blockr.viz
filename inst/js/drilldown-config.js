@@ -340,7 +340,7 @@
     _selectOptionsFor(key) {
       const role = this._role(key);
       const raw = role.optionsBy ? (role.optionsBy[this.h.context()] || []) : (role.options || []);
-      /** @type {Array<string | { value: string, label?: string }>} */
+      /** @type {Array<string | { value: string, label?: string, col?: boolean }>} */
       const out = [];
       for (const o of raw) {
         if (o === '#num') {
@@ -617,6 +617,7 @@
         };
         // An optional section like Drill-down: it folds, the closed header
         // says whether rows are aggregated, and the switch is inside.
+        /** @type {string[]} */
         const grpCols = groupIsAgg
           ? [].concat(cfg.group || []).filter((/** @type {string} */ g) => g) : [];
         const aggState = !open ? 'Off'

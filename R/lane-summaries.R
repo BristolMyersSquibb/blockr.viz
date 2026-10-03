@@ -1684,12 +1684,12 @@ lane_custom_plan <- function(entry, s, cp) {
   if (cu$mark %in% c("box", "pointrange")) {
     entry$words <- list(
       center = "mid",
-      range = if (!identical(s$inner, "none")) "q1–q3",
-      whisk = if (!identical(s$outer, "none")) "lo–hi"
+      range = if (!identical(s$inner, "none")) "q1\u2013q3",
+      whisk = if (!identical(s$outer, "none")) "lo\u2013hi"
     )
   }
   if (identical(cu$mark, "dumbbell")) {
-    entry$words <- list(from = "from ◇", to = "to ●")
+    entry$words <- list(from = "from \u25c7", to = "to \u25cf")
   }
   entry$stype <- "custom"
   entry
