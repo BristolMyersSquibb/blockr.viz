@@ -1,0 +1,609 @@
+{
+ "config": {
+  "chart_type": "line",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "series": "USUBJID"
+ },
+ "steps": [
+  {
+   "step": "datazoom {\"batch\":[{\"startValue\":10,\"endValue\":60,\"start\":10,\"end\":70}]}",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "zoom": {
+    "start": 10,
+    "end": 70,
+    "startValue": 10,
+    "endValue": 60
+   },
+   "zoomArmed": true,
+   "brushable": false
+  },
+  {
+   "step": "R echoes the config {}",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "custom",
+        "line",
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "dataZoomSelect",
+        "dataZoomSelectActive": true
+       }
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "dataZoom",
+        "start": 10,
+        "end": 70,
+        "startValue": 10,
+        "endValue": 60
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "zoom": {
+    "start": 10,
+    "end": 70,
+    "startValue": 10,
+    "endValue": 60
+   },
+   "zoomArmed": true,
+   "brushable": false
+  },
+  {
+   "step": "datazoom {\"start\":0,\"end\":100}",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "zoom": null,
+   "zoomArmed": true,
+   "brushable": false
+  },
+  {
+   "step": "R echoes the config {}",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "custom",
+        "line",
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "dataZoomSelect",
+        "dataZoomSelectActive": true
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "zoom": null,
+   "zoomArmed": true,
+   "brushable": false
+  },
+  {
+   "step": "datazoom {\"batch\":[{\"start\":20,\"end\":50}]}",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "zoom": {
+    "start": 20,
+    "end": 50
+   },
+   "zoomArmed": true,
+   "brushable": false
+  },
+  {
+   "step": "R echoes the config {}",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "custom",
+        "line",
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "dataZoomSelect",
+        "dataZoomSelectActive": true
+       }
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "dataZoom",
+        "start": 20,
+        "end": 50
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "zoom": {
+    "start": 20,
+    "end": 50
+   },
+   "zoomArmed": true,
+   "brushable": false
+  },
+  {
+   "step": "R echoes the config {\"chart_type\":\"scatter\"}",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "scatter",
+        "scatter",
+        "scatter",
+        "scatter",
+        "scatter",
+        "scatter",
+        "scatter",
+        "scatter",
+        "scatter",
+        "scatter",
+        "scatter",
+        "scatter",
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "dataZoomSelect",
+        "dataZoomSelectActive": false
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "zoom": null,
+   "zoomArmed": false,
+   "brushable": false
+  },
+  {
+   "step": "R echoes the config {\"chart_type\":\"line\"}",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "line",
+        "custom",
+        "line",
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "dataZoomSelect",
+        "dataZoomSelectActive": true
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "zoom": null,
+   "zoomArmed": true,
+   "brushable": false
+  }
+ ]
+}

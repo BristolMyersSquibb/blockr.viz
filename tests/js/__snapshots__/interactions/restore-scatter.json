@@ -1,0 +1,72 @@
+{
+ "config": {
+  "chart_type": "scatter",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "color": "ARM",
+  "filter_column": "ARM",
+  "filter_values": [
+   "Placebo"
+  ]
+ },
+ "steps": [
+  {
+   "step": "R sends the saved selection",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "scatter",
+        "scatter",
+        "scatter",
+        "scatter"
+       ]
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "takeGlobalCursor",
+        "key": "brush",
+        "brushOption": {
+         "brushType": "rect",
+         "brushMode": "single"
+        }
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: ARM = Placebo"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "Placebo",
+    "selectedColumn": "ARM",
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

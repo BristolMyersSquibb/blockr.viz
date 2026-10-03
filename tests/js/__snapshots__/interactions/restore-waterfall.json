@@ -1,0 +1,169 @@
+{
+ "config": {
+  "chart_type": "waterfall",
+  "group": "AVISIT",
+  "value": "CHG",
+  "func": "sum",
+  "drill": "auto",
+  "filter_column": "AVISIT",
+  "filter_values": [
+   "Week 2"
+  ]
+ },
+ "steps": [
+  {
+   "step": "R sends the saved selection",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": -12,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": -12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": -2.3,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 30.58,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 103.9,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 12,
+            "itemStyle": {
+             "color": "#dc2626",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 9.7,
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 32.88,
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 73.32,
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 83.93,
+            "itemStyle": {
+             "color": "#009E73",
+             "borderRadius": [
+              2,
+              2,
+              2,
+              2
+             ],
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: AVISIT = Week 2"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "Week 2",
+    "selectedColumn": "AVISIT",
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

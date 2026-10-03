@@ -1,0 +1,103 @@
+{
+ "config": {
+  "chart_type": "pie",
+  "group": "AESEV",
+  "drill": "auto",
+  "filter_column": "AESEV",
+  "filter_values": [
+   "MILD"
+  ]
+ },
+ "steps": [
+  {
+   "step": "R sends the saved selection",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "pie"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "SEVERE",
+            "value": 20,
+            "n": 20,
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 0.2
+            }
+           },
+           {
+            "name": "MILD",
+            "value": 20,
+            "n": 20,
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "MODERATE",
+            "value": 18,
+            "n": 18,
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 0.2
+            }
+           },
+           {
+            "name": "",
+            "value": 2,
+            "n": 2,
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 0.2
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: AESEV = MILD"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "MILD",
+    "selectedColumn": "AESEV",
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}
