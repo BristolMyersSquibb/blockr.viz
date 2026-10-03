@@ -602,6 +602,19 @@ new_chart_block <- function(
       shiny::moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
+        # The busy cue (inst/js/busy-cue.js). The message goes out FIRST and
+        # the input is read after it, so a rerun -- which is what an
+        # invalidated input causes -- tells the browser before the upstream
+        # recompute this read then triggers. Ahead of every other observer,
+        # core's evaluation included. chart.js ends the cue once it has drawn;
+        # the push observer below ends it when no new picture is coming.
+        shiny::observe({
+          busy_cue_start(session, ns("drilldown_block"), "drawing")
+          tryCatch(data(), error = function(e) {
+            busy_cue_done(session, ns("drilldown_block"))
+          })
+        }, priority = 200L)
+
         # Input coercion, ONCE per upstream change, shared by the render
         # path and the title auto tier: a plain data frame is kept verbatim
         # (byte-identical passthrough, dotted columns included); a
@@ -1396,12 +1409,21 @@ new_chart_block <- function(
         # client that never got the first copy is covered by the _ready
         # handshake below.
         shiny::observe({
+          # A settings edit reaches here without touching the input, so the
+          # cue starts here too (a no-op while one is already running). Any
+          # exit that sends no picture ends it.
+          busy_cue_start(session, ns("drilldown_block"), "drawing")
+          sent <- FALSE
+          on.exit(
+            if (!sent) busy_cue_done(session, ns("drilldown_block"))
+          )
           chart_msg <- build_chart_msg()
           if (identical(chart_msg, last_push$msg)) {
             return()
           }
           last_push$msg <- chart_msg
           send_chart_msg(chart_msg)
+          sent <- TRUE
         })
 
         # The client got a message without rows for a rev it does not hold.

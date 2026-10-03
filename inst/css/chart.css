@@ -1466,3 +1466,37 @@
   line-height: inherit;
   outline: none;
 }
+
+/* ---- Busy cue (inst/js/busy-cue.js). An output being recomputed keeps its
+   old picture, dimmed, and the line under its sentence counts the wait. The
+   class lands 300 ms after R's "blockr-busy" and leaves once the new picture
+   is drawn. The sentence keeps full contrast: it names what is being
+   computed. Copied from the composer block's cue, which this replaces. */
+.blockr-busy-line {
+  height: 0;
+  overflow: hidden;
+  padding: 0 2px;
+  line-height: 18px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+  font-variant-numeric: tabular-nums;
+  transition: height 0.15s ease;
+}
+
+/* The line opens rather than appears, so the output slides down under it. */
+.blockr-busy .blockr-busy-line {
+  height: 24px;
+}
+
+/* On the elements themselves, so the output fades back in as well as out. */
+.drilldown-chart-container .dd-chart-grid,
+.drilldown-chart-container .dd-legend-band,
+[data-dt-elem-id] .blockr-table-wrapper {
+  transition: opacity 0.15s ease;
+}
+
+.blockr-busy .dd-chart-grid,
+.blockr-busy .dd-legend-band,
+.blockr-busy .blockr-table-wrapper {
+  opacity: 0.45;
+}

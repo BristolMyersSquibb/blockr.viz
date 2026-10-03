@@ -3,7 +3,7 @@
  *
  * The files run unmodified, in the order the page loads them: blockr.ui's
  * controls (controls_dep()), then drilldown-agg.js, drilldown-config.js and
- * capture-pages.js (drilldown_shared_dep()), then drilldown-theme-register.js
+ * capture-pages.js and busy-cue.js (drilldown_shared_dep()), then drilldown-theme-register.js
  * and chart.js (drilldown_chart_dep()). A chart is created through the input
  * binding's `initialize`, and its data arrives through the `drilldown-data`
  * message handler, exactly as from build_chart_msg().
@@ -36,7 +36,7 @@ const JS_DIR = path.join(__dirname, '..', '..', 'inst', 'js');
 // package, the copy R serves; BLOCKR_UI_JS points at a source tree instead
 // (CI checks blockr.ui out next to this repo).
 const UI_FILES = ['blockr-ui.js', 'blockr-select.js', 'blockr-input.js'];
-const VIZ_FILES = ['drilldown-agg.js', 'drilldown-config.js', 'capture-pages.js',
+const VIZ_FILES = ['drilldown-agg.js', 'drilldown-config.js', 'capture-pages.js', 'busy-cue.js',
                    'drilldown-theme-register.js', 'chart.js'];
 
 let uiDir = process.env.BLOCKR_UI_JS;
@@ -337,6 +337,11 @@ function fakeEcharts(mode) {
         const nm = typeof notMerge === 'object' && notMerge !== null
           ? !!notMerge.notMerge : !!notMerge;
         merged = mergeOption(merged, option, nm);
+        // Real echarts paints into a <canvas> under its element; chart.js's
+        // busy cue waits for one before it ends.
+        if (dom && !dom.querySelector('canvas')) {
+          dom.appendChild(dom.ownerDocument.createElement('canvas'));
+        }
         if (mode === 'full') {
           const entry = { op: 'setOption', notMerge: nm, option: normalize(option) };
           if (nm) entry.probes = probeOption(option);
@@ -373,7 +378,11 @@ function fakeEcharts(mode) {
       containPixel: () => true,
       getDataURL: () => 'data:image/png;base64,',
       clear() { merged = null; if (mode === 'full') log.push({ op: 'clear' }); },
-      dispose() { disposed = true; byDom.delete(dom); },
+      dispose() {
+        disposed = true; byDom.delete(dom);
+        const c = dom && dom.querySelector('canvas');
+        if (c) c.remove();
+      },
       isDisposed: () => disposed
     };
     instances.push(inst);

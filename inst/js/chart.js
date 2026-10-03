@@ -1822,6 +1822,13 @@
       gearHeader.appendChild(this.gearBtn);
       this.card.appendChild(gearHeader);
 
+      // The busy cue's line, under the sentence (inst/js/busy-cue.js writes
+      // it; collapsed until the chart is recomputing).
+      const busyLine = document.createElement('div');
+      busyLine.className = 'blockr-busy-line';
+      busyLine.setAttribute('aria-live', 'polite');
+      this.card.appendChild(busyLine);
+
       // All configuration (mapping + presentation) lives behind the gear.
       // The card itself shows only the result + its direct interactions.
 
@@ -7464,6 +7471,7 @@
     }
     el._needRev = null;
     el._block.setData(msg.columns, msg.data, msg.config, msg.arguments, msg.data_rev);
+    busyDone(el.id);
   };
 
   // The canvas cannot resolve var(), so readInk() copies the tokens into INK
@@ -7482,6 +7490,24 @@
   });
 
   const binding = new Shiny.InputBinding();
+  // The busy cue (busy-cue.js) ends once the new picture is painted: setData
+  // hands ECharts its option synchronously, and the paint lands in the next
+  // frame, so two frames on the picture is on screen. A first draw can come
+  // later than its setData (the panel binds the element, R re-sends), so
+  // without a canvas yet it waits for one.
+  const busyDone = (/** @type {string} */ id, /** @type {number} */ tries = 200) => {
+    const b = /** @type {any} */ (window).Blockr?.busy;
+    if (!b) return;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      if (el && !el.querySelector('canvas') && tries > 0) {
+        setTimeout(() => busyDone(id, tries - 1), 50);
+        return;
+      }
+      b.stop(id);
+    }));
+  };
+
   Object.assign(binding, {
     find: (/** @type {any} */ scope) => $(scope).find('.drilldown-chart-container'),
     getId: (/** @type {any} */ el) => el.id || null,
