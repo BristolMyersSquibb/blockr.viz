@@ -123,6 +123,22 @@ test('summarizeStat: quartiles, Tukey fences clipped to the data, sd and se', ()
   assert.strictEqual(C.model.summarizeStat([], 'tukey'), null);
 });
 
+test('B8: the 10th-90th percentile draws that range around the median, not Q1-Q3', () => {
+  const v = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  assert.deepStrictEqual(plain(C.model.summarizeStat(v, 'p10_p90')), { center: 5, lo: 1, hi: 9 });
+  assert.deepStrictEqual(plain(C.model.summarizeStat(v, 'median_q1_q3')),
+                         { center: 5, lo: 2.5, hi: 7.5 });
+});
+
+test('B10: a distribution panel finds its rows by the shared key, a missing facet too', () => {
+  const rows = [{ G: 'a', F: null, V: 1 }, { G: 'a', F: null, V: 3 }, { G: 'a', F: 'p', V: 10 }];
+  const cols = [cat('G'), cat('F'), num('V')];
+  const m = build({ chart_type: 'boxplot', group: 'G', facet: 'F', value: 'V', func: 'mean',
+                    sort_by: 'data', sort_dir: 'asc' }, rows, cols);
+  assert.deepStrictEqual(plain(m.panels.map((p) => [p.facet, p.slots[0].n, p.slots[0].body.center])),
+                         [['', 2, 2], ['p', 1, 10]]);
+});
+
 test('boxplot slots: one per group, the five numbers, the outliers past the whiskers', () => {
   const rows = [1, 2, 3, 4, 100].map((V) => ({ G: 'a', V, C: 'x' }))
     .concat([{ G: 'b', V: null, C: 'y' }, { G: 'b', V: 5, C: 'y' }]);

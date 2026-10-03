@@ -35,8 +35,9 @@
   /**
    * {center, lo, hi} of a statistic over ascending values, or null for none.
    * One implementation for the box body, its whiskers and the point range,
-   * so they cannot disagree. sd is the sample sd, 0 for one value. As in v1,
-   * 'p10_p90' has no case of its own and reads as Q1-Q3.
+   * so they cannot disagree. sd is the sample sd, 0 for one value.
+   * 'p10_p90' draws the 10th to 90th percentile around the median (B8; v1
+   * read it as Q1-Q3).
    * @param {number[]} vals @param {string} stat
    * @returns {{center: number, lo: number, hi: number} | null}
    */
@@ -57,6 +58,7 @@
       case 'mean_2sd': return { center: mean, lo: mean - 2 * sd, hi: mean + 2 * sd };
       case 'mean_se': return { center: mean, lo: mean - se, hi: mean + se };
       case 'p5_p95': return { center: q(0.5), lo: q(0.05), hi: q(0.95) };
+      case 'p10_p90': return { center: q(0.5), lo: q(0.1), hi: q(0.9) };
       case 'min_max': return { center: q(0.5), lo: vals[0], hi: vals[n - 1] };
       case 'tukey': {
         // Tukey fences clipped to the data.
@@ -191,8 +193,10 @@
     const isBox = cfg.chart_type === 'boxplot';
     const bodyStat = cfg.summary || (isBox ? 'median_q1_q3' : 'mean_se');
     const whiskerStat = cfg.whiskers || 'tukey';
-    const facetRows = (facetCol && facet && facet !== '__all__')
-      ? ix.get(rows, facetCol, 'raw', String(facet)) : rows;
+    // A facet's rows by the key every family uses, so a panel for a
+    // missing facet value holds its rows (B10).
+    const facetRows = (facetCol && facet !== '__all__')
+      ? ix.get(rows, facetCol, 'nz', String(facet)) : rows;
     const split = levels.length > 0;
     const keepEmpty = !!facetCol && NS.facetScales(cfg) !== 'free';
     const outliersOn = isBox && cfg.box_points === 'outliers';
