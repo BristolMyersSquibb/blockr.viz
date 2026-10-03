@@ -1925,9 +1925,15 @@ new_chart_block <- function(
             return(cap)
           }
           if (is.null(shiny::isolate(capture_token()))) {
-            capture_token(
-              chart_capture_request(ns("drilldown_block"), 960, 540)
+            tok <- tryCatch(
+              chart_capture_request(ns("drilldown_block"), 960, 540),
+              error = function(e) NULL
             )
+            if (is.null(tok)) {
+              stop("the chart has no data yet; open its view and try again",
+                   call. = FALSE)
+            }
+            capture_token(tok)
           }
           stop("the chart has not been drawn yet; try again in a moment",
                call. = FALSE)
