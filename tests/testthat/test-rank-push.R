@@ -678,3 +678,26 @@ test_that("a nested pair's parent row summarises its own rows", {
                  info = soc)
   }
 })
+
+test_that("a zero draws an empty track, a small value still shows", {
+  # The fill's 2px floor is for small values; on a zero it read as a little.
+  t <- rank_track_html(c(0, 0.4, NA))
+  expect_false(grepl("blockr-rank-fill", t[[1]]))
+  expect_match(t[[2]], "blockr-rank-fill")
+  expect_false(grepl("blockr-rank-fill", t[[3]]))
+
+  grouped <- rank_split_html(list(
+    v = c(3, 2), names = c("MILD", "SEVERE"), mode = "grouped",
+    seg = list(c(60, 40), c(0, 10)), segv = list(c(3, 2), c(0, 1)),
+    fills = c("#111111", "#222222")
+  ))
+  # Row 1: MILD drawn, SEVERE's row empty but still there.
+  expect_identical(lengths(regmatches(grouped, gregexpr("blockr-rank-row3",
+                                                        grouped))), c(2L, 2L))
+  expect_identical(lengths(regmatches(grouped, gregexpr("blockr-rank-fill",
+                                                        grouped))), c(1L, 2L))
+
+  dv <- rank_dv_html(c(0, 30), c(TRUE, FALSE))
+  expect_false(grepl("blockr-rank-fill", dv[[1]]))
+  expect_match(dv[[2]], "is-neg")
+})

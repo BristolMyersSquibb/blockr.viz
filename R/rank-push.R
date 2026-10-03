@@ -934,14 +934,15 @@ rank_barwrap <- function(inner, c) {
 }
 
 #' One bar: a track div plus a fill div, vectorised over the column. An NA
-#' width is a cell with NO value (the identity measure's absent facet): the
-#' track renders empty -- no fill, no zero sliver.
+#' width (a cell with NO value, the identity measure's absent facet) and a
+#' zero both render an empty track: the fill's 2px floor is for small values,
+#' and on a zero it reads as a little.
 #' @noRd
 rank_track_html <- function(w, fill = NULL, sub = FALSE) {
   sub <- rep_len(isTRUE(sub) | (is.logical(sub) & !is.na(sub) & sub), length(w))
   paste0(
     "<div class=\"blockr-rank-track", ifelse(sub, " is-sub", ""), "\">",
-    ifelse(is.na(w), "", paste0(
+    ifelse(is.na(w) | w <= 0, "", paste0(
       "<div class=\"blockr-rank-fill\" style=\"width:", rank_fmt_w(w), "%",
       if (!is.null(fill)) paste0(";background:", fill) else "", "\"></div>"
     )),
@@ -961,10 +962,12 @@ rank_split_html <- function(c) {
       "%;background:", c$fills[[j]], "\" data-rank-tip=\"",
       rank_esc(c$names[[j]]), ": ", c$segv[[j]], "\"></div>"
     )
+    has <- !is.na(c$segv[[j]]) & c$segv[[j]] > 0
     if (grouped) {
-      paste0("<div class=\"blockr-rank-row3\">", body, "</div>")
+      paste0("<div class=\"blockr-rank-row3\">", ifelse(has, body, ""),
+             "</div>")
     } else {
-      ifelse(c$segv[[j]] > 0, body, "")
+      ifelse(has, body, "")
     }
   }, character(n))
   seg <- matrix(seg, nrow = n)
@@ -974,10 +977,14 @@ rank_split_html <- function(c) {
 
 #' @noRd
 rank_dv_html <- function(w, pos) {
-  paste0(
-    "<div class=\"blockr-rank-dv\"><div class=\"blockr-rank-fill ",
-    ifelse(pos, "is-pos", "is-neg"), "\" style=\"width:", rank_fmt_w(w),
-    "%\"></div></div>"
+  ifelse(
+    is.na(w) | w <= 0,
+    "<div class=\"blockr-rank-dv\"></div>",
+    paste0(
+      "<div class=\"blockr-rank-dv\"><div class=\"blockr-rank-fill ",
+      ifelse(pos, "is-pos", "is-neg"), "\" style=\"width:", rank_fmt_w(w),
+      "%\"></div></div>"
+    )
   )
 }
 

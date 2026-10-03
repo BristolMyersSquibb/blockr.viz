@@ -469,11 +469,12 @@
     ' stroke="currentColor" stroke-width="2.4" stroke-linecap="round"' +
     ' stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
-  // An NA width ships as null: a no-value cell renders an EMPTY track (no
-  // fill, no zero sliver), where 0 keeps the visible sliver.
+  // Nothing to draw is an EMPTY track: an NA width (shipped as null) and a
+  // zero alike. The fill's 2px floor is for small values, so a zero must not
+  // emit a fill at all or it reads as a little.
   function trackHtml(width, fill, sub) {
     return '<div class="blockr-rank-track' + (sub ? " is-sub" : "") + '">' +
-      (width == null ? "" :
+      (!(width > 0) ? "" :
         '<div class="blockr-rank-fill" style="width:' + w(width) + "%" +
         (fill ? ";background:" + fill : "") + '"></div>') +
       "</div>";
@@ -498,14 +499,19 @@
         w(c.seg[j][i]) + "%;background:" + c.fills[j] +
         '" data-rank-tip="' + esc(c.names[j]) + ": " + c.segv[j][i] +
         '"></div>';
-      if (grouped) out += '<div class="blockr-rank-row3">' + body + "</div>";
-      else if (c.segv[j][i] > 0) out += body;
+      var has = c.segv[j][i] > 0;
+      if (grouped) {
+        out += '<div class="blockr-rank-row3">' + (has ? body : "") + "</div>";
+      } else if (has) {
+        out += body;
+      }
     }
     return '<div class="blockr-rank-track' + (grouped ? " is-tall" : "") +
       '">' + out + "</div>";
   }
 
   function dvHtml(width, pos) {
+    if (!(width > 0)) return '<div class="blockr-rank-dv"></div>';
     return '<div class="blockr-rank-dv"><div class="blockr-rank-fill ' +
       (pos ? "is-pos" : "is-neg") + '" style="width:' + w(width) +
       '%"></div></div>';
