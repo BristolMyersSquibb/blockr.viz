@@ -8,3 +8,6 @@
 ^\.claude$
 ^\.lintr$
 ^eslint\.config\.mjs$
+^node_modules$
+^package(-lock)?\.json$
+^tests/js$

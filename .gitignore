@@ -1,3 +1,6 @@
 # Local Claude Code state: machine-local settings and agent worktrees.
 # To share a specific Claude config file, un-ignore it, e.g. !.claude/settings.json
 .claude/
+
+# npm (tests/js)
+node_modules/
