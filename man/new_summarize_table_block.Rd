@@ -76,8 +76,9 @@ highlight -- optional \code{fields} (extra tooltip columns) and
 centerpiece); a swimlane), \code{expr}
 (free R code over the group's
 rows; text). Each row takes \code{name}, \code{show} and its OWN optional
-\code{color} (a categorical column: the cell is split into one glyph per
-level, a bar into segments, a swimlane's events tinted) and \code{facet}
+\code{color} (a categorical column: the cell is split into one glyph or
+dumbbell per level, a bar into segments, a swimlane's events tinted)
+and \code{facet}
 (a categorical column: the column repeats once per level). Both are
 per column, so one column may split by severity while the next
 repeats per sex and a third carries neither. A \code{field} row never

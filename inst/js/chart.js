@@ -1093,7 +1093,9 @@
    * `focus` is the render-scoped registry the mousemove picker and the
    * '__focus__' overlay read (final series array + the styling a promoted line
    * wears). Null wherever there is no crowd to pick a line OUT of: on scatter,
-   * and on a line chart drawing a single line. `focusSi` is the series index
+   * and on a line chart drawing a single line. `focus.veil` is the scrim fill,
+   * unset until the first hover sets it from the plot's surface colour.
+   * `focusSi` is the series index
    * currently promoted, or null when nothing is.
    * `band` is the band chart's series-index registry -- the centre line and
    * ribbon slots each level occupies -- so the hover picker can patch ribbon
@@ -1109,7 +1111,8 @@
    *             focus: { series: any[], stepMode: string | null,
    *                      smoothOn: boolean, xAxisType: string,
    *                      xOrder: Map<string, number> | null,
-   *                      markerPx: number, focusW: number } | null,
+   *                      markerPx: number, focusW: number,
+   *                      veil?: string } | null,
    *             focusSi: number | null,
    *             band: { centerIdx: Record<string, number>,
    *                     ribbonIdx: Record<string, { idx: number, item: any }>,
