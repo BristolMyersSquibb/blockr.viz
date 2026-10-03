@@ -6158,12 +6158,19 @@
         const existed = !!slot.chart;
         const chart = this._ensureSlotChart(slot, 'timeline');
 
+        // Lane by term, once per panel: terms.indexOf() per row scanned every
+        // lane for every event (22,500 patients x 119,100 events was a page
+        // blocked for 9 s).
+        /** @type {Map<string, number>} */
+        const laneOf = new Map();
+        terms.forEach((t, i) => laneOf.set(t, i));
+
         const barData = [];
         for (const r of rows) {
           if (r[x] == null) continue;
           const term = String(r[y] ?? '');
-          const lane = terms.indexOf(term);
-          if (lane < 0) continue;
+          const lane = laneOf.get(term);
+          if (lane === undefined) continue;
           const s = xCoord(r[x], xCats);
           let e;
           if (xend && r[xend] != null && !Number.isNaN(Number(r[xend]))) {
