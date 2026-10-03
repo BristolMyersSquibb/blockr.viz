@@ -7,7 +7,8 @@
  * as an event. The selection is one filter, {type, filters}; the footer and
  * every clear read it. Methods of the chart view, like chrome.js.
  *
- * Timeline first; the other families add their handlers here.
+ * A latched filter dims the marks it does not light (D5): the family's
+ * option module builds the patch from each mark's keys.
  */
 (function () {
   'use strict';
@@ -19,6 +20,26 @@
   // the view's live state, never values captured at draw time, because an
   // instance outlives many draws.
   const handlers = {
+    // A click on a bar segment, slice, tile, radar shape, box or point range
+    // sends its mark's keys (D2, D3), or the drill column's values in the
+    // rows under it.
+    /** @param {any} view @param {any} slot */
+    aggregated(view, slot) {
+      slot.chart.on('click', (/** @type {any} */ params) => {
+        const cfg = view.config;
+        if (NS.drillState(cfg) === 'off') return;
+        const m = view._memo.model;
+        if (!m || m.family !== 'aggregated') return;
+        const at = NS.model.aggregatedMarkAt(m, cfg, params);
+        if (!at) return;
+        const keys = NS.model.aggregatedKeys(cfg, slot.facetVal, at.group, at.level);
+        const filters = NS.model.aggregatedClick(cfg, keys,
+          () => NS.model.rowsUnder(view.data, view._ix, keys));
+        if (!filters) return;
+        view._select(slot, params, filters);
+      });
+    },
+
     /** @param {any} view @param {any} slot */
     timeline(view, slot) {
       slot.chart.on('click', (/** @type {any} */ params) => {
@@ -49,7 +70,7 @@
         return;
       }
       this._filter = { type: 'categorical', filters };
-      this._updateStatus();
+      this._updateHighlight();
       this._sendFilter(filters);
     },
 
@@ -110,16 +131,42 @@
       for (const chart of this.charts) chart.dispatchAction({ type: 'brush', areas: [] });
     },
 
-    // The selection as opacities, one patch per series and nothing redrawn.
-    // A timeline dims nothing: its series patch is empty.
-    /** @this {any} */
+    /** The footer, then the marks. @this {any} */
     _updateHighlight() {
       this._updateStatus();
-      for (const chart of this.charts) {
-        const option = chart.getOption();
-        if (!option || !option.series) continue;
-        chart.setOption({ series: option.series.map(() => ({})) }, false);
-      }
+      this._applyHighlight();
+    },
+
+    // The selection as opacities, one patch per panel and nothing redrawn
+    // (D5): a mark is lit when its keys match the filter, or, for a filter
+    // on a column it does not carry, when one of its rows does.
+    /** @this {any} */
+    _applyHighlight() {
+      const fam = this._family();
+      const m = this._memo.model;
+      const f = this._filter && this._filter.type === 'categorical' ? this._filter.filters : null;
+      const lit = f
+        ? (/** @type {Record<string, any>} */ keys, /** @type {any} */ rows) => NS.keys.markLit(keys,
+            rows || (() => NS.model.rowsUnder(this.data, this._ix, keys)), f)
+        : null;
+      this._slots.forEach((/** @type {any} */ slot, /** @type {number} */ i) => {
+        if (!slot || !slot.chart) return;
+        const chart = slot.chart;
+        const current = chart.getOption();
+        if (!current || !current.series) return;
+        const panel = m && m.family === fam ? m.panels[i] : null;
+        /** @type {{ series: any[], dimmed: boolean }} */
+        let patch;
+        if (panel && fam === 'aggregated') {
+          patch = NS.option.aggregatedPatch(m, panel, this.config, current, lit, !!slot.dimmed);
+        } else if (panel && fam === 'timeline') {
+          patch = NS.option.timelinePatch(m, panel, this.config, lit, !!slot.dimmed);
+        } else {
+          patch = { series: current.series.map(() => ({})), dimmed: false };
+        }
+        slot.dimmed = patch.dimmed;
+        chart.setOption({ series: patch.series }, false);
+      });
     },
 
     // -- Transient drill signal --------------------------------------------

@@ -1,26 +1,289 @@
 {
+ "bar-selected": {
+  "ids": [
+   "D4"
+  ],
+  "why": "The restored filter reads Filtered: Reported Term = Nausea, in the column's label."
+ },
+ "interactions/click-bar-color": {
+  "ids": [
+   "D1",
+   "D2",
+   "D4",
+   "D5"
+  ],
+  "why": "The MODERATE segment of Rash sends AETERM and AESEV and only that segment stays lit; the missing-severity segment has no value to send, so it sends Rash alone and lights the whole bar instead of clearing; the footer names both columns."
+ },
+ "interactions/click-bar-facet-drill-column": {
+  "ids": [
+   "D1",
+   "D4",
+   "D5"
+  ],
+  "why": "The click sends the USUBJID values of the clicked panel's rows (as v1) and latches that filter: the footer names it, and every bar holding those patients is lit, in any panel; the second click resends instead of clearing."
+ },
+ "interactions/click-bar-grouped-vertical": {
+  "ids": [
+   "D2",
+   "D4",
+   "D5"
+  ],
+  "why": "The MODERATE bar of Rash sends AETERM and AESEV and only that bar stays lit; the footer names both columns."
+ },
+ "interactions/click-bar-latched": {
+  "ids": [
+   "D1",
+   "D2",
+   "D4"
+  ],
+  "why": "A second click on Nausea sends the filter again and keeps it lit instead of clearing; clicks send filters: {AETERM: [...]}; the footer names the column label."
+ },
+ "interactions/click-bar-transient": {
+  "ids": [
+   "D2",
+   "D4"
+  ],
+  "why": "The drill event sends filters: {AETERM: [Nausea]}; the receipt reads Drilled down to Reported Term = Nausea."
+ },
+ "interactions/click-bar-transient-drill-column": {
+  "ids": [
+   "D2",
+   "D4"
+  ],
+  "why": "The drill event sends filters: {USUBJID: [...]}; the receipt names nine values as USUBJID, 9 values."
+ },
+ "interactions/click-boxplot": {
+  "ids": [
+   "D1",
+   "D2",
+   "D4"
+  ],
+  "why": "A second click on Week 4 resends and keeps it lit instead of clearing; clicks send filters: {AVISIT: [...]}; the footer names the column."
+ },
+ "interactions/click-boxplot-color": {
+  "ids": [
+   "D1",
+   "D2",
+   "D4",
+   "D5"
+  ],
+  "why": "A box sends AVISIT and ARM and only that box stays lit; the other arm's box in the same visit is a new filter, not a toggle; the footer names both columns."
+ },
+ "interactions/click-boxplot-facet": {
+  "ids": [
+   "D4",
+   "D5"
+  ],
+  "why": "The click sends the USUBJID values under the clicked box (as v1) and latches that filter: the footer names it, and the boxes holding those patients are lit."
+ },
  "interactions/click-gantt": {
-  "ids": ["D2", "D4", "B1"],
-  "why": "Clicks send filters: {AETERM: [...]} (the message D2/D3 extend); the footer names the column label (Reported Term = Rash); Reset clears with filter_type categorical, the type it latched."
+  "ids": [
+   "D1",
+   "D2",
+   "D4",
+   "D5",
+   "B1"
+  ],
+  "why": "Clicks send filters: {AETERM: [...]} (the message D2/D3 extend); the footer names the column label (Reported Term = Rash); the lanes outside the filter dim, where v1 dimmed nothing; Reset clears with filter_type categorical, the type it latched, and lights every bar again."
  },
  "interactions/click-gantt-drill-column": {
-  "ids": ["D2", "D4"],
-  "why": "The click sends filters: {USUBJID: [S01]}, and the footer names that filter (USUBJID = S01) instead of the lane (Rash)."
+  "ids": [
+   "D2",
+   "D4",
+   "D5"
+  ],
+  "why": "The click sends filters: {USUBJID: [S01]}, and the footer names that filter (USUBJID = S01) instead of the lane (Rash); the bars of other patients dim."
  },
  "interactions/click-gantt-facet": {
-  "ids": ["D3", "D4"],
-  "why": "A click in the Low Dose panel filters USUBJID = S02 and ARM = Low Dose, and the footer says both in column labels."
+  "ids": [
+   "D3",
+   "D4",
+   "D5"
+  ],
+  "why": "A click in the Low Dose panel filters USUBJID = S02 and ARM = Low Dose, the footer says both in column labels, and every other bar dims."
+ },
+ "interactions/click-gantt-facet-drill-column": {
+  "ids": [
+   "D2",
+   "D4",
+   "D5"
+  ],
+  "why": "The click sends filters: {AETERM: [Headache]}, the drill column only, without the facet; the footer names that filter; the bars outside it dim."
  },
  "interactions/click-gantt-transient": {
-  "ids": ["D2", "D4"],
+  "ids": [
+   "D2",
+   "D4"
+  ],
   "why": "The drill event sends filters: {AETERM: [Rash]}; the receipt reads Drilled down to Reported Term = Rash."
  },
+ "interactions/click-pie": {
+  "ids": [
+   "D1",
+   "D2",
+   "D4"
+  ],
+  "why": "A second click on SEVERE resends and keeps it lit instead of clearing; clicks send filters: {AESEV: [...]}; the footer names the column."
+ },
+ "interactions/click-pie-facet": {
+  "ids": [
+   "D1",
+   "D3",
+   "D4",
+   "D5"
+  ],
+  "why": "A slice in the M panel sends AESEV and SEX = M and only that panel's slice stays lit; MILD in another panel is a new filter, not a toggle; the footer names both columns."
+ },
+ "interactions/click-pie-transient": {
+  "ids": [
+   "D3"
+  ],
+  "why": "The drill event from the F panel sends AESEV = MILD and SEX = F."
+ },
+ "interactions/click-pointrange": {
+  "ids": [
+   "D2",
+   "D4",
+   "D5"
+  ],
+  "why": "Clicks send filters: {AVISIT: [...]}; the footer names the column; the point ranges outside the filter dim, where v1 dimmed nothing."
+ },
+ "interactions/click-pointrange-color": {
+  "ids": [
+   "D2",
+   "D4",
+   "D5"
+  ],
+  "why": "The first dot sends AVISIT and ARM; the footer names both columns; the other point ranges dim, where v1 dimmed nothing."
+ },
+ "interactions/click-radar-color": {
+  "ids": [
+   "D2",
+   "D4"
+  ],
+  "why": "Clicks send filters: {ARM: [...]}; the footer names the column label."
+ },
+ "interactions/click-radar-drill-column": {
+  "ids": [
+   "D2",
+   "D4"
+  ],
+  "why": "The click sends filters: {USUBJID: [...]} and the footer names that filter (USUBJID, 4 values) instead of the shape."
+ },
+ "interactions/click-radar-facet": {
+  "ids": [
+   "D3",
+   "D4",
+   "D5"
+  ],
+  "why": "A shape in the M panel sends AESEV = MILD and SEX = M, and the MILD shape of the F panel dims; the footer names both columns."
+ },
+ "interactions/click-treemap": {
+  "ids": [
+   "D1",
+   "D2",
+   "D4"
+  ],
+  "why": "A second click on Nausea resends and keeps it lit instead of clearing; clicks send filters: {AETERM: [...]}; the footer names the column label."
+ },
+ "interactions/click-waterfall": {
+  "ids": [
+   "D1",
+   "D2",
+   "D4"
+  ],
+  "why": "A click on the base under the latched step resends Week 2 instead of clearing; clicks send filters: {AVISIT: [...]}; the footer names the column."
+ },
+ "interactions/export-capture-throws": {
+  "ids": [
+   "B3"
+  ],
+  "why": "The hidden capture host is removed when the payload throws."
+ },
+ "interactions/export-capture-timeout": {
+  "ids": [
+   "B3"
+  ],
+  "why": "The hidden capture host is removed when the capture times out."
+ },
+ "interactions/gear-drive-bar-selection-then-mapping": {
+  "ids": [
+   "D4",
+   "D2"
+  ],
+  "why": "The click sends filters: {AETERM: [Nausea]} and the footer names the column; the group change that clears the filter shows No filter active at once and lights every bar."
+ },
  "interactions/gear-drive-gantt": {
-  "ids": ["B1"],
+  "ids": [
+   "B1"
+  ],
   "why": "A gear edit that clears the filter sends filter_type categorical, not range."
  },
+ "interactions/life-initialize-twice": {
+  "ids": [
+   "B2"
+  ],
+  "why": "A second initialize disposes the old view's ECharts instance."
+ },
+ "interactions/life-remount": {
+  "ids": [
+   "B2"
+  ],
+  "why": "A re-mount under the same id disposes the old view's instances."
+ },
+ "interactions/restore-bar-column-differs": {
+  "ids": [
+   "D5"
+  ],
+  "why": "A restored USUBJID = S01 lights the bars that hold rows of S01 instead of dimming every bar."
+ },
+ "interactions/restore-bar-echo-keeps": {
+  "ids": [
+   "D2",
+   "D4"
+  ],
+  "why": "The click sends filters: {AETERM: [Rash]}; the footer names the column label."
+ },
+ "interactions/restore-bar-multi": {
+  "ids": [
+   "D2",
+   "D4",
+   "D5"
+  ],
+  "why": "The restored Nausea and Headache both light; a click on the SEVERE segment of Nausea sends AETERM and AESEV; the footer names the column labels."
+ },
+ "interactions/restore-bar-single": {
+  "ids": [
+   "D1",
+   "D2",
+   "D4"
+  ],
+  "why": "A click on the restored Nausea resends and keeps it instead of clearing; clicks send filters: {AETERM: [...]}; the footer names the column label."
+ },
  "interactions/restore-gantt": {
-  "ids": ["D4"],
-  "why": "The restored filter reads Filtered: Reported Term = Rash, in the column's label."
+  "ids": [
+   "D4",
+   "D5"
+  ],
+  "why": "The restored filter reads Filtered: Reported Term = Rash, in the column's label, and the lanes other than Rash dim."
+ },
+ "interactions/restore-radar": {
+  "ids": [
+   "D4"
+  ],
+  "why": "The restored filter reads Filtered: Planned Arm = Placebo."
+ },
+ "interactions/restore-receipt": {
+  "ids": [
+   "D2",
+   "D4"
+  ],
+  "why": "The drill event sends filters: {AETERM: [Nausea]}; the receipt reads Drilled down to Reported Term = Nausea."
+ },
+ "interactions/restore-treemap": {
+  "ids": [
+   "D4"
+  ],
+  "why": "The restored filter reads Filtered: Reported Term = Rash."
  }
 }

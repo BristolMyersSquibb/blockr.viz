@@ -1,0 +1,16 @@
+{
+ "before": [],
+ "after": [
+  {
+   "name": "blockr_viz_capture_result",
+   "value": {
+    "req": "tok-2",
+    "error": "the chart did not compose in time"
+   },
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ],
+ "hosts": []
+}

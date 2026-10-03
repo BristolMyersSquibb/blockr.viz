@@ -23,11 +23,22 @@
   const NS = /** @type {any} */ (B.chart = B.chart || {});
 
   // The families v2 draws; the rest show an empty state until built.
-  /** @type {Record<string, { model: any, option: any, legend: any }>} */
+  // `widths`: the option reads each panel's width (x labels, value labels).
+  // `alwaysHighlight`: every draw ends with a highlight patch, as v1's
+  // aggregated draw did; the others patch only while a filter is active.
+  /** @typedef {{ model: any, option: any, legend: any, widths: boolean,
+   *              alwaysHighlight: boolean }} FamilyImpl */
+  /** @type {Record<string, FamilyImpl>} */
   const FAMILIES = {
+    aggregated: { model: NS.model.aggregated, option: NS.option.aggregated,
+                  legend: NS.option.aggregatedLegend, widths: true, alwaysHighlight: true },
     timeline: { model: NS.model.timeline, option: NS.option.timeline,
-                legend: NS.option.timelineLegend }
+                legend: NS.option.timelineLegend, widths: false, alwaysHighlight: false }
   };
+
+  // What a distribution panel draws without a numeric value.
+  const NO_VALUE_HTML = '<div class="vd-empty-state"><p class="vd-empty-text">' +
+    'Pick a numeric Value to plot its distribution</p></div>';
 
   /** @param {Record<string, any>} cfg @param {string[]} fields */
   const pick = (cfg, fields) => {
@@ -198,29 +209,53 @@
       this._observeResize();
     }
 
-    /** @param {string} fam @param {{ model: any, option: any, legend: any }} impl */
+    /** @param {string} fam @param {FamilyImpl} impl */
     _draw(fam, impl) {
       const m = this._model(impl);
       if (m.empty) { this._showEmpty(m.empty); return; }
       this._applyFacetGrid(m.nFacets);
-      const o = this._option(impl, m);
       // Panels without rows draw no slot, so the panel count is the shape.
       this._syncShape(fam, m.panels.length);
-      m.panels.forEach((/** @type {any} */ panel, /** @type {number} */ i) => {
+      // Each panel's width is read as its slot is laid out, before the slots
+      // after it exist, as v1 reads it.
+      const widths = m.panels.map((/** @type {any} */ panel, /** @type {number} */ i) => {
         const slot = this._ensureSlot(i, panel.label, m.single);
         slot.facetVal = panel.facet;
-        const hChanged = this._setSlotHeight(slot, o.panels[i].height);
+        return slot.chartDiv.clientWidth;
+      });
+      const o = this._option(impl, m, impl.widths ? widths : null);
+      m.panels.forEach((/** @type {any} */ panel, /** @type {number} */ i) => {
+        const slot = this._slots[i];
+        const po = o.panels[i];
+        if (!po.option) {
+          // Nothing to draw here: the empty state owns the div.
+          if (slot.chart) { slot.chart.dispose(); slot.chart = null; }
+          this._setSlotHeight(slot, po.height);
+          slot.chartDiv.innerHTML = NO_VALUE_HTML;
+          return;
+        }
+        const hChanged = this._setSlotHeight(slot, po.height);
         const existed = !!slot.chart;
         const chart = this._ensureSlotChart(slot, fam);
-        chart.setOption(o.panels[i].option, true);
+        // What a resize needs to re-fit turned x labels: a copy, since the
+        // re-fit updates it, plus the slot and its height without the gutter.
+        chart.__xFit = po.xFit
+          ? { ...po.xFit, slot, baseH: po.panelH - po.xFit.gutter } : undefined;
+        chart.setOption(po.option, true);
+        slot.dimmed = false;
         // A fresh instance measures its height; a kept one needs telling.
         if (existed && hChanged) chart.resize();
       });
       this.charts = this._slots.map((s) => s.chart).filter(Boolean);
       this._harmoniseAxes();
       this._updateLegendBand(impl.legend(m, this.config));
-      this._capMessage = null;
-      this._updateStatus();
+      this._capMessage = o.labelNote || null;
+      if (impl.alwaysHighlight) {
+        this._updateHighlight();
+      } else {
+        this._updateStatus();
+        if (this._filter) this._applyHighlight();
+      }
     }
 
     /** @param {{ model: any }} impl */
@@ -236,15 +271,16 @@
       return this._memo.model;
     }
 
-    /** @param {{ option: any }} impl @param {any} m */
-    _option(impl, m) {
+    /** @param {{ option: any }} impl @param {any} m @param {number[] | null} widths */
+    _option(impl, m, widths) {
       const ink = this._ink;
       const key = this._memo.modelKey + '\u0000' + pick(this.config, impl.option.FIELDS) +
-        '\u0000' + JSON.stringify(ink) + '\u0000' + (this.theme || '');
+        '\u0000' + JSON.stringify(ink) + '\u0000' + (this.theme || '') +
+        '\u0000' + (widths ? widths.join(',') : '');
       if (this._memo.optionKey !== key) {
         this._memo.option = impl.option(m, {
           cfg: this.config, columns: this.columns, ink, theme: this.theme,
-          measure: this._measure(ink)
+          measure: this._measure(ink), widths: widths || []
         });
         this._memo.optionKey = key;
       }
@@ -341,7 +377,7 @@
         const chartDiv = document.createElement('div');
         chartDiv.className = 'dd-chart';
         container.appendChild(chartDiv);
-        slot = { container, labelEl, chartDiv, chart: null, facetVal: null,
+        slot = { container, labelEl, chartDiv, chart: null, facetVal: null, dimmed: false,
                  hover: { si: null }, seriesByColorByVal: null,
                  brushable: false, zoomArmed: false, zoom: null,
                  focus: null, focusSi: null, band: null, bandFocus: null };
@@ -378,7 +414,38 @@
     _resizeCharts() {
       if (!this.chartGrid || this.chartGrid.offsetParent === null) return;
       if (!this.chartGrid.clientWidth || !this.chartGrid.clientHeight) return;
-      for (const c of this.charts) c.resize();
+      for (const c of this.charts) {
+        c.resize();
+        this._refitXLabels(c);
+      }
+    }
+
+    // A resize keeps the option built at the old width, so turned or
+    // wrapped x labels stay as they were. Measure again at the new width
+    // and, when the layout changed, patch the labels, the grid's bottom
+    // gutter and the canvas height by the gutter's change.
+    /** @param {any} chart */
+    _refitXLabels(chart) {
+      const fit = chart.__xFit;
+      if (!fit) return;
+      const lab = NS.axes.xAxisLabels(fit.labels, chart.getWidth() - fit.inset, fit.decimate,
+                                      this._measure(this._ink), this._ink);
+      if (fit.key === lab.key) return;
+      fit.key = lab.key;
+      const delta = lab.bottom - fit.gutter;
+      fit.gutter = lab.bottom;
+      const grid = (chart.getOption().grid || [])[0] || {};
+      /** @type {any} */
+      const xPatch = { axisLabel: NS.axes.axisLabelWithDisplay(lab.axisLabel, fit.formatter) };
+      // A titled x axis moves its title below the turned text.
+      if (fit.nameGap) xPatch.nameGap = lab.bottom ? lab.bottom + 16 : 28;
+      chart.setOption({ xAxis: [xPatch], grid: { bottom: (Number(grid.bottom) || 0) + delta } });
+      // The canvas last; the observer comes back here once, and finds the
+      // key unchanged.
+      if (delta && fit.slot &&
+          this._setSlotHeight(fit.slot, Math.round(fit.baseH + lab.bottom) + 'px')) {
+        chart.resize();
+      }
     }
 
     // One resize per animation frame, however many ticks a relayout fires.

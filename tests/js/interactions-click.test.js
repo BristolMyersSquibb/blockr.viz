@@ -306,6 +306,12 @@ scenario('gantt-facet', { ...GANTT, y: 'USUBJID', facet: 'ARM' }, [
   click(named('first bar', () => true), 1)
 ]);
 
+// An explicit drill column in a facet panel: only the drill column is sent,
+// the clicked event's own value of it.
+scenario('gantt-facet-drill-column', { ...GANTT, y: 'USUBJID', facet: 'ARM', drill: 'AETERM' }, [
+  click(named('first bar', () => true), 1)
+]);
+
 scenario('gantt-transient', { ...GANTT, ctrl_target: 'auto' }, [
   click(lane('Rash'), 0, box), wait(3100)
 ]);

@@ -1,0 +1,270 @@
+{
+ "config": {
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "auto",
+  "color": "AESEV",
+  "bar_mode": "grouped",
+  "orientation": "vertical"
+ },
+ "steps": [
+  {
+   "step": "click Rash / MODERATE",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "AETERM": [
+        "Rash"
+       ],
+       "AESEV": [
+        "MODERATE"
+       ]
+      },
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 8,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 8,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 10,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: Reported Term = Rash, AESEV = MODERATE"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": {
+     "AETERM": [
+      "Rash"
+     ],
+     "AESEV": [
+      "MODERATE"
+     ]
+    },
+    "selectedColumn": [
+     "AETERM",
+     "AESEV"
+    ],
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

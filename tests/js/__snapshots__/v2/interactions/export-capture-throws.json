@@ -1,0 +1,16 @@
+{
+ "now": [
+  {
+   "name": "blockr_viz_capture_result",
+   "value": {
+    "req": "tok-3",
+    "error": "SyntaxError:…"
+   },
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ],
+ "later": 1,
+ "hosts": []
+}

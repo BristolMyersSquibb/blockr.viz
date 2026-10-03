@@ -4,7 +4,7 @@
   "x": "ASTDY",
   "xend": "AENDY",
   "y": "USUBJID",
-  "drill": "auto",
+  "drill": "AETERM",
   "facet": "ARM"
  },
  "steps": [
@@ -17,11 +17,8 @@
       "action": "filter",
       "filter_type": "categorical",
       "filters": {
-       "USUBJID": [
-        "S02"
-       ],
-       "ARM": [
-        "Low Dose"
+       "AETERM": [
+        "Headache"
        ]
       },
       "nonce": 1
@@ -50,7 +47,7 @@
              "",
              "",
              "",
-             "S03",
+             "Nausea",
              0
             ],
             "itemStyle": {
@@ -66,11 +63,11 @@
              "",
              "",
              "",
-             "S03",
+             "Headache",
              0
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -82,7 +79,7 @@
              "",
              "",
              "",
-             "S03",
+             "Rash",
              0
             ],
             "itemStyle": {
@@ -98,7 +95,7 @@
              "",
              "",
              "",
-             "S03",
+             "Upper respiratory tract infection",
              0
             ],
             "itemStyle": {
@@ -114,7 +111,7 @@
              "",
              "",
              "",
-             "S03",
+             "Fatigue",
              0
             ],
             "itemStyle": {
@@ -130,7 +127,7 @@
              "",
              "",
              "",
-             "S06",
+             "Upper respiratory tract infection",
              0
             ],
             "itemStyle": {
@@ -146,7 +143,7 @@
              "",
              "",
              "",
-             "S06",
+             "Fatigue",
              0
             ],
             "itemStyle": {
@@ -162,7 +159,7 @@
              "",
              "",
              "",
-             "S06",
+             "Dizziness",
              0
             ],
             "itemStyle": {
@@ -178,7 +175,7 @@
              "",
              "",
              "",
-             "S06",
+             "Nausea",
              0
             ],
             "itemStyle": {
@@ -194,11 +191,11 @@
              "",
              "",
              "",
-             "S06",
+             "Headache",
              0
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -210,7 +207,7 @@
              "",
              "",
              "",
-             "S09",
+             "Nausea",
              0
             ],
             "itemStyle": {
@@ -226,11 +223,11 @@
              "",
              "",
              "",
-             "S09",
+             "Headache",
              0
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -242,7 +239,7 @@
              "",
              "",
              "",
-             "S09",
+             "Rash",
              0
             ],
             "itemStyle": {
@@ -258,7 +255,7 @@
              "",
              "",
              "",
-             "S09",
+             "Upper respiratory tract infection",
              0
             ],
             "itemStyle": {
@@ -274,7 +271,7 @@
              "",
              "",
              "",
-             "S09",
+             "Fatigue",
              0
             ],
             "itemStyle": {
@@ -306,7 +303,7 @@
              "",
              "",
              "",
-             "S02",
+             "Headache",
              0
             ],
             "itemStyle": {
@@ -322,11 +319,11 @@
              "",
              "",
              "",
-             "S02",
+             "Rash",
              0
             ],
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -338,11 +335,11 @@
              "",
              "",
              "",
-             "S02",
+             "Upper respiratory tract infection",
              0
             ],
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -354,11 +351,11 @@
              "",
              "",
              "",
-             "S02",
+             "Fatigue",
              0
             ],
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -370,11 +367,11 @@
              "",
              "",
              "",
-             "S02",
+             "Dizziness",
              0
             ],
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -386,7 +383,7 @@
              "",
              "",
              "",
-             "S05",
+             "Fatigue",
              0
             ],
             "itemStyle": {
@@ -402,7 +399,7 @@
              "",
              "",
              "",
-             "S05",
+             "Dizziness",
              0
             ],
             "itemStyle": {
@@ -418,7 +415,7 @@
              "",
              "",
              "",
-             "S05",
+             "Nausea",
              0
             ],
             "itemStyle": {
@@ -434,11 +431,11 @@
              "",
              "",
              "",
-             "S05",
+             "Headache",
              0
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -450,7 +447,7 @@
              "",
              "",
              "",
-             "S05",
+             "Rash",
              0
             ],
             "itemStyle": {
@@ -466,11 +463,11 @@
              "",
              "",
              "",
-             "S08",
+             "Headache",
              0
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -482,7 +479,7 @@
              "",
              "",
              "",
-             "S08",
+             "Rash",
              0
             ],
             "itemStyle": {
@@ -498,7 +495,7 @@
              "",
              "",
              "",
-             "S08",
+             "Upper respiratory tract infection",
              0
             ],
             "itemStyle": {
@@ -514,7 +511,7 @@
              "",
              "",
              "",
-             "S08",
+             "Fatigue",
              0
             ],
             "itemStyle": {
@@ -530,7 +527,7 @@
              "",
              "",
              "",
-             "S08",
+             "Dizziness",
              0
             ],
             "itemStyle": {
@@ -546,7 +543,7 @@
              "",
              "",
              "",
-             "S11",
+             "Fatigue",
              0
             ],
             "itemStyle": {
@@ -562,7 +559,7 @@
              "",
              "",
              "",
-             "S11",
+             "Dizziness",
              0
             ],
             "itemStyle": {
@@ -578,7 +575,7 @@
              "",
              "",
              "",
-             "S11",
+             "Nausea",
              0
             ],
             "itemStyle": {
@@ -594,11 +591,11 @@
              "",
              "",
              "",
-             "S11",
+             "Headache",
              0
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -610,7 +607,7 @@
              "",
              "",
              "",
-             "S11",
+             "Rash",
              0
             ],
             "itemStyle": {
@@ -642,7 +639,7 @@
              "",
              "",
              "",
-             "S01",
+             "Rash",
              0
             ],
             "itemStyle": {
@@ -658,7 +655,7 @@
              "",
              "",
              "",
-             "S01",
+             "Upper respiratory tract infection",
              0
             ],
             "itemStyle": {
@@ -674,7 +671,7 @@
              "",
              "",
              "",
-             "S01",
+             "Fatigue",
              0
             ],
             "itemStyle": {
@@ -690,7 +687,7 @@
              "",
              "",
              "",
-             "S01",
+             "",
              0
             ],
             "itemStyle": {
@@ -706,7 +703,7 @@
              "",
              "",
              "",
-             "S01",
+             "Nausea",
              0
             ],
             "itemStyle": {
@@ -722,7 +719,7 @@
              "",
              "",
              "",
-             "S04",
+             "Dizziness",
              0
             ],
             "itemStyle": {
@@ -738,7 +735,7 @@
              "",
              "",
              "",
-             "S04",
+             "Nausea",
              0
             ],
             "itemStyle": {
@@ -754,11 +751,11 @@
              "",
              "",
              "",
-             "S04",
+             "Headache",
              0
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -770,7 +767,7 @@
              "",
              "",
              "",
-             "S04",
+             "",
              0
             ],
             "itemStyle": {
@@ -786,7 +783,7 @@
              "",
              "",
              "",
-             "S04",
+             "Upper respiratory tract infection",
              0
             ],
             "itemStyle": {
@@ -802,7 +799,7 @@
              "",
              "",
              "",
-             "S07",
+             "Rash",
              0
             ],
             "itemStyle": {
@@ -818,7 +815,7 @@
              "",
              "",
              "",
-             "S07",
+             "Upper respiratory tract infection",
              0
             ],
             "itemStyle": {
@@ -834,7 +831,7 @@
              "",
              "",
              "",
-             "S07",
+             "",
              0
             ],
             "itemStyle": {
@@ -850,7 +847,7 @@
              "",
              "",
              "",
-             "S07",
+             "Dizziness",
              0
             ],
             "itemStyle": {
@@ -866,7 +863,7 @@
              "",
              "",
              "",
-             "S07",
+             "Nausea",
              0
             ],
             "itemStyle": {
@@ -882,7 +879,7 @@
              "",
              "",
              "",
-             "S10",
+             "Dizziness",
              0
             ],
             "itemStyle": {
@@ -898,7 +895,7 @@
              "",
              "",
              "",
-             "S10",
+             "Nausea",
              0
             ],
             "itemStyle": {
@@ -914,11 +911,11 @@
              "",
              "",
              "",
-             "S10",
+             "Headache",
              0
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -930,7 +927,7 @@
              "",
              "",
              "",
-             "S10",
+             "Rash",
              0
             ],
             "itemStyle": {
@@ -946,7 +943,7 @@
              "",
              "",
              "",
-             "S10",
+             "Upper respiratory tract infection",
              0
             ],
             "itemStyle": {
@@ -964,25 +961,15 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: USUBJID = S02, Planned Arm = Low Dose"
+     "text": "Filtered: Reported Term = Headache"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": {
-     "USUBJID": [
-      "S02"
-     ],
-     "ARM": [
-      "Low Dose"
-     ]
-    },
-    "selectedColumn": [
-     "USUBJID",
-     "ARM"
-    ],
+    "selected": "Headache",
+    "selectedColumn": "AETERM",
     "brush": false
    },
    "signal": null,

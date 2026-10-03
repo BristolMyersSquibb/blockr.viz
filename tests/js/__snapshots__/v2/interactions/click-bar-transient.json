@@ -1,0 +1,266 @@
+{
+ "config": {
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "auto",
+  "ctrl_target": "auto"
+ },
+ "steps": [
+  {
+   "step": "click Nausea",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "AETERM": [
+        "Nausea"
+       ]
+      },
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text dd-status-receipt",
+     "text": "Drilled down to Reported Term = Nausea",
+     "animation": "dd-receipt-out 1100ms linear 1400ms both"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": {
+    "cls": "dd-drill-flash",
+    "left": "10px",
+    "top": "20px",
+    "width": "120px",
+    "height": "18px",
+    "borderRadius": "0px 2px 2px 0px"
+   },
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 2000,
+     "left": 2000
+    },
+    {
+     "ms": 3100,
+     "left": 3100
+    }
+   ]
+  },
+  {
+   "step": "advance 1200 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text dd-status-receipt",
+     "text": "Drilled down to Reported Term = Nausea",
+     "animation": "dd-receipt-out 1100ms linear 1400ms both"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": {
+    "cls": "dd-drill-flash",
+    "left": "10px",
+    "top": "20px",
+    "width": "120px",
+    "height": "18px",
+    "borderRadius": "0px 2px 2px 0px"
+   },
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 2000,
+     "left": 800
+    },
+    {
+     "ms": 3100,
+     "left": 1900
+    }
+   ]
+  },
+  {
+   "step": "click Nausea",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "AETERM": [
+        "Nausea"
+       ]
+      },
+      "nonce": 2
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text dd-status-receipt",
+     "text": "Drilled down to Reported Term = Nausea",
+     "animation": "dd-receipt-out 1100ms linear 1400ms both"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": {
+    "cls": "dd-drill-flash",
+    "left": "10px",
+    "top": "20px",
+    "width": "120px",
+    "height": "18px",
+    "borderRadius": "0px 2px 2px 0px"
+   },
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 2000,
+     "left": 800
+    },
+    {
+     "ms": 2000,
+     "left": 2000
+    },
+    {
+     "ms": 3100,
+     "left": 3100
+    }
+   ]
+  },
+  {
+   "step": "advance 2000 ms",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text dd-status-receipt",
+     "text": "Drilled down to Reported Term = Nausea",
+     "animation": "dd-receipt-out 1100ms linear 1400ms both"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 3100,
+     "left": 1100
+    }
+   ]
+  },
+  {
+   "step": "advance 1200 ms",
+   "inputs": [],
+   "calls": [],
+   "footer": [],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": []
+  },
+  {
+   "step": "click Headache",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "AETERM": [
+        "Headache"
+       ]
+      },
+      "nonce": 3
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text dd-status-receipt",
+     "text": "Drilled down to Reported Term = Headache",
+     "animation": "dd-receipt-out 1100ms linear 1400ms both"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": {
+    "cls": "dd-drill-pulse",
+    "left": "55px",
+    "top": "66px",
+    "width": null,
+    "height": null,
+    "borderRadius": null
+   },
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 1200,
+     "left": 1200
+    },
+    {
+     "ms": 3100,
+     "left": 3100
+    }
+   ]
+  }
+ ]
+}
