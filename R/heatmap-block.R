@@ -364,10 +364,22 @@ new_heatmap_block <- function(row = character(),
         last_msg$json <- NULL
         last_msg$rev <- 0L
 
+        # Sent once the current flush is out. A custom message goes on the
+        # socket at once, ahead of the flush's output values, and on a panel's
+        # first visit those values carry the chrome that loads
+        # heatmap-block.js. Shiny drops a message with no handler, so the
+        # payload was lost and the `_ready` reply below re-sent it after
+        # every other output of the session (about 300 ms on a first open).
+        # After the flush, the client handles the chrome, waits for its
+        # script, and then reads the payload.
         push <- function(json) {
-          session$sendCustomMessage("blockr-viz-heatmap-data", list(
-            id = ns("heatmap_block"), rev = last_msg$rev, payload = json
-          ))
+          rev <- last_msg$rev
+          session$onFlushed(function() {
+            if (rev != last_msg$rev) return()
+            session$sendCustomMessage("blockr-viz-heatmap-data", list(
+              id = ns("heatmap_block"), rev = rev, payload = json
+            ))
+          }, once = TRUE)
         }
 
         # The client announces itself when it binds with nothing to render.
