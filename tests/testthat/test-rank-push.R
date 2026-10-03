@@ -474,6 +474,11 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
     pair_plain = list(by = c("SOC", "TERM"), summaries = list(
       list(type = "pair", from = "CHG", to = "AVAL", to_func = "mean")
     )),
+    # The colour split: one dumbbell per level, repeated per arm.
+    pair_split = list(by = "TERM", summaries = list(
+      list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
+           to_func = "mean", ref = 20, color = "SEV", facet = "ARM")
+    )),
     # The summarize-table path: every row type in one heterogeneous table,
     # and the facet + pooled + field composition.
     summaries_mixed = list(by = "TERM", summaries = list(
@@ -556,7 +561,7 @@ test_that("a pair column ships both ends, the band, the ref and the flags", {
   ae <- push_fixture()
   prep <- rank_prepare(ae, by = "USUBJID", summaries = list(
     list(type = "pair", from = "AVAL", from_func = "min", to = "DUR",
-         to_func = "max", lo = 5, ref = 10, dash = "SEV", color = "ARM")
+         to_func = "max", lo = 5, ref = 10, dash = "SEV")
   ))
   expect_null(prep$err)
   p <- prep$plan[[1]]
@@ -571,8 +576,55 @@ test_that("a pair column ships both ends, the band, the ref and the flags", {
   # A `to` below the band's low end is drawn open.
   expect_identical(c1$open, !is.na(b) & b < 5)
   expect_true(is.finite(c1$rf))
-  expect_true(all(!is.na(c1$fill)))
   expect_match(c1$disp[[1]], "^\\+")
+})
+
+test_that("a coloured pair column draws one dumbbell per level", {
+  ae <- push_fixture()
+  prep <- rank_prepare(ae, by = "TERM", summaries = list(
+    list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
+         to_func = "mean", color = "SEV")
+  ))
+  expect_null(prep$err)
+  p <- prep$plan[[1]]
+  expect_length(p$lcols, 2L)
+  rows <- prep$rows
+  # Each level's ends come from that level's rows only.
+  for (j in 1:2) {
+    lv <- c("MILD", "MODERATE")[[j]]
+    want <- vapply(rows$TERM, function(t) {
+      mean(ae$SDY[ae$TERM == t & ae$SEV == lv])
+    }, numeric(1))
+    expect_equal(rows[[p$lcols[[j]][["a"]]]], unname(want), info = lv)
+  }
+  # The pooled pair stays the sort value; the column domain takes in
+  # every level's ends.
+  ends <- unlist(lapply(c(list(p$cols), p$lcols), function(cn) {
+    unlist(rows[cn[c("a", "b")]])
+  }))
+  expect_true(p$dmin <= min(ends) && p$dmax >= max(ends))
+  c1 <- rank_cells(prep)$cols[[1]]
+  expect_true(isTRUE(c1$multi))
+  expect_identical(c1$levels, c("MILD", "MODERATE"))
+  expect_length(c1$lv, 2L)
+  expect_true(all(c1$lv[[1]]$fill == c1$fills[[1]]))
+  expect_match(c1$lv[[2]]$tip[[1]], "^MODERATE \u00b7 ")
+  # Two dumbbells, so no single change printed beside them.
+  expect_true(all(c1$disp == ""))
+  html <- rank_cells_html(rank_cells(prep))
+  expect_match(html, "blockr-rank-multi", fixed = TRUE)
+  expect_match(html, "blockr-rank-pacell", fixed = TRUE)
+})
+
+test_that("a coloured pair of one level per row keeps its value label", {
+  ae <- push_fixture()
+  ae <- ae[!duplicated(ae$USUBJID), ]
+  prep <- rank_prepare(ae, by = "USUBJID", summaries = list(
+    list(type = "pair", from = "AVAL", to = "DUR", color = "ARM")
+  ))
+  c1 <- rank_cells(prep)$cols[[1]]
+  expect_true(isTRUE(c1$multi))
+  expect_true(all(grepl("^\\+", c1$disp)))
 })
 
 test_that("a pair row names a missing column", {
@@ -602,5 +654,27 @@ test_that("a pair column's dash levels come from the full data, not the facet", 
       if (length(x)) x[[1]] else NA_character_
     }, character(1))
     expect_identical(d, match(sev, c("MILD", "MODERATE")), info = lv)
+  }
+})
+
+test_that("a nested pair's parent row summarises its own rows", {
+  ae <- push_fixture()
+  prep <- rank_prepare(ae, by = c("SOC", "TERM"), summaries = list(
+    list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
+         to_func = "mean")
+  ))
+  expect_null(prep$err)
+  p <- prep$plan[[1]]
+  rows <- prep$rows
+  # Over the SOC's own rows, not the mean of its terms' means (SOC A has
+  # terms of 16 and 12 rows, so the two differ).
+  par <- rows[is.na(rows$.parent), , drop = FALSE]
+  expect_identical(par$.label, c("SOC A", "SOC B"))
+  for (k in seq_len(nrow(par))) {
+    soc <- par$.label[[k]]
+    expect_equal(par[[p$cols[["a"]]]][[k]], mean(ae$SDY[ae$SOC == soc]),
+                 info = soc)
+    expect_equal(par[[p$cols[["b"]]]][[k]], mean(ae$EDY[ae$SOC == soc]),
+                 info = soc)
   }
 })

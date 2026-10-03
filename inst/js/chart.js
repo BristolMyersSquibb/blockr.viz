@@ -654,7 +654,7 @@
     // saved state, R round-trip) but display human labels; bare internals
     // in the picker read as jargon. '#num' expands to numeric columns,
     // which label themselves (name + variable label).
-    sort_by:  { label: 'Sort', kind: 'select', pairedWith: 'sort_dir',
+    sort_by:  { label: 'Sort', kind: 'select',
                 optionsBy: {
                   aggregated: [
                     { value: 'value', label: 'By value' },
@@ -670,9 +670,12 @@
                     '#num'
                   ]
                 } },
-    sort_dir: { label: 'Order', kind: 'select',
-                options: [{ value: 'asc',  label: 'Ascending' },
-                          { value: 'desc', label: 'Descending' }] },
+    // Two values, so a segmented control beside Sort (design system,
+    // "Segmented control"). Descending leads, as the mock-up draws it; an
+    // unset order sorts ascending, which `dflt` says.
+    sort_dir: { label: 'Order', kind: 'segmented', dflt: 'asc',
+                options: [{ value: 'desc', label: 'Descending' },
+                          { value: 'asc',  label: 'Ascending' }] },
     orientation: { label: 'Orientation', kind: 'segmented',
                    options: [{ value: 'horizontal', label: 'Horizontal' },
                              { value: 'vertical', label: 'Vertical' }] },
@@ -831,14 +834,14 @@
     facet_cols: { label: 'Panel columns', kind: 'select',
                   when: (/** @type {any} */ cfg) => !!cfg.facet,
                   ph: 'Auto (fits the width)',
-                  // A row reads `<value> <label>`, so the label carries only
-                  // the unit: "3" + "per row".
+                  // A fixed set shows its labels alone, so each label is the
+                  // whole reading.
                   options: [{ value: '',  label: 'Auto (fits the width)' },
-                            { value: '1', label: 'per row' },
-                            { value: '2', label: 'per row' },
-                            { value: '3', label: 'per row' },
-                            { value: '4', label: 'per row' },
-                            { value: '6', label: 'per row' }] },
+                            { value: '1', label: '1 per row' },
+                            { value: '2', label: '2 per row' },
+                            { value: '3', label: '3 per row' },
+                            { value: '4', label: '4 per row' },
+                            { value: '6', label: '6 per row' }] },
     // Distribution band. `band_window` picks how the window is sized;
     // `band_size` reads as subjects (adaptive) or x units (fixed), so its
     // label follows the mode rather than lying in one of them.
@@ -916,9 +919,10 @@
               { value: 'identity', label: 'None (as is)' }]
   });
 
-  // Missing group keys. Sits beside the func picker because it only means
-  // anything once you know what the rows are: with pct_distinct, "drop" is what
-  // lets a row count toward the denominator without drawing a bar.
+  // Missing group keys. Sits in Mapping, after Group and before the
+  // aggregation, because it decides which rows are counted: with
+  // pct_distinct, "drop" is what lets a row count toward the denominator
+  // without drawing a bar.
   // Which roles a pct_distinct denominator is taken WITHIN. The chart cannot
   // infer this: it would have to know whether a column is a population split
   // (arm, sex, country) or an event attribute (grade), and dividing grade-2
@@ -946,11 +950,12 @@
   // (always shown for the family) or { role, types:[...] } (shown only for
   // those chart types). requiredMap rows render immediately; optionalMap rows
   // are added on demand from the "+ Add mapping" menu. `mapping` holds always-on
-  // controls — for the aggregated family that is `value` (required, carries its
-  // own marker) + the `func`. `aggTitle` (aggregated family only) splits those
-  // stat controls into their own trailing "Aggregation" section, ggplot-style:
-  // Mapping = the aesthetics (group / color / facet / label), Aggregation = the
-  // stat (mean of AVGDD). Families without aggTitle keep everything under Mapping.
+  // controls, drawn under Mapping after the required rows. For the aggregated
+  // family that is what decides which rows are counted and how: the missing
+  // group, the aggregation (`value` paired with `func`, drawn as "Aggregate"
+  // and "Of") and the percent denominator. There is no separate Aggregation
+  // section (mock-up: blockr.design open/summarize-table/mock-summary-mark/
+  // chart.html, B and E).
   const FAMILY_ROLES = {
     aggregated: {
       requiredMap: ['group'],
@@ -971,8 +976,14 @@
         // it (pie/treemap/boxplot/radar/waterfall have their own).
         { role: 'tt_fields', types: ['bar'] }
       ],
-      mapping: ['value', { role: 'func', types: ['bar', 'waterfall', 'pie', 'treemap', 'radar'] }],
-      aggTitle: 'Aggregation',
+      // Missing group sits next to Group: it decides whether rows without a
+      // group are counted as their own category. Bar only, like the percent
+      // denominator after the aggregation: both exist for the
+      // population-as-rows pattern, which is a bar idea (a pie of "everyone,
+      // including the ones with no category" is not a chart anyone wants).
+      mapping: [{ role: 'na_group', types: ['bar'] },
+        'value', { role: 'func', types: ['bar', 'waterfall', 'pie', 'treemap', 'radar'] },
+        { role: 'pct_of', types: ['bar'] }],
       // orientation: bar + the distribution marks (which default vertical —
       // groups on x — while bar defaults horizontal; see
       // _ensureDistributionMetric). Waterfall is vertical-only (a bridge
@@ -996,12 +1007,6 @@
         // facet applies to any faceted family. Pie/treemap/radar have no
         // category axis, so "axis" no-ops there (the tooltip n covers it).
         'count_on', 'count_col',
-        // Missing-key handling, and the on-card aggregation switch. Bar only:
-        // they exist for the population-as-rows pattern, which is a bar idea
-        // (a pie of "everyone, including the ones with no category" is not a
-        // chart anyone wants).
-        { role: 'na_group', types: ['bar'] },
-        { role: 'pct_of', types: ['bar'] },
         // Facet-grid shape; both hidden until a facet is mapped (role
         // `when`).
         'facet_scales', 'facet_cols', 'download'],
@@ -1249,11 +1254,11 @@
         entryRequired: (/** @type {string} */ role) => role === 'value' && this._family() === 'aggregated',
         drillAutoLabel: () => {
           const fam = this._family();
-          if (this.config.chart_type === 'radar') return 'Auto — the clicked shape';
-          return fam === 'aggregated' ? 'Auto — the clicked group'
-            : fam === 'timeline' ? 'Auto — the clicked lane'
-            : this.config.chart_type === 'line' ? 'Auto — the clicked series'
-            : 'Auto — the selected point';
+          if (this.config.chart_type === 'radar') return 'Auto, the clicked shape';
+          return fam === 'aggregated' ? 'Auto, the clicked group'
+            : fam === 'timeline' ? 'Auto, the clicked lane'
+            : this.config.chart_type === 'line' ? 'Auto, the clicked series'
+            : 'Auto, the selected point';
         },
         title: 'Chart settings',
         onChange: (/** @type {string} */ key) => {
@@ -1338,10 +1343,9 @@
 
     // Section spec for the gear, per chart type. The distribution marks
     // (boxplot, pointrange) use the aggregated machinery (group + value on a
-    // category axis, group drill) but do NOT aggregate, so they drop the
-    // trailing "Aggregation" section: with aggTitle cleared the value slot
-    // renders under Mapping, and their func is already excluded by type.
-    // Everything else keeps the family spec unchanged.
+    // category axis, group drill) but do NOT aggregate: their func is
+    // excluded by type, so the value renders unpaired under Mapping as
+    // "Value". Everything else keeps the family spec unchanged.
     _sectionsSpec() {
       const base = FAMILY_ROLES[this._family()];
       // Hide the count id-column picker until a count surface is chosen
@@ -1357,9 +1361,6 @@
       // External-control send (beta) on every family: push the drilled value
       // into a value filter block. cfg.ctrl_* rides in the drilldown-data
       // config from R.
-      if (DISTRIBUTION_TYPES.includes(this.config.chart_type)) {
-        return /** @type {any} */ (dropCountCol({ ...base, aggTitle: null, ctrlSection: true }));
-      }
       return /** @type {any} */ (dropCountCol({ ...base, ctrlSection: true }));
     }
 

@@ -38,8 +38,9 @@
 #'   centerpiece); a swimlane), `expr`
 #'   (free R code over the group's
 #'   rows; text). Each row takes `name`, `show` and its OWN optional
-#'   `color` (a categorical column: the cell is split into one glyph per
-#'   level, a bar into segments, a swimlane's events tinted) and `facet`
+#'   `color` (a categorical column: the cell is split into one glyph or
+#'   dumbbell per level, a bar into segments, a swimlane's events tinted)
+#'   and `facet`
 #'   (a categorical column: the column repeats once per level). Both are
 #'   per column, so one column may split by severity while the next
 #'   repeats per sex and a third carries neither. A `field` row never
@@ -112,6 +113,11 @@
 #'   difference bar, the x domain (dates as dates) for a swimlane or a
 #'   sparkline. `FALSE` drops every strip, for a dense exhibit where the
 #'   numbers beside the marks carry the scale.
+#' @param bar_width Length of the marks that carry a value label (bars,
+#'   boxes, dot ranges, sparklines). `"fit"` (default) fills the panel, from
+#'   80px up to a 320px ceiling; `"narrow"`, `"medium"` and `"wide"` fix the
+#'   lane at 90, 150 and 240px and leave the rest of a wider panel blank. The
+#'   exported picture follows the table as drawn.
 #' @param title,subtitle,caption Display text, as on [new_chart_block()]:
 #'   `NULL` = auto (inherits the input's label / subtitle / caption
 #'   attribute), `""` = explicitly none, else a template with the chart
@@ -172,6 +178,7 @@ new_summarize_table_block <- function(group = NULL,
                                  search = TRUE,
                                  sortable = TRUE,
                                  axis = TRUE,
+                                 bar_width = "fit",
                                  download = FALSE,
                                  title = NULL,
                                  subtitle = NULL,
@@ -285,6 +292,7 @@ new_summarize_table_block <- function(group = NULL,
         r_search  <- shiny::reactiveVal(isTRUE(search))
         r_sortable <- shiny::reactiveVal(isTRUE(sortable))
         r_axis    <- shiny::reactiveVal(isTRUE(axis))
+        r_bar_width <- shiny::reactiveVal(rank_bar_width(bar_width))
         r_download <- shiny::reactiveVal(isTRUE(download))
         r_title   <- shiny::reactiveVal(title)
         r_subtitle <- shiny::reactiveVal(subtitle)
@@ -432,6 +440,7 @@ new_summarize_table_block <- function(group = NULL,
           group = r_group, parent = r_parent, color = r_color,
           facet = r_facet, func = r_func,
           value = r_value, id_var = r_id_var, bar_mode = r_bar_mode,
+          bar_width = r_bar_width,
           summaries = r_summaries, by = r_by,
           facet_layout = r_facet_layout,
           cols = r_cols, fields = r_fields, sort_by = r_sort_by,
@@ -494,8 +503,8 @@ new_summarize_table_block <- function(group = NULL,
             } else if (identical(key, "top_n")) {
               n <- suppressWarnings(as.integer(as.character(val)[[1L]]))
               setters[[key]](if (is.na(n) || n <= 0L) NULL else n)
-            } else if (key %in% c("func", "bar_mode", "sort_by", "sort_dir",
-                                  "facet_layout")) {
+            } else if (key %in% c("func", "bar_mode", "bar_width", "sort_by",
+                                  "sort_dir", "facet_layout")) {
               v <- as.character(unlist(val %||% character()))
               if (length(v) && nzchar(v[[1L]])) setters[[key]](v[[1L]])
             } else {
@@ -661,6 +670,7 @@ new_summarize_table_block <- function(group = NULL,
               sort_by = r_sort_by(), sort_dir = r_sort_dir(),
               top_n = r_top_n(), search = r_search(),
               sortable = r_sortable(), axis = r_axis(),
+              bar_width = r_bar_width(),
               download = r_download(), drill = r_drill(),
               ctrl_target = r_ctrl_target(),
               ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices()),
@@ -771,7 +781,7 @@ new_summarize_table_block <- function(group = NULL,
               facet_layout = r_facet_layout(), bar_mode = r_bar_mode(),
               cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
               sort_dir = r_sort_dir(), top_n = r_top_n(), axis = r_axis(),
-              sortable = r_sortable(),
+              sortable = r_sortable(), bar_width = r_bar_width(),
               title = r_title(), subtitle = r_subtitle(),
               caption = r_caption(),
               .title_args = title_args(),
@@ -910,7 +920,8 @@ new_summarize_table_block <- function(group = NULL,
             cols = r_cols, fields = r_fields, sort_by = r_sort_by,
             sort_dir = r_sort_dir, top_n = r_top_n,
             max_height = r_max_height, search = r_search,
-            sortable = r_sortable, axis = r_axis, download = r_download,
+            sortable = r_sortable, axis = r_axis, bar_width = r_bar_width,
+            download = r_download,
             title = r_title, subtitle = r_subtitle, caption = r_caption,
             drill = r_drill, ctrl_target = r_ctrl_target,
             ctrl_table = r_ctrl_table, filter_type = r_filter_type,
@@ -955,7 +966,8 @@ new_summarize_table_block <- function(group = NULL,
       "group", "value", "func", "id_var", "summaries", "by", "facet_layout",
       "parent", "color", "bar_mode",
       "facet", "cols", "fields", "sort_by", "sort_dir", "top_n",
-      "max_height", "search", "sortable", "axis", "download", "title",
+      "max_height", "search", "sortable", "axis", "bar_width", "download",
+      "title",
       "subtitle",
       "caption",
       "drill",
@@ -1020,9 +1032,19 @@ rank_arguments <- function() {
         "dashed: a dumbbell per row, e.g. baseline to peak per subject), ",
         "expr (free R ",
         "code over the ",
-        "group's rows, text). ",
+        "group's rows, text), custom (fn = a function of one cell's rows, ",
+        "`\\(d) ...`, returning a data frame whose columns name what they ",
+        "are: value; from, to; lo, q1, mid, q3, hi; text. One other column ",
+        "is the split, one mark per level. The function runs per cell at ",
+        "every level of `by` and per facet level, so a per-patient ",
+        "reduction such as the worst grade nests correctly. show picks the ",
+        "mark: bar, number, dumbbell, box, pointrange, text; read off the ",
+        "returned columns when absent; denom = a column whose distinct ",
+        "values are the N, so a count prints \"54 (18%)\" and its header ",
+        "N). ",
         "Optional per object: name (the column header), show, color (a ",
-        "categorical column: the cell is split into one glyph per level, a ",
+        "categorical column: the cell is split into one glyph or dumbbell ",
+        "per level, a ",
         "bar into segments, a swimlane's events tinted) and facet (a ",
         "categorical column: the column repeats once per level, on one ",
         "shared scale). Colour and facet are per COLUMN, not per table, so ",
@@ -1040,7 +1062,7 @@ rank_arguments <- function() {
       ),
       type = arg_array(arg_object(
         type = arg_enum(c("simple", "dist", "field", "series", "spans",
-                          "pair", "expr")),
+                          "pair", "expr", "custom")),
         name = arg_string(required = FALSE),
         show = arg_string(required = FALSE),
         scope = arg_enum(c("cell", "pooled"), required = FALSE),
@@ -1069,7 +1091,9 @@ rank_arguments <- function() {
         label = arg_string(required = FALSE),
         fields = arg_array(arg_string(), required = FALSE),
         size = arg_enum(c("md", "lg"), required = FALSE),
-        expr = arg_string(required = FALSE)
+        expr = arg_string(required = FALSE),
+        fn = arg_string(required = FALSE),
+        denom = arg_string(required = FALSE)
       ))
     ),
     by = new_arg_spec(
@@ -1234,6 +1258,15 @@ rank_arguments <- function() {
       ),
       example = TRUE,
       type = arg_boolean()
+    ),
+    bar_width = new_arg_spec(
+      paste0(
+        "Length of the marks that carry a value label (bars, boxes, dot ",
+        "ranges, sparklines): fit (default) fills the panel up to 320px; ",
+        "narrow, medium and wide fix them at 90, 150 and 240px."
+      ),
+      example = "fit",
+      type = arg_enum(c("narrow", "medium", "wide", "fit"))
     ),
     drill = new_arg_spec(
       paste0(
