@@ -54,9 +54,10 @@ canvas_capture_ratio <- function() {
 
 # A captured bitmap, with the CSS-pixel box it was composed at. Sized in
 # inches at 96 dpi, the density the canvas draws in, so an exhibit lands at
-# the size it had on screen.
+# the size it had on screen. `pages`, when the browser cut the picture for
+# slides (inst/js/capture-pages.js), is a list of captures, one per slide.
 #' @noRd
-new_chart_capture <- function(png, width, height) {
+new_chart_capture <- function(png, width, height, pages = NULL) {
 
   w <- as.numeric(width %||% 0)[1L]
   h <- as.numeric(height %||% 0)[1L]
@@ -66,10 +67,73 @@ new_chart_capture <- function(png, width, height) {
   }
 
   structure(
-    list(png = png, width = w / 96, height = h / 96),
+    list(png = png, width = w / 96, height = h / 96,
+         pages = if (length(pages) > 1L) pages),
     class = "chart_capture"
   )
 }
+
+# A capture from the message a block's JS posts: {png, width, height} and,
+# for a picture too long for one slide, `pages` of the same shape.
+#' @noRd
+chart_capture_from_msg <- function(msg) {
+  pages <- lapply(msg$pages, function(p) {
+    tryCatch(new_chart_capture(chart_capture_decode(p$png), p$width,
+                               p$height),
+             error = function(e) NULL)
+  })
+  pages <- Filter(Negate(is.null), pages)
+  out <- new_chart_capture(chart_capture_decode(msg$png), msg$width,
+                           msg$height,
+                           pages = if (length(pages) == length(msg$pages)) pages)
+  # The block's title, for the "(2 of 3)" slides: the picture carries it
+  # only on page 1.
+  if (!is.null(out) && is.character(msg$title) && length(msg$title) == 1L) {
+    out$title <- msg$title
+  }
+  out
+}
+
+# What the browser needs to cut a picture into slide pages: the box
+# pptx_add_exhibit.chart_capture() fits a picture into on the deck a
+# download is written on (inches), and the font floor (points). The box is
+# the one of a slide without a title, which is how page 1 goes out; later
+# pages carry a title and are scaled into the slightly shorter box. NULL
+# without officer, since there is no deck to write then.
+#' @noRd
+capture_page_box <- function() {
+  if (!requireNamespace("officer", quietly = TRUE)) {
+    return(NULL)
+  }
+  size <- pptx_slide_size(pptx_template())
+  list(w = size[[1L]] - 0.8, h = size[[2L]] - 1.1 - 0.4,
+       minPt = exhibit_min_font_size())
+}
+
+# Slide width and height in inches, from the template's presentation.xml
+# (`<p:sldSz cx= cy=>`, in EMU), cached per file. Widescreen without one.
+#' @noRd
+pptx_slide_size <- function(template) {
+  key <- paste(template, file.mtime(template) %||% "")
+  if (!is.null(slide_size_cache[[key]])) {
+    return(slide_size_cache[[key]])
+  }
+  out <- c(13.333, 7.5)
+  xml <- pptx_part(template, "ppt/presentation.xml")
+  if (!is.null(xml)) {
+    tag <- regmatches(xml, regexpr("<p:sldSz[^>]*>", xml))
+    cx <- suppressWarnings(as.numeric(sub('.*cx="([0-9]+)".*', "\\1", tag)))
+    cy <- suppressWarnings(as.numeric(sub('.*cy="([0-9]+)".*', "\\1", tag)))
+    if (length(cx) && length(cy) && is.finite(cx) && is.finite(cy) &&
+          cx > 0 && cy > 0) {
+      out <- c(cx, cy) / 914400
+    }
+  }
+  slide_size_cache[[key]] <- out
+  out
+}
+
+slide_size_cache <- new.env(parent = emptyenv())
 
 # "data:image/png;base64,iVBOR..." -> raw. Anything else is not a capture.
 #' @noRd
@@ -148,7 +212,37 @@ pptx_add_exhibit.chart_capture <- function(doc, x, title = NULL,
   slide_h <- tryCatch(officer::slide_size(doc)$height, error = function(e) 7.5)
 
   has_title <- is.character(title) && length(title) == 1L && nzchar(title)
-  slide_title <- has_title && pptx_layout_has_title(doc, layout, master)
+  can_title <- pptx_layout_has_title(doc, layout, master)
+
+  # A picture the browser cut into pages (inst/js/capture-pages.js) goes out
+  # one page per slide, every page at the same scale so the rows line up
+  # when the reader flips. Page 1 opens with the picture's own title band;
+  # the later ones say whose continuation they are in the slide title.
+  pages <- x$pages
+  if (length(pages) > 1L) {
+    n <- length(pages)
+    label <- if (has_title) title else x$title %||% ""
+    titles <- c(if (has_title) title else "",
+                trimws(paste0(label, " (", seq_len(n)[-1L], " of ", n, ")")))
+    tops <- vapply(titles, function(t) {
+      if (nzchar(t) && can_title) {
+        top %||% pptx_title_bottom(doc, layout, master, template %||% "",
+                                   t) %||% 1.1
+      } else {
+        top %||% 1.1
+      }
+    }, numeric(1))
+    fit <- min(mapply(function(p, t) {
+      min((slide_w - 0.8) / p$width, (slide_h - t - 0.4) / p$height, 2)
+    }, pages, tops))
+    for (k in seq_len(n)) {
+      doc <- pptx_capture_slide(doc, pages[[k]], fit, titles[[k]], tops[[k]],
+                                can_title, layout, master, slide_w)
+    }
+    return(doc)
+  }
+
+  slide_title <- has_title && can_title
 
   top <- top %||% if (slide_title) {
     pptx_title_bottom(doc, layout, master, template %||% "", title) %||% 1.1
@@ -162,12 +256,22 @@ pptx_add_exhibit.chart_capture <- function(doc, x, title = NULL,
   # spends the pixels that are already there and stops at screen density;
   # past that it would be blowing them up.
   fit <- min((slide_w - 0.8) / x$width, (slide_h - top - 0.4) / x$height, 2)
+
+  pptx_capture_slide(doc, x, fit, if (slide_title) title else "", top,
+                     can_title, layout, master, slide_w)
+}
+
+# One slide: the title when there is one and the layout has a place for it,
+# the picture at `fit`, centred.
+#' @noRd
+pptx_capture_slide <- function(doc, x, fit, title, top, can_title, layout,
+                               master, slide_w) {
   w <- x$width * fit
   h <- x$height * fit
 
   doc <- officer::add_slide(doc, layout = layout, master = master)
 
-  if (slide_title) {
+  if (nzchar(title) && can_title) {
     doc <- tryCatch(
       officer::ph_with(doc, title,
                        location = officer::ph_location_type(type = "title")),

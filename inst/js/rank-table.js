@@ -925,9 +925,28 @@
     return root;
   }
 
+  // The picture is as wide as the table, whatever the panel's width: laid
+  // out at `width` first, then the host grows until no table runs past the
+  // root's right edge (the wrapper would scroll it, and snapdom draws only
+  // the root's box). A table that fits keeps the panel's width.
+  function widenToContent(host, root) {
+    for (var i = 0; i < 4; i++) {
+      var box = root.getBoundingClientRect();
+      var edge = box.right - (parseFloat(getComputedStyle(root).paddingRight) || 0);
+      var over = 0;
+      root.querySelectorAll("table").forEach(function (t) {
+        over = Math.max(over, t.getBoundingClientRect().right - edge);
+      });
+      if (over < 0.5) return;
+      host.style.width = Math.ceil(host.offsetWidth + over) + "px";
+    }
+  }
+
   /** One picture of a payload at `width` CSS px: {png, width, height}, the
-   * size in CSS px (R turns it into inches at 96 dpi). */
-  function rankPicture(payload, width, ratio, css) {
+   * size in CSS px (R turns it into inches at 96 dpi). With a slide `box`
+   * (R: capture_page_box()) it also carries `pages` when the table is too
+   * long for one slide (capture-pages.js), and the title they repeat. */
+  function rankPicture(payload, width, ratio, css, box) {
     return loadSnapdom().then(function (snap) {
       var root = captureRoot(width, css);
       var host = root.parentNode;
@@ -947,6 +966,7 @@
           requestAnimationFrame(function () { requestAnimationFrame(r); });
         });
       }).then(function () {
+        widenToContent(host, root);
         var w = Math.ceil(root.offsetWidth);
         var h = Math.ceil(root.offsetHeight);
         // dpr 1: snapdom multiplies the scale by the device pixel ratio, and
@@ -955,8 +975,12 @@
           scale: Number(ratio) || 2, dpr: 1, embedFonts: true,
           backgroundColor: "#ffffff"
         }).then(function (canvas) {
+          var cut = window.BlockrCapturePages;
+          var pages = (box && cut) ? cut(canvas, root, box, null) : [];
+          var t = root.querySelector(".dd-table-title");
           drop();
-          return { png: canvas.toDataURL("image/png"), width: w, height: h };
+          return { png: canvas.toDataURL("image/png"), width: w, height: h,
+                   pages: pages, title: t ? t.textContent : "" };
         });
       }, function (e) { drop(); throw e; });
     });
@@ -978,7 +1002,8 @@
       var stored = storedFor(root);
       if (!c.capture_export || !stored || !elemId) return;
       var w = Math.round(root.getBoundingClientRect().width) || 900;
-      rankPicture(stored, w, c.capture_ratio, null).then(function (r) {
+      var box = c.capture_page;
+      rankPicture(stored, w, c.capture_ratio, null, box).then(function (r) {
         if (window.Shiny && Shiny.setInputValue) {
           Shiny.setInputValue(elemId + "_capture", r, { priority: "event" });
         }
