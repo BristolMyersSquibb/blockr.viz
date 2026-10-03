@@ -832,10 +832,13 @@ new_chart_block <- function(
         r_scale_map <- dd_board_scale_map()
 
         # Column metadata (computed once when data changes); see dd_col_meta().
+        # Kept while the frame is identical: a panel visit hands over an
+        # equal frame, and this walks every column (see last_value_cache()).
+        col_meta_cache <- last_value_cache()
         r_col_meta <- shiny::reactive({
           d <- plain_data()
           shiny::req(is.data.frame(d))
-          dd_col_meta(d)
+          col_meta_cache(d, function() dd_col_meta(d))
         })
 
         # Columns needed by the chart (reactive -- changes when config
@@ -919,8 +922,14 @@ new_chart_block <- function(
         # exclusively inside the gated observer below: a reactive is
         # pull-based, so it stays suspended with the observer for hidden
         # panels.
+        # The shipped columns are the cache key: a panel visit (an equal
+        # frame) or an edit that re-reads needed_cols() without changing the
+        # set (subtitle, sort_by) returns the last payload without
+        # serializing anything. The columns of `df_send` are the frame's own
+        # vectors, so on an unchanged frame the comparison is by pointer.
         payload_rev <- 0L
         last_payload <- NULL
+        payload_cache <- last_value_cache()
         r_data_json <- shiny::reactive({
           d <- plain_data()
           shiny::req(is.data.frame(d))
@@ -930,15 +939,17 @@ new_chart_block <- function(
           } else {
             d[0]
           }
-          # Dictionary-encodes the low-cardinality string columns; see
-          # chart-payload.R. Everything else is serialized exactly as it was.
-          json <- chart_data_json(df_send)
-          if (identical(json, last_payload$json)) {
-            return(last_payload)
-          }
-          payload_rev <<- payload_rev + 1L
-          last_payload <<- list(rev = payload_rev, json = json)
-          last_payload
+          payload_cache(df_send, function() {
+            # Dictionary-encodes the low-cardinality string columns; see
+            # chart-payload.R. Everything else is serialized exactly as it was.
+            json <- chart_data_json(df_send)
+            if (identical(json, last_payload$json)) {
+              return(last_payload)
+            }
+            payload_rev <<- payload_rev + 1L
+            last_payload <<- list(rev = payload_rev, json = json)
+            last_payload
+          })
         })
 
         # Distribution band, cached on exactly compute_band_series()'s
@@ -955,23 +966,38 @@ new_chart_block <- function(
           if (!is.null(v) && length(v) && nzchar(v) && v %in% names(d)) v
           else NULL
         }
+        # Keyed on the columns it reads and its settings, so a panel visit
+        # does not re-run the windowed pass. Serialized here, once per
+        # change: the band carries every outlier point, and Shiny would
+        # otherwise serialize it again on every push.
+        band_cache <- last_value_cache()
         r_band_series <- shiny::reactive({
           if (!identical(r_chart_type(), "band")) return(NULL)
           d <- plain_data()
           shiny::req(is.data.frame(d))
-          tryCatch(compute_band_series(
-            d, r_x(), r_y(), r_color(), r_series(),
-            facet_by = col_in(d, r_facet()),
+          args <- list(
+            x_col = r_x(), y_col = r_y(), color_by = r_color(),
+            series_by = r_series(), facet_by = col_in(d, r_facet()),
             summary = r_summary() %||% "median_q1_q3",
             whiskers = r_whiskers() %||% "p10_p90",
             window = r_band_window() %||% "adaptive",
             window_size = r_band_size() %||% 45,
             min_n = r_band_min_n() %||% 12,
             id_col = col_in(d, r_band_id())
-          ), error = function(e) {
-            warning("drilldown_chart band computation failed: ",
-                    conditionMessage(e), call. = FALSE)
-            NULL
+          )
+          cols <- intersect(as.character(unlist(args[c(
+            "x_col", "y_col", "color_by", "series_by", "facet_by", "id_col"
+          )])), names(d))
+          band_cache(list(d[cols], args), function() {
+            tryCatch(
+              chart_config_json(do.call(compute_band_series,
+                                        c(list(d), args))),
+              error = function(e) {
+                warning("drilldown_chart band computation failed: ",
+                        conditionMessage(e), call. = FALSE)
+                NULL
+              }
+            )
           })
         })
 
@@ -1003,19 +1029,29 @@ new_chart_block <- function(
         # early return keeps the reactive off the data dependency entirely.
         # facet_by is not decoration: without it every panel was handed the
         # same pooled fit (see compute_smoother_series()).
+        # Keyed like the band above, so a panel visit does not refit.
+        smoother_cache <- last_value_cache()
         r_smoother_series <- shiny::reactive({
           sm <- r_smoother()
           if (is.null(sm) || identical(sm, "none")) return(NULL)
           d <- plain_data()
-          tryCatch(compute_smoother_series(
-            d, sm, r_x(), r_y(), r_color(), r_series(),
-            facet_by = col_in(d, r_facet())
-          ), error = function(e) {
-            # Keep the NULL fallback (no overlay) but surface the failure
-            # so a broken smoother fit is diagnosable instead of silent.
-            warning("drilldown_chart smoother computation failed: ",
-                    conditionMessage(e), call. = FALSE)
-            NULL
+          if (!is.data.frame(d)) return(NULL)
+          args <- list(
+            smoother = sm, x_col = r_x(), y_col = r_y(), color_by = r_color(),
+            series_by = r_series(), facet_by = col_in(d, r_facet())
+          )
+          cols <- intersect(as.character(unlist(args[c(
+            "x_col", "y_col", "color_by", "series_by", "facet_by"
+          )])), names(d))
+          smoother_cache(list(d[cols], args), function() {
+            tryCatch(do.call(compute_smoother_series, c(list(d), args)),
+                     error = function(e) {
+              # Keep the NULL fallback (no overlay) but surface the failure
+              # so a broken smoother fit is diagnosable instead of silent.
+              warning("drilldown_chart smoother computation failed: ",
+                      conditionMessage(e), call. = FALSE)
+              NULL
+            })
           })
         })
 
@@ -1126,6 +1162,24 @@ new_chart_block <- function(
         # of it was whatever had last been pushed -- and a chart whose panel
         # nobody ever opened has never pushed, so an export could not draw
         # it. Now the capture service builds one when it needs one.
+        # The board scale map resolved for the coloured column, serialized.
+        # With a patient id coloured that is one hash per level and a 600 kB
+        # entry (22k patients: 0.13 s to resolve, 0.27 s for Shiny to
+        # serialize, on every push), so it is kept while the map, the column
+        # and the palette are the same.
+        scales_cache <- last_value_cache()
+        r_scales <- function(d) {
+          map <- r_scale_map()
+          var <- dd_colored_var(r_chart_type(), r_color(), r_group())
+          col <- if (!is.null(var) && var %in% names(d)) d[[var]]
+          scales_cache(list(map, var, col, dd_palette()), function() {
+            chart_config_json(dd_scales_config(
+              map, r_chart_type(), color = r_color(), group = r_group(),
+              data = d
+            ))
+          })
+        }
+
         build_chart_msg <- function() {
           d <- plain_data()
           # No nrow gate: an upstream filter emptying the frame MUST push,
@@ -1278,10 +1332,7 @@ new_chart_block <- function(
               # Board scale map, resolved for the chart type's colored role
               # (NULL when no map / no binding / no colored role -- JS then
               # keeps palette cycling).
-              scales = dd_scales_config(
-                r_scale_map(), r_chart_type(),
-                color = r_color(), group = r_group(), data = d
-              ),
+              scales = r_scales(d),
               # The series pool, resolved through the board theme. Rides the
               # config rather than its own custom message: an unhandled
               # message is dropped silently, and this one has to arrive before

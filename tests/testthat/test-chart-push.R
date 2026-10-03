@@ -154,3 +154,167 @@ test_that("_ready is answered with the rev, not the whole message", {
     args = list(x = blk, data = list(data = function() df))
   )
 })
+
+test_that("an equal frame or an edit that keeps the column set serializes nothing", {
+  calls <- new.env(parent = emptyenv())
+  calls$json <- 0L
+  calls$meta <- 0L
+  real_json <- chart_data_json
+  real_meta <- dd_col_meta
+  testthat::local_mocked_bindings(
+    chart_data_json = function(...) {
+      calls$json <- calls$json + 1L
+      real_json(...)
+    },
+    dd_col_meta = function(...) {
+      calls$meta <- calls$meta + 1L
+      real_meta(...)
+    }
+  )
+
+  src <- new.env(parent = emptyenv())
+  src$d <- push_df()
+  tick <- shiny::reactiveVal(0L)
+  # A new object holding the same rows each time, as a panel visit delivers.
+  dat <- shiny::reactive({
+    tick()
+    src$d[seq_len(nrow(src$d)), , drop = FALSE]
+  })
+  blk <- new_chart_block(chart_type = "bar", group = "PARAMCD")
+
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      msgs <- spy_messages(session)
+      session$flushReact()
+      expect_equal(calls$json, 1L)
+      expect_equal(calls$meta, 1L)
+
+      tick(1L)
+      session$flushReact()
+      expr <- session$makeScope("expr")
+      expr$setInputs(drilldown_block_action = list(
+        action = "config", subtitle = "Records", sort_by = "alpha"
+      ))
+      session$flushReact()
+      expect_equal(calls$json, 1L)
+      expect_equal(calls$meta, 1L)
+      expect_length(msgs(), 2L)
+
+      # A new mapped column is a new payload.
+      expr$setInputs(drilldown_block_action = list(
+        action = "config", color = "PARAMCD", value = "AVAL", func = "mean"
+      ))
+      session$flushReact()
+      expect_equal(calls$json, 2L)
+    },
+    args = list(x = blk, data = list(data = dat))
+  )
+})
+
+test_that("the scale map is resolved once per column, not per push", {
+  calls <- new.env(parent = emptyenv())
+  calls$n <- 0L
+  real <- dd_scales_config
+  testthat::local_mocked_bindings(dd_scales_config = function(...) {
+    calls$n <- calls$n + 1L
+    real(...)
+  })
+  df <- data.frame(TRT = c("A", "A", "B"), SEX = c("F", "M", "F"))
+  blk <- new_chart_block(chart_type = "bar", group = "SEX", color = "TRT")
+
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$userData$board_options <- list(
+        scale_map = shiny::reactiveVal(list(TRT = list(color = list(A = "#006400"))))
+      )
+      msgs <- spy_messages(session)
+      session$flushReact()
+      expect_equal(calls$n, 1L)
+      expr <- session$makeScope("expr")
+      for (dir in c("asc", "desc", "asc")) {
+        expr$setInputs(drilldown_block_action = list(
+          action = "config", sort_dir = dir
+        ))
+        session$flushReact()
+      }
+      expect_length(msgs(), 4L)
+      expect_equal(calls$n, 1L)
+      expect_identical(msgs()[[4L]]$config$scales, msgs()[[1L]]$config$scales)
+
+      expr$setInputs(drilldown_block_action = list(
+        action = "config", color = "SEX"
+      ))
+      session$flushReact()
+      expect_equal(calls$n, 2L)
+    },
+    args = list(x = blk, data = list(data = function() df))
+  )
+})
+
+test_that("a pre-serialized config entry reaches the browser as Shiny would write it", {
+  d <- data.frame(day = rep(1:40, 5), val = sin(1:200), id = rep(1:5, each = 40),
+                  arm = rep(c("A", "B"), 100))
+  band <- compute_band_series(d, "day", "val", "arm", NULL, id_col = "id",
+                              window = "fixed", window_size = 5, min_n = 2)
+  expect_false(is.null(band))
+  expect_identical(
+    shiny:::toJSON(list(config = list(band_series = chart_config_json(band)))),
+    shiny:::toJSON(list(config = list(band_series = band)))
+  )
+  expect_null(chart_config_json(NULL))
+})
+
+test_that("a panel visit or a gear edit does not refit the band or the smoother", {
+  calls <- new.env(parent = emptyenv())
+  calls$band <- 0L
+  calls$smooth <- 0L
+  real_band <- compute_band_series
+  real_smooth <- compute_smoother_series
+  testthat::local_mocked_bindings(
+    compute_band_series = function(...) {
+      calls$band <- calls$band + 1L
+      real_band(...)
+    },
+    compute_smoother_series = function(...) {
+      calls$smooth <- calls$smooth + 1L
+      real_smooth(...)
+    }
+  )
+  src <- new.env(parent = emptyenv())
+  src$d <- data.frame(day = rep(1:40, 5), val = sin(1:200),
+                      id = rep(1:5, each = 40))
+  tick <- shiny::reactiveVal(0L)
+  dat <- shiny::reactive({
+    tick()
+    src$d[seq_len(nrow(src$d)), , drop = FALSE]
+  })
+  check <- function(blk, field, count) {
+    shiny::testServer(
+      blockr.core:::get_s3_method("block_server", blk),
+      {
+        msgs <- spy_messages(session)
+        session$flushReact()
+        expect_equal(calls[[count]], 1L)
+        expect_false(is.null(msgs()[[1L]]$config[[field]]))
+        tick(isolate(tick()) + 1L)
+        session$flushReact()
+        expr <- session$makeScope("expr")
+        expr$setInputs(drilldown_block_action = list(
+          action = "config", title = "Over time"
+        ))
+        session$flushReact()
+        expect_length(msgs(), 2L)
+        expect_equal(calls[[count]], 1L)
+      },
+      args = list(x = blk, data = list(data = dat))
+    )
+  }
+  check(new_chart_block(chart_type = "band", x = "day", y = "val",
+                        band_window = "fixed", band_size = 5, band_min_n = 2),
+        "band_series", "band")
+  check(new_chart_block(chart_type = "scatter", x = "day", y = "val",
+                        smoother = "loess"),
+        "smoother_series", "smooth")
+})
