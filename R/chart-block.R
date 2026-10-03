@@ -88,6 +88,14 @@
 #'   (stacked but each group normalized to 100%, for comparing composition).
 #'   No effect without a `color` split; ignored when `baseline = "cumulative"`
 #'   (waterfall). Bar charts only.
+#' @param value_labels Write each bar's value at its end: `TRUE` or `FALSE`
+#'   (default). A negative bar carries its label at its own end, left of or
+#'   below zero. A stacked bar labels the stack total, a grouped bar every
+#'   bar, and a `bar_mode = "percent"` bar each segment's share, inside the
+#'   segment. Labels that would overlap are left out, so a crowded chart (a
+#'   waterfall of 100+ subjects) stays readable; the tooltip keeps every
+#'   value. Bar and waterfall only. Like `identity_line`, the gear's switch
+#'   speaks "on"/"off" over the wire; the R state is a plain logical.
 #' @param filter_type,filter_column,filter_values,filter_range,filter_point
 #'   Runtime click/brush filter state (transport for the emitted filter;
 #'   normally left at defaults at creation).
@@ -306,6 +314,9 @@ new_chart_block <- function(
     # = stacked but each group normalized to 100% (composition view). No-op
     # without a `color` split, and ignored when baseline = "cumulative".
     bar_mode = "stacked",
+    # Bar value labels (bar + waterfall). FALSE by default, so a saved chart
+    # keeps its look. Logical in state; the gear's switch speaks "on"/"off".
+    value_labels = FALSE,
     # --- Runtime filter transport (NOT creation-time config) -------------
     # These five hold the emitted click/brush filter state. They are set by
     # interaction at runtime, normally left at defaults at creation. They
@@ -581,6 +592,7 @@ new_chart_block <- function(
   # consumed. Pinning it to "tukey" here made the formal default unreachable.
   whiskers <- chr_state(whiskers)
   connect_centers <- bool_state(connect_centers)
+  value_labels <- bool_state(value_labels)
   filter_values <- null_state(filter_values)
   filter_range <- null_state(filter_range)
   filter_point <- null_state(filter_point)
@@ -734,6 +746,7 @@ new_chart_block <- function(
         r_sort_dir <- shiny::reactiveVal(sort_dir)
         r_orientation <- shiny::reactiveVal(orientation)
         r_bar_mode <- shiny::reactiveVal(bar_mode)
+        r_value_labels <- shiny::reactiveVal(value_labels)
 
         # Filter state (transport for the emitted downstream filter)
         r_filter_type <- shiny::reactiveVal(filter_type)
@@ -1166,6 +1179,9 @@ new_chart_block <- function(
               filter_values = as.list(shiny::isolate(r_filter_values())),
               sort_dir = r_sort_dir(), orientation = r_orientation(),
               bar_mode = r_bar_mode(),
+              # Logical in state, "on"/"off" for the gear's switch, like
+              # identity_line below.
+              value_labels = if (isTRUE(r_value_labels())) "on" else "off",
               line_width_mult = r_line_width_mult(),
               dot_size_mult = r_dot_size_mult(), connect = r_connect(),
               value_lines = as.list(r_value_lines()),
@@ -1435,6 +1451,10 @@ new_chart_block <- function(
             if (!is.null(msg$sort_dir))   upd(r_sort_dir, msg$sort_dir)
             if (!is.null(msg$orientation)) upd(r_orientation, msg$orientation)
             if (!is.null(msg$bar_mode))   upd(r_bar_mode, msg$bar_mode)
+            # "on"/"off" from the gear -> logical in state (see bool_state).
+            if (!is.null(msg$value_labels)) {
+              upd(r_value_labels, bool_state(msg$value_labels))
+            }
             if (!is.null(msg$baseline))   upd(r_baseline, msg$baseline)
             if (!is.null(msg$connect))    upd(r_connect, msg$connect)
             if (!is.null(msg$smoother))   upd(r_smoother, msg$smoother)
@@ -1773,6 +1793,7 @@ new_chart_block <- function(
             facet = r_facet(), value = r_value(), func = r_func(),
             x = r_x(), y = r_y(), series = r_series(),
             bar_mode = r_bar_mode(), orientation = r_orientation(),
+            value_labels = r_value_labels(),
             sort_by = r_sort_by(), sort_dir = r_sort_dir(),
             count_on = r_count_on(), count_col = r_count_col(),
             na_group = r_na_group(), pct_of = r_pct_of(),
@@ -1991,6 +2012,7 @@ new_chart_block <- function(
             sort_dir = r_sort_dir,
             orientation = r_orientation,
             bar_mode = r_bar_mode,
+            value_labels = r_value_labels,
             filter_type = r_filter_type,
             filter_column = r_filter_column,
             filter_values = r_filter_values,
@@ -2087,7 +2109,8 @@ new_chart_block <- function(
       # NULL wedges the block (state_ready never goes TRUE and result() stays
       # NULL) -- reference_blockr_allow_empty_state_wedge, and the reason every
       # chart block's result() was NULL before this line.
-      # `connect_centers` is never empty (fixed default), so it is not listed.
+      # `connect_centers` and `value_labels` are never empty (fixed
+      # defaults), so they are not listed.
       "box_points", "summary", "whiskers", "orientation",
       "band_id", "ref_hi", "ref_lo", "lo", "hi", "waterfall_totals",
       # count_col is optional (blank = row count); count_on is a fixed-option
@@ -2108,8 +2131,8 @@ new_chart_block <- function(
       "ctrl_target", "ctrl_table"),
     external_ctrl = c("group", "color", "facet", "value", "func",
       "chart_type", "x", "y", "xend", "series", "label", "tt_fields", "drill",
-      "sort_by", "sort_dir", "orientation", "bar_mode", "filter_type",
-      "filter_column",
+      "sort_by", "sort_dir", "orientation", "bar_mode", "value_labels",
+      "filter_type", "filter_column",
       "filter_values", "filter_range", "filter_point", "line_width_mult",
       "dot_size_mult", "connect", "value_lines", "x_lines", "smoother",
       "identity_line",

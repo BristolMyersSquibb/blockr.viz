@@ -72,6 +72,7 @@ chart_expr <- function(var = "data",
                        y = NULL,
                        series = NULL,
                        bar_mode = "stacked",
+                       value_labels = FALSE,
                        orientation = NULL,
                        sort_by = NULL,
                        sort_dir = NULL,
@@ -133,6 +134,7 @@ chart_expr <- function(var = "data",
     value_col = value_col, func = func %||% "count",
     x = x, y = y, series = series,
     bar_mode = bar_mode %||% "stacked",
+    value_labels = isTRUE(value_labels),
     orientation = orientation,
     sort_by = sort_by, sort_dir = sort_dir,
     count_on = count_on %||% "off", count_col = count_col,
@@ -772,6 +774,20 @@ ce_bar <- function(st) {
   layers <- c(layers, ce_helper_lines(
     st, horiz, fraction = pct || identical(st$func, "pct_distinct")
   ))
+
+  if (st$value_labels) {
+    layers <- c(layers, list(ce_bar_labels(st, agg$metric, horiz, pct)))
+    # Room for the labels past the bar ends; a percent bar carries them
+    # inside.
+    if (!pct) {
+      layers <- c(layers, list(ce_call(
+        if (horiz) "ggplot2::scale_x_continuous" else
+          "ggplot2::scale_y_continuous",
+        expand = ce_call("ggplot2::expansion", mult = 0.12)
+      )))
+    }
+  }
+
   pct_labels <- quote(function(v) paste0(round(100 * v), "%"))
 
   # A turned axis carries its own label text: cut to the cap, and baked as
@@ -818,6 +834,83 @@ ce_bar <- function(st) {
     scale_col = st$color,
     axis_labs = axis_labs,
     rotate_x = !is.null(turned)
+  )
+}
+
+# The value labels' geom_text (`value_labels`), the static_chart() layer in
+# plain ggplot2: the value at each bar end, the total at the end of a stack,
+# each segment's share inside a percent bar. check_overlap drops the labels
+# that would collide.
+ce_bar_labels <- function(st, metric, horiz, pct) {
+
+  size <- round(gg_px_size(11), 1)
+
+  if (pct) {
+    by <- lapply(c(st$facet, st$group), as.name)
+    total <- do.call(ce_call, c(list("stats::ave", metric), by,
+                                list(FUN = as.name("sum"))), quote = TRUE)
+    share <- call("/", call("*", 100, metric), total)
+    # A sliver too thin to hold its label gets none, as in static_chart().
+    return(ce_call(
+      "ggplot2::geom_text",
+      ce_aes(label = ce_call(
+        "base::ifelse", call("<", share, 6), "",
+        ce_call("base::paste0", ce_call("base::round", share), "%")
+      )),
+      position = ce_call("ggplot2::position_fill", vjust = 0.5),
+      colour = "white", size = size, check_overlap = TRUE
+    ))
+  }
+
+  label <- if (identical(st$func, "pct_distinct")) {
+    ce_call("base::paste0", ce_call("base::round", call("*", 100, metric), 1),
+            "%")
+  } else {
+    ce_call("base::prettyNum",
+            ce_call("base::round", ce_call("base::signif", metric, 6), 4),
+            big.mark = ",", scientific = FALSE)
+  }
+  just <- if (horiz) {
+    ce_call("base::ifelse", call("<", metric, 0), 1.15, -0.15)
+  } else {
+    ce_call("base::ifelse", call("<", metric, 0), 1.5, -0.5)
+  }
+
+  grouped <- identical(st$bar_mode, "grouped") && !is.null(st$color)
+  stacked <- !is.null(st$color) && !grouped
+
+  aes <- if (horiz) {
+    ce_aes(label = label, hjust = just)
+  } else {
+    ce_aes(label = label, vjust = just)
+  }
+
+  data <- NULL
+  if (stacked) {
+    # One label per stack: its total, from the cells summed per bar. The
+    # colour leaves the layer with the summarise, so the fill goes too.
+    aes <- as.call(c(as.list(aes), list(fill = NULL)))
+    syms <- lapply(c(st$facet, st$group), as.name)
+    by <- if (length(syms) == 1L) syms[[1L]] else as.call(c(list(as.name("c")),
+                                                          syms))
+    data <- call(
+      "function", as.pairlist(alist(d = )),
+      as.call(c(
+        list(ce_call("dplyr::summarise")[[1L]], as.name("d")),
+        stats::setNames(list(ce_call("base::sum", metric)),
+                        as.character(metric)),
+        list(.by = by)
+      ))
+    )
+  }
+
+  ce_call(
+    "ggplot2::geom_text", aes, data = data,
+    position = if (grouped) {
+      ce_call("ggplot2::position_dodge", width = 0.6,
+              orientation = if (horiz) "y")
+    },
+    colour = GG_AXIS_LABEL_COLOR, size = size, check_overlap = TRUE
   )
 }
 

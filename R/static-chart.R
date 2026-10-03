@@ -16,7 +16,8 @@
 #' The look mirrors the canvas chart, constant for constant (chart.js is the
 #' source of truth): 11px `#6b7280` tick labels, dashed `#e5e7eb` gridlines on
 #' the value axis only, `#d1d5db` axis lines, the category-first-at-the-top
-#' horizontal layout, 60%-band bars with no rounding and no value labels,
+#' horizontal layout, 60%-band bars with no rounding and value labels only
+#' on request (`value_labels`),
 #' boxes filled at the series color over a full-strength border, monotone
 #' interpolation on lines, and the bottom-centered legend band.
 #'
@@ -44,6 +45,10 @@
 #'   ordering, as in [new_chart_block()]. Unset values resolve per type like
 #'   the canvas: a bar lies horizontal and sorts by value, descending; a
 #'   boxplot stands vertical and keeps the data's own order, ascending.
+#' @param value_labels Write each bar's value at its end, as in
+#'   [new_chart_block()]: the stack total on a stacked bar, every bar when
+#'   grouped, each segment's share inside a percent bar. Overlapping labels
+#'   are left out (`check_overlap`). Bar only.
 #' @param count_on,count_col Observation-count labels, as in
 #'   [new_chart_block()].
 #' @param facet_cols Panels per row, passed to [ggplot2::facet_wrap()]'s
@@ -103,6 +108,7 @@ static_chart <- function(data,
                      y = NULL,
                      series = NULL,
                      bar_mode = "stacked",
+                     value_labels = FALSE,
                      orientation = NULL,
                      sort_by = NULL,
                      sort_dir = NULL,
@@ -199,7 +205,8 @@ static_chart <- function(data,
     bar = gg_bar(
       data, group, color, facet, value_col, func, bar_mode, horiz,
       sort_by, sort_dir, count_on, count_col, scale_map, na_group, pct_of,
-      facet_cols, value_lines, line_width_mult
+      facet_cols, value_lines, line_width_mult,
+      value_labels = isTRUE(value_labels)
     ),
     boxplot = gg_boxplot(
       data, group, color, facet, value_col, box_points, summary, whiskers,
@@ -863,7 +870,7 @@ gg_bar <- function(data, group, color, facet, value_col, func,
                          count_on, count_col, scale_map,
                          na_group = "level", pct_of = "facet",
                          facet_cols = NULL, value_lines = NULL,
-                         line_width_mult = 1) {
+                         line_width_mult = 1, value_labels = FALSE) {
 
   if (is.null(group)) {
     return(NULL)
@@ -941,6 +948,11 @@ gg_bar <- function(data, group, color, facet, value_col, func,
     )
   }
 
+  if (value_labels) {
+    p <- p + gg_bar_labels(agg, group, color, facet, func, horiz,
+                           grouped, pct, width)
+  }
+
   val_lab <- if (pct) {
     "% of group total"
   } else {
@@ -962,6 +974,9 @@ gg_bar <- function(data, group, color, facet, value_col, func,
                        fraction = fraction)
   lines <- gg_line_values(value_lines) / if (fraction) 100 else 1
   vals <- as.numeric(vals)
+  if (value_labels && !pct) {
+    vals <- c(vals, gg_label_room(vals))
+  }
 
   p <- p + gg_bar_value_scale(c(vals, gg_line_room(lines, vals, zero = TRUE)),
                               horiz, val_lab, percent = pct)
@@ -977,6 +992,114 @@ gg_bar <- function(data, group, color, facet, value_col, func,
         axis_labs %||% ggplot2::waiver()
     ) + ggplot2::labs(x = NULL)
   }
+}
+
+# Value labels at the bar ends, as the canvas draws them (`value_labels`): one
+# per bar, the stack total at the end of a stacked bar, each segment's share
+# inside a percent bar. check_overlap thins a crowded axis the way ECharts'
+# hideOverlap does; the canvas keeps every value in the tooltip.
+gg_bar_labels <- function(agg, group, color, facet, func, horiz, grouped,
+                          pct, width) {
+
+  size <- gg_px_size(11)
+
+  if (pct) {
+    # The share of the group total, inside the segment. Every row stays, so
+    # the text stacks exactly like the bars; a sliver too thin to hold its
+    # label gets an empty one (the canvas measures the segment instead).
+    keys <- lapply(c(facet, group), function(cc) as.character(agg[[cc]]))
+    tot <- stats::ave(agg$.value, keys, FUN = function(v) sum(v, na.rm = TRUE))
+    share <- agg$.value / tot
+    agg$.label <- ifelse(is.finite(share) & share >= 0.06,
+                         paste0(round(100 * share), "%"), "")
+    return(ggplot2::geom_text(
+      ggplot2::aes(label = .data$.label, group = .data[[color]]),
+      data = agg, position = ggplot2::position_fill(vjust = 0.5,
+                                                    reverse = TRUE),
+      colour = "white", size = size, check_overlap = TRUE
+    ))
+  }
+
+  lab <- agg[!is.na(agg$.value), , drop = FALSE]
+  total <- NULL
+
+  if (!is.null(color) && !grouped) {
+    # A stack has one value end: the stack total, written where the stack
+    # ends on the total's side (a negative segment stacks below zero).
+    cells <- lapply(c(facet, group), function(cc) lab[[cc]])
+    sums <- stats::aggregate(
+      list(.total = lab$.value), cells,
+      FUN = sum
+    )
+    names(sums)[seq_along(cells)] <- c(facet, group)
+    ends <- stats::aggregate(
+      list(.pos = pmax(lab$.value, 0), .neg = pmin(lab$.value, 0)),
+      cells, FUN = sum
+    )
+    lab <- sums
+    lab$.value <- ifelse(lab$.total < 0, ends$.neg, ends$.pos)
+    lab[[group]] <- factor(as.character(lab[[group]]),
+                           levels = levels(agg[[group]]))
+    total <- lab$.total
+  }
+
+  shown <- total %||% lab$.value
+  lab$.label <- if (identical(func, "pct_distinct")) {
+    paste0(round(100 * shown, 1), "%")
+  } else {
+    gg_value_text(shown)
+  }
+  # Just past the bar's own end: right of (above) a positive bar, left of
+  # (below) a negative one.
+  lab$.just <- if (horiz) {
+    ifelse(shown < 0, 1.15, -0.15)
+  } else {
+    ifelse(shown < 0, 1.5, -0.5)
+  }
+
+  mapping <- if (horiz) {
+    ggplot2::aes(label = .data$.label, hjust = .data$.just)
+  } else {
+    ggplot2::aes(label = .data$.label, vjust = .data$.just)
+  }
+
+  # Grouped labels dodge like their bars, so they need the colour grouping.
+  if (grouped) {
+    mapping$group <- ggplot2::aes(group = .data[[color]])$group
+  }
+
+  ggplot2::geom_text(
+    mapping, data = lab,
+    position = if (grouped) {
+      ggplot2::position_dodge(width = width, reverse = horiz,
+                              orientation = if (horiz) "y" else "x")
+    } else {
+      "identity"
+    },
+    colour = GG_AXIS_LABEL_COLOR, size = size, check_overlap = TRUE
+  )
+}
+
+# chart.js ddNum: six significant digits, at most four decimals, thousands
+# separators. The canvas writes its value labels with it.
+gg_value_text <- function(x) {
+  prettyNum(round(signif(x, 6), 4), big.mark = ",", scientific = FALSE)
+}
+
+# Headroom for value labels past the bar ends: 12% of the data span on the
+# side(s) the bars reach, as the canvas' value-axis boundaryGap. Zero stays
+# the floor of an all-positive axis.
+gg_label_room <- function(vals) {
+  vals <- vals[is.finite(vals)]
+  if (!length(vals)) {
+    return(numeric())
+  }
+  span <- diff(range(vals))
+  if (!span > 0) {
+    span <- max(abs(vals))
+  }
+  c(if (max(vals) > 0) max(vals) + 0.12 * span,
+    if (min(vals) < 0) min(vals) - 0.12 * span)
 }
 
 # chart.js summarizeStat, verbatim: {center, lo, hi} of a summary statistic

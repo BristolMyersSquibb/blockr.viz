@@ -544,6 +544,17 @@ chart_arguments <- function() {
       example = "stacked",
       type = arg_enum(c("stacked", "grouped", "percent"))
     ),
+    value_labels = new_arg_spec(
+      paste0(
+        "Write each bar's value at its end: true or false (default). A ",
+        "stacked bar labels the stack total, a grouped bar every bar, a ",
+        "percent bar each segment's share. Overlapping labels are left out, ",
+        "the tooltip keeps every value. Bar and waterfall only. Use for ",
+        "\"show the values on the bars\"."
+      ),
+      example = TRUE,
+      type = arg_boolean()
+    ),
     baseline = new_arg_spec(
       paste0(
         "Bar baseline mode: \"zero\" (default \u2014 every bar starts at 0) or ",

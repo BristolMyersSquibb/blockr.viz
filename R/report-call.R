@@ -98,6 +98,7 @@ static_chart_call <- function(x, var) {
     y = NULL,
     series = NULL,
     bar_mode = "stacked",
+    value_labels = FALSE,
     orientation = NULL,
     sort_by = NULL,
     sort_dir = NULL,
@@ -165,9 +166,9 @@ chart_report_state <- function(x) {
 
   nms <- c(
     "chart_type", "group", "color", "facet", "value", "func", "x", "y",
-    "series", "bar_mode", "orientation", "sort_by", "sort_dir", "count_on",
-    "count_col", "facet_scales", "facet_cols", "box_points", "smoother",
-    "identity_line",
+    "series", "bar_mode", "value_labels", "orientation", "sort_by",
+    "sort_dir", "count_on", "count_col", "facet_scales", "facet_cols",
+    "box_points", "smoother", "identity_line",
     "lo", "hi", "step", "value_lines", "x_lines", "line_width_mult",
     "dot_size_mult", "title", "subtitle", "caption"
   )

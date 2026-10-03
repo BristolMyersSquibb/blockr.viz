@@ -22,6 +22,7 @@ new_chart_block(
   sort_dir = NULL,
   orientation = NULL,
   bar_mode = "stacked",
+  value_labels = FALSE,
   filter_type = "categorical",
   filter_column = NULL,
   filter_values = NULL,
@@ -150,6 +151,15 @@ side-by-side / dodged, for comparing absolute values), or \code{"percent"}
 (stacked but each group normalized to 100\%, for comparing composition).
 No effect without a \code{color} split; ignored when \code{baseline = "cumulative"}
 (waterfall). Bar charts only.}
+
+\item{value_labels}{Write each bar's value at its end: \code{TRUE} or \code{FALSE}
+(default). A negative bar carries its label at its own end, left of or
+below zero. A stacked bar labels the stack total, a grouped bar every
+bar, and a \code{bar_mode = "percent"} bar each segment's share, inside the
+segment. Labels that would overlap are left out, so a crowded chart (a
+waterfall of 100+ subjects) stays readable; the tooltip keeps every
+value. Bar and waterfall only. Like \code{identity_line}, the gear's switch
+speaks "on"/"off" over the wire; the R state is a plain logical.}
 
 \item{filter_type, filter_column, filter_values, filter_range, filter_point}{Runtime click/brush filter state (transport for the emitted filter;
 normally left at defaults at creation).}
