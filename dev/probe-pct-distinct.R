@@ -1,5 +1,4 @@
-# Repro + acceptance for the AE percentage work (CDEx round-2 items 47/48, see
-# _team-ops/tasks/2026-08-christoph-cdex-most-frequent-ae-percent).
+# Repro + acceptance for the AE percentage work.
 #
 #   Rscript blockr.viz/dev/probe-pct-distinct.R
 #

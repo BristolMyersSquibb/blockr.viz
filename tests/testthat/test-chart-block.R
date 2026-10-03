@@ -638,8 +638,7 @@ test_that("config echo of a healed optional role does not erase state", {
 })
 
 # --- na_group / pct_distinct ------------------------------------------------
-# The population-as-rows design (see _team-ops
-# 2026-08-christoph-cdex-most-frequent-ae-percent): a chart divides by the
+# The population-as-rows design: a chart divides by the
 # distinct values in its PANEL, so rows carrying a subject and no category
 # must draw nothing and still count. The numbers are guarded in the engine
 # tests (test-agg-pct-distinct.R, test-agg-golden.R); what is guarded here is

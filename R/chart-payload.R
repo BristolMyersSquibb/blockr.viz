@@ -4,7 +4,7 @@
 # column with its data, so re-pointing colour or facet from the sentence needs
 # no round trip (see needed_cols()). That is bounded by the marks but not by
 # the rows, and the findings frames are the big ones: opening "VS: Records by
-# Parameter" on the CEDX board sent 15.67 MB in one websocket frame -- 25
+# Parameter" on a clinical board sent 15.67 MB in one websocket frame -- 25
 # columns x 65,032 rows -- to draw nine bars.
 #
 # Almost all of it is repeated low-cardinality strings: ETHNIC has 2 distinct
@@ -24,8 +24,8 @@
 #' Any atomic column, not just the strings: a code is shorter than the value it
 #' replaces whenever the values repeat, and the levels array is serialized by
 #' the same writer, so a Date stays an ISO string and a double stays a double.
-#' On the CEDX vital-signs frame that catches ADT (757 distinct dates in 65,032
-#' rows) and AVISITN (12) as well as the obvious ETHNIC and TRT.
+#' On a clinical vital-signs frame that catches ADT (757 distinct dates in
+#' 65,032 rows) and AVISITN (12) as well as the obvious ETHNIC and TRT.
 #'
 #' Three guards, each answering a way the encoding could cost more than it
 #' saves:

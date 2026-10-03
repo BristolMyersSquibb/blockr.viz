@@ -36,7 +36,7 @@ board <- new_dock_board(
   blocks = c(
     data = new_static_block(adae, block_name = "ADaM ADAE"),
 
-    # 1. The CDEx case: most frequent AEs, subjects not events, drill on.
+    # 1. The clinical case: most frequent AEs, subjects not events, drill on.
     rank = new_rank_block(
       group = "AEDECOD", func = "count_distinct", id_var = "USUBJID",
       drill = "AEDECOD",

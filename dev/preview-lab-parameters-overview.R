@@ -9,7 +9,7 @@
 # over time, split by treatment -- which is a chart's job, or a table with
 # VISIT on the rows and the parameter pinned. See the by-visit preview.
 #
-# CDEx 244-025 pins PARAM to a single value in each of the Lab / VS / ECG
+# A clinical board pins PARAM to a single value in each of the Lab / VS / ECG
 # local filters, so all six charts on a page show one test. This is the other
 # half of that page: one row per PARAM, no pin, so every test is on screen at
 # once. It answers "which tests are moving", which the pinned page cannot ask.

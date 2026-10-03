@@ -8,7 +8,7 @@
 #   chart_2026-10-02_1432.xlsx                (no title either)
 #
 # The dataset is a `blockr_dataset` attribute, set by whatever read the data
-# (blockr.sandbox's CDEx read writes the study code) and carried down to the
+# (blockr.sandbox's study reader writes the study code) and carried down to the
 # chart by blockr.dm's filter trail. Read here as a plain attribute, so this
 # package needs neither.
 #
