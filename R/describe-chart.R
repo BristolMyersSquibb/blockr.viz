@@ -17,9 +17,10 @@ chart_mapping_args <- function() {
 }
 
 # Runtime interaction state, not creation-time config.
+# `filter_column` / `filter_values` are LEGACY, read only from old state.
 chart_filter_args <- function() {
-  c("filter_type", "filter_column", "filter_values", "filter_range",
-    "filter_point")
+  c("filter_type", "filters", "filter_range", "filter_point",
+    "filter_column", "filter_values")
 }
 
 chart_chrome_args <- function() {
@@ -210,7 +211,12 @@ chart_value_line <- function(state, defaults) {
 # is silently narrowing everything downstream.
 chart_filter_lines <- function(state) {
 
-  set <- chart_set_args(state, setdiff(chart_filter_args(), "filter_type"))
+  set <- chart_set_args(state, c("filter_range", "filter_point"))
+  # The click filter keeps its columns apart: "AETERM = Rash; AESEV = MILD".
+  filters <- chart_filters_state(state$filters) %||%
+    chart_legacy_filters(state$filter_column, state$filter_values)
+  set <- c(list(filters = fmt_chart_filters(filters)), set)
+  set <- set[!vapply(set, is.null, logical(1L))]
 
   if (!length(set)) {
     return("Drill filter: none active (the block passes its input through).")

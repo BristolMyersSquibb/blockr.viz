@@ -28,6 +28,7 @@ new_chart_block(
   filter_values = NULL,
   filter_range = NULL,
   filter_point = NULL,
+  filters = NULL,
   line_width_mult = 1,
   dot_size_mult = 1,
   connect = "monotone",
@@ -161,8 +162,13 @@ waterfall of 100+ subjects) stays readable; the tooltip keeps every
 value. Bar and waterfall only. Like \code{identity_line}, the gear's switch
 speaks "on"/"off" over the wire; the R state is a plain logical.}
 
-\item{filter_type, filter_column, filter_values, filter_range, filter_point}{Runtime click/brush filter state (transport for the emitted filter;
-normally left at defaults at creation).}
+\item{filter_type, filters, filter_range, filter_point}{Runtime click/brush filter state (transport for the emitted filter;
+normally left at defaults at creation). \code{filters} is the click filter,
+a named list of character vectors, column -> values, \code{NA} for a missing
+value; the columns AND together. A range filter (\code{filter_type = "range"}) may carry the facet panel it was taken in as \code{filters}.}
+
+\item{filter_column, filter_values}{LEGACY, folded into \code{filters}: a board
+saved with one filter column and its values restores as that filter.}
 
 \item{line_width_mult}{Multiplier on the default line width for line
 charts. Default \code{1.0}. Range \code{0.5}-\code{3.0}. Individual family only.}

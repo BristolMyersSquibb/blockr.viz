@@ -469,18 +469,12 @@ chart_arguments <- function() {
       type = arg_string()
     ),
     # Runtime filter-transport slots: NULL examples (dropped) and their type
-    # varies (column name / value array / range object) -> left untyped.
-    filter_column = new_arg_spec(
+    # varies (named list / range object) -> left untyped.
+    filters = new_arg_spec(
       paste0(
-        "Runtime filter-transport state. The column the last click ",
-        "filtered on. Usually null at creation."
-      ),
-      example = NULL
-    ),
-    filter_values = new_arg_spec(
-      paste0(
-        "Runtime filter-transport state. Values kept after the last ",
-        "click. Usually null at creation."
+        "Runtime filter-transport state. The click filter: a named list, ",
+        "column -> values kept after the last click (NA = missing value). ",
+        "Usually null at creation."
       ),
       example = NULL
     ),
@@ -711,7 +705,7 @@ chart_guidance <- function() {
       "textbook Tukey boxplot; `summary` / `whiskers` swap the body /",
       "whisker statistic when a different convention is asked for.",
       "\n- \"label bars with W\" -> label=\"W\"",
-      "\n\nLeave filter_type/filter_column/filter_values/filter_range at",
+      "\n\nLeave filter_type/filters/filter_range at",
       "defaults \u2014 they are runtime transport for the emitted filter, not",
       "creation-time config.",
       "\n\nWhen picking `color`, check the data: if all visible rows",
