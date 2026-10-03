@@ -12,14 +12,5 @@
    }
   }
  ],
- "hosts": [
-  {
-   "style": "position: fixed; left: -20000px; top: 0px; width: 640px; height: 360px;",
-   "chart": {
-    "id": "blockr-capture-chart-1",
-    "style": "width: 640px; height: 360px;",
-    "cls": "drilldown-chart-container dd-family-aggregated"
-   }
-  }
- ]
+ "hosts": []
 }

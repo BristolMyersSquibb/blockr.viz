@@ -26,8 +26,8 @@ jobs:
       - run: npx -y -p typescript@~6.0.0 tsc
 
   # The chart's JavaScript in node with happy-dom: characterization
-  # snapshots and scaling checks (tests/js/README.md), against both chart
-  # engines. blockr.ui's controls load from a checkout of its default branch.
+  # snapshots and scaling checks (tests/js/README.md). blockr.ui's controls
+  # load from a checkout of its default branch.
   test-js:
     runs-on: ubuntu-latest
     steps:
@@ -42,10 +42,5 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm test
-        env:
-          BLOCKR_UI_JS: ${{ github.workspace }}/_blockr.ui/inst/assets/js
-      # The same tests against the v2 engine (inst/js/chart-v2/), which has to
-      # reproduce v1's snapshots or list why not (tests/js/v2-differences.json).
-      - run: npm run test:v2
         env:
           BLOCKR_UI_JS: ${{ github.workspace }}/_blockr.ui/inst/assets/js

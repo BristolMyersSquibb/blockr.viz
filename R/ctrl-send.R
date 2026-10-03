@@ -718,7 +718,10 @@ new_ctrl_bridge_extension <- function(...) {
 #' @param data The block's (annotated) input, as a data frame.
 #' @param table Name of the table the claim applies to, `""` when the target
 #'   filters a plain data frame (or when the target resolves the table itself).
-#' @param filters Named list, column -> drilled value(s). A value on a column
+#' @param filters Named list, column -> drilled value(s); the columns AND
+#'   together. An `NA` value is a missing one: it takes the rows where the
+#'   column is missing or empty, and a column left with no value there is not
+#'   claimed. A value on a column
 #'   carrying a group definition (see [expand_groups()]) is a group name; it
 #'   is matched against the group's members, and the claim is the SET of
 #'   source values the group holds (`mode = "multi"`), so a pooled bar claims
@@ -750,10 +753,17 @@ dd_ctrl_claims <- function(data, table, filters) {
   # unexpanded group column holds raw levels: match the group's members
   # (group_column_values()). An expanded column holds the names, so there the
   # clicked value matches as it is.
+  # A missing value (NA in the filter) takes the rows where the column is
+  # missing or empty, as the chart's aggregation folds both.
   keep <- rep(TRUE, nrow(data))
   for (col in names(filters)) {
-    keep <- keep & as.character(data[[col]]) %in%
-      group_column_values(data[[col]], filters[[col]])
+    x <- as.character(data[[col]])
+    vals <- as.character(unlist(filters[[col]]))
+    hit <- x %in% group_column_values(data[[col]], vals[!is.na(vals)])
+    if (anyNA(vals)) {
+      hit <- hit | is.na(x) | x == ""
+    }
+    keep <- keep & hit
   }
 
   cols <- names(filters)[!startsWith(names(filters), ".")]
@@ -794,7 +804,8 @@ dd_ctrl_claims <- function(data, table, filters) {
     vals <- if (identical(to, col)) {
       # No source column to claim: the values the UPSTREAM group column holds
       # for the clicked groups (raw members under an overlap definition).
-      group_column_values(data[[col]], filters[[col]], origin = TRUE)
+      v <- as.character(unlist(filters[[col]]))
+      group_column_values(data[[col]], v[!is.na(v)], origin = TRUE)
     } else {
       src <- data[[to]]
       v <- unique(as.character(src[keep]))

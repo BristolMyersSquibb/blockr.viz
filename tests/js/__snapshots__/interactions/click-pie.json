@@ -13,10 +13,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AESEV",
-      "values": [
-       "SEVERE"
-      ],
+      "filters": {
+       "AESEV": [
+        "SEVERE"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -81,7 +82,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: SEVERE"
+     "text": "Filtered: AESEV = SEVERE"
     },
     {
      "reset": "Reset"
@@ -89,7 +90,7 @@
    ],
    "state": {
     "selected": "SEVERE",
-    "selectedColumn": null,
+    "selectedColumn": "AESEV",
     "brush": false
    },
    "signal": null,
@@ -113,108 +114,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": null,
-      "values": null,
-      "x_col": null,
-      "y_col": null,
-      "x_range": null,
-      "y_range": null
-     },
-     "opts": {
-      "priority": "event"
-     }
-    }
-   ],
-   "calls": [
-    {
-     "instance": 0,
-     "calls": [
-      {
-       "op": "setOption",
-       "option": {
-        "series": [
-         {
-          "data": [
-           {
-            "name": "SEVERE",
-            "value": 20,
-            "n": 20,
-            "itemStyle": {
-             "color": "#0072B2",
-             "opacity": 1
-            }
-           },
-           {
-            "name": "MILD",
-            "value": 20,
-            "n": 20,
-            "itemStyle": {
-             "color": "#D55E00",
-             "opacity": 1
-            }
-           },
-           {
-            "name": "MODERATE",
-            "value": 18,
-            "n": 18,
-            "itemStyle": {
-             "color": "#F0E442",
-             "opacity": 1
-            }
-           },
-           {
-            "name": "",
-            "value": 2,
-            "n": 2,
-            "itemStyle": {
-             "color": "#009E73",
-             "opacity": 1
-            }
-           }
-          ]
-         }
-        ]
-       }
-      }
-     ]
-    }
-   ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
-   "state": {
-    "selected": null,
-    "selectedColumn": null,
-    "brush": false
-   },
-   "signal": null,
-   "legendOff": null,
-   "pending": [
-    {
-     "ms": 300,
-     "left": 300
-    },
-    {
-     "ms": 16,
-     "left": 16
-    }
-   ]
-  },
-  {
-   "step": "click MILD",
-   "inputs": [
-    {
-     "name": "blk-drilldown_block_action",
-     "value": {
-      "action": "filter",
-      "filter_type": "categorical",
-      "column": "AESEV",
-      "values": [
-       "MILD"
-      ],
+      "filters": {
+       "AESEV": [
+        "SEVERE"
+       ]
+      },
       "nonce": 2
      },
      "opts": {
@@ -238,6 +142,107 @@
             "n": 20,
             "itemStyle": {
              "color": "#0072B2",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "MILD",
+            "value": 20,
+            "n": 20,
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 0.2
+            }
+           },
+           {
+            "name": "MODERATE",
+            "value": 18,
+            "n": 18,
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 0.2
+            }
+           },
+           {
+            "name": "",
+            "value": 2,
+            "n": 2,
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 0.2
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: AESEV = SEVERE"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "SEVERE",
+    "selectedColumn": "AESEV",
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "click MILD",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "AESEV": [
+        "MILD"
+       ]
+      },
+      "nonce": 3
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "SEVERE",
+            "value": 20,
+            "n": 20,
+            "itemStyle": {
+             "color": "#0072B2",
              "opacity": 0.2
             }
            },
@@ -279,7 +284,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: MILD"
+     "text": "Filtered: AESEV = MILD"
     },
     {
      "reset": "Reset"
@@ -287,7 +292,7 @@
    ],
    "state": {
     "selected": "MILD",
-    "selectedColumn": null,
+    "selectedColumn": "AESEV",
     "brush": false
    },
    "signal": null,

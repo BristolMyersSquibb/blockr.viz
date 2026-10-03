@@ -1,4 +1,4 @@
-/* Hover pickers: chart.js's own nearest-line (line charts) and
+/* Hover pickers: the chart's own nearest-line (line charts) and
  * nearest-band-level (band charts) logic, and the overlay patches they
  * drive. The fake echarts converts pixels to data one to one, so a pixel
  * position below is also a data position. */

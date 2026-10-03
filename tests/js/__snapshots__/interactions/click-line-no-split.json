@@ -66,18 +66,42 @@
      }
     }
    ],
-   "calls": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {},
+         {},
+         {}
+        ]
+       }
+      }
+     ]
+    }
+   ],
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: 15, 29.2"
+     "text": "Filtered: Analysis Relative Day = 15, Analysis Value = 29.2"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "15, 29.2",
+    "selected": null,
     "selectedColumn": null,
     "brush": true
    },

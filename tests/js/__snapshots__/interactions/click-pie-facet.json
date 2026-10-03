@@ -14,10 +14,14 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AESEV",
-      "values": [
-       "MILD"
-      ],
+      "filters": {
+       "AESEV": [
+        "MILD"
+       ],
+       "SEX": [
+        "F"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -111,7 +115,7 @@
             "n": 10,
             "itemStyle": {
              "color": "#F0E442",
-             "opacity": 1
+             "opacity": 0.2
             }
            }
           ]
@@ -125,15 +129,25 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: MILD"
+     "text": "Filtered: AESEV = MILD, SEX = F"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "MILD",
-    "selectedColumn": null,
+    "selected": {
+     "AESEV": [
+      "MILD"
+     ],
+     "SEX": [
+      "F"
+     ]
+    },
+    "selectedColumn": [
+     "AESEV",
+     "SEX"
+    ],
     "brush": false
    },
    "signal": null,
@@ -157,151 +171,14 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": null,
-      "values": null,
-      "x_col": null,
-      "y_col": null,
-      "x_range": null,
-      "y_range": null
-     },
-     "opts": {
-      "priority": "event"
-     }
-    }
-   ],
-   "calls": [
-    {
-     "instance": 0,
-     "calls": [
-      {
-       "op": "setOption",
-       "option": {
-        "series": [
-         {
-          "data": [
-           {
-            "name": "MILD",
-            "value": 10,
-            "n": 10,
-            "itemStyle": {
-             "color": "#0072B2",
-             "opacity": 1
-            }
-           },
-           {
-            "name": "SEVERE",
-            "value": 10,
-            "n": 10,
-            "itemStyle": {
-             "color": "#D55E00",
-             "opacity": 1
-            }
-           },
-           {
-            "name": "MODERATE",
-            "value": 8,
-            "n": 8,
-            "itemStyle": {
-             "color": "#F0E442",
-             "opacity": 1
-            }
-           },
-           {
-            "name": "",
-            "value": 2,
-            "n": 2,
-            "itemStyle": {
-             "color": "#009E73",
-             "opacity": 1
-            }
-           }
-          ]
-         }
-        ]
-       }
-      }
-     ]
-    },
-    {
-     "instance": 1,
-     "calls": [
-      {
-       "op": "setOption",
-       "option": {
-        "series": [
-         {
-          "data": [
-           {
-            "name": "MODERATE",
-            "value": 10,
-            "n": 10,
-            "itemStyle": {
-             "color": "#0072B2",
-             "opacity": 1
-            }
-           },
-           {
-            "name": "SEVERE",
-            "value": 10,
-            "n": 10,
-            "itemStyle": {
-             "color": "#D55E00",
-             "opacity": 1
-            }
-           },
-           {
-            "name": "MILD",
-            "value": 10,
-            "n": 10,
-            "itemStyle": {
-             "color": "#F0E442",
-             "opacity": 1
-            }
-           }
-          ]
-         }
-        ]
-       }
-      }
-     ]
-    }
-   ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
-   "state": {
-    "selected": null,
-    "selectedColumn": null,
-    "brush": false
-   },
-   "signal": null,
-   "legendOff": null,
-   "pending": [
-    {
-     "ms": 300,
-     "left": 300
-    },
-    {
-     "ms": 16,
-     "left": 16
-    }
-   ]
-  },
-  {
-   "step": "click MODERATE in slot 1",
-   "inputs": [
-    {
-     "name": "blk-drilldown_block_action",
-     "value": {
-      "action": "filter",
-      "filter_type": "categorical",
-      "column": "AESEV",
-      "values": [
-       "MODERATE"
-      ],
+      "filters": {
+       "AESEV": [
+        "MILD"
+       ],
+       "SEX": [
+        "M"
+       ]
+      },
       "nonce": 2
      },
      "opts": {
@@ -343,7 +220,164 @@
             "n": 8,
             "itemStyle": {
              "color": "#F0E442",
+             "opacity": 0.2
+            }
+           },
+           {
+            "name": "",
+            "value": 2,
+            "n": 2,
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 0.2
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "MODERATE",
+            "value": 10,
+            "n": 10,
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 0.2
+            }
+           },
+           {
+            "name": "SEVERE",
+            "value": 10,
+            "n": 10,
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 0.2
+            }
+           },
+           {
+            "name": "MILD",
+            "value": 10,
+            "n": 10,
+            "itemStyle": {
+             "color": "#F0E442",
              "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: AESEV = MILD, SEX = M"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": {
+     "AESEV": [
+      "MILD"
+     ],
+     "SEX": [
+      "M"
+     ]
+    },
+    "selectedColumn": [
+     "AESEV",
+     "SEX"
+    ],
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "click MODERATE in slot 1",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "AESEV": [
+        "MODERATE"
+       ],
+       "SEX": [
+        "M"
+       ]
+      },
+      "nonce": 3
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "MILD",
+            "value": 10,
+            "n": 10,
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 0.2
+            }
+           },
+           {
+            "name": "SEVERE",
+            "value": 10,
+            "n": 10,
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 0.2
+            }
+           },
+           {
+            "name": "MODERATE",
+            "value": 8,
+            "n": 8,
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 0.2
             }
            },
            {
@@ -409,15 +443,25 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: MODERATE"
+     "text": "Filtered: AESEV = MODERATE, SEX = M"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "MODERATE",
-    "selectedColumn": null,
+    "selected": {
+     "AESEV": [
+      "MODERATE"
+     ],
+     "SEX": [
+      "M"
+     ]
+    },
+    "selectedColumn": [
+     "AESEV",
+     "SEX"
+    ],
     "brush": false
    },
    "signal": null,

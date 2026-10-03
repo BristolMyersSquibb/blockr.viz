@@ -251,44 +251,74 @@ chart_split_roles <- function(group = NULL, color = NULL, facet = NULL,
 # expression has to be `Group %in% c(<members>)`, with the members written in
 # as literals. They are read off the input's `blockr_groups` attribute.
 #
-# Returns a function `(col, vals)` giving the member vector to filter on, or
-# NULL when the click needs no translation (no definition, a partition, or
-# the input not seen yet). Backed by a reactiveVal that only moves when the
-# answer does, so the emitted expression does not follow every data update.
-# The answer is keyed by the click it was computed for: while the input is
-# unavailable (a hidden panel) the last answer holds, and it is never applied
-# to a different click.
-dd_group_filter_members <- function(r_column, r_values, r_data,
-                                    r_active = function() TRUE) {
+# `r_filters` gives the click filter, a named list column -> values (NA for a
+# missing value, which no group holds). Returns a function `(filters)` giving
+# a named list column -> members for the columns that need translating, or
+# NULL when none does (no definition, a partition, or the input not seen
+# yet). Backed by a reactiveVal that only moves when the answer does, so the
+# emitted expression does not follow every data update. The answer is keyed
+# by the filter it was computed for: while the input is unavailable (a
+# hidden panel) the last answer holds, and it is never applied to a
+# different filter.
+dd_group_filters_members <- function(r_filters, r_data,
+                                     r_active = function() TRUE) {
   rv <- shiny::reactiveVal(NULL)
   set <- function(v) {
     if (!identical(shiny::isolate(rv()), v)) rv(v)
   }
   shiny::observe({
-    col <- as.character(unlist(r_column()))
-    vals <- as.character(unlist(r_values()))
-    if (!isTRUE(r_active()) || length(col) != 1L || !length(vals)) {
+    f <- r_filters()
+    if (!isTRUE(r_active()) || !length(f)) {
       set(NULL)
       return()
     }
     d <- tryCatch(r_data(), error = function(e) NULL)
-    if (!is.data.frame(d) || !col %in% names(d)) {
+    if (!is.data.frame(d) || !all(names(f) %in% names(d))) {
       return()
     }
-    x <- d[[col]]
-    set(list(
-      col = col, vals = vals,
-      members = if (isTRUE(group_def(x)$overlap)) group_column_values(x, vals)
-    ))
+    members <- list()
+    for (col in names(f)) {
+      x <- d[[col]]
+      vals <- f[[col]][!is.na(f[[col]])]
+      if (length(vals) && isTRUE(group_def(x)$overlap)) {
+        members[[col]] <- group_column_values(x, vals)
+      }
+    }
+    set(list(filters = f, members = members))
   })
-  function(col, vals) {
+  function(filters) {
     cur <- rv()
-    col <- as.character(unlist(col))
-    vals <- as.character(unlist(vals))
-    if (is.null(cur) || !identical(cur$col, col) ||
-          !identical(cur$vals, vals) || !length(cur$members)) {
+    if (is.null(cur) || !identical(cur$filters, filters) ||
+          !length(cur$members)) {
       return(NULL)
     }
     cur$members
+  }
+}
+
+# The same for a block whose click filter is one column and its values (the
+# table and tile blocks). Returns a function `(col, vals)` giving the member
+# vector to filter on, or NULL when the click needs no translation.
+dd_group_filter_members <- function(r_column, r_values, r_data,
+                                    r_active = function() TRUE) {
+  as_filters <- function(col, vals) {
+    col <- as.character(unlist(col))
+    vals <- as.character(unlist(vals))
+    if (length(col) != 1L || !length(vals)) {
+      return(NULL)
+    }
+    stats::setNames(list(vals), col)
+  }
+  members <- dd_group_filters_members(
+    function() as_filters(r_column(), r_values()),
+    r_data,
+    r_active
+  )
+  function(col, vals) {
+    f <- as_filters(col, vals)
+    if (is.null(f)) {
+      return(NULL)
+    }
+    members(f)[[names(f)]]
   }
 }

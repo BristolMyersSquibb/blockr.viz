@@ -15,17 +15,18 @@ summarize_stat(vals, stat = "median_q1_q3")
 A list with \code{center}, \code{lo}, \code{hi}, or \code{NULL} for an empty vector.
 }
 \description{
-The R twin of \code{summarizeStat()} in \code{inst/js/chart.js}: one shared
-implementation so the box body, the box whiskers, the point range and the
-band can never disagree on what a statistic means. Quantiles use type 7,
-which is the same linear interpolation the JS side does (\code{i = p * (n - 1)},
-interpolate between the bracketing order statistics), and \code{sd} is the
-sample sd (n - 1), \code{0} for a single observation -- again as in JS.
+The R twin of \code{summarizeStat()} in \code{inst/js/chart/model-aggregated.js}:
+one shared implementation so the box body, the box whiskers, the point
+range and the band can never disagree on what a statistic means. Quantiles
+use type 7, which is the same linear interpolation the JS side does
+(\code{i = p * (n - 1)}, interpolate between the bracketing order statistics),
+and \code{sd} is the sample sd (n - 1), \code{0} for a single observation -- again as
+in JS.
 }
 \details{
 \code{"p10_p90"} exists here and in \code{SUMMARY_STATS}; it is the band's default
 outer interval. \code{"tukey"} returns the 1.5x IQR fences CLIPPED to the
-observed range (\verb{min(max(x), Q3 + 1.5 IQR)}), which is what chart.js has
+observed range (\verb{min(max(x), Q3 + 1.5 IQR)}), which is what the chart has
 always computed -- not the strict textbook whisker, which is the most
 extreme observation lying inside the fence. The two differ whenever no
 observation sits exactly at the fence. Mirrored deliberately: parity with

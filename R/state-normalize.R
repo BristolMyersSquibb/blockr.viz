@@ -46,11 +46,12 @@ chr_vec_state <- function(x) {
 # A boolean toggle slot: always a length-1 logical, never a string.
 #
 # The JS gear renders a two-option segmented control and transports its value
-# as the strings "on" / "off" (chart.js ROLES, table.js SORTABLE_OPT). That is
-# the CONTROL's wire format, not the block's API: table-block already coerces
-# it at the boundary (`as_toggle()`), so `sortable` et al. are plain logicals.
-# `identity_line` did not, and let the transport string leak into block state --
-# every chart board saved before that fix carries the literal "off".
+# as the strings "on" / "off" (chart/roles.js ROLES, table.js SORTABLE_OPT).
+# That is the CONTROL's wire format, not the block's API: table-block already
+# coerces it at the boundary (`as_toggle()`), so `sortable` et al. are plain
+# logicals. `identity_line` did not, and let the transport string leak into
+# block state -- every chart board saved before that fix carries the literal
+# "off".
 #
 # So accept every shape the value can arrive in: a logical (the API), "on" /
 # "off" (the gear + legacy state), "true" / "false" (a JSON round-trip), 1 / 0.

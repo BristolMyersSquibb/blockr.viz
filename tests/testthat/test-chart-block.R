@@ -85,8 +85,10 @@ test_that("click-to-filter on USUBJID produces a filter expression", {
         values = list("01-001")
       ))
       session$flushReact()
-      expect_equal(session$returned$state$filter_column(), "USUBJID")
-      expect_equal(unlist(session$returned$state$filter_values()), "01-001")
+      # v1's column + values land in the `filters` state; the legacy pair
+      # is never state again.
+      expect_equal(session$returned$state$filters(), list(USUBJID = "01-001"))
+      expect_null(session$returned$state$filter_column())
       result <- session$returned$result()
       expect_equal(nrow(result), 2L)
       expect_true(all(result$USUBJID == "01-001"))
@@ -199,8 +201,7 @@ test_that("scatter click-emit drives categorical filter on arbitrary column", {
       ))
       session$flushReact()
 
-      expect_equal(session$returned$state$filter_column(), "policy_id")
-      expect_equal(unlist(session$returned$state$filter_values()), "POL_002")
+      expect_equal(session$returned$state$filters(), list(policy_id = "POL_002"))
 
       result <- session$returned$result()
       expect_equal(nrow(result), 1L)
@@ -256,9 +257,8 @@ test_that("scatter+series click filter on real engine output returns matching ro
       ))
       session$flushReact()
 
-      expect_equal(session$returned$state$filter_column(), "policy_id")
-      expect_equal(unlist(session$returned$state$filter_values()),
-                   "policy-005")
+      expect_equal(session$returned$state$filters(),
+                   list(policy_id = "policy-005"))
 
       result <- session$returned$result()
       expect_s3_class(result, "data.frame")
@@ -862,8 +862,7 @@ test_that("with a ctrl_target the drill click is transient: nothing latched, cla
 
       # Nothing latched: no saved selection, and the chart does not filter its
       # own output on a click it only forwarded.
-      expect_null(session$returned$state$filter_column())
-      expect_null(session$returned$state$filter_values())
+      expect_null(session$returned$state$filters())
       expect_equal(nrow(session$returned$result()), 4L)
 
       # The claim went to the target.

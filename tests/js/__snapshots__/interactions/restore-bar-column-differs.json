@@ -31,13 +31,13 @@
            {
             "value": 10,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": 10,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -49,13 +49,13 @@
            {
             "value": 9,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": 9,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -67,7 +67,7 @@
            {
             "value": 3,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            }
           ]

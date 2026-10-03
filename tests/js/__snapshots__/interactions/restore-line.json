@@ -46,6 +46,120 @@
         "key": "dataZoomSelect",
         "dataZoomSelectActive": true
        }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {},
+         {},
+         {}
+        ]
+       }
       }
      ]
     }

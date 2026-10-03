@@ -14,10 +14,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AVISIT",
-      "values": [
-       "Week 2"
-      ],
+      "filters": {
+       "AVISIT": [
+        "Week 2"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -111,7 +112,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Week 2"
+     "text": "Filtered: AVISIT = Week 2"
     },
     {
      "reset": "Reset"
@@ -119,7 +120,7 @@
    ],
    "state": {
     "selected": "Week 2",
-    "selectedColumn": null,
+    "selectedColumn": "AVISIT",
     "brush": false
    },
    "signal": null,
@@ -143,10 +144,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AVISIT",
-      "values": [
-       "Week 4"
-      ],
+      "filters": {
+       "AVISIT": [
+        "Week 4"
+       ]
+      },
       "nonce": 2
      },
      "opts": {
@@ -240,7 +242,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Week 4"
+     "text": "Filtered: AVISIT = Week 4"
     },
     {
      "reset": "Reset"
@@ -248,7 +250,7 @@
    ],
    "state": {
     "selected": "Week 4",
-    "selectedColumn": null,
+    "selectedColumn": "AVISIT",
     "brush": false
    },
    "signal": null,
@@ -406,10 +408,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AVISIT",
-      "values": [
-       "Week 4"
-      ],
+      "filters": {
+       "AVISIT": [
+        "Week 4"
+       ]
+      },
       "nonce": 3
      },
      "opts": {
@@ -503,7 +506,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Week 4"
+     "text": "Filtered: AVISIT = Week 4"
     },
     {
      "reset": "Reset"
@@ -511,7 +514,7 @@
    ],
    "state": {
     "selected": "Week 4",
-    "selectedColumn": null,
+    "selectedColumn": "AVISIT",
     "brush": false
    },
    "signal": null,
@@ -535,12 +538,12 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": null,
-      "values": null,
-      "x_col": null,
-      "y_col": null,
-      "x_range": null,
-      "y_range": null
+      "filters": {
+       "AVISIT": [
+        "Week 4"
+       ]
+      },
+      "nonce": 4
      },
      "opts": {
       "priority": "event"
@@ -567,7 +570,7 @@
             ],
             "n": 12,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -580,7 +583,7 @@
             ],
             "n": 10,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -606,7 +609,7 @@
             ],
             "n": 12,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -619,7 +622,7 @@
             ],
             "n": 11,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            }
           ]
@@ -633,12 +636,15 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "No filter active"
+     "text": "Filtered: AVISIT = Week 4"
+    },
+    {
+     "reset": "Reset"
     }
    ],
    "state": {
-    "selected": null,
-    "selectedColumn": null,
+    "selected": "Week 4",
+    "selectedColumn": "AVISIT",
     "brush": false
    },
    "signal": null,

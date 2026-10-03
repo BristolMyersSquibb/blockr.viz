@@ -361,9 +361,10 @@ dt_col_label <- function(x, name) {
 
 #' Differentiated message for the flat table's non-renderable states, or NULL
 #' when the table can render. Wording mirrors the chart's empty states
-#' (chart.js): a configured column no longer in the data names the column and
-#' hints at an upstream rename + "re-pick it in the gear"; a required mapping
-#' with nothing configured is a pick prompt; a 0-row frame is just "no rows".
+#' (chart/model-common.js): a configured column no longer in the data names the
+#' column and hints at an upstream rename + "re-pick it in the gear"; a
+#' required mapping with nothing configured is a pick prompt; a 0-row frame is
+#' just "no rows".
 #' `value_cols_raw` is the caller's pre-default `value_cols` (NULL = "all but
 #' the rowname"), so an EXPLICIT pick whose columns all vanished reads as a
 #' config error, never as empty data. A partially-missing explicit pick keeps

@@ -1,6 +1,6 @@
 {
  "sameBlock": false,
- "oldSlotsKept": 1,
+ "oldSlotsKept": 0,
  "afterMount": {
   "inputs": [
    {
@@ -12,7 +12,7 @@
    }
   ],
   "newInstances": 0,
-  "disposed": 0
+  "disposed": 1
  },
  "afterReady": {
   "inputs": [
@@ -27,7 +27,7 @@
  },
  "afterData": {
   "newInstances": 1,
-  "disposed": 0,
+  "disposed": 1,
   "slots": 1
  }
 }

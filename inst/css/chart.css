@@ -915,13 +915,13 @@
 }
 
 /* ===== Title / caption bands ===== */
-/* Rendered by chart.js _updateTitles() from the RESOLVED title text; the
+/* Rendered by chart/chrome.js _updateTitles() from the RESOLVED title text; the
    whole band hides while empty so a title-less chart is pixel-identical to
    before. Muted-secondary text mirrors ggplot's title/subtitle hierarchy. */
 .dd-chart-titles {
   padding: 2px 2px 6px;
 }
-/* Empty title AND subtitle: the wrap hides itself (chart.js), and the row is
+/* Empty title AND subtitle: the wrap hides itself (chart/chrome.js), and the row is
    just the icons again, exactly as before the title moved up. */
 
 .dd-chart-title {
@@ -1025,7 +1025,7 @@
 }
 
 /* ===== Shared facet legend band ===== */
-/* One legend for the whole facet grid (chart.js _updateLegendBand): faceted
+/* One legend for the whole facet grid (chart/chrome.js _updateLegendBand): faceted
    renders hide the per-panel ECharts legends and show the color scale's
    chips ONCE here. Sizes mirror the ECharts legend defaults (25x14 round-
    rect chip, 11px text) so toggling the facet column on/off doesn't change
@@ -1073,6 +1073,13 @@
   flex: none;
 }
 
+/* The level a chip filter selects: a ring round the chip. */
+.dd-legend-chip-on {
+  box-shadow: 0 0 0 1px var(--blockr-color-border-strong, #9ca3af);
+  border-radius: var(--blockr-radius-sm, 4px);
+  color: var(--blockr-color-text-default, #111827);
+}
+
 /* Toggled-off level: dimmed chip (ECharts greys inactive entries the same
    way); the dim rides computed opacity so the PNG export inherits it. */
 .dd-legend-chip-off {
@@ -1109,7 +1116,7 @@
    read as cut, which is exactly what it looked like. A straight ramp spends its
    time where the eye can follow it.
 
-   The `animation` shorthand is set INLINE by chart.js, not here: _updateStatus()
+   The `animation` shorthand is set INLINE by chart/chrome.js, not here: _updateStatus()
    rebuilds this element on every chart re-render, and a fresh element would
    restart the animation from the top. The delay is computed from the age of the
    receipt so a rebuild resumes the fade instead of replaying it. Only the
@@ -1200,7 +1207,7 @@
    the gear. */
 .dd-card .blockr-gear-header {
   gap: 4px;
-  /* The title sits on the left of this row (chart.js). Top-aligned, so a
+  /* The title sits on the left of this row (chart/chrome.js). Top-aligned, so a
      sentence that wraps grows downward and the icons stay put at the top
      right, where every other block keeps them. */
   align-items: flex-start;
@@ -1411,7 +1418,7 @@
 }
 
 /* ===== Data tooltip =====
-   The content of the ECharts tooltip (chart.js tipHead / tipRow); the card
+   The content of the ECharts tooltip (chart/common.js tipHead / tipRow); the card
    around it is set on the option (cardTooltip). Headline 13px/600, rows 12px
    with the label muted and the value at 500 in tabular figures, a swatch
    where a headline or a row stands for one series (design system, Charts). */

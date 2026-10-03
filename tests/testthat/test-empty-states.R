@@ -1,5 +1,5 @@
 # Differentiated empty / error states across the table and tile renderers
-# (chart parity: chart.js already distinguishes "no data", "mapped column not
+# (chart parity: the chart already distinguishes "no data", "mapped column not
 # in data" and "pick a role" -- these pin the same three states server-side).
 
 render <- function(x) as.character(htmltools::renderTags(x)$html)

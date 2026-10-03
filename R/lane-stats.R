@@ -4,7 +4,7 @@
 # ships positions as percentages plus display values; the JS only draws
 # (_blockr.design/open/lane-chart/spec.md, "Statistics are computed in R").
 #
-# The vocabulary mirrors chart.js's SUMMARY_STATS (inst/js/chart.js) plus
+# The vocabulary mirrors SUMMARY_STATS in inst/js/chart/roles.js plus
 # `mean_ci95`, which exists ONLY here: a 95% CI needs `qt(0.975, n - 1)`, JS
 # has no t quantile, and the normal approximation (1.96) is 31% too narrow at
 # n = 6 -- real clinical cells have N of 6, 16, 18, 21. The two definitions are
@@ -12,17 +12,18 @@
 # the enum and hand-computed values pinning the behaviour on both sides:
 # tests/testthat/test-lane-stats.R.
 
-# MUST mirror chart.js SUMMARY_STATS values (drift-tested), plus mean_ci95.
+# MUST mirror chart/roles.js SUMMARY_STATS (drift-tested), plus mean_ci95.
 LANE_STATS <- c(
   "median_q1_q3", "mean_sd", "mean_2sd", "mean_se", "mean_ci95",
   "p5_p95", "p10_p90", "min_max"
 )
 
-# Whisker rules: the same vocabulary plus Tukey fences (chart.js WHISKER_STATS).
+# Whisker rules: the same vocabulary plus Tukey fences (WHISKER_STATS in
+# chart/roles.js).
 LANE_WHISKERS <- c("tukey", LANE_STATS)
 
 # Display metadata, one row per statistic: the select label, and the words the
-# tooltip uses for the center and the interval. Mirrors chart.js's
+# tooltip uses for the center and the interval. Mirrors chart/roles.js
 # SUMMARY_STATS labels where the values overlap (drift-tested).
 #
 # The labels are typeset, not plain ASCII, and R CMD check forbids non-ASCII
@@ -105,7 +106,7 @@ lane_stat_basis <- function(x) {
 #' `stats::quantile(type = 7)` off an already-sorted vector.
 #'
 #' Type 7 IS `index = (n - 1)p + 1` plus linear interpolation between the
-#' bracketing order statistics -- the same formula chart.js uses. Reproduced
+#' bracketing order statistics -- the same formula the chart uses. Reproduced
 #' here rather than called so the sort in [lane_stat_basis()] is paid once.
 #'
 #' The interpolation is written `(1 - h) * lo + h * hi`, NOT the algebraically
@@ -131,10 +132,10 @@ lane_q <- function(b, p) {
 
 #' One statistic off a prepared basis: center, lo, hi and n.
 #'
-#' Definitions identical to chart.js `summarizeStat()`: quantiles by linear
-#' interpolation, sample sd (`n - 1`, 0 for a single observation), Tukey
-#' fences clipped to the observed extremes. `mean_ci95` uses
-#' `stats::qt(0.975, n - 1)` -- NEVER 1.96 (see the header) -- and is
+#' Definitions identical to `summarizeStat()` (chart/model-aggregated.js):
+#' quantiles by linear interpolation, sample sd (`n - 1`, 0 for a single
+#' observation), Tukey fences clipped to the observed extremes. `mean_ci95`
+#' uses `stats::qt(0.975, n - 1)` -- NEVER 1.96 (see the header) -- and is
 #' undefined below n = 2: NA bounds, so the cell renders the center alone
 #' rather than a zero-width interval, which would read as certainty.
 #'
@@ -171,7 +172,7 @@ lane_summarize_at <- function(b, stat = "median_q1_q3") {
       iqr <- q3 - q1
       c(q(0.5), max(b$x[[1L]], q1 - 1.5 * iqr), min(b$x[[n]], q3 + 1.5 * iqr))
     },
-    # median_q1_q3, and the fallback for an unknown value (chart.js parity).
+    # median_q1_q3, and the fallback for an unknown value (chart parity).
     c(q(0.5), q(0.25), q(0.75))
   )
   list(center = out[[1L]], lo = out[[2L]], hi = out[[3L]], n = n)

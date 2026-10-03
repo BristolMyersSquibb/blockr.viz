@@ -16,10 +16,14 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AETERM",
-      "values": [
-       "Rash"
-      ],
+      "filters": {
+       "AETERM": [
+        "Rash"
+       ],
+       "AESEV": [
+        "MODERATE"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -58,7 +62,7 @@
            {
             "value": 1,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -104,7 +108,7 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -196,7 +200,7 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -228,15 +232,25 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Rash"
+     "text": "Filtered: Reported Term = Rash, AESEV = MODERATE"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "Rash",
-    "selectedColumn": null,
+    "selected": {
+     "AETERM": [
+      "Rash"
+     ],
+     "AESEV": [
+      "MODERATE"
+     ]
+    },
+    "selectedColumn": [
+     "AETERM",
+     "AESEV"
+    ],
     "brush": false
    },
    "signal": null,

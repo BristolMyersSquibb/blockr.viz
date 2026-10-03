@@ -34,34 +34,26 @@ function brushAll(drill) {
   const chart = block._slots[0].chart;
   const pts = chart.getOption().series[0].data;
   assert.strictEqual(pts.length, N);
-  /** @type {any[][]} */
-  const emitted = [];
-  const emit = block._emitDrill.bind(block);
-  block._emitDrill = (rows) => { emitted.push(rows); emit(rows); };
   chart.trigger('brushSelected', {
     batch: [{ selected: [{ seriesIndex: 0, dataIndex: Array.from({ length: N }, (_, i) => i) }] }]
   });
   const actions = env.inputs().filter((i) => /_action$/.test(i.name)).map((i) => i.value);
   env.close();
-  return { emitted, actions };
+  return actions;
 }
 
 test('brush with a drill column: every row once in the drill payload', () => {
-  const { emitted, actions } = brushAll('ID');
-  assert.strictEqual(emitted.length, 1);
-  assert.strictEqual(emitted[0].length, N);
-  assert.strictEqual(new Set(emitted[0]).size, N);
+  const actions = brushAll('ID');
   assert.strictEqual(actions.length, 1);
   const a = actions[0];
   assert.strictEqual(a.filter_type, 'categorical');
-  assert.strictEqual(a.column, 'ID');
-  assert.strictEqual(a.values.length, N);
-  assert.strictEqual(new Set(a.values).size, N);
+  const values = a.filters.ID;
+  assert.strictEqual(values.length, N);
+  assert.strictEqual(new Set(values).size, N);
 });
 
 test('brush without a drill column: a range over every brushed point', () => {
-  const { emitted, actions } = brushAll('auto');
-  assert.strictEqual(emitted.length, 0);
+  const actions = brushAll('auto');
   assert.strictEqual(actions.length, 1);
   assert.deepStrictEqual(actions[0], {
     action: 'filter', filter_type: 'range', x_col: 'X', y_col: 'Y',

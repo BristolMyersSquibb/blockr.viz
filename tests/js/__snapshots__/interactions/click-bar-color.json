@@ -14,10 +14,14 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AETERM",
-      "values": [
-       "Rash"
-      ],
+      "filters": {
+       "AETERM": [
+        "Rash"
+       ],
+       "AESEV": [
+        "MODERATE"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -56,7 +60,7 @@
            {
             "value": 1,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -108,7 +112,7 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -236,7 +240,7 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -268,15 +272,25 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Rash"
+     "text": "Filtered: Reported Term = Rash, AESEV = MODERATE"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "Rash",
-    "selectedColumn": null,
+    "selected": {
+     "AETERM": [
+      "Rash"
+     ],
+     "AESEV": [
+      "MODERATE"
+     ]
+    },
+    "selectedColumn": [
+     "AETERM",
+     "AESEV"
+    ],
     "brush": false
    },
    "signal": null,
@@ -300,294 +314,14 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": null,
-      "values": null,
-      "x_col": null,
-      "y_col": null,
-      "x_range": null,
-      "y_range": null
-     },
-     "opts": {
-      "priority": "event"
-     }
-    }
-   ],
-   "calls": [
-    {
-     "instance": 0,
-     "calls": [
-      {
-       "op": "setOption",
-       "option": {
-        "series": [
-         {
-          "data": [
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 1,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 1,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           }
-          ]
-         },
-         {
-          "data": [
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 10,
-            "itemStyle": {
-             "borderRadius": [
-              0,
-              2,
-              2,
-              0
-             ],
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 9,
-            "itemStyle": {
-             "borderRadius": [
-              0,
-              2,
-              2,
-              0
-             ],
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 1,
-            "itemStyle": {
-             "opacity": 1
-            }
-           }
-          ]
-         },
-         {
-          "data": [
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 8,
-            "itemStyle": {
-             "borderRadius": [
-              0,
-              2,
-              2,
-              0
-             ],
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 8,
-            "itemStyle": {
-             "borderRadius": [
-              0,
-              2,
-              2,
-              0
-             ],
-             "opacity": 1
-            }
-           },
-           {
-            "value": 2,
-            "itemStyle": {
-             "borderRadius": [
-              0,
-              2,
-              2,
-              0
-             ],
-             "opacity": 1
-            }
-           }
-          ]
-         },
-         {
-          "data": [
-           {
-            "value": 10,
-            "itemStyle": {
-             "borderRadius": [
-              0,
-              2,
-              2,
-              0
-             ],
-             "opacity": 1
-            }
-           },
-           {
-            "value": 10,
-            "itemStyle": {
-             "borderRadius": [
-              0,
-              2,
-              2,
-              0
-             ],
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           }
-          ]
-         }
-        ]
-       }
-      }
-     ]
-    }
-   ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
-   "state": {
-    "selected": null,
-    "selectedColumn": null,
-    "brush": false
-   },
-   "signal": null,
-   "legendOff": [],
-   "pending": [
-    {
-     "ms": 300,
-     "left": 300
-    },
-    {
-     "ms": 16,
-     "left": 16
-    }
-   ]
-  },
-  {
-   "step": "click Headache / MILD",
-   "inputs": [
-    {
-     "name": "blk-drilldown_block_action",
-     "value": {
-      "action": "filter",
-      "filter_type": "categorical",
-      "column": "AETERM",
-      "values": [
-       "Headache"
-      ],
+      "filters": {
+       "AETERM": [
+        "Rash"
+       ],
+       "AESEV": [
+        null
+       ]
+      },
       "nonce": 2
      },
      "opts": {
@@ -620,7 +354,307 @@
            {
             "value": null,
             "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
              "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 8,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 8,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 0.15
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: Reported Term = Rash, AESEV = (missing)"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": {
+     "AETERM": [
+      "Rash"
+     ],
+     "AESEV": [
+      null
+     ]
+    },
+    "selectedColumn": [
+     "AETERM",
+     "AESEV"
+    ],
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "click Headache / MILD",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "AETERM": [
+        "Headache"
+       ],
+       "AESEV": [
+        "MILD"
+       ]
+      },
+      "nonce": 3
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
             }
            },
            {
@@ -724,7 +758,7 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -800,7 +834,7 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -838,15 +872,25 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Headache"
+     "text": "Filtered: Reported Term = Headache, AESEV = MILD"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "Headache",
-    "selectedColumn": null,
+    "selected": {
+     "AETERM": [
+      "Headache"
+     ],
+     "AESEV": [
+      "MILD"
+     ]
+    },
+    "selectedColumn": [
+     "AETERM",
+     "AESEV"
+    ],
     "brush": false
    },
    "signal": null,

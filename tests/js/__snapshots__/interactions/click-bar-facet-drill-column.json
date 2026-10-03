@@ -14,12 +14,13 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "USUBJID",
-      "values": [
-       "S03",
-       "S06",
-       "S09"
-      ],
+      "filters": {
+       "USUBJID": [
+        "S03",
+        "S06",
+        "S09"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -46,7 +47,7 @@
            {
             "value": 1,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -98,7 +99,7 @@
            {
             "value": 3,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -110,25 +111,25 @@
            {
             "value": 3,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": 2,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": 3,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": 1,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -162,7 +163,7 @@
            {
             "value": 2,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -220,7 +221,7 @@
            {
             "value": 4,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -264,15 +265,19 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Nausea"
+     "text": "Filtered: USUBJID = S03, S06, S09"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "Nausea",
-    "selectedColumn": null,
+    "selected": [
+     "S03",
+     "S06",
+     "S09"
+    ],
+    "selectedColumn": "USUBJID",
     "brush": false
    },
    "signal": null,
@@ -296,291 +301,12 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": null,
-      "values": null,
-      "x_col": null,
-      "y_col": null,
-      "x_range": null,
-      "y_range": null
-     },
-     "opts": {
-      "priority": "event"
-     }
-    }
-   ],
-   "calls": [
-    {
-     "instance": 0,
-     "calls": [
-      {
-       "op": "setOption",
-       "option": {
-        "series": [
-         {
-          "data": [
-           {
-            "value": 1,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 1,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 1,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 1,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 1,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           }
-          ]
-         }
-        ]
-       }
-      }
-     ]
-    },
-    {
-     "instance": 1,
-     "calls": [
-      {
-       "op": "setOption",
-       "option": {
-        "series": [
-         {
-          "data": [
-           {
-            "value": 3,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 3,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 3,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 2,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 3,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 1,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           }
-          ]
-         }
-        ]
-       }
-      }
-     ]
-    },
-    {
-     "instance": 2,
-     "calls": [
-      {
-       "op": "setOption",
-       "option": {
-        "series": [
-         {
-          "data": [
-           {
-            "value": 2,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 2,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 4,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 4,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 4,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 4,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": null,
-            "itemStyle": {
-             "opacity": 1
-            }
-           }
-          ]
-         }
-        ]
-       }
-      }
-     ]
-    },
-    {
-     "instance": 3,
-     "calls": [
-      {
-       "op": "setOption",
-       "option": {
-        "series": [
-         {
-          "data": [
-           {
-            "value": 4,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 4,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 2,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 3,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 1,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 3,
-            "itemStyle": {
-             "opacity": 1
-            }
-           },
-           {
-            "value": 3,
-            "itemStyle": {
-             "opacity": 1
-            }
-           }
-          ]
-         }
-        ]
-       }
-      }
-     ]
-    }
-   ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
-   "state": {
-    "selected": null,
-    "selectedColumn": null,
-    "brush": false
-   },
-   "signal": null,
-   "legendOff": null,
-   "pending": [
-    {
-     "ms": 300,
-     "left": 300
-    },
-    {
-     "ms": 16,
-     "left": 16
-    }
-   ]
-  },
-  {
-   "step": "click Headache in slot 2",
-   "inputs": [
-    {
-     "name": "blk-drilldown_block_action",
-     "value": {
-      "action": "filter",
-      "filter_type": "categorical",
-      "column": "USUBJID",
-      "values": [
-       "S02",
-       "S05",
-       "S08",
-       "S11"
-      ],
+      "filters": {
+       "USUBJID": [
+        "S05",
+        "S11"
+       ]
+      },
       "nonce": 2
      },
      "opts": {
@@ -613,7 +339,7 @@
            {
             "value": 1,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -671,7 +397,7 @@
            {
             "value": 3,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -723,7 +449,7 @@
            {
             "value": 2,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -735,19 +461,19 @@
            {
             "value": 4,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": 4,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": 4,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -787,7 +513,7 @@
            {
             "value": 2,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -825,15 +551,307 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Headache"
+     "text": "Filtered: USUBJID = S05, S11"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "Headache",
-    "selectedColumn": null,
+    "selected": [
+     "S05",
+     "S11"
+    ],
+    "selectedColumn": "USUBJID",
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "click Headache in slot 2",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "USUBJID": [
+        "S02",
+        "S05",
+        "S08",
+        "S11"
+       ]
+      },
+      "nonce": 3
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 3,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: USUBJID, 4 values"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": [
+     "S02",
+     "S05",
+     "S08",
+     "S11"
+    ],
+    "selectedColumn": "USUBJID",
     "brush": false
    },
    "signal": null,

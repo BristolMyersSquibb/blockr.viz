@@ -51,10 +51,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "SEX",
-      "values": [
-       "F"
-      ],
+      "filters": {
+       "SEX": [
+        "F"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -62,11 +63,43 @@
      }
     }
    ],
-   "calls": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {},
+         {},
+         {}
+        ]
+       }
+      }
+     ]
+    }
+   ],
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: F"
+     "text": "Filtered: SEX = F"
     },
     {
      "reset": "Reset"
@@ -74,7 +107,7 @@
    ],
    "state": {
     "selected": "F",
-    "selectedColumn": null,
+    "selectedColumn": "SEX",
     "brush": false
    },
    "signal": null,

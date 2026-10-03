@@ -43,8 +43,17 @@ test_that("an active drill filter is called out as an active filter", {
   )
 
   expect_match(out, "Drill filter: ACTIVE", fixed = TRUE)
-  expect_match(out, "filter_column = AESOC", fixed = TRUE)
-  expect_match(out, "filter_values = INFECTIONS, NERVOUS", fixed = TRUE)
+  expect_match(out, "filters = AESOC = INFECTIONS, NERVOUS", fixed = TRUE)
+})
+
+test_that("a filter on several columns names each, a missing value as such", {
+
+  out <- chart_desc(
+    list(chart_type = "bar", group = "AETERM", filter_type = "categorical",
+         filters = list(AETERM = "Rash", AESEV = NA_character_))
+  )
+
+  expect_match(out, "filters = AETERM = Rash; AESEV = (missing)", fixed = TRUE)
 })
 
 test_that("no filter reads as passing the input through", {

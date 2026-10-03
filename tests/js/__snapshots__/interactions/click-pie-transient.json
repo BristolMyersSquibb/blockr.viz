@@ -14,10 +14,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AESEV",
-      "values": [
-       "MILD"
-      ],
+      "filters": {
+       "AESEV": [
+        "MILD"
+       ]
+      },
       "nonce": 1
      },
      "opts": {

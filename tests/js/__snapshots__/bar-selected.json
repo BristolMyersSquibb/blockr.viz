@@ -58,7 +58,7 @@
     }
    ]
   },
-  "status": "Filtered: AETERM = NauseaReset",
+  "status": "Filtered: Reported Term = NauseaReset",
   "empty": [],
   "grid": {
    "single": true,

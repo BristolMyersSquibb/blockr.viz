@@ -14,13 +14,14 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "USUBJID",
-      "values": [
-       "S01",
-       "S04",
-       "S07",
-       "S10"
-      ],
+      "filters": {
+       "USUBJID": [
+        "S01",
+        "S04",
+        "S07",
+        "S10"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -141,15 +142,20 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Placebo"
+     "text": "Filtered: USUBJID, 4 values"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "Placebo",
-    "selectedColumn": null,
+    "selected": [
+     "S01",
+     "S04",
+     "S07",
+     "S10"
+    ],
+    "selectedColumn": "USUBJID",
     "brush": false
    },
    "signal": null,

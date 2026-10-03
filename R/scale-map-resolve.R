@@ -16,7 +16,7 @@ dd_board_scale_map <- function() {
 }
 
 # Which drilldown role drives coloring, per chart type (pinned against the
-# JS render paths in inst/js/chart.js): stacked bar, radar, the distribution
+# JS render paths in inst/js/chart/): stacked bar, radar, the distribution
 # marks (boxplot/pointrange/band) and the individual/timeline families color
 # by the `color` role (a distribution mark splits each group into one colored
 # slot per level); pie and treemap color their `group` slices. The

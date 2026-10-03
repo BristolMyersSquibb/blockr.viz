@@ -15,39 +15,620 @@
      "name": "blk-drilldown_block_action",
      "value": {
       "action": "filter",
-      "filter_type": "categorical",
-      "column": "ARM",
-      "values": [
-       "Placebo"
+      "filter_type": "range",
+      "x_col": "ADY",
+      "y_col": "AVAL",
+      "x_range": [
+       1,
+       1
       ],
-      "nonce": 1
+      "y_range": [
+       27.37,
+       27.37
+      ]
      },
      "opts": {
       "priority": "event"
      }
     }
    ],
-   "calls": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": [
+             0,
+             26.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             14,
+             28.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             28,
+             30.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             56,
+             33.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             84,
+             35
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             3,
+             28.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             17,
+             30.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             31,
+             32.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             59,
+             35.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             87,
+             37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             2,
+             23.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             16,
+             25.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             30,
+             27.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             58,
+             30.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             86,
+             32
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             1,
+             31.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             15,
+             33.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             29,
+             35.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             57,
+             38.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             85,
+             40
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             2,
+             21.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             16,
+             23.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             30,
+             25.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             58,
+             28.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             86,
+             30
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             1,
+             29.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             15,
+             "NaN"
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             29,
+             33.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             57,
+             36.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             85,
+             38
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             0,
+             24.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             14,
+             26.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             28,
+             28.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             56,
+             31.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             84,
+             33
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             3,
+             32.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             17,
+             34.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             31,
+             36.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             59,
+             39.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             87,
+             41
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             1,
+             27.37
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             15,
+             29.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             29,
+             31.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             57,
+             34.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             85,
+             "NaN"
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             0,
+             22.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             14,
+             24.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             28,
+             26.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             56,
+             29.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             84,
+             31
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             3,
+             30.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             17,
+             32.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             31,
+             34.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             59,
+             37.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             87,
+             39
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             2,
+             25.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             16,
+             "NaN"
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             30,
+             29.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             58,
+             32.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             86,
+             34
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
    "footer": [
     {
-     "cls": "dd-status-text dd-status-receipt",
-     "text": "Drilled down to ARM = Placebo",
-     "animation": "dd-receipt-out 1100ms linear 1400ms both"
+     "cls": "dd-status-text",
+     "text": "Filtered: Analysis Relative Day = 1, Analysis Value = 27.4"
+    },
+    {
+     "reset": "Reset"
     }
    ],
    "state": {
     "selected": null,
     "selectedColumn": null,
-    "brush": false
+    "brush": true
    },
-   "signal": {
-    "cls": "dd-drill-pulse",
-    "left": "55px",
-    "top": "66px",
-    "width": null,
-    "height": null,
-    "borderRadius": null
-   },
+   "signal": null,
    "legendOff": [],
    "pending": [
     {
@@ -61,14 +642,6 @@
     {
      "ms": 150,
      "left": 150
-    },
-    {
-     "ms": 1200,
-     "left": 1200
-    },
-    {
-     "ms": 3100,
-     "left": 3100
     }
    ]
   },
@@ -79,39 +652,620 @@
      "name": "blk-drilldown_block_action",
      "value": {
       "action": "filter",
-      "filter_type": "categorical",
-      "column": "ARM",
-      "values": [
-       "Placebo"
+      "filter_type": "range",
+      "x_col": "ADY",
+      "y_col": "AVAL",
+      "x_range": [
+       1,
+       1
       ],
-      "nonce": 2
+      "y_range": [
+       27.37,
+       27.37
+      ]
      },
      "opts": {
       "priority": "event"
      }
     }
    ],
-   "calls": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": [
+             0,
+             26.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             14,
+             28.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             28,
+             30.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             56,
+             33.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             84,
+             35
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             3,
+             28.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             17,
+             30.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             31,
+             32.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             59,
+             35.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             87,
+             37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             2,
+             23.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             16,
+             25.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             30,
+             27.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             58,
+             30.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             86,
+             32
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             1,
+             31.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             15,
+             33.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             29,
+             35.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             57,
+             38.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             85,
+             40
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             2,
+             21.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             16,
+             23.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             30,
+             25.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             58,
+             28.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             86,
+             30
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             1,
+             29.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             15,
+             "NaN"
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             29,
+             33.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             57,
+             36.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             85,
+             38
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             0,
+             24.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             14,
+             26.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             28,
+             28.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             56,
+             31.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             84,
+             33
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             3,
+             32.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             17,
+             34.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             31,
+             36.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             59,
+             39.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             87,
+             41
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             1,
+             27.37
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             15,
+             29.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             29,
+             31.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             57,
+             34.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             85,
+             "NaN"
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             0,
+             22.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             14,
+             24.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             28,
+             26.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             56,
+             29.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             84,
+             31
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             3,
+             30.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             17,
+             32.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             31,
+             34.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             59,
+             37.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             87,
+             39
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             2,
+             25.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             16,
+             "NaN"
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             30,
+             29.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             58,
+             32.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             86,
+             34
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
    "footer": [
     {
-     "cls": "dd-status-text dd-status-receipt",
-     "text": "Drilled down to ARM = Placebo",
-     "animation": "dd-receipt-out 1100ms linear 1400ms both"
+     "cls": "dd-status-text",
+     "text": "Filtered: Analysis Relative Day = 1, Analysis Value = 27.4"
+    },
+    {
+     "reset": "Reset"
     }
    ],
    "state": {
     "selected": null,
     "selectedColumn": null,
-    "brush": false
+    "brush": true
    },
-   "signal": {
-    "cls": "dd-drill-pulse",
-    "left": "55px",
-    "top": "66px",
-    "width": null,
-    "height": null,
-    "borderRadius": null
-   },
+   "signal": null,
    "legendOff": [],
    "pending": [
     {
@@ -127,20 +1281,8 @@
      "left": 150
     },
     {
-     "ms": 1200,
-     "left": 1200
-    },
-    {
      "ms": 150,
      "left": 150
-    },
-    {
-     "ms": 1200,
-     "left": 1200
-    },
-    {
-     "ms": 3100,
-     "left": 3100
     }
    ]
   }

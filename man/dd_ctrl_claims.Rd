@@ -12,7 +12,10 @@ dd_ctrl_claims(data, table, filters)
 \item{table}{Name of the table the claim applies to, \code{""} when the target
 filters a plain data frame (or when the target resolves the table itself).}
 
-\item{filters}{Named list, column -> drilled value(s). A value on a column
+\item{filters}{Named list, column -> drilled value(s); the columns AND
+together. An \code{NA} value is a missing one: it takes the rows where the
+column is missing or empty, and a column left with no value there is not
+claimed. A value on a column
 carrying a group definition (see \code{\link[=expand_groups]{expand_groups()}}) is a group name; it
 is matched against the group's members, and the claim is the SET of
 source values the group holds (\code{mode = "multi"}), so a pooled bar claims

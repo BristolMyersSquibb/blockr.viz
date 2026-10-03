@@ -2,14 +2,13 @@
  * R does.
  *
  * The files run unmodified, in the order the page loads them: blockr.ui's
- * controls (controls_dep()), then drilldown-agg.js, drilldown-config.js and
- * capture-pages.js and busy-cue.js (drilldown_shared_dep()), then drilldown-theme-register.js
- * and chart.js (drilldown_chart_dep()). A chart is created through the input
- * binding's `initialize`, and its data arrives through the `drilldown-data`
- * message handler, exactly as from build_chart_msg().
- *
- * CHART_ENGINE=v2 (or createEnv({ engine: 'v2' })) loads the v2 scripts in
- * inst/js/chart-v2/ (listed in scripts.txt) instead of chart.js.
+ * controls (controls_dep()), then drilldown-agg.js, drilldown-config.js,
+ * capture-pages.js and busy-cue.js (drilldown_shared_dep()), then
+ * drilldown-theme-register.js and the chart scripts in inst/js/chart/,
+ * in the order scripts.txt lists them (drilldown_chart_dep()). A chart is
+ * created through the input binding's `initialize`, and its data arrives
+ * through the `drilldown-data` message handler, exactly as from
+ * build_chart_msg().
  *
  * What is stubbed:
  *   - Shiny: the binding, the custom message handlers and setInputValue are
@@ -42,17 +41,12 @@ const UI_FILES = ['blockr-ui.js', 'blockr-select.js', 'blockr-input.js'];
 const SHARED_FILES = ['drilldown-agg.js', 'drilldown-config.js', 'capture-pages.js', 'busy-cue.js',
                       'drilldown-theme-register.js'];
 
-/** The engine a window loads unless createEnv() names one: 'v1' or 'v2'. */
-const ENGINE = process.env.CHART_ENGINE || 'v1';
-if (ENGINE !== 'v1' && ENGINE !== 'v2') throw new Error(`CHART_ENGINE must be v1 or v2, not ${ENGINE}`);
-
-/** The v2 scripts in load order, as the html dependency lists them. */
-const V2_FILES = fs.readFileSync(path.join(JS_DIR, 'chart-v2', 'scripts.txt'), 'utf8')
+/** The chart scripts in load order, as the html dependency lists them. */
+const CHART_FILES = fs.readFileSync(path.join(JS_DIR, 'chart', 'scripts.txt'), 'utf8')
   .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
-  .map((f) => 'chart-v2/' + f);
+  .map((f) => 'chart/' + f);
 
-/** @param {string} engine */
-const vizFiles = (engine) => [...SHARED_FILES, ...(engine === 'v2' ? V2_FILES : ['chart.js'])];
+const VIZ_FILES = [...SHARED_FILES, ...CHART_FILES];
 
 let uiDir = process.env.BLOCKR_UI_JS;
 const UI_DIR = () => uiDir || (uiDir = require('node:child_process').execFileSync(
@@ -65,11 +59,7 @@ const sourceCache = {};
 const source = (file) => {
   if (!(file in sourceCache)) {
     const dir = UI_FILES.includes(file) ? UI_DIR() : JS_DIR;
-    // CHART_JS points at another chart.js (a scratch copy for an
-    // experiment); everything else always loads from inst/js.
-    const f = file === 'chart.js' && process.env.CHART_JS
-      ? process.env.CHART_JS : path.join(dir, file);
-    sourceCache[file] = fs.readFileSync(f, 'utf8');
+    sourceCache[file] = fs.readFileSync(path.join(dir, file), 'utf8');
   }
   return sourceCache[file];
 };
@@ -352,7 +342,7 @@ function fakeEcharts(mode) {
         const nm = typeof notMerge === 'object' && notMerge !== null
           ? !!notMerge.notMerge : !!notMerge;
         merged = mergeOption(merged, option, nm);
-        // Real echarts paints into a <canvas> under its element; chart.js's
+        // Real echarts paints into a <canvas> under its element; the chart's
         // busy cue waits for one before it ends.
         if (dom && !dom.querySelector('canvas')) {
           dom.appendChild(dom.ownerDocument.createElement('canvas'));
@@ -478,11 +468,9 @@ const CHAR_W = 7;
 
 /**
  * A window with the chart's scripts loaded.
- * @param {{ width?: number, height?: number, record?: 'full' | 'none',
- *           engine?: 'v1' | 'v2' }} [opts]
+ * @param {{ width?: number, height?: number, record?: 'full' | 'none' }} [opts]
  */
 function createEnv(opts = {}) {
-  const engine = opts.engine || ENGINE;
   const layout = { width: opts.width || 800, height: opts.height || 400 };
   const win = new Window({ url: 'http://localhost/' });
   const fake = fakeEcharts(opts.record || 'full');
@@ -533,13 +521,12 @@ function createEnv(opts = {}) {
   // in blockr.ui's assets/icons, ahead of blockr-ui.js.
   win.eval(iconsScript());
   for (const f of UI_FILES) win.eval(source(f));
-  for (const f of vizFiles(engine)) win.eval(source(f));
+  for (const f of VIZ_FILES) win.eval(source(f));
 
   const binding = win.__binding;
-  if (!binding) throw new Error(`the ${engine} chart scripts registered no input binding`);
+  if (!binding) throw new Error('the chart scripts registered no input binding');
 
   return {
-    engine,
     win,
     layout,
     fake,
@@ -667,11 +654,10 @@ function slotLogs(block) {
  * @param {object|string} data column object (or its JSON string)
  * @param {object[]} columns column metadata (dd_col_meta())
  * @param {{ width?: number, height?: number, keepOpen?: boolean,
- *           theme?: string, dataRev?: any, engine?: 'v1' | 'v2' }} [opts]
+ *           theme?: string, dataRev?: any }} [opts]
  */
 function draw(config, data, columns, opts = {}) {
-  const env = createEnv({ width: opts.width, height: opts.height, record: 'full',
-                          engine: opts.engine });
+  const env = createEnv({ width: opts.width, height: opts.height, record: 'full' });
   try {
     const { el, block, id } = mount(env, opts.id || 'block-drilldown_block');
     if (opts.theme) env.handlers['drilldown-theme']({ id, theme: opts.theme });
@@ -699,5 +685,5 @@ function draw(config, data, columns, opts = {}) {
 
 module.exports = {
   createEnv, mount, message, send, timeDraw, draw, normalize, domSummary, slotLogs,
-  source, JS_DIR, ENGINE, V2_FILES
+  source, JS_DIR, CHART_FILES
 };

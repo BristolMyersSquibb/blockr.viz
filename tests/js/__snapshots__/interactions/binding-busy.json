@@ -1,0 +1,380 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "gantt",
+  "x": "ASTDY",
+  "xend": "AENDY",
+  "y": "AETERM",
+  "drill": "auto"
+ },
+ "steps": [
+  {
+   "step": "busy drawing",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "mounted": true,
+   "rev": null,
+   "rows": 0,
+   "sortDir": null,
+   "needRev": null,
+   "busy": false,
+   "busyLine": ""
+  },
+  {
+   "step": "advance 299 ms",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 1
+    }
+   ],
+   "mounted": true,
+   "rev": null,
+   "rows": 0,
+   "sortDir": null,
+   "needRev": null,
+   "busy": false,
+   "busyLine": ""
+  },
+  {
+   "step": "advance 1 ms",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [],
+   "mounted": true,
+   "rev": null,
+   "rows": 0,
+   "sortDir": null,
+   "needRev": null,
+   "busy": true,
+   "busyLine": "drawing… 0.3 s"
+  },
+  {
+   "step": "advance 500 ms",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [],
+   "mounted": true,
+   "rev": null,
+   "rows": 0,
+   "sortDir": null,
+   "needRev": null,
+   "busy": true,
+   "busyLine": "drawing… 0.3 s"
+  },
+  {
+   "step": "busy again",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [],
+   "mounted": true,
+   "rev": null,
+   "rows": 0,
+   "sortDir": null,
+   "needRev": null,
+   "busy": true,
+   "busyLine": "drawing… 0.3 s"
+  },
+  {
+   "step": "data rev 1 with rows",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "custom"
+       ]
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "mounted": true,
+   "rev": 1,
+   "rows": 60,
+   "sortDir": "asc",
+   "needRev": null,
+   "busy": true,
+   "busyLine": "drawing… 0.3 s"
+  },
+  {
+   "step": "advance 16 ms",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 284
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "mounted": true,
+   "rev": 1,
+   "rows": 60,
+   "sortDir": "asc",
+   "needRev": null,
+   "busy": true,
+   "busyLine": "drawing… 0.3 s"
+  },
+  {
+   "step": "advance 16 ms",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 268
+    }
+   ],
+   "mounted": true,
+   "rev": 1,
+   "rows": 60,
+   "sortDir": "asc",
+   "needRev": null,
+   "busy": false,
+   "busyLine": "drawing… 0.3 s"
+  },
+  {
+   "step": "busy drawing",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 268
+    },
+    {
+     "ms": 300,
+     "left": 300
+    }
+   ],
+   "mounted": true,
+   "rev": 1,
+   "rows": 60,
+   "sortDir": "asc",
+   "needRev": null,
+   "busy": false,
+   "busyLine": "drawing… 0.3 s"
+  },
+  {
+   "step": "advance 300 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [],
+   "mounted": true,
+   "rev": 1,
+   "rows": 60,
+   "sortDir": "asc",
+   "needRev": null,
+   "busy": true,
+   "busyLine": "drawing… 0.3 s"
+  },
+  {
+   "step": "busy done",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [],
+   "mounted": true,
+   "rev": 1,
+   "rows": 60,
+   "sortDir": "asc",
+   "needRev": null,
+   "busy": false,
+   "busyLine": "drawing… 0.3 s"
+  }
+ ]
+}

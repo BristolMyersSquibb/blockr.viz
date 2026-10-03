@@ -356,20 +356,104 @@
  "steps": [
   {
    "step": "click High Dose centre line",
-   "inputs": [],
-   "calls": [],
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "ARM": [
+        "High Dose"
+       ]
+      },
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: 0, 29.9"
+     "text": "Filtered: Planned Arm = High Dose"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "0, 29.9",
-    "selectedColumn": null,
+    "selected": "High Dose",
+    "selectedColumn": "ARM",
     "brush": false
    },
    "signal": null,

@@ -15,13 +15,22 @@
      "name": "blk-drilldown_block_action",
      "value": {
       "action": "filter",
-      "filter_type": "categorical",
-      "column": "AESEV",
-      "values": [
-       "MILD",
-       "SEVERE"
+      "filter_type": "range",
+      "x_col": "ADY",
+      "y_col": "AVAL",
+      "x_range": [
+       1,
+       58
       ],
-      "nonce": 1
+      "y_range": [
+       21.37,
+       29.37
+      ],
+      "filters": {
+       "ARM": [
+        "Low Dose"
+       ]
+      }
      },
      "opts": {
       "priority": "event"
@@ -38,6 +47,37 @@
         "type": "brush",
         "areas": []
        }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [],
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       }
       }
      ]
     },
@@ -49,6 +89,395 @@
        "action": {
         "type": "brush",
         "areas": []
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             17,
+             30.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             87,
+             37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             16,
+             25.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             86,
+             32
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             15,
+             33.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             85,
+             40
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             31,
+             32.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             30,
+             27.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             29,
+             35.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             3,
+             28.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             59,
+             35.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             2,
+             23.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             58,
+             30.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             1,
+             31.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             57,
+             38.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": [
+             16,
+             23.24
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             84,
+             33
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             2,
+             21.37
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             58,
+             28.48
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             1,
+             29.37
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             57,
+             36.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             0,
+             24.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             56,
+             31.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             3,
+             32.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             59,
+             39.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             86,
+             30
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             15,
+             "NaN"
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             85,
+             38
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             14,
+             26.24
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             17,
+             34.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             87,
+             41
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             30,
+             25.11
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             29,
+             33.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             28,
+             28.11
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             31,
+             36.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
        }
       }
      ]
@@ -62,6 +491,220 @@
         "type": "brush",
         "areas": []
        }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             29,
+             31.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             28,
+             26.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             31,
+             34.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             30,
+             29.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             1,
+             27.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             57,
+             34.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             0,
+             22.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             56,
+             29.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             3,
+             30.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             59,
+             37.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             2,
+             25.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             58,
+             32.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             15,
+             29.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             85,
+             "NaN"
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             14,
+             24.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             84,
+             31
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             17,
+             32.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             87,
+             39
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             16,
+             "NaN"
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             86,
+             34
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       }
       }
      ]
     }
@@ -69,15 +712,15 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Brush filter active"
+     "text": "Filtered: Analysis Relative Day 1 to 58, Analysis Value 21.4 to 29.4, Planned Arm = Low Dose"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": null,
-    "selectedColumn": null,
+    "selected": "Low Dose",
+    "selectedColumn": "ARM",
     "brush": true
    },
    "signal": null,
@@ -100,12 +743,22 @@
      "name": "blk-drilldown_block_action",
      "value": {
       "action": "filter",
-      "filter_type": "categorical",
-      "column": "AESEV",
-      "values": [
-       "MODERATE"
+      "filter_type": "range",
+      "x_col": "ADY",
+      "y_col": "AVAL",
+      "x_range": [
+       31,
+       31
       ],
-      "nonce": 2
+      "y_range": [
+       32.11,
+       32.11
+      ],
+      "filters": {
+       "ARM": [
+        "High Dose"
+       ]
+      }
      },
      "opts": {
       "priority": "event"
@@ -122,6 +775,211 @@
         "type": "brush",
         "areas": []
        }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [],
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             17,
+             30.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             87,
+             37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             16,
+             25.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             86,
+             32
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             15,
+             33.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             85,
+             40
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             31,
+             32.11
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             30,
+             27.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             29,
+             35.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             3,
+             28.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             59,
+             35.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             2,
+             23.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             58,
+             30.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             1,
+             31.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             57,
+             38.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       }
       }
      ]
     },
@@ -133,6 +991,221 @@
        "action": {
         "type": "brush",
         "areas": []
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": [
+             16,
+             23.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             84,
+             33
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             2,
+             21.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             58,
+             28.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             1,
+             29.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             57,
+             36.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             0,
+             24.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             56,
+             31.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             3,
+             32.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             59,
+             39.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             86,
+             30
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             15,
+             "NaN"
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             85,
+             38
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             14,
+             26.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             17,
+             34.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             87,
+             41
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             30,
+             25.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             29,
+             33.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             28,
+             28.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             31,
+             36.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
        }
       }
      ]
@@ -146,6 +1219,220 @@
         "type": "brush",
         "areas": []
        }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             29,
+             31.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             28,
+             26.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             31,
+             34.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             30,
+             29.11
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             1,
+             27.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             57,
+             34.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             0,
+             22.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             56,
+             29.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             3,
+             30.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             59,
+             37.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             2,
+             25.37
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             58,
+             32.48
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "data": [
+           {
+            "value": [
+             15,
+             29.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             85,
+             "NaN"
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             14,
+             24.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             84,
+             31
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             17,
+             32.24
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             87,
+             39
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             16,
+             "NaN"
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             86,
+             34
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       }
       }
      ]
     }
@@ -153,15 +1440,15 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Brush filter active"
+     "text": "Filtered: Analysis Relative Day = 31, Analysis Value = 32.1, Planned Arm = High Dose"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": null,
-    "selectedColumn": null,
+    "selected": "High Dose",
+    "selectedColumn": "ARM",
     "brush": true
    },
    "signal": null,

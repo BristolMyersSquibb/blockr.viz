@@ -16,10 +16,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AETERM",
-      "values": [
-       "Rash"
-      ],
+      "filters": {
+       "AETERM": [
+        "Rash"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -31,7 +32,7 @@
    "footer": [
     {
      "cls": "dd-status-text dd-status-receipt",
-     "text": "Drilled down to AETERM = Rash",
+     "text": "Drilled down to Reported Term = Rash",
      "animation": "dd-receipt-out 1100ms linear 1400ms both"
     }
    ],

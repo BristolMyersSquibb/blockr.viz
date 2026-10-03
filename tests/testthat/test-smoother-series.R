@@ -1,7 +1,8 @@
 # The scatter smoother overlay: what it is fit on.
 #
 # compute_smoother_series() is the R half of an R-computes / JS-renders pair
-# (inst/js/chart.js draws the points it is handed, see smootherLine()). The
+# (inst/js/chart/option-points.js draws the points it is handed, see
+# smootherLine()). The
 # thing worth pinning here is the SPLIT: which rows go into which fit. A fit
 # over the wrong rows still draws a perfectly plausible line, so nothing on
 # screen says it is wrong -- only a test does.

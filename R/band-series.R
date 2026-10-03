@@ -1,15 +1,16 @@
 #' Distribution statistic over a numeric vector
 #'
-#' The R twin of `summarizeStat()` in `inst/js/chart.js`: one shared
-#' implementation so the box body, the box whiskers, the point range and the
-#' band can never disagree on what a statistic means. Quantiles use type 7,
-#' which is the same linear interpolation the JS side does (`i = p * (n - 1)`,
-#' interpolate between the bracketing order statistics), and `sd` is the
-#' sample sd (n - 1), `0` for a single observation -- again as in JS.
+#' The R twin of `summarizeStat()` in `inst/js/chart/model-aggregated.js`:
+#' one shared implementation so the box body, the box whiskers, the point
+#' range and the band can never disagree on what a statistic means. Quantiles
+#' use type 7, which is the same linear interpolation the JS side does
+#' (`i = p * (n - 1)`, interpolate between the bracketing order statistics),
+#' and `sd` is the sample sd (n - 1), `0` for a single observation -- again as
+#' in JS.
 #'
 #' `"p10_p90"` exists here and in `SUMMARY_STATS`; it is the band's default
 #' outer interval. `"tukey"` returns the 1.5x IQR fences CLIPPED to the
-#' observed range (`min(max(x), Q3 + 1.5 IQR)`), which is what chart.js has
+#' observed range (`min(max(x), Q3 + 1.5 IQR)`), which is what the chart has
 #' always computed -- not the strict textbook whisker, which is the most
 #' extreme observation lying inside the fence. The two differ whenever no
 #' observation sits exactly at the fence. Mirrored deliberately: parity with

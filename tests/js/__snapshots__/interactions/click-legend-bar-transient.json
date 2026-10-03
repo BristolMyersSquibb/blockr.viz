@@ -1,0 +1,87 @@
+{
+ "config": {
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "auto",
+  "color": "AESEV",
+  "ctrl_target": "auto"
+ },
+ "steps": [
+  {
+   "step": "legend chip MILD",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "AESEV": [
+        "MILD"
+       ]
+      },
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text dd-status-receipt",
+     "text": "Drilled down to AESEV = MILD",
+     "animation": "dd-receipt-out 1100ms linear 1400ms both"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 3100,
+     "left": 3100
+    }
+   ],
+   "legendOn": []
+  },
+  {
+   "step": "advance 3100 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [],
+   "legendOn": []
+  }
+ ]
+}

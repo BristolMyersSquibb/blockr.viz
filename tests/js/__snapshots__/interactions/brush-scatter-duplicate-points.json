@@ -14,13 +14,14 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "ID",
-      "values": [
-       "a",
-       "b",
-       "c",
-       "d"
-      ],
+      "filters": {
+       "ID": [
+        "a",
+        "b",
+        "c",
+        "d"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -28,19 +29,80 @@
      }
     }
    ],
-   "calls": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": [
+             1,
+             5
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             1,
+             5
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             2,
+             6
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             2,
+             6
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ],
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Brush filter active"
+     "text": "Filtered: ID, 4 values"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": null,
-    "selectedColumn": null,
+    "selected": [
+     "a",
+     "b",
+     "c",
+     "d"
+    ],
+    "selectedColumn": "ID",
     "brush": true
    },
    "signal": null,

@@ -1,9 +1,9 @@
 # The chart block's R <-> JS contract
 
-What `inst/js/chart.js` (with `drilldown-config.js` and `busy-cue.js`) sends
-to R and what it accepts from R. Derived from the code at viz cb5baef and
-pinned by the snapshots in `__snapshots__/interactions/` (file names in
-brackets). A rewrite has to keep the names, field sets and types below.
+What the chart scripts in `inst/js/chart/` (with `drilldown-config.js` and
+`busy-cue.js`) send to R and what they accept from R, pinned by the snapshots
+in `__snapshots__/interactions/` (file names in brackets). The click rules
+are the ones decided in blockr.design `open/chart-block-v2/decisions.md`.
 
 `<id>` is the chart element's id, `ns("drilldown_block")` in
 `chart-block.R`, for example `block_3-expr-drilldown_block`. Every input is
@@ -14,53 +14,58 @@ twice.
 
 ### `<id>_action`, action `filter`, categorical
 
-`{ action: "filter", filter_type: "categorical", column, values, nonce }`
+`{ action: "filter", filter_type: "categorical", filters, nonce }`
 
-- `column`: string, the drill column (the group, the colour for radar, the
-  lane for gantt, series or colour for line and split scatter, or the drill
-  override column).
-- `values`: array of strings, the distinct non-null values of `column` over
-  the clicked mark's rows, in row order, each through `String()`. Never empty
-  (nothing is sent when it would be).
+- `filters`: object, column -> array of values, one entry per column; the
+  columns AND together. A value is a string, or JSON `null` for a missing
+  value (a mark keyed on a missing value, drill `auto` only). R matches a
+  null with `is.na(col) | col %in% ""`.
+- What it holds: with drill `auto`, the clicked mark's keys (group, colour
+  where colour splits the mark, facet, series). In a gantt a mark's keys
+  are lane and facet. With an explicit drill column, that column's distinct
+  values in the rows under the mark. A legend chip sends its level,
+  `{<colour>: [level]}`. A brush with a series column sends the series of
+  the brushed points, plus the facet key in a facet panel. Nothing is sent
+  when the filter would be empty.
 - `nonce`: integer, a per-chart counter that goes up by one with every
-  categorical send (clicks and brushes, latched and transient). Not reset by
-  clears or re-renders.
-- When: a click on a mark with drill on (latched or with `ctrl_target`), a
-  brush whose points map to rows with a drill column.
-  [click-*, brush-scatter-color, brush-scatter-facet, brush-scatter-drill-column]
+  categorical send (clicks, chips and brushes, latched and transient, a
+  re-click included). Not reset by clears or re-renders.
+- When: a click on a mark with drill on (latched or with `ctrl_target`); a
+  second click on the same mark sends again and never clears.
+  [click-*, click-legend-*, brush-scatter-drill-column, restore-receipt]
 
 ### `<id>_action`, action `filter`, range
 
-`{ action: "filter", filter_type: "range", x_col, y_col, x_range, y_range }`
+`{ action: "filter", filter_type: "range", x_col, y_col, x_range, y_range,
+filters? }`
 
 - `x_col`: string, `config.x`. `y_col`: `config.y`, or null when `y_range` is
   null.
 - `x_range`, `y_range`: `[min, max]` numbers; `y_range` null for a brush event
   on a line chart.
+- `filters`: `{<facet>: [value]}` when the point or brush was taken in a
+  facet panel (null for a missing facet value); R ANDs it with the range.
+  Left out otherwise.
 - When: a scatter (or unsplit line, or band) click with drill `auto` and no
-  split column sends a zero-width range at the clicked point; a brush with no
-  drill column sends the brushed points' extent.
-  [click-scatter-geometric, click-line-no-split, click-band-plain,
-  brush-scatter-geometric, brush-line-event]
+  series sends a zero-width range at the clicked point; a brush without a
+  series or an explicit drill column sends the brushed points' extent,
+  whatever the colour.
+  [click-scatter-geometric, click-scatter-facet-geometric, click-line-no-split,
+  click-band-plain, brush-scatter-geometric, brush-scatter-facet,
+  brush-scatter-color, brush-line-event]
 
 ### `<id>_action`, action `filter`, clear
 
 `{ action: "filter", filter_type, column: null, values: null, x_col: null,
 y_col: null, x_range: null, y_range: null }`
 
-- `filter_type`: `"categorical"` when the chart type is aggregated (bar,
-  waterfall, pie, treemap, boxplot, pointrange, radar), else `"range"`
-  (scatter, line, band and gantt), whatever the filter it clears was.
-- When: a second click on the selected aggregated mark, Reset, a brush clear
-  (outside the 150 ms / 450 ms window after a click), and in the gear after
-  every column pick, role removal, drill change, and type switch across
-  families. In the gear it follows the `config` message.
-  [click-bar-latched, brush-*, gear-drive-*]
-
-### `<id>_action`, action `filter`, point
-
-`{ action: "filter", filter_type: "point", x_col, y_col, x_val, y_val }` is
-built by `_sendPointFilter()` but nothing calls it.
+- `filter_type`: the type of the filter it clears.
+- When: Reset, a brush clear (outside the 150 ms / 450 ms window after a
+  click), and in the gear after every column pick, role removal, drill
+  change, and type switch across families. In the gear it follows the
+  `config` message. An empty brush selection clears only a filter a brush
+  made.
+  [restore-*, brush-*, gear-drive-*]
 
 ### `<id>_action`, action `config`
 
@@ -127,7 +132,8 @@ life-remount]
 
 Value: `Date.now()`. Sent by the input binding's `initialize` when no
 `drilldown-data` is waiting for that id (also on a re-mount and on a second
-`initialize` of the same element). [life-bind-empty, life-remount]
+`initialize` of the same element; either disposes the old view's echarts
+instances first). [life-bind-empty, life-remount, life-initialize-twice]
 
 ### `<id>_capture`
 
@@ -161,8 +167,7 @@ header) is clicked. Scale is `config.capture_ratio`, else 2.
 - Before the element is bound the message waits per id; a later message
   without rows for the same rev keeps the waiting rows, any other replaces it.
 - `config`: the block's settings (see `build_chart_msg()`), plus what only
-  the chart reads: `filter_column` + `filter_values` (a saved selection,
-  restored when both are set and `ctrl_target` is empty), `ctrl_choices`,
+  the chart reads: the saved filter (below), `ctrl_choices`,
   `title_resolved` / `_parts` / `_offers` (and subtitle, caption),
   `sentence_args`, `title_arg_values`, `script_inputs`, `script_error`,
   `sv_<name>`, `capture_export`, `capture_ratio`, `palette`, `scales`,
@@ -188,7 +193,7 @@ not bound yet.
 `{ req, width, height, ratio, columns, data, data_rev, config }`. Draws the
 chart in a hidden host (`.blockr-capture-host`, fixed at left -20000px, the
 requested size) and replies on `blockr_viz_capture_result`. The host is
-removed after a picture, and left in place after an error or the timeout.
+removed after a picture, an error or the timeout.
 [export-capture-*]
 
 ### `blockr-busy`, `blockr-busy-done` (busy-cue.js)
@@ -202,3 +207,36 @@ pending is ignored. `{ id }` ends it, as does the chart's own draw.
 
 Not a message: a change of `data-bs-theme` on `<html>` or any element under
 it redraws every chart that holds rows. [life-bs-theme]
+
+## The saved filter
+
+R's block state is `filter_type`, `filters` (a named list of character
+vectors, `NA` = missing), `filter_range` and `filter_point`;
+`filter_column` / `filter_values` are legacy constructor arguments that
+fold into `filters` and are never state. The `drilldown-data` config
+carries, isolated:
+
+- `filter_type`: `"categorical"`, `"range"` or `"point"`.
+- `filters`: the state's `filters`, each column a JSON array, NA as null;
+  null when there is none.
+- `filter_range`: `{ x_col, y_col, x_range, y_range }` when `filter_type`
+  is `"range"`, else null.
+- `filter_column` + `filter_values`: the older one-column form, only when
+  the filter is categorical, one column and has no missing value; else null
+  and `[]`.
+
+The chart restores `filters` (or, without it, `filter_column` +
+`filter_values`) as a categorical selection, and a `"range"` with its
+`filter_range` and the facet key in `filters` as a range selection. Both
+light what holds filtered rows and dim the rest, a filter on a column the
+chart does not draw included. A transient chart (`ctrl_target` set)
+restores neither.
+[restore-*, restore-bar-two-columns, restore-bar-missing,
+restore-scatter-range-facet]
+
+## Legend band
+
+A chip is a filter control, not a visibility toggle: no `legendSelect` /
+`legendUnSelect`, no chip is ever `dd-legend-chip-off`; the chip of the
+level the latched filter selects carries `dd-legend-chip-on`. With drill
+off a chip does nothing. [click-legend-*]

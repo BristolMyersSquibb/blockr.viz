@@ -96,9 +96,14 @@
 #'   waterfall of 100+ subjects) stays readable; the tooltip keeps every
 #'   value. Bar and waterfall only. Like `identity_line`, the gear's switch
 #'   speaks "on"/"off" over the wire; the R state is a plain logical.
-#' @param filter_type,filter_column,filter_values,filter_range,filter_point
+#' @param filter_type,filters,filter_range,filter_point
 #'   Runtime click/brush filter state (transport for the emitted filter;
-#'   normally left at defaults at creation).
+#'   normally left at defaults at creation). `filters` is the click filter,
+#'   a named list of character vectors, column -> values, `NA` for a missing
+#'   value; the columns AND together. A range filter (`filter_type =
+#'   "range"`) may carry the facet panel it was taken in as `filters`.
+#' @param filter_column,filter_values LEGACY, folded into `filters`: a board
+#'   saved with one filter column and its values restores as that filter.
 #' @param baseline Bar baseline mode: `"zero"` (default -- every bar starts at
 #'   0) or `"cumulative"` (a waterfall/bridge -- each bar floats from the
 #'   running cumulative of the bars before it; the step axis honors data order,
@@ -326,10 +331,11 @@ new_chart_block <- function(
     # from the signature would break filter-state save/restore. See the
     # `state = list(...)` block below.
     filter_type = "categorical",
-    filter_column = NULL,
-    filter_values = NULL,
+    filter_column = NULL, # LEGACY: folded into `filters`
+    filter_values = NULL, # LEGACY: folded into `filters`
     filter_range = NULL,
     filter_point = NULL,
+    filters = NULL,
     # ---------------------------------------------------------------------
     line_width_mult = 1.0,
     dot_size_mult = 1.0,
@@ -342,10 +348,10 @@ new_chart_block <- function(
     # points past the whisker extent). No-op for non-boxplot charts.
     box_points = "none",
     # Distribution statistics (boxplot / pointrange, see SUMMARY_STATS in
-    # chart.js): `summary` is the box body / point-range interval (NULL =
-    # per-mark default, resolved JS-side in _ensureDistributionMetric);
-    # `whiskers` is the box's outer rule; `connect_centers` joins the
-    # point-range centers in slot order.
+    # chart/roles.js): `summary` is the box body / point-range interval
+    # (NULL = per-mark default, resolved JS-side in ensureDistributionMetric,
+    # chart/model-common.js); `whiskers` is the box's outer rule;
+    # `connect_centers` joins the point-range centers in slot order.
     summary = NULL,
     # NULL = per-mark default, like `summary` above: "tukey" for the boxplot
     # (the textbook rule), "p10_p90" for the band. Saved boards carrying an
@@ -394,7 +400,8 @@ new_chart_block <- function(
     # column counted DISTINCT (e.g. USUBJID -> unique subjects); NULL / "" falls
     # back to the raw row count. The distinct counts are computed per label
     # group in the browser -- they do NOT sum from the per-cell n, since one
-    # subject can span several colour / facet cells (see chart.js _labelCounts).
+    # subject can span several colour / facet cells (see labelCounts in
+    # chart/chart-index.js).
     count_on = "off",
     count_col = NULL,
     # Missing group keys: their own category ("level", the long-standing
@@ -528,7 +535,12 @@ new_chart_block <- function(
   series <- chr_state(series)
   label <- chr_state(label)
   drill <- chr_state(drill)
-  filter_column <- chr_state(filter_column)
+  # LEGACY: older boards saved one filter column and its values; they fold
+  # into `filters` here, and are never state again.
+  filters <- chart_filters_state(filters) %||%
+    chart_legacy_filters(filter_column, filter_values)
+  filter_column <- NULL
+  filter_values <- NULL
   sort_by <- chr_state(sort_by)
   lo <- chr_state(lo)
   hi <- chr_state(hi)
@@ -573,10 +585,11 @@ new_chart_block <- function(
   x_lines <- num_vec_state(x_lines)
 
   # `identity_line` is a LOGICAL. The gear's segmented control sends the
-  # strings "on"/"off" (that is the control's transport, see chart.js ROLES),
-  # and every board saved before this change stored that string verbatim --
-  # 90 of them, all "off". Coerce both shapes to a plain logical here, the way
-  # table-block's as_toggle() already does for sortable/collapsible/search.
+  # strings "on"/"off" (that is the control's transport, see chart/roles.js
+  # ROLES), and every board saved before this change stored that string
+  # verbatim -- 90 of them, all "off". Coerce both shapes to a plain logical
+  # here, the way table-block's as_toggle() already does for
+  # sortable/collapsible/search.
   identity_line <- bool_state(identity_line)
   # box_points lost its "all" option; anything outside the enum (old saved
   # boards) degrades to "none" -- no crash, no behaviour preservation.
@@ -591,7 +604,6 @@ new_chart_block <- function(
   whiskers <- chr_state(whiskers)
   connect_centers <- bool_state(connect_centers)
   value_labels <- bool_state(value_labels)
-  filter_values <- null_state(filter_values)
   filter_range <- null_state(filter_range)
   filter_point <- null_state(filter_point)
 
@@ -604,7 +616,7 @@ new_chart_block <- function(
         # the input is read after it, so a rerun -- which is what an
         # invalidated input causes -- tells the browser before the upstream
         # recompute this read then triggers. Ahead of every other observer,
-        # core's evaluation included. chart.js ends the cue once it has drawn;
+        # core's evaluation included. The chart ends the cue once it has drawn;
         # the push observer below ends it when no new picture is coming.
         shiny::observe({
           busy_cue_start(session, ns("drilldown_block"), "drawing")
@@ -761,8 +773,7 @@ new_chart_block <- function(
 
         # Filter state (transport for the emitted downstream filter)
         r_filter_type <- shiny::reactiveVal(filter_type)
-        r_filter_column <- shiny::reactiveVal(filter_column)
-        r_filter_values <- shiny::reactiveVal(filter_values)
+        r_filters <- shiny::reactiveVal(filters)
         r_filter_range <- shiny::reactiveVal(filter_range)
         r_filter_point <- shiny::reactiveVal(filter_point)
 
@@ -925,8 +936,8 @@ new_chart_block <- function(
         # splices the json-classed string verbatim into the websocket
         # message (json_verbatim), so the browser receives a parsed OBJECT
         # and cannot use string identity -- an unchanged rev is its signal
-        # to skip the row conversion (see setData in chart.js). Ticking per
-        # recompute defeated that. Visiting a dock panel re-evaluates the
+        # to skip the row conversion (see setData in chart/view.js). Ticking
+        # per recompute defeated that. Visiting a dock panel re-evaluates the
         # block, and an equal-but-new result invalidates this reactive, so
         # coming back to a chart shipped a fresh rev for bytes the browser
         # already held and made it rebuild every row object. Read
@@ -1041,7 +1052,8 @@ new_chart_block <- function(
         # facet_by is not decoration: without it every panel was handed the
         # same pooled fit (see compute_smoother_series()).
         # Keyed like the band above, so a panel visit does not refit. Only a
-        # scatter draws the line (chart.js), so no other type pays for a fit.
+        # scatter draws the line (chart/option-points.js), so no other type
+        # pays for a fit.
         smoother_cache <- last_value_cache()
         r_smoother_series <- shiny::reactive({
           sm <- r_smoother()
@@ -1222,6 +1234,11 @@ new_chart_block <- function(
               NULL
             }
           }
+          sel <- shiny::isolate(list(
+            type = r_filter_type(), filters = r_filters(),
+            range = r_filter_range()
+          ))
+          sel_one <- chart_filters_one_column(sel$filters, sel$type)
           chart_msg <- list(
             id = ns("drilldown_block"),
             columns = col_meta,
@@ -1245,9 +1262,15 @@ new_chart_block <- function(
               # guard above). Only a genuine re-send (restore at session
               # start, config/data change) carries it -- exactly what the JS
               # restore branch needs to re-select the mark and label the
-              # footer. as.list() so a length-1 value stays a JSON array.
-              filter_column = shiny::isolate(r_filter_column()),
-              filter_values = as.list(shiny::isolate(r_filter_values())),
+              # footer. The chart reads `filters` (and a range with the
+              # panel it was taken in); the same filter also goes in the
+              # older one-column form when it fits one. as.list() so a
+              # length-1 value stays a JSON array.
+              filter_type = sel$type,
+              filters = chart_filters_json(sel$filters),
+              filter_range = if (identical(sel$type, "range")) sel$range,
+              filter_column = sel_one$column,
+              filter_values = as.list(sel_one$values),
               sort_dir = r_sort_dir(), orientation = r_orientation(),
               bar_mode = r_bar_mode(),
               # Logical in state, "on"/"off" for the gear's switch, like
@@ -1293,7 +1316,7 @@ new_chart_block <- function(
               # DISTINCT id column to count (browser-side, per label group).
               count_on = r_count_on(), count_col = r_count_col(),
               # Missing group keys and the percent denominator, read by
-              # chart.js.
+              # chart/model-aggregated.js.
               na_group = r_na_group(), pct_of = r_pct_of(),
               # Facet-grid panel scales: shared numeric domain + shared
               # category set across the panels ("fixed"), or per-panel
@@ -1387,7 +1410,7 @@ new_chart_block <- function(
         # Rows travel only when the client does not already hold them. A
         # gear edit changes the config and leaves the payload's rev alone, so
         # it goes out without `data` (the rows were 2.7 MB of the 2.7 MB
-        # message on a 120k-row bar chart). chart.js keeps the rows it has
+        # message on a 120k-row bar chart). The chart keeps the rows it has
         # for that rev, or asks for them through `_need` when it has none (a
         # panel the dock re-mounted).
         send_chart_msg <- function(msg) {
@@ -1465,13 +1488,14 @@ new_chart_block <- function(
         })
 
         # The client announces itself when it binds with no payload waiting.
-        # chart.js's `pendingData` only catches a message that arrived while the
-        # SCRIPT was already loaded; Shiny drops a custom message that has no
-        # registered handler at all, and chart.js only loads with the first
-        # chart block UI in the page. On a board whose opening view carries no
-        # chart -- a config or population view, typical of clinical boards --
-        # every chart's startup payload was dropped and nothing re-sent it, so
-        # the chart stayed blank until an unrelated edit re-pumped it.
+        # `pendingData` (chart/binding.js) only catches a message that
+        # arrived while the SCRIPT was already loaded; Shiny drops a custom
+        # message that has no registered handler at all, and the chart
+        # scripts only load with the first chart block UI in the page. On a
+        # board whose opening view carries no chart -- a config or population
+        # view, typical of clinical boards -- every chart's startup payload
+        # was dropped and nothing re-sent it, so the chart stayed blank until
+        # an unrelated edit re-pumped it.
         # The reply is only the rev. A push already in flight reaches the
         # client before it (one websocket, in order), and a client that got it
         # does nothing; re-sending the whole message here drew the same picture
@@ -1664,26 +1688,28 @@ new_chart_block <- function(
             # the config writes above: the data-send observer transitively
             # depends on the filter reactiveVals via the expr reactive, so a
             # blind set to an unchanged value would invalidate (and re-pump)
-            # needlessly on an echoed filter. The click-vs-brush race logic
-            # (the `is_point` no-op below, the `!is.null` gating) is
-            # unchanged -- only the actual writes are now guarded.
+            # needlessly on an echoed filter.
+            #
+            # A categorical filter arrives as `filters` (a named list, a
+            # JSON null for a missing value) or as the older `column` +
+            # `values`; chart_msg_filters() reads both. A range may carry
+            # the facet panel it was taken in as `filters`.
             ft <- msg$filter_type %||% "categorical"
 
             if (transient_drill() && ft == "categorical") {
-              # The event path. Only a real claim lands here: a null column
-              # (the gear clearing the filter after a mapping change) is
-              # inert, because there is no local selection to clear and the
-              # target's cohort is not this block's to drop.
-              if (!is.null(msg$column) && length(msg$values)) {
+              # The event path. Only a real claim lands here: an empty
+              # filter (the gear clearing the filter after a mapping change)
+              # is inert, because there is no local selection to clear and
+              # the target's cohort is not this block's to drop.
+              f <- chart_msg_filters(msg)
+              if (length(f)) {
                 r_drill_claim(list(
-                  column = as.character(msg$column)[[1L]],
-                  values = as.character(unlist(msg$values)),
-                  nonce  = as.numeric(msg$nonce %||% 0)
+                  filters = f,
+                  nonce = as.numeric(msg$nonce %||% 0)
                 ))
               }
             } else if (ft == "categorical") {
-              upd(r_filter_column, msg$column)
-              upd(r_filter_values, msg$values)
+              upd(r_filters, chart_msg_filters(msg))
               upd(r_filter_range, NULL)
               upd(r_filter_point, NULL)
               upd(r_filter_type, "categorical")
@@ -1691,8 +1717,7 @@ new_chart_block <- function(
               # Click on a single dot with no drill column: drill to the
               # observation(s) at that exact x/y coordinate.
               if (!is.null(msg$x_col) && !is.null(msg$y_col)) {
-                upd(r_filter_column, NULL)
-                upd(r_filter_values, NULL)
+                upd(r_filters, NULL)
                 upd(r_filter_range, NULL)
                 upd(r_filter_point, list(
                   x_col = msg$x_col,
@@ -1704,16 +1729,11 @@ new_chart_block <- function(
               }
             } else if (ft == "range") {
               if (!is.null(msg$x_col) && !is.null(msg$x_range)) {
-                xr <- as.numeric(msg$x_range)
-                yr <- if (!is.null(msg$y_range)) as.numeric(msg$y_range)
-                # A degenerate range (xlo == xhi) is now legitimate: it is a
-                # scatter-auto CLICK (a one-point selection -> the observation
-                # via between(x, v, v)). The old click-vs-brush race that this
-                # guarded against is gone -- within each drill mode click and
-                # brush emit the SAME filter type (override -> categorical,
-                # auto -> range), so there is nothing to clobber.
-                upd(r_filter_column, NULL)
-                upd(r_filter_values, NULL)
+                xr <- as.numeric(unlist(msg$x_range))
+                yr <- if (!is.null(msg$y_range)) as.numeric(unlist(msg$y_range))
+                # A degenerate range (xlo == xhi) is a point click: a
+                # one-point selection, the observation via between(x, v, v).
+                upd(r_filters, chart_filters_state(msg$filters))
                 upd(r_filter_point, NULL)
                 upd(r_filter_range, list(
                   x_col = msg$x_col,
@@ -1723,8 +1743,7 @@ new_chart_block <- function(
                 ))
                 upd(r_filter_type, "range")
               } else {
-                upd(r_filter_column, NULL)
-                upd(r_filter_values, NULL)
+                upd(r_filters, NULL)
                 upd(r_filter_range, NULL)
                 upd(r_filter_point, NULL)
                 upd(r_filter_type, "categorical")
@@ -1736,8 +1755,11 @@ new_chart_block <- function(
         # What the drill claims: only a CATEGORICAL click is a claim (one
         # value is a decision). Range / point / brush selections are
         # deliberately not claims -- same rule as drill_claim_columns(). The
-        # filter state records the column actually drilled at click time
+        # filter state records the columns actually drilled at click time
         # (JS resolves drill = "auto" there), so no user-facing claim field.
+        # Several columns AND together; a column whose value is missing
+        # narrows the rows the others are claimed from, but is not claimed
+        # itself (a missing value is no value to filter a target on).
         r_ctrl_claims <- shiny::reactive({
           # The unexpanded frame: a claim names the rows upstream holds, and
           # dd_ctrl_claims() maps a group name to its members itself.
@@ -1751,21 +1773,11 @@ new_chart_block <- function(
             if (is.null(claim)) {
               return(NULL)
             }
-            return(dd_ctrl_claims(
-              d, r_ctrl_table(),
-              stats::setNames(list(claim$values), claim$column)
-            ))
+            return(dd_ctrl_claims(d, r_ctrl_table(), claim$filters))
           }
 
-          col <- r_filter_column()
-          vals <- as.character(unlist(r_filter_values()))
-          filters <- if (identical(r_filter_type(), "categorical") &&
-                           !is.null(col) && length(vals)) {
-            stats::setNames(list(vals), col)
-          } else {
-            list()
-          }
-          dd_ctrl_claims(d, r_ctrl_table(), filters)
+          filters <- if (identical(r_filter_type(), "categorical")) r_filters()
+          dd_ctrl_claims(d, r_ctrl_table(), filters %||% list())
         })
 
         dd_ctrl_sender(
@@ -1780,11 +1792,10 @@ new_chart_block <- function(
           local({
             latch <- dd_ctrl_pristine(
               function() {
-                list(r_filter_type(), r_filter_column(), r_filter_values(),
-                     r_filter_range(), r_filter_point())
+                list(r_filter_type(), r_filters(), r_filter_range(),
+                     r_filter_point())
               },
-              list(filter_type, filter_column, filter_values, filter_range,
-                   filter_point)
+              list(filter_type, filters, filter_range, filter_point)
             )
             function() {
               still <- latch()
@@ -1810,33 +1821,20 @@ new_chart_block <- function(
         # as_plain_df() coercion for non-data-frame inputs while plain data
         # frames keep this exact (byte-identical) emitted code.
         # A click on a pooled group of an overlap definition filters on the
-        # group's members (dd_group_filter_members()).
-        filter_members <- dd_group_filter_members(
-          r_filter_column, r_filter_values, raw_data,
-          r_active = function() identical(r_filter_type(), "categorical")
-        )
+        # group's members (dd_group_filters_members()).
+        filter_members <- dd_group_filters_members(r_filters, raw_data)
 
+        # The click filter's columns AND together (chart_filter_conds()); a
+        # range ANDs with the facet panel it was taken in.
         build_filter_expr <- function() {
           ft <- r_filter_type()
+          filters <- r_filters()
+          conds <- if (length(filters)) {
+            chart_filter_conds(filters, filter_members(filters))
+          }
 
           if (ft == "categorical") {
-            col <- r_filter_column()
-            vals <- r_filter_values()
-            vals <- filter_members(col, vals) %||% vals
-
-            if (is.null(col) || is.null(vals) || length(vals) == 0) {
-              blockr.core::bbquote(dplyr::filter(.(data), TRUE))
-            } else if (length(vals) == 1) {
-              blockr.core::bbquote(
-                dplyr::filter(.(data), .data[[.(col)]] == .(val)),
-                list(col = col, val = vals[[1]])
-              )
-            } else {
-              blockr.core::bbquote(
-                dplyr::filter(.(data), .data[[.(col)]] %in% .(vals)),
-                list(col = col, vals = vals)
-              )
-            }
+            chart_filter_call(conds)
           } else if (ft == "point") {
             pt <- r_filter_point()
             if (is.null(pt) || is.null(pt$x_col) || is.null(pt$y_col)) {
@@ -1850,34 +1848,11 @@ new_chart_block <- function(
                 xv = pt$x_val, yv = pt$y_val)
             )
           } else if (ft == "range") {
-            rng <- r_filter_range()
-            if (is.null(rng) || is.null(rng$x_range)) {
+            rc <- chart_range_cond(r_filter_range())
+            if (is.null(rc)) {
               return(blockr.core::bbquote(dplyr::filter(.(data), TRUE)))
             }
-            xc <- rng$x_col
-            xr <- rng$x_range
-            yr <- rng$y_range
-            if (!is.null(yr) && !is.null(rng$y_col)) {
-              # 2D brush (scatter): filter on both x and y
-              yc <- rng$y_col
-              blockr.core::bbquote(
-                dplyr::filter(.(data),
-                  dplyr::between(.data[[.(xc)]], .(xlo), .(xhi)) &
-                    dplyr::between(.data[[.(yc)]], .(ylo), .(yhi))
-                ),
-                list(xc = xc, yc = yc,
-                  xlo = xr[1], xhi = xr[2],
-                  ylo = yr[1], yhi = yr[2])
-              )
-            } else {
-              # 1D brush (line): filter on x only
-              blockr.core::bbquote(
-                dplyr::filter(.(data),
-                  dplyr::between(.data[[.(xc)]], .(xlo), .(xhi))
-                ),
-                list(xc = xc, xlo = xr[1], xhi = xr[2])
-              )
-            }
+            chart_filter_call(c(list(rc), conds))
           } else {
             blockr.core::bbquote(dplyr::filter(.(data), TRUE))
           }
@@ -2043,7 +2018,7 @@ new_chart_block <- function(
         # "<block>-expr-dl_pptx.htm" and reports "Couldn't download".
         #
         # Which is exactly what prod does. It never shows up locally, because
-        # there the host is hoisted into the gear header (chart.js
+        # there the host is hoisted into the gear header (chart/chrome.js
         # _hoistDownload) before the output would have been suspended, so the
         # registration happens anyway.
         #
@@ -2066,11 +2041,12 @@ new_chart_block <- function(
             # mapped column that was renamed or dropped upstream leaves the
             # filter (and the downstream data) perfectly valid. That is a
             # presentation concern, surfaced by the renderer's own in-canvas
-            # message (see chart.js: "Mapped column not in data ... re-pick it
-            # in the gear"), NOT an expr-level failure. Validating aesthetics
-            # here would fail a correct expression; a broken *filter* column,
-            # by contrast, fails hard on its own when the emitted filter is
-            # evaluated (caught by core's capture_conditions("eval")).
+            # message (see chart/model-common.js: "Mapped column not in data
+            # ... re-pick it in the gear"), NOT an expr-level failure.
+            # Validating aesthetics here would fail a correct expression; a
+            # broken *filter* column, by contrast, fails hard on its own when
+            # the emitted filter is evaluated (caught by core's
+            # capture_conditions("eval")).
             d <- data()
             # Non-data-frame input under the shared contract (a composer
             # table et al.): the emitted code must coerce the same way the
@@ -2121,10 +2097,13 @@ new_chart_block <- function(
             bar_mode = r_bar_mode,
             value_labels = r_value_labels,
             filter_type = r_filter_type,
-            filter_column = r_filter_column,
-            filter_values = r_filter_values,
+            # LEGACY: folded into `filters`, serialized as NULL (blockr.core
+            # requires every ctor formal in the state).
+            filter_column = function() NULL,
+            filter_values = function() NULL,
             filter_range = r_filter_range,
             filter_point = r_filter_point,
+            filters = r_filters,
             line_width_mult = r_line_width_mult,
             dot_size_mult = r_dot_size_mult,
             connect = r_connect,
@@ -2175,30 +2154,23 @@ new_chart_block <- function(
     },
     ui = function(id) {
       ns <- shiny::NS(id)
-      # One engine per app (see chart_engine()); the v2 container carries a
-      # class of its own so the two can be told apart in a page.
-      v2 <- identical(chart_engine(), "v2")
       shiny::tagList(
         viz_echarts_dep(),
         viz_block_css_dep(),
-        if (v2) drilldown_chart_v2_dep() else drilldown_chart_dep(),
+        drilldown_chart_dep(),
         # The prepare script's control strip. Always in the DOM, empty and
-        # display:none until a script declares a value -- chart.js fills it.
+        # display:none until a script declares a value -- the chart fills it.
         # It used to hold promoted mapping rows too (`expose`, retired): a
         # mapping is named in the block's sentence now.
         shiny::div(id = ns("mapping_band"), class = "dd-mapping-band",
                    style = "display:none"),
         shiny::div(
           id = ns("drilldown_block"),
-          class = if (v2) {
-            "drilldown-chart-container dd-engine-v2"
-          } else {
-            "drilldown-chart-container"
-          }
+          class = "drilldown-chart-container"
         ),
         # The download control is rendered HERE and hoisted into the gear
-        # header by chart.js -- the same shape rank-table.js uses for the
-        # search box. It has to be a Shiny output (download links are
+        # header by chart/chrome.js -- the same shape rank-table.js uses for
+        # the search box. It has to be a Shiny output (download links are
         # server-driven), and the gear header is built by the widget's JS.
         shiny::div(class = "dd-chart-dl-host", style = "display:none",
                    shiny::uiOutput(ns("chart_download"), inline = TRUE))
@@ -2209,16 +2181,19 @@ new_chart_block <- function(
     # then charts the coerced frame's data columns (as_plain_df()).
     dat_valid = validate_annotated_df_input,
     # `value` must stay listed: the gear legitimately empties it mid-config
-    # (reconcileValue in drilldown-agg.js / _ensureDistributionMetric in chart.js
-    # set value = '' when the aggregation changes and the old column no longer
-    # fits) and the observer stores that verbatim -- without the entry the
-    # block silently wedges (reference_blockr_allow_empty_state_wedge).
+    # (reconcileValue in drilldown-agg.js / ensureDistributionMetric in
+    # chart/model-common.js set value = '' when the aggregation changes and
+    # the old column no longer fits) and the observer stores that verbatim --
+    # without the entry the block silently wedges
+    # (reference_blockr_allow_empty_state_wedge).
     # `func` is NOT listed: the JS side never emits it empty (a fixed-option
     # select, backfilled to "count"/"mean" wherever unset).
+    # `filter_column` / `filter_values` are LEGACY and always NULL.
     allow_empty_state = c("group", "color", "facet", "filter_column",
       "filter_values", "value", "x", "y", "xend", "series", "label",
       "tt_fields", "drill", "sort_by", "sort_dir", "filter_range",
-      "filter_point", "value_lines", "x_lines", "smoother", "identity_line",
+      "filter_point", "filters", "value_lines", "x_lines", "smoother",
+      "identity_line",
       # `summary`, `whiskers` and `orientation` are NULL until their per-mark
       # default is resolved where it is consumed; `band_id` / `ref_hi` /
       # `ref_lo` are optional band columns, empty on every chart that is not a
@@ -2249,8 +2224,8 @@ new_chart_block <- function(
     external_ctrl = c("group", "color", "facet", "value", "func",
       "chart_type", "x", "y", "xend", "series", "label", "tt_fields", "drill",
       "sort_by", "sort_dir", "orientation", "bar_mode", "value_labels",
-      "filter_type", "filter_column",
-      "filter_values", "filter_range", "filter_point", "line_width_mult",
+      "filter_type", "filters", "filter_range", "filter_point",
+      "line_width_mult",
       "dot_size_mult", "connect", "value_lines", "x_lines", "smoother",
       "identity_line",
       "box_points", "summary", "whiskers", "connect_centers",

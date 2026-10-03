@@ -374,7 +374,7 @@
     });
   }
 
-  // The drill's footer line, in the chart's words and markup (chart.js
+  // The drill's footer line, in the chart's words and markup (chart/chrome.js
   // _updateStatus, chart.css .dd-status-*), so a table and a chart on one
   // board report a drill the same way. A latched drill reads "No filter
   // active" / "Filtered: COL = value" with Reset. With a ctrl_target the click
@@ -403,7 +403,7 @@
         rec.className = "dd-status-text dd-status-receipt";
         rec.textContent = rc.text;
         // Resume, do not restart: a repaint mid-fade picks the fade up where
-        // it is (chart.js does the same).
+        // it is (chart/chrome.js does the same).
         rec.style.animation = "dd-receipt-out " + RK_RECEIPT_FADE_MS +
           "ms linear " + (RK_RECEIPT_HOLD_MS - age) + "ms both";
         rec.addEventListener("animationend", function () {
@@ -779,7 +779,7 @@
     paintStatus(root);
   }
 
-  // The three bands, painted as the chart paints them (chart.js
+  // The three bands, painted as the chart paints them (chart/chrome.js
   // _updateTitles): a piece naming one of the block's settings is a word that
   // opens it, and a setting whose clause dropped is offered beside the
   // sentence. Without the gear's engine (a static page) the text alone.
@@ -1005,7 +1005,7 @@
   }
 
   // Opening the download menu posts the picture, so it is in R before a
-  // format is picked (chart.js does the same). At the panel's own width, so
+  // format is picked (chart/chrome.js does the same). At the panel's own width, so
   // the file is the table on screen, unscrolled.
   function bindCapture(root, header) {
     var elemId = root.getAttribute("data-rank-elem-id");
@@ -1074,7 +1074,7 @@
                       { value: "off", label: "No downloads" }];
 
   // The lane statistic vocabulary: MUST mirror R's LANE_STATS/LANE_STAT_META
-  // (R/lane-stats.R, drift-tested) -- chart.js's SUMMARY_STATS plus
+  // (R/lane-stats.R, drift-tested) -- chart/roles.js SUMMARY_STATS plus
   // mean_ci95, which exists only on this surface because R has qt().
   var LANE_STATS = [
     { value: "median_q1_q3", label: "Median · Q1–Q3" },
@@ -2524,7 +2524,7 @@
     root.insertBefore(pop, header.nextSibling);
     root.insertBefore(band, pop.nextSibling);
     // The title band moves into the gear row, on its left: the chart's header
-    // (chart.js _buildDOM). The settings band then opens below the title.
+    // (chart/chrome.js _buildDOM). The settings band then opens below the title.
     var titles = root.querySelector(".dd-table-titles");
     if (titles) header.insertBefore(titles, header.firstChild);
     bindCapture(root, header);
@@ -2618,7 +2618,7 @@
   }
   // ---------- hover card ----------
   // A bar, a box, a dot range or a dumbbell answers a hover with the chart's
-  // card (chart.js tipHead / tipRow, the .dd-tt-* rules in chart.css): the
+  // card (chart/common.js tipHead / tipRow, the .dd-tt-* rules in chart.css): the
   // row as the headline, the column's arm and N under it, then one labelled
   // line per number. The numbers come from the payload the row was built
   // from, so the card can say what the lane only draws: every segment of a

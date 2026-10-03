@@ -42,13 +42,13 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": null,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -88,7 +88,7 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -100,7 +100,7 @@
               2,
               0
              ],
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -146,13 +146,13 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": null,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -222,13 +222,13 @@
               2,
               0
              ],
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": null,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -266,7 +266,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: AETERM = Nausea,Headache"
+     "text": "Filtered: Reported Term = Nausea, Headache"
     },
     {
      "reset": "Reset"
@@ -301,10 +301,14 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AETERM",
-      "values": [
-       "Nausea"
-      ],
+      "filters": {
+       "AETERM": [
+        "Nausea"
+       ],
+       "AESEV": [
+        "SEVERE"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -331,7 +335,7 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -377,7 +381,7 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -435,7 +439,7 @@
            {
             "value": null,
             "itemStyle": {
-             "opacity": 1
+             "opacity": 0.15
             }
            },
            {
@@ -555,15 +559,25 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: AETERM = Nausea"
+     "text": "Filtered: Reported Term = Nausea, AESEV = SEVERE"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "Nausea",
-    "selectedColumn": "AETERM",
+    "selected": {
+     "AETERM": [
+      "Nausea"
+     ],
+     "AESEV": [
+      "SEVERE"
+     ]
+    },
+    "selectedColumn": [
+     "AETERM",
+     "AESEV"
+    ],
     "brush": false
    },
    "signal": null,

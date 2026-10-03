@@ -651,9 +651,9 @@
   // off, and the claim carries a click counter so re-clicking one row sends
   // again. The undo lives at the target, because the control channel has no
   // back-edge -- a selection held here would keep showing a cohort anyone else
-  // can reset. Same rule and the same two constants as the chart (chart.js
-  // `_transientDrill`). The R side stops stamping `data-dt-active` in this
-  // mode, so the restore walks below simply never fire.
+  // can reset. Same rule as the chart (chart/common.js `transientDrill`). The R side stops stamping
+  // `data-dt-active` in this mode, so the restore walks below simply never
+  // fire.
   // ==========================================================================
 
   var FLASH_CLS = ["dt-flash-row", "dt-flash-col", "dt-flash-colhead",
