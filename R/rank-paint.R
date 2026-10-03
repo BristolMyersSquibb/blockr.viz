@@ -171,7 +171,8 @@ rp_bar <- function(c, i, x, w, ytop, gl) {
   if (!length(c$fill)) fill <- RP_FILL
   if (isTRUE(c$sub[[min(i, length(c$sub))]])) fill <- rp_sub(fill)
   out <- list(rp_rect(x, w, y, h, RP_TRACK, gl))
-  if (!is.na(c$w[[i]])) {
+  # A zero draws no fill: rp_rect()'s hairline floor would read as a little.
+  if (!is.na(c$w[[i]]) && c$w[[i]] > 0) {
     out <- c(out, list(rp_rect(x, c$w[[i]] / 100 * w, y, h, fill, gl)))
   }
   out
@@ -213,7 +214,7 @@ rp_bardiv <- function(c, i, x, w, ytop, gl) {
   y <- ytop + (gl$row_h - h) / 2
   mid <- x + w / 2
   out <- list(rp_rect(x, w, y, h, RP_TRACK, gl))
-  if (!is.na(c$w[[i]])) {
+  if (!is.na(c$w[[i]]) && c$w[[i]] > 0) {
     ww <- c$w[[i]] / 100 * w / 2
     out <- c(out, list(
       if (isTRUE(c$pos[[i]])) rp_rect(mid, ww, y, h, RP_FILL, gl)
