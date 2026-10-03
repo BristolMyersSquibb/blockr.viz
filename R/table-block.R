@@ -1066,13 +1066,13 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
       #      server, so this is flash-free on first paint and every re-render.
       #   2. `.drilldown-table-structured` -- the class table.js promotes; a
       #      fallback for browsers without :has() (styles after promotion).
+      #
+      # Scope 1 is gone on this branch: about 50 `:has()` rules on every table
+      # container, which Chrome re-checked on every change inside the
+      # container. On a large board that made typing anywhere slow. Without it
+      # a table whose structure is not known when the chrome is built paints
+      # flat until table.js sets the class.
       htmltools::tags$style(htmltools::HTML(paste0(
-        html_table_delta_css(
-          scope = paste0(
-            ".blockr-html-table-container",
-            ":has(.blockr-table[data-dt-structured=\"1\"])"
-          )
-        ),
         html_table_delta_css(scope = ".drilldown-table-structured"),
         html_table_chev_css()
       )))
