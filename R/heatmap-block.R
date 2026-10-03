@@ -302,16 +302,10 @@ new_heatmap_block <- function(row = character(),
         shiny::observeEvent(input$heatmap_block_capture, {
           capture(chart_capture_from_msg(input$heatmap_block_capture))
         })
-        dl_picture <- function() {
-          if (canvas_capture_on()) capture()
-        }
-
         dl_slot <- dt_download_control(session, dl_exhibit,
                                        enabled = r_download,
                                        filename = "heatmap",
-                                       picture = if (canvas_capture_on()) {
-                                         dl_picture
-                                       })
+                                       picture = capture)
 
         board_scale_map <- dd_board_scale_map()
 
@@ -417,7 +411,7 @@ new_heatmap_block <- function(row = character(),
               # comes back in the state the server holds.
               cellNumbers = isTRUE(shiny::isolate(r_numbers())),
               drill = nzchar(r_target()),
-              capture = canvas_capture_on(),
+              capture = TRUE,
               captureRatio = canvas_capture_ratio(),
               capturePage = capture_page_box()
             ),
