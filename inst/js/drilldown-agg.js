@@ -112,6 +112,20 @@
     if (!col || col.type !== 'numeric') cfg.value = '';
   }
 
+  // Math.max (dir 1) or Math.min (dir -1) of a non-empty array of numbers
+  // (never NaN: the caller drops those). A tie between 0 and -0 resolves the
+  // way Math.max / Math.min resolve it.
+  /** @param {number[]} vals @param {number} dir */
+  function extreme(vals, dir) {
+    let m = vals[0];
+    for (let i = 1; i < vals.length; i++) {
+      const v = vals[i];
+      if (dir > 0 ? (v > m || (v === 0 && m === 0 && Object.is(m, -0)))
+                  : (v < m || (v === 0 && m === 0 && Object.is(v, -0)))) m = v;
+    }
+    return m;
+  }
+
   /**
    * Group + aggregate rows. Semantics are aligned to the R engine
    * (dd_table_aggregate / dd_metric_plan in R/table-block.R — the source of
@@ -248,8 +262,10 @@
       else if (func === 'mean') out = g.values.length ? g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / g.values.length : null;
       else if (func === 'median') { const s = g.values.slice().sort((/** @type {number} */ a, /** @type {number} */ b) => a - b); const m = Math.floor(s.length / 2); out = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : null; }
       else if (func === 'sum') out = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
-      else if (func === 'min') out = g.values.length ? Math.min.apply(null, g.values) : null;
-      else if (func === 'max') out = g.values.length ? Math.max.apply(null, g.values) : null;
+      // A loop, not Math.min.apply: passing a cell's values as arguments
+      // throws a RangeError past about 100k of them.
+      else if (func === 'min') out = g.values.length ? extreme(g.values, -1) : null;
+      else if (func === 'max') out = g.values.length ? extreme(g.values, 1) : null;
       // identity: the value AS-IS — no aggregation. Returns the cell's first
       // usable numeric value; with one row per (group, color) cell (the
       // intended use: precomputed bar heights) that IS the row's value. A cell

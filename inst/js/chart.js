@@ -1118,8 +1118,8 @@
   };
 
   /** @typedef {'nz' | 'raw'} KeyMode */
-  /** @type {any[]} */
-  const NO_ROWS = Object.freeze([]);
+  // The answer for a key with no rows. Frozen: it is shared by every miss.
+  const NO_ROWS = /** @type {any[]} */ (/** @type {unknown} */ (Object.freeze([])));
 
   // Lookups over row arrays, for a draw. A render reads the same rows once
   // per series level, per box, per bar cell; as a filter or find over the
@@ -2521,7 +2521,7 @@
       // for horizontal text, whatever the line count says.
       const flatW = Math.max(10, slot - PAD);
       const flat = labels.map((l) => wrapLabel(measure, l, flatW));
-      const flatLines = Math.max(...flat.map((f) => f.lines.length));
+      const flatLines = maxOf(flat.map((f) => f.lines.length));
 
       if (flatLines <= FLAT_MAX_LINES && !flat.some((f) => f.hard)) {
         const axisLabel = {
@@ -2549,12 +2549,10 @@
       };
 
       const turned = labels.map(turnedLines);
-      const turnLines = Math.max(...turned.map((t) => t.length));
+      const turnLines = maxOf(turned.map((t) => t.length));
       // The gutter is the longest LINE, not the longest label: wrapping is
       // what keeps this off the cap.
-      const len = Math.ceil(Math.max(
-        ...turned.map((t) => Math.max(...t.map(measure)))
-      )) + PAD;
+      const len = Math.ceil(maxOf(turned.map((t) => maxOf(t.map(measure))))) + PAD;
 
       // 4. Turned text needs about a line-height of horizontal room per line,
       // so labels collide once the slot drops under that. `interval: n` draws
@@ -3402,7 +3400,11 @@
           }
         }
 
-        let xVals = [], yVals = [], brushedRows = [];
+        // Points that share an (x, y) share their rows: each key's rows are
+        // taken once, however many of its points the brush caught.
+        /** @type {any[]} */
+        const xVals = [], yVals = [], brushedRows = [];
+        const takenKeys = new Set();
         for (const sel of selected) {
           const sData = allSeries[sel.seriesIndex]?.data;
           if (!sData || sel.dataIndex < 0 || sel.dataIndex >= sData.length) continue;
@@ -3413,8 +3415,12 @@
           if (vx != null) xVals.push(vx);
           if (vy != null) yVals.push(vy);
           if (rowIndex) {
-            const hit = rowIndex.get(String(vx) + '|||' + String(vy));
-            if (hit) brushedRows.push(...hit);
+            const k = String(vx) + '|||' + String(vy);
+            const hit = takenKeys.has(k) ? null : rowIndex.get(k);
+            if (hit) {
+              takenKeys.add(k);
+              for (const r of hit) brushedRows.push(r);
+            }
           }
         }
 
@@ -3424,11 +3430,11 @@
         if (drillCol && brushedRows.length) {
           this._emitDrill(brushedRows);
         } else if (xVals.length > 0) {
-          const xRange = [Math.min(...xVals), Math.max(...xVals)];
+          const xRange = [minOf(xVals), maxOf(xVals)];
           if (isLine) {
             this._sendRangeFilter(xRange, null);
           } else {
-            const yRange = yVals.length > 0 ? [Math.min(...yVals), Math.max(...yVals)] : null;
+            const yRange = yVals.length > 0 ? [minOf(yVals), maxOf(yVals)] : null;
             this._sendRangeFilter(xRange, yRange);
           }
         }
