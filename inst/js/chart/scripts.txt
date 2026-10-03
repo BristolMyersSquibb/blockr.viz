@@ -1,4 +1,4 @@
-# The v2 chart scripts, in load order. Read by the chart's html dependency
+# The chart scripts, in load order. Read by the chart's html dependency
 # (R/chart-dep.R) and by the node test harness (tests/js/harness.js).
 common.js
 chart-index.js

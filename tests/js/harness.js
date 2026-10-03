@@ -4,7 +4,7 @@
  * The files run unmodified, in the order the page loads them: blockr.ui's
  * controls (controls_dep()), then drilldown-agg.js, drilldown-config.js,
  * capture-pages.js and busy-cue.js (drilldown_shared_dep()), then
- * drilldown-theme-register.js and the chart scripts in inst/js/chart-v2/,
+ * drilldown-theme-register.js and the chart scripts in inst/js/chart/,
  * in the order scripts.txt lists them (drilldown_chart_dep()). A chart is
  * created through the input binding's `initialize`, and its data arrives
  * through the `drilldown-data` message handler, exactly as from
@@ -42,9 +42,9 @@ const SHARED_FILES = ['drilldown-agg.js', 'drilldown-config.js', 'capture-pages.
                       'drilldown-theme-register.js'];
 
 /** The chart scripts in load order, as the html dependency lists them. */
-const CHART_FILES = fs.readFileSync(path.join(JS_DIR, 'chart-v2', 'scripts.txt'), 'utf8')
+const CHART_FILES = fs.readFileSync(path.join(JS_DIR, 'chart', 'scripts.txt'), 'utf8')
   .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
-  .map((f) => 'chart-v2/' + f);
+  .map((f) => 'chart/' + f);
 
 const VIZ_FILES = [...SHARED_FILES, ...CHART_FILES];
 

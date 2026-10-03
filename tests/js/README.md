@@ -1,6 +1,6 @@
 # JavaScript tests for the chart block
 
-The chart scripts in `inst/js/chart-v2/` run in node with happy-dom, loaded
+The chart scripts in `inst/js/chart/` run in node with happy-dom, loaded
 the way the page loads them: blockr.ui's controls, `drilldown-agg.js`,
 `drilldown-config.js`, `capture-pages.js`, `busy-cue.js`,
 `drilldown-theme-register.js`, then the chart scripts in the order
@@ -75,7 +75,7 @@ ones that used to be quadratic, before the chart read rows through its
 
 ## Unit tests
 
-`tests/js/v2/` holds the node tests of the chart's pure parts (the index,
+`tests/js/chart/` holds the node tests of the chart's pure parts (the index,
 keys, models and options, loaded into a vm context without a DOM), the
 binding's message handling and a few behaviours too narrow for a scenario.
 `npm test` runs them.

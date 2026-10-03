@@ -2149,13 +2149,10 @@ new_chart_block <- function(
     },
     ui = function(id) {
       ns <- shiny::NS(id)
-      # One engine per app (see chart_engine()); the v2 container carries a
-      # class of its own so the two can be told apart in a page.
-      v2 <- identical(chart_engine(), "v2")
       shiny::tagList(
         viz_echarts_dep(),
         viz_block_css_dep(),
-        if (v2) drilldown_chart_v2_dep() else drilldown_chart_dep(),
+        drilldown_chart_dep(),
         # The prepare script's control strip. Always in the DOM, empty and
         # display:none until a script declares a value -- chart.js fills it.
         # It used to hold promoted mapping rows too (`expose`, retired): a
@@ -2164,11 +2161,7 @@ new_chart_block <- function(
                    style = "display:none"),
         shiny::div(
           id = ns("drilldown_block"),
-          class = if (v2) {
-            "drilldown-chart-container dd-engine-v2"
-          } else {
-            "drilldown-chart-container"
-          }
+          class = "drilldown-chart-container"
         ),
         # The download control is rendered HERE and hoisted into the gear
         # header by chart.js -- the same shape rank-table.js uses for the

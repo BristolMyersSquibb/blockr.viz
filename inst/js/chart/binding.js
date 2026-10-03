@@ -1,9 +1,7 @@
 // @ts-check
 /**
- * Chart block v2: the Shiny input binding and the messages R sends.
- *
- * Same binding name and messages as v1 (tests/js/CONTRACT.md), so a page
- * loads one engine or the other, never both:
+ * Chart block: the Shiny input binding and the messages R sends
+ * (tests/js/CONTRACT.md):
  *
  *   drilldown-data     columns, rows (or none, when the client holds them)
  *                      and config; waits for its container if it has none
@@ -18,13 +16,12 @@
   'use strict';
   const NS = /** @type {any} */ (window.Blockr).chart;
 
-  // A second engine in the page would answer every message twice.
+  // Loaded twice, the scripts would answer every message twice.
   const reg = /** @type {any} */ (Shiny.inputBindings);
   if (reg.bindingNames && reg.bindingNames['blockr.drilldown']) {
-    console.error('blockr.viz: a chart engine is already loaded; the v2 chart scripts stop here.');
+    console.error('blockr.viz: the chart scripts are already loaded; this copy stops here.');
     return;
   }
-  NS.engine = 'v2';
 
   // The last undelivered payload and theme per container id: a message can
   // arrive before its container is bound (dock panels mount late).

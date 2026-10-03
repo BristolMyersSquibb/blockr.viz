@@ -128,9 +128,9 @@ js_enum <- function(path, anchor) {
   sub("value:\\s*['\"]([^'\"]+)['\"]", "\\1", vals, perl = TRUE)
 }
 
-test_that("LANE_STATS mirrors chart.js SUMMARY_STATS plus mean_ci95", {
-  js <- system.file("js", "chart.js", package = "blockr.viz")
-  skip_if(!nzchar(js) || !file.exists(js), "chart.js not found")
+test_that("LANE_STATS mirrors the chart's SUMMARY_STATS plus mean_ci95", {
+  js <- system.file("js", "chart", "roles.js", package = "blockr.viz")
+  skip_if(!nzchar(js) || !file.exists(js), "chart/roles.js not found")
   chart_stats <- js_enum(js, "SUMMARY_STATS")
   expect_true(length(chart_stats) >= 5L)
   # The one deliberate difference: mean_ci95 exists only where R computes

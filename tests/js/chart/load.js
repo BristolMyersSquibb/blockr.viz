@@ -1,4 +1,4 @@
-/* Load v2's pure scripts into a plain node vm context: no DOM, no ECharts,
+/* Load the chart's pure scripts into a plain node vm context: no DOM, no ECharts,
  * no Shiny. Returns the namespace they fill (Blockr.chart).
  *
  * The scripts are the ones the page loads, in scripts.txt order, up to the
@@ -25,10 +25,10 @@ function loadPure(opts = {}) {
   ctx.window = ctx;
   const run = (f) => vm.runInContext(fs.readFileSync(path.join(JS_DIR, f), 'utf8'), ctx,
                                      { filename: f });
-  for (const f of PURE) run(path.join('chart-v2', f));
+  for (const f of PURE) run(path.join('chart', f));
   if (opts.roles) {
     run('drilldown-agg.js');
-    run(path.join('chart-v2', 'roles.js'));
+    run(path.join('chart', 'roles.js'));
   }
   return ctx.Blockr.chart;
 }

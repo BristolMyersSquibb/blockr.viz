@@ -1,6 +1,6 @@
 # The chart block's R <-> JS contract
 
-What the chart scripts in `inst/js/chart-v2/` (with `drilldown-config.js` and
+What the chart scripts in `inst/js/chart/` (with `drilldown-config.js` and
 `busy-cue.js`) send to R and what they accept from R, pinned by the snapshots
 in `__snapshots__/interactions/` (file names in brackets). The click rules
 are the ones decided in blockr.design `open/chart-block-v2/decisions.md`.
