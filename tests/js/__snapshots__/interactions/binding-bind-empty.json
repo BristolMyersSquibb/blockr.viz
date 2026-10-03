@@ -1,0 +1,93 @@
+{
+ "inputs": [
+  {
+   "name": "blk-drilldown_block_ready",
+   "value": "[time]",
+   "opts": {
+    "priority": "event"
+   }
+  }
+ ],
+ "root": [
+  [
+   "div.drilldown-chart-container",
+   false,
+   [
+    [
+     "div.dd-card",
+     false,
+     [
+      [
+       "div.blockr-gear-header",
+       false,
+       [
+        [
+         "div.dd-chart-titles",
+         true,
+         null
+        ],
+        [
+         "div.dd-chart-dl-host.dd-chart-dl",
+         false,
+         null
+        ],
+        [
+         "button.blockr-gear-btn",
+         false,
+         null
+        ]
+       ]
+      ],
+      [
+       "div.blockr-busy-line",
+       false,
+       []
+      ],
+      [
+       "div.blockr-settings.blockr-settings--beak.dd-popover",
+       false,
+       []
+      ],
+      [
+       "div.dd-mapping-band",
+       true,
+       []
+      ],
+      [
+       "div.dd-chart-grid",
+       false,
+       []
+      ],
+      [
+       "div.dd-legend-band",
+       true,
+       []
+      ],
+      [
+       "div.dd-chart-caption",
+       true,
+       []
+      ],
+      [
+       "div.dd-status-footer",
+       false,
+       [
+        [
+         "span.dd-status-text",
+         false,
+         null
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+  ]
+ ],
+ "footer": [
+  {
+   "cls": "dd-status-text",
+   "text": "No filter active"
+  }
+ ]
+}

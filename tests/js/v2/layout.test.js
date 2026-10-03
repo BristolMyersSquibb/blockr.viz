@@ -1,7 +1,5 @@
-/* B9: facet panels are laid out before any of them fits its labels. v1
- * reads the first panel's width before the others exist, so its first
- * panel fits its x labels to the whole row (flat) while the others turn
- * theirs; v2 fits every panel to its own track. */
+/* Facet panels are laid out before any of them fits its labels, so every
+ * panel fits its x labels to its own track, the first one included. */
 'use strict';
 
 const test = require('node:test');
@@ -10,8 +8,8 @@ const h = require('../harness');
 const { F, BASE } = require('../cases');
 
 /** The x labels' turn and each canvas height, per panel. */
-const layout = (engine, cfg) => {
-  const r = h.draw({ ...BASE, ...cfg }, F.data, F.columns, { engine, width: 640 });
+const layout = (cfg) => {
+  const r = h.draw({ ...BASE, ...cfg }, F.data, F.columns, { width: 640 });
   return {
     rotate: r.options.map((s) => {
       const o = s.calls[0].option;
@@ -28,11 +26,9 @@ const CASES = {
 };
 
 for (const [name, cfg] of Object.entries(CASES)) {
-  test(`B9: every ${name} panel fits its labels to its own track`, () => {
-    const v2 = layout('v2', cfg);
-    assert.deepStrictEqual(v2.rotate, [90, 90]);
-    assert.strictEqual(v2.heights[0], v2.heights[1]);
-    const v1 = layout('v1', cfg);
-    assert.deepStrictEqual(v1.rotate, [0, 90]);
+  test(`every ${name} panel fits its labels to its own track`, () => {
+    const l = layout(cfg);
+    assert.deepStrictEqual(l.rotate, [90, 90]);
+    assert.strictEqual(l.heights[0], l.heights[1]);
   });
 }

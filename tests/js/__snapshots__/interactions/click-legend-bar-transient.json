@@ -9,31 +9,39 @@
  "steps": [
   {
    "step": "legend chip MILD",
-   "inputs": [],
-   "calls": [
+   "inputs": [
     {
-     "instance": 0,
-     "calls": [
-      {
-       "op": "dispatchAction",
-       "action": {
-        "type": "legendUnSelect",
-        "name": "MILD"
-       }
-      }
-     ]
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "AESEV": [
+        "MILD"
+       ]
+      },
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
     }
    ],
-   "footer": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text dd-status-receipt",
+     "text": "Drilled down to AESEV = MILD",
+     "animation": "dd-receipt-out 1100ms linear 1400ms both"
+    }
+   ],
    "state": {
     "selected": null,
     "selectedColumn": null,
     "brush": false
    },
    "signal": null,
-   "legendOff": [
-    "MILD"
-   ],
+   "legendOff": [],
    "pending": [
     {
      "ms": 300,
@@ -42,6 +50,10 @@
     {
      "ms": 16,
      "left": 16
+    },
+    {
+     "ms": 3100,
+     "left": 3100
     }
    ],
    "legendOn": []
@@ -67,9 +79,7 @@
     "brush": false
    },
    "signal": null,
-   "legendOff": [
-    "MILD"
-   ],
+   "legendOff": [],
    "pending": [],
    "legendOn": []
   }

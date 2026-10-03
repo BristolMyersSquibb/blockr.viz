@@ -1,8 +1,10 @@
 # JavaScript tests for the chart block
 
-`inst/js/chart.js` runs in node with happy-dom, loaded the way the page loads
-it: blockr.ui's controls, `drilldown-agg.js`, `drilldown-config.js`,
-`capture-pages.js`, `drilldown-theme-register.js`, `chart.js`. A chart is
+The chart scripts in `inst/js/chart-v2/` run in node with happy-dom, loaded
+the way the page loads them: blockr.ui's controls, `drilldown-agg.js`,
+`drilldown-config.js`, `capture-pages.js`, `busy-cue.js`,
+`drilldown-theme-register.js`, then the chart scripts in the order
+`scripts.txt` lists them. A chart is
 created by the input binding's `initialize` and drawn by the `drilldown-data`
 message handler. echarts is a fake that records what the chart asks of it
 (`harness.js` lists everything that is stubbed).
@@ -47,7 +49,7 @@ update the snapshots.
 ## Interactions
 
 The `interactions-*.test.js` files record everything the chart does besides
-drawing, as the reference for a rewrite of `chart.js`: clicks and drill,
+drawing: clicks and drill,
 brush, the hover pickers, the gear, the sentence words, state restore,
 lifecycle, the messages R sends, and export. Snapshots are in
 `__snapshots__/interactions/` and update the same way as the drawing ones.
@@ -68,34 +70,12 @@ handles, with the snapshots that pin each one.
 (`t(4n) / t(n) > 8`).
 
 The cases with a level per patient (series, group, categorical x) are the
-ones that used to be quadratic, before chart.js read rows through its
-`RowIndex`. `SCALING_ONLY="<case name>"` runs one case, and
-`CHART_JS=<path>` times another copy of `chart.js`, for trying a change out
-before making it.
+ones that used to be quadratic, before the chart read rows through its
+`RowIndex`. `SCALING_ONLY="<case name>"` runs one case.
 
-## The v2 engine
+## Unit tests
 
-`inst/js/chart-v2/` is the rewrite of `chart.js`, built beside it one chart
-family at a time (spec: blockr.design `open/chart-block-v2`). The harness
-loads either engine:
-
-```sh
-npm run test:v2               # every test above, against v2
-CHART_ENGINE=v2 node --require ./tests/js/v2-preload.js --test tests/js/chart-timeline.test.js
-```
-
-Under v2 the snapshots are still v1's, and v2 has to reproduce them.
-`v2-differences.json` lists the ones it does not, each with the IDs of the
-decisions that explain the difference (D1-D11, B1-B11) and a line of why; what
-v2 draws instead is pinned in `__snapshots__/v2/`. An unlisted difference
-fails, and so does a listed one that v2 now reproduces.
-`UPDATE_SNAPSHOTS=1 npm run test:v2` rewrites `__snapshots__/v2/` only.
-
-`v2-pending.js` names the tests of families v2 does not draw yet; the
-preload (`v2-preload.js`) skips them. Each build step removes its family's
-entries. `V2_RUN_PENDING=1` runs them anyway.
-
-`tests/js/v2/` holds the node tests of v2's pure parts (the index, keys,
-models and options, loaded into a vm context without a DOM), a comparison of
-the v2 binding with v1's, and checks of the two lists above. `npm test` runs
-them.
+`tests/js/v2/` holds the node tests of the chart's pure parts (the index,
+keys, models and options, loaded into a vm context without a DOM), the
+binding's message handling and a few behaviours too narrow for a scenario.
+`npm test` runs them.

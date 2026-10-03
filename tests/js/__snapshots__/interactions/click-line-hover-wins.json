@@ -187,10 +187,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "USUBJID",
-      "values": [
-       "S02"
-      ],
+      "filters": {
+       "USUBJID": [
+        "S02"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -198,11 +199,135 @@
      }
     }
    ],
-   "calls": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {},
+         {},
+         {},
+         {},
+         {},
+         {},
+         {}
+        ]
+       }
+      }
+     ]
+    }
+   ],
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: S02"
+     "text": "Filtered: USUBJID = S02"
     },
     {
      "reset": "Reset"
@@ -210,7 +335,7 @@
    ],
    "state": {
     "selected": "S02",
-    "selectedColumn": null,
+    "selectedColumn": "USUBJID",
     "brush": false
    },
    "signal": null,

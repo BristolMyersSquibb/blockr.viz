@@ -15,10 +15,14 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AESEV",
-      "values": [
-       "MILD"
-      ],
+      "filters": {
+       "AESEV": [
+        "MILD"
+       ],
+       "SEX": [
+        "M"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -70,16 +74,16 @@
             ],
             "itemStyle": {
              "color": "#D55E00",
-             "opacity": 1
+             "opacity": 0.15
             },
             "lineStyle": {
              "color": "#D55E00",
              "width": 2,
-             "opacity": 1
+             "opacity": 0.15
             },
             "areaStyle": {
              "color": "#D55E00",
-             "opacity": 0.15
+             "opacity": 0.04
             }
            },
            {
@@ -247,15 +251,25 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: MILD"
+     "text": "Filtered: AESEV = MILD, SEX = M"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "MILD",
-    "selectedColumn": null,
+    "selected": {
+     "AESEV": [
+      "MILD"
+     ],
+     "SEX": [
+      "M"
+     ]
+    },
+    "selectedColumn": [
+     "AESEV",
+     "SEX"
+    ],
     "brush": false
    },
    "signal": null,

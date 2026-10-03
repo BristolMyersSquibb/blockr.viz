@@ -83,10 +83,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "USUBJID",
-      "values": [
-       "S03"
-      ],
+      "filters": {
+       "USUBJID": [
+        "S03"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -94,11 +95,131 @@
      }
     }
    ],
-   "calls": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {},
+         {},
+         {}
+        ]
+       }
+      }
+     ]
+    }
+   ],
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: S03"
+     "text": "Filtered: USUBJID = S03"
     },
     {
      "reset": "Reset"
@@ -106,7 +227,7 @@
    ],
    "state": {
     "selected": "S03",
-    "selectedColumn": null,
+    "selectedColumn": "USUBJID",
     "brush": false
    },
    "signal": null,
@@ -129,7 +250,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: S03"
+     "text": "Filtered: USUBJID = S03"
     },
     {
      "reset": "Reset"
@@ -137,7 +258,7 @@
    ],
    "state": {
     "selected": "S03",
-    "selectedColumn": null,
+    "selectedColumn": "USUBJID",
     "brush": false
    },
    "signal": null,
@@ -169,10 +290,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "USUBJID",
-      "values": [
-       "S03"
-      ],
+      "filters": {
+       "USUBJID": [
+        "S03"
+       ]
+      },
       "nonce": 2
      },
      "opts": {
@@ -187,6 +309,120 @@
       {
        "op": "resize",
        "opts": null
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {},
+         {},
+         {}
+        ]
+       }
       }
      ]
     }
@@ -194,7 +430,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: S03"
+     "text": "Filtered: USUBJID = S03"
     },
     {
      "reset": "Reset"
@@ -202,7 +438,7 @@
    ],
    "state": {
     "selected": "S03",
-    "selectedColumn": null,
+    "selectedColumn": "USUBJID",
     "brush": false
    },
    "signal": null,
@@ -221,7 +457,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: S03"
+     "text": "Filtered: USUBJID = S03"
     },
     {
      "reset": "Reset"
@@ -229,7 +465,7 @@
    ],
    "state": {
     "selected": "S03",
-    "selectedColumn": null,
+    "selectedColumn": "USUBJID",
     "brush": false
    },
    "signal": null,
@@ -257,10 +493,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "USUBJID",
-      "values": [
-       "S05"
-      ],
+      "filters": {
+       "USUBJID": [
+        "S05"
+       ]
+      },
       "nonce": 3
      },
      "opts": {
@@ -268,11 +505,131 @@
      }
     }
    ],
-   "calls": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 0.15
+          },
+          "itemStyle": {
+           "opacity": 0.15
+          }
+         },
+         {},
+         {},
+         {}
+        ]
+       }
+      }
+     ]
+    }
+   ],
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: S05"
+     "text": "Filtered: USUBJID = S05"
     },
     {
      "reset": "Reset"
@@ -280,7 +637,7 @@
    ],
    "state": {
     "selected": "S05",
-    "selectedColumn": null,
+    "selectedColumn": "USUBJID",
     "brush": false
    },
    "signal": null,
@@ -299,7 +656,7 @@
      "name": "blk-drilldown_block_action",
      "value": {
       "action": "filter",
-      "filter_type": "range",
+      "filter_type": "categorical",
       "column": null,
       "values": null,
       "x_col": null,
@@ -327,19 +684,110 @@
        "op": "setOption",
        "option": {
         "series": [
-         {},
-         {},
-         {},
-         {},
-         {},
-         {},
-         {},
-         {},
-         {},
-         {},
-         {},
-         {},
-         {},
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
          {},
          {},
          {}

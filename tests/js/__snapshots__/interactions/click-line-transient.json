@@ -47,10 +47,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "USUBJID",
-      "values": [
-       "S03"
-      ],
+      "filters": {
+       "USUBJID": [
+        "S03"
+       ]
+      },
       "nonce": 1
      },
      "opts": {

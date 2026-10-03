@@ -14,7 +14,7 @@ const sendCfg = (label, extra) => [label, (c) => c.send({ ...c.cfg, ...extra }, 
 const echo = (extra) => [`R echoes the config ${JSON.stringify(extra || {})}`, (c) => c.echo(extra)];
 const clickName = (name) => [`click ${name}`, (c) => c.clickWhere(0, (p) => String(p.name) === name)];
 const reset = () => ['Reset', (c) => c.reset()];
-// Reset where the chart shows one (v1 latches nothing on these).
+// Reset, where the chart shows one.
 const resetIfShown = () => ['Reset, if shown', (c) => {
   if (c.block.statusEl.querySelector('.dd-status-reset')) c.reset();
 }];
@@ -92,9 +92,8 @@ scenario('scatter', { chart_type: 'scatter', ...LAB, color: 'ARM', filter_column
 scenario('line', { chart_type: 'line', ...LAB, series: 'USUBJID', filter_column: 'USUBJID',
                    filter_values: ['S03'] }, [sendCfg('R sends the saved selection')]);
 
-// Saved state v1 does not write: two columns, a missing value, a range with
-// the panel it was taken in. v1 restores none of them; v2 lights what they
-// select (D2, D5, D10, D11).
+// Saved state on two columns, a missing value, a range with the panel it was
+// taken in: the chart lights what they select.
 scenario('bar-two-columns', { chart_type: 'bar', ...AE, color: 'AESEV',
                               filters: { AETERM: ['Rash'], AESEV: ['MODERATE'] } },
 [sendCfg('R sends a saved filter on two columns')]);

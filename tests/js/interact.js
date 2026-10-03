@@ -102,11 +102,10 @@ function mountRoot(env, id, { download = false } = {}) {
  * @param {object} config
  * @param {{ width?: number, height?: number, theme?: string, data?: any,
  *           columns?: any[], dataRev?: any, download?: boolean,
- *           noSend?: boolean, engine?: 'v1' | 'v2' }} [opts]
+ *           noSend?: boolean }} [opts]
  */
 function open(config, opts = {}) {
-  const env = h.createEnv({ width: opts.width, height: opts.height, record: 'full',
-                            engine: opts.engine });
+  const env = h.createEnv({ width: opts.width, height: opts.height, record: 'full' });
   const clock = useClock(env);
   const { el } = mountRoot(env, ID, opts);
   env.binding.initialize(el);

@@ -16,10 +16,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AETERM",
-      "values": [
-       "Headache"
-      ],
+      "filters": {
+       "AETERM": [
+        "Headache"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -27,19 +28,948 @@
      }
     }
    ],
-   "calls": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": [
+             34,
+             36,
+             2,
+             "S03",
+             "",
+             "",
+             "",
+             "Nausea",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             37,
+             40,
+             2,
+             "S03",
+             "",
+             "",
+             "",
+             "Headache",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             40,
+             44,
+             2,
+             "S03",
+             "",
+             "",
+             "",
+             "Rash",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             3,
+             8,
+             2,
+             "S03",
+             "",
+             "",
+             "",
+             "Upper respiratory tract infection",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             6,
+             12,
+             2,
+             "S03",
+             "",
+             "",
+             "",
+             "Fatigue",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             39,
+             39,
+             1,
+             "S06",
+             "",
+             "",
+             "",
+             "Upper respiratory tract infection",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             2,
+             2,
+             1,
+             "S06",
+             "",
+             "",
+             "",
+             "Fatigue",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             5,
+             6,
+             1,
+             "S06",
+             "",
+             "",
+             "",
+             "Dizziness",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             8,
+             10,
+             1,
+             "S06",
+             "",
+             "",
+             "",
+             "Nausea",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             11,
+             14,
+             1,
+             "S06",
+             "",
+             "",
+             "",
+             "Headache",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             4,
+             9,
+             5,
+             "S09",
+             "",
+             "",
+             "",
+             "Nausea",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             7,
+             13,
+             5,
+             "S09",
+             "",
+             "",
+             "",
+             "Headache",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             10,
+             17,
+             5,
+             "S09",
+             "",
+             "",
+             "",
+             "Rash",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             13,
+             21,
+             5,
+             "S09",
+             "",
+             "",
+             "",
+             "Upper respiratory tract infection",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             16,
+             16,
+             5,
+             "S09",
+             "",
+             "",
+             "",
+             "Fatigue",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": [
+             19,
+             25,
+             10,
+             "S02",
+             "",
+             "",
+             "",
+             "Headache",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             22,
+             29,
+             10,
+             "S02",
+             "",
+             "",
+             "",
+             "Rash",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             25,
+             33,
+             10,
+             "S02",
+             "",
+             "",
+             "",
+             "Upper respiratory tract infection",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             28,
+             28,
+             10,
+             "S02",
+             "",
+             "",
+             "",
+             "Fatigue",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             31,
+             31,
+             10,
+             "S02",
+             "",
+             "",
+             "",
+             "Dizziness",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             24,
+             27,
+             12,
+             "S05",
+             "",
+             "",
+             "",
+             "Fatigue",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             27,
+             31,
+             12,
+             "S05",
+             "",
+             "",
+             "",
+             "Dizziness",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             30,
+             35,
+             12,
+             "S05",
+             "",
+             "",
+             "",
+             "Nausea",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             33,
+             39,
+             12,
+             "S05",
+             "",
+             "",
+             "",
+             "Headache",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             36,
+             43,
+             12,
+             "S05",
+             "",
+             "",
+             "",
+             "Rash",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             29,
+             29,
+             0,
+             "S08",
+             "",
+             "",
+             "",
+             "Headache",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             32,
+             33,
+             0,
+             "S08",
+             "",
+             "",
+             "",
+             "Rash",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             35,
+             37,
+             0,
+             "S08",
+             "",
+             "",
+             "",
+             "Upper respiratory tract infection",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             38,
+             41,
+             0,
+             "S08",
+             "",
+             "",
+             "",
+             "Fatigue",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             1,
+             5,
+             0,
+             "S08",
+             "",
+             "",
+             "",
+             "Dizziness",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             34,
+             40,
+             3,
+             "S11",
+             "",
+             "",
+             "",
+             "Fatigue",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             37,
+             44,
+             3,
+             "S11",
+             "",
+             "",
+             "",
+             "Dizziness",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             40,
+             48,
+             3,
+             "S11",
+             "",
+             "",
+             "",
+             "Nausea",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             3,
+             3,
+             3,
+             "S11",
+             "",
+             "",
+             "",
+             "Headache",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             6,
+             7,
+             3,
+             "S11",
+             "",
+             "",
+             "",
+             "Rash",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": [
+             4,
+             5,
+             4,
+             "S01",
+             "",
+             "",
+             "",
+             "Rash",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             7,
+             9,
+             4,
+             "S01",
+             "",
+             "",
+             "",
+             "Upper respiratory tract infection",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             10,
+             10,
+             4,
+             "S01",
+             "",
+             "",
+             "",
+             "Fatigue",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             13,
+             17,
+             4,
+             "S01",
+             "",
+             "",
+             "",
+             "",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             16,
+             21,
+             4,
+             "S01",
+             "",
+             "",
+             "",
+             "Nausea",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             9,
+             16,
+             6,
+             "S04",
+             "",
+             "",
+             "",
+             "Dizziness",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             12,
+             20,
+             6,
+             "S04",
+             "",
+             "",
+             "",
+             "Nausea",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             15,
+             15,
+             6,
+             "S04",
+             "",
+             "",
+             "",
+             "Headache",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             18,
+             19,
+             6,
+             "S04",
+             "",
+             "",
+             "",
+             "",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             21,
+             23,
+             6,
+             "S04",
+             "",
+             "",
+             "",
+             "Upper respiratory tract infection",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             14,
+             18,
+             8,
+             "S07",
+             "",
+             "",
+             "",
+             "Rash",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             17,
+             22,
+             8,
+             "S07",
+             "",
+             "",
+             "",
+             "Upper respiratory tract infection",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             20,
+             26,
+             8,
+             "S07",
+             "",
+             "",
+             "",
+             "",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             23,
+             30,
+             8,
+             "S07",
+             "",
+             "",
+             "",
+             "Dizziness",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             26,
+             34,
+             8,
+             "S07",
+             "",
+             "",
+             "",
+             "Nausea",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             19,
+             20,
+             11,
+             "S10",
+             "",
+             "",
+             "",
+             "Dizziness",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             22,
+             24,
+             11,
+             "S10",
+             "",
+             "",
+             "",
+             "Nausea",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             25,
+             28,
+             11,
+             "S10",
+             "",
+             "",
+             "",
+             "Headache",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             28,
+             32,
+             11,
+             "S10",
+             "",
+             "",
+             "",
+             "Rash",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             31,
+             36,
+             11,
+             "S10",
+             "",
+             "",
+             "",
+             "Upper respiratory tract infection",
+             0
+            ],
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: S02"
+     "text": "Filtered: Reported Term = Headache"
     },
     {
      "reset": "Reset"
     }
    ],
    "state": {
-    "selected": "S02",
-    "selectedColumn": null,
+    "selected": "Headache",
+    "selectedColumn": "AETERM",
     "brush": false
    },
    "signal": null,

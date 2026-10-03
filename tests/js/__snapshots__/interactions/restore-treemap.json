@@ -104,7 +104,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: AETERM = Rash"
+     "text": "Filtered: Reported Term = Rash"
     },
     {
      "reset": "Reset"

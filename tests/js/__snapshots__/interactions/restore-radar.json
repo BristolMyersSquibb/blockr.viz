@@ -134,7 +134,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: ARM = Placebo"
+     "text": "Filtered: Planned Arm = Placebo"
     },
     {
      "reset": "Reset"

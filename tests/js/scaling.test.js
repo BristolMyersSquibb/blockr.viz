@@ -5,7 +5,6 @@
  * n, which a 2x step with a threshold of 3 did not.
  *
  * SKIP_SCALING=1 skips the file. SCALING_ONLY=<name> runs one case.
- * CHART_JS=<path> (see harness.js) times another copy of chart.js.
  */
 'use strict';
 

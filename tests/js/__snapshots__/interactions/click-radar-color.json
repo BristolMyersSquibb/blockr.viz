@@ -16,10 +16,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "ARM",
-      "values": [
-       "Placebo"
-      ],
+      "filters": {
+       "ARM": [
+        "Placebo"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -140,7 +141,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Placebo"
+     "text": "Filtered: Planned Arm = Placebo"
     },
     {
      "reset": "Reset"
@@ -148,7 +149,7 @@
    ],
    "state": {
     "selected": "Placebo",
-    "selectedColumn": null,
+    "selectedColumn": "ARM",
     "brush": false
    },
    "signal": null,
@@ -172,10 +173,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "ARM",
-      "values": [
-       "Low Dose"
-      ],
+      "filters": {
+       "ARM": [
+        "Low Dose"
+       ]
+      },
       "nonce": 2
      },
      "opts": {
@@ -296,7 +298,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Low Dose"
+     "text": "Filtered: Planned Arm = Low Dose"
     },
     {
      "reset": "Reset"
@@ -304,7 +306,7 @@
    ],
    "state": {
     "selected": "Low Dose",
-    "selectedColumn": null,
+    "selectedColumn": "ARM",
     "brush": false
    },
    "signal": null,

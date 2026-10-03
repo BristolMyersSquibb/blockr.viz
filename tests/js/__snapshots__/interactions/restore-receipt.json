@@ -14,10 +14,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AETERM",
-      "values": [
-       "Nausea"
-      ],
+      "filters": {
+       "AETERM": [
+        "Nausea"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -29,7 +30,7 @@
    "footer": [
     {
      "cls": "dd-status-text dd-status-receipt",
-     "text": "Drilled down to AETERM = Nausea",
+     "text": "Drilled down to Reported Term = Nausea",
      "animation": "dd-receipt-out 1100ms linear 1400ms both"
     }
    ],
@@ -83,7 +84,7 @@
    "footer": [
     {
      "cls": "dd-status-text dd-status-receipt",
-     "text": "Drilled down to AETERM = Nausea",
+     "text": "Drilled down to Reported Term = Nausea",
      "animation": "dd-receipt-out 1100ms linear 1400ms both"
     }
    ],
@@ -184,7 +185,7 @@
    "footer": [
     {
      "cls": "dd-status-text dd-status-receipt",
-     "text": "Drilled down to AETERM = Nausea",
+     "text": "Drilled down to Reported Term = Nausea",
      "animation": "dd-receipt-out 1100ms linear 400ms both"
     }
    ],
@@ -238,7 +239,7 @@
    "footer": [
     {
      "cls": "dd-status-text dd-status-receipt",
-     "text": "Drilled down to AETERM = Nausea",
+     "text": "Drilled down to Reported Term = Nausea",
      "animation": "dd-receipt-out 1100ms linear 400ms both"
     }
    ],
@@ -328,7 +329,7 @@
    "footer": [
     {
      "cls": "dd-status-text dd-status-receipt",
-     "text": "Drilled down to AETERM = Nausea",
+     "text": "Drilled down to Reported Term = Nausea",
      "animation": "dd-receipt-out 1100ms linear -600ms both"
     }
    ],

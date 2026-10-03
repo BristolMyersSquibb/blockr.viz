@@ -11,20 +11,7 @@
   {
    "step": "legend chip MILD",
    "inputs": [],
-   "calls": [
-    {
-     "instance": 0,
-     "calls": [
-      {
-       "op": "dispatchAction",
-       "action": {
-        "type": "legendUnSelect",
-        "name": "MILD"
-       }
-      }
-     ]
-    }
-   ],
+   "calls": [],
    "footer": [
     {
      "cls": "dd-status-text",
@@ -37,9 +24,7 @@
     "brush": false
    },
    "signal": null,
-   "legendOff": [
-    "MILD"
-   ],
+   "legendOff": [],
    "pending": [
     {
      "ms": 300,

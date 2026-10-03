@@ -9,11 +9,9 @@
    }
   }
  ],
- "disposed": 0,
+ "disposed": 1,
  "cards": 1,
  "bandInCard": true,
- "oldInstanceAlive": [
-  true
- ],
+ "oldInstanceAlive": [],
  "newRows": 0
 }

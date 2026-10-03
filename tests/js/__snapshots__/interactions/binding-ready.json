@@ -1,0 +1,259 @@
+{
+ "config": {
+  "value": ".count",
+  "func": "count",
+  "bar_mode": "stacked",
+  "value_labels": "off",
+  "line_width_mult": 1,
+  "dot_size_mult": 1,
+  "connect": "monotone",
+  "value_lines": [],
+  "x_lines": [],
+  "smoother": "none",
+  "identity_line": "off",
+  "box_points": "none",
+  "connect_centers": "off",
+  "count_on": "off",
+  "na_group": "level",
+  "facet_scales": "fixed",
+  "download": "off",
+  "waterfall_totals": [],
+  "filter_values": [],
+  "chart_type": "gantt",
+  "x": "ASTDY",
+  "xend": "AENDY",
+  "y": "AETERM",
+  "drill": "auto"
+ },
+ "steps": [
+  {
+   "step": "ready rev 1",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_need",
+     "value": 1,
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [],
+   "mounted": true,
+   "rev": null,
+   "rows": 0,
+   "sortDir": null,
+   "needRev": 1,
+   "busy": false,
+   "busyLine": ""
+  },
+  {
+   "step": "data rev 1 with rows",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "custom"
+       ]
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "mounted": true,
+   "rev": 1,
+   "rows": 60,
+   "sortDir": "asc",
+   "needRev": null,
+   "busy": false,
+   "busyLine": ""
+  },
+  {
+   "step": "ready rev 1",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "mounted": true,
+   "rev": 1,
+   "rows": 60,
+   "sortDir": "asc",
+   "needRev": null,
+   "busy": false,
+   "busyLine": ""
+  },
+  {
+   "step": "ready rev 2",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_need",
+     "value": 2,
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "mounted": true,
+   "rev": 1,
+   "rows": 60,
+   "sortDir": "asc",
+   "needRev": 2,
+   "busy": false,
+   "busyLine": ""
+  },
+  {
+   "step": "ready rev 2",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "mounted": true,
+   "rev": 1,
+   "rows": 60,
+   "sortDir": "asc",
+   "needRev": 2,
+   "busy": false,
+   "busyLine": ""
+  },
+  {
+   "step": "ready rev 1",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ],
+   "mounted": true,
+   "rev": 1,
+   "rows": 60,
+   "sortDir": "asc",
+   "needRev": 2,
+   "busy": false,
+   "busyLine": ""
+  }
+ ]
+}

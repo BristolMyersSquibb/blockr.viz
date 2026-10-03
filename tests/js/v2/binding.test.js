@@ -1,10 +1,7 @@
-/* The v2 binding against v1's: the messages R sends (with and without rows,
- * before the container exists, _ready, the busy cue), the theme, resize and
- * dispose, driven on a gantt in both engines and compared. The interaction
- * tests cover these with a bar, which v2 does not draw yet.
- *
- * Re-mounts are the one place v2 differs on purpose (B2), tested on v2
- * alone at the end.
+/* The binding: the messages R sends (with and without rows, before the
+ * container exists, _ready, the busy cue), the theme, resize, dispose and
+ * re-mounts, driven on a gantt. Snapshots in __snapshots__/interactions/,
+ * named binding-*.
  */
 'use strict';
 
@@ -43,48 +40,46 @@ const busyDone = () => ['busy done', (c) => c.env.handlers['blockr-busy-done']({
 const wait = (ms) => [`advance ${ms} ms`, (c) => c.advance(ms)];
 const theme = (t) => [`theme ${t}`, (c) => c.env.handlers['drilldown-theme']({ id: c.id, theme: t })];
 
-/** Run the steps on both engines; v2 must record what v1 records. */
-const same = (name, steps, opts = {}) => test(name, () => {
-  const run = (engine) => JSON.parse(JSON.stringify(
-    I.runSteps(cfg(), steps, { noSend: true, extra: state, ...opts, engine })));
-  assert.deepStrictEqual(run('v2'), run('v1'));
+/** Run the steps and compare what they record with the snapshot `snap`. */
+const same = (snap, name, steps, opts = {}) => test(name, () => {
+  I.snap('binding-' + snap, I.runSteps(cfg(), steps, { noSend: true, extra: state, ...opts }));
 });
 
-same('data with rows, again with the same rev, then a new rev', [
+same('data-revs', 'data with rows, again with the same rev, then a new rev', [
   data(1), data(1, { sort_dir: 'desc' }), data(2)
 ]);
 
-same('data without rows: ask once per rev, draw once they come', [
+same('data-without-rows', 'data without rows: ask once per rev, draw once they come', [
   noRows(5), noRows(5, { sort_dir: 'desc' }), noRows(6), data(6),
   noRows(6, { sort_dir: 'desc' }), noRows(7)
 ]);
 
-same('the reply to _ready', [
+same('ready', 'the reply to _ready', [
   ready(1), data(1), ready(1), ready(2), ready(2), ready(1, 'nope-drilldown_block')
 ]);
 
-same('the busy cue ends two frames after the picture', [
+same('busy', 'the busy cue ends two frames after the picture', [
   busy('drawing'), wait(299), wait(1), wait(500), busy('again'), data(1), wait(16), wait(16),
   busy('drawing'), wait(300), busyDone()
 ]);
 
-same('the busy cue waits for rows that are not there', [
+same('busy-without-rows', 'the busy cue waits for rows that are not there', [
   busy('drawing'), noRows(3), wait(400), data(3), wait(32)
 ]);
 
-same('a theme re-creates the instances; before data it only waits', [
+same('theme', 'a theme re-creates the instances; before data it only waits', [
   theme('dark'), data(1), theme('dark'), theme('vintage'), theme('default'), wait(400)
 ]);
 
-same('a facet grid: panels, resize pass and the observer', [
+same('facet-grid', 'a facet grid: panels, resize pass and the observer', [
   data(1, { y: 'USUBJID', facet: 'ARM', facet_cols: '2' }), wait(300),
   ['resize', (c) => c.block.resize()],
   data(1, { y: 'USUBJID', facet: 'ARM', facet_cols: '' }), wait(300)
 ], { width: 900 });
 
 test('data before the container exists, and a theme', () => {
-  const run = (engine) => {
-    const env = h.createEnv({ record: 'full', engine });
+  const run = () => {
+    const env = h.createEnv({ record: 'full' });
     I.useClock(env);
     const id = 'late-drilldown_block';
     const dataless = (rev, extra) => env.win.JSON.parse(JSON.stringify({
@@ -103,12 +98,12 @@ test('data before the container exists, and a theme', () => {
     env.close();
     return out;
   };
-  assert.deepStrictEqual(run('v2'), run('v1'));
+  I.snap('binding-late-container', run());
 });
 
 test('bind with nothing waiting: the same card, and the _ready announce', () => {
-  const run = (engine) => {
-    const env = h.createEnv({ record: 'full', engine });
+  const run = () => {
+    const env = h.createEnv({ record: 'full' });
     const { el } = I.mountRoot(env, I.ID, { download: true });
     env.binding.initialize(el);
     const skeleton = (node, depth) => Array.from(node.children)
@@ -122,26 +117,24 @@ test('bind with nothing waiting: the same card, and the _ready announce', () => 
     env.close();
     return out;
   };
-  assert.deepStrictEqual(run('v2'), run('v1'));
+  I.snap('binding-bind-empty', run());
 });
 
 test('dispose: every instance goes, and a resize after it does nothing', () => {
-  const run = (engine) => {
-    const c = I.open(cfg({ facet: 'ARM' }), { engine });
-    c.block.dispose();
-    const out = { disposed: c.env.fake.instances.filter((i) => i.isDisposed()).length,
-                  total: c.env.fake.instances.length };
-    c.block.resize();
-    c.close();
-    return out;
-  };
-  assert.deepStrictEqual(run('v2'), run('v1'));
+  const c = I.open(cfg({ facet: 'ARM' }));
+  c.block.dispose();
+  const total = c.env.fake.instances.length;
+  assert.ok(total > 1);
+  assert.strictEqual(c.env.fake.instances.filter((i) => i.isDisposed()).length, total);
+  c.block.resize();
+  assert.strictEqual(c.env.fake.instances.length, total);
+  c.close();
 });
 
-// -- B2 -----------------------------------------------------------------------
+// -- Re-mounts ------------------------------------------------------------------
 
-test('B2: a second initialize disposes the first view\'s instances', () => {
-  const c = I.open(cfg(), { engine: 'v2' });
+test('a second initialize disposes the first view\'s instances', () => {
+  const c = I.open(cfg());
   const first = c.env.fake.instances.slice();
   assert.ok(first.length > 0);
   c.env.binding.initialize(c.el);
@@ -149,8 +142,8 @@ test('B2: a second initialize disposes the first view\'s instances', () => {
   c.close();
 });
 
-test('B2: a dock re-mount (a new element, same id) disposes the old view', () => {
-  const c = I.open(cfg(), { engine: 'v2' });
+test('a dock re-mount (a new element, same id) disposes the old view', () => {
+  const c = I.open(cfg());
   const first = c.env.fake.instances.slice();
   c.el.parentElement.remove();
   const { el } = I.mountRoot(c.env, I.ID);

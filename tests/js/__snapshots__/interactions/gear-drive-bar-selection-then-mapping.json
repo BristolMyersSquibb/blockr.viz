@@ -26,10 +26,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AETERM",
-      "values": [
-       "Nausea"
-      ],
+      "filters": {
+       "AETERM": [
+        "Nausea"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -100,7 +101,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Nausea"
+     "text": "Filtered: Reported Term = Nausea"
     },
     {
      "reset": "Reset"
@@ -108,7 +109,7 @@
    ],
    "state": {
     "selected": "Nausea",
-    "selectedColumn": null,
+    "selectedColumn": "AETERM",
     "brush": false
    },
    "signal": null,
@@ -166,7 +167,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Nausea"
+     "text": "Filtered: Reported Term = Nausea"
     },
     {
      "reset": "Reset"
@@ -174,7 +175,7 @@
    ],
    "state": {
     "selected": "Nausea",
-    "selectedColumn": null,
+    "selectedColumn": "AETERM",
     "brush": false
    },
    "signal": null,
@@ -313,7 +314,7 @@
            {
             "value": 20,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -345,10 +346,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Nausea"
-    },
-    {
-     "reset": "Reset"
+     "text": "No filter active"
     }
    ],
    "state": {

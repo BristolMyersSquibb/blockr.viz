@@ -25,7 +25,7 @@ const click = (pred, slot = 0, extra) => [`click ${describe(pred)}${slot ? ' in 
 const clickAt = (slot, si, di, extra) => [`click series ${si} datum ${di} in slot ${slot}`,
   (c) => c.click(slot, si, di, extra)];
 const reset = () => ['Reset', (c) => c.reset()];
-// Reset where the chart shows one (v1 latches nothing on these).
+// Reset, where the chart shows one.
 const resetIfShown = () => ['Reset, if shown', (c) => {
   if (c.block.statusEl.querySelector('.dd-status-reset')) c.reset();
 }];
@@ -228,8 +228,8 @@ scenario('scatter-transient-geometric', { chart_type: 'scatter', ...LAB,
   click(point(15, 29.24), 0, ring)
 ]);
 
-// A point in a facet panel: v2 sends the panel's key with the point (D10)
-// and dims the points outside it (D11).
+// A point in a facet panel: the panel's key goes with the point, and the
+// points outside it dim.
 scenario('scatter-facet-geometric', { chart_type: 'scatter', ...LAB, facet: 'ARM' }, [
   click(named('first point', () => true), 1),
   reset()
@@ -355,10 +355,9 @@ scenario('legend-line-series-color-facet', { chart_type: 'line', ...LAB, series:
   chip('Placebo'), chip('Placebo')
 ]);
 
-// A chip on a chart without a facet: in v1 it hides its level, in v2 it
-// filters it (D8), also with an explicit drill column, with a ctrl_target,
-// and not at all with drill off.
-// The chips marked as the filter's level (v2 only).
+// A chip on a chart without a facet filters its level, also with an
+// explicit drill column, with a ctrl_target, and not at all with drill off.
+// The chips marked as the filter's level.
 const chipsOn = { extra: (c) => ({ legendOn: Array.from(
   c.block.legendEl.querySelectorAll('.dd-legend-chip-on'), (x) => x.textContent) }) };
 

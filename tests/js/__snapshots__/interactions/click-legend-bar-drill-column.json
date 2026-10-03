@@ -8,16 +8,270 @@
  "steps": [
   {
    "step": "legend chip SEVERE",
-   "inputs": [],
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "USUBJID": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12"
+       ]
+      },
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
    "calls": [
     {
      "instance": 0,
      "calls": [
       {
-       "op": "dispatchAction",
-       "action": {
-        "type": "legendUnSelect",
-        "name": "SEVERE"
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 9,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 8,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": 8,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 10,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
        }
       }
      ]
@@ -26,18 +280,32 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "No filter active"
+     "text": "Filtered: USUBJID, 12 values"
+    },
+    {
+     "reset": "Reset"
     }
    ],
    "state": {
-    "selected": null,
-    "selectedColumn": null,
+    "selected": [
+     "S01",
+     "S02",
+     "S03",
+     "S04",
+     "S05",
+     "S06",
+     "S07",
+     "S08",
+     "S09",
+     "S10",
+     "S11",
+     "S12"
+    ],
+    "selectedColumn": "USUBJID",
     "brush": false
    },
    "signal": null,
-   "legendOff": [
-    "SEVERE"
-   ],
+   "legendOff": [],
    "pending": [
     {
      "ms": 300,

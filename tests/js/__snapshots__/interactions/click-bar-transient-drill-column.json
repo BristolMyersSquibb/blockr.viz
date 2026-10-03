@@ -14,18 +14,19 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "USUBJID",
-      "values": [
-       "S01",
-       "S03",
-       "S04",
-       "S05",
-       "S06",
-       "S07",
-       "S09",
-       "S10",
-       "S11"
-      ],
+      "filters": {
+       "USUBJID": [
+        "S01",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S09",
+        "S10",
+        "S11"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -37,7 +38,7 @@
    "footer": [
     {
      "cls": "dd-status-text dd-status-receipt",
-     "text": "Drilled down to USUBJID = S01, S03 +7",
+     "text": "Drilled down to USUBJID, 9 values",
      "animation": "dd-receipt-out 1100ms linear 1400ms both"
     }
    ],

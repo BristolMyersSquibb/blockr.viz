@@ -106,10 +106,11 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "column": "AETERM",
-      "values": [
-       "Rash"
-      ],
+      "filters": {
+       "AETERM": [
+        "Rash"
+       ]
+      },
       "nonce": 1
      },
      "opts": {
@@ -180,7 +181,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Rash"
+     "text": "Filtered: Reported Term = Rash"
     },
     {
      "reset": "Reset"
@@ -188,7 +189,7 @@
    ],
    "state": {
     "selected": "Rash",
-    "selectedColumn": null,
+    "selectedColumn": "AETERM",
     "brush": false
    },
    "signal": null,
@@ -276,7 +277,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: Rash"
+     "text": "Filtered: Reported Term = Rash"
     },
     {
      "reset": "Reset"
@@ -284,7 +285,7 @@
    ],
    "state": {
     "selected": "Rash",
-    "selectedColumn": null,
+    "selectedColumn": "AETERM",
     "brush": false
    },
    "signal": null,
@@ -380,7 +381,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: AETERM = Fatigue"
+     "text": "Filtered: Reported Term = Fatigue"
     },
     {
      "reset": "Reset"
@@ -619,7 +620,7 @@
    "footer": [
     {
      "cls": "dd-status-text",
-     "text": "Filtered: AETERM = Fatigue"
+     "text": "Filtered: Reported Term = Fatigue"
     },
     {
      "reset": "Reset"
