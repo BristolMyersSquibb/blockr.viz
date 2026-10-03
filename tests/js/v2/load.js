@@ -2,7 +2,9 @@
  * no Shiny. Returns the namespace they fill (Blockr.chart).
  *
  * The scripts are the ones the page loads, in scripts.txt order, up to the
- * first that needs a browser. roles.js needs drilldown-agg.js before it.
+ * first that needs a browser. roles.js needs drilldown-agg.js before it;
+ * the aggregated model and option need both (the aggregation engine, the
+ * statistic names), so `{ roles: true }` loads them.
  */
 'use strict';
 
@@ -12,7 +14,9 @@ const vm = require('node:vm');
 
 const JS_DIR = path.join(__dirname, '..', '..', '..', 'inst', 'js');
 const PURE = ['common.js', 'chart-index.js', 'chart-keys.js', 'axes-labels.js',
-              'model-common.js', 'model-timeline.js', 'option-timeline.js'];
+              'model-common.js', 'model-timeline.js', 'model-aggregated.js',
+              'option-timeline.js', 'option-bar.js', 'option-radial.js',
+              'option-distribution.js', 'option-aggregated.js'];
 
 /** @param {{ roles?: boolean }} [opts] */
 function loadPure(opts = {}) {

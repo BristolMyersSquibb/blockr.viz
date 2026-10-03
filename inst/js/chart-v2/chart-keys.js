@@ -88,14 +88,30 @@
     return label + ' = ' + vals.join(', ');
   }).join(', ');
 
+  // The values of each filtered column as a set of strings, made once per
+  // filter: a highlight asks for every mark.
+  /** @type {WeakMap<Filters, Record<string, Set<string>>>} */
+  const valueSets = new WeakMap();
+  /** @param {Filters} filters @returns {Record<string, Set<string>>} */
+  const setsOf = (filters) => {
+    let s = valueSets.get(filters);
+    if (!s) {
+      s = {};
+      for (const col of Object.keys(filters)) s[col] = new Set(filters[col].map(String));
+      valueSets.set(filters, s);
+    }
+    return s;
+  };
+
   /**
    * Does a row satisfy every column of the filter?
    * @param {any} row @param {Filters} filters
    */
   const rowMatches = (row, filters) => {
-    for (const col of Object.keys(filters)) {
+    const sets = setsOf(filters);
+    for (const col of Object.keys(sets)) {
       const v = row[col];
-      if (v == null || !filters[col].map(String).includes(String(v))) return false;
+      if (v == null || !sets[col].has(String(v))) return false;
     }
     return true;
   };
@@ -104,15 +120,18 @@
    * Is a mark lit under a filter (D5)? When every filtered column is one of
    * the mark's keys, the keys decide; otherwise the mark is lit when one of
    * its rows passes the filter (patient S01 on a chart of terms lights every
-   * term S01 has).
-   * @param {Record<string, any>} keys @param {any[]} rows @param {Filters} filters
+   * term S01 has). `rows` may be a function, called only when needed.
+   * @param {Record<string, any>} keys @param {any[] | (() => any[])} rows
+   * @param {Filters} filters
    */
   const markLit = (keys, rows, filters) => {
-    const cols = Object.keys(filters);
+    const sets = setsOf(filters);
+    const cols = Object.keys(sets);
     if (cols.every((c) => c in keys)) {
-      return cols.every((c) => filters[c].map(String).includes(String(keys[c])));
+      return cols.every((c) => sets[c].has(String(keys[c])));
     }
-    for (const r of rows || []) if (rowMatches(r, filters)) return true;
+    const rs = typeof rows === 'function' ? rows() : rows;
+    for (const r of rs || []) if (rowMatches(r, filters)) return true;
     return false;
   };
 
