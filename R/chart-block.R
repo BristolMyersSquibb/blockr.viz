@@ -1975,8 +1975,14 @@ new_chart_block <- function(
           filename = function() dl_name("xlsx"),
           content = function(file) {
             dl_guard("Excel", {
-              # The rows the chart is drawn from.
-              d <- plain_data()
+              # The numbers the chart shows: one row per bar (or slice,
+              # cell, spoke) for the aggregated types, the rows themselves
+              # for the rest.
+              d <- chart_xlsx_frame(
+                plain_data(), chart_type = r_chart_type(),
+                group = r_group(), color = r_color(), facet = r_facet(),
+                func = r_func(), value = r_value(), na_group = r_na_group()
+              )
               shiny::req(is.data.frame(d))
               auto <- r_data_titles()
               write_annotated_xlsx(
@@ -2410,3 +2416,31 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
 }
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
+
+# What the chart's Excel download holds. The aggregated types draw one mark
+# per (facet, group, colour) cell, so the sheet carries those cells, built by
+# the same engine the table block and the JS golden tests use. Distribution
+# marks, points, lines and bars on a timeline draw rows, so the sheet does too.
+#' @noRd
+chart_xlsx_frame <- function(data, chart_type, group = NULL, color = NULL,
+                             facet = NULL, func = "count", value = NULL,
+                             na_group = "level") {
+  if (!is.data.frame(data)) {
+    return(NULL)
+  }
+  aggregated <- c("bar", "waterfall", "pie", "treemap", "radar")
+  keys <- intersect(c(facet, group, color), names(data))
+  if (!isTRUE(chart_type %in% aggregated) ||
+        !length(intersect(group, names(data)))) {
+    return(data)
+  }
+  func <- func %||% "count"
+  summaries <- if (identical(func, "count") || !length(value) ||
+                     !value %in% names(data)) {
+    list(list(func = "count", cols = character()))
+  } else {
+    list(list(func = func, cols = value))
+  }
+  dd_table_aggregate(data, unique(keys), summaries,
+                     na_group = na_group %||% "level")$data
+}
