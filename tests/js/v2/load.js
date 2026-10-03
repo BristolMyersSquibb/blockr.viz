@@ -15,8 +15,9 @@ const vm = require('node:vm');
 const JS_DIR = path.join(__dirname, '..', '..', '..', 'inst', 'js');
 const PURE = ['common.js', 'chart-index.js', 'chart-keys.js', 'axes-labels.js',
               'model-common.js', 'model-timeline.js', 'model-aggregated.js',
-              'option-timeline.js', 'option-bar.js', 'option-radial.js',
-              'option-distribution.js', 'option-aggregated.js'];
+              'model-individual.js', 'option-timeline.js', 'option-bar.js', 'option-radial.js',
+              'option-distribution.js', 'option-aggregated.js', 'option-points.js',
+              'option-band.js', 'option-individual.js'];
 
 /** @param {{ roles?: boolean }} [opts] */
 function loadPure(opts = {}) {
