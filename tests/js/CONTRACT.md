@@ -202,3 +202,72 @@ pending is ignored. `{ id }` ends it, as does the chart's own draw.
 
 Not a message: a change of `data-bs-theme` on `<html>` or any element under
 it redraws every chart that holds rows. [life-bs-theme]
+
+## v2 (`inst/js/chart-v2/`)
+
+What v2 sends and reads differently from the above, by decision
+(blockr.design `open/chart-block-v2/decisions.md`). Everything not listed
+here is as above. R reads both engines' messages.
+
+### `<id>_action`, action `filter`, categorical
+
+`{ action: "filter", filter_type: "categorical", filters, nonce }`
+
+- `filters`: object, column -> array of values, one entry per column; the
+  columns AND together. A value is a string, or JSON `null` for a missing
+  value (a mark keyed on a missing value, drill `auto` only). R matches a
+  null with `is.na(col) | col %in% ""`. `column` / `values` are not sent.
+- What it holds: with drill `auto`, the clicked mark's keys (group, colour
+  where colour splits the mark, facet, series; D2, D3, D6, D7); with an
+  explicit drill column, that column's values in the rows under the mark.
+  A legend chip sends its level, `{<colour>: [level]}` (D8). A brush with
+  a series column sends the series of the brushed points, plus the facet
+  key in a facet panel (D9).
+- `nonce`: as v1, one up per send, a re-click and a chip included (D1).
+- [click-*, click-legend-*, brush-scatter-drill-column, restore-receipt]
+
+### `<id>_action`, action `filter`, range
+
+`{ action: "filter", filter_type: "range", x_col, y_col, x_range, y_range,
+filters? }`
+
+- As v1, plus `filters` when the point or brush was taken in a facet
+  panel: `{<facet>: [value]}` (null for a missing facet value). R ANDs it
+  with the range (D10). Left out otherwise, so a range outside a facet is
+  v1's message.
+- A brush without a series or an explicit drill column is always a range,
+  whatever the colour (D9).
+- [click-scatter-facet-geometric, brush-scatter-facet, brush-scatter-color]
+
+### `<id>_action`, action `filter`, clear
+
+As v1, with `filter_type` the type of the filter it clears (B1).
+
+### `drilldown-data` config: the saved filter
+
+R's block state is `filter_type`, `filters` (a named list of character
+vectors, `NA` = missing), `filter_range` and `filter_point`;
+`filter_column` / `filter_values` are legacy constructor arguments that
+fold into `filters` and are never state. The config carries, isolated:
+
+- `filter_type`: `"categorical"`, `"range"` or `"point"`.
+- `filters`: the state's `filters`, each column a JSON array, NA as null;
+  null when there is none.
+- `filter_range`: `{ x_col, y_col, x_range, y_range }` when `filter_type`
+  is `"range"`, else null.
+- `filter_column` + `filter_values`: for v1, only when the filter is
+  categorical, one column and has no missing value; else null and `[]`.
+
+v2 restores `filters` (or, without it, `filter_column` + `filter_values`)
+as a categorical selection, and a `"range"` with its `filter_range` and
+the facet key in `filters` as a range selection; both dim what they do not
+select (D5, D11). A transient chart (`ctrl_target` set) restores neither.
+[restore-*, restore-bar-two-columns, restore-bar-missing,
+restore-scatter-range-facet]
+
+### Legend band
+
+A chip is a filter control, not a visibility toggle (D8): no
+`legendSelect` / `legendUnSelect`, no chip is ever `dd-legend-chip-off`;
+the chip of the level the latched filter selects carries
+`dd-legend-chip-on`. With drill off a chip does nothing.
