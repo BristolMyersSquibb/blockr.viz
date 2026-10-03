@@ -7258,6 +7258,34 @@
   /** @type {Record<string, any>} */
   const pendingTheme = {};
 
+  // R leaves `data` out of a message whose rows the client already holds
+  // (same data_rev), so a gear edit does not re-ship the frame.
+  /** @param {any} blk @param {any} rev */
+  const hasRows = (blk, rev) => !!blk && rev != null &&
+    blk._lastDataRev === rev && Array.isArray(blk.data);
+
+  // Ask R for the whole message. Once per rev: a second message without rows
+  // arriving before the answer is covered by it, since R answers with its
+  // latest message.
+  /** @param {any} el @param {any} rev */
+  const askRows = (el, rev) => {
+    if (el._needRev === rev || !(window.Shiny && Shiny.setInputValue)) return;
+    el._needRev = rev;
+    Shiny.setInputValue(el.id + '_need', rev, { priority: 'event' });
+  };
+
+  /** @param {any} el @param {any} msg */
+  const deliver = (el, msg) => {
+    if (msg.data == null && msg.data_rev != null &&
+        !hasRows(el._block, msg.data_rev)) {
+      // Drawing this config over no rows would flash the empty state.
+      askRows(el, msg.data_rev);
+      return;
+    }
+    el._needRev = null;
+    el._block.setData(msg.columns, msg.data, msg.config, msg.arguments, msg.data_rev);
+  };
+
   // The canvas cannot resolve var(), so readInk() copies the tokens into INK
   // at every render. A scheme switch changes the tokens without a render
   // (bslib's dark mode writes data-bs-theme on <html>), and every chart kept
@@ -7288,8 +7316,8 @@
       }
       if (el.id in pendingData) {
         const p = pendingData[el.id];
-        el._block.setData(p.columns, p.data, p.config, p.arguments, p.data_rev);
         delete pendingData[el.id];
+        deliver(el, p);
       } else if (window.Shiny && Shiny.setInputValue) {
         // Nothing waiting for us. `pendingData` only catches a message that
         // arrived while THIS SCRIPT was already loaded; Shiny drops a custom
@@ -7400,10 +7428,15 @@
   Shiny.addCustomMessageHandler('drilldown-data', (/** @type {any} */ msg) => {
     const el = /** @type {any} */ (document.getElementById(msg.id));
     if (el?._block) {
-      el._block.setData(msg.columns, msg.data, msg.config, msg.arguments, msg.data_rev);
-    } else {
-      pendingData[msg.id] = msg;
+      deliver(el, msg);
+      return;
     }
+    // A message without rows must not wipe the rows of an earlier one that
+    // is still waiting for its container.
+    const prev = pendingData[msg.id];
+    pendingData[msg.id] = msg.data == null && prev && prev.data != null &&
+      prev.data_rev === msg.data_rev
+      ? Object.assign({}, msg, { data: prev.data }) : msg;
   });
 
 

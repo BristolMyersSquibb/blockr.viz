@@ -1113,9 +1113,13 @@ new_chart_block <- function(
         # shipped, never the whole wide flatten. The expensive pieces
         # (toJSON, smoother fit) live in the cached reactives above -- read
         # only from in here, so they inherit this observer's suspension.
-        # Last payload sent, for the ready-handshake re-send below.
+        # Last message pushed, always WITH its rows: the `_need` reply and
+        # the capture service both send it whole. `sent_rev` is the data_rev
+        # of the last message that carried rows, i.e. the rows the client
+        # holds.
         last_push <- new.env(parent = emptyenv())
         last_push$msg <- NULL
+        last_push$sent_rev <- NULL
 
         # The payload the browser draws from, built on demand. It used to be
         # assembled inline in the observer below, which meant the ONLY copy
@@ -1316,20 +1320,47 @@ new_chart_block <- function(
           chart_msg
         }
 
+        # Rows travel only when the client does not already hold them. A
+        # gear edit changes the config and leaves the payload's rev alone, so
+        # it goes out without `data` (the rows were 2.7 MB of the 2.7 MB
+        # message on a 120k-row bar chart). chart.js keeps the rows it has
+        # for that rev, or asks for them through `_need` when it has none (a
+        # panel the dock re-mounted).
+        send_chart_msg <- function(msg) {
+          if (identical(msg$data_rev, last_push$sent_rev)) {
+            msg$data <- NULL
+          } else {
+            last_push$sent_rev <- msg$data_rev
+          }
+          session$sendCustomMessage("drilldown-data", msg)
+        }
+
         # An IDENTICAL message is not sent again. The observer runs whenever
         # anything it reads invalidates, and a dock panel visit invalidates
         # the block's result without changing it, so returning to a chart
         # used to re-ship the whole payload for the picture already on
         # screen (651 kB for the six Vital Signs charts, second pass). A
         # client that never got the first copy is covered by the _ready
-        # handshake below, which re-sends `last_push$msg` on announce.
+        # handshake below.
         shiny::observe({
           chart_msg <- build_chart_msg()
           if (identical(chart_msg, last_push$msg)) {
             return()
           }
           last_push$msg <- chart_msg
-          session$sendCustomMessage("drilldown-data", chart_msg)
+          send_chart_msg(chart_msg)
+        })
+
+        # The client got a message without rows for a rev it does not hold.
+        # Answer with the whole last message, which is at least as new as
+        # the one that prompted the request.
+        shiny::observeEvent(input$drilldown_block_need, {
+          msg <- last_push$msg
+          if (is.null(msg)) {
+            return()
+          }
+          last_push$sent_rev <- msg$data_rev
+          session$sendCustomMessage("drilldown-data", msg)
         })
 
         # Register this chart with the session's capture service, so an
