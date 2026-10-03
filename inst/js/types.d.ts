@@ -197,6 +197,10 @@ interface BlockrSelectStatic {
   menu?(anchor: HTMLElement, config: BlockrSelectMenuConfig): { close(): void };
 }
 
+interface BlockrLayerHandle {
+  remove(): void;
+}
+
 interface BlockrNamespace {
   /** Shared select component (blockr-select.js). */
   Select?: BlockrSelectStatic;
@@ -204,8 +208,17 @@ interface BlockrNamespace {
   icons: Record<string, string>;
   /** A shortcut written for this platform ("Mod+Enter" is "⌘↵" on a Mac). */
   keys(keys: string): string;
-  /** Document-level click delegate that drops listeners for removed nodes. */
-  onDocClick(el: Element, cb: (e: MouseEvent) => void): void;
+  /** The dismiss stack (blockr.ui's blockr-ui.js): Escape and a click
+   * outside reach the top layer first. */
+  layer(
+    el: Element | Element[],
+    opts?: {
+      from?: Element;
+      inPage?: boolean;
+      escape?: (e: KeyboardEvent) => void;
+      outside?: (e: PointerEvent) => void;
+    }
+  ): BlockrLayerHandle;
   uid(prefix?: string): string;
   escapeHtml(s: string): string;
   removeNode(node: Node | null | undefined): void;

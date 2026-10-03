@@ -71,8 +71,8 @@
       this._closeWatch = null;      // armed deferred re-render (multi picks)
       /** @type {any} */
       this._at = null;              // the open `@` menu (Titles), portalled
-      /** @type {((e: MouseEvent) => void) | null} */
-      this._atDocClose = null;
+      /** @type {BlockrLayerHandle | null} */
+      this._atLayer = null;
       /** @type {((e: Event) => void) | null} */
       this._atScrollSync = null;
     }
@@ -710,13 +710,31 @@
       // field, so the chip shows ⌘↵ / Ctrl+↵ (design system, "Keyboard
       // shortcuts").
       let committed = ta.value;
+      const wrap = document.createElement('div');
+      wrap.className = 'dd-text-wrap dd-script-wrap';
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'blockr-expr-confirm dd-text-commit';
       chip.textContent = Blockr.keys('Mod+Enter');
       chip.setAttribute('aria-label', 'Apply (' + Blockr.keys('Mod+Enter') + ')');
       chip.style.display = 'none';
-      const sync = () => { chip.style.display = ta.value === committed ? 'none' : ''; };
+      // While it holds an edit, the box is a layer in the page
+      // (Blockr.layer): Escape reverts the edit and goes no further, so a
+      // gear tray on the dismiss stack stays open. Blur commits, so the
+      // layer needs no outside-click action.
+      /** @type {BlockrLayerHandle | null} */
+      let dirty = null;
+      const sync = () => {
+        const edited = ta.value !== committed;
+        chip.style.display = edited ? '' : 'none';
+        if (edited && !dirty) {
+          dirty = Blockr.layer(wrap, { inPage: true, escape: revert });
+        } else if (!edited && dirty) {
+          dirty.remove();
+          dirty = null;
+        }
+      };
+      const revert = () => { ta.value = committed; sync(); };
       const commit = () => {
         if (ta.value === committed) return;
         committed = ta.value;
@@ -727,16 +745,13 @@
       ta.addEventListener('input', sync);
       ta.addEventListener('blur', commit);
       ta.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') { ta.value = committed; sync(); }
-        else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
           e.preventDefault();
           commit();
         }
       });
       chip.addEventListener('mousedown', (e) => e.preventDefault());
       chip.addEventListener('click', commit);
-      const wrap = document.createElement('div');
-      wrap.className = 'dd-text-wrap dd-script-wrap';
       wrap.appendChild(ta);
       wrap.appendChild(chip);
       row.appendChild(wrap);
@@ -1094,12 +1109,12 @@
       this._at = { inp, el, pos: (inp.selectionStart || 1) - 1, query: '', items: [], idx: 0 };
       this._positionAtMenu();
       this._renderAtMenu();
-      // A click anywhere else dismisses, like every other menu here. mousedown
-      // rather than click, so it fires before the field's blur-commit.
-      this._atDocClose = (/** @type {MouseEvent} */ e) => {
-        if (this._at && !this._at.el.contains(/** @type {Node} */ (e.target))) this._closeAtMenu();
-      };
-      document.addEventListener('mousedown', this._atDocClose, true);
+      // A layer (Blockr.layer): Escape and a click anywhere else close it,
+      // the field included. The layer is above the field's own, so Escape
+      // closes the menu and leaves the field's edit alone. The pointerdown
+      // comes before the field's blur-commit.
+      const close = () => this._closeAtMenu();
+      this._atLayer = Blockr.layer(el, { escape: close, outside: close });
       // Portalled and fixed, so it does not travel with the panel it hangs
       // off. Follow the field rather than close on it: the arrow keys walking
       // the list scroll the panel itself, and closing there would make the
@@ -1115,9 +1130,9 @@
     }
 
     _closeAtMenu() {
-      if (this._atDocClose) {
-        document.removeEventListener('mousedown', this._atDocClose, true);
-        this._atDocClose = null;
+      if (this._atLayer) {
+        this._atLayer.remove();
+        this._atLayer = null;
       }
       if (this._atScrollSync) {
         document.removeEventListener('scroll', this._atScrollSync, true);
@@ -1288,7 +1303,6 @@
       if (e.key === 'ArrowDown' && n) { e.preventDefault(); st.idx = (st.idx + 1) % n; this._hlAtMenu(); return true; }
       if (e.key === 'ArrowUp' && n) { e.preventDefault(); st.idx = (st.idx - 1 + n) % n; this._hlAtMenu(); return true; }
       if ((e.key === 'Enter' || e.key === 'Tab') && n) { e.preventDefault(); this._pickAtItem(st.idx); return true; }
-      if (e.key === 'Escape') { e.preventDefault(); this._closeAtMenu(); return true; }
       return false;
     }
 
@@ -2437,8 +2451,23 @@
         const confirmIcon = () =>
           (typeof Blockr !== 'undefined' && Blockr.icons && Blockr.icons.confirm) ?
             Blockr.icons.confirm : '✓';
+        // While it holds an edit, the field is a layer in the page
+        // (Blockr.layer): Escape reverts the edit and goes no further, so a
+        // gear tray on the dismiss stack stays open. An open @-menu is a
+        // layer above it and takes the first Escape. Blur commits, so the
+        // layer needs no outside-click action.
+        /** @type {BlockrLayerHandle | null} */
+        let dirty = null;
+        const revert = () => { inp.value = committed; syncChip(); };
         const syncChip = () => {
-          if (inp.value !== committed) {
+          const edited = inp.value !== committed;
+          if (edited && !dirty) {
+            dirty = Blockr.layer(inp, { inPage: true, escape: revert });
+          } else if (!edited && dirty) {
+            dirty.remove();
+            dirty = null;
+          }
+          if (edited) {
             chip.style.display = '';
             chip.classList.remove('confirmed');
             chip.textContent = '↵';
@@ -2468,7 +2497,6 @@
           // while it is open, or picking an option would commit the row.
           if (typeof opts.onKeydown === 'function' && opts.onKeydown(e, inp)) return;
           if (e.key === 'Enter') { e.preventDefault(); commit(); }
-          else if (e.key === 'Escape') { inp.value = committed; syncChip(); }
         });
         inp.addEventListener('blur', commit);
         // Keep focus on the input so the chip click doesn't race blur-commit.
@@ -2842,6 +2870,23 @@
       const menu = document.createElement('div');
       menu.className = 'dd-add-menu';
       menu.style.display = 'none';
+      // The menu is a dropdown (styled in chart.css). Open, it is a layer
+      // (Blockr.layer): Escape and a click outside close it. A click on the
+      // button counts as inside, so the button's own toggle closes it.
+      /** @type {BlockrLayerHandle | null} */
+      let layer = null;
+      const hide = () => {
+        menu.style.display = 'none';
+        if (layer) { layer.remove(); layer = null; }
+      };
+      const show = () => {
+        menu.style.display = '';
+        layer = Blockr.layer(menu, {
+          from: btn,
+          escape: () => { hide(); btn.focus(); },
+          outside: hide
+        });
+      };
       for (const key of remaining) {
         const item = document.createElement('button');
         item.type = 'button';
@@ -2849,24 +2894,15 @@
         item.textContent = this._role(key).label;
         item.addEventListener('click', (e) => {
           e.stopPropagation();
-          menu.style.display = 'none';
+          hide();
           this._addRole(key);
         });
         menu.appendChild(item);
       }
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        menu.style.display = (menu.style.display === 'none') ? '' : 'none';
+        if (menu.style.display === 'none') show(); else hide();
       });
-      // The menu is a dropdown (styled in chart.css), so it dismisses on
-      // outside click like any menu.
-      if (typeof Blockr !== 'undefined' && typeof Blockr.onDocClick === 'function') {
-        Blockr.onDocClick(wrap, (/** @type {MouseEvent} */ e) => {
-          if (!wrap.contains(/** @type {Node} */ (e.target))) {
-            menu.style.display = 'none';
-          }
-        });
-      }
       bar.appendChild(btn);
       wrap.appendChild(bar);
       wrap.appendChild(menu);
