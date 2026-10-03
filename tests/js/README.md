@@ -46,10 +46,10 @@ update the snapshots.
 
 ## Scaling
 
-`scaling.test.js` times `setData` at n and 2n patients (five rows each,
-`synth.js`), median of three runs after a warm-up. Linear work doubles the
-time; the test fails when it more than triples (`t(2n) / t(n) > 3`), which
-is what work quadratic in the rows or the levels looks like.
+`scaling.test.js` times `setData` at n and 4n patients (five rows each,
+`synth.js`), median of three runs after a warm-up. Linear work takes about
+4 times as long, quadratic work about 16 times; the test fails above 8
+(`t(4n) / t(n) > 8`).
 
 The four known quadratic cases are marked `todo`: they print their ratio but
 do not fail the run. `SCALING_STRICT=1` runs them as ordinary tests.

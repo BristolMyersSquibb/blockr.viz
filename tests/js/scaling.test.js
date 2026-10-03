@@ -1,6 +1,8 @@
-/* Scaling: setData at n and 2n patients (five rows each), median of three
- * runs after one warm-up. Linear work doubles; the test fails when the time
- * more than triples, which is where quadratic work shows.
+/* Scaling: setData at n and 4n patients (five rows each), median of three
+ * runs after one warm-up. Linear work takes about 4 times as long at 4n,
+ * quadratic work about 16 times; the test fails above 8. A 4x step keeps the
+ * two apart even when a quadratic case is still partly constant overhead at
+ * n, which a 2x step with a threshold of 3 did not.
  *
  * SKIP_SCALING=1 skips the file. SCALING_STRICT=1 runs the known-quadratic
  * cases as ordinary tests (they fail today). SCALING_ONLY=<name> runs one
@@ -13,7 +15,8 @@ const assert = require('node:assert');
 const h = require('./harness');
 const { synth } = require('./synth');
 
-const MAX_RATIO = 3;
+const FACTOR = 4;
+const MAX_RATIO = 8;
 const RUNS = 3;
 
 const median = (xs) => xs.slice().sort((a, b) => a - b)[Math.floor(xs.length / 2)];
@@ -47,18 +50,18 @@ const CASES = [
     config: { chart_type: 'gantt', x: 'ASTDY', xend: 'AENDY', y: 'USUBJID', facet: 'ARM',
               sort_by: 'onset', drill: 'auto' } },
   // Known quadratic: a scan of every row per series / group level.
-  { name: 'scatter, series = patient', n: 700,
+  { name: 'scatter, series = patient', n: 500,
     todo: 'rows.filter() per series level in _renderIndividual',
     config: { chart_type: 'scatter', x: 'ADY', y: 'AVAL', series: 'USUBJID', drill: 'auto' } },
-  { name: 'scatter, series = patient, colour = arm', n: 500,
+  { name: 'scatter, series = patient, colour = arm', n: 400,
     todo: 'rows.filter() and data.find() per series level in _renderIndividual',
     config: { chart_type: 'scatter', x: 'ADY', y: 'AVAL', series: 'USUBJID', color: 'ARM',
               drill: 'auto' } },
-  { name: 'boxplot, group = patient, colour = arm', n: 600,
+  { name: 'boxplot, group = patient, colour = arm', n: 300,
     todo: 'rowsFor() filters the facet rows per (group, level) in _buildDistribution',
     config: { chart_type: 'boxplot', group: 'USUBJID', color: 'ARM', value: 'AVAL',
               drill: 'auto' } },
-  { name: 'bar, group = patient, colour = grade', n: 4000,
+  { name: 'bar, group = patient, colour = grade', n: 2500,
     todo: 'facetData.find() per (group, colour) in _buildAggregatedOption',
     config: { chart_type: 'bar', group: 'USUBJID', color: 'GRADE', drill: 'auto' } }
 ];
@@ -75,15 +78,15 @@ for (const cs of CASES) {
     const env = h.createEnv({ record: 'none' });
     try {
       const t1 = measure(env, cs.config, cs.n);
-      const t2 = measure(env, cs.config, 2 * cs.n);
+      const t2 = measure(env, cs.config, FACTOR * cs.n);
       const ratio = t2 / t1;
-      const line = `n=${cs.n}: ${t1.toFixed(1)} ms, 2n: ${t2.toFixed(1)} ms, ratio ${ratio.toFixed(2)}`;
+      const line = `n=${cs.n}: ${t1.toFixed(1)} ms, ${FACTOR}n: ${t2.toFixed(1)} ms, ratio ${ratio.toFixed(2)}`;
       t.diagnostic(line);
-      assert.ok(ratio <= MAX_RATIO, `t(2n)/t(n) = ${ratio.toFixed(2)} > ${MAX_RATIO} (${line})`);
+      assert.ok(ratio <= MAX_RATIO, `t(${FACTOR}n)/t(n) = ${ratio.toFixed(2)} > ${MAX_RATIO} (${line})`);
     } finally {
       env.close();
     }
   });
 }
 
-module.exports = { measure, CASES, MAX_RATIO };
+module.exports = { measure, CASES, FACTOR, MAX_RATIO };
