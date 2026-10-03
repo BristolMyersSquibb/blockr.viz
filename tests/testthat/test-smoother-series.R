@@ -128,3 +128,47 @@ test_that("no panel can be fit gives NULL, not an empty list", {
   expect_null(compute_smoother_series(d, "lm", "x", "y", color_by = NULL,
                                       series_by = NULL, facet_by = "g"))
 })
+
+test_that("a loess fit at or below loess_max is the exact fit", {
+  set.seed(11)
+  d <- data.frame(x = runif(300, 0, 10))
+  d$y <- sin(d$x) + rnorm(300, 0, 0.3)
+  res <- compute_smoother_series(d, "loess", "x", "y", color_by = NULL,
+                                 series_by = NULL)
+  xs <- seq(min(d$x), max(d$x), length.out = 100L)
+  fit <- stats::loess(y ~ x, d, span = 0.75,
+                      control = stats::loess.control(surface = "direct"))
+  expect_equal(unlist(res$`__all__`$y),
+               as.numeric(stats::predict(fit, data.frame(x = xs))))
+})
+
+test_that("a loess fit above loess_max is binned and stays on the exact line", {
+  set.seed(12)
+  d <- data.frame(x = sample(1:200, 4000, TRUE))
+  d$y <- 10 * sin(d$x / 30) + rnorm(4000, 0, 5)
+  exact <- compute_smoother_series(d, "loess", "x", "y", NULL, NULL,
+                                   loess_max = Inf)
+  binned <- compute_smoother_series(d, "loess", "x", "y", NULL, NULL,
+                                    loess_max = 1000L)
+  expect_identical(binned$`__all__`$x, exact$`__all__`$x)
+  ye <- unlist(exact$`__all__`$y)
+  yb <- unlist(binned$`__all__`$y)
+  expect_length(yb, 100L)
+  expect_true(all(is.finite(yb)))
+  # Well inside the noise of the exact fit itself (sd 5 on 4000 rows).
+  expect_lt(max(abs(yb - ye)), 0.1 * diff(range(ye)))
+})
+
+test_that("a loess fit on 100k rows is bounded in time", {
+  set.seed(13)
+  n <- 100000L
+  d <- data.frame(x = sample(1:400, n, TRUE), g = sample(c("a", "b"), n, TRUE))
+  d$y <- sin(d$x / 60) + rnorm(n)
+  for (i in 1:20) d[[paste0("pad", i)]] <- rnorm(n)
+  t <- system.time(
+    res <- compute_smoother_series(d, "loess", "x", "y", color_by = "g",
+                                   series_by = NULL)
+  )[["elapsed"]]
+  expect_named(res, c("a", "b"))
+  expect_lt(t, 3)
+})

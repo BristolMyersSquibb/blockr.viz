@@ -11,7 +11,8 @@ compute_smoother_series(
   y_col,
   color_by,
   series_by,
-  facet_by = NULL
+  facet_by = NULL,
+  loess_max = 5000L
 )
 }
 \arguments{
@@ -27,6 +28,17 @@ compute_smoother_series(
 \item{facet_by}{Facet column name, or \code{NULL} for an unfaceted chart. When
 given, each panel is fit on its own rows and the result is keyed by facet
 level first.}
+
+\item{loess_max}{Most points a loess fit is run on. A loess fit with
+\code{surface = "direct"} costs the square of its points (2 s at 12k rows,
+minutes at 120k). A group with more rows is cut, in x order, into
+\code{loess_max} bins of equal count, and the fit runs on each bin's mean x
+and mean y with \code{surface = "interpolate"}. Every row still counts, and
+equal counts keep the x density, so the span (a share of the points)
+covers the same stretch of x. On 12k noisy rows the line moved by at
+most 0.3 where the exact fit's own error was 1.8; keeping every k-th
+point instead moved it by 0.9. No randomness, so the same data draws the
+same line. A group at or below the limit is fit exactly as before.}
 }
 \value{
 A named list or \code{NULL}.

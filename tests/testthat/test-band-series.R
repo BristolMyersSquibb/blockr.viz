@@ -244,3 +244,19 @@ test_that("band_empty_reason names the first guard that fired", {
   msg_rows <- band_empty_reason(d, "day", "val", min_n = 99999)
   expect_match(msg_rows, "rows")
 })
+
+test_that("columns the band does not read change nothing", {
+  set.seed(21)
+  d <- data.frame(day = rep(1:40, 6), val = rnorm(240), id = rep(1:6, each = 40),
+                  arm = rep(c("A", "B"), 120), sex = rep(c("F", "M"), each = 120))
+  wide <- d
+  wide$junk <- letters[seq_len(240) %% 26 + 1L]
+  wide$noise <- runif(240)
+  band <- function(x) {
+    compute_band_series(x, "day", "val", "arm", NULL, facet_by = "sex",
+                        id_col = "id", window = "fixed", window_size = 5,
+                        min_n = 2)
+  }
+  expect_identical(band(wide), band(d))
+  expect_false(is.null(band(d)))
+})

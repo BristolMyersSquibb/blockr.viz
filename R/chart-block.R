@@ -832,10 +832,13 @@ new_chart_block <- function(
         r_scale_map <- dd_board_scale_map()
 
         # Column metadata (computed once when data changes); see dd_col_meta().
+        # Kept while the frame is identical: a panel visit hands over an
+        # equal frame, and this walks every column (see last_value_cache()).
+        col_meta_cache <- last_value_cache()
         r_col_meta <- shiny::reactive({
           d <- plain_data()
           shiny::req(is.data.frame(d))
-          dd_col_meta(d)
+          col_meta_cache(d, function() dd_col_meta(d))
         })
 
         # Columns needed by the chart (reactive -- changes when config
@@ -919,8 +922,14 @@ new_chart_block <- function(
         # exclusively inside the gated observer below: a reactive is
         # pull-based, so it stays suspended with the observer for hidden
         # panels.
+        # The shipped columns are the cache key: a panel visit (an equal
+        # frame) or an edit that re-reads needed_cols() without changing the
+        # set (subtitle, sort_by) returns the last payload without
+        # serializing anything. The columns of `df_send` are the frame's own
+        # vectors, so on an unchanged frame the comparison is by pointer.
         payload_rev <- 0L
         last_payload <- NULL
+        payload_cache <- last_value_cache()
         r_data_json <- shiny::reactive({
           d <- plain_data()
           shiny::req(is.data.frame(d))
@@ -930,15 +939,17 @@ new_chart_block <- function(
           } else {
             d[0]
           }
-          # Dictionary-encodes the low-cardinality string columns; see
-          # chart-payload.R. Everything else is serialized exactly as it was.
-          json <- chart_data_json(df_send)
-          if (identical(json, last_payload$json)) {
-            return(last_payload)
-          }
-          payload_rev <<- payload_rev + 1L
-          last_payload <<- list(rev = payload_rev, json = json)
-          last_payload
+          payload_cache(df_send, function() {
+            # Dictionary-encodes the low-cardinality string columns; see
+            # chart-payload.R. Everything else is serialized exactly as it was.
+            json <- chart_data_json(df_send)
+            if (identical(json, last_payload$json)) {
+              return(last_payload)
+            }
+            payload_rev <<- payload_rev + 1L
+            last_payload <<- list(rev = payload_rev, json = json)
+            last_payload
+          })
         })
 
         # Distribution band, cached on exactly compute_band_series()'s
@@ -955,23 +966,38 @@ new_chart_block <- function(
           if (!is.null(v) && length(v) && nzchar(v) && v %in% names(d)) v
           else NULL
         }
+        # Keyed on the columns it reads and its settings, so a panel visit
+        # does not re-run the windowed pass. Serialized here, once per
+        # change: the band carries every outlier point, and Shiny would
+        # otherwise serialize it again on every push.
+        band_cache <- last_value_cache()
         r_band_series <- shiny::reactive({
           if (!identical(r_chart_type(), "band")) return(NULL)
           d <- plain_data()
           shiny::req(is.data.frame(d))
-          tryCatch(compute_band_series(
-            d, r_x(), r_y(), r_color(), r_series(),
-            facet_by = col_in(d, r_facet()),
+          args <- list(
+            x_col = r_x(), y_col = r_y(), color_by = r_color(),
+            series_by = r_series(), facet_by = col_in(d, r_facet()),
             summary = r_summary() %||% "median_q1_q3",
             whiskers = r_whiskers() %||% "p10_p90",
             window = r_band_window() %||% "adaptive",
             window_size = r_band_size() %||% 45,
             min_n = r_band_min_n() %||% 12,
             id_col = col_in(d, r_band_id())
-          ), error = function(e) {
-            warning("drilldown_chart band computation failed: ",
-                    conditionMessage(e), call. = FALSE)
-            NULL
+          )
+          cols <- intersect(as.character(unlist(args[c(
+            "x_col", "y_col", "color_by", "series_by", "facet_by", "id_col"
+          )])), names(d))
+          band_cache(list(d[cols], args), function() {
+            tryCatch(
+              chart_config_json(do.call(compute_band_series,
+                                        c(list(d), args))),
+              error = function(e) {
+                warning("drilldown_chart band computation failed: ",
+                        conditionMessage(e), call. = FALSE)
+                NULL
+              }
+            )
           })
         })
 
@@ -1003,19 +1029,31 @@ new_chart_block <- function(
         # early return keeps the reactive off the data dependency entirely.
         # facet_by is not decoration: without it every panel was handed the
         # same pooled fit (see compute_smoother_series()).
+        # Keyed like the band above, so a panel visit does not refit. Only a
+        # scatter draws the line (chart.js), so no other type pays for a fit.
+        smoother_cache <- last_value_cache()
         r_smoother_series <- shiny::reactive({
           sm <- r_smoother()
           if (is.null(sm) || identical(sm, "none")) return(NULL)
+          if (!identical(r_chart_type(), "scatter")) return(NULL)
           d <- plain_data()
-          tryCatch(compute_smoother_series(
-            d, sm, r_x(), r_y(), r_color(), r_series(),
-            facet_by = col_in(d, r_facet())
-          ), error = function(e) {
-            # Keep the NULL fallback (no overlay) but surface the failure
-            # so a broken smoother fit is diagnosable instead of silent.
-            warning("drilldown_chart smoother computation failed: ",
-                    conditionMessage(e), call. = FALSE)
-            NULL
+          if (!is.data.frame(d)) return(NULL)
+          args <- list(
+            smoother = sm, x_col = r_x(), y_col = r_y(), color_by = r_color(),
+            series_by = r_series(), facet_by = col_in(d, r_facet())
+          )
+          cols <- intersect(as.character(unlist(args[c(
+            "x_col", "y_col", "color_by", "series_by", "facet_by"
+          )])), names(d))
+          smoother_cache(list(d[cols], args), function() {
+            tryCatch(do.call(compute_smoother_series, c(list(d), args)),
+                     error = function(e) {
+              # Keep the NULL fallback (no overlay) but surface the failure
+              # so a broken smoother fit is diagnosable instead of silent.
+              warning("drilldown_chart smoother computation failed: ",
+                      conditionMessage(e), call. = FALSE)
+              NULL
+            })
           })
         })
 
@@ -1113,15 +1151,37 @@ new_chart_block <- function(
         # shipped, never the whole wide flatten. The expensive pieces
         # (toJSON, smoother fit) live in the cached reactives above -- read
         # only from in here, so they inherit this observer's suspension.
-        # Last payload sent, for the ready-handshake re-send below.
+        # Last message pushed, always WITH its rows: the `_need` reply and
+        # the capture service both send it whole. `sent_rev` is the data_rev
+        # of the last message that carried rows, i.e. the rows the client
+        # holds.
         last_push <- new.env(parent = emptyenv())
         last_push$msg <- NULL
+        last_push$sent_rev <- NULL
 
         # The payload the browser draws from, built on demand. It used to be
         # assembled inline in the observer below, which meant the ONLY copy
         # of it was whatever had last been pushed -- and a chart whose panel
         # nobody ever opened has never pushed, so an export could not draw
         # it. Now the capture service builds one when it needs one.
+        # The board scale map resolved for the coloured column, serialized.
+        # With a patient id coloured that is one hash per level and a 600 kB
+        # entry (22k patients: 0.13 s to resolve, 0.27 s for Shiny to
+        # serialize, on every push), so it is kept while the map, the column
+        # and the palette are the same.
+        scales_cache <- last_value_cache()
+        r_scales <- function(d) {
+          map <- r_scale_map()
+          var <- dd_colored_var(r_chart_type(), r_color(), r_group())
+          col <- if (!is.null(var) && var %in% names(d)) d[[var]]
+          scales_cache(list(map, var, col, dd_palette()), function() {
+            chart_config_json(dd_scales_config(
+              map, r_chart_type(), color = r_color(), group = r_group(),
+              data = d
+            ))
+          })
+        }
+
         build_chart_msg <- function() {
           d <- plain_data()
           # No nrow gate: an upstream filter emptying the frame MUST push,
@@ -1274,10 +1334,7 @@ new_chart_block <- function(
               # Board scale map, resolved for the chart type's colored role
               # (NULL when no map / no binding / no colored role -- JS then
               # keeps palette cycling).
-              scales = dd_scales_config(
-                r_scale_map(), r_chart_type(),
-                color = r_color(), group = r_group(), data = d
-              ),
+              scales = r_scales(d),
               # The series pool, resolved through the board theme. Rides the
               # config rather than its own custom message: an unhandled
               # message is dropped silently, and this one has to arrive before
@@ -1316,20 +1373,47 @@ new_chart_block <- function(
           chart_msg
         }
 
+        # Rows travel only when the client does not already hold them. A
+        # gear edit changes the config and leaves the payload's rev alone, so
+        # it goes out without `data` (the rows were 2.7 MB of the 2.7 MB
+        # message on a 120k-row bar chart). chart.js keeps the rows it has
+        # for that rev, or asks for them through `_need` when it has none (a
+        # panel the dock re-mounted).
+        send_chart_msg <- function(msg) {
+          if (identical(msg$data_rev, last_push$sent_rev)) {
+            msg$data <- NULL
+          } else {
+            last_push$sent_rev <- msg$data_rev
+          }
+          session$sendCustomMessage("drilldown-data", msg)
+        }
+
         # An IDENTICAL message is not sent again. The observer runs whenever
         # anything it reads invalidates, and a dock panel visit invalidates
         # the block's result without changing it, so returning to a chart
         # used to re-ship the whole payload for the picture already on
         # screen (651 kB for the six Vital Signs charts, second pass). A
         # client that never got the first copy is covered by the _ready
-        # handshake below, which re-sends `last_push$msg` on announce.
+        # handshake below.
         shiny::observe({
           chart_msg <- build_chart_msg()
           if (identical(chart_msg, last_push$msg)) {
             return()
           }
           last_push$msg <- chart_msg
-          session$sendCustomMessage("drilldown-data", chart_msg)
+          send_chart_msg(chart_msg)
+        })
+
+        # The client got a message without rows for a rev it does not hold.
+        # Answer with the whole last message, which is at least as new as
+        # the one that prompted the request.
+        shiny::observeEvent(input$drilldown_block_need, {
+          msg <- last_push$msg
+          if (is.null(msg)) {
+            return()
+          }
+          last_push$sent_rev <- msg$data_rev
+          session$sendCustomMessage("drilldown-data", msg)
         })
 
         # Register this chart with the session's capture service, so an
@@ -1369,11 +1453,17 @@ new_chart_block <- function(
         # chart block UI in the page. On a board whose opening view carries no
         # chart -- a config or population view, which is how CDEx boards open --
         # every chart's startup payload was dropped and nothing re-sent it, so
-        # the chart stayed blank until an unrelated edit re-pumped it. Re-send
-        # the last payload; JS's data_rev guard makes a duplicate a no-op.
+        # the chart stayed blank until an unrelated edit re-pumped it.
+        # The reply is only the rev. A push already in flight reaches the
+        # client before it (one websocket, in order), and a client that got it
+        # does nothing; re-sending the whole message here drew the same picture
+        # a second time. A client without those rows asks through `_need`.
         shiny::observeEvent(input$drilldown_block_ready, {
           if (!is.null(last_push$msg)) {
-            session$sendCustomMessage("drilldown-data", last_push$msg)
+            session$sendCustomMessage("drilldown-ready", list(
+              id = ns("drilldown_block"),
+              data_rev = last_push$msg$data_rev
+            ))
           }
         })
 
@@ -2218,6 +2308,16 @@ new_chart_block <- function(
 #' @param facet_by Facet column name, or `NULL` for an unfaceted chart. When
 #'   given, each panel is fit on its own rows and the result is keyed by facet
 #'   level first.
+#' @param loess_max Most points a loess fit is run on. A loess fit with
+#'   `surface = "direct"` costs the square of its points (2 s at 12k rows,
+#'   minutes at 120k). A group with more rows is cut, in x order, into
+#'   `loess_max` bins of equal count, and the fit runs on each bin's mean x
+#'   and mean y with `surface = "interpolate"`. Every row still counts, and
+#'   equal counts keep the x density, so the span (a share of the points)
+#'   covers the same stretch of x. On 12k noisy rows the line moved by at
+#'   most 0.3 where the exact fit's own error was 1.8; keeping every k-th
+#'   point instead moved it by 0.9. No randomness, so the same data draws the
+#'   same line. A group at or below the limit is fit exactly as before.
 #' @return A named list or `NULL`.
 #' @examples
 #' compute_smoother_series(
@@ -2233,7 +2333,8 @@ new_chart_block <- function(
 #' @keywords internal
 #' @export
 compute_smoother_series <- function(data, smoother, x_col, y_col,
-                                     color_by, series_by, facet_by = NULL) {
+                                     color_by, series_by, facet_by = NULL,
+                                     loess_max = 5000L) {
   if (is.null(smoother) || identical(smoother, "none")) return(NULL)
   if (is.null(data) || nrow(data) == 0) return(NULL)
   if (is.null(x_col) || is.null(y_col)) return(NULL)
@@ -2241,6 +2342,9 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
   if (!is.numeric(data[[x_col]]) || !is.numeric(data[[y_col]])) return(NULL)
 
   split_col <- series_by %||% color_by
+  # Only the columns the fits read, so the splits below copy two to four
+  # columns rather than the whole frame.
+  data <- data[intersect(c(x_col, y_col, split_col, facet_by), names(data))]
 
   fit_one <- function(d) {
     d <- d[!is.na(d[[x_col]]) & !is.na(d[[y_col]]), , drop = FALSE]
@@ -2250,14 +2354,28 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
     if (length(unique(xv)) < 2L) return(NULL)
     rng <- range(xv, na.rm = TRUE)
     xs <- seq(rng[1L], rng[2L], length.out = 100L)
+    surface <- "direct"
+    at <- xs
+    if (identical(smoother, "loess") && length(xv) > loess_max) {
+      o <- order(xv)
+      bin <- ((seq_along(o) - 1) * loess_max) %/% length(o)
+      cnt <- tabulate(bin + 1L)
+      xv <- rowsum(xv[o], bin, reorder = FALSE)[, 1L] / cnt
+      yv <- rowsum(yv[o], bin, reorder = FALSE)[, 1L] / cnt
+      surface <- "interpolate"
+      # An interpolated surface is NA outside the fitted x, and the outer
+      # bin means sit just inside the data's range. Read the ends at the
+      # nearest fitted x so the line still spans the whole range.
+      at <- pmin(pmax(xs, min(xv)), max(xv))
+    }
     ys <- tryCatch({
       if (identical(smoother, "lm")) {
         coefs <- stats::coef(stats::lm(yv ~ xv))
         coefs[1L] + coefs[2L] * xs
       } else if (identical(smoother, "loess")) {
         fit <- stats::loess(yv ~ xv, span = 0.75,
-                            control = stats::loess.control(surface = "direct"))
-        as.numeric(stats::predict(fit, newdata = data.frame(xv = xs)))
+                            control = stats::loess.control(surface = surface))
+        as.numeric(stats::predict(fit, newdata = data.frame(xv = at)))
       } else {
         NULL
       }

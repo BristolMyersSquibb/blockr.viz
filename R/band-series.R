@@ -163,12 +163,15 @@ compute_band_series <- function(data, x_col, y_col, color_by, series_by,
   if (!is.numeric(data[[x_col]]) || !is.numeric(data[[y_col]])) return(NULL)
   if (!is.null(id_col) && !(id_col %in% names(data))) id_col <- NULL
 
-  keep <- is.finite(data[[x_col]]) & is.finite(data[[y_col]])
-  data <- data[keep, , drop = FALSE]
-  if (nrow(data) == 0L) return(NULL)
-
   split_col <- series_by %||% color_by
   if (!is.null(facet_by) && !(facet_by %in% names(data))) facet_by <- NULL
+
+  # Only the columns the band reads, so the row filter and the splits below
+  # copy two to five columns rather than the whole frame.
+  keep <- is.finite(data[[x_col]]) & is.finite(data[[y_col]])
+  cols <- intersect(c(x_col, y_col, split_col, facet_by, id_col), names(data))
+  data <- data[keep, cols, drop = FALSE]
+  if (nrow(data) == 0L) return(NULL)
 
   # One grid across the WHOLE x range, not per group: the panels share an x
   # axis, and a per-group grid would put each arm's points at different days
