@@ -42,7 +42,7 @@ drilldown_chart_v2_dep <- memoise0(function() {
     drilldown_shared_dep(),
     htmltools::htmlDependency(
       name = "chart-v2-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".2"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".3"),
       src = system.file("js", package = "blockr.viz"),
       script = c("drilldown-theme-register.js", chart_v2_scripts())
     ),

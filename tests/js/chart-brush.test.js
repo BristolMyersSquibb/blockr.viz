@@ -54,9 +54,11 @@ test('brush with a drill column: every row once in the drill payload', () => {
   assert.strictEqual(actions.length, 1);
   const a = actions[0];
   assert.strictEqual(a.filter_type, 'categorical');
-  assert.strictEqual(a.column, 'ID');
-  assert.strictEqual(a.values.length, N);
-  assert.strictEqual(new Set(a.values).size, N);
+  // v1 sends {column, values}; v2 the named list {filters: {ID: [...]}} (D2).
+  const values = a.filters ? a.filters.ID : a.values;
+  if (!a.filters) assert.strictEqual(a.column, 'ID');
+  assert.strictEqual(values.length, N);
+  assert.strictEqual(new Set(values).size, N);
 });
 
 test('brush without a drill column: a range over every brushed point', () => {

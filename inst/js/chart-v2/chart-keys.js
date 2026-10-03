@@ -16,6 +16,9 @@
  * on a missing value ('' or null) sends that column with null, which R
  * matches with is.na() (and the empty string, as the aggregation folds
  * both).
+ *
+ * A range filter (a point or a brush on numeric axes) is
+ * {x_col, y_col, x_range, y_range}, as v1 sends it.
  */
 (function () {
   'use strict';
@@ -103,6 +106,54 @@
     return label + ' = ' + vals.map((v) => (isMissing(v) ? MISSING_WORD : v)).join(', ');
   }).join(', ');
 
+  /**
+   * Decimals that show a number to three significant digits; none for a
+   * whole number.
+   * @param {number} v
+   */
+  const decimalsOf = (v) => {
+    if (!Number.isFinite(v) || Number.isInteger(v)) return 0;
+    const s = String(Number(v.toPrecision(3)));
+    if (/e/i.test(s)) return 0;
+    const dot = s.indexOf('.');
+    return dot < 0 ? 0 : s.length - dot - 1;
+  };
+
+  /**
+   * One end of a range, or both: "2 to 86", "21.4 to 30.0" (both ends at
+   * the same decimals), "= 15" for a single value. Dates on a time axis,
+   * categories as they are.
+   * @param {any[]} r @param {string} [axisType]
+   */
+  const rangeWords = (r, axisType) => {
+    const [lo, hi] = r;
+    /** @param {any} v @param {number} d */
+    const fmt = (v, d) => {
+      if (axisType === 'time') return NS.axes.fmtXVal(v, 'time', null);
+      if (typeof v !== 'number' || !Number.isFinite(v)) return String(v);
+      return v.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+    };
+    const d = Math.max(decimalsOf(Number(lo)), decimalsOf(Number(hi)));
+    if (lo === hi) return '= ' + fmt(lo, decimalsOf(Number(lo)));
+    return fmt(lo, d) + ' to ' + fmt(hi, d);
+  };
+
+  /**
+   * The words for a range filter (D4): "Study Day 2 to 86, Value 21.4 to
+   * 30.0"; a point reads "Study Day = 15, Value = 29.2".
+   * @param {{ x_col: string, y_col: string | null, x_range: any[],
+   *           y_range: any[] | null }} range
+   * @param {VizColumn[]} columns @param {string} [xAxisType]
+   */
+  const describeRange = (range, columns, xAxisType) => {
+    const parts = [NS.axes.axisTitle(columns, range.x_col) + ' ' +
+                   rangeWords(range.x_range, xAxisType)];
+    if (range.y_range && range.y_col) {
+      parts.push(NS.axes.axisTitle(columns, range.y_col) + ' ' + rangeWords(range.y_range));
+    }
+    return parts.join(', ');
+  };
+
   /** A value as a filter compares it: missing folds to ''. @param {any} v */
   const keyOf = (v) => (isMissing(v) ? '' : String(v));
 
@@ -171,6 +222,6 @@
   };
 
   NS.keys = { isMissing, fromKeys, fromRows, restored, filterMessage, clearMessage, describe,
-              rowMatches, markLit, selectionView, MAX_LISTED,
+              describeRange, rangeWords, rowMatches, markLit, selectionView, MAX_LISTED,
               MISSING_WORD };
 })();

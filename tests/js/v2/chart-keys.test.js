@@ -116,3 +116,20 @@ test('a missing value is a key too: sent as null, named (missing), matched by nu
   assert.strictEqual(K.markLit({ AETERM: 'Rash' }, [{ AESEV: 'MILD' }], f), false);
 });
 
+test('a range in column labels: both ends at one precision, a point with =', () => {
+  const cols = [{ name: 'ADY', type: 'numeric', label: 'Study Day' },
+                { name: 'AVAL', type: 'numeric', label: 'Value' }];
+  assert.strictEqual(K.describeRange({ x_col: 'ADY', y_col: 'AVAL', x_range: [2, 86],
+                                       y_range: [21.37, 30] }, cols),
+                     'Study Day 2 to 86, Value 21.4 to 30.0');
+  assert.strictEqual(K.describeRange({ x_col: 'ADY', y_col: 'AVAL', x_range: [15, 15],
+                                       y_range: [29.24, 29.24] }, cols),
+                     'Study Day = 15, Value = 29.2');
+  // A line's brush: x only; large values keep their whole part.
+  assert.strictEqual(K.describeRange({ x_col: 'ADY', y_col: null, x_range: [1200, 3400.5],
+                                       y_range: null }, cols),
+                     'Study Day 1,200 to 3,401');
+  assert.strictEqual(K.describeRange({ x_col: 'ADT', y_col: null, x_range: [0, 86400000],
+                                       y_range: null }, cols, 'time'),
+                     'ADT 1970-01-01 to 1970-01-02');
+});

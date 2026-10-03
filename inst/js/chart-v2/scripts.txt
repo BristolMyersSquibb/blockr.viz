@@ -19,6 +19,7 @@ option-individual.js
 roles.js
 chrome.js
 interact.js
+interact-individual.js
 export.js
 view.js
 binding.js

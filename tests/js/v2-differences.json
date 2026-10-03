@@ -213,12 +213,6 @@
   ],
   "why": "The click sends filters: {AETERM: [Nausea]} and the footer names the column; the group change that clears the filter shows No filter active at once and lights every bar."
  },
- "interactions/gear-drive-gantt": {
-  "ids": [
-   "B1"
-  ],
-  "why": "A gear edit that clears the filter sends filter_type categorical, not range."
- },
  "interactions/life-initialize-twice": {
   "ids": [
    "B2"
@@ -285,5 +279,188 @@
    "D4"
   ],
   "why": "The restored filter reads Filtered: Reported Term = Rash."
+ },
+ "interactions/brush-scatter-geometric": {
+  "ids": [
+   "D4"
+  ],
+  "why": "The brush footer names the range that was sent (Analysis Relative Day 2 to 86, Analysis Value 21.4 to 30.0) instead of Brush filter active."
+ },
+ "interactions/brush-scatter-ignored-events": {
+  "ids": [
+   "B4",
+   "D4"
+  ],
+  "why": "A brush on points outside the data selects nothing and latches nothing (v1 showed Brush filter active and sent nothing); the brush that caught a point names its range in the footer."
+ },
+ "interactions/brush-scatter-color": {
+  "ids": [
+   "D2",
+   "D4",
+   "B1"
+  ],
+  "why": "The brush sends filters: {ARM: [...]} and the footer names it; its clear carries filter_type categorical, the type it latched."
+ },
+ "interactions/brush-scatter-facet": {
+  "ids": [
+   "D2",
+   "D4"
+  ],
+  "why": "The brush sends filters: {AESEV: [...]} and the footer names it."
+ },
+ "interactions/brush-scatter-drill-column": {
+  "ids": [
+   "D2",
+   "D4"
+  ],
+  "why": "The brush sends filters: {USUBJID: [...]} and the footer names it."
+ },
+ "interactions/brush-scatter-drill-off": {
+  "ids": [
+   "B4"
+  ],
+  "why": "With drill off an empty brush event sends nothing (v1 sent a clear)."
+ },
+ "interactions/brush-scatter-transient": {
+  "ids": [
+   "D2",
+   "D4",
+   "B1"
+  ],
+  "why": "The brush sends filters: {ARM: [...]} and the footer names it; its clear carries filter_type categorical, the type it latched."
+ },
+ "interactions/brush-scatter-click-guard": {
+  "ids": [
+   "B4",
+   "D4"
+  ],
+  "why": "A brush clear after the click guard clears the latched point and the footer says No filter active (v1 kept naming the point); the point is named in column labels."
+ },
+ "interactions/brush-line-event": {
+  "ids": [
+   "D4"
+  ],
+  "why": "The brush footer names the x range that was sent (Analysis Relative Day 0 to 1)."
+ },
+ "interactions/brush-scatter-duplicate-points": {
+  "ids": [
+   "D2",
+   "D4"
+  ],
+  "why": "The brush sends filters: {ID: [a, b, c, d]}; the footer names it (ID, 4 values)."
+ },
+ "interactions/click-scatter-geometric": {
+  "ids": [
+   "D4"
+  ],
+  "why": "The point click sends the same zero-width range; the footer names it in column labels (Analysis Relative Day = 15, Analysis Value = 29.2) instead of the bare coordinates."
+ },
+ "interactions/click-scatter-color": {
+  "ids": [
+   "D6",
+   "D4"
+  ],
+  "why": "Colour no longer widens a point click to its arm: each click sends a zero-width range at the point instead of ARM = Placebo; the footer names the point in column labels."
+ },
+ "interactions/click-scatter-series": {
+  "ids": [
+   "D2",
+   "D4",
+   "D5",
+   "D6"
+  ],
+  "why": "The point selects its series, sent as filters: {USUBJID: [S03]}; the footer names it (USUBJID = S03) instead of the point's coordinates; the other patients' points dim."
+ },
+ "interactions/click-scatter-facet-drill-column": {
+  "ids": [
+   "D2",
+   "D4",
+   "D5"
+  ],
+  "why": "The click sends the USUBJID of the rows under the point as filters: {USUBJID: [...]}; the footer names it; the points of other patients dim, in every panel."
+ },
+ "interactions/click-scatter-transient": {
+  "ids": [
+   "D6",
+   "D4"
+  ],
+  "why": "With colour only, a point click is the point itself, a zero-width range: no claim to send to the target, so it latches a local range filter (as a geometric click did) instead of sending ARM = Placebo; the footer names the point."
+ },
+ "interactions/click-scatter-transient-geometric": {
+  "ids": [
+   "D4"
+  ],
+  "why": "The footer names the latched point in column labels."
+ },
+ "interactions/click-line-series": {
+  "ids": [
+   "D1",
+   "D2",
+   "D4",
+   "D5",
+   "B1"
+  ],
+  "why": "Clicks send filters: {USUBJID: [...]}; the footer names the column (USUBJID = S03); the other lines dim; Reset clears with filter_type categorical, the type it latched, and lights every line again."
+ },
+ "interactions/click-line-hover-wins": {
+  "ids": [
+   "D2",
+   "D4",
+   "D5"
+  ],
+  "why": "The hovered line S02 is sent as filters: {USUBJID: [S02]}; the footer names the column; the other lines dim."
+ },
+ "interactions/click-line-color-only": {
+  "ids": [
+   "D2",
+   "D4",
+   "D5"
+  ],
+  "why": "The line is sent as filters: {SEX: [F]}; the footer names the column; the other line dims."
+ },
+ "interactions/click-line-no-split": {
+  "ids": [
+   "D4"
+  ],
+  "why": "The footer names the clicked point in column labels."
+ },
+ "interactions/click-line-transient": {
+  "ids": [
+   "D2"
+  ],
+  "why": "The drill event sends filters: {USUBJID: [S03]}."
+ },
+ "interactions/click-band-color": {
+  "ids": [
+   "D7",
+   "D4",
+   "D5"
+  ],
+  "why": "A click on the High Dose centre line selects that level and sends ARM = High Dose, where v1 sent nothing and named a computed point; the footer says Planned Arm = High Dose; the other levels dim."
+ },
+ "interactions/click-band-plain": {
+  "ids": [
+   "D7"
+  ],
+  "why": "An uncoloured band is not clickable: nothing is sent or latched, where v1 sent a zero-width range at a computed point."
+ },
+ "interactions/restore-scatter": {
+  "ids": [
+   "D4",
+   "D5"
+  ],
+  "why": "The restored ARM = Placebo reads Planned Arm = Placebo, and the points of the other arms dim, where v1 dimmed nothing."
+ },
+ "interactions/restore-line": {
+  "ids": [
+   "D5"
+  ],
+  "why": "The restored USUBJID = S03 dims the other lines, where v1 dimmed nothing."
+ },
+ "interactions/restore-brush": {
+  "ids": [
+   "D4"
+  ],
+  "why": "The brush footer names the range in column labels (Analysis Relative Day 1 to 15, Analysis Value 27.4 to 29.2) instead of Brush filter active."
  }
 }

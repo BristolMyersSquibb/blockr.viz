@@ -25,15 +25,20 @@
   // The families v2 draws; the rest show an empty state until built.
   // `widths`: the option reads each panel's width (x labels, value labels).
   // `alwaysHighlight`: every draw ends with a highlight patch, as v1's
-  // aggregated draw did; the others patch only while a filter is active.
+  // aggregated draw did; the others patch only while a filter dims.
+  // `prepare` / `after`: view methods run on a panel's slot before and
+  // after its option is set.
   /** @typedef {{ model: any, option: any, legend: any, widths: boolean,
-   *              alwaysHighlight: boolean }} FamilyImpl */
+   *              alwaysHighlight: boolean, prepare?: string, after?: string }} FamilyImpl */
   /** @type {Record<string, FamilyImpl>} */
   const FAMILIES = {
     aggregated: { model: NS.model.aggregated, option: NS.option.aggregated,
                   legend: NS.option.aggregatedLegend, widths: true, alwaysHighlight: true },
     timeline: { model: NS.model.timeline, option: NS.option.timeline,
-                legend: NS.option.timelineLegend, widths: false, alwaysHighlight: false }
+                legend: NS.option.timelineLegend, widths: false, alwaysHighlight: false },
+    individual: { model: NS.model.individual, option: NS.option.individual,
+                  legend: NS.option.individualLegend, widths: true, alwaysHighlight: false,
+                  prepare: '_individualPrepare', after: '_individualAfter' }
   };
 
   // What a distribution panel draws without a numeric value.
@@ -84,9 +89,16 @@
       this._lastDataStr = null;
       /** @type {any} */
       this._lastDataRev = null;
-      // The selection: {type, filters} or null (chart-keys.js).
-      /** @type {{ type: 'categorical' | 'range' | 'point', filters: Record<string, any[]> } | null} */
+      // The selection (chart-keys.js): {type: 'categorical', filters} or
+      // {type: 'range', range}, `brush` when a brush made it; or null.
+      /** @type {{ type: 'categorical' | 'range', filters?: Record<string, any[]>, range?: any,
+       *           brush?: boolean } | null} */
       this._filter = null;
+      // A line click waits for a second click (interact-individual.js), and
+      // a click guards against the brush clear that follows it.
+      /** @type {any} */
+      this._lineClickTimer = null;
+      this._suppressBrushClear = false;
       this._hasBrushFilter = false;
       this._awaitData = false;
       // Click counter riding on every filter message.
@@ -242,10 +254,12 @@
         // re-fit updates it, plus the slot and its height without the gutter.
         chart.__xFit = po.xFit
           ? { ...po.xFit, slot, baseH: po.panelH - po.xFit.gutter } : undefined;
+        if (impl.prepare) this[impl.prepare](slot, po);
         chart.setOption(po.option, true);
         slot.dimmed = false;
         // A fresh instance measures its height; a kept one needs telling.
         if (existed && hChanged) chart.resize();
+        if (impl.after) this[impl.after](slot, po);
       });
       this.charts = this._slots.map((s) => s.chart).filter(Boolean);
       this._harmoniseAxes();
@@ -255,7 +269,8 @@
         this._updateHighlight();
       } else {
         this._updateStatus();
-        if (this._filter) this._applyHighlight();
+        const f = this._filter;
+        if (f && f.type === 'categorical' && !f.brush) this._applyHighlight();
       }
     }
 

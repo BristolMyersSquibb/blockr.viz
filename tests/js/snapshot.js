@@ -4,7 +4,7 @@
  *
  * Under CHART_ENGINE=v2 the snapshots are v1's, and v2 must reproduce them.
  * A snapshot v2 does not reproduce has to be listed in v2-differences.json
- * with an ID from the decisions (D1-D7, B1-B7); what v2 draws instead is
+ * with an ID from the decisions (D1-D7, B1-B10); what v2 draws instead is
  * pinned in __snapshots__/v2/. An unlisted difference fails, and so does a
  * listed one that no longer differs. UPDATE_SNAPSHOTS=1 under v2 writes
  * only __snapshots__/v2/, never v1's files.

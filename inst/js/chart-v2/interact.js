@@ -92,11 +92,12 @@
       if (filters) this._sendFilter(filters);
     },
 
-    // The type of what a clear clears (B1).
+    // The type of what a clear clears (B1); with nothing latched, the type
+    // v1 sends: categorical on an aggregated chart, else range.
     /** @this {any} */
     _clearType() {
       if (this._filter) return this._filter.type;
-      return this._hasBrushFilter ? 'range' : 'categorical';
+      return this._family() === 'aggregated' ? 'categorical' : 'range';
     },
 
     /** @this {any} @param {'categorical' | 'range' | 'point'} type */
@@ -112,6 +113,7 @@
     _gearClearFilter() {
       const type = this._clearType();
       this._filter = null;
+      this._hasBrushFilter = false;
       this._updateStatus();
       this._sendClearFilter(type);
     },
@@ -144,7 +146,9 @@
     _applyHighlight() {
       const fam = this._family();
       const m = this._memo.model;
-      const f = this._filter && this._filter.type === 'categorical' ? this._filter.filters : null;
+      // A brush shows its own area; only a click or a restored filter dims.
+      const f = this._filter && this._filter.type === 'categorical' && !this._filter.brush
+        ? this._filter.filters : null;
       const lit = f
         ? (/** @type {Record<string, any>} */ keys, /** @type {any} */ rows) => NS.keys.markLit(keys,
             rows || (() => NS.model.rowsUnder(this.data, this._ix, keys)), f)
@@ -161,6 +165,12 @@
           patch = NS.option.aggregatedPatch(m, panel, this.config, current, lit, !!slot.dimmed);
         } else if (panel && fam === 'timeline') {
           patch = NS.option.timelinePatch(m, panel, this.config, lit, !!slot.dimmed);
+        } else if (panel && fam === 'individual') {
+          // The series the panel was drawn with, unnamed ones unnamed.
+          const o = this._memo.option && this._memo.option.panels[i];
+          const drawn = o && o.option && o.option.series && o.option.series.length === current.series.length
+            ? o.option.series : current.series;
+          patch = NS.option.individualPatch(m, panel, drawn, lit, !!slot.dimmed, f);
         } else {
           patch = { series: current.series.map(() => ({})), dimmed: false };
         }

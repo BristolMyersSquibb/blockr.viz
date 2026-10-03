@@ -1,0 +1,186 @@
+{
+ "config": {
+  "chart_type": "scatter",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "color": "AESEV",
+  "facet": "ARM"
+ },
+ "steps": [
+  {
+   "step": "brushSelected [[1,[0,1,2]],[3,[0]]] in slot 2",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "AESEV": [
+        "MILD",
+        "SEVERE"
+       ]
+      },
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: AESEV = MILD, SEVERE"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": [
+     "MILD",
+     "SEVERE"
+    ],
+    "selectedColumn": "AESEV",
+    "brush": true
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "brushSelected [[2,[0]]] in slot 1",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "filters": {
+       "AESEV": [
+        "MODERATE"
+       ]
+      },
+      "nonce": 2
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: AESEV = MODERATE"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "MODERATE",
+    "selectedColumn": "AESEV",
+    "brush": true
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

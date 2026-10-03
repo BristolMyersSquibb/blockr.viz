@@ -517,6 +517,10 @@
       let text = 'No filter active';
       if (f && f.type === 'categorical') {
         text = 'Filtered: ' + NS.keys.describe(f.filters, this.columns);
+      } else if (f && f.type === 'range') {
+        const m = this._memo.model;
+        text = 'Filtered: ' + NS.keys.describeRange(f.range, this.columns,
+          m && m.x ? m.x.type : undefined);
       } else if (this._hasBrushFilter) {
         text = 'Brush filter active';
       }
