@@ -81,7 +81,7 @@ matrix (\code{\link[=heatmap_matrix]{heatmap_matrix()}}).
 \description{
 Renders long event rows (e.g. one row per adverse event) as a row x
 column matrix: the cell DISPLAYS the event count and is PAINTED by the
-worst level of \code{color} -- two channels, the old-CDEx AE heatmap form.
+worst level of \code{color} -- two channels, the classic AE heatmap form.
 Columns order by event count, most first; the block draws every column
 it gets, so a cap belongs in the prepare \code{script}. Rows order by \code{group}
 (factor order), then total burden descending; each group starts with a

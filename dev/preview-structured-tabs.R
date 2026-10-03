@@ -1,14 +1,14 @@
 # Mini repro: several structured ("Table 1") tables as dock TABS -- the
-# cedx-style setup (there the annotated frames come from composer /
+# clinical-board setup (there the annotated frames come from composer /
 # summary chains; summary_table_block emits the same structured shape, so
-# this is the same rendering path with none of the cedx data plumbing).
+# this is the same rendering path with none of the clinical data plumbing).
 #
 # Flip between the Table tabs and watch the body:
 #   - viz from THIS tree (default): the body is NOT redrawn on a flip --
 #     the data-push table's DOM survives, and the payload guard suppresses
 #     identical re-sends. A section you collapsed stays collapsed.
 #   - VIZ_DIR=/workspace/blockr.viz (the renderUI-era table): the body
-#     re-renders on tab activations (the redraw seen in cedx run-view).
+#     re-renders on tab activations (the redraw seen in a clinical run view).
 #
 # Run from the workspace root (serves on 3838):
 #   Rscript /workspace/_scratch/wt-table-datapush/dev/preview-structured-tabs.R

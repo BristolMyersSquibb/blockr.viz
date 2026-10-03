@@ -1044,7 +1044,7 @@ test_that("a colour-split boxplot centres every box on its own slot", {
 # label that would collide with its neighbour, silently. Past
 # PANEL_H_CAP / CAT_LABEL_H (4000 / 14 = 286) categories the row band is
 # shorter than a label, so terms disappear off the axis with nothing on screen
-# to explain it. That silence was the CDEx complaint, not the thinning itself:
+# to explain it. That silence was the user's complaint, not the thinning itself:
 # a 500-term axis is unreadable at any band, and PANEL_H_CAP cannot simply be
 # raised (Safari's canvas limit is an AREA, and past it the chart goes blank).
 # So what is asserted here is the message.

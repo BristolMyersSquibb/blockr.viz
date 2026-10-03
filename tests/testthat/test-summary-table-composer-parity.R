@@ -15,7 +15,7 @@ test_that("SD renders at one decimal, as composer formats it", {
 test_that("quartiles use R's default quantile type, as composer does", {
   # composer's registry is q1 = \(x) unname(quantile(x, 0.25, na.rm = TRUE)),
   # i.e. type 7. tern uses type 2 and disagrees in the first decimal; that
-  # difference from old CDEx is expected and is not a defect.
+  # difference from the old app is expected and is not a defect.
   out <- summary_table_long(mtcars, vars = "mpg", stats = "q1_q3")
   expect_equal(out$q1, unname(stats::quantile(mtcars$mpg, 0.25)))
   expect_false(

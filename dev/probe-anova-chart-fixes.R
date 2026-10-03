@@ -1,10 +1,9 @@
-# Repro for the three CDEx one-way-ANOVA chart complaints, one view each.
-# See _team-ops/tasks/2026-08-christoph-cdex-anova-chart-fixes.
+# Repro for the three one-way-ANOVA chart complaints, one view each.
 #
 #   Rscript blockr.viz/dev/probe-anova-chart-fixes.R
 #
 # All three are boxplot chart-block behaviours, so none of them is
-# ANOVA-specific -- the CDEx view just happens to be where the team hit them.
+# ANOVA-specific -- the ANOVA view just happens to be where the team hit them.
 # The shipped `pop_anova` block sets neither `color` nor `facet`, which is why
 # problems 2 and 3 are invisible there: this script switches them on.
 
@@ -36,7 +35,7 @@ board <- new_dock_board(
   blocks = c(
     data = new_static_block(adsl, block_name = "ADSL (+ SITEGRP, 10 levels)"),
 
-    # 1. Same config as cedx_board's `pop_anova`, minus the deprecated
+    # 1. Same config as the clinical board's `pop_anova`, minus the deprecated
     #    `metric` alias. Click a box: the footer reads "Filtered: TRT01P =
     #    ..." and the drill fires, but every box keeps full opacity.
     #    _updateHighlight() (inst/js/chart.js:5478) excludes 'boxplot' at

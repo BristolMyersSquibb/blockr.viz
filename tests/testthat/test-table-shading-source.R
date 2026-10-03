@@ -1,5 +1,5 @@
 # Shading `source` (paint one column by another) + rotated column titles --
-# the two table features behind the CDEx AE heatmap form: count displayed,
+# the two table features behind the classic AE heatmap form: count displayed,
 # worst grade painted, terms upright.
 
 toy <- function() {

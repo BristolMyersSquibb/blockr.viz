@@ -9,7 +9,7 @@
 #
 # Supersedes preview-lab-parameters-overview.R, which put PARAM on the rows.
 # That failed because 41 tests in different units have to share one column
-# domain. Here the parameter is PINNED, exactly as CDEx 244-025's Lab local
+# domain. Here the parameter is PINNED, exactly as a clinical board's Lab local
 # filter already pins it, so every row is the same measurement in the same
 # unit and the shared domain is what makes the visits comparable.
 #

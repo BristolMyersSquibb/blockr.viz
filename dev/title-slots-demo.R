@@ -86,7 +86,7 @@ sentence <- paste0(
   "[, split by {@facet}]"
 )
 
-# Facet is unset on this board, as it is on 31 of the 32 CEDX exhibits, so the
+# Facet is unset on this board, as it is on 31 of 32 clinical exhibits, so the
 # clause is not there and neither is the word that would open it. The offer
 # chip at the end of the sentence is what a reader clicks to add one.
 

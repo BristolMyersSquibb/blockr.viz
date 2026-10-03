@@ -8,9 +8,9 @@ Landed 2026-07-26. Mockups that led to it: `_scratch/rankbar-mockups/index.html`
 Every ranked bar chart we ship is really a table that grew a bar. The bar is the
 only part echarts is needed for, and using a chart there costs us what a table
 gives away for free: search, click-to-sort, exact values in their own columns,
-arbitrary row count, printable output. The trigger was a CDEx user pointing at
-"Most Frequent AEs" (`blockr.cdex/dev/ae-bms-view.R`, a `new_chart_block(chart_type
-= "bar", drill = "AEDECOD")`).
+arbitrary row count, printable output. The trigger was a user pointing at a
+"Most Frequent AEs" chart, a
+`new_chart_block(chart_type = "bar", drill = "AEDECOD")`.
 
 What the table lacked was colour mapping and faceting. Both are addable, and
 faceting is where the table form wins outright: **a facet becomes a column**,

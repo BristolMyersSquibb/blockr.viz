@@ -7,7 +7,7 @@
 # The vocabulary mirrors chart.js's SUMMARY_STATS (inst/js/chart.js) plus
 # `mean_ci95`, which exists ONLY here: a 95% CI needs `qt(0.975, n - 1)`, JS
 # has no t quantile, and the normal approximation (1.96) is 31% too narrow at
-# n = 6 -- real CEDX cells have N of 6, 16, 18, 21. The two definitions are
+# n = 6 -- real clinical cells have N of 6, 16, 18, 21. The two definitions are
 # mirrored, not shared (one language per surface), with a drift test pinning
 # the enum and hand-computed values pinning the behaviour on both sides:
 # tests/testthat/test-lane-stats.R.

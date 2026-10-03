@@ -1542,7 +1542,7 @@ input.blockr-search:focus {
 #' Emitted with the plain container prefix, never under the structured scope
 #' of `html_table_delta_css()`: a `:has()` scope in front of the descendant
 #' `path` made Chrome restyle the whole page on every DOM insertion (1.3 ms
-#' per insertion became 4.7 ms on the CDEx board). A flat table has no
+#' per insertion became 4.7 ms on a clinical board). A flat table has no
 #' chevrons, so the plain prefix leaks nothing onto it.
 #' @noRd
 html_table_chev_css <- function() {

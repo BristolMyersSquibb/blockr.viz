@@ -1,7 +1,7 @@
 # Builds a PowerPoint deck against the BMS house template with the same table
 # on two consecutive slides: the positional split the exporter used before
 # (col_widths = "even") and the measured one it uses now. Real ADaM data from
-# bmsExampleData, in the shapes CDEx actually produces.
+# bmsExampleData, in the shapes clinical boards actually produce.
 #
 #   Rscript dev/pptx-layout/bms-preview.R
 #

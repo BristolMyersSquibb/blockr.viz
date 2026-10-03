@@ -1676,7 +1676,7 @@
         //
         // On the block's face the aggregation is a WORD, not a control,
         // unless it was exposed in its own right. It is an analysis decision
-        // rather than a display one: across the whole CEDX workflow `func` is
+        // rather than a display one: across a full clinical workflow `func` is
         // authored once per exhibit and never varies (28 counts, 18 means,
         // one max, one min), and flipping the lab waterfall's max to min
         // silently turns "worst value per patient" into "best" with nothing

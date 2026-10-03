@@ -7289,8 +7289,8 @@
         // message with no registered handler at all, and chart.js only loads
         // with the first chart block's UI in the page. On a board whose
         // opening view carries no chart (a config or population view, which is
-        // how CDEx boards open), every chart's startup payload was dropped and
-        // the block never re-sent -- the chart stayed permanently blank.
+        // how clinical boards open), every chart's startup payload was dropped
+        // and the block never re-sent -- the chart stayed permanently blank.
         // Announce, and let R re-send its last payload.
         Shiny.setInputValue(el.id + "_ready", Date.now(), { priority: "event" });
       }
