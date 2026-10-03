@@ -117,7 +117,14 @@
           for (const di of s.dataIndex) selected.push({ seriesIndex: s.seriesIndex, dataIndex: di });
         }
       }
-      if (!selected.length) { view._brushCleared(); return; }
+      // An empty selection clears only a filter a brush made. ECharts also
+      // sends one after the brush cursor is armed on every draw, which
+      // would drop a restored range or a point click (D11); the reader's
+      // own clear arrives as a `brush` event with no areas.
+      if (!selected.length) {
+        if (view._filter && view._filter.brush) view._brushCleared();
+        return;
+      }
       view._brushed(slot, selected);
     });
 
