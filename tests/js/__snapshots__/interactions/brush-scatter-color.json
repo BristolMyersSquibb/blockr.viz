@@ -1,0 +1,104 @@
+{
+ "config": {
+  "chart_type": "scatter",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "color": "ARM"
+ },
+ "steps": [
+  {
+   "step": "brushSelected [[1,[0,1]],[3,[0]]]",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": "ARM",
+      "values": [
+       "High Dose",
+       "Placebo"
+      ],
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Brush filter active"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": true
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "brushSelected with nothing selected",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "range",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

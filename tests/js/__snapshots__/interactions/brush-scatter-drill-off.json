@@ -1,0 +1,111 @@
+{
+ "config": {
+  "chart_type": "scatter",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": ""
+ },
+ "steps": [
+  {
+   "step": "brushSelected [[0,[0,1]]]",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "brushSelected with nothing selected",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "brush event with no areas",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "range",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}
