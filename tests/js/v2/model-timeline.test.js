@@ -138,3 +138,10 @@ test('a click filters the lane; in a facet panel the panel too (D3)', () => {
   assert.strictEqual(C.model.timelineClick({ ...BASE }, '__all__', [7, 8, 2, '', '', '', '', '', 0]),
                      null);
 });
+
+test('the keys of a mark are its lane and facet, whatever the drill column', () => {
+  const mark = [1, 3, 0, 'Rash', 'MILD', '', '', 'S02', 0];
+  assert.deepStrictEqual(plain(C.model.timelineKeys({ ...BASE, drill: 'ID', color: 'SEV',
+                                                      facet: 'ARM' }, 'A', mark)),
+                         { T: 'Rash', ARM: 'A' });
+});

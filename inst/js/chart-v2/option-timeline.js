@@ -12,7 +12,7 @@
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
   const NS = /** @type {any} */ (B.chart = B.chart || {});
-  const option = NS.option = NS.option || {};
+  const option = /** @type {any} */ (NS.option = NS.option || {});
 
   // Config fields the option reads beside the model's; a change to any
   // other field reuses the option.
@@ -22,12 +22,33 @@
   const LANE_PX = 28;
   const PANEL_EXTRA_PX = 80;
   const PANEL_MIN_PX = 200;
+  // The opacity of a bar a filter does not light.
+  const DIM = 0.15;
 
   /**
    * @typedef {{ cfg: Record<string, any>, columns: VizColumn[],
    *             ink: typeof NS.INK_DEFAULT, theme: any,
    *             measure: (s: string) => number }} Look
    */
+
+  /**
+   * Which marks each series of a panel draws, as mark positions in series
+   * order: one series per colour level (marks of no level are not drawn),
+   * else one series of every mark. The option and the highlight patch both
+   * lay the series out from this.
+   * @param {any} m @param {any} panel @returns {number[][]}
+   */
+  const seriesMarks = (m, panel) => {
+    if (!m.color) return [panel.marks.map((/** @type {any} */ _, /** @type {number} */ i) => i)];
+    /** @type {Map<string, number[]>} */
+    const buckets = new Map(m.color.levels.map((/** @type {any} */ lvl) =>
+      /** @type {[string, number[]]} */ ([lvl, []])));
+    panel.marks.forEach((/** @type {any[]} */ t, /** @type {number} */ i) => {
+      const b = buckets.get(String(t[4] ?? ''));
+      if (b) b.push(i);
+    });
+    return m.color.levels.map((/** @type {any} */ lvl) => buckets.get(lvl) || []);
+  };
 
   /**
    * @param {any} m the timeline model
@@ -60,15 +81,19 @@
       );
       if (!rect) return;
       const barLabel = onBarLabel ? String(api.value(5) ?? '') : '';
+      // The datum's opacity rides in the style: a filter dims the bars it
+      // does not light (D5).
+      const st = api.style();
       /** @type {any[]} */
-      const children = [{ type: 'rect', shape: Object.assign({}, rect, { r: 3 }), style: api.style() }];
+      const children = [{ type: 'rect', shape: Object.assign({}, rect, { r: 3 }), style: st }];
       if (barW > 50 && barLabel) {
         children.push({
           type: 'text',
           style: {
             text: barLabel, x: rect.x + 6, y: rect.y + rect.height / 2, fill: '#fff',
             fontSize: ink.fontSize, fontWeight: 500, fontFamily: ink.face,
-            textVerticalAlign: 'middle', truncate: { outerWidth: barW - 12 }
+            textVerticalAlign: 'middle', truncate: { outerWidth: barW - 12 },
+            opacity: st && st.opacity != null ? st.opacity : 1
           }
         });
       }
@@ -120,26 +145,17 @@
     };
 
     const panels = m.panels.map((/** @type {any} */ panel) => {
-      const data = panel.marks.map((/** @type {any[]} */ t) => ({ value: t }));
-      /** @type {any[]} */
-      let series;
-      if (showLegend) {
-        // One named series per colour level, so each legend chip has a
-        // series to toggle.
-        /** @type {Map<any, any[]>} */
-        const buckets = new Map(colorLevels.map((/** @type {any} */ lvl) =>
-          /** @type {[any, any[]]} */ ([lvl, []])));
-        for (const d of data) {
-          const b = buckets.get(String(d.value[4] ?? ''));
-          if (b) b.push(d);
-        }
-        series = colorLevels.map((/** @type {any} */ lvl) => ({
-          type: 'custom', name: lvl, data: buckets.get(lvl) || [],
-          encode: { x: [0, 1], y: 2 }, renderItem
-        }));
-      } else {
-        series = [{ type: 'custom', data, encode: { x: [0, 1], y: 2 }, renderItem }];
-      }
+      const layout = seriesMarks(m, panel);
+      const data = (/** @type {number[]} */ idx) =>
+        idx.map((i) => ({ value: panel.marks[i] }));
+      // One named series per colour level, so each legend chip has a series
+      // to toggle.
+      const series = showLegend
+        ? colorLevels.map((/** @type {any} */ lvl, /** @type {number} */ si) => ({
+            type: 'custom', name: lvl, data: data(layout[si]),
+            encode: { x: [0, 1], y: 2 }, renderItem
+          }))
+        : [{ type: 'custom', data: data(layout[0]), encode: { x: [0, 1], y: 2 }, renderItem }];
 
       const counts = panel.laneCounts;
       const gut = NS.axes.yGutter(counts
@@ -190,5 +206,27 @@
                ({ name: String(lvl), color: colors[i] })) };
   };
 
-  Object.assign(option, { timeline, timelineLegend });
+  /**
+   * The highlight patch for one panel (D5): every bar's opacity from whether
+   * its mark (lane and facet) is lit. Without a filter, and nothing dimmed
+   * from before, the patch is empty, as v1's.
+   * @param {any} m @param {any} panel @param {Record<string, any>} cfg
+   * @param {((keys: Record<string, any>, rows: () => any[]) => boolean) | null} lit
+   * @param {boolean} wasDimmed
+   * @returns {{ series: any[], dimmed: boolean }}
+   */
+  const timelinePatch = (m, panel, cfg, lit, wasDimmed) => {
+    const layout = seriesMarks(m, panel);
+    if (!lit && !wasDimmed) return { series: layout.map(() => ({})), dimmed: false };
+    const series = layout.map((idx) => ({
+      data: idx.map((i) => {
+        const t = panel.marks[i];
+        const on = !lit || lit(NS.model.timelineKeys(cfg, panel.facet, t), () => [panel.rows[i]]);
+        return { value: t, itemStyle: { opacity: on ? 1 : DIM } };
+      })
+    }));
+    return { series, dimmed: !!lit };
+  };
+
+  Object.assign(option, { timeline, timelineLegend, timelinePatch, timelineSeriesMarks: seriesMarks });
 })();

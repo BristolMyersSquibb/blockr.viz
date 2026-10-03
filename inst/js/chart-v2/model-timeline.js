@@ -42,7 +42,8 @@
 
   /**
    * @typedef {{ facet: string, label: string | null, lanes: string[],
-   *             laneCounts: Map<string, any> | null, marks: any[][] }} TimelinePanel
+   *             laneCounts: Map<string, any> | null, marks: any[][],
+   *             rows: any[] }} TimelinePanel
    * @typedef {{ family: 'timeline', empty: string | null,
    *             x: { col: string, type: string, cats: string[] | null },
    *             y: { col: string }, xend: string | null, series: string | null,
@@ -146,6 +147,9 @@
       terms.forEach((t, i) => laneOf.set(t, i));
 
       const marks = [];
+      // The source row of each mark, for a filter on a column the mark does
+      // not carry (D5).
+      const markRows = [];
       for (const r of prow) {
         if (r[x] == null) continue;
         const term = String(r[y] ?? '');
@@ -158,11 +162,12 @@
                     r[series] ?? '',
                     (drill != null ? (r[drill] ?? '') : ''),
                     ttFields.length ? ttFields.map((c) => r[c] ?? '') : 0]);
+        markRows.push(r);
       }
       out.panels.push({
         facet: fv,
         label: (!out.single && fv !== '__all__') ? labels.get(fv) : null,
-        lanes: terms, laneCounts, marks
+        lanes: terms, laneCounts, marks, rows: markRows
       });
     }
     return out;
@@ -171,13 +176,14 @@
 
   /**
    * The keys of a timeline mark: its lane, and the facet in a facet panel
-   * (D3). A missing facet value is left out, as R cannot filter on it.
+   * (D3). The colour is an attribute of the event, not a key. A missing
+   * facet value is left out, as R cannot filter on it.
    * @param {Record<string, any>} cfg @param {any} facetVal @param {any[]} mark
    * @returns {Record<string, any>}
    */
   const timelineKeys = (cfg, facetVal, mark) => {
     /** @type {Record<string, any>} */
-    const keys = { [cfg.y]: mark[7] };
+    const keys = { [cfg.y]: mark[3] };
     if (cfg.facet && facetVal != null && facetVal !== '__all__' && facetVal !== '') {
       keys[cfg.facet] = facetVal;
     }
