@@ -104,8 +104,7 @@ band_half_width <- function(dist, id_code, n_ids, window, window_size,
 #' ([summarize_stat()]), so a band and a boxplot of the same data agree.
 #'
 #' Computed in R rather than the browser, following
-#' [compute_smoother_series()]: the interactive chart and [static_chart()]
-#' then share ONE implementation, so a deck and the app cannot disagree.
+#' [compute_smoother_series()].
 #'
 #' Returns a named list keyed by group level (or `__all__`). Each entry holds
 #' aligned numeric vectors over the grid: `x`, `center`, `lo`/`hi` (the inner

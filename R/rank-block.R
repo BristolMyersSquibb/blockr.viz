@@ -683,7 +683,7 @@ new_summarize_table_block <- function(group = NULL,
               # The export picture comes from the browser (R/chart-capture.R):
               # the table as drawn, at full height, instead of a server
               # repaint that has to match it.
-              capture_export = canvas_capture_on(),
+              capture_export = TRUE,
               capture_ratio = canvas_capture_ratio(),
               capture_page = capture_page_box(),
               # The prepare script: its text for the gear's editor, what it
@@ -731,33 +731,28 @@ new_summarize_table_block <- function(group = NULL,
           capture(chart_capture_from_msg(input$rank_block_capture))
         })
         dl_picture <- function() {
-          if (canvas_capture_on() && !is.null(capture())) {
-            return(capture())
-          }
-          dl_exhibit()
+          capture() %||% dl_exhibit()
         }
 
         # A deck asks for the picture through the session's capture service,
         # at a width it chooses; the height is the table's own.
-        if (canvas_capture_on()) {
-          register_chart_capture(ns("rank_block"), function(token, width,
-                                                            height) {
-            json <- last_msg$json %||% tryCatch(
-              shiny::isolate(build_json()),
-              error = function(e) NULL
-            )
-            if (is.null(json)) {
-              stop("summarize table '", ns("rank_block"),
-                   "' has no data to draw yet", call. = FALSE)
-            }
-            session$sendCustomMessage("blockr-viz-rank-capture", list(
-              req = token, payload = json, width = width,
-              ratio = canvas_capture_ratio(),
-              css = paste(html_table_shared_css_fallback(), rank_table_css(),
-                          sep = "\n")
-            ))
-          })
-        }
+        register_chart_capture(ns("rank_block"), function(token, width,
+                                                          height) {
+          json <- last_msg$json %||% tryCatch(
+            shiny::isolate(build_json()),
+            error = function(e) NULL
+          )
+          if (is.null(json)) {
+            stop("summarize table '", ns("rank_block"),
+                 "' has no data to draw yet", call. = FALSE)
+          }
+          session$sendCustomMessage("blockr-viz-rank-capture", list(
+            req = token, payload = json, width = width,
+            ratio = canvas_capture_ratio(),
+            css = paste(html_table_shared_css_fallback(), rank_table_css(),
+                        sep = "\n")
+          ))
+        })
 
         # --- downloads ------------------------------------------------------
         #
@@ -802,10 +797,9 @@ new_summarize_table_block <- function(group = NULL,
               list(id = "dl_html", ext = "html", label = "Web page",
                    ok = TRUE),
               list(id = "dl_pptx", ext = "pptx", label = "PowerPoint",
-                   ok = requireNamespace("officer", quietly = TRUE) &&
-                     (canvas_capture_on() || rank_paint_ready())),
+                   ok = requireNamespace("officer", quietly = TRUE)),
               list(id = "dl_png", ext = "png", label = "Image",
-                   ok = canvas_capture_on() || rank_paint_ready())
+                   ok = TRUE)
             )
           )
         })

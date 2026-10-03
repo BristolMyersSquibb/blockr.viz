@@ -51,5 +51,5 @@ identical(static_exhibit(1:3), 1:3)
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=static_table]{static_table()}}, \code{\link[=static_chart]{static_chart()}}, \code{\link[=as_annotated_df]{as_annotated_df()}}
+\code{\link[=static_table]{static_table()}}, \code{\link[=as_annotated_df]{as_annotated_df()}}
 }

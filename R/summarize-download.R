@@ -114,23 +114,21 @@ rank_export_df <- function(prep) {
 #' The exhibit as one image: what [pptx_add_exhibit()] places on a slide,
 #' without the slide. A summarize table is painted from its cell model and is
 #' as tall as the table is long (a file has no fixed box, so nothing is
-#' paged); a chart is its ggplot at the size the plot asks for.
+#' paged); a ggplot is drawn at the size the plot asks for.
 #'
 #' It is a re-render, not a screenshot. The summarize table's marks are drawn
-#' from the same cell model the browser gets and the chart from the same
-#' pipeline a report compiles, so the file is sharper than a capture -- and
-#' not pixel-identical to one, since neither carries the live view's zoom or
-#' hidden series.
+#' from the same cell model the browser gets, so the file is sharper than a
+#' capture, and not pixel-identical to one.
 #'
-#' @param x A `summarize_exhibit` from [static_summarize_table()], or a ggplot
-#'   from [static_chart()].
+#' @param x A `summarize_exhibit` from [static_summarize_table()], or a
+#'   ggplot.
 #' @param file Path to write the `.png` to.
 #' @param width_in Image width in inches. `NULL` (charts) keeps the plot's own.
 #' @param res Pixels per inch.
 #' @param ... Passed to the renderer.
 #'
 #' @return `file`, invisibly.
-#' @seealso [static_summarize_table()], [static_chart()], [write_exhibit_pptx()]
+#' @seealso [static_summarize_table()], [write_exhibit_pptx()]
 #' @export
 write_exhibit_png <- function(x, file, width_in = NULL,
                               res = getOption("blockr.viz.paint_res", 300),

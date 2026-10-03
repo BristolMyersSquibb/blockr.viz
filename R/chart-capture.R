@@ -1,44 +1,11 @@
 # The chart as the browser drew it -------------------------------------------
 #
-# PROTOTYPE, off unless `blockr.viz.canvas_capture` is TRUE.
-#
-# Every other export in this package rebuilds the chart server-side, because
-# one rendering everywhere was worth more than matching the screen. The cost
-# shows up wherever the panel's geometry and the slide's disagree: a wide
-# panel keeps its category labels flat, an 11.9in slide cannot, and the file
-# is then a different picture from the one the download button sat next to.
-#
-# This is the other trade. chart.js `_downloadImage()` already composes the
-# whole block on an offscreen canvas -- title band, every facet panel at its
-# grid position, facet labels, legend chips with their dimming, caption -- and
-# it has been sitting there unwired. With the flag on it sends that bitmap up
-# instead of saving it, and the png / html / pptx downloads carry it. The
-# download, the slide and the screen are then one picture, at whatever aspect
-# ratio the panel currently has.
-#
-# What still needs the server-side renderers: a chart nobody has looked at
-# (a dormant dock panel has no canvas), a report built with no browser in the
-# loop, and the emitted-code report style, which is code rather than a
-# picture. So `static_chart()` / `chart_expr()` stay, as the fallback rather
-# than the main path.
-
-# ON by default. Nobody wants the rebuilt picture when the real one is right
-# there, so this is a kill switch rather than a feature flag: set the option
-# to FALSE, or BLOCKR_CANVAS_CAPTURE=0 in an already-deployed app, and the
-# exports go back through static_chart(). Kept only so a deployment can be
-# put back without a redeploy; it should go once this has ridden along for a
-# release.
-#' @noRd
-canvas_capture_on <- function() {
-
-  env <- tolower(Sys.getenv("BLOCKR_CANVAS_CAPTURE"))
-
-  if (nzchar(env)) {
-    return(!env %in% c("0", "false", "no", "off"))
-  }
-
-  !isFALSE(getOption("blockr.viz.canvas_capture", TRUE))
-}
+# A chart's downloads and slides carry the picture the browser drew.
+# chart.js `_downloadImage()` composes the whole block on an offscreen canvas
+# (title band, every facet panel at its grid position, facet labels, legend
+# chips, caption) and sends the bitmap up; the png / html / pptx downloads
+# write that. A chart whose panel was never drawn is drawn offscreen by the
+# capture service further down.
 
 # How many device pixels per CSS pixel the canvas composes with. 2 is what
 # the screen wants; a bitmap headed for an 11.9in slide is placed four times

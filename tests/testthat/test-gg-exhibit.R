@@ -1,39 +1,20 @@
-# The chart block's downloads and the deck's slide must be ONE rendering.
-# Before this they were two: the block captured the live ECharts canvas, the
-# deck evaluated the compiled ggplot pipeline.
+# A ggplot through the exhibit writers (R/gg-exhibit.R). Other packages'
+# blocks hand these a ggplot; the chart block exports its captured picture.
 
-chart_state <- function(...) {
-  c(list(chart_type = "bar", group = "Species", func = "count"), list(...))
+species_plot <- function(title = NULL) {
+  skip_if_not_installed("ggplot2")
+  p <- ggplot2::ggplot(datasets::iris, ggplot2::aes(Species)) +
+    ggplot2::geom_bar()
+  if (!is.null(title)) {
+    p <- p + ggplot2::labs(title = title)
+  }
+  attr(p, "pptx_width") <- 6
+  attr(p, "pptx_height") <- 4
+  p
 }
 
-test_that("the exhibit is the chart a report would print", {
-  p <- chart_static_exhibit(datasets::iris, chart_state(title = "Species"))
-
-  expect_s3_class(p, "gg")
-  # The aggregated frame, one row per mark -- not the 150 input rows.
-  d <- chart_exhibit_data(p)
-  expect_identical(nrow(d), 3L)
-  expect_true(all(c("Species", "n") %in% names(d)))
-})
-
-test_that("both report styles produce a chart, and the download follows the deck", {
-  # The deck's report call honours this option; so does the download, so the
-  # two cannot disagree about which renderer drew the picture.
-  withr::with_options(list(blockr.viz.report_style = "code"), {
-    expect_s3_class(chart_static_exhibit(datasets::iris, chart_state()), "gg")
-  })
-  withr::with_options(list(blockr.viz.report_style = "static"), {
-    expect_s3_class(chart_static_exhibit(datasets::iris, chart_state()), "gg")
-  })
-})
-
-test_that("a chart with no data is no exhibit, rather than an error", {
-  expect_null(chart_static_exhibit(datasets::iris[0L, ], chart_state()))
-  expect_null(chart_static_exhibit(NULL, chart_state()))
-})
-
-test_that("a chart renders to every target through the shared writers", {
-  p <- chart_static_exhibit(datasets::iris, chart_state(title = "Species"))
+test_that("a plot renders to every target through the shared writers", {
+  p <- species_plot(title = "Species")
 
   # png
   f <- withr::local_tempfile(fileext = ".png")
@@ -58,14 +39,8 @@ test_that("a chart renders to every target through the shared writers", {
   expect_identical(length(officer::read_pptx(h)), 1L)
 })
 
-test_that("chart HTML download omits the document title block", {
-  p <- chart_static_exhibit(
-    datasets::iris,
-    chart_state(
-      title = "Demographic Distribution",
-      subtitle = "{label(@value)} by {label(@group)}[, coloured by {label(@color)}]"
-    )
-  )
+test_that("a titled plot's HTML omits the document title block", {
+  p <- species_plot(title = "Demographic Distribution")
 
   f <- withr::local_tempfile(fileext = ".html")
   write_exhibit_html(p, f, title = "Demographic Distribution", subtitle = "by")
@@ -74,8 +49,6 @@ test_that("chart HTML download omits the document title block", {
   expect_match(html, "<title>Demographic Distribution</title>", fixed = TRUE)
   expect_true(grepl("<img", html, fixed = TRUE))
   expect_false(grepl("<h1>Demographic Distribution</h1>", html,
-                     fixed = TRUE))
-  expect_false(grepl("<p class=\"blockr-exhibit-subtitle\"", html,
                      fixed = TRUE))
 })
 
@@ -95,7 +68,7 @@ test_that("bare ggplot HTML output keeps the document subtitle", {
 })
 
 test_that("a plot keeps its aspect on a slide rather than filling it", {
-  p <- chart_static_exhibit(datasets::iris, chart_state())
+  p <- species_plot()
   size <- gg_exhibit_size(p)
 
   expect_gt(size$width, 0)
@@ -119,10 +92,10 @@ test_that("the chart block carries the download toggle", {
     get0("download", envir = environment(off[["expr_server"]]))))
 })
 
-test_that("a chart fills the slide it is placed on", {
+test_that("a plot fills the slide it is placed on", {
   skip_if_not_installed("officer")
 
-  p <- chart_static_exhibit(datasets::iris, chart_state())
+  p <- species_plot()
   own <- gg_exhibit_size(p)
 
   doc <- officer::read_pptx()
@@ -162,8 +135,7 @@ test_that("a title is printed once, and only the duplicate is dropped", {
     gsub("</?a:t>", "", regmatches(xml, gregexpr("<a:t>[^<]*</a:t>", xml))[[1L]])
   }
 
-  p <- chart_static_exhibit(datasets::iris,
-                            chart_state(title = "Species counts"))
+  p <- species_plot(title = "Species counts")
   expect_identical(gg_title(p), "Species counts")
 
   # The placeholder and the plot's band would say the same thing twice, in two
@@ -177,47 +149,4 @@ test_that("a title is printed once, and only the duplicate is dropped", {
   # placeholder's.)
   expect_identical(slide_text(p, "3. Chart"), "3. Chart")
   expect_identical(gg_title(p), "Species counts")
-})
-
-test_that("a colour scale never runs short of levels on the deck path", {
-  # The deck builds a report call from the BLOCK alone -- blockr.outline has
-  # no data at projection time -- so the emitted palette has to fit a level
-  # count nobody knows yet. `scale_*_manual(values = <unnamed>)` does not
-  # cycle: it raises "Insufficient values in manual scale" the moment the
-  # data has more levels than the pool, and it did so only on a slide,
-  # because the block's own download passes a snapshot and emits NAMED
-  # values. That is the worst place to find out.
-  set.seed(1)
-  levels_n <- function(k) {
-    data.frame(
-      x = stats::rnorm(60), y = stats::rnorm(60),
-      grp = sample(paste0("L", seq_len(k)), 60, TRUE),
-      stringsAsFactors = FALSE
-    )
-  }
-  render <- function(expr, data) {
-    p <- eval(expr, list(data = data), baseenv())
-    f <- tempfile(fileext = ".png")
-    on.exit(unlink(f), add = TRUE)
-    grDevices::png(f, width = 400, height = 300)
-    on.exit(try(grDevices::dev.off(), silent = TRUE), add = TRUE)
-    print(p)
-    TRUE
-  }
-
-  state <- list(chart_type = "scatter", x = "x", y = "y", color = "grp")
-
-  # More levels than the house palette holds (7).
-  for (k in c(3L, 9L, 14L)) {
-    d <- levels_n(k)
-    deck <- do.call(chart_expr, c(list(var = "data", qualify = TRUE), state))
-    expect_true(render(deck, d))
-  }
-
-  # A snapshot still pins each level to its colour, and a level the snapshot
-  # never saw does not fail the render.
-  snap <- do.call(chart_expr,
-                  c(list(var = "data", data = levels_n(4L), qualify = TRUE),
-                    state))
-  expect_true(render(snap, levels_n(5L)))
 })

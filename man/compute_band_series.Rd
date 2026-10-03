@@ -66,8 +66,7 @@ statistics a box plot computes. The window is the only genuinely new idea;
 }
 \details{
 Computed in R rather than the browser, following
-\code{\link[=compute_smoother_series]{compute_smoother_series()}}: the interactive chart and \code{\link[=static_chart]{static_chart()}}
-then share ONE implementation, so a deck and the app cannot disagree.
+\code{\link[=compute_smoother_series]{compute_smoother_series()}}.
 
 Returns a named list keyed by group level (or \verb{__all__}). Each entry holds
 aligned numeric vectors over the grid: \code{x}, \code{center}, \code{lo}/\code{hi} (the inner
