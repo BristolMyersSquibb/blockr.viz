@@ -3751,7 +3751,7 @@
         const cs = this._scaleFor(colorCol);
         const levels = colorCol
           ? this._orderLevels(
-              [...new Set(this.data.map(r => String(r[colorCol] ?? '')))].filter(l => l !== ''),
+              this._ix.levels(this.data, colorCol, 'nz').filter(l => l !== ''),
               cs, colorCol)
           : [];
         bandItems = levels.map((lv, i) => ({
@@ -4624,8 +4624,9 @@
       // facetData), the distribution marks need the raw values, so they
       // filter this.data themselves — including by the facet column, else
       // every facet panel would draw the whole dataset.
+      const ix = this._ix;
       const facetRows = (facetCol && facet && facet !== '__all__')
-        ? this.data.filter(r => String(r[facetCol]) === String(facet))
+        ? ix.get(this.data, facetCol, 'raw', String(facet))
         : this.data;
 
       // Ascending numeric values of a set of rows (empty for an all-NA set).
@@ -4662,7 +4663,7 @@
       const colorScale = this._scaleFor(colorCol);
       const levels = colorCol
         ? this._orderLevels(
-            [...new Set(this.data.map(r => String(r[colorCol] ?? '')))].filter(l => l !== ''),
+            ix.levels(this.data, colorCol, 'nz').filter(l => l !== ''),
             colorScale, colorCol)
         : [];
       const split = levels.length > 0;
@@ -4672,11 +4673,23 @@
       // Rows behind a (group, level) box, within this facet. level ===
       // '__all__' means no split. Levels themselves are taken from the full
       // data (below) so the legend / colors stay stable across facet panels.
-      const rowsFor = (/** @type {string} */ g, /** @type {string} */ lv) =>
-        facetRows.filter(r =>
-          String(r[groupBy]) === g &&
-          r[value] != null &&
-          (lv === '__all__' || String(r[colorCol] ?? '') === lv));
+      // Looked up in the facet's (group[, level]) buckets and kept per box:
+      // the slot loop, the series and the outlier overlay all ask again.
+      /** @type {Map<string, Map<string, any[]>>} */
+      const boxRows = new Map();
+      const rowsFor = (/** @type {string} */ g, /** @type {string} */ lv) => {
+        let byLevel = boxRows.get(g);
+        if (!byLevel) { byLevel = new Map(); boxRows.set(g, byLevel); }
+        let out = byLevel.get(lv);
+        if (!out) {
+          const cell = lv === '__all__'
+            ? ix.get(facetRows, groupBy, 'raw', g)
+            : ix.get2(facetRows, groupBy, 'raw', colorCol, 'nz', g, lv);
+          out = cell.filter(r => r[value] != null);
+          byLevel.set(lv, out);
+        }
+        return out;
+      };
 
       // Axis counts ("F (12)") when count_on covers the axis surface: per
       // DRAWN slot, over that slot's own rows — a split boxplot draws one box
