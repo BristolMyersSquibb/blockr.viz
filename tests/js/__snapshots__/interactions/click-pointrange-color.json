@@ -1,0 +1,77 @@
+{
+ "config": {
+  "chart_type": "pointrange",
+  "group": "AVISIT",
+  "color": "ARM",
+  "value": "AVAL",
+  "drill": "auto"
+ },
+ "steps": [
+  {
+   "step": "click first centre dot",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": "AVISIT",
+      "values": [
+       "Baseline"
+      ],
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {},
+         {},
+         {},
+         {},
+         {},
+         {}
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: Baseline"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "Baseline",
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

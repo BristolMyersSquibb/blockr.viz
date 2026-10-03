@@ -1,0 +1,2038 @@
+{
+ "config": {
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "auto",
+  "color": "AESEV",
+  "facet": "ARM"
+ },
+ "steps": [
+  {
+   "step": "legend chip MILD",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendUnSelect",
+        "name": "MILD"
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendUnSelect",
+        "name": "MILD"
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendUnSelect",
+        "name": "MILD"
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendUnSelect",
+        "name": "MILD"
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [
+    "MILD"
+   ],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "legend chip SEVERE",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendUnSelect",
+        "name": "SEVERE"
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendUnSelect",
+        "name": "SEVERE"
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendUnSelect",
+        "name": "SEVERE"
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendUnSelect",
+        "name": "SEVERE"
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [
+    "MILD",
+    "SEVERE"
+   ],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "R echoes the config",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar",
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 4
+         }
+        ]
+       }
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendUnSelect",
+        "batch": [
+         {
+          "name": "MILD"
+         },
+         {
+          "name": "SEVERE"
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar",
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 4
+         }
+        ]
+       }
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendUnSelect",
+        "batch": [
+         {
+          "name": "MILD"
+         },
+         {
+          "name": "SEVERE"
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 3,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar",
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 4
+         }
+        ]
+       }
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendUnSelect",
+        "batch": [
+         {
+          "name": "MILD"
+         },
+         {
+          "name": "SEVERE"
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar",
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 4
+         }
+        ]
+       }
+      },
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendUnSelect",
+        "batch": [
+         {
+          "name": "MILD"
+         },
+         {
+          "name": "SEVERE"
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 3,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 4,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 4,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [
+    "MILD",
+    "SEVERE"
+   ],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "legend chip MILD",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendSelect",
+        "name": "MILD"
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendSelect",
+        "name": "MILD"
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendSelect",
+        "name": "MILD"
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "legendSelect",
+        "name": "MILD"
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [
+    "SEVERE"
+   ],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "R echoes the config {\"color\":\"SEX\"}",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 2
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 2
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 2,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 2
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 3,
+     "calls": [
+      {
+       "op": "redraw",
+       "series": [
+        "bar",
+        "bar"
+       ]
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "xAxis": [
+         {
+          "min": 0,
+          "max": 2
+         }
+        ]
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         },
+         {
+          "data": [
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": null,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": 2,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           },
+           {
+            "value": 1,
+            "itemStyle": {
+             "borderRadius": [
+              0,
+              2,
+              2,
+              0
+             ],
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

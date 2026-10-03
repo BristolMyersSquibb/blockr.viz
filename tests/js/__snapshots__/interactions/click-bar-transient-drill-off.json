@@ -1,0 +1,33 @@
+{
+ "config": {
+  "chart_type": "bar",
+  "group": "AETERM",
+  "drill": "",
+  "ctrl_target": "auto"
+ },
+ "steps": [
+  {
+   "step": "click Nausea",
+   "inputs": [],
+   "calls": [],
+   "footer": [],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

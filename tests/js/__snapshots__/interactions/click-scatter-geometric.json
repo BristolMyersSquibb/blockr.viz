@@ -1,0 +1,271 @@
+{
+ "config": {
+  "chart_type": "scatter",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto"
+ },
+ "steps": [
+  {
+   "step": "click point (15, 29.24)",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "range",
+      "x_col": "ADY",
+      "y_col": "AVAL",
+      "x_range": [
+       15,
+       15
+      ],
+      "y_range": [
+       29.24,
+       29.24
+      ]
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: 15, 29.2"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "15, 29.2",
+    "selectedColumn": null,
+    "brush": true
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 150,
+     "left": 150
+    }
+   ]
+  },
+  {
+   "step": "advance 150 ms",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: 15, 29.2"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "15, 29.2",
+    "selectedColumn": null,
+    "brush": true
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 150
+    }
+   ]
+  },
+  {
+   "step": "click point (15, 29.24)",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "range",
+      "x_col": "ADY",
+      "y_col": "AVAL",
+      "x_range": [
+       15,
+       15
+      ],
+      "y_range": [
+       29.24,
+       29.24
+      ]
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: 15, 29.2"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "15, 29.2",
+    "selectedColumn": null,
+    "brush": true
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 150
+    },
+    {
+     "ms": 150,
+     "left": 150
+    }
+   ]
+  },
+  {
+   "step": "click point (2, 21.37)",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "range",
+      "x_col": "ADY",
+      "y_col": "AVAL",
+      "x_range": [
+       2,
+       2
+      ],
+      "y_range": [
+       21.37,
+       21.37
+      ]
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: 2, 21.4"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "2, 21.4",
+    "selectedColumn": null,
+    "brush": true
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 150
+    },
+    {
+     "ms": 150,
+     "left": 150
+    },
+    {
+     "ms": 150,
+     "left": 150
+    }
+   ]
+  },
+  {
+   "step": "Reset",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "range",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {}
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 150
+    },
+    {
+     "ms": 150,
+     "left": 150
+    },
+    {
+     "ms": 150,
+     "left": 150
+    }
+   ]
+  }
+ ]
+}

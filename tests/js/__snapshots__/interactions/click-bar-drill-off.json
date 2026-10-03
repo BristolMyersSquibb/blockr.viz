@@ -1,0 +1,38 @@
+{
+ "config": {
+  "chart_type": "bar",
+  "group": "AETERM",
+  "color": "AESEV",
+  "drill": ""
+ },
+ "steps": [
+  {
+   "step": "click Headache / MILD",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

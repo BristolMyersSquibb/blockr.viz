@@ -1,0 +1,275 @@
+{
+ "config": {
+  "chart_type": "radar",
+  "group": "AVISIT",
+  "color": "AESEV",
+  "facet": "SEX",
+  "drill": "auto"
+ },
+ "steps": [
+  {
+   "step": "click MILD in slot 1",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": "AESEV",
+      "values": [
+       "MILD"
+      ],
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "",
+            "value": [
+             0,
+             1,
+             0,
+             0,
+             1
+            ],
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 0.15
+            },
+            "lineStyle": {
+             "color": "#0072B2",
+             "width": 2,
+             "opacity": 0.15
+            },
+            "areaStyle": {
+             "color": "#0072B2",
+             "opacity": 0.04
+            }
+           },
+           {
+            "name": "MILD",
+            "value": [
+             2,
+             2,
+             2,
+             2,
+             2
+            ],
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 1
+            },
+            "lineStyle": {
+             "color": "#D55E00",
+             "width": 2,
+             "opacity": 1
+            },
+            "areaStyle": {
+             "color": "#D55E00",
+             "opacity": 0.15
+            }
+           },
+           {
+            "name": "MODERATE",
+            "value": [
+             2,
+             1,
+             2,
+             2,
+             1
+            ],
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 0.15
+            },
+            "lineStyle": {
+             "color": "#F0E442",
+             "width": 2,
+             "opacity": 0.15
+            },
+            "areaStyle": {
+             "color": "#F0E442",
+             "opacity": 0.04
+            }
+           },
+           {
+            "name": "SEVERE",
+            "value": [
+             2,
+             2,
+             2,
+             2,
+             2
+            ],
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 0.15
+            },
+            "lineStyle": {
+             "color": "#009E73",
+             "width": 2,
+             "opacity": 0.15
+            },
+            "areaStyle": {
+             "color": "#009E73",
+             "opacity": 0.04
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "instance": 1,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "",
+            "value": [
+             0,
+             0,
+             0,
+             0,
+             0
+            ],
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 0.15
+            },
+            "lineStyle": {
+             "color": "#0072B2",
+             "width": 2,
+             "opacity": 0.15
+            },
+            "areaStyle": {
+             "color": "#0072B2",
+             "opacity": 0.04
+            }
+           },
+           {
+            "name": "MILD",
+            "value": [
+             2,
+             2,
+             2,
+             2,
+             2
+            ],
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 1
+            },
+            "lineStyle": {
+             "color": "#D55E00",
+             "width": 2,
+             "opacity": 1
+            },
+            "areaStyle": {
+             "color": "#D55E00",
+             "opacity": 0.15
+            }
+           },
+           {
+            "name": "MODERATE",
+            "value": [
+             2,
+             2,
+             2,
+             2,
+             2
+            ],
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 0.15
+            },
+            "lineStyle": {
+             "color": "#F0E442",
+             "width": 2,
+             "opacity": 0.15
+            },
+            "areaStyle": {
+             "color": "#F0E442",
+             "opacity": 0.04
+            }
+           },
+           {
+            "name": "SEVERE",
+            "value": [
+             2,
+             2,
+             2,
+             2,
+             2
+            ],
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 0.15
+            },
+            "lineStyle": {
+             "color": "#009E73",
+             "width": 2,
+             "opacity": 0.15
+            },
+            "areaStyle": {
+             "color": "#009E73",
+             "opacity": 0.04
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: MILD"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "MILD",
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

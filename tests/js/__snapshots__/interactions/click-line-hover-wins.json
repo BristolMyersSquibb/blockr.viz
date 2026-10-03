@@ -1,0 +1,230 @@
+{
+ "config": {
+  "chart_type": "line",
+  "x": "ADY",
+  "y": "AVAL",
+  "drill": "auto",
+  "series": "USUBJID",
+  "color": "ARM"
+ },
+ "steps": [
+  {
+   "step": "mousemove onto S02",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "id": "__scrim__",
+          "data": [
+           [
+            0.5,
+            0.5
+           ]
+          ]
+         },
+         {
+          "id": "__focus__",
+          "data": [
+           [
+            2,
+            21.37
+           ],
+           [
+            16,
+            23.24
+           ],
+           [
+            30,
+            25.11
+           ],
+           [
+            58,
+            28.48
+           ],
+           [
+            86,
+            30
+           ]
+          ],
+          "smooth": true,
+          "smoothMonotone": "x",
+          "showSymbol": false,
+          "lineStyle": {
+           "color": "#F0E442",
+           "width": 2.5,
+           "opacity": 1
+          },
+          "areaStyle": {
+           "origin": "start",
+           "color": {
+            "type": "linear",
+            "x": 0,
+            "y": 0,
+            "x2": 0,
+            "y2": 1,
+            "colorStops": [
+             {
+              "offset": 0.05,
+              "color": "rgba(240,228,66,0.15)"
+             },
+             {
+              "offset": 0.95,
+              "color": "rgba(240,228,66,0)"
+             }
+            ]
+           }
+          }
+         },
+         {
+          "id": "__focus_dots__",
+          "data": [
+           [
+            2,
+            21.37
+           ],
+           [
+            16,
+            23.24
+           ],
+           [
+            30,
+            25.11
+           ],
+           [
+            58,
+            28.48
+           ],
+           [
+            86,
+            30
+           ]
+          ],
+          "symbol": "circle",
+          "symbolSize": 8,
+          "itemStyle": {
+           "color": "#F0E442",
+           "borderColor": "rgb(255,255,255)",
+           "borderWidth": 2
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "click line S03",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 450,
+     "left": 450
+    },
+    {
+     "ms": 275,
+     "left": 275
+    }
+   ]
+  },
+  {
+   "step": "advance 275 ms",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": "USUBJID",
+      "values": [
+       "S02"
+      ],
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: S02"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "S02",
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 25
+    },
+    {
+     "ms": 450,
+     "left": 175
+    }
+   ]
+  }
+ ]
+}

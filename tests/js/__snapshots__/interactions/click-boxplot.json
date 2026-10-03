@@ -1,0 +1,658 @@
+{
+ "config": {
+  "chart_type": "boxplot",
+  "group": "AVISIT",
+  "value": "AVAL",
+  "drill": "auto"
+ },
+ "steps": [
+  {
+   "step": "click Week 2",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": "AVISIT",
+      "values": [
+       "Week 2"
+      ],
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": [
+             21.37,
+             24.12,
+             26.87,
+             29.62,
+             32.37
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             23.24,
+             25.49,
+             28.74,
+             31.74,
+             34.24
+            ],
+            "n": 10,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             25.11,
+             27.86,
+             30.61,
+             33.36,
+             36.11
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             28.48,
+             31.23,
+             33.98,
+             36.73,
+             39.48
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             30,
+             32.5,
+             35,
+             38.5,
+             41
+            ],
+            "n": 11,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: Week 2"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "Week 2",
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "click Week 4",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": "AVISIT",
+      "values": [
+       "Week 4"
+      ],
+      "nonce": 2
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": [
+             21.37,
+             24.12,
+             26.87,
+             29.62,
+             32.37
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             23.24,
+             25.49,
+             28.74,
+             31.74,
+             34.24
+            ],
+            "n": 10,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             25.11,
+             27.86,
+             30.61,
+             33.36,
+             36.11
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             28.48,
+             31.23,
+             33.98,
+             36.73,
+             39.48
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             30,
+             32.5,
+             35,
+             38.5,
+             41
+            ],
+            "n": 11,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: Week 4"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "Week 4",
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "Reset",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": [
+             21.37,
+             24.12,
+             26.87,
+             29.62,
+             32.37
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             23.24,
+             25.49,
+             28.74,
+             31.74,
+             34.24
+            ],
+            "n": 10,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             25.11,
+             27.86,
+             30.61,
+             33.36,
+             36.11
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             28.48,
+             31.23,
+             33.98,
+             36.73,
+             39.48
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             30,
+             32.5,
+             35,
+             38.5,
+             41
+            ],
+            "n": 11,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "click Week 4",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": "AVISIT",
+      "values": [
+       "Week 4"
+      ],
+      "nonce": 3
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": [
+             21.37,
+             24.12,
+             26.87,
+             29.62,
+             32.37
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             23.24,
+             25.49,
+             28.74,
+             31.74,
+             34.24
+            ],
+            "n": 10,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             25.11,
+             27.86,
+             30.61,
+             33.36,
+             36.11
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             28.48,
+             31.23,
+             33.98,
+             36.73,
+             39.48
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           },
+           {
+            "value": [
+             30,
+             32.5,
+             35,
+             38.5,
+             41
+            ],
+            "n": 11,
+            "itemStyle": {
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: Week 4"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "Week 4",
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "click Week 4",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "value": [
+             21.37,
+             24.12,
+             26.87,
+             29.62,
+             32.37
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             23.24,
+             25.49,
+             28.74,
+             31.74,
+             34.24
+            ],
+            "n": 10,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             25.11,
+             27.86,
+             30.61,
+             33.36,
+             36.11
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             28.48,
+             31.23,
+             33.98,
+             36.73,
+             39.48
+            ],
+            "n": 12,
+            "itemStyle": {
+             "opacity": 1
+            }
+           },
+           {
+            "value": [
+             30,
+             32.5,
+             35,
+             38.5,
+             41
+            ],
+            "n": 11,
+            "itemStyle": {
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

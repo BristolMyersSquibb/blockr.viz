@@ -1,0 +1,96 @@
+{
+ "config": {
+  "chart_type": "gantt",
+  "x": "ASTDY",
+  "xend": "AENDY",
+  "y": "AETERM",
+  "drill": "auto",
+  "ctrl_target": "auto"
+ },
+ "steps": [
+  {
+   "step": "click bar in lane Rash",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": "AETERM",
+      "values": [
+       "Rash"
+      ],
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text dd-status-receipt",
+     "text": "Drilled down to AETERM = Rash",
+     "animation": "dd-receipt-out 1100ms linear 1400ms both"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": {
+    "cls": "dd-drill-flash",
+    "left": "10px",
+    "top": "20px",
+    "width": "120px",
+    "height": "18px",
+    "borderRadius": "0px 2px 2px 0px"
+   },
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    },
+    {
+     "ms": 2000,
+     "left": 2000
+    },
+    {
+     "ms": 3100,
+     "left": 3100
+    }
+   ]
+  },
+  {
+   "step": "advance 3100 ms",
+   "inputs": [],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "resize",
+       "opts": null
+      }
+     ]
+    }
+   ],
+   "footer": [],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": []
+  }
+ ]
+}

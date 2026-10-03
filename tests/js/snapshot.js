@@ -18,7 +18,7 @@ function matchSnapshot(name, value) {
   const f = file(name);
   const textOut = JSON.stringify(value, null, 1) + '\n';
   if (UPDATE) {
-    fs.mkdirSync(DIR, { recursive: true });
+    fs.mkdirSync(path.dirname(f), { recursive: true });
     fs.writeFileSync(f, textOut);
     return;
   }

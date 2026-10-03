@@ -1,0 +1,649 @@
+{
+ "config": {
+  "chart_type": "treemap",
+  "group": "AETERM",
+  "value": "AVAL",
+  "func": "sum",
+  "drill": "auto"
+ },
+ "steps": [
+  {
+   "step": "click Headache",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": "AETERM",
+      "values": [
+       "Headache"
+      ],
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "Headache",
+            "value": 307.4,
+            "n": 10,
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Upper respiratory tract infection",
+            "value": 303.4,
+            "n": 10,
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "Rash",
+            "value": 285.92,
+            "n": 9,
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "Fatigue",
+            "value": 283.29,
+            "n": 9,
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "Nausea",
+            "value": 256.16,
+            "n": 10,
+            "itemStyle": {
+             "color": "#56B4E9",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "Dizziness",
+            "value": 239.68,
+            "n": 9,
+            "itemStyle": {
+             "color": "#E69F00",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "",
+            "value": 98.07,
+            "n": 3,
+            "itemStyle": {
+             "color": "#CC79A7",
+             "opacity": 0.3
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: Headache"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "Headache",
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "click Nausea",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": "AETERM",
+      "values": [
+       "Nausea"
+      ],
+      "nonce": 2
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "Headache",
+            "value": 307.4,
+            "n": 10,
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "Upper respiratory tract infection",
+            "value": 303.4,
+            "n": 10,
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "Rash",
+            "value": 285.92,
+            "n": 9,
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "Fatigue",
+            "value": 283.29,
+            "n": 9,
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "Nausea",
+            "value": 256.16,
+            "n": 10,
+            "itemStyle": {
+             "color": "#56B4E9",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Dizziness",
+            "value": 239.68,
+            "n": 9,
+            "itemStyle": {
+             "color": "#E69F00",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "",
+            "value": 98.07,
+            "n": 3,
+            "itemStyle": {
+             "color": "#CC79A7",
+             "opacity": 0.3
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: Nausea"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "Nausea",
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "Reset",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "Headache",
+            "value": 307.4,
+            "n": 10,
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Upper respiratory tract infection",
+            "value": 303.4,
+            "n": 10,
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Rash",
+            "value": 285.92,
+            "n": 9,
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Fatigue",
+            "value": 283.29,
+            "n": 9,
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Nausea",
+            "value": 256.16,
+            "n": 10,
+            "itemStyle": {
+             "color": "#56B4E9",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Dizziness",
+            "value": 239.68,
+            "n": 9,
+            "itemStyle": {
+             "color": "#E69F00",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "",
+            "value": 98.07,
+            "n": 3,
+            "itemStyle": {
+             "color": "#CC79A7",
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "click Nausea",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": "AETERM",
+      "values": [
+       "Nausea"
+      ],
+      "nonce": 3
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "Headache",
+            "value": 307.4,
+            "n": 10,
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "Upper respiratory tract infection",
+            "value": 303.4,
+            "n": 10,
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "Rash",
+            "value": 285.92,
+            "n": 9,
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "Fatigue",
+            "value": 283.29,
+            "n": 9,
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "Nausea",
+            "value": 256.16,
+            "n": 10,
+            "itemStyle": {
+             "color": "#56B4E9",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Dizziness",
+            "value": 239.68,
+            "n": 9,
+            "itemStyle": {
+             "color": "#E69F00",
+             "opacity": 0.3
+            }
+           },
+           {
+            "name": "",
+            "value": 98.07,
+            "n": 3,
+            "itemStyle": {
+             "color": "#CC79A7",
+             "opacity": 0.3
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: Nausea"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "Nausea",
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "click Nausea",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "Headache",
+            "value": 307.4,
+            "n": 10,
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Upper respiratory tract infection",
+            "value": 303.4,
+            "n": 10,
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Rash",
+            "value": 285.92,
+            "n": 9,
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Fatigue",
+            "value": 283.29,
+            "n": 9,
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Nausea",
+            "value": 256.16,
+            "n": 10,
+            "itemStyle": {
+             "color": "#56B4E9",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "Dizziness",
+            "value": 239.68,
+            "n": 9,
+            "itemStyle": {
+             "color": "#E69F00",
+             "opacity": 1
+            }
+           },
+           {
+            "name": "",
+            "value": 98.07,
+            "n": 3,
+            "itemStyle": {
+             "color": "#CC79A7",
+             "opacity": 1
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

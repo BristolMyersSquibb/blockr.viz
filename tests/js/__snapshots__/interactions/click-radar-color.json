@@ -1,0 +1,485 @@
+{
+ "config": {
+  "chart_type": "radar",
+  "group": "AVISIT",
+  "color": "ARM",
+  "value": "AVAL",
+  "func": "mean",
+  "drill": "auto"
+ },
+ "steps": [
+  {
+   "step": "click Placebo",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": "ARM",
+      "values": [
+       "Placebo"
+      ],
+      "nonce": 1
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "",
+            "value": [
+             35,
+             33.48,
+             30.11,
+             28.24,
+             26.37
+            ],
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 0.15
+            },
+            "lineStyle": {
+             "color": "#0072B2",
+             "width": 2,
+             "opacity": 0.15
+            },
+            "areaStyle": {
+             "color": "#0072B2",
+             "opacity": 0.04
+            }
+           },
+           {
+            "name": "High Dose",
+            "value": [
+             36.3333,
+             34.8133,
+             31.4433,
+             29.5733,
+             27.7033
+            ],
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 0.15
+            },
+            "lineStyle": {
+             "color": "#D55E00",
+             "width": 2,
+             "opacity": 0.15
+            },
+            "areaStyle": {
+             "color": "#D55E00",
+             "opacity": 0.04
+            }
+           },
+           {
+            "name": "Low Dose",
+            "value": [
+             35.5,
+             33.98,
+             30.61,
+             27.9067,
+             26.87
+            ],
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 0.15
+            },
+            "lineStyle": {
+             "color": "#F0E442",
+             "width": 2,
+             "opacity": 0.15
+            },
+            "areaStyle": {
+             "color": "#F0E442",
+             "opacity": 0.04
+            }
+           },
+           {
+            "name": "Placebo",
+            "value": [
+             34.6667,
+             33.48,
+             30.11,
+             28.5733,
+             26.37
+            ],
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 1
+            },
+            "lineStyle": {
+             "color": "#009E73",
+             "width": 2,
+             "opacity": 1
+            },
+            "areaStyle": {
+             "color": "#009E73",
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: Placebo"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "Placebo",
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "click Low Dose",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": "ARM",
+      "values": [
+       "Low Dose"
+      ],
+      "nonce": 2
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "",
+            "value": [
+             35,
+             33.48,
+             30.11,
+             28.24,
+             26.37
+            ],
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 0.15
+            },
+            "lineStyle": {
+             "color": "#0072B2",
+             "width": 2,
+             "opacity": 0.15
+            },
+            "areaStyle": {
+             "color": "#0072B2",
+             "opacity": 0.04
+            }
+           },
+           {
+            "name": "High Dose",
+            "value": [
+             36.3333,
+             34.8133,
+             31.4433,
+             29.5733,
+             27.7033
+            ],
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 0.15
+            },
+            "lineStyle": {
+             "color": "#D55E00",
+             "width": 2,
+             "opacity": 0.15
+            },
+            "areaStyle": {
+             "color": "#D55E00",
+             "opacity": 0.04
+            }
+           },
+           {
+            "name": "Low Dose",
+            "value": [
+             35.5,
+             33.98,
+             30.61,
+             27.9067,
+             26.87
+            ],
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 1
+            },
+            "lineStyle": {
+             "color": "#F0E442",
+             "width": 2,
+             "opacity": 1
+            },
+            "areaStyle": {
+             "color": "#F0E442",
+             "opacity": 0.15
+            }
+           },
+           {
+            "name": "Placebo",
+            "value": [
+             34.6667,
+             33.48,
+             30.11,
+             28.5733,
+             26.37
+            ],
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 0.15
+            },
+            "lineStyle": {
+             "color": "#009E73",
+             "width": 2,
+             "opacity": 0.15
+            },
+            "areaStyle": {
+             "color": "#009E73",
+             "opacity": 0.04
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "Filtered: Low Dose"
+    },
+    {
+     "reset": "Reset"
+    }
+   ],
+   "state": {
+    "selected": "Low Dose",
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  },
+  {
+   "step": "Reset",
+   "inputs": [
+    {
+     "name": "blk-drilldown_block_action",
+     "value": {
+      "action": "filter",
+      "filter_type": "categorical",
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
+     },
+     "opts": {
+      "priority": "event"
+     }
+    }
+   ],
+   "calls": [
+    {
+     "instance": 0,
+     "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
+       "op": "setOption",
+       "option": {
+        "series": [
+         {
+          "data": [
+           {
+            "name": "",
+            "value": [
+             35,
+             33.48,
+             30.11,
+             28.24,
+             26.37
+            ],
+            "itemStyle": {
+             "color": "#0072B2",
+             "opacity": 1
+            },
+            "lineStyle": {
+             "color": "#0072B2",
+             "width": 2,
+             "opacity": 1
+            },
+            "areaStyle": {
+             "color": "#0072B2",
+             "opacity": 0.15
+            }
+           },
+           {
+            "name": "High Dose",
+            "value": [
+             36.3333,
+             34.8133,
+             31.4433,
+             29.5733,
+             27.7033
+            ],
+            "itemStyle": {
+             "color": "#D55E00",
+             "opacity": 1
+            },
+            "lineStyle": {
+             "color": "#D55E00",
+             "width": 2,
+             "opacity": 1
+            },
+            "areaStyle": {
+             "color": "#D55E00",
+             "opacity": 0.15
+            }
+           },
+           {
+            "name": "Low Dose",
+            "value": [
+             35.5,
+             33.98,
+             30.61,
+             27.9067,
+             26.87
+            ],
+            "itemStyle": {
+             "color": "#F0E442",
+             "opacity": 1
+            },
+            "lineStyle": {
+             "color": "#F0E442",
+             "width": 2,
+             "opacity": 1
+            },
+            "areaStyle": {
+             "color": "#F0E442",
+             "opacity": 0.15
+            }
+           },
+           {
+            "name": "Placebo",
+            "value": [
+             34.6667,
+             33.48,
+             30.11,
+             28.5733,
+             26.37
+            ],
+            "itemStyle": {
+             "color": "#009E73",
+             "opacity": 1
+            },
+            "lineStyle": {
+             "color": "#009E73",
+             "width": 2,
+             "opacity": 1
+            },
+            "areaStyle": {
+             "color": "#009E73",
+             "opacity": 0.15
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": [],
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}

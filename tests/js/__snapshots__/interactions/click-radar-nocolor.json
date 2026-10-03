@@ -1,0 +1,37 @@
+{
+ "config": {
+  "chart_type": "radar",
+  "group": "AETERM",
+  "drill": "auto"
+ },
+ "steps": [
+  {
+   "step": "click series 0 datum 0 in slot 0",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
+   "pending": [
+    {
+     "ms": 300,
+     "left": 300
+    },
+    {
+     "ms": 16,
+     "left": 16
+    }
+   ]
+  }
+ ]
+}
