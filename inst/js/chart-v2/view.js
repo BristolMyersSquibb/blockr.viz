@@ -216,13 +216,14 @@
       this._applyFacetGrid(m.nFacets);
       // Panels without rows draw no slot, so the panel count is the shape.
       this._syncShape(fam, m.panels.length);
-      // Each panel's width is read as its slot is laid out, before the slots
-      // after it exist, as v1 reads it.
-      const widths = m.panels.map((/** @type {any} */ panel, /** @type {number} */ i) => {
+      // Every panel is laid out before any width is read, so the first
+      // panel fits its labels to its own track, not the whole row (B9).
+      m.panels.forEach((/** @type {any} */ panel, /** @type {number} */ i) => {
         const slot = this._ensureSlot(i, panel.label, m.single);
         slot.facetVal = panel.facet;
-        return slot.chartDiv.clientWidth;
       });
+      const widths = m.panels.map((/** @type {any} */ _, /** @type {number} */ i) =>
+        this._slots[i].chartDiv.clientWidth);
       const o = this._option(impl, m, impl.widths ? widths : null);
       m.panels.forEach((/** @type {any} */ panel, /** @type {number} */ i) => {
         const slot = this._slots[i];
