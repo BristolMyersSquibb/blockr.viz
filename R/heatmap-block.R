@@ -284,14 +284,15 @@ new_heatmap_block <- function(row = character(),
           p <- heatmap_prep(d, one_or_null(r_row()), one_or_null(r_col()),
                             one_or_null(r_color()), one_or_null(r_group()))
           if (!is.null(p$err)) {
-            return(list(data = data.frame(message = p$err)))
+            return(list(data = data.frame(message = p$err),
+                        dataset = dl_dataset(d)))
           }
           out <- hmb_exhibit_frame(
             p, d, tryCatch(board_scale_map(), error = function(e) NULL)
           )
           tt <- tryCatch(r_titles(), error = function(e) list())
           list(data = out, title = tt$title, subtitle = tt$subtitle,
-               caption = tt$caption)
+               caption = tt$caption, dataset = dl_dataset(d))
         }
         # The export picture: the heatmap as the browser drew it, posted by
         # heatmap-block.js when the download menu opens (the summarize

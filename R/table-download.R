@@ -117,7 +117,12 @@ dl_tool <- function(ns, spec) {
 #'   are on. `NULL` (the default) means always on, which is the answer for a
 #'   caller with no gear to switch them off in.
 #' @param slot_id Output id for the control itself.
-#' @param filename Base name for the written file, without extension.
+#' @param filename Word the file is named by when the exhibit has no title.
+#'   The full name is the data's `blockr_dataset` attribute when it has one,
+#'   the title or this word, and the time:
+#'   `AQ-001_Ozone_by_month_2026-10-02_1432.xlsx`. An exhibit whose `data`
+#'   is a frame built for the export, without the input's attributes, returns
+#'   the dataset name as `dataset`.
 #' @param picture Optional function of no arguments returning the block as
 #'   the browser drew it (a `chart_capture`, see R/chart-capture.R), or
 #'   `NULL` while there is none. When given, the menu gains an Image entry,
@@ -153,6 +158,12 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
     }
   })
   pic <- function() if (is.function(picture)) picture()
+  # A name that cannot be worked out is a plain one, never a failed
+  # download: the content handler reports its own errors (dl_guard below).
+  dl_name <- function(ext) {
+    e <- tryCatch(exhibit(), error = function(e) list())
+    dl_filename(e$dataset %||% dl_dataset(e$data), e$title, filename, ext)
+  }
 
   session$output[[slot_id]] <- shiny::renderUI(dl_control_ui(ns, specs()))
 
@@ -160,7 +171,7 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
   # offered: what is installed does not change inside a session, and a handler
   # nobody can click costs nothing.
   session$output$dl_xlsx <- shiny::downloadHandler(
-    filename = function() paste0(filename, ".xlsx"),
+    filename = function() dl_name("xlsx"),
     content = function(file) {
             dl_guard("Excel", {
               e <- exhibit()
@@ -171,7 +182,7 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
           }
         )
   session$output$dl_html <- shiny::downloadHandler(
-    filename = function() paste0(filename, ".html"),
+    filename = function() dl_name("html"),
     content = function(file) {
             dl_guard("web page", {
               p <- pic()
@@ -189,7 +200,7 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
           }
         )
   session$output$dl_pptx <- shiny::downloadHandler(
-    filename = function() paste0(filename, ".pptx"),
+    filename = function() dl_name("pptx"),
     content = function(file) {
             dl_guard("PowerPoint", {
               p <- pic()
@@ -202,7 +213,7 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
           }
         )
   session$output$dl_png <- shiny::downloadHandler(
-    filename = function() paste0(filename, ".png"),
+    filename = function() dl_name("png"),
     content = function(file) {
             dl_guard("image", {
               p <- pic()

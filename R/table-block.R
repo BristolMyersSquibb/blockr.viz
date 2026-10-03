@@ -1947,6 +1947,9 @@ new_table_block <- function(rowname = NULL,
           list(
             data = dt_exhibit_frame(d, r_rowname(), r_value(), r_group(),
                                     r_summaries(), r_shadings()),
+            # The export frame is built anew and has lost the input's
+            # attributes, so the file name's dataset is read off the input.
+            dataset = dl_dataset(d),
             title = resolve_block_title(r_title(), d, auto = auto$label),
             subtitle = resolve_block_title(r_subtitle(), d,
                                            auto = auto$subtitle),

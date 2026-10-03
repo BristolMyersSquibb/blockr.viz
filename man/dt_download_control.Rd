@@ -31,7 +31,12 @@ caller with no gear to switch them off in.}
 
 \item{slot_id}{Output id for the control itself.}
 
-\item{filename}{Base name for the written file, without extension.}
+\item{filename}{Word the file is named by when the exhibit has no title.
+The full name is the data's \code{blockr_dataset} attribute when it has one,
+the title or this word, and the time:
+\verb{AQ-001_Ozone_by_month_2026-10-02_1432.xlsx}. An exhibit whose \code{data}
+is a frame built for the export, without the input's attributes, returns
+the dataset name as \code{dataset}.}
 
 \item{picture}{Optional function of no arguments returning the block as
 the browser drew it (a \code{chart_capture}, see R/chart-capture.R), or

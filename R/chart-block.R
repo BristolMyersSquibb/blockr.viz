@@ -1857,8 +1857,17 @@ new_chart_block <- function(
           dl_control_ui(ns, dl_formats())
         )
 
+        # Named for the title the chart shows (see R/download-filename.R).
+        dl_name <- function(ext) {
+          dl_filename(
+            tryCatch(dl_dataset(data()), error = function(e) NULL),
+            tryCatch(r_titles_resolved()$title, error = function(e) NULL),
+            "chart", ext
+          )
+        }
+
         output$dl_xlsx <- shiny::downloadHandler(
-          filename = function() "chart.xlsx",
+          filename = function() dl_name("xlsx"),
           content = function(file) {
             dl_guard("Excel", {
               # The numbers, never the picture: xlsx reads the aggregated frame
@@ -1883,7 +1892,7 @@ new_chart_block <- function(
           }
         )
         output$dl_html <- shiny::downloadHandler(
-          filename = function() "chart.html",
+          filename = function() dl_name("html"),
           content = function(file) {
             dl_guard("web page", {
               p <- dl_chart()
@@ -1899,7 +1908,7 @@ new_chart_block <- function(
           }
         )
         output$dl_pptx <- shiny::downloadHandler(
-          filename = function() "chart.pptx",
+          filename = function() dl_name("pptx"),
           content = function(file) {
             dl_guard("PowerPoint", {
               p <- dl_chart()
@@ -1914,7 +1923,7 @@ new_chart_block <- function(
           }
         )
         output$dl_png <- shiny::downloadHandler(
-          filename = function() "chart.png",
+          filename = function() dl_name("png"),
           content = function(file) {
             dl_guard("image", {
               p <- dl_chart()
