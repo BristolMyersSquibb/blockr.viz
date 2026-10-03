@@ -187,6 +187,9 @@
         },
         title: 'Chart settings',
         onChange: (/** @type {string} */ key) => {
+          // A pick through a sentence word is done: its menu does not stay
+          // marked open until R repaints the sentence (B5).
+          this._closeSlot();
           if (key === 'func') this._reconcileMetric();
           // A mapping onto a column the rows do not carry yet: R has to send
           // the data again, so hold the last picture until it does.

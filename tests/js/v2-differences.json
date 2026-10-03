@@ -462,5 +462,17 @@
    "D4"
   ],
   "why": "The brush footer names the range in column labels (Analysis Relative Day 1 to 15, Analysis Value 27.4 to 29.2) instead of Brush filter active."
+ },
+ "interactions/sentence-slots": {
+  "ids": [
+   "B5"
+  ],
+  "why": "A pick through a sentence word closes its menu: the word is no longer marked open and the chart holds no open slot, so the next click on the word opens its menu again (v1 read it as a second click and closed it)."
+ },
+ "interactions/gear-bar-facet-counts": {
+  "ids": [
+   "B6"
+  ],
+  "why": "With \"% of panel\" the value picker offers every column, the current value column USUBJID among them, as \"Count distinct\" does; v1 offered numeric columns only."
  }
 }

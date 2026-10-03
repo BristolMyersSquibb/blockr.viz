@@ -403,10 +403,16 @@
   // NOT aggregate — they show the raw distribution of that same variable — so
   // there the very same slot is just the "Value" to plot. Same argument,
   // different framing. (Label is a function of config; the engine resolves it.)
+  // "% of panel" counts the distinct values of any column, as "Count
+  // distinct" does, so its picker offers every column, the current value
+  // column included (B6).
   ROLES.value = /** @type {any} */ ({
     ...ROLES.value,
     label: (/** @type {any} */ cfg) =>
-      DISTRIBUTION_TYPES.includes(cfg.chart_type) ? 'Value' : 'Aggregate'
+      DISTRIBUTION_TYPES.includes(cfg.chart_type) ? 'Value' : 'Aggregate',
+    colType: (/** @type {any} */ cfg) =>
+      (cfg.func === 'count_distinct' || cfg.func === 'pct_distinct') ? 'any'
+        : (!cfg.func || cfg.func === 'count') ? 'none' : 'num'
   });
 
   // "None (as is)" — a chart-only aggregation that plots the value column
