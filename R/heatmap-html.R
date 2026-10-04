@@ -257,7 +257,7 @@ hmb_paint <- function(prep, data = NULL, scale_map = NULL) {
     # keep their colour, the rest get stable palette entries -- so a bound
     # column never mixes declared colours with RAMP positions (which would
     # move as filters change the levels in view). The check is therefore
-    # "bound at all", and the same one rank_level_colors uses.
+    # "bound at all", and the same one summarize_level_colors uses.
     if (!is.null(pal) && all(lv %in% names(pal))) {
       hex <- unname(pal[lv])
       if (!anyNA(hex)) {
@@ -606,7 +606,7 @@ hmb_search_icon <- function() {
 #' The dock publishes a transient `on_screen=[]` while it arranges, which
 #' closes core's data gate for a tick; a chrome that read the data would
 #' render empty on that tick and Shiny would wipe the panel. The chart,
-#' table, rank and summarize blocks all avoid it the same way: a shell that
+#' table and summarize table blocks all avoid it the same way: a shell that
 #' renders once and a body pushed over a custom message.
 #'
 #' `body` is the standalone escape hatch -- pass a [hmb_body()] result and

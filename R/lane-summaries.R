@@ -82,22 +82,24 @@ lane_norm_summaries <- function(summaries) {
     s <- s[!vapply(s, function(v) {
       is.null(v) || (is.atomic(v) && length(v) == 1L && is.na(v))
     }, logical(1L))]
-    type <- rank_chr1(s$type) %||% "simple"
+    type <- summarize_chr1(s$type) %||% "simple"
     if (!type %in% names(LANE_ROW_TYPES)) {
       return(list(err = paste0("Summary ", i, ": unknown type \"", type,
                                "\"")))
     }
     shows <- LANE_ROW_TYPES[[type]]
-    show_given <- rank_chr1(s$show)
+    show_given <- summarize_chr1(s$show)
     show <- show_given %||% shows[[1L]]
     if (!show %in% shows) show <- shows[[1L]]
-    scope <- rank_chr1(s$scope) %||% "cell"
+    scope <- summarize_chr1(s$scope) %||% "cell"
     if (!scope %in% c("cell", "pooled")) scope <- "cell"
     # Fields are group facts: always pooled (they stand outside faceting).
     if (identical(type, "field")) scope <- "pooled"
 
     need <- switch(type,
-      simple = if (!identical(rank_chr1(s$func) %||% "count", "count")) "col",
+      simple = if (!identical(summarize_chr1(s$func) %||% "count", "count")) {
+        "col"
+      },
       dist = "col",
       field = "col",
       series = c("x", "col"),
@@ -107,7 +109,7 @@ lane_norm_summaries <- function(summaries) {
       custom = "fn"
     )
     for (nm in need) {
-      if (is.null(rank_chr1(s[[nm]]))) {
+      if (is.null(summarize_chr1(s[[nm]]))) {
         return(list(err = paste0("Summary ", i, " (", type, "): `", nm,
                                  "` is required")))
       }
@@ -123,20 +125,21 @@ lane_norm_summaries <- function(summaries) {
     # the column carries no such dimension, and two columns may map different
     # ones. `scope` survives normalization only to seed `facet` when a board
     # saved under the table-level pair opens (lane_migrate_globals()).
-    s$color <- rank_chr1(s$color)
+    s$color <- summarize_chr1(s$color)
     # Fields are group facts: they stand outside faceting, as they always did.
-    s$facet <- if (identical(type, "field")) NULL else rank_chr1(s$facet)
+    s$facet <- if (identical(type, "field")) NULL else summarize_chr1(s$facet)
     # The distribution glyph's three axes. `show` is legacy sugar: it seeds
     # the style and, for "pointrange", the absent outer range -- so a saved
     # board restores byte-identically while a new one configures the axes
     # directly. An explicit `style` / `inner` / `outer` always wins.
     if (identical(type, "dist") && !identical(show, "text")) {
-      style <- rank_chr1(s$style) %||%
+      style <- summarize_chr1(s$style) %||%
         if (identical(show_given, "box")) "box" else "dot"
       if (!style %in% LANE_DIST_STYLES) style <- "dot"
-      inner <- rank_chr1(s$inner) %||% rank_chr1(s$stat) %||% "median_q1_q3"
+      inner <- summarize_chr1(s$inner) %||% summarize_chr1(s$stat) %||%
+        "median_q1_q3"
       if (!inner %in% c("none", LANE_STATS)) inner <- "median_q1_q3"
-      outer <- rank_chr1(s$outer) %||% rank_chr1(s$whiskers) %||%
+      outer <- summarize_chr1(s$outer) %||% summarize_chr1(s$whiskers) %||%
         if (identical(show_given, "pointrange")) "none" else "tukey"
       if (!outer %in% c("none", LANE_WHISKERS)) outer <- "tukey"
       s$style <- style
@@ -151,7 +154,7 @@ lane_norm_summaries <- function(summaries) {
     # The series row's computed reference: pooled orientation lines/bands,
     # computed in R (never client-side). "none" = off.
     if (identical(type, "series")) {
-      ref <- rank_chr1(s$ref) %||% "none"
+      ref <- summarize_chr1(s$ref) %||% "none"
       if (!ref %in% c("none", "mean", "mean_sd", "median_iqr")) ref <- "none"
       s$ref <- ref
     }
@@ -160,7 +163,7 @@ lane_norm_summaries <- function(summaries) {
     # `size` opts the lane into the tall exhibit form.
     if (identical(type, "spans")) {
       s$fields <- as.character(s$fields %||% character())
-      size <- rank_chr1(s$size) %||% "md"
+      size <- summarize_chr1(s$size) %||% "md"
       if (!size %in% c("md", "lg")) size <- "md"
       s$size <- size
     }
@@ -168,9 +171,9 @@ lane_norm_summaries <- function(summaries) {
     # number or a column), an optional reference line (`ref`, a number) and
     # an optional `dash` column whose non-first levels draw dashed.
     if (identical(type, "pair")) {
-      ff <- rank_chr1(s$from_func) %||% "identity"
+      ff <- summarize_chr1(s$from_func) %||% "identity"
       if (!ff %in% LANE_PAIR_FUNCS) ff <- "identity"
-      tf <- rank_chr1(s$to_func) %||% "max"
+      tf <- summarize_chr1(s$to_func) %||% "max"
       if (!tf %in% LANE_PAIR_FUNCS) tf <- "max"
       s$from_func <- ff
       s$to_func <- tf
@@ -178,9 +181,9 @@ lane_norm_summaries <- function(summaries) {
       s$hi <- lane_pair_bound(s$hi)
       ref <- suppressWarnings(as.numeric(s$ref %||% NA_real_))[1L]
       s$ref <- if (is.finite(ref)) ref
-      s$dash <- rank_chr1(s$dash)
+      s$dash <- summarize_chr1(s$dash)
     }
-    s$name <- rank_chr1(s$name) %||% lane_summary_auto_name(s)
+    s$name <- summarize_chr1(s$name) %||% lane_summary_auto_name(s)
     out[[i]] <- s
   }
   out
@@ -262,9 +265,9 @@ lane_migrate_globals <- function(summaries, color = NULL, facet = NULL) {
 #' distribution cell that shows nothing is not a column.
 #' @noRd
 lane_dist_centre_stat <- function(s) {
-  inner <- rank_chr1(s$inner) %||% rank_chr1(s$stat)
+  inner <- summarize_chr1(s$inner) %||% summarize_chr1(s$stat)
   if (!is.null(inner) && !identical(inner, "none")) return(inner)
-  outer <- rank_chr1(s$outer)
+  outer <- summarize_chr1(s$outer)
   if (!is.null(outer) && !identical(outer, "none") &&
         outer %in% LANE_STATS) {
     return(outer)
@@ -276,15 +279,15 @@ lane_dist_centre_stat <- function(s) {
 lane_summary_auto_name <- function(s) {
   switch(s$type,
     simple = {
-      f <- rank_chr1(s$func) %||% "count"
+      f <- summarize_chr1(s$func) %||% "count"
       if (identical(f, "count")) "Rows" else
-        paste0(AGG_WORDS[[f]] %||% f, " ", rank_chr1(s$col))
+        paste0(AGG_WORDS[[f]] %||% f, " ", summarize_chr1(s$col))
     },
-    dist = rank_chr1(s$col),
-    field = rank_chr1(s$col),
-    series = rank_chr1(s$col),
-    spans = paste0(rank_chr1(s$x), " \u2192 ", rank_chr1(s$xend)),
-    pair = paste0(rank_chr1(s$from), " \u2192 ", rank_chr1(s$to)),
+    dist = summarize_chr1(s$col),
+    field = summarize_chr1(s$col),
+    series = summarize_chr1(s$col),
+    spans = paste0(summarize_chr1(s$x), " \u2192 ", summarize_chr1(s$xend)),
+    pair = paste0(summarize_chr1(s$from), " \u2192 ", summarize_chr1(s$to)),
     expr = "Value",
     custom = "Value",
     "Value"
@@ -356,7 +359,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   if (!length(summaries)) return(bad("Add at least one summary column"))
 
   present <- function(col) {
-    col <- rank_chr1(col)
+    col <- summarize_chr1(col)
     if (is.null(col) || !col %in% names(data)) NULL else col
   }
   summaries <- lane_migrate_globals(summaries, present(color), present(facet))
@@ -394,7 +397,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     }
     cc <- present(s$color)
     if (!is.null(cc) && lane_color_capable(s)) {
-      lv <- rank_levels(data[[cc]])
+      lv <- summarize_levels(data[[cc]])
       if (length(lv) > LANE_MAX_LEVELS) {
         return(bad(paste0(
           "Summary \"", s$name, "\": colour column \"", cc, "\" has ",
@@ -410,7 +413,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     }
     fc <- present(s$facet)
     if (!is.null(fc)) {
-      lv <- rank_levels(data[[fc]])
+      lv <- summarize_levels(data[[fc]])
       if (length(lv) < 2L) {
         return(bad(paste0(
           "Summary \"", s$name, "\": facet column \"", fc, "\" has fewer ",
@@ -430,10 +433,10 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     # The dash levels come from the full data, like colour: a facet slice
     # missing a level must not renumber which rows draw dashed.
     if (identical(s$type, "pair") && !is.null(present(s$dash))) {
-      s$.dlevels <- rank_levels(data[[s$dash]])
+      s$.dlevels <- summarize_levels(data[[s$dash]])
     }
     if (s$type %in% c("series", "spans")) {
-      s$.date <- inherits(data[[rank_chr1(s$x)]], "Date")
+      s$.date <- inherits(data[[summarize_chr1(s$x)]], "Date")
     }
     summaries[[i]] <- s
   }
@@ -453,7 +456,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   facet_levels <- if (is.null(shared_facet)) {
     character()
   } else {
-    rank_levels(data[[shared_facet]])
+    summarize_levels(data[[shared_facet]])
   }
 
   # --- leaf / parent skeletons ----------------------------------------------
@@ -476,14 +479,14 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   # The data's own order for the row labels (factor levels, else
   # first-appearance): `sort_by = "data"` reads it, everything else ignores
   # it. A visit-keyed table is unreadable alphabetically.
-  leaf$.ord <- rank_data_ord(data[[group]], leaf$.label)
+  leaf$.ord <- summarize_data_ord(data[[group]], leaf$.label)
   par_rows <- NULL
   if (!is.null(parent)) {
-    pv <- rank_levels(data[[parent]])
+    pv <- summarize_levels(data[[parent]])
     par_rows <- data.frame(.label = pv, .parent = NA_character_,
                            stringsAsFactors = FALSE)
     par_rows[[parent]] <- pv
-    par_rows$.ord <- rank_data_ord(data[[parent]], pv)
+    par_rows$.ord <- summarize_data_ord(data[[parent]], pv)
   }
 
   # --- per-summary build -----------------------------------------------------
@@ -501,11 +504,11 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     }
     switch(s$type,
       simple = {
-        f <- rank_chr1(s$func) %||% "count"
+        f <- summarize_chr1(s$func) %||% "count"
         put_value <- function(target, slice, out) {
-          agg <- rank_aggregate(slice, tkeys, f, rank_chr1(s$col),
-                                rank_chr1(s$col))
-          target[[out]] <- rank_match_col(target, agg, tkeys, ".v")
+          agg <- summarize_aggregate(slice, tkeys, f, summarize_chr1(s$col),
+                                     summarize_chr1(s$col))
+          target[[out]] <- summarize_match_col(target, agg, tkeys, ".v")
           target
         }
         target <- put_value(target, slice, paste0(sid, "_v"))
@@ -539,10 +542,10 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
           stats$.w <- s$outer
         }
         put_stats <- function(target, slice, prefix) {
-          agg <- lane_stat_agg(slice, tkeys, rank_chr1(s$col), stats)
+          agg <- lane_stat_agg(slice, tkeys, summarize_chr1(s$col), stats)
           for (nm in setdiff(names(agg), tkeys)) {
             target[[paste0(prefix, "_", sub("^\\.", "", nm))]] <-
-              rank_match_col(target, agg, tkeys, nm)
+              summarize_match_col(target, agg, tkeys, nm)
           }
           target
         }
@@ -567,16 +570,16 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       field = {
         g <- dplyr::group_by(slice, dplyr::across(dplyr::all_of(tkeys)))
         agg <- as.data.frame(dplyr::summarise(
-          g, .t = lane_field_join(.data[[rank_chr1(s$col)]]),
+          g, .t = lane_field_join(.data[[summarize_chr1(s$col)]]),
           .groups = "drop"
         ))
-        m <- rank_match_field(target, agg, tkeys, ".t")
+        m <- summarize_match_field(target, agg, tkeys, ".t")
         m[is.na(m)] <- ""
         target[[paste0(sid, "_t")]] <- m
         target
       },
       expr = {
-        ex <- tryCatch(rlang::parse_expr(rank_chr1(s$expr)),
+        ex <- tryCatch(rlang::parse_expr(summarize_chr1(s$expr)),
                        error = function(e) NULL)
         if (is.null(ex)) {
           target[[paste0(sid, "_t")]] <- rep("(parse error)", nrow(target))
@@ -595,10 +598,10 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         if (is.numeric(v)) {
           agg$.t <- as.numeric(v)
           target[[paste0(sid, "_v")]] <-
-            rank_match_col(target, agg, tkeys, ".t")
+            summarize_match_col(target, agg, tkeys, ".t")
         } else {
           agg$.t <- as.character(v)
-          m <- rank_match_field(target, agg, tkeys, ".t")
+          m <- summarize_match_field(target, agg, tkeys, ".t")
           m[is.na(m)] <- ""
           target[[paste0(sid, "_t")]] <- m
         }
@@ -646,11 +649,11 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       # copy's slice -- the whole data for an unfaceted column, one level's
       # rows for a facet copy. Over the full slice, so rows without a group
       # (the population join's) are in it: the same N the ranked-bar
-      # surface's facets print (rank_denom()).
+      # surface's facets print (summarize_denom()).
       if (identical(s$type, "simple") &&
-            rank_has_pct(rank_chr1(s$func) %||% "count")) {
-        cp$den <- rank_denom(cp$slice, rank_chr1(s$func) %||% "count",
-                             rank_chr1(s$col))
+            summarize_has_pct(summarize_chr1(s$func) %||% "count")) {
+        cp$den <- summarize_denom(cp$slice, summarize_chr1(s$func) %||% "count",
+                                  summarize_chr1(s$col))
       }
       leaf <- fill(leaf, keys, cp$slice, s, cp$suffix)
       if (!is.null(par_rows)) {
@@ -661,7 +664,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       # (per facet level, its own level's line).
       if (identical(s$type, "series") &&
             !identical(s$ref %||% "none", "none")) {
-        ys <- as.numeric(cp$slice[[rank_chr1(s$col)]])
+        ys <- as.numeric(cp$slice[[summarize_chr1(s$col)]])
         ys <- ys[is.finite(ys)]
         cp$ref <- switch(s$ref,
           mean = list(center = mean(ys)),
@@ -684,13 +687,14 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     par_rows$.v <- lane_primary_value(par_rows, s_primary$s, primary_col)
   }
 
-  plan <- rank_drop_empty_facets(plan, leaf, par_rows)
+  plan <- summarize_drop_empty_facets(plan, leaf, par_rows)
   facet_levels <- intersect(facet_levels,
                             unlist(lapply(plan, function(p) p$flevel)))
 
-  srt <- rank_resolve_sort(sort_by, plan, data, leaf, par_rows, group, parent)
-  asm <- rank_assemble_rows(srt$leaf, srt$par_rows, parent, srt$key, sort_dir,
-                            top_n)
+  srt <- summarize_resolve_sort(sort_by, plan, data, leaf, par_rows, group,
+                                parent)
+  asm <- summarize_assemble_rows(srt$leaf, srt$par_rows, parent, srt$key,
+                                 sort_dir, top_n)
   rows <- asm$rows
 
   # --- per-entry domains ------------------------------------------------------
@@ -703,13 +707,13 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   # authored order (adjacency is the comparison affordance). by_level: the
   # Table-1 reading -- unfaceted columns and fields lead, then one column
   # group per facet level spanning the summaries; the header grows a
-  # spanning row (rank_thead) and each copy is re-labelled by its SUMMARY
+  # spanning row (summarize_thead) and each copy is re-labelled by its SUMMARY
   # (the level moves up into the group header). That reading needs ONE facet
   # column for the whole table (`facet_levels` is empty otherwise), because
   # a group header spanning "F | M" and "Placebo | Active" is not a span.
   facet_spans <- NULL
   has_cell <- any(vapply(plan, function(p) !is.null(p$flevel), logical(1L)))
-  if (identical(rank_chr1(facet_layout), "by_level") &&
+  if (identical(summarize_chr1(facet_layout), "by_level") &&
         length(facet_levels) && has_cell) {
     lead <- Filter(function(p) is.null(p$flevel), plan)
     groups <- lapply(facet_levels, function(lv) {
@@ -739,10 +743,10 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     if (lane_color_capable(s)) present(s$color)
   })))
   color_groups <- Filter(Negate(is.null), lapply(legend_cols, function(cc) {
-    lv <- rank_levels(data[[cc]])
+    lv <- summarize_levels(data[[cc]])
     if (length(lv) < 2L) return(NULL)
     list(column = cc, levels = lv,
-         palette = rank_level_colors(scale_map, cc, lv, data[[cc]]))
+         palette = summarize_level_colors(scale_map, cc, lv, data[[cc]]))
   }))
   # The first group also fills the single-dimension slots the rank path's
   # emitters fall back on (a plan entry carries its own fills and levels, so
@@ -755,7 +759,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     rows = rows, plan = plan,
     layout = if (!length(facet_cols)) "simple" else "facet",
     mark = "summaries", bar_max = 0, bar_min = 0,
-    group_label = rank_group_label(data, group, parent),
+    group_label = summarize_group_label(data, group, parent),
     series = series_lv,
     palette = pal, facet_levels = facet_levels,
     denoms = c(all = nrow(data)), group = group, parent = parent,
@@ -773,7 +777,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
 #' when the summary has no colour, so an uncoloured column is untouched.
 #'
 #' Colours come from the same resolver as every other mark
-#' (`rank_level_colors`: board scale map -> theme -> palette), so a box
+#' (`summarize_level_colors`: board scale map -> theme -> palette), so a box
 #' split by SEX matches the chart's boxplot split by SEX.
 #' @noRd
 lane_color_split <- function(s, sid, stats, data, scale_map) {
@@ -784,8 +788,8 @@ lane_color_split <- function(s, sid, stats, data, scale_map) {
     lcols = lapply(seq_along(lv), function(j) {
       stats::setNames(paste0(sid, "_L", j, "_", stats), stats)
     }),
-    fills = unname(rank_level_colors(scale_map, s$.color, lv,
-                                     data[[s$.color]])[lv]),
+    fills = unname(summarize_level_colors(scale_map, s$.color, lv,
+                                          data[[s$.color]])[lv]),
     cvar = s$.color
   )
 }
@@ -810,9 +814,9 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
   base <- list(label = label, sub_label = sub, sid = sid, stype = s$type,
                flevel = cp$level, sname = s$name, meas = s$name,
                # a count with nothing in it is an empty column
-               # (rank_drop_empty_facets)
+               # (summarize_drop_empty_facets)
                zero_empty = identical(s$type, "simple") &&
-                 rank_has_pct(rank_chr1(s$func) %||% "count"))
+                 summarize_has_pct(summarize_chr1(s$func) %||% "count"))
   # A count with an N (see lane_prepare_summaries): the header's second line
   # says N, the value reads "8 (12%)", and a bar's length is the percentage,
   # so arms of different size compare on one scale. The ranked-bar
@@ -847,8 +851,8 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       # group's total and the segments say what it is made of. A group whose
       # rows are all one level draws ONE segment, in that level's colour.
       # Only for an ADDITIVE measure, though: the parts of a mean do not add
-      # up to it, so those segments sit side by side (rank_additive()) rather
-      # than stacking into a length nothing computes.
+      # up to it, so those segments sit side by side (summarize_additive())
+      # rather than stacking into a length nothing computes.
       #
       # `mode` is provisional: nothing here has seen a value yet, so a
       # non-additive measure asks for lanes even when every row turns out to
@@ -858,14 +862,16 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       c(base, list(kind = "barsplit", key = paste0(sid, "_v"),
                    prefix = paste0(sid, "_S_"), series = s$.levels,
                    cvar = s$.color,
-                   mode = if (rank_additive(rank_chr1(s$func) %||% "count")) {
+                   mode = if (summarize_additive(
+                     summarize_chr1(s$func) %||% "count"
+                   )) {
                      "stacked"
                    } else {
                      "grouped"
                    },
                    show_val = TRUE,
                    denom = if (pct) den,
-                   fills = unname(rank_level_colors(
+                   fills = unname(summarize_level_colors(
                      scale_map, s$.color, s$.levels, data[[s$.color]]
                    )[s$.levels])))
     } else {
@@ -879,7 +885,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                    combined = pct && identical(kind, "num")))
     }
   } else if (identical(s$type, "dist")) {
-    stat <- rank_chr1(s$stat) %||% "median_q1_q3"
+    stat <- summarize_chr1(s$stat) %||% "median_q1_q3"
     meta <- LANE_STAT_META[[stat]] %||% LANE_STAT_META$median_q1_q3
     if (identical(s$show, "text")) {
       c(base, list(kind = "num", key = paste0(sid, "_bc"),
@@ -890,8 +896,8 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       # ONE glyph, two styles. The leaf columns follow the pieces that are
       # switched on, so an absent range ships no columns at all and the
       # emitter draws what it is given (never re-derived arithmetic).
-      inner <- rank_chr1(s$inner) %||% "median_q1_q3"
-      outer <- rank_chr1(s$outer) %||% "none"
+      inner <- summarize_chr1(s$inner) %||% "median_q1_q3"
+      outer <- summarize_chr1(s$outer) %||% "none"
       cmeta <- LANE_STAT_META[[lane_dist_centre_stat(s)]] %||%
         LANE_STAT_META$median_q1_q3
       cols <- c(bc = paste0(sid, "_bc"), n = paste0(sid, "_n"))
@@ -924,7 +930,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                  sub_label = sub %||% dt_col_label(data[[s$col]], s$col)))
   } else if (identical(s$type, "expr")) {
     # Numeric vs text is decided by the eval; the plan names the numeric
-    # key and rank_cells falls back to the text column when it is absent.
+    # key and summarize_cells falls back to the text column when it is absent.
     c(base, list(kind = "num", key = paste0(sid, "_v"),
                  alt_text = paste0(sid, "_t")))
   } else if (identical(s$type, "pair")) {
@@ -954,9 +960,9 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                  ref = s$ref, levels = lv,
                  words = list(from = words[[1L]], to = words[[2L]]),
                  fills = if (!is.null(lv)) {
-                   unname(rank_level_colors(
-                     scale_map, rank_chr1(s$color), lv,
-                     data[[rank_chr1(s$color)]]
+                   unname(summarize_level_colors(
+                     scale_map, summarize_chr1(s$color), lv,
+                     data[[summarize_chr1(s$color)]]
                    )[lv])
                  },
                  show_val = TRUE),
@@ -971,22 +977,22 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       })
   } else if (identical(s$type, "series")) {
     c(base, list(kind = "sparkline", key = paste0(sid, "_last"),
-                 pts = paste0(sid, "_pts"), x = rank_chr1(s$x),
+                 pts = paste0(sid, "_pts"), x = summarize_chr1(s$x),
                  dom_date = isTRUE(s$.date), ref = cp$ref,
                  show_val = TRUE))
   } else {
     lv <- s$.levels
     c(base, list(kind = "interval", key = paste0(sid, "_start"),
-                 segs = paste0(sid, "_segs"), x = rank_chr1(s$x),
-                 xend = rank_chr1(s$xend), levels = lv,
+                 segs = paste0(sid, "_segs"), x = summarize_chr1(s$x),
+                 xend = summarize_chr1(s$xend), levels = lv,
                  dom_date = isTRUE(s$.date),
                  tfields = intersect(as.character(s$fields %||% character()),
                                      names(data)),
-                 size = rank_chr1(s$size) %||% "md",
+                 size = summarize_chr1(s$size) %||% "md",
                  fills = if (!is.null(lv)) {
-                   unname(rank_level_colors(
-                     scale_map, rank_chr1(s$color), lv,
-                     data[[rank_chr1(s$color)]]
+                   unname(summarize_level_colors(
+                     scale_map, summarize_chr1(s$color), lv,
+                     data[[summarize_chr1(s$color)]]
                    )[lv])
                  } else {
                    dd_palette(1L)
@@ -1001,12 +1007,12 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
 #' @noRd
 lane_dist_sub_label <- function(s, meta, wmeta) {
   parts <- c(
-    if (identical(rank_chr1(s$inner) %||% "none", "none")) {
+    if (identical(summarize_chr1(s$inner) %||% "none", "none")) {
       LANE_STAT_META[[lane_dist_centre_stat(s)]]$center
     } else {
       meta$label
     },
-    if (!identical(rank_chr1(s$outer) %||% "none", "none")) wmeta$range
+    if (!identical(summarize_chr1(s$outer) %||% "none", "none")) wmeta$range
   )
   paste(parts, collapse = " \u00b7 ")
 }
@@ -1056,8 +1062,8 @@ lane_as_num <- function(v) {
 
 #' @noRd
 lane_series_split <- function(slice, target, tkeys, s) {
-  xs <- lane_as_num(slice[[rank_chr1(s$x)]])
-  ys <- as.numeric(slice[[rank_chr1(s$col)]])
+  xs <- lane_as_num(slice[[summarize_chr1(s$x)]])
+  ys <- as.numeric(slice[[summarize_chr1(s$col)]])
   band <- as.character(s$band %||% character())
   band <- band[nzchar(band)]
   has_band <- length(band) == 2L && all(band %in% names(slice)) &&
@@ -1078,16 +1084,16 @@ lane_series_split <- function(slice, target, tkeys, s) {
 
 #' @noRd
 lane_spans_split <- function(slice, target, tkeys, s) {
-  xs <- lane_as_num(slice[[rank_chr1(s$x)]])
-  xe <- lane_as_num(slice[[rank_chr1(s$xend)]])
-  color <- rank_chr1(s$color)
+  xs <- lane_as_num(slice[[summarize_chr1(s$x)]])
+  xe <- lane_as_num(slice[[summarize_chr1(s$xend)]])
+  color <- summarize_chr1(s$color)
   color <- if (!is.null(color) && color %in% names(slice)) color
   # Full-data level order rides on the summary (s$.levels), so a facet
   # slice missing a level cannot renumber the fills.
   lv <- s$.levels
   # Event identity: the label column headlines the segment tooltip and
   # keys the same-event hover highlight; fields append extra columns.
-  lbcol <- rank_chr1(s$label)
+  lbcol <- summarize_chr1(s$label)
   lbcol <- if (!is.null(lbcol) && lbcol %in% names(slice)) lbcol
   fcols <- intersect(as.character(s$fields %||% character()), names(slice))
   ok <- if (is.null(xs) || is.null(xe)) {
@@ -1138,7 +1144,7 @@ lane_spans_split <- function(slice, target, tkeys, s) {
 #' True when no row anywhere in the column carries more than one level. The
 #' caller then stacks instead: with a single part per row the two layouts
 #' draw the SAME numbers -- stacking a lone segment is that segment -- and
-#' the stacked emitter omits an empty one, in both `rank_split_html()` and
+#' the stacked emitter omits an empty one, in both `summarize_split_html()` and
 #' its `splitHtml()` twin. So the cell becomes one bar in that row's colour,
 #' with no width, colour or tooltip changed.
 #'
@@ -1209,7 +1215,7 @@ lane_summary_domains <- function(plan, rows) {
           # glyph is read against the same axis, or the split lies.
           c(pos(p$cols), unlist(lapply(p$lcols %||% list(), pos)))
         }
-        # A count with an N is drawn as a percentage of it (rank_cells()),
+        # A count with an N is drawn as a percentage of it (summarize_cells()),
         # so its domain is one too: the copies share a percentage scale.
         scale <- if (is.numeric(p$denom) && length(p$denom) == 1L &&
                        is.finite(p$denom) && p$denom > 0) 100 / p$denom else 1
@@ -1228,11 +1234,11 @@ lane_summary_domains <- function(plan, rows) {
       # signed measure (mean/median of a change column, a waterfall's extreme
       # per subject) is the zero-centred DIVERGING bar instead -- same column,
       # same numbers, and every consumer downstream already switches on `kind`
-      # (rank_axis_domain(), rank_cells(), rank_cells_html(), the JSON packer
-      # and its rank-table.js twin). Decided here because this is the first
-      # point that has seen the assembled values.
-      # `barsplit` is deliberately excluded: stacked segments that go negative
-      # are a different problem, and it has no diverging form.
+      # (summarize_axis_domain(), summarize_cells(), summarize_cells_html(), the
+      # JSON packer and its summarize-table.js twin). Decided here because this
+      # is the first point that has seen the assembled values. `barsplit` is
+      # deliberately excluded: stacked segments that go negative are a different
+      # problem, and it has no diverging form.
       if (identical(kind, "bar") && any(vals < 0)) {
         amx <- if (length(vals)) max(abs(vals)) else 0
         for (i in idx) {
@@ -1344,16 +1350,16 @@ lane_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
     if (identical(func, "identity")) {
       g <- dplyr::group_by(sl, dplyr::across(dplyr::all_of(kk)))
       out <- as.data.frame(dplyr::summarise(
-        g, .v = rank_agg_first(.data[[col]]), .groups = "drop"
+        g, .v = summarize_agg_first(.data[[col]]), .groups = "drop"
       ))
       out$.v <- as.numeric(out$.v)
       out
     } else {
-      rank_aggregate(sl, kk, func, col, col)
+      summarize_aggregate(sl, kk, func, col, col)
     }
   }
   per <- function(sl, func, col) {
-    rank_match_col(target, agg_one(sl, func, col, tkeys), tkeys, ".v")
+    summarize_match_col(target, agg_one(sl, func, col, tkeys), tkeys, ".v")
   }
   n <- nrow(target)
   level_idx <- function(sl, col, lv) {
@@ -1367,7 +1373,7 @@ lane_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
       },
       .groups = "drop"
     ))
-    match(rank_match_field(target, agg, tkeys, ".t"), lv)
+    match(summarize_match_field(target, agg, tkeys, ".t"), lv)
   }
   # Both ends, the band and the dash index of one slice, under `prefix`:
   # once for the pooled pair, once per colour level for the split.
@@ -1502,7 +1508,7 @@ lane_custom_setup <- function(s, data) {
       "; no mark reads that. Return value, from and to, mid, or text."
     )))
   }
-  mark <- rank_chr1(s$show)
+  mark <- summarize_chr1(s$show)
   if (is.null(mark)) mark <- fits[[1L]]
   if (!mark %in% fits) {
     return(list(err = paste0(
@@ -1515,7 +1521,7 @@ lane_custom_setup <- function(s, data) {
   if (!is.null(split)) {
     # Levels from the full data where the split is a data column, so a
     # level's colour does not depend on which cells happen to return it.
-    lv <- rank_levels(if (split %in% names(data)) data[[split]] else
+    lv <- summarize_levels(if (split %in% names(data)) data[[split]] else
                         probe[[split]])
     if (length(lv) > LANE_MAX_LEVELS) {
       return(list(err = paste0(
@@ -1528,7 +1534,7 @@ lane_custom_setup <- function(s, data) {
   # `denom`: a column whose distinct values in the cell's slice are the N. A
   # count then reads as the presets' counts do: "54 (18%)", N in the header,
   # a bar as long as its share. The value stays the function's.
-  denom <- rank_chr1(s$denom)
+  denom <- summarize_chr1(s$denom)
   if (!is.null(denom) && !denom %in% names(data)) {
     return(list(err = paste0(who, "the percent column \"", denom,
                              "\" is not in the data.")))
@@ -1595,7 +1601,7 @@ lane_custom_fill <- function(target, tkeys, slice, s, sid) {
                                         .groups = "drop"))
     a$.v <- as.numeric(a$.v)
     a$.v[!is.finite(a$.v)] <- NA_real_
-    rank_match_col(target, a, tkeys, ".v")
+    summarize_match_col(target, a, tkeys, ".v")
   }
   mean_na <- function(x) mean(as.numeric(x), na.rm = TRUE)
   sum_na <- function(x) {
@@ -1626,7 +1632,7 @@ lane_custom_fill <- function(target, tkeys, slice, s, sid) {
         a <- as.data.frame(dplyr::summarise(
           g, .t = lane_field_join(.data$text), .groups = "drop"
         ))
-        m <- rank_match_field(target, a, tkeys, ".t")
+        m <- summarize_match_field(target, a, tkeys, ".t")
       } else {
         m <- rep(NA_character_, n)
       }

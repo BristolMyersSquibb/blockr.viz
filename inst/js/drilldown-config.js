@@ -835,7 +835,7 @@
         return parts.map(p => (p && p.text) ? p.text : '').join('');
       }
       // Two host conventions for the same thing: the chart ships
-      // `subtitle_resolved`, the table and the rank table fold the resolved
+      // `subtitle_resolved`, the table and the summarize table fold the resolved
       // string into `subtitle_auto` (the gear derives the clearable auto
       // content from it).
       for (const k of [key + '_resolved', key + '_auto']) {

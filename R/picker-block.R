@@ -191,7 +191,7 @@ new_picker_block <- function(
         # announces when it comes up with nothing parked, and we send again;
         # without this the gear band is empty and the face carries no
         # controls at all, restored pickers or not. Same fix as the chart
-        # (`drilldown_block_ready`) and the rank table.
+        # (`drilldown_block_ready`) and the summarize table.
         shiny::observeEvent(input$picker_block_ready, send_state())
 
         # JS -> R: the whole picker list on any change (value-filter style).

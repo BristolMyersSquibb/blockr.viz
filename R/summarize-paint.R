@@ -1,8 +1,8 @@
 # Paint a summarize table as ONE grid picture ---------------------------------
 #
-# The third consumer of rank_cells(), beside the markup (rank_cells_html) and
-# the JSON payload (rank_flat_payload): the same cell model drawn with grid,
-# for the formats that cannot hold the HTML one.
+# The third consumer of summarize_cells(), beside the markup
+# (summarize_cells_html) and the JSON payload (summarize_flat_payload): the same
+# cell model drawn with grid, for the formats that cannot hold the HTML one.
 #
 # Why a picture and not a table. PowerPoint's DrawingML table cell (`a:tc`)
 # holds text runs and nothing else, so a glyph can never live in a table cell
@@ -19,8 +19,8 @@
 #
 # This is a LEAF consumer: read-only, export-only, no JS twin, and nothing on
 # the block's render path calls it. A board that never exports never runs a
-# line of it, which is what keeps the marks' one source of truth (rank_cells)
-# the only thing the two live consumers share.
+# line of it, which is what keeps the marks' one source of truth
+# (summarize_cells) the only thing the two live consumers share.
 #
 # Coordinates: everything is computed in INCHES from the top-left, and the
 # vertical constants are the CSS ones (12px lane, 1px whisker, 3px cap inset,
@@ -33,10 +33,10 @@
 
 # --- colours -------------------------------------------------------------
 # The cascade does not exist in an export, so every token is resolved to a
-# literal here. Values from R/rank-table-css.R.
-RP_FILL  <- "#2a78d6"                      # --blockr-rank-fill
+# literal here. Values from R/summarize-table-css.R.
+RP_FILL  <- "#2a78d6"                      # --blockr-summarize-fill
 RP_TRACK <- "#dad9d5"                      # mix(#eeeeea 80%, #898781)
-RP_TICK  <- "#c3c2b7"                      # --blockr-rank-tick
+RP_TICK  <- "#c3c2b7"                      # --blockr-summarize-tick
 RP_RULE  <- "#e1e0d9"                      # --blockr-color-border, hairlines
 RP_TEXT  <- "#1c1b18"
 RP_MUTED <- "#6f6d66"
@@ -91,7 +91,7 @@ rp_ch <- function(fs, family = "sans") rp_w("0", fs, family)
 #
 # Widths follow the CSS intent rather than its mechanism: the stub and the
 # number columns shrink to fit, the GLYPH columns own the slack (that is the
-# `width:1%` idiom in rank-table-css.R). Each glyph column keeps its label
+# `width:1%` idiom in summarize-table-css.R). Each glyph column keeps its label
 # slot (`dw` characters, one width per column) so the lanes start and end at
 # the same x on every row and stay comparable.
 rp_layout <- function(m, prep, width_in, fs = 9, family = "sans",
@@ -101,7 +101,7 @@ rp_layout <- function(m, prep, width_in, fs = 9, family = "sans",
   hdr <- vapply(plan, function(p) p$label %||% "", character(1L))
   sub <- vapply(plan, function(p) p$sub_label %||% "", character(1L))
 
-  stub_lab <- rank_label_header(prep)
+  stub_lab <- summarize_label_header(prep)
   indent <- ifelse(m$level > 0L, 0.28, 0)
   stub_w <- max(
     rp_w(paste0(strrep(" ", 0), m$label), fs, family) + max(indent),
@@ -152,7 +152,7 @@ rp_layout <- function(m, prep, width_in, fs = 9, family = "sans",
 #
 # One helper per kind, each taking the cell box in inches and the row's
 # geometry in PERCENT of the lane -- the same percentages the browser gets,
-# never re-derived here (see the drift note at the top of R/rank-push.R).
+# never re-derived here (see the drift note at the top of R/summarize-push.R).
 
 rp_rect <- function(x0, w, ytop, h, fill, gl, alpha = NULL) {
   if (is.na(x0) || is.na(w)) return(NULL)
@@ -225,7 +225,8 @@ rp_bardiv <- function(c, i, x, w, ytop, gl) {
 }
 
 # Box: two whisker segments (never through the body), caps, translucent IQR
-# body, solid median tick. CSS: .blockr-rank-boxcell in R/rank-table-css.R.
+# body, solid median tick. CSS: .blockr-summarize-boxcell in
+# R/summarize-table-css.R.
 rp_box <- function(c, i, x, w, ytop, gl, fill = RP_FILL) {
   if (is.na(c$bc[[i]])) return(list())
   h <- gl$lane
@@ -404,7 +405,7 @@ rp_sparkline <- function(c, i, x, w, ytop, gl, fill = RP_FILL) {
   out
 }
 
-# Only the levels the row HAS are stacked, as on screen (rank_multi_html()
+# Only the levels the row HAS are stacked, as on screen (summarize_multi_html()
 # skips the rest), so a row of one level draws one full-height lane.
 rp_multi <- function(c, i, x, w, ytop, gl) {
   drawn <- Filter(function(j) {
@@ -444,14 +445,14 @@ rp_multi <- function(c, i, x, w, ytop, gl) {
 
 # --- the header axis -----------------------------------------------------
 # The domain printed once per glyph column, from the same numbers the marks
-# were scaled with (rank_axis_domain(), never re-derived).
+# were scaled with (summarize_axis_domain(), never re-derived).
 rp_axis <- function(p, prep, x, w, ytop, gl) {
-  dom <- rank_axis_domain(p, prep)
+  dom <- summarize_axis_domain(p, prep)
   if (is.null(dom)) return(list())
   t <- if (isTRUE(dom$date)) {
-    rank_axis_date_ticks(dom$d0, dom$d1)
+    summarize_axis_date_ticks(dom$d0, dom$d1)
   } else {
-    at <- rank_axis_ticks(dom$d0, dom$d1)
+    at <- summarize_axis_ticks(dom$d0, dom$d1)
     list(at = at, labels = lane_fmt(at))
   }
   if (length(t$at) < 2L) return(list())
@@ -498,7 +499,7 @@ rp_heights <- function(m, prep, lay, fs, row_h = NULL, title = NULL,
   }
   span_off <- if (is.null(prep$facet_spans)) 0 else line_h
   axis_h <- fs / 72 * 1.1
-  has_leg <- length(tryCatch(rank_legend_spec(prep),
+  has_leg <- length(tryCatch(summarize_legend_spec(prep),
                              error = function(e) NULL)$groups) > 0L
 
   h <- list(
@@ -517,9 +518,9 @@ rp_heights <- function(m, prep, lay, fs, row_h = NULL, title = NULL,
 }
 
 # --- the picture ---------------------------------------------------------
-rank_paint_grob <- function(m, prep, width_in = 12.5, fs = 9, family = "sans",
-                            row_h = NULL, title = NULL, subtitle = NULL,
-                            caption = NULL) {
+summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
+                                 family = "sans", row_h = NULL, title = NULL,
+                                 subtitle = NULL, caption = NULL) {
 
   n <- m$n
   lay <- rp_layout(m, prep, width_in, fs = fs, family = family)
@@ -568,7 +569,7 @@ rank_paint_grob <- function(m, prep, width_in = 12.5, fs = 9, family = "sans",
   # The colour legend. A swimlane or a split bar is unreadable without it,
   # and on screen it lives in the toolbar the picture does not have, so it
   # moves under the subtitle. Same spec the HTML legend is built from.
-  leg <- tryCatch(rank_legend_spec(prep), error = function(e) NULL)
+  leg <- tryCatch(summarize_legend_spec(prep), error = function(e) NULL)
   if (!is.null(leg) && length(leg$groups)) {
     sw <- px * 9
     at <- 0
@@ -700,7 +701,7 @@ rank_paint_grob <- function(m, prep, width_in = 12.5, fs = 9, family = "sans",
   y <- y + n * row_h
 
   # `top_n` is never a silent truncation: what fell below the cut says so on
-  # the picture too (rank_fold_text(), same string the table prints).
+  # the picture too (summarize_fold_text(), same string the table prints).
   if (!is.null(m$fold)) {
     g <- c(g, list(txt(m$fold, lay$pad, y + row_h / 2, size = fs * 0.9,
                        col = RP_MUTED)),
@@ -812,10 +813,10 @@ rp_page_rows <- function(m, per_page) {
 # the exporter can ask the question without painting anything: choosing the
 # size that keeps a table on one slide means asking it once per candidate,
 # and building the grobs to find out would paint pages nobody keeps.
-rank_paint_per_page <- function(m, prep, width_in = 12.5, max_height = 5.4,
-                                fs = 9, family = "sans", row_h = NULL,
-                                title = NULL, subtitle = NULL,
-                                caption = NULL) {
+summarize_paint_per_page <- function(m, prep, width_in = 12.5, max_height = 5.4,
+                                     fs = 9, family = "sans", row_h = NULL,
+                                     title = NULL, subtitle = NULL,
+                                     caption = NULL) {
 
   lay <- rp_layout(m, prep, width_in, fs = fs, family = family)
   hh <- rp_heights(m, prep, lay, fs, row_h, title, subtitle, caption)
@@ -830,17 +831,18 @@ rank_paint_per_page <- function(m, prep, width_in = 12.5, max_height = 5.4,
 # One table, as many pictures as it takes. `max_height` is the slide's body
 # box; `title` grows a "(2 of 7)" marker so a reader always knows a page is
 # part of a longer table, and the fold row rides on the LAST page only.
-rank_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
-                             fs = 9, family = "sans", row_h = NULL,
-                             title = NULL, subtitle = NULL, caption = NULL) {
+summarize_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
+                                  fs = 9, family = "sans", row_h = NULL,
+                                  title = NULL, subtitle = NULL,
+                                  caption = NULL) {
 
-  per_page <- rank_paint_per_page(m, prep, width_in, max_height, fs, family,
-                                  row_h, title, subtitle, caption)
+  per_page <- summarize_paint_per_page(m, prep, width_in, max_height, fs,
+                                       family, row_h, title, subtitle, caption)
 
   if (per_page >= m$n) {
-    p <- rank_paint_grob(m, prep, width_in = width_in, fs = fs,
-                         family = family, row_h = row_h, title = title,
-                         subtitle = subtitle, caption = caption)
+    p <- summarize_paint_grob(m, prep, width_in = width_in, fs = fs,
+                              family = family, row_h = row_h, title = title,
+                              subtitle = subtitle, caption = caption)
     return(list(p))
   }
 
@@ -861,9 +863,10 @@ rank_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
     } else {
       subtitle
     }
-    rank_paint_grob(mk, prep, width_in = width_in, fs = fs, family = family,
-                    row_h = row_h, title = ttl, subtitle = sub,
-                    caption = if (k == n_pg) caption else NULL)
+    summarize_paint_grob(mk, prep, width_in = width_in, fs = fs,
+                         family = family, row_h = row_h, title = ttl,
+                         subtitle = sub,
+                         caption = if (k == n_pg) caption else NULL)
   })
 }
 
@@ -875,13 +878,13 @@ rank_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
 # flextable and officer on the other pptx path, so the package installs
 # without them and only the export asks.
 #' @noRd
-rank_paint_ready <- function() {
+summarize_paint_ready <- function() {
   all(vapply(c("grid", "systemfonts", "ragg"), requireNamespace,
              logical(1L), quietly = TRUE))
 }
 
 #' @noRd
-rank_paint_require <- function() {
+summarize_paint_require <- function() {
   miss <- Filter(function(p) !requireNamespace(p, quietly = TRUE),
                  c("grid", "systemfonts", "ragg"))
   if (length(miss)) {
@@ -893,11 +896,11 @@ rank_paint_require <- function() {
 
 # One painted page as an image an rmarkdown / knitr chunk can print.
 #' @noRd
-rank_paint_image <- function(x, width_in = 9, res = 300, ...) {
-  rank_paint_require()
-  p <- rank_paint_grob(x$cells, x$prep, width_in = width_in,
-                       title = x$title, subtitle = x$subtitle,
-                       caption = x$caption, ...)
+summarize_paint_image <- function(x, width_in = 9, res = 300, ...) {
+  summarize_paint_require()
+  p <- summarize_paint_grob(x$cells, x$prep, width_in = width_in,
+                            title = x$title, subtitle = x$subtitle,
+                            caption = x$caption, ...)
   f <- tempfile(fileext = ".png")
   rp_write_png(p, f, res = res)
   htmltools::tags$img(src = knitr::image_uri(f),
@@ -905,8 +908,8 @@ rank_paint_image <- function(x, width_in = 9, res = 300, ...) {
 }
 
 #' @noRd
-rank_paint_png_file <- function(p, file, res = 300) {
-  rank_paint_require()
+summarize_paint_png_file <- function(p, file, res = 300) {
+  summarize_paint_require()
   rp_write_png(p, file, res = res)
 }
 
@@ -919,16 +922,18 @@ rp_write_png <- function(p, file, res = 300) {
   list(file = file, width = p$width, height = p$height)
 }
 
-rank_paint_png <- function(m, prep, file, width_in = 12.5, res = 300, ...) {
-  invisible(rp_write_png(rank_paint_grob(m, prep, width_in = width_in, ...),
-                         file, res))
+summarize_paint_png <- function(m, prep, file, width_in = 12.5, res = 300,
+                                ...) {
+  invisible(rp_write_png(
+    summarize_paint_grob(m, prep, width_in = width_in, ...), file, res
+  ))
 }
 
 # Every page of a table as its own file: `<stem>.png`, `<stem>-2.png`, ...
-rank_paint_pngs <- function(m, prep, stem, width_in = 12.5, max_height = 5.4,
-                            res = 300, ...) {
-  pg <- rank_paint_pages(m, prep, width_in = width_in,
-                         max_height = max_height, ...)
+summarize_paint_pngs <- function(m, prep, stem, width_in = 12.5,
+                                 max_height = 5.4, res = 300, ...) {
+  pg <- summarize_paint_pages(m, prep, width_in = width_in,
+                              max_height = max_height, ...)
   lapply(seq_along(pg), function(k) {
     f <- if (k == 1L) paste0(stem, ".png") else paste0(stem, "-", k, ".png")
     rp_write_png(pg[[k]], f, res)

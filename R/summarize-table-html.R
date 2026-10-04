@@ -1,13 +1,14 @@
-# Ranked bar table: HTML ------------------------------------------------------
+# Summarize table: HTML -------------------------------------------------------
 #
 # Emits the table-block chrome (shared CSS, sticky-header scroll wrapper,
-# search input, title / subtitle / caption bands) with a rank-specific
-# <table> inside it, plus one small JS dependency for search / sort /
-# expand / row-click. See R/rank-table.R for the data half.
+# search input, title / subtitle / caption bands) with the summarize
+# table's <table> inside it, plus one small JS dependency for search / sort /
+# expand / row-click. See R/summarize-table.R for the data half.
 
-#' Ranked bar table
+#' Summarize table, as static HTML
 #'
-#' Renders a ranked horizontal-bar table: one row per level of `group`,
+#' Renders the table without a block. Its original form, a ranked
+#' horizontal-bar table: one row per level of `group`,
 #' ordered by the measure, with the bar drawn as a div in a cell. Search,
 #' click-to-sort, exact values, a sticky header and an arbitrary row count
 #' come from the table form; the bar carries the magnitude.
@@ -69,20 +70,20 @@
 #'
 #' @return An [htmltools::tagList()].
 #' @examplesIf interactive()
-#' rank_table(mtcars, group = "cyl", func = "count")
-#' @export
-rank_table <- function(data, group = NULL, value = ".count", func = "count",
-                       id_var = NULL, summaries = list(), by = NULL,
-                       facet_layout = "by_summary", parent = NULL,
-                       color = NULL,
-                       bar_mode = "stacked", facet = NULL,
-                       cols = NULL, fields = NULL, sort_by = "value",
-                       sort_dir = "desc", top_n = NULL, max_height = NULL,
-                       search = TRUE, sortable = TRUE, axis = TRUE,
-                       bar_width = "fit", title = NULL, subtitle = NULL,
-                       caption = NULL, drill = NULL, scale_map = NULL,
-                       elem_id = NULL, active = NULL, expanded = FALSE) {
-  prep <- rank_prepare(
+#' summarize_table(mtcars, group = "cyl", func = "count")
+#' @noRd
+summarize_table <- function(data, group = NULL, value = ".count",
+                            func = "count", id_var = NULL, summaries = list(),
+                            by = NULL, facet_layout = "by_summary",
+                            parent = NULL, color = NULL, bar_mode = "stacked",
+                            facet = NULL, cols = NULL, fields = NULL,
+                            sort_by = "value", sort_dir = "desc", top_n = NULL,
+                            max_height = NULL, search = TRUE, sortable = TRUE,
+                            axis = TRUE, bar_width = "fit", title = NULL,
+                            subtitle = NULL, caption = NULL, drill = NULL,
+                            scale_map = NULL, elem_id = NULL, active = NULL,
+                            expanded = FALSE) {
+  prep <- summarize_prepare(
     data, group = group, value = value, func = func, id_var = id_var,
     summaries = summaries, by = by,
     facet_layout = facet_layout,
@@ -95,17 +96,19 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
   # (the input's own label / subtitle / caption attribute), "" = none, else a
   # {...} template resolved against the current data. The block resolves them
   # before calling; resolving again here is a no-op for a plain string and
-  # gives a standalone rank_table() the same auto tier.
+  # gives a standalone summarize_table() the same auto tier.
   title_raw <- title
   subtitle_raw <- subtitle
   caption_raw <- caption
-  title <- resolve_block_title(title, data, auto = rank_attr(data, "label"))
+  title <- resolve_block_title(title, data,
+                               auto = summarize_attr(data, "label"))
   subtitle <- resolve_block_title(subtitle, data,
-                                  auto = rank_attr(data, "subtitle"))
-  caption <- resolve_block_title(caption, data, auto = rank_attr(data, "caption"))
+                                  auto = summarize_attr(data, "subtitle"))
+  caption <- resolve_block_title(caption, data,
+                                 auto = summarize_attr(data, "caption"))
 
   # The gear's working state: the block's config as given, plus the pickable
-  # input columns. Read back by rank-table.js off the rendered <table>.
+  # input columns. Read back by summarize-table.js off the rendered <table>.
   cfg <- list(
     group = group, parent = parent, color = color, facet = facet,
     func = func, value = value, id_var = id_var,
@@ -118,15 +121,15 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
       title_state = title_raw, subtitle_state = subtitle_raw,
       caption_state = caption_raw
     ),
-    columns = rank_gear_cols(data)
+    columns = summarize_gear_cols(data)
   )
 
-  rank_chrome(
+  summarize_chrome(
     inner = if (!is.null(prep$err)) {
-      rank_message_table(prep$err)
+      summarize_message_table(prep$err)
     } else {
-      htmltools::HTML(rank_table_html(prep, drill = drill, active = active,
-                                      cfg = cfg, expanded = expanded))
+      htmltools::HTML(summarize_table_html(prep, drill = drill, active = active,
+                                           cfg = cfg, expanded = expanded))
     },
     prep = prep, max_height = max_height, search = search,
     title = title, subtitle = subtitle, caption = caption,
@@ -135,9 +138,9 @@ rank_table <- function(data, group = NULL, value = ".count", func = "count",
 }
 
 #' @noRd
-rank_message_table <- function(msg = "No data") {
+summarize_message_table <- function(msg = "No data") {
   htmltools::tags$table(
-    class = "blockr-table blockr-rank-table",
+    class = "blockr-table blockr-summarize-table",
     htmltools::tags$tbody(
       htmltools::tags$tr(htmltools::tags$td(class = "blockr-data", msg))
     )
@@ -146,26 +149,35 @@ rank_message_table <- function(msg = "No data") {
 
 # Chrome: title bands, toolbar (search + legend), scroll wrapper, caption,
 # status line. Mirrors dt_chrome() -- same classes, so the shared table CSS
-# and the design tokens apply unchanged -- plus the rank delta CSS and JS.
+# and the design tokens apply unchanged -- plus the summarize table's CSS delta
+# and JS.
 #' @noRd
-rank_chrome <- function(inner, prep = NULL, max_height = NULL, search = TRUE,
-                        title = NULL, subtitle = NULL, caption = NULL,
-                        drill = NULL, elem_id = NULL, active = NULL,
-                        shell = FALSE, download = NULL, ctrl_target = "") {
-  legend <- if (isTRUE(shell)) rank_legend_tag(NULL) else rank_legend(prep)
+summarize_chrome <- function(inner, prep = NULL, max_height = NULL,
+                             search = TRUE, title = NULL, subtitle = NULL,
+                             caption = NULL, drill = NULL, elem_id = NULL,
+                             active = NULL, shell = FALSE, download = NULL,
+                             ctrl_target = "") {
+  legend <- if (isTRUE(shell)) {
+    summarize_legend_tag(NULL)
+  } else {
+    summarize_legend(prep)
+  }
 
-  # The control row holds the search only; rank-table.js hoists it into the gear
-  # row so search sits left of the gear (table-block parity), which keeps that
-  # row at its 30px.
+  # The control row holds the search only; summarize-table.js hoists it into the
+  # gear row so search sits left of the gear (table-block parity), which keeps
+  # that row at its 30px.
   header <- htmltools::tags$div(
     class = "blockr-html-table-header",
     if (isTRUE(search) || !is.null(download)) {
       htmltools::tags$div(
         class = "blockr-html-table-toolbar",
-        if (isTRUE(search)) {
+        # The shell always carries the box, hidden while off: the payload
+        # turns it on and off without re-rendering the container.
+        if (isTRUE(search) || isTRUE(shell)) {
           htmltools::tags$input(
             type = "search", class = "blockr-search",
-            placeholder = "Search\u2026", `aria-label` = "Search table"
+            placeholder = "Search\u2026", `aria-label` = "Search table",
+            style = if (!isTRUE(search)) "display:none"
           )
         },
         # The download control rides in the toolbar so the JS hoist carries it
@@ -187,13 +199,13 @@ rank_chrome <- function(inner, prep = NULL, max_height = NULL, search = TRUE,
       htmltools::tags$div(class = "dd-table-title"),
       htmltools::tags$div(class = "dd-table-subtitle")
     )
-  } else if (rank_nz(title) || rank_nz(subtitle)) {
+  } else if (summarize_nz(title) || summarize_nz(subtitle)) {
     htmltools::tags$div(
       class = "dd-table-titles",
-      if (rank_nz(title)) {
+      if (summarize_nz(title)) {
         htmltools::tags$div(class = "dd-table-title", title)
       },
-      if (rank_nz(subtitle)) {
+      if (summarize_nz(subtitle)) {
         htmltools::tags$div(class = "dd-table-subtitle", subtitle)
       }
     )
@@ -211,16 +223,16 @@ rank_chrome <- function(inner, prep = NULL, max_height = NULL, search = TRUE,
 
   htmltools::tagList(
     htmltools::tags$style(htmltools::HTML(html_table_shared_css_fallback())),
-    htmltools::tags$style(htmltools::HTML(rank_table_css())),
-    rank_table_dep(),
+    htmltools::tags$style(htmltools::HTML(summarize_table_css())),
+    summarize_table_dep(),
     htmltools::tags$div(
-      class = "blockr-html-table-container blockr-rank-container",
-      `data-rank-elem-id` = elem_id,
-      `data-rank-drill` = drill,
+      class = "blockr-html-table-container blockr-summarize-container",
+      `data-summarize-elem-id` = elem_id,
+      `data-summarize-drill` = drill,
       # Transient drill: the JS reads this to decide whether a click is an
       # event (send and forget) or a selection it latches.
-      `data-rank-ctrl-target` = ctrl_target %||% "",
-      htmltools::tags$div(class = "blockr-rank-scope", header),
+      `data-summarize-ctrl-target` = ctrl_target %||% "",
+      htmltools::tags$div(class = "blockr-summarize-scope", header),
       titles,
       # The legend sits below the title band and above the table, never in the
       # control row -- a long legend must not push the search box around.
@@ -232,13 +244,13 @@ rank_chrome <- function(inner, prep = NULL, max_height = NULL, search = TRUE,
       ),
       if (isTRUE(shell)) {
         htmltools::tags$div(class = "dd-table-caption", style = "display:none")
-      } else if (rank_nz(caption)) {
+      } else if (summarize_nz(caption)) {
         htmltools::tags$div(class = "dd-table-caption", caption)
       },
       if (isTRUE(shell)) {
-        rank_footer_tag(NULL)
+        summarize_footer_tag(NULL)
       } else {
-        rank_footer(prep, drill = drill, active = active)
+        summarize_footer(prep, drill = drill, active = active)
       }
     )
   )
@@ -246,12 +258,12 @@ rank_chrome <- function(inner, prep = NULL, max_height = NULL, search = TRUE,
 
 # The footer's content as DATA: the note a reinterpreted config leaves, and
 # the active drill filter. One definition, two consumers -- the chrome renders
-# it server-side, and rank-table.js refreshes it from the payload without
+# it server-side, and summarize-table.js refreshes it from the payload without
 # re-rendering the container. There is no row count: a Top N cut already
 # says what it left out in its fold row, and an uncut table has nothing to
 # report.
 #' @noRd
-rank_foot_spec <- function(prep, drill = NULL, active = NULL) {
+summarize_foot_spec <- function(prep, drill = NULL, active = NULL) {
   if (!is.null(prep$err)) {
     return(list(note = NULL, filter = NULL, reset = FALSE))
   }
@@ -268,7 +280,7 @@ rank_foot_spec <- function(prep, drill = NULL, active = NULL) {
 # case; the summarize table maps colour PER COLUMN, so it can carry several,
 # and each is titled by the column it decodes.
 #' @noRd
-rank_legend_spec <- function(prep) {
+summarize_legend_spec <- function(prep) {
   if (!is.null(prep$err)) return(NULL)
   # Colour identity lives in the COLOUR mapping only: a plain facet's bars are
   # all the house blue and its column headers already name the levels, so it
@@ -284,7 +296,7 @@ rank_legend_spec <- function(prep) {
     # Positional, never by name: a colour column can carry a BLANK level (an
     # untreated subject's empty TRT01A), and `pal[[""]]` is a subscript error
     # even though the entry sits right there -- the empty string matches no
-    # name in R. rank_level_colors() returns the palette in `levels` order,
+    # name in R. summarize_level_colors() returns the palette in `levels` order,
     # so the index IS the lookup. Blank reads as "(Missing)", as it does in
     # the table's group columns.
     pal <- g$palette
@@ -302,40 +314,42 @@ rank_legend_spec <- function(prep) {
 }
 
 #' @noRd
-rank_footer <- function(prep, drill = NULL, active = NULL) {
-  rank_footer_tag(rank_foot_spec(prep, drill = drill, active = active))
+summarize_footer <- function(prep, drill = NULL, active = NULL) {
+  summarize_footer_tag(
+    summarize_foot_spec(prep, drill = drill, active = active)
+  )
 }
 
 #' @noRd
-rank_footer_tag <- function(spec) {
+summarize_footer_tag <- function(spec) {
   if (is.null(spec)) spec <- list(reset = FALSE)
   htmltools::tags$div(
-    class = "blockr-rank-footer",
-    htmltools::tags$span(class = "blockr-rank-note", spec$note %||% ""),
+    class = "blockr-summarize-footer",
+    htmltools::tags$span(class = "blockr-summarize-note", spec$note %||% ""),
     # The drill's line, the chart's own markup and words (chart/chrome.js
-    # _updateStatus): rank-table.js fills it, because what it says depends on
-    # clicks the server never hears about in transient mode.
+    # _updateStatus): summarize-table.js fills it, because what it says depends
+    # on clicks the server never hears about in transient mode.
     htmltools::tags$div(class = "dd-status-footer")
   )
 }
 
 #' @noRd
-rank_legend <- function(prep) {
-  rank_legend_tag(rank_legend_spec(prep))
+summarize_legend <- function(prep) {
+  summarize_legend_tag(summarize_legend_spec(prep))
 }
 
 #' @noRd
-rank_legend_tag <- function(spec) {
+summarize_legend_tag <- function(spec) {
   htmltools::tags$div(
-    class = "blockr-rank-legend",
+    class = "blockr-summarize-legend",
     style = if (is.null(spec)) "display:none" else NULL,
     lapply(spec$groups, function(g) {
       htmltools::tags$span(
-        class = "blockr-rank-legend-group",
-        htmltools::tags$span(class = "blockr-rank-legend-title", g$title),
+        class = "blockr-summarize-legend-group",
+        htmltools::tags$span(class = "blockr-summarize-legend-title", g$title),
         lapply(g$items, function(it) {
           htmltools::tags$span(
-            class = "blockr-rank-legend-item",
+            class = "blockr-summarize-legend-item",
             htmltools::tags$i(style = paste0("background:", it$color)),
             it$label
           )
@@ -346,7 +360,7 @@ rank_legend_tag <- function(spec) {
 }
 
 #' @noRd
-rank_nz <- function(x) {
+summarize_nz <- function(x) {
   !is.null(x) && length(x) == 1L && !is.na(x) && nzchar(x)
 }
 
@@ -354,7 +368,7 @@ rank_nz <- function(x) {
 # quote -- because the JS row assembler applies the same rules and the two
 # outputs must not drift.
 #' @noRd
-rank_esc <- function(x) {
+summarize_esc <- function(x) {
   x <- as.character(x)
   x[is.na(x)] <- ""
   x <- gsub("&", "&amp;", x, fixed = TRUE)
@@ -365,15 +379,15 @@ rank_esc <- function(x) {
 
 # A data-frame-level display attribute, or NULL when absent / not a string.
 #' @noRd
-rank_attr <- function(data, nm) {
+summarize_attr <- function(data, nm) {
   v <- attr(data, nm, exact = TRUE)
   if (is.character(v) && length(v) == 1L && nzchar(v)) v else NULL
 }
 #' The two parts of a numeric cell: the value string, and the percent string
 #' when the column shows both. Data, never markup -- the consumers wrap it.
 #' @noRd
-rank_num_parts <- function(v, denom = NULL, combined = FALSE, signed = FALSE,
-                           pct_only = FALSE) {
+summarize_num_parts <- function(v, denom = NULL, combined = FALSE,
+                                signed = FALSE, pct_only = FALSE) {
   if (isTRUE(signed)) {
     return(list(disp = ifelse(
       is.na(v), "",
@@ -410,29 +424,31 @@ rank_num_parts <- function(v, denom = NULL, combined = FALSE, signed = FALSE,
 
 # --- the table ---------------------------------------------------------------
 #' @noRd
-rank_table_html <- function(prep, drill = NULL, active = NULL, cfg = NULL,
-                            expanded = FALSE) {
-  rank_cells_html(rank_cells(prep, drill = drill, active = active, cfg = cfg),
-                  expanded = expanded)
+summarize_table_html <- function(prep, drill = NULL, active = NULL, cfg = NULL,
+                                 expanded = FALSE) {
+  summarize_cells_html(
+    summarize_cells(prep, drill = drill, active = active, cfg = cfg),
+    expanded = expanded
+  )
 }
 
 #' @noRd
-rank_label_header <- function(prep) {
+summarize_label_header <- function(prep) {
   if (is.null(prep$parent)) prep$group else paste0(prep$parent, " / ", prep$group)
 }
 
 # The same bundle the table block ships (blockr.ui's shared controls, the dd-*
-# CSS and the gear engine), plus the rank JS LAST -- it reads
+# CSS and the gear engine), plus the summarize table JS LAST -- it reads
 # Blockr.DrilldownConfig at bind time.
 #' @noRd
-rank_table_dep <- memoise0(function() {
+summarize_table_dep <- memoise0(function() {
   htmltools::tagList(
     drilldown_table_dep(),
     htmltools::htmlDependency(
-      name = "blockr-viz-rank",
+      name = "blockr-viz-summarize",
       version = paste0(utils::packageVersion("blockr.viz"), ".18"),
       src = system.file("js", package = "blockr.viz"),
-      script = "rank-table.js"
+      script = "summarize-table.js"
     )
   )
 })
@@ -441,7 +457,7 @@ rank_table_dep <- memoise0(function() {
 # raw text -- escaped, it lives in an attribute), so the client never parses
 # a formatted string (and a bar cell, which has no text at all, still sorts).
 #' @noRd
-rank_data_v <- function(v) {
+summarize_data_v <- function(v) {
   # format() common-width-pads a CHARACTER vector even with trim (trim only
   # suppresses numeric left-padding) -- text sort keys pass through as-is.
   # Numbers are formatted PER ELEMENT: vectorized format() decimal-aligns
@@ -454,7 +470,7 @@ rank_data_v <- function(v) {
       format(x, scientific = FALSE, trim = TRUE, digits = 15L)
     }, character(1L))
   }
-  paste0(" data-v=\"", rank_esc(ifelse(is.na(v), "", s)), "\"")
+  paste0(" data-v=\"", summarize_esc(ifelse(is.na(v), "", s)), "\"")
 }
 
 # Pickable input columns for the gear's column pickers, in the shape the shared
@@ -462,7 +478,7 @@ rank_data_v <- function(v) {
 # columns -- not the displayed projection -- so the pickers stay correct while
 # the table shows an aggregated frame (dt_gear_cols_json's rule).
 #' @noRd
-rank_gear_cols <- function(data) {
+summarize_gear_cols <- function(data) {
   if (!is.data.frame(data)) return(list())
   lapply(names(data), function(nm) {
     num <- is.numeric(data[[nm]])
@@ -485,7 +501,7 @@ rank_gear_cols <- function(data) {
 # than a dozen scalars: `titles` has to carry null-vs-"" (auto vs explicitly
 # none), which an HTML attribute cannot say, and `cols` / `columns` are arrays.
 #' @noRd
-rank_table_attrs <- function(prep, cfg) {
+summarize_table_attrs <- function(prep, cfg) {
   if (is.null(cfg)) return("")
   # Facet levels travel too: the Compare picker offers levels, not columns.
   cfg$facet_levels <- as.list(prep$facet_levels %||% character())
@@ -493,20 +509,20 @@ rank_table_attrs <- function(prep, cfg) {
   cfg$sortable <- if (isTRUE(cfg$sortable %||% TRUE)) "on" else "off"
   cfg$axis <- if (isTRUE(cfg$axis %||% TRUE)) "on" else "off"
   cfg$download <- if (isTRUE(cfg$download)) "on" else "off"
-  cfg$bar_width <- rank_bar_width(cfg$bar_width)
+  cfg$bar_width <- summarize_bar_width(cfg$bar_width)
   json <- as.character(jsonlite::toJSON(cfg, auto_unbox = TRUE, null = "null"))
   # A preset is a CSS hook on the table; "fit" is the stylesheet's default
   # and needs none.
   width <- if (!identical(cfg$bar_width, "fit")) {
-    paste0(" data-rank-width=\"", cfg$bar_width, "\"")
+    paste0(" data-summarize-width=\"", cfg$bar_width, "\"")
   }
-  paste0(" data-rank-cfg=\"", rank_esc(json), "\"", width)
+  paste0(" data-summarize-cfg=\"", summarize_esc(json), "\"", width)
 }
 
 #' The `bar_width` vocabulary: an unknown or empty value reads as "fit".
 #' @noRd
-rank_bar_width <- function(x) {
-  x <- rank_chr1(x) %||% "fit"
+summarize_bar_width <- function(x) {
+  x <- summarize_chr1(x) %||% "fit"
   if (x %in% c("narrow", "medium", "wide", "fit")) x else "fit"
 }
 
@@ -514,16 +530,17 @@ rank_bar_width <- function(x) {
 #'
 #' Rendered ONCE by the block (a one-shot `renderUI`, like the table block's
 #' chrome) so the gear, the search text and the scroll position outlive every
-#' body update. rank-table.js fills the body and the bands from each pushed
+#' body update. summarize-table.js fills the body and the bands from each pushed
 #' payload.
 #'
-#' @param max_height,search,drill,elem_id Same meaning as in [rank_table()].
+#' @param max_height,search,drill,elem_id Same meaning as in
+#' `summarize_table()`.
 #' @return An [htmltools::tagList()].
 #' @noRd
-rank_chrome_shell <- function(max_height = NULL, search = TRUE,
-                              drill = NULL, elem_id = NULL, download = NULL,
-                              ctrl_target = "") {
-  rank_chrome(
+summarize_chrome_shell <- function(max_height = NULL, search = TRUE,
+                                   drill = NULL, elem_id = NULL,
+                                   download = NULL, ctrl_target = "") {
+  summarize_chrome(
     inner = htmltools::HTML(""), prep = NULL, max_height = max_height,
     search = search, drill = drill, elem_id = elem_id, shell = TRUE,
     download = download, ctrl_target = ctrl_target

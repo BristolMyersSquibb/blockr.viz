@@ -11,7 +11,7 @@
 #   6. Compare: zero-centred difference vs a comparator arm, delta in-bar.
 #
 # Run from the workspace root:
-#   BLOCKR_PORT=4747 R -q -f blockr.viz/dev/verify-rank-identity.R
+#   BLOCKR_PORT=4747 R -q -f blockr.viz/dev/verify-summarize-identity.R
 options(shiny.port = as.integer(Sys.getenv("BLOCKR_PORT", "3838")),
         shiny.host = "0.0.0.0")
 
@@ -46,14 +46,14 @@ board <- new_dock_board(
 
     # One value per patient, as-is, with the chart's tooltip fields as
     # real columns beside the bar.
-    ident = new_rank_block(
+    ident = new_summarize_table_block(
       group = "USUBJID", func = "identity", value = "BMIBL",
       fields = c("TRT01A", "SEX", "AGE"),
       title = "Baseline BMI per subject",
       block_name = "Identity + fields"),
 
     # Same, split by color -- the chart's color stratification.
-    ident_color = new_rank_block(
+    ident_color = new_summarize_table_block(
       group = "USUBJID", func = "identity", value = "BMIBL", color = "SEX",
       title = "Baseline BMI per subject, by sex",
       block_name = "Identity + color"),
@@ -66,13 +66,13 @@ board <- new_dock_board(
       block_name = "Chart (reference)"),
 
     # Facet WITHOUT color: colour-neutral columns, one shared scale.
-    ident_facet = new_rank_block(
+    ident_facet = new_summarize_table_block(
       group = "USUBJID", func = "identity", value = "BMIBL", facet = "TRT01A",
       title = "Baseline BMI per subject, by arm",
       block_name = "Identity + facet"),
 
     # Facet AND color composing: split bars inside each arm column.
-    facet_color = new_rank_block(
+    facet_color = new_summarize_table_block(
       group = "AEDECOD", facet = "TRTA", color = "AESEV",
       func = "count_distinct", id_var = "USUBJID",
       title = "Adverse events by arm and severity",
@@ -80,7 +80,7 @@ board <- new_dock_board(
       block_name = "Facet + color"),
 
     # Untouched block, for the gear's default state.
-    fresh = new_rank_block(block_name = "Fresh rank")
+    fresh = new_summarize_table_block(block_name = "Fresh rank")
   ),
   links = links(
     from = c("data", "data", "data", "data", "ae", "data"),
@@ -101,6 +101,6 @@ board <- new_dock_board(
   active = "Identity"
 )
 
-cat("\nServing rank-identity verification on http://127.0.0.1:",
+cat("\nServing summarize-identity verification on http://127.0.0.1:",
     getOption("shiny.port"), "/\n\n", sep = "")
 serve(board)

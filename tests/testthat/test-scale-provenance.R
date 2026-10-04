@@ -51,15 +51,15 @@ test_that("dd_scales_config emits the CHART's var name with source colors", {
   expect_equal(cfg$color$F, "#0072B2")
 })
 
-test_that("the rank / summarize-table colors follow provenance too", {
+test_that("the summarize table colors follow provenance too", {
   d <- picked()
   d$USUBJID <- c("s1", "s2", "s3", "s4")
   d$ASTDY <- c(1, 2, 3, 4)
   d$AENDY <- c(5, 6, 7, 8)
 
   # The colour-split bar path.
-  p <- rank_prepare(d, group = "VISIT", func = "count", color = "color",
-                    scale_map = sex_map)
+  p <- summarize_prepare(d, group = "VISIT", func = "count", color = "color",
+                         scale_map = sex_map)
   expect_equal(unname(p$palette[c("F", "M", "U")]),
                c("#0072B2", "#E69F00", "#999999"))
 

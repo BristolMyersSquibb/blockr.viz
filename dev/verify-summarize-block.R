@@ -1,8 +1,8 @@
-# Verification board for new_rank_block(): the five bar shapes side by side on
+# Verification board for new_summarize_table_block(): the five bar shapes side by side on
 # real ADaM data (safetyData ADAE / ADSL), plus the drill wired to a table so a
 # row click is visibly filtering downstream.
 #
-#   BLOCKR_PORT=3838 R -q -f dev/verify-rank-block.R
+#   BLOCKR_PORT=3838 R -q -f dev/verify-summarize-block.R
 #
 # What to check:
 #   1. Rank        -- ranked bars, search narrows, click a numeric header sorts,
@@ -37,7 +37,7 @@ board <- new_dock_board(
     data = new_static_block(adae, block_name = "ADaM ADAE"),
 
     # 1. The clinical case: most frequent AEs, subjects not events, drill on.
-    rank = new_rank_block(
+    rank = new_summarize_table_block(
       group = "AEDECOD", func = "count_distinct", id_var = "USUBJID",
       drill = "AEDECOD",
       title = "Most frequent adverse events",
@@ -47,7 +47,7 @@ board <- new_dock_board(
     drilled = new_table_block(block_name = "Drilled events"),
 
     # 2. Hierarchy: system organ class over preferred term.
-    nested = new_rank_block(
+    nested = new_summarize_table_block(
       group = "AEDECOD", parent = "AEBODSYS",
       func = "count_distinct", id_var = "USUBJID",
       title = "Adverse events by system organ class",
@@ -55,14 +55,14 @@ board <- new_dock_board(
       block_name = "Hierarchy"),
 
     # 3. Colour split by severity (ordered, so one hue stepped).
-    split = new_rank_block(
+    split = new_summarize_table_block(
       group = "AEDECOD", color = "AESEV", func = "count_distinct",
       id_var = "USUBJID", bar_mode = "stacked",
       title = "Adverse events by maximum severity",
       block_name = "Colour split"),
 
     # 4. Facet: one bar column per treatment arm, shared scale.
-    faceted = new_rank_block(
+    faceted = new_summarize_table_block(
       group = "AEDECOD", facet = "TRTA", func = "count_distinct",
       id_var = "USUBJID", sort_by = "Xanomeline High Dose",
       title = "Adverse events by treatment arm",
@@ -98,6 +98,6 @@ board <- new_dock_board(
   active = "Rank"
 )
 
-cat("\nServing rank-block verification on http://127.0.0.1:",
+cat("\nServing summarize-block verification on http://127.0.0.1:",
     getOption("shiny.port"), "/\n\n", sep = "")
 serve(board)

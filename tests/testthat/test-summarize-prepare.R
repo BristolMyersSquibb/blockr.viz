@@ -33,7 +33,7 @@ test_that("the script's value is state, and the result is the prepared rows", {
       session$flushReact()
       st <- session$returned$state
       expect_match(st$script(), "min_n <- 1")
-      expr_scope$setInputs(rank_block_action = list(
+      expr_scope$setInputs(summarize_table_block_action = list(
         action = "config", param = "sv_min_n", value = 2
       ))
       session$flushReact()
@@ -53,7 +53,7 @@ test_that("a script edit from the gear replaces the script", {
     {
       expr_scope <- session$makeScope("expr")
       session$flushReact()
-      expr_scope$setInputs(rank_block_action = list(
+      expr_scope$setInputs(summarize_table_block_action = list(
         action = "config", param = "script",
         value = "data[data$AEDECOD == \"RASH\", , drop = FALSE]"
       ))

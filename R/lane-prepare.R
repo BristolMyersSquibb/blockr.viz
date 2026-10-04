@@ -1,6 +1,6 @@
 # Summarize table: shared row assembly ----------------------------------------
 #
-# Helpers shared by the bar path (rank-table.R) and the summaries path
+# Helpers shared by the bar path (summarize-table.R) and the summaries path
 # (lane-summaries.R). The single-mark preparers that briefly lived here are
 # gone: the column list is the one config model, and only the ranked bar
 # keeps a dedicated path.
@@ -9,11 +9,11 @@
 # mark is a horizontal glyph on a shared linear domain confined to a cell
 # (_blockr.design/open/summarize-table/).
 
-#' Shared ordering + fold + row assembly: the tail of rank_prepare(), split out
-#' so every mark reuses one definition of "rank order, cap, nest".
+#' Shared ordering + fold + row assembly: the tail of summarize_prepare(), split
+#' out so every mark reuses one definition of "rank order, cap, nest".
 #' @noRd
-rank_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
-                               top_n) {
+summarize_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
+                                    top_n) {
   ord <- function(df) {
     if (is.null(df) || !nrow(df)) return(df)
     v <- if (identical(sort_key, ".label")) df$.label else df[[sort_key]]
@@ -73,10 +73,10 @@ rank_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
 }
 
 #' Match an arbitrary stat column from `src` into `target` by `keys`
-#' (rank_match generalized beyond `.v`; absent keys stay NA -- an absent
+#' (summarize_match generalized beyond `.v`; absent keys stay NA -- an absent
 #' facet cell draws nothing).
 #' @noRd
-rank_match_col <- function(target, src, keys, col) {
+summarize_match_col <- function(target, src, keys, col) {
   tk <- do.call(paste, c(lapply(keys, function(k) as.character(target[[k]])),
                          list(sep = "\r")))
   sk <- do.call(paste, c(lapply(keys, function(k) as.character(src[[k]])),

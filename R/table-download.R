@@ -1,7 +1,7 @@
 # The table download control, in one place.
 #
 # Three renderers offer the same downloads off the same annotated frame: the
-# table block, the summarize (rank) table, and now a function block drawing a
+# table block, the summarize table, and now a function block drawing a
 # composer table through blockr.sandbox's block_result_output() methods. Each
 # had its own copy of the icon, the format list and the button-or-menu rule,
 # which is how two of them ended up with slightly different markup for what

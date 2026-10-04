@@ -142,9 +142,9 @@ test_that("LANE_STATS mirrors the chart's SUMMARY_STATS plus mean_ci95", {
   expect_identical(intersect(LANE_STATS, chart_stats), chart_stats)
 })
 
-test_that("rank-table.js LANE_STATS mirrors R's, values and labels", {
-  js <- system.file("js", "rank-table.js", package = "blockr.viz")
-  skip_if(!nzchar(js) || !file.exists(js), "rank-table.js not found")
+test_that("summarize-table.js LANE_STATS mirrors R's, values and labels", {
+  js <- system.file("js", "summarize-table.js", package = "blockr.viz")
+  skip_if(!nzchar(js) || !file.exists(js), "summarize-table.js not found")
   expect_identical(js_enum(js, "var LANE_STATS"), LANE_STATS)
   src <- paste(readLines(js, warn = FALSE), collapse = "\n")
   for (nm in LANE_STATS) {

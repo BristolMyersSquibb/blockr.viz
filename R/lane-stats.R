@@ -227,7 +227,7 @@ lane_stat_agg <- function(data, keys, value, stats) {
 }
 
 # Display formatting for a statistic value: significant digits like the num
-# cells (rank_num_parts), trimmed of formatC's common-width padding.
+# cells (summarize_num_parts), trimmed of formatC's common-width padding.
 #' @noRd
 lane_fmt <- function(x) {
   ifelse(is.na(x), "", trimws(formatC(x, format = "fg", digits = 4L,

@@ -18,7 +18,7 @@
 # click -> set the pin is deliberately not wired yet.
 #
 # The one real constraint: a dist column shares ONE x domain across all rows
-# (R/rank-push.R:601). Lab AVAL runs from fractions to 1860 U/L across the 47
+# (R/summarize-push.R:601). Lab AVAL runs from fractions to 1860 U/L across the 47
 # params in this study, so AVAL cannot be the glyph — grid "3. AVAL squash"
 # shows exactly how badly. % change from baseline is unit-free and is what
 # makes the overview readable.

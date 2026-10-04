@@ -23,7 +23,7 @@ shown only to expose repetition.
   bytes/row) and **47% of it is pre-rendered prose tooltips** — not HTML, but
   still presentation built in R.
 - **Bytes are not the bottleneck; compute is.** At prod scale the dist config
-  spends **556 ms in `rank_prepare`** against **32 ms** building and
+  spends **556 ms in `summarize_prepare`** against **32 ms** building and
   serializing the payload. `quantile()` runs once per group per facet.
 
 ## Measured
@@ -85,11 +85,11 @@ A tip reads `n=10 · Median 53.47 · Q1–Q3 43.85–58.58 · 1.5×IQR 24.99–7
 
 ### 1. The markup claim holds
 
-`rank_flat_payload()` (`R/rank-push.R:972`) emits `head` as the only HTML
+`summarize_flat_payload()` (`R/summarize-push.R:972`) emits `head` as the only HTML
 string; a scan of the serialized payload with `head` removed finds **zero
 angle brackets**. `label`, `parent`, `fold`, legend labels are plain text
-escaped **client-side** (`rank-table.js:541`). The gear config rides inside
-`head` as `data-rank-cfg` — 0.8 KB, re-sent on every push although the gear
+escaped **client-side** (`summarize-table.js:541`). The gear config rides inside
+`head` as `data-summarize-cfg` — 0.8 KB, re-sent on every push although the gear
 only re-reads it on popover open.
 
 ### 2. `tip` is presentation built in R, and it is half the payload
@@ -105,7 +105,7 @@ differences of the others (`w1`, `bw`, `b2`, `w2` for box; `rw`, `ow` for
 pointrange). Estimated: **272 KB → ~90 KB, a 3× cut**, with the client
 formatting the tooltip from data.
 
-The comment at `R/rank-push.R:85-89` explains why the differences are computed
+The comment at `R/summarize-push.R:85-89` explains why the differences are computed
 in R (`String(24.13 - 10.5)` is not `"13.63"` in JS). That is a real float
 printing concern, but it applies to *display* strings, not to CSS percentages
 where a trailing digit is invisible.
@@ -113,28 +113,28 @@ where a trailing digit is invisible.
 ### 3. Dead payload fields
 
 - **`nn`** (box, pointrange, sparkline) is serialized on every push and
-  **never read** — `grep -o "[.]nn[^a-zA-Z]" inst/js/rank-table.js` returns
+  **never read** — `grep -o "[.]nn[^a-zA-Z]" inst/js/summarize-table.js` returns
   nothing. It exists only to build `tip` in R. 4.8 KB at prod scale, free to
   drop.
 - **`chrome$foot$reset`** is shipped and never read; the Reset button lives in
-  the one-shot chrome shell (`rank_footer_tag`, `R/rank-table-html.R:306`).
+  the one-shot chrome shell (`summarize_footer_tag`, `R/summarize-table-html.R:306`).
 - A **text/field column** ships `v` and `disp` as the *same string*
-  (`R/rank-push.R:410`) — exactly 2× that column's bytes.
-- **`sub`** is `rows$.level > 0L` (`R/rank-push.R:127`), which the client
-  already derives from the shipped `level` vector (`rank-table.js:535`).
+  (`R/summarize-push.R:410`) — exactly 2× that column's bytes.
+- **`sub`** is `rows$.level > 0L` (`R/summarize-push.R:127`), which the client
+  already derives from the shipped `level` vector (`summarize-table.js:535`).
 
-### 4. The real cost was `rank_prepare`, not the wire — FIXED
+### 4. The real cost was `summarize_prepare`, not the wire — FIXED
 
 Prod, 3 cols + dist, per render, before:
 
 | stage | ms |
 |---|---:|
-| `rank_prepare` (the aggregation) | **680.7** |
-| `rank_cells` | 102.7 |
-| `rank_flat_payload` | 24.0 |
+| `summarize_prepare` (the aggregation) | **680.7** |
+| `summarize_cells` | 102.7 |
+| `summarize_flat_payload` | 24.0 |
 | `toJSON` | 7.6 |
 
-Rprof put 34% of `rank_prepare` in `stats::quantile` → `sort.int` and 40% in
+Rprof put 34% of `summarize_prepare` in `stats::quantile` → `sort.int` and 40% in
 `as.data.frame.list`. Three costs were stacked in `lane_stat_agg`'s per-group
 `f()` (`R/lane-stats.R:130`):
 
@@ -170,12 +170,12 @@ two ways: a bit-identity test against `stats::quantile()`
 byte-for-byte diff of the whole prod payload against the old implementation
 (279,329 bytes, identical).
 
-After the fix the `rank_prepare` profile is flat — no single hot spot above
+After the fix the `summarize_prepare` profile is flat — no single hot spot above
 6%, the remainder being dplyr's grouping machinery.
 
 ## Suggested order
 
-1. ~~Vectorise the dist aggregation in `rank_prepare`.~~ **Done**, 3.9× at
+1. ~~Vectorise the dist aggregation in `summarize_prepare`.~~ **Done**, 3.9× at
    prod scale.
 2. **Drop `nn`, `foot$reset`, `sub`, and the text-column `disp`/`v`
    duplication.** Pure deletion, no design change, ~7% of the payload.
@@ -183,9 +183,9 @@ After the fix the `rank_prepare` profile is flat — no single hot spot above
    `dmin`/`dmax` so the client derives `w1`/`bw`/`b2`/`w2`/`rw`/`ow`.
    ~3× payload cut on the dist path. Bigger change — it moves the tooltip
    wording into JS, so the static/report HTML consumer
-   (`rank_cells_html()`) keeps its own copy and the drift guard in
-   `test-rank-push.R` needs a matching pair.
-4. **Move `data-rank-cfg` out of the per-push `head`** into the one-shot
+   (`summarize_cells_html()`) keeps its own copy and the drift guard in
+   `test-summarize-push.R` needs a matching pair.
+4. **Move `data-summarize-cfg` out of the per-push `head`** into the one-shot
    chrome, or into its own rarely-sent message.
 
 Nothing here argues against the current architecture — the cell model already

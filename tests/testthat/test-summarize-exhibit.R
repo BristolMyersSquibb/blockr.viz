@@ -39,9 +39,9 @@ test_that("the HTML renderer draws the same marks the app does", {
   ex <- demo_exhibit()
   html <- as.character(htmltools::renderTags(html_exhibit(ex))$html)
 
-  expect_true(grepl("blockr-rank-table", html, fixed = TRUE))
+  expect_true(grepl("blockr-summarize-table", html, fixed = TRUE))
   expect_true(grepl("lane-box", html, fixed = TRUE))
-  expect_true(grepl("blockr-rank-fill", html, fixed = TRUE))
+  expect_true(grepl("blockr-summarize-fill", html, fixed = TRUE))
   # An exhibit is printed, not searched. (The class name still appears in the
   # inlined CSS, so the test asks for the INPUT.)
   expect_false(grepl("<input type=\"search\"", html, fixed = TRUE))
@@ -142,8 +142,8 @@ test_that("a page never exceeds the height it was given", {
     summaries = list(list(type = "simple", func = "count", show = "bar",
                           name = "n")),
     title = "T")
-  pages <- rank_paint_pages(ex$cells, ex$prep, width_in = 12.5,
-                            max_height = 2.2, title = "T")
+  pages <- summarize_paint_pages(ex$cells, ex$prep, width_in = 12.5,
+                                 max_height = 2.2, title = "T")
 
   expect_gt(length(pages), 1L)
   for (p in pages) {
@@ -154,7 +154,7 @@ test_that("a page never exceeds the height it was given", {
 
 test_that("pptx_add_exhibit() paints one slide per page", {
   skip_if_not_installed("officer")
-  skip_if_not(rank_paint_ready())
+  skip_if_not(summarize_paint_ready())
 
   ex <- demo_exhibit(title = "T")
   doc <- officer::read_pptx()
@@ -173,7 +173,7 @@ test_that("pptx_add_exhibit() paints one slide per page", {
 
 test_that("a long table is paged rather than overflowing the slide", {
   skip_if_not_installed("officer")
-  skip_if_not(rank_paint_ready())
+  skip_if_not(summarize_paint_ready())
 
   data <- demo_frame(600L)
   data$grp <- paste0("term ", sprintf("%03d", seq_len(nrow(data)) %% 60L))

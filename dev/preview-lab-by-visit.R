@@ -40,7 +40,7 @@ lb$ABNORMAL <- as.integer(lb$ANRIND %in% c("HIGH", "LOW"))
 
 # Rows in visit order: `sort_by` takes a raw data column and orders each row by
 # that column's minimum within the group. AVISIT is text, so "Week 12" sorts
-# before "Week 2"; AVISITN is what the column is for. rank-table.R:617-620 calls
+# before "Week 2"; AVISITN is what the column is for. summarize-table.R:617-620 calls
 # out this exact case.
 VISIT_ORDER <- list(sort_by = "AVISITN", sort_dir = "asc")
 

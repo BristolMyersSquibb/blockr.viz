@@ -5,7 +5,7 @@
 #
 #   xlsx  the NUMBERS behind the marks, one column per statistic
 #   html  the table itself, script and styles inlined
-#   pptx  painted pages (see R/rank-paint.R for why a picture)
+#   pptx  painted pages (see R/summarize-paint.R for why a picture)
 #   png   one picture, however tall it needs to be
 #
 # The spreadsheet is deliberately not a picture: `openxlsx::insertImage()`
@@ -28,13 +28,13 @@
 #' @param prep A prepared summarize table (internal).
 #' @return A data frame, with `.indent` when the table is nested.
 #' @noRd
-rank_export_df <- function(prep) {
+summarize_export_df <- function(prep) {
 
   rows <- prep$rows
   n <- nrow(rows)
 
   out <- list()
-  out[[rank_label_header(prep)]] <- as.character(rows$.label)
+  out[[summarize_label_header(prep)]] <- as.character(rows$.label)
 
   dropped <- character()
 
@@ -150,11 +150,11 @@ write_exhibit_png.summarize_exhibit <- function(x, file, width_in = NULL,
                                                 res = getOption(
                                                   "blockr.viz.paint_res", 300),
                                                 ...) {
-  rank_paint_require()
+  summarize_paint_require()
 
-  p <- rank_paint_grob(x$cells, x$prep, width_in = width_in %||% 12.5,
-                       title = x$title, subtitle = x$subtitle,
-                       caption = x$caption, ...)
+  p <- summarize_paint_grob(x$cells, x$prep, width_in = width_in %||% 12.5,
+                            title = x$title, subtitle = x$subtitle,
+                            caption = x$caption, ...)
   rp_write_png(p, file, res = res)
 
   invisible(file)

@@ -433,7 +433,7 @@
   window.addEventListener('resize', followHeaders);
 
   // ---- body payloads ---------------------------------------------------
-  // A PERSISTENT store, not a one-shot queue (the table and rank blocks'
+  // A PERSISTENT store, not a one-shot queue (the table and summarize table blocks'
   // shape): a payload that arrives before its chrome exists waits here, and
   // a chrome re-created later -- dock panel re-mount, view switch -- paints
   // from the store with no R round trip.
