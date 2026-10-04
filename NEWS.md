@@ -1,3 +1,10 @@
+# blockr.viz 0.2.196
+
+* A drill to another block (`ctrl_target`) now carries every value the click
+  names. A click on a bar segment that covers nine patients drills the patient
+  profile to those nine; before, a drill naming more than one value reached
+  the target as nothing.
+
 # blockr.viz 0.2.195
 
 * The summarize table carries the classes `lane_chart_block` and `rank_block`
