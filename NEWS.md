@@ -1,3 +1,9 @@
+# blockr.viz 0.2.193
+
+* Summarize table: turning the search bar, the drill-down or "Send to
+  filter" on or off in the gear no longer closes the gear. These settings
+  used to re-render the block's container; they now update it in place.
+
 # blockr.viz 0.2.192
 
 * The chart block's browser code is rewritten: `inst/js/chart.js` is

@@ -527,3 +527,12 @@ test_that("only a labelled column's axis follows the bar width", {
   span <- as.character(rank_axis_strip(list(kind = "interval", dom = c(0, 9))))
   expect_false(grepl("has-val", span))
 })
+
+test_that("the chrome shell keeps the search box when search is off", {
+  # The gear turns search on and off through the payload; re-rendering the
+  # container would close the open gear.
+  html <- as.character(rank_chrome_shell(
+    search = FALSE, elem_id = "x", download = htmltools::span()
+  ))
+  expect_match(html, "<input[^>]*class=\"blockr-search\"[^>]*display:none")
+})

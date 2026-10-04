@@ -314,8 +314,10 @@
 
   function bindDrill(root) {
     var elemId = root.getAttribute("data-rank-elem-id");
-    var col = root.getAttribute("data-rank-drill");
-    if (!elemId || !col) return;
+    if (!elemId) return;
+    // Read per click: the gear turns the drill on, off or onto another
+    // column through the payload, without re-rendering the container.
+    var col = null;
 
     function send(values) {
       if (!window.Shiny || !Shiny.setInputValue) return;
@@ -346,6 +348,8 @@
       var tr = e.target.closest("tr.blockr-rank-row.is-pick");
       if (!tr || !root.contains(tr)) return;
       if (e.target.closest(".blockr-indent-btn")) return;
+      col = root.getAttribute("data-rank-drill");
+      if (!col) return;
       var label = tr.getAttribute("data-rank-label");
       // Transient: no toggle. A second click on the same row means "send it
       // again", never "un-drill" -- that is the target's job.
@@ -744,9 +748,36 @@
     return out.join("");
   }
 
+  /** The container's own settings, which its one-shot render does not
+   *  follow: search box, drill column, ctrl_target, height. A key the
+   *  payload lacks leaves that setting alone. */
+  function applySettings(root, ch) {
+    if (ch.drill !== undefined) {
+      if (ch.drill) root.setAttribute("data-rank-drill", ch.drill);
+      else root.removeAttribute("data-rank-drill");
+    }
+    if (ch.ctrl_target !== undefined) {
+      root.setAttribute("data-rank-ctrl-target", ch.ctrl_target || "");
+    }
+    var input = root.querySelector("input.blockr-search");
+    if (input && ch.search !== undefined) {
+      input.style.display = ch.search ? "" : "none";
+      // A hidden box must not keep filtering the rows.
+      if (!ch.search) input.value = "";
+    }
+    var wrap = root.querySelector(".blockr-table-wrapper");
+    if (wrap && ch.max_height !== undefined) {
+      var page = !ch.max_height;
+      wrap.classList.toggle("dt-scroll-page", page);
+      wrap.style.maxHeight = page ? "" : ch.max_height;
+      wrap.style.overflow = page ? "" : "auto";
+    }
+  }
+
   /** Title / subtitle / caption / legend / footer, refreshed in place. */
   function applyChrome(root, ch) {
     if (!ch) return;
+    applySettings(root, ch);
     paintTitles(root, ch);
     if (root._rankBand) root._rankBand();
     var lg = root.querySelector(".blockr-rank-legend");

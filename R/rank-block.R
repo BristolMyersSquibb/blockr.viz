@@ -603,16 +603,18 @@ new_summarize_table_block <- function(group = NULL,
         )
 
         # The chrome is a ONE-SHOT render: container, control row, empty title
-        # bands, empty scroll wrapper. It reads only what shapes the chrome, so
-        # a data or mapping change never rebuilds it -- the gear, the search
-        # text and the scroll position survive every body update.
+        # bands, empty scroll wrapper. Nothing in it is reactive, so no edit
+        # rebuilds it -- the gear stays open, and the search text and the
+        # scroll position survive. The settings it starts from (search box,
+        # drill, ctrl_target, height) change later through the payload's
+        # chrome, which rank-table.js applies in place.
         output$rank_chrome <- shiny::renderUI({
-          rank_chrome_shell(
+          shiny::isolate(rank_chrome_shell(
             max_height = r_max_height(), search = r_search(),
             drill = r_drill(), elem_id = ns("rank_block"),
             ctrl_target = r_ctrl_target(),
             download = shiny::uiOutput(ns("rank_download"), inline = TRUE)
-          )
+          ))
         })
 
         # The body ships as a column-oriented cell model over a custom message
@@ -651,7 +653,15 @@ new_summarize_table_block <- function(group = NULL,
           tt <- r_titles()
           p <- rank_build_payload(
             d,
-            chrome = tt[setdiff(names(tt), "title_arg_values")],
+            chrome = c(
+              tt[setdiff(names(tt), "title_arg_values")],
+              # The container's own settings, which the one-shot chrome
+              # render does not follow. "" rather than NULL: the payload
+              # drops NULLs, and an absent key means "leave as is".
+              list(search = isTRUE(r_search()), drill = r_drill() %||% "",
+                   ctrl_target = r_ctrl_target() %||% "",
+                   max_height = r_max_height() %||% "")
+            ),
             drill = r_drill(),
             # Isolated: a click must not rebuild the body (the JS keeps the
             # highlight live), but any fresh build -- restore, config edit, new

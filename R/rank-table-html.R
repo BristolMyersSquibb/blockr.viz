@@ -162,10 +162,13 @@ rank_chrome <- function(inner, prep = NULL, max_height = NULL, search = TRUE,
     if (isTRUE(search) || !is.null(download)) {
       htmltools::tags$div(
         class = "blockr-html-table-toolbar",
-        if (isTRUE(search)) {
+        # The shell always carries the box, hidden while off: the payload
+        # turns it on and off without re-rendering the container.
+        if (isTRUE(search) || isTRUE(shell)) {
           htmltools::tags$input(
             type = "search", class = "blockr-search",
-            placeholder = "Search\u2026", `aria-label` = "Search table"
+            placeholder = "Search\u2026", `aria-label` = "Search table",
+            style = if (!isTRUE(search)) "display:none"
           )
         },
         # The download control rides in the toolbar so the JS hoist carries it
