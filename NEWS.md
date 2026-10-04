@@ -1,8 +1,13 @@
+# blockr.viz 0.2.195
+
+* The summarize table carries the classes `lane_chart_block` and `rank_block`
+  again. Dropping them in 0.2.194 made every saved board with a summarize
+  table fail to open ("Could not deserialize object: expected classes ...").
+
 # blockr.viz 0.2.194
 
 * Removed `new_rank_block()` and `new_lane_chart_block()`, the summarize
-  table's former names. Use `new_summarize_table_block()`. The block no longer
-  carries the classes `rank_block` and `lane_chart_block`.
+  table's former names. Use `new_summarize_table_block()`.
 * `rank_table()` is no longer exported. The summarize table's static HTML is
   `html_exhibit(static_summarize_table(...))`.
 * The summarize table's internals are renamed from "rank" to "summarize":

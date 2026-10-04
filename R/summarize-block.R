@@ -957,7 +957,11 @@ new_summarize_table_block <- function(group = NULL,
         shiny::uiOutput(ns("summarize_chrome"))
       )
     },
-    class = c("summarize_table_block", "transform_block", "block"),
+    # `lane_chart_block` and `rank_block` have no methods but must stay:
+    # blockr.core's deserializer requires the rebuilt class vector to match
+    # the saved one, so dropping them refuses every saved summarize table.
+    class = c("summarize_table_block", "lane_chart_block", "rank_block",
+              "transform_block", "block"),
     # Same input contract as the table block: a dispatch check only, so a
     # composer table (or anything with an as_annotated_df method) connects
     # directly, and a value the method refuses errors at eval time.
