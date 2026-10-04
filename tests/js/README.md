@@ -79,3 +79,17 @@ ones that used to be quadratic, before the chart read rows through its
 keys, models and options, loaded into a vm context without a DOM), the
 binding's message handling and a few behaviours too narrow for a scenario.
 `npm test` runs them.
+
+## Summarize table
+
+`summarize-table.test.js` drives the summarize table block's script
+(`inst/js/rank-table.js`) the way the page does: the chrome the block's UI
+renders once, then the payloads its server pushes. Both come from the block's
+R code, recorded by `fixtures/make-summarize-fixtures.R` under
+`shiny::testServer()`, so a class, attribute or message name that R writes and
+the script does not read fails here. Rebuild the fixture after changing the
+block's server, payload or chrome:
+
+```sh
+Rscript tests/js/fixtures/make-summarize-fixtures.R
+```

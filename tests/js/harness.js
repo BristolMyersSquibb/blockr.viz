@@ -430,7 +430,11 @@ const PRELUDE = `
     addCustomMessageHandler: function (n, f) { window.__handlers[n] = f; },
     setInputValue: function (n, v, o) { window.__inputs.push({ name: n, value: v, opts: o }); }
   };
-  window.$ = window.jQuery = function () { return { find: function () { return []; } }; };
+  window.$ = window.jQuery = function () {
+    var q = { find: function () { return []; }, on: function () { return q; },
+              off: function () { return q; } };
+    return q;
+  };
 
   // Timers queue and never fire on their own (see flushTimers()).
   window.__timers = [];
@@ -685,5 +689,5 @@ function draw(config, data, columns, opts = {}) {
 
 module.exports = {
   createEnv, mount, message, send, timeDraw, draw, normalize, domSummary, slotLogs,
-  source, JS_DIR, CHART_FILES
+  source, JS_DIR, CHART_FILES, PRELUDE, UI_FILES, SHARED_FILES, iconsScript
 };
