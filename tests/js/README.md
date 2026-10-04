@@ -83,7 +83,7 @@ binding's message handling and a few behaviours too narrow for a scenario.
 ## Summarize table
 
 `summarize-table.test.js` drives the summarize table block's script
-(`inst/js/rank-table.js`) the way the page does: the chrome the block's UI
+(`inst/js/summarize-table.js`) the way the page does: the chrome the block's UI
 renders once, then the payloads its server pushes. Both come from the block's
 R code, recorded by `fixtures/make-summarize-fixtures.R` under
 `shiny::testServer()`, so a class, attribute or message name that R writes and

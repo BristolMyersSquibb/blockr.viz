@@ -326,9 +326,9 @@ dt_th <- function(name, idx, stub = FALSE, label = NULL, numeric = FALSE,
         htmltools::tags$span(class = "blockr-col-label", label),
         sort_span
       ),
-      # `extra` is trailing header content the caller owns (the rank table's
-      # column axis). Inside the SAME cell rather than a second header row,
-      # so it inherits the sticky behaviour and the column's padding, which
+      # `extra` is trailing header content the caller owns (the summarize
+      # table's column axis). Inside the SAME cell rather than a second header
+      # row, so it inherits the sticky behaviour and the column's padding, which
       # is what keeps a tick aligned with the mark below it.
       extra
     )

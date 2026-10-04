@@ -1,67 +1,69 @@
-# Ranked bar table: the CSS delta on top of the shared html-table rules.
+# Summarize table: the CSS delta on top of the shared html-table rules.
 #
 # Only what the bars, the legend, the expand caret and the footer add. Type,
 # padding, hover, sticky header and the scroll shadow all come from
-# html_table_shared_css_fallback(), so a rank table and a table block are the
-# same object with a different cell.
+# html_table_shared_css_fallback(), so a summarize table and a table block are
+# the same object with a different cell.
 #
 # Colors read blockr.theme's --blockr-* tokens with a fallback, so a themed
 # board restyles the bars without touching this file. The diverging bar is one
 # colour both ways: the zero tick carries the direction, not the hue.
 
 #' @noRd
-rank_table_css <- function() {
+summarize_table_css <- function() {
   "
-.blockr-rank-container {
-  --blockr-rank-fill: var(--blockr-color-bg-accent, #2563eb);
-  --blockr-rank-sub: color-mix(in srgb, var(--blockr-rank-fill) 45%, transparent);
+.blockr-summarize-container {
+  --blockr-summarize-fill: var(--blockr-color-bg-accent, #2563eb);
+  --blockr-summarize-sub: color-mix(in srgb, var(--blockr-summarize-fill) 45%,
+                                    transparent);
   /* The lane track. The design token alone is so close to the surface
      that an empty lane reads as nothing at all -- and on a box or a dot
      range the track IS the axis the glyph is read against, so it has to be
      visible. Mixed toward the strong border: still recessive, no longer
      invisible. */
-  --blockr-rank-track: color-mix(in srgb,
+  --blockr-summarize-track: color-mix(in srgb,
                                  var(--blockr-color-bg-subtle, #f9fafb) 55%,
                                  var(--blockr-color-border-strong, #d1d5db));
-  --blockr-rank-bar: var(--blockr-color-bg-accent, #2563eb);
-  --blockr-rank-tick: var(--blockr-color-border-default, #e5e7eb);
-  /* The floor under a GLYPH -- see .blockr-rank-barwrap below. A board that
-     wants shorter marks and less scrolling overrides it on the container. */
-  --blockr-rank-lane-min: 80px;
+  --blockr-summarize-bar: var(--blockr-color-bg-accent, #2563eb);
+  --blockr-summarize-tick: var(--blockr-color-border-default, #e5e7eb);
+  /* The floor under a GLYPH -- see .blockr-summarize-barwrap below. A board
+     that wants shorter marks and less scrolling overrides it on the
+     container. */
+  --blockr-summarize-lane-min: 80px;
   /* The ceiling over it, in the default `bar_width = 'fit'`: past it a wide
      panel's slack stays blank instead of stretching the marks. */
-  --blockr-rank-lane-max: 320px;
+  --blockr-summarize-lane-max: 320px;
 }
 /* Title / subtitle / caption: the canonical .dd-table-* bands, styled by
    inst/css/table.css (shipped with the table dep). Nothing to add here. */
-.blockr-rank-table { width: 100%; }
+.blockr-summarize-table { width: 100%; }
 /* Column widths ride on the CELLS: the header cells come from the table
    block's dt_th(), so they carry its classes, not ours. */
-.blockr-rank-table td.blockr-rank-bar-col {
+.blockr-summarize-table td.blockr-summarize-bar-col {
   width: 26%;
   min-width: 110px;
 }
-.blockr-rank-table td.blockr-rank-num {
+.blockr-summarize-table td.blockr-summarize-num {
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 /* Raw field columns (the as-is measure's extra row columns): plain text,
    left-aligned like the label column, never numeric-formatted. */
-.blockr-rank-table td.blockr-rank-txt { white-space: nowrap; }
-.blockr-rank-table td.blockr-rank-label-col { white-space: nowrap; }
+.blockr-summarize-table td.blockr-summarize-txt { white-space: nowrap; }
+.blockr-summarize-table td.blockr-summarize-label-col { white-space: nowrap; }
 /* The GLYPH columns own the slack. Auto table layout hands leftover width to
    the unconstrained cells, which meant a wide panel only stretched the label
    column while the bars and boxes stayed at their 26%. width:1% is the
    shrink-to-fit idiom (with nowrap, the cell takes its content width and no
    more), so widening the block lengthens the visuals instead. Label and text
    cells still cap out and ellipsis rather than pushing the glyphs off. */
-.blockr-rank-table th.blockr-stub-header,
-.blockr-rank-table td.blockr-rank-label-col,
-.blockr-rank-table td.blockr-rank-txt,
-.blockr-rank-table td.blockr-rank-num { width: 1%; }
-.blockr-rank-table td.blockr-rank-label-col,
-.blockr-rank-table td.blockr-rank-txt {
+.blockr-summarize-table th.blockr-stub-header,
+.blockr-summarize-table td.blockr-summarize-label-col,
+.blockr-summarize-table td.blockr-summarize-txt,
+.blockr-summarize-table td.blockr-summarize-num { width: 1%; }
+.blockr-summarize-table td.blockr-summarize-label-col,
+.blockr-summarize-table td.blockr-summarize-txt {
   max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -69,25 +71,25 @@ rank_table_css <- function() {
 /* The in-bar value label: track left, value right in a FIXED slot (one width
    per column, in ch) so every row's track spans the same range -- a varying
    label width would silently rescale the bars against each other. */
-.blockr-rank-barwrap {
+.blockr-summarize-barwrap {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 /* The mark has a FLOOR, and it is the mark that carries it, not the cell.
-   A cell minimum (the 110px on .blockr-rank-bar-col) is spent on the value
+   A cell minimum (the 110px on .blockr-summarize-bar-col) is spent on the value
    label first, so a faceted table with a dozen level columns squeezed every
    lane down to the few pixels the label left over -- glyphs too small to
    compare, which is the whole point of the column. Putting the minimum on
    the lane makes the column's minimum label-plus-a-readable-mark instead, and
    a table that no longer fits scrolls sideways in its wrapper (the cheap
    direction: rows stay put, and the reader keeps the labels in view). */
-.blockr-rank-barwrap .blockr-rank-track,
-.blockr-rank-barwrap .blockr-rank-dv,
-.blockr-rank-barwrap .blockr-rank-lane {
+.blockr-summarize-barwrap .blockr-summarize-track,
+.blockr-summarize-barwrap .blockr-summarize-dv,
+.blockr-summarize-barwrap .blockr-summarize-lane {
   flex: 1 1 auto;
-  min-width: var(--blockr-rank-lane-min, 80px);
-  max-width: var(--blockr-rank-lane-max, 320px);
+  min-width: var(--blockr-summarize-lane-min, 80px);
+  max-width: var(--blockr-summarize-lane-max, 320px);
 }
 /* Bar width (`bar_width`). Fit, the default, is the rule above: the lanes
    take the panel's slack, between the floor and the ceiling. A preset fixes
@@ -96,36 +98,44 @@ rank_table_css <- function() {
    idiom, the 26% glyph column) stretches an auto-width table to the panel
    again. The slack stays blank on the right; a panel narrower than the table
    scrolls. Only the labelled marks follow it: a swimlane spans its cell. */
-.blockr-rank-table[data-rank-width='narrow'] { --blockr-rank-lane-w: 90px; }
-.blockr-rank-table[data-rank-width='medium'] { --blockr-rank-lane-w: 150px; }
-.blockr-rank-table[data-rank-width='wide'] { --blockr-rank-lane-w: 240px; }
-.blockr-rank-table[data-rank-width] { width: auto; }
-.blockr-rank-table[data-rank-width] th,
-.blockr-rank-table[data-rank-width] td {
+.blockr-summarize-table[data-summarize-width='narrow'] {
+  --blockr-summarize-lane-w: 90px;
+}
+.blockr-summarize-table[data-summarize-width='medium'] {
+  --blockr-summarize-lane-w: 150px;
+}
+.blockr-summarize-table[data-summarize-width='wide'] {
+  --blockr-summarize-lane-w: 240px;
+}
+.blockr-summarize-table[data-summarize-width] { width: auto; }
+.blockr-summarize-table[data-summarize-width] th,
+.blockr-summarize-table[data-summarize-width] td {
   width: auto;
   min-width: 0;
 }
-.blockr-rank-table[data-rank-width] .blockr-rank-barwrap > :not(.blockr-rank-barval),
-.blockr-rank-table[data-rank-width] .blockr-rank-axis.has-val .blockr-rank-axis-in {
-  flex: 0 0 var(--blockr-rank-lane-w);
+.blockr-summarize-table[data-summarize-width]
+  .blockr-summarize-barwrap > :not(.blockr-summarize-barval),
+.blockr-summarize-table[data-summarize-width]
+  .blockr-summarize-axis.has-val .blockr-summarize-axis-in {
+  flex: 0 0 var(--blockr-summarize-lane-w);
   min-width: 0;
   max-width: none;
 }
-.blockr-rank-barval {
+.blockr-summarize-barval {
   flex: 0 0 auto;
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.blockr-rank-table .blockr-rank-pct {
+.blockr-summarize-table .blockr-summarize-pct {
   color: var(--blockr-color-text-muted, #6b7280);
 }
 /* The column axis, under the header label. Printing the domain ONCE is what
    pays for the empty lanes below it: with a scale named at the top of the
    column, a cell only has to hold its mark. Geometry mirrors
-   .blockr-rank-barwrap exactly (flexed strip + the same value slot), so a
+   .blockr-summarize-barwrap exactly (flexed strip + the same value slot), so a
    tick and the mark under it are percentages of one box. */
-.blockr-rank-axis {
+.blockr-summarize-axis {
   display: flex;
   gap: 8px;
   align-items: center;
@@ -140,25 +150,25 @@ rank_table_css <- function() {
    ch, and a ch at 9.5px is two thirds of the cell's, so a strip-wide font
    size left the ticked span ~20px longer than the lane under it. At the
    header's size (the cells') the pad and the value slot are one width. */
-.blockr-rank-axis-in {
+.blockr-summarize-axis-in {
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
   height: 100%;
   font-size: 9.5px;
 }
-.blockr-rank-axis.has-val .blockr-rank-axis-in {
-  max-width: var(--blockr-rank-lane-max, 320px);
+.blockr-summarize-axis.has-val .blockr-summarize-axis-in {
+  max-width: var(--blockr-summarize-lane-max, 320px);
 }
-.blockr-rank-axis-pad { flex: 0 0 auto; }
-.blockr-rank-axis-in span {
+.blockr-summarize-axis-pad { flex: 0 0 auto; }
+.blockr-summarize-axis-in span {
   position: absolute;
   top: 0;
   transform: translateX(-50%);
   white-space: nowrap;
 }
-.blockr-rank-axis-in span.is-first { transform: none; }
-.blockr-rank-axis-in span.is-last { transform: translateX(-100%); }
+.blockr-summarize-axis-in span.is-first { transform: none; }
+.blockr-summarize-axis-in span.is-last { transform: translateX(-100%); }
 
 /* Sorting affordance: none of our own. The header cells are dt_th()'s, so the
    .blockr-sortable cursor and the .blockr-sort-icon arrow come from the shared
@@ -167,7 +177,7 @@ rank_table_css <- function() {
 /* The by_level facet layout's spanning header row (one cell per facet
    level over its summary group) -- centred, with a hairline under the
    span so the group reads as one unit. */
-.blockr-rank-table th.blockr-th-group {
+.blockr-summarize-table th.blockr-th-group {
   text-align: center;
   border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
@@ -182,54 +192,56 @@ rank_table_css <- function() {
 
    The radius is cosmetic and means NOTHING. It must stay well under half the
    lane height, where a capsule becomes the SEMANTIC mark for a soft boundary
-   (see .blockr-rank-prcell below). On the 6px grouped rows the token would be a
-   third of the height, so it is clamped to thickness/4 there.
+   (see .blockr-summarize-prcell below). On the 6px grouped rows the token
+   would be a third of the height, so it is clamped to thickness/4 there.
 
    The grey track stays: it is a table-cell affordance (it says what the row's
    share is against the column max) with no echarts equivalent, and the
    crossfilter block in blockr.dm draws the same track + fill pair. */
-.blockr-rank-track {
+.blockr-summarize-track {
   display: flex;
   gap: 0;
   /* 12px = the shared lane height: bars, boxes, dot ranges and swimlanes
      line up across columns. */
   height: 12px;
-  background: var(--blockr-rank-track);
+  background: var(--blockr-summarize-track);
   border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
 }
-.blockr-rank-track.is-tall {
+.blockr-summarize-track.is-tall {
   height: auto;
   flex-direction: column;
   gap: 2px;
   background: none;
   border-radius: 0;
 }
-.blockr-rank-track.is-tall .blockr-rank-row3 {
+.blockr-summarize-track.is-tall .blockr-summarize-row3 {
   height: 6px;
-  background: var(--blockr-rank-track);
+  background: var(--blockr-summarize-track);
   /* 6px row: thickness/4, so the radius eases down instead of reading as a
      capsule at the token's full 2px. */
   border-radius: 0 min(var(--blockr-mark-radius, 2px), 1.5px)
                  min(var(--blockr-mark-radius, 2px), 1.5px) 0;
 }
-.blockr-rank-fill {
+.blockr-summarize-fill {
   height: 100%;
   min-width: 2px;
   border-radius: 0;
-  background: var(--blockr-rank-fill);
+  background: var(--blockr-summarize-fill);
 }
 /* The value end. In a plain bar the fill is the only child; in a stack it is
    the outermost segment; in a grouped bar each row3 holds one. Zero-width
    segments are never emitted, so :last-child is always a segment that shows. */
-.blockr-rank-track > .blockr-rank-fill:last-child,
-.blockr-rank-row3 > .blockr-rank-fill:last-child {
+.blockr-summarize-track > .blockr-summarize-fill:last-child,
+.blockr-summarize-row3 > .blockr-summarize-fill:last-child {
   border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
 }
-.blockr-rank-row3 > .blockr-rank-fill:last-child {
+.blockr-summarize-row3 > .blockr-summarize-fill:last-child {
   border-radius: 0 min(var(--blockr-mark-radius, 2px), 1.5px)
                  min(var(--blockr-mark-radius, 2px), 1.5px) 0;
 }
-.blockr-rank-track.is-sub .blockr-rank-fill { background: var(--blockr-rank-sub); }
+.blockr-summarize-track.is-sub .blockr-summarize-fill {
+  background: var(--blockr-summarize-sub);
+}
 
 /* Lane marks (box / point range / interval / sparkline): absolutely
    positioned glyphs inside a track-coloured lane, percentage geometry
@@ -237,7 +249,7 @@ rank_table_css <- function() {
    restyles every mark together. ONE height (matching the bar track) so a
    bar column, a box column and a swimlane read as one system; only the
    sparkline is taller (amplitude needs room). */
-.blockr-rank-lane {
+.blockr-summarize-lane {
   position: relative;
   height: 12px;
 }
@@ -249,7 +261,7 @@ rank_table_css <- function() {
    spanning the cell, and those keep a hairline so they do not float as chips.
    The column axis in the header carries the domain either way
    (_blockr.design/open/summarize-table/mock-box/, card D00). */
-.blockr-rank-lane.is-bare::before {
+.blockr-summarize-lane.is-bare::before {
   content: '';
   position: absolute;
   left: 0;
@@ -259,59 +271,60 @@ rank_table_css <- function() {
   margin-top: -0.5px;
   background: var(--blockr-color-border-default, #e5e7eb);
 }
-.blockr-rank-lane i { position: absolute; }
+.blockr-summarize-lane i { position: absolute; }
 /* Colour-split distribution cell: the levels stack INSIDE the cell, so the
    column stays one column and the row keeps its height (two 12px lanes plus
    the gap still fit the 40px the sparkline already claims). Three or more
    levels share the same budget by thinning. */
-.blockr-rank-multi {
+.blockr-summarize-multi {
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 2px;
 }
-.blockr-rank-multi .blockr-rank-lv {
+.blockr-summarize-multi .blockr-summarize-lv {
   min-width: 0;
-  /* The level's colour arrives as --blockr-rank-fill on this element. The
+  /* The level's colour arrives as --blockr-summarize-fill on this element. The
      TRANSLUCENT token is derived from the fill, so it has to be re-derived
      here as well -- otherwise every level's box body keeps the column
      default and only the whiskers and the median tick take the colour. */
-  --blockr-rank-sub: color-mix(in srgb, var(--blockr-rank-fill) 45%,
+  --blockr-summarize-sub: color-mix(in srgb, var(--blockr-summarize-fill) 45%,
                                transparent);
 }
-.blockr-rank-multi .blockr-rank-lv:nth-child(n+3) .blockr-rank-lane,
-.blockr-rank-multi .blockr-rank-lv:nth-child(n+3) ~ .blockr-rank-lv
-  .blockr-rank-lane { height: 8px; }
+.blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3)
+  .blockr-summarize-lane,
+.blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3)
+  ~ .blockr-summarize-lv .blockr-summarize-lane { height: 8px; }
 /* Box: whiskers OUTSIDE the body only (two segments), caps, a translucent
    body, a solid median tick. */
-.blockr-rank-boxcell .lane-wh {
+.blockr-summarize-boxcell .lane-wh {
   top: 50%;
   height: 1px;
   margin-top: -0.5px;
-  background: var(--blockr-rank-fill);
+  background: var(--blockr-summarize-fill);
 }
-.blockr-rank-boxcell .lane-cap {
+.blockr-summarize-boxcell .lane-cap {
   top: 3px;
   bottom: 3px;
   width: 1px;
-  background: var(--blockr-rank-fill);
+  background: var(--blockr-summarize-fill);
 }
 /* The IQR body is free-standing: neither end sits on an axis and neither abuts
    a sibling, so the cosmetic radius applies to BOTH ends. It is not the pill --
    the box is 10px tall and the radius is 2px, nowhere near the half-height that
    would make it read as a soft boundary. The fence caps, whiskers and median
    tick stay square: at 1-2px a radius would turn them into dots. */
-.blockr-rank-boxcell .lane-box {
+.blockr-summarize-boxcell .lane-box {
   top: 1px;
   bottom: 1px;
-  background: var(--blockr-rank-sub);
+  background: var(--blockr-summarize-sub);
   border-radius: var(--blockr-mark-radius, 2px);
 }
-.blockr-rank-boxcell .lane-med {
+.blockr-summarize-boxcell .lane-med {
   top: 0;
   bottom: 0;
   width: 2px;
-  background: var(--blockr-rank-fill);
+  background: var(--blockr-summarize-fill);
 }
 /* The dot style: three nested weights over one x. The fence band (outer
    range) recedes to a tint, the inner range is a rounded bar, the centre is a
@@ -323,27 +336,27 @@ rank_table_css <- function() {
    Written as 4px and 2px it only happened to be a capsule at 8px and 4px, and
    a later height change would have quietly demoted it to a rounded rectangle,
    i.e. to the cosmetic --blockr-mark-radius, which means nothing. */
-.blockr-rank-prcell .lane-fence {
+.blockr-summarize-prcell .lane-fence {
   top: 50%;
   height: 8px;
   margin-top: -4px;
   border-radius: 999px;
-  background: var(--blockr-rank-fill);
+  background: var(--blockr-summarize-fill);
   opacity: 0.16;
 }
-.blockr-rank-prcell .lane-rng {
+.blockr-summarize-prcell .lane-rng {
   top: 50%;
   height: 4px;
   margin-top: -2px;
   border-radius: 999px;
-  background: var(--blockr-rank-fill);
+  background: var(--blockr-summarize-fill);
 }
-.blockr-rank-prcell .lane-ctr {
+.blockr-summarize-prcell .lane-ctr {
   top: 50%;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--blockr-rank-fill);
+  background: var(--blockr-summarize-fill);
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 2px var(--blockr-color-bg-surface, #ffffff);
 }
@@ -352,54 +365,58 @@ rank_table_css <- function() {
    ground; the reference line runs past the lane so rows read as one line. The
    `from` mark is a hollow diamond, the `to` mark a dot, hollow when it falls
    outside the band. A dashed link is the row's `dash` level. */
-.blockr-rank-pacell .lane-band {
+.blockr-summarize-pacell .lane-band {
   top: 0;
   bottom: 0;
-  background: var(--blockr-rank-track);
+  background: var(--blockr-summarize-track);
   border-radius: var(--blockr-mark-radius, 2px);
 }
-.blockr-rank-pacell .lane-ref {
+.blockr-summarize-pacell .lane-ref {
   top: -6px;
   bottom: -6px;
   width: 0;
   border-left: 1px dashed var(--blockr-color-border-strong, #d1d5db);
 }
-.blockr-rank-pacell .lane-link {
+.blockr-summarize-pacell .lane-link {
   top: 50%;
   height: 0;
-  border-top: 2px solid var(--blockr-rank-fill);
+  border-top: 2px solid var(--blockr-summarize-fill);
   margin-top: -1px;
 }
-.blockr-rank-pacell.is-dash .lane-link { border-top-style: dashed; }
-.blockr-rank-pacell .lane-from {
+.blockr-summarize-pacell.is-dash .lane-link { border-top-style: dashed; }
+.blockr-summarize-pacell .lane-from {
   top: 50%;
   width: 7px;
   height: 7px;
   background: var(--blockr-color-bg-surface, #ffffff);
-  border: 1.5px solid var(--blockr-rank-fill);
+  border: 1.5px solid var(--blockr-summarize-fill);
   transform: translate(-50%, -50%) rotate(45deg);
   box-sizing: border-box;
 }
-.blockr-rank-pacell .lane-to {
+.blockr-summarize-pacell .lane-to {
   top: 50%;
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--blockr-rank-fill);
-  border: 1.5px solid var(--blockr-rank-fill);
+  background: var(--blockr-summarize-fill);
+  border: 1.5px solid var(--blockr-summarize-fill);
   transform: translate(-50%, -50%);
   box-sizing: border-box;
 }
-.blockr-rank-pacell .lane-to.is-open { background: var(--blockr-color-bg-surface, #ffffff); }
+.blockr-summarize-pacell .lane-to.is-open {
+  background: var(--blockr-color-bg-surface, #ffffff);
+}
 /* A split pair thinned to 8px lanes (three or more levels) takes smaller
    marks, or neighbouring levels' dots would touch. */
-.blockr-rank-multi .blockr-rank-lv:nth-child(n+3) .lane-to,
-.blockr-rank-multi .blockr-rank-lv:nth-child(n+3) ~ .blockr-rank-lv .lane-to {
+.blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3) .lane-to,
+.blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3)
+  ~ .blockr-summarize-lv .lane-to {
   width: 7px;
   height: 7px;
 }
-.blockr-rank-multi .blockr-rank-lv:nth-child(n+3) .lane-from,
-.blockr-rank-multi .blockr-rank-lv:nth-child(n+3) ~ .blockr-rank-lv .lane-from {
+.blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3) .lane-from,
+.blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3)
+  ~ .blockr-summarize-lv .lane-from {
   width: 6px;
   height: 6px;
 }
@@ -414,7 +431,7 @@ rank_table_css <- function() {
 
    Narrow segments need no guard: min-width is 2px and CSS scales border-radius
    down proportionally when the corners would not fit the box. */
-.blockr-rank-ivcell .lane-seg {
+.blockr-summarize-ivcell .lane-seg {
   top: 0;
   bottom: 0;
   min-width: 2px;
@@ -423,7 +440,7 @@ rank_table_css <- function() {
 /* The exhibit form (a spans row's size = lg): a WIDER column for boards
    where the swimlane is the centerpiece -- more horizontal resolution for
    the spans, not more height. */
-.blockr-rank-table td.blockr-rank-wide {
+.blockr-summarize-table td.blockr-summarize-wide {
   width: 55%;
   min-width: 320px;
 }
@@ -434,22 +451,22 @@ rank_table_css <- function() {
    flat opaque near-track shade (!important beats the inline fill) --
    identical opaque rectangles overlap invisibly, so only the matched
    event carries colour no matter how dense the timeline is. */
-.blockr-rank-container.seg-hover .lane-seg:not(.is-same),
-.blockr-rank-container.seg-search .lane-seg:not(.is-hit) {
-  background: color-mix(in srgb, var(--blockr-rank-track) 88%,
-                        var(--blockr-rank-tick)) !important;
+.blockr-summarize-container.seg-hover .lane-seg:not(.is-same),
+.blockr-summarize-container.seg-search .lane-seg:not(.is-hit) {
+  background: color-mix(in srgb, var(--blockr-summarize-track) 88%,
+                        var(--blockr-summarize-tick)) !important;
   transition: background 0.1s ease;
 }
 /* Rows: the table style every output table uses (blockr.ui design system,
    Tables): 30px, a 20px line with 5px above and below, no rules in the body.
    The 12px lanes sit inside the line, and the gaps between them separate
    the rows. The sparkline row below keeps its own taller cell. */
-.blockr-rank-table tbody td {
+.blockr-summarize-table tbody td {
   padding-top: 5px;
   padding-bottom: 5px;
   line-height: 20px;
 }
-.blockr-rank-table tbody tr {
+.blockr-summarize-table tbody tr {
   border-bottom: 0;
 }
 
@@ -458,43 +475,43 @@ rank_table_css <- function() {
    cell keeps a token 1px of vertical padding (a line rarely touches the
    extremes), so a sparkline row stays close to a text row's height
    instead of paying 36px plus full text padding. */
-.blockr-rank-table td:has(.blockr-rank-spcell) {
+.blockr-summarize-table td:has(.blockr-summarize-spcell) {
   padding-top: 1px;
   padding-bottom: 1px;
 }
-.blockr-rank-spcell {
+.blockr-summarize-spcell {
   /* Row height minus the two 1px paddings: the trajectory occupies the
      WHOLE row (the svg stretches freely; viewBox geometry is
      percentage-based and the stroke is non-scaling). */
   height: 40px;
   background: none;
 }
-.blockr-rank-spcell svg {
+.blockr-summarize-spcell svg {
   display: block;
   width: 100%;
   height: 100%;
 }
-.blockr-rank-spcell .lane-band { fill: var(--blockr-rank-track); }
+.blockr-summarize-spcell .lane-band { fill: var(--blockr-summarize-track); }
 /* The computed reference (a series row's `ref` option): a dashed pooled
    center line, optionally a dispersion band under everything. */
-.blockr-rank-spcell .lane-refband {
-  fill: color-mix(in srgb, var(--blockr-rank-fill) 10%, transparent);
+.blockr-summarize-spcell .lane-refband {
+  fill: color-mix(in srgb, var(--blockr-summarize-fill) 10%, transparent);
 }
-.blockr-rank-spcell .lane-refline {
-  stroke: var(--blockr-rank-tick);
+.blockr-summarize-spcell .lane-refline {
+  stroke: var(--blockr-summarize-tick);
   stroke-width: 1;
   stroke-dasharray: 3 2;
 }
-.blockr-rank-spcell .lane-ln {
+.blockr-summarize-spcell .lane-ln {
   fill: none;
-  stroke: var(--blockr-rank-fill);
+  stroke: var(--blockr-summarize-fill);
   stroke-width: 1.6;
 }
-.blockr-rank-spcell .lane-dot {
+.blockr-summarize-spcell .lane-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--blockr-rank-fill);
+  background: var(--blockr-summarize-fill);
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 2px var(--blockr-color-bg-surface, #ffffff);
 }
@@ -717,7 +734,7 @@ rank_table_css <- function() {
 }
 
 /* The cursor readout (interval track / sparkline points): one fixed element
-   per page, positioned by rank-table.js. It follows the pointer, so it is
+   per page, positioned by summarize-table.js. It follows the pointer, so it is
    not a Blockr.tooltip, but it wears the same light card. */
 .blockr-lane-tip {
   position: fixed;
@@ -743,44 +760,44 @@ rank_table_css <- function() {
 /* Zero-centred difference bar. Zero sits in the MIDDLE here, so neither end of
    the rail is an axis and both round; the fill rounds on whichever end points
    away from the zero tick. */
-.blockr-rank-dv {
+.blockr-summarize-dv {
   position: relative;
   height: 12px;
-  background: var(--blockr-rank-track);
+  background: var(--blockr-summarize-track);
   border-radius: var(--blockr-mark-radius, 2px);
 }
-.blockr-rank-dv::before {
+.blockr-summarize-dv::before {
   content: '';
   position: absolute;
   left: 50%;
   top: -2px;
   bottom: -2px;
   width: 1px;
-  background: var(--blockr-rank-tick);
+  background: var(--blockr-summarize-tick);
 }
-.blockr-rank-dv .blockr-rank-fill { position: absolute; top: 0; }
+.blockr-summarize-dv .blockr-summarize-fill { position: absolute; top: 0; }
 /* One colour both ways. The side of the zero line already says which
    direction; colouring the two apart would only add an opinion about which
    one is good, and nothing tells the block that. */
-.blockr-rank-dv .blockr-rank-fill.is-pos {
+.blockr-summarize-dv .blockr-summarize-fill.is-pos {
   left: 50%;
   border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
 }
-.blockr-rank-dv .blockr-rank-fill.is-neg {
+.blockr-summarize-dv .blockr-summarize-fill.is-neg {
   right: 50%;
   border-radius: var(--blockr-mark-radius, 2px) 0 0 var(--blockr-mark-radius, 2px);
 }
-.blockr-rank-dv .blockr-rank-fill {
-  background: var(--blockr-rank-bar);
+.blockr-summarize-dv .blockr-summarize-fill {
+  background: var(--blockr-summarize-bar);
 }
 
 /* Hierarchy. The chevron itself is the table block's -- same button, same svg
    (section_chevron_svg()), same rotation contract (the ROW carries `collapsed`).
-   These four rules are the ONLY part of html_table_delta_css() the rank table
-   needs; the rest of that delta is the structured Table-1 typography, which
-   would restyle every cell, so it is deliberately not injected. Keep in sync
-   with the .blockr-indent-btn / .blockr-chev block in R/html-table.R. */
-.blockr-rank-container .blockr-indent-btn {
+   These four rules are the ONLY part of html_table_delta_css() the summarize
+   table needs; the rest of that delta is the structured Table-1 typography,
+   which would restyle every cell, so it is deliberately not injected. Keep in
+   sync with the .blockr-indent-btn / .blockr-chev block in R/html-table.R. */
+.blockr-summarize-container .blockr-indent-btn {
   border: 0;
   background: transparent;
   padding: 0;
@@ -791,66 +808,68 @@ rank_table_css <- function() {
   align-items: center;
   vertical-align: baseline;
 }
-.blockr-rank-container .blockr-chev {
+.blockr-summarize-container .blockr-chev {
   width: 13px;
   height: 13px;
   flex: none;
   color: var(--blockr-color-text-muted, #6b7280);
   transition: transform 0.2s ease, color 0.15s ease;
 }
-.blockr-rank-container .blockr-indent-btn:hover .blockr-chev {
+.blockr-summarize-container .blockr-indent-btn:hover .blockr-chev {
   color: var(--blockr-color-text-default, #111827);
 }
-.blockr-rank-container tr.blockr-indent-toggle.collapsed .blockr-chev {
+.blockr-summarize-container tr.blockr-indent-toggle.collapsed .blockr-chev {
   transform: rotate(-90deg);
 }
 
 /* Hierarchy. */
-.blockr-rank-table tr.is-child td.blockr-rank-label-col {
+.blockr-summarize-table tr.is-child td.blockr-summarize-label-col {
   color: var(--blockr-color-text-muted, #6b7280);
 }
-.blockr-rank-table tr.is-child.collapsed-hidden { display: none; }
-.blockr-rank-table tr.is-parent .blockr-rank-label { font-weight: 600; }
-.blockr-rank-table tr.is-pick { cursor: pointer; }
-.blockr-rank-table tr.is-on {
-  background: color-mix(in srgb, var(--blockr-rank-fill) 10%, transparent);
+.blockr-summarize-table tr.is-child.collapsed-hidden { display: none; }
+.blockr-summarize-table tr.is-parent .blockr-summarize-label {
+  font-weight: 600;
+}
+.blockr-summarize-table tr.is-pick { cursor: pointer; }
+.blockr-summarize-table tr.is-on {
+  background: color-mix(in srgb, var(--blockr-summarize-fill) 10%, transparent);
 }
 /* Transient drill (a ctrl_target is set): the row is lit, held, released --
    there is nothing to un-set. A LAYER whose opacity fades, not the row's own
    background: the bars behind it are the data, and a background-image fade
    would animate discretely anyway (see the note in table.css). Same clock as
    the table's flash. */
-.blockr-rank-table tr.rk-flash td {
+.blockr-summarize-table tr.summarize-flash td {
   position: relative;
   z-index: 0;
 }
-.blockr-rank-table tr.rk-flash td::after {
+.blockr-summarize-table tr.summarize-flash td::after {
   /* Single quotes: this stylesheet lives inside an R string literal. */
   content: '';
   position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: color-mix(in srgb, var(--blockr-rank-fill) 10%, transparent);
-  animation: rk-flash-out 900ms linear 300ms both;
+  background: color-mix(in srgb, var(--blockr-summarize-fill) 10%, transparent);
+  animation: summarize-flash-out 900ms linear 300ms both;
 }
-.blockr-rank-table tr.rk-flash td:first-child::after {
+.blockr-summarize-table tr.summarize-flash td:first-child::after {
   box-shadow: inset 3px 0 0 0 var(--blockr-color-border-accent, #2563eb);
 }
-@keyframes rk-flash-out {
+@keyframes summarize-flash-out {
   from { opacity: 1; }
   to { opacity: 0; }
 }
-.blockr-rank-table tr.blockr-rank-fold td {
+.blockr-summarize-table tr.blockr-summarize-fold td {
   font-style: italic;
   color: var(--blockr-color-text-muted, #6b7280);
 }
-.blockr-rank-table tr.blockr-rank-hidden-search { display: none; }
+.blockr-summarize-table tr.blockr-summarize-hidden-search { display: none; }
 
 /* Legend + footer. */
 /* The legend is its own row under the control row (search + gear), so a long
    legend can never push the search box around. */
-.blockr-rank-legend {
+.blockr-summarize-legend {
   padding: 0.35rem 0.25rem 0.15rem;
   display: flex;
   flex-wrap: wrap;
@@ -862,26 +881,30 @@ rank_table_css <- function() {
 /* One group per colour column (a summarize table maps colour per column, so
    it can carry several). The wider gap BETWEEN groups keeps a title bound to
    the items it decodes. */
-.blockr-rank-legend-group {
+.blockr-summarize-legend-group {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 0.6rem;
   align-items: center;
 }
-.blockr-rank-legend-title {
+.blockr-summarize-legend-title {
   font-size: 0.7rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--blockr-color-text-muted, #6b7280);
 }
-.blockr-rank-legend-item { display: inline-flex; gap: 0.3rem; align-items: center; }
-.blockr-rank-legend-item i {
+.blockr-summarize-legend-item {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+.blockr-summarize-legend-item i {
   width: 10px;
   height: 10px;
   border-radius: 2px;
   display: inline-block;
 }
-.blockr-rank-footer {
+.blockr-summarize-footer {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
@@ -891,6 +914,6 @@ rank_table_css <- function() {
   font-size: 0.75rem;
   color: var(--blockr-color-text-muted, #6b7280);
 }
-.blockr-rank-note { color: var(--blockr-color-text-warning, #b45309); }
+.blockr-summarize-note { color: var(--blockr-color-text-warning, #b45309); }
 "
 }

@@ -1,26 +1,26 @@
 /**
- * Ranked bar table: search, sort, expand, row-click drill.
+ * Summarize table: search, sort, expand, row-click drill.
  *
  * Self-contained on purpose. table.js owns `.drilldown-table-container` and
- * its payload-push render path; the rank table is server-rendered HTML in
- * `.blockr-rank-container`, so it binds its own handlers rather than reaching
- * into table.js internals.
+ * its payload-push render path; the summarize table is its own markup
+ * in `.blockr-summarize-container`, so it binds its own handlers rather
+ * than reaching into table.js internals.
  *
- * Contract with R (R/rank-table-html.R):
- *   container  data-rank-elem-id  the ns()-ed id the `_action` input hangs off
- *              data-rank-drill    the drill column, absent = display only
- *   table      data-rank-nested   "1" when parent rows are present
- *   row        data-rank-label / data-rank-parent / data-rank-level
+ * Contract with R (R/summarize-table-html.R):
+ *   container  data-summarize-elem-id  the ns()-ed id the `_action` input hangs off
+ *              data-summarize-drill    the drill column, absent = display only
+ *   table      data-summarize-nested   "1" when parent rows are present
+ *   row        data-summarize-label / data-summarize-parent / data-summarize-level
  *   num cell   data-v             the raw number to sort on
  */
 (function () {
   "use strict";
 
-  var BOUND = "rankTableBound";
+  var BOUND = "summarizeTableBound";
 
   // Where this file was served from: snapdom.js sits next to it and is loaded
   // only when a picture is first asked for.
-  var RANK_JS_BASE = (function () {
+  var SUMMARIZE_JS_BASE = (function () {
     var sc = document.currentScript;
     return sc && sc.src ? sc.src.replace(/[^\/]*$/, "") : "";
   })();
@@ -28,7 +28,7 @@
   /** @param {Element} root */
   function rows(root) {
     return Array.prototype.slice.call(
-      root.querySelectorAll("tbody tr.blockr-rank-row")
+      root.querySelectorAll("tbody tr.blockr-summarize-row")
     );
   }
 
@@ -41,12 +41,12 @@
       if (r.classList.contains("is-parent")) {
         // The table block's contract: the ROW carries `collapsed`, which is
         // what rotates the shared chevron.
-        open[r.getAttribute("data-rank-label")] = !r.classList.contains("collapsed");
+        open[r.getAttribute("data-summarize-label")] = !r.classList.contains("collapsed");
       }
     });
     rows(root).forEach(function (r) {
       if (!r.classList.contains("is-child")) return;
-      var vis = open[r.getAttribute("data-rank-parent")] === true;
+      var vis = open[r.getAttribute("data-summarize-parent")] === true;
       if (vis) r.classList.remove("collapsed-hidden");
       else r.classList.add("collapsed-hidden");
     });
@@ -57,8 +57,8 @@
   // parent stays visible when any of its children match -- the same rule the
   // table block's search follows.
   function rowText(root, r) {
-    if (!root._rankCache) root._rankCache = new WeakMap();
-    var t = root._rankCache.get(r);
+    if (!root._summarizeCache) root._summarizeCache = new WeakMap();
+    var t = root._summarizeCache.get(r);
     if (t == null) {
       // Segment tooltips (the swimlane's event labels) live in attributes,
       // not text -- fold them in so searching "pruritus" finds the
@@ -68,7 +68,7 @@
         tips.push(e.getAttribute("data-tip"));
       });
       t = (r.textContent + " " + tips.join(" ")).toLowerCase();
-      root._rankCache.set(r, t);
+      root._summarizeCache.set(r, t);
     }
     return t;
   }
@@ -82,24 +82,24 @@
     all.forEach(function (r) {
       var hit = !q || rowText(root, r).indexOf(q) !== -1;
       if (hit) {
-        r.classList.remove("blockr-rank-hidden-search");
-        var pr = r.getAttribute("data-rank-parent");
+        r.classList.remove("blockr-summarize-hidden-search");
+        var pr = r.getAttribute("data-summarize-parent");
         if (pr) matched[pr] = true;
       } else {
-        r.classList.add("blockr-rank-hidden-search");
+        r.classList.add("blockr-summarize-hidden-search");
       }
     });
     // A matching child keeps its parent on screen, and auto-expands it, so
     // searching a leaf never returns an empty-looking table.
     all.forEach(function (r) {
       if (!r.classList.contains("is-parent")) return;
-      if (matched[r.getAttribute("data-rank-label")]) {
-        r.classList.remove("blockr-rank-hidden-search");
+      if (matched[r.getAttribute("data-summarize-label")]) {
+        r.classList.remove("blockr-summarize-hidden-search");
         if (q) setOpen(r, true);
       }
     });
     applyVisibility(root);
-    var foldRow = root.querySelector("tr.blockr-rank-fold");
+    var foldRow = root.querySelector("tr.blockr-summarize-fold");
     if (foldRow) foldRow.style.display = q ? "none" : "";
     // Segment emphasis: a query that matches segment tooltips also LIGHTS
     // the matching segments (same dimming as the hover highlight), so a
@@ -134,7 +134,7 @@
   // nested table only whole parent blocks move, so a child never leaves its
   // parent; within a block the children sort too.
   //
-  // Every row carries data-rank-ord: the order it ARRIVED in. The server's
+  // Every row carries data-summarize-ord: the order it ARRIVED in. The server's
   // order (sort_by / sort_dir, e.g. visits in visit order) is a real state,
   // so header sorting cycles back to it on the third click instead of
   // stranding the table in an alphabet it was configured out of.
@@ -142,13 +142,13 @@
   function bindSort(root) {
     // Looked up per interaction: with the data-push transport the <table> is
     // replaced on every payload, so nothing may be captured here.
-    var tbl = function () { return root.querySelector("table.blockr-rank-table"); };
+    var tbl = function () { return root.querySelector("table.blockr-summarize-table"); };
     // The sort state lives on the CONTAINER, read fresh per click: a new
     // payload replaces it (new columns, new server order), so the next header
     // click starts at click 1 again.
     function sortState() {
-      if (!root._rankSort) root._rankSort = { key: null, dir: 0 };
-      return root._rankSort;
+      if (!root._summarizeSort) root._summarizeSort = { key: null, dir: 0 };
+      return root._summarizeSort;
     }
 
     // Same contract as the table block's wireSort(): the header carries
@@ -156,7 +156,7 @@
     // the stub (label) column, which sorts on its text.
     function cellValue(r, th) {
       var idx = parseInt(th.getAttribute("data-col-index"), 10);
-      if (!idx) return r.getAttribute("data-rank-label") || "";
+      if (!idx) return r.getAttribute("data-summarize-label") || "";
       var td = r.children[idx];
       if (!td) return null;
       var raw = td.getAttribute("data-v");
@@ -197,7 +197,7 @@
       if (!table) return;
       var tbody = table.querySelector("tbody");
       if (!tbody) return;
-      var nested = table.getAttribute("data-rank-nested") === "1";
+      var nested = table.getAttribute("data-summarize-nested") === "1";
       var key = th.getAttribute("data-col-index");
       var state = sortState();
       // Three states per column: the first click sorts, the second reverses,
@@ -230,7 +230,7 @@
       }
 
       var ordOf = function (r) {
-        return parseInt(r.getAttribute("data-rank-ord"), 10) || 0;
+        return parseInt(r.getAttribute("data-summarize-ord"), 10) || 0;
       };
       var bs = blocks(nested);
       bs.sort(function (x, y) {
@@ -246,7 +246,7 @@
         });
         b.kids.forEach(function (k) { frag.appendChild(k); });
       });
-      var fold = tbody.querySelector("tr.blockr-rank-fold");
+      var fold = tbody.querySelector("tr.blockr-summarize-fold");
       tbody.appendChild(frag);
       if (fold) tbody.appendChild(fold);
     }
@@ -274,7 +274,7 @@
       if (!btn || !root.contains(btn)) return;
       e.stopPropagation();
       e.preventDefault();
-      var row = btn.closest("tr.blockr-rank-row");
+      var row = btn.closest("tr.blockr-summarize-row");
       if (!row) return;
       setOpen(row, row.classList.contains("collapsed"));
       applyVisibility(root);
@@ -289,31 +289,31 @@
   // off, and the claim carries a click counter so re-clicking one row sends
   // again. Same rule as the chart, the table and the heatmap; the undo lives
   // at the target.
-  function rankTransient(root) {
-    var t = root.getAttribute("data-rank-ctrl-target");
+  function summarizeTransient(root) {
+    var t = root.getAttribute("data-summarize-ctrl-target");
     return !!(t && t.trim());
   }
 
   // Click counter: changes on a real click and NOT on a board update, which is
   // the distinction the server's send-once skip has to make.
-  var rankDrillSeq = 0;
+  var summarizeDrillSeq = 0;
 
   // Light the clicked row, then release it. One at a time: two lit rows would
   // read as two selections where only the last click counts.
-  function rankFlash(root, tr) {
-    root.querySelectorAll("tr.rk-flash").forEach(function (n) {
-      n.classList.remove("rk-flash");
+  function summarizeFlash(root, tr) {
+    root.querySelectorAll("tr.summarize-flash").forEach(function (n) {
+      n.classList.remove("summarize-flash");
     });
-    tr.classList.add("rk-flash");
+    tr.classList.add("summarize-flash");
     var drop = function () {
-      tr.classList.remove("rk-flash");
+      tr.classList.remove("summarize-flash");
       tr.removeEventListener("animationend", drop);
     };
     tr.addEventListener("animationend", drop);
   }
 
   function bindDrill(root) {
-    var elemId = root.getAttribute("data-rank-elem-id");
+    var elemId = root.getAttribute("data-summarize-elem-id");
     if (!elemId) return;
     // Read per click: the gear turns the drill on, off or onto another
     // column through the payload, without re-rendering the container.
@@ -328,41 +328,43 @@
           type: "categorical",
           column: col,
           values: values,
-          nonce: ++rankDrillSeq
+          nonce: ++summarizeDrillSeq
         },
         { priority: "event" }
       );
     }
 
     function select(label) {
-      root._rankSel = label;
+      root._summarizeSel = label;
       paintStatus(root);
     }
-    root._rankClear = function () {
+    root._summarizeClear = function () {
       rows(root).forEach(function (r) { r.classList.remove("is-on"); });
       send(null);
       select(null);
     };
 
     root.addEventListener("click", function (e) {
-      var tr = e.target.closest("tr.blockr-rank-row.is-pick");
+      var tr = e.target.closest("tr.blockr-summarize-row.is-pick");
       if (!tr || !root.contains(tr)) return;
       if (e.target.closest(".blockr-indent-btn")) return;
-      col = root.getAttribute("data-rank-drill");
+      col = root.getAttribute("data-summarize-drill");
       if (!col) return;
-      var label = tr.getAttribute("data-rank-label");
+      var label = tr.getAttribute("data-summarize-label");
       // Transient: no toggle. A second click on the same row means "send it
       // again", never "un-drill" -- that is the target's job.
-      if (rankTransient(root)) {
+      if (summarizeTransient(root)) {
         send([label]);
-        rankFlash(root, tr);
-        root._rankReceipt = { text: "Drilled down to " + col + " = " + label,
-                              at: Date.now() };
+        summarizeFlash(root, tr);
+        root._summarizeReceipt = {
+          text: "Drilled down to " + col + " = " + label,
+          at: Date.now()
+        };
         paintStatus(root);
-        clearTimeout(root._rankReceiptTimer);
-        root._rankReceiptTimer = setTimeout(function () {
+        clearTimeout(root._summarizeReceiptTimer);
+        root._summarizeReceiptTimer = setTimeout(function () {
           dropReceipt(root);
-        }, RK_RECEIPT_HOLD_MS + RK_RECEIPT_FADE_MS + 200);
+        }, SUMMARIZE_RECEIPT_HOLD_MS + SUMMARIZE_RECEIPT_FADE_MS + 200);
         return;
       }
       var was = tr.classList.contains("is-on");
@@ -384,42 +386,42 @@
   // active" / "Filtered: COL = value" with Reset. With a ctrl_target the click
   // is an event: nothing at rest, and a receipt ("Drilled down to COL =
   // value") that holds, then fades.
-  var RK_RECEIPT_HOLD_MS = 1400;
-  var RK_RECEIPT_FADE_MS = 1100;
+  var SUMMARIZE_RECEIPT_HOLD_MS = 1400;
+  var SUMMARIZE_RECEIPT_FADE_MS = 1100;
 
   function dropReceipt(root) {
-    if (!root._rankReceipt) return;
-    root._rankReceipt = null;
+    if (!root._summarizeReceipt) return;
+    root._summarizeReceipt = null;
     paintStatus(root, true);
   }
 
   function paintStatus(root, returning) {
-    var box = root.querySelector(".blockr-rank-footer .dd-status-footer");
+    var box = root.querySelector(".blockr-summarize-footer .dd-status-footer");
     if (!box) return;
     box.textContent = "";
-    var col = root.getAttribute("data-rank-drill");
+    var col = root.getAttribute("data-summarize-drill");
     if (!col) return;
-    var rc = root._rankReceipt;
+    var rc = root._summarizeReceipt;
     if (rc) {
       var age = Date.now() - rc.at;
-      if (age < RK_RECEIPT_HOLD_MS + RK_RECEIPT_FADE_MS) {
+      if (age < SUMMARIZE_RECEIPT_HOLD_MS + SUMMARIZE_RECEIPT_FADE_MS) {
         var rec = document.createElement("span");
         rec.className = "dd-status-text dd-status-receipt";
         rec.textContent = rc.text;
         // Resume, do not restart: a repaint mid-fade picks the fade up where
         // it is (chart/chrome.js does the same).
-        rec.style.animation = "dd-receipt-out " + RK_RECEIPT_FADE_MS +
-          "ms linear " + (RK_RECEIPT_HOLD_MS - age) + "ms both";
+        rec.style.animation = "dd-receipt-out " + SUMMARIZE_RECEIPT_FADE_MS +
+          "ms linear " + (SUMMARIZE_RECEIPT_HOLD_MS - age) + "ms both";
         rec.addEventListener("animationend", function () {
           dropReceipt(root);
         });
         box.appendChild(rec);
         return;
       }
-      root._rankReceipt = null;
+      root._summarizeReceipt = null;
     }
-    if (rankTransient(root)) return;
-    var sel = root._rankSel;
+    if (summarizeTransient(root)) return;
+    var sel = root._summarizeSel;
     var span = document.createElement("span");
     span.className = "dd-status-text" + (returning ? " dd-status-returning" : "");
     span.textContent = sel ? "Filtered: " + col + " = " + sel : "No filter active";
@@ -431,7 +433,7 @@
       reset.textContent = "Reset";
       reset.addEventListener("click", function (e) {
         e.stopPropagation();
-        if (root._rankClear) root._rankClear();
+        if (root._summarizeClear) root._summarizeClear();
       });
       box.appendChild(reset);
     }
@@ -442,12 +444,12 @@
   // ==========================================================================
   // Data-push body (dev/table-data-push-design.md, the table block's shape).
   // The server ships the body as a column-oriented cell model over the
-  // "blockr-viz-rank-data" custom message instead of rendering it through
+  // "blockr-viz-summarize-data" custom message instead of rendering it through
   // Shiny: ~93-95% smaller than the equivalent HTML at 790 rows, and a payload
   // cached per elem id re-renders a re-mounted dock panel with no R round trip.
   //
-  // The markup assembled here must match R/rank-push.R's rank_cells_html()
-  // byte for byte (test-rank-push.R pins them), including the escaping rules
+  // The markup assembled here must match R/summarize-push.R's summarize_cells_html()
+  // byte for byte (test-summarize-push.R pins them), including the escaping rules
   // htmltools applies: & < > and the attribute quote.
   // ==========================================================================
 
@@ -477,21 +479,21 @@
   // zero alike. The fill's 2px floor is for small values, so a zero must not
   // emit a fill at all or it reads as a little.
   function trackHtml(width, fill, sub) {
-    return '<div class="blockr-rank-track' + (sub ? " is-sub" : "") + '">' +
+    return '<div class="blockr-summarize-track' + (sub ? " is-sub" : "") + '">' +
       (!(width > 0) ? "" :
-        '<div class="blockr-rank-fill" style="width:' + w(width) + "%" +
+        '<div class="blockr-summarize-fill" style="width:' + w(width) + "%" +
         (fill ? ";background:" + fill : "") + '"></div>') +
       "</div>";
   }
 
-  // The in-bar value label (R: rank_barwrap): track left, the value in a
+  // The in-bar value label (R: summarize_barwrap): track left, the value in a
   // fixed-width right-aligned slot -- one width per column so tracks align.
   function barWrap(inner, c, i) {
     if (!c.disp) return inner;
     var pct = c.pct && c.pct[i] ?
-      ' <span class="blockr-rank-pct">' + c.pct[i] + "</span>" : "";
-    return '<div class="blockr-rank-barwrap">' + inner +
-      '<span class="blockr-rank-barval" style="width:' + c.dw + 'ch">' +
+      ' <span class="blockr-summarize-pct">' + c.pct[i] + "</span>" : "";
+    return '<div class="blockr-summarize-barwrap">' + inner +
+      '<span class="blockr-summarize-barval" style="width:' + c.dw + 'ch">' +
       c.disp[i] + pct + "</span></div>";
   }
 
@@ -499,31 +501,31 @@
     var grouped = c.mode === "grouped";
     var out = "";
     for (var j = 0; j < c.names.length; j++) {
-      var body = '<div class="blockr-rank-fill" style="width:' +
+      var body = '<div class="blockr-summarize-fill" style="width:' +
         w(c.seg[j][i]) + "%;background:" + c.fills[j] +
-        '" data-rank-tip="' + esc(c.names[j]) + ": " + c.segv[j][i] +
+        '" data-summarize-tip="' + esc(c.names[j]) + ": " + c.segv[j][i] +
         '"></div>';
       var has = c.segv[j][i] > 0;
       if (grouped) {
-        out += '<div class="blockr-rank-row3">' + (has ? body : "") + "</div>";
+        out += '<div class="blockr-summarize-row3">' + (has ? body : "") + "</div>";
       } else if (has) {
         out += body;
       }
     }
-    return '<div class="blockr-rank-track' + (grouped ? " is-tall" : "") +
+    return '<div class="blockr-summarize-track' + (grouped ? " is-tall" : "") +
       '">' + out + "</div>";
   }
 
   function dvHtml(width, pos) {
-    if (!(width > 0)) return '<div class="blockr-rank-dv"></div>';
-    return '<div class="blockr-rank-dv"><div class="blockr-rank-fill ' +
+    if (!(width > 0)) return '<div class="blockr-summarize-dv"></div>';
+    return '<div class="blockr-summarize-dv"><div class="blockr-summarize-fill ' +
       (pos ? "is-pos" : "is-neg") + '" style="width:' + w(width) +
       '%"></div></div>';
   }
 
   // ---- lane mark emitters ----
-  // Byte-identical twins of rank_box_html / rank_pr_html / rank_iv_html /
-  // rank_sp_html in R/rank-push.R (test-rank-push.R pins the pair). Every
+  // Byte-identical twins of summarize_box_html / summarize_pr_html / summarize_iv_html /
+  // summarize_sp_html in R/summarize-push.R (test-summarize-push.R pins the pair). Every
   // geometric number arrives pre-rounded; emission conditions key on shipped
   // nulls, never re-derived arithmetic. `p(x)` is String(): positions and
   // widths were rounded R-side so the two prints agree.
@@ -532,11 +534,11 @@
   function boxHtml(c, i) {
     var cls = c.bare ? " is-bare" : "";
     if (c.bc[i] == null) {
-      return '<div class="blockr-rank-lane blockr-rank-boxcell' + cls +
+      return '<div class="blockr-summarize-lane blockr-summarize-boxcell' + cls +
         '"></div>';
     }
-    var s = '<div class="blockr-rank-lane blockr-rank-boxcell' + cls +
-      '" data-rank-tip="' + c.tip[i] + '">';
+    var s = '<div class="blockr-summarize-lane blockr-summarize-boxcell' + cls +
+      '" data-summarize-tip="' + c.tip[i] + '">';
     if (c.w1[i] != null) {
       s += '<i class="lane-wh" style="left:' + p(c.wl[i]) + "%;width:" +
         p(c.w1[i]) + '%"></i>';
@@ -562,11 +564,11 @@
   function prHtml(c, i) {
     var cls = c.bare ? " is-bare" : "";
     if (c.c[i] == null) {
-      return '<div class="blockr-rank-lane blockr-rank-prcell' + cls +
+      return '<div class="blockr-summarize-lane blockr-summarize-prcell' + cls +
         '"></div>';
     }
-    var s = '<div class="blockr-rank-lane blockr-rank-prcell' + cls +
-      '" data-rank-tip="' + c.tip[i] + '">';
+    var s = '<div class="blockr-summarize-lane blockr-summarize-prcell' + cls +
+      '" data-summarize-tip="' + c.tip[i] + '">';
     if (c.ow && c.ow[i] != null) {
       s += '<i class="lane-fence" style="left:' + p(c.ol[i]) + "%;width:" +
         p(c.ow[i]) + '%"></i>';
@@ -580,12 +582,12 @@
   }
 
   // The pair cell (dumbbell): band, reference line, link, then the two
-  // marks. Byte-identical to rank_pair_html().
+  // marks. Byte-identical to summarize_pair_html().
   function pairHtml(c, i) {
-    var s = '<div class="blockr-rank-lane blockr-rank-pacell' +
+    var s = '<div class="blockr-summarize-lane blockr-summarize-pacell' +
       (c.dash[i] ? " is-dash" : "") + '"' +
-      (c.fill[i] != null ? ' style="--blockr-rank-fill:' + c.fill[i] + '"' : "") +
-      (c.tip[i] ? ' data-rank-tip="' + c.tip[i] + '"' : "") + ">";
+      (c.fill[i] != null ? ' style="--blockr-summarize-fill:' + c.fill[i] + '"' : "") +
+      (c.tip[i] ? ' data-summarize-tip="' + c.tip[i] + '"' : "") + ">";
     if (c.bw[i] != null) {
       s += '<i class="lane-band" style="left:' + p(c.bl[i]) + "%;width:" +
         p(c.bw[i]) + '%"></i>';
@@ -608,7 +610,7 @@
   }
 
   function ivHtml(c, i) {
-    var s = '<div class="blockr-rank-lane blockr-rank-ivcell" data-d0="' +
+    var s = '<div class="blockr-summarize-lane blockr-summarize-ivcell" data-d0="' +
       p(c.d0) + '" data-d1="' + p(c.d1) + '"' +
       (c.dd ? ' data-dd="1"' : "") + ">";
     var segs = c.segs[i] || [];
@@ -622,7 +624,7 @@
   }
 
   function spHtml(c, i) {
-    var s = '<div class="blockr-rank-lane blockr-rank-spcell" data-xs="' +
+    var s = '<div class="blockr-summarize-lane blockr-summarize-spcell" data-xs="' +
       c.xs[i] + '" data-ys="' + c.ys[i] + '">' +
       '<svg viewBox="0 0 100 36" preserveAspectRatio="none">';
     if (c.rby != null) {
@@ -653,9 +655,9 @@
   // each in the level's colour. A level with no rows in this group draws no
   // lane at all (a table grouped by subject reads as one coloured glyph per
   // row). The colour rides as a CSS custom property on the wrapper, so the
-  // glyph emitters are reused untouched. Byte-identical to rank_multi_html.
+  // glyph emitters are reused untouched. Byte-identical to summarize_multi_html.
   function multiHtml(c, i) {
-    var s = '<div class="blockr-rank-multi">';
+    var s = '<div class="blockr-summarize-multi">';
     for (var j = 0; j < c.lv.length; j++) {
       var g = c.lv[j];
       if (!lvDrawn(c, g, i)) continue;
@@ -666,7 +668,7 @@
       } else {
         inner = c.kind === "box" ? boxHtml(g, i) : prHtml(g, i);
       }
-      s += '<div class="blockr-rank-lv" style="--blockr-rank-fill:' +
+      s += '<div class="blockr-summarize-lv" style="--blockr-summarize-fill:' +
         c.fills[j] + '">' + inner + "</div>";
     }
     return s + "</div>";
@@ -684,57 +686,57 @@
     for (var i = 0; i < p.n; i++) {
       var parent = !!(p.parent_row && p.parent_row[i]);
       var child = !!(p.level && p.level[i] > 0);
-      var cls = "blockr-rank-row" +
+      var cls = "blockr-summarize-row" +
         (parent ? " is-parent blockr-indent-toggle collapsed" : "") +
         (child ? " is-child collapsed-hidden" : "") +
         (p.pick ? " is-pick" : "") +
         (p.on && p.on[i] ? " is-on" : "");
-      var row = '<tr class="' + cls + '" data-rank-label="' +
+      var row = '<tr class="' + cls + '" data-summarize-label="' +
         esc(p.label[i]) + '"' +
-        (child ? ' data-rank-parent="' + esc(p.parent[i]) + '"' : "") +
-        ' data-rank-level="' + (child ? p.level[i] : 0) +
-        '" data-rank-ord="' + i + '">';
-      row += '<td class="blockr-rank-label-col blockr-stub' +
+        (child ? ' data-summarize-parent="' + esc(p.parent[i]) + '"' : "") +
+        ' data-summarize-level="' + (child ? p.level[i] : 0) +
+        '" data-summarize-ord="' + i + '">';
+      row += '<td class="blockr-summarize-label-col blockr-stub' +
         (parent ? " blockr-has-toggle" : "") + '"' +
         (child ? ' style="padding-left:40px;"' : "") + ">" +
         (parent ? '<button class="blockr-indent-btn" type="button"' +
           ' tabindex="-1" aria-expanded="false">' + CHEV + "</button>" : "") +
-        '<span class="blockr-rank-label">' + esc(p.label[i]) + "</span></td>";
+        '<span class="blockr-summarize-label">' + esc(p.label[i]) + "</span></td>";
       for (var k = 0; k < p.cols.length; k++) {
         var c = p.cols[k];
         if (c.kind === "num" && c.text) {
-          row += '<td class="blockr-rank-txt"' + dataV(c.v[i]) + ">" +
+          row += '<td class="blockr-summarize-txt"' + dataV(c.v[i]) + ">" +
             c.disp[i] + "</td>";
         } else if (c.kind === "num") {
-          row += '<td class="blockr-rank-num dt-col-num"' + dataV(c.v[i]) +
+          row += '<td class="blockr-summarize-num dt-col-num"' + dataV(c.v[i]) +
             ">" + c.disp[i] +
-            (c.pct ? ' <span class="blockr-rank-pct">' + c.pct[i] + "</span>" : "") +
+            (c.pct ? ' <span class="blockr-summarize-pct">' + c.pct[i] + "</span>" : "") +
             "</td>";
         } else if (c.kind === "barsplit") {
-          row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
+          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
             barWrap(splitHtml(c, i), c, i) + "</td>";
         } else if (c.kind === "bardiv") {
-          row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
+          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
             barWrap(dvHtml(c.w[i], c.pos[i]), c, i) + "</td>";
         } else if (c.kind === "box" || c.kind === "pointrange") {
           var glyph = c.multi
             ? multiHtml(c, i)
             : (c.kind === "box" ? boxHtml(c, i) : prHtml(c, i));
-          row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
+          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
             barWrap(glyph, c, i) + "</td>";
         } else if (c.kind === "pair") {
-          row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
+          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
             barWrap(c.multi ? multiHtml(c, i) : pairHtml(c, i), c, i) +
             "</td>";
         } else if (c.kind === "interval") {
-          row += '<td class="blockr-rank-bar-col' +
-            (c.lg ? " blockr-rank-wide" : "") + '"' + dataV(c.v[i]) + ">" +
+          row += '<td class="blockr-summarize-bar-col' +
+            (c.lg ? " blockr-summarize-wide" : "") + '"' + dataV(c.v[i]) + ">" +
             ivHtml(c, i) + "</td>";
         } else if (c.kind === "sparkline") {
-          row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
+          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
             barWrap(spHtml(c, i), c, i) + "</td>";
         } else {
-          row += '<td class="blockr-rank-bar-col"' + dataV(c.v[i]) + ">" +
+          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
             barWrap(trackHtml(c.w[i], c.fill, c.sub && c.sub[i]), c, i) +
             "</td>";
         }
@@ -742,7 +744,7 @@
       out.push(row + "</tr>");
     }
     if (p.fold) {
-      out.push('<tr class="blockr-rank-fold"><td colspan="' + p.ncol + '">' +
+      out.push('<tr class="blockr-summarize-fold"><td colspan="' + p.ncol + '">' +
         esc(p.fold) + "</td></tr>");
     }
     return out.join("");
@@ -753,11 +755,11 @@
    *  payload lacks leaves that setting alone. */
   function applySettings(root, ch) {
     if (ch.drill !== undefined) {
-      if (ch.drill) root.setAttribute("data-rank-drill", ch.drill);
-      else root.removeAttribute("data-rank-drill");
+      if (ch.drill) root.setAttribute("data-summarize-drill", ch.drill);
+      else root.removeAttribute("data-summarize-drill");
     }
     if (ch.ctrl_target !== undefined) {
-      root.setAttribute("data-rank-ctrl-target", ch.ctrl_target || "");
+      root.setAttribute("data-summarize-ctrl-target", ch.ctrl_target || "");
     }
     var input = root.querySelector("input.blockr-search");
     if (input && ch.search !== undefined) {
@@ -779,8 +781,8 @@
     if (!ch) return;
     applySettings(root, ch);
     paintTitles(root, ch);
-    if (root._rankBand) root._rankBand();
-    var lg = root.querySelector(".blockr-rank-legend");
+    if (root._summarizeBand) root._summarizeBand();
+    var lg = root.querySelector(".blockr-summarize-legend");
     if (lg) {
       if (!ch.legend) {
         lg.style.display = "none";
@@ -790,11 +792,11 @@
         // column, so a table can decode more than one dimension at once.
         var h = "";
         (ch.legend.groups || []).forEach(function (g) {
-          h += '<span class="blockr-rank-legend-group">' +
-            '<span class="blockr-rank-legend-title">' + esc(g.title) +
+          h += '<span class="blockr-summarize-legend-group">' +
+            '<span class="blockr-summarize-legend-title">' + esc(g.title) +
             "</span>";
           (g.items || []).forEach(function (it) {
-            h += '<span class="blockr-rank-legend-item"><i style="background:' +
+            h += '<span class="blockr-summarize-legend-item"><i style="background:' +
               it.color + '"></i>' + esc(it.label) + "</span>";
           });
           h += "</span>";
@@ -804,9 +806,9 @@
       }
     }
     var f = ch.foot || {};
-    var note = root.querySelector(".blockr-rank-note");
+    var note = root.querySelector(".blockr-summarize-note");
     if (note) note.textContent = f.note || "";
-    root._rankSel = f.filter || null;
+    root._summarizeSel = f.filter || null;
     paintStatus(root);
   }
 
@@ -819,7 +821,7 @@
     var tEl = band && band.querySelector(".dd-table-title");
     var sEl = band && band.querySelector(".dd-table-subtitle");
     var cap = root.querySelector(".dd-table-caption");
-    var slots = root._rankSlots;
+    var slots = root._summarizeSlots;
     if (slots) slots.close();
     function paint(el, text, parts, offers) {
       if (!el) return;
@@ -853,13 +855,13 @@
       if (tb) tb.innerHTML = assembleBody(p);
     }
     // Fresh rows, fresh server order: the next header click starts at click 1.
-    root._rankSort = { key: null, dir: 0 };
+    root._summarizeSort = { key: null, dir: 0 };
     // The hover card reads its numbers from here (cardHtml).
-    root._rankPayload = p;
+    root._summarizePayload = p;
     applyChrome(root, p.chrome);
     // The row set changed: drop the search text cache and re-apply the current
     // query + collapse state to the fresh rows.
-    root._rankCache = null;
+    root._summarizeCache = null;
     var input = root.querySelector("input.blockr-search");
     if (input && input.value) runSearch(root);
     else applyVisibility(root);
@@ -868,7 +870,7 @@
   if (window.Shiny && Shiny.addCustomMessageHandler) {
     // A deck's request (R/chart-capture.R): the picture at the width it
     // asks for, the height the table's own. Exactly one reply per request.
-    Shiny.addCustomMessageHandler("blockr-viz-rank-capture", function (msg) {
+    Shiny.addCustomMessageHandler("blockr-viz-summarize-capture", function (msg) {
       var replied = false;
       var reply = function (x) {
         if (replied) return;
@@ -887,11 +889,11 @@
         reply({ error: "the table's payload could not be read" });
         return;
       }
-      rankPicture(payload, Number(msg.width) || 900, msg.ratio, msg.css)
+      summarizePicture(payload, Number(msg.width) || 900, msg.ratio, msg.css)
         .then(reply, function (e) { reply({ error: String(e) }); });
     });
 
-    Shiny.addCustomMessageHandler("blockr-viz-rank-data",
+    Shiny.addCustomMessageHandler("blockr-viz-summarize-data",
       function (msg) {
         var entry = payloadStore[msg.id];
         var payload = null;
@@ -906,7 +908,7 @@
           ? CSS.escape(msg.id)
           : String(msg.id).replace(/"/g, '\\"');
         var root = document.querySelector(
-          '.blockr-rank-container[data-rank-elem-id="' + eid + '"]');
+          '.blockr-summarize-container[data-summarize-elem-id="' + eid + '"]');
         // No container yet: the payload waits in the store, and bind() picks it
         // up when the chrome turns up (no timers, no expiring delivery window).
         if (root) applyPayload(root, payload);
@@ -915,7 +917,7 @@
 
   /** A stored payload for this container, or null. */
   function storedFor(root) {
-    var id = root.getAttribute("data-rank-elem-id");
+    var id = root.getAttribute("data-summarize-elem-id");
     var e = id ? payloadStore[id] : null;
     return e ? e.payload : null;
   }
@@ -932,7 +934,7 @@
     if (!snapdomLoading) {
       snapdomLoading = new Promise(function (resolve, reject) {
         var sc = document.createElement("script");
-        sc.src = RANK_JS_BASE + "snapdom.js";
+        sc.src = SUMMARIZE_JS_BASE + "snapdom.js";
         sc.onload = function () {
           if (window.snapdom) resolve(window.snapdom);
           else reject(new Error("snapdom.js loaded but defined nothing"));
@@ -961,12 +963,12 @@
       host.appendChild(st);
     }
     var root = document.createElement("div");
-    root.className = "blockr-html-table-container blockr-rank-container " +
-      "blockr-rank-capture";
+    root.className = "blockr-html-table-container blockr-summarize-container " +
+      "blockr-summarize-capture";
     root.innerHTML = '<div class="dd-table-titles">' +
       '<div class="dd-table-title"></div>' +
       '<div class="dd-table-subtitle"></div></div>' +
-      '<div class="blockr-rank-legend" style="display:none"></div>' +
+      '<div class="blockr-summarize-legend" style="display:none"></div>' +
       '<div class="blockr-table-wrapper"></div>' +
       '<div class="dd-table-caption"></div>';
     host.appendChild(root);
@@ -995,7 +997,7 @@
    * size in CSS px (R turns it into inches at 96 dpi). With a slide `box`
    * (R: capture_page_box()) it also carries `pages` when the table is too
    * long for one slide (capture-pages.js), and the title they repeat. */
-  function rankPicture(payload, width, ratio, css, box) {
+  function summarizePicture(payload, width, ratio, css, box) {
     return loadSnapdom().then(function (snap) {
       var root = captureRoot(width, css);
       var host = root.parentNode;
@@ -1039,20 +1041,20 @@
   // format is picked (chart/chrome.js does the same). At the panel's own width, so
   // the file is the table on screen, unscrolled.
   function bindCapture(root, header) {
-    var elemId = root.getAttribute("data-rank-elem-id");
+    var elemId = root.getAttribute("data-summarize-elem-id");
     header.addEventListener("click", function (e) {
       var t = e.target;
       if (!t || !t.closest ||
           !t.closest(".blockr-action-menu__trigger, .blockr-tool")) return;
-      var tbl = root.querySelector("table.blockr-rank-table");
+      var tbl = root.querySelector("table.blockr-summarize-table");
       var c = {};
-      try { c = JSON.parse((tbl && tbl.getAttribute("data-rank-cfg")) || "{}"); }
+      try { c = JSON.parse((tbl && tbl.getAttribute("data-summarize-cfg")) || "{}"); }
       catch (err) { c = {}; }
       var stored = storedFor(root);
       if (!c.capture_export || !stored || !elemId) return;
       var w = Math.round(root.getBoundingClientRect().width) || 900;
       var box = c.capture_page;
-      rankPicture(stored, w, c.capture_ratio, null, box).then(function (r) {
+      summarizePicture(stored, w, c.capture_ratio, null, box).then(function (r) {
         if (window.Shiny && Shiny.setInputValue) {
           Shiny.setInputValue(elemId + "_capture", r, { priority: "event" });
         }
@@ -1092,7 +1094,7 @@
   // scale in the numbers beside the marks.
   var AXIS_OPT = [{ value: "on", label: "Column axis" },
                   { value: "off", label: "No column axis" }];
-  // The length of the labelled marks (R: rank_bar_width). Fit fills the
+  // The length of the labelled marks (R: summarize_bar_width). Fit fills the
   // panel up to a ceiling; the others are fixed and leave the slack blank.
   var BAR_WIDTH_OPT = [{ value: "narrow", label: "Narrow" },
                        { value: "medium", label: "Medium" },
@@ -1147,9 +1149,9 @@
       '<path d="M1.5 11l3.5-3 2.5 1.5L11 5l3.5 3"/></svg>'
   };
 
-  var RANK_ROLES = {
+  var SUMMARIZE_ROLES = {
     // Mapping — the chart block's labels verbatim (Group / Color / Facet), so
-    // the two gears read as the same system. `parent` is the rank-only extra.
+    // the two gears read as the same system. `parent` is the ranked-bar surface's extra.
     group:  { label: "Group", kind: "column", colType: "cat" },
     // The summarize-table path's grouping vector (outer -> inner, at most
     // two): one row per key combo, the outer becomes the expandable parent.
@@ -1159,7 +1161,7 @@
     color:  { label: "Color", kind: "column", colType: "cat" },
     facet:  { label: "Facet", kind: "column", colType: "cat" },
     // Extra row columns beside the bar — the chart's tooltip fields, shown
-    // as real columns. Offered only for the as-is measure (rankSections):
+    // as real columns. Offered only for the as-is measure (summarizeSections):
     // any aggregation has no underlying row to read a column from.
     fields: { label: "More columns", kind: "columns", colType: "any",
               placeholder: "add columns…" },
@@ -1480,7 +1482,7 @@
 
   /** The seed for a colour / facet mapping: the first categorical that a
    *  reader can actually decode. `n_lev` rides on the gear's column list
-   *  (rank_gear_cols), so adding a mapping lands on AESEV rather than on
+   *  (summarize_gear_cols), so adding a mapping lands on AESEV rather than on
    *  USUBJID, whose 200 levels R rejects outright (LANE_MAX_LEVELS). */
   var MAX_MAP_LEVELS = 15;
   function firstMapCol(cols) {
@@ -2170,7 +2172,7 @@
   // aggregations that reduce a column, `Count distinct` only for
   // count_distinct, the split layout only with a colour split, Compare only
   // with a facet. Conditional rows beat a wall of inert ones.
-  function rankSections(cfg, ctx) {
+  function summarizeSections(cfg, ctx) {
     var mapping = [];
     var optional = [];
     var pres = ["sort_by", "sort_dir"];
@@ -2272,7 +2274,7 @@
   /** Read the gear's working state off the rendered table. */
   function readGearState(table) {
     var cfg = {};
-    try { cfg = JSON.parse(table.getAttribute("data-rank-cfg") || "{}"); }
+    try { cfg = JSON.parse(table.getAttribute("data-summarize-cfg") || "{}"); }
     catch (e) { cfg = {}; }
     var cols = cfg.columns || [];
     var levels = cfg.facet_levels || [];
@@ -2315,7 +2317,7 @@
     var sumNames = (cfg.summaries || []).map(function (s) {
       return s && s.name ? { value: s.name, label: s.name } : null;
     }).filter(Boolean);
-    RANK_ROLES.sort_by.options = [
+    SUMMARIZE_ROLES.sort_by.options = [
       { value: "value", label: "Measure" },
       // The order the data itself carries -- factor levels, else
       // first-appearance in the rows (chart parity: "Data order"). A visit
@@ -2341,7 +2343,7 @@
   }
 
   function buildGear(root) {
-    var elemId = root.getAttribute("data-rank-elem-id");
+    var elemId = root.getAttribute("data-summarize-elem-id");
     if (!elemId) return;
     // The table arrives with the first payload, after this chrome: start from
     // whatever is there (possibly nothing). State is re-read ONLY on popover
@@ -2352,7 +2354,7 @@
     // between builds orphans them -- their edits then land in the old object
     // while onChange reads the new one and transmits the STALE value (the
     // second-gear-edit-after-a-render bug).
-    var table = root.querySelector("table.blockr-rank-table");
+    var table = root.querySelector("table.blockr-summarize-table");
     var st = table ? readGearState(table) : { cfg: {}, cols: [] };
     var cfg = st.cfg;
     var cols = st.cols;
@@ -2405,13 +2407,13 @@
     engine = new DDC({
       popoverEl: function () { return pop; },
       bandEl: function () { return band; },
-      roles: RANK_ROLES,
+      roles: SUMMARIZE_ROLES,
       config: function () { return cfg; },
       columns: function () { return cols; },
       context: function () { return "all"; },
       currentType: function () { return null; },
-      sections: function () { return rankSections(cfg, ctx); },
-      sectionsForFamily: function () { return rankSections(cfg, ctx); },
+      sections: function () { return summarizeSections(cfg, ctx); },
+      sectionsForFamily: function () { return summarizeSections(cfg, ctx); },
       secondary: new Set(),
       // "Mapping" in both modes, as on the chart: the trays share their
       // section names.
@@ -2461,7 +2463,7 @@
     // re-reads and rebuilds its controls on open, so this cannot orphan them.
     var sync = function () {
       if (pop.classList.contains("blockr-settings--open")) return;
-      var t = root.querySelector("table.blockr-rank-table");
+      var t = root.querySelector("table.blockr-summarize-table");
       if (!t) return;
       var s3 = readGearState(t);
       cfg = s3.cfg;
@@ -2473,9 +2475,9 @@
     // orphan the open controls): a word added to the subtitle in the gear
     // takes its control off the strip at once, a word removed puts it back.
     var BAND_KEYS = ["sentence_args", "script_inputs", "script_error"];
-    root._rankBand = function () {
+    root._summarizeBand = function () {
       if (pop.classList.contains("blockr-settings--open")) {
-        var t = root.querySelector("table.blockr-rank-table");
+        var t = root.querySelector("table.blockr-summarize-table");
         if (t) {
           var fresh = readGearState(t).cfg;
           BAND_KEYS.forEach(function (k) { cfg[k] = fresh[k]; });
@@ -2517,7 +2519,7 @@
           if (pop.classList.contains("blockr-settings--open")) engine.render();
         }
       };
-      root._rankSlots = new B.SentenceSlots({
+      root._summarizeSlots = new B.SentenceSlots({
         ddc: function () { return words; },
         config: function () { sync(); return cfg; },
         openGear: function () {
@@ -2534,14 +2536,14 @@
       pop.classList.remove("blockr-settings--open");
       btn.setAttribute("aria-expanded", "false");
       // Back to the server's state for everything the gear held.
-      if (root._rankBand) root._rankBand();
+      if (root._summarizeBand) root._summarizeBand();
     }
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
       if (pop.classList.contains("blockr-settings--open")) { closePop(); return; }
       // Re-read state before opening: the config may have moved server-side
       // (state restore, AI / external_ctrl edit) since the gear was built.
-      var t = root.querySelector("table.blockr-rank-table");
+      var t = root.querySelector("table.blockr-summarize-table");
       if (t) {
         var s2 = readGearState(t);
         cfg = s2.cfg;
@@ -2591,7 +2593,7 @@
       // Nothing for us yet: either the payload has not been built, or it was
       // pushed before this script existed (Shiny drops a custom message with
       // no registered handler). Announce, and let R re-send.
-      var id = root.getAttribute("data-rank-elem-id");
+      var id = root.getAttribute("data-summarize-elem-id");
       if (id && window.Shiny && Shiny.setInputValue) {
         Shiny.setInputValue(id + "_ready", Date.now(), { priority: "event" });
       }
@@ -2600,7 +2602,7 @@
 
   function scan(scope) {
     var host = scope && scope.querySelectorAll ? scope : document;
-    host.querySelectorAll(".blockr-rank-container").forEach(bind);
+    host.querySelectorAll(".blockr-summarize-container").forEach(bind);
   }
 
   // ---------- hover readout ----------
@@ -2711,15 +2713,15 @@
 
   /** The card for the cell under the pointer, or "" for none. */
   function cardHtml(td, t) {
-    var root = td.closest(".blockr-rank-container");
+    var root = td.closest(".blockr-summarize-container");
     var tr = td.parentNode;
-    var p = root && root._rankPayload;
-    var i = tr ? Number(tr.getAttribute("data-rank-ord")) : NaN;
+    var p = root && root._summarizePayload;
+    var i = tr ? Number(tr.getAttribute("data-summarize-ord")) : NaN;
     var c = (p && p.kind === "flat" && p.cols) ? p.cols[td.cellIndex - 1] : null;
     if (!c || isNaN(i) || i >= p.n) {
       // No payload (a static page): the one-line text the cell carries.
-      var own = t.closest("[data-rank-tip]");
-      var txt = own ? own.getAttribute("data-rank-tip") : "";
+      var own = t.closest("[data-summarize-tip]");
+      var txt = own ? own.getAttribute("data-summarize-tip") : "";
       return txt ? ttNote(txt) : "";
     }
     var tt = c.tt || {};
@@ -2737,11 +2739,11 @@
       return "";
     }
     if (c.kind === "barsplit") {
-      var fillEl = t.closest(".blockr-rank-fill");
+      var fillEl = t.closest(".blockr-summarize-fill");
       var hitName = null;
       if (fillEl) {
         var fills = Array.prototype.slice.call(
-          fillEl.parentNode.parentNode.querySelectorAll(".blockr-rank-fill"));
+          fillEl.parentNode.parentNode.querySelectorAll(".blockr-summarize-fill"));
         var drawn = [];
         for (var j0 = 0; j0 < c.names.length; j0++) {
           if (c.mode === "grouped" || c.segv[j0][i] > 0) drawn.push(j0);
@@ -2775,7 +2777,7 @@
         return h + ttDist(c.kind, c, i, words);
       }
       // A colour-split cell: the level under the pointer, else every level.
-      var lvEl = t.closest(".blockr-rank-lv");
+      var lvEl = t.closest(".blockr-summarize-lv");
       var drawnLv = [];
       for (var k = 0; k < c.lv.length; k++) {
         if (lvDrawn(c, c.lv[k], i)) drawnLv.push(k);
@@ -2783,7 +2785,7 @@
       var pick = drawnLv;
       if (lvEl) {
         var all = Array.prototype.slice.call(
-          lvEl.parentNode.querySelectorAll(".blockr-rank-lv"));
+          lvEl.parentNode.querySelectorAll(".blockr-summarize-lv"));
         var pos = all.indexOf(lvEl);
         if (pos >= 0 && pos < drawnLv.length) pick = [drawnLv[pos]];
       }
@@ -2814,7 +2816,7 @@
       // A colour-split cell, as for the glyph: the level under the pointer,
       // else every level. Each level's tip starts with its level name,
       // which the coloured row below already says.
-      var lvP = t.closest(".blockr-rank-lv");
+      var lvP = t.closest(".blockr-summarize-lv");
       var drawnP = [];
       for (var q = 0; q < c.lv.length; q++) {
         if (lvDrawn(c, c.lv[q], i)) drawnP.push(q);
@@ -2822,7 +2824,7 @@
       var pickP = drawnP;
       if (lvP) {
         var allP = Array.prototype.slice.call(
-          lvP.parentNode.querySelectorAll(".blockr-rank-lv"));
+          lvP.parentNode.querySelectorAll(".blockr-summarize-lv"));
         var posP = allP.indexOf(lvP);
         if (posP >= 0 && posP < drawnP.length) pickP = [drawnP[posP]];
       }
@@ -2852,12 +2854,12 @@
   document.addEventListener("mousemove", function (e) {
     var t = /** @type {Element} */ (e.target);
     if (!t || !t.closest) { return; }
-    var lane = t.closest(".blockr-rank-ivcell, .blockr-rank-spcell");
+    var lane = t.closest(".blockr-summarize-ivcell, .blockr-summarize-spcell");
     var tip = tipEl();
     if (!lane) {
       laneHighlight(null, null);
-      var td = t.closest("td.blockr-rank-bar-col");
-      var html = td && t.closest(".blockr-rank-container") ? cardHtml(td, t) : "";
+      var td = t.closest("td.blockr-summarize-bar-col");
+      var html = td && t.closest(".blockr-summarize-container") ? cardHtml(td, t) : "";
       if (!html) {
         tip.hidden = true;
         return;
@@ -2872,12 +2874,12 @@
     if (!r.width) { tip.hidden = true; return; }
     var fx = Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1);
     var txt = "";
-    if (lane.classList.contains("blockr-rank-ivcell")) {
+    if (lane.classList.contains("blockr-summarize-ivcell")) {
       var seg = t.closest(".lane-seg");
       // Same-event highlight: hovering a labelled segment dims every other
       // segment in the table and lifts the matches -- the table's answer
       // to cross-lane identity emphasis, keyed on data-l.
-      laneHighlight(lane.closest(".blockr-rank-container"),
+      laneHighlight(lane.closest(".blockr-summarize-container"),
                     seg ? seg.getAttribute("data-l") : null);
       if (seg) {
         txt = seg.getAttribute("data-tip") || "";
@@ -2928,7 +2930,7 @@
       for (var j = 0; j < added.length; j++) {
         var n = added[j];
         if (n.nodeType !== 1) continue;
-        if (n.classList && n.classList.contains("blockr-rank-container")) bind(n);
+        if (n.classList && n.classList.contains("blockr-summarize-container")) bind(n);
         else scan(n);
       }
     }

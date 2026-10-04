@@ -3,8 +3,8 @@
 # One object, rendered by whichever back end the target needs. The block
 # itself cannot be that object: `new_summarize_table_block()` is a transform
 # block whose result is its (filtered) INPUT, and the table exists only as a
-# push to rank-table.js. A report or a deck evaluating the board would print
-# the input frame -- which is what it did before this file existed.
+# push to summarize-table.js. A report or a deck evaluating the board would
+# print the input frame -- which is what it did before this file existed.
 #
 # So the block states how to rebuild its table (report_call), and the rebuilt
 # table carries everything every target needs:
@@ -59,14 +59,15 @@ static_summarize_table <- function(data, ...) {
   args <- list(...)
   # The block hands over the settings its text names, script values
   # included; a direct call names only the table's own arguments.
-  targs <- args$.title_args %||% rank_title_args(args)
+  targs <- args$.title_args %||% summarize_title_args(args)
   args$.title_args <- NULL
 
   # The block resolves its title tier against the data before calling; doing
   # it again is a no-op for a plain string and gives a direct call the same
-  # automatic tier (see rank_table()).
-  prep <- do.call(rank_prepare, c(list(data), args[rank_prep_args(args)]))
-  cells <- rank_cells(
+  # automatic tier (see summarize_table()).
+  prep <- do.call(summarize_prepare,
+                  c(list(data), args[summarize_prep_args(args)]))
+  cells <- summarize_cells(
     prep,
     cfg = list(axis = args$axis %||% TRUE, sortable = args$sortable %||% TRUE,
                bar_width = args$bar_width)
@@ -79,13 +80,13 @@ static_summarize_table <- function(data, ...) {
       prep = prep,
       cells = cells,
       title = resolve_block_title(args$title, data,
-                                  auto = rank_attr(data, "label"),
+                                  auto = summarize_attr(data, "label"),
                                   args = targs),
       subtitle = resolve_block_title(args$subtitle, data,
-                                     auto = rank_attr(data, "subtitle"),
+                                     auto = summarize_attr(data, "subtitle"),
                                      args = targs),
       caption = resolve_block_title(args$caption, data,
-                                    auto = rank_attr(data, "caption"),
+                                    auto = summarize_attr(data, "caption"),
                                     args = targs)
     ),
     class = c("summarize_exhibit", "blockr_exhibit")
@@ -98,7 +99,7 @@ static_summarize_table <- function(data, ...) {
 # is the parent a row sits under. The block and the exhibit both call this,
 # so a downloaded table says what the one on screen says.
 #' @noRd
-rank_title_args <- function(args) {
+summarize_title_args <- function(args) {
   by <- as.character(unlist(args$by %||% character()))
   list(
     by = if (length(by)) by[[length(by)]],
@@ -109,12 +110,12 @@ rank_title_args <- function(args) {
   )
 }
 
-# Which of the caller's arguments rank_prepare() takes. Everything else
+# Which of the caller's arguments summarize_prepare() takes. Everything else
 # (display text, heights, the search toggle) belongs to the chrome and is
 # passed on to whichever renderer draws it.
 #' @noRd
-rank_prep_args <- function(args) {
-  names(args) %in% names(formals(rank_prepare))
+summarize_prep_args <- function(args) {
+  names(args) %in% names(formals(summarize_prepare))
 }
 
 #' @export
@@ -132,11 +133,11 @@ print.summarize_exhibit <- function(x, ...) {
   # An interactive session gets the picture; without a device to draw on
   # (a script, a knit chunk with no plot) the one-line summary still says
   # what the object is.
-  ok <- rank_paint_ready() &&
+  ok <- summarize_paint_ready() &&
     !identical(grDevices::dev.cur()[[1L]], 1L)
   if (ok) {
-    p <- rank_paint_grob(x$cells, x$prep, title = x$title,
-                         subtitle = x$subtitle, caption = x$caption)
+    p <- summarize_paint_grob(x$cells, x$prep, title = x$title,
+                              subtitle = x$subtitle, caption = x$caption)
     grid::grid.newpage()
     grid::grid.draw(p$grob)
   } else {
@@ -152,7 +153,7 @@ knit_print.summarize_exhibit <- function(x, ...) {
   if (exhibit_html_output()) {
     return(knitr::knit_print(html_exhibit(x)))
   }
-  knitr::knit_print(rank_paint_image(x))
+  knitr::knit_print(summarize_paint_image(x))
 }
 
 #' @export
@@ -171,7 +172,7 @@ html_exhibit.summarize_exhibit <- function(x, title = NULL, caption = NULL,
   # whole. Same call the painted page makes -- it draws every row too, and
   # the two targets must not disagree about what the table CONTAINS.
   args$expanded <- TRUE
-  do.call(rank_table, c(list(x$data), args))
+  do.call(summarize_table, c(list(x$data), args))
 }
 
 #' @export
@@ -202,7 +203,7 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
   if (!requireNamespace("officer", quietly = TRUE)) {
     stop("pptx_add_exhibit() needs the 'officer' package.", call. = FALSE)
   }
-  rank_paint_require()
+  summarize_paint_require()
 
   layouts <- officer::layout_summary(doc)
   layout <- layout %||% if ("Title and Content" %in% layouts$layout) {
@@ -255,7 +256,7 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
   # shrink alike.
   min_font_size <- exhibit_min_font_size(min_font_size)
   fits_one <- function(fs) {
-    do.call(rank_paint_per_page, c(common, list(fs = fs))) >= x$cells$n
+    do.call(summarize_paint_per_page, c(common, list(fs = fs))) >= x$cells$n
   }
 
   if (!fits_one(font_size) && min_font_size < font_size) {
@@ -267,7 +268,7 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
     }
   }
 
-  pages <- do.call(rank_paint_pages, c(common, list(fs = font_size)))
+  pages <- do.call(summarize_paint_pages, c(common, list(fs = font_size)))
 
   if (length(pages) > 1L) {
     # Below the floor only to say what it would have taken: the deck still
@@ -288,7 +289,7 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
   for (k in seq_along(pages)) {
     p <- pages[[k]]
     f <- tempfile(fileext = ".png")
-    rank_paint_png_file(p, f, res = res)
+    summarize_paint_png_file(p, f, res = res)
     doc <- officer::add_slide(doc, layout = layout, master = master)
     if (slide_title) {
       doc <- tryCatch(

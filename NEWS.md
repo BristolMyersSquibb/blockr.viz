@@ -5,6 +5,11 @@
   carries the classes `rank_block` and `lane_chart_block`.
 * `rank_table()` is no longer exported. The summarize table's static HTML is
   `html_exhibit(static_summarize_table(...))`.
+* The summarize table's internals are renamed from "rank" to "summarize":
+  files (`R/summarize-*.R`, `inst/js/summarize-table.js`), functions, CSS
+  classes and variables (`blockr-summarize-*`), HTML attributes
+  (`data-summarize-*`) and the custom message names. Custom CSS that targeted
+  `.blockr-rank-*` needs the new names.
 
 # blockr.viz 0.2.193
 

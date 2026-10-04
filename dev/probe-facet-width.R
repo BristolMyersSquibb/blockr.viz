@@ -1,5 +1,5 @@
 # Probe: how wide does a glyph column end up when the facet has many levels?
-# Renders static rank_table()s to /tmp so the widths can be measured in a
+# Renders static summarize_table()s to /tmp so the widths can be measured in a
 # browser without a Shiny app. Three shapes: faceted counts (the squeeze),
 # a plain single-bar table (the lane must still take the slack), and a
 # faceted box glyph (the other mark family).
@@ -14,10 +14,10 @@ d <- data.frame(
   SEX = sample(c("F", "M"), n, TRUE)
 )
 
-faceted <- rank_table(d, group = "SOC", func = "count", facet = "SITE",
+faceted <- summarize_table(d, group = "SOC", func = "count", facet = "SITE",
                       search = FALSE)
-plain <- rank_table(d, group = "SOC", func = "count", search = FALSE)
-boxes <- rank_table(
+plain <- summarize_table(d, group = "SOC", func = "count", search = FALSE)
+boxes <- summarize_table(
   d,
   summaries = list(
     list(type = "dist", name = "Age", col = "AGE", style = "box")
@@ -27,12 +27,12 @@ boxes <- rank_table(
 
 probe <- "
 window.addEventListener('load', function () {
-  var out = Array.from(document.querySelectorAll('.blockr-rank-container'))
+  var out = Array.from(document.querySelectorAll('.blockr-summarize-container'))
     .map(function (root, i) {
       var w = root.querySelector('.blockr-table-wrapper');
-      var cells = Array.from(root.querySelectorAll('td.blockr-rank-bar-col'))
+      var cells = Array.from(root.querySelectorAll('td.blockr-summarize-bar-col'))
         .slice(0, 3).map(function (c) {
-          var lane = c.querySelector('.blockr-rank-track, .blockr-rank-lane');
+          var lane = c.querySelector('.blockr-summarize-track, .blockr-summarize-lane');
           return c.getBoundingClientRect().width.toFixed(1) + '/' +
             (lane ? lane.getBoundingClientRect().width.toFixed(1) : 'NA');
         });

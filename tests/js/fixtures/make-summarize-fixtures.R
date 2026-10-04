@@ -45,7 +45,7 @@ record <- function(blk, edits = list()) {
       sent <- list()
       root <- session$rootScope()
       root$sendCustomMessage <- function(type, message) {
-        if (identical(type, "blockr-viz-rank-data")) {
+        if (identical(type, "blockr-viz-summarize-data")) {
           sent[[length(sent) + 1L]] <<- message
         }
         invisible(NULL)
@@ -53,7 +53,7 @@ record <- function(blk, edits = list()) {
       session$flushReact()
       expr <- session$makeScope("expr")
       for (e in edits) {
-        expr$setInputs(rank_block_action = list(
+        expr$setInputs(summarize_table_block_action = list(
           action = "config", param = e$param, value = e$value
         ))
         session$flushReact()
@@ -62,7 +62,7 @@ record <- function(blk, edits = list()) {
       # The chrome as the block's one-shot render builds it, from the
       # constructor's settings.
       st <- blk
-      chrome <- rank_chrome_shell(
+      chrome <- summarize_chrome_shell(
         max_height = attr(st, "fixture_max_height"),
         search = attr(st, "fixture_search") %||% TRUE,
         drill = attr(st, "fixture_drill"),

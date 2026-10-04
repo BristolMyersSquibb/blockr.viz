@@ -159,54 +159,55 @@
 #' )
 #' @export
 new_summarize_table_block <- function(group = NULL,
-                                 value = ".count",
-                                 func = "count",
-                                 id_var = NULL,
-                                 summaries = list(),
-                                 by = NULL,
-                                 facet_layout = "by_summary",
-                                 parent = NULL,
-                                 color = NULL,
-                                 bar_mode = "stacked",
-                                 facet = NULL,
-                                 cols = NULL,
-                                 fields = NULL,
-                                 sort_by = "value",
-                                 sort_dir = "desc",
-                                 top_n = NULL,
-                                 max_height = NULL,
-                                 search = TRUE,
-                                 sortable = TRUE,
-                                 axis = TRUE,
-                                 bar_width = "fit",
-                                 download = FALSE,
-                                 title = NULL,
-                                 subtitle = NULL,
-                                 # The chart block's default: a deployment
-                                 # can caption every new table, e.g. with
-                                 # "{filters}". Read once, at construction.
-                                 caption = getOption(
-                                   "blockr.viz.default_caption"
-                                 ),
-                                 drill = NULL,
-                                 # The prepare step, as on the chart block:
-                                 # R code run on the incoming rows before
-                                 # the table is built; its top assignments
-                                 # become controls on the card.
-                                 script = NULL,
-                                 values = list(),
-                                 ctrl_target = "",
-                                 ctrl_table = "",
-                                 # Runtime filter transport (NOT creation-time
-                                 # config). MUST stay in the signature:
-                                 # blockr.core serializes a block from its
-                                 # constructor formals and restores by
-                                 # re-calling the constructor, so dropping
-                                 # these breaks filter-state round-trip.
-                                 filter_type = "categorical",
-                                 filter_column = NULL,
-                                 filter_values = NULL,
-                                 ...) {
+                                      value = ".count",
+                                      func = "count",
+                                      id_var = NULL,
+                                      summaries = list(),
+                                      by = NULL,
+                                      facet_layout = "by_summary",
+                                      parent = NULL,
+                                      color = NULL,
+                                      bar_mode = "stacked",
+                                      facet = NULL,
+                                      cols = NULL,
+                                      fields = NULL,
+                                      sort_by = "value",
+                                      sort_dir = "desc",
+                                      top_n = NULL,
+                                      max_height = NULL,
+                                      search = TRUE,
+                                      sortable = TRUE,
+                                      axis = TRUE,
+                                      bar_width = "fit",
+                                      download = FALSE,
+                                      title = NULL,
+                                      subtitle = NULL,
+                                      # The chart block's default: a deployment
+                                      # can caption every new table, e.g. with
+                                      # "{filters}". Read once, at construction.
+                                      caption = getOption(
+                                        "blockr.viz.default_caption"
+                                      ),
+                                      drill = NULL,
+                                      # The prepare step, as on the chart block:
+                                      # R code run on the incoming rows before
+                                      # the table is built; its top assignments
+                                      # become controls on the card.
+                                      script = NULL,
+                                      values = list(),
+                                      ctrl_target = "",
+                                      ctrl_table = "",
+                                      # Runtime filter transport (NOT
+                                      # creation-time config). MUST stay in the
+                                      # signature: blockr.core serializes a
+                                      # block from its constructor formals and
+                                      # restores by re-calling the constructor,
+                                      # so dropping these breaks filter-state
+                                      # round-trip.
+                                      filter_type = "categorical",
+                                      filter_column = NULL,
+                                      filter_values = NULL,
+                                      ...) {
   # Heal state poisoned by a pre-#144 DAG copy/paste (a NULL slot returning as
   # list()); see R/state-normalize.R.
   group <- chr_state(group)
@@ -232,10 +233,10 @@ new_summarize_table_block <- function(group = NULL,
   # The summarize table groups by `by`; the ranked bar by `group` (+ `parent`).
   # A board that grew its column list out of the ranked-bar surface -- or one
   # saved before `by` existed -- still carries the value in the old slots, and
-  # rank_prepare() falls back to them. So the table draws correctly while the
-  # gear's REQUIRED "Group by" row shows empty, which reads as a broken block.
-  # Move the value into the slot the summarize gear reads, and clear the old
-  # ones: left in place they would silently resurrect a grouping the user
+  # summarize_prepare() falls back to them. So the table draws correctly while
+  # the gear's REQUIRED "Group by" row shows empty, which reads as a broken
+  # block. Move the value into the slot the summarize gear reads, and clear the
+  # old ones: left in place they would silently resurrect a grouping the user
   # cleared in the gear (the same rule as the colour / facet migration below).
   if (length(summaries) && !length(by) && length(c(parent, group))) {
     by <- unique(c(parent, group))
@@ -292,16 +293,16 @@ new_summarize_table_block <- function(group = NULL,
         r_search  <- shiny::reactiveVal(isTRUE(search))
         r_sortable <- shiny::reactiveVal(isTRUE(sortable))
         r_axis    <- shiny::reactiveVal(isTRUE(axis))
-        r_bar_width <- shiny::reactiveVal(rank_bar_width(bar_width))
+        r_bar_width <- shiny::reactiveVal(summarize_bar_width(bar_width))
         r_download <- shiny::reactiveVal(isTRUE(download))
         r_title   <- shiny::reactiveVal(title)
         r_subtitle <- shiny::reactiveVal(subtitle)
         r_caption <- shiny::reactiveVal(caption)
         r_drill   <- shiny::reactiveVal(drill)
-        r_ctrl_target <- shiny::reactiveVal(rank_chr1(ctrl_target) %||% "")
+        r_ctrl_target <- shiny::reactiveVal(summarize_chr1(ctrl_target) %||% "")
 
         # Transient drill. With a target set, a click is an EVENT sent to that
-        # block, not a selection this rank table holds: nothing lands in
+        # block, not a selection this table holds: nothing lands in
         # `r_filter_*`, so the block does not filter its own output on a click
         # it only forwarded, the board saves no selection, and clicking the
         # same row twice sends twice instead of toggling off. The undo lives at
@@ -311,7 +312,7 @@ new_summarize_table_block <- function(group = NULL,
         transient_drill <- function() {
           nzchar(trimws(r_ctrl_target() %||% ""))
         }
-        r_ctrl_table  <- shiny::reactiveVal(rank_chr1(ctrl_table) %||% "")
+        r_ctrl_table  <- shiny::reactiveVal(summarize_chr1(ctrl_table) %||% "")
         # Candidate targets for the gear's "Send to filter" select: the value
         # filter blocks currently on the board (dd_ctrl_choices tracks the
         # board reactively).
@@ -385,7 +386,7 @@ new_summarize_table_block <- function(group = NULL,
           # The prepare script's declared values are settings too, named in a
           # template by their variable: `{@min_patients}` (chart parity).
           script_title_args(
-            rank_title_args(list(
+            summarize_title_args(list(
               by = r_by(), group = r_group(), parent = r_parent(),
               value = r_value(), func = r_func(), id_var = r_id_var(),
               color = r_color(), facet = r_facet(), sort_by = r_sort_by(),
@@ -435,7 +436,7 @@ new_summarize_table_block <- function(group = NULL,
         board_scale_map <- dd_board_scale_map()
 
         # The gear's config params, mapped to their reactiveVals. One place, so
-        # a new arg needs one line here and one role in rank-table.js.
+        # a new arg needs one line here and one role in summarize-table.js.
         setters <- list(
           group = r_group, parent = r_parent, color = r_color,
           facet = r_facet, func = r_func,
@@ -460,8 +461,8 @@ new_summarize_table_block <- function(group = NULL,
 
         # JS -> R: a row click, a Reset, or a gear edit. Same payload shape as
         # the chart and table blocks, so the three behave identically.
-        shiny::observeEvent(input$rank_block_action, {
-          act <- input$rank_block_action
+        shiny::observeEvent(input$summarize_table_block_action, {
+          act <- input$summarize_table_block_action
           if (identical(act$action, "config")) {
             key <- as.character(act$param %||% "")[1L]
             if (!nzchar(key)) return()
@@ -524,7 +525,7 @@ new_summarize_table_block <- function(group = NULL,
             r_filter_values(NULL)
             return()
           }
-          col <- rank_chr1(act$column)
+          col <- summarize_chr1(act$column)
           vals <- as.character(unlist(act$values %||% character()))
           # The event path. A clear (no column, from a re-aim or the Reset)
           # is inert: there is no local selection to clear and the target's
@@ -607,13 +608,13 @@ new_summarize_table_block <- function(group = NULL,
         # rebuilds it -- the gear stays open, and the search text and the
         # scroll position survive. The settings it starts from (search box,
         # drill, ctrl_target, height) change later through the payload's
-        # chrome, which rank-table.js applies in place.
-        output$rank_chrome <- shiny::renderUI({
-          shiny::isolate(rank_chrome_shell(
+        # chrome, which summarize-table.js applies in place.
+        output$summarize_chrome <- shiny::renderUI({
+          shiny::isolate(summarize_chrome_shell(
             max_height = r_max_height(), search = r_search(),
-            drill = r_drill(), elem_id = ns("rank_block"),
+            drill = r_drill(), elem_id = ns("summarize_table_block"),
             ctrl_target = r_ctrl_target(),
-            download = shiny::uiOutput(ns("rank_download"), inline = TRUE)
+            download = shiny::uiOutput(ns("summarize_download"), inline = TRUE)
           ))
         })
 
@@ -631,17 +632,17 @@ new_summarize_table_block <- function(group = NULL,
         last_msg$rev <- 0L
 
         push <- function(json) {
-          session$sendCustomMessage("blockr-viz-rank-data", list(
-            id = ns("rank_block"), rev = last_msg$rev, payload = json
+          session$sendCustomMessage("blockr-viz-summarize-data", list(
+            id = ns("summarize_table_block"), rev = last_msg$rev, payload = json
           ))
         }
 
         # The client announces itself when it binds with nothing to render.
         # Shiny DROPS a custom message that has no registered handler yet, and
-        # rank-table.js only loads with the first rank block UI in the page --
-        # on a board whose opening view carries none, the startup payload is
-        # lost and the identity guard below would never re-send it.
-        shiny::observeEvent(input$rank_block_ready, {
+        # summarize-table.js only loads with the first summarize table UI in the
+        # page -- on a board whose opening view carries none, the startup
+        # payload is lost and the identity guard below would never re-send it.
+        shiny::observeEvent(input$summarize_table_block_ready, {
           if (!is.null(last_msg$json)) push(last_msg$json)
         })
         # The payload as JSON, from the current state. The push observer
@@ -651,7 +652,7 @@ new_summarize_table_block <- function(group = NULL,
           d <- tryCatch(ann_data(), error = function(e) NULL)
           shiny::req(is.data.frame(d))
           tt <- r_titles()
-          p <- rank_build_payload(
+          p <- summarize_build_payload(
             d,
             chrome = c(
               tt[setdiff(names(tt), "title_arg_values")],
@@ -689,7 +690,7 @@ new_summarize_table_block <- function(group = NULL,
                 list(title_state = r_title(), subtitle_state = r_subtitle(),
                      caption_state = r_caption())
               ),
-              columns = rank_gear_cols(d),
+              columns = summarize_gear_cols(d),
               # The export picture comes from the browser (R/chart-capture.R):
               # the table as drawn, at full height, instead of a server
               # repaint that has to match it.
@@ -703,7 +704,7 @@ new_summarize_table_block <- function(group = NULL,
               script_inputs = dd_script_roles(r_specs()),
               script_error = r_prepared()$error,
               sentence_args = as.list(tt$sentence_args),
-              # Named sv_<name>; rank-table.js spreads them onto the gear's
+              # Named sv_<name>; summarize-table.js spreads them onto the gear's
               # config, where the engine's script roles read them.
               script_values = dd_script_cfg(r_specs(), r_values())
             ),
@@ -716,7 +717,7 @@ new_summarize_table_block <- function(group = NULL,
             sort_dir = r_sort_dir(), top_n = r_top_n(),
             scale_map = board_scale_map()
           )
-          rank_payload_json(p)
+          summarize_payload_json(p)
         }
         shiny::observe({
           json <- build_json()
@@ -734,11 +735,11 @@ new_summarize_table_block <- function(group = NULL,
         # block's exports come off its canvas (R/chart-capture.R): the same
         # table as on screen, every row, no scroll box, as one picture. The
         # download menu posts it when it opens, so it is here by the time a
-        # format is picked. The painted exhibit (rank-paint.R) stays the
+        # format is picked. The painted exhibit (summarize-paint.R) stays the
         # fallback where no browser has drawn one.
         capture <- shiny::reactiveVal(NULL)
-        shiny::observeEvent(input$rank_block_capture, {
-          capture(chart_capture_from_msg(input$rank_block_capture))
+        shiny::observeEvent(input$summarize_table_block_capture, {
+          capture(chart_capture_from_msg(input$summarize_table_block_capture))
         })
         dl_picture <- function() {
           capture() %||% dl_exhibit()
@@ -746,20 +747,21 @@ new_summarize_table_block <- function(group = NULL,
 
         # A deck asks for the picture through the session's capture service,
         # at a width it chooses; the height is the table's own.
-        register_chart_capture(ns("rank_block"), function(token, width,
-                                                          height) {
+        register_chart_capture(ns("summarize_table_block"), function(token,
+                                                                     width,
+                                                                     height) {
           json <- last_msg$json %||% tryCatch(
             shiny::isolate(build_json()),
             error = function(e) NULL
           )
           if (is.null(json)) {
-            stop("summarize table '", ns("rank_block"),
+            stop("summarize table '", ns("summarize_table_block"),
                  "' has no data to draw yet", call. = FALSE)
           }
-          session$sendCustomMessage("blockr-viz-rank-capture", list(
+          session$sendCustomMessage("blockr-viz-summarize-capture", list(
             req = token, payload = json, width = width,
             ratio = canvas_capture_ratio(),
-            css = paste(html_table_shared_css_fallback(), rank_table_css(),
+            css = paste(html_table_shared_css_fallback(), summarize_table_css(),
                         sep = "\n")
           ))
         })
@@ -814,7 +816,7 @@ new_summarize_table_block <- function(group = NULL,
           )
         })
 
-        output$rank_download <- shiny::renderUI(
+        output$summarize_download <- shiny::renderUI(
           dl_control_ui(ns, dl_formats())
         )
 
@@ -836,7 +838,7 @@ new_summarize_table_block <- function(group = NULL,
               # rather than a cell, so images neither sort nor resize with the
               # data -- and someone opening the xlsx came to pivot.
               write_annotated_xlsx(
-                rank_export_df(e$prep), file,
+                summarize_export_df(e$prep), file,
                 title = e$title, subtitle = e$subtitle, caption = e$caption
               )
             })
@@ -888,7 +890,8 @@ new_summarize_table_block <- function(group = NULL,
         # a download link inside a display:none host is a hidden output,
         # Shiny suspends it, the handler is never registered, and the click
         # comes back 404.
-        shiny::outputOptions(output, "rank_download", suspendWhenHidden = FALSE)
+        shiny::outputOptions(output, "summarize_download",
+                             suspendWhenHidden = FALSE)
         shiny::outputOptions(output, "dl_xlsx", suspendWhenHidden = FALSE)
         shiny::outputOptions(output, "dl_html", suspendWhenHidden = FALSE)
         shiny::outputOptions(output, "dl_pptx", suspendWhenHidden = FALSE)
@@ -950,8 +953,8 @@ new_summarize_table_block <- function(group = NULL,
         # The dep ships with the STATIC ui, not only with the renderUI output
         # (table / chart block parity): a script that arrives with the first
         # rendered body is too late to have bound before it.
-        rank_table_dep(),
-        shiny::uiOutput(ns("rank_chrome"))
+        summarize_table_dep(),
+        shiny::uiOutput(ns("summarize_chrome"))
       )
     },
     class = c("summarize_table_block", "transform_block", "block"),
@@ -992,7 +995,7 @@ new_summarize_table_block <- function(group = NULL,
 
 #' Argument specs for the lane chart block
 #' @noRd
-rank_arguments <- function() {
+summarize_arguments <- function() {
   blockr.core::new_arg_specs(
     group = new_arg_spec(
       paste0(
@@ -1321,7 +1324,7 @@ rank_arguments <- function() {
 
 #' Construction guidance for the lane chart block
 #' @noRd
-rank_guidance <- function() {
+summarize_guidance <- function() {
   paste(
     "Horizontal marks as an HTML table \u2014 the third sibling of the",
     "chart and table blocks. Use it whenever one row is one category and",

@@ -30,7 +30,7 @@
   // Transient drill: with a ctrl_target the click is an EVENT sent to that
   // block, not a selection this block holds. Nothing latches, nothing toggles
   // off, and the claim carries a click counter so re-clicking one tile sends
-  // again. Same rule as the chart, the table, the heatmap and the rank table;
+  // again. Same rule as the chart, the table, the heatmap and the summarize table;
   // the undo lives at the target.
   /** @param {Element} root */
   function tileTransient(root) {

@@ -24,7 +24,7 @@ dl_exhibit <- function(...) {
 }
 
 test_that("the export frame is the numbers behind the marks", {
-  df <- rank_export_df(dl_exhibit()$prep)
+  df <- summarize_export_df(dl_exhibit()$prep)
 
   expect_s3_class(df, "data.frame")
   expect_identical(nrow(df), 3L)
@@ -47,7 +47,7 @@ test_that("a mark with no scalar behind it is dropped, and says so", {
       list(type = "spans", name = "Episodes", x = "day", xend = "day")
     )
   )
-  df <- rank_export_df(ex$prep)
+  df <- summarize_export_df(ex$prep)
 
   # A swimlane is a set of intervals per row, which is not a cell.
   expect_identical(attr(df, "dropped"), "Episodes")
@@ -61,7 +61,7 @@ test_that("a nested export carries its indentation", {
     summaries = list(list(type = "simple", func = "count", show = "number",
                           name = "n"))
   )
-  df <- rank_export_df(ex$prep)
+  df <- summarize_export_df(ex$prep)
 
   expect_true(".indent" %in% names(df))
   expect_true(any(df$.indent > 0L))
@@ -74,14 +74,14 @@ test_that("the HTML download is one self-contained file that still works", {
   txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
 
   # The marks are in the markup, not a picture of them.
-  expect_true(grepl("blockr-rank-table", txt, fixed = TRUE))
+  expect_true(grepl("blockr-summarize-table", txt, fixed = TRUE))
   expect_true(grepl("lane-box", txt, fixed = TRUE))
   # Nothing the file does not carry: a linked script or stylesheet is a
   # promise the recipient's machine cannot keep.
   expect_false(grepl("<script[^>]+src=", txt))
   expect_false(grepl("<link[^>]+href=", txt))
   # ... and the sorting script IS carried, inlined off disk.
-  expect_true(grepl("blockr-rank-row", txt, fixed = TRUE))
+  expect_true(grepl("blockr-summarize-row", txt, fixed = TRUE))
   expect_gt(file.size(f), 50000)
 })
 
@@ -98,7 +98,7 @@ test_that("a dependency that cannot be inlined is refused, not shipped broken", 
 
 test_that("the pptx download paints, the png download is one image", {
   skip_if_not_installed("officer")
-  skip_if_not(rank_paint_ready())
+  skip_if_not(summarize_paint_ready())
 
   ex <- dl_exhibit()
 

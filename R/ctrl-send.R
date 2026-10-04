@@ -953,9 +953,9 @@ dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
   shiny::observe({
     # "auto" is not a block id: the board answers for it (ctrl_auto_target()).
     # Resolved HERE rather than in each sender, so the word means the same
-    # thing to the chart, the table, the heatmap, the rank table, the tile and
-    # the composer table -- and so the clear below releases the block the last
-    # claim actually went to, even if the board has since gained a second
+    # thing to the chart, the table, the heatmap, the summarize table, the tile
+    # and the composer table -- and so the clear below releases the block the
+    # last claim actually went to, even if the board has since gained a second
     # candidate and "auto" now resolves to nothing.
     tgt <- dd_ctrl_resolve(r_target(), session)
     claims <- r_claims()

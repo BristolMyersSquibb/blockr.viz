@@ -81,7 +81,7 @@ register_viz_blocks <- function() {
       tile_arguments(),
       chart_arguments(),
       table_arguments(),
-      rank_arguments()
+      summarize_arguments()
     ),
     guidance = c(
       summary_table_guidance(),
@@ -89,7 +89,7 @@ register_viz_blocks <- function() {
       tile_guidance(),
       chart_guidance(),
       table_guidance(),
-      rank_guidance()
+      summarize_guidance()
     ),
     package = utils::packageName(),
     overwrite = TRUE

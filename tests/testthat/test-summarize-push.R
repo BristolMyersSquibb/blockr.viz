@@ -1,8 +1,8 @@
-# Rank table: the data-push cell model, and the R/JS drift guard.
+# Summarize table: the data-push cell model, and the R/JS drift guard.
 #
 # The payload exists so the body ships as ~40 KB of numbers instead of ~780 KB
-# of HTML, which only works if rank-table.js assembles exactly the markup
-# rank_cells_html() pastes. The last test in this file runs the REAL JS
+# of HTML, which only works if summarize-table.js assembles exactly the markup
+# summarize_cells_html() pastes. The last test in this file runs the REAL JS
 # assembler in a headless browser and compares the two strings byte for byte --
 # without it the two renderers would drift silently.
 
@@ -44,8 +44,8 @@ push_fixture <- function() {
 
 test_that("the flat payload carries the head and the per-column vectors", {
   ae <- push_fixture()
-  p <- rank_build_payload(ae, group = "TERM", func = "count_distinct",
-                          id_var = "USUBJID", drill = "TERM")
+  p <- summarize_build_payload(ae, group = "TERM", func = "count_distinct",
+                               id_var = "USUBJID", drill = "TERM")
 
   expect_identical(p$kind, "flat")
   expect_identical(p$n, 4L)
@@ -53,7 +53,7 @@ test_that("the flat payload carries the head and the per-column vectors", {
   # head is the <table> with its data attributes and an EMPTY tbody: the gear
   # keeps reading its state off those attributes.
   expect_match(p$head, "<tbody></tbody></table>$")
-  expect_match(p$head, "blockr-rank-table")
+  expect_match(p$head, "blockr-summarize-table")
   # Row meta, full length and aligned.
   expect_length(p$label, 4L)
   # A constant vector is omitted, not shipped: a flat table has no levels, no
@@ -74,17 +74,18 @@ test_that("the flat payload carries the head and the per-column vectors", {
 
 test_that("labels ship PLAIN and are escaped by each consumer, not the payload", {
   ae <- push_fixture()
-  p <- rank_build_payload(ae, group = "TERM", func = "count")
+  p <- summarize_build_payload(ae, group = "TERM", func = "count")
   expect_true("T <1> & co" %in% p$label)     # raw in the payload
   html <- as.character(htmltools::renderTags(
-    rank_table(ae, group = "TERM", func = "count")
+    summarize_table(ae, group = "TERM", func = "count")
   )$html)
   expect_match(html, "T &lt;1&gt; &amp; co", fixed = TRUE)
 })
 
 test_that("nested tables DO ship the level and parent vectors", {
   ae <- push_fixture()
-  p <- rank_build_payload(ae, group = "TERM", parent = "SOC", func = "count")
+  p <- summarize_build_payload(ae, group = "TERM", parent = "SOC",
+                               func = "count")
   expect_true(any(as.integer(p$level) > 0L))
   expect_true(any(as.logical(p$parent_row)))
   expect_true("SOC A" %in% as.character(p$parent))
@@ -92,8 +93,8 @@ test_that("nested tables DO ship the level and parent vectors", {
 
 test_that("a split column ships one width vector per series", {
   ae <- push_fixture()
-  p <- rank_build_payload(ae, group = "TERM", color = "SEV", func = "count",
-                          bar_mode = "percent")
+  p <- summarize_build_payload(ae, group = "TERM", color = "SEV",
+                               func = "count", bar_mode = "percent")
   c1 <- p$cols[[1]]
   expect_identical(c1$kind, "barsplit")
   expect_identical(c1$mode, "percent")
@@ -109,7 +110,7 @@ test_that("a grouped split with one level per row is stacked instead", {
   # COHORT is constant within USUBJID, and `max` is non-additive, so the plan
   # asks for side-by-side lanes -- with nothing to put beside anything. Every
   # row would draw one bar and one EMPTY lane, at twice the height.
-  deg <- rank_build_payload(ae, by = "USUBJID", summaries = list(
+  deg <- summarize_build_payload(ae, by = "USUBJID", summaries = list(
     list(type = "simple", func = "max", col = "AVAL", show = "bar",
          color = "COHORT")
   ))
@@ -118,20 +119,21 @@ test_that("a grouped split with one level per row is stacked instead", {
   expect_identical(c1$mode, "stacked")
   # Stacked omits an empty segment, so the cell is one bar in the row's own
   # colour -- and the colours are still the level colours, not a flat fill.
-  html <- rank_cells_html(rank_cells(rank_prepare(
+  html <- summarize_cells_html(summarize_cells(summarize_prepare(
     ae, by = "USUBJID", summaries = list(
       list(type = "simple", func = "max", col = "AVAL", show = "bar",
            color = "COHORT")
     )
   )))
-  row1 <- regmatches(html, regexpr("<tr class=\"blockr-rank-row.*?</tr>", html))
-  expect_length(gregexpr("blockr-rank-fill", row1)[[1]], 1L)
+  row1 <- regmatches(html,
+                     regexpr("<tr class=\"blockr-summarize-row.*?</tr>", html))
+  expect_length(gregexpr("blockr-summarize-fill", row1)[[1]], 1L)
   expect_identical(gregexpr("width:0%", row1)[[1]][[1]], -1L)
   expect_identical(gregexpr("is-tall", row1)[[1]][[1]], -1L)
 
   # A REAL split is untouched: SEV varies within a term, so the lanes carry
   # a comparison and grouped stays grouped.
-  keep <- rank_build_payload(ae, by = "TERM", summaries = list(
+  keep <- summarize_build_payload(ae, by = "TERM", summaries = list(
     list(type = "simple", func = "max", col = "AVAL", show = "bar",
          color = "SEV")
   ))
@@ -141,8 +143,8 @@ test_that("a grouped split with one level per row is stacked instead", {
 test_that("the degenerate collapse leaves widths and the domain alone", {
   ae <- push_fixture()
   cfg <- list(type = "simple", func = "max", col = "AVAL", show = "bar")
-  plain <- rank_build_payload(ae, by = "USUBJID", summaries = list(cfg))
-  split <- rank_build_payload(ae, by = "USUBJID", summaries = list(
+  plain <- summarize_build_payload(ae, by = "USUBJID", summaries = list(cfg))
+  split <- summarize_build_payload(ae, by = "USUBJID", summaries = list(
     c(cfg, list(color = "COHORT"))
   ))
   # One level per row means the segment IS the bar: same numbers, same axis,
@@ -154,7 +156,7 @@ test_that("the degenerate collapse leaves widths and the domain alone", {
 
 test_that("a non-renderable state ships as kind html, not a cell model", {
   ae <- push_fixture()
-  p <- rank_build_payload(ae, group = NULL)
+  p <- summarize_build_payload(ae, group = NULL)
   expect_identical(p$kind, "html")
   expect_match(p$html, "Pick a Group column")
   # The chrome still travels: the footer and legend slots get cleared.
@@ -163,7 +165,7 @@ test_that("a non-renderable state ships as kind html, not a cell model", {
 
 test_that("the chrome rides on the payload so the container is never rebuilt", {
   ae <- push_fixture()
-  p <- rank_build_payload(
+  p <- summarize_build_payload(
     ae, chrome = list(title = "Ranked", subtitle = "N = 30", caption = "src"),
     group = "TERM", facet = "ARM", color = "SEV", func = "count_distinct",
     id_var = "USUBJID"
@@ -176,8 +178,8 @@ test_that("the chrome rides on the payload so the container is never rebuilt", {
   expect_length(p$chrome$legend$groups[[1L]]$items, 2L)
   # No row count in the footer: the fold row speaks for a Top N cut.
   expect_null(p$chrome$foot$count)
-  plain <- rank_build_payload(ae, group = "TERM", facet = "ARM",
-                              func = "count_distinct", id_var = "USUBJID")
+  plain <- summarize_build_payload(ae, group = "TERM", facet = "ARM",
+                                   func = "count_distinct", id_var = "USUBJID")
   expect_null(plain$chrome$legend)
 })
 
@@ -185,9 +187,11 @@ test_that("the payload is smaller than the markup it replaces", {
   ae <- push_fixture()
   args <- list(group = "TERM", facet = "ARM", func = "count_distinct",
                id_var = "USUBJID")
-  json <- rank_payload_json(do.call(rank_build_payload, c(list(ae), args)))
+  json <- summarize_payload_json(
+    do.call(summarize_build_payload, c(list(ae), args))
+  )
   html <- as.character(htmltools::renderTags(
-    do.call(rank_table, c(list(ae), args))
+    do.call(summarize_table, c(list(ae), args))
   )$html)
   expect_lt(nchar(json, type = "bytes"), nchar(html, type = "bytes"))
 })
@@ -195,8 +199,8 @@ test_that("the payload is smaller than the markup it replaces", {
 test_that("json keeps single-row columns as arrays", {
   ae <- push_fixture()
   one <- ae[ae$TERM == "T3", , drop = FALSE]
-  p <- rank_build_payload(one, group = "TERM", func = "count")
-  j <- rank_payload_json(p)
+  p <- summarize_build_payload(one, group = "TERM", func = "count")
+  j <- summarize_payload_json(p)
   # A length-1 column must stay [x], never x: the JS assembler indexes it.
   expect_match(j, '"label":\\[')
   expect_match(j, '"w":\\[')
@@ -206,7 +210,7 @@ test_that("json keeps single-row columns as arrays", {
 
 test_that("a box column ships pre-rounded positions AND widths", {
   ae <- push_fixture()
-  p <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = list(
+  p <- summarize_build_payload(ae, group = NULL, by = "TERM", summaries = list(
     list(type = "dist", col = "DUR", show = "box")
   ))
   c1 <- p$cols[[1]]
@@ -234,7 +238,7 @@ test_that("a box column ships pre-rounded positions AND widths", {
 test_that("a pointrange with n = 1 ships NA bounds and a center-only cell", {
   ae <- push_fixture()
   one <- ae[!duplicated(ae$TERM), , drop = FALSE]   # one row per term
-  p <- rank_build_payload(one, group = NULL, by = "TERM", summaries = list(
+  p <- summarize_build_payload(one, group = NULL, by = "TERM", summaries = list(
     list(type = "dist", col = "DUR", stat = "mean_ci95",
          show = "pointrange")
   ))
@@ -245,7 +249,7 @@ test_that("a pointrange with n = 1 ships NA bounds and a center-only cell", {
   # Tips ship pre-escaped (both consumers paste them into an attribute).
   expect_match(c1$tip[[1]], "undefined (n &lt; 2)", fixed = TRUE)
   # And the emitter draws the dot alone.
-  html <- rank_cells_html(rank_cells(rank_prepare(
+  html <- summarize_cells_html(summarize_cells(summarize_prepare(
     one, group = NULL, by = "TERM", summaries = list(
       list(type = "dist", col = "DUR", stat = "mean_ci95",
            show = "pointrange")
@@ -257,7 +261,8 @@ test_that("a pointrange with n = 1 ships NA bounds and a center-only cell", {
 
 test_that("an interval column ships per-row segments on the observed domain", {
   ae <- push_fixture()
-  p <- rank_build_payload(ae, group = NULL, by = "USUBJID", summaries = list(
+  p <- summarize_build_payload(ae, group = NULL, by = "USUBJID",
+                               summaries = list(
     list(type = "spans", x = "SDY", xend = "EDY", color = "SEV"),
     list(type = "simple", name = "Events", func = "count", show = "number")
   ))
@@ -269,8 +274,8 @@ test_that("an interval column ships per-row segments on the observed domain", {
   expect_true(any(lengths(c1$segs) > 1L))
   # Fill index points into the level fills; tips carry the level name.
   expect_identical(as.character(c1$fills),
-                   unname(rank_level_colors(NULL, "SEV",
-                                            c("MILD", "MODERATE"))))
+                   unname(summarize_level_colors(NULL, "SEV",
+                                                 c("MILD", "MODERATE"))))
   expect_match(c1$tips[[1]][[1]], "^(MILD|MODERATE) · ")
   # The domain is the observed span range, not zero-based.
   expect_equal(c1$d0, min(ae$SDY))
@@ -281,7 +286,7 @@ test_that("an interval column ships per-row segments on the observed domain", {
 
 test_that("a sparkline column ships pre-printed geometry plus hover values", {
   ae <- push_fixture()
-  p <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = list(
+  p <- summarize_build_payload(ae, group = NULL, by = "TERM", summaries = list(
     list(type = "series", x = "AVAL", col = "DUR", band = c("LO", "HI"))
   ))
   c1 <- p$cols[[1]]
@@ -299,7 +304,7 @@ test_that("a sparkline column ships pre-printed geometry plus hover values", {
 
 test_that("a leading rank bar beside a trajectory ranks the rows", {
   ae <- push_fixture()
-  p <- rank_build_payload(ae, group = NULL, by = "TERM", summaries = list(
+  p <- summarize_build_payload(ae, group = NULL, by = "TERM", summaries = list(
     list(type = "simple", func = "mean", col = "DUR", show = "bar"),
     list(type = "series", x = "AVAL", col = "DUR")
   ))
@@ -317,12 +322,12 @@ test_that("a leading rank bar beside a trajectory ranks the rows", {
 test_that("negative lows extend the distribution domain below zero", {
   d <- data.frame(g = rep(c("a", "b"), each = 6),
                   v = c(-5, -2, 0, 1, 2, 3, 1, 2, 3, 4, 5, 6))
-  prep <- rank_prepare(d, group = NULL, by = "g", summaries = list(
+  prep <- summarize_prepare(d, group = NULL, by = "g", summaries = list(
     list(type = "dist", col = "v", show = "box")
   ))
   # The domain rides on the plan entry now (per-summary scales).
   expect_lt(prep$plan[[1]]$dmin, 0)
-  m <- rank_cells(prep)
+  m <- summarize_cells(prep)
   c1 <- m$cols[[1]]
   # Everything still renders inside the track.
   expect_true(all(as.numeric(c1$wl) >= 0, na.rm = TRUE))
@@ -334,7 +339,7 @@ test_that("negative lows extend the distribution domain below zero", {
 test_that("a signed simple column becomes a zero-centred diverging bar", {
   mk <- function(vals) {
     d <- data.frame(g = paste0("r", seq_along(vals)), v = vals)
-    rank_build_payload(d, group = NULL, by = "g", summaries = list(
+    summarize_build_payload(d, group = NULL, by = "g", summaries = list(
       list(type = "simple", func = "median", col = "v", show = "bar")
     ))$cols[[1]]
   }
@@ -369,7 +374,7 @@ test_that("a signed simple column becomes a zero-centred diverging bar", {
 
 test_that("the diverging bar's axis is centred on zero at the column max", {
   d <- data.frame(g = c("a", "b", "c"), v = c(10, 0, -30))
-  prep <- rank_prepare(d, group = NULL, by = "g", summaries = list(
+  prep <- summarize_prepare(d, group = NULL, by = "g", summaries = list(
     list(type = "simple", func = "median", col = "v", show = "bar")
   ))
   p <- prep$plan[[1]]
@@ -377,12 +382,12 @@ test_that("the diverging bar's axis is centred on zero at the column max", {
   # The axis prints the same numbers the geometry is scaled with.
   expect_equal(p$dmax, 30)
   expect_equal(p$dmin, -30)
-  dom <- rank_axis_domain(p, prep)
+  dom <- summarize_axis_domain(p, prep)
   expect_equal(dom$d0, -30)
   expect_equal(dom$d1, 30)
 })
 
-test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
+test_that("the JS assembles byte-identical markup to summarize_cells_html", {
   skip_on_cran()
   skip_if_not(chromote_works(), "no headless browser here")
 
@@ -503,22 +508,23 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
     ))
   )
 
-  js_path <- system.file("js", "rank-table.js", package = "blockr.viz")
-  skip_if(!nzchar(js_path) || !file.exists(js_path), "rank-table.js not found")
+  js_path <- system.file("js", "summarize-table.js", package = "blockr.viz")
+  skip_if(!nzchar(js_path) || !file.exists(js_path),
+          "summarize-table.js not found")
 
   sess <- chromote::ChromoteSession$new()
   on.exit(try(sess$close(), silent = TRUE), add = TRUE)
   page <- tempfile(fileext = ".html")
   writeLines(c(
     "<!doctype html><html><body>",
-    "<div class='blockr-rank-container' data-rank-elem-id='t1'>",
+    "<div class='blockr-summarize-container' data-summarize-elem-id='t1'>",
     "<div class='dd-table-titles'><div class='dd-table-title'></div>",
     "<div class='dd-table-subtitle'></div></div>",
-    "<div class='blockr-rank-legend'></div>",
+    "<div class='blockr-summarize-legend'></div>",
     "<div class='blockr-table-wrapper'></div>",
     "<div class='dd-table-caption'></div>",
-    "<div class='blockr-rank-footer'>",
-    "<span class='blockr-rank-note'></span>",
+    "<div class='blockr-summarize-footer'>",
+    "<span class='blockr-summarize-note'></span>",
     "<div class='dd-status-footer'></div></div></div>",
     "<script>window.Shiny={addCustomMessageHandler:function(n,f){",
     "window.__h=f}};</script>",
@@ -530,11 +536,11 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
 
   for (nm in names(cases)) {
     args <- cases[[nm]]
-    payload <- do.call(rank_build_payload, c(list(ae), args))
-    r_html <- as.character(do.call(rank_table_html, list(
-      do.call(rank_prepare, c(list(ae), args))
+    payload <- do.call(summarize_build_payload, c(list(ae), args))
+    r_html <- as.character(do.call(summarize_table_html, list(
+      do.call(summarize_prepare, c(list(ae), args))
     )))
-    json <- rank_payload_json(payload)
+    json <- summarize_payload_json(payload)
     sess$Runtime$evaluate(paste0(
       "window.__h({id:'t1', rev:", which(names(cases) == nm), ", payload:",
       jsonlite::toJSON(json, auto_unbox = TRUE), "})"
@@ -559,7 +565,7 @@ test_that("rank-table.js assembles byte-identical markup to rank_cells_html", {
 
 test_that("a pair column ships both ends, the band, the ref and the flags", {
   ae <- push_fixture()
-  prep <- rank_prepare(ae, by = "USUBJID", summaries = list(
+  prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
     list(type = "pair", from = "AVAL", from_func = "min", to = "DUR",
          to_func = "max", lo = 5, ref = 10, dash = "SEV")
   ))
@@ -567,7 +573,7 @@ test_that("a pair column ships both ends, the band, the ref and the flags", {
   p <- prep$plan[[1]]
   expect_identical(p$kind, "pair")
   expect_match(p$sub_label, "dashed: SEV")
-  c1 <- rank_cells(prep)$cols[[1]]
+  c1 <- summarize_cells(prep)$cols[[1]]
   expect_identical(c1$kind, "pair")
   rows <- prep$rows
   a <- rows[[p$cols[["a"]]]]
@@ -581,7 +587,7 @@ test_that("a pair column ships both ends, the band, the ref and the flags", {
 
 test_that("a coloured pair column draws one dumbbell per level", {
   ae <- push_fixture()
-  prep <- rank_prepare(ae, by = "TERM", summaries = list(
+  prep <- summarize_prepare(ae, by = "TERM", summaries = list(
     list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
          to_func = "mean", color = "SEV")
   ))
@@ -603,7 +609,7 @@ test_that("a coloured pair column draws one dumbbell per level", {
     unlist(rows[cn[c("a", "b")]])
   }))
   expect_true(p$dmin <= min(ends) && p$dmax >= max(ends))
-  c1 <- rank_cells(prep)$cols[[1]]
+  c1 <- summarize_cells(prep)$cols[[1]]
   expect_true(isTRUE(c1$multi))
   expect_identical(c1$levels, c("MILD", "MODERATE"))
   expect_length(c1$lv, 2L)
@@ -611,25 +617,25 @@ test_that("a coloured pair column draws one dumbbell per level", {
   expect_match(c1$lv[[2]]$tip[[1]], "^MODERATE \u00b7 ")
   # Two dumbbells, so no single change printed beside them.
   expect_true(all(c1$disp == ""))
-  html <- rank_cells_html(rank_cells(prep))
-  expect_match(html, "blockr-rank-multi", fixed = TRUE)
-  expect_match(html, "blockr-rank-pacell", fixed = TRUE)
+  html <- summarize_cells_html(summarize_cells(prep))
+  expect_match(html, "blockr-summarize-multi", fixed = TRUE)
+  expect_match(html, "blockr-summarize-pacell", fixed = TRUE)
 })
 
 test_that("a coloured pair of one level per row keeps its value label", {
   ae <- push_fixture()
   ae <- ae[!duplicated(ae$USUBJID), ]
-  prep <- rank_prepare(ae, by = "USUBJID", summaries = list(
+  prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
     list(type = "pair", from = "AVAL", to = "DUR", color = "ARM")
   ))
-  c1 <- rank_cells(prep)$cols[[1]]
+  c1 <- summarize_cells(prep)$cols[[1]]
   expect_true(isTRUE(c1$multi))
   expect_true(all(grepl("^\\+", c1$disp)))
 })
 
 test_that("a pair row names a missing column", {
   ae <- push_fixture()
-  prep <- rank_prepare(ae, by = "USUBJID", summaries = list(
+  prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
     list(type = "pair", from = "AVAL", to = "NOPE")
   ))
   expect_match(prep$err, "NOPE")
@@ -640,7 +646,7 @@ test_that("a pair column's dash levels come from the full data, not the facet", 
   # ARM = Placebo rows are all MILD, so the Placebo copy's own levels would
   # be MILD alone and MODERATE rows elsewhere would be numbered wrongly.
   ae$SEV[ae$ARM == "Placebo"] <- "MILD"
-  prep <- rank_prepare(ae, by = "USUBJID", summaries = list(
+  prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
     list(type = "pair", from = "AVAL", to = "DUR", dash = "SEV",
          facet = "ARM")
   ))
@@ -659,7 +665,7 @@ test_that("a pair column's dash levels come from the full data, not the facet", 
 
 test_that("a nested pair's parent row summarises its own rows", {
   ae <- push_fixture()
-  prep <- rank_prepare(ae, by = c("SOC", "TERM"), summaries = list(
+  prep <- summarize_prepare(ae, by = c("SOC", "TERM"), summaries = list(
     list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
          to_func = "mean")
   ))
@@ -681,23 +687,23 @@ test_that("a nested pair's parent row summarises its own rows", {
 
 test_that("a zero draws an empty track, a small value still shows", {
   # The fill's 2px floor is for small values; on a zero it read as a little.
-  t <- rank_track_html(c(0, 0.4, NA))
-  expect_false(grepl("blockr-rank-fill", t[[1]]))
-  expect_match(t[[2]], "blockr-rank-fill")
-  expect_false(grepl("blockr-rank-fill", t[[3]]))
+  t <- summarize_track_html(c(0, 0.4, NA))
+  expect_false(grepl("blockr-summarize-fill", t[[1]]))
+  expect_match(t[[2]], "blockr-summarize-fill")
+  expect_false(grepl("blockr-summarize-fill", t[[3]]))
 
-  grouped <- rank_split_html(list(
+  grouped <- summarize_split_html(list(
     v = c(3, 2), names = c("MILD", "SEVERE"), mode = "grouped",
     seg = list(c(60, 40), c(0, 10)), segv = list(c(3, 2), c(0, 1)),
     fills = c("#111111", "#222222")
   ))
   # Row 1: MILD drawn, SEVERE's row empty but still there.
-  expect_identical(lengths(regmatches(grouped, gregexpr("blockr-rank-row3",
+  expect_identical(lengths(regmatches(grouped, gregexpr("blockr-summarize-row3",
                                                         grouped))), c(2L, 2L))
-  expect_identical(lengths(regmatches(grouped, gregexpr("blockr-rank-fill",
+  expect_identical(lengths(regmatches(grouped, gregexpr("blockr-summarize-fill",
                                                         grouped))), c(1L, 2L))
 
-  dv <- rank_dv_html(c(0, 30), c(TRUE, FALSE))
-  expect_false(grepl("blockr-rank-fill", dv[[1]]))
+  dv <- summarize_dv_html(c(0, 30), c(TRUE, FALSE))
+  expect_false(grepl("blockr-summarize-fill", dv[[1]]))
   expect_match(dv[[2]], "is-neg")
 })

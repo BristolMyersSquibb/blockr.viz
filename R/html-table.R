@@ -1536,8 +1536,8 @@ input.blockr-search:focus {
   css
 }
 
-#' The chevron's stroke: a constant 1.4px at any size. The rank table, which
-#' shares the markup, keeps its own.
+#' The chevron's stroke: a constant 1.4px at any size. The summarize table,
+#' which shares the markup, keeps its own.
 #'
 #' Emitted with the plain container prefix, never under the structured scope
 #' of `html_table_delta_css()`: a `:has()` scope in front of the descendant
@@ -1581,21 +1581,25 @@ html_table_shared_css_fallback <- function() {
    this page-global sheet overrode blockr.ui's preview for every table on
    the board as soon as a table block was on it. :where() keeps each rule's
    specificity what it was, so nothing changes inside the containers. */
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-table {
+:where(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table {
   border-collapse: collapse;
   width: 100%;
   font-size: var(--blockr-font-size-base, 0.875rem);
 }
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-table thead {
+:where(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table thead {
   position: sticky;
   top: 0;
   background: var(--blockr-color-bg-surface, #ffffff);
   z-index: 1;
 }
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-table thead tr {
+:where(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table thead tr {
   border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-table th {
+:where(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table th {
   text-align: left;
   padding: 10px 16px;
   font-weight: var(--blockr-font-weight-medium, 500);
@@ -1603,15 +1607,18 @@ html_table_shared_css_fallback <- function() {
   vertical-align: bottom;
   overflow: hidden;
 }
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr {
+:where(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table tbody tr {
   border-bottom: 1px solid color-mix(in srgb,
     var(--blockr-color-border-default, #e5e7eb) 50%, transparent);
   transition: background-color 0.15s ease;
 }
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr:hover {
+:where(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table tbody tr:hover {
   background-color: var(--blockr-color-bg-subtle, #f9fafb);
 }
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-table td {
+:where(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table td {
   padding: 10px 16px;
   font-size: var(--blockr-font-size-base, 0.875rem);
   color: var(--blockr-color-text-default, #111827);
@@ -1620,18 +1627,21 @@ html_table_shared_css_fallback <- function() {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-table th.blockr-sortable {
+:where(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table th.blockr-sortable {
   cursor: pointer;
   user-select: none;
   transition: background-color 0.15s ease;
 }
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-table th.blockr-sortable:hover {
+:where(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table th.blockr-sortable:hover {
   background-color: var(--blockr-color-bg-subtle, #f9fafb);
 }
 /* The sort cue is the design system's sort bars: short to long for
    ascending, long to short for descending, in the accent (as in the
    blockr.ui preview). */
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-sort-icon {
+:where(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-sort-icon {
   display: inline-block;
   width: 12px;
   height: 12px;
@@ -1640,7 +1650,8 @@ html_table_shared_css_fallback <- function() {
   -webkit-mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h3M2 6h5.5M2 9h8'/%3E%3C/svg%3E\") no-repeat center / 12px 12px;
   mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h3M2 6h5.5M2 9h8'/%3E%3C/svg%3E\") no-repeat center / 12px 12px;
 }
-:where(.drilldown-table-container, .blockr-rank-container) .blockr-sort-icon-desc {
+:where(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-sort-icon-desc {
   -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h8M2 6h5.5M2 9h3'/%3E%3C/svg%3E\");
   mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h8M2 6h5.5M2 9h3'/%3E%3C/svg%3E\");
 }

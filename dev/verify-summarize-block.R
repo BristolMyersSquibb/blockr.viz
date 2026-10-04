@@ -2,7 +2,7 @@
 # real ADaM data (safetyData ADAE / ADSL), plus the drill wired to a table so a
 # row click is visibly filtering downstream.
 #
-#   BLOCKR_PORT=3838 R -q -f dev/verify-rank-block.R
+#   BLOCKR_PORT=3838 R -q -f dev/verify-summarize-block.R
 #
 # What to check:
 #   1. Rank        -- ranked bars, search narrows, click a numeric header sorts,
@@ -98,6 +98,6 @@ board <- new_dock_board(
   active = "Rank"
 )
 
-cat("\nServing rank-block verification on http://127.0.0.1:",
+cat("\nServing summarize-block verification on http://127.0.0.1:",
     getOption("shiny.port"), "/\n\n", sep = "")
 serve(board)

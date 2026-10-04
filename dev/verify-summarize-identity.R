@@ -11,7 +11,7 @@
 #   6. Compare: zero-centred difference vs a comparator arm, delta in-bar.
 #
 # Run from the workspace root:
-#   BLOCKR_PORT=4747 R -q -f blockr.viz/dev/verify-rank-identity.R
+#   BLOCKR_PORT=4747 R -q -f blockr.viz/dev/verify-summarize-identity.R
 options(shiny.port = as.integer(Sys.getenv("BLOCKR_PORT", "3838")),
         shiny.host = "0.0.0.0")
 
@@ -101,6 +101,6 @@ board <- new_dock_board(
   active = "Identity"
 )
 
-cat("\nServing rank-identity verification on http://127.0.0.1:",
+cat("\nServing summarize-identity verification on http://127.0.0.1:",
     getOption("shiny.port"), "/\n\n", sep = "")
 serve(board)

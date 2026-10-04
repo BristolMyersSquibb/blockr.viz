@@ -102,7 +102,7 @@ test_that("a table that fits says nothing", {
 
 test_that("the floor reaches the painted summarize table too", {
   skip_if_not_installed("officer")
-  skip_if_not(rank_paint_ready())
+  skip_if_not(summarize_paint_ready())
 
   set.seed(42)
   data <- data.frame(

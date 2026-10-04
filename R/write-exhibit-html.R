@@ -70,10 +70,10 @@ write_exhibit_html <- function(x, file, title = NULL, subtitle = NULL,
   # Self-contained or nothing. `html_table()` inlines its own style and script
   # and so arrives here with no dependencies at all; the summarize table's
   # renderer carries the shared bundle (Blockr.Select, the gear engine, the
-  # rank script), and those are read off disk and written INTO the file, the
-  # same way blockr.outline's HTML deck carries them. What cannot be inlined
-  # -- a CDN href, a file that has gone -- is a dependency the download would
-  # not carry, so it is a refusal rather than a silently broken artifact.
+  # summarize table script), and those are read off disk and written INTO the
+  # file, the same way blockr.outline's HTML deck carries them. What cannot be
+  # inlined -- a CDN href, a file that has gone -- is a dependency the download
+  # would not carry, so it is a refusal rather than a silently broken artifact.
   head_extra <- character()
 
   if (length(rendered$dependencies)) {

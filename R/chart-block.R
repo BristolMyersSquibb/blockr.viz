@@ -2169,8 +2169,8 @@ new_chart_block <- function(
           class = "drilldown-chart-container"
         ),
         # The download control is rendered HERE and hoisted into the gear
-        # header by chart/chrome.js -- the same shape rank-table.js uses for
-        # the search box. It has to be a Shiny output (download links are
+        # header by chart/chrome.js -- the same shape summarize-table.js uses
+        # for the search box. It has to be a Shiny output (download links are
         # server-driven), and the gear header is built by the widget's JS.
         shiny::div(class = "dd-chart-dl-host", style = "display:none",
                    shiny::uiOutput(ns("chart_download"), inline = TRUE))

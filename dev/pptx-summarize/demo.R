@@ -7,7 +7,7 @@
 #   *.html  the SAME table as the block draws it, for the side-by-side
 #   summarize-tables.pptx  the pictures placed on real slides
 #
-# The painter is package code (R/rank-paint.R, R/summarize-exhibit.R); this
+# The painter is package code (R/summarize-paint.R, R/summarize-exhibit.R); this
 # script is the eyeball harness for it: real ADaM shapes, the slide's own
 # geometry, and the browser rendering of each table beside its painted twin.
 
@@ -17,11 +17,11 @@
 
 pkgload::load_all(file.path(.ws, "blockr.viz"), quiet = TRUE)
 
-# The painter is package code now (R/rank-paint.R, R/summarize-exhibit.R);
+# The painter is package code now (R/summarize-paint.R, R/summarize-exhibit.R);
 # this script drives the SAME entry points a deck does. The two internals it
 # reaches for are the page list and the png writer, which the pptx method
 # calls itself -- the preview needs the pages as files.
-paint_pages <- blockr.viz:::rank_paint_pages
+paint_pages <- blockr.viz:::summarize_paint_pages
 write_png <- blockr.viz:::rp_write_png
 
 out <- file.path(.ws, "_scratch", "pptx-summarize")
@@ -196,7 +196,7 @@ for (nm in names(specs)) {
   htmltools::save_html(
     htmltools::tagList(
       htmltools::tags$style("body{font-family:system-ui,sans-serif;padding:16px;background:#fff}"),
-      htmltools::div(class = "blockr-rank-container", tbl)
+      htmltools::div(class = "blockr-summarize-container", tbl)
     ),
     file.path(out, paste0(nm, ".html")),
     libdir = "lib"
@@ -289,8 +289,8 @@ writeLines(c(
   '</style>',
   '<h1>Summarize table painted as one picture for PowerPoint</h1>',
   paste0('<p class="lede">Painted exhibit first (what lands on the slide),',
-         ' then the same table drawn by <code>rank_table()</code> in a',
-         ' browser. Both read the same <code>rank_cells()</code> output.',
+         ' then the same table drawn by <code>summarize_table()</code> in a',
+         ' browser. Both read the same <code>summarize_cells()</code> output.',
          ' Slide box: ', FIT_WIDTH, ' x ', BODY_H, 'in. Deck: ',
          '<a href="summarize-tables.pptx">summarize-tables.pptx</a>',
          ' (', length(pngs), ' slides).</p>'),

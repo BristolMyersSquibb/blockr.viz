@@ -51,12 +51,12 @@ mk_ae <- function(n_subj, n_terms) {
 
 # ---- the three blocks' payload builders -------------------------------------
 # summarize table: aggregates in R, ships the aggregated cell model.
-rank_json <- function(data, ...) {
-  rank_payload_json(rank_build_payload(data, chrome = list(), ...))
+summarize_json <- function(data, ...) {
+  summarize_payload_json(summarize_build_payload(data, chrome = list(), ...))
 }
 # and its historical server-rendered HTML, same config, for the ratio.
-rank_html <- function(data, ...) {
-  as.character(htmltools::renderTags(rank_table(data, ...))$html)
+summarize_html <- function(data, ...) {
+  as.character(htmltools::renderTags(summarize_table(data, ...))$html)
 }
 # table block: ships a cell model of whatever frame it is handed.
 table_json <- function(data) dt_payload_json(dt_build_payload(data))
@@ -94,19 +94,19 @@ report <- function(label, n_subj, n_terms) {
                 b / rows, ms))
   }
 
-  jb <- do.call(rank_json, c(list(d), CFG_BAR))
-  hb <- do.call(rank_html, c(list(d), CFG_BAR))
-  js <- do.call(rank_json, c(list(d), CFG_SUM))
-  hs <- do.call(rank_html, c(list(d), CFG_SUM))
+  jb <- do.call(summarize_json, c(list(d), CFG_BAR))
+  hb <- do.call(summarize_html, c(list(d), CFG_BAR))
+  js <- do.call(summarize_json, c(list(d), CFG_SUM))
+  hs <- do.call(summarize_html, c(list(d), CFG_SUM))
 
   line("summarize (bar+facet) JSON", jb, n_terms,
-       bench(function() do.call(rank_json, c(list(d), CFG_BAR))))
+       bench(function() do.call(summarize_json, c(list(d), CFG_BAR))))
   line("summarize (bar+facet) HTML", hb, n_terms,
-       bench(function() do.call(rank_html, c(list(d), CFG_BAR))))
+       bench(function() do.call(summarize_html, c(list(d), CFG_BAR))))
   line("summarize (3 cols+dist) JSON", js, n_terms,
-       bench(function() do.call(rank_json, c(list(d), CFG_SUM))))
+       bench(function() do.call(summarize_json, c(list(d), CFG_SUM))))
   line("summarize (3 cols+dist) HTML", hs, n_terms,
-       bench(function() do.call(rank_html, c(list(d), CFG_SUM))))
+       bench(function() do.call(summarize_html, c(list(d), CFG_SUM))))
 
   # Same rows, table block: hand it the aggregated frame the summarize
   # table produces, so both ship the same number of table rows.
@@ -138,8 +138,8 @@ report("stress", 2000L, 790L)
 # ---- where do the bytes go, inside the summarize payload? -------------------
 cat("\n== field-level breakdown, prod summarize (3 cols + dist)\n")
 d <- mk_ae(800L, 400L)
-p <- do.call(rank_build_payload, c(list(d, chrome = list()), CFG_SUM))
-tot <- nbytes(rank_payload_json(p))
+p <- do.call(summarize_build_payload, c(list(d, chrome = list()), CFG_SUM))
+tot <- nbytes(summarize_payload_json(p))
 sz <- function(x) nbytes(as.character(jsonlite::toJSON(x, auto_unbox = TRUE,
                                                        na = "null")))
 parts <- c(

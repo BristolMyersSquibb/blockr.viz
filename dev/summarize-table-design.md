@@ -36,16 +36,16 @@ stays small enough to be a good block. Anything else is the chart block.
 
 | File | What |
 |---|---|
-| `R/rank-table.R` | the data half: `rank_prepare()` → rows + a column plan |
-| `R/rank-push.R` | the cell model + the data-push payload (one builder, two consumers) |
-| `R/rank-table-html.R` | the HTML half: chrome, marks, `rank_table()` |
-| `R/rank-table-css.R` | the CSS delta on top of `html_table_shared_css_fallback()` |
-| `R/rank-block.R` | `new_rank_block()`, arg specs, guidance |
-| `inst/js/rank-table.js` | search / sort / expand / row-click drill |
-| `dev/verify-rank-block.R` | the five shapes on real ADAE, drill wired to a table |
-| `tests/testthat/test-rank-table.R` | prepare + HTML contract |
+| `R/summarize-table.R` | the data half: `summarize_prepare()` → rows + a column plan |
+| `R/summarize-push.R` | the cell model + the data-push payload (one builder, two consumers) |
+| `R/summarize-table-html.R` | the HTML half: chrome, marks, `summarize_table()` |
+| `R/summarize-table-css.R` | the CSS delta on top of `html_table_shared_css_fallback()` |
+| `R/summarize-block.R` | `new_rank_block()`, arg specs, guidance |
+| `inst/js/summarize-table.js` | search / sort / expand / row-click drill |
+| `dev/verify-summarize-block.R` | the five shapes on real ADAE, drill wired to a table |
+| `tests/testthat/test-summarize-table.R` | prepare + HTML contract |
 
-`rank_prepare()` returns a **column plan** (`list(kind = "bar" | "barsplit" |
+`summarize_prepare()` returns a **column plan** (`list(kind = "bar" | "barsplit" |
 "bardiv" | "num", ...)`) and the renderer walks it. The renderer knows nothing
 about group / facet / compare — which is what keeps five bar shapes in one
 code path.
@@ -63,7 +63,7 @@ want it at the same moment and it belongs in `html-table.R`, once.
 visible or filtered rows, or scrolling and searching silently rescale bars.
 
 **A parent is not the sum of its children.** Each level is aggregated in its own
-pass (`rank_aggregate()` twice), so distinct-subject counts stay correct: one
+pass (`summarize_aggregate()` twice), so distinct-subject counts stay correct: one
 subject reporting three preferred terms in a class counts once for the class.
 
 **Percentages use a per-facet denominator.** An arm's percentage is over that
@@ -94,15 +94,15 @@ denominator ("of 225"), and a reduced measure reads "Mean: <label>" the way
 wraps inside a narrow column and inflates the whole header row.
 
 **The gear is the shared engine.** `Blockr.DrilldownConfig`
-(`inst/js/drilldown-config.js`) is host-agnostic; `rank-table.js` registers as a
+(`inst/js/drilldown-config.js`) is host-agnostic; `summarize-table.js` registers as a
 third host beside `chart.js` and `table.js`, so the menu has the chart's exact
 structure AND labels: Mapping (required `Group`, then `Aggregate` / `Of column`
 / `Count distinct` conditional on the measure, then `+ Add mapping` offering
 `Nest under` / `Color` / `Facet` as add-as-needed rows),
 Presentation (`Order` pill, `Search bar`, `Split layout` when a colour split is
 on), Titles, and a Drill-down section. Keys ARE the R config params, so
-`onChange(key)` round-trips through `input$rank_block_action` (action `config`)
-to the matching reactiveVal. The gear reads its state off `data-rank-cfg` on the
+`onChange(key)` round-trips through `input$summarize_table_block_action` (action `config`)
+to the matching reactiveVal. The gear reads its state off `data-summarize-cfg` on the
 rendered `<table>` — one JSON attribute, because the three text slots must carry
 null (auto) vs "" (none), which an HTML attribute cannot say.
 
@@ -120,14 +120,14 @@ the search box around.
 to `.drilldown-table-container` only, so the rank table silently missed every
 header-cell rule: its sub-labels ran 19px instead of 11px and wrapped, giving an
 84px header row against the table's 59px. The selectors now read
-`:is(.drilldown-table-container, .blockr-rank-container)` — one set of rules for
+`:is(.drilldown-table-container, .blockr-summarize-container)` — one set of rules for
 both containers, since they ARE the same chrome. `.drilldown-table-structured`
 rules stay table-only. After that: control row 30px, header 59px, row 42px, cell
 padding identical in both blocks.
 
 **The value lives IN the bar cell.** Every bar-family cell (bar / barsplit /
 bardiv) renders its value in a fixed-width right-aligned slot after the track
-(`.blockr-rank-barwrap` / `.blockr-rank-barval`); the slot width is ONE number
+(`.blockr-summarize-barwrap` / `.blockr-summarize-barval`); the slot width is ONE number
 per column (`dw`, in ch, shipped in the payload) so every row's track spans the
 same range — a per-row label width would silently rescale the bars. Separate
 `n` / `%` columns are opt-in via `cols` and mute the in-bar label. The compare
@@ -142,7 +142,7 @@ only. Only `compare` still owns the colour slot (bars coloured by direction).
 
 **`fields` = the chart's tooltip fields, as real columns.** Identity-only
 (each group IS one row; an aggregate has no row to read): extra row columns
-ride beside the bar, text columns left-aligned (`.blockr-rank-txt`) and sorted
+ride beside the bar, text columns left-aligned (`.blockr-summarize-txt`) and sorted
 on their text via `data-v` (escaped — it can carry arbitrary text now).
 An absent (group, level) cell is NA for the non-additive measures and renders
 as a BLANK cell and an empty track (no zero sliver): the chart's null gap.
@@ -161,7 +161,7 @@ under the Mapping header, which the chart does not do), and a host-level
 so the shared rotation rule applies. Those four CSS rules live in
 `html_table_delta_css()`, which the rank chrome deliberately does NOT inject (it
 is the structured Table-1 typography and would restyle every cell), so they are
-mirrored in `rank_table_css()` with a keep-in-sync note.
+mirrored in `summarize_table_css()` with a keep-in-sync note.
 
 ## The body ships as JSON, not HTML
 
@@ -170,11 +170,11 @@ used by the table block?" — right question; the rank block was built on the
 `renderUI` shape the table block itself left behind in 21da370. It now uses the
 same transport (dev/table-data-push-design.md).
 
-One builder, two consumers: `rank_cells()` computes every per-column vector
-(widths, display strings, fills, row meta), `rank_cells_html()` pastes them into
-the historical `<table>` (the exported `rank_table()`, the report path, the
-tests), and `rank_flat_payload()` emits them as the JSON cell model
-`rank-table.js` assembles client-side. A non-renderable state still ships as
+One builder, two consumers: `summarize_cells()` computes every per-column vector
+(widths, display strings, fills, row meta), `summarize_cells_html()` pastes them into
+the historical `<table>` (the exported `summarize_table()`, the report path, the
+tests), and `summarize_flat_payload()` emits them as the JSON cell model
+`summarize-table.js` assembles client-side. A non-renderable state still ships as
 `kind = "html"` — those are small, and reusing the existing builder means zero
 markup duplication.
 
@@ -197,7 +197,7 @@ before.
 
 Getting the last 60% of that saving was measurement, not guesswork. Two things
 dominated and neither was obvious: the `n (%)` columns were shipping the
-`<span class="blockr-rank-pct">` markup per cell (127 KB of a 197 KB faceted
+`<span class="blockr-summarize-pct">` markup per cell (127 KB of a 197 KB faceted
 payload — the payload now carries the two parts as data and each consumer wraps
 them), and constant vectors were being shipped in full (`sub` / `on` /
 `parent_row` / `level` are all-false on a flat table, ~28 KB; they are omitted
@@ -205,13 +205,13 @@ now, and an absent vector reads as all-false).
 
 **The drift guard is the price of admission.** Two renderers that must agree
 byte for byte will not stay agreed by good intentions, so
-`test-rank-push.R` runs the REAL `rank-table.js` assembler in a headless browser
-across all eight bar shapes and compares it to `rank_cells_html()`. It earned
+`test-summarize-push.R` runs the REAL `summarize-table.js` assembler in a headless browser
+across all eight bar shapes and compares it to `summarize_cells_html()`. It earned
 its keep immediately, catching three genuine divergences: R's `format()` aligns
 decimals across a vector ("100.00" beside "57.14") where JS prints "100", a
 `NULL` in the payload serializes as `{}` and reads as truthy in JS (the trap
 `dt_payload_json` documents), and a logical vector where an integer was expected
-printed `data-rank-level="true"`.
+printed `data-summarize-level="true"`.
 
 ## The bar mark is the chart's, not a local invention
 
