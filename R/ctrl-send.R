@@ -461,6 +461,25 @@ group_level_cols <- function(nms) {
   gl[order(as.integer(substr(gl, 7L, nchar(gl) - 6L)))]
 }
 
+# One claim per named column: the values the drilled rows hold, missing and
+# empty values left out. Several values claim as a set ("multi").
+drilled_value_claims <- function(rows, table, columns) {
+  claims <- list()
+  for (col in intersect(columns, names(rows))) {
+    v <- unique(as.character(rows[[col]]))
+    v <- v[!is.na(v) & nzchar(v)]
+    if (!length(v)) {
+      next
+    }
+    claims[[length(claims) + 1L]] <- if (nzchar(table)) {
+      list(name = col, table = table, mode = "multi", values = v)
+    } else {
+      list(name = col, mode = "multi", values = v)
+    }
+  }
+  claims
+}
+
 # The single distinct value of `x`, or NULL if it does not resolve to one.
 single_value <- function(x) {
   u <- unique(x[!is.na(x) & nzchar(x)])
@@ -821,14 +840,17 @@ dd_ctrl_claims <- function(data, table, filters) {
   plain_cols <- unique(claim_col[!cols %in% grouped])
   plain_cols <- setdiff(plain_cols, names(group_claims))
 
+  # A named column claims the set of values the clicked rows hold. The rows
+  # come from a click, so several values are a selection too: the patients
+  # under a bar segment, two patients behind one scatter point.
+  # drill_claim_columns() claims a column only when it holds one value, which
+  # is right for a caller handing it undrilled rows, not for these.
   # No named column at all: the ARD identity columns speak (table drills).
   # Only group columns: they are claimed below and nothing else is.
-  out <- if (length(plain_cols) || !length(cols)) {
-    drill_claim_columns(
-      data[keep, , drop = FALSE],
-      table = table %||% "",
-      columns = if (length(plain_cols)) plain_cols
-    )
+  out <- if (length(plain_cols)) {
+    drilled_value_claims(data[keep, , drop = FALSE], table %||% "", plain_cols)
+  } else if (!length(cols)) {
+    drill_claim_columns(data[keep, , drop = FALSE], table = table %||% "")
   } else {
     list()
   }

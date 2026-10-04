@@ -69,3 +69,27 @@ test_that("a gated input HOLDS: no clear on hide, no re-send on return", {
     }
   )
 })
+
+test_that("a drill naming several values claims them as a set", {
+  d <- data.frame(
+    USUBJID = c("S1", "S1", "S2", "S3"),
+    AETERM = c("Rash", "Rash", "Rash", "Nausea"),
+    AESEV = c("MILD", "MILD", "MILD", "SEVERE")
+  )
+  # The patients under a bar segment: a click with an explicit drill column
+  # sends their ids.
+  claims <- dd_ctrl_claims(d, "", list(USUBJID = c("S1", "S2")))
+  expect_length(claims, 1L)
+  expect_equal(claims[[1L]]$name, "USUBJID")
+  expect_equal(claims[[1L]]$mode, "multi")
+  expect_setequal(claims[[1L]]$values, c("S1", "S2"))
+
+  # One value claims as before.
+  one <- dd_ctrl_claims(d, "adsl", list(USUBJID = "S3"))
+  expect_equal(one[[1L]]$values, "S3")
+  expect_equal(one[[1L]]$table, "adsl")
+
+  # Several columns: each claims what the rows under all of them hold.
+  both <- dd_ctrl_claims(d, "", list(AETERM = "Rash", AESEV = "MILD"))
+  expect_equal(vapply(both, `[[`, "", "name"), c("AETERM", "AESEV"))
+})
