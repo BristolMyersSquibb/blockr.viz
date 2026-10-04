@@ -487,7 +487,7 @@ test_that("a high-cardinality colour or facet is refused, naming the column", {
 })
 
 test_that("the ctor migrates the retired pair into the block's STATE", {
-  b <- new_rank_block(
+  b <- new_summarize_table_block(
     by = "TERM", color = "SEV", facet = "ARM",
     summaries = list(list(type = "dist", col = "DUR"),
                      list(type = "simple", func = "count", show = "bar",
@@ -509,8 +509,8 @@ test_that("the ctor moves a ranked-bar grouping into `by`", {
   # rank_prepare() falls back to group/parent when `by` is unset, so such a
   # board DRAWS -- while the summarize gear's required "Group by" row shows
   # empty. The state has to say what the table is doing.
-  b <- new_rank_block(group = "TERM", parent = "SOC",
-                      summaries = list(list(type = "dist", col = "DUR")))
+  b <- new_summarize_table_block(group = "TERM", parent = "SOC",
+                                 summaries = list(list(type = "dist", col = "DUR")))
   st <- blockr.core::blockr_ser(b)$payload
   expect_identical(st$by, c("SOC", "TERM"))
   # Cleared, so clearing "Group by" in the gear cannot resurrect them.
@@ -518,7 +518,9 @@ test_that("the ctor moves a ranked-bar grouping into `by`", {
   expect_null(st$parent)
 
   # The ranked-bar surface (no column list) keeps its own slots untouched.
-  st <- blockr.core::blockr_ser(new_rank_block(group = "TERM"))$payload
+  st <- blockr.core::blockr_ser(
+    new_summarize_table_block(group = "TERM")
+  )$payload
   expect_identical(st$group, "TERM")
   expect_null(st$by)
 })

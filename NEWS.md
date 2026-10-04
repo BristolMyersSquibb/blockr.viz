@@ -1,3 +1,11 @@
+# blockr.viz 0.2.194
+
+* Removed `new_rank_block()` and `new_lane_chart_block()`, the summarize
+  table's former names. Use `new_summarize_table_block()`. The block no longer
+  carries the classes `rank_block` and `lane_chart_block`.
+* `rank_table()` is no longer exported. The summarize table's static HTML is
+  `html_exhibit(static_summarize_table(...))`.
+
 # blockr.viz 0.2.193
 
 * Summarize table: turning the search bar, the drill-down or "Send to

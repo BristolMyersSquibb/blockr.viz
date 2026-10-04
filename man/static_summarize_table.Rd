@@ -10,7 +10,8 @@ static_summarize_table(data, ...)
 \item{data}{A data frame (or \code{\link[=as_annotated_df]{as_annotated_df()}}-coercible object), the
 table's input.}
 
-\item{...}{Passed to \code{\link[=rank_table]{rank_table()}}: the block's own vocabulary (\code{by},
+\item{...}{The block's own vocabulary, as in
+\code{\link[=new_summarize_table_block]{new_summarize_table_block()}} (\code{by},
 \code{summaries}, \code{group}, \code{color}, \code{facet}, \code{sort_by}, \code{top_n}, \code{title}, ...).}
 }
 \value{
@@ -47,5 +48,5 @@ ex
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=rank_table]{rank_table()}}, \code{\link[=pptx_add_exhibit]{pptx_add_exhibit()}}, \code{\link[=html_exhibit]{html_exhibit()}}
+\code{\link[=pptx_add_exhibit]{pptx_add_exhibit()}}, \code{\link[=html_exhibit]{html_exhibit()}}
 }

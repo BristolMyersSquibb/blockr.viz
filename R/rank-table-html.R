@@ -70,7 +70,7 @@
 #' @return An [htmltools::tagList()].
 #' @examplesIf interactive()
 #' rank_table(mtcars, group = "cyl", func = "count")
-#' @export
+#' @noRd
 rank_table <- function(data, group = NULL, value = ".count", func = "count",
                        id_var = NULL, summaries = list(), by = NULL,
                        facet_layout = "by_summary", parent = NULL,
@@ -520,7 +520,7 @@ rank_bar_width <- function(x) {
 #' body update. rank-table.js fills the body and the bands from each pushed
 #' payload.
 #'
-#' @param max_height,search,drill,elem_id Same meaning as in [rank_table()].
+#' @param max_height,search,drill,elem_id Same meaning as in `rank_table()`.
 #' @return An [htmltools::tagList()].
 #' @noRd
 rank_chrome_shell <- function(max_height = NULL, search = TRUE,

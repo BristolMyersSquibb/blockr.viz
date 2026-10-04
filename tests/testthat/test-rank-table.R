@@ -423,16 +423,7 @@ test_that("the block constructs, registers and round-trips its state", {
   blk <- new_summarize_table_block(group = "TERM", func = "count_distinct",
                                    id_var = "USUBJID", drill = "TERM")
   expect_s3_class(blk, "summarize_table_block")
-  # The earlier eras stay in the class vector so old dispatch keeps working.
-  expect_s3_class(blk, "lane_chart_block")
-  expect_s3_class(blk, "rank_block")
   expect_s3_class(blk, "transform_block")
-
-  # The deprecated aliases must remain exported and construct the SAME
-  # block, or saved boards from the earlier eras cannot restore.
-  expect_s3_class(new_rank_block(group = "TERM"), "summarize_table_block")
-  expect_s3_class(new_lane_chart_block(group = "TERM"),
-                  "summarize_table_block")
 
   # blockr.core serializes a block from its constructor formals and restores by
   # re-calling the constructor, so the runtime filter transport has to stay in

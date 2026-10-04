@@ -954,10 +954,7 @@ new_summarize_table_block <- function(group = NULL,
         shiny::uiOutput(ns("rank_chrome"))
       )
     },
-    # `lane_chart_block` and `rank_block` stay in the class vector so S3
-    # usage and saved boards from the earlier eras keep dispatching.
-    class = c("summarize_table_block", "lane_chart_block", "rank_block",
-              "transform_block", "block"),
+    class = c("summarize_table_block", "transform_block", "block"),
     # Same input contract as the table block: a dispatch check only, so a
     # composer table (or anything with an as_annotated_df method) connects
     # directly, and a value the method refuses errors at eval time.
@@ -991,22 +988,6 @@ new_summarize_table_block <- function(group = NULL,
     ),
     ...
   )
-}
-
-#' @rdname new_summarize_table_block
-#' @description `new_lane_chart_block()` and `new_rank_block()` are the
-#'   block's former names, kept as deprecated aliases so saved boards
-#'   restore: they construct the same `summarize_table_block` (and record
-#'   the new constructor on the next save).
-#' @export
-new_lane_chart_block <- function(...) {
-  new_summarize_table_block(...)
-}
-
-#' @rdname new_summarize_table_block
-#' @export
-new_rank_block <- function(...) {
-  new_summarize_table_block(...)
 }
 
 #' Argument specs for the lane chart block

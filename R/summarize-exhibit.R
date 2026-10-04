@@ -37,11 +37,12 @@
 #'
 #' @param data A data frame (or [as_annotated_df()]-coercible object), the
 #'   table's input.
-#' @param ... Passed to [rank_table()]: the block's own vocabulary (`by`,
+#' @param ... The block's own vocabulary, as in
+#'   [new_summarize_table_block()] (`by`,
 #'   `summaries`, `group`, `color`, `facet`, `sort_by`, `top_n`, `title`, ...).
 #'
 #' @return An object of class `summarize_exhibit`.
-#' @seealso [rank_table()], [pptx_add_exhibit()], [html_exhibit()]
+#' @seealso [pptx_add_exhibit()], [html_exhibit()]
 #' @examplesIf requireNamespace("systemfonts", quietly = TRUE)
 #' ex <- static_summarize_table(
 #'   mtcars, by = "cyl",

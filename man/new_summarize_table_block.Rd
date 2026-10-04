@@ -2,8 +2,6 @@
 % Please edit documentation in R/rank-block.R
 \name{new_summarize_table_block}
 \alias{new_summarize_table_block}
-\alias{new_lane_chart_block}
-\alias{new_rank_block}
 \title{Summarize Table Block}
 \usage{
 new_summarize_table_block(
@@ -42,10 +40,6 @@ new_summarize_table_block(
   filter_values = NULL,
   ...
 )
-
-new_lane_chart_block(...)
-
-new_rank_block(...)
 }
 \arguments{
 \item{group}{Column to rank by: one row per level, ordered by the measure.}
@@ -214,11 +208,6 @@ beside a box beside a sparkline in one interactive table. The third
 sibling of \code{\link[=new_chart_block]{new_chart_block()}} and \code{\link[=new_table_block]{new_table_block()}}: the chart's
 vocabulary, the table's rendering (sticky header, client-side search and
 sort, scroll at \code{max_height}, exact values in their own columns).
-
-\code{new_lane_chart_block()} and \code{new_rank_block()} are the
-block's former names, kept as deprecated aliases so saved boards
-restore: they construct the same \code{summarize_table_block} (and record
-the new constructor on the next save).
 }
 \details{
 \code{summaries} is the config model: an ordered list of typed summary rows

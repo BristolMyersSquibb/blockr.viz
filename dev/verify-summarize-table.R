@@ -101,12 +101,12 @@ serve(
   new_dock_board(
     blocks = c(
       ae_data = new_static_block(ae, block_name = "AE rows"),
-      mixed = new_lane_chart_block(
+      mixed = new_summarize_table_block(
         by = "AEDECOD", summaries = mixed_summaries, drill = "AEDECOD",
         title = "AE terms: the full column mix",
         block_name = "Summarize table"
       ),
-      facet = new_lane_chart_block(
+      facet = new_summarize_table_block(
         by = "AEDECOD", summaries = facet_summaries, facet = "TRT01A",
         drill = "AEDECOD",
         title = "Faceted by arm, with a pooled Overall column",
