@@ -267,7 +267,8 @@ new_heatmap_block <- function(row = character(),
           if (is.null(claim)) return(NULL)
           d <- tryCatch(raw_data(), error = function(e) NULL)
           dd_ctrl_claims(d, "", stats::setNames(list(claim$values),
-                                                claim$column))
+                                                claim$column),
+                         subject = dd_ctrl_subject(session))
         })
         dd_ctrl_sender(
           r_target,

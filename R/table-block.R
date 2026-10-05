@@ -1874,7 +1874,8 @@ new_table_block <- function(rowname = NULL,
               list()
             }
             tcols <- dd_col_claims(claim$col_keys, r_ctrl_table())
-            trows <- dd_ctrl_claims(d, r_ctrl_table(), tf)
+            trows <- dd_ctrl_claims(d, r_ctrl_table(), tf,
+                                    subject = dd_ctrl_subject(session))
             if (is.null(trows)) {
               return(NULL)
             }
@@ -1898,7 +1899,8 @@ new_table_block <- function(rowname = NULL,
           # The column half needs no resolving against the display frame: it
           # already names a source column. ANDed in front of the row claim.
           cols <- dd_col_claims(r_filter_col_keys(), r_ctrl_table())
-          rows <- dd_ctrl_claims(d, r_ctrl_table(), filters)
+          rows <- dd_ctrl_claims(d, r_ctrl_table(), filters,
+                                 subject = dd_ctrl_subject(session))
           if (is.null(rows)) {
             return(NULL)
           }

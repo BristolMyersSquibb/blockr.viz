@@ -1773,11 +1773,13 @@ new_chart_block <- function(
             if (is.null(claim)) {
               return(NULL)
             }
-            return(dd_ctrl_claims(d, r_ctrl_table(), claim$filters))
+            return(dd_ctrl_claims(d, r_ctrl_table(), claim$filters,
+                                 subject = dd_ctrl_subject(session)))
           }
 
           filters <- if (identical(r_filter_type(), "categorical")) r_filters()
-          dd_ctrl_claims(d, r_ctrl_table(), filters %||% list())
+          dd_ctrl_claims(d, r_ctrl_table(), filters %||% list(),
+                         subject = dd_ctrl_subject(session))
         })
 
         dd_ctrl_sender(

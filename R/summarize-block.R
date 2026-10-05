@@ -573,12 +573,14 @@ new_summarize_table_block <- function(group = NULL,
             if (is.null(claim)) {
               return(NULL)
             }
-            return(dd_ctrl_claims(d, r_ctrl_table(), claim$filters))
+            return(dd_ctrl_claims(d, r_ctrl_table(), claim$filters,
+                                 subject = dd_ctrl_subject(session)))
           }
 
           dd_ctrl_claims(
             d, r_ctrl_table(),
-            summarize_drill_filters(r_filter_column(), r_filter_values())
+            summarize_drill_filters(r_filter_column(), r_filter_values()),
+            subject = dd_ctrl_subject(session)
           )
         })
         dd_ctrl_sender(

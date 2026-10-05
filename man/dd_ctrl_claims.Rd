@@ -4,7 +4,7 @@
 \alias{dd_ctrl_claims}
 \title{Claims from a block's own drill-filter state.}
 \usage{
-dd_ctrl_claims(data, table, filters)
+dd_ctrl_claims(data, table, filters, subject = NULL)
 }
 \arguments{
 \item{data}{The block's (annotated) input, as a data frame.}
@@ -20,6 +20,10 @@ carrying a group definition (see \code{\link[=expand_groups]{expand_groups()}}) 
 is matched against the group's members, and the claim is the SET of
 source values the group holds (\code{mode = "multi"}), so a pooled bar claims
 \code{source \%in\% members} instead of nothing.}
+
+\item{subject}{The board's subject column (\code{\link[=dd_ctrl_subject]{dd_ctrl_subject()}}), or \code{NULL}.
+When given, the claim becomes the subjects behind the click: see
+"Claiming subjects" below.}
 }
 \value{
 A list of filter conditions, \code{list()} when the user has no drill,
@@ -67,6 +71,23 @@ evaluated frame may speak -- \code{list()} from real data is what propagates an
 un-drill (see \code{\link[=dd_ctrl_sender]{dd_ctrl_sender()}}, which holds on \code{NULL}). Without this
 distinction a mere view switch cleared the target filter and re-sent the
 claim on return, one board-wide update each way.
+}
+
+\section{Claiming subjects}{
+
+A column claim is re-applied by the target to ITS data, which is not the
+data this block counted. An AE table fed through a treatment-emergent flag
+counts 69 patients with a gastrointestinal event; \code{AEBODSYS = GI} applied
+to the unflagged AE table finds 70. Every step between the data model and
+this block (a flag filter, a group filter, a worst-grade reduction, a
+prepare script) is lost the same way.
+
+With \code{subject}, the clicked rows are resolved to their subjects here, where
+all those steps have already happened, and the claim is
+\verb{subject \%in\% <those ids>}, with the column clause kept as its \code{label}. A
+structured table resolves through the \code{source_data} its producer stamped
+(\code{\link[=drill_source]{drill_source()}}'s frame). A frame that carries the subject column
+neither way keeps the column claim.
 }
 
 \keyword{internal}

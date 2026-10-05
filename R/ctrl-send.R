@@ -254,6 +254,41 @@ dd_ctrl_resolve <- function(target, session) {
   if (identical(target, "auto")) ctrl_auto_target(session) else target
 }
 
+#' The board's subject column
+#'
+#' The column a drill claims when the board says what a subject is: the
+#' `subject` field of the "study_roles" board option (blockr.pharma's Study
+#' settings), `USUBJID` when the option is there and the field is empty.
+#' Read by option id, so this package does not depend on blockr.pharma.
+#'
+#' A board without the option has no subjects (an airquality board, a
+#' finance board), and its senders claim columns as they always did.
+#'
+#' @param session Shiny session (defaults to the current reactive domain).
+#' @return The column name, or `NULL` when the board declares no subjects.
+#' @keywords internal
+#' @export
+dd_ctrl_subject <- function(session = shiny::getDefaultReactiveDomain()) {
+
+  if (is.null(session)) {
+    return(NULL)
+  }
+
+  val <- tryCatch(
+    blockr.core::get_board_option_or_null("study_roles", session),
+    error = function(e) NULL
+  )
+
+  if (is.null(val)) {
+    return(NULL)
+  }
+
+  col <- trimws(as.character(unlist(val$subject, use.names = FALSE)))
+  col <- col[!is.na(col) & nzchar(col)]
+
+  if (length(col) == 1L) col else "USUBJID"
+}
+
 #' Controllable blocks on the board
 #'
 #' The block ids a sender may point at: every block on the board of the given
@@ -745,11 +780,29 @@ new_ctrl_bridge_extension <- function(...) {
 #'   is matched against the group's members, and the claim is the SET of
 #'   source values the group holds (`mode = "multi"`), so a pooled bar claims
 #'   `source %in% members` instead of nothing.
+#' @param subject The board's subject column ([dd_ctrl_subject()]), or `NULL`.
+#'   When given, the claim becomes the subjects behind the click: see
+#'   "Claiming subjects" below.
+#'
+#' @section Claiming subjects:
+#' A column claim is re-applied by the target to ITS data, which is not the
+#' data this block counted. An AE table fed through a treatment-emergent flag
+#' counts 69 patients with a gastrointestinal event; `AEBODSYS = GI` applied
+#' to the unflagged AE table finds 70. Every step between the data model and
+#' this block (a flag filter, a group filter, a worst-grade reduction, a
+#' prepare script) is lost the same way.
+#'
+#' With `subject`, the clicked rows are resolved to their subjects here, where
+#' all those steps have already happened, and the claim is
+#' `subject %in% <those ids>`, with the column clause kept as its `label`. A
+#' structured table resolves through the `source_data` its producer stamped
+#' ([drill_source()]'s frame). A frame that carries the subject column
+#' neither way keeps the column claim.
 #' @return A list of filter conditions, `list()` when the user has no drill,
 #'   `NULL` when the claim cannot be resolved right now (hold).
 #' @keywords internal
 #' @export
-dd_ctrl_claims <- function(data, table, filters) {
+dd_ctrl_claims <- function(data, table, filters, subject = NULL) {
 
   if (!is.data.frame(data)) {
     return(NULL)
@@ -881,7 +934,57 @@ dd_ctrl_claims <- function(data, table, filters) {
     return(NULL)
   }
 
+  if (length(subject)) {
+    ids <- dd_claim_subjects(data, keep, out, subject)
+    if (length(ids)) {
+      return(list(list(name = subject, mode = "multi", values = ids,
+                       label = dd_claim_label(out))))
+    }
+  }
+
   out
+}
+
+# The subjects behind a click: off the clicked rows when the frame carries the
+# subject column, else off the stamped `source_data` narrowed by the column
+# claims (a structured table's rows are display rows). NULL when neither
+# frame knows the subject.
+#' @noRd
+dd_claim_subjects <- function(data, keep, claims, subject) {
+
+  ids <- if (subject %in% names(data)) {
+    data[[subject]][keep]
+  } else {
+    src <- attr(data, "source_data", exact = TRUE)
+    names_ok <- vapply(claims, function(cl) cl$name %in% names(src),
+                       logical(1L))
+    if (!is.data.frame(src) || !subject %in% names(src) || !all(names_ok)) {
+      return(NULL)
+    }
+    hit <- rep(TRUE, nrow(src))
+    for (cl in claims) {
+      hit <- hit & as.character(src[[cl$name]]) %in%
+        as.character(unlist(cl$values))
+    }
+    src[[subject]][hit]
+  }
+
+  ids <- unique(as.character(ids))
+  ids[!is.na(ids) & nzchar(ids)]
+}
+
+# What the user clicked, in the words a filter trail uses:
+# "AEBODSYS = Nausea; TRT = Placebo".
+#' @noRd
+dd_claim_label <- function(claims) {
+  parts <- vapply(claims, function(cl) {
+    vals <- as.character(unlist(cl$values))
+    if (length(vals) > 6L) {
+      vals <- c(vals[1:6], "\u2026")
+    }
+    paste0(cl$name, " = ", paste(vals, collapse = ", "))
+  }, character(1L))
+  paste(parts, collapse = "; ")
 }
 
 #' Has the user actually drilled, or is this still the state we were built with?
@@ -1023,6 +1126,16 @@ dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
     payload <- list(columns = claims)
 
     if (identical(list(payload, nonce), last_key)) {
+      return()
+    }
+
+    # One click, one send. A claim on subject ids is read off this block's
+    # data, so every upstream change (a global filter, a flag) re-reads it to
+    # a different id set under the same click, and each re-send would be one
+    # more board-wide update. The drill filter sits below the global filter,
+    # so the ids it already holds stay correct as the cohort narrows.
+    if (!is.null(nonce) && !is.null(last_key) &&
+          identical(nonce, last_key[[2L]])) {
       return()
     }
     last_key <<- list(payload, nonce)

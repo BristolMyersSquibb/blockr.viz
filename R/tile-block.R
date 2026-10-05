@@ -269,7 +269,8 @@ new_tile_block <- function(value = character(),
             }
             return(dd_ctrl_claims(
               d, r_ctrl_table(),
-              stats::setNames(list(claim$values), claim$column)
+              stats::setNames(list(claim$values), claim$column),
+              subject = dd_ctrl_subject(session)
             ))
           }
 
@@ -280,7 +281,8 @@ new_tile_block <- function(value = character(),
           } else {
             list()
           }
-          dd_ctrl_claims(d, r_ctrl_table(), filters)
+          dd_ctrl_claims(d, r_ctrl_table(), filters,
+                         subject = dd_ctrl_subject(session))
         })
 
         dd_ctrl_sender(
