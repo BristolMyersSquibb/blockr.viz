@@ -397,7 +397,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     }
     cc <- present(s$color)
     if (!is.null(cc) && lane_color_capable(s)) {
-      lv <- summarize_levels(data[[cc]])
+      lv <- summarize_color_levels(data[[cc]])
       if (length(lv) > LANE_MAX_LEVELS) {
         return(bad(paste0(
           "Summary \"", s$name, "\": colour column \"", cc, "\" has ",
@@ -743,7 +743,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     if (lane_color_capable(s)) present(s$color)
   })))
   color_groups <- Filter(Negate(is.null), lapply(legend_cols, function(cc) {
-    lv <- summarize_levels(data[[cc]])
+    lv <- summarize_color_levels(data[[cc]])
     if (length(lv) < 2L) return(NULL)
     list(column = cc, levels = lv,
          palette = summarize_level_colors(scale_map, cc, lv, data[[cc]]))
@@ -1521,8 +1521,8 @@ lane_custom_setup <- function(s, data) {
   if (!is.null(split)) {
     # Levels from the full data where the split is a data column, so a
     # level's colour does not depend on which cells happen to return it.
-    lv <- summarize_levels(if (split %in% names(data)) data[[split]] else
-                        probe[[split]])
+    lv <- summarize_color_levels(if (split %in% names(data)) data[[split]] else
+                              probe[[split]])
     if (length(lv) > LANE_MAX_LEVELS) {
       return(list(err = paste0(
         who, "the split column \"", split, "\" has ", length(lv),

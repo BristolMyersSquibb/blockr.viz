@@ -1,3 +1,11 @@
+# blockr.viz 0.2.198
+
+* The summarize table no longer gives a colour level a slot when no row in
+  the table carries it. A filter upstream keeps a factor's full level set, so
+  grouped bars, lollipops and the legend showed an empty slot for every
+  filtered-out level. Zeros in single rows keep their slot, and the remaining
+  levels keep their colours.
+
 # blockr.viz 0.2.197
 
 * A chart opened for the first time shows its "drawing… 1.2 s" clock from

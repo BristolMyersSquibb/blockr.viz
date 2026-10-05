@@ -539,3 +539,13 @@ test_that("the chrome shell keeps the search box when search is off", {
   ))
   expect_match(html, "<input[^>]*class=\"blockr-search\"[^>]*display:none")
 })
+
+test_that("a colour level no row carries gets no slot, and no colour shifts", {
+  ae <- ae_fixture()
+  ae$ARM <- factor(as.character(ae$ARM), levels = c("Placebo", "High", "Low"))
+  # "High" has no rows in the fixture; the factor still lists it.
+  p <- summarize_prepare(ae, group = "TERM", color = "ARM", bar_mode = "grouped")
+  split <- Filter(function(x) identical(x$kind, "barsplit"), p$plan)[[1]]
+  expect_identical(as.character(split$series), c("Placebo", "Low"))
+  expect_identical(unname(p$palette), dd_palette()[c(1L, 3L)])
+})

@@ -44,7 +44,12 @@ summarize_level_colors <- function(map, col, levels, column = NULL) {
       return(out)
     }
   }
-  stats::setNames(rep_len(dd_palette(), length(levels)), levels)
+  # A factor's colours follow its FULL level set, so dropping an unused level
+  # (summarize_color_levels) does not shift the colours of the ones after it.
+  pos <- if (is.factor(column)) match(levels, levels(column))
+  pos <- if (is.null(pos) || anyNA(pos)) seq_along(levels) else pos
+  pool <- dd_palette()
+  stats::setNames(pool[(pos - 1L) %% length(pool) + 1L], levels)
 }
 
 # The aggregation vocabulary, as a summarise expression over one group.
@@ -136,6 +141,14 @@ summarize_levels <- function(x) {
     sort(unique(as.character(x)))
   }
   lv[!is.na(lv)]
+}
+
+# Colour levels: summarize_levels() minus the factor levels no row carries.
+# A filter upstream keeps a factor's full level set, and every unused level
+# would draw an empty slot in each row and a legend key for nothing.
+#' @noRd
+summarize_color_levels <- function(x) {
+  summarize_levels(if (is.factor(x)) droplevels(x) else x)
 }
 
 # The DATA's own order for a grouping column -- the chart's dataOrder():
@@ -390,7 +403,7 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
                       show_val = show_val,
                       val_denom = if (pct_ok) denom))
   } else if (identical(layout, "split")) {
-    series <- summarize_levels(data[[color]])
+    series <- summarize_color_levels(data[[color]])
     pal <- summarize_level_colors(scale_map, color, series, data[[color]])
     seg <- summarize_aggregate(data, c(keys, color), func, value, id_var)
     # One column per level, joined onto the leaf rows in level order.
@@ -426,7 +439,7 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
       # column per facet level, each bar split into colour segments. Facet
       # columns are keyed by INDEX (.f<i>s_<level>) so a facet level name can
       # never collide with a colour level name.
-      series <- summarize_levels(data[[color]])
+      series <- summarize_color_levels(data[[color]])
       pal <- summarize_level_colors(scale_map, color, series, data[[color]])
       seg <- summarize_aggregate(data, c(keys, facet, color), func, value,
                                  id_var)
