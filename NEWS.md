@@ -1,3 +1,9 @@
+# blockr.viz 0.2.200
+
+* A custom summary that splits by a column its function returns (a dumbbell
+  or an interval per grade) errors no more. 0.2.198 read the colour column of
+  every split, and such a split has none.
+
 # blockr.viz 0.2.199
 
 * A row click on a nested summarize table filters on the row's grouping path.

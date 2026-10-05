@@ -46,7 +46,11 @@ summarize_level_colors <- function(map, col, levels, column = NULL) {
   }
   # A factor's colours follow its FULL level set, so dropping an unused level
   # (summarize_color_levels) does not shift the colours of the ones after it.
-  pos <- if (is.factor(column)) match(levels, levels(column))
+  # Read only with a `col`: a custom summary's split has none, and its callers
+  # pass `data[[NULL]]`, which errors once forced.
+  pos <- if (!is.null(col) && is.factor(column)) {
+    match(levels, levels(column))
+  }
   pos <- if (is.null(pos) || anyNA(pos)) seq_along(levels) else pos
   pool <- dd_palette()
   stats::setNames(pool[(pos - 1L) %% length(pool) + 1L], levels)
