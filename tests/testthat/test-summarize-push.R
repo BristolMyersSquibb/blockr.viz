@@ -697,9 +697,9 @@ test_that("a zero draws an empty track, a small value still shows", {
     seg = list(c(60, 40), c(0, 10)), segv = list(c(3, 2), c(0, 1)),
     fills = c("#111111", "#222222")
   ))
-  # Row 1: MILD drawn, SEVERE's row empty but still there.
+  # Row 1: MILD drawn, SEVERE has no value there and gets no track.
   expect_identical(lengths(regmatches(grouped, gregexpr("blockr-summarize-row3",
-                                                        grouped))), c(2L, 2L))
+                                                        grouped))), c(1L, 2L))
   expect_identical(lengths(regmatches(grouped, gregexpr("blockr-summarize-fill",
                                                         grouped))), c(1L, 2L))
 

@@ -1,3 +1,10 @@
+# blockr.viz 0.2.202
+
+* A grouped colour split in the summarize table draws no track for a level
+  with no value in that row, as the lollipop draws no lane for it. A term
+  with no SEVERE event shows two bars, not two bars and an empty track. The
+  slide and image exports follow.
+
 # blockr.viz 0.2.201
 
 * A summarize table's colour split takes its levels from the rows it draws.

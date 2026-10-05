@@ -194,13 +194,20 @@ rp_barsplit <- function(c, i, x, w, ytop, gl) {
     }
     return(out)
   }
-  # grouped: one thin row per level, stacked inside the cell
+  # grouped: one thin row per level with a value in this row, stacked inside
+  # the cell. A level with none gets no track, as in summarize_split_html().
+  has <- vapply(seq_len(k), function(j) {
+    v <- c$segv[[j]][[i]]
+    !is.na(v) && v > 0
+  }, logical(1L))
+  lv <- which(has)
   h <- gl$px * 6
   gap <- gl$px * 2
-  tot <- k * h + (k - 1) * gap
+  tot <- length(lv) * h + max(length(lv) - 1L, 0L) * gap
   y0 <- ytop + (gl$row_h - tot) / 2
-  unlist(lapply(seq_len(k), function(j) {
-    y <- y0 + (j - 1) * (h + gap)
+  unlist(lapply(seq_along(lv), function(r) {
+    j <- lv[[r]]
+    y <- y0 + (r - 1) * (h + gap)
     seg <- c$seg[[j]][[i]]
     list(rp_rect(x, w, y, h, RP_TRACK, gl),
          if (!is.na(seg) && seg > 0) {

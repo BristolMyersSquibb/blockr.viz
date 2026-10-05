@@ -984,8 +984,10 @@ summarize_split_html <- function(c) {
     )
     has <- !is.na(c$segv[[j]]) & c$segv[[j]] > 0
     if (grouped) {
-      paste0("<div class=\"blockr-summarize-row3\">", ifelse(has, body, ""),
-             "</div>")
+      # A level with no value in this row gets no track, as the lollipop
+      # draws no lane for it.
+      ifelse(has, paste0("<div class=\"blockr-summarize-row3\">", body,
+                         "</div>"), "")
     } else {
       ifelse(has, body, "")
     }
