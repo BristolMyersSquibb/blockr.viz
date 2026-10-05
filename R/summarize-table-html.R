@@ -267,10 +267,12 @@ summarize_foot_spec <- function(prep, drill = NULL, active = NULL) {
   if (!is.null(prep$err)) {
     return(list(note = NULL, filter = NULL, reset = FALSE))
   }
-  act <- as.character(unlist(active$vals %||% character()))
   list(
     note = prep$note,
-    filter = if (length(act)) paste(act, collapse = ", ") else NULL,
+    # The footer prints "Filtered: " and this phrase.
+    filter = summarize_drill_phrase(
+      summarize_drill_filters(active$col, active$vals)
+    ),
     reset = !is.null(drill)
   )
 }

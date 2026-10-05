@@ -167,9 +167,12 @@ one of the block's settings (\verb{\{label(@by)\}}, \verb{\{@func\}}) prints as 
 that opens that setting; \code{by} names its innermost column. \code{caption}
 defaults to the option \code{blockr.viz.default_caption} (unset = \code{NULL}).}
 
-\item{drill}{Column a row click filters on. The emitted filter is the same
-categorical contract as \code{\link[=new_chart_block]{new_chart_block()}}, so existing filter links
-compose.}
+\item{drill}{Turns the row click on (any column name; empty = display
+only). A click filters on the row's grouping path: on a nested table a
+parent row filters its outer column, a child row the outer and the inner
+column together, a flat row its group column. The emitted filter is the
+same categorical contract as \code{\link[=new_chart_block]{new_chart_block()}}, so existing filter
+links compose.}
 
 \item{script, values}{Prepare script, as in \code{\link[=new_chart_block]{new_chart_block()}}: R code run
 on the incoming rows before the table is built, whose top assignments
@@ -194,7 +197,9 @@ filter fed a plain data frame.}
 
 \item{filter_type, filter_column, filter_values}{Runtime filter transport,
 normally left at defaults: they hold the click state so it survives a
-board save and restore.}
+board save and restore. \code{filter_column} is the clicked row's path, outer
+to inner, with one \code{filter_values} entry per column; a single column
+takes any of its values.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }

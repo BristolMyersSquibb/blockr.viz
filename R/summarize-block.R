@@ -125,9 +125,12 @@
 #'   one of the block's settings (`{label(@by)}`, `{@func}`) prints as a word
 #'   that opens that setting; `by` names its innermost column. `caption`
 #'   defaults to the option `blockr.viz.default_caption` (unset = `NULL`).
-#' @param drill Column a row click filters on. The emitted filter is the same
-#'   categorical contract as [new_chart_block()], so existing filter links
-#'   compose.
+#' @param drill Turns the row click on (any column name; empty = display
+#'   only). A click filters on the row's grouping path: on a nested table a
+#'   parent row filters its outer column, a child row the outer and the inner
+#'   column together, a flat row its group column. The emitted filter is the
+#'   same categorical contract as [new_chart_block()], so existing filter
+#'   links compose.
 #' @param script,values Prepare script, as in [new_chart_block()]: R code run
 #'   on the incoming rows before the table is built, whose top assignments
 #'   become controls on the card (`x <- value #| label = "..."`). `values`
@@ -148,7 +151,9 @@
 #'   filter fed a plain data frame.
 #' @param filter_type,filter_column,filter_values Runtime filter transport,
 #'   normally left at defaults: they hold the click state so it survives a
-#'   board save and restore.
+#'   board save and restore. `filter_column` is the clicked row's path, outer
+#'   to inner, with one `filter_values` entry per column; a single column
+#'   takes any of its values.
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #'
 #' @return A blockr transform block of class `summarize_table_block`.
@@ -220,7 +225,9 @@ new_summarize_table_block <- function(group = NULL,
   color <- chr_state(color)
   facet <- chr_state(facet)
   drill <- chr_state(drill)
-  filter_column <- chr_state(filter_column)
+  # The clicked row's path, outer -> inner, one value per column
+  # (R/summarize-drill.R). A board saved before holds one column.
+  filter_column <- chr_vec_state(filter_column)
   filter_values <- null_state(filter_values)
   script <- cb_script_text(script)
   values <- if (is.list(values)) values else list()
@@ -525,19 +532,22 @@ new_summarize_table_block <- function(group = NULL,
             r_filter_values(NULL)
             return()
           }
-          col <- summarize_chr1(act$column)
+          # The row's path: one column per level, one value per column.
+          col <- as.character(unlist(act$column %||% character()))
+          col <- col[!is.na(col) & nzchar(col)]
           vals <- as.character(unlist(act$values %||% character()))
+          filters <- summarize_drill_filters(col, vals)
           # The event path. A clear (no column, from a re-aim or the Reset)
           # is inert: there is no local selection to clear and the target's
           # cohort is not this block's to drop.
           if (transient_drill()) {
-            if (!is.null(col) && length(vals)) {
-              r_drill_claim(list(column = col, values = vals,
+            if (length(filters)) {
+              r_drill_claim(list(filters = filters,
                                  nonce = as.numeric(act$nonce %||% 0)))
             }
             return()
           }
-          if (is.null(col) || !length(vals)) {
+          if (!length(filters)) {
             r_filter_column(NULL)
             r_filter_values(NULL)
             return()
@@ -563,20 +573,13 @@ new_summarize_table_block <- function(group = NULL,
             if (is.null(claim)) {
               return(NULL)
             }
-            return(dd_ctrl_claims(
-              d, r_ctrl_table(),
-              stats::setNames(list(claim$values), claim$column)
-            ))
+            return(dd_ctrl_claims(d, r_ctrl_table(), claim$filters))
           }
 
-          col <- r_filter_column()
-          vals <- r_filter_values()
-          filters <- if (!is.null(col) && length(vals)) {
-            stats::setNames(list(vals), col)
-          } else {
-            list()
-          }
-          dd_ctrl_claims(d, r_ctrl_table(), filters)
+          dd_ctrl_claims(
+            d, r_ctrl_table(),
+            summarize_drill_filters(r_filter_column(), r_filter_values())
+          )
         })
         dd_ctrl_sender(
           r_ctrl_target,
@@ -898,25 +901,19 @@ new_summarize_table_block <- function(group = NULL,
         shiny::outputOptions(output, "dl_png", suspendWhenHidden = FALSE)
 
         # A click on a pooled group of an overlap definition filters on the
-        # group's members (dd_group_filter_members()).
-        filter_members <- dd_group_filter_members(
-          r_filter_column, r_filter_values, ann_data
+        # group's members (dd_group_filters_members()).
+        r_drill_filters <- shiny::reactive(
+          summarize_drill_filters(r_filter_column(), r_filter_values())
         )
+        filter_members <- dd_group_filters_members(r_drill_filters, ann_data)
 
         list(
           expr = shiny::reactive({
-            col <- r_filter_column()
-            vals <- r_filter_values()
-            vals <- filter_members(col, vals) %||% vals
+            filters <- r_drill_filters()
             # Display-only until a row is clicked: downstream receives the
-            # input untouched. The expr must be a call, so identity() wraps it.
-            ex <- if (is.null(col) || !length(vals)) {
-              quote(identity(data))
-            } else {
-              bquote(
-                dplyr::filter(data, .data[[.(col)]] %in% .(as.character(vals)))
-              )
-            }
+            # input untouched (identity(), as the expr must be a call). A click
+            # filters on every column of the row's path.
+            ex <- summarize_drill_expr(filters, filter_members(filters))
             # The prepare script wraps the filter (chart parity): a click
             # filters the source rows, and downstream receives what the table
             # was built from, filtered.
@@ -1271,9 +1268,11 @@ summarize_arguments <- function() {
     ),
     drill = new_arg_spec(
       paste0(
-        "Column a row click filters on: downstream blocks receive that ",
-        "row's rows. Same filter contract as the chart and table blocks. ",
-        "Empty = display only."
+        "Turns the row click on (any of the grouping columns). A click ",
+        "filters downstream to that row's rows: a parent row of a nested ",
+        "table on its outer column, a child row on both columns. Same ",
+        "filter contract as the chart and table blocks. Empty = display ",
+        "only."
       ),
       example = "AEDECOD",
       type = arg_string()

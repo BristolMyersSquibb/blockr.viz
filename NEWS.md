@@ -1,3 +1,14 @@
+# blockr.viz 0.2.199
+
+* A row click on a nested summarize table filters on the row's grouping path.
+  A parent row filters its outer column (`AEBODSYS = CARDIAC`), a child row
+  both columns (`AEBODSYS = SKIN, AEDECOD = RASH`), for the downstream filter
+  and for a drill sent to another block. Before, every row claimed the inner
+  column, so a parent row matched nothing and a child label found under
+  several parents claimed it under all of them. The gear's Drill-down section
+  is an on/off switch now; its column picker is gone. Boards saved with a
+  single-column click restore it as before.
+
 # blockr.viz 0.2.198
 
 * The summarize table no longer gives a colour level a slot when no row in

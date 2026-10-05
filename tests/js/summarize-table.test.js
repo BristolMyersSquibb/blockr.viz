@@ -143,13 +143,27 @@ test('a latched drill: a row click filters, a second click on it clears', async 
   const row = t.rows()[1];
   click(row);
   assert.deepEqual(t.actions().at(-1), {
-    action: 'filter', type: 'categorical', column: 'TERM', values: ['T2'], nonce: 1
+    action: 'filter', type: 'categorical', column: ['TERM'], values: ['T2'], nonce: 1
   });
   assert.ok(row.classList.contains('is-on'));
   assert.match(t.footer(), /TERM = T2/);
   click(row);
   assert.equal(t.actions().at(-1).action, 'clear_filter');
   assert.equal(row.classList.contains('is-on'), false);
+  await t.close();
+});
+
+test('a nested drill claims the row path: parent the outer column, child both', async () => {
+  const t = open('nested_drill');
+  const row = (label) => t.rows().find((r) => r.getAttribute('data-summarize-label') === label);
+  click(row('SOC B'));
+  let a = t.actions().at(-1);
+  assert.deepEqual([a.column, a.values], [['SOC'], ['SOC B']]);
+  assert.match(t.footer(), /Filtered: SOC = SOC B/);
+  click(row('T2'));
+  a = t.actions().at(-1);
+  assert.deepEqual([a.column, a.values], [['SOC', 'TERM'], ['SOC A', 'T2']]);
+  assert.match(t.footer(), /Filtered: SOC = SOC A, TERM = T2/);
   await t.close();
 });
 

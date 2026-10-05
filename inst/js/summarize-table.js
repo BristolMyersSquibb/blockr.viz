@@ -312,30 +312,52 @@
     tr.addEventListener("animationend", drop);
   }
 
+  // What a row stands for: its grouping path, outer -> inner. A parent row
+  // claims the outer column, a child row both, a flat row its group column.
+  // `path` rides on the payload (R/summarize-drill.R); a payload without one
+  // falls back to the drill column.
+  function rowClaim(root, tr, col) {
+    var pay = root._summarizePayload;
+    var path = (pay && pay.path && pay.path.length) ? pay.path : [col];
+    var label = tr.getAttribute("data-summarize-label");
+    if (path.length < 2) return { cols: [path[0]], vals: [label] };
+    if (tr.classList.contains("is-parent")) {
+      return { cols: [path[0]], vals: [label] };
+    }
+    return {
+      cols: [path[0], path[1]],
+      vals: [tr.getAttribute("data-summarize-parent"), label]
+    };
+  }
+
+  // "AEBODSYS = X, AEDECOD = Y": the footer's and the receipt's words.
+  function claimPhrase(c) {
+    return c.cols.map(function (col, i) {
+      return col + " = " + c.vals[i];
+    }).join(", ");
+  }
+
   function bindDrill(root) {
     var elemId = root.getAttribute("data-summarize-elem-id");
     if (!elemId) return;
-    // Read per click: the gear turns the drill on, off or onto another
-    // column through the payload, without re-rendering the container.
-    var col = null;
 
-    function send(values) {
+    function send(claim) {
       if (!window.Shiny || !Shiny.setInputValue) return;
       Shiny.setInputValue(
         elemId + "_action",
         {
-          action: values === null ? "clear_filter" : "filter",
+          action: claim === null ? "clear_filter" : "filter",
           type: "categorical",
-          column: col,
-          values: values,
+          column: claim === null ? null : claim.cols,
+          values: claim === null ? null : claim.vals,
           nonce: ++summarizeDrillSeq
         },
         { priority: "event" }
       );
     }
 
-    function select(label) {
-      root._summarizeSel = label;
+    function select(phrase) {
+      root._summarizeSel = phrase;
       paintStatus(root);
     }
     root._summarizeClear = function () {
@@ -348,16 +370,18 @@
       var tr = e.target.closest("tr.blockr-summarize-row.is-pick");
       if (!tr || !root.contains(tr)) return;
       if (e.target.closest(".blockr-indent-btn")) return;
-      col = root.getAttribute("data-summarize-drill");
+      // Read per click: the gear turns the drill on and off through the
+      // payload, without re-rendering the container.
+      var col = root.getAttribute("data-summarize-drill");
       if (!col) return;
-      var label = tr.getAttribute("data-summarize-label");
+      var claim = rowClaim(root, tr, col);
       // Transient: no toggle. A second click on the same row means "send it
       // again", never "un-drill" -- that is the target's job.
       if (summarizeTransient(root)) {
-        send([label]);
+        send(claim);
         summarizeFlash(root, tr);
         root._summarizeReceipt = {
-          text: "Drilled down to " + col + " = " + label,
+          text: "Drilled down to " + claimPhrase(claim),
           at: Date.now()
         };
         paintStatus(root);
@@ -374,8 +398,8 @@
         select(null);
       } else {
         tr.classList.add("is-on");
-        send([label]);
-        select(label);
+        send(claim);
+        select(claimPhrase(claim));
       }
     });
   }
@@ -424,7 +448,7 @@
     var sel = root._summarizeSel;
     var span = document.createElement("span");
     span.className = "dd-status-text" + (returning ? " dd-status-returning" : "");
-    span.textContent = sel ? "Filtered: " + col + " = " + sel : "No filter active";
+    span.textContent = sel ? "Filtered: " + sel : "No filter active";
     box.appendChild(span);
     if (sel) {
       var reset = document.createElement("button");
@@ -2209,6 +2233,9 @@
         drillToggle: "drill",
         drillDefault: (cfg.by && cfg.by.length)
           ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),
+        // A click claims the row's grouping path, so there is no column to
+        // pick: `drill` is the on switch.
+        drillPicker: false,
         ctrlSection: true,
         drillHint: cfg.drill
           ? "Clicking a row filters downstream on " + cfg.drill + "."
@@ -2257,6 +2284,7 @@
       presentation: pres,
       drillToggle: "drill",
       drillDefault: cfg.group || "",
+      drillPicker: false,
       // "Send to filter (beta)" inside the open Drill-down section, chart /
       // table parity: the engine reads cfg.ctrl_target / cfg.ctrl_choices.
       ctrlSection: true,

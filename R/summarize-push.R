@@ -539,12 +539,10 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     cols[[i]]$tt <- summarize_tip_meta(plan[[i]])
   }
 
-  act_vals <- as.character(unlist(active$vals %||% character()))
-  on <- if (length(act_vals) && !is.null(summarize_chr1(active$col))) {
-    rows$.label %in% act_vals
-  } else {
-    rep(FALSE, n)
-  }
+  on <- summarize_drill_on(
+    rows, summarize_chr1(prep$group), summarize_chr1(prep$parent),
+    summarize_drill_filters(active$col, active$vals)
+  )
 
   list(
     n = n,
@@ -558,6 +556,9 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     parent_row = rows$.is_parent,
     on = on,
     pick = !is.null(drill),
+    # The columns a row click claims, outer -> inner: a parent row claims the
+    # first, a child row both (R/summarize-drill.R).
+    path = c(summarize_chr1(prep$parent), summarize_chr1(prep$group)),
     cols = cols,
     fold = summarize_fold_text(prep),
     attrs = summarize_table_attrs(prep, cfg)
@@ -1451,6 +1452,7 @@ summarize_flat_payload <- function(m) {
     parent_row = arr_if(m$parent_row),
     on = arr_if(m$on),
     pick = isTRUE(m$pick),
+    path = if (isTRUE(m$pick)) arr(as.character(m$path)) else NULL,
     cols = lapply(m$cols, one),
     fold = m$fold
   )

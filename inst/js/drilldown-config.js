@@ -646,7 +646,8 @@
       if (spec.drillToggle) {
         this._renderToggleColumnSection('Drill-down', 'drill', spec.drillToggle,
           spec.drillDefault,
-          spec.ctrlSection ? (sec) => this._renderCtrlRows(sec) : null);
+          spec.ctrlSection ? (sec) => this._renderCtrlRows(sec) : null,
+          spec.drillPicker !== false);
       }
 
       // Chart / tile drill-down. The chart opts in via drillAutoLabel (the
@@ -1490,13 +1491,16 @@
      *   OPEN section after the picker — capabilities that ride on this one
      *   (the drill's external-control send).
      */
-    _renderToggleColumnSection(title, secKey, cfgKey, seed, extras) {
+    // `picker = false`: the host decides the column itself (the summarize
+    // table claims a row's whole grouping path), so the section is the
+    // checkbox alone and its header reads On / Off.
+    _renderToggleColumnSection(title, secKey, cfgKey, seed, extras, picker = true) {
       const cfg = this._cfg();
       const on = this._secOpen(secKey,
         () => this._hasVal(cfg[cfgKey]) && cfg[cfgKey] !== '(none)');
       const cur = this._hasVal(cfg[cfgKey]) ? String(cfg[cfgKey]) : '';
       const sec = this._foldSection(title, secKey, on,
-        on ? (cur ? this._colDisplay(cur) : 'On') : 'Off');
+        on ? (cur && picker ? this._colDisplay(cur) : 'On') : 'Off');
       if (!sec) return;
       this._enableRow(sec, 'Filter downstream on a click', on, (enabled) =>
         this._toggleSection(secKey, enabled,
@@ -1513,7 +1517,7 @@
             }
           }));
       if (on) {
-        this._renderRole(sec, cfgKey, { required: true });
+        if (picker) this._renderRole(sec, cfgKey, { required: true });
         if (extras) extras(sec);
       }
     }

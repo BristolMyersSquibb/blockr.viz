@@ -105,6 +105,9 @@ cases <- list(
                            sort_dir = "asc")),
   # Two grouping columns nest: SOC rows with TERM rows under them.
   nested = record(block(by = c("SOC", "TERM"), summaries = list(count_bar))),
+  # The same, drilled: a row click claims the row's path.
+  nested_drill = record(block(by = c("SOC", "TERM"), summaries = list(count_bar),
+                              drill = "TERM")),
   # A colour column: the legend band.
   color = record(block(by = "TERM", summaries = list(
     list(type = "simple", func = "count", show = "bar", color = "SEV")
