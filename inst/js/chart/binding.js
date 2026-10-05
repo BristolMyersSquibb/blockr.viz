@@ -111,6 +111,8 @@
         // Nothing waiting: a message sent before these scripts loaded was
         // dropped by Shiny. Announce; R answers with its last rev.
         Shiny.setInputValue(el.id + '_ready', Date.now(), { priority: 'event' });
+        // No picture yet: count the wait from when the chart shows.
+        /** @type {any} */ (window).Blockr?.busy?.watch?.(el.id, 'drawing');
       }
     }
   });

@@ -60,7 +60,7 @@ same('ready', 'the reply to _ready', [
 
 same('busy', 'the busy cue ends two frames after the picture', [
   busy('drawing'), wait(299), wait(1), wait(500), busy('again'), data(1), wait(16), wait(16),
-  busy('drawing'), wait(300), busyDone()
+  busy('drawing'), wait(300), busyDone(), wait(250)
 ]);
 
 same('busy-without-rows', 'the busy cue waits for rows that are not there', [

@@ -1,3 +1,12 @@
+# blockr.viz 0.2.197
+
+* A chart opened for the first time shows its "drawing… 1.2 s" clock from
+  the moment its panel shows. On a board that builds blocks lazily, R's own
+  start message came a second or more after the click, and the chart sat
+  blank and uncounted until then. A "done" that R sends while the block is
+  still being built no longer ends the clock when a new start follows at
+  once.
+
 # blockr.viz 0.2.196
 
 * A drill to another block (`ctrl_target`) now carries every value the click

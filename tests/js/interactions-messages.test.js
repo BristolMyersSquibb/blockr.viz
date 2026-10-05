@@ -75,7 +75,8 @@ scenario('busy', [
   wait(16),
   busy('drawing'),
   wait(300),
-  busyDone()
+  busyDone(),
+  wait(250)
 ]);
 
 scenario('busy-without-rows', [

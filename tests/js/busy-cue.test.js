@@ -54,6 +54,59 @@ test('R ends the cue when no picture is coming', () => {
   env.flushTimers(1);
   assert.ok(busy(el));
   env.handlers['blockr-busy-done']({ id });
+  env.flushTimers(1);
+  assert.ok(!busy(el));
+  env.close();
+});
+
+test('a done followed at once by a start is one wait', () => {
+  const env = h.createEnv();
+  const { el, id } = h.mount(env);
+  env.handlers['blockr-busy']({ id, label: 'drawing' });
+  env.flushTimers(1);
+  env.handlers['blockr-busy-done']({ id });
+  env.handlers['blockr-busy']({ id, label: 'drawing' });
+  env.flushTimers(1);
+  assert.ok(busy(el), 'the clock runs on');
+  env.close();
+});
+
+// A lazily built block: the chart is bound while its panel is hidden, and R
+// says nothing until the panel shows and the server has made the block.
+const hide = (el) => { el.parentElement.style.visibility = 'hidden'; };
+const front = (env, el) => {
+  el.parentElement.style.visibility = '';
+  env.win.document.dispatchEvent(new env.win.CustomEvent('dockview:active-panel', { bubbles: true }));
+};
+
+test('a chart with no picture counts from when its panel shows', () => {
+  const env = h.createEnv();
+  const { el, id } = h.mount(env);
+  hide(el);
+  env.flushTimers(500);
+  assert.ok(!busy(el), 'hidden: no clock');
+
+  front(env, el);
+  env.flushTimers(1);
+  env.flushTimers(1);
+  assert.ok(busy(el), 'shown: the clock runs before R has said anything');
+  assert.match(el.querySelector('.blockr-busy-line').textContent, /^drawing… \d+\.\d s$/);
+
+  env.handlers['blockr-busy']({ id, label: 'drawing' });
+  assert.ok(busy(el), "R's start keeps the clock");
+  h.send(env, id, { columns: F.columns, data: F.data, config, dataRev: 1 });
+  env.flushTimers(500);
+  assert.ok(!busy(el), 'the picture ends it');
+  env.close();
+});
+
+test('a chart R has already spoken about is not watched', () => {
+  const env = h.createEnv();
+  const id = 'block_spoken-drilldown_block';
+  env.handlers['blockr-busy-done']({ id });
+  const { el } = h.mount(env, id);
+  front(env, el);
+  env.flushTimers(500);
   assert.ok(!busy(el));
   env.close();
 });

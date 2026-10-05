@@ -367,6 +367,37 @@
    },
    "signal": null,
    "legendOff": null,
+   "pending": [
+    {
+     "ms": 250,
+     "left": 250
+    }
+   ],
+   "mounted": true,
+   "rev": 1,
+   "rows": 60,
+   "sortDir": "asc",
+   "needRev": null,
+   "busy": true,
+   "busyLine": "drawing… 0.3 s"
+  },
+  {
+   "step": "advance 250 ms",
+   "inputs": [],
+   "calls": [],
+   "footer": [
+    {
+     "cls": "dd-status-text",
+     "text": "No filter active"
+    }
+   ],
+   "state": {
+    "selected": null,
+    "selectedColumn": null,
+    "brush": false
+   },
+   "signal": null,
+   "legendOff": null,
    "pending": [],
    "mounted": true,
    "rev": 1,
