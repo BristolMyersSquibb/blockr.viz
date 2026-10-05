@@ -147,11 +147,14 @@ summarize_levels <- function(x) {
   lv[!is.na(lv)]
 }
 
-# Colour levels: summarize_levels() minus the factor levels no row carries.
-# A filter upstream keeps a factor's full level set, and every unused level
-# would draw an empty slot in each row and a legend key for nothing.
+# Colour levels: summarize_levels() over the rows the table draws, minus the
+# factor levels none of them carries. A filter upstream keeps a factor's full
+# level set, and a population join adds rows with no group that still carry
+# their arm. Either way the level would draw an empty slot in each row and a
+# legend key for nothing. `drawn` marks the rows with a complete group.
 #' @noRd
-summarize_color_levels <- function(x) {
+summarize_color_levels <- function(x, drawn = NULL) {
+  if (!is.null(drawn)) x <- x[drawn]
   summarize_levels(if (is.factor(x)) droplevels(x) else x)
 }
 
@@ -407,7 +410,8 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
                       show_val = show_val,
                       val_denom = if (pct_ok) denom))
   } else if (identical(layout, "split")) {
-    series <- summarize_color_levels(data[[color]])
+    series <- summarize_color_levels(data[[color]],
+                                     stats::complete.cases(data[keys]))
     pal <- summarize_level_colors(scale_map, color, series, data[[color]])
     seg <- summarize_aggregate(data, c(keys, color), func, value, id_var)
     # One column per level, joined onto the leaf rows in level order.
@@ -443,7 +447,9 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
       # column per facet level, each bar split into colour segments. Facet
       # columns are keyed by INDEX (.f<i>s_<level>) so a facet level name can
       # never collide with a colour level name.
-      series <- summarize_color_levels(data[[color]])
+      series <- summarize_color_levels(
+        data[[color]], stats::complete.cases(data[c(keys, facet)])
+      )
       pal <- summarize_level_colors(scale_map, color, series, data[[color]])
       seg <- summarize_aggregate(data, c(keys, facet, color), func, value,
                                  id_var)

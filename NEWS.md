@@ -1,3 +1,11 @@
+# blockr.viz 0.2.201
+
+* A summarize table's colour split takes its levels from the rows it draws.
+  A population join adds subjects with no record, which have no group but
+  still carry their arm, so an arm with no events (Screen Failure) kept an
+  empty bar slot in every row and a legend key. Lollipops drew nothing for it
+  and looked right; bars drew the empty track.
+
 # blockr.viz 0.2.200
 
 * A custom summary that splits by a column its function returns (a dumbbell

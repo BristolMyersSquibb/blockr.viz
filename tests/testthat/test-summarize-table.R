@@ -549,3 +549,20 @@ test_that("a colour level no row carries gets no slot, and no colour shifts", {
   expect_identical(as.character(split$series), c("Placebo", "Low"))
   expect_identical(unname(p$palette), dd_palette()[c(1L, 3L)])
 })
+
+test_that("a colour level only ungrouped rows carry gets no slot", {
+  ae <- ae_fixture()
+  ae$ARM <- factor(as.character(ae$ARM), levels = c("Placebo", "Low", "High"))
+  # A population join's subject with no record: no term, but an arm.
+  pop <- ae[1L, ]
+  pop$TERM <- NA_character_
+  pop$ARM <- factor("High", levels = levels(ae$ARM))
+  d <- rbind(ae, pop)
+  p <- summarize_prepare(d, group = "TERM", color = "ARM", bar_mode = "grouped")
+  split <- Filter(function(x) identical(x$kind, "barsplit"), p$plan)[[1]]
+  expect_identical(as.character(split$series), c("Placebo", "Low"))
+  S <- list(list(type = "simple", name = "Subjects", func = "count_distinct",
+                 col = "USUBJID", show = "bar"))
+  l <- lane_prepare_summaries(d, by = "TERM", summaries = S, color = "ARM")
+  expect_identical(as.character(l$plan[[1L]]$series), c("Placebo", "Low"))
+})

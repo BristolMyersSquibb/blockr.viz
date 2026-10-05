@@ -353,6 +353,9 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   group <- by[[length(by)]]
   parent <- if (length(by) == 2L) by[[1L]]
   keys <- c(parent, group)
+  # The rows that draw: a missing group draws none (see the skeletons below),
+  # so a colour level only such rows carry gets no slot and no legend key.
+  drawn <- stats::complete.cases(data[keys])
 
   summaries <- lane_norm_summaries(summaries)
   if (!is.null(summaries$err)) return(bad(summaries$err))
@@ -397,7 +400,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     }
     cc <- present(s$color)
     if (!is.null(cc) && lane_color_capable(s)) {
-      lv <- summarize_color_levels(data[[cc]])
+      lv <- summarize_color_levels(data[[cc]], drawn)
       if (length(lv) > LANE_MAX_LEVELS) {
         return(bad(paste0(
           "Summary \"", s$name, "\": colour column \"", cc, "\" has ",
@@ -743,7 +746,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     if (lane_color_capable(s)) present(s$color)
   })))
   color_groups <- Filter(Negate(is.null), lapply(legend_cols, function(cc) {
-    lv <- summarize_color_levels(data[[cc]])
+    lv <- summarize_color_levels(data[[cc]], drawn)
     if (length(lv) < 2L) return(NULL)
     list(column = cc, levels = lv,
          palette = summarize_level_colors(scale_map, cc, lv, data[[cc]]))
