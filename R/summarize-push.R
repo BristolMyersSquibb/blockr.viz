@@ -881,12 +881,13 @@ summarize_cells_html <- function(m, expanded = FALSE) {
     "<button class=\"blockr-indent-btn\" type=\"button\" tabindex=\"-1\"",
     " aria-expanded=\"false\">", as.character(section_chevron_svg()), "</button>"
   )
-  # Child rows are indented on the same 24 + 16px step the structured table
-  # uses, and the chevron hangs into that gutter (margin-left:-18px).
+  # Child rows sit 24px deeper than their parent, whose label cell has 24px
+  # of padding on a nested table (summarize-table-css.R) so the chevron
+  # hanging into it (margin-left:-18px) clears a clicked row's 3px bar.
   lbl <- paste0(
     "<td class=\"blockr-summarize-label-col blockr-stub",
     ifelse(m$parent_row, " blockr-has-toggle", ""), "\"",
-    ifelse(m$level > 0L, " style=\"padding-left:40px;\"", ""), ">",
+    ifelse(m$level > 0L, " style=\"padding-left:48px;\"", ""), ">",
     ifelse(m$parent_row, chev, ""),
     "<span class=\"blockr-summarize-label\">", summarize_esc(m$label),
     "</span></td>"

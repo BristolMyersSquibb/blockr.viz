@@ -724,7 +724,7 @@
         '" data-summarize-ord="' + i + '">';
       row += '<td class="blockr-summarize-label-col blockr-stub' +
         (parent ? " blockr-has-toggle" : "") + '"' +
-        (child ? ' style="padding-left:40px;"' : "") + ">" +
+        (child ? ' style="padding-left:48px;"' : "") + ">" +
         (parent ? '<button class="blockr-indent-btn" type="button"' +
           ' tabindex="-1" aria-expanded="false">' + CHEV + "</button>" : "") +
         '<span class="blockr-summarize-label">' + esc(p.label[i]) + "</span></td>";

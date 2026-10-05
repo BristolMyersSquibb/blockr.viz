@@ -1,3 +1,9 @@
+# blockr.viz 0.2.204
+
+* A nested summarize table gives its label column 24px of left padding, and
+  child rows 48px. The fold chevron sat 2px outside the cell, under the bar a
+  clicked row draws at its left edge; it now has a gap to it.
+
 # blockr.viz 0.2.203
 
 * The summarize table's title sits on the left of the gear row again, without

@@ -823,6 +823,15 @@ summarize_table_css <- function() {
 }
 
 /* Hierarchy. */
+/* A nested table's chevron hangs into the label cell's left padding
+   (margin-left: -18px). The shared 16px left it 2px outside the cell, under
+   the 3px bar a clicked row draws at the cell edge. 24px leaves a gap; the
+   header moves with it so the labels stay under it, and the children's
+   inline 48px keeps them 24px deeper. */
+.blockr-summarize-table[data-summarize-nested='1'] td.blockr-summarize-label-col,
+.blockr-summarize-table[data-summarize-nested='1'] th.blockr-stub-header {
+  padding-left: 24px;
+}
 .blockr-summarize-table tr.is-child td.blockr-summarize-label-col {
   color: var(--blockr-color-text-muted, #6b7280);
 }
