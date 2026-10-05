@@ -620,8 +620,12 @@ test_that("the table starts below the title, however many lines it takes", {
   long <- tempfile(fileext = ".pptx")
   on.exit(unlink(c(short, long)), add = TRUE)
 
-  write_exhibit_pptx(demo_df(), short, title = "Demographics")
-  write_exhibit_pptx(demo_df(), long, title = paste(
+  # officer's own deck (4:3, 44pt title), not the default lookup: that finds
+  # whatever blockr.outline is installed, and the widescreen template there
+  # fits this title on two 20pt lines that end above the floor.
+  tpl <- system.file("template", "template.pptx", package = "officer")
+  write_exhibit_pptx(demo_df(), short, title = "Demographics", template = tpl)
+  write_exhibit_pptx(demo_df(), long, template = tpl, title = paste(
     "Number of Subjects with Treatment-Emergent Adverse Events by highest",
     "Standard Toxicity Grade, System Organ Class, and Dictionary Derived Term"
   ))
