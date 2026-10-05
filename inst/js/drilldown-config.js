@@ -2658,9 +2658,8 @@
           selected: this._hasVal(cfg[key]) ? cfg[key] : first
         };
       }
-      // A number in a sentence ("Top 25") opens a short list of round values
-      // inside its declared range, with the current value among them. Typing
-      // any other value stays with the gear's row.
+      // A number word is typed over (SentenceSlots._edit); this list is what
+      // a caller that asks for options anyway still gets.
       if (role.kind === 'number') {
         const cur = Number(cfg[key]);
         return {
@@ -2695,6 +2694,18 @@
     _slotEntry(key) {
       const role = this._role(this._slotCfgKey(key));
       return !!(role && role.slot === 'entry');
+    }
+
+    /** Is this word a number? A number is typed over in place, with its
+     * range beside it and the arrow keys stepping it; a list of round values
+     * could not offer 7. Returns the config key the value lives under (a
+     * script value's `sv_` key) and the role, or null.
+     * @param {string} key @returns {{key: string, role: any} | null}
+     */
+    _slotNumber(key) {
+      const k = this._slotCfgKey(key);
+      const role = this._role(k);
+      return (role && role.kind === 'number') ? { key: k, role: role } : null;
     }
 
     /** Is this word a flag? A flag toggles in place: a menu of two words is a
@@ -3101,6 +3112,11 @@
         this._edit(key, anchor);
         return;
       }
+      const num = ddc._slotNumber && ddc._slotNumber(key);
+      if (num) {
+        this._edit(key, anchor, num);
+        return;
+      }
       const opts = ddc._slotOptionsFor(key);
       if (!opts) return;
       const B = (typeof Blockr !== 'undefined') ? Blockr : null;
@@ -3138,42 +3154,98 @@
      * puts the word back unchanged, and an emptied field clears the setting.
      * The gear's text row has the same commit model. An offer chip edits the
      * same way, starting empty.
-     * @param {string} key @param {HTMLElement} anchor */
-    _edit(key, anchor) {
+     *
+     * A number (`num`) adds its range beside the field ("0 to 50"), steps on
+     * the up and down arrows (by ten with Shift), and is held inside its range
+     * and on its step when taken. An emptied or non-numeric field keeps the old
+     * value: a number has no "unset" to clear to.
+     * @param {string} key @param {HTMLElement} anchor
+     * @param {{key: string, role: any} | null} [num] */
+    _edit(key, anchor, num = null) {
       const ddc = this.h.ddc();
-      const cur = this.h.config()[key];
+      const cur = this.h.config()[num ? num.key : key];
       const before = cur == null ? ''
         : (Array.isArray(cur) ? cur.join(', ') : String(cur));
       const input = document.createElement('input');
-      input.type = 'text';
+      // A number keeps type=number for the keyboard (design system, "Text and
+      // number fields"); its spinner is hidden in chart.css.
+      input.type = num ? 'number' : 'text';
       input.className = 'blockr-slot-input';
       input.value = before;
-      input.placeholder = '50';
+      input.placeholder = num ? '' : '50';
       input.setAttribute('aria-label', this.label(key) || key);
-      const fit = () => { input.size = Math.max(3, input.value.length + 1); };
+      // `size` does not apply to a number field, so it is sized in ch.
+      const fit = () => {
+        const n = Math.max(3, input.value.length + 1);
+        if (num) input.style.width = `calc(${n}ch + 10px)`;
+        else input.size = n;
+      };
       fit();
+
+      const role = num ? num.role : null;
+      const lo = role && isFinite(parseFloat(role.min)) ? Number(role.min) : -Infinity;
+      const hi = role && isFinite(parseFloat(role.max)) ? Number(role.max) : Infinity;
+      const step = role && Number(role.step) > 0 ? Number(role.step) : 1;
+      const rangeText = isFinite(lo) && isFinite(hi) ? `${lo} to ${hi}`
+        : isFinite(lo) ? `at least ${lo}` : isFinite(hi) ? `at most ${hi}` : '';
+      /** @param {number} v */
+      const fix = (v) => {
+        const base = isFinite(lo) ? lo : 0;
+        const on = base + Math.round((v - base) / step) * step;
+        return Math.min(hi, Math.max(lo, Number(on.toFixed(10))));
+      };
+      /** @type {HTMLElement | null} */
+      let note = null;
+      if (num && rangeText) {
+        note = document.createElement('span');
+        note.className = 'blockr-slot-range';
+        note.textContent = rangeText;
+      }
+      // Out of range says which end it will be held at, while typing.
+      const check = () => {
+        if (!note) return;
+        const v = parseFloat(input.value);
+        const out = isFinite(v) && (v < lo || v > hi);
+        note.classList.toggle('blockr-slot-range--out', out);
+        note.textContent = !out ? rangeText : (v > hi ? `at most ${hi}` : `at least ${lo}`);
+      };
+
       let done = false;
       /** @param {boolean} commit */
       const finish = (commit) => {
         if (done) return;
         done = true;
-        const val = input.value.trim();
+        let val = input.value.trim();
+        if (note) note.remove();
         input.replaceWith(anchor);
+        if (num) {
+          const v = parseFloat(val);
+          val = isFinite(v) ? String(fix(v)) : before;
+        }
         if (commit && val !== before) {
           ddc._setRoleValue(key, val);
         } else {
           anchor.focus();
         }
       };
-      input.addEventListener('input', fit);
+      input.addEventListener('input', () => { fit(); check(); });
       input.addEventListener('click', (e) => e.stopPropagation());
       input.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
         e.stopPropagation();
+        if (num && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+          e.preventDefault();
+          const v = parseFloat(input.value);
+          const by = step * (e.shiftKey ? 10 : 1) * (e.key === 'ArrowUp' ? 1 : -1);
+          input.value = String(fix((isFinite(v) ? v : (isFinite(lo) ? lo : 0)) + by));
+          fit(); check();
+          input.select();
+        }
         if (e.key === 'Enter') { e.preventDefault(); finish(true); }
         if (e.key === 'Escape') { e.preventDefault(); finish(false); }
       });
       input.addEventListener('blur', () => finish(true));
       anchor.replaceWith(input);
+      if (note) input.after(note);
       input.focus();
       input.select();
     }

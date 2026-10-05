@@ -1,3 +1,13 @@
+# blockr.viz 0.2.205
+
+* A number in a block's title or subtitle is typed over instead of opening a
+  list of round values, so any value in its range can be set from the word
+  (7, not only 5 or 10). The range shows beside the field ("0 to 50"), the
+  arrow keys step by one (Shift: ten), and a value outside the range is held
+  at the nearest end. Applies to the chart, heatmap and summarize table.
+* The field a word turns into while typed over has the design system's
+  accent edge and focus ring.
+
 # blockr.viz 0.2.204
 
 * A nested summarize table gives its label column 24px of left padding, and

@@ -1467,11 +1467,38 @@
   color: var(--blockr-blue-700, #1d4ed8);
   padding: 0 4px;
   margin: 0 1px;
-  border: 1px solid var(--blockr-color-primary, #2563eb);
+  border: 1px solid var(--blockr-color-border-accent, #2563eb);
   border-radius: var(--blockr-radius-sm, 4px);
   background: var(--blockr-color-bg-surface, #fff);
   line-height: inherit;
   outline: none;
+  /* A field being typed in: the accent edge and the focus ring (design
+     system, "Focus"). */
+  box-shadow: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12));
+  font-variant-numeric: tabular-nums;
+}
+/* A number keeps type=number for the keyboard, without the spinner. */
+.blockr-slot-input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.blockr-slot-input[type=number]::-webkit-outer-spin-button,
+.blockr-slot-input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* A number's range, beside the field while it is typed over ("0 to 50").
+   Says which end it will be held at once the typed value leaves it. */
+.blockr-slot-range {
+  margin: 0 4px 0 2px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: 400;
+  color: var(--blockr-color-text-muted, #6b7280);
+  white-space: nowrap;
+}
+.blockr-slot-range--out {
+  color: var(--blockr-color-text-danger, #b91c1c);
 }
 
 /* ---- Busy cue (inst/js/busy-cue.js). An output being recomputed keeps its

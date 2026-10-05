@@ -40,7 +40,7 @@ chart_scripts <- function() {
 chart_css_dep <- memoise0(function() {
   htmltools::htmlDependency(
     name = "chart-css",
-    version = paste0(utils::packageVersion("blockr.viz"), ".45"),
+    version = paste0(utils::packageVersion("blockr.viz"), ".46"),
     src = system.file("css", package = "blockr.viz"),
     stylesheet = "chart.css"
   )

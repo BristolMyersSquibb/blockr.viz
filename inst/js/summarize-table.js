@@ -2532,6 +2532,7 @@
       var words = {
         _role: function (k) { return engine._role(k); },
         _slotFlag: function (k) { return engine._slotFlag(k); },
+        _slotNumber: function (k) { sync(); return engine._slotNumber(k); },
         _slotOptionsFor: function (k) {
           sync();
           if (k !== "by") return engine._slotOptionsFor(k);
