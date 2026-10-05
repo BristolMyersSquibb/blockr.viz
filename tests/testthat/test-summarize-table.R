@@ -566,3 +566,25 @@ test_that("a colour level only ungrouped rows carry gets no slot", {
   l <- lane_prepare_summaries(d, by = "TERM", summaries = S, color = "ARM")
   expect_identical(as.character(l$plan[[1L]]$series), c("Placebo", "Low"))
 })
+
+test_that("table.css names only classes the summarize table draws", {
+  # The rank -> summarize rename (0.2.194) left table.css on the old class
+  # names, and nothing failed: the title band fell out of the gear row and the
+  # shared table styles stopped applying, on every summarize table.
+  sheet <- paste(readLines(system.file("css", "table.css", package = "blockr.viz")),
+                 collapse = "\n")
+  used <- unique(regmatches(
+    sheet, gregexpr("blockr-(rank|summarize)-[a-z-]+", sheet)
+  )[[1]])
+  expect_gt(length(used), 0L)
+  drawn <- paste(
+    as.character(summarize_chrome_shell(
+      elem_id = "x", download = htmltools::span()
+    )),
+    paste(readLines(system.file("js", "summarize-table.js",
+                                package = "blockr.viz")), collapse = "\n")
+  )
+  for (cls in used) {
+    expect_true(grepl(cls, drawn, fixed = TRUE), info = cls)
+  }
+})

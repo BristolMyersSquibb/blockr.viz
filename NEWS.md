@@ -1,3 +1,11 @@
+# blockr.viz 0.2.203
+
+* The summarize table's title sits on the left of the gear row again, without
+  a line under it, and the shared table styles (cell padding, row hover, drill
+  cursor, active row, drill flash, sticky header, column alignment) reach it
+  again. table.css still named the classes from before the rank -> summarize
+  rename (0.2.194).
+
 # blockr.viz 0.2.202
 
 * A grouped colour split in the summarize table draws no track for a level

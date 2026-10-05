@@ -1,17 +1,17 @@
 /* Scope note (2026-07-26): every rule below applies to EITHER blockr table
    container -- the drilldown table (`.drilldown-table-container`, managed by
-   table.js) or the rank table (`.blockr-rank-container`, server-rendered HTML,
-   R/rank-table-html.R). They are the same chrome: one control row, one header
+   table.js) or the summarize table (`.blockr-summarize-container`, payload-rendered,
+   R/summarize-table-html.R). They are the same chrome: one control row, one header
    cell, one set of body alignments. Written as `:is(...)` so there is ONE
-   definition to keep, not two that drift -- the rank block's header spacing
+   definition to keep, not two that drift -- the summarize table's header spacing
    silently diverged (84px header against 59px) while these were table-only.
-   `.drilldown-table-structured` rules stay table-only: a rank table is never a
+   `.drilldown-table-structured` rules stay table-only: a summarize table is never a
    structured Table-1 frame. */
 
 /* Type-based body alignment: numeric cells right (tabular figures), text
    cells left — matching the header, like the structured table and the
    canonical html preview. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.blockr-data {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.blockr-data {
   font-variant-numeric: tabular-nums;
 }
 /* Type-based body alignment for the flat table: numeric cells right, text
@@ -19,19 +19,19 @@
    `.drilldown-table-structured` (see html_table_delta_css()), so it no longer
    leaks its `td.blockr-data` weight/size/alignment onto the flat table — these
    rules stand on their own as the flat table's intended alignment. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.blockr-data.dt-num {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.blockr-data.dt-num {
   text-align: right;
 }
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.blockr-data.dt-txt {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.blockr-data.dt-txt {
   text-align: left;
 }
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.blockr-stub {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.blockr-stub {
   text-align: left;
 }
 /* Table-block rows at 26px, with no rules in the body, like the preview:
    3px above and below a 20px line. The header cells take 7px. Structured
    tables set their own cell padding in html_table_delta_css(); these are the
-   flat table's. The rank table keeps its own rows. */
+   flat table's. The summarize table keeps its own rows. */
 .drilldown-table-container .blockr-table tbody td {
   padding: 3px 12px;
   line-height: 20px;
@@ -53,31 +53,31 @@
 .drilldown-table-container .blockr-table tbody tr.blockr-data-row:hover > td {
   background-color: var(--blockr-color-bg-hover, #f3f4f6);
 }
-:is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table tbody tr.blockr-data-row {
+:is(.drilldown-table-container, .blockr-summarize-container).dt-clickable .blockr-table tbody tr.blockr-data-row {
   cursor: pointer;
 }
 /* A drill row with an NA drill value emits nothing (no data-raw -> the click
    is a no-op), so it must not look clickable: default cursor, and the plain
    row wash every row gets. */
-:is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table tbody tr.blockr-data-row.dt-row-nodrill {
+:is(.drilldown-table-container, .blockr-summarize-container).dt-clickable .blockr-table tbody tr.blockr-data-row.dt-row-nodrill {
   cursor: default;
 }
 /* Section headers: only those that ARE an identity claim (row-group headers,
    e.g. a SOC over its PTs -- they carry data-dd-keys) read as clickable.
    Variable-block headers ("Sex", "Age") are labels, not claims: no keys, no
    pointer, click is a no-op. */
-:is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table tbody tr.blockr-section-header[data-dd-keys] .blockr-section-value {
+:is(.drilldown-table-container, .blockr-summarize-container).dt-clickable .blockr-table tbody tr.blockr-section-header[data-dd-keys] .blockr-section-value {
   cursor: pointer;
 }
-/* No drill: the row is inert. The rank table keeps its own reading-aid
+/* No drill: the row is inert. The summarize table keeps its own reading-aid
    tint; the table block's plain row wash is set above. */
-.blockr-rank-container:not(.dt-clickable) .blockr-table tbody tr.blockr-data-row:hover td {
+.blockr-summarize-container:not(.dt-clickable) .blockr-table tbody tr.blockr-data-row:hover td {
   background: var(--blockr-color-bg-subtle, #f9fafb);
 }
 /* Drill selection: the selected tint and the accent ink across the row, no
    bar. Structured tables restate this in html_table_delta_css(), after their
    hover rules. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-row-active td {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody tr.dt-row-active td {
   background-color: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
   color: var(--blockr-color-text-accent, #2563eb);
 }
@@ -85,19 +85,19 @@
    arm) reads as clickable; a Total or a stats spanner carries no keys and
    stays inert, the same rule the section headers follow above. Its hover is
    the column it would claim (table.js wireHover). */
-:is(.drilldown-table-container, .blockr-rank-container).dt-clickable .blockr-table thead th.dd-col-drill {
+:is(.drilldown-table-container, .blockr-summarize-container).dt-clickable .blockr-table thead th.dd-col-drill {
   cursor: pointer;
 }
 /* The claimed column, painted the same tint the claimed row gets. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-col-active,
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.dt-col-active {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-col-active,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.dt-col-active {
   background-color: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
   color: var(--blockr-color-text-accent, #2563eb);
 }
 /* The cell where the two claims cross: one step stronger of the same accent
    tint, and bold, so it is plainly the darkest of the three without breaking
    the column. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-row-active td.dt-col-active {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody tr.dt-row-active td.dt-col-active {
   background-color: var(--blockr-color-bg-accent-subtle-hover, rgba(37, 99, 235, 0.13));
   font-weight: var(--blockr-font-weight-semibold, 600);
 }
@@ -141,20 +141,20 @@
    two are one gesture. A row plus a column is a large area of the screen, and
    the same duration over a large area reads as longer than over one small mark
    -- matching the clocks made the table feel like it was waiting for you. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-flash-row > td,
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.dt-flash-col {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody tr.dt-flash-row > td,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.dt-flash-col {
   position: relative;
   z-index: 0;
 }
 /* The header may be sticky, which is already a containing block -- do not
    touch its position. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-flash-colhead {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-flash-colhead {
   z-index: 0;
 }
 
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-flash-row > td::after,
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody td.dt-flash-col::after,
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-flash-colhead::after {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody tr.dt-flash-row > td::after,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.dt-flash-col::after,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-flash-colhead::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -166,15 +166,15 @@
 
 /* The accent bars ride the same layer, so they fade with it rather than
    needing an animation of their own. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-flash-row > td:first-child::after {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody tr.dt-flash-row > td:first-child::after {
   box-shadow: inset 3px 0 0 0 var(--blockr-color-border-accent, #2563eb);
 }
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-flash-colhead::after {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-flash-colhead::after {
   box-shadow: inset 0 3px 0 0 var(--blockr-color-border-accent, #2563eb);
 }
 
 /* The cell where the two claims cross: one step darker, same layer. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table tbody tr.dt-flash-row > td.dt-flash-cross::after {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody tr.dt-flash-row > td.dt-flash-cross::after {
   background: var(--blockr-color-bg-accent-subtle-hover, rgba(37, 99, 235, 0.13));
 }
 
@@ -189,7 +189,7 @@
    visible part in the last few hundred ms and reads as a cut. Rendered by R
    (it owns the claim's words) and animated here; nothing needs to remove it,
    an invisible line at the end of a fade is not in anyone's way. */
-:is(.drilldown-table-container, .blockr-rank-container) .dt-status-receipt {
+:is(.drilldown-table-container, .blockr-summarize-container) .dt-status-receipt {
   color: var(--blockr-color-text-muted, #6b7280);
   animation: dt-receipt-out 1100ms linear 1400ms both;
 }
@@ -203,25 +203,25 @@
    sub-label and sort arrow all agree with the body cells: numeric right, text
    left (the structured table does the same for its arm columns). The type
    class beats the inherited html-table delta, which right-aligns every header. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.blockr-col-header.dt-col-num {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.blockr-col-header.dt-col-num {
   text-align: right;
 }
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.blockr-col-header.dt-col-txt {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.blockr-col-header.dt-col-txt {
   text-align: left;
 }
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-col-num .dt-th-namerow,
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-col-num .dt-th-subrow {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-col-num .dt-th-namerow,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-col-num .dt-th-subrow {
   justify-content: flex-end;
 }
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-col-txt .dt-th-namerow,
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th.dt-col-txt .dt-th-subrow {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-col-txt .dt-th-namerow,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-col-txt .dt-th-subrow {
   justify-content: flex-start;
 }
 /* Sticky header for the scrollable table. The structured-Table-1 delta CSS
    provides its own sticky + scroll-shadow, but that delta is injected only for
    structured tables — so cover the flat path here (the flat table scrolls,
    unlike the paginated preview, and benefits from a pinned header). */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -258,13 +258,13 @@
    preview's type-row) rather than on its own line.
    - labelled column:   name on top, [label arrow] below
    - unlabelled column: [name arrow] on the single row */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .dt-th-namerow,
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .dt-th-subrow {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .dt-th-namerow,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .dt-th-subrow {
   display: flex;
   align-items: center;
   gap: 4px;
 }
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .dt-th-subrow {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .dt-th-subrow {
   margin-top: 1px;
 }
 /* Right-aligned (structured Table-1) arm headers anchor the subtext + arrow
@@ -275,29 +275,29 @@
 }
 /* The structured arm sub-line carries its own top margin for the stacked
    layout; inside the flex subrow the subrow owns the spacing. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .dt-th-subrow .arm__n {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .dt-th-subrow .arm__n {
   margin-top: 0;
 }
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .dt-th-namerow .blockr-sort-icon,
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .dt-th-subrow .blockr-sort-icon {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .dt-th-namerow .blockr-sort-icon,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .dt-th-subrow .blockr-sort-icon {
   flex: 0 0 auto;
 }
 /* The unsorted arrow reserves no space, so a right-aligned header stays
    flush-right; the arrow only appears — and nudges the subtext left — once a
    sort direction is set. (The shared base rule gives it a fixed 12px box,
    which would otherwise push the subtext off the right edge.) */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .blockr-sort-icon {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .blockr-sort-icon {
   display: none;
 }
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .blockr-sort-icon-asc,
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .blockr-sort-icon-desc {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .blockr-sort-icon-asc,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .blockr-sort-icon-desc {
   display: inline-block;
 }
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .blockr-col-name,
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .arm__name {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .blockr-col-name,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .arm__name {
   display: block;
 }
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-table thead th .blockr-col-label {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .blockr-col-label {
   font-weight: var(--blockr-font-weight-normal, 400);
   font-size: 11px;   /* match the canonical html preview's column sub-label */
   color: var(--blockr-color-text-muted, #6b7280);
@@ -309,19 +309,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-:is(.drilldown-table-container, .blockr-rank-container) {
+:is(.drilldown-table-container, .blockr-summarize-container) {
   position: relative;
 }
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-html-table-header {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-html-table-header {
   padding-right: 36px;
 }
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-hidden-search {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-hidden-search {
   display: none !important;
 }
 
 /* Zero-match search feedback (table.js updateNoMatch): shown under the
    header when an active query hides every data row, removed with matches. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-search-empty {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-search-empty {
   padding: 16px 12px;
   text-align: center;
   font-size: 12px;
@@ -372,7 +372,7 @@
    the gear keeps its canonical top-right position. Scoped to the block
    container: the shared .blockr-html-table-* chrome is also the plain
    preview's, which has no gear and keeps its own layout. */
-:is(.drilldown-table-container, .blockr-rank-container) .blockr-gear-header {
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-gear-header {
   gap: 6px;
 }
 
@@ -384,14 +384,14 @@
    to nowrap + ellipsis for the one-line estimate, which would clip instead;
    lift that here, gated on the toggle so the off-state keeps the old look.
    `balance` evens the line lengths rather than leaving a trailing orphan. */
-:is(.drilldown-table-container, .blockr-rank-container)
+:is(.drilldown-table-container, .blockr-summarize-container)
   .blockr-table[data-dt-wrap-titles="on"] thead th .blockr-col-name {
   white-space: normal;
   overflow: visible;
   text-overflow: clip;
   text-wrap: balance;
 }
-:is(.drilldown-table-container, .blockr-rank-container)
+:is(.drilldown-table-container, .blockr-summarize-container)
   .blockr-table[data-dt-wrap-titles="on"] thead th .arm__name {
   text-wrap: balance;
 }
@@ -442,22 +442,22 @@
    rotate(180deg) reads bottom-up (the spreadsheet convention); the stub
    header (.blockr-stub-header) stays horizontal -- it is the row identity.
    Gated on the table attribute exactly like wrap-titles above. */
-:is(.drilldown-table-container, .blockr-rank-container)
+:is(.drilldown-table-container, .blockr-summarize-container)
   .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header {
   vertical-align: bottom;
   text-align: center;
   padding-left: 4px;
   padding-right: 4px;
 }
-:is(.drilldown-table-container, .blockr-rank-container)
+:is(.drilldown-table-container, .blockr-summarize-container)
   .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header .dt-th-namerow,
-:is(.drilldown-table-container, .blockr-rank-container)
+:is(.drilldown-table-container, .blockr-summarize-container)
   .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header .dt-th-subrow {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
 }
-:is(.drilldown-table-container, .blockr-rank-container)
+:is(.drilldown-table-container, .blockr-summarize-container)
   .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header .blockr-col-name {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
@@ -469,13 +469,13 @@
 }
 /* The column sub-label (variable label) has no room in a 30px column;
    the title carries the identity in matrix mode. */
-:is(.drilldown-table-container, .blockr-rank-container)
+:is(.drilldown-table-container, .blockr-summarize-container)
   .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header .blockr-col-label {
   display: none;
 }
 /* Dense cells: the standard cell padding would eat a 28px column whole,
    and centred counts read better than right-aligned ones in a matrix. */
-:is(.drilldown-table-container, .blockr-rank-container)
+:is(.drilldown-table-container, .blockr-summarize-container)
   .blockr-table[data-dt-rotate-titles="on"] tbody td.blockr-data {
   padding-left: 4px;
   padding-right: 4px;
@@ -509,14 +509,14 @@
 }
 
 /* ===== Summarize table: the chart's header and drill line ===== */
-/* The title band sits in the gear row, on its left (rank-table.js buildGear),
+/* The title band sits in the gear row, on its left (summarize-table.js buildGear),
    laid out as the chart's (chart.css .dd-card .blockr-gear-header): it takes
    the row's width and wraps before the tools, which stay top right. In the
    row it has no hairline under it: the chart's has none either. */
-.blockr-rank-container .blockr-gear-header {
+.blockr-summarize-container .blockr-gear-header {
   align-items: flex-start;
 }
-.blockr-rank-container .blockr-gear-header .dd-table-titles {
+.blockr-summarize-container .blockr-gear-header .dd-table-titles {
   flex: 1 1 auto;
   min-width: 0;
   padding: 2px 8px 0 2px;
@@ -525,21 +525,21 @@
 }
 /* The drill line takes the rest of the footer row, so its Reset sits hard
    right, as under a chart and under the table block. */
-.blockr-rank-footer > .dd-status-footer {
+.blockr-summarize-footer > .dd-status-footer {
   flex: 1 1 auto;
   padding: 0;
 }
-.blockr-rank-footer > .dd-status-footer:empty {
+.blockr-summarize-footer > .dd-status-footer:empty {
   display: none;
 }
 
-/* The export picture (rank-table.js captureRoot): the block without its
+/* The export picture (summarize-table.js captureRoot): the block without its
    tools, white, with the title band as the header row shows it. */
-.blockr-rank-capture {
+.blockr-summarize-capture {
   background: #fff;
   padding: 8px 10px;
 }
-.blockr-rank-capture .dd-table-titles {
+.blockr-summarize-capture .dd-table-titles {
   border-bottom: none;
   margin-bottom: 4px;
 }
