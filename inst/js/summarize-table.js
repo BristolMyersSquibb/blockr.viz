@@ -50,6 +50,52 @@
       if (vis) r.classList.remove("collapsed-hidden");
       else r.classList.add("collapsed-hidden");
     });
+    syncFoldAll(root);
+  }
+
+  // ---------- fold all ----------
+  // A nested table gets the table block's corner chevron in its stub header
+  // (table.js buildFoldAll, same button and CSS): one click opens or folds
+  // every parent row. The head is re-rendered with each payload, so the
+  // button is (re)built here and its state read off the rows.
+  function syncFoldAll(root) {
+    var table = root.querySelector("table.blockr-summarize-table");
+    if (!table || table.getAttribute("data-summarize-nested") !== "1") return;
+    var parents = root.querySelectorAll("tbody tr.blockr-summarize-row.is-parent");
+    if (!parents.length) return;
+    var ths = table.querySelectorAll("thead th.blockr-stub-header");
+    var th = ths.length ? ths[ths.length - 1] : null;
+    if (!th) return;
+    var btn = th.querySelector(".dt-foldall");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "dt-foldall";
+      btn.innerHTML = CHEV;
+      var wrap = document.createElement("div");
+      wrap.className = "dt-foldall-wrap";
+      wrap.appendChild(btn);
+      if ((th.textContent || "").trim()) {
+        var lab = document.createElement("span");
+        lab.className = "dt-stub-title";
+        while (th.firstChild) lab.appendChild(th.firstChild);
+        wrap.appendChild(lab);
+      } else {
+        var all = document.createElement("span");
+        all.className = "dt-foldall-all";
+        all.textContent = "All";
+        btn.appendChild(all);
+      }
+      th.appendChild(wrap);
+      th.classList.add("dt-has-foldall");
+    }
+    var open = Array.prototype.every.call(parents, function (r) {
+      return !r.classList.contains("collapsed");
+    });
+    var act = open ? "Collapse all groups" : "Expand all groups";
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+    btn.setAttribute("aria-label", act);
+    btn.setAttribute("data-blockr-tooltip", act);
   }
 
   // ---------- search ----------
@@ -252,6 +298,8 @@
     }
 
     root.addEventListener("click", function (e) {
+      // The fold-all chevron sits in the stub header; it never sorts.
+      if (e.target.closest(".dt-foldall")) return;
       var th = e.target.closest("th.blockr-sortable[data-col-index]");
       if (!th || !root.contains(th)) return;
       e.stopPropagation();
@@ -270,6 +318,16 @@
 
   function bindToggle(root) {
     root.addEventListener("click", function (e) {
+      var all = e.target.closest(".dt-foldall");
+      if (all && root.contains(all)) {
+        e.stopPropagation();
+        e.preventDefault();
+        var shut = all.getAttribute("aria-expanded") === "true";
+        root.querySelectorAll("tbody tr.blockr-summarize-row.is-parent")
+          .forEach(function (r) { setOpen(r, !shut); });
+        applyVisibility(root);
+        return;
+      }
       var btn = e.target.closest(".blockr-indent-btn");
       if (!btn || !root.contains(btn)) return;
       e.stopPropagation();

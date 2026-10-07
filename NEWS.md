@@ -14,6 +14,10 @@
   every 10 read "17.7"); whole numbers stay whole. A dumbbell's change only
   carries a "+" when the column also has a negative change.
 * Value labels are grey.
+* A nested summarize table has the table block's fold-all chevron in its
+  top-left header cell: one click opens every group, the next folds them.
+* Every colour level of a split cell draws at full size; a row with more
+  levels grows instead of thinning the third level on.
 
 # blockr.viz 0.2.205
 

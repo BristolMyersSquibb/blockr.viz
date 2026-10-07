@@ -858,6 +858,37 @@ summarize_table_css <- function() {
   transform: rotate(-90deg);
 }
 
+/* Fold all: the table block's corner chevron (summarize-table.js
+   syncFoldAll), hung into the stub header's padding exactly as the parent
+   rows hang theirs, so the title keeps the labels' left edge. */
+.blockr-summarize-container .dt-foldall-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-left: -18px;
+}
+.blockr-summarize-container .dt-foldall {
+  display: inline-flex;
+  align-items: center;
+  height: 1lh;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  flex: none;
+}
+.blockr-summarize-container .dt-foldall:hover .blockr-chev {
+  color: var(--blockr-color-text-default, #111827);
+}
+.blockr-summarize-container .dt-foldall[aria-expanded='false'] .blockr-chev {
+  transform: rotate(-90deg);
+}
+.blockr-summarize-container .dt-foldall:focus-visible {
+  outline: var(--blockr-focus-outline, 2px solid #2563eb);
+  outline-offset: var(--blockr-focus-offset, 2px);
+  border-radius: 2px;
+}
+
 /* Hierarchy. */
 /* A nested table's chevron hangs into the label cell's left padding
    (margin-left: -18px). The shared 16px left it 2px outside the cell, under
