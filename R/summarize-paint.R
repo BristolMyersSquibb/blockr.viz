@@ -123,8 +123,10 @@ rp_layout <- function(m, prep, width_in, fs = 9, family = "sans",
   # The value slot each glyph column reserves to the right of its lane.
   slot <- vapply(seq_along(m$cols), function(i) {
     c <- m$cols[[i]]
-    if (!is_glyph[i] || is.null(c$disp)) return(0)
-    (c$dw %||% 1) * rp_ch(fs, family) + pad
+    # `dw` is there exactly when the column prints labels: on the column for
+    # a plain mark, beside each level's lane for a colour split.
+    if (!is_glyph[i] || is.null(c$dw)) return(0)
+    c$dw * rp_ch(fs, family) + pad
   }, numeric(1L))
 
   # A swimlane marked `size = "lg"` is the centerpiece of its table and the
@@ -414,32 +416,33 @@ rp_sparkline <- function(c, i, x, w, ytop, gl, fill = RP_FILL) {
 
 # Only the levels the row HAS are stacked, as on screen (summarize_multi_html()
 # skips the rest), so a row of one level draws one full-height lane.
-rp_multi <- function(c, i, x, w, ytop, gl) {
-  drawn <- Filter(function(j) {
-    g <- c$lv[[j]]
-    if (identical(c$kind, "pair")) {
-      !is.na(g$a[[i]]) || !is.na(g$b[[i]])
-    } else {
-      !is.na((if (identical(c$kind, "box")) g$bc else g$c)[[i]])
-    }
-  }, seq_along(c$lv))
+rp_multi <- function(c, i, x, w, ytop, gl, xr = NULL) {
+  drawn <- rp_multi_drawn(c, i)
   k <- length(drawn)
   if (!k) return(list())
+  lab <- !is.null(c$dw) && !is.null(xr)
   h <- if (k > 2) gl$px * 8 else gl$lane
   gap <- gl$px * 2
-  # A slide row has one fixed height (the pager divides by it), so where
-  # the screen's row would grow the lanes thin to fit instead.
-  room <- gl$row_h - gl$px * 2
-  if (k * h + (k - 1) * gap > room) h <- (room - (k - 1) * gap) / k
-  tot <- k * h + (k - 1) * gap
+  if (lab) {
+    # With value labels each level owns a text line, and the row has grown
+    # to hold them (rp_row_heights()), so the lanes keep their size.
+    pitch <- rp_multi_pitch(k, gl$px, gl$fs)
+  } else {
+    # Without labels the row keeps the table's one height, so where the
+    # screen's row would grow, the lanes thin to fit instead.
+    room <- gl$row_h - gl$px * 2
+    if (k * h + (k - 1) * gap > room) h <- (room - (k - 1) * gap) / k
+    pitch <- h + gap
+  }
+  tot <- (k - 1) * pitch + h
   y0 <- ytop + (gl$row_h - tot) / 2
   unlist(lapply(seq_len(k), function(jj) {
     j <- drawn[[jj]]
     lv <- c$lv[[j]]
-    yy <- y0 + (jj - 1) * (h + gap) - (gl$row_h - h) / 2
+    yy <- y0 + (jj - 1) * pitch - (gl$row_h - h) / 2
     sub <- gl
     sub$lane <- h
-    if (identical(c$kind, "pair")) {
+    marks <- if (identical(c$kind, "pair")) {
       lv$rf <- c$rf
       rp_pair(lv, i, x, w, yy, sub)
     } else if (identical(c$kind, "box")) {
@@ -447,7 +450,53 @@ rp_multi <- function(c, i, x, w, ytop, gl) {
     } else {
       rp_pr(lv, i, x, w, yy, sub, lv$fill %||% RP_FILL)
     }
+    if (lab && !is.null(lv$disp) && nzchar(lv$disp[[i]])) {
+      marks <- c(marks, list(grid::textGrob(
+        lv$disp[[i]], x = grid::unit(xr, "in"),
+        y = grid::unit(gl$H - (yy + gl$row_h / 2), "in"),
+        just = c("right", "centre"),
+        gp = grid::gpar(fontsize = gl$fs * 0.95, col = RP_MUTED,
+                        fontfamily = gl$family))))
+    }
+    marks
   }), recursive = FALSE)
+}
+
+# The levels a colour-split cell draws in row i: the ones the row HAS.
+rp_multi_drawn <- function(c, i) {
+  Filter(function(j) {
+    g <- c$lv[[j]]
+    if (identical(c$kind, "pair")) {
+      !is.na(g$a[[i]]) || !is.na(g$b[[i]])
+    } else {
+      !is.na((if (identical(c$kind, "box")) g$bc else g$c)[[i]])
+    }
+  }, seq_along(c$lv))
+}
+
+# The distance between two levels' lanes when each carries a number: the
+# larger of the lane plus its gap and a line of the label's type.
+rp_multi_pitch <- function(k, px, fs) {
+  h <- if (k > 2) px * 8 else px * 12
+  max(h + px * 2, fs * 0.95 / 72 * 1.25)
+}
+
+# Every row's height. A row is the table's one height unless a colour-split
+# column prints a number per level, and the row has more levels than that
+# height holds: then it grows to fit them, on the slide as on screen.
+rp_row_heights <- function(m, row_h, px, fs) {
+  out <- rep(row_h, m$n)
+  for (c in m$cols) {
+    if (!isTRUE(c$multi) || is.null(c$dw)) next
+    for (r in seq_len(m$n)) {
+      k <- length(rp_multi_drawn(c, r))
+      if (k < 2L) next
+      h <- if (k > 2) px * 8 else px * 12
+      need <- (k - 1) * rp_multi_pitch(k, px, fs) + h + px * 8
+      if (need > out[[r]]) out[[r]] <- need
+    }
+  }
+  out
 }
 
 # --- the header axis -----------------------------------------------------
@@ -510,7 +559,8 @@ rp_heights <- function(m, prep, lay, fs, row_h = NULL, title = NULL,
                              error = function(e) NULL)$groups) > 0L
 
   h <- list(
-    px = px, row_h = row_h, line_h = line_h, sub_line = sub_line,
+    px = px, row_h = row_h, rows = rp_row_heights(m, row_h, px, fs),
+    line_h = line_h, sub_line = sub_line,
     span_off = span_off, axis_h = axis_h,
     head_h = span_off + line_h + sub_line + axis_h + 0.06,
     title_h = if (is.null(title) || !nzchar(title)) 0 else fs / 72 * 2.4,
@@ -543,7 +593,8 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
   sub_h <- hh$sub_h
   cap_h <- hh$cap_h
   leg_h <- hh$leg_h
-  H <- hh$chrome + n * row_h + hh$fold_h
+  rows_h <- hh$rows
+  H <- hh$chrome + sum(rows_h) + hh$fold_h
 
   gl <- list(H = H, px = px, lane = px * 12, hair = px, row_h = row_h,
              fs = fs, family = family)
@@ -651,8 +702,14 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
   g <- c(g, list(rule(y, col = "#8d8b84", lwd = 0.9)))
 
   # body
+  gl_tab <- gl
+  ytops <- y + cumsum(c(0, rows_h))[seq_len(n)]
   for (r in seq_len(n)) {
-    ytop <- y + (r - 1) * row_h
+    ytop <- ytops[[r]]
+    # A row grown for its per-level numbers centres everything in it.
+    row_h <- rows_h[[r]]
+    gl <- gl_tab
+    gl$row_h <- row_h
     ind <- if (m$level[[r]] > 0L) 0.28 else 0
     g <- c(g, list(txt(m$label[[r]], lay$pad + ind, ytop + row_h / 2,
                        bold = isTRUE(m$parent_row[[r]]))))
@@ -663,7 +720,8 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
       lane_w <- w - lay$slot[i] - 2 * lay$pad
       k <- lay$kind[i]
       marks <- if (isTRUE(c$multi)) {
-        rp_multi(c, r, x0, lane_w, ytop, gl)
+        rp_multi(c, r, x0, lane_w, ytop, gl,
+                 xr = lay$x[i + 1] + w - lay$pad)
       } else if (k == "bar") {
         rp_bar(c, r, x0, lane_w, ytop, gl)
       } else if (k == "barsplit") {
@@ -693,8 +751,10 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
         p <- if (is.null(c$pct)) "" else c$pct[[min(r, length(c$pct))]]
         if (lay$is_glyph[i]) {
           xr <- lay$x[i + 1] + w - lay$pad
+          # Grey, as on screen: the number belongs to the mark beside it.
           g <- c(g, list(txt(trimws(paste(s, p)), xr, ytop + row_h / 2,
-                             just = "right", size = fs * 0.95)))
+                             just = "right", size = fs * 0.95,
+                             col = RP_MUTED)))
         } else {
           xr <- lay$x[i + 1] + w - lay$pad
           g <- c(g, list(txt(trimws(paste(s, p)), xr, ytop + row_h / 2,
@@ -705,7 +765,9 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
     }
     g <- c(g, list(rule(ytop + row_h)))
   }
-  y <- y + n * row_h
+  gl <- gl_tab
+  row_h <- hh$row_h
+  y <- y + sum(rows_h)
 
   # `top_n` is never a silent truncation: what fell below the cut says so on
   # the picture too (summarize_fold_text(), same string the table prints).
@@ -780,9 +842,16 @@ rp_slice <- function(m, idx) {
 #  * a page that OPENS mid-group repeats the parent row, marked as carried
 #    over -- the same rule static_table(continued = TRUE) applies to a
 #    section header, for the same reason.
-rp_page_rows <- function(m, per_page) {
+rp_page_rows <- function(m, per_page, heights = NULL, budget = NULL) {
   n <- m$n
   if (per_page >= n) return(list(seq_len(n)))
+  # Grown rows: a page takes rows while their heights fit the budget, at
+  # least one, instead of a fixed count.
+  fit <- function(from, room) {
+    if (is.null(heights)) return(room)
+    used <- cumsum(heights[seq.int(from, n)])
+    max(1L, sum(used <= room + 1e-9))
+  }
   lvl <- as.integer(m$level %||% rep(0L, n))
   par <- as.logical(m$parent_row %||% rep(FALSE, n))
   pages <- list()
@@ -794,13 +863,17 @@ rp_page_rows <- function(m, per_page) {
     # replaced by its parent restarted above where it began, and the loop
     # never terminated.)
     lead <- integer()
-    take <- per_page
-    if (at > 1L && lvl[[at]] > 0L && per_page >= 2L) {
+    take <- fit(at, if (is.null(heights)) per_page else budget)
+    if (at > 1L && lvl[[at]] > 0L && take >= 2L) {
       p <- at - 1L
       while (p >= 1L && lvl[[p]] > 0L) p <- p - 1L
       if (p >= 1L) {
         lead <- p
-        take <- per_page - 1L
+        take <- if (is.null(heights)) {
+          per_page - 1L
+        } else {
+          fit(at, budget - heights[[p]])
+        }
       }
     }
     end <- min(at + take - 1L, n)
@@ -832,7 +905,10 @@ summarize_paint_per_page <- function(m, prep, width_in = 12.5, max_height = 5.4,
   # chrome a CONTINUATION page carries, which is never less than page 1's.
   budget <- max_height - hh$chrome - hh$fold_h
 
-  max(1L, floor(budget / hh$row_h))
+  # Uniform rows divide; grown rows (per-level numbers) are counted from
+  # the top, which is what "does the table fit one page" asks.
+  if (all(hh$rows == hh$row_h)) return(max(1L, floor(budget / hh$row_h)))
+  max(1L, sum(cumsum(hh$rows) <= budget + 1e-9))
 }
 
 # One table, as many pictures as it takes. `max_height` is the slide's body
@@ -845,6 +921,9 @@ summarize_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
 
   per_page <- summarize_paint_per_page(m, prep, width_in, max_height, fs,
                                        family, row_h, title, subtitle, caption)
+  lay <- rp_layout(m, prep, width_in, fs = fs, family = family)
+  hh <- rp_heights(m, prep, lay, fs, row_h, title, subtitle, caption)
+  uniform <- all(hh$rows == hh$row_h)
 
   if (per_page >= m$n) {
     p <- summarize_paint_grob(m, prep, width_in = width_in, fs = fs,
@@ -853,7 +932,12 @@ summarize_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
     return(list(p))
   }
 
-  pages <- rp_page_rows(m, per_page)
+  pages <- if (uniform) {
+    rp_page_rows(m, per_page)
+  } else {
+    rp_page_rows(m, per_page, heights = hh$rows,
+                 budget = max_height - hh$chrome - hh$fold_h)
+  }
   n_pg <- length(pages)
   lapply(seq_along(pages), function(k) {
     idx <- pages[[k]]

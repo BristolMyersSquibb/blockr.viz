@@ -70,6 +70,7 @@ static_summarize_table <- function(data, ...) {
   cells <- summarize_cells(
     prep,
     cfg = list(axis = args$axis %||% TRUE, sortable = args$sortable %||% TRUE,
+               value_labels = args$value_labels %||% TRUE,
                bar_width = args$bar_width)
   )
 
@@ -333,7 +334,8 @@ report_call.summarize_table_block <- function(x, var, ...) {
     value = ".count", func = "count", id_var = NULL,
     summaries = NULL, by = NULL, facet_layout = "by_summary",
     bar_mode = "stacked", cols = NULL, fields = NULL,
-    sort_by = "value", sort_dir = "desc", top_n = NULL, axis = TRUE
+    sort_by = "value", sort_dir = "desc", top_n = NULL, axis = TRUE,
+    value_labels = TRUE
   )
 
   args <- list()

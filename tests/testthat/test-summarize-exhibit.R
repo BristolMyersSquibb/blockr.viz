@@ -187,3 +187,39 @@ test_that("a long table is paged rather than overflowing the slide", {
 
   expect_gt(length(doc), 1L)
 })
+
+test_that("a slide row grows to hold one number per colour level", {
+  d <- data.frame(
+    TERM = rep(c("Headache", "Fatigue", "Rash"), each = 30L),
+    GRADE = factor(rep(c("1", "2", "3"), times = 30L)),
+    SDY = rep(1:30, 3L),
+    stringsAsFactors = FALSE
+  )
+  d$EDY <- d$SDY + as.integer(d$GRADE) * 3L
+  sm <- list(list(type = "pair", from = "SDY", from_func = "mean",
+                  to = "EDY", to_func = "mean", color = "GRADE"))
+  prep <- summarize_prepare(d, by = "TERM", summaries = sm)
+  on <- summarize_cells(prep)
+  off <- summarize_cells(prep, cfg = list(value_labels = FALSE))
+  lay <- rp_layout(on, prep, 9)
+  h_on <- rp_heights(on, prep, lay, 9)
+  h_off <- rp_heights(off, prep, rp_layout(off, prep, 9), 9)
+  # Three levels per row: the rows grow with the numbers, not without.
+  expect_true(all(h_on$rows > h_on$row_h))
+  expect_true(all(h_off$rows == h_off$row_h))
+  # The painter stacks every level's number in the value slot.
+  g <- summarize_paint_grob(on, prep, width_in = 9)
+  labs <- unlist(lapply(g$grob$children, function(x) {
+    if (inherits(x, "text")) x$label
+  }))
+  for (j in 1:3) {
+    expect_true(any(labs == formatC(j * 3, format = "f", digits = 0L)),
+                info = j)
+  }
+  # A page that held every uniform row holds fewer grown ones.
+  budget <- h_off$chrome + 2.2 * h_off$row_h + h_off$fold_h
+  expect_gte(summarize_paint_per_page(off, prep, 9, budget), 2L)
+  expect_lt(summarize_paint_per_page(on, prep, 9, budget), 2L)
+  pages <- summarize_paint_pages(on, prep, 9, budget)
+  expect_length(pages, 3L)
+})

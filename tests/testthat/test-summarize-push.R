@@ -582,7 +582,21 @@ test_that("a pair column ships both ends, the band, the ref and the flags", {
   # A `to` below the band's low end is drawn open.
   expect_identical(c1$open, !is.na(b) & b < 5)
   expect_true(is.finite(c1$rf))
-  expect_match(c1$disp[[1]], "^\\+")
+  # Every change is >= 0, so no "+": a column of durations reads "8.2".
+  expect_match(c1$disp[[1]], "^[0-9]")
+})
+
+test_that("a pair column with a negative change signs every label", {
+  ae <- push_fixture()
+  t2 <- ae$TERM == "T2"
+  ae$EDY[t2] <- ae$SDY[t2] - 50
+  prep <- summarize_prepare(ae, by = "TERM", summaries = list(
+    list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
+         to_func = "mean")
+  ))
+  d <- summarize_cells(prep)$cols[[1]]$disp
+  d <- d[nzchar(d)]
+  expect_true(all(grepl("^[+-]", d)))
 })
 
 test_that("a coloured pair column draws one dumbbell per level", {
@@ -615,14 +629,23 @@ test_that("a coloured pair column draws one dumbbell per level", {
   expect_length(c1$lv, 2L)
   expect_true(all(c1$lv[[1]]$fill == c1$fills[[1]]))
   expect_match(c1$lv[[2]]$tip[[1]], "^MODERATE \u00b7 ")
-  # Two dumbbells, so no single change printed beside them.
-  expect_true(all(c1$disp == ""))
+  # No single number for the cell: each level prints its own change beside
+  # its dumbbell, in the column's one slot width.
+  expect_null(c1$disp)
+  expect_true(c1$dw >= 1L)
+  for (j in 1:2) {
+    g <- c1$lv[[j]]
+    drawn <- !is.na(g$a) & !is.na(g$b)
+    expect_true(all(nzchar(g$disp[drawn])), info = j)
+  }
   html <- summarize_cells_html(summarize_cells(prep))
   expect_match(html, "blockr-summarize-multi", fixed = TRUE)
   expect_match(html, "blockr-summarize-pacell", fixed = TRUE)
+  expect_match(html, paste0("blockr-summarize-lv blockr-summarize-barwrap",
+                            "[^>]*>.*?blockr-summarize-barval"))
 })
 
-test_that("a coloured pair of one level per row keeps its value label", {
+test_that("a coloured pair of one level per row labels that level", {
   ae <- push_fixture()
   ae <- ae[!duplicated(ae$USUBJID), ]
   prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
@@ -630,7 +653,45 @@ test_that("a coloured pair of one level per row keeps its value label", {
   ))
   c1 <- summarize_cells(prep)$cols[[1]]
   expect_true(isTRUE(c1$multi))
-  expect_true(all(grepl("^\\+", c1$disp)))
+  labs <- Reduce(function(x, g) ifelse(nzchar(g$disp), g$disp, x),
+                 c1$lv, rep("", length(c1$v)))
+  expect_true(all(nzchar(labs)))
+})
+
+test_that("value_labels = FALSE drops every value label", {
+  ae <- push_fixture()
+  prep <- summarize_prepare(ae, by = "TERM", summaries = list(
+    list(type = "simple", func = "count", show = "bar"),
+    list(type = "dist", col = "DUR", show = "box"),
+    list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
+         to_func = "mean", color = "SEV")
+  ))
+  on <- summarize_cells(prep)
+  off <- summarize_cells(prep, cfg = list(value_labels = FALSE))
+  expect_false(is.null(on$cols[[1]]$disp))
+  for (c in off$cols) {
+    expect_null(c$disp)
+    expect_null(c$dw)
+    for (g in c$lv) expect_null(g$disp)
+  }
+  html <- summarize_cells_html(off)
+  expect_false(grepl("blockr-summarize-barval", html, fixed = TRUE))
+  # The payload ships no label for the browser to draw either.
+  pl <- summarize_flat_payload(off)
+  expect_false(any(vapply(pl$cols, function(c) !is.null(c$dw), logical(1))))
+})
+
+test_that("value labels print one decimal finer than the column axis", {
+  # Ticks every 10 (0..50): one decimal.
+  expect_identical(summarize_val_digits(c(17.6667, 4.33), 0, 50), 1L)
+  expect_identical(summarize_val_str(c(17.6667, NA), 1L), c("17.7", ""))
+  # Ticks every 0.5: two.
+  expect_identical(summarize_val_digits(c(1.234, 2.5), 0, 2), 2L)
+  # Whole numbers stay whole, whatever the axis.
+  expect_identical(summarize_val_digits(c(3, 12, 40), 0, 1), 0L)
+  # No axis: lane_fmt's significant digits.
+  expect_true(is.na(summarize_val_digits(c(1.23456), NULL, NULL)))
+  expect_identical(summarize_val_str(1.23456, NA_integer_), lane_fmt(1.23456))
 })
 
 test_that("a pair row names a missing column", {

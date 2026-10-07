@@ -694,8 +694,14 @@
       } else {
         inner = c.kind === "box" ? boxHtml(g, i) : prHtml(g, i);
       }
-      s += '<div class="blockr-summarize-lv" style="--blockr-summarize-fill:' +
-        c.fills[j] + '">' + inner + "</div>";
+      // With value labels on, each level is its own barwrap: the lane, then
+      // the level's number in the column's one slot width.
+      var lab = g.disp && c.dw != null;
+      s += '<div class="blockr-summarize-lv' +
+        (lab ? " blockr-summarize-barwrap" : "") +
+        '" style="--blockr-summarize-fill:' + c.fills[j] + '">' + inner +
+        (lab ? '<span class="blockr-summarize-barval" style="width:' + c.dw +
+          'ch">' + g.disp[i] + "</span>" : "") + "</div>";
     }
     return s + "</div>";
   }
@@ -1118,6 +1124,8 @@
   // The per-column tick strip under the header: the domain named ONCE, for
   // every mark that sits on a scale. Off for a dense exhibit that carries its
   // scale in the numbers beside the marks.
+  var VALUES_OPT = [{ value: "on", label: "Show values" },
+                    { value: "off", label: "Off" }];
   var AXIS_OPT = [{ value: "on", label: "Column axis" },
                   { value: "off", label: "No column axis" }];
   // The length of the labelled marks (R: summarize_bar_width). Fit fills the
@@ -1210,6 +1218,9 @@
     sortable: { label: "Header sorting", kind: "segmented",
                 options: SORTABLE_OPT },
     axis:     { label: "Column axis", kind: "segmented", options: AXIS_OPT },
+    // The Values switch, the chart block's word for it: every mark's number
+    // beside it, one per level on a colour split.
+    value_labels: { label: "Values", kind: "segmented", options: VALUES_OPT },
     bar_width: { label: "Bar width", kind: "segmented",
                  options: BAR_WIDTH_OPT },
     download: { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
@@ -2228,10 +2239,10 @@
           render: function (sec) { renderSummariesEditor(sec, ctx); }
         }] : [],
         presentation: fcols.length === 1
-          ? ["sort_by", "sort_dir", "facet_layout", "search", "sortable",
-             "axis", "download", "bar_width"]
-          : ["sort_by", "sort_dir", "search", "sortable", "axis", "download",
-             "bar_width"],
+          ? ["sort_by", "sort_dir", "facet_layout", "value_labels", "search",
+             "sortable", "axis", "download", "bar_width"]
+          : ["sort_by", "sort_dir", "value_labels", "search", "sortable",
+             "axis", "download", "bar_width"],
         drillToggle: "drill",
         drillDefault: (cfg.by && cfg.by.length)
           ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),
@@ -2263,6 +2274,7 @@
     // The measure sits in Mapping, as the chart's does: no Aggregation
     // section of its own.
     aggTitle = null;
+    pres.push("value_labels");
     pres.push("search");
     pres.push("sortable");
     pres.push("axis");

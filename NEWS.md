@@ -1,3 +1,16 @@
+# blockr.viz 0.2.207
+
+* The summarize table has a Values switch in its gear (`value_labels`,
+  default on). Off drops every number printed beside a mark.
+* A colour-split column (a dumbbell, box or dot range per grade, say) prints
+  one number per level, beside that level's lane. Before, the cell printed
+  none. The row grows to hold them, on screen and on the slide, so a long
+  table can take more slides.
+* Value labels print one decimal finer than the column axis's ticks (ticks
+  every 10 read "17.7"); whole numbers stay whole. A dumbbell's change only
+  carries a "+" when the column also has a negative change.
+* Value labels are grey.
+
 # blockr.viz 0.2.205
 
 * A number in a block's title or subtitle is typed over instead of opening a

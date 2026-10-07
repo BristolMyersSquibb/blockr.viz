@@ -121,11 +121,14 @@ summarize_table_css <- function() {
   min-width: 0;
   max-width: none;
 }
+/* Grey: the number belongs to the mark beside it and should not outshout
+   the label column. */
 .blockr-summarize-barval {
   flex: 0 0 auto;
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 .blockr-summarize-table .blockr-summarize-pct {
   color: var(--blockr-color-text-muted, #6b7280);
@@ -290,6 +293,14 @@ summarize_table_css <- function() {
      default and only the whiskers and the median tick take the colour. */
   --blockr-summarize-sub: color-mix(in srgb, var(--blockr-summarize-fill) 45%,
                                transparent);
+}
+/* A colour-split cell with value labels: one number per level, beside its
+   lane. A tight line, so a level is barely taller than its lane and a row of
+   five levels grows by what the numbers need. The type stays the cell's:
+   the slot is sized in ch and has to match the axis pad above it. */
+.blockr-summarize-multi .blockr-summarize-lv.blockr-summarize-barwrap
+  .blockr-summarize-barval {
+  line-height: 14px;
 }
 .blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3)
   .blockr-summarize-lane,

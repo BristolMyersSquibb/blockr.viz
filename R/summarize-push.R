@@ -47,6 +47,11 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
   # print the same string and the drift guard stays green.
   sortv <- function(v) if (is.numeric(v)) round(v, 4L) else v
 
+  # The table's Values switch (`value_labels`, default on): off drops every
+  # value label beside a mark, whatever the mark. Number and text columns ARE
+  # their values and are not touched.
+  vals_on <- !isFALSE(cfg$value_labels)
+
   # NA stays NA: a no-value cell (the identity measure's absent facet) draws
   # NO fill at all, where 0 draws the visible zero-width sliver.
   # Parametric over the scale: summaries-path plan entries carry their own
@@ -69,10 +74,15 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
   # The in-bar value label: the raw measure (never the width percentage),
   # with the counting measures' "(43%)" tail when the plan carries a base.
   val_parts <- function(p, vraw, signed = FALSE) {
-    if (!isTRUE(p$show_val)) return(NULL)
+    if (!vals_on || !isTRUE(p$show_val)) return(NULL)
+    dom <- summarize_axis_domain(p, prep)
+    dig <- summarize_val_digits(vraw, dom$d0, dom$d1)
     parts <- summarize_num_parts(vraw, denom = p$val_denom,
                                  combined = !is.null(p$val_denom),
-                                 signed = signed)
+                                 signed = signed,
+                                 fmt = if (!is.na(dig)) {
+                                   function(v) summarize_val_str(v, dig)
+                                 })
     # formatC pads "fg" output to a common width; harmless in a collapsing
     # HTML cell but it would inflate the label slot -- trim before measuring.
     parts$disp <- trimws(parts$disp)
@@ -214,6 +224,15 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       # One glyph from one set of stat columns. Called once for a plain
       # column, once per level for a colour-split one (`p$lcols`), so both
       # shapes ship exactly the same geometry per glyph.
+      # The value label: the centre, at one precision for the whole column
+      # (every colour level's centres together).
+      lab_on <- vals_on && isTRUE(p$show_val)
+      dig <- if (lab_on) {
+        centres <- unlist(lapply(c(list(p$cols), p$lcols), function(cn) {
+          if (!is.na(cn["bc"])) rows[[cn[["bc"]]]]
+        }))
+        summarize_val_digits(centres, p$dmin, p$dmax)
+      }
       glyph <- function(cn, lvl = NULL) {
       # A missing stat column (the single-value "dot": a pointrange with no
       # interval) reads as all-NA, which the emitters draw as center-only.
@@ -228,8 +247,8 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       bl <- col_or_na("bl")
       bh <- col_or_na("bh")
       nn <- col_or_na("n")
-      lab <- if (isTRUE(p$show_val)) {
-        disp <- lane_fmt(bc)
+      lab <- if (lab_on) {
+        disp <- summarize_val_str(bc, dig)
         list(disp = disp, dw = max(c(1L, nchar(disp))))
       }
       # A split glyph's tooltip names its level first: colour is never the
@@ -285,18 +304,18 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       } else {
         # Colour split: one lane per level inside the cell, in level order,
         # sharing the column's scale. The pooled glyph still supplies the
-        # sort value; its own lane is not drawn, and neither is the value
-        # label (a single number beside two glyphs matches neither).
+        # sort value; its own lane is not drawn. Each level carries its own
+        # value label beside its lane; the column keeps one slot width.
+        lv <- lapply(seq_along(p$lcols), function(j) {
+          g <- glyph(p$lcols[[j]], p$levels[[j]])
+          g$dw <- NULL
+          g$kind <- NULL
+          g$v <- NULL
+          g
+        })
         c(list(kind = p$kind, multi = TRUE, levels = as.character(p$levels),
-               fills = as.character(p$fills), v = base$v),
-          list(lv = lapply(seq_along(p$lcols), function(j) {
-            g <- glyph(p$lcols[[j]], p$levels[[j]])
-            g$disp <- NULL
-            g$dw <- NULL
-            g$kind <- NULL
-            g$v <- NULL
-            g
-          })))
+               fills = as.character(p$fills), v = base$v, lv = lv),
+          if (lab_on) list(dw = summarize_multi_dw(lv)))
       }
     } else if (identical(p$kind, "pair")) {
       # The dumbbell: `from` and `to` as positions, the segment between them
@@ -306,6 +325,15 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       dmx <- p$dmax %||% mx
       wd <- p$words %||% list(from = "From", to = "To")
       fills <- as.character(p$fills %||% character())
+      # The value label is the change from `from` to `to`, at one precision
+      # for the whole column. A "+" only where the column also holds a
+      # negative change: a column of durations reads "18", not "+18".
+      lab_on <- vals_on && isTRUE(p$show_val)
+      deltas <- unlist(lapply(c(list(p$cols), p$lcols), function(cn) {
+        rows[[cn[["b"]]]] - rows[[cn[["a"]]]]
+      }))
+      dig <- if (lab_on) summarize_val_digits(deltas, p$dmin, p$dmax)
+      signed <- any(deltas < 0, na.rm = TRUE)
       # One dumbbell from one set of end columns, like the glyph above:
       # once for a plain column, once per level for a colour-split one.
       dumbbell <- function(cn, didx, fill, lvl = NULL) {
@@ -334,8 +362,10 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
                               ifelse(is.na(lo), "", lane_fmt(lo)), "\u2013",
                               ifelse(is.na(hi), "", lane_fmt(hi))), "")
         )))
-        disp <- ifelse(both, paste0(ifelse(delta >= 0, "+", ""),
-                                    lane_fmt(delta)), "")
+        disp <- if (lab_on) {
+          ifelse(both, paste0(ifelse(signed & delta >= 0, "+", ""),
+                              summarize_val_str(delta, dig)), "")
+        }
         list(kind = "pair",
              a = pos_w(a), b = pos_w(b),
              l = ifelse(both, pos_w(pmin(a, b)), NA_real_),
@@ -346,7 +376,7 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
              fill = fill,
              dash = !is.na(di) & di > 1L,
              open = open, tip = tip, v = sortv(b),
-             disp = disp, dw = max(c(1L, nchar(disp))))
+             disp = disp, dw = if (lab_on) max(c(1L, nchar(disp))))
       }
       fi <- rows[[p$fidx]]
       base <- dumbbell(p$cols, p$didx, if (length(fills)) {
@@ -359,25 +389,18 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       } else {
         # Colour split: one dumbbell per level, in level order, on the
         # column's one scale; a level with no rows in the group draws none.
-        # The pooled pair supplies the sort value. The value label stays only
-        # when NO row draws two levels (a table by subject): there it is
-        # that level's change, while beside two dumbbells it would match
-        # neither, and labelling just the one-level rows of a mixed column
-        # reads as if the others had no value.
+        # The pooled pair supplies the sort value. Each level carries its own
+        # change beside its dumbbell; the column keeps one slot width.
         lv <- lapply(seq_along(p$lcols), function(j) {
           g <- dumbbell(p$lcols[[j]], p$ldidx[[j]], rep(fills[[j]], n),
                         p$levels[[j]])
-          g[c("kind", "rf", "v", "disp", "dw")] <- NULL
+          g[c("kind", "rf", "v", "dw")] <- NULL
           g
         })
-        drawn <- Reduce(`+`, lapply(lv, function(g) {
-          !is.na(g$a) | !is.na(g$b)
-        }), 0L)
-        disp <- if (any(drawn > 1L)) rep("", n) else base$disp
         list(kind = "pair", multi = TRUE,
              levels = as.character(p$levels), fills = fills,
              rf = base$rf, v = base$v, lv = lv,
-             disp = disp, dw = max(c(1L, nchar(disp))))
+             dw = if (lab_on) summarize_multi_dw(lv))
       }
     } else if (identical(p$kind, "interval")) {
       # Swimlane segments: [left, width, fill-index] triples per row, plus a
@@ -488,8 +511,10 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       # The sparkline column always sorts (and labels) by the LAST value;
       # with a companion rank bar, `.v` carries that bar's aggregate instead.
       last_y <- rows[[p$key %||% ".last"]] %||% rows$.last %||% rows$.v
-      lab <- if (isTRUE(p$show_val)) {
-        disp <- lane_fmt(last_y)
+      lab <- if (vals_on && isTRUE(p$show_val)) {
+        disp <- summarize_val_str(last_y, summarize_val_digits(
+          last_y, yd[[1L]], yd[[2L]]
+        ))
         list(disp = disp, dw = max(c(1L, nchar(disp))))
       }
       list(kind = "sparkline", pl = pull("pl"), bd = pull("bd"),
@@ -729,6 +754,46 @@ summarize_axis_ticks <- function(d0, d1, k = 4L) {
   step <- cand[[which.min(abs(cand - raw))]]
   t <- seq(ceiling(d0 / step) * step, d1, by = step)
   t[t >= d0 & t <= d1]
+}
+
+#' How many decimals a column's value labels print: one finer than its axis
+#' ticks, so ticks every 10 read "17.7" and ticks every 0.5 read "2.25".
+#' Whole numbers (counts) stay whole. `NA` when the column has no axis to
+#' read the step off: those labels keep lane_fmt()'s significant digits.
+#' `x` is every value the column prints, all colour levels together, so one
+#' column prints one precision.
+#' @noRd
+summarize_val_digits <- function(x, d0 = NULL, d1 = NULL) {
+  x <- x[is.finite(x)]
+  if (length(x) && all(abs(x - round(x)) < 1e-9)) return(0L)
+  if (!length(d0) || !length(d1) || !is.finite(d0) || !is.finite(d1)) {
+    return(NA_integer_)
+  }
+  at <- summarize_axis_ticks(d0, d1)
+  if (length(at) < 2L) return(NA_integer_)
+  step <- at[[2L]] - at[[1L]]
+  dig <- 0L
+  while (dig < 6L && abs(round(step, dig) - step) > 1e-9 * max(1, step)) {
+    dig <- dig + 1L
+  }
+  dig + 1L
+}
+
+#' A value label at `dig` decimals (summarize_val_digits()); `NA` digits fall
+#' back to lane_fmt(). An NA value prints as "".
+#' @noRd
+summarize_val_str <- function(x, dig) {
+  if (is.na(dig)) return(lane_fmt(x))
+  out <- formatC(x, format = "f", digits = dig, big.mark = "")
+  out[is.na(x)] <- ""
+  out
+}
+
+#' The value slot of a colour-split column: one width for every level's
+#' label, so the lanes of all levels and rows end at the same x.
+#' @noRd
+summarize_multi_dw <- function(lv) {
+  max(c(1L, unlist(lapply(lv, function(g) nchar(g$disp %||% "")))))
 }
 
 # The calendar ladder: step, its length in days (for picking) and the format a
@@ -1188,10 +1253,23 @@ summarize_multi_html <- function(c) {
         summarize_pr_html(g)
       key <- if (identical(c$kind, "box")) g$bc else g$c
     }
+    # With value labels on, each level is its own barwrap: the lane, then
+    # the level's number in the column's one slot width, so the numbers
+    # stack beside the lanes they belong to.
+    lab <- !is.null(g$disp) && !is.null(c$dw)
     ifelse(is.na(key), "",
-           paste0("<div class=\"blockr-summarize-lv\"",
+           paste0("<div class=\"blockr-summarize-lv",
+                  if (lab) " blockr-summarize-barwrap", "\"",
                   " style=\"--blockr-summarize-fill:", c$fills[[j]], "\">",
-                  html, "</div>"))
+                  html,
+                  if (lab) {
+                    paste0("<span class=\"blockr-summarize-barval\"",
+                           " style=\"width:", c$dw, "ch\">", g$disp,
+                           "</span>")
+                  } else {
+                    ""
+                  },
+                  "</div>"))
   })
   paste0("<div class=\"blockr-summarize-multi\">",
          do.call(paste0, parts), "</div>")
@@ -1360,6 +1438,9 @@ summarize_flat_payload <- function(m) {
           o$ow <- arr(g$ow)
         }
         o$tip <- arr(as.character(g$tip))
+        if (isTRUE(c$multi) && !is.null(g$disp)) {
+          o$disp <- arr(as.character(g$disp))
+        }
         # The statistics, for the hover card: one array per stat that exists.
         if (length(g$r)) o$r <- lapply(g$r, arr)
         # Column-level, and only when true: the assembler reads an absent
@@ -1385,6 +1466,9 @@ summarize_flat_payload <- function(m) {
         o$dash <- arr(g$dash)
         o$open <- arr(g$open)
         o$tip <- arr(as.character(g$tip))
+        if (isTRUE(c$multi) && !is.null(g$disp)) {
+          o$disp <- arr(as.character(g$disp))
+        }
         o
       }
       if (!is.na(c$rf)) out$rf <- c$rf
@@ -1430,6 +1514,10 @@ summarize_flat_payload <- function(m) {
     if (!identical(c$kind, "num") && !is.null(c$disp)) {
       out$disp <- arr(as.character(c$disp))
       if (!is.null(c$pct)) out$pct <- arr(as.character(c$pct))
+      out$dw <- c$dw
+    } else if (isTRUE(c$multi) && !is.null(c$dw)) {
+      # A colour-split column's labels ride on its levels; the slot width
+      # is the column's.
       out$dw <- c$dw
     }
     out$v <- arr(c$v)

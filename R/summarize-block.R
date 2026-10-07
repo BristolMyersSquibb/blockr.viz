@@ -113,6 +113,12 @@
 #'   difference bar, the x domain (dates as dates) for a swimlane or a
 #'   sparkline. `FALSE` drops every strip, for a dense exhibit where the
 #'   numbers beside the marks carry the scale.
+#' @param value_labels Print each mark's value beside it (default `TRUE`):
+#'   a bar's value, a box's or a dot range's centre, a dumbbell's change, a
+#'   sparkline's last value. A colour-split column prints one number per
+#'   level, beside its lane. Labels print one decimal finer than the column
+#'   axis's ticks; whole numbers stay whole. `FALSE` drops them all. Number
+#'   and text columns are their values and are not affected.
 #' @param bar_width Length of the marks that carry a value label (bars,
 #'   boxes, dot ranges, sparklines). `"fit"` (default) fills the panel, from
 #'   80px up to a 320px ceiling; `"narrow"`, `"medium"` and `"wide"` fix the
@@ -183,6 +189,7 @@ new_summarize_table_block <- function(group = NULL,
                                       search = TRUE,
                                       sortable = TRUE,
                                       axis = TRUE,
+                                      value_labels = TRUE,
                                       bar_width = "fit",
                                       download = FALSE,
                                       title = NULL,
@@ -300,6 +307,7 @@ new_summarize_table_block <- function(group = NULL,
         r_search  <- shiny::reactiveVal(isTRUE(search))
         r_sortable <- shiny::reactiveVal(isTRUE(sortable))
         r_axis    <- shiny::reactiveVal(isTRUE(axis))
+        r_value_labels <- shiny::reactiveVal(!isFALSE(value_labels))
         r_bar_width <- shiny::reactiveVal(summarize_bar_width(bar_width))
         r_download <- shiny::reactiveVal(isTRUE(download))
         r_title   <- shiny::reactiveVal(title)
@@ -485,7 +493,8 @@ new_summarize_table_block <- function(group = NULL,
               if (!identical(sv, r_values())) r_values(sv)
               return()
             }
-            if (!key %in% c("search", "sortable", "axis", "download") &&
+            if (!key %in% c("search", "sortable", "axis", "value_labels",
+                            "download") &&
                   is.null(setters[[key]])) return()
             val <- act$value
             if (key %in% c("title", "subtitle", "caption")) {
@@ -506,6 +515,8 @@ new_summarize_table_block <- function(group = NULL,
               r_sortable(identical(as.character(val)[[1L]], "on"))
             } else if (identical(key, "axis")) {
               r_axis(identical(as.character(val)[[1L]], "on"))
+            } else if (identical(key, "value_labels")) {
+              r_value_labels(identical(as.character(val)[[1L]], "on"))
             } else if (identical(key, "download")) {
               r_download(identical(as.character(val)[[1L]], "on"))
             } else if (identical(key, "top_n")) {
@@ -686,6 +697,7 @@ new_summarize_table_block <- function(group = NULL,
               sort_by = r_sort_by(), sort_dir = r_sort_dir(),
               top_n = r_top_n(), search = r_search(),
               sortable = r_sortable(), axis = r_axis(),
+              value_labels = r_value_labels(),
               bar_width = r_bar_width(),
               download = r_download(), drill = r_drill(),
               ctrl_target = r_ctrl_target(),
@@ -793,6 +805,7 @@ new_summarize_table_block <- function(group = NULL,
               facet_layout = r_facet_layout(), bar_mode = r_bar_mode(),
               cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
               sort_dir = r_sort_dir(), top_n = r_top_n(), axis = r_axis(),
+              value_labels = r_value_labels(),
               sortable = r_sortable(), bar_width = r_bar_width(),
               title = r_title(), subtitle = r_subtitle(),
               caption = r_caption(),
@@ -935,7 +948,8 @@ new_summarize_table_block <- function(group = NULL,
             cols = r_cols, fields = r_fields, sort_by = r_sort_by,
             sort_dir = r_sort_dir, top_n = r_top_n,
             max_height = r_max_height, search = r_search,
-            sortable = r_sortable, axis = r_axis, bar_width = r_bar_width,
+            sortable = r_sortable, axis = r_axis,
+            value_labels = r_value_labels, bar_width = r_bar_width,
             download = r_download,
             title = r_title, subtitle = r_subtitle, caption = r_caption,
             drill = r_drill, ctrl_target = r_ctrl_target,
@@ -982,7 +996,8 @@ new_summarize_table_block <- function(group = NULL,
       "group", "value", "func", "id_var", "summaries", "by", "facet_layout",
       "parent", "color", "bar_mode",
       "facet", "cols", "fields", "sort_by", "sort_dir", "top_n",
-      "max_height", "search", "sortable", "axis", "bar_width", "download",
+      "max_height", "search", "sortable", "axis", "value_labels",
+      "bar_width", "download",
       "title",
       "subtitle",
       "caption",
@@ -1255,6 +1270,17 @@ summarize_arguments <- function() {
         "instead of a track repeated on every row. Applies to every mark: ",
         "value domain for bars, boxes and dot ranges, x domain (dates as ",
         "dates) for swimlanes and sparklines. FALSE drops them all."
+      ),
+      example = TRUE,
+      type = arg_boolean()
+    ),
+    value_labels = new_arg_spec(
+      paste0(
+        "Print each mark's value beside it (default TRUE): a bar's value, a ",
+        "box's or dot range's centre, a dumbbell's change, a sparkline's ",
+        "last value; a colour-split column prints one number per level. ",
+        "FALSE drops them all. Use for \"show the numbers\" / \"hide the ",
+        "numbers\"."
       ),
       example = TRUE,
       type = arg_boolean()

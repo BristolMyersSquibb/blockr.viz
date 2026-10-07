@@ -79,7 +79,8 @@ summarize_table <- function(data, group = NULL, value = ".count",
                             facet = NULL, cols = NULL, fields = NULL,
                             sort_by = "value", sort_dir = "desc", top_n = NULL,
                             max_height = NULL, search = TRUE, sortable = TRUE,
-                            axis = TRUE, bar_width = "fit", title = NULL,
+                            axis = TRUE, value_labels = TRUE,
+                            bar_width = "fit", title = NULL,
                             subtitle = NULL, caption = NULL, drill = NULL,
                             scale_map = NULL, elem_id = NULL, active = NULL,
                             expanded = FALSE) {
@@ -115,7 +116,8 @@ summarize_table <- function(data, group = NULL, value = ".count",
     summaries = summaries, by = by, facet_layout = facet_layout,
     bar_mode = bar_mode, cols = cols, fields = fields, sort_by = sort_by,
     sort_dir = sort_dir, top_n = top_n, search = search,
-    sortable = sortable, axis = axis, bar_width = bar_width, drill = drill,
+    sortable = sortable, axis = axis, value_labels = value_labels,
+    bar_width = bar_width, drill = drill,
     titles = list(
       title = title, subtitle = subtitle, caption = caption,
       title_state = title_raw, subtitle_state = subtitle_raw,
@@ -389,7 +391,8 @@ summarize_attr <- function(data, nm) {
 #' when the column shows both. Data, never markup -- the consumers wrap it.
 #' @noRd
 summarize_num_parts <- function(v, denom = NULL, combined = FALSE,
-                                signed = FALSE, pct_only = FALSE) {
+                                signed = FALSE, pct_only = FALSE,
+                                fmt = NULL) {
   if (isTRUE(signed)) {
     return(list(disp = ifelse(
       is.na(v), "",
@@ -412,8 +415,13 @@ summarize_num_parts <- function(v, denom = NULL, combined = FALSE,
   # (R/lane-stats.R), so a split bar's label and a box's centre read alike. "fg"
   # keeps whole numbers whole: a count of 12345 stays 12345, a mean of 155.625
   # reads 155.6 rather than spelling out a precision the estimate has not got.
-  n <- ifelse(is.na(v), "",
-              formatC(v, format = "fg", digits = 4L, big.mark = ""))
+  # `fmt`, when given, is the value label's own precision (one digit finer
+  # than the column's axis, summarize_val_digits()).
+  n <- ifelse(is.na(v), "", if (is.null(fmt)) {
+    formatC(v, format = "fg", digits = 4L, big.mark = "")
+  } else {
+    fmt(v)
+  })
   if (isTRUE(combined) && !is.null(pct)) {
     return(list(
       disp = n,
@@ -510,6 +518,7 @@ summarize_table_attrs <- function(prep, cfg) {
   cfg$search <- if (isTRUE(cfg$search)) "on" else "off"
   cfg$sortable <- if (isTRUE(cfg$sortable %||% TRUE)) "on" else "off"
   cfg$axis <- if (isTRUE(cfg$axis %||% TRUE)) "on" else "off"
+  cfg$value_labels <- if (isFALSE(cfg$value_labels)) "off" else "on"
   cfg$download <- if (isTRUE(cfg$download)) "on" else "off"
   cfg$bar_width <- summarize_bar_width(cfg$bar_width)
   json <- as.character(jsonlite::toJSON(cfg, auto_unbox = TRUE, null = "null"))
