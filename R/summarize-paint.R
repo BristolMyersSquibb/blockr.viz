@@ -126,7 +126,7 @@ rp_layout <- function(m, prep, width_in, fs = 9, family = "sans",
     # `dw` is there exactly when the column prints labels: on the column for
     # a plain mark, beside each level's lane for a colour split.
     if (!is_glyph[i] || is.null(c$dw)) return(0)
-    c$dw * rp_ch(fs, family) + pad
+    c$dw * rp_ch(fs * RP_VAL_SIZE, family) + pad
   }, numeric(1L))
 
   # A swimlane marked `size = "lg"` is the centerpiece of its table and the
@@ -416,6 +416,10 @@ rp_sparkline <- function(c, i, x, w, ytop, gl, fill = RP_FILL) {
 
 # Only the levels the row HAS are stacked, as on screen (summarize_multi_html()
 # skips the rest), so a row of one level draws one full-height lane.
+# The value labels' type, as a share of the table's: between the cells and
+# the axis ticks (0.78), as on screen (11px against 13px cells).
+RP_VAL_SIZE <- 0.85
+
 rp_multi <- function(c, i, x, w, ytop, gl, xr = NULL) {
   drawn <- rp_multi_drawn(c, i)
   k <- length(drawn)
@@ -455,7 +459,7 @@ rp_multi <- function(c, i, x, w, ytop, gl, xr = NULL) {
         lv$disp[[i]], x = grid::unit(xr, "in"),
         y = grid::unit(gl$H - (yy + gl$row_h / 2), "in"),
         just = c("right", "centre"),
-        gp = grid::gpar(fontsize = gl$fs * 0.95, col = RP_MUTED,
+        gp = grid::gpar(fontsize = gl$fs * RP_VAL_SIZE, col = RP_MUTED,
                         fontfamily = gl$family))))
     }
     marks
@@ -478,7 +482,7 @@ rp_multi_drawn <- function(c, i) {
 # larger of the lane plus its gap and a line of the label's type.
 rp_multi_pitch <- function(k, px, fs) {
   h <- if (k > 2) px * 8 else px * 12
-  max(h + px * 2, fs * 0.95 / 72 * 1.25)
+  max(h + px * 2, fs * RP_VAL_SIZE / 72 * 1.25)
 }
 
 # Every row's height. A row is the table's one height unless a colour-split
@@ -753,7 +757,7 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
           xr <- lay$x[i + 1] + w - lay$pad
           # Grey, as on screen: the number belongs to the mark beside it.
           g <- c(g, list(txt(trimws(paste(s, p)), xr, ytop + row_h / 2,
-                             just = "right", size = fs * 0.95,
+                             just = "right", size = fs * RP_VAL_SIZE,
                              col = RP_MUTED)))
         } else {
           xr <- lay$x[i + 1] + w - lay$pad

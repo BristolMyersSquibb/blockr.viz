@@ -129,6 +129,9 @@ summarize_table_css <- function() {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   color: var(--blockr-color-text-muted, #6b7280);
+  /* Smaller than the cells, larger than the axis ticks. The slot is sized
+     in ch of THIS type, so the axis pad above it takes the same size. */
+  font-size: 11px;
 }
 .blockr-summarize-table .blockr-summarize-pct {
   color: var(--blockr-color-text-muted, #6b7280);
@@ -151,8 +154,8 @@ summarize_table_css <- function() {
 }
 /* The small type sits on the ticks, not on the strip: the pad is sized in
    ch, and a ch at 9.5px is two thirds of the cell's, so a strip-wide font
-   size left the ticked span ~20px longer than the lane under it. At the
-   header's size (the cells') the pad and the value slot are one width. */
+   size left the ticked span ~20px longer than the lane under it. The pad
+   takes the value labels' size (11px), so it and the slot are one width. */
 .blockr-summarize-axis-in {
   position: relative;
   flex: 1 1 auto;
@@ -163,7 +166,7 @@ summarize_table_css <- function() {
 .blockr-summarize-axis.has-val .blockr-summarize-axis-in {
   max-width: var(--blockr-summarize-lane-max, 320px);
 }
-.blockr-summarize-axis-pad { flex: 0 0 auto; }
+.blockr-summarize-axis-pad { flex: 0 0 auto; font-size: 11px; }
 .blockr-summarize-axis-in span {
   position: absolute;
   top: 0;
@@ -296,11 +299,10 @@ summarize_table_css <- function() {
 }
 /* A colour-split cell with value labels: one number per level, beside its
    lane. A tight line, so a level is barely taller than its lane and a row of
-   five levels grows by what the numbers need. The type stays the cell's:
-   the slot is sized in ch and has to match the axis pad above it. */
+   five levels grows by what the numbers need. */
 .blockr-summarize-multi .blockr-summarize-lv.blockr-summarize-barwrap
   .blockr-summarize-barval {
-  line-height: 14px;
+  line-height: 13px;
 }
 .blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3)
   .blockr-summarize-lane,
