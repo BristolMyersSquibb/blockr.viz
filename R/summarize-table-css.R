@@ -220,6 +220,17 @@ summarize_table_css <- function() {
   background: none;
   border-radius: 0;
 }
+.blockr-summarize-track.is-lv {
+  /* One level of a grouped split with its value beside it: the thin row of
+     .is-tall's stack, now on its own line. */
+  height: 6px;
+  border-radius: 0 min(var(--blockr-mark-radius, 2px), 1.5px)
+                 min(var(--blockr-mark-radius, 2px), 1.5px) 0;
+}
+.blockr-summarize-track.is-lv > .blockr-summarize-fill:last-child {
+  border-radius: 0 min(var(--blockr-mark-radius, 2px), 1.5px)
+                 min(var(--blockr-mark-radius, 2px), 1.5px) 0;
+}
 .blockr-summarize-track.is-tall .blockr-summarize-row3 {
   height: 6px;
   background: var(--blockr-summarize-track);

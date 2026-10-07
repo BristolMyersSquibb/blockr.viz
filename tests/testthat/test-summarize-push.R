@@ -447,6 +447,10 @@ test_that("the JS assembles byte-identical markup to summarize_cells_html", {
     # A grouped split with one level per row, collapsed to stacked: both
     # assemblers have to DROP the empty segments, or one draws lanes the
     # other does not.
+    barsplit_grouped_vals = list(by = "TERM", summaries = list(
+      list(type = "simple", func = "mean", col = "DUR", show = "bar",
+           color = "SEV")
+    )),
     barsplit_degenerate = list(by = "USUBJID", summaries = list(
       list(type = "simple", func = "max", col = "AVAL", show = "bar",
            color = "COHORT")
@@ -679,6 +683,28 @@ test_that("value_labels = FALSE drops every value label", {
   # The payload ships no label for the browser to draw either.
   pl <- summarize_flat_payload(off)
   expect_false(any(vapply(pl$cols, function(c) !is.null(c$dw), logical(1))))
+})
+
+test_that("a grouped split bar prints one value per level", {
+  ae <- push_fixture()
+  prep <- summarize_prepare(ae, by = "TERM", summaries = list(
+    list(type = "simple", func = "mean", col = "DUR", show = "bar",
+         color = "SEV")
+  ))
+  c1 <- summarize_cells(prep)$cols[[1]]
+  expect_identical(c1$mode, "grouped")
+  expect_null(c1$disp)
+  expect_length(c1$ldisp, 2L)
+  for (j in 1:2) {
+    has <- c1$segv[[j]] > 0
+    expect_true(all(nzchar(c1$ldisp[[j]][has])), info = j)
+  }
+  html <- summarize_cells_html(summarize_cells(prep))
+  expect_match(html, "blockr-summarize-track is-lv", fixed = TRUE)
+  # Off: back to the stacked rows with no number.
+  off <- summarize_cells(prep, cfg = list(value_labels = FALSE))$cols[[1]]
+  expect_null(off$ldisp)
+  expect_null(off$disp)
 })
 
 test_that("value labels print one decimal finer than the column axis", {

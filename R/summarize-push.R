@@ -173,7 +173,21 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       }
       vraw <- if (!is.null(p$key)) rows[[p$key]] else rowSums(
         vapply(segv, identity, numeric(n)))
-      lab <- val_parts(p, vraw)
+      # Grouped: the levels sit side by side, each its own bar, so each
+      # prints its own value beside it (`ldisp`, one vector per level) in the
+      # column's one slot width. Stacked and 100% keep the one total.
+      lab <- if (identical(p$mode, "grouped") && vals_on &&
+                   isTRUE(p$show_val)) {
+        dom <- summarize_axis_domain(p, prep)
+        dig <- summarize_val_digits(unlist(segv), dom$d0, dom$d1)
+        ldisp <- lapply(segv, function(v) {
+          ifelse(!is.na(v) & v > 0, summarize_val_str(v, dig), "")
+        })
+        list(ldisp = ldisp,
+             dw = max(c(1L, nchar(unlist(ldisp)))))
+      } else {
+        val_parts(p, vraw)
+      }
       v <- if (is.null(p$key)) {
         tot
       } else {
@@ -1049,7 +1063,16 @@ summarize_split_html <- function(c) {
       summarize_esc(c$names[[j]]), ": ", c$segv[[j]], "\"></div>"
     )
     has <- !is.na(c$segv[[j]]) & c$segv[[j]] > 0
-    if (grouped) {
+    if (grouped && !is.null(c$ldisp)) {
+      # With value labels each level is its own barwrap: a thin track, then
+      # the level's value in the column's one slot width.
+      ifelse(has, paste0(
+        "<div class=\"blockr-summarize-lv blockr-summarize-barwrap\">",
+        "<div class=\"blockr-summarize-track is-lv\">", body, "</div>",
+        "<span class=\"blockr-summarize-barval\" style=\"width:", c$dw,
+        "ch\">", c$ldisp[[j]], "</span></div>"
+      ), "")
+    } else if (grouped) {
       # A level with no value in this row gets no track, as the lollipop
       # draws no lane for it.
       ifelse(has, paste0("<div class=\"blockr-summarize-row3\">", body,
@@ -1059,6 +1082,10 @@ summarize_split_html <- function(c) {
     }
   }, character(n))
   seg <- matrix(seg, nrow = n)
+  if (grouped && !is.null(c$ldisp)) {
+    return(paste0("<div class=\"blockr-summarize-multi\">",
+                  apply(seg, 1L, paste0, collapse = ""), "</div>"))
+  }
   paste0("<div class=\"blockr-summarize-track", if (grouped) " is-tall" else "",
          "\">", apply(seg, 1L, paste0, collapse = ""), "</div>")
 }
@@ -1418,6 +1445,10 @@ summarize_flat_payload <- function(m) {
       out$fills <- arr(as.character(c$fills))
       out$seg <- lapply(c$seg, arr)
       out$segv <- lapply(c$segv, arr)
+      if (!is.null(c$ldisp)) {
+        out$ldisp <- lapply(c$ldisp, function(x) arr(as.character(x)))
+        out$dw <- c$dw
+      }
     } else if (identical(c$kind, "bardiv")) {
       out$w <- arr(c$w)
       out$pos <- arr(c$pos)

@@ -2,8 +2,9 @@
 
 * The summarize table has a Values switch in its gear (`value_labels`,
   default on). Off drops every number printed beside a mark.
-* A colour-split column (a dumbbell, box or dot range per grade, say) prints
-  one number per level, beside that level's lane. Before, the cell printed
+* A colour-split column (a dumbbell, box or dot range per grade, or a bar
+  whose levels sit side by side) prints one number per level, beside that
+  level's lane. A stacked bar keeps its one total. Before, the cell printed
   none. The row grows to hold them, on screen and on the slide, so a long
   table can take more slides.
 * Value labels print one decimal finer than the column axis's ticks (ticks

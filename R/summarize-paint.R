@@ -180,7 +180,7 @@ rp_bar <- function(c, i, x, w, ytop, gl) {
   out
 }
 
-rp_barsplit <- function(c, i, x, w, ytop, gl) {
+rp_barsplit <- function(c, i, x, w, ytop, gl, xr = NULL) {
   k <- length(c$names)
   grouped <- identical(c$mode, "grouped")
   if (!grouped) {
@@ -205,17 +205,35 @@ rp_barsplit <- function(c, i, x, w, ytop, gl) {
   lv <- which(has)
   h <- gl$px * 6
   gap <- gl$px * 2
-  tot <- length(lv) * h + max(length(lv) - 1L, 0L) * gap
+  # With value labels each level owns a text line beside its row, and the
+  # row has grown to hold them (rp_row_heights()).
+  lab <- !is.null(c$ldisp) && !is.null(xr)
+  pitch <- if (lab) rp_split_pitch(gl$px, gl$fs) else h + gap
+  tot <- max(length(lv) - 1L, 0L) * pitch + h
   y0 <- ytop + (gl$row_h - tot) / 2
   unlist(lapply(seq_along(lv), function(r) {
     j <- lv[[r]]
-    y <- y0 + (r - 1) * (h + gap)
+    y <- y0 + (r - 1) * pitch
     seg <- c$seg[[j]][[i]]
     list(rp_rect(x, w, y, h, RP_TRACK, gl),
          if (!is.na(seg) && seg > 0) {
            rp_rect(x, seg / 100 * w, y, h, c$fills[[j]], gl)
+         },
+         if (lab && nzchar(c$ldisp[[j]][[i]])) {
+           grid::textGrob(
+             c$ldisp[[j]][[i]], x = grid::unit(xr, "in"),
+             y = grid::unit(gl$H - (y + h / 2), "in"),
+             just = c("right", "centre"),
+             gp = grid::gpar(fontsize = gl$fs * RP_VAL_SIZE, col = RP_MUTED,
+                             fontfamily = gl$family))
          })
   }), recursive = FALSE)
+}
+
+# A grouped split's level pitch when each level carries a number: the thin
+# row plus its gap, or a line of the label's type, whichever is larger.
+rp_split_pitch <- function(px, fs) {
+  max(px * 8, fs * RP_VAL_SIZE / 72 * 1.25)
 }
 
 rp_bardiv <- function(c, i, x, w, ytop, gl) {
@@ -491,6 +509,16 @@ rp_multi_pitch <- function(k, px, fs) {
 rp_row_heights <- function(m, row_h, px, fs) {
   out <- rep(row_h, m$n)
   for (c in m$cols) {
+    if (!is.null(c$ldisp)) {
+      # A grouped split bar with a number per level.
+      for (r in seq_len(m$n)) {
+        k <- sum(vapply(c$ldisp, function(x) nzchar(x[[r]]), logical(1L)))
+        if (k < 2L) next
+        need <- (k - 1) * rp_split_pitch(px, fs) + px * 6 + px * 8
+        if (need > out[[r]]) out[[r]] <- need
+      }
+      next
+    }
     if (!isTRUE(c$multi) || is.null(c$dw)) next
     for (r in seq_len(m$n)) {
       k <- length(rp_multi_drawn(c, r))
@@ -729,7 +757,8 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
       } else if (k == "bar") {
         rp_bar(c, r, x0, lane_w, ytop, gl)
       } else if (k == "barsplit") {
-        rp_barsplit(c, r, x0, lane_w, ytop, gl)
+        rp_barsplit(c, r, x0, lane_w, ytop, gl,
+                    xr = lay$x[i + 1] + w - lay$pad)
       } else if (k == "bardiv") {
         rp_bardiv(c, r, x0, lane_w, ytop, gl)
       } else if (k == "box") {
@@ -809,7 +838,7 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
 # Slice a column's per-row vectors, leaving its per-COLUMN ones alone.
 # Length is the test, with three names handled explicitly because they are
 # the ones where a length-n vector would mean something else: `seg` / `segv`
-# are one entry per SERIES (each a full column of values), and `lv` is one
+# / `ldisp` are one entry per SERIES (each a full column of values), and `lv` is one
 # entry per colour LEVEL (each a whole nested cell).
 rp_slice_col <- function(c, idx, n) {
   nm <- names(c)
@@ -817,7 +846,7 @@ rp_slice_col <- function(c, idx, n) {
   for (k in seq_along(c)) {
     v <- c[[k]]
     key <- nm[[k]]
-    if (key %in% c("seg", "segv")) {
+    if (key %in% c("seg", "segv", "ldisp")) {
       out[[k]] <- lapply(v, function(s) if (length(s) == n) s[idx] else s)
     } else if (identical(key, "lv")) {
       out[[k]] <- lapply(v, rp_slice_col, idx = idx, n = n)

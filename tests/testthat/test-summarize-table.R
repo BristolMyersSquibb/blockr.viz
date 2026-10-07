@@ -89,10 +89,11 @@ test_that("a split of a non-additive measure groups instead of stacking", {
   # The axis reaches the widest SEGMENT, never the sum of them.
   cells <- unlist(p$rows[, c(".s_MILD", ".s_MODERATE")])
   expect_equal(p$bar_max, max(cells))
-  # And the label is still the group's own mean, at four significant digits.
+  # Side by side, each level prints its own mean; with value labels off
+  # the cell is the bars alone.
   m <- summarize_cells(p)
-  expect_identical(m$cols[[1]]$disp[[1]],
-                   trimws(formatC(p$rows$.v[[1]], format = "fg", digits = 4L)))
+  expect_null(m$cols[[1]]$disp)
+  expect_length(m$cols[[1]]$ldisp, 2L)
 
   # An explicit grouped ask needs no note, and the additive measures keep
   # stacking: their parts really do sum to the whole.
@@ -407,7 +408,12 @@ test_that("the HTML marks nested and split shapes distinctly", {
 
   grouped <- html(group = "TERM", color = "SEV", func = "count",
                   bar_mode = "grouped")
-  expect_match(grouped, "blockr-summarize-row3")
+  # Each level its own thin track with its value beside it; with the
+  # values off, the levels stack as thin rows in one tall track.
+  expect_match(grouped, "blockr-summarize-track is-lv", fixed = TRUE)
+  bare <- html(group = "TERM", color = "SEV", func = "count",
+               bar_mode = "grouped", value_labels = FALSE)
+  expect_match(bare, "blockr-summarize-row3")
 })
 
 test_that("title tiers follow the chart and table contract", {

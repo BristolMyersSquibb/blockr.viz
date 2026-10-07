@@ -530,13 +530,25 @@
         '" data-summarize-tip="' + esc(c.names[j]) + ": " + c.segv[j][i] +
         '"></div>';
       var has = c.segv[j][i] > 0;
-      if (grouped) {
+      if (grouped && c.ldisp) {
+        // With value labels each level is its own barwrap: a thin track,
+        // then the level's value in the column's one slot width.
+        if (has) {
+          out += '<div class="blockr-summarize-lv blockr-summarize-barwrap">' +
+            '<div class="blockr-summarize-track is-lv">' + body + "</div>" +
+            '<span class="blockr-summarize-barval" style="width:' + c.dw +
+            'ch">' + c.ldisp[j][i] + "</span></div>";
+        }
+      } else if (grouped) {
         // A level with no value in this row gets no track (the lollipop
         // draws no lane for it).
         if (has) out += '<div class="blockr-summarize-row3">' + body + "</div>";
       } else if (has) {
         out += body;
       }
+    }
+    if (grouped && c.ldisp) {
+      return '<div class="blockr-summarize-multi">' + out + "</div>";
     }
     return '<div class="blockr-summarize-track' + (grouped ? " is-tall" : "") +
       '">' + out + "</div>";
