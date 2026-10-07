@@ -447,6 +447,9 @@ test_that("the JS assembles byte-identical markup to summarize_cells_html", {
     # A grouped split with one level per row, collapsed to stacked: both
     # assemblers have to DROP the empty segments, or one draws lanes the
     # other does not.
+    barsplit_stacked_vals = list(by = "TERM", summaries = list(
+      list(type = "simple", func = "count", show = "bar", color = "SEV")
+    )),
     barsplit_grouped_vals = list(by = "TERM", summaries = list(
       list(type = "simple", func = "mean", col = "DUR", show = "bar",
            color = "SEV")
@@ -705,6 +708,28 @@ test_that("a grouped split bar prints one value per level", {
   off <- summarize_cells(prep, cfg = list(value_labels = FALSE))$cols[[1]]
   expect_null(off$ldisp)
   expect_null(off$disp)
+})
+
+test_that("a stacked split bar prints each segment's value inside it", {
+  ae <- push_fixture()
+  prep <- summarize_prepare(ae, by = "TERM", summaries = list(
+    list(type = "simple", func = "count", show = "bar", color = "SEV")
+  ))
+  c1 <- summarize_cells(prep)$cols[[1]]
+  expect_identical(c1$mode, "stacked")
+  # The total stays at the end; each segment carries its own count.
+  expect_false(is.null(c1$disp))
+  expect_length(c1$slab, 2L)
+  expect_identical(c1$slab[[1]], ifelse(c1$segv[[1]] > 0,
+                                        as.character(c1$segv[[1]]), ""))
+  expect_length(c1$sink, 2L)
+  html <- summarize_cells_html(summarize_cells(prep))
+  expect_match(html, "blockr-summarize-seglab w", fixed = TRUE)
+  off <- summarize_cells(prep, cfg = list(value_labels = FALSE))$cols[[1]]
+  expect_null(off$slab)
+  # Dark ink on a light fill, white on a dark one.
+  expect_identical(summarize_ink(c("#f0e442", "#0072b2")),
+                   c("#1f2937", "#ffffff"))
 })
 
 test_that("value labels print one decimal finer than the column axis", {

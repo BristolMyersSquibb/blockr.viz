@@ -191,8 +191,20 @@ rp_barsplit <- function(c, i, x, w, ytop, gl, xr = NULL) {
     for (j in seq_len(k)) {
       seg <- c$seg[[j]][[i]]
       if (is.na(seg) || seg <= 0) next
-      out <- c(out, list(rp_rect(at, seg / 100 * w, y, h, c$fills[[j]], gl)))
-      at <- at + seg / 100 * w
+      sw <- seg / 100 * w
+      out <- c(out, list(rp_rect(at, sw, y, h, c$fills[[j]], gl)))
+      # The segment's own number, inside it, where it fits (as on screen).
+      lb <- if (!is.null(c$slab)) c$slab[[j]][[i]] else ""
+      if (nzchar(lb) &&
+            rp_w(lb, gl$fs * RP_SEG_SIZE, gl$family, bold = TRUE) +
+              gl$px * 4 <= sw) {
+        out <- c(out, list(grid::textGrob(
+          lb, x = grid::unit(at + sw / 2, "in"),
+          y = grid::unit(gl$H - (y + h / 2), "in"), just = c("centre", "centre"),
+          gp = grid::gpar(fontsize = gl$fs * RP_SEG_SIZE, col = c$sink[[j]],
+                          fontfamily = gl$family, fontface = "bold"))))
+      }
+      at <- at + sw
     }
     return(out)
   }
@@ -437,6 +449,8 @@ rp_sparkline <- function(c, i, x, w, ytop, gl, fill = RP_FILL) {
 # The value labels' type, as a share of the table's: between the cells and
 # the axis ticks (0.78), as on screen (11px against 13px cells).
 RP_VAL_SIZE <- 0.85
+# A number inside a stacked segment: 10px against 13px cells.
+RP_SEG_SIZE <- 0.77
 
 rp_multi <- function(c, i, x, w, ytop, gl, xr = NULL) {
   drawn <- rp_multi_drawn(c, i)
@@ -838,7 +852,7 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
 # Slice a column's per-row vectors, leaving its per-COLUMN ones alone.
 # Length is the test, with three names handled explicitly because they are
 # the ones where a length-n vector would mean something else: `seg` / `segv`
-# / `ldisp` are one entry per SERIES (each a full column of values), and `lv` is one
+# / `ldisp` / `slab` are one entry per SERIES (each a full column of values), and `lv` is one
 # entry per colour LEVEL (each a whole nested cell).
 rp_slice_col <- function(c, idx, n) {
   nm <- names(c)
@@ -846,7 +860,7 @@ rp_slice_col <- function(c, idx, n) {
   for (k in seq_along(c)) {
     v <- c[[k]]
     key <- nm[[k]]
-    if (key %in% c("seg", "segv", "ldisp")) {
+    if (key %in% c("seg", "segv", "ldisp", "slab")) {
       out[[k]] <- lapply(v, function(s) if (length(s) == n) s[idx] else s)
     } else if (identical(key, "lv")) {
       out[[k]] <- lapply(v, rp_slice_col, idx = idx, n = n)

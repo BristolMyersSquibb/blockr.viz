@@ -197,15 +197,34 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
           vraw
         }
       }
+      fills <- as.character(p$fills %||%
+                              unname(prep$palette[as.character(p$series)]))
+      # Stacked / 100%: each segment carries its own number INSIDE it (the
+      # total stays at the end). The stylesheet hides one its segment is too
+      # narrow for, the painter measures; the ink is white or dark against
+      # the level's fill.
+      inside <- if (!identical(p$mode, "grouped") && vals_on &&
+                      isTRUE(p$show_val)) {
+        if (identical(p$mode, "percent")) {
+          lapply(seg, function(s) {
+            ifelse(!is.na(s) & s > 0, paste0(round(s), "%"), "")
+          })
+        } else {
+          dom <- summarize_axis_domain(p, prep)
+          dig <- summarize_val_digits(unlist(segv), dom$d0, dom$d1)
+          lapply(segv, function(v) {
+            ifelse(!is.na(v) & v > 0, summarize_val_str(v, dig), "")
+          })
+        }
+      }
       c(list(kind = "barsplit", mode = p$mode %||% "stacked",
              names = as.character(p$series),
              # The plan's own colours win: a summaries column resolves them
              # through the same resolver as every other mark, so a split bar
              # and a split box agree about which level is which.
-             fills = as.character(p$fills %||%
-                                    unname(prep$palette[
-                                      as.character(p$series)])),
+             fills = fills,
              seg = seg, segv = segv,
+             slab = inside, sink = if (!is.null(inside)) summarize_ink(fills),
              v = sortv(v)), lab)
     } else if (identical(p$kind, "bardiv")) {
       v <- rows[[p$key]]
@@ -810,6 +829,19 @@ summarize_multi_dw <- function(lv) {
   max(c(1L, unlist(lapply(lv, function(g) nchar(g$disp %||% "")))))
 }
 
+#' The ink for a number printed ON a fill: white on a dark fill, the text
+#' colour on a light one (the palette's yellow would swallow white).
+#' @noRd
+summarize_ink <- function(fills) {
+  vapply(fills, function(f) {
+    rgb <- tryCatch(grDevices::col2rgb(f)[, 1L] / 255,
+                    error = function(e) c(0, 0, 0))
+    lin <- ifelse(rgb <= 0.03928, rgb / 12.92, ((rgb + 0.055) / 1.055)^2.4)
+    lum <- sum(c(0.2126, 0.7152, 0.0722) * lin)
+    if (lum > 0.4) "#1f2937" else "#ffffff"
+  }, character(1L), USE.NAMES = FALSE)
+}
+
 # The calendar ladder: step, its length in days (for picking) and the format a
 # tick at that step is printed in. A date axis is only honest on calendar
 # boundaries -- "every 30 days" drifts through the months -- so the step is a
@@ -1056,11 +1088,19 @@ summarize_split_html <- function(c) {
   if (!n || !k) return(rep("<div class=\"blockr-summarize-track\"></div>", n))
   grouped <- identical(c$mode, "grouped")
   seg <- vapply(seq_len(k), function(j) {
+    # A stacked segment's own number, inside it (see summarize_cells()).
+    lab <- if (!grouped && !is.null(c$slab)) c$slab[[j]] else rep("", n)
     body <- paste0(
-      "<div class=\"blockr-summarize-fill\" style=\"width:",
+      "<div class=\"blockr-summarize-fill", ifelse(nzchar(lab), " has-lab", ""),
+      "\" style=\"width:",
       summarize_fmt_w(c$seg[[j]]),
       "%;background:", c$fills[[j]], "\" data-summarize-tip=\"",
-      summarize_esc(c$names[[j]]), ": ", c$segv[[j]], "\"></div>"
+      summarize_esc(c$names[[j]]), ": ", c$segv[[j]], "\">",
+      ifelse(nzchar(lab), paste0(
+        "<span class=\"blockr-summarize-seglab w", nchar(lab),
+        "\" style=\"color:", c$sink[[j]], "\">", lab, "</span>"
+      ), ""),
+      "</div>"
     )
     has <- !is.na(c$segv[[j]]) & c$segv[[j]] > 0
     if (grouped && !is.null(c$ldisp)) {
@@ -1448,6 +1488,10 @@ summarize_flat_payload <- function(m) {
       if (!is.null(c$ldisp)) {
         out$ldisp <- lapply(c$ldisp, function(x) arr(as.character(x)))
         out$dw <- c$dw
+      }
+      if (!is.null(c$slab)) {
+        out$slab <- lapply(c$slab, function(x) arr(as.character(x)))
+        out$sink <- arr(as.character(c$sink))
       }
     } else if (identical(c$kind, "bardiv")) {
       out$w <- arr(c$w)

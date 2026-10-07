@@ -245,6 +245,36 @@ summarize_table_css <- function() {
   border-radius: 0;
   background: var(--blockr-summarize-fill);
 }
+/* A stacked segment's own number, inside it. The segment is a size
+   container, so a number it is too narrow for is hidden rather than cut:
+   wN is the number's length in characters, about 6px each at 10px type,
+   plus a little air. A longer number than w7 never shows inside. */
+.blockr-summarize-fill.has-lab {
+  container-type: inline-size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.blockr-summarize-seglab {
+  display: none;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.blockr-summarize-seglab.w1, .blockr-summarize-seglab.w2,
+.blockr-summarize-seglab.w3, .blockr-summarize-seglab.w4,
+.blockr-summarize-seglab.w5, .blockr-summarize-seglab.w6,
+.blockr-summarize-seglab.w7 { display: inline; }
+@container (max-width: 11px) { .blockr-summarize-seglab.w1 { display: none; } }
+@container (max-width: 17px) { .blockr-summarize-seglab.w2 { display: none; } }
+@container (max-width: 23px) { .blockr-summarize-seglab.w3 { display: none; } }
+@container (max-width: 29px) { .blockr-summarize-seglab.w4 { display: none; } }
+@container (max-width: 35px) { .blockr-summarize-seglab.w5 { display: none; } }
+@container (max-width: 41px) { .blockr-summarize-seglab.w6 { display: none; } }
+@container (max-width: 47px) { .blockr-summarize-seglab.w7 { display: none; } }
 /* The value end. In a plain bar the fill is the only child; in a stack it is
    the outermost segment; in a grouped bar each row3 holds one. Zero-width
    segments are never emitted, so :last-child is always a segment that shows. */

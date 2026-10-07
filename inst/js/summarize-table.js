@@ -525,10 +525,15 @@
     var grouped = c.mode === "grouped";
     var out = "";
     for (var j = 0; j < c.names.length; j++) {
-      var body = '<div class="blockr-summarize-fill" style="width:' +
+      // A stacked segment's own number, inside it (R: summarize_cells()).
+      var lab = (!grouped && c.slab) ? c.slab[j][i] : "";
+      var body = '<div class="blockr-summarize-fill' + (lab ? " has-lab" : "") +
+        '" style="width:' +
         w(c.seg[j][i]) + "%;background:" + c.fills[j] +
         '" data-summarize-tip="' + esc(c.names[j]) + ": " + c.segv[j][i] +
-        '"></div>';
+        '">' + (lab ? '<span class="blockr-summarize-seglab w' + lab.length +
+          '" style="color:' + c.sink[j] + '">' + lab + "</span>" : "") +
+        "</div>";
       var has = c.segv[j][i] > 0;
       if (grouped && c.ldisp) {
         // With value labels each level is its own barwrap: a thin track,

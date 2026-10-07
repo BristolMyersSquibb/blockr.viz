@@ -4,7 +4,10 @@
   default on). Off drops every number printed beside a mark.
 * A colour-split column (a dumbbell, box or dot range per grade, or a bar
   whose levels sit side by side) prints one number per level, beside that
-  level's lane. A stacked bar keeps its one total. Before, the cell printed
+  level's lane.
+* A stacked bar prints each segment's number inside it (a 100% bar its
+  share), white or dark against the fill, and keeps the total at the end. A
+  segment too narrow for its number shows none; the tooltip still has it. Before, the cell printed
   none. The row grows to hold them, on screen and on the slide, so a long
   table can take more slides.
 * Value labels print one decimal finer than the column axis's ticks (ticks
