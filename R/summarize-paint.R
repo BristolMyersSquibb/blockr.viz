@@ -457,19 +457,10 @@ rp_multi <- function(c, i, x, w, ytop, gl, xr = NULL) {
   k <- length(drawn)
   if (!k) return(list())
   lab <- !is.null(c$dw) && !is.null(xr)
-  h <- if (k > 2) gl$px * 8 else gl$lane
-  gap <- gl$px * 2
-  if (lab) {
-    # With value labels each level owns a text line, and the row has grown
-    # to hold them (rp_row_heights()), so the lanes keep their size.
-    pitch <- rp_multi_pitch(k, gl$px, gl$fs)
-  } else {
-    # Without labels the row keeps the table's one height, so where the
-    # screen's row would grow, the lanes thin to fit instead.
-    room <- gl$row_h - gl$px * 2
-    if (k * h + (k - 1) * gap > room) h <- (room - (k - 1) * gap) / k
-    pitch <- h + gap
-  }
+  # Every level keeps the full lane, as on screen; the row has grown to
+  # hold them (rp_row_heights()).
+  h <- gl$lane
+  pitch <- rp_multi_pitch(gl$px, gl$fs, lab)
   tot <- (k - 1) * pitch + h
   y0 <- ytop + (gl$row_h - tot) / 2
   unlist(lapply(seq_len(k), function(jj) {
@@ -510,16 +501,16 @@ rp_multi_drawn <- function(c, i) {
   }, seq_along(c$lv))
 }
 
-# The distance between two levels' lanes when each carries a number: the
-# larger of the lane plus its gap and a line of the label's type.
-rp_multi_pitch <- function(k, px, fs) {
-  h <- if (k > 2) px * 8 else px * 12
-  max(h + px * 2, fs * RP_VAL_SIZE / 72 * 1.25)
+# The distance between two levels' lanes: the lane plus its gap, or, when
+# each carries a number, a line of the label's type if that is larger.
+rp_multi_pitch <- function(px, fs, lab = TRUE) {
+  h <- px * 12 + px * 2
+  if (lab) max(h, fs * RP_VAL_SIZE / 72 * 1.25) else h
 }
 
 # Every row's height. A row is the table's one height unless a colour-split
-# column prints a number per level, and the row has more levels than that
-# height holds: then it grows to fit them, on the slide as on screen.
+# column has more levels than that height holds: then it grows to fit them
+# (and their numbers), on the slide as on screen.
 rp_row_heights <- function(m, row_h, px, fs) {
   out <- rep(row_h, m$n)
   for (c in m$cols) {
@@ -533,12 +524,12 @@ rp_row_heights <- function(m, row_h, px, fs) {
       }
       next
     }
-    if (!isTRUE(c$multi) || is.null(c$dw)) next
+    if (!isTRUE(c$multi)) next
     for (r in seq_len(m$n)) {
       k <- length(rp_multi_drawn(c, r))
       if (k < 2L) next
-      h <- if (k > 2) px * 8 else px * 12
-      need <- (k - 1) * rp_multi_pitch(k, px, fs) + h + px * 8
+      need <- (k - 1) * rp_multi_pitch(px, fs, !is.null(c$dw)) +
+        px * 12 + px * 8
       if (need > out[[r]]) out[[r]] <- need
     }
   }

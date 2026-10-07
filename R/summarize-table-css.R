@@ -320,9 +320,9 @@ summarize_table_css <- function() {
 }
 .blockr-summarize-lane i { position: absolute; }
 /* Colour-split distribution cell: the levels stack INSIDE the cell, so the
-   column stays one column and the row keeps its height (two 12px lanes plus
-   the gap still fit the 40px the sparkline already claims). Three or more
-   levels share the same budget by thinning. */
+   column stays one column. Every level keeps the full 12px lane and its
+   marks; a row with more levels grows to hold them. (Thinning the third
+   level on to fit a fixed row drew one row in two dot sizes.) */
 .blockr-summarize-multi {
   display: flex;
   flex-direction: column;
@@ -345,10 +345,6 @@ summarize_table_css <- function() {
   .blockr-summarize-barval {
   line-height: 13px;
 }
-.blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3)
-  .blockr-summarize-lane,
-.blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3)
-  ~ .blockr-summarize-lv .blockr-summarize-lane { height: 8px; }
 /* Box: whiskers OUTSIDE the body only (two segments), caps, a translucent
    body, a solid median tick. */
 .blockr-summarize-boxcell .lane-wh {
@@ -459,20 +455,6 @@ summarize_table_css <- function() {
 }
 .blockr-summarize-pacell .lane-to.is-open {
   background: var(--blockr-color-bg-surface, #ffffff);
-}
-/* A split pair thinned to 8px lanes (three or more levels) takes smaller
-   marks, or neighbouring levels' dots would touch. */
-.blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3) .lane-to,
-.blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3)
-  ~ .blockr-summarize-lv .lane-to {
-  width: 7px;
-  height: 7px;
-}
-.blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3) .lane-from,
-.blockr-summarize-multi .blockr-summarize-lv:nth-child(n+3)
-  ~ .blockr-summarize-lv .lane-from {
-  width: 6px;
-  height: 6px;
 }
 /* Interval: the swimlane. Colour = the mapped level, and BOTH ends round.
    A timeline is not a stack. A stack tiles by construction -- its segments
