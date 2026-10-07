@@ -2617,8 +2617,11 @@
         return b.length ? b[b.length - 1] : "";
       };
       var words = {
-        _role: function (k) { return engine._role(k); },
-        _slotFlag: function (k) { return engine._slotFlag(k); },
+        // Synced like the menus below: the sentence paints with the first
+        // payload, before the gear has read the script's controls, and a
+        // script word's label comes from those.
+        _role: function (k) { sync(); return engine._role(k); },
+        _slotFlag: function (k) { sync(); return engine._slotFlag(k); },
         _slotNumber: function (k) { sync(); return engine._slotNumber(k); },
         _slotOptionsFor: function (k) {
           sync();

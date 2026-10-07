@@ -352,6 +352,11 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   }
   group <- by[[length(by)]]
   parent <- if (length(by) == 2L) by[[1L]]
+  # An outer column with no value in it is a level with nothing to show, so
+  # the table lists the inner column flat. This is how a prepare script turns
+  # the nesting off without touching `by`: it blanks the outer column
+  # (`AEBODSYS = if (soc) AEBODSYS else NA`) behind a flag.
+  if (!is.null(parent) && all(is.na(data[[parent]]))) parent <- NULL
   keys <- c(parent, group)
   # The rows that draw: a missing group draws none (see the skeletons below),
   # so a colour level only such rows carry gets no slot and no legend key.

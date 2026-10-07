@@ -1,3 +1,14 @@
+# blockr.viz 0.2.210
+
+* A summarize table grouped by two `by` columns lists the inner column flat
+  when the outer one has no value in any row. A prepare script can blank the
+  outer column behind a flag (`soc <- FALSE`, `AEBODSYS = if (soc) AEBODSYS
+  else NA`) and name the flag in the subtitle (`[ within {@soc}]`), so the
+  reader switches the nesting on and off from the sentence. Before, such a
+  table drew no rows.
+* A prepare-script word offered beside the sentence ("+ system organ
+  class") shows its label from the first paint, not the variable name.
+
 # blockr.viz 0.2.207
 
 * The summarize table has a Values switch in its gear (`value_labels`,
