@@ -1,5 +1,5 @@
-# Custom summary rows: a function of one cell's rows, run per cell at every
-# level of `by` and per facet level.
+# Custom summary rows: a function of the rows grouped by table row, run once
+# per level of `by` and per facet level.
 
 custom_fixture <- function() {
   data.frame(
@@ -17,10 +17,13 @@ custom_fixture <- function() {
 
 worst_fn <- paste(
   "\\(d) d |>",
-  "  dplyr::slice_max(as.numeric(GR), n = 1, with_ties = FALSE, by = USUBJID) |>",
+  "  dplyr::arrange(dplyr::desc(as.numeric(GR))) |>",
+  "  dplyr::distinct(USUBJID, .keep_all = TRUE) |>",
   "  dplyr::count(GR, name = \"value\")",
   sep = "\n"
 )
+
+n_fn <- "dplyr::summarise(d, value = dplyr::n())"
 
 row_of <- function(rows, label) rows[rows$.label == label, , drop = FALSE]
 
@@ -43,7 +46,9 @@ test_that("a worst-grade count nests: the SOC row reduces its own rows", {
 test_that("a split dumbbell draws one pair per level, the pooled pair sorts", {
   prep <- summarize_prepare(custom_fixture(), by = "TERM", summaries = list(
     list(type = "custom", name = "Onset to end",
-         fn = "dplyr::reframe(d, from = mean(S), to = mean(E), .by = GR)")
+         fn = paste("d |> dplyr::group_by(GR, .add = TRUE) |>",
+                    "dplyr::summarise(from = mean(S), to = mean(E),",
+                    ".groups = \"drop\")"))
   ))
   expect_null(prep$err)
   p <- prep$plan[[1]]
@@ -65,11 +70,12 @@ test_that("the mark is read off the returned columns, or named", {
     vapply(prep$plan, function(p) p$kind, character(1))
   }
   expect_identical(
-    kinds(list(type = "custom", fn = "c(value = nrow(d))"),
-          list(type = "custom", fn = "c(value = nrow(d))", show = "number"),
-          list(type = "custom", fn = "data.frame(text = unique(d$ARM))"),
+    kinds(list(type = "custom", fn = n_fn),
+          list(type = "custom", fn = n_fn, show = "number"),
+          list(type = "custom", fn = "dplyr::distinct(d, text = ARM)"),
           list(type = "custom",
-               fn = "data.frame(lo = min(d$S), mid = median(d$S), hi = max(d$S))",
+               fn = paste("dplyr::summarise(d, lo = min(S), mid = median(S),",
+                          "hi = max(S))"),
                show = "pointrange")),
     c("bar", "num", "num", "pointrange")
   )
@@ -77,9 +83,18 @@ test_that("the mark is read off the returned columns, or named", {
 
 test_that("a bare body using `d` works like a function", {
   prep <- summarize_prepare(custom_fixture(), by = "TERM", summaries = list(
-    list(type = "custom", name = "Rows", fn = "c(value = nrow(d))")
+    list(type = "custom", name = "Rows", fn = n_fn)
   ))
   expect_equal(row_of(prep$rows, "Erythema")$.s1_v, 3)
+})
+
+test_that("a function that drops the grouping says so", {
+  expect_error(
+    summarize_prepare(custom_fixture(), by = "TERM", summaries = list(
+      list(type = "custom", name = "X", fn = "c(value = nrow(d))")
+    )),
+    "dropped the grouping by TERM"
+  )
 })
 
 test_that("a facet runs the function per facet level", {
@@ -130,7 +145,8 @@ test_that("a custom count with `denom` prints n (%) against the slice's N", {
 test_that("a custom count with `denom` keeps N on its header", {
   prep <- summarize_prepare(custom_fixture(), by = "TERM", summaries = list(
     list(type = "custom", name = "Patients", denom = "USUBJID",
-         fn = "c(value = dplyr::n_distinct(d$USUBJID))", facet = "ARM")
+         fn = "dplyr::summarise(d, value = dplyr::n_distinct(USUBJID))",
+         facet = "ARM")
   ))
   expect_null(prep$err)
   subs <- vapply(prep$plan, function(p) p$sub_label %||% "", character(1))

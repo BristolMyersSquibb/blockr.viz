@@ -1420,14 +1420,16 @@ lane_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
 }
 
 # --- custom summaries -----------------------------------------------------------
-# A custom row is a function of one cell's rows that returns a small data
-# frame. Its columns name what they are: `value`; `from`, `to`; `lo`, `q1`,
-# `mid`, `q3`, `hi`; `text`. One more column, if there is one, is the split:
-# the frame has a row per level of it, and each level draws its own mark (the
-# colour split of the preset rows). The block runs the function per cell, at
-# every level of `by` and per facet level, so a nested table needs nothing
-# from the function: a worst-grade count is right for the SOC and for its
-# terms alike.
+# A custom row is a function of the rows, grouped by table row, that returns
+# a small data frame. Its columns name what they are: `value`; `from`, `to`;
+# `lo`, `q1`, `mid`, `q3`, `hi`; `text`. One more column, if there is one, is
+# the split: the frame has a row per level of it, and each level draws its own
+# mark (the colour split of the preset rows). The block runs the function once
+# per level of `by` and per facet level, with `d` grouped by that level's
+# columns. A function that keeps the grouping (dplyr verbs, `.add = TRUE`)
+# computes every table row of the level in one call, and a nested table needs
+# nothing more from it: a worst-grade count is right for the SOC and for its
+# terms alike, because each level reduces its own rows.
 #
 # The function is read once over the whole data to learn its shape, and the
 # row then stands in as the preset row that draws that shape (a sum bar, a
@@ -1462,7 +1464,7 @@ lane_custom_fn <- function(code) {
   body <- if (length(exprs) == 1L) exprs[[1L]] else as.call(c(quote(`{`), exprs))
   f <- tryCatch(eval(body, env), error = function(e) NULL)
   if (is.function(f)) return(f)
-  # A bare body: `d` is the cell's rows.
+  # A bare body: `d` is the rows, grouped by table row.
   fun <- function(d) NULL
   formals(fun) <- alist(d = )
   body(fun) <- body
@@ -1576,23 +1578,25 @@ lane_custom_setup <- function(s, data) {
   list(s = s2)
 }
 
-#' The function's frames for every cell of `slice`, keyed by `tkeys`.
+#' The function's frames for every cell of `slice`, keyed by `tkeys`. One
+#' call per level: `d` arrives grouped by `tkeys`, and the function keeps that
+#' grouping, so its result carries the key columns that place each value.
 #' @noRd
 lane_custom_cells <- function(slice, tkeys, s) {
-  fn <- s$.custom$fn
   g <- dplyr::group_by(slice, dplyr::across(dplyr::all_of(tkeys)))
-  out <- dplyr::group_modify(g, function(d, k) {
-    r <- lane_custom_run(fn, d)
-    if (inherits(r, "error")) {
-      stop("Summary \"", s$name, "\": the function failed for ",
-           paste(vapply(k, as.character, character(1L)), collapse = " / "),
-           ": ", conditionMessage(r), call. = FALSE)
-    }
-    # Grouping columns come back from group_modify(); a result column of the
-    # same name would collide.
-    r[setdiff(names(r), tkeys)]
-  }, .keep = TRUE)
-  as.data.frame(dplyr::ungroup(out), check.names = FALSE)
+  r <- lane_custom_run(s$.custom$fn, g)
+  if (inherits(r, "error")) {
+    stop("Summary \"", s$name, "\": the function failed: ",
+         conditionMessage(r), call. = FALSE)
+  }
+  miss <- setdiff(tkeys, names(r))
+  if (length(miss)) {
+    stop("Summary \"", s$name, "\": the function dropped the grouping by ",
+         paste(miss, collapse = ", "), ". Keep it: add groups with ",
+         "group_by(..., .add = TRUE) and summarise with dplyr, not d$.",
+         call. = FALSE)
+  }
+  r
 }
 
 #' Fill a custom row's columns: the same `<sid>_*` columns the preset it

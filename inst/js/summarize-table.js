@@ -1331,7 +1331,8 @@
     spans:  { label: "spans", shows: ["interval"] },
     pair:   { label: "pair", shows: ["dumbbell"] },
     expr:   { label: "expr", shows: ["text"] },
-    // A function of one cell's rows. "auto" reads the mark off what the
+    // A function of the rows, grouped by table row. "auto" reads the mark
+    // off what the
     // function returns (R's lane_custom_setup()); the rest name one.
     custom: { label: "custom",
               shows: ["auto", "bar", "number", "dumbbell", "box",
@@ -2034,11 +2035,11 @@
           body.appendChild(exCtl);
         } else if (t === "custom") {
           // Code commits on its own button (or Mod+Enter), never per
-          // keystroke: every commit reruns the function for every cell.
+          // keystroke: every commit reruns the function for every level.
           var fnCtl = document.createElement("div");
           fnCtl.className = "lane-sum-ctl lane-sum-ctl-wide";
-          fnCtl.innerHTML = '<span class="blockr-label">Summary of one ' +
-            "cell's rows, <code>d</code></span>";
+          fnCtl.innerHTML = '<span class="blockr-label">Summary of ' +
+            "<code>d</code>, grouped by table row</span>";
           var fnIn = document.createElement("textarea");
           fnIn.className = "blockr-text-input dd-script-editor lane-sum-fn";
           fnIn.rows = Math.max(3, String(s.fn || "").split("\n").length + 1);
@@ -2231,7 +2232,7 @@
       { label: "Text", meta: "the distinct values", icon: SHOW_ICONS.text, t: "field" },
       { label: "Expression", meta: "one R expression", icon: SHOW_ICONS.number, t: "expr" },
       { divider: true },
-      { label: "Custom summary", meta: "a function of the cell's rows", icon: CODE_SVG, t: "custom" }
+      { label: "Custom summary", meta: "a function of the rows", icon: CODE_SVG, t: "custom" }
     ];
     var addRow = document.createElement("div");
     addRow.className = "lane-sum-addrow";
