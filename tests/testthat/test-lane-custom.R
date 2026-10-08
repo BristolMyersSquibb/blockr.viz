@@ -34,6 +34,8 @@ test_that("a worst-grade count nests: the SOC row reduces its own rows", {
                                                   fn = worst_fn)))
   expect_null(prep$err)
   expect_identical(prep$plan[[1]]$kind, "barsplit")
+  # The block cannot tell a count from a mean: custom levels sit side by side.
+  expect_identical(prep$plan[[1]]$mode, "grouped")
   r <- prep$rows
   skin <- row_of(r, "Skin")
   # P1 is grade 1 for Pruritus and grade 3 for Erythema: once, at 3.

@@ -866,7 +866,9 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       # rows are all one level draws ONE segment, in that level's colour.
       # Only for an ADDITIVE measure, though: the parts of a mean do not add
       # up to it, so those segments sit side by side (summarize_additive())
-      # rather than stacking into a length nothing computes.
+      # rather than stacking into a length nothing computes. A custom row's
+      # `value` may be a mean as easily as a count, and the block cannot tell,
+      # so its levels always sit side by side.
       #
       # `mode` is provisional: nothing here has seen a value yet, so a
       # non-additive measure asks for lanes even when every row turns out to
@@ -876,7 +878,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       c(base, list(kind = "barsplit", key = paste0(sid, "_v"),
                    prefix = paste0(sid, "_S_"), series = s$.levels,
                    cvar = s$.color,
-                   mode = if (summarize_additive(
+                   mode = if (is.null(s$.custom) && summarize_additive(
                      summarize_chr1(s$func) %||% "count"
                    )) {
                      "stacked"
