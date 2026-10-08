@@ -208,19 +208,18 @@ rp_barsplit <- function(c, i, x, w, ytop, gl, xr = NULL) {
     }
     return(out)
   }
-  # grouped: one thin row per level with a value in this row, stacked inside
+  # grouped: one 10px row per level with a value in this row, stacked inside
   # the cell. A level with none gets no track, as in summarize_split_html().
   has <- vapply(seq_len(k), function(j) {
     v <- c$segv[[j]][[i]]
     !is.na(v) && v > 0
   }, logical(1L))
   lv <- which(has)
-  h <- gl$px * 6
-  gap <- gl$px * 2
-  # With value labels each level owns a text line beside its row, and the
-  # row has grown to hold them (rp_row_heights()).
+  h <- gl$px * 10
+  # With value labels each level owns a text line beside its row. The row
+  # has grown to hold them (rp_row_heights()).
   lab <- !is.null(c$ldisp) && !is.null(xr)
-  pitch <- if (lab) rp_split_pitch(gl$px, gl$fs) else h + gap
+  pitch <- rp_split_pitch(gl$px, gl$fs, lab)
   tot <- max(length(lv) - 1L, 0L) * pitch + h
   y0 <- ytop + (gl$row_h - tot) / 2
   unlist(lapply(seq_along(lv), function(r) {
@@ -240,12 +239,6 @@ rp_barsplit <- function(c, i, x, w, ytop, gl, xr = NULL) {
                              fontfamily = gl$family))
          })
   }), recursive = FALSE)
-}
-
-# A grouped split's level pitch when each level carries a number: the thin
-# row plus its gap, or a line of the label's type, whichever is larger.
-rp_split_pitch <- function(px, fs) {
-  max(px * 8, fs * RP_VAL_SIZE / 72 * 1.25)
 }
 
 rp_bardiv <- function(c, i, x, w, ytop, gl) {
@@ -508,18 +501,28 @@ rp_multi_pitch <- function(px, fs, lab = TRUE) {
   if (lab) max(h, fs * RP_VAL_SIZE / 72 * 1.25) else h
 }
 
+# A grouped split bar's level pitch: the 10px row and 5px, as on screen with or
+# without value labels, or a line of the label's type if that is larger.
+rp_split_pitch <- function(px, fs, lab = TRUE) {
+  h <- px * 15
+  if (lab) max(h, fs * RP_VAL_SIZE / 72 * 1.25) else h
+}
+
 # Every row's height. A row is the table's one height unless a colour-split
 # column has more levels than that height holds: then it grows to fit them
 # (and their numbers), on the slide as on screen.
 rp_row_heights <- function(m, row_h, px, fs) {
   out <- rep(row_h, m$n)
   for (c in m$cols) {
-    if (!is.null(c$ldisp)) {
-      # A grouped split bar with a number per level.
+    if (identical(c$kind, "barsplit") && identical(c$mode, "grouped")) {
+      # A grouped split bar: one lane per level with a value in the row.
       for (r in seq_len(m$n)) {
-        k <- sum(vapply(c$ldisp, function(x) nzchar(x[[r]]), logical(1L)))
+        k <- sum(vapply(c$segv, function(x) {
+          !is.na(x[[r]]) && x[[r]] > 0
+        }, logical(1L)))
         if (k < 2L) next
-        need <- (k - 1) * rp_split_pitch(px, fs) + px * 6 + px * 8
+        need <- (k - 1) * rp_split_pitch(px, fs, !is.null(c$ldisp)) +
+          px * 10 + px * 8
         if (need > out[[r]]) out[[r]] <- need
       }
       next

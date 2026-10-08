@@ -198,8 +198,7 @@ summarize_table_css <- function() {
 
    The radius is cosmetic and means NOTHING. It must stay well under half the
    lane height, where a capsule becomes the SEMANTIC mark for a soft boundary
-   (see .blockr-summarize-prcell below). On the 6px grouped rows the token
-   would be a third of the height, so it is clamped to thickness/4 there.
+   (see .blockr-summarize-prcell below).
 
    The grey track stays: it is a table-cell affordance (it says what the row's
    share is against the column max) with no echarts equivalent, and the
@@ -216,28 +215,20 @@ summarize_table_css <- function() {
 .blockr-summarize-track.is-tall {
   height: auto;
   flex-direction: column;
-  gap: 2px;
+  /* 5px: the same white between levels as the labelled split, whose 13px
+     value line plus the 2px gap puts its 10px lanes 15px apart. */
+  gap: 5px;
   background: none;
   border-radius: 0;
 }
-.blockr-summarize-track.is-lv {
-  /* One level of a grouped split with its value beside it: the thin row of
-     .is-tall's stack, now on its own line. */
-  height: 6px;
-  border-radius: 0 min(var(--blockr-mark-radius, 2px), 1.5px)
-                 min(var(--blockr-mark-radius, 2px), 1.5px) 0;
-}
-.blockr-summarize-track.is-lv > .blockr-summarize-fill:last-child {
-  border-radius: 0 min(var(--blockr-mark-radius, 2px), 1.5px)
-                 min(var(--blockr-mark-radius, 2px), 1.5px) 0;
-}
+/* One level of a grouped split, with its value beside it (.is-lv) or
+   without (.row3): 10px, a little under the plain bar's 12px so the levels
+   keep 5px of white between them. A row grows to hold its levels. */
+.blockr-summarize-track.is-lv { height: 10px; }
 .blockr-summarize-track.is-tall .blockr-summarize-row3 {
-  height: 6px;
+  height: 10px;
   background: var(--blockr-summarize-track);
-  /* 6px row: thickness/4, so the radius eases down instead of reading as a
-     capsule at the token's full 2px. */
-  border-radius: 0 min(var(--blockr-mark-radius, 2px), 1.5px)
-                 min(var(--blockr-mark-radius, 2px), 1.5px) 0;
+  border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
 }
 .blockr-summarize-fill {
   height: 100%;
@@ -281,10 +272,6 @@ summarize_table_css <- function() {
 .blockr-summarize-track > .blockr-summarize-fill:last-child,
 .blockr-summarize-row3 > .blockr-summarize-fill:last-child {
   border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
-}
-.blockr-summarize-row3 > .blockr-summarize-fill:last-child {
-  border-radius: 0 min(var(--blockr-mark-radius, 2px), 1.5px)
-                 min(var(--blockr-mark-radius, 2px), 1.5px) 0;
 }
 .blockr-summarize-track.is-sub .blockr-summarize-fill {
   background: var(--blockr-summarize-sub);
