@@ -215,15 +215,15 @@ summarize_table_css <- function() {
 .blockr-summarize-track.is-tall {
   height: auto;
   flex-direction: column;
-  /* 5px: the same white between levels as the labelled split, whose 13px
-     value line plus the 2px gap puts its 10px lanes 15px apart. */
-  gap: 5px;
+  /* 4px: the same white between levels as the labelled split, whose 12px
+     value line plus the 2px gap puts its 10px lanes 14px apart. */
+  gap: 4px;
   background: none;
   border-radius: 0;
 }
 /* One level of a grouped split, with its value beside it (.is-lv) or
    without (.row3): 10px, a little under the plain bar's 12px so the levels
-   keep 5px of white between them. A row grows to hold its levels. */
+   keep 4px of white between them. A row grows to hold its levels. */
 .blockr-summarize-track.is-lv { height: 10px; }
 .blockr-summarize-track.is-tall .blockr-summarize-row3 {
   height: 10px;
@@ -331,6 +331,11 @@ summarize_table_css <- function() {
 .blockr-summarize-multi .blockr-summarize-lv.blockr-summarize-barwrap
   .blockr-summarize-barval {
   line-height: 13px;
+}
+/* A grouped bar's 10px level: a 12px line, so the levels sit 14px apart. */
+.blockr-summarize-multi .blockr-summarize-track.is-lv
+  + .blockr-summarize-barval {
+  line-height: 12px;
 }
 /* Box: whiskers OUTSIDE the body only (two segments), caps, a translucent
    body, a solid median tick. */

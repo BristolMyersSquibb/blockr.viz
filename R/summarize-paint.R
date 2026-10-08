@@ -501,10 +501,10 @@ rp_multi_pitch <- function(px, fs, lab = TRUE) {
   if (lab) max(h, fs * RP_VAL_SIZE / 72 * 1.25) else h
 }
 
-# A grouped split bar's level pitch: the 10px row and 5px, as on screen with or
+# A grouped split bar's level pitch: the 10px row and 4px, as on screen with or
 # without value labels, or a line of the label's type if that is larger.
 rp_split_pitch <- function(px, fs, lab = TRUE) {
-  h <- px * 15
+  h <- px * 14
   if (lab) max(h, fs * RP_VAL_SIZE / 72 * 1.25) else h
 }
 
