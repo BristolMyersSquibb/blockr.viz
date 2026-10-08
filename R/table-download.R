@@ -118,7 +118,8 @@ dl_tool <- function(ns, spec) {
 #'   caller with no gear to switch them off in.
 #' @param slot_id Output id for the control itself.
 #' @param filename Word the file is named by when the exhibit has no title.
-#'   The full name is the data's `blockr_dataset` attribute when it has one,
+#'   The full name is the dataset in the data's `blockr_provenance` attribute
+#'   when it has one,
 #'   the title or this word, and the time:
 #'   `AQ-001_Ozone_by_month_2026-10-02_1432.xlsx`. An exhibit whose `data`
 #'   is a frame built for the export, without the input's attributes, returns

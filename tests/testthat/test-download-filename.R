@@ -2,7 +2,7 @@ t0 <- as.POSIXct("2026-10-02 14:32:07")
 
 test_that("the name is dataset, title, time", {
   d <- data.frame(x = 1)
-  attr(d, "blockr_dataset") <- "AQ-001"
+  attr(d, "blockr_provenance") <- list(dataset = "AQ-001")
   expect_identical(
     dl_filename(dl_dataset(d), "Ozone by month", "chart", "xlsx", t0),
     "AQ-001_Ozone_by_month_2026-10-02_1432.xlsx"

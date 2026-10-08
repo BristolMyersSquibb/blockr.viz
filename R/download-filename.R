@@ -7,10 +7,10 @@
 #   Ozone_by_month_2026-10-02_1432.xlsx       (no dataset on the data)
 #   chart_2026-10-02_1432.xlsx                (no title either)
 #
-# The dataset is a `blockr_dataset` attribute, set by whatever read the data
-# (blockr.sandbox's study reader writes the study code) and carried down to the
-# chart by blockr.dm's filter trail. Read here as a plain attribute, so this
-# package needs neither.
+# The dataset is the `dataset` field of a `blockr_provenance` attribute, set by
+# whatever read the data (blockr.sandbox's study reader writes the study code)
+# and carried down to the chart by blockr.dm's filter trail. Read here as a
+# plain attribute, so this package needs neither.
 #
 # The time is always there, so two downloads of one block after a filter
 # change do not collide into "(1)".
@@ -34,10 +34,10 @@ dl_filename <- function(dataset, title, fallback, ext, time = Sys.time()) {
   paste0(paste(parts, collapse = "_"), ".", ext)
 }
 
-#' The `blockr_dataset` attribute, or `NULL`
+#' The `dataset` field of the `blockr_provenance` attribute, or `NULL`
 #' @noRd
 dl_dataset <- function(data) {
-  ds <- attr(data, "blockr_dataset", exact = TRUE)
+  ds <- attr(data, "blockr_provenance", exact = TRUE)$dataset
   if (is.character(ds) && length(ds) == 1L && !is.na(ds) && nzchar(ds)) ds
 }
 
