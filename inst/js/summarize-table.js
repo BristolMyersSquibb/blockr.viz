@@ -812,7 +812,8 @@
       for (var k = 0; k < p.cols.length; k++) {
         var c = p.cols[k];
         if (c.kind === "num" && c.text) {
-          row += '<td class="blockr-summarize-txt"' + dataV(c.v[i]) + ">" +
+          row += '<td class="blockr-summarize-txt' +
+            (c.failed ? " is-failed" : "") + '"' + dataV(c.v[i]) + ">" +
             c.disp[i] + "</td>";
         } else if (c.kind === "num") {
           row += '<td class="blockr-summarize-num dt-col-num"' + dataV(c.v[i]) +
@@ -912,11 +913,37 @@
         lg.style.display = "";
       }
     }
+    paintIssues(root, ch.issues);
     var f = ch.foot || {};
     var note = root.querySelector(".blockr-summarize-note");
     if (note) note.textContent = f.note || "";
     root._summarizeSel = f.filter || null;
     paintStatus(root);
+  }
+
+  /** The columns whose function failed: name, reason, and a link that opens
+   *  the gear where the function is edited (R: summarize_issues_tag()). */
+  function paintIssues(root, issues) {
+    var el = root.querySelector(".blockr-summarize-issues");
+    if (!el) return;
+    if (!issues || !issues.length) {
+      el.style.display = "none";
+      el.innerHTML = "";
+      return;
+    }
+    var gear = root.querySelector(".blockr-gear-header .blockr-gear-btn");
+    el.innerHTML = issues.map(function (f) {
+      return '<div class="blockr-summarize-issue"><b>' + esc(f.name) +
+        "</b> is empty: " + esc(f.msg) +
+        (gear ? ' <button type="button" class="blockr-summarize-issue-edit">' +
+          "Edit</button>" : "") + "</div>";
+    }).join("");
+    el.style.display = "";
+    el.querySelectorAll(".blockr-summarize-issue-edit").forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (gear.getAttribute("aria-expanded") !== "true") gear.click();
+      });
+    });
   }
 
   // The three bands, painted as the chart paints them (chart/chrome.js

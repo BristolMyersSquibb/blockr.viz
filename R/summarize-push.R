@@ -560,7 +560,8 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       # both consumers paste it as-is), and the sort key is the text itself.
       v <- as.character(rows[[p$key]])
       v[is.na(v)] <- ""
-      list(kind = "num", text = TRUE, v = v, disp = summarize_esc(v))
+      c(list(kind = "num", text = TRUE, v = v, disp = summarize_esc(v)),
+        if (!is.null(p$failed)) list(failed = TRUE))
     } else if (identical(p$dispkey, "dist_text")) {
       # A distribution shown as TEXT: "10.4 (7.6–13.2)". Sorts numerically
       # by the center (a text sort would rank "9" above "10").
@@ -634,12 +635,16 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
 #' @noRd
 summarize_thead <- function(prep, sortable = TRUE, cols = NULL, axis = TRUE) {
   col_th <- function(p, i) {
-    as.character(dt_th(
+    th <- as.character(dt_th(
       p$label, i, label = p$sub_label,
       numeric = identical(p$kind, "num") && !isTRUE(p$text),
       sortable = sortable,
       extra = if (isTRUE(axis)) summarize_axis_strip(p, cols[[i]], prep)
     ))
+    # A column whose function failed: marked, the reason in the line under
+    # the title (summarize_issues_spec()).
+    if (is.null(p$failed)) th else sub("^<th class=\"",
+                                       "<th class=\"blockr-summarize-failed ", th)
   }
   stub <- as.character(dt_th(
     summarize_label_header(prep), 0L, stub = TRUE,
@@ -972,7 +977,8 @@ summarize_cells_html <- function(m, expanded = FALSE) {
              summarize_data_v(c$v), ">",
              summarize_barwrap(summarize_sp_html(c), c), "</td>")
     } else if (isTRUE(c$text)) {
-      paste0("<td class=\"blockr-summarize-txt\"", summarize_data_v(c$v), ">",
+      paste0("<td class=\"blockr-summarize-txt",
+             if (isTRUE(c$failed)) " is-failed", "\"", summarize_data_v(c$v), ">",
              c$disp, "</td>")
     } else {
       paste0("<td class=\"blockr-summarize-num dt-col-num\"",
@@ -1663,6 +1669,7 @@ summarize_build_payload <- function(data, chrome = list(), drill = NULL,
   }
   body$chrome <- summarize_drop_null(c(chrome, list(
     legend = summarize_legend_spec(prep),
+    issues = summarize_issues_spec(prep),
     foot = summarize_foot_spec(prep, drill = drill, active = active)
   )))
   body

@@ -937,6 +937,66 @@ summarize_table_css <- function() {
 /* Legend + footer. */
 /* The legend is its own row under the control row (search + gear), so a long
    legend can never push the search box around. */
+/* A column whose function failed: the header in the danger colour with a
+   round mark, its cells dashes, and the reason in a line under the titles
+   that wraps, since the reason is the part the user acts on. */
+.blockr-summarize-issues {
+  margin: 0.5rem 0 0.25rem;
+}
+.blockr-summarize-issue {
+  position: relative;
+  padding: 0.3rem 0.6rem 0.3rem 1.9rem;
+  border-left: 2px solid var(--blockr-color-text-danger, #b91c1c);
+  background: var(--blockr-color-bg-subtle, #f9fafb);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--blockr-color-text-default, #374151);
+  white-space: normal;
+}
+.blockr-summarize-issue + .blockr-summarize-issue { margin-top: 2px; }
+.blockr-summarize-issue::before,
+.blockr-summarize-failed .blockr-col-name::after {
+  content: '!';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--blockr-color-text-danger, #b91c1c);
+}
+.blockr-summarize-issue::before {
+  position: absolute;
+  left: 0.6rem;
+  top: 0.5rem;
+}
+.blockr-summarize-failed .blockr-col-name {
+  color: var(--blockr-color-text-danger, #b91c1c);
+  white-space: nowrap;
+}
+.blockr-summarize-table td.blockr-summarize-txt.is-failed {
+  color: var(--blockr-color-text-muted, #9ca3af);
+}
+.blockr-summarize-failed .blockr-col-name::after {
+  margin-left: 4px;
+  vertical-align: -1px;
+}
+.blockr-summarize-issue-edit {
+  border: 0;
+  padding: 0;
+  margin-left: 2px;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--blockr-color-text-danger, #b91c1c);
+  cursor: pointer;
+}
+.blockr-summarize-issue-edit:hover { text-decoration: underline; }
 .blockr-summarize-legend {
   padding: 0.35rem 0.25rem 0.15rem;
   display: flex;

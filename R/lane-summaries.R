@@ -398,9 +398,13 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     s <- summaries[[i]]
     # A custom row runs its function once over the whole data to learn what
     # it returns, then stands in as the preset row that draws that shape.
+    # A function that fails here leaves its column empty, the error with it.
     if (identical(s$type, "custom")) {
       cs <- lane_custom_setup(s, data)
-      if (!is.null(cs$err)) return(bad(cs$err))
+      if (!is.null(cs$err)) {
+        summaries[[i]] <- lane_failed_summary(s, cs$err)
+        next
+      }
       s <- cs$s
     }
     cc <- present(s$color)
@@ -507,6 +511,10 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   s_primary <- NULL
 
   fill <- function(target, tkeys, slice, s, sid) {
+    if (!is.null(s$.failed)) {
+      target[[paste0(sid, "_t")]] <- rep("\u2013", nrow(target))
+      return(target)
+    }
     if (!is.null(s$.custom)) {
       return(lane_custom_fill(target, tkeys, slice, s, sid))
     }
@@ -652,6 +660,8 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
              named = n_faceted > 1L)
       })
     }
+    sid1 <- copies[[1L]]$suffix
+    n0 <- length(plan)
     for (cp in copies) {
       # A count's N: the subjects (count distinct) or rows (count) in this
       # copy's slice -- the whole data for an unfaceted column, one level's
@@ -663,8 +673,9 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         cp$den <- summarize_denom(cp$slice, summarize_chr1(s$func) %||% "count",
                                   summarize_chr1(s$col))
       }
-      # A custom function that fails is the user's code: it reads as the
-      # table's message, never as an error that ends the session.
+      # A custom function that fails is the user's code: its column stays
+      # empty, with the error beside it, and every other column draws. The
+      # copies already built for it go; the failed column is one copy.
       failed <- tryCatch({
         leaf <- fill(leaf, keys, cp$slice, s, cp$suffix)
         if (!is.null(par_rows)) {
@@ -672,7 +683,17 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         }
         NULL
       }, lane_custom_error = conditionMessage)
-      if (!is.null(failed)) return(bad(failed))
+      if (!is.null(failed)) {
+        s <- lane_failed_summary(s, failed)
+        summaries[[i]] <- s
+        sid1 <- paste0(".s", i)
+        cp <- list(suffix = sid1, slice = data, level = NULL)
+        plan <- plan[seq_len(n0)]
+        leaf <- fill(leaf, keys, data, s, sid1)
+        if (!is.null(par_rows)) par_rows <- fill(par_rows, parent, data, s, sid1)
+        plan <- c(plan, list(lane_summary_plan(s, cp, data, scale_map)))
+        break
+      }
       # The series reference is computed per COPY over the slice's values:
       # every sparkline in the column is oriented against the same line
       # (per facet level, its own level's line).
@@ -690,7 +711,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       if (!is.null(s$.custom)) entry <- lane_custom_plan(entry, s, cp)
       plan <- c(plan, list(entry))
     }
-    if (is.null(s_primary)) s_primary <- list(s = s, sid = copies[[1L]]$suffix)
+    if (is.null(s_primary)) s_primary <- list(s = s, sid = sid1)
   }
 
   # `.v` = the FIRST summary's primary value (its sort key): rank order
@@ -782,8 +803,21 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     folded = asm$folded, fold_max = asm$fold_max,
     n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows),
     note = note, pct_ok = FALSE, func = "identity",
-    facet_spans = facet_spans
+    facet_spans = facet_spans,
+    failed = Filter(Negate(is.null), lapply(plan, function(p) {
+      if (!is.null(p$failed)) list(name = p$sname, msg = p$failed)
+    }))
   )
+}
+
+#' A custom summary whose function failed: a text column of dashes that
+#' carries the error (`.failed`, without the "Summary \"name\": " prefix the
+#' column header already says). Unfaceted and uncoloured, so it is one
+#' column whatever the summary asked for.
+#' @noRd
+lane_failed_summary <- function(s, msg) {
+  list(type = "field", name = s$name,
+       .failed = sub("^Summary \"[^\"]*\": ", "", msg))
 }
 
 #' The colour dimension of a distribution column: the per-level statistic
@@ -940,6 +974,9 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                    show_val = TRUE),
         lane_color_split(s, sid, names(cols), data, scale_map))
     }
+  } else if (!is.null(s$.failed)) {
+    c(base, list(kind = "num", key = paste0(sid, "_t"), raw = TRUE,
+                 text = TRUE, failed = s$.failed))
   } else if (identical(s$type, "field")) {
     c(base, list(kind = "num", key = paste0(sid, "_t"), raw = TRUE,
                  text = TRUE,
