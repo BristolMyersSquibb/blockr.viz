@@ -663,10 +663,16 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         cp$den <- summarize_denom(cp$slice, summarize_chr1(s$func) %||% "count",
                                   summarize_chr1(s$col))
       }
-      leaf <- fill(leaf, keys, cp$slice, s, cp$suffix)
-      if (!is.null(par_rows)) {
-        par_rows <- fill(par_rows, parent, cp$slice, s, cp$suffix)
-      }
+      # A custom function that fails is the user's code: it reads as the
+      # table's message, never as an error that ends the session.
+      failed <- tryCatch({
+        leaf <- fill(leaf, keys, cp$slice, s, cp$suffix)
+        if (!is.null(par_rows)) {
+          par_rows <- fill(par_rows, parent, cp$slice, s, cp$suffix)
+        }
+        NULL
+      }, lane_custom_error = conditionMessage)
+      if (!is.null(failed)) return(bad(failed))
       # The series reference is computed per COPY over the slice's values:
       # every sparkline in the column is oriented against the same line
       # (per facet level, its own level's line).
@@ -1581,20 +1587,24 @@ lane_custom_setup <- function(s, data) {
 #' The function's frames for every cell of `slice`, keyed by `tkeys`. One
 #' call per level: `d` arrives grouped by `tkeys`, and the function keeps that
 #' grouping, so its result carries the key columns that place each value.
+#' A failure is a `lane_custom_error`, which lane_prepare_summaries() turns
+#' into the table's error message.
 #' @noRd
 lane_custom_cells <- function(slice, tkeys, s) {
+  fail <- function(...) {
+    stop(errorCondition(paste0("Summary \"", s$name, "\": ", ...),
+                        class = "lane_custom_error"))
+  }
   g <- dplyr::group_by(slice, dplyr::across(dplyr::all_of(tkeys)))
   r <- lane_custom_run(s$.custom$fn, g)
   if (inherits(r, "error")) {
-    stop("Summary \"", s$name, "\": the function failed: ",
-         conditionMessage(r), call. = FALSE)
+    fail("the function failed: ", conditionMessage(r))
   }
   miss <- setdiff(tkeys, names(r))
   if (length(miss)) {
-    stop("Summary \"", s$name, "\": the function dropped the grouping by ",
+    fail("the function dropped the grouping by ",
          paste(miss, collapse = ", "), ". Keep it: add groups with ",
-         "group_by(..., .add = TRUE) and summarise with dplyr, not d$.",
-         call. = FALSE)
+         "group_by(..., .add = TRUE) and summarise with dplyr, not d$.")
   }
   r
 }

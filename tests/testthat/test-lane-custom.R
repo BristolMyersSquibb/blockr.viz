@@ -88,13 +88,11 @@ test_that("a bare body using `d` works like a function", {
   expect_equal(row_of(prep$rows, "Erythema")$.s1_v, 3)
 })
 
-test_that("a function that drops the grouping says so", {
-  expect_error(
-    summarize_prepare(custom_fixture(), by = "TERM", summaries = list(
-      list(type = "custom", name = "X", fn = "c(value = nrow(d))")
-    )),
-    "dropped the grouping by TERM"
-  )
+test_that("a function that drops the grouping says so, without an error", {
+  prep <- summarize_prepare(custom_fixture(), by = "TERM", summaries = list(
+    list(type = "custom", name = "X", fn = "c(value = nrow(d))")
+  ))
+  expect_match(prep$err, "Summary \"X\": the function dropped the grouping by TERM")
 })
 
 test_that("a facet runs the function per facet level", {
