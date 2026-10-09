@@ -116,6 +116,18 @@ summarize_denom <- function(data, func, id_var) {
   nrow(data)
 }
 
+# A facet level's Big N: the subjects in its rows, or the rows when there is
+# no subject column. Over every row of the level, so the population join's
+# rows without a group count.
+#' @noRd
+summarize_pop_n <- function(data, subject = NULL) {
+  subject <- summarize_chr1(subject)
+  if (!is.null(subject) && subject %in% names(data)) {
+    return(dplyr::n_distinct(data[[subject]]))
+  }
+  nrow(data)
+}
+
 #' @noRd
 summarize_has_pct <- function(func) {
   isTRUE(func %in% c("count", "count_distinct"))
@@ -205,7 +217,7 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
                               cols = NULL, fields = NULL, sort_by = "value",
                               sort_dir = "desc", top_n = NULL, scale_map = NULL,
                               summaries = list(), by = NULL,
-                              facet_layout = "by_summary") {
+                              facet_layout = "by_summary", subject = NULL) {
   bad <- function(msg) list(err = msg)
 
   if (!is.data.frame(data)) return(bad("No data"))
@@ -242,7 +254,8 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
       facet_layout = summarize_chr1(facet_layout) %||% "by_summary",
       color = summarize_chr1(color),
       sort_by = sort_by,
-      sort_dir = sort_dir, top_n = top_n, scale_map = scale_map
+      sort_dir = sort_dir, top_n = top_n, scale_map = scale_map,
+      subject = subject
     ))
   }
 
@@ -379,6 +392,7 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
   pal <- character()
   facet_levels <- character()
   denoms <- c(all = denom)
+  pops <- numeric()
 
   # A single-series bar takes the chart's FIRST palette colour, not a CSS token:
   # a summarize table and a bar chart of the same data are then the same blue
@@ -436,6 +450,8 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
       # own N, never the pooled total.
       sub <- data[as.character(data[[facet]]) == lv, , drop = FALSE]
       denoms[[lv]] <- summarize_denom(sub, func, id_var)
+      # The header's N: the percentage base for a count, else the subjects.
+      pops[[lv]] <- if (pct_ok) denoms[[lv]] else summarize_pop_n(sub, subject)
     }
     if (!is.null(color)) {
       # Facet AND colour, the chart's two independent mappings: one bar
@@ -463,7 +479,7 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
           cvar = summarize_col_name(data, color),
           prefix = paste0(".f", fi, "s_"), series = series, mode = bar_mode,
           denom = if (pct_ok) denoms[[fv]],
-          sub_label = paste0("N = ", denoms[[fv]]),
+          sub_label = paste0("N = ", pops[[fv]]),
           show_val = TRUE, val_denom = if (pct_ok) denoms[[fv]]
         )))
       }
@@ -481,7 +497,7 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
           meas = summarize_measure_label(func, vname),
           fill = solo_fill,
           denom = if (pct_ok) denoms[[lv]],
-          sub_label = paste0("N = ", denoms[[lv]]),
+          sub_label = paste0("N = ", pops[[lv]]),
           show_val = TRUE, val_denom = if (pct_ok) denoms[[lv]]
         )))
       }

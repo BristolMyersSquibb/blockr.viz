@@ -733,7 +733,8 @@ new_summarize_table_block <- function(group = NULL,
             facet_layout = r_facet_layout(),
             cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
             sort_dir = r_sort_dir(), top_n = r_top_n(),
-            scale_map = board_scale_map()
+            scale_map = board_scale_map(),
+            subject = dd_ctrl_subject(session)
           )
           # A failed custom summary is an error of the block: blockr shows
           # it with the block (the `cond` below), the table draws the rest.
@@ -825,7 +826,8 @@ new_summarize_table_block <- function(group = NULL,
               title = r_title(), subtitle = r_subtitle(),
               caption = r_caption(),
               .title_args = title_args(),
-              scale_map = board_scale_map()
+              scale_map = board_scale_map(),
+              subject = dd_ctrl_subject(session)
             )
           ))
           e$caption <- download_footer_caption(e$caption, data(), session)

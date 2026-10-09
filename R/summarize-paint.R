@@ -728,9 +728,19 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
     for (grp in fs_spans$groups) {
       x0 <- lay$x[at + 2]
       x1 <- lay$x[at + 1 + grp$n + 1]
+      # The level's N sits beside the level, quieter (muted), as on screen:
+      # the pair is centred as one run.
+      ny <- hy + line_h * 0.5
+      nlab <- if (!is.null(grp$pop)) paste0("N = ", grp$pop)
+      lw <- rp_w(grp$label, fs * 0.95, family, bold = TRUE)
+      gap <- if (is.null(nlab)) 0 else rp_ch(fs * 0.8, family)
+      nw <- if (is.null(nlab)) 0 else rp_w(nlab, fs * 0.8, family)
+      lx <- (x0 + x1) / 2 - (lw + gap + nw) / 2
       g <- c(g, list(
-        txt(grp$label, (x0 + x1) / 2, hy + line_h * 0.5, just = "centre",
-            bold = TRUE, size = fs * 0.95),
+        txt(grp$label, lx, ny, bold = TRUE, size = fs * 0.95),
+        if (!is.null(nlab)) {
+          txt(nlab, lx + lw + gap, ny, size = fs * 0.8, col = RP_MUTED)
+        },
         grid::linesGrob(x = grid::unit(c(x0 + lay$pad, x1 - lay$pad), "in"),
                   y = grid::unit(c(H - hy - line_h * 0.92, H - hy - line_h * 0.92), "in"),
                   gp = grid::gpar(col = RP_TICK, lwd = 0.6))

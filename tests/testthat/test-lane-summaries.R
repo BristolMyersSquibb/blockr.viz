@@ -977,3 +977,42 @@ test_that("facet columns with nothing to draw are left out, as the chart does", 
                      vapply(pf$plan, function(x) x$label, "")))
   expect_false(any(c("Gone", "Empty") %in% pf$facet_levels))
 })
+
+test_that("every facet copy carries its level's N, counted in subjects", {
+  d <- data.frame(
+    USUBJID = c("S1", "S1", "S2", "S3", "S3", "S4", "S5"),
+    ARM = c("A", "A", "A", "B", "B", "B", "B"),
+    TERM = c("x", "y", NA, "x", "x", "y", NA),
+    AGE = c(30, 30, 40, 50, 50, 60, 70)
+  )
+  S <- list(
+    list(type = "simple", name = "Patients", func = "count_distinct",
+         col = "USUBJID", show = "bar", facet = "ARM"),
+    list(type = "dist", name = "Age", col = "AGE", show = "box",
+         facet = "ARM")
+  )
+  p <- summarize_prepare(d, by = "TERM", summaries = S, subject = "USUBJID")
+  subs <- vapply(p$plan, function(x) x$sub_label, "")
+  # rows with no TERM (the population join's) are in the N
+  expect_identical(subs, c("Patients · N = 2", "Patients · N = 3",
+                           "Age · N = 2", "Age · N = 3"))
+
+  # no subject column: the level's rows
+  p0 <- summarize_prepare(d, by = "TERM", summaries = S[2])
+  expect_identical(vapply(p0$plan, function(x) x$sub_label, ""),
+                   c("Age · N = 3", "Age · N = 4"))
+
+  # by_level: the N moves up into the level's span
+  pl <- summarize_prepare(d, by = "TERM", summaries = S,
+                          facet_layout = "by_level", subject = "USUBJID")
+  expect_identical(vapply(pl$facet_spans$groups, function(g) g$pop, 1L),
+                   c(2L, 3L))
+  expect_null(pl$plan[[2L]]$sub_label)
+  expect_match(summarize_thead(pl), "N = 3</span>", fixed = TRUE)
+
+  # the ranked-bar surface: a mean's facet N is subjects too
+  pr <- summarize_prepare(d, group = "TERM", func = "mean", value = "AGE",
+                          facet = "ARM", subject = "USUBJID")
+  expect_identical(vapply(pr$plan, function(x) x$sub_label, ""),
+                   c("N = 2", "N = 3"))
+})

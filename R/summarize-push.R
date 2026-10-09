@@ -676,7 +676,12 @@ summarize_thead <- function(prep, sortable = TRUE, cols = NULL, axis = TRUE) {
     vapply(fs$groups, function(g) {
       paste0("<th class=\"blockr-col-header blockr-th-group\" colspan=\"",
              g$n, "\"><span class=\"blockr-col-name\">",
-             summarize_esc(g$label), "</span></th>")
+             summarize_esc(g$label), "</span>",
+             if (!is.null(g$pop)) {
+               paste0(" <span class=\"blockr-col-label\">N = ", g$pop,
+                      "</span>")
+             },
+             "</th>")
     }, character(1L))
   )
   row2 <- vapply(seq.int(fs$lead + 1L, length(prep$plan)), function(i) {

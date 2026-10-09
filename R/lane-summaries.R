@@ -335,7 +335,8 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
                                    facet_layout = "by_summary",
                                    color = NULL,
                                    sort_by = "value", sort_dir = "desc",
-                                   top_n = NULL, scale_map = NULL) {
+                                   top_n = NULL, scale_map = NULL,
+                                   subject = NULL) {
   bad <- function(msg) list(err = msg)
 
   by <- as.character(by %||% character())
@@ -669,6 +670,9 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         cp$den <- summarize_denom(cp$slice, summarize_chr1(s$func) %||% "count",
                                   summarize_chr1(s$col))
       }
+      # Every facet copy says its level's N, whatever the column shows: the
+      # subjects in the slice, rows when the board declares no subject.
+      if (!is.null(cp$level)) cp$pop <- summarize_pop_n(cp$slice, subject)
       # A custom function that fails is the user's code: its column stays
       # empty, with the error beside it, and every other column draws. The
       # copies already built for it go; the failed column is one copy.
@@ -757,7 +761,8 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     if (!one) groups <- lapply(groups, function(g) {
       lapply(g, function(p) {
         p$label <- p$sname %||% p$label
-        p$sub_label <- NULL
+        # Every copy: a plan entry can carry `sub_label` twice (c() appends).
+        p[names(p) == "sub_label"] <- NULL
         p
       })
     })
@@ -765,7 +770,12 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     if (!one) facet_spans <- list(
       lead = length(lead),
       groups = lapply(seq_along(facet_levels), function(j) {
-        list(label = facet_levels[[j]], n = length(groups[[j]]))
+        lv <- facet_levels[[j]]
+        list(label = lv, n = length(groups[[j]]),
+             pop = summarize_pop_n(
+               data[as.character(data[[shared_facet]]) == lv, , drop = FALSE],
+               subject
+             ))
       })
     )
   }
@@ -855,7 +865,13 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
   } else {
     cp$level
   }
-  sub <- if (is.null(cp$level)) NULL else s$name
+  sub <- if (is.null(cp$level)) {
+    NULL
+  } else if (is.null(cp$pop)) {
+    s$name
+  } else {
+    paste0(s$name, " \u00b7 N = ", cp$pop)
+  }
   base <- list(label = label, sub_label = sub, sid = sid, stype = s$type,
                flevel = cp$level, sname = s$name, meas = s$name,
                # a count with nothing in it is an empty column
@@ -1754,7 +1770,10 @@ lane_custom_plan <- function(entry, s, cp) {
   # A count keeps the preset's second header line (its N); the other marks'
   # preset lines name statistics the function did not compute.
   if (!cu$mark %in% c("bar", "number")) {
-    entry$sub_label <- if (!is.null(cp$level)) s$name
+    entry[names(entry) == "sub_label"] <- NULL
+    entry$sub_label <- if (!is.null(cp$level)) {
+      if (is.null(cp$pop)) s$name else paste0(s$name, " \u00b7 N = ", cp$pop)
+    }
   }
   if (cu$mark %in% c("box", "pointrange")) {
     entry$words <- list(
