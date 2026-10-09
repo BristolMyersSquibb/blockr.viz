@@ -444,13 +444,15 @@ test_that("columns may facet by DIFFERENT columns; the header names them", {
   expect_identical(p$layout, "facet")
 })
 
-test_that("a one-level facet column is an error naming the summary", {
+test_that("a one-level facet column draws one copy labelled with the level", {
+  # A population filter that leaves one arm narrows the facet to one level.
   ae <- sum_fixture()
   ae$ONE <- "only"
   S <- list(list(type = "simple", name = "Rows", func = "count",
                  show = "bar", facet = "ONE"))
   p <- summarize_prepare(ae, group = NULL, by = "TERM", summaries = S)
-  expect_match(p$err, "Summary \"Rows\": facet column \"ONE\"")
+  expect_null(p$err)
+  expect_identical(vapply(p$plan, function(x) x$label, ""), "only")
 })
 
 test_that("the retired table-level pair fans down onto the rows it applied to", {

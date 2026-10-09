@@ -274,12 +274,11 @@ test_that("a bad config is a message, never an error", {
                "Value column")
   expect_identical(summarize_prepare(ae[0, ], group = "TERM")$err,
                    "No rows to display")
-  # A one-level facet has nothing to compare across columns.
+  # A one-level facet (one arm left after a filter) draws, it is not an error.
   one_arm <- droplevels(ae[ae$ARM == "Placebo", ])
-  expect_match(
+  expect_null(
     summarize_prepare(one_arm, group = "TERM", facet = "ARM",
-                      func = "count")$err,
-    "fewer than two levels"
+                      func = "count")$err
   )
 })
 

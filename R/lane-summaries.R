@@ -425,13 +425,9 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     }
     fc <- present(s$facet)
     if (!is.null(fc)) {
+      # One level is a filter narrowing the data (one arm left), not a
+      # mistake: the column draws once, labelled with that level.
       lv <- summarize_levels(data[[fc]])
-      if (length(lv) < 2L) {
-        return(bad(paste0(
-          "Summary \"", s$name, "\": facet column \"", fc, "\" has fewer ",
-          "than two levels; nothing to compare across columns."
-        )))
-      }
       if (length(lv) > LANE_MAX_LEVELS) {
         return(bad(paste0(
           "Summary \"", s$name, "\": facet column \"", fc, "\" has ",

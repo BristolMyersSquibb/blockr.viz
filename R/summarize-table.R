@@ -427,12 +427,6 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
                       val_denom = if (pct_ok) denom))
   } else {
     facet_levels <- summarize_levels(data[[facet]])
-    if (length(facet_levels) < 2L) {
-      return(bad(paste0(
-        "Facet column \"", facet, "\" has fewer than two levels; ",
-        "nothing to compare across columns."
-      )))
-    }
     fac <- summarize_aggregate(data, c(keys, facet), func, value, id_var)
     for (lv in facet_levels) {
       s <- fac[as.character(fac[[facet]]) == lv, , drop = FALSE]
