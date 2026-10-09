@@ -25,6 +25,7 @@ new_summarize_table_block(
   search = TRUE,
   sortable = TRUE,
   axis = TRUE,
+  value_labels = TRUE,
   bar_width = "fit",
   download = FALSE,
   title = NULL,
@@ -143,6 +144,13 @@ value domain for a box, a dot range or a bar, the zero-centred one for a
 difference bar, the x domain (dates as dates) for a swimlane or a
 sparkline. \code{FALSE} drops every strip, for a dense exhibit where the
 numbers beside the marks carry the scale.}
+
+\item{value_labels}{Print each mark's value beside it (default \code{TRUE}):
+a bar's value, a box's or a dot range's centre, a dumbbell's change, a
+sparkline's last value. A colour-split column prints one number per
+level, beside its lane. Labels print one decimal finer than the column
+axis's ticks; whole numbers stay whole. \code{FALSE} drops them all. Number
+and text columns are their values and are not affected.}
 
 \item{bar_width}{Length of the marks that carry a value label (bars,
 boxes, dot ranges, sparklines). \code{"fit"} (default) fills the panel, from
