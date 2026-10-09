@@ -21,9 +21,10 @@ new_download_footer_option(
 A \code{board_option} object.
 }
 \description{
-A line of text printed under every downloaded picture: the image download
-of a chart, summarize table or heatmap, and the PowerPoint and web page
-downloads that carry such a picture. \code{{user}}, \code{{time}}, \code{{filters}} and
+A line of text printed under every download of a chart or table: drawn
+under the picture for an image (and the PowerPoint and web page that carry
+it), added as the last caption line for a table written as a table.
+\code{{user}}, \code{{time}}, \code{{filters}} and
 the fields of the data's \code{blockr_provenance} attribute (\code{{dataset}},
 \code{{note}}, ...) are filled in when the file is downloaded.
 }

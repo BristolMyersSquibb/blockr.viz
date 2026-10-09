@@ -94,7 +94,7 @@ test_that("the option takes its default from the deployment", {
   expect_identical(attr(opt, "category"), "Downloads")
 })
 
-test_that("blocks with picture downloads put the option on the board", {
+test_that("blocks with downloads put the option on the board", {
   ids <- function(blk) {
     vapply(blockr.core::board_options(blk), blockr.core::board_option_id,
            character(1L))
@@ -102,5 +102,50 @@ test_that("blocks with picture downloads put the option on the board", {
   expect_true("download_footer" %in% ids(new_chart_block()))
   expect_true("download_footer" %in% ids(new_summarize_table_block()))
   expect_true("download_footer" %in% suppressWarnings(ids(new_heatmap_block())))
-  expect_false("download_footer" %in% ids(new_table_block()))
+  expect_true("download_footer" %in% ids(new_table_block()))
+})
+
+test_that("a table written as a table ends its caption with the footer", {
+  session <- list(user = "jdoe")
+  local_mocked_bindings(board_download_footer = function(...) "By {user}")
+  expect_identical(download_footer_caption("Note", NULL, session),
+                   "Note\nBy jdoe")
+  expect_identical(download_footer_caption(NULL, NULL, session), "By jdoe")
+  expect_identical(download_footer_caption("", NULL, session), "By jdoe")
+
+  local_mocked_bindings(board_download_footer = function(...) NULL)
+  expect_identical(download_footer_caption("Note", NULL, session), "Note")
+  expect_null(download_footer_caption(NULL, NULL, session))
+})
+
+test_that("the table block's downloads carry the footer in every format", {
+  skip_if_not_installed("openxlsx")
+  skip_if_not_installed("officer")
+  skip_if_not_installed("flextable")
+
+  d <- data.frame(term = c("A", "B"), n = 1:2)
+  attr(d, "blockr_provenance") <- list(dataset = "AQ-001")
+  blk <- new_table_block(download = TRUE)
+
+  shiny::testServer(blk$expr_server, args = list(data = shiny::reactive(d)), {
+    session$userData$board_options <- list(
+      download_footer = shiny::reactiveVal("Exported from {dataset}")
+    )
+    session$flushReact()
+
+    h <- paste(readLines(output$dl_html, warn = FALSE), collapse = "")
+    expect_match(h, "Exported from AQ-001", fixed = TRUE)
+
+    x <- openxlsx::read.xlsx(output$dl_xlsx, colNames = FALSE,
+                             skipEmptyRows = FALSE)
+    expect_true("Exported from AQ-001" %in% x[[1L]])
+
+    td <- withr::local_tempdir()
+    utils::unzip(output$dl_pptx, exdir = td)
+    sl <- paste(unlist(lapply(
+      list.files(file.path(td, "ppt/slides"), "xml$", full.names = TRUE),
+      readLines, warn = FALSE
+    )), collapse = "")
+    expect_match(sl, "Exported from AQ-001", fixed = TRUE)
+  })
 })

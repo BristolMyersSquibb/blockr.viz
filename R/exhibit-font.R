@@ -148,7 +148,9 @@ new_exhibit_font_option <- function(value = 11, category = "Table options",
 
 #' @exportS3Method blockr.core::board_options
 board_options.table_block <- function(x, ...) {
-  blockr.core::combine_board_options(new_exhibit_font_option(), NextMethod())
+  blockr.core::combine_board_options(new_exhibit_font_option(),
+                                     new_download_footer_option(),
+                                     NextMethod())
 }
 
 #' @exportS3Method blockr.core::board_options

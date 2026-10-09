@@ -1,9 +1,10 @@
 # Download footer -------------------------------------------------------------
 #
-# One line a board prints under every picture it lets out: the chart,
-# summarize table and heatmap images, and the decks and web pages that carry
-# those images. Tables written as tables (xlsx, a table's own html and pptx)
-# do not get it.
+# One line a board prints under everything it lets out. Under a picture (the
+# chart, summarize table and heatmap images, and the decks and web pages that
+# carry them) it is drawn into the image; under a table written as a table
+# (xlsx, html, pptx of the table block, composer tables, the summarize table's
+# table formats) it is the last line of the caption.
 #
 # Set per board as the `download_footer` option (Downloads in the settings
 # sidebar), so the builder sets it and a locked board keeps it. The default
@@ -23,9 +24,10 @@
 
 #' Download footer board option
 #'
-#' A line of text printed under every downloaded picture: the image download
-#' of a chart, summarize table or heatmap, and the PowerPoint and web page
-#' downloads that carry such a picture. `{user}`, `{time}`, `{filters}` and
+#' A line of text printed under every download of a chart or table: drawn
+#' under the picture for an image (and the PowerPoint and web page that carry
+#' it), added as the last caption line for a table written as a table.
+#' `{user}`, `{time}`, `{filters}` and
 #' the fields of the data's `blockr_provenance` attribute (`{dataset}`,
 #' `{note}`, ...) are filled in when the file is downloaded.
 #'
@@ -48,13 +50,13 @@ new_download_footer_option <- function(
       shiny::tagList(
         shiny::textAreaInput(
           shiny::NS(id, "download_footer"),
-          "Footer on downloaded pictures",
+          "Footer on downloads",
           value = value,
           rows = 2L
         ),
         shiny::helpText(
           paste(
-            "Printed under charts and tables downloaded as images or slides.",
+            "Printed under every downloaded chart and table.",
             "{user}, {time}, {dataset}, {note} and {filters} are filled in",
             "at download."
           )
@@ -94,8 +96,10 @@ board_options.heatmap_block <- function(x, ...) {
                                      NextMethod())
 }
 
-# The summarize table already contributes the exhibit font
-# (R/exhibit-font.R); its method adds both.
+# The table and summarize table blocks already contribute the exhibit font
+# (R/exhibit-font.R); their methods add both. blockr.sandbox's composer
+# block, which downloads through `dt_download_control()`, adds it in its own
+# package.
 
 # The footer text for one download, or NULL when there is none.
 #' @noRd
@@ -147,6 +151,22 @@ board_download_footer <- function(session = blockr.core::get_session()) {
     blockr.core::get_board_option_or_null("download_footer", session),
     error = function(e) NULL
   )
+}
+
+# The caption with the board's footer as its last line, for a download
+# written as a table rather than a picture. `data` as below.
+#' @noRd
+download_footer_caption <- function(caption, data, session) {
+  txt <- download_footer_text(
+    board_download_footer(session),
+    tryCatch(data, error = function(e) NULL),
+    user = session$user
+  )
+  if (is.null(txt)) {
+    return(caption)
+  }
+  cap <- if (is.character(caption) && length(caption)) caption[[1L]]
+  if (is.null(cap) || is.na(cap) || !nzchar(cap)) txt else paste(cap, txt, sep = "\n")
 }
 
 # A picture with the board's footer under it, or the picture as it was when

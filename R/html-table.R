@@ -1522,6 +1522,7 @@ input.blockr-search:focus {
   box-shadow: 0 10px 16px -14px rgba(16, 24, 40, 0.4);
 }
 .blockr-html-table-caption {
+  white-space: pre-line;
   padding: 8px 4px 4px;
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-color-text-muted, #6b7280);

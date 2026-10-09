@@ -166,6 +166,14 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
     dl_filename(e$dataset %||% dl_dataset(e$data), e$title, filename, ext)
   }
 
+  # The caption with the board's download footer as its last line
+  # (R/download-footer.R). `source`, when the exhibit has one, is the frame
+  # the provenance and filter trail are read from, for an exhibit whose
+  # `data` was built for the export without them.
+  dl_caption <- function(e) {
+    download_footer_caption(e$caption, e$source %||% e$data, session)
+  }
+
   session$output[[slot_id]] <- shiny::renderUI(dl_control_ui(ns, specs()))
 
   # One handler per format, registered whether or not the format is currently
@@ -177,7 +185,8 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
             dl_guard("Excel", {
               e <- exhibit()
               write_annotated_xlsx(e$data, file, title = e$title,
-                                   subtitle = e$subtitle, caption = e$caption,
+                                   subtitle = e$subtitle,
+                                   caption = dl_caption(e),
                                    digits = e$digits)
             })
           }
@@ -194,7 +203,7 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
               e <- exhibit()
               write_exhibit_html(dt_format_digits(e$data, e$digits), file,
                                  title = e$title,
-                                 subtitle = e$subtitle, caption = e$caption,
+                                 subtitle = e$subtitle, caption = dl_caption(e),
                                  collapsible = !identical(e$collapsible, FALSE),
                                  sortable = !identical(e$sortable, FALSE))
             })
@@ -209,7 +218,7 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
               e <- exhibit()
               write_exhibit_pptx(dt_format_digits(e$data, e$digits), file,
                                  title = e$title,
-                                 subtitle = e$subtitle, caption = e$caption)
+                                 subtitle = e$subtitle, caption = dl_caption(e))
             })
           }
         )

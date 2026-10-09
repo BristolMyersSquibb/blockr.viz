@@ -298,17 +298,23 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
     }
   }
 
-  # Caption (optional): an italic footnote line one blank row below the body,
+  # Caption (optional): an italic footnote one blank row below the body,
   # left-aligned in the stub column (a footnote reads from the margin, unlike
-  # the centred title).
+  # the centred title). Each line of it on a row of its own, since a cell
+  # does not grow to fit a line break: the download footer comes in as the
+  # caption's last line.
   if (!is.null(caption) && nzchar(caption)) {
-    cap_r <- r + total_out + 1L
-    openxlsx::writeData(wb, sheet, caption, startRow = cap_r, startCol = 1L)
-    openxlsx::mergeCells(wb, sheet, cols = seq_len(n_col), rows = cap_r)
-    openxlsx::addStyle(wb, sheet, openxlsx::createStyle(
-      textDecoration = "italic", halign = "left", fontSize = 9,
-      fontColour = "#6b7280"),
-      rows = cap_r, cols = 1L)
+    lines <- strsplit(caption, "\n", fixed = TRUE)[[1L]]
+    for (i in seq_along(lines)) {
+      cap_r <- r + total_out + i
+      openxlsx::writeData(wb, sheet, lines[[i]], startRow = cap_r,
+                          startCol = 1L)
+      openxlsx::mergeCells(wb, sheet, cols = seq_len(n_col), rows = cap_r)
+      openxlsx::addStyle(wb, sheet, openxlsx::createStyle(
+        textDecoration = "italic", halign = "left", fontSize = 9,
+        fontColour = "#6b7280"),
+        rows = cap_r, cols = 1L)
+    }
   }
 
   openxlsx::setColWidths(wb, sheet, cols = 1L, widths = 34)

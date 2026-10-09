@@ -293,7 +293,7 @@ new_heatmap_block <- function(row = character(),
           )
           tt <- tryCatch(r_titles(), error = function(e) list())
           list(data = out, title = tt$title, subtitle = tt$subtitle,
-               caption = tt$caption, dataset = dl_dataset(d))
+               caption = tt$caption, dataset = dl_dataset(d), source = d)
         }
         # The export picture: the heatmap as the browser drew it, posted by
         # heatmap-block.js when the download menu opens (the summarize

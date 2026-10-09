@@ -806,9 +806,12 @@ new_summarize_table_block <- function(group = NULL,
         # format whose writer is missing is left out rather than shown
         # disabled: nobody asked for PowerPoint specifically, the download
         # toggle did, so an entry that only ever explains itself is noise.
+        # Its caption ends with the board's download footer
+        # (R/download-footer.R), for every format that writes the table
+        # rather than the browser's picture.
         dl_exhibit <- function() {
           d <- ann_data()
-          do.call(static_summarize_table, c(
+          e <- do.call(static_summarize_table, c(
             list(d),
             list(
               group = r_group(), parent = r_parent(), color = r_color(),
@@ -825,6 +828,8 @@ new_summarize_table_block <- function(group = NULL,
               scale_map = board_scale_map()
             )
           ))
+          e$caption <- download_footer_caption(e$caption, data(), session)
+          e
         }
 
         dl_formats <- shiny::reactive({
