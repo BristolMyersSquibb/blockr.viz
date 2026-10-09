@@ -384,16 +384,16 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
   # a summarize table and a bar chart of the same data are then the same blue
   # (and follow a themed board's palette together).
   solo_fill <- dd_palette(1L)
-  measure_sub <- if (identical(func, "identity")) {
-    # The bar column header is the value column itself
-    # (summarize_measure_label); the sub-line carries its variable label when it
-    # adds one.
-    dt_col_label(data[[value]], value)
-  } else if (needs_value) {
-    lbl <- dt_col_label(data[[value]], value) %||% value
-    paste0(AGG_WORDS[[func]] %||% func, ": ", lbl)
+  # The value column by its variable label, else its name: the bar column
+  # header and the hover card say it (summarize_measure_label), so the
+  # sub-line only adds the aggregation's word when there is no label.
+  vlab <- dt_col_label(data[[value]], value)
+  vname <- vlab %||% value
+  measure_sub <- if (needs_value && is.null(vlab) &&
+                     !identical(func, "identity")) {
+    paste0(AGG_WORDS[[func]] %||% func, ": ", value)
   } else if (identical(func, "count_distinct")) {
-    paste0("distinct ", id_var)
+    paste0("distinct ", summarize_col_name(data, id_var))
   } else {
     NULL
   }
@@ -404,8 +404,8 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
   show_val <- !length(cols)
   if (identical(layout, "simple")) {
     plan <- list(list(kind = "bar",
-                      label = summarize_measure_label(func, value),
-                      meas = summarize_measure_label(func, value),
+                      label = summarize_measure_label(func, vname),
+                      meas = summarize_measure_label(func, vname),
                       key = ".v", sub_label = measure_sub, fill = solo_fill,
                       show_val = show_val,
                       val_denom = if (pct_ok) denom))
@@ -420,8 +420,8 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
       leaf[[paste0(".s_", lv)]] <- summarize_match(leaf, s, keys, absent)
     }
     plan <- list(list(kind = "barsplit",
-                      label = summarize_measure_label(func, value),
-                      meas = summarize_measure_label(func, value),
+                      label = summarize_measure_label(func, vname),
+                      meas = summarize_measure_label(func, vname),
                       cvar = summarize_col_name(data, color),
                       key = ".v", series = series, mode = bar_mode,
                       sub_label = measure_sub, show_val = show_val,
@@ -459,7 +459,7 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
         plan <- c(plan, list(list(
           kind = "barsplit", label = fv, key = paste0(".f_", fv),
           flevel = fv, zero_empty = pct_ok,
-          meas = summarize_measure_label(func, value),
+          meas = summarize_measure_label(func, vname),
           cvar = summarize_col_name(data, color),
           prefix = paste0(".f", fi, "s_"), series = series, mode = bar_mode,
           denom = if (pct_ok) denoms[[fv]],
@@ -478,7 +478,7 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
         plan <- c(plan, list(list(
           kind = "bar", label = lv, key = paste0(".f_", lv),
           flevel = lv, zero_empty = pct_ok,
-          meas = summarize_measure_label(func, value),
+          meas = summarize_measure_label(func, vname),
           fill = solo_fill,
           denom = if (pct_ok) denoms[[lv]],
           sub_label = paste0("N = ", denoms[[lv]]),

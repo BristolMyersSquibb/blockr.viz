@@ -130,8 +130,10 @@
 
   /**
    * The line chart's tooltip: per x position, each line's value there,
-   * capped. While a line is hovered (`hover.si`) only that line's row; away
-   * from every line of a split chart, none.
+   * capped. While a line is hovered (`hover.si`): with one line per colour
+   * level, every line's row with that one marked (the colour-split card);
+   * with one line per series (a subject), that line's row only. Away from
+   * every line of a split chart, none.
    * @param {any} m @param {any} look @param {{ si: number | null }} hover
    */
   const lineTooltip = (m, look, hover) => {
@@ -146,11 +148,11 @@
         let rows = ps.filter((/** @type {any} */ p) =>
           p && p.seriesType === 'line' && Array.isArray(p.value) && p.seriesName !== '__focus__');
         if (!rows.length) return '';
-        if (hover.si != null) {
+        if (hover.si == null && m.seriesCount > 1) return '';
+        const byColor = !m.seriesCol && !!m.color && m.seriesCount > 1;
+        if (hover.si != null && !byColor) {
           rows = rows.filter((/** @type {any} */ p) => p.seriesIndex === hover.si);
           if (!rows.length) return '';
-        } else if (m.seriesCount > 1) {
-          return '';
         }
         // One row per series, the first of replicates at one x.
         const seen = new Set();
@@ -162,10 +164,18 @@
         const head = m.x.cats
           ? (rows[0].axisValueLabel ?? String(rows[0].value[0]))
           : title(m.x.col) + ': ' + NS.ddNum3(rows[0].value[0]);
+        // The hovered line first, so the cap never hides it.
+        if (byColor) {
+          rows.sort((/** @type {any} */ a, /** @type {any} */ b) =>
+            (b.seriesIndex === hover.si ? 1 : 0) - (a.seriesIndex === hover.si ? 1 : 0));
+        }
+        // A colour level is named with its column, as on a split bar.
+        const colorName = byColor ? NS.esc(title(m.color) || m.color) + ' ' : '';
         const lines = rows.slice(0, TT_ROW_CAP).map((/** @type {any} */ p) => {
-          const nm = m.splitCol ? p.seriesName : title(m.y.col);
-          return NS.tipRow(NS.esc(nm), NS.ddNum3(p.value[1]) + ttSuffix(p.value),
-                           m.splitCol ? p.color : null);
+          const nm = m.splitCol ? colorName + NS.esc(p.seriesName) : NS.esc(title(m.y.col));
+          return NS.tipRow(nm, NS.ddNum3(p.value[1]) + ttSuffix(p.value),
+                           m.splitCol ? p.color : null,
+                           byColor ? p.seriesIndex === hover.si : null);
         });
         if (rows.length > TT_ROW_CAP) lines.push(NS.tipNote('+' + (rows.length - TT_ROW_CAP) + ' more'));
         return NS.tipHead(NS.esc(head)) + lines.join('');

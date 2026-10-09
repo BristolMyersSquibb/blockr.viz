@@ -987,15 +987,18 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
     lv <- s$.levels
     dlv <- s$.dlevels
     words <- c(
-      trimws(paste(LANE_PAIR_WORDS[[s$from_func]], s$from, "\u25c7")),
-      trimws(paste(LANE_PAIR_WORDS[[s$to_func]], s$to, "\u25cf"))
+      trimws(paste(LANE_PAIR_WORDS[[s$from_func]],
+                   summarize_col_name(data, s$from), "\u25c7")),
+      trimws(paste(LANE_PAIR_WORDS[[s$to_func]],
+                   summarize_col_name(data, s$to), "\u25cf"))
     )
     # Set on `base` itself: c() would append a second `sub_label` that `$`
     # never reads past the first (NULL) one.
     base$sub_label <- sub %||% paste0(
       words[[1L]], " \u2192 ", words[[2L]],
       if (length(dlv) > 1L) {
-        paste0(" \u00b7 dashed: ", s$dash, " \u2260 ", dlv[[1L]])
+        paste0(" \u00b7 dashed: ", summarize_col_name(data, s$dash), " \u2260 ",
+               dlv[[1L]])
       } else {
         ""
       }
@@ -1038,6 +1041,14 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                  dom_date = isTRUE(s$.date),
                  tfields = intersect(as.character(s$fields %||% character()),
                                      names(data)),
+                 # What the segment tooltip calls the colour and the extra
+                 # fields: their variable labels, else their names.
+                 cvar = summarize_col_name(data, summarize_chr1(s$color)),
+                 tlabels = vapply(
+                   intersect(as.character(s$fields %||% character()), names(data)),
+                   function(f) summarize_col_name(data, f), character(1L),
+                   USE.NAMES = FALSE
+                 ),
                  size = summarize_chr1(s$size) %||% "md",
                  fills = if (!is.null(lv)) {
                    unname(summarize_level_colors(

@@ -78,6 +78,16 @@ test('the line tooltip follows the hovered line, and says nothing away from ever
   assert.doesNotMatch(html, /S01/);
 });
 
+test('a colour-split line card lists every level, the hovered one marked', () => {
+  const { po, opt } = build({ chart_type: 'line', color: 'ARM' });
+  const ps = [{ seriesType: 'line', seriesIndex: 0, seriesName: 'A', value: [1, 3], color: '#111111' },
+              { seriesType: 'line', seriesIndex: 1, seriesName: 'B', value: [1, 7], color: '#222222' }];
+  po.hover.si = 1;
+  const html = opt.tooltip.formatter(ps);
+  assert.match(html, /is-hit.*Arm B/);
+  assert.match(html, /is-dim.*Arm A/);
+});
+
 test('the point tooltip: the level, x and y by title, then the tooltip fields', () => {
   const { opt } = build({ color: 'ARM', tt_fields: ['SEX'] });
   const html = opt.tooltip.formatter({ seriesName: 'A', value: [2, 7, 'F'], color: '#123456' });

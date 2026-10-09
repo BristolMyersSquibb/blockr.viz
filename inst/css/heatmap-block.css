@@ -279,14 +279,15 @@ tr.hmb-flash td.hmb-stub {
   border-color: var(--blockr-color-border-danger-subtle);
 }
 
-/* ---- data tooltip (the chart's card) ---------------------------------- */
+/* ---- data tooltip (the chart's card) ----------------------------------
+   The box only; the content uses chart.css .dd-tt-*. */
 .hmb-tip {
   position: fixed;
   z-index: 1080;
   display: none;
-  min-width: 150px;
+  min-width: 160px;
   max-width: 320px;
-  padding: 8px 10px;
+  padding: 6px 10px;
   pointer-events: none;
   background: var(--blockr-color-bg-raised);
   border: 1px solid var(--blockr-color-border-default);
@@ -296,28 +297,3 @@ tr.hmb-flash td.hmb-stub {
   color: var(--blockr-color-text-default);
 }
 .hmb-tip.hmb-tip--on { display: block; }
-.hmb-tip-h {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
-  font-size: var(--blockr-font-size-sm);
-  font-weight: var(--blockr-font-weight-semibold);
-}
-.hmb-tip-h i {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-}
-.hmb-tip-r {
-  display: flex;
-  gap: 16px;
-  line-height: 1.6;
-}
-.hmb-tip-r span { color: var(--blockr-color-text-muted); }
-.hmb-tip-r b {
-  margin-left: auto;
-  font-weight: var(--blockr-font-weight-medium);
-  font-variant-numeric: tabular-nums;
-}

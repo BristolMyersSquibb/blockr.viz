@@ -3018,11 +3018,11 @@
       placeTip(tip, e);
       return;
     }
-    tip.className = "blockr-lane-tip";
     var r = lane.getBoundingClientRect();
     if (!r.width) { tip.hidden = true; return; }
     var fx = Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1);
     var txt = "";
+    var swatch = null;
     if (lane.classList.contains("blockr-summarize-ivcell")) {
       var seg = t.closest(".lane-seg");
       // Same-event highlight: hovering a labelled segment dims every other
@@ -3032,6 +3032,7 @@
                     seg ? seg.getAttribute("data-l") : null);
       if (seg) {
         txt = seg.getAttribute("data-tip") || "";
+        swatch = seg.style.background || null;
       } else {
         var d0 = parseFloat(lane.getAttribute("data-d0"));
         var d1 = parseFloat(lane.getAttribute("data-d1"));
@@ -3047,12 +3048,18 @@
       txt = xs[i] + " · " + ys[i];
     }
     if (!txt) { tip.hidden = true; return; }
-    // getAttribute already decoded the escaped payload text.
-    tip.textContent = txt;
-    tip.hidden = false;
-    tip.style.left = Math.min(e.clientX + 12,
-      window.innerWidth - tip.offsetWidth - 8) + "px";
-    tip.style.top = (e.clientY + 16) + "px";
+    // The same card as the bars: the first clause headlines (with the
+    // segment's colour), a "name: value" clause is a row, the rest notes.
+    // getAttribute already decoded the payload text; the card escapes it.
+    var parts = txt.split(" \u00b7 ");
+    var html = ttHead(parts[0], swatch);
+    parts.slice(1).forEach(function (pc) {
+      var k = pc.indexOf(": ");
+      html += k > 0 ? ttRow(pc.slice(0, k), pc.slice(k + 2)) : ttNote(pc);
+    });
+    tip.className = "blockr-lane-tip is-card";
+    tip.innerHTML = html;
+    placeTip(tip, e);
   });
   // Leaving the window (or scrolling the lane away) must not strand the tip
   // or the highlight.

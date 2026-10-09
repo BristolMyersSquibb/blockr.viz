@@ -190,6 +190,27 @@ test_that("the hover card names the colour column by its label", {
   expect_identical(p$plan[[1L]]$cvar, "ARM")
 })
 
+test_that("hover text names columns by their labels", {
+  ae <- sum_fixture()
+  attr(ae$SEV, "label") <- "Severity"
+  attr(ae$ARM, "label") <- "Treatment Arm"
+  attr(ae$ASTDY, "label") <- "Start Day"
+  attr(ae$AENDY, "label") <- "End Day"
+  S <- list(
+    list(type = "spans", name = "Episodes", x = "ASTDY", xend = "AENDY",
+         color = "SEV", fields = "ARM"),
+    list(type = "pair", name = "Onset to end", from = "ASTDY",
+         from_func = "mean", to = "AENDY", to_func = "mean")
+  )
+  m <- summarize_cells(summarize_prepare(ae, by = "TERM", summaries = S))
+  expect_match(m$cols[[1L]]$tips[[1L]][[1L]],
+               "^Severity (MILD|MOD) .* Treatment Arm: ")
+  expect_match(m$cols[[2L]]$tt$sub, "Start Day.*End Day")
+  # The plain summarize table: the bar header and card name the value label.
+  p <- summarize_prepare(ae, group = "TERM", value = "ASTDY", func = "mean")
+  expect_identical(p$plan[[1L]]$meas, "Mean Start Day")
+})
+
 test_that("a split bar only stacks an additive measure", {
   ae <- sum_fixture()
   S <- list(list(type = "simple", name = "Mean duration", func = "mean",
@@ -599,7 +620,7 @@ test_that("spans label/fields enrich tips and key the highlight", {
   ))
   c1 <- p$cols[[1]]
   # The tooltip headlines the event, then level, span, field pairs.
-  expect_match(c1$tips[[1]][[1]], "^Term[0-9] · (MILD|MOD) · ")
+  expect_match(c1$tips[[1]][[1]], "^Term[0-9] · SEV (MILD|MOD) · ")
   expect_match(c1$tips[[1]][[1]], "SER: (Y|N)")
   # The 4th segment slot carries the escaped label (data-l, the highlight
   # key); without `label` it is absent.

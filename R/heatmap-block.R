@@ -518,7 +518,7 @@ heatmap_block_dep <- memoise0(function() {
     chart_css_dep(),
     htmltools::htmlDependency(
       name = "heatmap-block",
-      version = paste0(utils::packageVersion("blockr.viz"), ".4"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".5"),
       src = system.file(package = "blockr.viz"),
       script = "js/heatmap-block.js",
       stylesheet = "css/heatmap-block.css"

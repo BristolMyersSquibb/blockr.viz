@@ -276,7 +276,7 @@ test_that("an interval column ships per-row segments on the observed domain", {
   expect_identical(as.character(c1$fills),
                    unname(summarize_level_colors(NULL, "SEV",
                                                  c("MILD", "MODERATE"))))
-  expect_match(c1$tips[[1]][[1]], "^(MILD|MODERATE) · ")
+  expect_match(c1$tips[[1]][[1]], "^SEV (MILD|MODERATE) · ")
   # The domain is the observed span range, not zero-based.
   expect_equal(c1$d0, min(ae$SDY))
   expect_equal(c1$d1, max(ae$EDY))

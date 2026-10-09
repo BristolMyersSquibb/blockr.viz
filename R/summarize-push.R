@@ -457,7 +457,8 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         if (dd) format(as.Date(v, origin = "1970-01-01")) else lane_fmt(v)
       }
       lv <- p$levels %||% prep$series
-      tf <- as.character(p$tfields %||% character())
+      tf <- as.character(p$tlabels %||% p$tfields %||% character())
+      cvar <- summarize_chr1(p$cvar)
       # Segment tuples [left, width, fill-index (, escaped label)]: the
       # optional 4th slot keys the same-event hover highlight (data-l).
       out_segs <- lapply(segs, function(ss) {
@@ -472,7 +473,9 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         vapply(ss, function(sg) {
           summarize_esc(paste0(
             if (!is.null(sg$lb)) paste0(sg$lb, " \u00b7 "),
-            if (!is.null(lv)) paste0(lv[[sg$f]], " \u00b7 "),
+            if (!is.null(lv)) {
+              paste0(if (!is.null(cvar)) paste0(cvar, " "), lv[[sg$f]], " \u00b7 ")
+            },
             fmt_d(sg$s), "\u2013", fmt_d(sg$e),
             if (length(tf) && !is.null(sg$fv)) {
               paste0(" \u00b7 ", paste0(tf, ": ", sg$fv, collapse = " \u00b7 "))

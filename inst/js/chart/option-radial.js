@@ -118,7 +118,8 @@
         tooltip: {
           trigger: 'item', confine: true,
           formatter: (/** @type {any} */ p) =>
-            NS.tipHead(P.esc(p.name), legendOn ? p.color : null) +
+            NS.tipHead((legendOn ? P.esc(P.title(cfg.color) || cfg.color) + ' ' : '') +
+              P.esc(p.name), legendOn ? p.color : null) +
             NS.tipNote(P.esc(P.aggLabel)) +
             groups.map((/** @type {string} */ g, /** @type {number} */ i) => {
               const v = p.value ? p.value[i] : null;

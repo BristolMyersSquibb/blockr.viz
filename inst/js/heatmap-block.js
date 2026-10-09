@@ -320,7 +320,8 @@
   // ---- data tooltip ----------------------------------------------------
   // The chart's data tooltip, drawn for a cell (design system, "Charts:
   // data tooltip"): the term with the cell's swatch, then label / value
-  // rows. One card for the page, placed by the pointer.
+  // rows, in the chart's own card classes (chart.css .dd-tt-*). One card
+  // for the page, placed by the pointer.
   /** @type {HTMLElement|null} */
   var tipEl = null;
   function tip() {
@@ -337,10 +338,12 @@
   /** @param {HTMLElement} el @param {string} label @param {string} value */
   function tipRow(el, label, value) {
     var r = document.createElement('div');
-    r.className = 'hmb-tip-r';
+    r.className = 'dd-tt-row';
     var l = document.createElement('span');
+    l.className = 'dd-tt-label';
     l.textContent = label;
-    var v = document.createElement('b');
+    var v = document.createElement('span');
+    v.className = 'dd-tt-value';
     v.textContent = value;
     r.appendChild(l);
     r.appendChild(v);
@@ -364,11 +367,14 @@
       var el = tip();
       el.textContent = '';
       var h = document.createElement('div');
-      h.className = 'hmb-tip-h';
-      var sw = document.createElement('i');
+      h.className = 'dd-tt-head';
+      var sw = document.createElement('span');
+      sw.className = 'dd-tt-sw';
       sw.style.background = m.bg[m.pal[at] - 1];
       h.appendChild(sw);
-      h.appendChild(document.createTextNode(m.terms[j]));
+      var ht = document.createElement('span');
+      ht.textContent = m.terms[j];
+      h.appendChild(ht);
       el.appendChild(h);
       tipRow(el, m.rowLabel || m.rowCol, m.rows[i]);
       tipRow(el, 'Events', String(m.cnt[at]));
