@@ -635,16 +635,12 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
 #' @noRd
 summarize_thead <- function(prep, sortable = TRUE, cols = NULL, axis = TRUE) {
   col_th <- function(p, i) {
-    th <- as.character(dt_th(
+    as.character(dt_th(
       p$label, i, label = p$sub_label,
       numeric = identical(p$kind, "num") && !isTRUE(p$text),
       sortable = sortable,
       extra = if (isTRUE(axis)) summarize_axis_strip(p, cols[[i]], prep)
     ))
-    # A column whose function failed: marked, the reason in the line under
-    # the title (summarize_issues_spec()).
-    if (is.null(p$failed)) th else sub("^<th class=\"",
-                                       "<th class=\"blockr-summarize-failed ", th)
   }
   stub <- as.character(dt_th(
     summarize_label_header(prep), 0L, stub = TRUE,
@@ -1669,9 +1665,11 @@ summarize_build_payload <- function(data, chrome = list(), drill = NULL,
   }
   body$chrome <- summarize_drop_null(c(chrome, list(
     legend = summarize_legend_spec(prep),
-    issues = summarize_issues_spec(prep),
     foot = summarize_foot_spec(prep, drill = drill, active = active)
   )))
+  # The errors of failed custom summaries: the block raises them as blockr
+  # conditions and drops the field before the payload is sent.
+  body$failed <- prep$failed
   body
 }
 

@@ -236,12 +236,6 @@ summarize_chrome <- function(inner, prep = NULL, max_height = NULL,
       `data-summarize-ctrl-target` = ctrl_target %||% "",
       htmltools::tags$div(class = "blockr-summarize-scope", header),
       titles,
-      # A column whose function failed says why, under the titles.
-      if (isTRUE(shell)) {
-        summarize_issues_tag(NULL)
-      } else {
-        summarize_issues_tag(summarize_issues_spec(prep))
-      },
       # The legend sits below the title band and above the table, never in the
       # control row -- a long legend must not push the search box around.
       legend,
@@ -321,29 +315,6 @@ summarize_legend_spec <- function(prep) {
       })
     )
   }))
-}
-
-# The columns whose custom function failed, as DATA: name and reason. The
-# column itself draws dashes (lane_failed_summary()); this is the why.
-#' @noRd
-summarize_issues_spec <- function(prep) {
-  if (!is.null(prep$err) || !length(prep$failed)) return(NULL)
-  prep$failed
-}
-
-#' @noRd
-summarize_issues_tag <- function(spec) {
-  htmltools::tags$div(
-    class = "blockr-summarize-issues",
-    style = if (is.null(spec)) "display:none" else NULL,
-    lapply(spec, function(f) {
-      htmltools::tags$div(
-        class = "blockr-summarize-issue",
-        htmltools::HTML(paste0("<b>", summarize_esc(f$name), "</b> is empty: ",
-                               summarize_esc(f$msg)))
-      )
-    })
-  )
 }
 
 #' @noRd

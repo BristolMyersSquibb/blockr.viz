@@ -804,20 +804,17 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows),
     note = note, pct_ok = FALSE, func = "identity",
     facet_spans = facet_spans,
-    failed = Filter(Negate(is.null), lapply(plan, function(p) {
-      if (!is.null(p$failed)) list(name = p$sname, msg = p$failed)
-    }))
+    failed = unlist(lapply(plan, function(p) p$failed))
   )
 }
 
 #' A custom summary whose function failed: a text column of dashes that
-#' carries the error (`.failed`, without the "Summary \"name\": " prefix the
-#' column header already says). Unfaceted and uncoloured, so it is one
-#' column whatever the summary asked for.
+#' carries the error (`.failed`), which the block reports through blockr's
+#' conditions. Unfaceted and uncoloured, so it is one column whatever the
+#' summary asked for.
 #' @noRd
 lane_failed_summary <- function(s, msg) {
-  list(type = "field", name = s$name,
-       .failed = sub("^Summary \"[^\"]*\": ", "", msg))
+  list(type = "field", name = s$name, .failed = msg)
 }
 
 #' The colour dimension of a distribution column: the per-level statistic

@@ -95,9 +95,8 @@ test_that("a function that drops the grouping says so, without an error", {
     list(type = "custom", name = "X", fn = "c(value = nrow(d))")
   ))
   expect_null(prep$err)
-  expect_identical(prep$failed[[1L]]$name, "X")
-  expect_match(prep$failed[[1L]]$msg,
-               "^the function dropped the grouping by TERM")
+  expect_match(prep$failed,
+               "^Summary \"X\": the function dropped the grouping by TERM")
 })
 
 test_that("a failing column is empty and the others still draw", {
@@ -112,22 +111,36 @@ test_that("a failing column is empty and the others still draw", {
   expect_length(prep$plan, 3L)
   expect_equal(row_of(prep$rows, "Erythema")$.s1_v, 3)
   # A faceted column that fails is one column, not one per level.
-  expect_identical(vapply(prep$plan[2:3], `[[`, "", "failed"),
-                   c("the function dropped the grouping by SOC, TERM. Keep it: add groups with group_by(..., .add = TRUE) and summarise with dplyr, not d$.",
-                     "the function failed on the whole data: nope"))
+  expect_identical(prep$failed, c(
+    "Summary \"X\": the function dropped the grouping by SOC, TERM. Keep it: add groups with group_by(..., .add = TRUE) and summarise with dplyr, not d$.",
+    "Summary \"Y\": the function failed on the whole data: nope"
+  ))
   expect_true(all(prep$rows$.s2_t == "\u2013"))
-  expect_identical(vapply(prep$failed, `[[`, "", "name"), c("X", "Y"))
-
-  m <- summarize_cells(prep)
-  html <- summarize_table_html(prep)
-  expect_match(html, "<th class=\"blockr-summarize-failed ", fixed = TRUE)
-  expect_match(html, "blockr-summarize-txt is-failed", fixed = TRUE)
-  expect_identical(summarize_issues_spec(prep), prep$failed)
-  page <- htmltools::renderTags(summarize_table(
-    d, by = "TERM", summaries = list(
-      list(type = "custom", name = "Y", fn = "stop(\"nope\")"))))$html
-  expect_match(page, "<b>Y</b> is empty: the function failed on the whole data: nope",
+  expect_match(summarize_table_html(prep), "blockr-summarize-txt is-failed",
                fixed = TRUE)
+  # The payload carries the errors for the block to raise as conditions.
+  p <- summarize_build_payload(d, by = c("SOC", "TERM"),
+                               summaries = list(
+    list(type = "custom", name = "Y", fn = "stop(\"nope\")")))
+  expect_identical(p$failed,
+                   "Summary \"Y\": the function failed on the whole data: nope")
+})
+
+test_that("the block raises a failed custom summary as a blockr error", {
+  blk <- new_summarize_table_block(by = "TERM", summaries = list(
+    list(type = "simple", name = "Rows", func = "count"),
+    list(type = "custom", name = "Y", fn = "stop(\"nope\")")))
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      cnd <- session$returned$cond()
+      expect_identical(cnd$severity, "error")
+      expect_identical(cnd$message,
+                       "Summary \"Y\": the function failed on the whole data: nope")
+    },
+    args = list(x = blk, data = list(data = function() custom_fixture()))
+  )
 })
 
 test_that("a facet runs the function per facet level", {
@@ -148,9 +161,9 @@ test_that("a broken function says which column and why", {
     summarize_prepare(d, by = "TERM", summaries = list(
       c(list(type = "custom", name = "X", fn = fn), if (!is.null(show))
         list(show = show))
-    ))$failed[[1L]]$msg
+    ))$failed
   }
-  expect_match(bad("\\(d) d |> "), "^the function does not parse")
+  expect_match(bad("\\(d) d |> "), "Summary \"X\": the function does not parse")
   expect_match(bad("stop(\"nope\")"), "failed on the whole data: nope")
   expect_match(bad("data.frame(a = 1, b = 2)"), "not values \\(a, b\\)")
   expect_match(bad("data.frame(n = 1)"), "no mark reads that")

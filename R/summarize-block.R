@@ -643,6 +643,7 @@ new_summarize_table_block <- function(group = NULL,
         # A single plain `observe`, NOT observeEvent + channels: that exact
         # shape is what blockr.dock's lazy-eval card probe suspends for hidden
         # panels (see the chart block's push observer).
+        cond <- shiny::reactiveValues(error = list())
         last_msg <- new.env(parent = emptyenv())
         last_msg$json <- NULL
         last_msg$rev <- 0L
@@ -734,6 +735,11 @@ new_summarize_table_block <- function(group = NULL,
             sort_dir = r_sort_dir(), top_n = r_top_n(),
             scale_map = board_scale_map()
           )
+          # A failed custom summary is an error of the block: blockr shows
+          # it with the block (the `cond` below), the table draws the rest.
+          errs <- as.list(p$failed)
+          if (!identical(shiny::isolate(cond$error), errs)) cond$error <- errs
+          p$failed <- NULL
           summarize_payload_json(p)
         }
         shiny::observe({
@@ -935,6 +941,8 @@ new_summarize_table_block <- function(group = NULL,
             sx <- cb_expr(r_parsed(), r_specs(), r_values(), slot = TRUE)
             if (is.null(sx)) ex else dd_splice_slot(sx, ex)
           }),
+          # Failed custom summaries, as blockr conditions (set in build_json).
+          cond = cond,
           # Every constructor formal needs a state entry: blockr.core
           # serializes from formals and restores by re-calling the
           # constructor, so a formal without one silently loses its value
