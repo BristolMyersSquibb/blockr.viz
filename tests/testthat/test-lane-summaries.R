@@ -345,6 +345,19 @@ test_that("by_level reorders into level groups with a two-row header", {
   expect_false(grepl("blockr-th-group", p2$head))
 })
 
+test_that("by_level with one summary per level keeps a single header row", {
+  ae <- sum_fixture()
+  S <- list(list(type = "simple", name = "Subjects", func = "count_distinct",
+                 col = "USUBJID", show = "bar"))
+  p <- summarize_prepare(ae, group = NULL, by = "TERM", summaries = S,
+                         facet = "ARM", facet_layout = "by_level")
+  expect_null(p$facet_spans)
+  # Headed by the level over its N, never by the summary name.
+  expect_identical(vapply(p$plan, function(x) x$label, ""),
+                   c("Active", "Placebo"))
+  expect_match(p$plan[[1L]]$sub_label, "^N = ")
+})
+
 test_that("colour is the SUMMARY's mapping: one column splits, the next does not", {
   ae <- sum_fixture()
   S <- list(

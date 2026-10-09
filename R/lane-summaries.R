@@ -754,7 +754,11 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     groups <- lapply(facet_levels, function(lv) {
       Filter(function(p) identical(p$flevel, lv), plan)
     })
-    groups <- lapply(groups, function(g) {
+    # One summary per level: a spanner over a single column would only push
+    # the summary name ("Patients") into every leaf header. The column keeps
+    # its by_summary header, the level over its N.
+    one <- all(lengths(groups) == 1L)
+    if (!one) groups <- lapply(groups, function(g) {
       lapply(g, function(p) {
         p$label <- p$sname %||% p$label
         p$sub_label <- NULL
@@ -762,7 +766,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       })
     })
     plan <- c(lead, do.call(c, groups))
-    facet_spans <- list(
+    if (!one) facet_spans <- list(
       lead = length(lead),
       groups = lapply(seq_along(facet_levels), function(j) {
         list(label = facet_levels[[j]], n = length(groups[[j]]))
