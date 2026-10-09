@@ -780,7 +780,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   color_groups <- Filter(Negate(is.null), lapply(legend_cols, function(cc) {
     lv <- summarize_color_levels(data[[cc]], drawn)
     if (length(lv) < 2L) return(NULL)
-    list(column = cc, levels = lv,
+    list(column = cc, title = summarize_col_name(data, cc), levels = lv,
          palette = summarize_level_colors(scale_map, cc, lv, data[[cc]]))
   }))
   # The first group also fills the single-dimension slots the rank path's

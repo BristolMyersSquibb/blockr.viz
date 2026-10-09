@@ -292,8 +292,8 @@ summarize_legend_spec <- function(prep) {
   groups <- prep$color_groups
   if (is.null(groups)) {
     if (is.null(prep$color) || length(prep$series) < 2L) return(NULL)
-    groups <- list(list(column = prep$color, levels = prep$series,
-                        palette = prep$palette))
+    groups <- list(list(column = prep$color, title = prep$color_title,
+                        levels = prep$series, palette = prep$palette))
   }
   if (!length(groups)) return(NULL)
   list(groups = lapply(groups, function(g) {
@@ -305,7 +305,8 @@ summarize_legend_spec <- function(prep) {
     # the table's group columns.
     pal <- g$palette
     list(
-      title = g$column,
+      # The column's variable label when it has one, as the hover card says.
+      title = g$title %||% g$column,
       items = lapply(seq_along(g$levels), function(i) {
         l <- as.character(g$levels[[i]])
         list(

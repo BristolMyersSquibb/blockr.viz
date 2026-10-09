@@ -607,6 +607,7 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
     group_label = summarize_group_label(data, group, parent),
     series = series, palette = pal, facet_levels = facet_levels,
     denoms = denoms, group = group, parent = parent, color = color,
+    color_title = summarize_col_name(data, color),
     facet = facet, folded = folded, fold_max = fold_max,
     # par_rows is the UNCAPPED frame here (summarize_assemble_rows caps a copy),
     # so its row count already is the group total.

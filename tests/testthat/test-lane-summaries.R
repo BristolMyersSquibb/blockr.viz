@@ -183,6 +183,7 @@ test_that("the hover card names the colour column by its label", {
   p <- lane_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
   expect_identical(p$plan[[1L]]$cvar, "Treatment Arm")
   expect_identical(p$plan[[2L]]$cvar, "Treatment Arm")
+  expect_identical(summarize_legend_spec(p)$groups[[1L]]$title, "Treatment Arm")
   # No label: the column name, as before.
   attr(ae$ARM, "label") <- NULL
   p <- lane_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
