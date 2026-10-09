@@ -84,10 +84,7 @@
        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
       },
       "tooltip": {
-       "trigger": "axis",
-       "axisPointer": {
-        "type": "shadow"
-       },
+       "trigger": "item",
        "confine": true,
        "formatter": "[fn]",
        "backgroundColor": "#ffffff",
@@ -260,8 +257,14 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>M</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span class=\"dd-tt-label\">Planned Arm High Dose</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span class=\"dd-tt-label\">Planned Arm Low Dose</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">Planned Arm Placebo</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-sep\"></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">30</span></div>",
-       "<div class=\"dd-tt-head\"><span>F</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">Planned Arm </span><span class=\"dd-tt-value\">5</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span class=\"dd-tt-label\">Planned Arm High Dose</span><span class=\"dd-tt-value\">5</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span class=\"dd-tt-label\">Planned Arm Low Dose</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">Planned Arm Placebo</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-sep\"></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">30</span></div>"
+       "<div class=\"dd-tt-head\"><span>M</span></div>",
+       "<div class=\"dd-tt-head\"><span>F</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">Planned Arm </span><span class=\"dd-tt-value\">5</span></div>",
+       "<div class=\"dd-tt-head\"><span>M</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span class=\"dd-tt-label\">Planned Arm High Dose</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>F</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span class=\"dd-tt-label\">Planned Arm High Dose</span><span class=\"dd-tt-value\">5</span></div>",
+       "<div class=\"dd-tt-head\"><span>M</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span class=\"dd-tt-label\">Planned Arm Low Dose</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>F</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span class=\"dd-tt-label\">Planned Arm Low Dose</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>M</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">Planned Arm Placebo</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>F</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">Planned Arm Placebo</span><span class=\"dd-tt-value\">10</span></div>"
       ]
      }
     },

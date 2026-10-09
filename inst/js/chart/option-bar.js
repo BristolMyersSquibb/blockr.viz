@@ -293,8 +293,11 @@
 
     const fmtRaw = (/** @type {number} */ n) =>
       Number.isInteger(n) ? n : Math.round(n * 100) / 100;
+    // A split bar's tooltip names the hovered segment only.
     /** @type {Record<string, any>} */
-    const tooltip = { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true };
+    const tooltip = colors.length
+      ? { trigger: 'item', confine: true }
+      : { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true };
     // A split bar's rows name the colour column with the level.
     const colorName = colors.length ? esc(title(cfg.color) || cfg.color) + ' ' : '';
     const ttExtraRows = (/** @type {any} */ head) => {
@@ -309,8 +312,9 @@
       return out;
     };
     if (showPercent) {
-      tooltip.formatter = (/** @type {any[]} */ ps) => {
-        if (!ps || !ps.length) return '';
+      tooltip.formatter = (/** @type {any} */ arg) => {
+        const ps = [].concat(arg || []);
+        if (!ps.length) return '';
         const head = ps[0].axisValueLabel || ps[0].name || '';
         const rows = ps.filter((p) => p && p.value != null).map((p) => {
           const pct = Math.round((Number(p.value) || 0) * 100);
@@ -327,10 +331,11 @@
       for (const a of panel.cells) nOf[a.group + '|||' + a.color] = a.n;
       const aggLabel = P.aggLabel;
       const showN = cfg.func !== 'count' && cfg.func !== 'identity';
-      // A split bar's rows add up to its total only for a count or a sum.
+      // A count or a sum needs no note naming the aggregation.
       const additive = cfg.func === 'count' || cfg.func === 'sum';
-      tooltip.formatter = (/** @type {any[]} */ ps) => {
-        if (!ps || !ps.length) return '';
+      tooltip.formatter = (/** @type {any} */ arg) => {
+        const ps = [].concat(arg || []);
+        if (!ps.length) return '';
         const head = ps[0].axisValueLabel || ps[0].name || '';
         const rows = ps.filter((p) => p && p.value != null).map((p) => {
           const nm = colors.length ? p.seriesName : aggLabel;
@@ -343,14 +348,8 @@
             (!pctFunc && showN && n != null ? ' (n=' + n + ')' : ''),
             colors.length ? p.color : null);
         });
-        const vals = ps.filter((p) => p && p.value != null);
-        let foot = '';
-        if (colors.length && vals.length > 1 && additive && !pctFunc) {
-          foot = NS.TIP_SEP + NS.tipRow(esc(aggLabel),
-            fmtRaw(vals.reduce((a, p) => a + Number(p.value || 0), 0)));
-        }
         const note = colors.length && !(additive && !pctFunc) ? NS.tipNote(esc(aggLabel)) : '';
-        return NS.tipHead(esc(head)) + note + rows.join('') + foot + ttExtraRows(head).join('');
+        return NS.tipHead(esc(head)) + note + rows.join('') + ttExtraRows(head).join('');
       };
     }
     // The HTML band shows the chips; a hidden legend keeps the selection
