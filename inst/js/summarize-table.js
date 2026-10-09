@@ -2872,10 +2872,12 @@
       var hitName = null;
       if (fillEl) {
         var fills = Array.prototype.slice.call(
-          fillEl.parentNode.parentNode.querySelectorAll(".blockr-summarize-fill"));
+          td.querySelectorAll(".blockr-summarize-fill"));
         var drawn = [];
+        // The levels splitHtml() drew, in order: only those with a value
+        // in this row, stacked or grouped alike.
         for (var j0 = 0; j0 < c.names.length; j0++) {
-          if (c.mode === "grouped" || c.segv[j0][i] > 0) drawn.push(j0);
+          if (c.segv[j0][i] > 0) drawn.push(j0);
         }
         var at = fills.indexOf(fillEl);
         if (at >= 0 && at < drawn.length) hitName = c.names[drawn[at]];
@@ -2884,7 +2886,8 @@
       var shown = 0;
       for (var j = 0; j < c.names.length; j++) {
         var v = c.segv[j][i];
-        if (!(v > 0) && c.mode !== "grouped") continue;
+        // A level with nothing drawn in this row has no line either.
+        if (!(v > 0)) continue;
         shown++;
         rows += ttRow((tt.cvar ? tt.cvar + " " : "") + c.names[j],
                       ttNum(v) + ttPct(v, den), c.fills[j],
