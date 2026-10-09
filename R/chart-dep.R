@@ -38,11 +38,33 @@ chart_scripts <- function() {
 # serve chart.css under an old version string and hit the browser cache.
 # Suffix bumped when inst/css/chart.css changes.
 chart_css_dep <- memoise0(function() {
+  htmltools::tagList(
+    tooltip_card_dep(),
+    htmltools::htmlDependency(
+      name = "chart-css",
+      version = paste0(utils::packageVersion("blockr.viz"), ".48"),
+      src = system.file("css", package = "blockr.viz"),
+      stylesheet = "chart.css"
+    )
+  )
+})
+
+#' HTML dependency for the data tooltip card
+#'
+#' The stylesheet behind every blockr.viz data tooltip: a headline with a
+#' colour swatch, then rows with the name muted on the left and the value on
+#' the right (`dd-tt-head`, `dd-tt-sw`, `dd-tt-row`, `dd-tt-label`,
+#' `dd-tt-value`, `dd-tt-meta`, `dd-tt-sep`). Another package's tooltips
+#' attach it and use the same classes, so every hover card looks the same.
+#'
+#' @return An [htmltools::htmlDependency()].
+#' @export
+tooltip_card_dep <- memoise0(function() {
   htmltools::htmlDependency(
-    name = "chart-css",
-    version = paste0(utils::packageVersion("blockr.viz"), ".47"),
+    name = "blockr-viz-tooltip",
+    version = paste0(utils::packageVersion("blockr.viz"), ".1"),
     src = system.file("css", package = "blockr.viz"),
-    stylesheet = "chart.css"
+    stylesheet = "tooltip.css"
   )
 })
 

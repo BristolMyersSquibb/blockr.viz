@@ -1417,57 +1417,7 @@
   font-size: var(--blockr-font-size-sm, 0.8125rem);
 }
 
-/* ===== Data tooltip =====
-   The content of the ECharts tooltip (chart/common.js tipHead / tipRow); the card
-   around it is set on the option (cardTooltip). Headline 13px/600, rows 12px
-   with the label muted and the value at 500 in tabular figures, a swatch
-   where a headline or a row stands for one series (design system, Charts). */
-.dd-tt-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 3px;
-  font-size: 13px;
-  font-weight: var(--blockr-font-weight-semibold, 600);
-  color: var(--blockr-color-text-default, #111827);
-}
-.dd-tt-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  line-height: 20px;
-}
-.dd-tt-sw {
-  flex: 0 0 auto;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-}
-.dd-tt-label {
-  color: var(--blockr-color-text-muted, #6b7280);
-}
-.dd-tt-value {
-  margin-left: auto;
-  padding-left: 16px;
-  font-weight: var(--blockr-font-weight-medium, 500);
-  font-variant-numeric: tabular-nums;
-  color: var(--blockr-color-text-default, #111827);
-}
-.dd-tt-sep {
-  margin: 3px 0 2px;
-  border-top: 1px solid var(--blockr-color-border-default, #e5e7eb);
-}
-/* A card listing every level of a colour split: the level under the pointer
-   stands out, the others step back. */
-.dd-tt-row.is-hit .dd-tt-label,
-.dd-tt-row.is-hit .dd-tt-value {
-  color: var(--blockr-color-text-default, #111827);
-  font-weight: var(--blockr-font-weight-semibold, 600);
-}
-.dd-tt-row.is-dim {
-  opacity: 0.55;
-}
+/* The data tooltip's content (.dd-tt-*) is in tooltip.css (tooltip_card_dep()). */
 
 /* A slot being typed over (SentenceSlots._edit): sits in the line where the
    word was, the word's colour and weight, a box instead of the underline. */
