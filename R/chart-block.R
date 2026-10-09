@@ -1969,8 +1969,13 @@ new_chart_block <- function(
                                             auto = auto$label),
                 subtitle = resolve_block_title(r_subtitle(), plain_data(),
                                                auto = auto$subtitle),
-                caption = resolve_block_title(r_caption(), plain_data(),
-                                              auto = auto$caption)
+                # Ends with the board's download footer
+                # (R/download-footer.R), as under the chart's pictures.
+                caption = download_footer_caption(
+                  resolve_block_title(r_caption(), plain_data(),
+                                      auto = auto$caption),
+                  data(), session
+                )
               )
             })
           }
