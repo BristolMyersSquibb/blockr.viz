@@ -169,6 +169,26 @@
       : (split ? (/** @type {string} */ v) => String(v).split(SEP)[0] : null);
     // The tooltip names the statistics it shows: they are configurable.
     const ttHead = (/** @type {any} */ p) => split ? String(p.name).replace(SEP, ' · ') : p.name;
+    // A colour split lists every level of the group, one line each, the one
+    // under the pointer marked and its n and whiskers under the list.
+    const colorName = split ? esc(P.title(cfg.color) || cfg.color) + ' ' : '';
+    const splitTooltipFmt = (/** @type {any} */ p) => {
+      const at = slots.find((/** @type {any} */ s) => s.cat === p.name);
+      if (!at || !at.body) return '';
+      const span = (/** @type {any} */ lo, /** @type {any} */ hi) =>
+        NS.ddNum(lo) + ' – ' + NS.ddNum(hi);
+      const rows = slots
+        .filter((/** @type {any} */ s) => s.group === at.group && s.body)
+        .map((/** @type {any} */ s) => NS.tipRow(colorName + esc(s.level),
+          NS.ddNum(s.body.center) + ' (' + span(s.body.lo, s.body.hi) + ')',
+          hexFor(s.level, levels.indexOf(s.level)), s === at));
+      const foot = colorName + esc(at.level) + ' · n ' + at.n +
+        (isBox && at.whisker ? ' · Whiskers (' + esc(whiskMeta.range) + ') ' +
+          span(at.whisker.lo, at.whisker.hi) : '');
+      return NS.tipHead(esc(at.group)) +
+        NS.tipNote(esc(bodyMeta.center) + ' (' + esc(bodyMeta.range) + ')') +
+        rows.join('') + NS.TIP_SEP + NS.tipNote(foot);
+    };
     const boxTooltipFmt = (/** @type {any} */ p) => {
       const d = p.data;
       // n = 0 is an empty slot.
@@ -228,7 +248,7 @@
       option: {
         ...(look.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: ink.face },
-        tooltip: { trigger: 'item', confine: true, formatter: isBox ? boxTooltipFmt : rangeTooltipFmt },
+        tooltip: { trigger: 'item', confine: true, formatter: split ? splitTooltipFmt : isBox ? boxTooltipFmt : rangeTooltipFmt },
         legend: split ? { show: false, data: levels } : undefined,
         grid: vertical
           ? { left: 55, right: 10, top: 30, bottom: bottomBase }

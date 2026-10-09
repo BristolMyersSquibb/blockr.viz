@@ -1458,6 +1458,16 @@
   margin: 3px 0 2px;
   border-top: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
+/* A card listing every level of a colour split: the level under the pointer
+   stands out, the others step back. */
+.dd-tt-row.is-hit .dd-tt-label,
+.dd-tt-row.is-hit .dd-tt-value {
+  color: var(--blockr-color-text-default, #111827);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
+.dd-tt-row.is-dim {
+  opacity: 0.55;
+}
 
 /* A slot being typed over (SentenceSlots._edit): sits in the line where the
    word was, the word's colour and weight, a box instead of the underline. */

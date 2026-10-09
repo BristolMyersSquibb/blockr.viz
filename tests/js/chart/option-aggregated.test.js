@@ -59,9 +59,10 @@ test('percent: shares of the group total, the raw value kept, a 0..1 axis', () =
   assert.strictEqual(opt.xAxis.max, 1);
   assert.strictEqual(opt.xAxis.name, '% of group total');
   assert.strictEqual(opt.xAxis.axisLabel.formatter(0.25), '25%');
-  const tip = opt.tooltip.formatter([{ axisValueLabel: 'Rash', value: 2 / 3, data: { raw: 2 },
-                                       seriesName: 'MILD', color: '#000' }]);
-  assert.match(tip, /67% \(2\)/);
+  // A split bar's card lists every level at the category, the hovered one marked.
+  const tip = opt.tooltip.formatter({ name: 'Rash', dataIndex: 0, seriesName: 'MILD' });
+  assert.match(tip, /is-hit.*67% \(2\)/);
+  assert.match(tip, /is-dim.*SEVERE/);
 });
 
 test('vertical: categories on x, labels fitted to the width, the canvas grows', () => {

@@ -86,9 +86,15 @@
   /** @param {string} text @param {any} [color] */
   const tipHead = (text, color) =>
     '<div class="dd-tt-head">' + tipSwatch(color) + '<span>' + text + '</span></div>';
-  /** @param {string} label @param {any} value @param {any} [color] */
-  const tipRow = (label, value, color) =>
-    '<div class="dd-tt-row">' + tipSwatch(color) + '<span class="dd-tt-label">' +
+  /**
+   * `hit` marks a row in a card that lists every level of a colour split:
+   * true for the level under the pointer, false for the others.
+   * @param {string} label @param {any} value @param {any} [color]
+   * @param {boolean | null} [hit]
+   */
+  const tipRow = (label, value, color, hit) =>
+    '<div class="dd-tt-row' + (hit === true ? ' is-hit' : hit === false ? ' is-dim' : '') +
+    '">' + tipSwatch(color) + '<span class="dd-tt-label">' +
     label + '</span><span class="dd-tt-value">' + value + '</span></div>';
 
   /** A muted line of its own, for what the rows below it are. @param {string} text */

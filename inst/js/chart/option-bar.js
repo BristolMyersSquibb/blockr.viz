@@ -293,11 +293,26 @@
 
     const fmtRaw = (/** @type {number} */ n) =>
       Number.isInteger(n) ? n : Math.round(n * 100) / 100;
-    // A split bar's tooltip names the hovered segment only.
+    // A split bar's card lists every level of the hovered category, the
+    // segment under the pointer marked. The item trigger is what says which
+    // segment that is; the axis trigger only knows the category.
     /** @type {Record<string, any>} */
     const tooltip = colors.length
       ? { trigger: 'item', confine: true }
       : { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true };
+    /** @returns {{ ps: any[], hit: string | null }} */
+    const levelsAt = (/** @type {any} */ arg) => {
+      const p = Array.isArray(arg) ? arg[0] : arg;
+      if (!p) return { ps: [], hit: null };
+      if (!colors.length) return { ps: [].concat(arg), hit: null };
+      const ps = series.slice(0, colors.length).map((sr) => {
+        const d = sr.data[p.dataIndex];
+        const obj = d != null && typeof d === 'object';
+        return { name: p.name, seriesName: sr.name, value: obj ? d.value : d,
+                 data: obj ? d : null, color: sr.itemStyle.color };
+      });
+      return { ps, hit: p.seriesName };
+    };
     // A split bar's rows name the colour column with the level.
     const colorName = colors.length ? esc(title(cfg.color) || cfg.color) + ' ' : '';
     const ttExtraRows = (/** @type {any} */ head) => {
@@ -313,14 +328,15 @@
     };
     if (showPercent) {
       tooltip.formatter = (/** @type {any} */ arg) => {
-        const ps = [].concat(arg || []);
+        const { ps, hit } = levelsAt(arg);
         if (!ps.length) return '';
         const head = ps[0].axisValueLabel || ps[0].name || '';
         const rows = ps.filter((p) => p && p.value != null).map((p) => {
           const pct = Math.round((Number(p.value) || 0) * 100);
           const raw = p.data && p.data.raw != null ? fmtRaw(p.data.raw) : null;
           return NS.tipRow(colorName + esc(p.seriesName),
-            pct + '%' + (raw != null ? ' (' + raw + ')' : ''), p.color);
+            pct + '%' + (raw != null ? ' (' + raw + ')' : ''), p.color,
+            hit == null ? null : p.seriesName === hit);
         });
         return NS.tipHead(esc(head)) + rows.concat(ttExtraRows(head)).join('');
       };
@@ -334,7 +350,7 @@
       // A count or a sum needs no note naming the aggregation.
       const additive = cfg.func === 'count' || cfg.func === 'sum';
       tooltip.formatter = (/** @type {any} */ arg) => {
-        const ps = [].concat(arg || []);
+        const { ps, hit } = levelsAt(arg);
         if (!ps.length) return '';
         const head = ps[0].axisValueLabel || ps[0].name || '';
         const rows = ps.filter((p) => p && p.value != null).map((p) => {
@@ -346,10 +362,18 @@
           return NS.tipRow(colors.length ? colorName + esc(nm) : esc(nm),
             shown + (pctFunc && n != null ? ' (' + n + ')' : '') +
             (!pctFunc && showN && n != null ? ' (n=' + n + ')' : ''),
-            colors.length ? p.color : null);
+            colors.length ? p.color : null,
+            hit == null ? null : p.seriesName === hit);
         });
+        // The segments add up to the bar only for a count or a sum.
+        const vals = ps.filter((p) => p && p.value != null);
+        const foot = colors.length && vals.length > 1 && additive && !pctFunc
+          ? NS.TIP_SEP + NS.tipRow(esc(aggLabel),
+            fmtRaw(vals.reduce((a, p) => a + Number(p.value || 0), 0)))
+          : '';
         const note = colors.length && !(additive && !pctFunc) ? NS.tipNote(esc(aggLabel)) : '';
-        return NS.tipHead(esc(head)) + note + rows.join('') + ttExtraRows(head).join('');
+        return NS.tipHead(esc(head)) + note + rows.join('') + foot +
+          ttExtraRows(head).join('');
       };
     }
     // The HTML band shows the chips; a hidden legend keeps the selection

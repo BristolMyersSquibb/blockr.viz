@@ -399,6 +399,15 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
           ifelse(both, paste0(ifelse(signed & delta >= 0, "+", ""),
                               summarize_val_str(delta, dig)), "")
         }
+        # The ends without their words, for the split card's one line per
+        # level ("30.5 -> 53 (+22.5)"); the words head the card once.
+        ab <- ifelse(is.na(a) & is.na(b), "", summarize_esc(paste0(
+          ifelse(is.na(a), "", lane_fmt(a)),
+          ifelse(both, " \u2192 ", ""),
+          ifelse(is.na(b), "", lane_fmt(b)),
+          ifelse(both, paste0(" (", ifelse(delta >= 0, "+", ""),
+                              lane_fmt(delta), ")"), "")
+        )))
         list(kind = "pair",
              a = pos_w(a), b = pos_w(b),
              l = ifelse(both, pos_w(pmin(a, b)), NA_real_),
@@ -408,7 +417,7 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
              rf = if (!is.null(p$ref)) pos_w(p$ref) else NA_real_,
              fill = fill,
              dash = !is.na(di) & di > 1L,
-             open = open, tip = tip, v = sortv(b),
+             open = open, tip = tip, ab = ab, v = sortv(b),
              disp = disp, dw = if (lab_on) max(c(1L, nchar(disp))))
       }
       fi <- rows[[p$fidx]]
@@ -1546,6 +1555,7 @@ summarize_flat_payload <- function(m) {
         if (isTRUE(c$multi) && !is.null(g$disp)) {
           o$disp <- arr(as.character(g$disp))
         }
+        if (isTRUE(c$multi)) o$ab <- arr(as.character(g$ab))
         o
       }
       if (!is.na(c$rf)) out$rf <- c$rf

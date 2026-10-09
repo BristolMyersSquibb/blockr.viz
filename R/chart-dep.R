@@ -13,7 +13,7 @@ drilldown_chart_dep <- memoise0(function() {
     drilldown_shared_dep(),
     htmltools::htmlDependency(
       name = "chart-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".134"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".135"),
       src = system.file("js", package = "blockr.viz"),
       script = c("drilldown-theme-register.js", chart_scripts())
     ),
@@ -40,7 +40,7 @@ chart_scripts <- function() {
 chart_css_dep <- memoise0(function() {
   htmltools::htmlDependency(
     name = "chart-css",
-    version = paste0(utils::packageVersion("blockr.viz"), ".46"),
+    version = paste0(utils::packageVersion("blockr.viz"), ".47"),
     src = system.file("css", package = "blockr.viz"),
     stylesheet = "chart.css"
   )

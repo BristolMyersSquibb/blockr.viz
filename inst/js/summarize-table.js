@@ -2800,9 +2800,11 @@
     return '<div class="dd-tt-head">' + ttSw(color) + "<span>" + esc(text) +
       "</span></div>";
   }
+  // `hit`, in a card listing every level of a colour split: true for the
+  // level under the pointer, false for the others (chart/common.js tipRow).
   function ttRow(label, value, color, hit) {
-    return '<div class="dd-tt-row"' +
-      (hit ? ' style="font-weight:600"' : "") + ">" + ttSw(color) +
+    return '<div class="dd-tt-row' +
+      (hit === true ? " is-hit" : hit === false ? " is-dim" : "") + '">' + ttSw(color) +
       '<span class="dd-tt-label">' + esc(label) + '</span>' +
       '<span class="dd-tt-value">' + esc(value) + "</span></div>";
   }
@@ -2853,6 +2855,10 @@
       if (x && ctx.indexOf(x) < 0) ctx.push(x);
     });
     var h = ttHead(p.label[i]) + (ctx.length ? ttNote(ctx.join(" \u00b7 ")) : "");
+    // A note naming the statistics, unless the column's own line already does.
+    var statNote = function (text) {
+      return text && ctx.indexOf(text) < 0 ? ttNote(text) : "";
+    };
     var den = tt.den;
     var meas = tt.meas || "Value";
     if (c.kind === "bar") {
@@ -2882,7 +2888,7 @@
         shown++;
         rows += ttRow((tt.cvar ? tt.cvar + " " : "") + c.names[j],
                       ttNum(v) + ttPct(v, den), c.fills[j],
-                      c.names[j] === hitName);
+                      hitName == null ? null : c.names[j] === hitName);
       }
       if (!shown) return "";
       var foot = "";
@@ -2899,31 +2905,48 @@
         if (!c.r || !c.r.bc || c.r.bc[i] == null) return "";
         return h + ttDist(c.kind, c, i, words);
       }
-      // A colour-split cell: the level under the pointer, else every level.
+      // A colour-split cell: every level, one line each, the one under the
+      // pointer marked and its n and whiskers under the list.
       var lvEl = t.closest(".blockr-summarize-lv");
       var drawnLv = [];
       for (var k = 0; k < c.lv.length; k++) {
         if (lvDrawn(c, c.lv[k], i)) drawnLv.push(k);
       }
-      var pick = drawnLv;
+      if (!drawnLv.length) return "";
+      var hitLv = null;
       if (lvEl) {
         var all = Array.prototype.slice.call(
           lvEl.parentNode.querySelectorAll(".blockr-summarize-lv"));
         var pos = all.indexOf(lvEl);
-        if (pos >= 0 && pos < drawnLv.length) pick = [drawnLv[pos]];
+        if (pos >= 0 && pos < drawnLv.length) hitLv = drawnLv[pos];
       }
-      if (!pick.length) return "";
-      var body = "";
-      pick.forEach(function (k2, n2) {
-        if (n2) body += TT_SEP;
-        // The level's own line, unless the column header already names it
-        // (colour and facet on the same column: one glyph per arm).
-        if (c.levels[k2] !== tt.head || pick.length > 1) {
-          body += ttRow((tt.cvar ? tt.cvar + " " : "") + c.levels[k2], "",
-                        c.fills[k2]);
-        }
-        body += ttDist(c.kind, c.lv[k2], i, words);
+      var statAt = function (g, key) { return g.r && g.r[key] ? g.r[key][i] : null; };
+      var spanOf = function (lo, hi) {
+        return (lo == null || hi == null) ? "undefined (n < 2)"
+          : ttNum(lo) + " \u2013 " + ttNum(hi);
+      };
+      var statHead = words.range
+        ? (words.center || "Center") + " (" + words.range + ")" : (words.center || "");
+      var body = statNote(statHead);
+      drawnLv.forEach(function (k2) {
+        var g = c.lv[k2];
+        var lo = statAt(g, "bl"), hi = statAt(g, "bh");
+        body += ttRow((tt.cvar ? tt.cvar + " " : "") + c.levels[k2],
+                      ttNum(statAt(g, "bc")) +
+                        (words.range && (lo != null || hi != null)
+                          ? " (" + spanOf(lo, hi) + ")" : ""),
+                      c.fills[k2], hitLv == null ? null : k2 === hitLv);
       });
+      if (hitLv != null) {
+        var gh = c.lv[hitLv];
+        var footLv = [(tt.cvar ? tt.cvar + " " : "") + c.levels[hitLv]];
+        if (gh.nn && gh.nn[i] != null) footLv.push("n " + ttNum(gh.nn[i]));
+        if (words.whisk) {
+          footLv.push((c.kind === "box" ? "Whiskers (" + words.whisk + ")" : words.whisk) +
+                      " " + spanOf(statAt(gh, "wl"), statAt(gh, "wh")));
+        }
+        body += TT_SEP + ttNote(footLv.join(" \u00b7 "));
+      }
       return h + body;
     }
     if (c.kind === "pair") {
@@ -2936,29 +2959,32 @@
         var tip = c.tip && c.tip[i];
         return tip ? h + notes(tip, 0) : "";
       }
-      // A colour-split cell, as for the glyph: the level under the pointer,
-      // else every level. Each level's tip starts with its level name,
-      // which the coloured row below already says.
+      // A colour-split cell, as for the glyph: every level on one line, the
+      // ends' words once above them, the one under the pointer marked. Its
+      // tip's remaining clauses (the range) go under the list.
       var lvP = t.closest(".blockr-summarize-lv");
       var drawnP = [];
       for (var q = 0; q < c.lv.length; q++) {
         if (lvDrawn(c, c.lv[q], i)) drawnP.push(q);
       }
-      var pickP = drawnP;
+      if (!drawnP.length) return "";
+      var hitP = null;
       if (lvP) {
         var allP = Array.prototype.slice.call(
           lvP.parentNode.querySelectorAll(".blockr-summarize-lv"));
         var posP = allP.indexOf(lvP);
-        if (posP >= 0 && posP < drawnP.length) pickP = [drawnP[posP]];
+        if (posP >= 0 && posP < drawnP.length) hitP = drawnP[posP];
       }
-      if (!pickP.length) return "";
-      var bodyP = "";
-      pickP.forEach(function (k3, n3) {
-        if (n3) bodyP += TT_SEP;
-        bodyP += ttRow((tt.cvar ? tt.cvar + " " : "") + c.levels[k3], "",
-                       c.fills[k3]) + notes(c.lv[k3].tip[i], 1);
+      var wordsP = tt.words || {};
+      var bodyP = wordsP.from && wordsP.to
+        ? statNote(wordsP.from + " \u2192 " + wordsP.to) : "";
+      drawnP.forEach(function (k3) {
+        bodyP += ttRow((tt.cvar ? tt.cvar + " " : "") + c.levels[k3],
+                       c.lv[k3].ab ? c.lv[k3].ab[i] : "", c.fills[k3],
+                       hitP == null ? null : k3 === hitP);
       });
-      return h + bodyP;
+      var restP = hitP == null ? "" : notes(c.lv[hitP].tip[i], 2);
+      return h + bodyP + (restP ? TT_SEP + restP : "");
     }
     return "";
   }
