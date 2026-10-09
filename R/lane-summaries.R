@@ -835,7 +835,7 @@ lane_color_split <- function(s, sid, stats, data, scale_map) {
     }),
     fills = unname(summarize_level_colors(scale_map, s$.color, lv,
                                           data[[s$.color]])[lv]),
-    cvar = s$.color
+    cvar = summarize_col_name(data, s$.color)
   )
 }
 
@@ -908,7 +908,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       # (lane_split_degenerate()).
       c(base, list(kind = "barsplit", key = paste0(sid, "_v"),
                    prefix = paste0(sid, "_S_"), series = s$.levels,
-                   cvar = s$.color,
+                   cvar = summarize_col_name(data, s$.color),
                    mode = if (is.null(s$.custom) && summarize_additive(
                      summarize_chr1(s$func) %||% "count"
                    )) {
@@ -1023,7 +1023,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                pcols(paste0(sid, "_L", j))
              }),
              ldidx = paste0(sid, "_L", seq_along(lv), "_d"),
-             cvar = s$.color)
+             cvar = summarize_col_name(data, s$.color))
       })
   } else if (identical(s$type, "series")) {
     c(base, list(kind = "sparkline", key = paste0(sid, "_last"),

@@ -172,6 +172,23 @@ test_that("the colour dimension reaches every lane mark, dot included", {
   expect_true(all(nonzero <= 1L))
 })
 
+test_that("the hover card names the colour column by its label", {
+  ae <- sum_fixture()
+  attr(ae$ARM, "label") <- "Treatment Arm"
+  S <- list(
+    list(type = "simple", name = "Bar", func = "count_distinct",
+         col = "USUBJID", show = "bar"),
+    list(type = "dist", name = "Duration", col = "DUR")
+  )
+  p <- lane_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  expect_identical(p$plan[[1L]]$cvar, "Treatment Arm")
+  expect_identical(p$plan[[2L]]$cvar, "Treatment Arm")
+  # No label: the column name, as before.
+  attr(ae$ARM, "label") <- NULL
+  p <- lane_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  expect_identical(p$plan[[1L]]$cvar, "ARM")
+})
+
 test_that("a split bar only stacks an additive measure", {
   ae <- sum_fixture()
   S <- list(list(type = "simple", name = "Mean duration", func = "mean",

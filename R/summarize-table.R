@@ -421,7 +421,8 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
     }
     plan <- list(list(kind = "barsplit",
                       label = summarize_measure_label(func, value),
-                      meas = summarize_measure_label(func, value), cvar = color,
+                      meas = summarize_measure_label(func, value),
+                      cvar = summarize_col_name(data, color),
                       key = ".v", series = series, mode = bar_mode,
                       sub_label = measure_sub, show_val = show_val,
                       val_denom = if (pct_ok) denom))
@@ -458,7 +459,8 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
         plan <- c(plan, list(list(
           kind = "barsplit", label = fv, key = paste0(".f_", fv),
           flevel = fv, zero_empty = pct_ok,
-          meas = summarize_measure_label(func, value), cvar = color,
+          meas = summarize_measure_label(func, value),
+          cvar = summarize_col_name(data, color),
           prefix = paste0(".f", fi, "s_"), series = series, mode = bar_mode,
           denom = if (pct_ok) denoms[[fv]],
           sub_label = paste0("N = ", denoms[[fv]]),
@@ -778,6 +780,13 @@ summarize_measure_label <- function(func, value) {
     identity = value,
     "Value"
   )
+}
+
+# A column as the hover card names it: its variable label, else its name.
+#' @noRd
+summarize_col_name <- function(data, col) {
+  if (is.null(col)) return(NULL)
+  dt_col_label(data[[col]], col) %||% col
 }
 
 #' @noRd
