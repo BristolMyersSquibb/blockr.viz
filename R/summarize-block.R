@@ -764,8 +764,14 @@ new_summarize_table_block <- function(group = NULL,
         shiny::observeEvent(input$summarize_table_block_capture, {
           capture(chart_capture_from_msg(input$summarize_table_block_capture))
         })
+        # The capture carries the board's download footer
+        # (R/download-footer.R); the painted fallback does not.
         dl_picture <- function() {
-          capture() %||% dl_exhibit()
+          cap <- capture()
+          if (is.null(cap)) {
+            return(dl_exhibit())
+          }
+          download_footer_stamp(cap, data(), session)
         }
 
         # A deck asks for the picture through the session's capture service,

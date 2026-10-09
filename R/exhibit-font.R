@@ -153,7 +153,9 @@ board_options.table_block <- function(x, ...) {
 
 #' @exportS3Method blockr.core::board_options
 board_options.summarize_table_block <- function(x, ...) {
-  blockr.core::combine_board_options(new_exhibit_font_option(), NextMethod())
+  blockr.core::combine_board_options(new_exhibit_font_option(),
+                                     new_download_footer_option(),
+                                     NextMethod())
 }
 
 # --- what a split table reports ----------------------------------------------

@@ -54,6 +54,7 @@ Suggests:
     knitr,
     officer,
     openxlsx,
+    png,
     ragg,
     rmarkdown,
     safetyData,

@@ -303,10 +303,15 @@ new_heatmap_block <- function(row = character(),
         shiny::observeEvent(input$heatmap_block_capture, {
           capture(chart_capture_from_msg(input$heatmap_block_capture))
         })
-        dl_slot <- dt_download_control(session, dl_exhibit,
-                                       enabled = r_download,
-                                       filename = "heatmap",
-                                       picture = capture)
+        # With the board's download footer under it (R/download-footer.R).
+        dl_slot <- dt_download_control(
+          session, dl_exhibit,
+          enabled = r_download,
+          filename = "heatmap",
+          picture = function() {
+            download_footer_stamp(capture(), data(), session)
+          }
+        )
 
         board_scale_map <- dd_board_scale_map()
 

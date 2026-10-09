@@ -1896,10 +1896,11 @@ new_chart_block <- function(
           }
         })
 
+        # With the board's download footer under it (R/download-footer.R).
         dl_chart <- function() {
           cap <- capture()
           if (!is.null(cap)) {
-            return(cap)
+            return(download_footer_stamp(cap, data(), session))
           }
           if (is.null(shiny::isolate(capture_token()))) {
             tok <- tryCatch(
