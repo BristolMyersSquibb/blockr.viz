@@ -2812,6 +2812,23 @@
     return '<div class="dd-tt-row dd-tt-label">' + esc(text) + "</div>";
   }
   var TT_SEP = '<div class="dd-tt-sep"></div>';
+  function closestIn(t, root, selector) {
+    var el = t.closest(selector);
+    return el && root.contains(el) ? el : null;
+  }
+  function staticTipTarget(t, own) {
+    if (!own.classList) return true;
+    if (own.classList.contains("blockr-summarize-pacell")) {
+      return !!closestIn(t, own, ".lane-link, .lane-from, .lane-to");
+    }
+    if (own.classList.contains("blockr-summarize-boxcell")) {
+      return !!closestIn(t, own, ".lane-wh, .lane-cap, .lane-box, .lane-med");
+    }
+    if (own.classList.contains("blockr-summarize-prcell")) {
+      return !!closestIn(t, own, ".lane-fence, .lane-rng, .lane-ctr");
+    }
+    return true;
+  }
 
   // A distribution glyph's lines, the chart's boxplot tooltip words: n, the
   // centre, the body's range, the whiskers'.
@@ -2845,7 +2862,8 @@
     var c = (p && p.kind === "flat" && p.cols) ? p.cols[td.cellIndex - 1] : null;
     if (!c || isNaN(i) || i >= p.n) {
       // No payload (a static page): the one-line text the cell carries.
-      var own = t.closest("[data-summarize-tip]");
+      var own = closestIn(t, td, "[data-summarize-tip]");
+      if (own && !staticTipTarget(t, own)) return "";
       var txt = own ? own.getAttribute("data-summarize-tip") : "";
       return txt ? ttNote(txt) : "";
     }
@@ -2862,26 +2880,26 @@
     var den = tt.den;
     var meas = tt.meas || "Value";
     if (c.kind === "bar") {
+      if (!closestIn(t, td, ".blockr-summarize-fill")) return "";
       if (c.disp && c.disp[i] != null && c.disp[i] !== "") {
         return h + ttRow(meas, c.disp[i] + (c.pct && c.pct[i] ? " " + c.pct[i] : ""));
       }
       return "";
     }
     if (c.kind === "barsplit") {
-      var fillEl = t.closest(".blockr-summarize-fill");
+      var fillEl = closestIn(t, td, ".blockr-summarize-fill");
+      if (!fillEl) return "";
       var hitName = null;
-      if (fillEl) {
-        var fills = Array.prototype.slice.call(
-          td.querySelectorAll(".blockr-summarize-fill"));
-        var drawn = [];
-        // The levels splitHtml() drew, in order: only those with a value
-        // in this row, stacked or grouped alike.
-        for (var j0 = 0; j0 < c.names.length; j0++) {
-          if (c.segv[j0][i] > 0) drawn.push(j0);
-        }
-        var at = fills.indexOf(fillEl);
-        if (at >= 0 && at < drawn.length) hitName = c.names[drawn[at]];
+      var fills = Array.prototype.slice.call(
+        td.querySelectorAll(".blockr-summarize-fill"));
+      var drawn = [];
+      // The levels splitHtml() drew, in order: only those with a value
+      // in this row, stacked or grouped alike.
+      for (var j0 = 0; j0 < c.names.length; j0++) {
+        if (c.segv[j0][i] > 0) drawn.push(j0);
       }
+      var at = fills.indexOf(fillEl);
+      if (at >= 0 && at < drawn.length) hitName = c.names[drawn[at]];
       var rows = "";
       var shown = 0;
       for (var j = 0; j < c.names.length; j++) {
@@ -2903,6 +2921,9 @@
       return h + rows + foot;
     }
     if (c.kind === "box" || c.kind === "pointrange") {
+      var distMark = closestIn(t, td,
+        ".lane-wh, .lane-cap, .lane-box, .lane-med, .lane-fence, .lane-rng, .lane-ctr");
+      if (!distMark) return "";
       var words = tt.words || {};
       if (!c.multi) {
         if (!c.r || !c.r.bc || c.r.bc[i] == null) return "";
@@ -2910,7 +2931,7 @@
       }
       // A colour-split cell: every level, one line each, the one under the
       // pointer marked and its n and whiskers under the list.
-      var lvEl = t.closest(".blockr-summarize-lv");
+      var lvEl = distMark.closest(".blockr-summarize-lv");
       var drawnLv = [];
       for (var k = 0; k < c.lv.length; k++) {
         if (lvDrawn(c, c.lv[k], i)) drawnLv.push(k);
@@ -2953,6 +2974,8 @@
       return h + body;
     }
     if (c.kind === "pair") {
+      var pairMark = closestIn(t, td, ".lane-link, .lane-from, .lane-to");
+      if (!pairMark) return "";
       var notes = function (tip, skip) {
         return String(tip).split(" \u00b7 ").slice(skip).map(function (x) {
           return ttNote(x);
@@ -2965,7 +2988,7 @@
       // A colour-split cell, as for the glyph: every level on one line, the
       // ends' words once above them, the one under the pointer marked. Its
       // tip's remaining clauses (the range) go under the list.
-      var lvP = t.closest(".blockr-summarize-lv");
+      var lvP = pairMark.closest(".blockr-summarize-lv");
       var drawnP = [];
       for (var q = 0; q < c.lv.length; q++) {
         if (lvDrawn(c, c.lv[q], i)) drawnP.push(q);
