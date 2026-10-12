@@ -85,6 +85,20 @@ test_that("the HTML download is one self-contained file that still works", {
   expect_gt(file.size(f), 50000)
 })
 
+test_that("the HTML download does not re-resolve subtitle templates", {
+  ex <- dl_exhibit(
+    subtitle = "By: {@rows}[ Display AEs with at least {@min_share} patients]",
+    .title_args = list(rows = "SOC and PT", min_share = "1")
+  )
+  f <- withr::local_tempfile(fileext = ".html")
+  write_exhibit_html(ex, f, title = ex$title, subtitle = ex$subtitle)
+
+  txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
+
+  expect_true(grepl("By: SOC and PT", txt, fixed = TRUE))
+  expect_false(grepl(">By:<", txt, fixed = TRUE))
+})
+
 test_that("a dependency that cannot be inlined is refused, not shipped broken", {
   tags <- htmltools::tagList(
     htmltools::tags$div("x"),
