@@ -108,12 +108,14 @@ test_that("section headers keep a raw key when their label carries N", {
   p <- summarize_flat_payload(m)
 
   expect_true("A (N = 2)" %in% as.character(p$label))
+  expect_true("A (N = 2)" %in% as.character(p$parent))
   expect_true("A" %in% as.character(p$parent_key))
 
   html <- summarize_cells_html(m)
   expect_match(html, 'data-summarize-label="A \\(N = 2\\)"')
   expect_match(html, 'data-summarize-key="A"')
-  expect_match(html, 'data-summarize-parent="A"')
+  expect_match(html, 'data-summarize-parent="A \\(N = 2\\)"')
+  expect_match(html, 'data-summarize-parent-key="A"')
 })
 
 test_that("a split column ships one width vector per series", {

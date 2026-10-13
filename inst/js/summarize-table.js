@@ -41,9 +41,11 @@
       if (r.classList.contains("is-parent")) {
         // The table block's contract: the ROW carries `collapsed`, which is
         // what rotates the shared chevron.
-        var key = r.getAttribute("data-summarize-key") ||
-          r.getAttribute("data-summarize-label");
-        open[key] = !r.classList.contains("collapsed");
+        var label = r.getAttribute("data-summarize-label");
+        var key = r.getAttribute("data-summarize-key") || label;
+        var isOpen = !r.classList.contains("collapsed");
+        open[label] = isOpen;
+        open[key] = isOpen;
       }
     });
     rows(root).forEach(function (r) {
@@ -141,9 +143,10 @@
     // searching a leaf never returns an empty-looking table.
     all.forEach(function (r) {
       if (!r.classList.contains("is-parent")) return;
+      var label = r.getAttribute("data-summarize-label");
       var key = r.getAttribute("data-summarize-key") ||
-        r.getAttribute("data-summarize-label");
-      if (matched[key]) {
+        label;
+      if (matched[key] || matched[label]) {
         r.classList.remove("blockr-summarize-hidden-search");
         if (q) setOpen(r, true);
       }
@@ -391,7 +394,11 @@
     }
     return {
       cols: [path[0], path[1]],
-      vals: [tr.getAttribute("data-summarize-parent"), label]
+      vals: [
+        tr.getAttribute("data-summarize-parent-key") ||
+          tr.getAttribute("data-summarize-parent"),
+        label
+      ]
     };
   }
 
@@ -810,6 +817,8 @@
       var row = '<tr class="' + cls + '" data-summarize-label="' +
         esc(p.label[i]) + '"' +
         (parent && p.parent_key ? ' data-summarize-key="' +
+          esc(p.parent_key[i]) + '"' : "") +
+        (child && p.parent_key ? ' data-summarize-parent-key="' +
           esc(p.parent_key[i]) + '"' : "") +
         (child ? ' data-summarize-parent="' + esc(p.parent[i]) + '"' : "") +
         ' data-summarize-level="' + (child ? p.level[i] : 0) +
