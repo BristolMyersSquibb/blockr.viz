@@ -277,9 +277,9 @@ test_that("an interval column ships per-row segments on the observed domain", {
                    unname(summarize_level_colors(NULL, "SEV",
                                                  c("MILD", "MODERATE"))))
   expect_match(c1$tips[[1]][[1]], "^SEV (MILD|MODERATE) · ")
-  # The domain is the observed span range, not zero-based.
-  expect_equal(c1$d0, min(ae$SDY))
-  expect_equal(c1$d1, max(ae$EDY))
+  # Nonnegative timelines use a readable study-day scale.
+  expect_equal(c1$d0, 0)
+  expect_equal(c1$d1, 60)
   # An Events count column rides beside the lane.
   expect_identical(p$cols[[2]]$kind, "num")
 })

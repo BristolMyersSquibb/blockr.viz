@@ -619,8 +619,11 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     n = n,
     thead = summarize_thead(prep, sortable = isTRUE(cfg$sortable %||% TRUE),
                             cols = cols, axis = isTRUE(cfg$axis %||% TRUE)),
+    tfoot = summarize_tfoot(prep, cols = cols,
+                            axis = isTRUE(cfg$axis %||% TRUE)),
     ncol = length(plan) + 1L,
     nested = !is.null(prep$parent),
+    expanded = any(vapply(plan, function(p) isTRUE(p$section), logical(1L))),
     label = as.character(rows$.label),      # PLAIN: each consumer escapes
     parent = as.character(rows$.parent),
     level = as.integer(rows$.level),
@@ -710,7 +713,10 @@ summarize_axis_strip <- function(p, cl = NULL, prep = NULL) {
   t <- if (isTRUE(dom$date)) {
     summarize_axis_date_ticks(dom$d0, dom$d1)
   } else {
-    at <- summarize_axis_ticks(dom$d0, dom$d1)
+    at <- summarize_axis_ticks(
+      dom$d0, dom$d1,
+      k = if (identical(p$kind, "interval")) 7L else 4L
+    )
     list(at = at, labels = lane_fmt(at))
   }
   if (length(t$at) < 2L) return(NULL)
@@ -747,6 +753,30 @@ summarize_axis_strip <- function(p, cl = NULL, prep = NULL) {
       htmltools::tags$span(class = "blockr-summarize-axis-pad",
                            style = paste0("width:", cl$dw, "ch"))
     }
+  )
+}
+
+#' Bottom axis for large swimlane columns
+#' @noRd
+summarize_tfoot <- function(prep, cols = NULL, axis = TRUE) {
+  if (!isTRUE(axis) || !length(prep$plan)) return("")
+  cells <- vapply(seq_along(prep$plan), function(i) {
+    p <- prep$plan[[i]]
+    if (!identical(p$kind, "interval") || !identical(p$size, "lg")) {
+      return("<td></td>")
+    }
+    cl <- if (!is.null(cols) && length(cols) >= i) cols[[i]]
+    paste0(
+      "<td class=\"blockr-summarize-axis-cell\">",
+      summarize_axis_strip(p, cl, prep),
+      "</td>"
+    )
+  }, character(1L))
+  if (!any(grepl("blockr-summarize-axis", cells, fixed = TRUE))) return("")
+  paste0(
+    "<tfoot><tr><td class=\"blockr-summarize-axis-stub\"></td>",
+    paste(cells, collapse = ""),
+    "</tr></tfoot>"
   )
 }
 
@@ -946,6 +976,7 @@ summarize_fold_text <- function(prep) {
 #' assembler still compares like with like.
 #' @noRd
 summarize_cells_html <- function(m, expanded = FALSE) {
+  expanded <- isTRUE(expanded) || isTRUE(m$expanded)
   cells <- lapply(m$cols, function(c) {
     if (identical(c$kind, "bar")) {
       paste0("<td class=\"blockr-summarize-bar-col\"",
@@ -1056,7 +1087,8 @@ summarize_cells_html <- function(m, expanded = FALSE) {
     "<table class=\"blockr-table blockr-summarize-table\"",
     " data-summarize-nested=\"",
     if (isTRUE(m$nested)) "1" else "0", "\"", m$attrs, ">",
-    m$thead, "<tbody>", paste(body, collapse = ""), fold, "</tbody></table>"
+    m$thead, "<tbody>", paste(body, collapse = ""), fold, "</tbody>",
+    m$tfoot, "</table>"
   )
 }
 
@@ -1626,10 +1658,11 @@ summarize_flat_payload <- function(m) {
       "<table class=\"blockr-table blockr-summarize-table\"",
       " data-summarize-nested=\"",
       if (isTRUE(m$nested)) "1" else "0", "\"", m$attrs, ">",
-      m$thead, "<tbody></tbody></table>"
+      m$thead, "<tbody></tbody>", m$tfoot, "</table>"
     ),
     ncol = m$ncol,
     label = arr(m$label),
+    expanded = isTRUE(m$expanded),
     parent = if (isTRUE(m$nested)) arr(m$parent) else NULL,
     # The LEVEL itself (an integer), omitted only when every row is level 0 --
     # arr_if() on the comparison would have shipped logicals and printed

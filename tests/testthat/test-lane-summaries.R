@@ -261,6 +261,11 @@ test_that("the column axis prints the domain once, on glyph columns only", {
   span <- as.numeric(as.Date(c("2023-02-11", "2023-06-02")))
   expect_match(strip(list(kind = "interval", dom = span, dom_date = TRUE)),
                "Mar 2023")
+  interval_axis <- strip(list(kind = "interval", dom = c(0, 450)))
+  expect_match(interval_axis, "left:0%\">0</span>", fixed = TRUE)
+  expect_match(interval_axis, "left:11.11%\">50</span>", fixed = TRUE)
+  expect_match(interval_axis, "class=\"is-last\" style=\"left:100%\">450</span>",
+               fixed = TRUE)
   expect_match(strip(list(kind = "sparkline", dom = c(0, 90))),
                "blockr-summarize-axis")
   # No scale, no strip -- and a degenerate domain draws nothing either.
@@ -270,6 +275,51 @@ test_that("the column axis prints the domain once, on glyph columns only", {
   # flat ranked-bar path, where one bar_max covers every bar column).
   expect_match(strip(list(kind = "bar"), NULL, list(bar_max = 100)),
                "blockr-summarize-axis")
+})
+
+test_that("large swimlanes repeat the axis below the table", {
+  ae <- sum_fixture()
+  large <- summarize_cells(summarize_prepare(
+    ae, group = NULL, by = "USUBJID", summaries = list(
+      list(type = "spans", x = "ASTDY", xend = "AENDY", size = "lg")
+    )
+  ))
+  expect_match(large$tfoot, "<tfoot>", fixed = TRUE)
+  expect_match(large$tfoot, "blockr-summarize-axis", fixed = TRUE)
+
+  medium <- summarize_cells(summarize_prepare(
+    ae, group = NULL, by = "USUBJID", summaries = list(
+      list(type = "spans", x = "ASTDY", xend = "AENDY")
+    )
+  ))
+  expect_identical(medium$tfoot, "")
+})
+
+test_that("swimlane parent rows can act as section headers", {
+  ae <- sum_fixture()
+  prep <- summarize_prepare(
+    ae, group = NULL, by = c("ARM", "USUBJID"), summaries = list(
+      list(type = "spans", x = "ASTDY", xend = "AENDY", parent = FALSE)
+    )
+  )
+  seg_col <- prep$plan[[1L]]$segs
+  parent <- prep$rows[prep$rows$.is_parent, , drop = FALSE]
+  child <- prep$rows[!prep$rows$.is_parent, , drop = FALSE]
+  expect_true(all(lengths(parent[[seg_col]]) == 0L))
+  expect_true(any(lengths(child[[seg_col]]) > 0L))
+  expect_true(summarize_cells(prep)$expanded)
+})
+
+test_that("interval columns keep an explicit axis domain", {
+  ae <- sum_fixture()
+  attr(ae$ASTDY, "blockr_domain") <- c(100, 350)
+  attr(ae$AENDY, "blockr_domain") <- c(100, 350)
+  prep <- summarize_prepare(
+    ae, group = NULL, by = "USUBJID", summaries = list(
+      list(type = "spans", x = "ASTDY", xend = "AENDY")
+    )
+  )
+  expect_equal(prep$plan[[1L]]$dom, c(100, 350))
 })
 
 test_that("axis = FALSE drops every strip", {

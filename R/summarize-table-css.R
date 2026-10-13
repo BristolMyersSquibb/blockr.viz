@@ -175,6 +175,13 @@ summarize_table_css <- function() {
 }
 .blockr-summarize-axis-in span.is-first { transform: none; }
 .blockr-summarize-axis-in span.is-last { transform: translateX(-100%); }
+.blockr-summarize-table tfoot td {
+  border-top: 1px solid var(--blockr-color-border-subtle, #eef2f7);
+  padding-top: 4px;
+}
+.blockr-summarize-table tfoot .blockr-summarize-axis {
+  margin-top: 0;
+}
 
 /* Sorting affordance: none of our own. The header cells are dt_th()'s, so the
    .blockr-sortable cursor and the .blockr-sort-icon arrow come from the shared

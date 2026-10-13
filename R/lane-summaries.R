@@ -166,6 +166,7 @@ lane_norm_summaries <- function(summaries) {
       size <- summarize_chr1(s$size) %||% "md"
       if (!size %in% c("md", "lg")) size <- "md"
       s$size <- size
+      s$parent <- if (is.null(s$parent)) TRUE else isTRUE(s$parent)
     }
     # The pair row: the two functions, an optional band (`lo` / `hi`, each a
     # number or a column), an optional reference line (`ref`, a number) and
@@ -507,7 +508,10 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   plan <- list()
   s_primary <- NULL
 
-  fill <- function(target, tkeys, slice, s, sid) {
+  fill <- function(target, tkeys, slice, s, sid, parent_row = FALSE) {
+    if (isTRUE(parent_row) && identical(s$parent, FALSE)) {
+      return(lane_blank_summary(target, s, sid))
+    }
     if (!is.null(s$.failed)) {
       target[[paste0(sid, "_t")]] <- rep("\u2013", nrow(target))
       return(target)
@@ -679,7 +683,10 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       failed <- tryCatch({
         leaf <- fill(leaf, keys, cp$slice, s, cp$suffix)
         if (!is.null(par_rows)) {
-          par_rows <- fill(par_rows, parent, cp$slice, s, cp$suffix)
+          par_rows <- fill(
+            par_rows, parent, cp$slice, s, cp$suffix,
+            parent_row = TRUE
+          )
         }
         NULL
       }, lane_custom_error = conditionMessage)
@@ -690,7 +697,9 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
         cp <- list(suffix = sid1, slice = data, level = NULL)
         plan <- plan[seq_len(n0)]
         leaf <- fill(leaf, keys, data, s, sid1)
-        if (!is.null(par_rows)) par_rows <- fill(par_rows, parent, data, s, sid1)
+        if (!is.null(par_rows)) {
+          par_rows <- fill(par_rows, parent, data, s, sid1, parent_row = TRUE)
+        }
         plan <- c(plan, list(lane_summary_plan(s, cp, data, scale_map)))
         break
       }
@@ -825,6 +834,18 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
 #' @noRd
 lane_failed_summary <- function(s, msg) {
   list(type = "field", name = s$name, .failed = msg)
+}
+
+#' Fill parent rows with empty marks for section-style summaries
+#' @noRd
+lane_blank_summary <- function(target, s, sid) {
+  n <- nrow(target)
+  if (identical(s$type, "spans")) {
+    target[[paste0(sid, "_segs")]] <- I(rep(list(list()), n))
+    target[[paste0(sid, "_start")]] <- rep(NA_real_, n)
+    target[[paste0(sid, "_nseg")]] <- rep(0L, n)
+  }
+  target
 }
 
 #' The colour dimension of a distribution column: the per-level statistic
@@ -1051,9 +1072,12 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                  show_val = TRUE))
   } else {
     lv <- s$.levels
+    x <- summarize_chr1(s$x)
+    xend <- summarize_chr1(s$xend)
     c(base, list(kind = "interval", key = paste0(sid, "_start"),
-                 segs = paste0(sid, "_segs"), x = summarize_chr1(s$x),
-                 xend = summarize_chr1(s$xend), levels = lv,
+                 segs = paste0(sid, "_segs"), x = x,
+                 xend = xend, levels = lv,
+                 dom = lane_axis_domain_attr(data, c(x, xend)),
                  dom_date = isTRUE(s$.date),
                  tfields = intersect(as.character(s$fields %||% character()),
                                      names(data)),
@@ -1065,6 +1089,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                    function(f) summarize_col_name(data, f), character(1L),
                    USE.NAMES = FALSE
                  ),
+                 section = identical(s$parent, FALSE),
                  size = summarize_chr1(s$size) %||% "md",
                  fills = if (!is.null(lv)) {
                    unname(summarize_level_colors(
@@ -1135,6 +1160,20 @@ lane_as_num <- function(v) {
   if (inherits(v, "Date") || inherits(v, "POSIXct")) as.numeric(v)
   else if (is.numeric(v)) as.numeric(v)
   else NULL
+}
+
+#' @noRd
+lane_axis_domain_attr <- function(data, cols) {
+  vals <- unlist(lapply(cols, function(col) {
+    if (!col %in% names(data)) return(NULL)
+    attr(data[[col]], "blockr_domain", exact = TRUE)
+  }), use.names = FALSE)
+  vals <- suppressWarnings(as.numeric(vals))
+  vals <- vals[is.finite(vals)]
+  if (length(vals) < 2L) return(NULL)
+  rng <- range(vals)
+  if (rng[[2L]] <= rng[[1L]]) return(NULL)
+  rng
 }
 
 #' @noRd
@@ -1400,8 +1439,30 @@ lane_summary_domains <- function(plan, rows) {
         }
       }
       ext <- ext[is.finite(ext)]
-      xd <- if (length(ext)) range(ext) else c(0, 1)
+      is_date <- any(vapply(plan[idx], function(p) {
+        isTRUE(p$dom_date)
+      }, logical(1L)))
+      preset <- unlist(lapply(plan[idx], function(p) p$dom), use.names = FALSE)
+      preset <- preset[is.finite(preset)]
+      has_preset <- length(preset) > 0L
+      xd <- if (length(preset)) {
+        range(preset)
+      } else if (length(ext)) {
+        range(ext)
+      } else {
+        c(0, 1)
+      }
       if (xd[[2L]] <= xd[[1L]]) xd[[2L]] <- xd[[1L]] + 1
+      if (!has_preset && !is_date && xd[[1L]] >= 0) {
+        xd[[1L]] <- 0
+        at <- summarize_axis_ticks(xd[[1L]], xd[[2L]], k = 7L)
+        if (length(at) >= 2L) {
+          step <- at[[2L]] - at[[1L]]
+          if (is.finite(step) && step > 0) {
+            xd[[2L]] <- ceiling(xd[[2L]] / step) * step
+          }
+        }
+      }
       for (i in idx) plan[[i]]$dom <- xd
     }
   }

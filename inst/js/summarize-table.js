@@ -790,12 +790,14 @@
   /** Assemble the whole tbody from the cell model. */
   function assembleBody(p) {
     var out = [];
+    var expanded = !!p.expanded;
     for (var i = 0; i < p.n; i++) {
       var parent = !!(p.parent_row && p.parent_row[i]);
       var child = !!(p.level && p.level[i] > 0);
       var cls = "blockr-summarize-row" +
-        (parent ? " is-parent blockr-indent-toggle collapsed" : "") +
-        (child ? " is-child collapsed-hidden" : "") +
+        (parent ? " is-parent blockr-indent-toggle" +
+          (expanded ? "" : " collapsed") : "") +
+        (child ? " is-child" + (expanded ? "" : " collapsed-hidden") : "") +
         (p.pick ? " is-pick" : "") +
         (p.on && p.on[i] ? " is-on" : "");
       var row = '<tr class="' + cls + '" data-summarize-label="' +
@@ -807,7 +809,8 @@
         (parent ? " blockr-has-toggle" : "") + '"' +
         (child ? ' style="padding-left:48px;"' : "") + ">" +
         (parent ? '<button class="blockr-indent-btn" type="button"' +
-          ' tabindex="-1" aria-expanded="false">' + CHEV + "</button>" : "") +
+          ' tabindex="-1" aria-expanded="' + (expanded ? "true" : "false") +
+          '">' + CHEV + "</button>" : "") +
         '<span class="blockr-summarize-label">' + esc(p.label[i]) + "</span></td>";
       for (var k = 0; k < p.cols.length; k++) {
         var c = p.cols[k];
