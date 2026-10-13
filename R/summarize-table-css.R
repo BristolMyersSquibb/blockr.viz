@@ -905,6 +905,12 @@ summarize_table_css <- function() {
 .blockr-summarize-table tr.is-parent .blockr-summarize-label {
   font-weight: 600;
 }
+.blockr-summarize-table tr.is-parent td.blockr-summarize-label-col {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
 .blockr-summarize-table tr.is-pick { cursor: pointer; }
 .blockr-summarize-table tr.is-on {
   background: color-mix(in srgb, var(--blockr-summarize-fill) 10%, transparent);

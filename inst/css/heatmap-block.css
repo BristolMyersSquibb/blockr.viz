@@ -216,14 +216,40 @@
 .hmb-gt {
   position: sticky;
   left: 0;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding-left: 10px;
   border-left: 3px solid var(--blockr-color-border-accent);
   font-size: var(--blockr-font-size-xs);
   font-weight: var(--blockr-font-weight-semibold);
   letter-spacing: 0;
   color: var(--blockr-color-text-default);
+  white-space: normal;
 }
+.hmb-table .blockr-indent-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0 5px 0 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: baseline;
+}
+.hmb-table .blockr-chev {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  color: var(--blockr-color-text-muted);
+  transition: transform 0.2s ease, color 0.15s ease;
+}
+.hmb-table .blockr-indent-btn:hover .blockr-chev {
+  color: var(--blockr-color-text-default);
+}
+.hmb-table tr.hmb-grp.collapsed .blockr-chev {
+  transform: rotate(-90deg);
+}
+.hmb-table tr.hmb-collapsed-hidden { display: none; }
 
 /* ---- drill ------------------------------------------------------------ */
 .hmb-block[data-hmb-drill="1"] tr.hmb-r { cursor: pointer; }

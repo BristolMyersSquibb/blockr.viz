@@ -52,8 +52,9 @@
     var q = search ? search.value.trim().toLowerCase() : '';
     root.querySelectorAll('tr.hmb-r').forEach(function (tr) {
       var id = (tr.getAttribute('data-hmb-id') || '').toLowerCase();
+      var show = q === '' || id.indexOf(q) !== -1;
       (/** @type {HTMLElement} */ (tr)).style.display =
-        (q === '' || id.indexOf(q) !== -1) ? '' : 'none';
+        q === '' ? '' : (show ? 'table-row' : 'none');
     });
     root.querySelectorAll('tr.hmb-grp').forEach(function (tr) {
       (/** @type {HTMLElement} */ (tr)).style.display = q === '' ? '' : 'none';
@@ -282,6 +283,11 @@
       .replace(/>/g, '&gt;');
   }
 
+  var CHEV = '<svg class="blockr-chev" viewBox="0 0 24 24" fill="none" ' +
+    'stroke="currentColor" stroke-width="2.4" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M6 9l6 6 6-6"/></svg>';
+
   /** @param {any} m @returns {string} */
   function assembleRows(m) {
     var n = m.n, k = m.k, i, j;
@@ -301,12 +307,18 @@
     var at = 0;
     /** @type {Record<number, string>} */
     var rowClasses = {};
+    /** @type {Record<number, number>} */
+    var rowGroups = {};
     for (i = 0; i < groups.length; i++) {
-      heads[at] = '<tr class="hmb-grp"><td colspan="' + (k + 1) +
-        '"><span class="hmb-gt">' + esc(groups[i].label) +
-        ' (N = ' + groups[i].n + ')</span></td></tr>';
+      heads[at] = '<tr class="hmb-grp blockr-indent-toggle" data-hmb-group="' +
+        i + '"><td colspan="' + (k + 1) +
+        '"><span class="hmb-gt"><button class="blockr-indent-btn" ' +
+        'type="button" tabindex="-1" aria-expanded="true">' + CHEV +
+        '</button><span class="hmb-gt-label">' + esc(groups[i].label) +
+        ' (N = ' + groups[i].n + ')</span></span></td></tr>';
       for (j = 0; j < groups[i].n; j++) {
         rowClasses[at + j] = 'hmb-r hmb-rg';
+        rowGroups[at + j] = i;
       }
       rowClasses[at] += ' hmb-r-start';
       rowClasses[at + groups[i].n - 1] += ' hmb-r-end';
@@ -319,11 +331,33 @@
       var cls = rowClasses[i] || 'hmb-r';
       var row = (heads[i] || '') + '<tr class="' + cls +
         '" data-hmb-i="' + i + '" data-hmb-id="' + id +
+        (rowGroups[i] == null ? '' : '" data-hmb-group="' + rowGroups[i]) +
         '"><td class="hmb-stub">' + id + '</td>';
       for (j = 0; j < k; j++) row += cells[j * n + i];
       out[i] = row + '</tr>';
     }
     return out.join('');
+  }
+
+  /** @param {Element} root */
+  function wireGroupCollapse(root) {
+    root.addEventListener('click', function (ev) {
+      var t = /** @type {Element|null} */ (ev.target);
+      var btn = t && t.closest ? t.closest('.blockr-indent-btn') : null;
+      if (!btn || !root.contains(btn)) return;
+      var h = btn.closest('tr.hmb-grp');
+      if (!h) return;
+      ev.stopPropagation();
+      ev.preventDefault();
+      var group = h.getAttribute('data-hmb-group');
+      var collapsed = !h.classList.contains('collapsed');
+      h.classList.toggle('collapsed', collapsed);
+      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      root.querySelectorAll('tr.hmb-r[data-hmb-group="' + group + '"]')
+        .forEach(function (tr) {
+          tr.classList.toggle('hmb-collapsed-hidden', collapsed);
+        });
+    });
   }
 
   // ---- data tooltip ----------------------------------------------------
@@ -647,8 +681,11 @@
       var thead = /** @type {HTMLElement|null} */ (clone.querySelector('thead'));
       if (thead) thead.style.transform = '';
       clone.querySelectorAll('tr').forEach(function (tr) {
-        tr.classList.remove('hmb-flash');
+        tr.classList.remove('hmb-flash', 'collapsed', 'hmb-collapsed-hidden');
         (/** @type {HTMLElement} */ (tr)).style.display = '';
+      });
+      clone.querySelectorAll('.hmb-grp .blockr-indent-btn').forEach(function (btn) {
+        btn.setAttribute('aria-expanded', 'true');
       });
       host.appendChild(clone);
       document.body.appendChild(host);
@@ -727,6 +764,7 @@
     paintHeader(root, st);
     if (st.ddc) st.ddc.render();
     wireSearch(root);
+    wireGroupCollapse(root);
     wireDrill(root, elemId);
     wireTooltip(root);
     wireCapture(root, st);

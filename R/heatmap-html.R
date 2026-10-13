@@ -509,6 +509,7 @@ hmb_assemble_rows <- function(m) {
   }
   stub <- paste0('<td class="hmb-stub">', esc(m$rows), "</td>")
   row_class <- rep("hmb-r", n)
+  row_group <- rep(NA_integer_, n)
 
   if (length(m$groups)) {
     gn <- vapply(m$groups, `[[`, 0L, "n")
@@ -517,10 +518,19 @@ hmb_assemble_rows <- function(m) {
     row_class <- paste(row_class, "hmb-rg")
     row_class[starts] <- paste(row_class[starts], "hmb-r-start")
     row_class[ends] <- paste(row_class[ends], "hmb-r-end")
-    heads <- vapply(m$groups, function(g) {
-      paste0('<tr class="hmb-grp"><td colspan="', k + 1L,
-             '"><span class="hmb-gt">', esc(g$label), " (N = ", g$n,
-             ")</span></td></tr>")
+    for (g in seq_along(m$groups)) {
+      row_group[starts[[g]]:ends[[g]]] <- g - 1L
+    }
+    chev <- paste0(
+      '<button class="blockr-indent-btn" type="button" tabindex="-1"',
+      ' aria-expanded="true">', as.character(section_chevron_svg()), "</button>"
+    )
+    heads <- vapply(seq_along(m$groups), function(g) {
+      grp <- m$groups[[g]]
+      paste0('<tr class="hmb-grp blockr-indent-toggle" data-hmb-group="',
+             g - 1L, '"><td colspan="', k + 1L, '"><span class="hmb-gt">',
+             chev, '<span class="hmb-gt-label">', esc(grp$label),
+             " (N = ", grp$n, ")</span></span></td></tr>")
     }, "")
   } else {
     heads <- rep("", n)
@@ -528,6 +538,11 @@ hmb_assemble_rows <- function(m) {
   }
   body_rows <- paste0('<tr class="', row_class, '" data-hmb-i="',
                       seq_len(n) - 1L, '" data-hmb-id="', esc(m$rows),
+                      ifelse(
+                        is.na(row_group),
+                        "",
+                        paste0('" data-hmb-group="', row_group)
+                      ),
                       '">', stub, apply(cells, 1L, paste0, collapse = ""),
                       "</tr>")
 
