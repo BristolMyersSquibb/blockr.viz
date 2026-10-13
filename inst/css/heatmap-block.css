@@ -178,6 +178,8 @@
   z-index: 1;
   height: 24px;
   padding: 0 12px 0 0;
+  box-sizing: border-box;
+  border: 1px solid transparent;
   white-space: nowrap;
   background: var(--blockr-color-bg-surface);
   color: var(--blockr-color-text-default);
@@ -197,26 +199,30 @@
 }
 .hmb-block.hmb-nonum td.hmb-c span { visibility: hidden; }
 
-/* A group opens with a section title: 12px, 600, uppercase, 0.05em,
-   text-muted, no band behind it. */
+/* A group opens with a quiet section divider. A full rectangle around the
+   sparse matrix reads too heavy once many cells are empty. */
 .hmb-table tr.hmb-grp td {
-  padding: 14px 0 4px;
+  padding: 16px 0 6px;
+  border-top: 1px solid var(--blockr-color-border-default);
+  border-bottom: 1px solid var(--blockr-color-border-default);
+  background: color-mix(
+    in srgb,
+    var(--blockr-color-text-default, #111827) 3%,
+    var(--blockr-color-bg-surface, #ffffff)
+  );
   white-space: nowrap;
 }
-.hmb-table tr.hmb-grp:first-child td { padding-top: 2px; }
+.hmb-table tr.hmb-grp:first-child td { padding-top: 8px; }
 .hmb-gt {
   position: sticky;
   left: 0;
+  display: inline-block;
+  padding-left: 10px;
+  border-left: 3px solid var(--blockr-color-border-accent);
   font-size: var(--blockr-font-size-xs);
   font-weight: var(--blockr-font-weight-semibold);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--blockr-color-text-muted);
-}
-.hmb-gn {
-  margin-left: 8px;
-  font-size: var(--blockr-font-size-xs);
-  color: var(--blockr-color-text-muted);
+  letter-spacing: 0;
+  color: var(--blockr-color-text-default);
 }
 
 /* ---- drill ------------------------------------------------------------ */

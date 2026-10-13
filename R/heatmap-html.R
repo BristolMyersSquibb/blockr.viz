@@ -508,18 +508,30 @@ hmb_assemble_rows <- function(m) {
     )
   }
   stub <- paste0('<td class="hmb-stub">', esc(m$rows), "</td>")
-  body_rows <- paste0('<tr class="hmb-r" data-hmb-i="', seq_len(n) - 1L,
-                      '" data-hmb-id="', esc(m$rows), '">', stub,
-                      apply(cells, 1L, paste0, collapse = ""), "</tr>")
+  row_class <- rep("hmb-r", n)
 
   if (length(m$groups)) {
     gn <- vapply(m$groups, `[[`, 0L, "n")
     starts <- utils::head(cumsum(c(1L, gn)), -1L)
+    ends <- cumsum(gn)
+    row_class <- paste(row_class, "hmb-rg")
+    row_class[starts] <- paste(row_class[starts], "hmb-r-start")
+    row_class[ends] <- paste(row_class[ends], "hmb-r-end")
     heads <- vapply(m$groups, function(g) {
       paste0('<tr class="hmb-grp"><td colspan="', k + 1L,
-             '"><span class="hmb-gt">', esc(g$label),
-             '</span><span class="hmb-gn">', g$n, "</span></td></tr>")
+             '"><span class="hmb-gt">', esc(g$label), " (N = ", g$n,
+             ")</span></td></tr>")
     }, "")
+  } else {
+    heads <- rep("", n)
+    starts <- integer()
+  }
+  body_rows <- paste0('<tr class="', row_class, '" data-hmb-i="',
+                      seq_len(n) - 1L, '" data-hmb-id="', esc(m$rows),
+                      '">', stub, apply(cells, 1L, paste0, collapse = ""),
+                      "</tr>")
+
+  if (length(m$groups)) {
     body_rows[starts] <- paste0(heads, body_rows[starts])
   }
   paste0(body_rows, collapse = "")

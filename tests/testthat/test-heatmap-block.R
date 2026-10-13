@@ -68,7 +68,14 @@ test_that("heatmap_html renders legend, group rows, header row, no dashes", {
   expect_match(html, "hmb-legend", fixed = TRUE)
   expect_match(html, "MODERATE", fixed = TRUE)     # legend decodes levels
   # a group opens with a section-title row spanning the matrix
-  expect_match(html, '<tr class="hmb-grp"><td colspan="3"><span class="hmb-gt">A</span><span class="hmb-gn">1</span></td></tr>', fixed = TRUE)
+  expect_match(html, paste0(
+    '<tr class="hmb-grp"><td colspan="3"><span class="hmb-gt">',
+    "A (N = 1)</span></td></tr>"
+  ), fixed = TRUE)
+  expect_match(html, paste0(
+    '<tr class="hmb-r hmb-rg hmb-r-start hmb-r-end" ',
+    'data-hmb-i="0" data-hmb-id="s1">'
+  ), fixed = TRUE)
   expect_no_match(html, "hmb-rail", fixed = TRUE)
   # the header row: title slots, the search tool, no controls on the face
   expect_match(html, "hmb-head", fixed = TRUE)

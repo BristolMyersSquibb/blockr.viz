@@ -8,6 +8,7 @@
 html_exhibit(
   x,
   title = NULL,
+  subtitle = NULL,
   caption = NULL,
   max_height = NULL,
   default_expanded = NULL,
@@ -17,6 +18,7 @@ html_exhibit(
 \method{html_exhibit}{default}(
   x,
   title = NULL,
+  subtitle = NULL,
   caption = NULL,
   max_height = NULL,
   default_expanded = NULL,
@@ -26,9 +28,11 @@ html_exhibit(
 \arguments{
 \item{x}{A data frame or \code{\link[=as_annotated_df]{as_annotated_df()}}-coercible table object.}
 
-\item{title, caption}{Table title / footnote. \code{NULL} (default) takes them
-from the annotated data frame's display attributes, \code{""} switches them
-off -- the same title-tier convention as \code{\link[=static_table]{static_table()}}.}
+\item{title, subtitle, caption}{Table title / subtitle / footnote. \code{NULL}
+(default) takes them from the annotated data frame's display attributes,
+\code{""} switches them off: the same title-tier convention as
+\code{\link[=static_table]{static_table()}}. The default HTML table renderer currently ignores
+\code{subtitle}.}
 
 \item{max_height}{CSS max-height of the scroll container, or \code{NULL}
 (default) for none. A report exhibit is printed rather than scrolled.}
