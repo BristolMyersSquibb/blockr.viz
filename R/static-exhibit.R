@@ -119,9 +119,11 @@ exhibit_html_output <- function() {
 #' document can ask for it explicitly.
 #'
 #' @param x A data frame or [as_annotated_df()]-coercible table object.
-#' @param title,caption Table title / footnote. `NULL` (default) takes them
-#'   from the annotated data frame's display attributes, `""` switches them
-#'   off -- the same title-tier convention as [static_table()].
+#' @param title,subtitle,caption Table title / subtitle / footnote. `NULL`
+#'   (default) takes them from the annotated data frame's display attributes,
+#'   `""` switches them off: the same title-tier convention as
+#'   [static_table()]. The default HTML table renderer currently ignores
+#'   `subtitle`.
 #' @param max_height CSS max-height of the scroll container, or `NULL`
 #'   (default) for none. A report exhibit is printed rather than scrolled.
 #' @param default_expanded Logical, or `NULL` (default) to decide from the
@@ -139,14 +141,15 @@ exhibit_html_output <- function() {
 #' @return A [htmltools::tagList()].
 #' @seealso [static_exhibit()], [static_table()]
 #' @export
-html_exhibit <- function(x, title = NULL, caption = NULL, max_height = NULL,
-                         default_expanded = NULL, ...) {
+html_exhibit <- function(x, title = NULL, subtitle = NULL, caption = NULL,
+                         max_height = NULL, default_expanded = NULL, ...) {
   UseMethod("html_exhibit")
 }
 
 #' @rdname html_exhibit
 #' @export
-html_exhibit.default <- function(x, title = NULL, caption = NULL,
+html_exhibit.default <- function(x, title = NULL, subtitle = NULL,
+                                 caption = NULL,
                                  max_height = NULL, default_expanded = NULL,
                                  ...) {
 

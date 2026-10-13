@@ -299,18 +299,27 @@
     var heads = {};
     var groups = m.groups || [];
     var at = 0;
+    /** @type {Record<number, string>} */
+    var rowClasses = {};
     for (i = 0; i < groups.length; i++) {
       heads[at] = '<tr class="hmb-grp"><td colspan="' + (k + 1) +
         '"><span class="hmb-gt">' + esc(groups[i].label) +
-        '</span><span class="hmb-gn">' + groups[i].n + '</span></td></tr>';
+        ' (N = ' + groups[i].n + ')</span></td></tr>';
+      for (j = 0; j < groups[i].n; j++) {
+        rowClasses[at + j] = 'hmb-r hmb-rg';
+      }
+      rowClasses[at] += ' hmb-r-start';
+      rowClasses[at + groups[i].n - 1] += ' hmb-r-end';
       at += groups[i].n;
     }
 
     var out = new Array(n);
     for (i = 0; i < n; i++) {
       var id = esc(m.rows[i]);
-      var row = (heads[i] || '') + '<tr class="hmb-r" data-hmb-i="' + i +
-        '" data-hmb-id="' + id + '"><td class="hmb-stub">' + id + '</td>';
+      var cls = rowClasses[i] || 'hmb-r';
+      var row = (heads[i] || '') + '<tr class="' + cls +
+        '" data-hmb-i="' + i + '" data-hmb-id="' + id +
+        '"><td class="hmb-stub">' + id + '</td>';
       for (j = 0; j < k; j++) row += cells[j * n + i];
       out[i] = row + '</tr>';
     }
