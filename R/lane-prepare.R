@@ -58,7 +58,14 @@ summarize_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
     pieces <- list()
     for (i in seq_len(nrow(par_rows))) {
       p <- par_rows[i, , drop = FALSE]
-      kids <- ord(leaf[!is.na(leaf$.parent) & leaf$.parent == p$.label, ,
+      pkey <- if (!is.null(p$.parent_key)) {
+        p$.parent_key[[1L]]
+      } else if (!is.null(parent) && parent %in% names(p)) {
+        as.character(p[[parent]][[1L]])
+      } else {
+        p$.label[[1L]]
+      }
+      kids <- ord(leaf[!is.na(leaf$.parent) & leaf$.parent == pkey, ,
                        drop = FALSE])
       pieces[[length(pieces) + 1L]] <-
         p[, intersect(keep, names(p)), drop = FALSE]

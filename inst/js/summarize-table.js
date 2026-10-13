@@ -41,7 +41,11 @@
       if (r.classList.contains("is-parent")) {
         // The table block's contract: the ROW carries `collapsed`, which is
         // what rotates the shared chevron.
-        open[r.getAttribute("data-summarize-label")] = !r.classList.contains("collapsed");
+        var label = r.getAttribute("data-summarize-label");
+        var key = r.getAttribute("data-summarize-key") || label;
+        var isOpen = !r.classList.contains("collapsed");
+        open[label] = isOpen;
+        open[key] = isOpen;
       }
     });
     rows(root).forEach(function (r) {
@@ -139,7 +143,10 @@
     // searching a leaf never returns an empty-looking table.
     all.forEach(function (r) {
       if (!r.classList.contains("is-parent")) return;
-      if (matched[r.getAttribute("data-summarize-label")]) {
+      var label = r.getAttribute("data-summarize-label");
+      var key = r.getAttribute("data-summarize-key") ||
+        label;
+      if (matched[key] || matched[label]) {
         r.classList.remove("blockr-summarize-hidden-search");
         if (q) setOpen(r, true);
       }
@@ -380,11 +387,18 @@
     var label = tr.getAttribute("data-summarize-label");
     if (path.length < 2) return { cols: [path[0]], vals: [label] };
     if (tr.classList.contains("is-parent")) {
-      return { cols: [path[0]], vals: [label] };
+      return {
+        cols: [path[0]],
+        vals: [tr.getAttribute("data-summarize-key") || label]
+      };
     }
     return {
       cols: [path[0], path[1]],
-      vals: [tr.getAttribute("data-summarize-parent"), label]
+      vals: [
+        tr.getAttribute("data-summarize-parent-key") ||
+          tr.getAttribute("data-summarize-parent"),
+        label
+      ]
     };
   }
 
@@ -790,16 +804,22 @@
   /** Assemble the whole tbody from the cell model. */
   function assembleBody(p) {
     var out = [];
+    var expanded = !!p.expanded;
     for (var i = 0; i < p.n; i++) {
       var parent = !!(p.parent_row && p.parent_row[i]);
       var child = !!(p.level && p.level[i] > 0);
       var cls = "blockr-summarize-row" +
-        (parent ? " is-parent blockr-indent-toggle collapsed" : "") +
-        (child ? " is-child collapsed-hidden" : "") +
+        (parent ? " is-parent blockr-indent-toggle" +
+          (expanded ? "" : " collapsed") : "") +
+        (child ? " is-child" + (expanded ? "" : " collapsed-hidden") : "") +
         (p.pick ? " is-pick" : "") +
         (p.on && p.on[i] ? " is-on" : "");
       var row = '<tr class="' + cls + '" data-summarize-label="' +
         esc(p.label[i]) + '"' +
+        (parent && p.parent_key ? ' data-summarize-key="' +
+          esc(p.parent_key[i]) + '"' : "") +
+        (child && p.parent_key ? ' data-summarize-parent-key="' +
+          esc(p.parent_key[i]) + '"' : "") +
         (child ? ' data-summarize-parent="' + esc(p.parent[i]) + '"' : "") +
         ' data-summarize-level="' + (child ? p.level[i] : 0) +
         '" data-summarize-ord="' + i + '">';
@@ -807,7 +827,8 @@
         (parent ? " blockr-has-toggle" : "") + '"' +
         (child ? ' style="padding-left:48px;"' : "") + ">" +
         (parent ? '<button class="blockr-indent-btn" type="button"' +
-          ' tabindex="-1" aria-expanded="false">' + CHEV + "</button>" : "") +
+          ' tabindex="-1" aria-expanded="' + (expanded ? "true" : "false") +
+          '">' + CHEV + "</button>" : "") +
         '<span class="blockr-summarize-label">' + esc(p.label[i]) + "</span></td>";
       for (var k = 0; k < p.cols.length; k++) {
         var c = p.cols[k];

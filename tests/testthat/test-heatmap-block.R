@@ -67,14 +67,16 @@ test_that("heatmap_html renders legend, group rows, header row, no dashes", {
   ))
   expect_match(html, "hmb-legend", fixed = TRUE)
   expect_match(html, "MODERATE", fixed = TRUE)     # legend decodes levels
-  # a group opens with a section-title row spanning the matrix
+  # a group opens with a collapsible section-title row spanning the matrix
   expect_match(html, paste0(
-    '<tr class="hmb-grp"><td colspan="3"><span class="hmb-gt">',
-    "A (N = 1)</span></td></tr>"
+    '<tr class="hmb-grp blockr-indent-toggle" data-hmb-group="0">',
+    '<td colspan="3"><span class="hmb-gt"><button class="blockr-indent-btn"'
   ), fixed = TRUE)
+  expect_match(html, '<span class="hmb-gt-label">A (N = 1)</span>',
+               fixed = TRUE)
   expect_match(html, paste0(
     '<tr class="hmb-r hmb-rg hmb-r-start hmb-r-end" ',
-    'data-hmb-i="0" data-hmb-id="s1">'
+    'data-hmb-i="0" data-hmb-id="s1" data-hmb-group="0">'
   ), fixed = TRUE)
   expect_no_match(html, "hmb-rail", fixed = TRUE)
   # the header row: title slots, the search tool, no controls on the face
@@ -302,7 +304,7 @@ test_that("the body carries the matrix, the legend and the count", {
                 group = "ARM")
   expect_null(b$err)
   expect_match(b$table, "hmb-table", fixed = TRUE)
-  expect_match(b$table, 'class="hmb-grp"', fixed = TRUE)
+  expect_match(b$table, 'class="hmb-grp blockr-indent-toggle"', fixed = TRUE)
   expect_match(b$legend, "hmb-legend", fixed = TRUE)
   expect_match(b$legend, "MODERATE", fixed = TRUE)
   expect_match(b$legend, "Numbers: events", fixed = TRUE)

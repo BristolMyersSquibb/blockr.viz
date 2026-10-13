@@ -1132,6 +1132,7 @@ summarize_arguments <- function() {
         label = arg_string(required = FALSE),
         fields = arg_array(arg_string(), required = FALSE),
         size = arg_enum(c("md", "lg"), required = FALSE),
+        parent = arg_boolean(required = FALSE),
         expr = arg_string(required = FALSE),
         fn = arg_string(required = FALSE),
         denom = arg_string(required = FALSE)

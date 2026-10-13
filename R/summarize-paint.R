@@ -548,7 +548,10 @@ rp_axis <- function(p, prep, x, w, ytop, gl) {
   t <- if (isTRUE(dom$date)) {
     summarize_axis_date_ticks(dom$d0, dom$d1)
   } else {
-    at <- summarize_axis_ticks(dom$d0, dom$d1)
+    at <- summarize_axis_ticks(
+      dom$d0, dom$d1,
+      k = if (identical(p$kind, "interval")) 7L else 4L
+    )
     list(at = at, labels = lane_fmt(at))
   }
   if (length(t$at) < 2L) return(list())
