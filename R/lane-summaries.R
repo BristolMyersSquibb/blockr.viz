@@ -484,16 +484,25 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   leaf <- data.frame(.label = as.character(skel[[group]]),
                      .parent = if (is.null(parent)) NA_character_ else
                        as.character(skel[[parent]]),
+                     .parent_key = if (is.null(parent)) NA_character_ else
+                       as.character(skel[[parent]]),
                      stringsAsFactors = FALSE)
   for (k in keys) leaf[[k]] <- skel[[k]]
   # The data's own order for the row labels (factor levels, else
   # first-appearance): `sort_by = "data"` reads it, everything else ignores
   # it. A visit-keyed table is unreadable alphabetically.
   leaf$.ord <- summarize_data_ord(data[[group]], leaf$.label)
+  show_parent_n <- !is.null(parent) && any(vapply(summaries, function(s) {
+    identical(s$type, "spans") && identical(s$parent, FALSE)
+  }, logical(1L)))
   par_rows <- NULL
   if (!is.null(parent)) {
     pv <- summarize_levels(data[[parent]])
-    par_rows <- data.frame(.label = pv, .parent = NA_character_,
+    parent_n <- tabulate(match(as.character(skel[[parent]]), pv),
+                         nbins = length(pv))
+    pl <- if (show_parent_n) paste0(pv, " (N = ", parent_n, ")") else pv
+    par_rows <- data.frame(.label = pl, .parent = NA_character_,
+                           .parent_key = as.character(pv),
                            stringsAsFactors = FALSE)
     par_rows[[parent]] <- pv
     par_rows$.ord <- summarize_data_ord(data[[parent]], pv)

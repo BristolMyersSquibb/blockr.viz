@@ -710,7 +710,12 @@ summarize_resolve_sort <- function(sort_by, plan, data, leaf, par_rows, group,
         sb %in% names(data)) {
     leaf$.ord <- summarize_min_ord(data, group, sb, leaf$.label)
     if (!is.null(par_rows)) {
-      par_rows$.ord <- summarize_min_ord(data, parent, sb, par_rows$.label)
+      par_label <- if (!is.null(par_rows$.parent_key)) {
+        par_rows$.parent_key
+      } else {
+        par_rows$.label
+      }
+      par_rows$.ord <- summarize_min_ord(data, parent, sb, par_label)
     }
     key <- ".ord"
   }

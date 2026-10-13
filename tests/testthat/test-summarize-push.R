@@ -91,6 +91,31 @@ test_that("nested tables DO ship the level and parent vectors", {
   expect_true("SOC A" %in% as.character(p$parent))
 })
 
+test_that("section headers keep a raw key when their label carries N", {
+  ae <- data.frame(
+    ARM = c("A", "A", "B"),
+    USUBJID = c("S1", "S2", "S3"),
+    SDY = c(1, 2, 3),
+    EDY = c(5, 6, 7),
+    stringsAsFactors = FALSE
+  )
+  prep <- summarize_prepare(
+    ae, by = c("ARM", "USUBJID"),
+    summaries = list(list(type = "spans", x = "SDY", xend = "EDY",
+                          parent = FALSE))
+  )
+  m <- summarize_cells(prep)
+  p <- summarize_flat_payload(m)
+
+  expect_true("A (N = 2)" %in% as.character(p$label))
+  expect_true("A" %in% as.character(p$parent_key))
+
+  html <- summarize_cells_html(m)
+  expect_match(html, 'data-summarize-label="A \\(N = 2\\)"')
+  expect_match(html, 'data-summarize-key="A"')
+  expect_match(html, 'data-summarize-parent="A"')
+})
+
 test_that("a split column ships one width vector per series", {
   ae <- push_fixture()
   p <- summarize_build_payload(ae, group = "TERM", color = "SEV",

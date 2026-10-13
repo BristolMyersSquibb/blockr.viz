@@ -626,6 +626,9 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     expanded = any(vapply(plan, function(p) isTRUE(p$section), logical(1L))),
     label = as.character(rows$.label),      # PLAIN: each consumer escapes
     parent = as.character(rows$.parent),
+    parent_key = as.character(
+      if (!is.null(rows$.parent_key)) rows$.parent_key else rows$.parent
+    ),
     level = as.integer(rows$.level),
     parent_row = rows$.is_parent,
     on = on,
@@ -1069,6 +1072,9 @@ summarize_cells_html <- function(m, expanded = FALSE) {
     "\" data-summarize-label=\"", summarize_esc(m$label), "\"",
     ifelse(m$level > 0L,
            paste0(" data-summarize-parent=\"", summarize_esc(m$parent), "\""),
+           ""),
+    ifelse(m$parent_row,
+           paste0(" data-summarize-key=\"", summarize_esc(m$parent_key), "\""),
            ""),
     " data-summarize-level=\"", m$level,
     # The order the row arrived in: the third header click sorts back to it,
@@ -1664,6 +1670,7 @@ summarize_flat_payload <- function(m) {
     label = arr(m$label),
     expanded = isTRUE(m$expanded),
     parent = if (isTRUE(m$nested)) arr(m$parent) else NULL,
+    parent_key = if (isTRUE(m$nested)) arr(m$parent_key) else NULL,
     # The LEVEL itself (an integer), omitted only when every row is level 0 --
     # arr_if() on the comparison would have shipped logicals and printed
     # data-summarize-level="true".
