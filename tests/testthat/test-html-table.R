@@ -348,6 +348,48 @@ test_that("html_table() indents rows by the .indent column", {
   expect_true(grepl("padding-left:", html, fixed = TRUE))
 })
 
+test_that("html_table() wires fold-all for indent-only groups", {
+  df <- tibble::tibble(
+    .label  = c("SOC A", "PT A", "SOC B", "PT B"),
+    .indent = c(0L, 1L, 0L, 1L),
+    Value   = c("10", "6", "8", "5")
+  )
+
+  html <- as.character(htmltools::tagList(html_table(df)))
+  expect_true(grepl("blockr-indent-toggle", html, fixed = TRUE))
+  expect_true(grepl("function buildFoldAll(onClick)", html, fixed = TRUE))
+  expect_true(grepl("tr.blockr-indent-toggle .blockr-chev", html,
+                    fixed = TRUE))
+  expect_true(grepl("var multiBlankStub = ths.length > 1 && !firstTitle;",
+                    html, fixed = TRUE))
+  expect_true(grepl("function setAll(shut)", html, fixed = TRUE))
+})
+
+test_that("html_table() renders fold-all for blank multi-row stub headers", {
+  df <- data.frame(
+    .label  = c("SOC A", "PT A"),
+    .indent = c(0L, 1L),
+    "Group A||Any Grade (%)||(N=20)" = c("", "1"),
+    check.names = FALSE
+  )
+  attr(df$.label, "label") <- c(
+    "",
+    "Primary System Organ Class",
+    "Dictionary-Derived Term"
+  )
+
+  html <- as.character(htmltools::tagList(html_table(df)))
+  expect_true(grepl("class=\"dt-foldall\"", html, fixed = TRUE))
+  expect_true(grepl("class=\"dt-foldall-all\">All", html, fixed = TRUE))
+  expect_true(grepl("Primary System Organ Class", html, fixed = TRUE))
+  expect_true(grepl("Dictionary-Derived Term", html, fixed = TRUE))
+  expect_false(grepl(
+    "dt-has-foldall\">Dictionary-Derived Term",
+    html,
+    fixed = TRUE
+  ))
+})
+
 test_that("html_table() rejects legacy long-format input", {
   df <- tibble::tibble(
     label   = c("A", "B"),
@@ -602,10 +644,24 @@ test_that("flat table-block rows are 26px with no body rules", {
 test_that("table.js draws fold-all in the stub header and previews claims on hover", {
   js <- paste(readLines(system.file("js", "table.js", package = "blockr.viz")),
               collapse = "\n")
-  # Fold all: a button in the last stub header, the producer's title moved
-  # beside it untouched, "All" when there is none; Alt+click folds all too.
+  # Fold all: a button in the blank top-left stub header when there is one,
+  # otherwise beside a single stub title. Never in a lower row label.
   expect_match(js, "function buildFoldAll(tbody, onClick)", fixed = TRUE)
   expect_match(js, "thead th.blockr-stub-header", fixed = TRUE)
+  expect_match(js, "var indentHeads = function () {", fixed = TRUE)
+  expect_match(js, "tr.blockr-indent-toggle .blockr-chev", fixed = TRUE)
+  expect_match(
+    js,
+    "thead th.blockr-stub-header .dt-foldall",
+    fixed = TRUE
+  )
+  expect_match(js, "if (rendered) return bindFoldAll(rendered);",
+               fixed = TRUE)
+  expect_match(js, "var multiBlankStub = ths.length > 1 && !firstTitle;",
+               fixed = TRUE)
+  expect_match(js, "ths.length === 1 ? ths[0] : null", fixed = TRUE)
+  expect_false(grepl("th.setAttribute(\"rowspan\", String(ths.length));",
+                     js, fixed = TRUE))
   expect_match(js, "lab.className = \"dt-stub-title\";", fixed = TRUE)
   expect_match(js, "all.textContent = \"All\";", fixed = TRUE)
   expect_match(js, ".altKey) {", fixed = TRUE)

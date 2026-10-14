@@ -212,8 +212,13 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
   # a clickable-looking header would be a lie.
   col_keys <- if (drill_on) annotated_column_keys(data)
 
-  thead <- build_html_thead(data, data_cols, stub_col, stub_sortable = FALSE,
-                            sortable = sortable, col_keys = col_keys)
+  thead <- build_html_thead(
+    data, data_cols, stub_col,
+    stub_sortable = FALSE,
+    sortable = sortable,
+    col_keys = col_keys,
+    collapsible = collapsible
+  )
   tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
                             styling_cols = styling_cols,
                             collapsible = collapsible,
@@ -1214,7 +1219,7 @@ drilldown_table_dep <- memoise0(function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".30"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".33"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"

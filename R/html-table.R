@@ -99,8 +99,12 @@ html_table <- function(data,
 
   wrapper_id <- paste0("blockr-html-table-", sub("^file", "", basename(tempfile(""))))
 
-  thead <- build_html_thead(data, data_cols, stub_col,
-                            stub_sortable = FALSE, sortable = sortable)
+  thead <- build_html_thead(
+    data, data_cols, stub_col,
+    stub_sortable = FALSE,
+    sortable = sortable,
+    collapsible = collapsible
+  )
   tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
                             styling_cols = styling_cols,
                             collapsible = collapsible)
@@ -280,7 +284,8 @@ structured_colgroup <- function(data, data_cols, stub_col, wrap_names = FALSE) {
 
 #' @noRd
 build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
-                             sortable = TRUE, col_keys = NULL) {
+                             sortable = TRUE, col_keys = NULL,
+                             collapsible = TRUE) {
   # Global off-switch: when sorting is disabled no header is a sort hook.
   stub_sortable <- isTRUE(stub_sortable) && isTRUE(sortable)
   if (length(data_cols) == 0L) {
@@ -308,6 +313,18 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
     logical(max_depth)
   }
   stub_by_row <- is.character(stub_labels) && length(stub_labels) > 1L
+  indent_groups <- if (".indent" %in% names(data) && nrow(data) > 1L) {
+    indent <- suppressWarnings(as.integer(data[[".indent"]]))
+    indent[is.na(indent) | indent < 0L] <- 0L
+    any(indent[-1L] > indent[-nrow(data)])
+  } else {
+    FALSE
+  }
+  section_groups <- any(grepl("^\\.group\\d+_level$", names(data)))
+  has_fold_all <- isTRUE(collapsible) && !is.null(stub_col) &&
+    (indent_groups || section_groups)
+  fold_all_first <- has_fold_all && stub_by_row &&
+    !isTRUE(nzchar(stub_labels[[1L]]))
 
   rows <- vector("list", max_depth)
 
@@ -315,12 +332,20 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
     cells <- list()
 
     if (L == 1L && !is.null(stub_col)) {
-      stub_class <- "blockr-stub-header"
+      stub_class <- if (fold_all_first) {
+        "blockr-stub-header dt-has-foldall"
+      } else {
+        "blockr-stub-header"
+      }
       if (isTRUE(stub_sortable)) stub_class <- paste(stub_class, "blockr-sortable")
       stub_class <- stub_header_class(stub_class, stub_label_bold[[1L]])
-      stub_content <- stub_header_content(
-        if (stub_by_row) stub_labels[[1L]] else stub_labels
-      )
+      stub_content <- if (fold_all_first) {
+        fold_all_header_content()
+      } else {
+        stub_header_content(
+          if (stub_by_row) stub_labels[[1L]] else stub_labels
+        )
+      }
       cells[[length(cells) + 1L]] <- htmltools::tags$th(
         class = stub_class,
         rowspan = if (stub_by_row) NULL else max_depth,
@@ -483,6 +508,23 @@ stub_header_content <- function(label = NULL) {
   }
 
   htmltools::HTML(paste(htmltools::htmlEscape(parts), collapse = "<br>"))
+}
+
+#' A row-stub fold-all control.
+#' @noRd
+fold_all_header_content <- function() {
+  htmltools::tags$div(
+    class = "dt-foldall-wrap",
+    htmltools::tags$button(
+      type = "button",
+      class = "dt-foldall",
+      `aria-expanded` = "true",
+      `aria-label` = "Collapse all groups",
+      `data-blockr-tooltip` = "Collapse all groups",
+      section_chevron_svg(),
+      htmltools::tags$span(class = "dt-foldall-all", "All")
+    )
+  )
 }
 
 #' Tag a header cell with its column claim, when the producer named one.
@@ -1764,23 +1806,135 @@ html_table_js_template <- function() {
   }
   function syncAria(h){
     var btn = h.querySelector('.blockr-section-btn');
-    if (btn) btn.setAttribute('aria-expanded', h.classList.contains('collapsed') ? 'false' : 'true');
+    if (btn) {
+      btn.setAttribute(
+        'aria-expanded',
+        h.classList.contains('collapsed') ? 'false' : 'true'
+      );
+    }
   }
-  if (canCollapse) root.querySelectorAll('tr.blockr-indent-toggle .blockr-indent-btn').forEach(function(btn){
+  function syncIndentAria(h){
+    var btn = h.querySelector('.blockr-indent-btn');
+    if (btn) {
+      btn.setAttribute(
+        'aria-expanded',
+        h.classList.contains('collapsed') ? 'false' : 'true'
+      );
+    }
+  }
+  function heads(){
+    return Array.prototype.slice.call(
+      tbody.querySelectorAll('tr.blockr-section-header')
+    );
+  }
+  function indentHeads(){
+    return Array.prototype.slice.call(
+      tbody.querySelectorAll('tr.blockr-indent-toggle')
+    );
+  }
+  function groupHeads(){
+    return heads().concat(indentHeads());
+  }
+  var foldAll = null;
+  function buildFoldAll(onClick){
+    var chev = tbody.querySelector(
+      'tr.blockr-section-header .blockr-chev, ' +
+      'tr.blockr-indent-toggle .blockr-chev'
+    );
+    if (!chev) return null;
+    function bindFoldAll(btn){
+      btn.onclick = function(ev){
+        ev.stopPropagation();
+        ev.preventDefault();
+        onClick();
+      };
+      return btn;
+    }
+    var rendered = table.querySelector(
+      'thead th.blockr-stub-header .dt-foldall'
+    );
+    if (rendered) return bindFoldAll(rendered);
+
+    var ths = table.querySelectorAll('thead th.blockr-stub-header');
+    var first = ths.length ? ths[0] : null;
+    var firstTitle = first ? (first.textContent || '').trim() : '';
+    var multiBlankStub = ths.length > 1 && !firstTitle;
+    var th = multiBlankStub ? first : (ths.length === 1 ? ths[0] : null);
+    if (!th) return null;
+    var existing = th.querySelector('.dt-foldall');
+    if (existing) return bindFoldAll(existing);
+    var title = (th.textContent || '').trim();
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'dt-foldall';
+    btn.appendChild(chev.cloneNode(true));
+    bindFoldAll(btn);
+    var wrap = document.createElement('div');
+    wrap.className = 'dt-foldall-wrap';
+    wrap.appendChild(btn);
+    if (title) {
+      var lab = document.createElement('span');
+      lab.className = 'dt-stub-title';
+      while (th.firstChild) lab.appendChild(th.firstChild);
+      wrap.appendChild(lab);
+    } else {
+      var all = document.createElement('span');
+      all.className = 'dt-foldall-all';
+      all.textContent = 'All';
+      btn.appendChild(all);
+    }
+    th.appendChild(wrap);
+    th.classList.add('dt-has-foldall');
+    return btn;
+  }
+  function syncFoldAll(){
+    if (!foldAll) return;
+    var open = groupHeads().every(function(h){
+      return !h.classList.contains('collapsed');
+    });
+    var act = open ? 'Collapse all groups' : 'Expand all groups';
+    foldAll.setAttribute('aria-expanded', open ? 'true' : 'false');
+    foldAll.setAttribute('aria-label', act);
+    foldAll.setAttribute('data-blockr-tooltip', act);
+  }
+  function setAll(shut){
+    heads().forEach(function(h){
+      h.classList.toggle('collapsed', shut);
+      syncAria(h);
+    });
+    indentHeads().forEach(function(h){
+      h.classList.toggle('collapsed', shut);
+      syncIndentAria(h);
+    });
+    recomputeCollapse();
+    syncFoldAll();
+  }
+  if (canCollapse) {
+    foldAll = buildFoldAll(function(){
+      setAll(
+        foldAll != null && foldAll.getAttribute('aria-expanded') === 'true'
+      );
+    });
+  }
+  if (canCollapse) root.querySelectorAll(
+    'tr.blockr-indent-toggle .blockr-indent-btn'
+  ).forEach(function(btn){
     btn.addEventListener('click', function(ev){
       ev.stopPropagation();
       ev.preventDefault();
       var h = btn.closest('tr.blockr-indent-toggle');
       if (!h) return;
       h.classList.toggle('collapsed');
-      btn.setAttribute('aria-expanded', h.classList.contains('collapsed') ? 'false' : 'true');
+      syncIndentAria(h);
       recomputeCollapse();
+      syncFoldAll();
     });
   });
   function toggleCollapse(h){
     h.classList.toggle('collapsed');
     syncAria(h);
     recomputeCollapse();
+    syncFoldAll();
   }
   // The group label is a <button> inside the header row; its click bubbles
   // up to this row-level handler, so one listener covers both.
@@ -1803,11 +1957,11 @@ html_table_js_template <- function() {
     // the flag was set.
     root.querySelectorAll('tr.blockr-indent-toggle').forEach(function(h){
       h.classList.add('collapsed');
-      var btn = h.querySelector('.blockr-indent-btn');
-      if (btn) btn.setAttribute('aria-expanded', 'false');
+      syncIndentAria(h);
     });
     recomputeCollapse();
   }
+  syncFoldAll();
 
   // ---------- Sticky-header scroll shadow ----------
   var scrollWrap = root.querySelector('.blockr-table-wrapper');
