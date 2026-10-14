@@ -3155,10 +3155,10 @@
      * The gear's text row has the same commit model. An offer chip edits the
      * same way, starting empty.
      *
-     * A number (`num`) adds its range beside the field ("0 to 50"), steps on
-     * the up and down arrows (by ten with Shift), and is held inside its range
-     * and on its step when taken. An emptied or non-numeric field keeps the old
-     * value: a number has no "unset" to clear to.
+     * A number (`num`) steps on the up and down arrows (by ten with Shift),
+     * and is held inside its range and on its step when taken. An emptied or
+     * non-numeric field keeps the old value: a number has no "unset" to clear
+     * to.
      * @param {string} key @param {HTMLElement} anchor
      * @param {{key: string, role: any} | null} [num] */
     _edit(key, anchor, num = null) {
@@ -3186,8 +3186,7 @@
       const lo = role && isFinite(parseFloat(role.min)) ? Number(role.min) : -Infinity;
       const hi = role && isFinite(parseFloat(role.max)) ? Number(role.max) : Infinity;
       const step = role && Number(role.step) > 0 ? Number(role.step) : 1;
-      const rangeText = isFinite(lo) && isFinite(hi) ? `${lo} to ${hi}`
-        : isFinite(lo) ? `at least ${lo}` : isFinite(hi) ? `at most ${hi}` : '';
+      const rangeText = isFinite(lo) && isFinite(hi) ? `${lo} to ${hi}` : '';
       /** @param {number} v */
       const fix = (v) => {
         const base = isFinite(lo) ? lo : 0;
@@ -3196,10 +3195,11 @@
       };
       /** @type {HTMLElement | null} */
       let note = null;
-      if (num && rangeText) {
+      if (num && (rangeText || isFinite(lo) || isFinite(hi))) {
         note = document.createElement('span');
         note.className = 'blockr-slot-range';
         note.textContent = rangeText;
+        note.hidden = !rangeText;
       }
       // Out of range says which end it will be held at, while typing.
       const check = () => {
@@ -3207,6 +3207,7 @@
         const v = parseFloat(input.value);
         const out = isFinite(v) && (v < lo || v > hi);
         note.classList.toggle('blockr-slot-range--out', out);
+        note.hidden = !out && !rangeText;
         note.textContent = !out ? rangeText : (v > hi ? `at most ${hi}` : `at least ${lo}`);
       };
 
