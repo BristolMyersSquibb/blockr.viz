@@ -149,12 +149,7 @@ heatmap_prep <- function(data, row, col, color = NULL, group = NULL) {
 #' names and their labels": an exhibit speaks in labels).
 #' @noRd
 hmb_label <- function(data, col) {
-  lab <- attr(data[[col]], "label", exact = TRUE)
-  if (is.character(lab) && length(lab) == 1L && !is.na(lab) && nzchar(lab)) {
-    lab
-  } else {
-    col
-  }
+  title_column_label(data, col)
 }
 
 #' The heatmap's matrix as a data frame
@@ -346,6 +341,7 @@ hmb_cols_json <- function(data) {
 #' @noRd
 hmb_cfg_json <- function(row = NULL, col = NULL, color = NULL, group = NULL,
                          cell_numbers = TRUE, download = FALSE, target = "",
+                         locked_roles = character(),
                          titles = list(), script = list()) {
   res <- titles$resolved
   parts <- res$parts
@@ -358,6 +354,7 @@ hmb_cfg_json <- function(row = NULL, col = NULL, color = NULL, group = NULL,
     # The board's drill filter, resolved (ctrl_auto_target()); "" = none,
     # and the rows do not take clicks.
     ctrl_target = target %||% "",
+    locked_roles = I(hmb_locked_roles(locked_roles)),
     # The three-tier text: NULL (auto) travels as JSON null.
     title = titles$title, subtitle = titles$subtitle,
     caption = titles$caption,

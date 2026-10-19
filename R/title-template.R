@@ -36,6 +36,40 @@
 # tt_fields policy: display text must not take the block down when an
 # upstream edit drops a column.
 
+title_column_label <- function(data, col) {
+  if (!is.data.frame(data) || !col %in% names(data)) {
+    return("")
+  }
+
+  direct <- attr(data[[col]], "label", exact = TRUE)
+  source <- attr(data[[col]], "blockr_source", exact = TRUE)
+
+  source_label <- NULL
+  if (is.character(source) && length(source) == 1L &&
+      !is.na(source) && nzchar(source)) {
+    if (source %in% names(data)) {
+      source_label <- attr(data[[source]], "label", exact = TRUE)
+    }
+    if (!(is.character(source_label) && length(source_label) == 1L &&
+          !is.na(source_label) && nzchar(source_label))) {
+      source_label <- source
+    }
+  }
+
+  if (is.character(direct) && length(direct) == 1L &&
+      !is.na(direct) && nzchar(direct) && !identical(direct, col)) {
+    return(direct)
+  }
+  if (!is.null(source_label)) {
+    return(source_label)
+  }
+  if (is.character(direct) && length(direct) == 1L &&
+      !is.na(direct) && nzchar(direct)) {
+    return(direct)
+  }
+  col
+}
+
 # How many distinct values a `{col}` token spells out before eliding with
 # ", ...". Guards against `{USUBJID}` turning the title into a subject list.
 TITLE_MAX_VALUES <- 8L
@@ -256,11 +290,7 @@ resolve_title_token <- function(token, data, args = list()) {
   col <- fn_arg("label")
   if (!is.null(col)) {
     if (!col %in% names(data)) return(plain(""))
-    lbl <- attr(data[[col]], "label", exact = TRUE)
-    if (is.character(lbl) && length(lbl) && nzchar(lbl[[1L]])) {
-      return(plain(lbl[[1L]]))
-    }
-    return(plain(col))
+    return(plain(title_column_label(data, col)))
   }
 
   col <- fn_arg("n_distinct")

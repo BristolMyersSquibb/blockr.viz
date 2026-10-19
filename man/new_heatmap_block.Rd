@@ -23,6 +23,7 @@ new_heatmap_block(
   caption = NULL,
   script = NULL,
   values = list(),
+  locked_roles = character(),
   ...
 )
 }
@@ -67,6 +68,9 @@ template. \verb{\{@arg\}} in the subtitle makes the word a control.}
 \item{script, values}{Prepare script, as in \code{\link[=new_chart_block]{new_chart_block()}}: R code run
 on the incoming rows before the matrix is built, whose top assignments
 become settings. \code{values} holds their current settings.}
+
+\item{locked_roles}{Character vector of mapping roles whose values are
+authored elsewhere and should not be changed from the block UI.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}. A package
 building on this block passes its own \code{class} here (blockr.pharma's AE

@@ -47,6 +47,13 @@ test_that("heatmap_prep reads the columns' labels for the exhibit", {
   # no label: the name
   expect_identical(p$col_label, "AEDECOD")
   expect_identical(p$group_label, "ARM")
+
+  d$Group <- d$ARM
+  attr(d$ARM, "label") <- "Treatment Arm"
+  attr(d$Group, "label") <- "Group"
+  attr(d$Group, "blockr_source") <- "ARM"
+  p <- heatmap_prep(d, "USUBJID", "AEDECOD", "AESEV", "Group")
+  expect_identical(p$group_label, "Treatment Arm")
 })
 
 test_that("heatmap_prep reports config states as messages", {
@@ -116,8 +123,35 @@ test_that("cell_numbers = FALSE marks the wrapper", {
 test_that("new_heatmap_block constructs and carries its state", {
   blk <- new_heatmap_block(row = "USUBJID", col = "AEDECOD",
                            color = "AESEV", group = "ARM",
-                           drill = TRUE, subtitle = "{label(@col)}")
+                           drill = TRUE, subtitle = "{label(@col)}",
+                           locked_roles = c("color", "group"))
   expect_s3_class(blk, "heatmap_block")
+})
+
+test_that("locked heatmap roles are state and ignore local config writes", {
+  blk <- new_heatmap_block(
+    row = "USUBJID", col = "AEDECOD", color = "AESEV", group = "ARM",
+    locked_roles = c("color", "group")
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      expr_scope <- session$makeScope("expr")
+      session$flushReact()
+      expr_scope$setInputs(heatmap_block_action = list(
+        action = "config", param = "color", value = "USUBJID"
+      ))
+      expr_scope$setInputs(heatmap_block_action = list(
+        action = "config", param = "group", value = "AEDECOD"
+      ))
+      session$flushReact()
+      st <- session$returned$state
+      expect_identical(st$color(), "AESEV")
+      expect_identical(st$group(), "ARM")
+      expect_identical(st$locked_roles(), c("color", "group"))
+    },
+    args = list(x = blk, data = list(data = function() hm_toy()))
+  )
 })
 
 test_that("a legacy top_n becomes the script's top_n value", {
@@ -283,6 +317,7 @@ test_that("the chrome mounts from config alone, with no data in reach", {
 test_that("the config carries the sentence and the script to the client", {
   cfg <- jsonlite::fromJSON(hmb_cfg_json(
     row = "USUBJID", col = "AEDECOD",
+    locked_roles = c("color", "group"),
     titles = list(title = NULL, subtitle = "{@col}",
                   resolved = list(subtitle = "AEDECOD",
                                   parts = list(subtitle = list(
@@ -297,6 +332,8 @@ test_that("the config carries the sentence and the script to the client", {
   expect_identical(cfg$script, "top_n <- 25")
   expect_identical(cfg$sv_top_n, 25L)
   expect_identical(cfg$cell_numbers, "on")
+  expect_identical(unlist(cfg$locked_roles, use.names = FALSE),
+                   c("color", "group"))
 })
 
 test_that("the body carries the matrix, the legend and the count", {

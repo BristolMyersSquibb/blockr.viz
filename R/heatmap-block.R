@@ -57,6 +57,8 @@
 #' @param script,values Prepare script, as in [new_chart_block()]: R code run
 #'   on the incoming rows before the matrix is built, whose top assignments
 #'   become settings. `values` holds their current settings.
+#' @param locked_roles Character vector of mapping roles whose values are
+#'   authored elsewhere and should not be changed from the block UI.
 #' @param ... Forwarded to [blockr.core::new_transform_block()]. A package
 #'   building on this block passes its own `class` here (blockr.pharma's AE
 #'   heatmap): it is prepended to `"heatmap_block"` at construction, which is
@@ -85,6 +87,7 @@ new_heatmap_block <- function(row = character(),
                               caption = NULL,
                               script = NULL,
                               values = list(),
+                              locked_roles = character(),
                               ...) {
   args <- list(...)
   cls <- c(args[["class"]], "heatmap_block")
@@ -99,6 +102,7 @@ new_heatmap_block <- function(row = character(),
   caption <- title_state(caption)
   script <- cb_script_text(script)
   values <- if (is.list(values)) values else list()
+  locked_roles <- hmb_locked_roles(locked_roles)
 
   # LEGACY. A board saved before the cap moved into the prepare script carries
   # top_n as an argument; it becomes the script's value of the same name. A
@@ -125,6 +129,7 @@ new_heatmap_block <- function(row = character(),
         r_caption  <- shiny::reactiveVal(caption)
         r_script   <- shiny::reactiveVal(script)
         r_values   <- shiny::reactiveVal(values)
+        r_locked   <- shiny::reactiveVal(locked_roles)
 
         # --- prepare script ------------------------------------------------
         # The chart block's step, unchanged (R/prepare-apply.R). Specs keep
@@ -240,6 +245,9 @@ new_heatmap_block <- function(row = character(),
               if (!identical(sv, r_values())) r_values(sv)
               return()
             }
+            if (p %in% r_locked()) {
+              return()
+            }
             switch(
               p,
               row     = upd(r_row, blank(v)),
@@ -340,6 +348,7 @@ new_heatmap_block <- function(row = character(),
             cell_numbers = r_numbers(),
             download = r_download(),
             target = tryCatch(r_target(), error = function(e) ""),
+            locked_roles = r_locked(),
             titles = list(
               title = r_title(), subtitle = r_subtitle(),
               caption = r_caption(), resolved = tt
@@ -476,7 +485,8 @@ new_heatmap_block <- function(row = character(),
             ctrl_target = function() NULL,
             ctrl_table = function() NULL,
             title = r_title, subtitle = r_subtitle, caption = r_caption,
-            script = r_script, values = r_values
+            script = r_script, values = r_values,
+            locked_roles = r_locked
           )
         )
       })
@@ -488,7 +498,8 @@ new_heatmap_block <- function(row = character(),
     dat_valid = validate_annotated_df_input,
     allow_empty_state = c("row", "col", "color", "group", "drill",
       "top_n", "max_height", "filter_column", "filter_values", "ctrl_target",
-      "ctrl_table", "title", "subtitle", "caption", "script", "values"),
+      "ctrl_table", "title", "subtitle", "caption", "script", "values",
+      "locked_roles"),
     external_ctrl = c("row", "col", "color", "group", "cell_numbers",
       "download", "title", "subtitle", "caption", "script", "values"),
     expr_type = "bquoted",
@@ -507,6 +518,13 @@ new_heatmap_block <- function(row = character(),
 one_or_null <- function(x) {
   x <- as.character(x %||% character())
   if (length(x) && nzchar(x[1L])) x[1L] else NULL
+}
+
+#' @noRd
+hmb_locked_roles <- function(x) {
+  x <- as.character(x %||% character())
+  x <- x[!is.na(x) & nzchar(x)]
+  unique(intersect(x, c("row", "col", "color", "group")))
 }
 
 #' @noRd

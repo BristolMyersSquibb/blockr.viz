@@ -155,11 +155,22 @@
                 autoValue: (/** @type {any} */ cfg) =>
                   (cfg.caption == null && cfg.caption_resolved) ? cfg.caption_resolved : '' }
   };
-  /** @param {boolean} hasCols */
-  function hmSections(hasCols) {
+  /** @param {Record<string, any>} cfg @param {string} role */
+  function isLocked(cfg, role) {
+    return Array.isArray(cfg && cfg.locked_roles) &&
+      cfg.locked_roles.indexOf(role) >= 0;
+  }
+
+  /** @param {string[]} roles @param {Record<string, any>} cfg */
+  function unlockedRoles(roles, cfg) {
+    return roles.filter(function (role) { return !isLocked(cfg, role); });
+  }
+
+  /** @param {boolean} hasCols @param {Record<string, any>} cfg */
+  function hmSections(hasCols, cfg) {
     return {
-      requiredMap: hasCols ? ['row', 'col'] : [],
-      optionalMap: hasCols ? ['color', 'group'] : [],
+      requiredMap: hasCols ? unlockedRoles(['row', 'col'], cfg) : [],
+      optionalMap: hasCols ? unlockedRoles(['color', 'group'], cfg) : [],
       mapping: [],
       summaries: false,
       aggregatable: false,
@@ -205,8 +216,10 @@
       columns: function () { return st.cols; },
       context: function () { return 'all'; },
       currentType: function () { return null; },
-      sections: function () { return hmSections(st.cols.length > 0); },
-      sectionsForFamily: function () { return hmSections(st.cols.length > 0); },
+      sections: function () { return hmSections(st.cols.length > 0, st.cfg); },
+      sectionsForFamily: function () {
+        return hmSections(st.cols.length > 0, st.cfg);
+      },
       secondary: new Set(),
       typeKey: null,
       typeGroups: null,
@@ -218,6 +231,7 @@
       onMetricsChange: function () {},
       title: 'Heatmap settings',
       onChange: function (/** @type {string} */ key) {
+        if (isLocked(st.cfg, key)) return;
         var v = st.cfg[key];
         if (key === 'cell_numbers') {
           root.classList.toggle('hmb-nonum', v === 'off');
@@ -239,6 +253,26 @@
   }
 
   // ---- header: title, sentence, caption --------------------------------
+  /** @param {any[]} parts @param {Record<string, any>} cfg */
+  function unlockParts(parts, cfg) {
+    if (!Array.isArray(parts)) return parts;
+    return parts.map(function (p) {
+      if (!p || !p.arg || !isLocked(cfg, p.arg)) return p;
+      var q = Object.assign({}, p);
+      delete q.arg;
+      delete q.by;
+      return q;
+    });
+  }
+
+  /** @param {any[]} offers @param {Record<string, any>} cfg */
+  function unlockOffers(offers, cfg) {
+    if (!Array.isArray(offers)) return [];
+    return offers.filter(function (key) {
+      return typeof key !== 'string' || !isLocked(cfg, key);
+    });
+  }
+
   /** @param {Element} root @param {HmbState} st */
   function paintHeader(root, st) {
     var cfg = st.cfg;
@@ -255,15 +289,21 @@
     }
     // A repaint replaces the very node an open slot menu is anchored to.
     st.slots.close();
-    st.slots.paint(titleEl, cfg.title_resolved || '', cfg.title_parts);
-    st.slots.paint(subEl, cfg.subtitle_resolved || '', cfg.subtitle_parts);
-    st.slots.paint(capEl, cfg.caption_resolved || '', cfg.caption_parts);
+    st.slots.paint(titleEl, cfg.title_resolved || '',
+                   unlockParts(cfg.title_parts, cfg));
+    st.slots.paint(subEl, cfg.subtitle_resolved || '',
+                   unlockParts(cfg.subtitle_parts, cfg));
+    st.slots.paint(capEl, cfg.caption_resolved || '',
+                   unlockParts(cfg.caption_parts, cfg));
     // Offers sit on their own line under the sentence; the title's and the
     // caption's join them there.
     offersEl.textContent = '';
     /** @type {string[]} */
-    var offers = [].concat(cfg.subtitle_offers || [], cfg.title_offers || [],
-                           cfg.caption_offers || []);
+    var offers = [].concat(
+      unlockOffers(cfg.subtitle_offers, cfg),
+      unlockOffers(cfg.title_offers, cfg),
+      unlockOffers(cfg.caption_offers, cfg)
+    );
     st.slots.paintOffers(offersEl, offers);
     titleEl.style.display = titleEl.textContent ? '' : 'none';
     subEl.style.display = subEl.textContent ? '' : 'none';
