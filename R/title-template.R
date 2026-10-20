@@ -53,6 +53,10 @@ TITLE_MAX_VALUES <- 8L
 #                     the reading is derived, the editor is unchanged.
 #   {n_distinct(@arg)} how many distinct values that column has. NOT a slot --
 #                     a count is not something a reader can set.
+#   {@arg in a, b}    a slot whose menu offers only `a` and `b` (plus the
+#                     current pick). Works inside `label()` too:
+#                     `{label(@value in AVAL, CHG, PCHG)}`. Optional; without
+#                     a list the menu offers what the gear does.
 #
 #   [ ... ]           a segment that leaves with its token. Any token inside
 #                     resolving to "" drops the whole segment, so
@@ -204,13 +208,14 @@ resolve_title_token <- function(token, data, args = list()) {
   # column it names.
   m <- regmatches(token, regexec("^@\\s*([^()@]+?)\\s*$", token))[[1L]]
   if (length(m) == 2L) {
-    return(list(text = arg_token_value(m[[2L]], args), arg = m[[2L]],
-                by = "name"))
+    nm <- slot_arg_name(m[[2L]])
+    return(list(text = arg_token_value(nm, args), arg = nm, by = "name"))
   }
   m <- regmatches(
     token, regexec("^([A-Za-z_.][A-Za-z0-9_.]*)\\(\\s*@\\s*([^()@]+?)\\s*\\)$", token)
   )[[1L]]
   if (length(m) == 3L) {
+    m[[3L]] <- slot_arg_name(m[[3L]])
     col <- arg_token_value(m[[3L]], args)
     if (!nzchar(col)) {
       # Empty, but still this argument's slot. Dropping the `arg` here would
@@ -298,6 +303,43 @@ num_list_text <- function(v) {
   }
   paste(vapply(v, format, character(1L), scientific = FALSE, trim = TRUE),
         collapse = ", ")
+}
+
+# A slot may name its choices: `{@func in mean, median}`,
+# `{label(@value in AVAL, CHG, PCHG)}`. The list only narrows what the word's
+# menu offers; everything else about the token reads the bare name.
+SLOT_CHOICES_RE <- "^([^[:space:]]+)[[:space:]]+in[[:space:]]+(.*)$"
+
+slot_arg_name <- function(x) {
+  x <- trimws(x)
+  m <- regmatches(x, regexec(SLOT_CHOICES_RE, x))[[1L]]
+  if (length(m) == 3L) m[[2L]] else x
+}
+
+# Every `{... @arg in a, b ...}` list in the given templates, as a named list
+# of character vectors keyed by argument. Read off the text alone, so the
+# chart can ship the listed columns before any data is resolved. An argument
+# listed twice gets the union, in the order written.
+template_slot_choices <- function(templates) {
+  out <- list()
+  for (tpl in templates) {
+    if (!is.character(tpl) || !length(tpl) || is.na(tpl[[1L]])) next
+    toks <- regmatches(tpl[[1L]], gregexpr("\\{[^{}]+\\}", tpl[[1L]]))[[1L]]
+    for (tok in toks) {
+      m <- regmatches(
+        tok, regexec("@[[:space:]]*([^()@{}]+)", tok)
+      )[[1L]]
+      if (length(m) != 2L) next
+      inner <- trimws(m[[2L]])
+      mm <- regmatches(inner, regexec(SLOT_CHOICES_RE, inner))[[1L]]
+      if (length(mm) != 3L) next
+      ch <- trimws(strsplit(mm[[3L]], ",", fixed = TRUE)[[1L]])
+      ch <- ch[nzchar(ch)]
+      if (!length(ch)) next
+      out[[mm[[2L]]]] <- unique(c(out[[mm[[2L]]]], ch))
+    }
+  }
+  out
 }
 
 arg_token_value <- function(name, args) {

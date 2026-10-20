@@ -313,3 +313,31 @@ test_that("reference lines print as a list and drop their clause when unset", {
   expect_identical(unset[[1L]]$text, "Count")
   expect_identical(attr(unset, "offers"), "value_lines")
 })
+
+test_that("a slot's choice list narrows its menu, not its word", {
+  d <- data.frame(AVAL = 1:2, CHG = 1:2)
+  attr(d$AVAL, "label") <- "Analysis Value"
+  a <- list(func = "mean", value = "AVAL", color = "")
+  tpl <- paste0(
+    "{@func in mean, median} {label(@value in AVAL, CHG)}",
+    "[, coloured by {@color in SEX, RACE}]"
+  )
+  expect_identical(resolve_title_template(tpl, d, a), "mean Analysis Value")
+  parts <- block_title_parts(tpl, d, args = a)
+  args <- vapply(parts, function(p) p$arg %||% NA_character_, character(1L))
+  expect_identical(args[!is.na(args)], c("func", "value"))
+  expect_identical(attr(parts, "offers"), "color")
+  expect_identical(
+    template_slot_choices(list(tpl, NULL)),
+    list(func = c("mean", "median"), value = c("AVAL", "CHG"),
+         color = c("SEX", "RACE"))
+  )
+})
+
+test_that("a choice list is optional and lists merge per argument", {
+  expect_identical(template_slot_choices(list("{@func} by {@x}")), list())
+  expect_identical(
+    template_slot_choices(list("{@func in mean}", "{@func in median, mean}")),
+    list(func = c("mean", "median"))
+  )
+})

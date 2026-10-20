@@ -915,6 +915,12 @@ new_chart_block <- function(
           if (length(r_subtitle()) && grepl("@", r_subtitle(), fixed = TRUE)) {
             needed <- c(needed, names(column_kinds(d)))
           }
+          # Columns a sentence lists for a slot (`{@value in AVAL, CHG}`)
+          # travel for the same reason, whatever their kind.
+          needed <- c(needed, unlist(
+            template_slot_choices(list(r_title(), r_subtitle(), r_caption())),
+            use.names = FALSE
+          ))
           needed <- unique(needed)
           needed[!is.null(needed) & needed != "" &
             needed != ".count" & needed %in% names(d)]
@@ -1161,6 +1167,13 @@ new_chart_block <- function(
             # unbox.
             title_arg_values = lapply(
               stats::setNames(nm = names(a)), arg_token_value, args = a
+            ),
+            # The choices a sentence lists for its words (`{@func in mean,
+            # median}`), keyed by argument. Each as a list so one choice
+            # still arrives as an array.
+            slot_choices = lapply(
+              template_slot_choices(list(r_title(), r_subtitle(), r_caption())),
+              as.list
             )
           )
         })
@@ -1363,6 +1376,7 @@ new_chart_block <- function(
               # The gear's `@` menu is built from this, so it cannot offer a
               # token the resolver has no answer for.
               title_arg_values = r_titles_resolved()$title_arg_values,
+              slot_choices = r_titles_resolved()$slot_choices,
               smoother_series = r_smoother_series(),
               lo = r_lo(), hi = r_hi(),
               # Board scale map, resolved for the chart type's colored role

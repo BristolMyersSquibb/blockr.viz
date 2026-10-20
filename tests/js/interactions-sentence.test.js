@@ -184,3 +184,42 @@ test('a number word is typed over, held inside its range', () => {
                         range: range(c), menu: menu(c).key }) });
   I.snap('sentence-number', r);
 });
+
+// A list written in the sentence (`{@color in SEX, ARM}`) narrows the word's
+// menu to those choices, in that order. The current pick stays, a name the
+// data does not carry is left out, and "(none)" stays on an optional role.
+test('a sentence list narrows the menu behind its word', () => {
+  const assert = require('node:assert');
+  const listConfig = { ...config, slot_choices: { color: ['SEX', 'NOPE', 'ARM'],
+                                                  func: ['mean', 'median'] } };
+  const seen = {};
+  I.runSteps(listConfig, [
+    word('AESEV'),
+    ['read colour menu', (c) => { seen.color = menu(c).options; }],
+    word('AESEV'),
+    word('Count'),
+    ['read func menu', (c) => { seen.func = menu(c).options; }]
+  ]);
+  assert.deepStrictEqual(seen.color, ['(none)', 'SEX', 'ARM', '*AESEV']);
+  assert.deepStrictEqual(seen.func, ['mean', 'median', '*count']);
+});
+
+// The gear's title editor warns about names nothing answers to. A list is
+// not part of the name, so `{@func in mean, median}` is not flagged.
+test('the title editor does not flag a sentence list', () => {
+  const assert = require('node:assert');
+  let warn;
+  I.runSteps(config, [['check', (c) => {
+    const doc = c.env.win.document;
+    const row = doc.createElement('div');
+    const after = doc.createElement('div');
+    row.appendChild(after);
+    const fake = { _atNames: () => new Set(['func', '@func', 'value', '@value']) };
+    c.env.win.DrilldownConfig.prototype._paintTitleWarning.call(
+      fake, row, after,
+      '{@func in mean, median} {label(@value in AVAL, CHG)} {@nope in a}');
+    const el = row.querySelector('.dd-title-warn');
+    warn = el ? el.textContent : null;
+  }]]);
+  assert.strictEqual(warn, 'Nothing is called {@nope in a}. It prints nothing, and takes its [ ] clause with it.');
+});

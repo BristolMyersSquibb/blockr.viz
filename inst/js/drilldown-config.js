@@ -320,8 +320,8 @@
       }
     }
 
-    /** @param {string} key @param {{ required?: boolean }} param1 */
-    _colOptionsFor(key, { required }) {
+    /** @param {string} key @param {{ required?: boolean, skipKinds?: boolean }} param1 */
+    _colOptionsFor(key, { required, skipKinds }) {
       const role = this._role(key);
       const ct = this._roleColType(role);
       let cols = this._cols();
@@ -329,7 +329,7 @@
       else if (ct === 'num') cols = cols.filter(c => c.type === 'numeric');
       else if (ct === 'cat') cols = cols.filter(c => c.type === 'categorical' || (c.n_unique != null && c.n_unique <= 50));
       if (role.maxUnique) cols = cols.filter(c => c.n_unique != null && c.n_unique <= role.maxUnique);
-      cols = this._filterByKind(key, cols);
+      if (!skipKinds) cols = this._filterByKind(key, cols);
       const opts = cols.map(c => c.label ? { value: c.name, label: c.label } : c.name);
       if (this._roleAllowCount(role)) opts.unshift('.count');
       else if (!required) opts.unshift('(none)');
@@ -994,7 +994,8 @@
       for (const m of String(tpl).matchAll(/\{([^{}]+)\}/g)) {
         const tok = m[1].trim();
         const inner = /^[A-Za-z_.][A-Za-z0-9_.]*\(\s*(.+?)\s*\)$/.exec(tok);
-        const name = (inner ? inner[1] : tok).trim();
+        // `{@func in mean, median}`: the list is not part of the name.
+        const name = (inner ? inner[1] : tok).trim().replace(/\s+in\s+.*$/, '');
         if (name === 'n' || name === 'filters') continue;
         if (known.has(name)) continue;
         if (bad.indexOf(m[0]) < 0) bad.push(m[0]);
@@ -2632,6 +2633,9 @@
      * @param {string} key
      */
     _slotOptionsFor(key) {
+      // A list written in the sentence (`{@func in mean, median}`) narrows
+      // the menu. Keyed by the name the sentence used.
+      const listed = this._slotChoices(key);
       key = this._slotCfgKey(key);
       const role = this._role(key);
       if (!role) return null;
@@ -2644,13 +2648,16 @@
       const required = (spec.requiredMap || []).indexOf(key) >= 0 ||
         !!(this.h.entryRequired && this.h.entryRequired(key));
       if (role.kind === 'column') {
+        // A list replaces the kind filter: it may name a column of any kind.
+        const all = this._colOptionsFor(key, { required, skipKinds: !!listed });
         return {
-          options: this._colOptionsFor(key, { required }),
+          options: listed ? this._narrowToChoices(all, listed, cfg[key]) : all,
           selected: this._hasVal(cfg[key]) ? cfg[key] : (required ? '' : '(none)')
         };
       }
       if (role.kind === 'select') {
-        const options = this._selectOptionsFor(key);
+        let options = this._selectOptionsFor(key);
+        if (listed) options = this._narrowToChoices(options, listed, cfg[key]);
         const first = (typeof options[0] === 'object' && options[0])
           ? options[0].value : options[0];
         return {
@@ -2668,6 +2675,44 @@
         };
       }
       return null;
+    }
+
+    /** The choices the sentence lists for a word, or null.
+     * @param {string} key @returns {string[] | null} */
+    _slotChoices(key) {
+      const all = this._cfg().slot_choices;
+      if (!all || Array.isArray(all)) return null;
+      const v = all[key] != null ? all[key] : all[this._slotCfgKey(key)];
+      if (v == null) return null;
+      const list = (Array.isArray(v) ? v : [v]).map(String).filter(x => x);
+      return list.length ? list : null;
+    }
+
+    /** Keep the options the list names, in the list's order. The current
+     * pick stays, so a saved board still finds its own setting, and so do
+     * the structural entries ("(none)", ".count") the role adds itself.
+     * Names the data does not carry are left out.
+     * @param {Array<any>} opts @param {string[]} listed @param {any} cur */
+    _narrowToChoices(opts, listed, cur) {
+      const val = (/** @type {any} */ o) =>
+        (o && typeof o === 'object') ? String(o.value) : String(o);
+      const byVal = new Map(opts.map(o => [val(o), o]));
+      const out = [];
+      for (const o of opts) {
+        const v = val(o);
+        if (v === '(none)' || v === '.count') out.push(o);
+      }
+      for (const name of listed) {
+        if (byVal.has(name)) out.push(byVal.get(name));
+      }
+      const curs = Array.isArray(cur) ? cur.map(String)
+        : (this._hasVal(cur) ? [String(cur)] : []);
+      for (const c of curs) {
+        if (!listed.includes(c) && byVal.has(c) && c !== '(none)' && c !== '.count') {
+          out.push(byVal.get(c));
+        }
+      }
+      return out;
     }
 
     /** Round values between a number role's min and max, plus `cur`.
