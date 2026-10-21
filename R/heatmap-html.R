@@ -149,12 +149,7 @@ heatmap_prep <- function(data, row, col, color = NULL, group = NULL) {
 #' names and their labels": an exhibit speaks in labels).
 #' @noRd
 hmb_label <- function(data, col) {
-  lab <- attr(data[[col]], "label", exact = TRUE)
-  if (is.character(lab) && length(lab) == 1L && !is.na(lab) && nzchar(lab)) {
-    lab
-  } else {
-    col
-  }
+  title_column_label(data, col)
 }
 
 #' The heatmap's matrix as a data frame
@@ -346,6 +341,7 @@ hmb_cols_json <- function(data) {
 #' @noRd
 hmb_cfg_json <- function(row = NULL, col = NULL, color = NULL, group = NULL,
                          cell_numbers = TRUE, download = FALSE, target = "",
+                         locked_roles = character(),
                          titles = list(), script = list()) {
   res <- titles$resolved
   parts <- res$parts
@@ -358,6 +354,7 @@ hmb_cfg_json <- function(row = NULL, col = NULL, color = NULL, group = NULL,
     # The board's drill filter, resolved (ctrl_auto_target()); "" = none,
     # and the rows do not take clicks.
     ctrl_target = target %||% "",
+    locked_roles = I(hmb_locked_roles(locked_roles)),
     # The three-tier text: NULL (auto) travels as JSON null.
     title = titles$title, subtitle = titles$subtitle,
     caption = titles$caption,
@@ -508,18 +505,45 @@ hmb_assemble_rows <- function(m) {
     )
   }
   stub <- paste0('<td class="hmb-stub">', esc(m$rows), "</td>")
-  body_rows <- paste0('<tr class="hmb-r" data-hmb-i="', seq_len(n) - 1L,
-                      '" data-hmb-id="', esc(m$rows), '">', stub,
-                      apply(cells, 1L, paste0, collapse = ""), "</tr>")
+  row_class <- rep("hmb-r", n)
+  row_group <- rep(NA_integer_, n)
 
   if (length(m$groups)) {
     gn <- vapply(m$groups, `[[`, 0L, "n")
     starts <- utils::head(cumsum(c(1L, gn)), -1L)
-    heads <- vapply(m$groups, function(g) {
-      paste0('<tr class="hmb-grp"><td colspan="', k + 1L,
-             '"><span class="hmb-gt">', esc(g$label),
-             '</span><span class="hmb-gn">', g$n, "</span></td></tr>")
+    ends <- cumsum(gn)
+    row_class <- paste(row_class, "hmb-rg")
+    row_class[starts] <- paste(row_class[starts], "hmb-r-start")
+    row_class[ends] <- paste(row_class[ends], "hmb-r-end")
+    for (g in seq_along(m$groups)) {
+      row_group[starts[[g]]:ends[[g]]] <- g - 1L
+    }
+    chev <- paste0(
+      '<button class="blockr-indent-btn" type="button" tabindex="-1"',
+      ' aria-expanded="true">', as.character(section_chevron_svg()), "</button>"
+    )
+    heads <- vapply(seq_along(m$groups), function(g) {
+      grp <- m$groups[[g]]
+      paste0('<tr class="hmb-grp blockr-indent-toggle" data-hmb-group="',
+             g - 1L, '"><td colspan="', k + 1L, '"><span class="hmb-gt">',
+             chev, '<span class="hmb-gt-label">', esc(grp$label),
+             " (N = ", grp$n, ")</span></span></td></tr>")
     }, "")
+  } else {
+    heads <- rep("", n)
+    starts <- integer()
+  }
+  body_rows <- paste0('<tr class="', row_class, '" data-hmb-i="',
+                      seq_len(n) - 1L, '" data-hmb-id="', esc(m$rows),
+                      ifelse(
+                        is.na(row_group),
+                        "",
+                        paste0('" data-hmb-group="', row_group)
+                      ),
+                      '">', stub, apply(cells, 1L, paste0, collapse = ""),
+                      "</tr>")
+
+  if (length(m$groups)) {
     body_rows[starts] <- paste0(heads, body_rows[starts])
   }
   paste0(body_rows, collapse = "")

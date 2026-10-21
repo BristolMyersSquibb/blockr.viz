@@ -254,6 +254,21 @@ test_that("block_title_parts follows the three tiers", {
     list(list(text = "by "),
          list(text = "Actual Treatment", arg = "color", by = "label"))
   )
+
+  d2$Group <- d2$TRT
+  attr(d2$Group, "label") <- "Group"
+  attr(d2$Group, "blockr_source") <- "TRT"
+  expect_equal(
+    unclass_parts(block_title_parts("by {label(@group)}", d2,
+                                    args = list(group = "Group"))),
+    list(list(text = "by "),
+         list(text = "Actual Treatment", arg = "group", by = "label"))
+  )
+
+  d3 <- data.frame(Group = "A")
+  attr(d3$Group, "label") <- "Group"
+  attr(d3$Group, "blockr_source") <- "TRT"
+  expect_equal(resolve_title_template("{label(Group)}", d3), "TRT")
 })
 
 test_that("a dropped clause puts its argument on offer", {

@@ -83,14 +83,15 @@ summarize_table <- function(data, group = NULL, value = ".count",
                             bar_width = "fit", title = NULL,
                             subtitle = NULL, caption = NULL, drill = NULL,
                             scale_map = NULL, elem_id = NULL, active = NULL,
-                            expanded = FALSE) {
+                            expanded = FALSE, subject = NULL) {
   prep <- summarize_prepare(
     data, group = group, value = value, func = func, id_var = id_var,
     summaries = summaries, by = by,
     facet_layout = facet_layout,
     parent = parent, color = color, bar_mode = bar_mode, facet = facet,
     cols = cols, fields = fields, sort_by = sort_by,
-    sort_dir = sort_dir, top_n = top_n, scale_map = scale_map
+    sort_dir = sort_dir, top_n = top_n, scale_map = scale_map,
+    subject = subject
   )
 
   # The three display slots follow the chart / table contract: NULL = auto

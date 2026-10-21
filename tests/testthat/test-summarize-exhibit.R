@@ -47,6 +47,24 @@ test_that("the HTML renderer draws the same marks the app does", {
   expect_false(grepl("<input type=\"search\"", html, fixed = TRUE))
 })
 
+test_that("the HTML renderer accepts subject denominators", {
+  ex <- demo_exhibit(subject = "id")
+  html <- as.character(htmltools::renderTags(html_exhibit(ex))$html)
+
+  expect_true(grepl("blockr-summarize-table", html, fixed = TRUE))
+})
+
+test_that("the HTML renderer uses resolved exhibit titles", {
+  ex <- demo_exhibit(
+    subtitle = "By: {@rows}[ Display AEs with at least {@min_share} patients]",
+    .title_args = list(rows = "SOC and PT", min_share = "1")
+  )
+  html <- as.character(htmltools::renderTags(html_exhibit(ex))$html)
+
+  expect_true(grepl("By: SOC and PT", html, fixed = TRUE))
+  expect_false(grepl(">By:<", html, fixed = TRUE))
+})
+
 test_that("a nested export opens every row", {
   data <- demo_frame()
   ex <- static_summarize_table(

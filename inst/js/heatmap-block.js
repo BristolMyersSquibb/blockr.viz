@@ -52,8 +52,9 @@
     var q = search ? search.value.trim().toLowerCase() : '';
     root.querySelectorAll('tr.hmb-r').forEach(function (tr) {
       var id = (tr.getAttribute('data-hmb-id') || '').toLowerCase();
+      var show = q === '' || id.indexOf(q) !== -1;
       (/** @type {HTMLElement} */ (tr)).style.display =
-        (q === '' || id.indexOf(q) !== -1) ? '' : 'none';
+        q === '' ? '' : (show ? 'table-row' : 'none');
     });
     root.querySelectorAll('tr.hmb-grp').forEach(function (tr) {
       (/** @type {HTMLElement} */ (tr)).style.display = q === '' ? '' : 'none';
@@ -154,11 +155,22 @@
                 autoValue: (/** @type {any} */ cfg) =>
                   (cfg.caption == null && cfg.caption_resolved) ? cfg.caption_resolved : '' }
   };
-  /** @param {boolean} hasCols */
-  function hmSections(hasCols) {
+  /** @param {Record<string, any>} cfg @param {string} role */
+  function isLocked(cfg, role) {
+    return Array.isArray(cfg && cfg.locked_roles) &&
+      cfg.locked_roles.indexOf(role) >= 0;
+  }
+
+  /** @param {string[]} roles @param {Record<string, any>} cfg */
+  function unlockedRoles(roles, cfg) {
+    return roles.filter(function (role) { return !isLocked(cfg, role); });
+  }
+
+  /** @param {boolean} hasCols @param {Record<string, any>} cfg */
+  function hmSections(hasCols, cfg) {
     return {
-      requiredMap: hasCols ? ['row', 'col'] : [],
-      optionalMap: hasCols ? ['color', 'group'] : [],
+      requiredMap: hasCols ? unlockedRoles(['row', 'col'], cfg) : [],
+      optionalMap: hasCols ? unlockedRoles(['color', 'group'], cfg) : [],
       mapping: [],
       summaries: false,
       aggregatable: false,
@@ -204,8 +216,10 @@
       columns: function () { return st.cols; },
       context: function () { return 'all'; },
       currentType: function () { return null; },
-      sections: function () { return hmSections(st.cols.length > 0); },
-      sectionsForFamily: function () { return hmSections(st.cols.length > 0); },
+      sections: function () { return hmSections(st.cols.length > 0, st.cfg); },
+      sectionsForFamily: function () {
+        return hmSections(st.cols.length > 0, st.cfg);
+      },
       secondary: new Set(),
       typeKey: null,
       typeGroups: null,
@@ -217,6 +231,7 @@
       onMetricsChange: function () {},
       title: 'Heatmap settings',
       onChange: function (/** @type {string} */ key) {
+        if (isLocked(st.cfg, key)) return;
         var v = st.cfg[key];
         if (key === 'cell_numbers') {
           root.classList.toggle('hmb-nonum', v === 'off');
@@ -238,6 +253,26 @@
   }
 
   // ---- header: title, sentence, caption --------------------------------
+  /** @param {any[]} parts @param {Record<string, any>} cfg */
+  function unlockParts(parts, cfg) {
+    if (!Array.isArray(parts)) return parts;
+    return parts.map(function (p) {
+      if (!p || !p.arg || !isLocked(cfg, p.arg)) return p;
+      var q = Object.assign({}, p);
+      delete q.arg;
+      delete q.by;
+      return q;
+    });
+  }
+
+  /** @param {any[]} offers @param {Record<string, any>} cfg */
+  function unlockOffers(offers, cfg) {
+    if (!Array.isArray(offers)) return [];
+    return offers.filter(function (key) {
+      return typeof key !== 'string' || !isLocked(cfg, key);
+    });
+  }
+
   /** @param {Element} root @param {HmbState} st */
   function paintHeader(root, st) {
     var cfg = st.cfg;
@@ -254,15 +289,21 @@
     }
     // A repaint replaces the very node an open slot menu is anchored to.
     st.slots.close();
-    st.slots.paint(titleEl, cfg.title_resolved || '', cfg.title_parts);
-    st.slots.paint(subEl, cfg.subtitle_resolved || '', cfg.subtitle_parts);
-    st.slots.paint(capEl, cfg.caption_resolved || '', cfg.caption_parts);
+    st.slots.paint(titleEl, cfg.title_resolved || '',
+                   unlockParts(cfg.title_parts, cfg));
+    st.slots.paint(subEl, cfg.subtitle_resolved || '',
+                   unlockParts(cfg.subtitle_parts, cfg));
+    st.slots.paint(capEl, cfg.caption_resolved || '',
+                   unlockParts(cfg.caption_parts, cfg));
     // Offers sit on their own line under the sentence; the title's and the
     // caption's join them there.
     offersEl.textContent = '';
     /** @type {string[]} */
-    var offers = [].concat(cfg.subtitle_offers || [], cfg.title_offers || [],
-                           cfg.caption_offers || []);
+    var offers = [].concat(
+      unlockOffers(cfg.subtitle_offers, cfg),
+      unlockOffers(cfg.title_offers, cfg),
+      unlockOffers(cfg.caption_offers, cfg)
+    );
     st.slots.paintOffers(offersEl, offers);
     titleEl.style.display = titleEl.textContent ? '' : 'none';
     subEl.style.display = subEl.textContent ? '' : 'none';
@@ -282,6 +323,11 @@
       .replace(/>/g, '&gt;');
   }
 
+  var CHEV = '<svg class="blockr-chev" viewBox="0 0 24 24" fill="none" ' +
+    'stroke="currentColor" stroke-width="2.4" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M6 9l6 6 6-6"/></svg>';
+
   /** @param {any} m @returns {string} */
   function assembleRows(m) {
     var n = m.n, k = m.k, i, j;
@@ -299,22 +345,59 @@
     var heads = {};
     var groups = m.groups || [];
     var at = 0;
+    /** @type {Record<number, string>} */
+    var rowClasses = {};
+    /** @type {Record<number, number>} */
+    var rowGroups = {};
     for (i = 0; i < groups.length; i++) {
-      heads[at] = '<tr class="hmb-grp"><td colspan="' + (k + 1) +
-        '"><span class="hmb-gt">' + esc(groups[i].label) +
-        '</span><span class="hmb-gn">' + groups[i].n + '</span></td></tr>';
+      heads[at] = '<tr class="hmb-grp blockr-indent-toggle" data-hmb-group="' +
+        i + '"><td colspan="' + (k + 1) +
+        '"><span class="hmb-gt"><button class="blockr-indent-btn" ' +
+        'type="button" tabindex="-1" aria-expanded="true">' + CHEV +
+        '</button><span class="hmb-gt-label">' + esc(groups[i].label) +
+        ' (N = ' + groups[i].n + ')</span></span></td></tr>';
+      for (j = 0; j < groups[i].n; j++) {
+        rowClasses[at + j] = 'hmb-r hmb-rg';
+        rowGroups[at + j] = i;
+      }
+      rowClasses[at] += ' hmb-r-start';
+      rowClasses[at + groups[i].n - 1] += ' hmb-r-end';
       at += groups[i].n;
     }
 
     var out = new Array(n);
     for (i = 0; i < n; i++) {
       var id = esc(m.rows[i]);
-      var row = (heads[i] || '') + '<tr class="hmb-r" data-hmb-i="' + i +
-        '" data-hmb-id="' + id + '"><td class="hmb-stub">' + id + '</td>';
+      var cls = rowClasses[i] || 'hmb-r';
+      var row = (heads[i] || '') + '<tr class="' + cls +
+        '" data-hmb-i="' + i + '" data-hmb-id="' + id +
+        (rowGroups[i] == null ? '' : '" data-hmb-group="' + rowGroups[i]) +
+        '"><td class="hmb-stub">' + id + '</td>';
       for (j = 0; j < k; j++) row += cells[j * n + i];
       out[i] = row + '</tr>';
     }
     return out.join('');
+  }
+
+  /** @param {Element} root */
+  function wireGroupCollapse(root) {
+    root.addEventListener('click', function (ev) {
+      var t = /** @type {Element|null} */ (ev.target);
+      var btn = t && t.closest ? t.closest('.blockr-indent-btn') : null;
+      if (!btn || !root.contains(btn)) return;
+      var h = btn.closest('tr.hmb-grp');
+      if (!h) return;
+      ev.stopPropagation();
+      ev.preventDefault();
+      var group = h.getAttribute('data-hmb-group');
+      var collapsed = !h.classList.contains('collapsed');
+      h.classList.toggle('collapsed', collapsed);
+      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      root.querySelectorAll('tr.hmb-r[data-hmb-group="' + group + '"]')
+        .forEach(function (tr) {
+          tr.classList.toggle('hmb-collapsed-hidden', collapsed);
+        });
+    });
   }
 
   // ---- data tooltip ----------------------------------------------------
@@ -638,8 +721,11 @@
       var thead = /** @type {HTMLElement|null} */ (clone.querySelector('thead'));
       if (thead) thead.style.transform = '';
       clone.querySelectorAll('tr').forEach(function (tr) {
-        tr.classList.remove('hmb-flash');
+        tr.classList.remove('hmb-flash', 'collapsed', 'hmb-collapsed-hidden');
         (/** @type {HTMLElement} */ (tr)).style.display = '';
+      });
+      clone.querySelectorAll('.hmb-grp .blockr-indent-btn').forEach(function (btn) {
+        btn.setAttribute('aria-expanded', 'true');
       });
       host.appendChild(clone);
       document.body.appendChild(host);
@@ -718,6 +804,7 @@
     paintHeader(root, st);
     if (st.ddc) st.ddc.render();
     wireSearch(root);
+    wireGroupCollapse(root);
     wireDrill(root, elemId);
     wireTooltip(root);
     wireCapture(root, st);

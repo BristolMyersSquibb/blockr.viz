@@ -178,6 +178,8 @@
   z-index: 1;
   height: 24px;
   padding: 0 12px 0 0;
+  box-sizing: border-box;
+  border: 1px solid transparent;
   white-space: nowrap;
   background: var(--blockr-color-bg-surface);
   color: var(--blockr-color-text-default);
@@ -197,27 +199,60 @@
 }
 .hmb-block.hmb-nonum td.hmb-c span { visibility: hidden; }
 
-/* A group opens with a section title: 12px, 600, uppercase, 0.05em,
-   text-muted, no band behind it. */
+/* Group headers use the shared clinical section band used by timelines. */
 .hmb-table tr.hmb-grp td {
-  padding: 14px 0 4px;
-  white-space: nowrap;
+  padding: 16px 0 6px;
+  border-top: 1px solid var(--blockr-color-border-default);
+  border-bottom: 1px solid var(--blockr-color-border-default);
+  background: color-mix(
+    in srgb,
+    var(--blockr-color-text-default, #111827) 3%,
+    var(--blockr-color-bg-surface, #ffffff)
+  );
+  white-space: normal;
 }
-.hmb-table tr.hmb-grp:first-child td { padding-top: 2px; }
+.hmb-table tr.hmb-grp:first-child td { padding-top: 8px; }
 .hmb-gt {
   position: sticky;
   left: 0;
-  font-size: var(--blockr-font-size-xs);
+  display: inline-flex;
+  align-items: center;
+  padding-left: 10px;
+  border-left: 3px solid var(--blockr-color-border-accent);
+  font-size: var(--blockr-font-size-sm);
   font-weight: var(--blockr-font-weight-semibold);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--blockr-color-text-muted);
+  letter-spacing: 0;
+  color: var(--blockr-color-text-default);
+  white-space: nowrap;
 }
-.hmb-gn {
-  margin-left: 8px;
-  font-size: var(--blockr-font-size-xs);
-  color: var(--blockr-color-text-muted);
+.hmb-gt-label {
+  min-width: 0;
+  white-space: nowrap;
 }
+.hmb-table .blockr-indent-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0 5px 0 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: baseline;
+}
+.hmb-table .blockr-chev {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  color: var(--blockr-color-text-muted);
+  transition: transform 0.2s ease, color 0.15s ease;
+}
+.hmb-table .blockr-indent-btn:hover .blockr-chev {
+  color: var(--blockr-color-text-default);
+}
+.hmb-table tr.hmb-grp.collapsed .blockr-chev {
+  transform: rotate(-90deg);
+}
+.hmb-table tr.hmb-collapsed-hidden { display: none; }
 
 /* ---- drill ------------------------------------------------------------ */
 .hmb-block[data-hmb-drill="1"] tr.hmb-r { cursor: pointer; }

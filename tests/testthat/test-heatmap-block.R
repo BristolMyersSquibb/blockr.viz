@@ -47,6 +47,13 @@ test_that("heatmap_prep reads the columns' labels for the exhibit", {
   # no label: the name
   expect_identical(p$col_label, "AEDECOD")
   expect_identical(p$group_label, "ARM")
+
+  d$Group <- d$ARM
+  attr(d$ARM, "label") <- "Treatment Arm"
+  attr(d$Group, "label") <- "Group"
+  attr(d$Group, "blockr_source") <- "ARM"
+  p <- heatmap_prep(d, "USUBJID", "AEDECOD", "AESEV", "Group")
+  expect_identical(p$group_label, "Treatment Arm")
 })
 
 test_that("heatmap_prep reports config states as messages", {
@@ -67,8 +74,17 @@ test_that("heatmap_html renders legend, group rows, header row, no dashes", {
   ))
   expect_match(html, "hmb-legend", fixed = TRUE)
   expect_match(html, "MODERATE", fixed = TRUE)     # legend decodes levels
-  # a group opens with a section-title row spanning the matrix
-  expect_match(html, '<tr class="hmb-grp"><td colspan="3"><span class="hmb-gt">A</span><span class="hmb-gn">1</span></td></tr>', fixed = TRUE)
+  # a group opens with a collapsible section-title row spanning the matrix
+  expect_match(html, paste0(
+    '<tr class="hmb-grp blockr-indent-toggle" data-hmb-group="0">',
+    '<td colspan="3"><span class="hmb-gt"><button class="blockr-indent-btn"'
+  ), fixed = TRUE)
+  expect_match(html, '<span class="hmb-gt-label">A (N = 1)</span>',
+               fixed = TRUE)
+  expect_match(html, paste0(
+    '<tr class="hmb-r hmb-rg hmb-r-start hmb-r-end" ',
+    'data-hmb-i="0" data-hmb-id="s1" data-hmb-group="0">'
+  ), fixed = TRUE)
   expect_no_match(html, "hmb-rail", fixed = TRUE)
   # the header row: title slots, the search tool, no controls on the face
   expect_match(html, "hmb-head", fixed = TRUE)
@@ -107,8 +123,35 @@ test_that("cell_numbers = FALSE marks the wrapper", {
 test_that("new_heatmap_block constructs and carries its state", {
   blk <- new_heatmap_block(row = "USUBJID", col = "AEDECOD",
                            color = "AESEV", group = "ARM",
-                           drill = TRUE, subtitle = "{label(@col)}")
+                           drill = TRUE, subtitle = "{label(@col)}",
+                           locked_roles = c("color", "group"))
   expect_s3_class(blk, "heatmap_block")
+})
+
+test_that("locked heatmap roles are state and ignore local config writes", {
+  blk <- new_heatmap_block(
+    row = "USUBJID", col = "AEDECOD", color = "AESEV", group = "ARM",
+    locked_roles = c("color", "group")
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      expr_scope <- session$makeScope("expr")
+      session$flushReact()
+      expr_scope$setInputs(heatmap_block_action = list(
+        action = "config", param = "color", value = "USUBJID"
+      ))
+      expr_scope$setInputs(heatmap_block_action = list(
+        action = "config", param = "group", value = "AEDECOD"
+      ))
+      session$flushReact()
+      st <- session$returned$state
+      expect_identical(st$color(), "AESEV")
+      expect_identical(st$group(), "ARM")
+      expect_identical(st$locked_roles(), c("color", "group"))
+    },
+    args = list(x = blk, data = list(data = function() hm_toy()))
+  )
 })
 
 test_that("a legacy top_n becomes the script's top_n value", {
@@ -274,6 +317,7 @@ test_that("the chrome mounts from config alone, with no data in reach", {
 test_that("the config carries the sentence and the script to the client", {
   cfg <- jsonlite::fromJSON(hmb_cfg_json(
     row = "USUBJID", col = "AEDECOD",
+    locked_roles = c("color", "group"),
     titles = list(title = NULL, subtitle = "{@col}",
                   resolved = list(subtitle = "AEDECOD",
                                   parts = list(subtitle = list(
@@ -288,6 +332,8 @@ test_that("the config carries the sentence and the script to the client", {
   expect_identical(cfg$script, "top_n <- 25")
   expect_identical(cfg$sv_top_n, 25L)
   expect_identical(cfg$cell_numbers, "on")
+  expect_identical(unlist(cfg$locked_roles, use.names = FALSE),
+                   c("color", "group"))
 })
 
 test_that("the body carries the matrix, the legend and the count", {
@@ -295,7 +341,7 @@ test_that("the body carries the matrix, the legend and the count", {
                 group = "ARM")
   expect_null(b$err)
   expect_match(b$table, "hmb-table", fixed = TRUE)
-  expect_match(b$table, 'class="hmb-grp"', fixed = TRUE)
+  expect_match(b$table, 'class="hmb-grp blockr-indent-toggle"', fixed = TRUE)
   expect_match(b$legend, "hmb-legend", fixed = TRUE)
   expect_match(b$legend, "MODERATE", fixed = TRUE)
   expect_match(b$legend, "Numbers: events", fixed = TRUE)

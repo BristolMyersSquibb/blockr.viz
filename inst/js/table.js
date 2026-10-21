@@ -263,6 +263,13 @@
       return Array.prototype.slice.call(
         tbody.querySelectorAll("tr.blockr-section-header"));
     };
+    var indentHeads = function () {
+      return Array.prototype.slice.call(
+        tbody.querySelectorAll("tr.blockr-indent-toggle"));
+    };
+    var groups = function () {
+      return heads().concat(indentHeads());
+    };
     /** @type {HTMLButtonElement | null} */
     var foldAll = null;
     // Fold or open every group at once (the corner chevron, Alt+click on a
@@ -273,12 +280,19 @@
         h.classList.toggle("collapsed", shut);
         syncAria(h);
       });
+      indentHeads().forEach(function (h) {
+        h.classList.toggle("collapsed", shut);
+        var btn = h.querySelector(".blockr-indent-btn");
+        if (btn) {
+          btn.setAttribute("aria-expanded", shut ? "false" : "true");
+        }
+      });
       recompute();
       syncFoldAll();
     }
     function syncFoldAll() {
       if (!foldAll) return;
-      var open = heads().every(function (h) {
+      var open = groups().every(function (h) {
         return !h.classList.contains("collapsed");
       });
       var act = open ? "Collapse all groups" : "Expand all groups";
@@ -338,6 +352,7 @@
             "aria-expanded", h.classList.contains("collapsed") ? "false" : "true"
           );
           recompute();
+          syncFoldAll();
         });
       }
     );
@@ -345,6 +360,11 @@
       root.querySelectorAll("tr.blockr-section-header").forEach(function (h) {
         h.classList.add("collapsed");
         syncAria(h);
+      });
+      root.querySelectorAll("tr.blockr-indent-toggle").forEach(function (h) {
+        h.classList.add("collapsed");
+        var btn = h.querySelector(".blockr-indent-btn");
+        if (btn) btn.setAttribute("aria-expanded", "false");
       });
       recompute();
     }
@@ -362,23 +382,43 @@
   function buildFoldAll(tbody, onClick) {
     var table = tbody.closest("table");
     if (!table) return null;
-    var chev = tbody.querySelector("tr.blockr-section-header .blockr-chev");
+    var chev = tbody.querySelector(
+      "tr.blockr-section-header .blockr-chev, " +
+      "tr.blockr-indent-toggle .blockr-chev"
+    );
     if (!chev) return null;
-    // A stub header per header row when the producer labels each row; the
-    // bottom one is next to the body, where the group chevrons are.
+    /** @param {HTMLButtonElement} btn */
+    function bindFoldAll(btn) {
+      btn.onclick = function (ev) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        onClick();
+      };
+      return btn;
+    }
+    var rendered = /** @type {HTMLButtonElement | null} */ (
+      table.querySelector("thead th.blockr-stub-header .dt-foldall")
+    );
+    if (rendered) return bindFoldAll(rendered);
+
     var ths = table.querySelectorAll("thead th.blockr-stub-header");
-    var th = /** @type {HTMLElement | null} */ (ths.length ? ths[ths.length - 1] : null);
-    if (!th || th.querySelector(".dt-foldall")) return null;
+    var first = /** @type {HTMLElement | null} */ (ths.length ? ths[0] : null);
+    var firstTitle = first ? (first.textContent || "").trim() : "";
+    var multiBlankStub = ths.length > 1 && !firstTitle;
+    var th = /** @type {HTMLElement | null} */ (
+      multiBlankStub ? first : (ths.length === 1 ? ths[0] : null)
+    );
+    if (!th) return null;
+    var existing = /** @type {HTMLButtonElement | null} */ (
+      th.querySelector(".dt-foldall")
+    );
+    if (existing) return bindFoldAll(existing);
     var title = (th.textContent || "").trim();
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "dt-foldall";
     btn.appendChild(chev.cloneNode(true));
-    btn.addEventListener("click", function (ev) {
-      ev.stopPropagation();
-      ev.preventDefault();
-      onClick();
-    });
+    bindFoldAll(btn);
     var wrap = document.createElement("div");
     wrap.className = "dt-foldall-wrap";
     wrap.appendChild(btn);

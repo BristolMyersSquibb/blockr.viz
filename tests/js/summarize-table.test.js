@@ -130,6 +130,62 @@ test('a colour column fills the legend band', async () => {
   await t.close();
 });
 
+test('a pair tooltip opens only over the drawn mark', async () => {
+  const t = open('flat', { deliver: false });
+  const payload = {
+    kind: 'flat',
+    n: 1,
+    label: ['Gastrointestinal disorders'],
+    head: '<table class="blockr-table blockr-summarize-table"><tbody></tbody></table>',
+    chrome: {},
+    cols: [{
+      kind: 'pair',
+      multi: true,
+      levels: ['Grade 1'],
+      fills: ['#47978f'],
+      rf: null,
+      v: [40],
+      tt: {
+        cvar: 'Toxicity grade',
+        words: { from: 'Mean start', to: 'Mean end' }
+      },
+      lv: [{
+        kind: 'pair',
+        fill: [null],
+        dash: [false],
+        tip: ['Grade 1 · n=4 · Mean start 20 · Mean end 60'],
+        bw: [null],
+        bl: [null],
+        rf: null,
+        w: [40],
+        l: [20],
+        a: [20],
+        b: [60],
+        open: [false],
+        ab: ['+40']
+      }]
+    }]
+  };
+  t.win.__handlers['blockr-viz-summarize-data']({
+    id: t.id,
+    rev: 'pair-hover',
+    payload: JSON.stringify(payload)
+  });
+
+  const move = (el) => el.dispatchEvent(new t.win.MouseEvent(
+    'mousemove', { bubbles: true, clientX: 40, clientY: 40 }));
+  const lane = t.doc.querySelector('.blockr-summarize-pacell');
+
+  move(lane);
+  assert.equal(t.doc.querySelector('.blockr-lane-tip').hidden, true);
+
+  move(lane.querySelector('.lane-to'));
+  const tip = t.doc.querySelector('.blockr-lane-tip');
+  assert.equal(tip.hidden, false);
+  assert.match(tip.textContent, /Grade 1/);
+  await t.close();
+});
+
 test('a height makes the table scroll in its own box', async () => {
   const t = open('height');
   const w = t.doc.querySelector('.blockr-table-wrapper');

@@ -4,6 +4,7 @@
 'use strict';
 
 const test = require('node:test');
+const assert = require('node:assert');
 const I = require('./interact');
 
 const AE = { group: 'AETERM', drill: 'auto' };
@@ -222,4 +223,42 @@ test('the title editor does not flag a sentence list', () => {
     warn = el ? el.textContent : null;
   }]]);
   assert.strictEqual(warn, 'Nothing is called {@nope in a}. It prints nothing, and takes its [ ] clause with it.');
+});
+
+test('a min-only number word does not pollute the sentence while valid', () => {
+  const minOnlyConfig = {
+    chart_type: 'bar', ...AE,
+    subtitle_resolved: 'terms in at least 1 Patients',
+    subtitle_parts: [{ text: 'terms in at least ' },
+                     { text: '1', arg: 'min_share' },
+                     { text: ' Patients' }],
+    title_resolved: 'Adverse events',
+    script: 'min_share <- 1',
+    script_inputs: [{ name: 'min_share', key: 'sv_min_share',
+                      label: 'Minimum threshold', kind: 'number',
+                      min: 0, step: 1 }],
+    sv_min_share: 1,
+    sentence_args: ['min_share']
+  };
+
+  const c = I.open(minOnlyConfig);
+  try {
+    c.block.subtitleEl.querySelector('.blockr-slot').click();
+
+    const input = c.block.subtitleEl.querySelector('.blockr-slot-input');
+    const note = c.block.subtitleEl.querySelector('.blockr-slot-range');
+
+    assert.ok(input);
+    assert.ok(note);
+    assert.equal(note.hidden, true);
+    assert.equal(note.textContent, '');
+
+    input.value = '-1';
+    input.dispatchEvent(new c.env.win.Event('input', { bubbles: true }));
+
+    assert.equal(note.hidden, false);
+    assert.equal(note.textContent, 'at least 0');
+  } finally {
+    c.close();
+  }
 });

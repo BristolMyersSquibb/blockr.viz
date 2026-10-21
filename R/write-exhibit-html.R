@@ -58,6 +58,7 @@ write_exhibit_html <- function(x, file, title = NULL, subtitle = NULL,
   exhibit <- html_exhibit(
     x,
     title = "",
+    subtitle = "",
     caption = caption,
     default_expanded = default_expanded,
     collapsible = collapsible,
