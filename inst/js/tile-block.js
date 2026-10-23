@@ -338,18 +338,30 @@
 
     // The band is in flow: opening is a class toggle — no positioning, no
     // scroll/resize listeners, no outside-click dismissal (it is a panel,
-    // not a menu; the gear is the only toggle).
+    // not a menu; the gear toggles it). Open, it is a layer in the page
+    // (Blockr.layer), as the heatmap's gear tray: Escape in the band or on
+    // the gear closes it and focuses the gear.
+    /** @type {{ remove: () => void } | null} */
+    var layer = null;
     function openPop() {
       pop.classList.add('blockr-settings--open');
       btn.classList.add('blockr-gear-active');
       btn.setAttribute('aria-expanded', 'true');
       bandOpen[elemId] = true;
+      if (!layer && typeof Blockr !== 'undefined' && Blockr.layer) {
+        layer = Blockr.layer(pop, {
+          from: btn,
+          inPage: true,
+          escape: function () { closePop(); btn.focus(); }
+        });
+      }
     }
     function closePop() {
       pop.classList.remove('blockr-settings--open');
       btn.classList.remove('blockr-gear-active');
       btn.setAttribute('aria-expanded', 'false');
       bandOpen[elemId] = false;
+      if (layer) { layer.remove(); layer = null; }
     }
     btn.addEventListener('click', function (e) {
       e.stopPropagation();

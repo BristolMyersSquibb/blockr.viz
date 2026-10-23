@@ -13,7 +13,9 @@ heatmap_matrix(data, row, col, color = NULL, group = NULL)
 change the counts; it is accepted so the call mirrors the block's.}
 }
 \value{
-A data frame. Cells with no event hold 0.
+A data frame. Cells with no event hold 0. Data with no rows, or
+none with both a row and a column value, gives a frame with the row and
+group columns and no rows.
 }
 \description{
 The block's result: one row per matrix row, in the order the heatmap draws

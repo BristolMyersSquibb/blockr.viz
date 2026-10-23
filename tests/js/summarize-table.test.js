@@ -186,6 +186,34 @@ test('a pair tooltip opens only over the drawn mark', async () => {
   await t.close();
 });
 
+test('a pair tooltip escapes its text once', async () => {
+  const t = open('flat', { deliver: false });
+  const payload = {
+    kind: 'flat',
+    n: 1,
+    label: ['A'],
+    head: '<table class="blockr-table blockr-summarize-table"><tbody></tbody></table>',
+    chrome: {},
+    cols: [{
+      kind: 'pair', rf: null, v: [60], tt: {},
+      fill: [null], dash: [false], bw: [null], bl: [null], w: [40], l: [20],
+      a: [20], b: [60], open: [false],
+      tip: ['Start <day> & "1" 20 → End 60']
+    }]
+  };
+  t.win.__handlers['blockr-viz-summarize-data']({
+    id: t.id, rev: 'pair-esc', payload: JSON.stringify(payload)
+  });
+  const lane = t.doc.querySelector('.blockr-summarize-pacell');
+  assert.equal(lane.getAttribute('data-summarize-tip'),
+               'Start <day> & "1" 20 → End 60');
+  lane.querySelector('.lane-to').dispatchEvent(new t.win.MouseEvent(
+    'mousemove', { bubbles: true, clientX: 40, clientY: 40 }));
+  const tip = t.doc.querySelector('.blockr-lane-tip');
+  assert.match(tip.textContent, /Start <day> & "1" 20/);
+  await t.close();
+});
+
 test('a height makes the table scroll in its own box', async () => {
   const t = open('height');
   const w = t.doc.querySelector('.blockr-table-wrapper');
@@ -206,6 +234,23 @@ test('a latched drill: a row click filters, a second click on it clears', async 
   click(row);
   assert.equal(t.actions().at(-1).action, 'clear_filter');
   assert.equal(row.classList.contains('is-on'), false);
+  await t.close();
+});
+
+test('a gear change that drops the filter sends clear_filter', async () => {
+  const t = open('flat');
+  const row = t.rows()[1];
+  click(row);
+  click(t.doc.querySelector('.blockr-gear-btn'));
+  const box = Array.from(t.band().querySelectorAll('.blockr-checkbox'))
+    .find((b) => /Filter downstream on a click/.test(b.textContent));
+  assert.ok(box, 'the band has the drill checkbox');
+  click(box.querySelector('input'));
+  const acts = t.actions();
+  assert.deepEqual(acts.at(-2), { action: 'config', param: 'drill', value: '' });
+  assert.equal(acts.at(-1).action, 'clear_filter');
+  assert.equal(row.classList.contains('is-on'), false);
+  assert.match(t.footer(), /No filter active/);
   await t.close();
 });
 

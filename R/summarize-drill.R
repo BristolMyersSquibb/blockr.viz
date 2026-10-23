@@ -99,3 +99,25 @@ summarize_drill_expr <- function(filters, members = NULL) {
   })
   as.call(c(list(quote(dplyr::filter), quote(data)), conds))
 }
+
+#' The block's expression: the click filter with the prepare script `sx`
+#' around it. A clicked column the upstream data has is filtered before the
+#' script, on the source rows. A column only the script makes (a `by` the
+#' script derives) does not exist there, so it is filtered after the script.
+#' `src_cols` is the upstream's column names; NULL (not seen yet) filters
+#' every column before the script.
+#' @noRd
+summarize_drill_wrap <- function(sx, filters, members = NULL,
+                                 src_cols = NULL) {
+  if (is.null(sx)) {
+    return(summarize_drill_expr(filters, members))
+  }
+  post <- dd_drill_post(as.list(names(filters)), src_cols)
+  out <- dd_splice_slot(sx, summarize_drill_expr(filters[!post], members))
+  if (!any(post)) {
+    return(out)
+  }
+  ex <- summarize_drill_expr(filters[post], members)
+  ex[[2L]] <- out
+  ex
+}

@@ -130,7 +130,8 @@ chart_capture_file <- function(x, file = tempfile(fileext = ".png")) {
 }
 
 #' @export
-html_exhibit.chart_capture <- function(x, title = NULL, caption = NULL,
+html_exhibit.chart_capture <- function(x, title = NULL, subtitle = NULL,
+                                       caption = NULL,
                                        max_height = NULL,
                                        default_expanded = NULL, ...) {
 

@@ -647,6 +647,9 @@ new_summarize_table_block <- function(group = NULL,
         last_msg <- new.env(parent = emptyenv())
         last_msg$json <- NULL
         last_msg$rev <- 0L
+        # The browser's picture of the table, for the image and deck
+        # downloads (see "the export picture" below).
+        capture <- shiny::reactiveVal(NULL)
 
         push <- function(json) {
           session$sendCustomMessage("blockr-viz-summarize-data", list(
@@ -750,6 +753,8 @@ new_summarize_table_block <- function(group = NULL,
           if (identical(json, last_msg$json)) return()
           last_msg$json <- json
           last_msg$rev <- last_msg$rev + 1L
+          # A picture of the old table must not reach a download.
+          capture(NULL)
           push(json)
         })
 
@@ -761,7 +766,6 @@ new_summarize_table_block <- function(group = NULL,
         # download menu posts it when it opens, so it is here by the time a
         # format is picked. The painted exhibit (summarize-paint.R) stays the
         # fallback where no browser has drawn one.
-        capture <- shiny::reactiveVal(NULL)
         shiny::observeEvent(input$summarize_table_block_capture, {
           capture(chart_capture_from_msg(input$summarize_table_block_capture))
         })
@@ -947,12 +951,15 @@ new_summarize_table_block <- function(group = NULL,
             # Display-only until a row is clicked: downstream receives the
             # input untouched (identity(), as the expr must be a call). A click
             # filters on every column of the row's path.
-            ex <- summarize_drill_expr(filters, filter_members(filters))
             # The prepare script wraps the filter (chart parity): a click
             # filters the source rows, and downstream receives what the table
-            # was built from, filtered.
+            # was built from, filtered. A click on a column only the script
+            # makes is filtered after it (summarize_drill_wrap()).
             sx <- cb_expr(r_parsed(), r_specs(), r_values(), slot = TRUE)
-            if (is.null(sx)) ex else dd_splice_slot(sx, ex)
+            src <- if (!is.null(sx) && length(filters)) {
+              tryCatch(names(raw_ann()), error = function(e) NULL)
+            }
+            summarize_drill_wrap(sx, filters, filter_members(filters), src)
           }),
           # Failed custom summaries, as blockr conditions (set in build_json).
           cond = cond,
@@ -1065,7 +1072,8 @@ summarize_arguments <- function() {
         "= a number or a column for a shaded range, a `to` outside it drawn ",
         "open; optional ref = a number drawn as a dashed line; optional ",
         "dash = a categorical column whose non-first levels draw the link ",
-        "dashed: a dumbbell per row, e.g. baseline to peak per subject), ",
+        "dashed: a dumbbell per row, e.g. baseline to peak per subject; ",
+        "on a nested table a parent row is the mean of its rows' ends), ",
         "expr (free R ",
         "code over the ",
         "group's rows, text), custom (fn = a function of the rows, ",

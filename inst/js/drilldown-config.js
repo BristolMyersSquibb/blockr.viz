@@ -657,6 +657,14 @@
       // The external-control send nests inside here too (see above).
       if (this.h.drillAutoLabel || this.h.drillHint) this._renderDrillSection();
 
+      // A host whose clicks always send, with no drill to switch on (the
+      // heatmap), has no Drill-down section to nest the send in: it gets
+      // one holding the send alone.
+      if (spec.ctrlSection && !spec.drillToggle &&
+          !(this.h.drillAutoLabel || this.h.drillHint)) {
+        this._renderCtrlSection();
+      }
+
       this._renderScriptSection();
 
       if (this.h.afterTypeChange) this.h.afterTypeChange();
@@ -2030,6 +2038,19 @@
       });
       wrap.appendChild(add);
       container.appendChild(wrap);
+    }
+
+    // The send as its own folded section. The closed header says where a
+    // click goes: "Off", or the picked target's label.
+    _renderCtrlSection() {
+      const cfg = this._cfg();
+      const on = this._hasVal(cfg.ctrl_target);
+      const choices = Array.isArray(cfg.ctrl_choices) ? cfg.ctrl_choices : [];
+      const hit = on ? choices.find((/** @type {any} */ c) =>
+        c.value === cfg.ctrl_target) : null;
+      const summary = !on ? 'Off' : (hit ? hit.label : String(cfg.ctrl_target));
+      const sec = this._foldSection('Drill-down', 'ctrldrill', on, summary);
+      if (sec) this._renderCtrlRows(sec);
     }
 
     _renderDrillSection() {

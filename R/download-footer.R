@@ -209,12 +209,6 @@ download_footer_stamp <- function(x, data, session) {
 #' @noRd
 png_add_footer <- function(png, text, css_width, font_px = 11, pad = 12) {
 
-  if (!requireNamespace("png", quietly = TRUE) ||
-        !requireNamespace("ragg", quietly = TRUE)) {
-    stop("A download footer needs the 'png' and 'ragg' packages.",
-         call. = FALSE)
-  }
-
   img <- png::readPNG(png)
   h <- dim(img)[1L]
   w <- dim(img)[2L]

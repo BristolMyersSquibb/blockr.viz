@@ -466,6 +466,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "none",
+      "connect_centers": "off",
       "band_window": "fixed",
       "band_size": 45,
       "band_min_n": 12,
@@ -485,7 +486,8 @@
       "caption": null,
       "ctrl_target": "",
       "ctrl_table": "",
-      "script": ""
+      "script": "",
+      "whiskers": "p10_p90"
      },
      "opts": {
       "priority": "event"
@@ -677,6 +679,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "none",
+      "connect_centers": "off",
       "band_window": "fixed",
       "band_size": "30",
       "band_min_n": 12,
@@ -696,7 +699,8 @@
       "caption": null,
       "ctrl_target": "",
       "ctrl_table": "",
-      "script": ""
+      "script": "",
+      "whiskers": "p10_p90"
      },
      "opts": {
       "priority": "event"
@@ -817,6 +821,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "none",
+      "connect_centers": "off",
       "band_window": "fixed",
       "band_size": "30",
       "band_min_n": "5",
@@ -836,7 +841,8 @@
       "caption": null,
       "ctrl_target": "",
       "ctrl_table": "",
-      "script": ""
+      "script": "",
+      "whiskers": "p10_p90"
      },
      "opts": {
       "priority": "event"
@@ -961,6 +967,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "none",
+      "connect_centers": "off",
       "band_window": "fixed",
       "band_size": "30",
       "band_min_n": "5",
@@ -980,7 +987,8 @@
       "caption": null,
       "ctrl_target": "",
       "ctrl_table": "",
-      "script": ""
+      "script": "",
+      "whiskers": "p10_p90"
      },
      "opts": {
       "priority": "event"

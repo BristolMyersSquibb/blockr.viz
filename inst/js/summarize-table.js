@@ -702,7 +702,7 @@
     var s = '<div class="blockr-summarize-lane blockr-summarize-pacell' +
       (c.dash[i] ? " is-dash" : "") + '"' +
       (c.fill[i] != null ? ' style="--blockr-summarize-fill:' + c.fill[i] + '"' : "") +
-      (c.tip[i] ? ' data-summarize-tip="' + c.tip[i] + '"' : "") + ">";
+      (c.tip[i] ? ' data-summarize-tip="' + esc(c.tip[i]) + '"' : "") + ">";
     if (c.bw[i] != null) {
       s += '<i class="lane-band" style="left:' + p(c.bl[i]) + "%;width:" +
         p(c.bw[i]) + '%"></i>';
@@ -818,9 +818,9 @@
         esc(p.label[i]) + '"' +
         (parent && p.parent_key ? ' data-summarize-key="' +
           esc(p.parent_key[i]) + '"' : "") +
+        (child ? ' data-summarize-parent="' + esc(p.parent[i]) + '"' : "") +
         (child && p.parent_key ? ' data-summarize-parent-key="' +
           esc(p.parent_key[i]) + '"' : "") +
-        (child ? ' data-summarize-parent="' + esc(p.parent[i]) + '"' : "") +
         ' data-summarize-level="' + (child ? p.level[i] : 0) +
         '" data-summarize-ord="' + i + '">';
       row += '<td class="blockr-summarize-label-col blockr-stub' +
@@ -2583,9 +2583,10 @@
         }
       },
       onMults: function () {},
+      // The Reset's path: drops the highlight and the footer's words, and
+      // sends clear_filter, which R handles (it has no filter_values setter).
       onClearFilter: function () {
-        rows(root).forEach(function (r) { r.classList.remove("is-on"); });
-        sendConfig(elemId, "filter_values", null);
+        if (root._summarizeClear) root._summarizeClear();
       },
       ensureDefaults: function () {},
       afterTypeChange: function () {},
@@ -2672,13 +2673,26 @@
       });
     }
 
+    // Open, the band is a layer in the page (Blockr.layer), as the heatmap's
+    // gear tray: Escape in the band or on the gear closes it and focuses the
+    // gear. Every close goes through closePop, so the band reset runs too.
+    /** @type {{ remove: () => void } | null} */
+    var layer = null;
     function openPop() {
       pop.classList.add("blockr-settings--open");
       btn.setAttribute("aria-expanded", "true");
+      if (!layer && B && B.layer) {
+        layer = B.layer(pop, {
+          from: btn,
+          inPage: true,
+          escape: function () { closePop(); btn.focus(); }
+        });
+      }
     }
     function closePop() {
       pop.classList.remove("blockr-settings--open");
       btn.setAttribute("aria-expanded", "false");
+      if (layer) { layer.remove(); layer = null; }
       // Back to the server's state for everything the gear held.
       if (root._summarizeBand) root._summarizeBand();
     }

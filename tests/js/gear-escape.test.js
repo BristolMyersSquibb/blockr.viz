@@ -1,0 +1,171 @@
+/* Escape closes the gear tray of the chart, table, tile and summarize table,
+ * as it does the heatmap's (Blockr.gearTray): pressed in the band or on the
+ * gear, it closes the band and focuses the gear. */
+'use strict';
+
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const { Window } = require('happy-dom');
+const h = require('./harness.js');
+const I = require('./interact');
+const fixtures = require('./fixtures/summarize-table.json');
+
+const SHARED = [...h.UI_FILES, 'drilldown-agg.js', 'drilldown-config.js',
+  'capture-pages.js', 'busy-cue.js'];
+
+function mount(html, files) {
+  const win = new Window({ url: 'http://localhost/' });
+  win.eval(h.PRELUDE);
+  win.document.body.innerHTML = html;
+  win.eval(h.iconsScript());
+  for (const f of [...SHARED, ...files]) win.eval(h.source(f));
+  win.document.dispatchEvent(new win.Event('DOMContentLoaded'));
+  return win;
+}
+
+const click = (el) => el.dispatchEvent(new el.ownerDocument.defaultView.MouseEvent(
+  'click', { bubbles: true, cancelable: true }));
+const escape = (el) => el.dispatchEvent(new el.ownerDocument.defaultView.KeyboardEvent(
+  'keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+/** Open with the gear, close with Escape on `where(band, gear)`, then check
+ *  that the gear still toggles and its close drops the layer. Focus on the
+ *  gear can open its tooltip, a layer too, so counts are taken around the
+ *  gear's own close only. */
+function check(win, band, gear, where) {
+  const isOpen = () => band.classList.contains('blockr-settings--open');
+  const before = win.Blockr.layer.count();
+  click(gear);
+  assert.ok(isOpen(), 'the gear opens the band');
+  assert.equal(win.Blockr.layer.count(), before + 1, 'the open band is a layer');
+  escape(where(band, gear));
+  assert.equal(isOpen(), false, 'Escape closes the band');
+  if (gear.hasAttribute('aria-expanded')) {
+    assert.equal(gear.getAttribute('aria-expanded'), 'false');
+  }
+  assert.equal(win.document.activeElement, gear, 'focus is on the gear');
+  click(gear);
+  assert.ok(isOpen(), 'the gear opens it again');
+  const open = win.Blockr.layer.count();
+  click(gear);
+  assert.equal(isOpen(), false);
+  assert.equal(win.Blockr.layer.count(), open - 1, 'a gear close drops the layer');
+}
+
+const onGear = (band, gear) => gear;
+const inBand = (band) => band;
+
+test('Escape closes the chart gear tray', async () => {
+  const c = I.open({ chart_type: 'bar', group: 'AETERM' });
+  try {
+    check(c.env.win, c.block.popoverEl, c.block.gearBtn, onGear);
+    check(c.env.win, c.block.popoverEl, c.block.gearBtn, inBand);
+    assert.equal(c.block._popoverOpen, false);
+  } finally {
+    await c.env.close();
+  }
+});
+
+const TABLE = `
+  <div class="drilldown-table-container" data-dt-elem-id="tbl">
+    <table class="blockr-table">
+      <thead><tr><th class="blockr-col-header leaf" data-col-index="0">n</th></tr></thead>
+      <tbody><tr class="blockr-data-row"><td class="blockr-data">1</td></tr></tbody>
+    </table>
+  </div>`;
+
+test('Escape closes the table gear tray', async () => {
+  const win = mount(TABLE, ['table.js']);
+  const band = win.document.querySelector('.blockr-settings.dd-popover');
+  const gear = win.document.querySelector('.blockr-gear-btn');
+  assert.ok(band && gear, 'the table has a gear');
+  check(win, band, gear, onGear);
+  check(win, band, gear, inBand);
+  win.happyDOM.abort();
+  await win.happyDOM.close();
+});
+
+const TILE = `
+  <div class="tk-block" data-tk-elem-id="tile"
+       data-tk-cols='[{"name":"AGE","type":"numeric"}]' data-tk-config='{}'></div>`;
+
+test('Escape closes the tile gear tray', async () => {
+  const win = mount(TILE, ['tile-block.js']);
+  const band = win.document.querySelector('.blockr-settings.dd-popover');
+  const gear = win.document.querySelector('.blockr-gear-btn');
+  assert.ok(band && gear, 'the tile has a gear');
+  check(win, band, gear, onGear);
+  check(win, band, gear, inBand);
+  win.happyDOM.abort();
+  await win.happyDOM.close();
+});
+
+test('Escape closes the summarize table gear tray and resets its band', async () => {
+  const c = fixtures.flat;
+  const win = mount(c.chrome, ['table.js', 'summarize-table.js']);
+  const p = c.payloads[0];
+  win.__handlers['blockr-viz-summarize-data']({ id: c.id, rev: p.rev, payload: p.payload });
+  const root = win.document.querySelector('[data-summarize-elem-id]');
+  const band = win.document.querySelector('.blockr-settings.dd-popover');
+  const gear = win.document.querySelector('.blockr-gear-btn');
+  let resets = 0;
+  const reset = root._summarizeBand;
+  root._summarizeBand = function () { resets++; return reset.apply(this, arguments); };
+  check(win, band, gear, onGear);
+  assert.equal(resets, 2, 'Escape and the gear both reset the band');
+  check(win, band, gear, inBand);
+  assert.equal(resets, 4);
+  win.happyDOM.abort();
+  await win.happyDOM.close();
+});
+
+test('Escape closes the summary table gear tray', async () => {
+  const win = mount('<div class="summary-table-block-container" id="stb"></div>',
+    ['summary-table-block.js']);
+  const host = win.document.getElementById('stb');
+  win.__binding.initialize(host);
+  const band = host.querySelector('.blockr-settings');
+  const gear = host.querySelector('.blockr-gear-btn');
+  assert.ok(band && gear, 'the summary table has a gear');
+  check(win, band, gear, onGear);
+  check(win, band, gear, inBand);
+  win.happyDOM.abort();
+  await win.happyDOM.close();
+});
+
+// The picker block's script is inline in R/picker-block.R, so it takes R to
+// get it. The JS job in CI has no R; there the test is skipped.
+function pickerScript() {
+  const r = require('node:child_process').spawnSync('Rscript', ['-e', [
+    'e <- new.env(); sys.source("R/picker-block.R", e)',
+    'a <- e$picker_block_assets(function(x) paste0("pk-", x))',
+    's <- Filter(function(t) inherits(t, "shiny.tag") && t$name == "script", a)',
+    'cat(as.character(s[[1]]$children[[1]]))'
+  ].join('; ')], { cwd: require('node:path').join(__dirname, '..', '..'), encoding: 'utf8' });
+  return r.status === 0 ? r.stdout : null;
+}
+const PICKER_JS = pickerScript();
+
+test('Escape closes the picker gear tray', { skip: !PICKER_JS && 'needs Rscript' }, async () => {
+  const win = mount(`
+    <div class="block-container blockr-picker">
+      <div class="blockr-gear-header">
+        <button id="pk-gear" type="button" class="blockr-gear-btn"></button>
+      </div>
+      <div id="pk-band" class="blockr-settings blockr-settings--beak">
+        <div id="pk-rows" class="pk-rows"></div>
+        <div class="blockr-add-row"><span id="pk-add" class="blockr-add-link">
+          <span class="blockr-add-icon"></span>Add picker</span></div>
+      </div>
+      <div id="pk-face"></div>
+    </div>`, []);
+  // Connected already, so the script announces itself without waiting.
+  win.Shiny.shinyapp = { isConnected: () => true };
+  win.eval(PICKER_JS);
+  const band = win.document.getElementById('pk-band');
+  const gear = win.document.getElementById('pk-gear');
+  check(win, band, gear, onGear);
+  check(win, band, gear, inBand);
+  win.happyDOM.abort();
+  await win.happyDOM.close();
+});

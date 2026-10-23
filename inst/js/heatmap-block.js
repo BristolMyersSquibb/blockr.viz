@@ -10,9 +10,10 @@
  *   - assembles the matrix rows from the sparse cell model, with a data
  *     tooltip per cell and the header following the panel's scroll,
  *   - wires the search tool and the row click, which is an event sent over
- *     the control bridge to the board's drill filter (as the composer
- *     table's): nothing latches here, and a board with no drill filter leaves
- *     the rows inert.
+ *     the control bridge to the filter the gear's "Send to filter" section
+ *     names, by default the board's drill filter (as the composer table's):
+ *     nothing latches here, and a target that resolves to nothing leaves the
+ *     rows inert.
  * Mirrors tile-block.js (scan + MutationObserver init, idempotent per root).
  */
 (function () {
@@ -112,7 +113,7 @@
   /** @param {Element} root @param {string} elemId */
   function wireDrill(root, elemId) {
     root.addEventListener('click', function (e) {
-      // data-hmb-drill is "1" while the board has a drill filter to send to.
+      // data-hmb-drill is "1" while the click has a filter to send to.
       if (root.getAttribute('data-hmb-drill') !== '1') return;
       var t = /** @type {Element|null} */ (e.target);
       var tr = t && t.closest('tr.hmb-r');
@@ -175,7 +176,9 @@
       summaries: false,
       aggregatable: false,
       colorSection: null,
-      ctrlSection: false,
+      // The click always sends, so there is no drill switch: the engine
+      // gives the target a Drill-down section of its own (cfg.ctrl_*).
+      ctrlSection: true,
       presentation: ['cell_numbers', 'download'],
       titles: ['title', 'subtitle', 'caption']
     };
@@ -299,7 +302,7 @@
     // caption's join them there.
     offersEl.textContent = '';
     /** @type {string[]} */
-    var offers = [].concat(
+    var offers = /** @type {string[]} */ ([]).concat(
       unlockOffers(cfg.subtitle_offers, cfg),
       unlockOffers(cfg.title_offers, cfg),
       unlockOffers(cfg.caption_offers, cfg)

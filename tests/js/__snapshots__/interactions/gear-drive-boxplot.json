@@ -114,6 +114,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "none",
+      "connect_centers": "off",
       "band_window": "adaptive",
       "band_size": 45,
       "band_min_n": 12,
@@ -133,7 +134,9 @@
       "caption": null,
       "ctrl_target": "",
       "ctrl_table": "",
-      "script": ""
+      "script": "",
+      "summary": "mean_sd",
+      "whiskers": "tukey"
      },
      "opts": {
       "priority": "event"
@@ -314,6 +317,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "none",
+      "connect_centers": "off",
       "band_window": "adaptive",
       "band_size": 45,
       "band_min_n": 12,
@@ -333,7 +337,9 @@
       "caption": null,
       "ctrl_target": "",
       "ctrl_table": "",
-      "script": ""
+      "script": "",
+      "summary": "mean_sd",
+      "whiskers": "min_max"
      },
      "opts": {
       "priority": "event"
@@ -518,6 +524,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "outliers",
+      "connect_centers": "off",
       "band_window": "adaptive",
       "band_size": 45,
       "band_min_n": 12,
@@ -537,7 +544,9 @@
       "caption": null,
       "ctrl_target": "",
       "ctrl_table": "",
-      "script": ""
+      "script": "",
+      "summary": "mean_sd",
+      "whiskers": "min_max"
      },
      "opts": {
       "priority": "event"
@@ -726,6 +735,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "outliers",
+      "connect_centers": "off",
       "band_window": "adaptive",
       "band_size": 45,
       "band_min_n": 12,
@@ -745,7 +755,8 @@
       "caption": null,
       "ctrl_target": "",
       "ctrl_table": "",
-      "script": ""
+      "script": "",
+      "summary": "mean_sd"
      },
      "opts": {
       "priority": "event"
@@ -952,6 +963,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "outliers",
+      "connect_centers": "on",
       "band_window": "adaptive",
       "band_size": 45,
       "band_min_n": 12,
@@ -971,7 +983,8 @@
       "caption": null,
       "ctrl_target": "",
       "ctrl_table": "",
-      "script": ""
+      "script": "",
+      "summary": "mean_sd"
      },
      "opts": {
       "priority": "event"

@@ -116,6 +116,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "none",
+      "connect_centers": "off",
       "band_window": "adaptive",
       "band_size": 45,
       "band_min_n": 12,
@@ -378,6 +379,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "none",
+      "connect_centers": "off",
       "band_window": "adaptive",
       "band_size": 45,
       "band_min_n": 12,
@@ -397,7 +399,9 @@
       "caption": null,
       "ctrl_target": "",
       "ctrl_table": "",
-      "script": ""
+      "script": "",
+      "summary": "median_q1_q3",
+      "whiskers": "tukey"
      },
      "opts": {
       "priority": "event"
@@ -576,6 +580,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "none",
+      "connect_centers": "off",
       "band_window": "adaptive",
       "band_size": 45,
       "band_min_n": 12,
@@ -816,6 +821,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "none",
+      "connect_centers": "off",
       "band_window": "adaptive",
       "band_size": 45,
       "band_min_n": 12,
@@ -1047,6 +1053,7 @@
       "value_lines": "",
       "x_lines": "",
       "box_points": "none",
+      "connect_centers": "off",
       "band_window": "adaptive",
       "band_size": 45,
       "band_min_n": 12,
