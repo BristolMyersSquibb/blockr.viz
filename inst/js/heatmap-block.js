@@ -302,7 +302,7 @@
     // caption's join them there.
     offersEl.textContent = '';
     /** @type {string[]} */
-    var offers = [].concat(
+    var offers = /** @type {string[]} */ ([]).concat(
       unlockOffers(cfg.subtitle_offers, cfg),
       unlockOffers(cfg.title_offers, cfg),
       unlockOffers(cfg.caption_offers, cfg)
