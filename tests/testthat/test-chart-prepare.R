@@ -387,3 +387,38 @@ test_that("column labels survive a script that filters with base `[`", {
   # A label the script sets is its own.
   expect_identical(attr(out$data$AVAL, "label"), "Result")
 })
+
+
+test_that("a click on a column the script makes filters after the script", {
+  d <- data.frame(USUBJID = c("1", "2", "3", "4"), AGE = c(30, 50, 70, 40),
+                  SEX = c("F", "F", "M", "M"))
+  # A restored click on the script's AGEGR and the upstream SEX: AGEGR used
+  # to be filtered on the source rows, which have no AGEGR.
+  blk <- new_chart_block(
+    chart_type = "bar", group = "AGEGR", color = "SEX",
+    script = 'dplyr::mutate(data, AGEGR = ifelse(AGE < 45, "young", "old"))',
+    filters = list(AGEGR = "young", SEX = "M"), filter_type = "categorical"
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      ex <- do.call(bquote, list(session$returned$expr(),
+                                 list(data = quote(d))))
+      out <- eval(ex, list(d = d))
+      expect_identical(out$USUBJID, "4")
+      # SEX, an upstream column, still filters the source rows.
+      expect_match(paste(deparse(ex), collapse = ""),
+                   "mutate(dplyr::filter(d, .data[[\"SEX\"]]", fixed = TRUE)
+    },
+    args = list(x = blk, data = list(data = function() d))
+  )
+})
+
+test_that("dd_drill_post sends only script-made columns after the script", {
+  cols <- list("SEX", "AGEGR", c("AGE", "AGEGR"))
+  expect_identical(dd_drill_post(cols, c("USUBJID", "AGE", "SEX")),
+                   c(FALSE, TRUE, TRUE))
+  expect_identical(dd_drill_post(cols, NULL), c(FALSE, FALSE, FALSE))
+  expect_identical(dd_drill_post(list(), c("SEX")), logical())
+})

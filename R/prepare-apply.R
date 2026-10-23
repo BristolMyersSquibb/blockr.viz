@@ -98,6 +98,25 @@ dd_prepare_run <- function(data, parsed, specs, values = list()) {
 }
 
 
+#' Which click-filter conditions run after the prepare script
+#'
+#' A click filter wraps into the script's `.(data)` slot, so it filters the
+#' source rows. A condition on a column only the script makes (a group the
+#' script derives) cannot run there; it goes after the script instead.
+#'
+#' @param cols A list, per condition the column names it reads.
+#' @param src_cols The upstream's column names; NULL (not seen yet) keeps
+#'   every condition before the script.
+#' @return A logical vector, TRUE for a condition to filter after the script.
+#' @noRd
+dd_drill_post <- function(cols, src_cols = NULL) {
+  if (is.null(src_cols)) {
+    return(rep(FALSE, length(cols)))
+  }
+  vapply(cols, function(cc) !all(cc %in% src_cols), logical(1L))
+}
+
+
 #' Splice an expression into every `.(data)` slot of another
 #'
 #' The block's expression is the click filter with the script wrapped around
