@@ -2672,13 +2672,26 @@
       });
     }
 
+    // Open, the band is a layer in the page (Blockr.layer), as the heatmap's
+    // gear tray: Escape in the band or on the gear closes it and focuses the
+    // gear. Every close goes through closePop, so the band reset runs too.
+    /** @type {{ remove: () => void } | null} */
+    var layer = null;
     function openPop() {
       pop.classList.add("blockr-settings--open");
       btn.setAttribute("aria-expanded", "true");
+      if (!layer && B && B.layer) {
+        layer = B.layer(pop, {
+          from: btn,
+          inPage: true,
+          escape: function () { closePop(); btn.focus(); }
+        });
+      }
     }
     function closePop() {
       pop.classList.remove("blockr-settings--open");
       btn.setAttribute("aria-expanded", "false");
+      if (layer) { layer.remove(); layer = null; }
       // Back to the server's state for everything the gear held.
       if (root._summarizeBand) root._summarizeBand();
     }

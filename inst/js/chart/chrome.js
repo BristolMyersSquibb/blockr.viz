@@ -86,6 +86,7 @@
         this.popoverEl.classList.add('blockr-settings--open');
         this.gearBtn.classList.add('blockr-gear-active');
         this.gearBtn.setAttribute('aria-expanded', 'true');
+        this._trayLayer(true);
       }
 
       // Titles are HTML, once above a facet grid, on the header's left.
@@ -259,6 +260,7 @@
       this._popoverOpen = true;
       this.gearBtn.classList.add('blockr-gear-active');
       this.gearBtn.setAttribute('aria-expanded', 'true');
+      this._trayLayer(true);
       // The band is in flow, so the chart has less room now.
       this._resizeCharts();
     },
@@ -268,7 +270,21 @@
       this._popoverOpen = false;
       this.gearBtn.classList.remove('blockr-gear-active');
       this.gearBtn.setAttribute('aria-expanded', 'false');
+      this._trayLayer(false);
       this._resizeCharts();
+    },
+    // Open, the band is a layer in the page (Blockr.layer), as the heatmap's
+    // gear tray: Escape in the band or on the gear closes it and focuses the
+    // gear.
+    /** @this {any} @param {boolean} on */
+    _trayLayer(on) {
+      if (this._trayLayerH) { this._trayLayerH.remove(); this._trayLayerH = null; }
+      if (!on || typeof Blockr === 'undefined' || !Blockr.layer) return;
+      this._trayLayerH = Blockr.layer(this.popoverEl, {
+        from: this.gearBtn,
+        inPage: true,
+        escape: () => { this._closePopover(); this.gearBtn.focus(); }
+      });
     },
 
     // What R gets after a gear edit: every setting, verbatim where null and

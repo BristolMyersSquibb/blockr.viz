@@ -130,6 +130,8 @@
       /** @type {boolean | undefined} */
       this._popoverOpen = undefined;
       /** @type {any} */
+      this._trayLayerH = null;
+      /** @type {any} */
       this._resizeObserver = null;
       /** @type {any} */
       this._resizeRaf = null;
