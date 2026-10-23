@@ -323,8 +323,9 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
   section_groups <- any(grepl("^\\.group\\d+_level$", names(data)))
   has_fold_all <- isTRUE(collapsible) && !is.null(stub_col) &&
     (indent_groups || section_groups)
-  fold_all_first <- has_fold_all && stub_by_row &&
-    !isTRUE(nzchar(stub_labels[[1L]]))
+  # Per-row stub labels: the button goes in the top one, beside its title
+  # or reading "All" when it is blank.
+  fold_all_first <- has_fold_all && stub_by_row
 
   rows <- vector("list", max_depth)
 
@@ -340,7 +341,7 @@ build_html_thead <- function(data, data_cols, stub_col, stub_sortable = FALSE,
       if (isTRUE(stub_sortable)) stub_class <- paste(stub_class, "blockr-sortable")
       stub_class <- stub_header_class(stub_class, stub_label_bold[[1L]])
       stub_content <- if (fold_all_first) {
-        fold_all_header_content()
+        fold_all_header_content(stub_labels[[1L]])
       } else {
         stub_header_content(
           if (stub_by_row) stub_labels[[1L]] else stub_labels
@@ -510,9 +511,11 @@ stub_header_content <- function(label = NULL) {
   htmltools::HTML(paste(htmltools::htmlEscape(parts), collapse = "<br>"))
 }
 
-#' A row-stub fold-all control.
+#' A row-stub fold-all control, beside the title when there is one.
 #' @noRd
-fold_all_header_content <- function() {
+fold_all_header_content <- function(title = NULL) {
+  titled <- is.character(title) && length(title) == 1L && !is.na(title) &&
+    any(nzchar(strsplit(title, "\n", fixed = TRUE)[[1L]]))
   htmltools::tags$div(
     class = "dt-foldall-wrap",
     htmltools::tags$button(
@@ -522,8 +525,11 @@ fold_all_header_content <- function() {
       `aria-label` = "Collapse all groups",
       `data-blockr-tooltip` = "Collapse all groups",
       section_chevron_svg(),
-      htmltools::tags$span(class = "dt-foldall-all", "All")
-    )
+      if (!titled) htmltools::tags$span(class = "dt-foldall-all", "All")
+    ),
+    if (titled) {
+      htmltools::tags$span(class = "dt-stub-title", stub_header_content(title))
+    }
   )
 }
 
@@ -1855,11 +1861,8 @@ html_table_js_template <- function() {
     );
     if (rendered) return bindFoldAll(rendered);
 
-    var ths = table.querySelectorAll('thead th.blockr-stub-header');
-    var first = ths.length ? ths[0] : null;
-    var firstTitle = first ? (first.textContent || '').trim() : '';
-    var multiBlankStub = ths.length > 1 && !firstTitle;
-    var th = multiBlankStub ? first : (ths.length === 1 ? ths[0] : null);
+    // Always the top stub header, titled or blank.
+    var th = table.querySelector('thead th.blockr-stub-header');
     if (!th) return null;
     var existing = th.querySelector('.dt-foldall');
     if (existing) return bindFoldAll(existing);

@@ -401,12 +401,9 @@
     );
     if (rendered) return bindFoldAll(rendered);
 
-    var ths = table.querySelectorAll("thead th.blockr-stub-header");
-    var first = /** @type {HTMLElement | null} */ (ths.length ? ths[0] : null);
-    var firstTitle = first ? (first.textContent || "").trim() : "";
-    var multiBlankStub = ths.length > 1 && !firstTitle;
+    // Always the top stub header, titled or blank, never a lower row label.
     var th = /** @type {HTMLElement | null} */ (
-      multiBlankStub ? first : (ths.length === 1 ? ths[0] : null)
+      table.querySelector("thead th.blockr-stub-header")
     );
     if (!th) return null;
     var existing = /** @type {HTMLButtonElement | null} */ (
