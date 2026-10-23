@@ -2583,9 +2583,10 @@
         }
       },
       onMults: function () {},
+      // The Reset's path: drops the highlight and the footer's words, and
+      // sends clear_filter, which R handles (it has no filter_values setter).
       onClearFilter: function () {
-        rows(root).forEach(function (r) { r.classList.remove("is-on"); });
-        sendConfig(elemId, "filter_values", null);
+        if (root._summarizeClear) root._summarizeClear();
       },
       ensureDefaults: function () {},
       afterTypeChange: function () {},

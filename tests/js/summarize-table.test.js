@@ -237,6 +237,23 @@ test('a latched drill: a row click filters, a second click on it clears', async 
   await t.close();
 });
 
+test('a gear change that drops the filter sends clear_filter', async () => {
+  const t = open('flat');
+  const row = t.rows()[1];
+  click(row);
+  click(t.doc.querySelector('.blockr-gear-btn'));
+  const box = Array.from(t.band().querySelectorAll('.blockr-checkbox'))
+    .find((b) => /Filter downstream on a click/.test(b.textContent));
+  assert.ok(box, 'the band has the drill checkbox');
+  click(box.querySelector('input'));
+  const acts = t.actions();
+  assert.deepEqual(acts.at(-2), { action: 'config', param: 'drill', value: '' });
+  assert.equal(acts.at(-1).action, 'clear_filter');
+  assert.equal(row.classList.contains('is-on'), false);
+  assert.match(t.footer(), /No filter active/);
+  await t.close();
+});
+
 test('a nested drill claims the row path: parent the outer column, child both', async () => {
   const t = open('nested_drill');
   const row = (label) => t.rows().find((r) => r.getAttribute('data-summarize-label') === label);
