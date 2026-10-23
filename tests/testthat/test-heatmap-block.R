@@ -453,6 +453,32 @@ test_that("heatmap_matrix is the matrix the block draws", {
                "not in the data")
 })
 
+test_that("heatmap_matrix of no rows is an empty matrix, not an error", {
+  m <- heatmap_matrix(hm_toy()[0, ], row = "USUBJID", col = "AEDECOD",
+                      group = "ARM")
+  expect_identical(names(m), c("USUBJID", "ARM"))
+  expect_identical(nrow(m), 0L)
+  blank <- data.frame(USUBJID = c("s1", NA), AEDECOD = c("", "RASH"))
+  expect_identical(nrow(heatmap_matrix(blank, "USUBJID", "AEDECOD")), 0L)
+  # The columns are still checked.
+  expect_error(heatmap_matrix(hm_toy()[0, ], row = "NOPE", col = "AEDECOD"),
+               "not in the data")
+})
+
+test_that("a block over no rows has an empty result, not an error", {
+  blk <- new_heatmap_block(row = "USUBJID", col = "AEDECOD")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      out <- session$returned$result()
+      expect_s3_class(out, "data.frame")
+      expect_identical(nrow(out), 0L)
+    },
+    args = list(x = blk, data = list(data = function() hm_toy()[0, ]))
+  )
+})
+
 test_that("the block's result is the matrix, after the script", {
   blk <- new_heatmap_block(
     row = "USUBJID", col = "AEDECOD", group = "ARM",
