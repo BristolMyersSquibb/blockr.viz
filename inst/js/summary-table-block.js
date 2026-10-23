@@ -102,6 +102,8 @@
       this.gearBtn = document.createElement('button');
       this.popover = document.createElement('div');
       this._bandGrid = document.createElement('div');
+      /** @type {{ remove: () => void } | null} */
+      this._layer = null;
 
       /** @type {((value: string) => void) | null} */
       this._overallLabelSync = null;
@@ -505,9 +507,23 @@
     }
 
     _togglePopover() {
-      const showing = !this.popover.classList.contains('blockr-settings--open');
+      this._setPopover(!this.popover.classList.contains('blockr-settings--open'));
+    }
+
+    // Open, the band is a layer in the page (Blockr.layer), as the heatmap's
+    // gear tray: Escape in the band or on the gear closes it and focuses the
+    // gear.
+    /** @param {boolean} showing */
+    _setPopover(showing) {
       this.popover.classList.toggle('blockr-settings--open', showing);
       this.gearBtn.classList.toggle('blockr-gear-active', showing);
+      if (this._layer) { this._layer.remove(); this._layer = null; }
+      if (!showing || !Blockr.layer) return;
+      this._layer = Blockr.layer(this.popover, {
+        from: this.gearBtn,
+        inPage: true,
+        escape: () => { this._setPopover(false); this.gearBtn.focus(); }
+      });
     }
 
     _submit() {

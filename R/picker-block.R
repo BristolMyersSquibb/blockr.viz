@@ -829,9 +829,23 @@ picker_block_assets <- function(ns) {
         gear.innerHTML = Blockr.icons.gear;
         var addIcon = add.querySelector('.blockr-add-icon');
         if (addIcon) addIcon.innerHTML = Blockr.icons.plus;
-        gear.addEventListener('click', function () {
-          var open = band.classList.toggle('blockr-settings--open');
+        // Open, the band is a layer in the page (Blockr.layer), as the
+        // heatmap's gear tray: Escape in the band or on the gear closes it
+        // and focuses the gear.
+        var layer = null;
+        function setBand(open) {
+          band.classList.toggle('blockr-settings--open', open);
           gear.classList.toggle('blockr-gear-active', open);
+          if (layer) { layer.remove(); layer = null; }
+          if (!open || !Blockr.layer) return;
+          layer = Blockr.layer(band, {
+            from: gear,
+            inPage: true,
+            escape: function () { setBand(false); gear.focus(); }
+          });
+        }
+        gear.addEventListener('click', function () {
+          setBand(!band.classList.contains('blockr-settings--open'));
         });
         add.addEventListener('click', function () {
           // Start empty: the builder curates which columns this picker offers.
