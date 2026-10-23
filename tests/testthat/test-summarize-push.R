@@ -679,6 +679,21 @@ test_that("a coloured pair column draws one dumbbell per level", {
                             "[^>]*>.*?blockr-summarize-barval"))
 })
 
+test_that("a pair's tip ships as text and is escaped once, in the cell", {
+  ae <- push_fixture()
+  # TERM's first level is "T <1> & co".
+  prep <- summarize_prepare(ae, by = "SOC", summaries = list(
+    list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
+         to_func = "mean", color = "TERM")
+  ))
+  m <- summarize_cells(prep)
+  c1 <- m$cols[[1]]
+  expect_match(c1$lv[[1]]$tip[[1]], "^T <1> & co \u00b7 ")
+  html <- summarize_cells_html(m)
+  expect_match(html, "data-summarize-tip=\"T &lt;1&gt; &amp; co", fixed = TRUE)
+  expect_no_match(html, "&amp;amp;", fixed = TRUE)
+})
+
 test_that("a coloured pair of one level per row labels that level", {
   ae <- push_fixture()
   ae <- ae[!duplicated(ae$USUBJID), ]

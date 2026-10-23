@@ -702,7 +702,7 @@
     var s = '<div class="blockr-summarize-lane blockr-summarize-pacell' +
       (c.dash[i] ? " is-dash" : "") + '"' +
       (c.fill[i] != null ? ' style="--blockr-summarize-fill:' + c.fill[i] + '"' : "") +
-      (c.tip[i] ? ' data-summarize-tip="' + c.tip[i] + '"' : "") + ">";
+      (c.tip[i] ? ' data-summarize-tip="' + esc(c.tip[i]) + '"' : "") + ">";
     if (c.bw[i] != null) {
       s += '<i class="lane-band" style="left:' + p(c.bl[i]) + "%;width:" +
         p(c.bw[i]) + '%"></i>';

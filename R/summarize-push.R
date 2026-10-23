@@ -384,7 +384,9 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         open <- band & !is.na(b) & (b < blo | b > bhi)
         delta <- b - a
         pre <- if (is.null(lvl)) "" else paste0(lvl, " \u00b7 ")
-        tip <- ifelse(is.na(a) & is.na(b), "", summarize_esc(paste0(
+        # Plain text, unlike the glyph's tip: the hover card reads it from
+        # the payload and escapes it, the cell escapes it into its attribute.
+        tip <- ifelse(is.na(a) & is.na(b), "", paste0(
           pre,
           ifelse(is.na(a), "", paste0(wd$from, " ", lane_fmt(a))),
           ifelse(both, " \u2192 ", ""),
@@ -394,20 +396,20 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
           ifelse(band, paste0(" \u00b7 range ",
                               ifelse(is.na(lo), "", lane_fmt(lo)), "\u2013",
                               ifelse(is.na(hi), "", lane_fmt(hi))), "")
-        )))
+        ))
         disp <- if (lab_on) {
           ifelse(both, paste0(ifelse(signed & delta >= 0, "+", ""),
                               summarize_val_str(delta, dig)), "")
         }
         # The ends without their words, for the split card's one line per
         # level ("30.5 -> 53 (+22.5)"); the words head the card once.
-        ab <- ifelse(is.na(a) & is.na(b), "", summarize_esc(paste0(
+        ab <- ifelse(is.na(a) & is.na(b), "", paste0(
           ifelse(is.na(a), "", lane_fmt(a)),
           ifelse(both, " \u2192 ", ""),
           ifelse(is.na(b), "", lane_fmt(b)),
           ifelse(both, paste0(" (", ifelse(delta >= 0, "+", ""),
                               lane_fmt(delta), ")"), "")
-        )))
+        ))
         list(kind = "pair",
              a = pos_w(a), b = pos_w(b),
              l = ifelse(both, pos_w(pmin(a, b)), NA_real_),
@@ -1337,7 +1339,7 @@ summarize_pair_html <- function(c) {
         ""
       },
       if (nzchar(c$tip[[i]])) {
-        paste0(" data-summarize-tip=\"", c$tip[[i]], "\"")
+        paste0(" data-summarize-tip=\"", summarize_esc(c$tip[[i]]), "\"")
       } else {
         ""
       },
