@@ -647,6 +647,9 @@ new_summarize_table_block <- function(group = NULL,
         last_msg <- new.env(parent = emptyenv())
         last_msg$json <- NULL
         last_msg$rev <- 0L
+        # The browser's picture of the table, for the image and deck
+        # downloads (see "the export picture" below).
+        capture <- shiny::reactiveVal(NULL)
 
         push <- function(json) {
           session$sendCustomMessage("blockr-viz-summarize-data", list(
@@ -750,6 +753,8 @@ new_summarize_table_block <- function(group = NULL,
           if (identical(json, last_msg$json)) return()
           last_msg$json <- json
           last_msg$rev <- last_msg$rev + 1L
+          # A picture of the old table must not reach a download.
+          capture(NULL)
           push(json)
         })
 
@@ -761,7 +766,6 @@ new_summarize_table_block <- function(group = NULL,
         # download menu posts it when it opens, so it is here by the time a
         # format is picked. The painted exhibit (summarize-paint.R) stays the
         # fallback where no browser has drawn one.
-        capture <- shiny::reactiveVal(NULL)
         shiny::observeEvent(input$summarize_table_block_capture, {
           capture(chart_capture_from_msg(input$summarize_table_block_capture))
         })
