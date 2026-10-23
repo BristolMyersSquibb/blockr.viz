@@ -1054,7 +1054,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
         lo = paste0(prefix, "_lo"), hi = paste0(prefix, "_hi"))
     }
     c(base, list(kind = "pair", key = paste0(sid, "_to"),
-                 cols = pcols(sid),
+                 cols = pcols(sid), ncol = paste0(sid, "_n"),
                  fidx = paste0(sid, "_f"), didx = paste0(sid, "_d"),
                  ref = s$ref, levels = lv,
                  words = list(from = words[[1L]], to = words[[2L]]),
@@ -1072,6 +1072,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                pcols(paste0(sid, "_L", j))
              }),
              ldidx = paste0(sid, "_L", seq_along(lv), "_d"),
+             lncol = paste0(sid, "_L", seq_along(lv), "_n"),
              cvar = summarize_col_name(data, s$.color))
       })
   } else if (identical(s$type, "series")) {
@@ -1488,11 +1489,16 @@ LANE_PAIR_WORDS <- c(identity = "", mean = "Mean", median = "Median",
 #' level index `_d`. A colour split adds the same set per level under
 #' `_L<j>`, from that level's rows only.
 #'
-#' Every row summarises its own rows with the row's functions, a parent row
-#' (the SOC above its terms) over all of its rows, like every other column:
-#' the same group_by() + summarise() once per level of `by`.
+#' A leaf row summarises its own rows with the row's functions. A parent row
+#' (the arm above its subjects) is the mean of its leaf rows' values instead:
+#' "baseline to peak per subject" read at the arm is the mean baseline to the
+#' mean peak, where the row's functions over all of the arm's rows would give
+#' the first subject's baseline and the arm's single highest value. The band
+#' and every colour level follow the same rule, and `_n` counts the leaf rows
+#' a parent averages over (NA on leaf rows; per level under `_L<j>_n`).
 #' @noRd
 lane_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
+  parent_row <- length(tkeys) < length(keys)
   agg_one <- function(sl, func, col, kk) {
     if (identical(func, "identity")) {
       g <- dplyr::group_by(sl, dplyr::across(dplyr::all_of(kk)))
@@ -1505,8 +1511,26 @@ lane_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
       summarize_aggregate(sl, kk, func, col, col)
     }
   }
+  # The leaf rows' values: one per group of `keys`, without the rows that
+  # have no group (they draw no leaf row, so no parent averages over them).
+  leaf_vals <- function(sl, func, col) {
+    out <- agg_one(sl, func, col, keys)
+    out[stats::complete.cases(out[keys]), , drop = FALSE]
+  }
   per <- function(sl, func, col) {
-    summarize_match_col(target, agg_one(sl, func, col, tkeys), tkeys, ".v")
+    agg <- if (parent_row) {
+      lv <- leaf_vals(sl, func, col)
+      g <- dplyr::group_by(lv, dplyr::across(dplyr::all_of(tkeys)))
+      out <- as.data.frame(dplyr::summarise(
+        g, .v = if (any(!is.na(.data$.v))) mean(.data$.v, na.rm = TRUE) else
+          NA_real_,
+        .groups = "drop"
+      ))
+      out
+    } else {
+      agg_one(sl, func, col, tkeys)
+    }
+    summarize_match_col(target, agg, tkeys, ".v")
   }
   n <- nrow(target)
   level_idx <- function(sl, col, lv) {
@@ -1522,8 +1546,18 @@ lane_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
     ))
     match(summarize_match_field(target, agg, tkeys, ".t"), lv)
   }
-  # Both ends, the band and the dash index of one slice, under `prefix`:
-  # once for the pooled pair, once per colour level for the split.
+  # The leaf rows of the slice under each parent row: what its mean is over.
+  n_leaf <- function(sl) {
+    if (!parent_row) return(rep(NA_integer_, n))
+    lk <- unique(sl[keys])
+    lk <- lk[stats::complete.cases(lk), , drop = FALSE]
+    agg <- as.data.frame(dplyr::count(lk, dplyr::across(dplyr::all_of(tkeys)),
+                                      name = ".v"))
+    as.integer(summarize_match_col(target, agg, tkeys, ".v"))
+  }
+  # Both ends, the band, the dash index and the leaf count of one slice,
+  # under `prefix`: once for the pooled pair, once per colour level for the
+  # split.
   ends <- function(target, sl, prefix) {
     bound <- function(b) {
       if (is.null(b)) return(rep(NA_real_, n))
@@ -1534,6 +1568,7 @@ lane_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
     target[[paste0(prefix, "_to")]] <- per(sl, s$to_func, s$to)
     target[[paste0(prefix, "_lo")]] <- bound(s$lo)
     target[[paste0(prefix, "_hi")]] <- bound(s$hi)
+    target[[paste0(prefix, "_n")]] <- n_leaf(sl)
     dash <- s$dash
     target[[paste0(prefix, "_d")]] <- if (!is.null(dash) &&
                                             length(s$.dlevels)) {

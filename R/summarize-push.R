@@ -369,7 +369,7 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       signed <- any(deltas < 0, na.rm = TRUE)
       # One dumbbell from one set of end columns, like the glyph above:
       # once for a plain column, once per level for a colour-split one.
-      dumbbell <- function(cn, didx, fill, lvl = NULL) {
+      dumbbell <- function(cn, didx, fill, lvl = NULL, ncol = NULL) {
         a <- rows[[cn[["a"]]]]
         b <- rows[[cn[["b"]]]]
         lo <- rows[[cn[["lo"]]]]
@@ -379,6 +379,11 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         bhi <- ifelse(is.na(hi), dmx, hi)
         both <- !is.na(a) & !is.na(b)
         di <- rows[[didx]]
+        nn <- if (!is.null(ncol) && !is.null(rows[[ncol]])) {
+          rows[[ncol]]
+        } else {
+          rep(NA_integer_, n)
+        }
         # A `to` outside the band is drawn open: the range is the question
         # the band asks, so the mark answers it without a tooltip.
         open <- band & !is.na(b) & (b < blo | b > bhi)
@@ -395,7 +400,11 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
                               lane_fmt(delta), ")"), ""),
           ifelse(band, paste0(" \u00b7 range ",
                               ifelse(is.na(lo), "", lane_fmt(lo)), "\u2013",
-                              ifelse(is.na(hi), "", lane_fmt(hi))), "")
+                              ifelse(is.na(hi), "", lane_fmt(hi))), ""),
+          # A parent row is the mean of the rows under it
+          # (lane_pair_fill()), so its card says over how many.
+          ifelse(is.na(nn), "", paste0(" \u00b7 mean of ", nn,
+                                       ifelse(nn == 1L, " row", " rows")))
         ))
         disp <- if (lab_on) {
           ifelse(both, paste0(ifelse(signed & delta >= 0, "+", ""),
@@ -427,7 +436,7 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         ifelse(is.na(fi), NA_character_, fills[pmax(1L, fi)])
       } else {
         rep(NA_character_, n)
-      })
+      }, ncol = p$ncol)
       if (is.null(p$lcols)) {
         base
       } else {
@@ -437,7 +446,7 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         # change beside its dumbbell; the column keeps one slot width.
         lv <- lapply(seq_along(p$lcols), function(j) {
           g <- dumbbell(p$lcols[[j]], p$ldidx[[j]], rep(fills[[j]], n),
-                        p$levels[[j]])
+                        p$levels[[j]], ncol = p$lncol[j])
           g[c("kind", "rf", "v", "dw")] <- NULL
           g
         })
