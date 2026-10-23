@@ -4,8 +4,9 @@
 # upstream reshape block is needed. The block's result is the matrix itself
 # (heatmap_matrix()), so the assistant and a document read what is on screen.
 # A row click never filters anything: it is an event sent over the control
-# bridge to the board's drill filter (ctrl_auto_target()), as the composer
-# table does. Renderer: R/heatmap-html.R; JS: inst/js/heatmap-block.js.
+# bridge to the filter block the gear names (`ctrl_target`), by default the
+# board's drill filter (ctrl_auto_target()), as the composer table does.
+# Renderer: R/heatmap-html.R; JS: inst/js/heatmap-block.js.
 #
 # The engine knows no AE words. It draws every column it is handed; a cap
 # such as "the 25 most frequent terms" is the prepare script's business, and
@@ -42,15 +43,23 @@
 #'   it restores it as the script's `top_n` value.
 #' @param cell_numbers Show the count in each cell (default `TRUE`). Off,
 #'   the matrix reads as a pure color heatmap.
-#' @param drill LEGACY. A row click always goes to the board's drill filter,
-#'   when the board has one (see [ctrl_auto_target()]).
+#' @param drill LEGACY. A row click goes to `ctrl_target`. A board saved
+#'   with it set and an empty `ctrl_target` sends to `"auto"`.
 #' @param download Logical (default `FALSE`), exposed in the gear: the
 #'   header row grows the shared download tool -- the matrix (row identity,
 #'   group, count columns) written as xlsx / html / pptx.
 #' @param filter_column,filter_values LEGACY. The block no longer filters.
 #' @param max_height LEGACY. The matrix scrolls with its panel.
-#' @param ctrl_target,ctrl_table LEGACY. The target is found by the board,
-#'   see [ctrl_auto_target()].
+#' @param ctrl_target Character(1), beta. Where a row click is sent: the block
+#'   id of a value filter block on the same board, or `"auto"` for the
+#'   board's drill filter (the one `blockr.dm::new_drill_filter_block()`,
+#'   else the one value filter block, see [ctrl_auto_target()]). `NULL`
+#'   (default) means `"auto"`; `""` sends nothing. The gear's "Send to
+#'   filter" section writes it, as for the chart, table, tile and summarize
+#'   table.
+#' @param ctrl_table Character(1), beta. Only with `ctrl_target`: the table
+#'   in the target's dm the clicked row applies to. Empty for a value filter
+#'   fed a plain data frame.
 #' @param title,subtitle,caption Text above and below the matrix, as in
 #'   [new_chart_block()]: `NULL` = the input's own label, `""` = none, else a
 #'   template. `{@arg}` in the subtitle makes the word a control.
@@ -75,13 +84,13 @@ new_heatmap_block <- function(row = character(),
                               group = character(),
                               top_n = NULL,        # LEGACY: script value top_n
                               cell_numbers = TRUE,
-                              drill = NULL,        # LEGACY: bridge only
+                              drill = NULL,        # LEGACY: see ctrl_target
                               download = FALSE,
                               filter_column = NULL, # LEGACY: no filter
                               filter_values = NULL, # LEGACY: no filter
                               max_height = NULL,   # LEGACY: panel scroll
-                              ctrl_target = NULL,  # LEGACY: auto target
-                              ctrl_table = NULL,   # LEGACY: auto target
+                              ctrl_target = NULL,  # NULL = "auto"
+                              ctrl_table = NULL,
                               title = NULL,
                               subtitle = NULL,
                               caption = NULL,
@@ -103,6 +112,8 @@ new_heatmap_block <- function(row = character(),
   script <- cb_script_text(script)
   values <- if (is.list(values)) values else list()
   locked_roles <- hmb_locked_roles(locked_roles)
+  ctrl_target <- hmb_ctrl_target(ctrl_target, drill)
+  ctrl_table <- hmb_ctrl_chr(ctrl_table)
 
   # LEGACY. A board saved before the cap moved into the prepare script carries
   # top_n as an argument; it becomes the script's value of the same name. A
@@ -130,6 +141,10 @@ new_heatmap_block <- function(row = character(),
         r_script   <- shiny::reactiveVal(script)
         r_values   <- shiny::reactiveVal(values)
         r_locked   <- shiny::reactiveVal(locked_roles)
+        r_ctrl_target  <- shiny::reactiveVal(ctrl_target)
+        r_ctrl_table   <- shiny::reactiveVal(ctrl_table)
+        # The gear's target picker: the value filter blocks on the board.
+        r_ctrl_choices <- dd_ctrl_choices()
 
         # --- prepare script ------------------------------------------------
         # The chart block's step, unchanged (R/prepare-apply.R). Specs keep
@@ -199,12 +214,12 @@ new_heatmap_block <- function(row = character(),
         })
 
         # The drill, as the composer table has it. A row click is an EVENT
-        # sent over the control bridge to the board's drill filter: nothing
-        # latches here, the block does not filter its own result, a second
-        # click on the same row sends again, and the undo lives at the target.
-        # The target is the board's answer (ctrl_auto_target()); a board with
-        # none leaves the rows inert.
-        r_target <- shiny::reactive(ctrl_auto_target(session))
+        # sent over the control bridge to the filter `ctrl_target` names:
+        # nothing latches here, the block does not filter its own result, a
+        # second click on the same row sends again, and the undo lives at the
+        # target. "auto" is the board's drill filter (ctrl_auto_target()); a
+        # target that resolves to nothing leaves the rows inert.
+        r_target <- shiny::reactive(dd_ctrl_resolve(r_ctrl_target(), session))
         r_drill_claim <- shiny::reactiveVal(NULL)
 
         upd <- function(rv, v) {
@@ -256,6 +271,8 @@ new_heatmap_block <- function(row = character(),
               group   = upd(r_group, blank(v)),
               cell_numbers = upd(r_numbers, flag(v)),
               download = upd(r_download, flag(v)),
+              ctrl_target = upd(r_ctrl_target, hmb_ctrl_chr(v)),
+              ctrl_table  = upd(r_ctrl_table, hmb_ctrl_chr(v)),
               # "" is a real value for the text (no title at all); NULL from
               # the client is the auto tier.
               title    = upd(r_title, title_state(v)),
@@ -268,18 +285,18 @@ new_heatmap_block <- function(row = character(),
           }
         })
 
-        # The claim, against the board's data model: the drill filter places
-        # it (dd_ctrl_claims() with no table names the column as it stands).
+        # The claim, against the board's data model: with no table the target
+        # places it (dd_ctrl_claims() names the column as it stands).
         r_ctrl_claims <- shiny::reactive({
           claim <- r_drill_claim()
           if (is.null(claim)) return(NULL)
           d <- tryCatch(raw_data(), error = function(e) NULL)
-          dd_ctrl_claims(d, "", stats::setNames(list(claim$values),
-                                                claim$column),
+          dd_ctrl_claims(d, r_ctrl_table(),
+                         stats::setNames(list(claim$values), claim$column),
                          subject = dd_ctrl_subject(session))
         })
         dd_ctrl_sender(
-          r_target,
+          r_ctrl_target,
           r_ctrl_claims,
           session = session,
           r_nonce = function() {
@@ -347,7 +364,11 @@ new_heatmap_block <- function(row = character(),
             color = one_or_null(r_color()), group = one_or_null(r_group()),
             cell_numbers = r_numbers(),
             download = r_download(),
-            target = tryCatch(r_target(), error = function(e) ""),
+            ctrl = list(
+              target = r_ctrl_target(),
+              table = r_ctrl_table(),
+              choices = dd_ctrl_choices_list(r_ctrl_choices())
+            ),
             locked_roles = r_locked(),
             titles = list(
               title = r_title(), subtitle = r_subtitle(),
@@ -482,8 +503,8 @@ new_heatmap_block <- function(row = character(),
             filter_column = function() NULL,
             filter_values = function() NULL,
             max_height = function() NULL,
-            ctrl_target = function() NULL,
-            ctrl_table = function() NULL,
+            ctrl_target = r_ctrl_target,
+            ctrl_table = r_ctrl_table,
             title = r_title, subtitle = r_subtitle, caption = r_caption,
             script = r_script, values = r_values,
             locked_roles = r_locked
@@ -501,7 +522,8 @@ new_heatmap_block <- function(row = character(),
       "ctrl_table", "title", "subtitle", "caption", "script", "values",
       "locked_roles"),
     external_ctrl = c("row", "col", "color", "group", "cell_numbers",
-      "download", "title", "subtitle", "caption", "script", "values"),
+      "download", "ctrl_target", "ctrl_table", "title", "subtitle", "caption",
+      "script", "values"),
     expr_type = "bquoted",
     class = cls
     # `ctor`/`ctor_pkg` deliberately ride `...` and are NOT formals: the
@@ -520,6 +542,23 @@ one_or_null <- function(x) {
   if (length(x) && nzchar(x[1L])) x[1L] else NULL
 }
 
+# `ctrl_target` as state: NULL (a board saved while the heatmap always sent to
+# the board's drill filter) is "auto", and so is "" on a board saved before
+# that, when the block still had its own drill switch (`drill` non-NULL) and
+# "" was merely the default.
+#' @noRd
+hmb_ctrl_target <- function(x, drill = NULL) {
+  if (is.null(x)) return("auto")
+  x <- hmb_ctrl_chr(x)
+  if (!nzchar(x) && !is.null(drill)) "auto" else x
+}
+
+#' @noRd
+hmb_ctrl_chr <- function(x) {
+  x <- as.character(unlist(x %||% ""))
+  if (!length(x) || is.na(x[[1L]])) "" else trimws(x[[1L]])
+}
+
 #' @noRd
 hmb_locked_roles <- function(x) {
   x <- as.character(x %||% character())
@@ -536,7 +575,7 @@ heatmap_block_dep <- memoise0(function() {
     chart_css_dep(),
     htmltools::htmlDependency(
       name = "heatmap-block",
-      version = paste0(utils::packageVersion("blockr.viz"), ".8"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".9"),
       src = system.file(package = "blockr.viz"),
       script = "js/heatmap-block.js",
       stylesheet = "css/heatmap-block.css"

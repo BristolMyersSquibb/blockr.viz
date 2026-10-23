@@ -336,6 +336,17 @@ test_that("the config carries the sentence and the script to the client", {
                    c("color", "group"))
 })
 
+test_that("the config carries the gear's drill target", {
+  cfg <- jsonlite::fromJSON(hmb_cfg_json(
+    row = "USUBJID", col = "AEDECOD",
+    ctrl = list(target = "auto", table = "adsl",
+                choices = list(list(value = "auto", label = "Automatic (f)")))
+  ), simplifyVector = FALSE)
+  expect_identical(cfg$ctrl_target, "auto")
+  expect_identical(cfg$ctrl_table, "adsl")
+  expect_identical(cfg$ctrl_choices[[1]]$value, "auto")
+})
+
 test_that("the body carries the matrix, the legend and the count", {
   b <- hmb_body(hm_toy(), row = "USUBJID", col = "AEDECOD", color = "AESEV",
                 group = "ARM")
@@ -511,15 +522,75 @@ test_that("the old drill arguments are legacy and restore quietly", {
     blockr.core:::get_s3_method("block_server", blk),
     {
       st <- session$returned$state
-      for (k in c("drill", "filter_column", "filter_values", "ctrl_target",
-                  "ctrl_table")) {
+      for (k in c("drill", "filter_column", "filter_values")) {
         expect_null(st[[k]]())
       }
+      # the target is state again (#64)
+      expect_identical(st$ctrl_target(), "pt_drill")
+      expect_identical(st$ctrl_table(), "")
       # a restored filter no longer filters: the result is the whole matrix
       session$flushReact()
       ex <- do.call(bquote, list(session$returned$expr(),
                                  list(data = quote(d))))
       expect_identical(nrow(eval(ex, list(d = hm_toy()))), 3L)
+    },
+    args = list(x = blk, data = list(data = function() hm_toy()))
+  )
+})
+
+test_that("a heatmap saved without a target sends to the board's drill filter", {
+  # NULL: a board saved while the heatmap always sent to "auto".
+  expect_identical(hmb_ctrl_target(NULL), "auto")
+  # "" with the old drill switch: the default of a board older than that.
+  expect_identical(hmb_ctrl_target("", drill = TRUE), "auto")
+  expect_identical(hmb_ctrl_target("", drill = FALSE), "auto")
+  # "" without it: sending switched off in the gear.
+  expect_identical(hmb_ctrl_target(""), "")
+  expect_identical(hmb_ctrl_target(" pt_drill "), "pt_drill")
+  expect_identical(hmb_ctrl_target(character()), "")
+})
+
+test_that("a row click goes to the target the gear names", {
+  blk <- new_heatmap_block(row = "USUBJID", col = "AEDECOD")
+  sends <- list()
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$userData$blockr_ctrl_send <- function(target, args,
+                                                    author = NULL) {
+        sends[[length(sends) + 1L]] <<- list(target = target, args = args)
+      }
+      st <- session$returned$state
+      expect_identical(st$ctrl_target(), "auto")
+      expr_scope <- session$makeScope("expr")
+      session$flushReact()
+      expr_scope$setInputs(heatmap_block_action = list(
+        action = "config", param = "ctrl_target", value = "pt_drill"
+      ))
+      session$flushReact()
+      expect_identical(st$ctrl_target(), "pt_drill")
+      expr_scope$setInputs(heatmap_block_action = list(
+        action = "filter", column = "USUBJID", values = list("s1"), nonce = 1
+      ))
+      session$flushReact()
+      expect_length(sends, 1L)
+      expect_identical(sends[[1L]]$target, "pt_drill")
+      expect_identical(sends[[1L]]$args$state$columns[[1L]]$values, "s1")
+
+      # "" turns the send off: a click goes nowhere.
+      expr_scope$setInputs(heatmap_block_action = list(
+        action = "config", param = "ctrl_target", value = ""
+      ))
+      session$flushReact()
+      expect_identical(st$ctrl_target(), "")
+      n <- length(sends)
+      expr_scope$setInputs(heatmap_block_action = list(
+        action = "filter", column = "USUBJID", values = list("s2"), nonce = 2
+      ))
+      session$flushReact()
+      expect_false(any(vapply(sends[-seq_len(n)], function(x) {
+        length(x$args$state$columns) > 0L
+      }, logical(1L))))
     },
     args = list(x = blk, data = list(data = function() hm_toy()))
   )

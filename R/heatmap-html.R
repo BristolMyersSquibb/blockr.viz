@@ -357,7 +357,8 @@ hmb_cols_json <- function(data) {
 #' arrived. `titles$resolved` and the script half fill in once it has.
 #' @noRd
 hmb_cfg_json <- function(row = NULL, col = NULL, color = NULL, group = NULL,
-                         cell_numbers = TRUE, download = FALSE, target = "",
+                         cell_numbers = TRUE, download = FALSE,
+                         ctrl = list(),
                          locked_roles = character(),
                          titles = list(), script = list()) {
   res <- titles$resolved
@@ -368,9 +369,11 @@ hmb_cfg_json <- function(row = NULL, col = NULL, color = NULL, group = NULL,
     group = group %||% "",
     cell_numbers = if (isTRUE(cell_numbers)) "on" else "off",
     download = if (isTRUE(download)) "on" else "off",
-    # The board's drill filter, resolved (ctrl_auto_target()); "" = none,
-    # and the rows do not take clicks.
-    ctrl_target = target %||% "",
+    # The gear's "Send to filter" section: the target as set ("auto", a
+    # block id, "" = off), the dm table, and the board's candidates.
+    ctrl_target = ctrl$target %||% "",
+    ctrl_table = ctrl$table %||% "",
+    ctrl_choices = ctrl$choices %||% list(),
     locked_roles = I(hmb_locked_roles(locked_roles)),
     # The three-tier text: NULL (auto) travels as JSON null.
     title = titles$title, subtitle = titles$subtitle,
