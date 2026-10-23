@@ -42,9 +42,6 @@ test_that("an empty footer is no footer", {
 })
 
 test_that("the footer is a band under the picture, at its density", {
-  skip_if_not_installed("png")
-  skip_if_not_installed("ragg")
-
   f <- tempfile(fileext = ".png")
   ragg::agg_png(f, width = 800, height = 400, units = "px")
   graphics::plot(1:10)
@@ -66,9 +63,6 @@ test_that("the footer is a band under the picture, at its density", {
 })
 
 test_that("the stamp grows the capture and leaves it alone without a footer", {
-  skip_if_not_installed("png")
-  skip_if_not_installed("ragg")
-
   f <- tempfile(fileext = ".png")
   ragg::agg_png(f, width = 400, height = 200, units = "px")
   graphics::plot(1:10)

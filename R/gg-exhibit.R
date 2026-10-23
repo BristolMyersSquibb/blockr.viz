@@ -40,13 +40,8 @@ gg_title <- function(p) {
 #' @noRd
 gg_write_png <- function(p, file, width, height, res = 300) {
 
-  if (requireNamespace("ragg", quietly = TRUE)) {
-    ragg::agg_png(file, width = width, height = height, units = "in",
-                  res = res, background = "white")
-  } else {
-    grDevices::png(file, width = width * res, height = height * res, res = res,
-                   bg = "white")
-  }
+  ragg::agg_png(file, width = width, height = height, units = "in",
+                res = res, background = "white")
   on.exit(grDevices::dev.off())
 
   print(p)

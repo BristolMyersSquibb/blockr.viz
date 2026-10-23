@@ -1019,19 +1019,19 @@ summarize_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
 # ecosystem and renders text with the same shaper systemfonts measured with.
 # --- what the paint path needs -------------------------------------------
 #
-# grid and systemfonts to lay out, ragg to rasterise. All Suggests, like
-# flextable and officer on the other pptx path, so the package installs
-# without them and only the export asks.
+# grid and systemfonts to lay out, ragg to rasterise. ragg is an import; grid
+# and systemfonts are Suggests, like flextable and officer on the other pptx
+# path, so the package installs without them and only the export asks.
 #' @noRd
 summarize_paint_ready <- function() {
-  all(vapply(c("grid", "systemfonts", "ragg"), requireNamespace,
+  all(vapply(c("grid", "systemfonts"), requireNamespace,
              logical(1L), quietly = TRUE))
 }
 
 #' @noRd
 summarize_paint_require <- function() {
   miss <- Filter(function(p) !requireNamespace(p, quietly = TRUE),
-                 c("grid", "systemfonts", "ragg"))
+                 c("grid", "systemfonts"))
   if (length(miss)) {
     stop("Painting a summarize table needs: ", paste(miss, collapse = ", "),
          ".", call. = FALSE)
