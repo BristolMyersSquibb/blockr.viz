@@ -112,11 +112,9 @@ summarize_drill_wrap <- function(sx, filters, members = NULL,
   if (is.null(sx)) {
     return(summarize_drill_expr(filters, members))
   }
-  post <- if (is.null(src_cols)) character() else
-    setdiff(names(filters), src_cols)
-  pre <- filters[setdiff(names(filters), post)]
-  out <- dd_splice_slot(sx, summarize_drill_expr(pre, members))
-  if (!length(post)) {
+  post <- dd_drill_post(as.list(names(filters)), src_cols)
+  out <- dd_splice_slot(sx, summarize_drill_expr(filters[!post], members))
+  if (!any(post)) {
     return(out)
   }
   ex <- summarize_drill_expr(filters[post], members)

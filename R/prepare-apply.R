@@ -125,7 +125,8 @@ dd_drill_post <- function(cols, src_cols = NULL) {
 #' that column. Composing them means the script's `.(data)` marker is replaced
 #' by the whole filter call, which carries the one remaining marker. A click
 #' on a column the script itself makes cannot filter the source rows; the
-#' summarize table filters that one after the script (summarize_drill_wrap()).
+#' chart and the summarize table filter that one after the script
+#' (dd_drill_post()).
 #'
 #' @param e The outer expression (the compiled script).
 #' @param repl The expression to splice in (the filter call).
