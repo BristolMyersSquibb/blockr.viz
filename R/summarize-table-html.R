@@ -64,6 +64,9 @@
 #'   JS emits. `NULL` outside a block (a static table).
 #' @param active Active drill filter, `list(col =, vals =)`, for the row
 #'   highlight and the status line.
+#' @param resolve_titles `FALSE` takes `title`, `subtitle` and `caption` as
+#'   final text. An exhibit's are resolved already, and a second pass of the
+#'   template syntax would drop the brackets of a footer appended to them.
 #' @param expanded Open every nested row. `FALSE` (default) is the dashboard's
 #'   collapsed-to-parents view; an EXPORT sets it, having nobody to click the
 #'   chevron.
@@ -83,7 +86,8 @@ summarize_table <- function(data, group = NULL, value = ".count",
                             bar_width = "fit", title = NULL,
                             subtitle = NULL, caption = NULL, drill = NULL,
                             scale_map = NULL, elem_id = NULL, active = NULL,
-                            expanded = FALSE, subject = NULL) {
+                            expanded = FALSE, subject = NULL,
+                            resolve_titles = TRUE) {
   prep <- summarize_prepare(
     data, group = group, value = value, func = func, id_var = id_var,
     summaries = summaries, by = by,
@@ -96,18 +100,20 @@ summarize_table <- function(data, group = NULL, value = ".count",
 
   # The three display slots follow the chart / table contract: NULL = auto
   # (the input's own label / subtitle / caption attribute), "" = none, else a
-  # {...} template resolved against the current data. The block resolves them
-  # before calling; resolving again here is a no-op for a plain string and
-  # gives a standalone summarize_table() the same auto tier.
+  # {...} template resolved against the current data. A standalone call gets
+  # the auto tier here; an exhibit passes text it resolved already
+  # (`resolve_titles = FALSE`), since a second pass drops literal brackets.
   title_raw <- title
   subtitle_raw <- subtitle
   caption_raw <- caption
-  title <- resolve_block_title(title, data,
-                               auto = summarize_attr(data, "label"))
-  subtitle <- resolve_block_title(subtitle, data,
-                                  auto = summarize_attr(data, "subtitle"))
-  caption <- resolve_block_title(caption, data,
-                                 auto = summarize_attr(data, "caption"))
+  if (isTRUE(resolve_titles)) {
+    title <- resolve_block_title(title, data,
+                                 auto = summarize_attr(data, "label"))
+    subtitle <- resolve_block_title(subtitle, data,
+                                    auto = summarize_attr(data, "subtitle"))
+    caption <- resolve_block_title(caption, data,
+                                   auto = summarize_attr(data, "caption"))
+  }
 
   # The gear's working state: the block's config as given, plus the pickable
   # input columns. Read back by summarize-table.js off the rendered <table>.

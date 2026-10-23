@@ -168,6 +168,9 @@ html_exhibit.summarize_exhibit <- function(x, title = NULL, caption = NULL,
   args$title <- if (is.null(title)) x$title else title
   args$subtitle <- if (is.null(subtitle)) x$subtitle else subtitle
   args$caption <- if (is.null(caption)) x$caption else caption
+  # The exhibit resolved them, and a caller's text (a caption with the
+  # download footer appended) is final.
+  args$resolve_titles <- FALSE
   # A printed exhibit is not a scroll box: the page or the slide gives it the
   # room, so the block's own max_height does not travel with it.
   args$max_height <- max_height

@@ -99,6 +99,26 @@ test_that("the HTML download does not re-resolve subtitle templates", {
   expect_false(grepl(">By:<", txt, fixed = TRUE))
 })
 
+test_that("the HTML download keeps the brackets of the download footer", {
+  ex <- dl_exhibit()
+  # What the block does: the footer goes onto the resolved caption.
+  ex$caption <- "Internal use [draft]"
+  f <- withr::local_tempfile(fileext = ".html")
+  write_exhibit_html(ex, f, title = ex$title, caption = ex$caption)
+
+  txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
+
+  expect_true(grepl("<div class=\"dd-table-caption\">Internal use [draft]</div>",
+                    txt, fixed = TRUE))
+  # A direct call still reads its caption as a template.
+  h <- as.character(summarize_table(
+    dl_frame(), by = "grp", caption = "Internal use [draft]",
+    summaries = list(list(type = "simple", func = "count", show = "bar"))
+  ))
+  expect_true(grepl("<div class=\"dd-table-caption\">Internal use draft</div>",
+                    h, fixed = TRUE))
+})
+
 test_that("a dependency that cannot be inlined is refused, not shipped broken", {
   tags <- htmltools::tagList(
     htmltools::tags$div("x"),
