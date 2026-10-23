@@ -356,6 +356,12 @@ report_call.summarize_table_block <- function(x, var, ...) {
     if (!is.null(v)) args[[nm]] <- as.character(v)[1L]
   }
 
+  # The Big N counts the subject column the board's `study_roles` option
+  # names, as on screen and in the downloads. Read from the session the
+  # document is built in; outside one there is none.
+  subject <- shiny::isolate(dd_ctrl_subject())
+  if (!is.null(subject)) args$subject <- subject
+
   as.call(c(
     list(call("::", as.name("blockr.viz"),
               as.name("static_summarize_table")),

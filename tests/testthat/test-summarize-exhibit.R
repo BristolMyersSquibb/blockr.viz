@@ -107,6 +107,27 @@ test_that("the block's report call rebuilds its own table", {
   expect_s3_class(eval(cl), "summarize_exhibit")
 })
 
+test_that("the report call counts the board's subjects for the Big N", {
+  blk <- new_summarize_table_block(
+    by = "grp",
+    summaries = list(list(type = "simple", func = "count", show = "bar"))
+  )
+  # No session: no subject, as before.
+  expect_false("subject" %in% names(as.list(report_call(blk, "block1"))))
+  shiny::testServer(
+    function(id) {
+      shiny::moduleServer(id, function(input, output, session) {
+        session$userData$board_options <- list(
+          study_roles = shiny::reactiveVal(list(subject = "SUBJID"))
+        )
+        cl <- report_call(blk, "block1")
+        expect_identical(as.list(cl)$subject, "SUBJID")
+      })
+    },
+    NULL
+  )
+})
+
 test_that("the row slicer keeps per-row and per-column fields apart", {
   ex <- demo_exhibit()
   m <- ex$cells
