@@ -158,12 +158,11 @@ knit_print.summarize_exhibit <- function(x, ...) {
 }
 
 #' @export
-html_exhibit.summarize_exhibit <- function(x, title = NULL, caption = NULL,
+html_exhibit.summarize_exhibit <- function(x, title = NULL, subtitle = NULL,
+                                           caption = NULL,
                                            max_height = NULL,
                                            default_expanded = NULL, ...) {
   args <- x$args
-  extra <- list(...)
-  subtitle <- extra[["subtitle"]]
 
   args$title <- if (is.null(title)) x$title else title
   args$subtitle <- if (is.null(subtitle)) x$subtitle else subtitle

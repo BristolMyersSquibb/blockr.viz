@@ -50,7 +50,8 @@ gg_write_png <- function(p, file, width, height, res = 300) {
 }
 
 #' @export
-html_exhibit.gg <- function(x, title = NULL, caption = NULL, max_height = NULL,
+html_exhibit.gg <- function(x, title = NULL, subtitle = NULL, caption = NULL,
+                            max_height = NULL,
                             default_expanded = NULL, ...) {
 
   # A chart in an HTML document is an image of the rendered plot, at the size
