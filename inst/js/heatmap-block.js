@@ -355,7 +355,8 @@
         '"><span class="hmb-gt"><button class="blockr-indent-btn" ' +
         'type="button" tabindex="-1" aria-expanded="true">' + CHEV +
         '</button><span class="hmb-gt-label">' + esc(groups[i].label) +
-        ' (N = ' + groups[i].n + ')</span></span></td></tr>';
+        '</span><span class="hmb-gn">N = ' + groups[i].n +
+        '</span></span></td></tr>';
       for (j = 0; j < groups[i].n; j++) {
         rowClasses[at + j] = 'hmb-r hmb-rg';
         rowGroups[at + j] = i;

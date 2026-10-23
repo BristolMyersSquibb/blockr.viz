@@ -902,30 +902,14 @@ summarize_table_css <- function() {
   color: var(--blockr-color-text-muted, #6b7280);
 }
 .blockr-summarize-table tr.is-child.collapsed-hidden { display: none; }
-.blockr-summarize-table tr.is-parent td {
-  padding-top: 16px;
-  padding-bottom: 6px;
-  border-top: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  background: color-mix(
-    in srgb,
-    var(--blockr-color-text-default, #111827) 3%,
-    var(--blockr-color-bg-surface, #ffffff)
-  );
-}
-.blockr-summarize-table tr.is-parent:first-child td {
-  padding-top: 8px;
-}
 .blockr-summarize-table tr.is-parent .blockr-summarize-label {
   font-weight: 600;
-  white-space: nowrap;
 }
 .blockr-summarize-table tr.is-parent td.blockr-summarize-label-col {
   max-width: none;
   overflow: visible;
   text-overflow: clip;
-  white-space: nowrap;
-  border-left: 3px solid var(--blockr-color-border-accent, #2563eb);
+  white-space: normal;
 }
 .blockr-summarize-table tr.is-pick { cursor: pointer; }
 .blockr-summarize-table tr.is-on {

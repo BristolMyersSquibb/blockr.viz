@@ -527,7 +527,8 @@ hmb_assemble_rows <- function(m) {
       paste0('<tr class="hmb-grp blockr-indent-toggle" data-hmb-group="',
              g - 1L, '"><td colspan="', k + 1L, '"><span class="hmb-gt">',
              chev, '<span class="hmb-gt-label">', esc(grp$label),
-             " (N = ", grp$n, ")</span></span></td></tr>")
+             '</span><span class="hmb-gn">N = ', grp$n,
+             "</span></span></td></tr>")
     }, "")
   } else {
     heads <- rep("", n)
@@ -590,6 +591,8 @@ hmb_body <- function(data, row = NULL, col = NULL, color = NULL,
   thead <- htmltools::tags$thead(htmltools::tags$tr(ths))
 
   model <- hmb_cell_model(prep, fun)
+  # A grouped matrix hangs its chevrons left of the stub column's edge.
+  tbl_class <- if (length(model$groups)) "hmb-table hmb-grouped" else "hmb-table"
   tbody <- htmltools::tags$tbody(htmltools::HTML(hmb_assemble_rows(model)))
 
   list(
@@ -597,12 +600,12 @@ hmb_body <- function(data, row = NULL, col = NULL, color = NULL,
     # The <table> shell and its rotated header stay R markup; the body is
     # the cell model, assembled by whichever consumer asked.
     head = as.character(
-      htmltools::tags$table(class = "hmb-table", thead,
+      htmltools::tags$table(class = tbl_class, thead,
                             htmltools::tags$tbody())
     ),
     model = model,
     table = as.character(
-      htmltools::tags$table(class = "hmb-table", thead, tbody)
+      htmltools::tags$table(class = tbl_class, thead, tbody)
     ),
     # The status line stays on the board, so it speaks in names.
     count = sprintf("%d %s \u00d7 %d %s", model$n, prep$row_col, model$k,

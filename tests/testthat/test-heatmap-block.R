@@ -79,7 +79,7 @@ test_that("heatmap_html renders legend, group rows, header row, no dashes", {
     '<tr class="hmb-grp blockr-indent-toggle" data-hmb-group="0">',
     '<td colspan="3"><span class="hmb-gt"><button class="blockr-indent-btn"'
   ), fixed = TRUE)
-  expect_match(html, '<span class="hmb-gt-label">A (N = 1)</span>',
+  expect_match(html, '<span class="hmb-gt-label">A</span><span class="hmb-gn">N = 1</span>',
                fixed = TRUE)
   expect_match(html, paste0(
     '<tr class="hmb-r hmb-rg hmb-r-start hmb-r-end" ',
