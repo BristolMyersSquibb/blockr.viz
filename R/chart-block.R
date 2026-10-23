@@ -1309,8 +1309,10 @@ new_chart_block <- function(
               # a gear disagreeing with the canvas is worse than either alone.
               # Same idea as _ensureDistributionMetric resolving `summary` into
               # the config JS-side.
-              whiskers = r_whiskers() %||%
-                (if (identical(r_chart_type(), "band")) "p10_p90" else "tukey"),
+              # Only for the types that draw whiskers: a resolved value on
+              # any other type would come back as a pick after a switch.
+              whiskers = r_whiskers() %||% switch(r_chart_type() %||% "",
+                band = "p10_p90", boxplot = "tukey", NULL),
               connect_centers = if (isTRUE(r_connect_centers())) "on" else "off",
               # Distribution band. `band_series` carries the computed band
               # itself (the JS side draws it, it does not derive it -- same

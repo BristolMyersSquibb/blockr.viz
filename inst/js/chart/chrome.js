@@ -323,6 +323,7 @@
         value_lines: c.value_lines == null ? '' : String(c.value_lines),
         x_lines: c.x_lines == null ? '' : String(c.x_lines),
         box_points: c.box_points || 'none',
+        connect_centers: (c.connect_centers === 'on' || c.connect_centers === true) ? 'on' : 'off',
         // band_series / band_refs are R's output, never sent back.
         band_window: c.band_window || 'adaptive',
         band_size: c.band_size == null ? 45 : c.band_size,
@@ -346,6 +347,11 @@
         ctrl_table: c.ctrl_table || '',
         script: c.script == null ? '' : String(c.script)
       };
+      // The distribution picks, only on the types whose gear offers them; R
+      // keeps its own state (and its per-type default) otherwise.
+      const t = c.chart_type;
+      if (c.summary && (NS.DISTRIBUTION_TYPES.includes(t) || t === 'band')) msg.summary = c.summary;
+      if (c.whiskers && (t === 'boxplot' || t === 'band')) msg.whiskers = c.whiskers;
       // Script control values; an emptied multi-select ships as "" so R can
       // tell it from no value at all.
       for (const spec of (c.script_inputs || [])) {

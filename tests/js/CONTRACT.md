@@ -95,6 +95,7 @@ with these fields in this order:
 | `identity_line` | string, `"off"` |
 | `value_lines`, `x_lines` | string: what was typed, or `String()` of the array R sent (`[5,12]` -> `"5,12"`, `[]` -> `""`) |
 | `box_points` | string, `"none"` |
+| `connect_centers` | `"on"` / `"off"` (a `true` in the config reads as on) |
 | `band_window` | string, `"adaptive"` |
 | `band_size` | as stored, `45` |
 | `band_min_n` | as stored, `12` |
@@ -109,11 +110,12 @@ with these fields in this order:
 | `title`, `subtitle`, `caption` | string or null, verbatim (null = auto, `""` = none) |
 | `ctrl_target`, `ctrl_table` | string, `""` |
 | `script` | string, `""` |
+| `summary` | string; only on boxplot, pointrange and band, left out when unset |
+| `whiskers` | string; only on boxplot and band, left out when unset |
 | `sv_<name>` | one per `script_inputs` entry that is not an error: the value, `""` for null or an empty array |
 
-`summary`, `whiskers`, `connect_centers`, `line_width_mult`, `dot_size_mult`,
-`band_series`, `band_refs`, `filter_*` and `capture_*` are never sent back.
-[gear-drive-*, sentence-slots]
+`line_width_mult`, `dot_size_mult`, `band_series`, `band_refs`, `filter_*`
+and `capture_*` are never sent back. [gear-drive-*, sentence-slots]
 
 ### `<id>_action`, action `set_mults`
 
