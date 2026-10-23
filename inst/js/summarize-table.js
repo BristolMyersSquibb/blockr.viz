@@ -818,9 +818,9 @@
         esc(p.label[i]) + '"' +
         (parent && p.parent_key ? ' data-summarize-key="' +
           esc(p.parent_key[i]) + '"' : "") +
+        (child ? ' data-summarize-parent="' + esc(p.parent[i]) + '"' : "") +
         (child && p.parent_key ? ' data-summarize-parent-key="' +
           esc(p.parent_key[i]) + '"' : "") +
-        (child ? ' data-summarize-parent="' + esc(p.parent[i]) + '"' : "") +
         ' data-summarize-level="' + (child ? p.level[i] : 0) +
         '" data-summarize-ord="' + i + '">';
       row += '<td class="blockr-summarize-label-col blockr-stub' +
