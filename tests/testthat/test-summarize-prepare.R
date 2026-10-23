@@ -64,3 +64,63 @@ test_that("a script edit from the gear replaces the script", {
     args = list(x = blk, data = list(data = function() sp_toy()))
   )
 })
+
+sp_age <- function() {
+  data.frame(USUBJID = c("1", "2", "3", "4"), AGE = c(30, 50, 70, 40),
+             SEX = c("F", "F", "M", "M"), stringsAsFactors = FALSE)
+}
+
+sp_age_block <- function(...) {
+  new_summarize_table_block(
+    by = "AGEGR",
+    summaries = list(list(type = "simple", name = "n",
+                          func = "count_distinct", col = "USUBJID",
+                          show = "bar")),
+    script = 'dplyr::mutate(data, AGEGR = ifelse(AGE < 45, "young", "old"))',
+    drill = "AGEGR",
+    ...
+  )
+}
+
+test_that("a click on a column the script makes filters after the script", {
+  # The restored click: the filter on AGEGR used to run on the source rows,
+  # which have no AGEGR.
+  blk <- sp_age_block(filter_column = "AGEGR", filter_values = list("young"))
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      out <- eval(session$returned$expr(), list(data = sp_age()))
+      expect_setequal(out$USUBJID, c("1", "4"))
+      expect_identical(unique(out$AGEGR), "young")
+    },
+    args = list(x = blk, data = list(data = function() sp_age()))
+  )
+  # A live click, on a path that also names an upstream column.
+  blk <- sp_age_block()
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      scope <- session$makeScope("expr")
+      session$flushReact()
+      scope$setInputs(summarize_table_block_action = list(
+        action = "filter", type = "categorical",
+        column = list("SEX", "AGEGR"), values = list("M", "old"), nonce = 1
+      ))
+      session$flushReact()
+      out <- eval(session$returned$expr(), list(data = sp_age()))
+      expect_identical(out$USUBJID, "3")
+    },
+    args = list(x = blk, data = list(data = function() sp_age()))
+  )
+})
+
+test_that("a click on an upstream column still filters before the script", {
+  sx <- quote(dplyr::select(.(data), USUBJID))
+  ex <- summarize_drill_wrap(sx, list(SEX = "F"), src_cols = names(sp_age()))
+  out <- eval(ex, list(data = sp_age()))
+  expect_identical(out$USUBJID, c("1", "2"))
+  # Upstream not seen yet: everything before the script, as before.
+  ex <- summarize_drill_wrap(sx, list(AGEGR = "young"))
+  expect_identical(ex[[1L]], quote(dplyr::select))
+})

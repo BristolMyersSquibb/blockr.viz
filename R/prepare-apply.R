@@ -123,7 +123,9 @@ dd_drill_post <- function(cols, src_cols = NULL) {
 #' it, so the drill filter still applies to the SOURCE rows: a click identifies
 #' a mark by a column the upstream data has, and the script may well not keep
 #' that column. Composing them means the script's `.(data)` marker is replaced
-#' by the whole filter call, which carries the one remaining marker.
+#' by the whole filter call, which carries the one remaining marker. A click
+#' on a column the script itself makes cannot filter the source rows; the
+#' summarize table filters that one after the script (summarize_drill_wrap()).
 #'
 #' @param e The outer expression (the compiled script).
 #' @param repl The expression to splice in (the filter call).

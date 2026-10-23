@@ -947,12 +947,15 @@ new_summarize_table_block <- function(group = NULL,
             # Display-only until a row is clicked: downstream receives the
             # input untouched (identity(), as the expr must be a call). A click
             # filters on every column of the row's path.
-            ex <- summarize_drill_expr(filters, filter_members(filters))
             # The prepare script wraps the filter (chart parity): a click
             # filters the source rows, and downstream receives what the table
-            # was built from, filtered.
+            # was built from, filtered. A click on a column only the script
+            # makes is filtered after it (summarize_drill_wrap()).
             sx <- cb_expr(r_parsed(), r_specs(), r_values(), slot = TRUE)
-            if (is.null(sx)) ex else dd_splice_slot(sx, ex)
+            src <- if (!is.null(sx) && length(filters)) {
+              tryCatch(names(raw_ann()), error = function(e) NULL)
+            }
+            summarize_drill_wrap(sx, filters, filter_members(filters), src)
           }),
           # Failed custom summaries, as blockr conditions (set in build_json).
           cond = cond,
