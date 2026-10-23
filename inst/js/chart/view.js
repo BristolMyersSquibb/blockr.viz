@@ -105,6 +105,9 @@
       this._suppressBrushClear = false;
       this._hasBrushFilter = false;
       this._awaitData = false;
+      // True once the last setData drew its charts or its empty state; the
+      // busy cue ends on it.
+      this.drawn = false;
       // Click counter riding on every filter message.
       this._drillSeq = 0;
       /** @type {HTMLElement | null} */
@@ -206,6 +209,7 @@
 
       this._renderConfig();
       this._updateTitles();
+      this.drawn = false;
       this._render();
     }
 
@@ -279,6 +283,7 @@
         this._updateStatus();
         if (this._filter) this._applyHighlight(true);
       }
+      this.drawn = true;
     }
 
     /** @param {{ model: any }} impl */
@@ -366,6 +371,7 @@
       // The footer survives the empty state, so a filter that emptied the
       // chart can still be reset.
       this._updateStatus();
+      this.drawn = true;
     }
 
     // Instances survive a redraw unless the family, the panel count or the

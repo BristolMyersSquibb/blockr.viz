@@ -172,8 +172,9 @@ header) is clicked. Scale is `config.capture_ratio`, else 2.
   `sentence_args`, `title_arg_values`, `script_inputs`, `script_error`,
   `sv_<name>`, `capture_export`, `capture_ratio`, `palette`, `scales`,
   `band_series`, `band_refs`, `band_note`, `smoother_series`.
-- Effect: setData, redraw, and the busy cue ends two frames after a canvas
-  exists. [msg-data-*, msg-before-mount, restore-*]
+- Effect: setData, redraw, and the busy cue ends two frames after the view
+  drew its charts or its empty state. [msg-data-*, msg-before-mount,
+  restore-*, busy-cue.test.js]
 
 ### `drilldown-ready`
 

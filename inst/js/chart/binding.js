@@ -42,14 +42,15 @@
     Shiny.setInputValue(el.id + '_need', rev, { priority: 'event' });
   };
 
-  // The busy cue ends once the picture is painted: two frames after the
-  // option went in, or later if the chart has no canvas yet.
+  // The busy cue ends once the picture is painted: two frames after the view
+  // drew its charts or its empty state, or later if the element under this
+  // id has not drawn yet (a re-mount waiting for R to send again).
   const busyDone = (/** @type {string} */ id, /** @type {number} */ tries = 200) => {
     const b = /** @type {any} */ (window).Blockr?.busy;
     if (!b) return;
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      const el = document.getElementById(id);
-      if (el && !el.querySelector('canvas') && tries > 0) {
+      const el = /** @type {any} */ (document.getElementById(id));
+      if (el && !(el._block && el._block.drawn) && tries > 0) {
         setTimeout(() => busyDone(id, tries - 1), 50);
         return;
       }
