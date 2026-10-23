@@ -334,6 +334,41 @@ test_that("the filter trail survives a script that regroups", {
 })
 
 
+test_that("the provenance survives a script that aggregates or merges", {
+  d <- data.frame(USUBJID = c("1", "1", "2"), AETOXGR = c(1, 3, 2))
+  attr(d, "blockr_filters") <- c(global = "SEX = F")
+  attr(d, "blockr_provenance") <- list(dataset = "adae", note = "cut 1")
+  run <- function(...) {
+    ps <- parsed_of(script_of(...), d)
+    out <- dd_prepare_run(d, ps$parsed, ps$specs, list())
+    expect_null(out$error)
+    out$data
+  }
+
+  sm <- run(
+    "data |>",
+    "  dplyr::group_by(USUBJID) |>",
+    "  dplyr::summarise(worst = max(AETOXGR))"
+  )
+  expect_identical(attr(sm, "blockr_provenance"),
+                   list(dataset = "adae", note = "cut 1"))
+  expect_identical(dl_dataset(sm), "adae")
+
+  mg <- run("merge(data, data.frame(USUBJID = c(\"1\", \"2\"), ARM = c(\"A\", \"B\")))")
+  expect_identical(attr(mg, "blockr_provenance"),
+                   list(dataset = "adae", note = "cut 1"))
+  expect_identical(attr(mg, "blockr_filters"), c(global = "SEX = F"))
+
+  # A script that sets its own provenance keeps it.
+  own <- run(
+    "out <- dplyr::summarise(data, n = dplyr::n())",
+    "attr(out, \"blockr_provenance\") <- list(dataset = \"mine\")",
+    "out"
+  )
+  expect_identical(attr(own, "blockr_provenance"), list(dataset = "mine"))
+})
+
+
 test_that("column labels survive a script that filters with base `[`", {
   d <- data.frame(AVISIT = c("WEEK 1", "UNSCHEDULED"), AVAL = c(1, 2))
   attr(d$AVISIT, "label") <- "Analysis Visit"

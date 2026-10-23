@@ -73,12 +73,14 @@ dd_prepare_run <- function(data, parsed, specs, values = list()) {
   }
 
   # A script that aggregates or regroups (summarise(), group_by() and
-  # slice_max(), merge()) returns a frame without the input's filter trail,
-  # and the caption's `{filters}` reads the prepared frame. The filters
-  # upstream still applied to it, so the trail is carried across. A script
-  # that sets its own trail keeps it.
-  if (is.null(attr(out, "blockr_filters", exact = TRUE))) {
-    attr(out, "blockr_filters") <- attr(data, "blockr_filters", exact = TRUE)
+  # slice_max(), merge()) returns a frame without the input's filter trail
+  # and provenance, and the caption's `{filters}`, the footer's `{dataset}`
+  # and the download names read the prepared frame. Both still describe it,
+  # so they are carried across. A script that sets its own keeps it.
+  for (a in c("blockr_filters", "blockr_provenance")) {
+    if (is.null(attr(out, a, exact = TRUE))) {
+      attr(out, a) <- attr(data, a, exact = TRUE)
+    }
   }
 
   # Base `[` on a data.frame strips every column's attributes, so a script
