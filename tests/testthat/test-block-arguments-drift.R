@@ -31,7 +31,10 @@ registry_allowlist <- list(
     # on a block that appears twenty times in a board invites the assistant to
     # write a script where a mapping would have done the job. Signed off as a
     # non-AI-exposed argument.
-    "script", "values"
+    "script", "script_values",
+    # What a click or brush selected: written by the chart, round-trips
+    # through save/restore only, never set by the AI at creation.
+    "selection"
   ),
   table = c(
     # Runtime filter transport: written by clicks, round-trips through
@@ -124,11 +127,11 @@ test_that("config_effect implementations only read real ctor args", {
 })
 
 test_that("gear-emptied chart fields are wedge-safe (allow_empty_state)", {
-  # The JS gear legitimately empties `value` when the aggregation changes
+  # The JS gear legitimately empties the value column (`y` or `x`) when the aggregation changes
   # (reconcileValue in drilldown-agg.js, ensureDistributionMetric in
   # chart/model-common.js);
   # a field emptied by the gear but missing from allow_empty_state silently
   # freezes the block mid-configuration (the allow_empty_state wedge).
   aes <- attr(new_chart_block(), "allow_empty_state")
-  expect_true("value" %in% aes)
+  expect_true(all(c("x", "y") %in% aes))
 })

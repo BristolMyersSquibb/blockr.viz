@@ -51,11 +51,11 @@ click_msg <- function(filters, nonce = 1) {
 }
 
 test_that("a click on one column filters the output", {
-  blk <- new_chart_block(chart_type = "bar", group = "AETERM")
+  blk <- new_chart_block(y = "AETERM")
   with_chart(blk, function(t) {
     t$send(click_msg(list(AETERM = list("Rash"))))
-    expect_equal(t$state$filters(), list(AETERM = "Rash"))
-    expect_equal(t$state$filter_type(), "categorical")
+    expect_equal(t$state$selection()$filters, list(AETERM = "Rash"))
+    expect_equal(t$state$selection()$type, "categorical")
     expect_equal(t$result()$USUBJID, c("S1", "S2", "S3"))
     # A one-column filter emits a plain comparison.
     expect_identical(
@@ -66,10 +66,9 @@ test_that("a click on one column filters the output", {
 })
 
 test_that("a click on several columns ANDs them", {
-  with_chart(new_chart_block(chart_type = "bar", group = "AETERM",
-                             color = "AESEV"), function(t) {
+  with_chart(new_chart_block(y = "AETERM", color = "AESEV"), function(t) {
     t$send(click_msg(list(AETERM = list("Rash"), AESEV = list("MODERATE"))))
-    expect_equal(t$state$filters(), list(AETERM = "Rash", AESEV = "MODERATE"))
+    expect_equal(t$state$selection()$filters, list(AETERM = "Rash", AESEV = "MODERATE"))
     expect_equal(t$result()$USUBJID, "S2")
     expect_identical(
       t$expr(),
@@ -80,11 +79,10 @@ test_that("a click on several columns ANDs them", {
 })
 
 test_that("a null value is a missing one: NA and the empty string", {
-  with_chart(new_chart_block(chart_type = "bar", group = "AETERM",
-                             color = "AESEV"), function(t) {
+  with_chart(new_chart_block(y = "AETERM", color = "AESEV"), function(t) {
     # Shiny hands a JSON null inside an array over as NULL in a list...
     t$send(click_msg(list(AETERM = list("Rash"), AESEV = list(NULL))))
-    expect_equal(t$state$filters(),
+    expect_equal(t$state$selection()$filters,
                  list(AETERM = "Rash", AESEV = NA_character_))
     expect_equal(t$result()$USUBJID, "S3")
 
@@ -94,17 +92,17 @@ test_that("a null value is a missing one: NA and the empty string", {
 
     # A missing value beside a real one.
     t$send(click_msg(list(AESEV = list("MILD", NULL)), nonce = 3))
-    expect_equal(t$state$filters(), list(AESEV = c("MILD", NA)))
+    expect_equal(t$state$selection()$filters, list(AESEV = c("MILD", NA)))
     expect_equal(t$result()$USUBJID, c("S1", "S3", "S1", "S4"))
   })
 })
 
 test_that("a one-column message (column + values) still filters, and clears", {
-  blk <- new_chart_block(chart_type = "bar", group = "AETERM")
+  blk <- new_chart_block(y = "AETERM")
   with_chart(blk, function(t) {
     t$send(list(action = "filter", filter_type = "categorical",
               column = "AETERM", values = list("Nausea", "Rash")))
-    expect_equal(t$state$filters(), list(AETERM = c("Nausea", "Rash")))
+    expect_equal(t$state$selection()$filters, list(AETERM = c("Nausea", "Rash")))
     expect_equal(nrow(t$result()), 5L)
 
     t$send(list(action = "filter", filter_type = "categorical",
@@ -115,40 +113,43 @@ test_that("a one-column message (column + values) still filters, and clears", {
     t$send(list(action = "filter", filter_type = "categorical", column = NULL,
               values = NULL, x_col = NULL, y_col = NULL, x_range = NULL,
               y_range = NULL))
-    expect_null(t$state$filters())
+    expect_null(t$state$selection()$filters)
     expect_equal(nrow(t$result()), 5L)
   })
 })
 
 test_that("D10: a range taken in a facet panel ANDs the panel's key", {
-  with_chart(new_chart_block(chart_type = "scatter", x = "ADY", y = "AVAL",
-                             facet = "AETERM"), function(t) {
+  with_chart(new_chart_block(
+    type = "scatter",
+    x = "ADY",
+    y = "AVAL",
+    facet = "AETERM"
+  ), function(t) {
     t$send(list(action = "filter", filter_type = "range", x_col = "ADY",
               y_col = "AVAL", x_range = list(1, 5), y_range = list(0, 45),
               filters = list(AETERM = list("Nausea"))))
-    expect_equal(t$state$filter_type(), "range")
-    expect_equal(t$state$filters(), list(AETERM = "Nausea"))
-    expect_equal(t$state$filter_range()$x_range, c(1, 5))
+    expect_equal(t$state$selection()$type, "range")
+    expect_equal(t$state$selection()$filters, list(AETERM = "Nausea"))
+    expect_equal(t$state$selection()$range$x_range, c(1, 5))
     expect_equal(t$result()$USUBJID, "S1")
 
     # A range without a panel.
     t$send(list(action = "filter", filter_type = "range", x_col = "ADY",
               y_col = "AVAL", x_range = list(1, 5), y_range = list(0, 45)))
-    expect_null(t$state$filters())
+    expect_null(t$state$selection()$filters)
     expect_equal(t$result()$USUBJID, c("S1", "S2", "S3", "S1"))
 
     # The clear of a range.
     t$send(list(action = "filter", filter_type = "range", column = NULL,
               values = NULL, x_col = NULL, y_col = NULL, x_range = NULL,
               y_range = NULL))
-    expect_null(t$state$filter_range())
+    expect_null(t$state$selection()$range)
     expect_equal(nrow(t$result()), 5L)
   })
 })
 
 test_that("a drill target receives the AND of the columns", {
-  blk <- new_chart_block(chart_type = "bar", group = "AETERM",
-                         color = "AESEV", ctrl_target = "vf")
+  blk <- new_chart_block(y = "AETERM", color = "AESEV", drill_target = "vf")
   sent <- list()
   with_chart(blk, function(t) {
     t$session$userData$blockr_ctrl_send <- function(target, args,
@@ -180,7 +181,7 @@ test_that("a drill target receives the AND of the columns", {
     expect_equal(claims(3), list(USUBJID = "S4"))
 
     # Nothing latched in this mode.
-    expect_null(t$state$filters())
+    expect_null(t$state$selection()$filters)
   })
 })
 
@@ -195,43 +196,43 @@ test_that("dd_ctrl_claims() matches a missing value on NA and on \"\"", {
 })
 
 test_that("a board saved before `filters` restores its filter", {
-  blk <- new_chart_block(chart_type = "bar", group = "AETERM",
-                         filter_column = "AETERM",
-                         filter_values = list("Nausea"))
+  blk <- new_chart_block(
+    y = "AETERM",
+    selection = list(type = "categorical", filters = list(AETERM = "Nausea"))
+  )
   ser <- blockr.core::blockr_ser(blk)
-  expect_equal(ser$payload$filters, list(AETERM = "Nausea"))
-  expect_null(ser$payload$filter_column)
-  expect_null(ser$payload$filter_values)
+  expect_equal(ser$payload$selection$filters, list(AETERM = "Nausea"))
+  expect_false(any(c("filters", "filter_column", "filter_values") %in%
+                     names(ser$payload)))
 
   with_chart(blk, function(t) {
-    expect_equal(t$state$filters(), list(AETERM = "Nausea"))
-    expect_null(t$state$filter_column())
+    expect_equal(t$state$selection()$filters, list(AETERM = "Nausea"))
     expect_equal(t$result()$USUBJID, c("S1", "S4"))
   })
 
   # The payload as it was written before `filters`: the old pair set.
   old <- ser
-  old$payload$filters <- NULL
+  old$payload$selection <- NULL
   old$payload$filter_column <- "AETERM"
   old$payload$filter_values <- list("Rash")
   restored <- blockr.core::blockr_deser(old)
-  expect_equal(blockr.core::blockr_ser(restored)$payload$filters,
+  expect_equal(blockr.core::blockr_ser(restored)$payload$selection$filters,
                list(AETERM = "Rash"))
 })
 
 test_that("a multi-column filter with a missing value round-trips", {
   f <- list(AETERM = "Rash", AESEV = NA_character_)
-  blk <- new_chart_block(chart_type = "bar", group = "AETERM",
-                         color = "AESEV", filters = f)
+  blk <- new_chart_block(y = "AETERM", color = "AESEV",
+                         selection = list(filters = f))
   ser <- blockr.core::blockr_ser(blk)
-  expect_identical(ser$payload$filters, f)
+  expect_identical(ser$payload$selection$filters, f)
 
   # Through the JSON file a board is saved as.
   back <- blockr.core::blockr_deser(board_json_trip(ser))
-  expect_identical(blockr.core::blockr_ser(back)$payload$filters, f)
+  expect_identical(blockr.core::blockr_ser(back)$payload$selection$filters, f)
 
   with_chart(back, function(t) {
-    expect_identical(t$state$filters(), f)
+    expect_identical(t$state$selection()$filters, f)
     expect_equal(t$result()$USUBJID, "S3")
 
     # The state a live click leaves serializes the same way.
@@ -241,7 +242,7 @@ test_that("a multi-column filter with a missing value round-trips", {
     expect_identical(
       blockr.core::blockr_ser(
         blockr.core::blockr_deser(board_json_trip(again))
-      )$payload$filters,
+      )$payload$selection$filters,
       list(AETERM = "Nausea", AESEV = NA_character_)
     )
   })
@@ -260,8 +261,10 @@ test_that("the chart is told the filter, also in the one-column form", {
     }
     function() sent$msgs[[length(sent$msgs)]]$config
   }
-  blk <- new_chart_block(chart_type = "bar", group = "AETERM",
-                         filters = list(AETERM = "Rash"))
+  blk <- new_chart_block(
+    y = "AETERM",
+    selection = list(type = "categorical", filters = list(AETERM = "Rash"), range = NULL, point = NULL)
+  )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {

@@ -1,89 +1,70 @@
 #' Build arguments metadata for the chart block
 #'
-#' Mirrors the FULL configurable arg set (every name in the descriptions
-#' below) so the model copies the real shape instead of inventing names for
-#' the styling / filter-transport slots it can't see here. Omitting them made
-#' gpt-class models guess plausible-but-wrong names
-#' (trend/line_size/marker_size/filter_mode/brush) -> a rejected add_block and
-#' a wasted retry on every chart. Runtime-transport slots show their
-#' creation-time defaults.
+#' Mirrors the configurable arg set (every name in the descriptions below) so
+#' the model copies the real shape instead of inventing names for the
+#' styling slots it can't see here. Omitting them made gpt-class models guess
+#' plausible-but-wrong names (trend/line_size/marker_size/filter_mode/brush)
+#' -> a rejected add_block and a wasted retry on every chart. `script` and
+#' `script_values` are left out on purpose (see new_chart_block()), and so is
+#' `selection`, which the chart writes itself.
 #' @noRd
 chart_arguments <- function() {
   new_arg_specs(
-    chart_type = new_arg_spec(
+    type = new_arg_spec(
       paste0(
-        "Chart type. One of \"bar\", \"waterfall\", \"pie\", \"treemap\", ",
-        "\"boxplot\", \"pointrange\", \"radar\" (aggregated \u2014 use group + ",
-        "value + func), \"scatter\", \"line\" (individual \u2014 use x + y), or ",
-        "\"gantt\" (timeline \u2014 use x + xend + y). Default \"bar\". Radar: ",
-        "group levels are the spokes, one shape per color level. Waterfall: ",
-        "a bar with a cumulative baseline \u2014 each step's value is a DELTA ",
-        "and bars float from the running total (group = step axis, honored ",
-        "in data order). Use for P&L / bridge charts; reshape wide measures ",
-        "with pivot_longer to (step, value) upstream first. Boxplot / ",
-        "pointrange: the distribution marks \u2014 they summarize the raw ",
-        "`value` within each `group` in the browser (see `summary`); no ",
-        "upstream summarize block, no aggregating func."
+        "Chart type. Aggregated (the chart aggregates the rows itself; ",
+        "set `x`, `y` and `func`): \"bar\", \"waterfall\", \"pie\", ",
+        "\"treemap\", \"boxplot\", \"pointrange\". Individual (one mark per ",
+        "row; set `x` and `y`): \"scatter\", \"line\", \"band\". Timeline: ",
+        "\"gantt\" (set `x`, `xend` and `y`). Default \"bar\". Waterfall: ",
+        "each step's value is a DELTA and bars float from the running total ",
+        "(the step axis is in data order); reshape wide measures with ",
+        "pivot_longer to (step, value) upstream first. Boxplot / ",
+        "pointrange: they summarize the raw value column within each ",
+        "category in the browser (see `summary`); no upstream summarize ",
+        "block, no aggregating func."
       ),
       example = "scatter",
-      type = arg_enum(
-        c("bar", "waterfall", "pie", "treemap", "boxplot", "pointrange",
-          "radar", "scatter", "line", "band", "gantt")
-      )
+      type = arg_enum(CHART_TYPES)
     ),
-    group = new_arg_spec(
+    x = new_arg_spec(
       paste0(
-        "Column for the categorical axis (aggregated charts). Names a ",
-        "data column, never a literal."
+        "Column on the horizontal axis. For an aggregated chart either the ",
+        "category or the aggregated value, whichever should run along x: ",
+        "a vertical bar of counts by class is x=\"class\", a horizontal ",
+        "bar of summed sales by region is x=\"sales\", y=\"region\". For ",
+        "pie and treemap, x is the slice. For gantt, the interval start. ",
+        "Names a data column, never a literal."
       ),
-      example = "Species",
+      example = "Sepal.Length",
       type = arg_string()
     ),
-    color = new_arg_spec(
+    y = new_arg_spec(
       paste0(
-        "Column mapped to colour. All families. Names a data column, ",
-        "never a literal colour. null for no colour mapping."
+        "Column on the vertical axis. For an aggregated chart either the ",
+        "category or the aggregated value (see `x`); leave it empty for a ",
+        "row count (func=\"count\"). For pie and treemap, the value. For ",
+        "gantt, the lane (e.g. a subject id). Names a data column."
       ),
-      example = "Species",
-      type = arg_string()
-    ),
-    facet = new_arg_spec(
-      paste0(
-        "Column to facet by \u2014 one small panel per level. Optional."
-      ),
-      example = NULL,
-      type = arg_string()
-    ),
-    value = new_arg_spec(
-      paste0(
-        "Column to aggregate (aggregated charts only). Must match `func`: ",
-        "\".count\" with func \"count\" (row counts; the value is ignored ",
-        "otherwise), any column with \"count_distinct\" (e.g. a subject id ",
-        "such as USUBJID to count patients instead of records), a numeric ",
-        "column with the numeric aggregations."
-      ),
-      example = ".count",
+      example = "Sepal.Width",
       type = arg_string()
     ),
     func = new_arg_spec(
       paste0(
-        "Aggregation function for `value` (aggregated charts only). ",
-        "One of \"count\", \"count_distinct\", \"mean\", \"median\", ",
-        "\"sum\", \"min\", \"max\", \"identity\". Default \"count\" (row count; ",
-        "ignores `value`). \"count_distinct\" counts distinct `value` values ",
-        "per group -- note that with a `color` split an entity appearing ",
-        "under several color levels is counted once per level; deduplicate ",
-        "upstream if segments must sum to the per-group distinct count. ",
-        "\"identity\" does NOT aggregate: it plots `value` as-is (one bar per ",
-        "row when the `group` category is unique -- for precomputed heights); ",
-        "duplicate categories collapse to the first row. Chart-only (not a ",
-        "table/tile aggregation). \"pct_distinct\" is the share of the ",
-        "PANEL's distinct `value`s, not of the bar or of the grid: a facet's ",
-        "own population is the denominator, so it stays right whatever the ",
-        "facet is set to and needs nothing joined on. Pair it with ",
-        "na_group=\"drop\" when the data carries rows that exist only to be ",
-        "counted (a subject with no event); they then draw no bar and still ",
-        "count. Chart-only."
+        "Aggregation (aggregated charts only), applied to the value column ",
+        "per category. One of \"count\", \"count_distinct\", \"mean\", ",
+        "\"median\", \"sum\", \"min\", \"max\", \"identity\", ",
+        "\"pct_distinct\". Default \"count\" (row count; set only the ",
+        "category column). \"count_distinct\" counts distinct values of ",
+        "the value column per category, e.g. a subject id to count ",
+        "subjects instead of records; with a `color` split an entity under ",
+        "several colour levels is counted once per level. \"identity\" ",
+        "does NOT aggregate: it plots the value as is (one bar per row when ",
+        "the category is unique, for precomputed heights). \"pct_distinct\" ",
+        "is the share of the PANEL's distinct values: a facet's own ",
+        "population is the denominator. Pair it with missing=\"drop\" when ",
+        "the data carries rows that exist only to be counted (a subject ",
+        "with no event); they then draw no bar and still count."
       ),
       example = "count",
       # identity and pct_distinct are chart-only, so they widen the chart's
@@ -91,60 +72,35 @@ chart_arguments <- function() {
       # drift-tested against JS).
       type = arg_enum(c(AGG_FNS, "identity", "pct_distinct"))
     ),
-    na_group = new_arg_spec(
+    orientation = new_arg_spec(
       paste0(
-        "What to do with rows whose `group` value is missing. \"level\" ",
-        "(default) gives them their own category, which is how this has ",
-        "always behaved -- a nameless bar and a blank legend entry. ",
-        "\"drop\" removes them from the categories but NOT from the panel, ",
-        "so they draw nothing and still count toward pct_distinct's ",
-        "denominator. That is the difference between a row that is a category ",
-        "and a row that is only a member of the population."
+        "Usually omitted: which way a bar, boxplot or pointrange lies ",
+        "follows from `x` and `y` (the category axis holds the non-numeric ",
+        "column). Set \"horizontal\" (categories on y) or \"vertical\" ",
+        "(categories on x) only when both columns are non-numeric, e.g. a ",
+        "distinct count of a character id by a category."
       ),
-      example = "level",
-      type = arg_enum(c("level", "drop"))
+      example = NULL,
+      type = arg_enum(c("horizontal", "vertical"))
     ),
-    pct_of = new_arg_spec(
+    color = new_arg_spec(
       paste0(
-        "Which mapped role a `func = \"pct_distinct\"` denominator is taken ",
-        "WITHIN: \"facet\" (default), \"group\" or \"color\". A cell only ",
-        "knows the values of the roles it is mapped on, so those three are ",
-        "the whole option space. ",
-        "It cannot be inferred, because the chart would have to know whether ",
-        "a column is a POPULATION split (arm, sex, country, where a per-level ",
-        "denominator is meaningful) or an EVENT attribute (grade, where ",
-        "dividing grade-2 subjects by subjects-with-grade-2 is circular). ",
-        "Worked example: two countries, 4 of 10 US subjects and 3 of 5 ",
-        "Japanese subjects had an action. Grouped by country and faceted by ",
-        "action, \"facet\" divides both by all 15 and gives 27% and 20% -- ",
-        "wrong, and it reverses the ranking. \"group\" gives 40% and 60%. ",
-        "A vector is accepted for a denominator taken within several roles at ",
-        "once, though the gear offers one."
+        "Column mapped to colour. All types. Names a data column, never a ",
+        "literal colour. null for no colour mapping."
       ),
-      example = "facet",
+      example = "Species",
       type = arg_string()
     ),
-    x = new_arg_spec(
-      paste0(
-        "X-axis column (individual: scatter/line; timeline: interval ",
-        "start). Names a data column."
-      ),
-      example = "Sepal.Length",
-      type = arg_string()
-    ),
-    y = new_arg_spec(
-      paste0(
-        "Y-axis column (individual: scatter/line; timeline: the lane, ",
-        "e.g. USUBJID). Names a data column."
-      ),
-      example = "Sepal.Width",
+    facet = new_arg_spec(
+      "Column to facet by: one small panel per level. Optional.",
+      example = NULL,
       type = arg_string()
     ),
     series = new_arg_spec(
       paste0(
         "Column whose distinct values split rows into separate series ",
-        "(individual: one line/scatter group per value; timeline: per-bar ",
-        "label). Splits only \u2014 not a colour, not a drill target. ",
+        "(scatter/line: one line or point group per value; gantt: per-bar ",
+        "label). Splits only: not a colour, not a drill target. ",
         "Independent of color. High cardinality is fine."
       ),
       example = NULL,
@@ -152,8 +108,8 @@ chart_arguments <- function() {
     ),
     xend = new_arg_spec(
       paste0(
-        "Interval end column (timeline only). Rows with no end render as ",
-        "a dot at x."
+        "Interval end column (gantt only). Rows with no end render as a ",
+        "dot at x."
       ),
       example = NULL,
       type = arg_string()
@@ -161,42 +117,41 @@ chart_arguments <- function() {
     label = new_arg_spec(
       paste0(
         "Column written as on-mark text. Optional; default null = no ",
-        "on-mark text. For pie/treemap, null falls back to `group` ",
-        "(a label-less pie is unusable). Label only \u2014 does not affect ",
-        "colour, series, or drill."
+        "on-mark text. For pie/treemap, null falls back to the slice ",
+        "column (a label-less pie is unusable). Label only: does not ",
+        "affect colour, series, or drill."
       ),
       example = NULL,
       type = arg_string()
     ),
-    tt_fields = new_arg_spec(
+    tooltip = new_arg_spec(
       paste0(
         "Extra column names appended to each mark's hover tooltip, beyond ",
-        "the mapped roles (timeline/gantt, scatter, line, bar). On a bar the ",
-        "value shown is the group's representative (its first row) -- exact for ",
-        "a \"None (as is)\" bar (one row per bar), a representative for an ",
-        "aggregation. Display-only \u2014 never affects the plot; a listed column ",
-        "dropped upstream is silently omitted. Empty = no extra tooltip fields."
+        "the mapped roles (gantt, scatter, line, bar). On a bar the value ",
+        "shown is the category's representative (its first row): exact for ",
+        "func=\"identity\" (one row per bar), a representative for an ",
+        "aggregation. Display only; a listed column dropped upstream is ",
+        "silently omitted. Empty = no extra tooltip fields."
       ),
       example = NULL,
       type = arg_array(arg_string())
     ),
     drill = new_arg_spec(
       paste0(
-        "Drill-down: what a SELECTION (click or brush) filters downstream on. ",
-        "Tri-state: null/\"\" = OFF (the chart is a static display \u2014 no filter, ",
-        "no hover effect; the default); \"auto\" = ON with the family's natural ",
-        "target (aggregated -> the clicked group; radar -> the clicked ",
-        "shape's color value; scatter -> the selected ",
-        "point's x&y; line -> the clicked series; timeline -> the clicked ",
-        "lane); a COLUMN NAME = ON, overriding the natural target to filter on ",
-        "that column's value(s) for the selected marks. Click and brush follow ",
-        "the same rule (a click is a one-point selection). With \"auto\" on a ",
-        "scatter, a brush filters the geometric x/y box."
+        "What a SELECTION (click or brush) filters downstream on. ",
+        "null/\"\" = OFF (a static display: no filter, no hover effect; the ",
+        "default); \"auto\" = ON with the type's natural target (aggregated ",
+        "-> the clicked category; scatter -> the selected point's x and y; ",
+        "line -> the clicked series; gantt -> the clicked lane); a COLUMN ",
+        "NAME = ON, filtering on that column's value(s) for the selected ",
+        "marks. Click and brush follow the same rule (a click is a ",
+        "one-point selection). With \"auto\" on a scatter, a brush filters ",
+        "the x/y box."
       ),
       example = "Species",
       type = arg_string()
     ),
-    ctrl_target = new_arg_spec(
+    drill_target = new_arg_spec(
       paste0(
         "BETA. Block id of a value filter block on the SAME board: a ",
         "categorical drill click's claim (e.g. SEX = F) is also pushed into ",
@@ -204,17 +159,16 @@ chart_arguments <- function() {
         "a pipeline the chart has no data link to. Requires `drill` to be ",
         "on and the board to carry the control bridge extension. Range / ",
         "point / brush selections are never pushed (a claim is one value). ",
-        "Empty (default) = off; the drill then behaves exactly as ",
-        "documented above. \"auto\" needs no id: it is the board's drill ",
-        "destination, found by class -- the one drill filter block, else ",
-        "the one value filter block. Prefer it over a typed id."
+        "Empty (default) = off. \"auto\" needs no id: it is the board's ",
+        "drill destination, found by class (the one drill filter block, ",
+        "else the one value filter block). Prefer it over a typed id."
       ),
       example = "cohort_filter",
       type = arg_string()
     ),
-    ctrl_table = new_arg_spec(
+    drill_table = new_arg_spec(
       paste0(
-        "BETA. Only with `ctrl_target`: the table in the target's dm the ",
+        "BETA. Only with `drill_target`: the table in the target's dm the ",
         "pushed conditions apply to (e.g. \"adsl\"). Leave empty when the ",
         "target filters a plain data frame."
       ),
@@ -231,32 +185,30 @@ chart_arguments <- function() {
     ),
     identity_line = new_arg_spec(
       paste0(
-        "Identity-line overlay for scatter charts: true draws a dashed ",
-        "45-degree y = x guide line, false (default) omits it. Use for ",
-        "shift or agreement plots (e.g. baseline vs post-baseline)."
+        "Identity line for scatter charts: true draws a dashed 45-degree ",
+        "y = x guide line, false (default) omits it. Use for shift or ",
+        "agreement plots (e.g. baseline vs post-baseline)."
       ),
       example = FALSE,
       type = arg_boolean()
     ),
     box_points = new_arg_spec(
       paste0(
-        "Observation overlay for boxplots (chart_type=\"boxplot\"): ",
-        "\"none\" (default, box only) or \"outliers\" (plot only the ",
-        "points beyond the whisker extent). Use \"outliers\" to flag ",
-        "extreme values. No-op for non-boxplot charts."
+        "Observation overlay for boxplots: \"none\" (default, box only) or ",
+        "\"outliers\" (only the points beyond the whiskers)."
       ),
       example = "none",
       type = arg_enum(c("none", "outliers"))
     ),
     summary = new_arg_spec(
       paste0(
-        "Distribution statistic for the distribution marks: the point ",
+        "Distribution statistic for boxplot and pointrange: the point ",
         "range's interval, or the boxplot's BODY. One of \"median_q1_q3\", ",
-        "\"mean_sd\", \"mean_2sd\", \"mean_se\", \"p5_p95\", \"min_max\". ",
-        "Computed in the browser from the raw `value` column per `group` ",
-        "(x `color`) slot \u2014 no upstream summarize block, no lo/hi ",
-        "mapping. Default per mark: \"median_q1_q3\" (boxplot), ",
-        "\"mean_se\" (pointrange). No-op for other chart types."
+        "\"mean_sd\", \"mean_2sd\", \"mean_se\", \"p5_p95\", \"p10_p90\", ",
+        "\"min_max\". Computed in the browser from the raw value column per ",
+        "category (x `color`): no upstream summarize block, no ymin/ymax ",
+        "mapping. Default \"median_q1_q3\" (boxplot), \"mean_se\" ",
+        "(pointrange)."
       ),
       example = "mean_se",
       type = arg_enum(c("median_q1_q3", "mean_sd", "mean_2sd", "mean_se",
@@ -264,119 +216,141 @@ chart_arguments <- function() {
     ),
     whiskers = new_arg_spec(
       paste0(
-        "Boxplot whisker rule \u2014 the box's OUTER interval: \"tukey\" ",
-        "(default, 1.5x IQR fences clipped to the data; the textbook ",
-        "boxplot) or any `summary` value, e.g. \"min_max\" for range ",
-        "whiskers or \"p5_p95\" for the clinical percentile convention. ",
-        "No-op for non-boxplot charts."
+        "Boxplot whisker rule, the box's OUTER interval: \"tukey\" ",
+        "(default, 1.5x IQR fences clipped to the data) or any `summary` ",
+        "value, e.g. \"min_max\" for range whiskers or \"p5_p95\" for the ",
+        "percentile convention."
       ),
       example = "tukey",
       type = arg_enum(c("tukey", "median_q1_q3", "mean_sd", "mean_2sd",
                         "mean_se", "p5_p95", "p10_p90", "min_max"))
     ),
+    connect_centers = new_arg_spec(
+      paste0(
+        "Pointrange only: true draws a line through the interval centers ",
+        "in category order (e.g. mean value by visit per group). Default ",
+        "false."
+      ),
+      example = TRUE,
+      type = arg_boolean()
+    ),
     band_window = new_arg_spec(
       paste0(
-        "Distribution band (chart_type=\"band\") windowing: \"adaptive\" ",
-        "(default) grows the window at each grid point until it holds ",
-        "`band_size` distinct subjects, keeping the band's reliability ",
-        "constant as a cohort thins; \"fixed\" treats `band_size` as a ",
-        "half-width in x units. Prefer adaptive for studies with uneven ",
-        "visit spacing \u2014 a narrow fixed window lands in the gaps between ",
-        "late visits and tears the band into pieces. No-op for other charts."
+        "Band (type=\"band\") windowing: \"adaptive\" (default) grows the ",
+        "window at each grid point until it holds `band_size` distinct ",
+        "individuals, keeping the band's reliability constant as the data ",
+        "thins; \"fixed\" treats `band_size` as a half-width in x units. ",
+        "Prefer adaptive when x is unevenly spaced: a narrow fixed window ",
+        "lands in the gaps and tears the band into pieces."
       ),
       example = "adaptive",
       type = arg_enum(c("adaptive", "fixed"))
     ),
     band_size = new_arg_spec(
       paste0(
-        "Distribution band window size: distinct subjects per window when ",
-        "`band_window=\"adaptive\"` (default 45), or the half-width in x ",
-        "units when \"fixed\". No-op for other chart types."
+        "Band window size: distinct individuals per window when ",
+        "band_window=\"adaptive\" (default 45), or the half-width in x ",
+        "units when \"fixed\"."
       ),
       example = 45,
       type = arg_number()
     ),
     band_min_n = new_arg_spec(
       paste0(
-        "Distribution band cut-off: grid points holding fewer than this ",
-        "many distinct subjects draw nothing, so the band stops rather ",
-        "than running through a stretch with almost no data. Default 12. ",
-        "No-op for other chart types."
+        "Band cut-off: grid points holding fewer than this many distinct ",
+        "individuals draw nothing, so the band stops rather than running ",
+        "through a stretch with almost no data. Default 12."
       ),
       example = 12,
       type = arg_number()
     ),
-    band_id = new_arg_spec(
+    id = new_arg_spec(
       paste0(
-        "Subject id column for the distribution band (e.g. \"USUBJID\"), ",
-        "counted DISTINCT for the window and the reported n, and carried ",
-        "on an outlier point's drill. Leave empty to count rows \u2014 which ",
-        "over-counts whenever one subject contributes several observations ",
-        "to the same window, so set it for repeated-measures data."
+        "Column that identifies an individual (a subject, a customer, a ",
+        "store). The band counts it DISTINCT per window and carries it on ",
+        "an outlier's drill; the N labels (`show_n`) count it DISTINCT. ",
+        "Empty (default) counts rows, which over-counts whenever one ",
+        "individual contributes several rows."
       ),
       example = "USUBJID",
       type = arg_string()
     ),
-    ref_hi = new_arg_spec(
+    ymin = new_arg_spec(
       paste0(
-        "Column holding an UPPER reference limit, drawn as a dashed line ",
-        "(e.g. \"ANRHI\"). Unlike `value_lines`, which takes values, this ",
-        "names a column: a reference range is per-record and varies, so ",
-        "the block reduces it to its median and labels the line with the ",
-        "spread it reduced from. Empty (default) draws nothing."
+        "Column holding the lower end of an interval per row, drawn with ",
+        "`ymax` as error bars on a scatter or a line (a forest plot is a ",
+        "scatter with ymin/ymax). Numeric."
       ),
-      example = "ANRHI",
+      example = NULL,
+      type = arg_string()
+    ),
+    ymax = new_arg_spec(
+      "Column holding the upper end of the interval. See `ymin`.",
+      example = NULL,
       type = arg_string()
     ),
     ref_lo = new_arg_spec(
       paste0(
-        "Column holding a LOWER reference limit, drawn as a dashed line ",
-        "(e.g. \"ANRLO\"). See `ref_hi`. Empty (default) draws nothing."
+        "Column holding a LOWER reference limit, drawn as a dashed line. ",
+        "Unlike `y_lines`, which takes values, this names a column: a ",
+        "reference range can vary by row, so the block reduces it to its ",
+        "median and labels the line with the spread it reduced from. Empty ",
+        "(default) draws nothing."
       ),
-      example = "ANRLO",
+      example = NULL,
       type = arg_string()
     ),
-    connect_centers = new_arg_spec(
-      paste0(
-        "Pointrange only: true draws a line through the interval centers ",
-        "in group order \u2014 the over-visits trajectory reading (e.g. mean ",
-        "AVAL by AVISIT per treatment arm). Default false."
-      ),
-      example = TRUE,
-      type = arg_boolean()
+    ref_hi = new_arg_spec(
+      "Column holding an UPPER reference limit. See `ref_lo`.",
+      example = NULL,
+      type = arg_string()
     ),
-    count_on = new_arg_spec(
+    show_n = new_arg_spec(
       paste0(
         "Append observation counts to labels, e.g. \"Female (12)\": \"off\" ",
-        "(default), \"axis\" (on the category-axis ticks of bar/boxplot ",
-        "charts), \"facet\" (on the facet strip labels) or \"both\". Pair ",
-        "with count_col to count distinct subjects; leave count_col empty to ",
-        "count raw rows."
+        "(default), \"axis\" (on the category axis of bar and boxplot ",
+        "charts), \"facet\" (on the facet labels) or \"both\". Counts ",
+        "distinct `id` values when `id` is set, rows otherwise. With ",
+        "func=\"identity\" (precomputed bars) the `id` column is shown as ",
+        "is, e.g. a precomputed \"N\" column."
       ),
       example = "off",
       type = arg_enum(c("off", "axis", "facet", "both"))
     ),
-    count_col = new_arg_spec(
+    missing = new_arg_spec(
       paste0(
-        "Column driving the count labels (see count_on). For an aggregating ",
-        "func (count/mean/...) it is an id counted DISTINCT, e.g. \"USUBJID\" ",
-        "to label groups by unique subject count. For func=\"identity\" ",
-        "(\"None (as is)\", pre-summarised bars) the column is shown AS-IS ",
-        "(the group's row value), e.g. a precomputed \"N\" column. Empty ",
-        "(default) shows the raw row count. No-op when count_on=\"off\"."
+        "Rows whose category is missing: \"level\" (default) gives them ",
+        "their own category; \"drop\" removes them from the categories but ",
+        "NOT from the panel, so they draw nothing and still count toward ",
+        "pct_distinct's denominator."
       ),
-      example = NULL,
+      example = "level",
+      type = arg_enum(c("level", "drop"))
+    ),
+    pct_of = new_arg_spec(
+      paste0(
+        "Which mapped role a func=\"pct_distinct\" denominator is taken ",
+        "WITHIN: \"facet\" (default), \"category\" or \"color\". It cannot ",
+        "be inferred: the chart would have to know whether a column is a ",
+        "POPULATION split (arm, sex, country, where a per-level denominator ",
+        "is meaningful) or an EVENT attribute (a grade, where the ",
+        "denominator would be circular). Worked example: 4 of 10 US ",
+        "subjects and 3 of 5 Japanese subjects had an event. Categories by ",
+        "country, faceted by event: \"facet\" divides both by all 15 and ",
+        "gives 27% and 20%, which is wrong and reverses the ranking; ",
+        "\"category\" gives 40% and 60%."
+      ),
+      example = "facet",
       type = arg_string()
     ),
     facet_scales = new_arg_spec(
       paste0(
         "How the facet panels scale, like ggplot2's facet_wrap(scales=). ",
-        "\"fixed\" (default) shares ONE numeric domain and one category set / ",
-        "order across the panels, so equal bar lengths mean equal values. ",
-        "\"free\" lets each panel size itself \u2014 use it when the panels do ",
-        "not share a unit, e.g. facet=\"PARAM\" over labs with different ",
-        "ranges. \"free_y\" frees the value axis but keeps a shared x ",
-        "(scatter/line/band only). No-op without a facet."
+        "\"fixed\" (default) shares one numeric domain and one category set ",
+        "across the panels, so equal bar lengths mean equal values. ",
+        "\"free\" lets each panel size itself; use it when the panels do ",
+        "not share a unit. \"free_y\" frees the value axis but keeps a ",
+        "shared x (scatter/line/band only). No-op without a facet."
       ),
       example = "fixed",
       type = arg_enum(c("fixed", "free_y", "free"))
@@ -386,51 +360,31 @@ chart_arguments <- function() {
         "How many facet panels sit in a row, like ggplot2's ",
         "facet_wrap(ncol=). null (default) is auto: as many panels per row ",
         "as the card is wide. A number pins the row and the deck render ",
-        "follows it, so the picture keeps its shape wherever it is printed. ",
-        "Capped at the panel count. No-op without a facet."
+        "follows it. Capped at the panel count. No-op without a facet."
       ),
       example = NULL,
       type = arg_enum(c("1", "2", "3", "4", "6"))
     ),
-    lo = new_arg_spec(
-      paste0(
-        "Lower error-band column (individual line only). Set together ",
-        "with hi to draw a band; numeric only."
-      ),
-      example = NULL,
-      type = arg_string()
-    ),
-    hi = new_arg_spec(
-      paste0(
-        "Upper error-band column (individual line only). Set together ",
-        "with lo to draw a band; numeric only."
-      ),
-      example = NULL,
-      type = arg_string()
-    ),
     connect = new_arg_spec(
       paste0(
         "How a line chart connects its points. \"monotone\" (default) draws ",
-        "monotone-smoothed lines (no overshoot; local extrema stay at the ",
-        "measured points) at every density; \"straight\" draws plain ",
+        "smoothed lines with no overshoot; \"straight\" draws plain ",
         "segments; \"step-start\", \"step-middle\", \"step-end\" hold the ",
-        "value between observations and place the vertical jump along the ",
-        "interval (dose levels, on/off states). One control replacing the ",
-        "old step + smooth pair. Line charts only."
+        "value between observations (dose levels, on/off states)."
       ),
       example = NULL,
       type = arg_enum(
         c("monotone", "straight", "step-start", "step-middle", "step-end")
       )
     ),
-    value_lines = new_arg_spec(
+    y_lines = new_arg_spec(
       paste0(
         "Helper lines: each number draws one dashed guide line across the ",
-        "VALUE axis at that value (a target, a threshold, a normal-range ",
-        "limit). That is y on scatter/line charts and the value axis of ",
-        "bar, waterfall, boxplot and pointrange charts in either ",
-        "orientation. On a percent axis the numbers are percentages (50 = ",
-        "half). Plain numbers, never column names. Empty = no lines."
+        "VALUE axis at that value (a target, a threshold). That is y on ",
+        "scatter/line charts and the value axis of bar, waterfall, boxplot ",
+        "and pointrange charts either way round. On a percent axis the ",
+        "numbers are percentages (50 = half). Plain numbers, never column ",
+        "names. Empty = no lines."
       ),
       example = NULL,
       type = arg_array(arg_number())
@@ -438,152 +392,89 @@ chart_arguments <- function() {
     x_lines = new_arg_spec(
       paste0(
         "Helper lines: each number draws one dashed VERTICAL guide line at ",
-        "that x position (e.g. a threshold like 5). Plain numbers, never ",
-        "column names. Empty = no lines. Scatter/line charts only."
+        "that x position. Plain numbers, never column names. Empty = no ",
+        "lines. Scatter/line charts only."
       ),
       example = NULL,
       type = arg_array(arg_number())
     ),
-    line_width_mult = new_arg_spec(
+    line_width = new_arg_spec(
       paste0(
-        "Line width multiplier for line charts (individual only). 1.0\u00d7 ",
-        "is the default look; range 0.5\u00d7\u20133.0\u00d7."
+        "Line width relative to the default, for line charts. 1 is the ",
+        "default look; range 0.5 to 3."
       ),
       example = 1,
       type = arg_number()
     ),
-    dot_size_mult = new_arg_spec(
+    point_size = new_arg_spec(
       paste0(
-        "Marker size multiplier for scatter points and line markers ",
-        "(individual only). 1.0\u00d7 is the default; range 0.5\u00d7\u20133.0\u00d7."
+        "Marker size relative to the default, for scatter points and line ",
+        "markers. 1 is the default; range 0.5 to 3."
       ),
       example = 1,
       type = arg_number()
-    ),
-    filter_type = new_arg_spec(
-      paste0(
-        "Runtime filter-transport state. Normally left at default ",
-        "\"categorical\"; set by interaction, not at creation."
-      ),
-      example = "categorical",
-      type = arg_string()
-    ),
-    # Runtime filter-transport slots: NULL examples (dropped) and their type
-    # varies (named list / range object) -> left untyped.
-    filters = new_arg_spec(
-      paste0(
-        "Runtime filter-transport state. The click filter: a named list, ",
-        "column -> values kept after the last click (NA = missing value). ",
-        "Usually null at creation."
-      ),
-      example = NULL
-    ),
-    filter_range = new_arg_spec(
-      paste0(
-        "Runtime filter-transport state for brush/drag on scatter/line ",
-        "(x_col, y_col, x_range, y_range). Usually null at creation."
-      ),
-      example = NULL
-    ),
-    filter_point = new_arg_spec(
-      paste0(
-        "Runtime filter-transport state for a single-point click on a ",
-        "scatter with no drill column (x_col, y_col, x_val, y_val). ",
-        "Usually null at creation."
-      ),
-      example = NULL
     ),
     sort_by = new_arg_spec(
       paste0(
-        "Category-axis ordering for aggregated charts. \"value\" (default ",
-        "for bar/pie/treemap/radar), \"data\" (default for boxplot/",
-        "pointrange: the data's own order \u2014 factor levels when present, ",
-        "else first appearance in the rows, so visits/dose groups keep ",
-        "their order), \"alpha\", or a column name (per-group minimum of ",
-        "that column, e.g. \"AVISITN\"). For timeline: \"onset\" (default), ",
-        "\"alpha\", or a column name. Ignored for individual (scatter/line) ",
-        "charts."
+        "Category order for aggregated charts: \"value\" (default for ",
+        "bar/pie/treemap), \"data\" (default for boxplot/pointrange: the ",
+        "data's own order, factor levels when present, else first ",
+        "appearance, so visits and dose groups keep their order), ",
+        "\"alpha\", or a column name (per-category minimum of that column, ",
+        "e.g. a visit number). For gantt: \"onset\" (default), \"alpha\", ",
+        "or a column name. Ignored for scatter and line."
       ),
       example = "value",
       type = arg_string()
     ),
     sort_dir = new_arg_spec(
-      paste0(
-        "Direction for `sort_by`. One of \"asc\" or \"desc\". Ignored ",
-        "for individual (scatter/line) charts."
-      ),
+      "Direction for `sort_by`: \"asc\" or \"desc\".",
       example = "desc",
       type = arg_enum(c("asc", "desc"))
     ),
-    orientation = new_arg_spec(
+    position = new_arg_spec(
       paste0(
-        "Category-axis orientation: \"horizontal\" (category on the y-axis, ",
-        "best for long labels) or \"vertical\" (category on the x-axis). ",
-        "Presentation only \u2014 the group/value mapping is unchanged. Bar and ",
-        "the distribution marks (boxplot/pointrange). Omit for the per-type ",
-        "default: horizontal for bar, vertical for the distribution marks."
+        "Layout of a colour-split bar: \"stack\" (default: segments stack ",
+        "into one bar per category), \"dodge\" (segments side by side, for ",
+        "comparing absolute values) or \"fill\" (stacked, each category ",
+        "normalized to 100%, for comparing composition). No effect without ",
+        "a `color` split. Bar charts only."
       ),
-      example = "horizontal",
-      type = arg_enum(c("horizontal", "vertical"))
-    ),
-    bar_mode = new_arg_spec(
-      paste0(
-        "Layout for a color-split bar: \"stacked\" (default \u2014 color ",
-        "segments stack into one bar per group), \"grouped\" (segments sit ",
-        "side-by-side / dodged, for comparing absolute values), or ",
-        "\"percent\" (stacked but each group normalized to 100%, for ",
-        "comparing composition). No effect without a `color` split; ignored ",
-        "when baseline=\"cumulative\" (waterfall). Bar charts only."
-      ),
-      example = "stacked",
-      type = arg_enum(c("stacked", "grouped", "percent"))
+      example = "stack",
+      type = arg_enum(names(CHART_POSITIONS))
     ),
     value_labels = new_arg_spec(
       paste0(
         "Write each bar's value at its end: true or false (default). A ",
-        "stacked bar labels the stack total, a grouped bar every bar, a ",
-        "percent bar each segment's share. Overlapping labels are left out, ",
-        "the tooltip keeps every value. Bar and waterfall only. Use for ",
-        "\"show the values on the bars\"."
+        "stacked bar labels the stack total, a dodged bar every bar, a ",
+        "filled bar each segment's share. Overlapping labels are left out; ",
+        "the tooltip keeps every value. Bar and waterfall only."
       ),
       example = TRUE,
       type = arg_boolean()
     ),
-    baseline = new_arg_spec(
-      paste0(
-        "Bar baseline mode: \"zero\" (default \u2014 every bar starts at 0) or ",
-        "\"cumulative\" (a waterfall/bridge \u2014 each bar floats from the ",
-        "running cumulative of the bars before it; each value is a DELTA and ",
-        "the step axis honors data order). chart_type=\"waterfall\" implies ",
-        "\"cumulative\". Bar family only."
-      ),
-      example = "zero",
-      type = arg_enum(c("zero", "cumulative"))
-    ),
     waterfall_totals = new_arg_spec(
       paste0(
-        "Group (step) values rendered as total/subtotal bars in a ",
-        "cumulative-baseline bar: their baseline resets to 0 and they show ",
-        "the absolute running cumulative (e.g. [\"Profit\"] in a Revenue -> ",
-        "Costs -> Profit bridge). Empty = every bar is a relative delta."
+        "Step values drawn as total/subtotal bars in a waterfall: their ",
+        "baseline resets to 0 and they show the absolute running total ",
+        "(e.g. [\"Profit\"] in a Revenue -> Costs -> Profit bridge). Empty = ",
+        "every bar is a relative delta."
       ),
       example = NULL,
       type = arg_array(arg_string())
     ),
     title = new_arg_spec(
       paste0(
-        "Chart title shown above the chart. Unset = auto (inherits the ",
-        "input data frame's label attribute when present); \"\" = ",
-        "explicitly no title. Supports {...} tokens resolved against the ",
-        "CURRENT data on every render, so the title follows upstream ",
-        "filters and pickers: {col} = the distinct values of that column ",
-        "collapsed with \", \" (with a value filter upstream, {ARM} reads ",
-        "the selected arm), {label(col)} = the column's variable label ",
-        "(after a picker block, {label(value)} names the picked measure), ",
-        "{n} = row count, {n_distinct(col)} = distinct count. Tokens are ",
-        "data lookups, never code."
+        "Chart title shown above the chart. Unset = auto (the input data ",
+        "frame's label attribute when present); \"\" = explicitly no title. ",
+        "Supports {...} tokens resolved against the CURRENT data on every ",
+        "render, so the title follows upstream filters and pickers: {col} ",
+        "= the distinct values of that column collapsed with \", \"; ",
+        "{label(col)} = the column's variable label; {n} = row count; ",
+        "{n_distinct(col)} = distinct count. Tokens are data lookups, never ",
+        "code."
       ),
-      example = "Adverse events by {ARM}",
+      example = "Sales by {region}",
       type = arg_string()
     ),
     subtitle = new_arg_spec(
@@ -593,26 +484,24 @@ chart_arguments <- function() {
         "block's own settings and makes that word a control: the reader ",
         "clicks it and picks, without opening the gear or unlocking the ",
         "board. {label(@y)} prints the column's label and is still the ",
-        "picker for `y`. {@func in mean, median} limits the word's menu ",
-        "to the listed choices; it works inside label() too. ",
-        "A clause in [ ] disappears when its setting is ",
-        "empty, and the setting is offered at the end of the sentence ",
-        "instead. Name the settings a reader should steer (colour, facet, ",
-        "which value), not the ones that define what the exhibit IS (a ",
-        "waterfall's `group` is one bar per subject, not a choice). ",
-        "Unset = auto (inherits the input data's subtitle attribute when ",
-        "present, e.g. from a composer table); \"\" = explicitly none."
+        "picker for `y`. {@func in mean, median} limits the word's menu to ",
+        "the listed choices; it works inside label() too. A clause in [ ] ",
+        "disappears when its setting is empty, and the setting is offered ",
+        "at the end of the sentence instead. Name the settings a reader ",
+        "should steer (colour, facet, which value), not the ones that ",
+        "define what the chart IS. Unset = auto (the input data's subtitle ",
+        "attribute when present); \"\" = explicitly none."
       ),
-      example = "{func} of {label(@y)} by {@x}[, coloured by {@color}]",
+      example = "{@func} of {label(@y)} by {@x}[, coloured by {@color}]",
       type = arg_string()
     ),
     caption = new_arg_spec(
       paste0(
         "Caption under the chart (source / footnote line), same {...} ",
-        "tokens as `title`. Unset = auto (inherits the input data's ",
-        "caption attribute when present); \"\" = explicitly none."
+        "tokens as `title`. Unset = auto (the input data's caption ",
+        "attribute when present); \"\" = explicitly none."
       ),
-      example = "N = {n_distinct(USUBJID)} subjects",
+      example = "N = {n_distinct(id)} customers",
       type = arg_string()
     )
   )
@@ -622,115 +511,79 @@ chart_arguments <- function() {
 #' @noRd
 chart_guidance <- function() {
   paste(
-      "This block renders an interactive chart that can also act as a",
-      "filter. Every aesthetic argument names a DATA COLUMN, never a",
-      "literal value (`color=\"ARM\"` maps the ARM column, it is not the",
-      "colour red). Roles are orthogonal: `color` only colours, `series`",
-      "only splits into series, `label` only writes on-mark text,",
-      "position is `x`/`y`/`xend` or `group`.",
-      "\n\nInteractivity is explicit and opt-in via `drill`. With `drill`",
-      "unset a click does nothing. Set `drill` to the column a click",
-      "should filter downstream on: clicking a mark emits a categorical",
-      "filter on that column's value(s) for the clicked mark. `color`",
-      "and `series` never drive drill.",
-      "\n\nThree chart families share the block (an internal detail that",
-      "never changes what an argument means):",
-      "\n- Aggregated (bar/pie/treemap/boxplot/pointrange/radar): set `group`,",
-      "`func`, and `value` (\".count\" for row counts). To make clicking",
-      "a bar filter to that group, set `drill=\"<the group column>\"`.",
-      "A radar puts the `group` levels on the spokes and draws one shape",
-      "per `color` level (each vertex = func(value) for that cell);",
-      "clicking a shape drills on its `color` value. To compare several",
-      "numeric columns as spokes, pivot longer upstream and map the name",
-      "column to `group`.",
-      "\n- Individual (scatter/line): set `x` and `y`. `series` splits",
-      "into one line/group per value (e.g. `series=\"USUBJID\"`).",
-      "Brush-drag filters the brushed points: on `drill` if set (categorical",
-      "on the drill column's values), else the x/y range.",
-      "ALSO set `value` (e.g. value=\".count\") even though the",
-      "individual family doesn't render it -- the block's state",
-      "requires the value slot to initialize, and omitting it",
-      "errors with \"State values 'value' are not yet",
-      "initialized\".",
-      "\n- Timeline (gantt): set `x` (start), `xend` (end), `y` (the",
-      "lane, e.g. USUBJID). To drill to the clicked entity set `drill`",
-      "(e.g. `drill=\"USUBJID\"` to drill the patient lane, or",
-      "`drill=\"AEDECOD\"` to drill the term).",
-      "\n\nMap common requests:",
-      "\n- \"scatter of X vs Y\" -> chart_type=\"scatter\", x=\"X\", y=\"Y\"",
-      "\n- \"shift plot of X vs Y\" (baseline vs post-baseline, agreement)",
-      "-> chart_type=\"scatter\", x=\"X\", y=\"Y\", identity_line=true",
-      "\n- \"line at x = 3\" -> x_lines=[3]; \"line at y = 2\" or",
-      "\"target of 2\" -> value_lines=[2], also on bar/boxplot charts in",
-      "either orientation. Several are fine (value_lines=[2, 5]). An",
-      "eDish / Hy's-Law cross is x_lines=[3], value_lines=[2].",
-      "\n- \"coloured by Z\" -> color=\"Z\"",
-      "\n- \"faceted by Z\" -> facet=\"Z\". The panels share one scale by",
-      "default, which is what makes them comparable. Set",
-      "facet_scales=\"free\" ONLY when the panels genuinely do not share a",
-      "unit (facet=\"PARAM\" over labs with different ranges), or when the",
-      "user asks for per-panel axes.",
-      "\n- \"bar of counts by X, click filters X\" -> chart_type=\"bar\",",
-      "group=\"X\", value=\".count\", func=\"count\", drill=\"X\"",
-      "\n- \"mean Y by X\" -> chart_type=\"bar\", group=\"X\",",
-      "value=\"Y\", func=\"mean\"",
-      "\n- \"radar / spider of mean Y across X, one shape per Z\" ->",
-      "chart_type=\"radar\", group=\"X\", value=\"Y\", func=\"mean\",",
-      "color=\"Z\". Works best with 3+ group levels and few color levels.",
-      "\n- \"waterfall / bridge of value V across steps S\" (e.g. a P&L:",
-      "Revenue -> Costs -> Profit) -> chart_type=\"waterfall\", group=\"S\",",
-      "value=\"V\", func=\"sum\". Each step's value is a DELTA; bars float",
-      "from the running cumulative and the step axis is shown in DATA ORDER",
-      "(make S an ordered factor, or arrange upstream). Wide measures-as-",
-      "columns data must be pivot_longer'd to (step, value) first.",
-      "\n- \"mean Y with an interval (SE/SD/CI-like) over visits/groups",
-      "T by arm G\" (e.g. mean AVAL by AVISIT per treatment) ->",
-      "chart_type=\"pointrange\", group=T, value=\"Y\", color=G,",
-      "summary=\"mean_se\", connect_centers=true. NO upstream",
-      "summarize block and NO lo/hi mapping \u2014 the chart summarizes",
-      "the raw rows itself.",
-      "\n- \"mean Y trend over time T by group G\" as a plain LINE",
-      "(no interval) -> requires an UPSTREAM summarize_block first",
-      "(group_by=[T,G], compute mean_Y = mean(Y)). Then on THIS block:",
-      "chart_type=\"line\", x=T, y=\"mean_Y\", series=G. There is no",
-      "aggregated-line family; raw rows would be drawn in row order",
-      "and produce tangles or empty plots. Prefer pointrange (above)",
-      "when an interval is wanted.",
-      "\n- \"distribution / spread / boxplot of Y by X\" ->",
-      "chart_type=\"boxplot\", group=\"X\", value=\"Y\". A boxplot",
-      "shows the SPREAD of `value` within each `group` \u2014 do NOT set",
-      "an aggregating `func` (mean/median/sum/count); that collapses",
-      "each group to one value and the plot renders EMPTY. Use `color`",
-      "or `facet` to split the boxes (e.g. by treatment arm). To show",
-      "the underlying observations set `box_points`: \"outliers\" flags",
-      "the extreme points past the whiskers. The default box is the",
-      "textbook Tukey boxplot; `summary` / `whiskers` swap the body /",
-      "whisker statistic when a different convention is asked for.",
-      "\n- \"label bars with W\" -> label=\"W\"",
-      "\n\nLeave filter_type/filters/filter_range at",
-      "defaults \u2014 they are runtime transport for the emitted filter, not",
-      "creation-time config.",
-      "\n\nWhen picking `color`, check the data: if all visible rows",
-      "share one value the colour channel is wasted \u2014 drop `color` or",
-      "pick a column with real variation.",
-      "\n\nBar/pie/treemap/boxplot/pointrange ordering is `sort_by` + `sort_dir` on",
-      "THIS block, not an upstream arrange_block. \"value\"+\"desc\" for",
-      "top-N by value. For 'top N by value' workflows prefer slice_block",
-      "(type=\"max\", order_by=COL, n=N).",
-      "\n\nEmpty-plot gotchas (data flows in, no marks drawn):",
-      "\n- chart_type=\"line\" with raw (non-summarized) rows: lines",
-      "connect rows IN ROW ORDER, often producing tangles or invisible",
-      "plots when you actually wanted a mean trajectory. Summarize",
-      "upstream first (see the 'mean Y trend over time' pattern above).",
-      "\n- color/series pointing at a column missing from this block's",
-      "upstream data. ADaM tables vary on treatment columns (adsl has",
-      "TRT01A/TRT01P; many other tables have TRTA/TRTP only). Run",
-      "describe_block or query_data on the upstream to confirm the",
-      "column exists here before referencing it.",
-      "\n- Mixing chart families: setting BOTH `group`/`value` AND",
-      "`x`/`y` confuses the renderer. Pick one family per chart_type.",
-      "\n- func=\"mean\"/\"sum\" with a value column that's all-NA or",
-      "non-numeric in scope -> NA bars (invisible). Pre-filter to rows",
-      "where the value is populated, or pick a different value."
+    "This block renders an interactive chart that can also act as a",
+    "filter. Every aesthetic argument names a DATA COLUMN, never a literal",
+    "value (`color=\"ARM\"` maps the ARM column, it is not the colour red).",
+    "Roles are orthogonal: `color` only colours, `series` only splits into",
+    "series, `label` only writes on-mark text.",
+    "\n\n`x` and `y` are the screen axes for every type, as in ggplot2.",
+    "For an aggregated type (bar, waterfall, pie, treemap, boxplot,",
+    "pointrange) one of them is the category and the other the column",
+    "`func` aggregates; which way the chart lies follows from that. A row",
+    "count needs only the category column: x=\"class\" draws vertical bars,",
+    "y=\"class\" horizontal ones. `orientation` is only for two",
+    "non-numeric columns (a distinct count of a character id).",
+    "\n\nInteractivity is explicit and opt-in via `drill`. With `drill`",
+    "unset a click does nothing. Set `drill` to the column a click should",
+    "filter downstream on. `color` and `series` never drive drill.",
+    "\n\nMap common requests:",
+    "\n- \"scatter of X vs Y\" -> type=\"scatter\", x=\"X\", y=\"Y\"",
+    "\n- \"shift plot of X vs Y\" (baseline vs post-baseline, agreement)",
+    "-> type=\"scatter\", x=\"X\", y=\"Y\", identity_line=true",
+    "\n- \"estimates with confidence intervals\" (a forest plot) ->",
+    "type=\"scatter\", x=\"estimate\", y=\"term\", or the other way round",
+    "with ymin=\"lower\", ymax=\"upper\" for vertical error bars",
+    "\n- \"line at x = 3\" -> x_lines=[3]; \"line at y = 2\" or \"target",
+    "of 2\" -> y_lines=[2], also on bar/boxplot charts either way round.",
+    "\n- \"coloured by Z\" -> color=\"Z\"",
+    "\n- \"faceted by Z\" -> facet=\"Z\". The panels share one scale by",
+    "default, which is what makes them comparable. Set facet_scales=\"free\"",
+    "ONLY when the panels do not share a unit, or when the user asks for",
+    "per-panel axes.",
+    "\n- \"bar of counts by X, click filters X\" -> type=\"bar\", y=\"X\",",
+    "func=\"count\", drill=\"X\" (horizontal; x=\"X\" for vertical)",
+    "\n- \"mean Y by X\" -> type=\"bar\", x=\"X\", y=\"Y\", func=\"mean\"",
+    "\n- \"number of subjects by X\" -> type=\"bar\", y=\"X\",",
+    "x=\"USUBJID\", func=\"count_distinct\", orientation=\"horizontal\"",
+    "(both columns are non-numeric, so the orientation is stated)",
+    "\n- \"waterfall / bridge of value V across steps S\" (a P&L: Revenue",
+    "-> Costs -> Profit) -> type=\"waterfall\", x=\"S\", y=\"V\",",
+    "func=\"sum\". Each step's value is a DELTA; the step axis is in DATA",
+    "ORDER (make S an ordered factor, or arrange upstream). Wide",
+    "measures-as-columns data must be pivot_longer'd to (step, value)",
+    "first.",
+    "\n- \"mean Y with an interval over visits T by group G\" ->",
+    "type=\"pointrange\", x=\"T\", y=\"Y\", color=\"G\", summary=\"mean_se\",",
+    "connect_centers=true. NO upstream summarize block: the chart",
+    "summarizes the raw rows itself.",
+    "\n- \"mean Y trend over time T by group G\" as a plain LINE (no",
+    "interval) -> an UPSTREAM summarize block first (group by T and G,",
+    "mean_Y = mean(Y)), then type=\"line\", x=\"T\", y=\"mean_Y\",",
+    "series=\"G\". Raw rows would be connected in row order. Prefer",
+    "pointrange when an interval is wanted.",
+    "\n- \"distribution / spread / boxplot of Y by X\" -> type=\"boxplot\",",
+    "x=\"X\", y=\"Y\". A boxplot shows the SPREAD of Y within each X; do",
+    "NOT set an aggregating func (mean/median/sum/count), which collapses",
+    "each category to one value and the plot renders EMPTY. Use `color` or",
+    "`facet` to split the boxes. box_points=\"outliers\" flags the points",
+    "past the whiskers; `summary` / `whiskers` swap the body / whisker",
+    "statistic.",
+    "\n- \"label bars with W\" -> label=\"W\"",
+    "\n\nWhen picking `color`, check the data: if all visible rows share one",
+    "value the colour channel is wasted; drop `color` or pick a column with",
+    "real variation.",
+    "\n\nBar/pie/treemap/boxplot/pointrange ordering is `sort_by` +",
+    "`sort_dir` on THIS block, not an upstream arrange block. \"value\" +",
+    "\"desc\" for top-N by value. For 'top N by value' workflows prefer a",
+    "slice block (type=\"max\", order_by=COL, n=N).",
+    "\n\nEmpty-plot gotchas (data flows in, no marks drawn):",
+    "\n- type=\"line\" with raw (non-summarized) rows: lines connect rows",
+    "IN ROW ORDER, often producing tangles when a mean trajectory was",
+    "wanted. Summarize upstream first (see above).",
+    "\n- color/series naming a column missing from this block's upstream",
+    "data. Check the upstream columns before referencing one.",
+    "\n- func=\"mean\"/\"sum\" with a value column that is all-NA or",
+    "non-numeric in scope -> NA bars (invisible). Pre-filter to rows where",
+    "the value is populated, or pick a different column."
   )
 }

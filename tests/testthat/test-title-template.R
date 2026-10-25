@@ -103,8 +103,10 @@ test_that("input_display_attrs reads label, subtitle and caption from raw input"
 test_that("chart block round-trips the three title tiers through state", {
   df <- data.frame(ARM = c("Placebo", "Drug A"), AVAL = c(1, 2))
   blk <- new_chart_block(
-    chart_type = "bar", group = "ARM",
-    title = "AEs by {ARM}", subtitle = "", caption = NULL
+    y = "ARM",
+    title = "AEs by {ARM}",
+    subtitle = "",
+    caption = NULL
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),

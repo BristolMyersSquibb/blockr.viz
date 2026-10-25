@@ -99,3 +99,35 @@ blockr_deser.tile_block <- function(x, data, ...) {
 
   do.call(blockr.core::ctor_fun(ctor), args)
 }
+
+#' Legacy deserialization for the chart block
+#'
+#' Restores boards saved with blockr.viz < 0.3.0, whose chart state carries
+#' the old argument names (`chart_type`, `group`/`value`, `bar_mode`,
+#' `tt_fields`, `lo`/`hi`, the `filter_*` fields, ...). The payload is
+#' translated by `chart_legacy_args()` (R/chart-args.R), the same table the
+#' constructor uses for old names in code, so a saved chart opens with the
+#' same picture. Current payloads pass straight through.
+#'
+#' @param x,data,... Passed through from [blockr.core::blockr_deser()].
+#' @keywords internal
+#' @export
+blockr_deser.chart_block <- function(x, data, ...) {
+  stopifnot(all(c("constructor", "payload") %in% names(data)))
+
+  payload <- chart_legacy_args(data[["payload"]])
+
+  ctor <- blockr.core::blockr_deser(data[["constructor"]])
+  args <- c(
+    payload,
+    list(
+      ctor = blockr.core::coal(
+        blockr.core::ctor_name(ctor),
+        blockr.core::ctor_fun(ctor)
+      ),
+      ctor_pkg = blockr.core::ctor_pkg(ctor)
+    )
+  )
+
+  do.call(blockr.core::ctor_fun(ctor), args)
+}

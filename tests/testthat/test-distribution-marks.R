@@ -25,8 +25,12 @@ dist_state <- function(blk, field) {
 
 test_that("distribution args restore through the constructor", {
   blk <- new_chart_block(
-    chart_type = "pointrange", group = "g", value = "v",
-    summary = "mean_sd", whiskers = "p5_p95", connect_centers = TRUE
+    type = "pointrange",
+    x = "g",
+    y = "v",
+    summary = "mean_sd",
+    whiskers = "p5_p95",
+    connect_centers = TRUE
   )
   expect_equal(dist_state(blk, "summary"), "mean_sd")
   expect_equal(dist_state(blk, "whiskers"), "p5_p95")
@@ -34,7 +38,7 @@ test_that("distribution args restore through the constructor", {
 })
 
 test_that("distribution args default: NULL summary and whiskers, no line", {
-  blk <- new_chart_block(chart_type = "boxplot", group = "g", value = "v")
+  blk <- new_chart_block(type = "boxplot", x = "g", y = "v")
   # NULL = per-mark default resolved where the mark is drawn (summary:
   # median_q1_q3 for the box, mean_se for pointrange; whiskers: tukey for the
   # box, p10_p90 for the band) -- R must not pin one mark's default. `whiskers`
@@ -50,13 +54,21 @@ test_that("connect_centers accepts the gear's \"on\"/\"off\" transport", {
   # Same contract as identity_line: the segmented control speaks "on"/"off"
   # over the wire, the R state is a plain logical.
   expect_true(dist_state(
-    new_chart_block(chart_type = "pointrange", group = "g", value = "v",
-                    connect_centers = "on"),
+    new_chart_block(
+      type = "pointrange",
+      x = "g",
+      y = "v",
+      connect_centers = "on"
+    ),
     "connect_centers"
   ))
   expect_false(dist_state(
-    new_chart_block(chart_type = "pointrange", group = "g", value = "v",
-                    connect_centers = "off"),
+    new_chart_block(
+      type = "pointrange",
+      x = "g",
+      y = "v",
+      connect_centers = "off"
+    ),
     "connect_centers"
   ))
 })
@@ -65,23 +77,29 @@ test_that("box_points = \"all\" (removed) degrades to \"none\", no crash", {
   # Saved boards may carry the retired "all" strip; the decision in the spec
   # is a graceful fallback, not preservation.
   expect_equal(
-    dist_state(new_chart_block(chart_type = "boxplot", group = "g",
-                               value = "v", box_points = "all"),
+    dist_state(new_chart_block(
+      type = "boxplot",
+      x = "g",
+      y = "v",
+      box_points = "all"
+    ),
                "box_points"),
     "none"
   )
   expect_equal(
-    dist_state(new_chart_block(chart_type = "boxplot", group = "g",
-                               value = "v", box_points = "outliers"),
+    dist_state(new_chart_block(
+      type = "boxplot",
+      x = "g",
+      y = "v",
+      box_points = "outliers"
+    ),
                "box_points"),
     "outliers"
   )
 })
 
 test_that("config message updates summary, whiskers and connect_centers", {
-  blk <- new_chart_block(
-    chart_type = "pointrange", group = "g", value = "v"
-  )
+  blk <- new_chart_block(type = "pointrange", x = "g", y = "v")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
@@ -108,8 +126,11 @@ test_that("pointrange export stays the drill-filtered raw rows", {
   # still just the click filter, so with no drill the raw rows pass through.
   df <- data.frame(g = c("a", "a", "b"), v = c(1, 2, 3))
   blk <- new_chart_block(
-    chart_type = "pointrange", group = "g", value = "v",
-    summary = "mean_se", connect_centers = TRUE
+    type = "pointrange",
+    x = "g",
+    y = "v",
+    summary = "mean_se",
+    connect_centers = TRUE
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),

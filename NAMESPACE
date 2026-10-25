@@ -9,6 +9,7 @@ S3method(blockr.core::board_options,chart_block)
 S3method(blockr.core::board_options,heatmap_block)
 S3method(blockr.core::board_options,summarize_table_block)
 S3method(blockr.core::board_options,table_block)
+S3method(blockr_deser,chart_block)
 S3method(blockr_deser,summary_table_block)
 S3method(blockr_deser,tile_block)
 S3method(format,summarize_exhibit)
@@ -87,17 +88,19 @@ export(write_annotated_xlsx)
 export(write_exhibit_html)
 export(write_exhibit_png)
 export(write_exhibit_pptx)
-importFrom(blockr.core,arg_array)
-importFrom(blockr.core,arg_boolean)
-importFrom(blockr.core,arg_enum)
-importFrom(blockr.core,arg_integer)
-importFrom(blockr.core,arg_number)
-importFrom(blockr.core,arg_object)
-importFrom(blockr.core,arg_string)
-importFrom(blockr.core,block_output)
-importFrom(blockr.core,block_ui)
-importFrom(blockr.core,blockr_deser)
-importFrom(blockr.core,new_arg_spec)
-importFrom(blockr.core,new_arg_specs)
-importFrom(blockr.core,register_blocks)
+importFrom(blockr.core,
+  arg_array,
+  arg_boolean,
+  arg_enum,
+  arg_integer,
+  arg_number,
+  arg_object,
+  arg_string,
+  block_output,
+  block_ui,
+  blockr_deser,
+  new_arg_spec,
+  new_arg_specs,
+  register_blocks
+)
 importFrom(rlang,"%||%")

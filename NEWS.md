@@ -1,3 +1,28 @@
+# blockr.viz 0.3.0
+
+* `new_chart_block()` has new argument names, chosen to stay stable on CRAN
+  and to match blockr.ggplot and ggplot2. `x` and `y` are the screen axes for
+  every type: a horizontal bar of counts is `y = "class"`, a horizontal bar
+  of sums `x = "sales", y = "region", func = "sum"`. `orientation` is
+  inferred and only needed when both columns are non-numeric. The renames:
+  `chart_type` -> `type`, `group`/`value` -> `x`/`y`, `bar_mode` ->
+  `position` (`"stack"`, `"dodge"`, `"fill"`), `tt_fields` -> `tooltip`,
+  `line_width_mult`/`dot_size_mult` -> `line_width`/`point_size`,
+  `value_lines` -> `y_lines`, `lo`/`hi` -> `ymin`/`ymax`, `band_id` and
+  `count_col` -> `id`, `count_on` -> `show_n`, `na_group` -> `missing`,
+  `ctrl_target`/`ctrl_table` -> `drill_target`/`drill_table`, `values` ->
+  `script_values`, and the four `filter_*` fields -> `selection`.
+  `pct_of = "group"` is now `"category"`. `baseline = "cumulative"` is
+  `type = "waterfall"`, and `type = "radar"` is gone. The old names still
+  work, with a warning, and saved boards load unchanged.
+* `{@arg}` slots in titles take the new names (`{@type}`, `{label(@y)}`). A
+  saved template with an old name still resolves.
+* The chart draws no toolbox icons. Drag in a line chart to zoom; a "Reset
+  zoom" link appears while zoomed, and a double-click also resets. A scatter
+  brushes on drag as before.
+* The fallback palette, used without blockr.theme, is blockr.theme's
+  "Blockr" palette. The old fallback's yellow was unreadable on white.
+
 # blockr.viz 0.2.210
 
 * A summarize table grouped by two `by` columns lists the inner column flat

@@ -1,579 +1,327 @@
-#' Drill-Down Chart Block
+#' Chart block
 #'
-#' A configurable chart that can also act as a filter. Arguments are
-#' grammar-of-graphics aesthetics: each one names a **data column**, never
-#' a literal value. Roles are orthogonal -- `color` only colours, `series`
-#' only splits into series, `label` only writes on-mark text, position is
-#' `x`/`y`/`xend` or `group`.
+#' An interactive chart (ECharts) that can also act as a filter. The
+#' arguments are grammar-of-graphics aesthetics: each one names a **data
+#' column**, never a literal value. Roles are orthogonal: `color` only
+#' colours, `series` only splits into series, `label` only writes on-mark
+#' text.
 #'
-#' Interactivity is explicit and opt-in via `drill`. A click identifies a
-#' mark; the mark maps to one or more source rows; the downstream filter
-#' is `drill %in% (distinct values of drill over those rows)`. When
-#' `drill` is unset the click is inert (no filter emitted). Brush / drag
-#' range selection on scatter/line is a separate gesture and is unchanged.
+#' `x` and `y` are the screen axes for every type, as in ggplot2. For the
+#' aggregated types (bar, waterfall, pie, treemap, boxplot, pointrange) one of
+#' them is the category and the other the column `func` aggregates, and which
+#' way the chart lies follows from that: `x = "class"` draws vertical bars of
+#' counts, `y = "class"` horizontal ones, and `x = "sales", y = "region",
+#' func = "sum"` horizontal bars of summed sales. With one column and a row
+#' count that column is the category; with two, a numeric column beside a
+#' non-numeric one is the value. For pie and treemap `x` is the slice and `y`
+#' the value.
 #'
-#' Three chart families share this block (an internal render-dispatch
-#' detail that never changes what an argument means):
-#' aggregated (bar, waterfall, pie, treemap, boxplot, radar), individual
-#' (scatter, line), timeline (gantt). A waterfall is a bar with a cumulative
-#' baseline (each bar floats from the running total). A radar puts the `group`
-#' levels on the spokes,
-#' draws one shape per `color` level, and each vertex is
-#' `agg_fn(metric)` for that cell; clicking a shape drills on its `color`
-#' value. For spokes from several numeric columns, pivot longer upstream
-#' and map the name column to `group`.
+#' Interactivity is opt-in via `drill`. A click identifies a mark, the mark
+#' maps to source rows, and the downstream filter is `drill %in%` the values
+#' of `drill` in those rows. With `drill` unset a click does nothing.
 #'
-#' @param group Column for the categorical axis (aggregated charts)
-#' @param color Column mapped to colour (optional, all families)
-#' @param facet Column to facet by -- one small panel per level (optional)
-#' @param value Column for the value (aggregated only). Must match
-#'   `func`: ".count" for `"count"` (row count -- the value is otherwise
-#'   ignored), any column for `"count_distinct"` (e.g. a subject id to count
-#'   patients instead of records), a numeric column for the numeric
-#'   aggregations. (Was `metric`.)
-#' @param func Aggregation function: `"count"`, `"count_distinct"`, `"mean"`,
-#'   `"median"`, `"sum"`, `"min"`, `"max"`, `"identity"`. With a `color` split,
-#'   `"count_distinct"` counts an entity once per colour level it appears
-#'   under; deduplicate upstream if segments must sum to the per-group
-#'   distinct count. `"identity"` ("None (as is)") does NOT aggregate -- it
-#'   plots `value` directly, one bar per row when `group` is unique (for bar
-#'   heights already computed upstream); duplicate categories collapse to the
-#'   first row. (Was `agg_fn`.)
-#' @param chart_type Chart type: "bar", "waterfall", "scatter", "line",
-#'   "pie", "treemap", "boxplot", "pointrange", "radar", "gantt". "waterfall"
-#'   is a bar with a cumulative baseline (sugar for `bar` +
-#'   `baseline = "cumulative"`). "boxplot" and "pointrange" are the
-#'   distribution marks: both summarize the raw `value` within each `group`
-#'   (x `color`) slot in the browser (see `summary`) -- no upstream summarize
-#'   block, and the block's export stays the drill-filtered raw rows.
-#' @param x X-axis column (individual / timeline charts)
-#' @param y Y-axis column (individual / timeline charts)
-#' @param series Column whose distinct values split rows into separate
-#'   series (individual: one line/scatter group per value; timeline:
-#'   per-bar label). Independent of `color`. High cardinality is fine.
-#' @param xend Interval end column (timeline only; NA rows render as
-#'   dots at `x`)
-#' @param label Column whose value is written on each mark. Default unset
-#'   (no on-mark text). For `pie`/`treemap`, when unset the label falls
-#'   back to `group` (a label-less pie is unusable).
-#' @param tt_fields Character vector of extra column names appended to each
-#'   mark's hover tooltip, beyond the mapped roles (gantt, scatter, line, bar).
-#'   On a bar the value shown is the group's representative (first row) -- exact
-#'   for a `"None (as is)"` bar, a representative for an aggregation. Default
-#'   `NULL` (none). Display-only -- does not affect the plot; a listed column
-#'   dropped upstream is silently omitted.
-#' @param drill Column a click filters downstream on. Default unset (a
-#'   click is inert). When set, clicking a mark emits a categorical
-#'   filter on this column's value(s) for the clicked mark. For an
-#'   aggregated chart this should be a column constant within a group.
-#' @param sort_by Category ordering on the axis. Allowed values depend on
-#'   the chart family:
-#'   * Aggregated: `"value"` (default for bar/pie/treemap/radar), `"data"`
-#'     (default for the distribution marks; factor levels when the group
-#'     column carries them, else first appearance in the rows -- visits and
-#'     dose groups keep their own order), `"alpha"`, or a column name (order
-#'     groups by that column's per-group minimum, e.g. `"AVISITN"`).
-#'   * Timeline: `"onset"` (default), `"alpha"`, or a column name.
-#'   * Individual: ignored.
-#' @param sort_dir `"asc"` or `"desc"`. Reverses the `sort_by` ordering.
-#' @param orientation Category-axis orientation: `"horizontal"` (category on
-#'   the y-axis, best for long labels) or `"vertical"` (category on the
-#'   x-axis). Presentation property -- the mapping (Group/Value) is unchanged.
-#'   Bar and the distribution marks (boxplot / pointrange). `NULL` (default)
-#'   resolves per type: `"horizontal"` for bar, `"vertical"` for the
-#'   distribution marks (visits/arms read left-to-right).
-#' @param bar_mode Layout for a color-split bar: `"stacked"` (default -- color
-#'   segments stack into one bar per group), `"grouped"` (segments sit
-#'   side-by-side / dodged, for comparing absolute values), or `"percent"`
-#'   (stacked but each group normalized to 100%, for comparing composition).
-#'   No effect without a `color` split; ignored when `baseline = "cumulative"`
-#'   (waterfall). Bar charts only.
-#' @param value_labels Write each bar's value at its end: `TRUE` or `FALSE`
-#'   (default). A negative bar carries its label at its own end, left of or
-#'   below zero. A stacked bar labels the stack total, a grouped bar every
-#'   bar, and a `bar_mode = "percent"` bar each segment's share, inside the
-#'   segment. Labels that would overlap are left out, so a crowded chart (a
-#'   waterfall of 100+ subjects) stays readable; the tooltip keeps every
-#'   value. Bar and waterfall only. Like `identity_line`, the gear's switch
-#'   speaks "on"/"off" over the wire; the R state is a plain logical.
-#' @param filter_type,filters,filter_range,filter_point
-#'   Runtime click/brush filter state (transport for the emitted filter;
-#'   normally left at defaults at creation). `filters` is the click filter,
-#'   a named list of character vectors, column -> values, `NA` for a missing
-#'   value; the columns AND together. A range filter (`filter_type =
-#'   "range"`) may carry the facet panel it was taken in as `filters`.
-#' @param filter_column,filter_values LEGACY, folded into `filters`: a board
-#'   saved with one filter column and its values restores as that filter.
-#' @param baseline Bar baseline mode: `"zero"` (default -- every bar starts at
-#'   0) or `"cumulative"` (a waterfall/bridge -- each bar floats from the
-#'   running cumulative of the bars before it; the step axis honors data order,
-#'   each `metric` value is a delta). `chart_type = "waterfall"` implies
-#'   `"cumulative"`. Bar family only.
-#' @param waterfall_totals Character vector of `group` (step) values rendered
-#'   as total/subtotal bars in a cumulative-baseline bar: their baseline resets
-#'   to 0 and they draw the absolute running cumulative. Default `NULL` (every
-#'   bar is a relative delta).
-#' @param title,subtitle,caption Chart text, rendered above (title, subtitle)
-#'   and below (caption) the chart. `caption` defaults to the option
-#'   `blockr.viz.default_caption` (unset = `NULL`), so a deployment can caption
-#'   every new chart, e.g. `options(blockr.viz.default_caption = "{filters}")`.
-#'   Each is one of three tiers: `NULL`
-#'   (default) = auto -- each slot falls back to the input data frame's
-#'   table-level display attribute (`label` for the title, `subtitle`,
-#'   `caption`) when one is present; `""` = explicitly none (suppresses the
-#'   auto text); any other
-#'   string = shown, with `{...}` tokens resolved against the CURRENT data on
-#'   every render: `{col}` -> the distinct values of that column collapsed
-#'   with ", " (an upstream value filter on ARM makes `{ARM}` read the
-#'   selected arm), `{label(col)}` -> the column's variable label (the picker
-#'   block carries the picked measure's label, so `{label(value)}` follows
-#'   the pick), `{n}` -> row count, `{n_distinct(col)}` -> distinct count.
-#'   Tokens are data lookups, never evaluated code; a token naming a missing
-#'   column resolves to "".
-#' @param line_width_mult Multiplier on the default line width for line
-#'   charts. Default `1.0`. Range `0.5`-`3.0`. Individual family only.
-#' @param dot_size_mult Multiplier on the default marker size. Default
-#'   `1.0`. Range `0.5`-`3.0`. Individual family only.
-#' @param connect How a line chart connects its points: `"monotone"`
-#'   (default, monotone-smoothed -- no overshoot, so the curve never implies
-#'   values outside the measured range), `"straight"` (plain segments), or
-#'   `"step-start"` / `"step-middle"` / `"step-end"` (hold the value between
-#'   observations, jump at the named point -- dose levels, on/off states).
-#'   One control replacing the old `step` + `smooth` pair. Consumed by the JS
-#'   renderer.
-#' @param value_lines,x_lines Helper lines at fixed positions: numeric
-#'   vectors, each entry drawing one dashed guide line. `value_lines` run
-#'   across the VALUE axis: y on a scatter or line chart, and the value axis
-#'   of a bar, waterfall, boxplot or point range in either orientation (a
-#'   target, a threshold). On a percent axis they are percentages (`50` is
-#'   half). `x_lines` run across a numeric x axis, so scatter and line only.
-#'   Plain numbers, never column names (a Hy's-Law eDish cross is
-#'   `x_lines = 3, value_lines = 2`). Default `NULL` (none).
-#' @param smoother Trend overlay for scatter charts: one of `"none"`
-#'   (default), `"lm"`, or `"loess"`. Fit per `color`/`series` group, and per
-#'   `facet` panel, via [compute_smoother_series()].
-#' @param identity_line Identity-line overlay for scatter charts: `TRUE` draws
-#'   a dashed 45-degree y = x guide line across the overlap of the x and y
-#'   ranges (shift / agreement plots), `FALSE` (default) omits it. The legacy
-#'   `"on"` / `"off"` strings still restore -- the gear's segmented control
-#'   transports "on"/"off" over the wire, but that is a UI detail and the R
-#'   value is a plain logical, as for the table block's `sortable` et al.
-#' @param box_points Observation overlay for boxplots: one of `"none"`
-#'   (default, box only) or `"outliers"` (plot only the points beyond the
-#'   whisker extent). The former `"all"` strip was removed; boards carrying
-#'   it degrade to `"none"`. No-op for other chart types.
-#' @param summary Distribution statistic (boxplot / pointrange): the point
-#'   range's interval, or the box's body. One of `"median_q1_q3"`,
-#'   `"mean_sd"`, `"mean_2sd"`, `"mean_se"`, `"p5_p95"`, `"min_max"`,
-#'   computed in the browser from the raw `value` column. `NULL` (default)
-#'   resolves per mark: `"median_q1_q3"` for boxplot, `"mean_se"` for
-#'   pointrange. No-op for other chart types.
-#' @param whiskers Whisker rule -- the mark's OUTER interval. `"tukey"`
-#'   (1.5x IQR fences clipped to the data, the textbook boxplot) or any
-#'   `summary` value (e.g. `"min_max"`, `"p5_p95"`, `"p10_p90"`). `NULL`
-#'   (default) resolves per mark: `"tukey"` for the boxplot, `"p10_p90"` for
-#'   the band. The band differs deliberately -- a fence is an extreme order
-#'   statistic, so dragged into a continuous ribbon its edge lurches whenever
-#'   one subject enters or leaves the window, while a fixed quantile moves
-#'   only when the distribution does. No-op for other chart types.
-#' @param connect_centers Pointrange only: `TRUE` draws a line through the
-#'   interval centers in group order (the over-visits trajectory reading).
-#'   Default `FALSE`. Like `identity_line`, the gear's control speaks
-#'   "on"/"off" over the wire; the R state is a plain logical.
-#' @param band_window Distribution band windowing: `"adaptive"` (default)
-#'   grows the window at each grid point until it holds `band_size` distinct
-#'   subjects, which keeps the band's stability constant as a cohort thins;
-#'   `"fixed"` uses `band_size` as a half-width in x units. A fixed window is
-#'   simpler to explain but goes empty wherever the design is sparse -- with
-#'   scheduled visits 56 days apart, a narrow window lands in the gap between
-#'   them and the band tears into pieces. No-op for other chart types.
-#' @param band_size Distinct subjects per window (`band_window =
-#'   "adaptive"`, default 45) or the half-width in x units (`"fixed"`).
-#' @param band_min_n Minimum distinct subjects in a window; below it the band
-#'   is cut rather than drawn through thin air. Default 12.
-#' @param band_id Subject id column counted DISTINCT for the window and for
-#'   the reported n (e.g. `"USUBJID"`). `NULL` counts rows, which over-counts
-#'   a cohort whenever one subject contributes several observations to the
-#'   same window -- so set it for repeated-measures data.
-#' @param ref_hi,ref_lo Column names holding an upper / lower reference
-#'   limit, drawn as dashed lines (e.g. `"ANRHI"` / `"ANRLO"`). Unlike
-#'   `value_lines`, which takes values, these name a COLUMN: an ADaM reference
-#'   range is per-record and varies by lab, sex and age, so the block reduces
-#'   the column to its median and the label carries the spread it reduced
-#'   from ("ANRHI 34 (32-43)"). `NULL` (default) or `""` draws nothing. A
-#'   limit the data never approaches only stretches the value axis so far
-#'   before it pins to the frame edge, so one irrelevant limit cannot flatten
-#'   the series.
-#' @param lo,hi Optional lower / upper value bounds used by the renderer to
-#'   clamp or annotate the value axis. Default `NULL` (auto).
-#' @param na_group What to do with rows whose `group` value is missing:
-#'   `"level"` (default) gives them their own category, the behaviour this has
-#'   always had; `"drop"` removes them from the categories but NOT from the
-#'   panel, so they draw nothing and still count toward `pct_distinct`'s
-#'   denominator. That is the difference between a row that is a category and a
-#'   row that is only a member of the population.
-#' @param pct_of Which mapped role a `func = "pct_distinct"` denominator is
-#'   taken within: `"facet"` (default), `"group"` or `"color"`. A cell only
-#'   knows the values of the roles it is mapped on, so those three are the
-#'   whole option space. It cannot be inferred: the chart would have to know
-#'   whether a column is a population split (arm, sex, country) or an event
-#'   attribute (grade), and dividing grade-2 subjects by subjects-with-grade-2
-#'   is circular. A vector is accepted, though the gear offers one role.
-#' @param func_toggle LEGACY, ignored. Put the aggregation on the face as a
-#'   slot in the sentence (`{@func}` in `subtitle`), or declare a switch in
-#'   the prepare `script` and name it in the sentence (`{@measure}`).
-#' @param count_on Which label surfaces carry an observation count in
-#'   parentheses ("Female (12)"): `"off"` (default), `"axis"` (the category
-#'   axis ticks), `"facet"` (the facet strip labels), or `"both"`.
-#' @param count_col Column counted DISTINCT for those labels (e.g.
-#'   `"USUBJID"` -> unique subjects). `NULL` (default) or `""` falls back to
-#'   the raw row count. Counts are computed per label group in the browser and
-#'   do NOT sum from the per-cell n: one subject can span several color /
-#'   facet cells.
-#' @param facet_scales How the facet panels scale, as in ggplot2's
-#'   `facet_wrap(scales = )`. `"fixed"` (default) gives every panel ONE
-#'   numeric domain and one category set in one order: a bar of the same
-#'   length, or a point at the same height, then means the same value in every
-#'   panel -- the premise of a small-multiples grid. `"free"` lets each panel
-#'   size itself off its own subset, which is the honest reading when the
-#'   panels do not share a unit (faceting by `PARAM`, where ALT, bilirubin and
-#'   heart rate cannot share a value axis); like ggplot2, it also drops
-#'   categories a panel has no rows for. `"free_y"` frees the value axis and
-#'   keeps a shared x. It is offered on scatter / line / band only, where the
-#'   value axis IS y -- elsewhere the value axis follows `orientation`, so the
-#'   name would lie, and a saved `"free_y"` reads as `"free"` there.
-#' @param facet_cols How many facet panels sit in a row, as in ggplot2's
-#'   `facet_wrap(ncol = )`. `NULL` (default) is auto: the canvas fits as many
-#'   panels per row as the card is wide, which is what every faceted chart did
-#'   before this setting existed. A number pins the row, and the same number
-#'   reaches the report / deck render -- where ggplot2 otherwise picks a
-#'   square-ish grid of its own, so an auto chart and its exhibit could
-#'   disagree about the shape of the same picture. Capped at the panel count:
-#'   four columns over two panels leaves no empty tracks.
+#' Arguments of blockr.viz < 0.3.0 (`chart_type`, `group`, `value`,
+#' `bar_mode`, ...) are still accepted, with a warning, and boards saved with
+#' them load unchanged.
 #'
-#'   It is deliberately NOT a board-wide setting the way the echarts theme is.
-#'   Colour and type can have one answer for every chart; how many panels fit
-#'   depends on how many this chart has and how wide its card is. A deployment
-#'   that does want one answer sets `blockr.viz.facet_cols` and every block
-#'   takes it as its default.
-#' @param download Offer the chart for download. `TRUE` (the default) puts a
-#'   control in the gear header that writes the chart a report would print --
-#'   image, HTML, PowerPoint and the plotted numbers -- rather than a capture
-#'   of the live canvas. `FALSE` shows no control.
-#' @param ctrl_target Character(1), beta. Block id of a value filter block on
-#'   the board: a categorical drill click's claim is pushed there over the
-#'   board's control channel ([ctrl_send()]; the board needs the channel
-#'   installed, see [new_ctrl_bridge_extension()]). Empty (the default) =
-#'   off; the drill behaves exactly as before. Exposed in the gear's "Send
-#'   to filter (beta)" section.
+#' @param type Chart type: `"bar"`, `"waterfall"`, `"pie"`, `"treemap"`,
+#'   `"boxplot"`, `"pointrange"` (aggregated), `"scatter"`, `"line"`,
+#'   `"band"` (one mark per row), or `"gantt"` (intervals on lanes). A
+#'   waterfall is a bar whose bars float from the running total. Boxplot and
+#'   pointrange summarize the raw values within each category in the browser
+#'   (see `summary`).
+#' @param x,y Columns on the horizontal and vertical axis. See Details for
+#'   the aggregated types. For gantt, `x` is the interval start and `y` the
+#'   lane.
+#' @param func Aggregation of the value column per category (aggregated types
+#'   only): `"count"` (default; set only the category column),
+#'   `"count_distinct"`, `"mean"`, `"median"`, `"sum"`, `"min"`, `"max"`,
+#'   `"identity"` or `"pct_distinct"`. `"identity"` does not aggregate: it
+#'   draws the value as is, one bar per row when the category is unique.
+#'   `"pct_distinct"` is the share of the panel's distinct values (see
+#'   `pct_of`). With a `color` split, `"count_distinct"` counts an entity
+#'   once per colour level it appears under.
+#' @param color Column mapped to colour.
+#' @param facet Column to facet by, one small panel per level.
+#' @param series Column whose values split rows into separate series (one
+#'   line or point group per value; per-bar label on a gantt). Independent of
+#'   `color`.
+#' @param xend Interval end column (gantt only). Rows without an end are drawn
+#'   as a dot at `x`.
+#' @param label Column written on each mark. For pie and treemap the slice
+#'   column is used when unset.
+#' @param orientation `NULL` (default) infers which way a bar, boxplot or
+#'   pointrange lies (see Details). Set `"horizontal"` (categories on y) or
+#'   `"vertical"` (categories on x) only when both columns are non-numeric,
+#'   such as a distinct count of a character id by a category.
+#' @param position Layout of a colour-split bar: `"stack"` (default),
+#'   `"dodge"` (side by side) or `"fill"` (stacked to 100%).
+#' @param sort_by Category order: `"value"` (default for bar, pie and
+#'   treemap), `"data"` (default for boxplot and pointrange: factor levels,
+#'   else first appearance), `"alpha"`, or a column name (the per-category
+#'   minimum of that column). For gantt: `"onset"` (default), `"alpha"` or a
+#'   column name. Ignored for scatter and line.
+#' @param sort_dir `"asc"` or `"desc"`.
+#' @param value_labels `TRUE` writes each bar's value at its end. A stacked bar
+#'   labels the total, a dodged bar every bar, a filled bar each segment's
+#'   share. Labels that would overlap are left out. Bar and waterfall only.
+#' @param tooltip Extra columns shown in each mark's tooltip.
+#' @param drill Column a click filters downstream on, `"auto"` for the type's
+#'   natural target, or `NULL` (default) for no filtering.
+#' @param line_width,point_size Line width and marker size relative to the
+#'   default (1). Range 0.5 to 3.
+#' @param connect How a line connects its points: `"monotone"` (default,
+#'   smoothed without overshoot), `"straight"`, `"step-start"`,
+#'   `"step-middle"` or `"step-end"`.
+#' @param y_lines,x_lines Numbers at which dashed guide lines are drawn.
+#'   `y_lines` run across the value axis (y on a scatter or line, the value
+#'   axis of a bar or boxplot either way round); `x_lines` across a numeric x.
+#' @param ymin,ymax Columns holding the lower and upper end of an interval per
+#'   row, drawn as error bars on a scatter or a line.
+#' @param smoother Trend line on a scatter: `"none"` (default), `"lm"` or
+#'   `"loess"`, fit per colour or series group and per facet panel.
+#' @param identity_line `TRUE` draws a dashed y = x line on a scatter.
+#' @param box_points `"none"` (default) or `"outliers"`: the points beyond the
+#'   whiskers of a boxplot.
+#' @param summary Statistic of a boxplot's body or a pointrange's interval:
+#'   `"median_q1_q3"`, `"mean_sd"`, `"mean_2sd"`, `"mean_se"`, `"p5_p95"`,
+#'   `"p10_p90"` or `"min_max"`. `NULL` (default) is `"median_q1_q3"` for a
+#'   boxplot and `"mean_se"` for a pointrange.
+#' @param whiskers A boxplot's outer interval: `"tukey"` (1.5 x IQR, clipped to
+#'   the data) or any `summary` value. `NULL` (default) is `"tukey"` for a
+#'   boxplot and `"p10_p90"` for a band.
+#' @param connect_centers `TRUE` joins a pointrange's centers in category
+#'   order.
+#' @param band_window,band_size,band_min_n The band (`type = "band"`): a
+#'   running quantile band of `y` over `x` across individuals. With
+#'   `band_window = "adaptive"` (default) the window at each point grows until
+#'   it holds `band_size` distinct individuals (default 45); with `"fixed"`,
+#'   `band_size` is a half-width in x units. Points with fewer than
+#'   `band_min_n` individuals (default 12) are not drawn.
+#' @param id Column that identifies an individual. The band counts it
+#'   distinct, and so do the N labels (`show_n`). `NULL` counts rows.
+#' @param ref_lo,ref_hi Columns holding a lower and upper reference limit per
+#'   row, drawn as dashed lines at their median and labelled with their
+#'   spread.
+#' @param waterfall_totals Steps of a waterfall drawn as total bars, from zero
+#'   to the running total.
+#' @param show_n Observation counts in labels, e.g. "Female (12)": `"off"`
+#'   (default), `"axis"`, `"facet"` or `"both"`.
+#' @param missing Rows whose category is missing: `"level"` (default) gives
+#'   them their own category, `"drop"` removes them from the categories but
+#'   keeps them in the panel, so they still count toward `pct_distinct`.
+#' @param pct_of The role whose levels a `pct_distinct` denominator is taken
+#'   within: `"facet"` (default), `"category"` or `"color"`.
+#' @param facet_scales `"fixed"` (default) shares one scale across the panels,
+#'   `"free"` lets each panel size itself, `"free_y"` frees y only (scatter,
+#'   line and band).
+#' @param facet_cols Panels per row; `NULL` (default) fits as many as the card
+#'   is wide. Defaults to the option `blockr.viz.facet_cols`.
+#' @param title,subtitle,caption Chart text. `NULL` uses the input data's
+#'   label, subtitle or caption attribute, `""` shows nothing, and any other
+#'   string is a template resolved against the current data: `{col}` (the
+#'   column's distinct values), `{label(col)}`, `{n}`, `{n_distinct(col)}`.
+#'   `{@arg}` prints one of the block's own settings and makes the word a
+#'   control the reader can click (`{label(@y)}`, `{@func in sum, mean}`); a
+#'   clause in `[...]` disappears when its setting is empty. `caption`
+#'   defaults to the option `blockr.viz.default_caption`.
+#' @param download `TRUE` (default) offers the chart for download (image,
+#'   HTML, PowerPoint and the plotted numbers).
+#' @param drill_target,drill_table Beta. The block id of a value filter block
+#'   that a drill click is also sent to, over the board's control channel
+#'   (see [ctrl_send()] and [new_ctrl_bridge_extension()]), and the table in
+#'   its dm the conditions apply to. `"auto"` finds the board's drill
+#'   destination. With a target set, a click is an event: the chart holds no
+#'   selection.
+#' @param script,script_values Experimental. R code run on the incoming data
+#'   before the chart sees it; its top-level plain-value assignments become
+#'   controls on the block, and `script_values` holds their settings.
+#' @param selection What a click or brush selected. Written by the chart; leave
+#'   it `NULL`.
+#' @param ... Forwarded to [blockr.core::new_transform_block()].
 #'
-#'   `"auto"` needs no block id: it resolves to the board's drill destination
-#'   -- the one `blockr.dm::new_drill_filter_block()` on the board, else the
-#'   one value filter block ([ctrl_auto_target()]). That is what the gear's
-#'   checkbox writes, so a drill reaches the cohort filter with nothing typed.
+#' @return A transform block of class `chart_block`.
+#' @examples
+#' # counts by class, horizontal bars
+#' new_chart_block(type = "bar", y = "class")
 #'
-#'   With a target set the drill becomes TRANSIENT: the click is an event,
-#'   not a selection. The chart latches nothing (so it does not filter its
-#'   own output on the click, saves no selection with the board, and highlights
-#'   nothing), clicking the same mark twice sends twice instead of toggling
-#'   off, and all the click leaves behind is the clicked mark lit for a moment
-#'   and a "Sent ..." line in the footer. Undoing a drill is the target's job, because the
-#'   control channel has no back-edge: a selection held here would keep
-#'   showing a cohort that anyone else can reset.
-#' @param ctrl_table Character(1), beta. Name of the table in the target's
-#'   `dm` the pushed conditions apply to (e.g. `"adsl"`). Leave empty when
-#'   the target filters a plain data frame.
-#' @param script,values Experimental prepare script. `script` is R code run
-#'   on the incoming data before the chart sees it; its top-level plain-value
-#'   assignments become controls on the block's face, and `values` holds
-#'   their current settings. `NULL` (default) = no script. Not on the AI
-#'   surface. A script that reshapes the data should end with
-#'   [mark_column_kinds()].
-#' @param ... Forwarded to [blockr.core::new_transform_block()]
+#' # mean highway mileage by class and drive train, side by side
+#' new_chart_block(
+#'   type = "bar", x = "class", y = "hwy", func = "mean",
+#'   color = "drv", position = "dodge"
+#' )
 #'
-#' @return A transform block of class `chart_block`
-#' @examplesIf interactive()
-#' new_chart_block()
+#' # a scatter with a linear trend per group
+#' new_chart_block(
+#'   type = "scatter", x = "displ", y = "hwy", color = "drv",
+#'   smoother = "lm"
+#' )
+#'
+#' # a subtitle with a control in it
+#' new_chart_block(
+#'   type = "bar", x = "class", y = "hwy", func = "mean",
+#'   subtitle = "{@func in mean, median} of {label(@y)}"
+#' )
 #' @export
 new_chart_block <- function(
-    group = NULL,
-    color = NULL,
-    facet = NULL,
-    value = ".count",
-    func = "count",
-    chart_type = "bar",
+    type = "bar",
     x = NULL,
     y = NULL,
+    func = "count",
+    color = NULL,
+    facet = NULL,
     series = NULL,
     xend = NULL,
     label = NULL,
-    tt_fields = NULL,
-    drill = NULL,
+    orientation = NULL,
+    position = "stack",
     sort_by = NULL,
     sort_dir = NULL,
-    # NULL = per-type default resolved in the browser: "horizontal" for bar,
-    # "vertical" for the distribution marks (see _ensureDistributionMetric).
-    orientation = NULL,
-    # Color-split bar layout. "stacked" (default) = segments stack into one
-    # bar per group; "grouped" = segments sit side-by-side (dodged); "percent"
-    # = stacked but each group normalized to 100% (composition view). No-op
-    # without a `color` split, and ignored when baseline = "cumulative".
-    bar_mode = "stacked",
-    # Bar value labels (bar + waterfall). FALSE by default, so a saved chart
-    # keeps its look. Logical in state; the gear's switch speaks "on"/"off".
     value_labels = FALSE,
-    # --- Runtime filter transport (NOT creation-time config) -------------
-    # These five hold the emitted click/brush filter state. They are set by
-    # interaction at runtime, normally left at defaults at creation. They
-    # MUST stay in the constructor signature: blockr.core serializes a block
-    # from its constructor formals (`block_ctor_inputs`) and restores by
-    # re-calling the constructor with those saved values, so dropping them
-    # from the signature would break filter-state save/restore. See the
-    # `state = list(...)` block below.
-    filter_type = "categorical",
-    filter_column = NULL, # LEGACY: folded into `filters`
-    filter_values = NULL, # LEGACY: folded into `filters`
-    filter_range = NULL,
-    filter_point = NULL,
-    filters = NULL,
-    # ---------------------------------------------------------------------
-    line_width_mult = 1.0,
-    dot_size_mult = 1.0,
+    tooltip = NULL,
+    drill = NULL,
+    line_width = 1,
+    point_size = 1,
     connect = "monotone",
-    value_lines = NULL,
+    y_lines = NULL,
     x_lines = NULL,
+    ymin = NULL,
+    ymax = NULL,
     smoother = "none",
     identity_line = FALSE,
-    # Boxplot observation overlay: "none" (box only) or "outliers" (only the
-    # points past the whisker extent). No-op for non-boxplot charts.
     box_points = "none",
-    # Distribution statistics (boxplot / pointrange, see SUMMARY_STATS in
-    # chart/roles.js): `summary` is the box body / point-range interval
-    # (NULL = per-mark default, resolved JS-side in ensureDistributionMetric,
-    # chart/model-common.js); `whiskers` is the box's outer rule;
-    # `connect_centers` joins the point-range centers in slot order.
     summary = NULL,
-    # NULL = per-mark default, like `summary` above: "tukey" for the boxplot
-    # (the textbook rule), "p10_p90" for the band. Saved boards carrying an
-    # explicit value are unaffected.
     whiskers = NULL,
     connect_centers = FALSE,
-    # Distribution band (chart_type = "band"): the same statistics as the
-    # boxplot, computed in a window sliding along a CONTINUOUS x instead of
-    # per category level. The window is the only genuinely new idea here --
-    # `summary` / `whiskers` above carry over unchanged, so a band and a
-    # boxplot of the same data agree. Computed in R (compute_band_series),
-    # like the smoother. No-op for other chart types.
     band_window = "adaptive",
     band_size = 45,
     band_min_n = 12,
-    band_id = NULL,
-    # Reference lines read from a COLUMN rather than given as values (which
-    # is what value_lines/x_lines take). An ADaM range (ANRHI, A1LO, ...) is
-    # per-record and genuinely varies, so the block reduces the column and
-    # the label admits it did. NULL / "" draws nothing.
-    ref_hi = NULL,
+    id = NULL,
     ref_lo = NULL,
-    lo = NULL,
-    hi = NULL,
-    # Bar baseline mode. "zero" (default) = a normal bar (every bar starts at
-    # 0); "cumulative" = a waterfall/bridge (each bar floats from the running
-    # cumulative). `chart_type = "waterfall"` is sugar for bar + cumulative.
-    # `waterfall_totals` names the steps rendered as total/subtotal bars
-    # (baseline reset to 0, drawn as the absolute running cumulative).
-    baseline = "zero",
+    ref_hi = NULL,
     waterfall_totals = NULL,
-    # Chart text (see R/title-template.R): NULL = auto (title falls back to
-    # the data frame's label attribute, the gt block's existing rule), "" =
-    # explicitly none, else a template resolved against the current data
-    # ("{ARM}" = the distinct values, "{label(value)}" = the column's label).
+    show_n = "off",
+    missing = "level",
+    pct_of = "facet",
+    facet_scales = "fixed",
+    # Read once, at construction. A deployment that wants one answer for
+    # every chart sets the option; a saved chart keeps its own value.
+    facet_cols = getOption("blockr.viz.facet_cols"),
     title = NULL,
     subtitle = NULL,
-    # The caption's default is the deployment's to set: a clinical board wants
-    # every chart to say which filters produced it ("{filters}"), including
-    # the charts nobody wrote a caption for, such as the ones an assistant
-    # adds. Read once, at construction; a saved chart keeps its own value.
+    # A board that wants every chart to say which filters produced it sets
+    # the option to "{filters}", which also reaches the charts an assistant
+    # adds.
     caption = getOption("blockr.viz.default_caption"),
-    # Observation counts appended to category-axis ticks and/or facet strip
-    # labels ("Female (12)"). `count_on` picks the surface(s): "off" (default),
-    # "axis" (the category axis), "facet", or "both". `count_col` is the id
-    # column counted DISTINCT (e.g. USUBJID -> unique subjects); NULL / "" falls
-    # back to the raw row count. The distinct counts are computed per label
-    # group in the browser -- they do NOT sum from the per-cell n, since one
-    # subject can span several colour / facet cells (see labelCounts in
-    # chart/chart-index.js).
-    count_on = "off",
-    count_col = NULL,
-    # Missing group keys: their own category ("level", the long-standing
-    # behaviour) or dropped from the categories while staying in the panel
-    # ("drop"). See the arg spec; "drop" is what makes a population-carrying
-    # frame work -- a subject with no event draws no bar and still counts.
-    na_group = "level",
-    # Which role a pct_distinct denominator is taken within. See the arg spec:
-    # "facet" is right when the population split is the panel (a chart
-    # faceted by arm), "group" when it is the bars (countries grouped, faceted
-    # by action). Getting it wrong is plausible-but-wrong, not an error.
-    pct_of = "facet",
-    # LEGACY: the on-chart aggregation switch, retired. Ignored; kept so old
-    # boards restore.
-    func_toggle = NULL,
-    # Panel scales for a facet grid. "fixed" (default) = one shared numeric
-    # domain and one shared category set/order across the panels, so a
-    # position means the same thing in every one of them.
-    # "free" = each panel sizes itself off its own subset, for panels that do
-    # not share a unit (faceting by PARAM). "free_y" frees the value axis but
-    # keeps a shared x; it is offered on scatter / line / band only, where the
-    # value axis IS y (elsewhere it follows `orientation`, so the name would
-    # lie) and reads as "free" there.
-    facet_scales = "fixed",
-    # Panels per row in the facet grid (`facet_wrap(ncol = )`). NULL = auto:
-    # the canvas packs as many panels per row as the card is wide (the
-    # stylesheet's auto-fit grid), which is what every faceted chart did
-    # before this setting. A number pins the row count, and the SAME number
-    # reaches the ggplot render, where facet_wrap() otherwise picks its own
-    # square-ish grid -- so the chart on screen and the exhibit in a deck stop
-    # disagreeing about the shape of one picture.
-    #
-    # Not a theme setting. The board's `echart_theme` option is colour and
-    # type, one answer for every chart; how many panels fit is a question
-    # about THIS chart's panel count and card width. A deployment that does
-    # want one answer sets the option, and every block takes it as its
-    # default -- the same route `caption` takes.
-    facet_cols = getOption("blockr.viz.facet_cols"),
-    # Downloads. TRUE by default, because a chart has always been takeable:
-    # the gear header carried an image button before this was a setting. What
-    # changed is WHAT it writes -- the chart a report would print, in four
-    # formats, instead of a capture of the live canvas (see R/chart-exhibit.R).
     download = TRUE,
-    ctrl_target = "",
-    ctrl_table = "",
-    # Mapping roles promoted out of the gear onto the block's face, where a
-    # reader can change them without unlocking the board. Character vector of
-    # role keys ("color", "facet", "value", ...); empty (default) = the block
-    # looks exactly as it did, everything in the gear. The gear's Mapping
-    # header carries the toggle that fills this, and each mapping row a pin
-    # that adds or removes itself -- a waterfall's `group` is what the
-    # exhibit IS, not a reader's choice, so it stays pinned out.
-    #
-    # PREPARE SCRIPT (experiment). An ordinary R script run on the incoming
-    # data before the chart sees it, whose plain-value declarations become
-    # controls on the block's face. NULL (default) = no script, and the block
-    # behaves exactly as it did.
-    #
-    # It exists for the cases a mapping cannot reach: a chart that needs one
-    # derived column, or a knob that is not an aesthetic. A
-    # transform on its own would be a code block upstream; the point here is
-    # that the knob lands on THIS block's face, because a dev-master board
-    # wants a chart and its settings to be one card.
-    #
-    # Declaration convention is the code block's: a top-level assignment whose
-    # right-hand side is a plain value (a literal, or c()/factor()/as.Date()/
-    # as.POSIXct()) is a control, everything else is code, and a name starting
-    # with a dot is never a control. A factor's levels are its choice list.
-    #
-    # Deliberately NOT on the AI surface: it is absent from the registry
-    # argument spec, so the assistant never sees it and cannot reach for a
-    # script where a mapping would have done. It stays externally controllable
-    # for MCP and restore.
-    #
-    # A script that RESHAPES the data (a pivot) drops the frame's
-    # `blockr_kinds` attribute, and the gear's role selects then fall back to
-    # offering every column. Not guarded, by decision: call
-    # `mark_column_kinds()` at the end of such a script.
+    drill_target = "",
+    drill_table = "",
+    # The prepare script (experimental). Deliberately absent from the
+    # registry's argument spec, so the assistant never reaches for a script
+    # where a mapping would do. It stays externally controllable for MCP and
+    # restore.
     script = NULL,
-    values = list(),
+    script_values = list(),
+    # What a click or a brush selected. Written by the chart, not by the
+    # caller; a formal because blockr.core saves a block from its formals.
+    selection = NULL,
     ...) {
 
-  # ARG-RENAME (see dev/unified-arg-naming.md): `metric`/`agg_fn` are the
-  # pre-rename names of `value`/`func`. Taken from `...` rather than made
-  # formals -- a formal would demand a matching `state` entry and re-serialize
-  # under the old name -- so saved boards (which pass the old names on restore)
-  # still map onto the new args. Remove after one release cycle.
-  .dep <- list(...)
-  # RETIRED: `expose` put mapping rows in an always-visible band above the
-  # chart. There is one channel now and it is the block's own sentence --
-  # `subtitle`, whose `{@arg}` words are the controls (blockr.docs
-  # design-system/pinned-controls.md). Taken from `...` like the other retired
-  # names so a saved board that carries it still restores, minus the band.
-  if (!is.null(.dep$expose)) {
+  # Code written for blockr.viz < 0.3.0 passes the old names through `...`.
+  # Translate them (R/chart-args.R) and say so. Saved boards take the same
+  # route silently, in blockr_deser.chart_block().
+  dots <- list(...)
+  # R matches a formal before `...` by a unique prefix, so an old `value =`
+  # lands in `value_labels`. Take it back.
+  call_names <- names(sys.call())
+  if ("value" %in% call_names && !"value_labels" %in% call_names) {
+    dots$value <- value_labels
+    value_labels <- FALSE
+  }
+  old <- intersect(names(dots), CHART_LEGACY_ARGS)
+  if (length(old)) {
+    warning(
+      "new_chart_block(): ", paste0("`", old, "`", collapse = ", "),
+      if (length(old) > 1L) " are" else " is",
+      " from blockr.viz < 0.3.0. See ?new_chart_block for the current ",
+      "names.",
+      call. = FALSE
+    )
+    fn <- sys.function()
+    given <- intersect(names(match.call())[-1L], names(formals(fn)))
+    cur <- mget(given, envir = environment())
+    pub <- chart_legacy_args(c(cur, dots[old]))
+    for (nm in intersect(names(pub), names(formals(fn)))) {
+      assign(nm, pub[[nm]])
+    }
+  }
+  if (!is.null(dots$expose)) {
     warning(
       "new_chart_block(): `expose` is retired. Name the setting in ",
       "`subtitle` instead, e.g. \"[, coloured by {@color}]\".",
       call. = FALSE
     )
   }
-  if (!is.null(.dep$metric)) {
-    warning("new_chart_block(): `metric` is deprecated, use `value`.",
-            call. = FALSE)
-    value <- .dep$metric
-  }
-  if (!is.null(.dep$agg_fn)) {
-    warning("new_chart_block(): `agg_fn` is deprecated, use `func`.",
-            call. = FALSE)
-    func <- .dep$agg_fn
-  }
 
   # A pre-#144 DAG copy/paste wrote NULL state as `{}`, which arrives here as
   # an empty list(); a board saved in that state keeps re-emitting it (see
-  # R/state-normalize.R). Heal every optional slot back to NULL, so a block
-  # restored from a poisoned board is indistinguishable from a clean one --
-  # the mapping row stays hidden instead of rendering an "[object Object]"
-  # picker, and the render paths stop coercing their vectors to lists. Column
-  # roles normalize to character; the numeric / free-form slots only collapse
-  # the empty list, keeping their type.
-  # A script may arrive as a character vector of lines (a hand-edited board, an
-  # MCP write). Collapse it HERE, at the one place every construction passes
-  # through, so nothing downstream has to keep asking which shape it has.
+  # R/state-normalize.R). Heal every optional slot back to NULL. Column roles
+  # normalize to character; numeric and free-form slots only collapse the
+  # empty list, keeping their type. A script may arrive as a character
+  # vector of lines; collapse it here, the one place every construction
+  # passes through.
+  type <- as.character(unlist(type %||% "bar"))[1L]
+  if (!type %in% CHART_TYPES) {
+    stop("`type` must be one of ", paste0("\"", CHART_TYPES, "\"",
+         collapse = ", "), ". Got \"", type, "\".", call. = FALSE)
+  }
   script <- cb_script_text(script)
-
-  group <- chr_state(group)
-  color <- chr_state(color)
-  facet <- chr_state(facet)
   x <- chr_state(x)
   y <- chr_state(y)
+  orientation <- chr_state(orientation)
+  if (!is.null(orientation) &&
+        !orientation %in% c("horizontal", "vertical")) {
+    stop("`orientation` must be NULL, \"horizontal\" or \"vertical\".",
+         call. = FALSE)
+  }
+  position <- as.character(unlist(position %||% "stack"))[1L]
+  if (!position %in% names(CHART_POSITIONS)) {
+    stop("`position` must be \"stack\", \"dodge\" or \"fill\".",
+         call. = FALSE)
+  }
+  color <- chr_state(color)
+  facet <- chr_state(facet)
   xend <- chr_state(xend)
   series <- chr_state(series)
   label <- chr_state(label)
   drill <- chr_state(drill)
-  # LEGACY: older boards saved one filter column and its values; they fold
-  # into `filters` here, and are never state again.
-  filters <- chart_filters_state(filters) %||%
-    chart_legacy_filters(filter_column, filter_values)
-  filter_column <- NULL
-  filter_values <- NULL
+  selection <- chart_selection_state(selection)
   sort_by <- chr_state(sort_by)
-  lo <- chr_state(lo)
-  hi <- chr_state(hi)
+  ymin <- chr_state(ymin)
+  ymax <- chr_state(ymax)
   connect <- match.arg(
     connect,
     c("monotone", "straight", "step-start", "step-middle", "step-end")
   )
-  tt_fields <- chr_vec_state(tt_fields)
+  tooltip <- chr_vec_state(tooltip)
   waterfall_totals <- chr_vec_state(waterfall_totals)
   # NOT chr_state: "" is a real value on these (explicitly no title, as
   # against NULL = auto) and chr_state would drop it. See title-template.R.
   title <- title_state(title)
   subtitle <- title_state(subtitle)
   caption <- title_state(caption)
-  # `count_col` is an optional column role (heal a DAG-poisoned list() to NULL,
-  # coerce to character); `count_on` is a fixed-option select, backfilled to
-  # "off" when absent.
-  count_col <- chr_state(count_col)
-  count_on <- count_on %||% "off"
-  na_group <- match.arg(as.character(na_group %||% "level")[1L],
-                        c("level", "drop"))
+  id <- chr_state(id)
+  show_n <- as.character(unlist(show_n %||% "off"))[1L]
+  missing <- match.arg(as.character(missing %||% "level")[1L],
+                       c("level", "drop"))
   # chr_vec_state, not chr_state: the engine takes several roles even though
   # the gear offers one, and truncating here would silently drop the rest.
   pct_of <- chr_vec_state(pct_of) %||% "facet"
-  bad <- setdiff(pct_of, c("facet", "group", "color"))
+  bad <- setdiff(pct_of, names(CHART_PCT_OF))
   if (length(bad)) {
-    stop("`pct_of` must name mapped roles: facet, group or color. Got ",
+    stop("`pct_of` must name mapped roles: facet, category or color. Got ",
          paste0("\"", bad, "\"", collapse = ", "), ".", call. = FALSE)
   }
-  # LEGACY: retired on-chart aggregation switch; a saved value is dropped.
-  func_toggle <- NULL
-  # Fixed-option select; a saved board predating it (or a DAG-poisoned list())
-  # backfills to the shared-scale default.
   facet_scales <- match.arg(
     as.character(facet_scales %||% "fixed")[1L],
     c("fixed", "free_y", "free")
@@ -581,31 +329,25 @@ new_chart_block <- function(
   # NULL (auto) or a whole number as a string; junk heals to auto rather than
   # erroring, because this value also arrives from MCP and from saved state.
   facet_cols <- facet_cols_state(facet_cols)
-  value_lines <- num_vec_state(value_lines)
+  y_lines <- num_vec_state(y_lines)
   x_lines <- num_vec_state(x_lines)
-
-  # `identity_line` is a LOGICAL. The gear's segmented control sends the
-  # strings "on"/"off" (that is the control's transport, see chart/roles.js
-  # ROLES), and every board saved before this change stored that string
-  # verbatim -- 90 of them, all "off". Coerce both shapes to a plain logical
-  # here, the way table-block's as_toggle() already does for
-  # sortable/collapsible/search.
+  # Logicals. The gear's segmented controls send "on"/"off", and boards
+  # saved before these were logicals stored that string.
   identity_line <- bool_state(identity_line)
-  # box_points lost its "all" option; anything outside the enum (old saved
-  # boards) degrades to "none" -- no crash, no behaviour preservation.
-  box_points <- if (identical(box_points, "outliers")) "outliers" else "none"
-  # Distribution statistics: optional select (NULL = per-mark default) /
-  # fixed-option select / logical with the same "on"/"off" wire format as
-  # identity_line. chr_state heals a DAG-poisoned list() to NULL.
-  summary <- chr_state(summary)
-  # NULL stays NULL: the whisker rule is now a per-mark default like `summary`
-  # ("tukey" for the boxplot, "p10_p90" for the band), resolved where it is
-  # consumed. Pinning it to "tukey" here made the formal default unreachable.
-  whiskers <- chr_state(whiskers)
   connect_centers <- bool_state(connect_centers)
   value_labels <- bool_state(value_labels)
-  filter_range <- null_state(filter_range)
-  filter_point <- null_state(filter_point)
+  # box_points lost its "all" option; anything outside the enum (old saved
+  # boards) degrades to "none".
+  box_points <- if (identical(box_points, "outliers")) "outliers" else "none"
+  # NULL = the per-mark default, resolved where it is consumed ("tukey" for
+  # the boxplot, "p10_p90" for the band; see SUMMARY_STATS in chart/roles.js).
+  summary <- chr_state(summary)
+  whiskers <- chr_state(whiskers)
+  script_values <- if (is.list(script_values)) script_values else list()
+  # The module server below takes `id` (its own namespace id), which would
+  # shadow the id column.
+  id_col <- id
+
 
   res <- blockr.core::new_transform_block(
     server = function(id, data) {
@@ -748,40 +490,102 @@ new_chart_block <- function(
           input_display_attrs(if (is.list(inp)) inp$df else NULL)
         })
 
+        # --- state -------------------------------------------------------
+        # The block's state is held under the PUBLIC argument names (the
+        # reactiveVals below that `state` lists). The rest of this server and
+        # the browser speak the internal names; where those differ from the
+        # public ones they are facades over the public state (R/chart-args.R).
+
         # Config state (orthogonal aesthetics)
-        r_group <- shiny::reactiveVal(group)
+        r_chart_type <- shiny::reactiveVal(type)
+        r_x_pub <- shiny::reactiveVal(x)
+        r_y_pub <- shiny::reactiveVal(y)
+        r_orientation_pub <- shiny::reactiveVal(orientation)
+        r_func <- shiny::reactiveVal(func)
         r_color <- shiny::reactiveVal(color)
         r_facet <- shiny::reactiveVal(facet)
-        r_value <- shiny::reactiveVal(value)
-        r_func <- shiny::reactiveVal(func)
-        r_chart_type <- shiny::reactiveVal(chart_type)
-        r_x <- shiny::reactiveVal(x)
-        r_y <- shiny::reactiveVal(y)
         r_xend <- shiny::reactiveVal(xend)
         r_series <- shiny::reactiveVal(series)
         r_label <- shiny::reactiveVal(label)
-        # Extra columns to append to each mark's hover tooltip (gantt). A
-        # character vector or NULL. Optional display-only role, so a value
-        # dropped upstream is silently omitted (not a hard invalid-state).
-        r_tt_fields <- shiny::reactiveVal(tt_fields)
+        # Extra columns to append to each mark's hover tooltip. A character
+        # vector or NULL. Optional display-only role, so a value dropped
+        # upstream is silently omitted (not a hard invalid-state).
+        r_tt_fields <- shiny::reactiveVal(tooltip)
         r_drill <- shiny::reactiveVal(drill)
         r_sort_by <- shiny::reactiveVal(sort_by)
         r_sort_dir <- shiny::reactiveVal(sort_dir)
-        r_orientation <- shiny::reactiveVal(orientation)
-        r_bar_mode <- shiny::reactiveVal(bar_mode)
+        r_position <- shiny::reactiveVal(position)
         r_value_labels <- shiny::reactiveVal(value_labels)
 
-        # Filter state (transport for the emitted downstream filter)
-        r_filter_type <- shiny::reactiveVal(filter_type)
-        r_filters <- shiny::reactiveVal(filters)
-        r_filter_range <- shiny::reactiveVal(filter_range)
-        r_filter_point <- shiny::reactiveVal(filter_point)
+        # Whether a column of the prepared data is numeric, for the
+        # orientation of a chart whose `orientation` is not given. The last
+        # known answer is kept while the data is momentarily gone (a hidden
+        # panel makes `data()` throw), so the chart does not flip on a view
+        # switch.
+        num_cols <- new.env(parent = emptyenv())
+        r_num_cols <- shiny::reactive({
+          d <- tryCatch(prepared_data(), error = function(e) NULL)
+          if (is.data.frame(d) && ncol(d)) {
+            num_cols$known <- names(d)
+            num_cols$num <- names(d)[vapply(d, is.numeric, logical(1L))]
+          }
+          list(known = num_cols$known, num = num_cols$num)
+        })
+        is_num <- function(col) {
+          nc <- r_num_cols()
+          if (!col %in% nc$known) NA else col %in% nc$num
+        }
+        is_num_now <- function(col) shiny::isolate(is_num(col))
+
+        # Public x / y / orientation -> the internal roles.
+        r_roles <- shiny::reactive({
+          chart_roles_internal(r_chart_type(), r_x_pub(), r_y_pub(),
+                               r_func(), r_orientation_pub(), is_num)
+        })
+        r_group <- function() r_roles()$group
+        r_value <- function() r_roles()$value
+        r_x <- function() r_roles()$x
+        r_y <- function() r_roles()$y
+        r_orientation <- function() r_roles()$orientation
+        r_bar_mode <- chart_facade(
+          function() chart_position_internal(r_position()),
+          function(v) r_position(chart_position_public(v))
+        )
+        # A waterfall is its own type; the gear's "Bars: cumulative" on a bar
+        # is translated to it in the config handler.
+        r_baseline <- function() "zero"
+
+        # What a click or a brush selected (transport for the emitted
+        # downstream filter), one public `selection` list.
+        r_selection <- shiny::reactiveVal(selection)
+        sel_get <- function(key, default = NULL) {
+          s <- r_selection()
+          if (is.null(s)) default else s[[key]] %||% default
+        }
+        sel_set <- function(key, v) {
+          s <- shiny::isolate(r_selection()) %||% list(type = "categorical")
+          s[key] <- list(v)
+          r_selection(chart_selection(s$type, s$filters, s$range, s$point))
+        }
+        r_filter_type <- chart_facade(
+          function() sel_get("type", "categorical"),
+          function(v) sel_set("type", v)
+        )
+        r_filters <- chart_facade(
+          function() sel_get("filters"), function(v) sel_set("filters", v)
+        )
+        r_filter_range <- chart_facade(
+          function() sel_get("range"), function(v) sel_set("range", v)
+        )
+        r_filter_point <- chart_facade(
+          function() sel_get("point"), function(v) sel_set("point", v)
+        )
 
         # External-control send (beta): the drill also pushes its claim into
         # a value filter block (gear section "Send to filter"). Empty target
         # = off, today's behaviour.
-        r_ctrl_target  <- shiny::reactiveVal(ctrl_target %||% "")
-        r_ctrl_table   <- shiny::reactiveVal(ctrl_table %||% "")
+        r_ctrl_target  <- shiny::reactiveVal(drill_target %||% "")
+        r_ctrl_table   <- shiny::reactiveVal(drill_table %||% "")
         r_ctrl_choices <- dd_ctrl_choices()
 
         # Transient drill. With a target set, a categorical click is an EVENT
@@ -802,12 +606,12 @@ new_chart_block <- function(
         }
 
         # Theming state
-        r_line_width_mult <- shiny::reactiveVal(line_width_mult)
-        r_dot_size_mult <- shiny::reactiveVal(dot_size_mult)
+        r_line_width_mult <- shiny::reactiveVal(line_width)
+        r_dot_size_mult <- shiny::reactiveVal(point_size)
         # Line-connect mode (straight / monotone / step-*), the single gear
         # select that replaced step + smooth. Fixed-option, so never empty.
         r_connect <- shiny::reactiveVal(connect)
-        r_value_lines <- shiny::reactiveVal(value_lines)
+        r_value_lines <- shiny::reactiveVal(y_lines)
         r_x_lines <- shiny::reactiveVal(x_lines)
         r_smoother <- shiny::reactiveVal(smoother)
         r_identity_line <- shiny::reactiveVal(identity_line)
@@ -820,24 +624,44 @@ new_chart_block <- function(
         r_band_window <- shiny::reactiveVal(band_window)
         r_band_size <- shiny::reactiveVal(band_size)
         r_band_min_n <- shiny::reactiveVal(band_min_n)
-        r_band_id <- shiny::reactiveVal(band_id)
+        # One id column: what the band counts and what N labels count.
+        r_id <- shiny::reactiveVal(id_col)
+        r_band_id <- chart_facade(function() r_id(), function(v) r_id(v))
+        r_count_col <- chart_facade(function() r_id(), function(v) r_id(v))
         r_ref_hi <- shiny::reactiveVal(ref_hi)
         r_ref_lo <- shiny::reactiveVal(ref_lo)
-        r_lo <- shiny::reactiveVal(lo)
-        r_hi <- shiny::reactiveVal(hi)
-        # Bar baseline mode + waterfall total-bar steps (see constructor args).
-        r_baseline <- shiny::reactiveVal(baseline)
+        # Interval columns (error bars on a line or a scatter).
+        r_lo <- shiny::reactiveVal(ymin)
+        r_hi <- shiny::reactiveVal(ymax)
         r_waterfall_totals <- shiny::reactiveVal(waterfall_totals)
-        r_title <- shiny::reactiveVal(title)
-        r_subtitle <- shiny::reactiveVal(subtitle)
-        r_caption <- shiny::reactiveVal(caption)
-        # Observation-count labels (see constructor args). `count_col` is the
-        # DISTINCT id column; the browser does the counting per label group.
-        r_count_on <- shiny::reactiveVal(count_on)
-        r_count_col <- shiny::reactiveVal(count_col)
-        # Missing-key handling and the on-chart aggregation control.
-        r_na_group <- shiny::reactiveVal(na_group)
-        r_pct_of <- shiny::reactiveVal(pct_of)
+        # Chart text. The public value is the template as written; the
+        # internal one has its `{@arg}` slots renamed to what the resolver
+        # and the gear know.
+        r_title_pub <- shiny::reactiveVal(title)
+        r_subtitle_pub <- shiny::reactiveVal(subtitle)
+        r_caption_pub <- shiny::reactiveVal(caption)
+        r_slot_alias <- shiny::reactive(
+          chart_slot_alias(r_chart_type(), r_roles())
+        )
+        tpl_facade <- function(pub) {
+          chart_facade(
+            function() chart_template_internal(pub(), r_slot_alias()),
+            function(v) pub(v)
+          )
+        }
+        r_title <- tpl_facade(r_title_pub)
+        r_subtitle <- tpl_facade(r_subtitle_pub)
+        r_caption <- tpl_facade(r_caption_pub)
+        # Observation-count labels (see constructor args). The browser does
+        # the counting per label group.
+        r_count_on <- shiny::reactiveVal(show_n)
+        # Missing-key handling.
+        r_na_group <- shiny::reactiveVal(missing)
+        r_pct_of_pub <- shiny::reactiveVal(pct_of)
+        r_pct_of <- chart_facade(
+          function() chart_pct_of_internal(r_pct_of_pub()),
+          function(v) r_pct_of_pub(chart_pct_of_public(v))
+        )
         # Facet-grid panel scales and panels per row (see constructor args).
         r_facet_scales <- shiny::reactiveVal(facet_scales)
         r_facet_cols <- shiny::reactiveVal(facet_cols)
@@ -847,7 +671,7 @@ new_chart_block <- function(
         # cb_script_text() collapses it at the one place every write passes
         # through (the same shape blockr.extra's code block uses).
         r_script <- shiny::reactiveVal(cb_script_text(script))
-        r_values <- shiny::reactiveVal(if (is.list(values)) values else list())
+        r_values <- shiny::reactiveVal(script_values)
         r_board_theme <- setup_drilldown_theme_sync(session)
         # Board scale map (NULL when the board has no "scale_map" option);
         # resolved per data push, never stored in block state.
@@ -1107,6 +931,10 @@ new_chart_block <- function(
             # 12-panel grid is the one chart where the shape of the page is
             # the reader's call, not the author's.
             facet_cols = r_facet_cols(),
+            # Presentation choices a reader may switch from the sentence
+            # ("{@position}", "{@smoother in none, lm}").
+            bar_mode = r_bar_mode(), smoother = r_smoother(),
+            facet_scales = r_facet_scales(),
             # Reference lines, typed in place on the word
             # ("[, target {@value_lines}]").
             value_lines = num_list_text(r_value_lines()),
@@ -1356,9 +1184,10 @@ new_chart_block <- function(
               # the user typed, or null = auto / "" = none); *_resolved is
               # what the browser renders (tokens substituted against the
               # current data, auto tier applied -- title-template.R).
-              title = r_title(),
-              subtitle = r_subtitle(),
-              caption = r_caption(),
+              # The templates as written: the gear edits these.
+              title = r_title_pub(),
+              subtitle = r_subtitle_pub(),
+              caption = r_caption_pub(),
               title_resolved = r_titles_resolved()$title,
               subtitle_resolved = r_titles_resolved()$subtitle,
               caption_resolved = r_titles_resolved()$caption,
@@ -1574,14 +1403,32 @@ new_chart_block <- function(
 
           action <- msg$action
           if (action == "config") {
-            if (!is.null(msg$group))      upd(r_group, nn(msg$group))
+            # The roles. The gear sends every role as the browser holds it
+            # (internal names: group/value/orientation for an aggregated
+            # chart, x/y otherwise); they become the public x / y /
+            # orientation together, so no field is read against another's
+            # stale value. "Bars: cumulative" on a bar is a waterfall.
+            type_new <- msg$chart_type %||% shiny::isolate(r_chart_type())
+            if (identical(type_new, "bar") &&
+                  identical(msg$baseline, "cumulative")) {
+              type_new <- "waterfall"
+            }
+            func_new <- msg$func %||% shiny::isolate(r_func())
+            roles <- chart_roles_public(
+              type_new, msg$group, msg$value, msg$x, msg$y, msg$orientation,
+              func_new,
+              prev = list(x = shiny::isolate(r_x_pub()),
+                          y = shiny::isolate(r_y_pub()),
+                          orientation = shiny::isolate(r_orientation_pub())),
+              is_num = is_num_now
+            )
+            upd(r_func, func_new)
+            upd(r_chart_type, type_new)
+            upd(r_x_pub, roles$x)
+            upd(r_y_pub, roles$y)
+            upd(r_orientation_pub, roles$orientation)
             if (!is.null(msg$color))      upd_healed(r_color, msg$color)
             if (!is.null(msg$facet))      upd_healed(r_facet, msg$facet)
-            if (!is.null(msg$value))     upd(r_value, msg$value)
-            if (!is.null(msg$func))     upd(r_func, msg$func)
-            if (!is.null(msg$chart_type)) upd(r_chart_type, msg$chart_type)
-            if (!is.null(msg$x))          upd(r_x, msg$x)
-            if (!is.null(msg$y))          upd(r_y, msg$y)
             if (!is.null(msg$xend))       upd(r_xend, nn(msg$xend))
             if (!is.null(msg$series))     upd_healed(r_series, msg$series)
             if (!is.null(msg$label))      upd(r_label, nn(msg$label))
@@ -1595,13 +1442,11 @@ new_chart_block <- function(
             if (!is.null(msg$drill))      upd(r_drill, nn(msg$drill))
             if (!is.null(msg$sort_by))    upd(r_sort_by, nn(msg$sort_by))
             if (!is.null(msg$sort_dir))   upd(r_sort_dir, msg$sort_dir)
-            if (!is.null(msg$orientation)) upd(r_orientation, msg$orientation)
             if (!is.null(msg$bar_mode))   upd(r_bar_mode, msg$bar_mode)
             # "on"/"off" from the gear -> logical in state (see bool_state).
             if (!is.null(msg$value_labels)) {
               upd(r_value_labels, bool_state(msg$value_labels))
             }
-            if (!is.null(msg$baseline))   upd(r_baseline, msg$baseline)
             if (!is.null(msg$connect))    upd(r_connect, msg$connect)
             if (!is.null(msg$smoother))   upd(r_smoother, msg$smoother)
             # "on"/"off" from the gear -> logical in state (see bool_state).
@@ -1639,15 +1484,36 @@ new_chart_block <- function(
               v <- suppressWarnings(as.numeric(msg$band_min_n))
               if (is.finite(v) && v >= 1) upd(r_band_min_n, v)
             }
-            # nn(): "" (picker cleared) means "no id column" / "no line".
-            if (!is.null(msg$band_id)) upd(r_band_id, nn(msg$band_id))
+            # One id column behind two gear rows (the band's and the N
+            # labels'). The gear sends both; the one that differs from the
+            # current id is the edit. nn(): "" (picker cleared) means "no id
+            # column" (the band and the labels count rows).
+            if (!is.null(msg$band_id) || !is.null(msg$count_col)) {
+              cur_id <- shiny::isolate(r_id())
+              bid <- nn(msg$band_id)
+              cid <- nn(msg$count_col)
+              # The band row is sent through present_role(): an id column
+              # the current data lacks comes back as "", which is not an
+              # edit (the upd_healed() rule).
+              d_now <- shiny::isolate(plain_data())
+              if (is.null(bid) && !is.null(cur_id) && is.data.frame(d_now) &&
+                    !(cur_id %in% names(d_now))) {
+                bid <- cur_id
+              }
+              new_id <- if (!is.null(msg$band_id) && !identical(bid, cur_id)) {
+                bid
+              } else if (!is.null(msg$count_col) && !identical(cid, cur_id)) {
+                cid
+              } else {
+                cur_id
+              }
+              upd(r_id, new_id)
+            }
             if (!is.null(msg$ref_hi))  upd(r_ref_hi, nn(msg$ref_hi))
             if (!is.null(msg$ref_lo))  upd(r_ref_lo, nn(msg$ref_lo))
             if (!is.null(msg$count_on))   upd(r_count_on, msg$count_on)
             if (!is.null(msg$na_group))   upd(r_na_group, msg$na_group)
             if (!is.null(msg$pct_of))     upd(r_pct_of, msg$pct_of)
-            # nn(): "" (picker cleared) means "no id column" -> row count.
-            if (!is.null(msg$count_col))  upd(r_count_col, nn(msg$count_col))
             if (!is.null(msg$facet_scales)) {
               upd(r_facet_scales, msg$facet_scales)
             }
@@ -1811,7 +1677,8 @@ new_chart_block <- function(
                 list(r_filter_type(), r_filters(), r_filter_range(),
                      r_filter_point())
               },
-              list(filter_type, filters, filter_range, filter_point)
+              list(selection$type %||% "categorical", selection$filters,
+                   selection$range, selection$point)
             )
             function() {
               still <- latch()
@@ -2099,46 +1966,32 @@ new_chart_block <- function(
             last_expr <<- out
             out
           }),
+          # The public arguments, in the constructor's order. Every entry is
+          # a reactiveVal: blockr.core requires that of `external_ctrl`.
           state = list(
-            group = r_group,
+            type = r_chart_type,
+            x = r_x_pub,
+            y = r_y_pub,
+            func = r_func,
             color = r_color,
             facet = r_facet,
-            value = r_value,
-            func = r_func,
-            chart_type = r_chart_type,
-            x = r_x,
-            y = r_y,
-            xend = r_xend,
             series = r_series,
+            xend = r_xend,
             label = r_label,
-            tt_fields = r_tt_fields,
-            drill = r_drill,
+            orientation = r_orientation_pub,
+            position = r_position,
             sort_by = r_sort_by,
             sort_dir = r_sort_dir,
-            orientation = r_orientation,
-            bar_mode = r_bar_mode,
             value_labels = r_value_labels,
-            filter_type = r_filter_type,
-            # LEGACY: folded into `filters`, serialized as NULL (blockr.core
-            # requires every ctor formal in the state).
-            filter_column = function() NULL,
-            filter_values = function() NULL,
-            filter_range = r_filter_range,
-            filter_point = r_filter_point,
-            filters = r_filters,
-            line_width_mult = r_line_width_mult,
-            dot_size_mult = r_dot_size_mult,
+            tooltip = r_tt_fields,
+            drill = r_drill,
+            line_width = r_line_width_mult,
+            point_size = r_dot_size_mult,
             connect = r_connect,
-            # One string, not the code block's array-of-lines: every entry in
-            # `external_ctrl` has to BE a reactiveVal (blockr.core checks), and
-            # a state entry that reshapes on the way out cannot be one. The
-            # ctor and the config handler still accept a character vector and
-            # collapse it (cb_script_text), so a hand-edited board with the
-            # script written as lines loads fine.
-            script = r_script,
-            values = r_values,
-            value_lines = r_value_lines,
+            y_lines = r_value_lines,
             x_lines = r_x_lines,
+            ymin = r_lo,
+            ymax = r_hi,
             smoother = r_smoother,
             identity_line = r_identity_line,
             box_points = r_box_points,
@@ -2148,28 +2001,28 @@ new_chart_block <- function(
             band_window = r_band_window,
             band_size = r_band_size,
             band_min_n = r_band_min_n,
-            band_id = r_band_id,
-            ref_hi = r_ref_hi,
+            id = r_id,
             ref_lo = r_ref_lo,
-            count_on = r_count_on,
-            count_col = r_count_col,
-            na_group = r_na_group,
-            pct_of = r_pct_of,
-            # LEGACY: serialized as NULL (blockr.core requires every ctor
-            # formal in the state).
-            func_toggle = function() NULL,
+            ref_hi = r_ref_hi,
+            waterfall_totals = r_waterfall_totals,
+            show_n = r_count_on,
+            missing = r_na_group,
+            pct_of = r_pct_of_pub,
             facet_scales = r_facet_scales,
             facet_cols = r_facet_cols,
+            title = r_title_pub,
+            subtitle = r_subtitle_pub,
+            caption = r_caption_pub,
             download = r_download,
-            lo = r_lo,
-            hi = r_hi,
-            baseline = r_baseline,
-            waterfall_totals = r_waterfall_totals,
-            title = r_title,
-            subtitle = r_subtitle,
-            caption = r_caption,
-            ctrl_target = r_ctrl_target,
-            ctrl_table = r_ctrl_table
+            drill_target = r_ctrl_target,
+            drill_table = r_ctrl_table,
+            # One string, not the code block's array-of-lines: a state entry
+            # that reshapes on the way out cannot be a reactiveVal. The ctor
+            # and the config handler still accept a character vector and
+            # collapse it (cb_script_text).
+            script = r_script,
+            script_values = r_values,
+            selection = r_selection
           )
         )
       })
@@ -2202,99 +2055,47 @@ new_chart_block <- function(
     # or a table-producing object coerced via as_annotated_df() -- the chart
     # then charts the coerced frame's data columns (as_plain_df()).
     dat_valid = validate_annotated_df_input,
-    # `value` must stay listed: the gear legitimately empties it mid-config
-    # (reconcileValue in drilldown-agg.js / ensureDistributionMetric in
-    # chart/model-common.js set value = '' when the aggregation changes and
-    # the old column no longer fits) and the observer stores that verbatim --
-    # without the entry the block silently wedges
-    # (reference_blockr_allow_empty_state_wedge).
-    # `func` is NOT listed: the JS side never emits it empty (a fixed-option
-    # select, backfilled to "count"/"mean" wherever unset).
-    # `filter_column` / `filter_values` are LEGACY and always NULL.
-    allow_empty_state = c("group", "color", "facet", "filter_column",
-      "filter_values", "value", "x", "y", "xend", "series", "label",
-      "tt_fields", "drill", "sort_by", "sort_dir", "filter_range",
-      "filter_point", "filters", "value_lines", "x_lines", "smoother",
-      "identity_line",
-      # `summary`, `whiskers` and `orientation` are NULL until their per-mark
-      # default is resolved where it is consumed; `band_id` / `ref_hi` /
-      # `ref_lo` are optional band columns, empty on every chart that is not a
-      # band. All of them MUST be listed: a non-allow_empty_state field holding
-      # NULL wedges the block (state_ready never goes TRUE and result() stays
-      # NULL) -- reference_blockr_allow_empty_state_wedge, and the reason every
-      # chart block's result() was NULL before this line.
-      # `connect_centers` and `value_labels` are never empty (fixed
-      # defaults), so they are not listed.
-      "box_points", "summary", "whiskers", "orientation",
-      "band_id", "ref_hi", "ref_lo", "lo", "hi", "waterfall_totals",
-      # count_col is optional (blank = row count); count_on is a fixed-option
-      # select (always "off"/"axis"/"facet"/"both"), so it is not listed here.
-      # `func_toggle` is LEGACY and always NULL, so it MUST be listed, or
-      # every chart block wedges.
-      # `na_group` is not: it is a fixed-option select like count_on, always
-      # "level" or "drop".
-      "count_col", "func_toggle",
-      # NULL is `facet_cols` on auto, which is its default and the common
-      # case, so it MUST be listed or every chart block wedges.
-      "facet_cols",
-      "title", "subtitle", "caption",
-      # No script is the default and the common case, so both MUST be allowed
-      # to be empty or every chart block wedges
-      # (reference_blockr_allow_empty_state_wedge).
-      "script", "values",
-      "ctrl_target", "ctrl_table"),
-    external_ctrl = c("group", "color", "facet", "value", "func",
-      "chart_type", "x", "y", "xend", "series", "label", "tt_fields", "drill",
-      "sort_by", "sort_dir", "orientation", "bar_mode", "value_labels",
-      "filter_type", "filters", "filter_range", "filter_point",
-      "line_width_mult",
-      "dot_size_mult", "connect", "value_lines", "x_lines", "smoother",
-      "identity_line",
-      "box_points", "summary", "whiskers", "connect_centers",
-      "lo", "hi", "baseline", "waterfall_totals",
-      "count_on", "count_col", "na_group", "pct_of",
-      "facet_scales", "facet_cols",
-      "title", "subtitle", "caption",
-      # Externally controllable (MCP, restore) but deliberately NOT on the AI
-      # surface: `script` is absent from the registry argument spec, so the
-      # assistant never sees it. A general escape hatch on a block that appears
-      # twenty times in a board invites a script where a mapping would do.
-      "script", "values",
-      "ctrl_target", "ctrl_table"),
+    # Every optional slot whose default is empty MUST be listed: a field
+    # outside this list holding NULL wedges the block (state_ready never goes
+    # TRUE and result() stays NULL; reference_blockr_allow_empty_state_wedge).
+    # `y` is emptied by the gear mid-config (the aggregation changed and the
+    # old column no longer fits). The fixed-option fields (type, func,
+    # position, show_n, missing, pct_of, facet_scales, connect, ...) and the
+    # logicals are never empty.
+    allow_empty_state = c("x", "y", "color", "facet", "series", "xend",
+      "label", "orientation", "sort_by", "sort_dir", "tooltip", "drill",
+      "y_lines", "x_lines", "ymin", "ymax", "smoother", "identity_line",
+      "box_points", "summary", "whiskers", "id", "ref_lo", "ref_hi",
+      "waterfall_totals", "facet_cols", "title", "subtitle", "caption",
+      "drill_target", "drill_table", "script", "script_values",
+      "selection"),
+    # Everything is externally controllable (MCP, restore). `script` is
+    # deliberately NOT on the AI surface: it is absent from the registry
+    # argument spec, so the assistant never sees it.
+    external_ctrl = c("type", "x", "y", "func", "color", "facet", "series",
+      "xend", "label", "orientation", "position", "sort_by", "sort_dir",
+      "value_labels", "tooltip", "drill", "line_width", "point_size",
+      "connect", "y_lines", "x_lines", "ymin", "ymax", "smoother",
+      "identity_line", "box_points", "summary", "whiskers",
+      "connect_centers", "band_window", "band_size", "band_min_n", "id",
+      "ref_lo", "ref_hi", "waterfall_totals", "show_n", "missing", "pct_of",
+      "facet_scales", "facet_cols", "title", "subtitle", "caption",
+      "drill_target", "drill_table", "script", "script_values", "selection"),
     expr_type = "bquoted",
     class = "chart_block",
     ...
   )
 
-  # Take the retired names back OFF the block, so a board that carries them
-  # loses them the next time it is saved.
-  #
-  # Without this they are immortal. They arrive through `...`, `...` is
-  # forwarded above, and blockr.core stores unrecognised dots as block
-  # ATTRIBUTES. `blockr_ser.block()` appends every attribute outside
-  # `internal_block_attributes()` to the payload, so a re-save wrote `value`
-  # AND `metric`, `func` AND `agg_fn` -- the old names came back on the next
-  # open, warned again, and were written out again. Every workflow warned on
-  # every visit, with no way out except editing the stored JSON.
-  #
-  # Making them formals is not the alternative: `block_ctor_inputs()` is every
-  # formal bar `...`, so they would serialize as state instead. Nor is
-  # filtering the dots before forwarding them, which would mean rebuilding a
-  # 1100-line call through `do.call()`. Stripping the attribute after
-  # construction is the whole of it, and it is where the leak actually is:
-  # these names are a transport for `value` / `func`, and nothing reads them
-  # after this function returns.
-  #
-  # So a stale board heals by being opened and saved once. The warning above
-  # is what says a board has not been.
-  attr(res, "metric") <- NULL
-  attr(res, "agg_fn") <- NULL
-  # RETIRED helper-line names, replaced by `value_lines` / `x_lines`. A saved
-  # board that carries them loads without its lines rather than failing.
-  attr(res, "vlines") <- NULL
-  attr(res, "hlines") <- NULL
-  attr(res, "ref_x") <- NULL
-  attr(res, "ref_y") <- NULL
+  # Take the old names back OFF the block. They arrive through `...`, which
+  # is forwarded above, and blockr.core stores unrecognised dots as block
+  # ATTRIBUTES that `blockr_ser.block()` writes back into the payload: a
+  # re-save would carry the old names forever, and every open would warn
+  # again. Making them formals would serialize them as state instead. Their
+  # values were translated at the top of this function.
+  for (nm in c(CHART_LEGACY_ARGS, "expose", "vlines", "hlines", "ref_x",
+               "ref_y")) {
+    attr(res, nm) <- NULL
+  }
 
   res
 }

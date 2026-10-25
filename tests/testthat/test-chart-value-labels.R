@@ -25,33 +25,43 @@ vl_state <- function(blk) {
 
 test_that("value_labels is off by default and stored as a logical", {
   expect_false(eval(formals(new_chart_block)$value_labels))
-  expect_false(vl_state(new_chart_block(group = "g")))
-  expect_true(vl_state(new_chart_block(group = "g", value_labels = TRUE)))
+  expect_false(vl_state(new_chart_block(y = "g")))
+  expect_true(vl_state(new_chart_block(y = "g", value_labels = TRUE)))
   # The gear's transport strings restore too.
-  expect_true(vl_state(new_chart_block(group = "g", value_labels = "on")))
-  expect_false(vl_state(new_chart_block(group = "g", value_labels = "off")))
+  expect_true(vl_state(new_chart_block(y = "g", value_labels = "on")))
+  expect_false(vl_state(new_chart_block(y = "g", value_labels = "off")))
 })
 
 test_that("value_labels is registered with the other chart args", {
   expect_true("value_labels" %in% names(chart_arguments()))
-  blk <- new_chart_block(group = "g")
+  blk <- new_chart_block(y = "g")
   expect_true("value_labels" %in% blockr.core::external_ctrl_vars(blk))
 })
 
 test_that("value_labels round-trips through serialization", {
-  blk <- new_chart_block(group = "g", value = "v", func = "sum",
-                         value_labels = TRUE)
+  blk <- new_chart_block(
+    x = "v",
+    y = "g",
+    func = "sum",
+    orientation = "horizontal",
+    value_labels = TRUE
+  )
   ser <- blockr.core::blockr_ser(blk)
   expect_true(ser[["payload"]]$value_labels)
   back <- blockr.core::blockr_deser(ser)
   expect_true(vl_state(back))
 
-  off <- blockr.core::blockr_ser(new_chart_block(group = "g"))
+  off <- blockr.core::blockr_ser(new_chart_block(y = "g"))
   expect_false(off[["payload"]]$value_labels)
 })
 
 test_that("the gear switch reaches state and the browser payload", {
-  blk <- new_chart_block(group = "g", value = "v", func = "sum")
+  blk <- new_chart_block(
+    x = "v",
+    y = "g",
+    func = "sum",
+    orientation = "horizontal"
+  )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {

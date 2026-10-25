@@ -12,19 +12,20 @@ chart_desc <- function(state, x = new_chart_block()) {
 test_that("the description names what is mapped, in chart vocabulary", {
 
   out <- chart_desc(
-    list(chart_type = "bar", group = "AESOC", color = "ARM",
-         value = "USUBJID", func = "count_distinct")
+    list(type = "bar", y = "AESOC", color = "ARM", x = "USUBJID",
+         func = "count_distinct", orientation = "horizontal")
   )
 
   expect_match(out, "Chart type: bar", fixed = TRUE)
-  expect_match(out, "group = AESOC", fixed = TRUE)
+  expect_match(out, "y = AESOC", fixed = TRUE)
   expect_match(out, "color = ARM", fixed = TRUE)
-  expect_match(out, "Aggregation: count_distinct of USUBJID", fixed = TRUE)
+  expect_match(out, "Aggregation: count_distinct of USUBJID by AESOC",
+               fixed = TRUE)
 })
 
 test_that("unset arguments are not reported", {
 
-  out <- chart_desc(list(chart_type = "bar", group = "AESOC"))
+  out <- chart_desc(list(type = "bar", y = "AESOC"))
 
   # The constructor has 56 arguments; the default method's str() dump lists
   # every one of them, almost all NULL. That noise is the thing this replaces.
@@ -38,8 +39,9 @@ test_that("unset arguments are not reported", {
 test_that("an active drill filter is called out as an active filter", {
 
   out <- chart_desc(
-    list(chart_type = "bar", group = "AESOC", filter_type = "categorical",
-         filter_column = "AESOC", filter_values = c("INFECTIONS", "NERVOUS"))
+    list(type = "bar", y = "AESOC",
+         selection = list(type = "categorical",
+                          filters = list(AESOC = c("INFECTIONS", "NERVOUS"))))
   )
 
   expect_match(out, "Drill filter: ACTIVE", fixed = TRUE)
@@ -49,8 +51,9 @@ test_that("an active drill filter is called out as an active filter", {
 test_that("a filter on several columns names each, a missing value as such", {
 
   out <- chart_desc(
-    list(chart_type = "bar", group = "AETERM", filter_type = "categorical",
-         filters = list(AETERM = "Rash", AESEV = NA_character_))
+    list(type = "bar", y = "AETERM",
+         selection = list(type = "categorical",
+                          filters = list(AETERM = "Rash", AESEV = NA_character_)))
   )
 
   expect_match(out, "filters = AETERM = Rash; AESEV = (missing)", fixed = TRUE)
@@ -58,7 +61,7 @@ test_that("a filter on several columns names each, a missing value as such", {
 
 test_that("no filter reads as passing the input through", {
 
-  out <- chart_desc(list(chart_type = "bar", group = "AESOC"))
+  out <- chart_desc(list(type = "bar", y = "AESOC"))
 
   expect_match(out, "Drill filter: none active", fixed = TRUE)
 })
@@ -66,8 +69,8 @@ test_that("no filter reads as passing the input through", {
 test_that("a long filter selection is capped, with its true length", {
 
   out <- chart_desc(
-    list(chart_type = "bar", filter_column = "SOC",
-         filter_values = as.character(1:40))
+    list(type = "bar",
+         selection = list(filters = list(SOC = as.character(1:40))))
   )
 
   expect_match(out, "(40 values)", fixed = TRUE)
@@ -75,14 +78,14 @@ test_that("a long filter selection is capped, with its true length", {
 
 test_that("a chart with nothing mapped says so", {
 
-  out <- chart_desc(list(chart_type = "bar"))
+  out <- chart_desc(list(type = "bar"))
 
   expect_match(out, "nothing mapped yet", fixed = TRUE)
 })
 
 test_that("the modifiable-argument line survives, summarised", {
 
-  out <- chart_desc(list(chart_type = "bar", group = "AESOC"))
+  out <- chart_desc(list(type = "bar", y = "AESOC"))
 
   # A chart declares ~49 of its arguments controllable. Spelling them out cost
   # more of the prompt cap than the whole rest of the description, so the line
@@ -95,22 +98,22 @@ test_that("the modifiable-argument line survives, summarised", {
 test_that("aggregation is reported only for the families that aggregate", {
 
   agg <- chart_desc(
-    list(chart_type = "bar", group = "AESOC", value = "AGE", func = "mean")
+    list(type = "bar", y = "AESOC", x = "AGE", func = "mean")
   )
   ind <- chart_desc(
-    list(chart_type = "scatter", x = "XMAX", y = "BILI", func = "count",
-         value = ".count")
+    list(type = "scatter", x = "XMAX", y = "BILI", func = "count")
   )
 
-  expect_match(agg, "Aggregation: mean of AGE", fixed = TRUE)
-  # A scatter does not aggregate; `func`/`value` sit at their defaults and
+  expect_match(agg, "Aggregation: mean of the numeric one of x (AGE)",
+               fixed = TRUE)
+  # A scatter does not aggregate; `func` sits at its default and
   # "count of row counts" on an eDish plot is worse than saying nothing.
   expect_false(grepl("Aggregation", ind, fixed = TRUE))
 })
 
 test_that("without live state it falls back to the default method", {
 
-  brd <- new_board(blocks = c(ch = new_chart_block(group = "AESOC")))
+  brd <- new_board(blocks = c(ch = new_chart_block(y = "AESOC")))
 
   out <- paste(
     blockr.assistant::describe_block(

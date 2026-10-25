@@ -3,11 +3,11 @@
 
 test_that("constructor accepts xend and sort_by", {
   blk <- new_chart_block(
-    chart_type = "gantt",
+    type = "gantt",
     x = "ASTDY",
-    xend = "AENDY",
     y = "AEDECOD",
     color = "AESEV",
+    xend = "AENDY",
     sort_by = "onset"
   )
   expect_s3_class(blk, "chart_block")
@@ -23,9 +23,12 @@ test_that("gantt state round-trips xend and sort_by", {
     stringsAsFactors = FALSE
   )
   blk <- new_chart_block(
-    chart_type = "gantt",
-    x = "ASTDY", xend = "AENDY", y = "AEDECOD",
-    color = "AESEV", sort_by = "onset"
+    type = "gantt",
+    x = "ASTDY",
+    y = "AEDECOD",
+    color = "AESEV",
+    xend = "AENDY",
+    sort_by = "onset"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -33,7 +36,7 @@ test_that("gantt state round-trips xend and sort_by", {
       session$flushReact()
       expect_equal(session$returned$state$xend(), "AENDY")
       expect_equal(session$returned$state$sort_by(), "onset")
-      expect_equal(session$returned$state$chart_type(), "gantt")
+      expect_equal(session$returned$state$type(), "gantt")
     },
     args = list(x = blk, data = list(data = function() df))
   )
@@ -45,7 +48,7 @@ test_that("config message updates xend and sort_by", {
     ASTDY = 1, AENDY = 2, AESEV = "MILD",
     stringsAsFactors = FALSE
   )
-  blk <- new_chart_block(chart_type = "gantt")
+  blk <- new_chart_block(type = "gantt")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
@@ -71,8 +74,10 @@ test_that("click-to-filter on USUBJID produces a filter expression", {
     stringsAsFactors = FALSE
   )
   blk <- new_chart_block(
-    chart_type = "line",
-    x = "ADY", y = "AVAL", color = "USUBJID"
+    type = "line",
+    x = "ADY",
+    y = "AVAL",
+    color = "USUBJID"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -87,8 +92,7 @@ test_that("click-to-filter on USUBJID produces a filter expression", {
       session$flushReact()
       # v1's column + values land in the `filters` state; the legacy pair
       # is never state again.
-      expect_equal(session$returned$state$filters(), list(USUBJID = "01-001"))
-      expect_null(session$returned$state$filter_column())
+      expect_equal(session$returned$state$selection()$filters, list(USUBJID = "01-001"))
       result <- session$returned$result()
       expect_equal(nrow(result), 2L)
       expect_true(all(result$USUBJID == "01-001"))
@@ -99,7 +103,7 @@ test_that("click-to-filter on USUBJID produces a filter expression", {
 
 test_that("empty categorical filter is a no-op", {
   df <- data.frame(a = 1:3, b = letters[1:3], stringsAsFactors = FALSE)
-  blk <- new_chart_block(chart_type = "bar", group = "b")
+  blk <- new_chart_block(y = "b")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
@@ -119,8 +123,11 @@ test_that("series round-trips through state", {
     stringsAsFactors = FALSE
   )
   blk <- new_chart_block(
-    chart_type = "line", x = "ADY", y = "AVAL",
-    series = "USUBJID", color = "TRT01A"
+    type = "line",
+    x = "ADY",
+    y = "AVAL",
+    color = "TRT01A",
+    series = "USUBJID"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -149,7 +156,9 @@ test_that("r_needed_cols includes AVISITN when x is AVISIT", {
     stringsAsFactors = FALSE
   )
   blk <- new_chart_block(
-    chart_type = "line", x = "AVISIT", y = "AVAL",
+    type = "line",
+    x = "AVISIT",
+    y = "AVAL",
     color = "USUBJID"
   )
   # Indirectly verify by checking the block state exposes x correctly;
@@ -179,16 +188,16 @@ test_that("scatter click-emit drives categorical filter on arbitrary column", {
     stringsAsFactors = FALSE
   )
   blk <- new_chart_block(
-    chart_type = "scatter",
-    x      = "exposure_premium",
-    y      = "model_price",
-    series  = "policy_id"
+    type = "scatter",
+    x = "exposure_premium",
+    y = "model_price",
+    series = "policy_id"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
       session$flushReact()
-      expect_equal(session$returned$state$chart_type(), "scatter")
+      expect_equal(session$returned$state$type(), "scatter")
       expect_equal(session$returned$state$series(), "policy_id")
 
       # Simulate a scatter-dot click: JS would send this exact message.
@@ -201,7 +210,7 @@ test_that("scatter click-emit drives categorical filter on arbitrary column", {
       ))
       session$flushReact()
 
-      expect_equal(session$returned$state$filters(), list(policy_id = "POL_002"))
+      expect_equal(session$returned$state$selection()$filters, list(policy_id = "POL_002"))
 
       result <- session$returned$result()
       expect_equal(nrow(result), 1L)
@@ -236,10 +245,10 @@ test_that("scatter+series click filter on real engine output returns matching ro
   testthat::expect_gt(expected_n, 0L)
 
   blk <- new_chart_block(
-    chart_type = "scatter",
-    x      = "tiv",
-    y      = "model_price",
-    series  = "policy_id"
+    type = "scatter",
+    x = "tiv",
+    y = "model_price",
+    series = "policy_id"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -257,7 +266,7 @@ test_that("scatter+series click filter on real engine output returns matching ro
       ))
       session$flushReact()
 
-      expect_equal(session$returned$state$filters(),
+      expect_equal(session$returned$state$selection()$filters,
                    list(policy_id = "policy-005"))
 
       result <- session$returned$result()
@@ -298,10 +307,10 @@ test_that("scatter click filter survives a follow-up brush event (race)", {
   expected_n <- sum(premium$policy_id == clicked_pid)
 
   blk <- new_chart_block(
-    chart_type = "scatter",
-    x      = "tiv",
-    y      = "model_price",
-    series  = "policy_id"
+    type = "scatter",
+    x = "tiv",
+    y = "model_price",
+    series = "policy_id"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -339,9 +348,7 @@ test_that("scatter click filter survives a follow-up brush event (race)", {
 })
 
 test_that("drill and label round-trip through state and config", {
-  blk <- new_chart_block(
-    chart_type = "bar", group = "g", drill = "USUBJID", label = "AEDECOD"
-  )
+  blk <- new_chart_block(y = "g", label = "AEDECOD", drill = "USUBJID")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
@@ -372,7 +379,9 @@ test_that("drill and label round-trip through state and config", {
 
 test_that("identity_line round-trips through state and config", {
   blk <- new_chart_block(
-    chart_type = "scatter", x = "base", y = "post", value = ".count",
+    type = "scatter",
+    x = "base",
+    y = "post",
     identity_line = TRUE
   )
   shiny::testServer(
@@ -415,7 +424,7 @@ chart_state_field <- function(blk, field) {
 }
 
 chart_state <- function(blk) chart_state_field(blk, "identity_line")
-value_line_state <- function(blk) chart_state_field(blk, "value_lines")
+value_line_state <- function(blk) chart_state_field(blk, "y_lines")
 x_line_state <- function(blk) chart_state_field(blk, "x_lines")
 
 test_that("identity_line accepts the legacy \"on\"/\"off\" strings", {
@@ -431,21 +440,28 @@ test_that("identity_line accepts the legacy \"on\"/\"off\" strings", {
 
 test_that("value_lines / x_lines parse numbers and drop junk", {
   # Several lines, and the gear's comma-separated text.
-  expect_equal(value_line_state(new_chart_block(value_lines = c(2, 5))),
+  expect_equal(value_line_state(new_chart_block(y_lines = c(2, 5))),
                c(2, 5))
-  expect_equal(value_line_state(new_chart_block(value_lines = "2, 5")),
+  expect_equal(value_line_state(new_chart_block(y_lines = "2, 5")),
                c(2, 5))
   expect_equal(x_line_state(new_chart_block(x_lines = 3)), 3)
 
   # A typo yields NO line rather than a line at NA.
-  expect_null(value_line_state(new_chart_block(value_lines = "junk")))
+  expect_null(value_line_state(new_chart_block(y_lines = "junk")))
 })
 
 test_that("a board carrying the retired vlines/hlines/ref_x/ref_y loads", {
   # The old names are gone, not aliased: the board restores without its
   # lines, and a re-save does not write them back out.
-  blk <- new_chart_block(chart_type = "scatter", x = "a", y = "b",
-                         vlines = 3, hlines = 2, ref_x = 1, ref_y = 1)
+  blk <- new_chart_block(
+    type = "scatter",
+    x = "a",
+    y = "b",
+    vlines = 3,
+    hlines = 2,
+    ref_x = 1,
+    ref_y = 1
+  )
   expect_null(value_line_state(blk))
   expect_null(x_line_state(blk))
   payload <- blockr.core::blockr_ser(blk)[["payload"]]
@@ -454,7 +470,7 @@ test_that("a board carrying the retired vlines/hlines/ref_x/ref_y loads", {
 })
 
 test_that("unset drill emits no downstream filter (inert)", {
-  blk <- new_chart_block(chart_type = "bar", group = "g")
+  blk <- new_chart_block(y = "g")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
@@ -477,7 +493,7 @@ test_that("an unchanged expr is the same object when the data reactive re-fires"
   # reactive invalidates while handing back the same frame -- and a freshly
   # allocated but equal call would read as "the expression changed" and
   # re-evaluate every re-fronted chart.
-  blk <- new_chart_block(chart_type = "bar", group = "g")
+  blk <- new_chart_block(y = "g")
   tick <- shiny::reactiveVal(0L)
   frame <- data.frame(g = c("a", "a", "b"), stringsAsFactors = FALSE)
   src <- shiny::reactive({
@@ -498,45 +514,6 @@ test_that("an unchanged expr is the same object when the data reactive re-fires"
   )
 })
 
-test_that("radar round-trips through state and filters on the color column", {
-  # Radar is an aggregated chart: group levels = spokes, one shape per
-  # color level. The JS click handler emits a categorical filter on the
-  # COLOR column (the shape's identity), not the group — confirm the R
-  # machinery round-trips the config and applies that filter.
-  df <- data.frame(
-    AVISIT = rep(c("Week 1", "Week 2", "Week 4"), 2),
-    AVAL = c(10, 12, 14, 9, 11, 13),
-    TRT01A = rep(c("ARM A", "ARM B"), each = 3),
-    stringsAsFactors = FALSE
-  )
-  blk <- new_chart_block(
-    chart_type = "radar", group = "AVISIT", color = "TRT01A",
-    value = "AVAL", func = "mean", drill = "auto"
-  )
-  shiny::testServer(
-    blockr.core:::get_s3_method("block_server", blk),
-    {
-      session$flushReact()
-      expect_equal(session$returned$state$chart_type(), "radar")
-      expect_equal(session$returned$state$group(), "AVISIT")
-      expect_equal(session$returned$state$color(), "TRT01A")
-      expect_equal(session$returned$state$func(), "mean")
-      # Click on the "ARM A" shape: JS emits a categorical filter on the
-      # color column with that level.
-      expr_scope <- session$makeScope("expr")
-      expr_scope$setInputs(drilldown_block_action = list(
-        action = "filter", filter_type = "categorical",
-        column = "TRT01A", values = list("ARM A")
-      ))
-      session$flushReact()
-      result <- session$returned$result()
-      expect_equal(nrow(result), 3L)
-      expect_true(all(result$TRT01A == "ARM A"))
-    },
-    args = list(x = blk, data = list(data = function() df))
-  )
-})
-
 test_that("empty-list state from a pre-#144 DAG paste normalizes back to NULL", {
   # A pre-#144 blockr.dag clipboard wrote NULL state as `{}`, so a pasted block
   # arrives with list() where it should hold NULL -- and a board saved in that
@@ -546,27 +523,37 @@ test_that("empty-list state from a pre-#144 DAG paste normalizes back to NULL", 
   # render paths coerce their column vectors to lists and error.
   # Slot list taken from a real poisoned clipboard payload (viz 0.1.18 chart).
   blk <- new_chart_block(
-    chart_type = "line", x = "VISIT", y = "AVAL", facet = "ARM",
-    value = "AVAL", func = "mean", lo = "AVAL_LOW", hi = "AVAL_UP",
+    type = "line",
+    x = "VISIT",
+    y = "AVAL",
+    func = "mean",
+    color = list(),
+    facet = "ARM",
+    series = list(),
+    xend = list(),
+    label = list(),
     sort_by = "value",
-    group = list(), color = list(), xend = list(), series = list(),
-    label = list(), tt_fields = list(), drill = list(),
-    value_lines = list(), x_lines = list(), waterfall_totals = list(),
-    filter_column = list(), filter_values = list(), filter_range = list(),
-    filter_point = list()
+    tooltip = list(),
+    drill = list(),
+    y_lines = list(),
+    x_lines = list(),
+    ymin = "AVAL_LOW",
+    ymax = "AVAL_UP",
+    waterfall_totals = list()
   )
   payload <- blockr.core::blockr_ser(blk)[["payload"]]
 
-  # `values` is exempt: it is a genuinely list-valued slot (the prepare
-  # script's control values, keyed by declared name), so list() is its real
-  # empty value rather than the `{}` corruption this test is about.
+  # `script_values` is exempt: it is a genuinely list-valued slot (the
+  # prepare script's control values, keyed by declared name), so list() is
+  # its real empty value rather than the `{}` corruption this test is about.
   empty_list <- vapply(payload, function(v) is.list(v) && !length(v), logical(1))
-  expect_equal(setdiff(names(payload)[empty_list], "values"), character())
+  expect_equal(setdiff(names(payload)[empty_list], "script_values"),
+               character())
 
   # Real config survives the heal untouched.
   expect_equal(payload$facet, "ARM")
   expect_equal(payload$x, "VISIT")
-  expect_equal(payload$lo, "AVAL_LOW")
+  expect_equal(payload$ymin, "AVAL_LOW")
   expect_equal(payload$sort_by, "value")
   # A scalar that arrives boxed in a list unboxes rather than being dropped.
   expect_equal(
@@ -586,9 +573,7 @@ test_that("a missing aesthetic column leaves the expr a valid pass-through filte
     arm = c("A", "B"), sex = c("F", "M"), age = c(40, 50),
     stringsAsFactors = FALSE
   )
-  blk <- new_chart_block(
-    chart_type = "bar", group = "NOPE", value = ".count", func = "count"
-  )
+  blk <- new_chart_block(y = "NOPE", func = "count")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
@@ -609,8 +594,13 @@ test_that("config echo of a healed optional role does not erase state", {
   # echoes that back as "" on any unrelated gear edit. The echo must NOT
   # clear the stored mapping -- only a genuine clear of a PRESENT column may.
   df <- data.frame(g = c("a", "b"), v = c(1, 2), SEX = c("F", "M"))
-  blk <- new_chart_block(group = "g", value = "v", func = "sum",
-                         color = "MISSING_COL")
+  blk <- new_chart_block(
+    x = "v",
+    y = "g",
+    func = "sum",
+    color = "MISSING_COL",
+    orientation = "horizontal"
+  )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
@@ -646,31 +636,22 @@ test_that("config echo of a healed optional role does not erase state", {
 
 test_that("na_group round-trips through the constructor", {
   blk <- new_chart_block(
-    chart_type = "bar", group = "AEDECOD", value = "USUBJID",
-    func = "pct_distinct", na_group = "drop"
+    x = "USUBJID",
+    y = "AEDECOD",
+    func = "pct_distinct",
+    orientation = "horizontal",
+    missing = "drop"
   )
-  expect_equal(chart_state_field(blk, "na_group"), "drop")
+  expect_equal(chart_state_field(blk, "missing"), "drop")
   expect_equal(chart_state_field(blk, "func"), "pct_distinct")
 })
 
-test_that("a saved func_toggle (LEGACY) restores and is dropped", {
-  # The on-chart switch is retired: the aggregation goes on the face as a
-  # slot in the sentence, or as a switch the prepare script declares.
-  blk <- new_chart_block(chart_type = "bar", group = "g", value = "v",
-                         func_toggle = c("count", "mean"))
-  expect_null(chart_state_field(blk, "func_toggle"))
-  expect_null(chart_state_field(
-    new_chart_block(chart_type = "bar", func_toggle = TRUE), "func_toggle"
-  ))
-})
-
-test_that("na_group defaults to 'level', so an existing board is unchanged", {
-  expect_equal(chart_state_field(new_chart_block(chart_type = "bar"),
-                                 "na_group"), "level")
+test_that("missing defaults to 'level', so an existing board is unchanged", {
+  expect_equal(chart_state_field(new_chart_block(), "missing"), "level")
 })
 
 test_that("a bad na_group is refused at construction, not at render", {
-  expect_error(new_chart_block(chart_type = "bar", na_group = "nonsense"))
+  expect_error(new_chart_block(missing = "nonsense"))
 })
 
 test_that("a func change from the face writes func into STATE", {
@@ -682,8 +663,11 @@ test_that("a func change from the face writes func into STATE", {
     stringsAsFactors = FALSE
   )
   blk <- new_chart_block(
-    chart_type = "bar", group = "AEDECOD", value = "USUBJID",
-    func = "pct_distinct", na_group = "drop"
+    x = "USUBJID",
+    y = "AEDECOD",
+    func = "pct_distinct",
+    orientation = "horizontal",
+    missing = "drop"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -698,7 +682,7 @@ test_that("a func change from the face writes func into STATE", {
       ))
       session$flushReact()
       expect_equal(session$returned$state$func(), "count_distinct")
-      expect_equal(session$returned$state$na_group(), "drop")
+      expect_equal(session$returned$state$missing(), "drop")
       # And back.
       expr_scope$setInputs(drilldown_block_action = list(
         action = "config", func = "pct_distinct", value = "USUBJID"
@@ -712,34 +696,41 @@ test_that("a func change from the face writes func into STATE", {
 
 test_that("a gear edit of na_group reaches state too", {
   df <- data.frame(g = c("a", NA), v = c(1, 2), stringsAsFactors = FALSE)
-  blk <- new_chart_block(chart_type = "bar", group = "g", value = "v",
-                         func = "sum")
+  blk <- new_chart_block(
+    x = "v",
+    y = "g",
+    func = "sum",
+    orientation = "horizontal"
+  )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
       session$flushReact()
-      expect_equal(session$returned$state$na_group(), "level")
+      expect_equal(session$returned$state$missing(), "level")
       session$makeScope("expr")$setInputs(drilldown_block_action = list(
         action = "config", na_group = "drop"
       ))
       session$flushReact()
-      expect_equal(session$returned$state$na_group(), "drop")
+      expect_equal(session$returned$state$missing(), "drop")
     },
     args = list(x = blk, data = list(data = function() df))
   )
 })
 
 test_that("pct_of round-trips, and refuses anything that is not a role", {
-  blk <- new_chart_block(chart_type = "bar", group = "COUNTRY",
-                         value = "USUBJID", func = "pct_distinct",
-                         pct_of = "group")
-  expect_equal(chart_state_field(blk, "pct_of"), "group")
-  expect_equal(chart_state_field(new_chart_block(chart_type = "bar"),
-                                 "pct_of"), "facet")
+  blk <- new_chart_block(
+    x = "USUBJID",
+    y = "COUNTRY",
+    func = "pct_distinct",
+    orientation = "horizontal",
+    pct_of = "category"
+  )
+  expect_equal(chart_state_field(blk, "pct_of"), "category")
+  expect_equal(chart_state_field(new_chart_block(), "pct_of"), "facet")
   # A cell knows only the roles it is mapped on, so a bare column name has no
   # meaning here and is refused at construction rather than at render.
-  expect_error(new_chart_block(chart_type = "bar", pct_of = "COUNTRY"),
-               "facet, group or color")
+  expect_error(new_chart_block(pct_of = "COUNTRY"),
+               "facet, category or color")
 })
 
 test_that("a chart captions itself with the filter trail its data carries", {
@@ -756,7 +747,10 @@ test_that("a chart captions itself with the filter trail its data carries", {
   )
 
   blk <- new_chart_block(
-    chart_type = "gantt", x = "ASTDY", xend = "AENDY", y = "AEDECOD",
+    type = "gantt",
+    x = "ASTDY",
+    y = "AEDECOD",
+    xend = "AENDY",
     caption = "{filters}"
   )
 
@@ -799,11 +793,11 @@ test_that("the default_caption option captions a new chart that sets none", {
 
   blk <- withr::with_options(
     list(blockr.viz.default_caption = "{filters}"),
-    new_chart_block(chart_type = "bar", group = "AEDECOD", value = "n")
+    new_chart_block(x = "n", y = "AEDECOD", orientation = "horizontal")
   )
   unset <- withr::with_options(
     list(blockr.viz.default_caption = NULL),
-    new_chart_block(chart_type = "bar", group = "AEDECOD", value = "n")
+    new_chart_block(x = "n", y = "AEDECOD", orientation = "horizontal")
   )
 
   shiny::testServer(
@@ -832,9 +826,11 @@ test_that("with a ctrl_target the drill click is transient: nothing latched, cla
     stringsAsFactors = FALSE
   )
   blk <- new_chart_block(
-    chart_type = "line",
-    x = "ADY", y = "AVAL", color = "USUBJID",
-    ctrl_target = "vf"
+    type = "line",
+    x = "ADY",
+    y = "AVAL",
+    color = "USUBJID",
+    drill_target = "vf"
   )
   sent <- list()
 
@@ -862,7 +858,7 @@ test_that("with a ctrl_target the drill click is transient: nothing latched, cla
 
       # Nothing latched: no saved selection, and the chart does not filter its
       # own output on a click it only forwarded.
-      expect_null(session$returned$state$filters())
+      expect_null(session$returned$state$selection()$filters)
       expect_equal(nrow(session$returned$result()), 4L)
 
       # The claim went to the target.
@@ -899,7 +895,7 @@ test_that("an unchanged payload is not serialized or pushed a second time", {
     stringsAsFactors = FALSE
   )
 
-  blk <- new_chart_block(chart_type = "bar", group = "PARAMCD", func = "count")
+  blk <- new_chart_block(y = "PARAMCD", func = "count")
 
   # A reactive, not a reactiveVal: reactiveVal skips an identical value, and
   # the case under test is exactly an equal-but-new object reaching the block.

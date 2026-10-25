@@ -79,15 +79,14 @@ test_that("a plot keeps its aspect on a slide rather than filling it", {
 })
 
 test_that("the chart block carries the download toggle", {
-  blk <- new_chart_block(chart_type = "bar", group = "Species")
+  blk <- new_chart_block(y = "Species")
 
   # A chart has always been takeable, so downloads default ON -- what changed
   # is what they write.
   expect_true(isTRUE(
     get0("download", envir = environment(blk[["expr_server"]]))))
 
-  off <- new_chart_block(chart_type = "bar", group = "Species",
-                         download = FALSE)
+  off <- new_chart_block(y = "Species", download = FALSE)
   expect_false(isTRUE(
     get0("download", envir = environment(off[["expr_server"]]))))
 })

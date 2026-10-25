@@ -32,7 +32,7 @@ test_that("a config edit is pushed without rows, a data change with them", {
     tick()
     src$d
   })
-  blk <- new_chart_block(chart_type = "bar", group = "PARAMCD")
+  blk <- new_chart_block(y = "PARAMCD")
 
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -67,7 +67,7 @@ test_that("a config edit is pushed without rows, a data change with them", {
 })
 
 test_that("a _need request is answered with the whole last message", {
-  blk <- new_chart_block(chart_type = "bar", group = "PARAMCD")
+  blk <- new_chart_block(y = "PARAMCD")
   df <- push_df()
 
   shiny::testServer(
@@ -103,7 +103,7 @@ test_that("a _need request is answered with the whole last message", {
 })
 
 test_that("a capture after a config edit still carries the rows", {
-  blk <- new_chart_block(chart_type = "bar", group = "PARAMCD")
+  blk <- new_chart_block(y = "PARAMCD")
   df <- push_df()
 
   shiny::testServer(
@@ -131,7 +131,7 @@ test_that("a capture after a config edit still carries the rows", {
 })
 
 test_that("_ready is answered with the rev, not the whole message", {
-  blk <- new_chart_block(chart_type = "bar", group = "PARAMCD")
+  blk <- new_chart_block(y = "PARAMCD")
   df <- push_df()
 
   shiny::testServer(
@@ -180,7 +180,7 @@ test_that("an equal frame or an edit that keeps the column set serializes nothin
     tick()
     src$d[seq_len(nrow(src$d)), , drop = FALSE]
   })
-  blk <- new_chart_block(chart_type = "bar", group = "PARAMCD")
+  blk <- new_chart_block(y = "PARAMCD")
 
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -221,7 +221,7 @@ test_that("the scale map is resolved once per column, not per push", {
     real(...)
   })
   df <- data.frame(TRT = c("A", "A", "B"), SEX = c("F", "M", "F"))
-  blk <- new_chart_block(chart_type = "bar", group = "SEX", color = "TRT")
+  blk <- new_chart_block(y = "SEX", color = "TRT")
 
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -311,18 +311,28 @@ test_that("a panel visit or a gear edit does not refit the band or the smoother"
       args = list(x = blk, data = list(data = dat))
     )
   }
-  check(new_chart_block(chart_type = "band", x = "day", y = "val",
-                        band_window = "fixed", band_size = 5, band_min_n = 2),
+  check(new_chart_block(
+    type = "band",
+    x = "day",
+    y = "val",
+    band_window = "fixed",
+    band_size = 5,
+    band_min_n = 2
+  ),
         "band_series", "band")
-  check(new_chart_block(chart_type = "scatter", x = "day", y = "val",
-                        smoother = "loess"),
+  check(new_chart_block(
+    type = "scatter",
+    x = "day",
+    y = "val",
+    smoother = "loess"
+  ),
         "smoother_series", "smooth")
 })
 
 test_that("only a scatter fits the smoother", {
   d <- data.frame(day = rep(1:40, 5), val = sin(1:200))
   for (type in c("scatter", "line")) {
-    blk <- new_chart_block(chart_type = type, x = "day", y = "val",
+    blk <- new_chart_block(type = type, x = "day", y = "val",
                            smoother = "loess")
     shiny::testServer(
       blockr.core:::get_s3_method("block_server", blk),

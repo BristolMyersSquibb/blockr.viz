@@ -12,15 +12,13 @@
 
 # Column-valued arguments, in the order a reader wants them.
 chart_mapping_args <- function() {
-  c("group", "x", "y", "xend", "series", "color", "facet", "label",
-    "lo", "hi", "band_id", "count_col", "tt_fields")
+  c("x", "y", "xend", "series", "color", "facet", "label", "ymin", "ymax",
+    "id", "tooltip")
 }
 
 # Runtime interaction state, not creation-time config.
-# `filter_column` / `filter_values` are LEGACY, read only from old state.
 chart_filter_args <- function() {
-  c("filter_type", "filters", "filter_range", "filter_point",
-    "filter_column", "filter_values")
+  "selection"
 }
 
 chart_chrome_args <- function() {
@@ -158,16 +156,13 @@ chart_ctrl_line <- function(x) {
 
 chart_type_line <- function(state, defaults) {
 
-  typ <- coal_chr(state$chart_type, defaults$chart_type)
+  typ <- coal_chr(state$type, defaults$type)
 
   extra <- c(
     if (!is.null(state$orientation)) as.character(state$orientation),
-    if (!identical(state$bar_mode, defaults$bar_mode) &&
+    if (!identical(state$position, defaults$position) &&
         !is.null(state$color)) {
-      sprintf("%s colour split", state$bar_mode)
-    },
-    if (!identical(state$baseline, defaults$baseline)) {
-      sprintf("%s baseline", state$baseline)
+      sprintf("position %s", state$position)
     }
   )
 
@@ -177,17 +172,17 @@ chart_type_line <- function(state, defaults) {
   )
 }
 
-# The families that aggregate in the browser. Elsewhere -- scatter, line,
-# gantt, and the distribution marks, which summarize the raw `value` without a
-# `func` -- these two arguments sit at their defaults and mean nothing, so
-# reporting "count of row counts" on an eDish scatter is worse than silence.
+# The types that aggregate in the browser. Elsewhere -- scatter, line,
+# gantt, and the distribution marks, which summarize the raw values without a
+# `func` -- `func` sits at its default and means nothing, so reporting
+# "count of row counts" on a scatter is worse than silence.
 chart_aggregated_types <- function() {
-  c("bar", "waterfall", "pie", "treemap", "radar")
+  c("bar", "waterfall", "pie", "treemap")
 }
 
 chart_value_line <- function(state, defaults) {
 
-  typ <- coal_chr(state$chart_type, defaults$chart_type)
+  typ <- coal_chr(state$type, defaults$type)
 
   if (!typ %in% chart_aggregated_types()) {
     return(NULL)
@@ -199,11 +194,27 @@ chart_value_line <- function(state, defaults) {
     return(NULL)
   }
 
-  if (identical(as.character(state$value), ".count")) {
-    return(sprintf("Aggregation: %s (row counts)", func))
+  # With both columns set and no orientation, which one is aggregated
+  # depends on the column types, which this method does not see.
+  if (length(state$x) && length(state$y) && is.null(state$orientation) &&
+        !identical(func, "count") && typ %in% CHART_ORIENTED_TYPES) {
+    return(sprintf(
+      "Aggregation: %s of the numeric one of x (%s) and y (%s), by the other",
+      func, state$x, state$y
+    ))
   }
 
-  sprintf("Aggregation: %s of %s", func, state$value)
+  roles <- chart_roles_internal(typ, state$x, state$y, func,
+                                state$orientation)
+
+  if (identical(as.character(roles$value), ".count") ||
+        is.null(roles$value)) {
+    return(sprintf("Aggregation: %s (row counts) by %s", func,
+                   coal_chr(roles$group, "nothing")))
+  }
+
+  sprintf("Aggregation: %s of %s by %s", func, roles$value,
+          coal_chr(roles$group, "nothing"))
 }
 
 # The one piece of state that is neither creation-time config nor visible in
@@ -211,10 +222,11 @@ chart_value_line <- function(state, defaults) {
 # is silently narrowing everything downstream.
 chart_filter_lines <- function(state) {
 
-  set <- chart_set_args(state, c("filter_range", "filter_point"))
+  sel <- state$selection
+  set <- list(range = fmt_chart_val(sel$range),
+              point = fmt_chart_val(sel$point))
   # The click filter keeps its columns apart: "AETERM = Rash; AESEV = MILD".
-  filters <- chart_filters_state(state$filters) %||%
-    chart_legacy_filters(state$filter_column, state$filter_values)
+  filters <- chart_filters_state(sel$filters)
   set <- c(list(filters = fmt_chart_filters(filters)), set)
   set <- set[!vapply(set, is.null, logical(1L))]
 
@@ -225,7 +237,7 @@ chart_filter_lines <- function(state) {
   c(
     sprintf(
       "Drill filter: ACTIVE (%s) -- the data this block passes downstream is",
-      coal_chr(state$filter_type, "categorical")
+      coal_chr(sel$type, "categorical")
     ),
     "  narrowed by a click or brush in the chart, not by upstream code:",
     sprintf("  %s = %s", names(set), unlist(set))
@@ -247,8 +259,7 @@ chart_chrome_lines <- function(state) {
 chart_other_lines <- function(state, defaults) {
 
   known <- c(chart_mapping_args(), chart_filter_args(), chart_chrome_args(),
-             "chart_type", "orientation", "bar_mode", "baseline", "value",
-             "func")
+             "type", "orientation", "position", "func")
 
   rest <- setdiff(intersect(names(state), names(defaults)), known)
 

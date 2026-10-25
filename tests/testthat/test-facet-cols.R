@@ -28,14 +28,14 @@ test_that("facet_cols_state keeps whole numbers and heals everything else", {
 })
 
 test_that("the chart block stores facet_cols and takes a deployment default", {
-  blk <- new_chart_block(group = "Species", facet = "Grp", facet_cols = "3")
+  blk <- new_chart_block(y = "Species", facet = "Grp", facet_cols = "3")
   expect_equal(environment(blk[["expr_server"]])$facet_cols, "3")
 
-  junk <- new_chart_block(group = "Species", facet_cols = "auto")
+  junk <- new_chart_block(y = "Species", facet_cols = "auto")
   expect_null(environment(junk[["expr_server"]])$facet_cols)
 
   withr::with_options(list(blockr.viz.facet_cols = 2), {
-    dep <- new_chart_block(group = "Species")
+    dep <- new_chart_block(y = "Species")
     expect_equal(environment(dep[["expr_server"]])$facet_cols, "2")
   })
 

@@ -6,7 +6,8 @@
 test_that("a board saved with `expose` still restores, minus the band", {
   expect_warning(
     blk <- new_chart_block(
-      group = "Species", value = ".count", func = "count",
+      y = "Species",
+      func = "count",
       expose = c("color", "facet")
     ),
     "retired"

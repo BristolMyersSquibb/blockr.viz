@@ -2,38 +2,32 @@
 % Please edit documentation in R/chart-block.R
 \name{new_chart_block}
 \alias{new_chart_block}
-\title{Drill-Down Chart Block}
+\title{Chart block}
 \usage{
 new_chart_block(
-  group = NULL,
-  color = NULL,
-  facet = NULL,
-  value = ".count",
-  func = "count",
-  chart_type = "bar",
+  type = "bar",
   x = NULL,
   y = NULL,
+  func = "count",
+  color = NULL,
+  facet = NULL,
   series = NULL,
   xend = NULL,
   label = NULL,
-  tt_fields = NULL,
-  drill = NULL,
+  orientation = NULL,
+  position = "stack",
   sort_by = NULL,
   sort_dir = NULL,
-  orientation = NULL,
-  bar_mode = "stacked",
   value_labels = FALSE,
-  filter_type = "categorical",
-  filter_column = NULL,
-  filter_values = NULL,
-  filter_range = NULL,
-  filter_point = NULL,
-  filters = NULL,
-  line_width_mult = 1,
-  dot_size_mult = 1,
+  tooltip = NULL,
+  drill = NULL,
+  line_width = 1,
+  point_size = 1,
   connect = "monotone",
-  value_lines = NULL,
+  y_lines = NULL,
   x_lines = NULL,
+  ymin = NULL,
+  ymax = NULL,
   smoother = "none",
   identity_line = FALSE,
   box_points = "none",
@@ -43,379 +37,230 @@ new_chart_block(
   band_window = "adaptive",
   band_size = 45,
   band_min_n = 12,
-  band_id = NULL,
-  ref_hi = NULL,
+  id = NULL,
   ref_lo = NULL,
-  lo = NULL,
-  hi = NULL,
-  baseline = "zero",
+  ref_hi = NULL,
   waterfall_totals = NULL,
+  show_n = "off",
+  missing = "level",
+  pct_of = "facet",
+  facet_scales = "fixed",
+  facet_cols = getOption("blockr.viz.facet_cols"),
   title = NULL,
   subtitle = NULL,
   caption = getOption("blockr.viz.default_caption"),
-  count_on = "off",
-  count_col = NULL,
-  na_group = "level",
-  pct_of = "facet",
-  func_toggle = NULL,
-  facet_scales = "fixed",
-  facet_cols = getOption("blockr.viz.facet_cols"),
   download = TRUE,
-  ctrl_target = "",
-  ctrl_table = "",
+  drill_target = "",
+  drill_table = "",
   script = NULL,
-  values = list(),
+  script_values = list(),
+  selection = NULL,
   ...
 )
 }
 \arguments{
-\item{group}{Column for the categorical axis (aggregated charts)}
+\item{type}{Chart type: \code{"bar"}, \code{"waterfall"}, \code{"pie"}, \code{"treemap"},
+\code{"boxplot"}, \code{"pointrange"} (aggregated), \code{"scatter"}, \code{"line"},
+\code{"band"} (one mark per row), or \code{"gantt"} (intervals on lanes). A
+waterfall is a bar whose bars float from the running total. Boxplot and
+pointrange summarize the raw values within each category in the browser
+(see \code{summary}).}
 
-\item{color}{Column mapped to colour (optional, all families)}
+\item{x, y}{Columns on the horizontal and vertical axis. See Details for
+the aggregated types. For gantt, \code{x} is the interval start and \code{y} the
+lane.}
 
-\item{facet}{Column to facet by -- one small panel per level (optional)}
+\item{func}{Aggregation of the value column per category (aggregated types
+only): \code{"count"} (default; set only the category column),
+\code{"count_distinct"}, \code{"mean"}, \code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"},
+\code{"identity"} or \code{"pct_distinct"}. \code{"identity"} does not aggregate: it
+draws the value as is, one bar per row when the category is unique.
+\code{"pct_distinct"} is the share of the panel's distinct values (see
+\code{pct_of}). With a \code{color} split, \code{"count_distinct"} counts an entity
+once per colour level it appears under.}
 
-\item{value}{Column for the value (aggregated only). Must match
-\code{func}: ".count" for \code{"count"} (row count -- the value is otherwise
-ignored), any column for \code{"count_distinct"} (e.g. a subject id to count
-patients instead of records), a numeric column for the numeric
-aggregations. (Was \code{metric}.)}
+\item{color}{Column mapped to colour.}
 
-\item{func}{Aggregation function: \code{"count"}, \code{"count_distinct"}, \code{"mean"},
-\code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"}, \code{"identity"}. With a \code{color} split,
-\code{"count_distinct"} counts an entity once per colour level it appears
-under; deduplicate upstream if segments must sum to the per-group
-distinct count. \code{"identity"} ("None (as is)") does NOT aggregate -- it
-plots \code{value} directly, one bar per row when \code{group} is unique (for bar
-heights already computed upstream); duplicate categories collapse to the
-first row. (Was \code{agg_fn}.)}
+\item{facet}{Column to facet by, one small panel per level.}
 
-\item{chart_type}{Chart type: "bar", "waterfall", "scatter", "line",
-"pie", "treemap", "boxplot", "pointrange", "radar", "gantt". "waterfall"
-is a bar with a cumulative baseline (sugar for \code{bar} +
-\code{baseline = "cumulative"}). "boxplot" and "pointrange" are the
-distribution marks: both summarize the raw \code{value} within each \code{group}
-(x \code{color}) slot in the browser (see \code{summary}) -- no upstream summarize
-block, and the block's export stays the drill-filtered raw rows.}
+\item{series}{Column whose values split rows into separate series (one
+line or point group per value; per-bar label on a gantt). Independent of
+\code{color}.}
 
-\item{x}{X-axis column (individual / timeline charts)}
+\item{xend}{Interval end column (gantt only). Rows without an end are drawn
+as a dot at \code{x}.}
 
-\item{y}{Y-axis column (individual / timeline charts)}
+\item{label}{Column written on each mark. For pie and treemap the slice
+column is used when unset.}
 
-\item{series}{Column whose distinct values split rows into separate
-series (individual: one line/scatter group per value; timeline:
-per-bar label). Independent of \code{color}. High cardinality is fine.}
+\item{orientation}{\code{NULL} (default) infers which way a bar, boxplot or
+pointrange lies (see Details). Set \code{"horizontal"} (categories on y) or
+\code{"vertical"} (categories on x) only when both columns are non-numeric,
+such as a distinct count of a character id by a category.}
 
-\item{xend}{Interval end column (timeline only; NA rows render as
-dots at \code{x})}
+\item{position}{Layout of a colour-split bar: \code{"stack"} (default),
+\code{"dodge"} (side by side) or \code{"fill"} (stacked to 100\%).}
 
-\item{label}{Column whose value is written on each mark. Default unset
-(no on-mark text). For \code{pie}/\code{treemap}, when unset the label falls
-back to \code{group} (a label-less pie is unusable).}
+\item{sort_by}{Category order: \code{"value"} (default for bar, pie and
+treemap), \code{"data"} (default for boxplot and pointrange: factor levels,
+else first appearance), \code{"alpha"}, or a column name (the per-category
+minimum of that column). For gantt: \code{"onset"} (default), \code{"alpha"} or a
+column name. Ignored for scatter and line.}
 
-\item{tt_fields}{Character vector of extra column names appended to each
-mark's hover tooltip, beyond the mapped roles (gantt, scatter, line, bar).
-On a bar the value shown is the group's representative (first row) -- exact
-for a \code{"None (as is)"} bar, a representative for an aggregation. Default
-\code{NULL} (none). Display-only -- does not affect the plot; a listed column
-dropped upstream is silently omitted.}
+\item{sort_dir}{\code{"asc"} or \code{"desc"}.}
 
-\item{drill}{Column a click filters downstream on. Default unset (a
-click is inert). When set, clicking a mark emits a categorical
-filter on this column's value(s) for the clicked mark. For an
-aggregated chart this should be a column constant within a group.}
+\item{value_labels}{\code{TRUE} writes each bar's value at its end. A stacked bar
+labels the total, a dodged bar every bar, a filled bar each segment's
+share. Labels that would overlap are left out. Bar and waterfall only.}
 
-\item{sort_by}{Category ordering on the axis. Allowed values depend on
-the chart family:
-\itemize{
-\item Aggregated: \code{"value"} (default for bar/pie/treemap/radar), \code{"data"}
-(default for the distribution marks; factor levels when the group
-column carries them, else first appearance in the rows -- visits and
-dose groups keep their own order), \code{"alpha"}, or a column name (order
-groups by that column's per-group minimum, e.g. \code{"AVISITN"}).
-\item Timeline: \code{"onset"} (default), \code{"alpha"}, or a column name.
-\item Individual: ignored.
-}}
+\item{tooltip}{Extra columns shown in each mark's tooltip.}
 
-\item{sort_dir}{\code{"asc"} or \code{"desc"}. Reverses the \code{sort_by} ordering.}
+\item{drill}{Column a click filters downstream on, \code{"auto"} for the type's
+natural target, or \code{NULL} (default) for no filtering.}
 
-\item{orientation}{Category-axis orientation: \code{"horizontal"} (category on
-the y-axis, best for long labels) or \code{"vertical"} (category on the
-x-axis). Presentation property -- the mapping (Group/Value) is unchanged.
-Bar and the distribution marks (boxplot / pointrange). \code{NULL} (default)
-resolves per type: \code{"horizontal"} for bar, \code{"vertical"} for the
-distribution marks (visits/arms read left-to-right).}
+\item{line_width, point_size}{Line width and marker size relative to the
+default (1). Range 0.5 to 3.}
 
-\item{bar_mode}{Layout for a color-split bar: \code{"stacked"} (default -- color
-segments stack into one bar per group), \code{"grouped"} (segments sit
-side-by-side / dodged, for comparing absolute values), or \code{"percent"}
-(stacked but each group normalized to 100\%, for comparing composition).
-No effect without a \code{color} split; ignored when \code{baseline = "cumulative"}
-(waterfall). Bar charts only.}
+\item{connect}{How a line connects its points: \code{"monotone"} (default,
+smoothed without overshoot), \code{"straight"}, \code{"step-start"},
+\code{"step-middle"} or \code{"step-end"}.}
 
-\item{value_labels}{Write each bar's value at its end: \code{TRUE} or \code{FALSE}
-(default). A negative bar carries its label at its own end, left of or
-below zero. A stacked bar labels the stack total, a grouped bar every
-bar, and a \code{bar_mode = "percent"} bar each segment's share, inside the
-segment. Labels that would overlap are left out, so a crowded chart (a
-waterfall of 100+ subjects) stays readable; the tooltip keeps every
-value. Bar and waterfall only. Like \code{identity_line}, the gear's switch
-speaks "on"/"off" over the wire; the R state is a plain logical.}
+\item{y_lines, x_lines}{Numbers at which dashed guide lines are drawn.
+\code{y_lines} run across the value axis (y on a scatter or line, the value
+axis of a bar or boxplot either way round); \code{x_lines} across a numeric x.}
 
-\item{filter_type, filters, filter_range, filter_point}{Runtime click/brush filter state (transport for the emitted filter;
-normally left at defaults at creation). \code{filters} is the click filter,
-a named list of character vectors, column -> values, \code{NA} for a missing
-value; the columns AND together. A range filter (\code{filter_type = "range"}) may carry the facet panel it was taken in as \code{filters}.}
+\item{ymin, ymax}{Columns holding the lower and upper end of an interval per
+row, drawn as error bars on a scatter or a line.}
 
-\item{filter_column, filter_values}{LEGACY, folded into \code{filters}: a board
-saved with one filter column and its values restores as that filter.}
+\item{smoother}{Trend line on a scatter: \code{"none"} (default), \code{"lm"} or
+\code{"loess"}, fit per colour or series group and per facet panel.}
 
-\item{line_width_mult}{Multiplier on the default line width for line
-charts. Default \code{1.0}. Range \code{0.5}-\code{3.0}. Individual family only.}
+\item{identity_line}{\code{TRUE} draws a dashed y = x line on a scatter.}
 
-\item{dot_size_mult}{Multiplier on the default marker size. Default
-\code{1.0}. Range \code{0.5}-\code{3.0}. Individual family only.}
+\item{box_points}{\code{"none"} (default) or \code{"outliers"}: the points beyond the
+whiskers of a boxplot.}
 
-\item{connect}{How a line chart connects its points: \code{"monotone"}
-(default, monotone-smoothed -- no overshoot, so the curve never implies
-values outside the measured range), \code{"straight"} (plain segments), or
-\code{"step-start"} / \code{"step-middle"} / \code{"step-end"} (hold the value between
-observations, jump at the named point -- dose levels, on/off states).
-One control replacing the old \code{step} + \code{smooth} pair. Consumed by the JS
-renderer.}
+\item{summary}{Statistic of a boxplot's body or a pointrange's interval:
+\code{"median_q1_q3"}, \code{"mean_sd"}, \code{"mean_2sd"}, \code{"mean_se"}, \code{"p5_p95"},
+\code{"p10_p90"} or \code{"min_max"}. \code{NULL} (default) is \code{"median_q1_q3"} for a
+boxplot and \code{"mean_se"} for a pointrange.}
 
-\item{value_lines, x_lines}{Helper lines at fixed positions: numeric
-vectors, each entry drawing one dashed guide line. \code{value_lines} run
-across the VALUE axis: y on a scatter or line chart, and the value axis
-of a bar, waterfall, boxplot or point range in either orientation (a
-target, a threshold). On a percent axis they are percentages (\code{50} is
-half). \code{x_lines} run across a numeric x axis, so scatter and line only.
-Plain numbers, never column names (a Hy's-Law eDish cross is
-\verb{x_lines = 3, value_lines = 2}). Default \code{NULL} (none).}
+\item{whiskers}{A boxplot's outer interval: \code{"tukey"} (1.5 x IQR, clipped to
+the data) or any \code{summary} value. \code{NULL} (default) is \code{"tukey"} for a
+boxplot and \code{"p10_p90"} for a band.}
 
-\item{smoother}{Trend overlay for scatter charts: one of \code{"none"}
-(default), \code{"lm"}, or \code{"loess"}. Fit per \code{color}/\code{series} group, and per
-\code{facet} panel, via \code{\link[=compute_smoother_series]{compute_smoother_series()}}.}
+\item{connect_centers}{\code{TRUE} joins a pointrange's centers in category
+order.}
 
-\item{identity_line}{Identity-line overlay for scatter charts: \code{TRUE} draws
-a dashed 45-degree y = x guide line across the overlap of the x and y
-ranges (shift / agreement plots), \code{FALSE} (default) omits it. The legacy
-\code{"on"} / \code{"off"} strings still restore -- the gear's segmented control
-transports "on"/"off" over the wire, but that is a UI detail and the R
-value is a plain logical, as for the table block's \code{sortable} et al.}
+\item{band_window, band_size, band_min_n}{The band (\code{type = "band"}): a
+running quantile band of \code{y} over \code{x} across individuals. With
+\code{band_window = "adaptive"} (default) the window at each point grows until
+it holds \code{band_size} distinct individuals (default 45); with \code{"fixed"},
+\code{band_size} is a half-width in x units. Points with fewer than
+\code{band_min_n} individuals (default 12) are not drawn.}
 
-\item{box_points}{Observation overlay for boxplots: one of \code{"none"}
-(default, box only) or \code{"outliers"} (plot only the points beyond the
-whisker extent). The former \code{"all"} strip was removed; boards carrying
-it degrade to \code{"none"}. No-op for other chart types.}
+\item{id}{Column that identifies an individual. The band counts it
+distinct, and so do the N labels (\code{show_n}). \code{NULL} counts rows.}
 
-\item{summary}{Distribution statistic (boxplot / pointrange): the point
-range's interval, or the box's body. One of \code{"median_q1_q3"},
-\code{"mean_sd"}, \code{"mean_2sd"}, \code{"mean_se"}, \code{"p5_p95"}, \code{"min_max"},
-computed in the browser from the raw \code{value} column. \code{NULL} (default)
-resolves per mark: \code{"median_q1_q3"} for boxplot, \code{"mean_se"} for
-pointrange. No-op for other chart types.}
+\item{ref_lo, ref_hi}{Columns holding a lower and upper reference limit per
+row, drawn as dashed lines at their median and labelled with their
+spread.}
 
-\item{whiskers}{Whisker rule -- the mark's OUTER interval. \code{"tukey"}
-(1.5x IQR fences clipped to the data, the textbook boxplot) or any
-\code{summary} value (e.g. \code{"min_max"}, \code{"p5_p95"}, \code{"p10_p90"}). \code{NULL}
-(default) resolves per mark: \code{"tukey"} for the boxplot, \code{"p10_p90"} for
-the band. The band differs deliberately -- a fence is an extreme order
-statistic, so dragged into a continuous ribbon its edge lurches whenever
-one subject enters or leaves the window, while a fixed quantile moves
-only when the distribution does. No-op for other chart types.}
+\item{waterfall_totals}{Steps of a waterfall drawn as total bars, from zero
+to the running total.}
 
-\item{connect_centers}{Pointrange only: \code{TRUE} draws a line through the
-interval centers in group order (the over-visits trajectory reading).
-Default \code{FALSE}. Like \code{identity_line}, the gear's control speaks
-"on"/"off" over the wire; the R state is a plain logical.}
+\item{show_n}{Observation counts in labels, e.g. "Female (12)": \code{"off"}
+(default), \code{"axis"}, \code{"facet"} or \code{"both"}.}
 
-\item{band_window}{Distribution band windowing: \code{"adaptive"} (default)
-grows the window at each grid point until it holds \code{band_size} distinct
-subjects, which keeps the band's stability constant as a cohort thins;
-\code{"fixed"} uses \code{band_size} as a half-width in x units. A fixed window is
-simpler to explain but goes empty wherever the design is sparse -- with
-scheduled visits 56 days apart, a narrow window lands in the gap between
-them and the band tears into pieces. No-op for other chart types.}
+\item{missing}{Rows whose category is missing: \code{"level"} (default) gives
+them their own category, \code{"drop"} removes them from the categories but
+keeps them in the panel, so they still count toward \code{pct_distinct}.}
 
-\item{band_size}{Distinct subjects per window (\code{band_window = "adaptive"}, default 45) or the half-width in x units (\code{"fixed"}).}
+\item{pct_of}{The role whose levels a \code{pct_distinct} denominator is taken
+within: \code{"facet"} (default), \code{"category"} or \code{"color"}.}
 
-\item{band_min_n}{Minimum distinct subjects in a window; below it the band
-is cut rather than drawn through thin air. Default 12.}
+\item{facet_scales}{\code{"fixed"} (default) shares one scale across the panels,
+\code{"free"} lets each panel size itself, \code{"free_y"} frees y only (scatter,
+line and band).}
 
-\item{band_id}{Subject id column counted DISTINCT for the window and for
-the reported n (e.g. \code{"USUBJID"}). \code{NULL} counts rows, which over-counts
-a cohort whenever one subject contributes several observations to the
-same window -- so set it for repeated-measures data.}
+\item{facet_cols}{Panels per row; \code{NULL} (default) fits as many as the card
+is wide. Defaults to the option \code{blockr.viz.facet_cols}.}
 
-\item{ref_hi, ref_lo}{Column names holding an upper / lower reference
-limit, drawn as dashed lines (e.g. \code{"ANRHI"} / \code{"ANRLO"}). Unlike
-\code{value_lines}, which takes values, these name a COLUMN: an ADaM reference
-range is per-record and varies by lab, sex and age, so the block reduces
-the column to its median and the label carries the spread it reduced
-from ("ANRHI 34 (32-43)"). \code{NULL} (default) or \code{""} draws nothing. A
-limit the data never approaches only stretches the value axis so far
-before it pins to the frame edge, so one irrelevant limit cannot flatten
-the series.}
+\item{title, subtitle, caption}{Chart text. \code{NULL} uses the input data's
+label, subtitle or caption attribute, \code{""} shows nothing, and any other
+string is a template resolved against the current data: \code{{col}} (the
+column's distinct values), \code{{label(col)}}, \code{{n}}, \code{{n_distinct(col)}}.
+\verb{\{@arg\}} prints one of the block's own settings and makes the word a
+control the reader can click (\verb{\{label(@y)\}}, \verb{\{@func in sum, mean\}}); a
+clause in \verb{[...]} disappears when its setting is empty. \code{caption}
+defaults to the option \code{blockr.viz.default_caption}.}
 
-\item{lo, hi}{Optional lower / upper value bounds used by the renderer to
-clamp or annotate the value axis. Default \code{NULL} (auto).}
+\item{download}{\code{TRUE} (default) offers the chart for download (image,
+HTML, PowerPoint and the plotted numbers).}
 
-\item{baseline}{Bar baseline mode: \code{"zero"} (default -- every bar starts at
-0) or \code{"cumulative"} (a waterfall/bridge -- each bar floats from the
-running cumulative of the bars before it; the step axis honors data order,
-each \code{metric} value is a delta). \code{chart_type = "waterfall"} implies
-\code{"cumulative"}. Bar family only.}
+\item{drill_target, drill_table}{Beta. The block id of a value filter block
+that a drill click is also sent to, over the board's control channel
+(see \code{\link[=ctrl_send]{ctrl_send()}} and \code{\link[=new_ctrl_bridge_extension]{new_ctrl_bridge_extension()}}), and the table in
+its dm the conditions apply to. \code{"auto"} finds the board's drill
+destination. With a target set, a click is an event: the chart holds no
+selection.}
 
-\item{waterfall_totals}{Character vector of \code{group} (step) values rendered
-as total/subtotal bars in a cumulative-baseline bar: their baseline resets
-to 0 and they draw the absolute running cumulative. Default \code{NULL} (every
-bar is a relative delta).}
+\item{script, script_values}{Experimental. R code run on the incoming data
+before the chart sees it; its top-level plain-value assignments become
+controls on the block, and \code{script_values} holds their settings.}
 
-\item{title, subtitle, caption}{Chart text, rendered above (title, subtitle)
-and below (caption) the chart. \code{caption} defaults to the option
-\code{blockr.viz.default_caption} (unset = \code{NULL}), so a deployment can caption
-every new chart, e.g. \code{options(blockr.viz.default_caption = "{filters}")}.
-Each is one of three tiers: \code{NULL}
-(default) = auto -- each slot falls back to the input data frame's
-table-level display attribute (\code{label} for the title, \code{subtitle},
-\code{caption}) when one is present; \code{""} = explicitly none (suppresses the
-auto text); any other
-string = shown, with \code{{...}} tokens resolved against the CURRENT data on
-every render: \code{{col}} -> the distinct values of that column collapsed
-with ", " (an upstream value filter on ARM makes \code{{ARM}} read the
-selected arm), \code{{label(col)}} -> the column's variable label (the picker
-block carries the picked measure's label, so \code{{label(value)}} follows
-the pick), \code{{n}} -> row count, \code{{n_distinct(col)}} -> distinct count.
-Tokens are data lookups, never evaluated code; a token naming a missing
-column resolves to "".}
+\item{selection}{What a click or brush selected. Written by the chart; leave
+it \code{NULL}.}
 
-\item{count_on}{Which label surfaces carry an observation count in
-parentheses ("Female (12)"): \code{"off"} (default), \code{"axis"} (the category
-axis ticks), \code{"facet"} (the facet strip labels), or \code{"both"}.}
-
-\item{count_col}{Column counted DISTINCT for those labels (e.g.
-\code{"USUBJID"} -> unique subjects). \code{NULL} (default) or \code{""} falls back to
-the raw row count. Counts are computed per label group in the browser and
-do NOT sum from the per-cell n: one subject can span several color /
-facet cells.}
-
-\item{na_group}{What to do with rows whose \code{group} value is missing:
-\code{"level"} (default) gives them their own category, the behaviour this has
-always had; \code{"drop"} removes them from the categories but NOT from the
-panel, so they draw nothing and still count toward \code{pct_distinct}'s
-denominator. That is the difference between a row that is a category and a
-row that is only a member of the population.}
-
-\item{pct_of}{Which mapped role a \code{func = "pct_distinct"} denominator is
-taken within: \code{"facet"} (default), \code{"group"} or \code{"color"}. A cell only
-knows the values of the roles it is mapped on, so those three are the
-whole option space. It cannot be inferred: the chart would have to know
-whether a column is a population split (arm, sex, country) or an event
-attribute (grade), and dividing grade-2 subjects by subjects-with-grade-2
-is circular. A vector is accepted, though the gear offers one role.}
-
-\item{func_toggle}{LEGACY, ignored. Put the aggregation on the face as a
-slot in the sentence (\verb{\{@func\}} in \code{subtitle}), or declare a switch in
-the prepare \code{script} and name it in the sentence (\verb{\{@measure\}}).}
-
-\item{facet_scales}{How the facet panels scale, as in ggplot2's
-\code{facet_wrap(scales = )}. \code{"fixed"} (default) gives every panel ONE
-numeric domain and one category set in one order: a bar of the same
-length, or a point at the same height, then means the same value in every
-panel -- the premise of a small-multiples grid. \code{"free"} lets each panel
-size itself off its own subset, which is the honest reading when the
-panels do not share a unit (faceting by \code{PARAM}, where ALT, bilirubin and
-heart rate cannot share a value axis); like ggplot2, it also drops
-categories a panel has no rows for. \code{"free_y"} frees the value axis and
-keeps a shared x. It is offered on scatter / line / band only, where the
-value axis IS y -- elsewhere the value axis follows \code{orientation}, so the
-name would lie, and a saved \code{"free_y"} reads as \code{"free"} there.}
-
-\item{facet_cols}{How many facet panels sit in a row, as in ggplot2's
-\code{facet_wrap(ncol = )}. \code{NULL} (default) is auto: the canvas fits as many
-panels per row as the card is wide, which is what every faceted chart did
-before this setting existed. A number pins the row, and the same number
-reaches the report / deck render -- where ggplot2 otherwise picks a
-square-ish grid of its own, so an auto chart and its exhibit could
-disagree about the shape of the same picture. Capped at the panel count:
-four columns over two panels leaves no empty tracks.
-
-It is deliberately NOT a board-wide setting the way the echarts theme is.
-Colour and type can have one answer for every chart; how many panels fit
-depends on how many this chart has and how wide its card is. A deployment
-that does want one answer sets \code{blockr.viz.facet_cols} and every block
-takes it as its default.}
-
-\item{download}{Offer the chart for download. \code{TRUE} (the default) puts a
-control in the gear header that writes the chart a report would print --
-image, HTML, PowerPoint and the plotted numbers -- rather than a capture
-of the live canvas. \code{FALSE} shows no control.}
-
-\item{ctrl_target}{Character(1), beta. Block id of a value filter block on
-the board: a categorical drill click's claim is pushed there over the
-board's control channel (\code{\link[=ctrl_send]{ctrl_send()}}; the board needs the channel
-installed, see \code{\link[=new_ctrl_bridge_extension]{new_ctrl_bridge_extension()}}). Empty (the default) =
-off; the drill behaves exactly as before. Exposed in the gear's "Send
-to filter (beta)" section.
-
-\code{"auto"} needs no block id: it resolves to the board's drill destination
--- the one \code{blockr.dm::new_drill_filter_block()} on the board, else the
-one value filter block (\code{\link[=ctrl_auto_target]{ctrl_auto_target()}}). That is what the gear's
-checkbox writes, so a drill reaches the cohort filter with nothing typed.
-
-With a target set the drill becomes TRANSIENT: the click is an event,
-not a selection. The chart latches nothing (so it does not filter its
-own output on the click, saves no selection with the board, and highlights
-nothing), clicking the same mark twice sends twice instead of toggling
-off, and all the click leaves behind is the clicked mark lit for a moment
-and a "Sent ..." line in the footer. Undoing a drill is the target's job, because the
-control channel has no back-edge: a selection held here would keep
-showing a cohort that anyone else can reset.}
-
-\item{ctrl_table}{Character(1), beta. Name of the table in the target's
-\code{dm} the pushed conditions apply to (e.g. \code{"adsl"}). Leave empty when
-the target filters a plain data frame.}
-
-\item{script, values}{Experimental prepare script. \code{script} is R code run
-on the incoming data before the chart sees it; its top-level plain-value
-assignments become controls on the block's face, and \code{values} holds
-their current settings. \code{NULL} (default) = no script. Not on the AI
-surface. A script that reshapes the data should end with
-\code{\link[=mark_column_kinds]{mark_column_kinds()}}.}
-
-\item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}}
+\item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }
 \value{
-A transform block of class \code{chart_block}
+A transform block of class \code{chart_block}.
 }
 \description{
-A configurable chart that can also act as a filter. Arguments are
-grammar-of-graphics aesthetics: each one names a \strong{data column}, never
-a literal value. Roles are orthogonal -- \code{color} only colours, \code{series}
-only splits into series, \code{label} only writes on-mark text, position is
-\code{x}/\code{y}/\code{xend} or \code{group}.
+An interactive chart (ECharts) that can also act as a filter. The
+arguments are grammar-of-graphics aesthetics: each one names a \strong{data
+column}, never a literal value. Roles are orthogonal: \code{color} only
+colours, \code{series} only splits into series, \code{label} only writes on-mark
+text.
 }
 \details{
-Interactivity is explicit and opt-in via \code{drill}. A click identifies a
-mark; the mark maps to one or more source rows; the downstream filter
-is \verb{drill \%in\% (distinct values of drill over those rows)}. When
-\code{drill} is unset the click is inert (no filter emitted). Brush / drag
-range selection on scatter/line is a separate gesture and is unchanged.
+\code{x} and \code{y} are the screen axes for every type, as in ggplot2. For the
+aggregated types (bar, waterfall, pie, treemap, boxplot, pointrange) one of
+them is the category and the other the column \code{func} aggregates, and which
+way the chart lies follows from that: \code{x = "class"} draws vertical bars of
+counts, \code{y = "class"} horizontal ones, and \verb{x = "sales", y = "region", func = "sum"} horizontal bars of summed sales. With one column and a row
+count that column is the category; with two, a numeric column beside a
+non-numeric one is the value. For pie and treemap \code{x} is the slice and \code{y}
+the value.
 
-Three chart families share this block (an internal render-dispatch
-detail that never changes what an argument means):
-aggregated (bar, waterfall, pie, treemap, boxplot, radar), individual
-(scatter, line), timeline (gantt). A waterfall is a bar with a cumulative
-baseline (each bar floats from the running total). A radar puts the \code{group}
-levels on the spokes,
-draws one shape per \code{color} level, and each vertex is
-\code{agg_fn(metric)} for that cell; clicking a shape drills on its \code{color}
-value. For spokes from several numeric columns, pivot longer upstream
-and map the name column to \code{group}.
+Interactivity is opt-in via \code{drill}. A click identifies a mark, the mark
+maps to source rows, and the downstream filter is \verb{drill \%in\%} the values
+of \code{drill} in those rows. With \code{drill} unset a click does nothing.
+
+Arguments of blockr.viz < 0.3.0 (\code{chart_type}, \code{group}, \code{value},
+\code{bar_mode}, ...) are still accepted, with a warning, and boards saved with
+them load unchanged.
 }
 \examples{
-\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
-new_chart_block()
-\dontshow{\}) # examplesIf}
+# counts by class, horizontal bars
+new_chart_block(type = "bar", y = "class")
+
+# mean highway mileage by class and drive train, side by side
+new_chart_block(
+  type = "bar", x = "class", y = "hwy", func = "mean",
+  color = "drv", position = "dodge"
+)
+
+# a scatter with a linear trend per group
+new_chart_block(
+  type = "scatter", x = "displ", y = "hwy", color = "drv",
+  smoother = "lm"
+)
+
+# a subtitle with a control in it
+new_chart_block(
+  type = "bar", x = "class", y = "hwy", func = "mean",
+  subtitle = "{@func in mean, median} of {label(@y)}"
+)
 }

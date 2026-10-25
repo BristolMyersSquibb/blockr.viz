@@ -5,5 +5,5 @@ test_that("non-viz blocks print bare", {
 })
 
 test_that("chart blocks have no report call", {
-  expect_null(report_call(new_chart_block(group = "Species"), "c1"))
+  expect_null(report_call(new_chart_block(y = "Species"), "c1"))
 })

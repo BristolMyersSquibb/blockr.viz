@@ -69,8 +69,7 @@ test_that("block server runs with a scale_map option and factor column", {
     BOR = factor(c("CR", "PD", "PR"), levels = c("CR", "PR", "PD")),
     TRT = c("A", "A", "B")
   )
-  blk <- new_chart_block(chart_type = "bar", group = "TRT",
-                                   color = "BOR")
+  blk <- new_chart_block(y = "TRT", color = "BOR")
 
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),

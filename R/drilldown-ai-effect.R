@@ -10,16 +10,16 @@
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
-# Column-valued roles, in display order, for the chart block. value_lines / x_lines
+# Column-valued roles, in display order, for the chart block. y_lines / x_lines
 # are NOT roles: they hold numeric helper-line positions, not column names
 # (reported separately below, never validated against the columns).
-dd_chart_roles <- c("group", "x", "y", "xend", "value", "color", "facet",
-                    "series", "label", "drill", "lo", "hi")
+dd_chart_roles <- c("x", "y", "xend", "color", "facet", "series", "label",
+                    "drill", "ymin", "ymax", "id")
 
 #' @noRd
 config_effect.chart_block <- function(block, args, data = NULL, ...) {
   cols <- if (is.data.frame(data)) names(data) else NULL
-  ct <- as.character(args$chart_type %||% "bar")[1]
+  ct <- as.character(args$type %||% "bar")[1]
 
   parts <- character()
   bad <- character()
@@ -35,7 +35,7 @@ config_effect.chart_block <- function(block, args, data = NULL, ...) {
   }
   # Helper lines: plain numeric values (possibly several per axis), echoed
   # verbatim so the model sees them configured.
-  for (r in c("value_lines", "x_lines")) {
+  for (r in c("y_lines", "x_lines")) {
     v <- unlist(args[[r]])
     if (length(v)) parts <- c(parts, paste0(r, "=", paste(v, collapse = ",")))
   }
