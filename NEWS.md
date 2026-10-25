@@ -1,3 +1,8 @@
+# blockr.viz (development version)
+
+* The picker block is gone. Bind chart and table mappings to the source
+  columns directly and put a group switch in the board's filter.
+
 # blockr.viz 0.2.210
 
 * A summarize table grouped by two `by` columns lists the inner column flat

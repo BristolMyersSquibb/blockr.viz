@@ -10,9 +10,6 @@
 #' @importFrom blockr.core register_blocks new_arg_specs new_arg_spec
 #'   arg_string arg_number arg_integer arg_boolean arg_enum arg_array arg_object
 register_viz_blocks <- function() {
-  # Registered separately at the end (own arg specs + guidance in its file):
-  # the picker, a shaper like summary_table.
-  on.exit(register_picker_block())
   # Removed outright (2026-06-14) -- superseded, with no compat shim kept since
   # blockr.bi was renamed to blockr.viz (a conscious upgrade):
   #   - new_kpi_block          -> new_tile_block
