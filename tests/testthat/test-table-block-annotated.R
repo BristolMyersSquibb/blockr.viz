@@ -97,7 +97,7 @@ test_that("drill filter applies to the coerced frame", {
   obj <- new_fake_composed(fake_df)
 
   testServer(blk$expr_server, args = list(data = reactive(obj)), {
-    session$setInputs(drilldown_table_block_action = list(
+    session$setInputs(`records-drilldown_table_block_action` = list(
       action = "filter", column = ".label", values = list("Age")
     ))
     out <- eval_block_expr(session$returned$expr(), obj)

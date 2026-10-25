@@ -2473,6 +2473,20 @@
     return { cfg: cfg, cols: cols };
   }
 
+  // The table block's "Rows are" switch (R/table-block.R): records or
+  // groups. The block's server reads it off this engine's action input.
+  function withLayoutSwitch(spec, elemId) {
+    spec.layoutSwitch = {
+      value: "groups",
+      options: [
+        { value: "records", label: "Records" },
+        { value: "groups", label: "Groups" }
+      ],
+      onPick: function (v) { sendConfig(elemId, "layout", v); }
+    };
+    return spec;
+  }
+
   function sendConfig(elemId, param, value) {
     if (!window.Shiny || !Shiny.setInputValue) return;
     Shiny.setInputValue(
@@ -2552,8 +2566,12 @@
       columns: function () { return cols; },
       context: function () { return "all"; },
       currentType: function () { return null; },
-      sections: function () { return summarizeSections(cfg, ctx); },
-      sectionsForFamily: function () { return summarizeSections(cfg, ctx); },
+      sections: function () {
+        return withLayoutSwitch(summarizeSections(cfg, ctx), elemId);
+      },
+      sectionsForFamily: function () {
+        return withLayoutSwitch(summarizeSections(cfg, ctx), elemId);
+      },
       secondary: new Set(),
       // "Mapping" in both modes, as on the chart: the trays share their
       // section names.

@@ -118,14 +118,14 @@ test_that("the three downloads of the issue's table are coloured (#43)", {
                     args = list(data = shiny::reactive(d)), {
     session$flushReact()
 
-    h <- paste(readLines(output$dl_html, warn = FALSE), collapse = "")
+    h <- paste(readLines(output[["records-dl_html"]], warn = FALSE), collapse = "")
     for (b in bg) expect_match(h, paste0("background:", b), fixed = TRUE)
     expect_false(grepl(".bg:", h, fixed = TRUE))
 
-    st <- xlsx_styles(output$dl_xlsx)
+    st <- xlsx_styles(output[["records-dl_xlsx"]])
     for (x in hex) expect_match(st, x, fixed = TRUE)
 
-    sl <- toupper(slide_xml(output$dl_pptx))
+    sl <- toupper(slide_xml(output[["records-dl_pptx"]]))
     for (x in hex) expect_match(sl, x, fixed = TRUE)
   })
 })
@@ -200,17 +200,17 @@ test_that("the block's downloads round to its digits (#37)", {
                     args = list(data = shiny::reactive(coef_frame())), {
     session$flushReact()
 
-    h <- paste(readLines(output$dl_html, warn = FALSE), collapse = "")
+    h <- paste(readLines(output[["records-dl_html"]], warn = FALSE), collapse = "")
     expect_match(h, ">3.81<", fixed = TRUE)
     expect_match(h, ">2.7<", fixed = TRUE)
     expect_false(grepl("3.8142", h, fixed = TRUE))
 
-    sl <- slide_xml(output$dl_pptx)
+    sl <- slide_xml(output[["records-dl_pptx"]])
     expect_match(sl, ">3.81<", fixed = TRUE)
     expect_match(sl, ">2.7<", fixed = TRUE)
     expect_false(grepl("3.8142", sl, fixed = TRUE))
 
-    fx <- output$dl_xlsx
+    fx <- output[["records-dl_xlsx"]]
     expect_equal(openxlsx::read.xlsx(fx)$times_more, 3.81427057462906)
     expect_identical(xlsx_num_formats(fx)[["2"]], "0.00")
   })

@@ -29,8 +29,7 @@ register_viz_blocks <- function() {
       "new_gt_table_block",
       "new_tile_block",
       "new_chart_block",
-      "new_table_block",
-      "new_summarize_table_block"
+      "new_table_block"
     ),
     name = c(
       # "Variable summary", not "Summary Table": its rows are VARIABLES
@@ -40,16 +39,14 @@ register_viz_blocks <- function() {
       "gt Table",
       "Tile",
       "Chart",
-      "Table",
-      "Summarize table"
+      "Table"
     ),
     description = c(
       "Wide, display-shaped multi-variable summary (list of variables by Y pattern). Successor to tidy_summary_block.",
       "Render wide-format tables (from summary_table) as styled gt tables \u2014 static / print / CSR output.",
       "Scorecard of bold KPI numbers \u2014 cards or an aligned matrix, with deltas / fills / status pills and click-to-filter drill. A pure renderer (shape upstream).",
       "Configurable chart with click-to-filter drill-down",
-      "Interactive table (sticky header, sort, search) with optional cell coloring and click-to-filter drill-down",
-      "Grouped summary table with graphical cells \u2014 an ordered list of summary columns (count/mean bars, box / point-range distributions, interval swimlanes, sparklines, text stats, group facts) over one grouping, with facet, search, sort and click-to-filter drill-down"
+      "Interactive table: the input rows (cell colouring, finished tables from R code) or one row per group with a column per summary (count/mean bars, box / point-range distributions, swimlanes, sparklines, text stats), with search, sort and click-to-filter drill-down"
     ),
     # Categories come from blockr.core::suggested_categories() (a fixed
     # vocabulary the pickers group by; anything else warns as discouraged).
@@ -64,7 +61,6 @@ register_viz_blocks <- function() {
       "table",
       "plot",
       "plot",
-      "table",
       "table"
     ),
     icon = c(
@@ -72,24 +68,21 @@ register_viz_blocks <- function() {
       "table",
       "speedometer2",
       "funnel",
-      "table",
-      "bar-chart-steps"
+      "table"
     ),
     arguments = list(
       summary_table_arguments(),
       gt_table_arguments(),
       tile_arguments(),
       chart_arguments(),
-      table_arguments(),
-      summarize_arguments()
+      table_arguments()
     ),
     guidance = c(
       summary_table_guidance(),
       gt_table_guidance(),
       tile_guidance(),
       chart_guidance(),
-      table_guidance(),
-      summarize_guidance()
+      paste0(table_guidance(), "\n\n", summarize_guidance())
     ),
     package = utils::packageName(),
     overwrite = TRUE

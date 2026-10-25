@@ -1166,6 +1166,21 @@
     }
   }
 
+  // The table block's "Rows are" switch (R/table-block.R): records or
+  // groups. The block's server reads it off this engine's action input.
+  /** @param {*} spec @param {string} current @param {string | null} elemId */
+  function withLayoutSwitch(spec, current, elemId) {
+    spec.layoutSwitch = {
+      value: current,
+      options: [
+        { value: "records", label: "Records" },
+        { value: "groups", label: "Groups" }
+      ],
+      onPick: function (/** @type {string} */ v) { sendConfig(elemId, "layout", v); }
+    };
+    return spec;
+  }
+
   /** @param {string | null} elemId @param {string} param @param {*} value */
   function sendConfig(elemId, param, value) {
     if (!elemId || !window.Shiny || !Shiny.setInputValue) return;
@@ -1509,10 +1524,16 @@
       context: function () { return "all"; },
       currentType: function () { return cfg.transform; },
       sections: function () {
-        return tableSections(cfg, hasCols(), cols.length ? cols[0].name : "");
+        return withLayoutSwitch(
+          tableSections(cfg, hasCols(), cols.length ? cols[0].name : ""),
+          "records", elemId
+        );
       },
       sectionsForFamily: function () {
-        return tableSections(cfg, hasCols(), cols.length ? cols[0].name : "");
+        return withLayoutSwitch(
+          tableSections(cfg, hasCols(), cols.length ? cols[0].name : ""),
+          "records", elemId
+        );
       },
       // Paired-tail roles (e.g. func behind value) are rendered inside their
       // partner's row, never standalone — mirror the chart's DD_SECONDARY.

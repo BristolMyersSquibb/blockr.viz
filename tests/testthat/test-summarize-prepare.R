@@ -29,7 +29,7 @@ test_that("the script's value is state, and the result is the prepared rows", {
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
-      expr_scope <- session$makeScope("expr")
+      expr_scope <- session$makeScope("expr-groups")
       session$flushReact()
       st <- session$returned$state
       expect_match(st$script(), "min_n <- 1")
@@ -37,7 +37,7 @@ test_that("the script's value is state, and the result is the prepared rows", {
         action = "config", param = "sv_min_n", value = 2
       ))
       session$flushReact()
-      expect_identical(st$values()$min_n, 2)
+      expect_identical(st$script_values()$min_n, 2)
       out <- eval(session$returned$expr(), list(data = sp_toy()))
       # COUGH has one patient, below the new minimum
       expect_setequal(unique(out$AEDECOD), c("NAUSEA", "RASH"))
@@ -51,7 +51,7 @@ test_that("a script edit from the gear replaces the script", {
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
-      expr_scope <- session$makeScope("expr")
+      expr_scope <- session$makeScope("expr-groups")
       session$flushReact()
       expr_scope$setInputs(summarize_table_block_action = list(
         action = "config", param = "script",

@@ -79,26 +79,35 @@ config_effect.chart_block <- function(block, args, data = NULL, ...) {
 #' @noRd
 config_effect.table_block <- function(block, args, data = NULL, ...) {
   cols <- if (is.data.frame(data)) names(data) else NULL
-  parts <- character()
+  parts <- paste0("layout=", as.character(args$layout %||% "records")[1])
   bad <- character()
-  for (r in c("rowname", "drill")) {
-    v <- args[[r]]
-    if (is.null(v) || !nzchar(as.character(v)[1])) next
-    v <- as.character(v)[1]
-    parts <- c(parts, paste0(r, "=", v))
-    if (!is.null(cols) && !(v %in% cols)) bad <- c(bad, paste0(r, " references '", v, "'"))
+  check <- function(r, v) {
+    v <- as.character(unlist(v))
+    v <- v[nzchar(v)]
+    if (!length(v)) return()
+    parts <<- c(parts, paste0(r, "=", paste(v, collapse = "/")))
+    miss <- setdiff(v, cols %||% v)
+    if (length(miss)) {
+      bad <<- c(bad, paste0(r, " references '", paste(miss, collapse = "', '"),
+                            "'"))
+    }
   }
-  # `value` (renamed from `values`, see dev/unified-arg-naming.md): the body
-  # column(s), a scalar or character vector. unlist() flattens either shape.
-  vc <- as.character(unlist(args$value))
-  vc <- vc[nzchar(vc)]
-  if (length(vc)) {
-    parts <- c(parts, paste0("value=", paste(vc, collapse = "/")))
-    miss <- setdiff(vc, cols %||% vc)
-    if (length(miss)) bad <- c(bad, paste0("value ", paste(miss, collapse = ",")))
+  check("rowname", args$rowname)
+  check("columns", args$columns)
+  check("by", args$by)
+  # `drill` may be a mode ("auto", "source") rather than a column.
+  dr <- as.character(args$drill %||% "")[1]
+  if (nzchar(dr)) {
+    if (dr %in% c("auto", "source")) {
+      parts <- c(parts, paste0("drill=", dr))
+    } else {
+      check("drill", dr)
+    }
   }
-  desc <- paste0("drilldown table configured: ",
-                 if (length(parts)) paste(parts, collapse = ", ") else "(defaults)")
+  if (length(args$summaries)) {
+    parts <- c(parts, paste0(length(args$summaries), " summaries"))
+  }
+  desc <- paste0("table configured: ", paste(parts, collapse = ", "))
   if (length(bad)) {
     desc <- paste0(desc, " -- INVALID: ", paste(bad, collapse = "; "),
                    ". Available columns: ", paste(cols, collapse = ", "))

@@ -1234,7 +1234,7 @@ drilldown_table_dep <- memoise0(function() {
 #' Registry/LLM metadata so the assistant and MCP can introspect the table
 #' block (the chart block has this; the table was previously invisible).
 #' @noRd
-table_arguments <- function() {
+table_records_arguments <- function() {
   new_arg_specs(
     # Aggregation: group by column(s), then one or more summaries. Same vocabulary
     # as the chart, but the table carries a LIST of summaries (mean of AGE AND sum
@@ -1411,6 +1411,67 @@ table_arguments <- function() {
   )
 }
 
+#' Argument specs for the table block
+#'
+#' The records layout's specs from the former table block, the groups
+#' layout's from the former summarize table, under the new names
+#' (dev/table-block-rewrite.md), plus `layout`.
+#' @noRd
+table_arguments <- function() {
+  pick <- function(specs, map) {
+    out <- unclass(specs)[names(map)]
+    names(out) <- unname(map)
+    out
+  }
+  rec <- pick(table_records_arguments(), c(
+    rowname = "rowname", value = "columns", color = "color",
+    shadings = "shadings", drill = "drill", digits = "digits",
+    ctrl_target = "drill_target", ctrl_table = "drill_table",
+    title = "title", subtitle = "subtitle", caption = "caption"
+  ))
+  grp <- pick(summarize_arguments(), c(
+    by = "by", summaries = "summaries", id_var = "id",
+    facet_layout = "facet_layout", sort_by = "sort_by",
+    sort_dir = "sort_dir", top_n = "top_n", axis = "axis",
+    value_labels = "value_labels", bar_width = "bar_width"
+  ))
+  rec$columns$description <- paste0(
+    "Records layout: the columns to show, in order. Empty = all columns."
+  )
+  grp$summaries$description <- paste0(
+    "Groups layout only. ", grp$summaries$description
+  )
+  grp$by$description <- paste0(
+    "Groups layout: the grouping columns, outer to inner (at most two). ",
+    "One row per level; the outer column becomes an expandable parent."
+  )
+  grp$id$description <- paste0(
+    "Groups layout: a column whose distinct values are counted instead of ",
+    "rows (a subject id), so a count reads as subjects with at least one ",
+    "event."
+  )
+  do.call(new_arg_specs, c(
+    list(
+      layout = new_arg_spec(
+        paste0(
+          "What one row is. \"records\": the input rows as they are ",
+          "(listings, model output, correlation matrices, finished tables ",
+          "from R code). \"groups\": one row per level of `by`, one column ",
+          "per entry of `summaries` (counts, means, distributions as bars, ",
+          "boxes, sparklines)."
+        ),
+        example = "groups",
+        type = arg_enum(c("records", "groups"))
+      )
+    ),
+    rec[c("rowname", "columns", "color", "shadings", "digits")],
+    grp,
+    rec[c("drill", "drill_target", "drill_table", "title", "subtitle",
+          "caption")]
+  ))
+}
+
+
 #' Construction guidance for the drill-down table block
 #' @noRd
 table_guidance <- function() {
@@ -1438,1047 +1499,368 @@ table_guidance <- function() {
   )
 }
 
-#' Drilldown Table Block
+#' Table block
 #'
-#' Transform block wrapping [drilldown_table()]. The visible table is
-#' rendered from the upstream (pre-filter) data so every row stays
-#' clickable; the block's data output is the upstream data filtered by
-#' the last click, using the exact same contract as
-#' [new_chart_block()] (so existing filter links compose).
+#' One block for every table: the input rows as they are, or one row per
+#' group with a column per summary. `layout` picks what a row is. Input that
+#' already is a finished table (an annotated data frame, or an object with an
+#' [as_annotated_df()] method such as a composer table) is shown with its
+#' structure in the records layout.
 #'
-#' The block accepts a data frame, or any table-producing object with an
-#' [as_annotated_df()] method (e.g. a composer table): the input is coerced
-#' through the generic before rendering and filtering, so such objects can be
-#' connected directly without an explicit coercion step in between. Plain
-#' data frames pass through untouched.
+#' The block's data output is the input, filtered by the last row click when
+#' a drill is on. The table itself is display.
 #'
-#' @param rowname,value,drill,digits,max_height
-#'   Forwarded to the renderer. The block has no in-table title:
-#'   the block's own name (card header) serves that role.
-#' @section Drill values:
-#' On a FLAT table `drill` names the column a click filters on. On a
-#' STRUCTURED or AGGREGATED one there is no column to choose -- the click
-#' filters on the row's identity or group keys -- so the value is a MODE
-#' instead, and it selects what the click hands downstream:
-#' \itemize{
-#'   \item `"auto"` -- the clicked subset of the displayed table.
-#'   \item `"source"` -- the RECORDS behind the click (e.g. the 143 female
-#'     subjects, not the "Sex: F" row), resolved by [drill_source()] from the
-#'     claim against the frame the producer stamped as the input's
-#'     `source_data` attribute. A composer table stamps it with
-#'     `attr(tbl, "source_data") <- data` and the blockr.sandbox adapter
-#'     carries it onto the annotated frame. Errors at eval time when the
-#'     input carries no such frame, rather than quietly handing back display
-#'     rows.
-#' }
-#' The two modes render identically: the table body draws from the block's
-#' input, never from its output. With no drill active `"source"` yields zero
-#' rows -- no click, no cohort, never a silent everything.
+#' @param layout What a row is: `"records"` (the input rows) or `"groups"`
+#'   (one row per level of `by`, one column per entry of `summaries`).
+#' @param by Grouping columns for the groups layout, outer first, at most two.
+#'   The outer one becomes an expandable parent row.
+#' @param rowname Records layout: the stub column (first column, row label).
+#' @param columns Records layout: columns to show; `NULL` shows all.
+#' @param summaries Groups layout: the table's columns, an ordered list of
+#'   typed summaries, each a `list(type = , ...)`. Types: `simple` (`func`,
+#'   `col`; show `"bar"`, `"number"` or `"dot"`), `dist` (`col`, `stat`; show
+#'   `"box"`, `"pointrange"` or `"text"`), `field`, `series`, `spans`, `pair`,
+#'   `expr`. Each takes `name`, `show`, and its own `color` and `facet`.
+#' @param id Groups layout: a column whose distinct values are counted
+#'   instead of rows (a subject identifier, so a count reads as "subjects
+#'   with at least one event").
+#' @param color Records layout: column whose colours tint the rows. `NULL` =
+#'   the stub column when the board's scale map has it, `""` = off.
+#' @param shadings Records layout: cell colour rules, a list of
+#'   `list(mode, cols, domain)` with `mode` one of `"sequential"`,
+#'   `"diverging"`, `"bar"`.
+#' @param digits Records layout: decimals of numeric cells.
+#' @param compact Records layout: rotated column titles, so a column is as
+#'   wide as its cells.
+#' @param facet_layout,sort_by,sort_dir,top_n,value_labels,axis,bar_width
+#'   Groups layout: column order of faceted summaries, row order, a row cap,
+#'   value labels beside the marks, the domain strip under glyph columns, and
+#'   the mark length. See the summarize table.
+#' @param drill Turns the row click on. In the records layout the column the
+#'   click filters on (or `"auto"`, `"source"`); in the groups layout any
+#'   value turns it on and the click filters on the row's groups.
+#' @param drill_target,drill_table Beta. Send the click to a filter block
+#'   instead of filtering this block's output: the target block id, and the
+#'   table the claim is resolved in.
+#' @param search,sortable,collapsible Show the search input; allow sorting by
+#'   column headers; allow collapsing group rows.
+#' @param max_height `NULL` (default): the table runs its full length and
+#'   scrolls with its panel. A CSS length caps it.
+#' @param download Offer the table for download (xlsx, html, pptx).
+#' @param title,subtitle,caption Text above and below the table, as on
+#'   [new_chart_block()]: `NULL` = the input's own label, `""` = none, else a
+#'   template resolved against the data.
+#' @param script,script_values Groups layout: prepare script, as on
+#'   [new_chart_block()], and the values of its controls.
+#' @param selection Internal: what the last click selected. Saved with the
+#'   board so a restored table keeps its drill.
+#' @param ... Old argument names (translated), and arguments forwarded to
+#'   [blockr.core::new_transform_block()].
 #'
-#' `"source"` is read as a mode only where a mode can exist. On a flat table
-#' it is an ordinary column name, so a real column called `source` stays a
-#' usable drill target.
-#' @param group Optional grouping column(s) for an aggregated table. Default
-#'   `NULL` (row-per-observation).
-#' @param summaries Summary-column specification for aggregated tables (a list
-#'   of aggregations keyed by output column). Default `list()` (none).
-#' @param color Categorical identity color ("Color by") -- the SAME argument
-#'   as the chart's `color`, applied to rows: one categorical column whose
-#'   values tint the rows through the board scale map. `""` = no tint;
-#'   `NULL` (default) = a subtle default tint by the rowname column.
-#' @param shadings Cell value-encoding rules: a list, each entry
-#'   `list(mode, cols)` (mode one of `"diverging"` / `"sequential"` /
-#'   `"bar"`; same shape family as `summaries`). Empty `cols` on a rule =
-#'   all numeric columns except those claimed by another rule. Default
-#'   `list()` (plain cells).
-#' @param cell_color,row_color LEGACY, mapped on construction:
-#'   `cell_color` (a [drilldown_table_color()] spec) becomes one `shadings`
-#'   rule; `row_color` becomes `color`. Kept as formals so saved boards
-#'   restore; no gear control, not in the registry.
-#' @param filter_column,filter_values Click-filter state (the shared filter
-#'   transport names, identical to the chart / tile). Kept as constructor
-#'   params so the filter round-trips through save/restore.
-#' @param filter_type,filter_range LEGACY, ignored: the table only ever
-#'   emits categorical filters (its JS never sets either). Kept as formals so
-#'   saved boards restore; serialized as NULL, no gear control, not in the
-#'   registry.
-#' @param filter_group_cols,filter_group_vals Grouped-table / structured-table
-#'   drill filter state: the aligned key columns and values ANDed to filter
-#'   the input to the clicked row (group keys for an aggregated table;
-#'   identity columns `.group<k>_level` / `.variable` / `.variable_level` for
-#'   a structured one). Default `NULL` (no drill filter active). The drilled
-#'   output is a pure subset of the annotated df: the identity columns carry
-#'   the selection, no synthetic column is added.
-#' @param filter_spread_col,filter_spread_from LEGACY, ignored (the drill no
-#'   longer spreads the selection into a synthetic column). Kept as formals so boards
-#'   saved while the spread existed still restore; always serialized as
-#'   `NULL`, ignored.
-#' @param sortable,collapsible,search Logical display toggles (each default
-#'   `TRUE`): column sorting, indent-derived collapsible section headers, and
-#'   the toolbar search box. Exposed in the block's gear menu.
-#' @param rotate_titles Logical display toggle (default `FALSE`), exposed in
-#'   the block's gear menu: render the value-column titles vertically and let
-#'   each column size on its CELL content instead of its title. The matrix
-#'   display mode -- a subject x term AE heatmap fits 3-4x more columns per
-#'   viewport when the terms stand upright. Flat tables only.
-#' @param download Logical display toggle (default `FALSE`), exposed in the
-#'   block's gear menu: may the reader take this table away? On, a download
-#'   control appears on the table toolbar offering every format the machine can
-#'   write -- which file to take is the reader's choice, not the board
-#'   author's. Each writes the same rendered (annotated) frame, with the same
-#'   resolved title / subtitle / caption, through that format's writer:
-#'   [write_annotated_xlsx()] for a styled spreadsheet (needs `openxlsx`),
-#'   [write_exhibit_html()] for a self-contained page that keeps the table's
-#'   sorting and section collapse (opened out: a downloaded page scrolls, so
-#'   every section starts expanded), and [write_exhibit_pptx()] for a deck
-#'   carrying a native, editable PowerPoint table, over as many slides as it
-#'   takes (needs `officer` and `flextable`). One writable format renders a button, several render a menu;
-#'   a format whose writer is not installed is left out.
-#' @param excel_download,html_download,pptx_download LEGACY per-format
-#'   toggles, folded on construction: downloads were three switches before they
-#'   became one. Kept as formals so boards saved before `download` still
-#'   restore -- any of them `TRUE` reads as `download = TRUE`, so such a board
-#'   reopens offering every format. Always serialized as `NULL`.
-#' @param title,subtitle,caption Table text, rendered above (title, subtitle)
-#'   and below (caption) the table. Same three-tier contract as the chart
-#'   block (see [new_chart_block()]): `NULL` (default) = auto -- each slot
-#'   falls back to the input's table-level display attribute (`label` /
-#'   `subtitle` / `caption`; composer tables carry the gt heading and source
-#'   notes there); `""` = explicitly none; any other string is shown with
-#'   `{...}` tokens resolved against the CURRENT data on every render
-#'   (`{col}`, `{label(col)}`, `{n}`, `{n_distinct(col)}`).
-#' @param ctrl_target Character(1), beta. Block id of a value filter block on
-#'   the board: the drill's claim is pushed there over the board's control
-#'   channel ([ctrl_send()]; the board needs the channel installed, see
-#'   [new_ctrl_bridge_extension()]). Empty (the default) = off; the drill
-#'   behaves exactly as before. Exposed in the gear's "Send to filter (beta)"
-#'   section.
-#'
-#'   `"auto"` needs no block id: it resolves to the board's drill destination
-#'   -- the one `blockr.dm::new_drill_filter_block()` on the board, else the
-#'   one value filter block ([ctrl_auto_target()]). That is what the gear's
-#'   checkbox writes, so a drill reaches the cohort filter with nothing typed.
-#'
-#'   With a target set the drill becomes TRANSIENT: the click is an event, not
-#'   a selection. The table latches nothing (so it does not filter its own
-#'   output on the click, saves no selection with the board, and keeps no
-#'   active row or column), clicking the same row twice sends twice instead of
-#'   toggling off, and all the click leaves behind is the clicked row, column
-#'   or crossing cell lit for a moment. Undoing a drill is the target's job,
-#'   because the control channel has no back-edge: a selection held here would
-#'   keep showing a cohort that anyone else can reset.
-#' @param ctrl_table Character(1), beta. Name of the table in the target's
-#'   `dm` the pushed conditions apply to (e.g. `"adsl"`). Leave empty when the
-#'   target filters a plain data frame.
-#' @param ... Forwarded to [blockr.core::new_transform_block()].
-#' @return A transform block of class `table_block`.
+#' @return A blockr transform block of class `table_block`.
 #' @examplesIf interactive()
 #' new_table_block()
+#' new_table_block(
+#'   layout = "groups", by = "Species",
+#'   summaries = list(
+#'     list(type = "simple", func = "count", show = "bar"),
+#'     list(type = "dist", col = "Sepal.Length", show = "box")
+#'   )
+#' )
 #' @export
-new_table_block <- function(rowname = NULL,
-                                      value = NULL,
-                                      group = NULL,
-                                      summaries = list(),
-                                      color = NULL,
-                                      shadings = list(),
-                                      # LEGACY (mapped below): read once at
-                                      # construction into `shadings` / `color`.
-                                      cell_color = NULL,
-                                      row_color = NULL,
-                                      drill = NULL,
-                                      digits = 2L,
-                                      max_height = "600px",
-                                      # LEGACY (dead) -- interleaved with the
-                                      # live filter_* formals to keep the
-                                      # argument ORDER old boards were written
-                                      # against. The block never writes these:
-                                      # the drill emits categorical filters and
-                                      # no synthetic spread column. Always
-                                      # serialized back as NULL.
-                                      filter_type = "categorical",       # LEGACY
-                                      filter_column = NULL,
-                                      filter_values = NULL,
-                                      filter_range = NULL,               # LEGACY
-                                      filter_group_cols = NULL,
-                                      filter_group_vals = NULL,
-                                      filter_spread_col = NULL,          # LEGACY
-                                      filter_spread_from = NULL,         # LEGACY
-                                      sortable = TRUE,
-                                      collapsible = TRUE,
-                                      search = TRUE,
-                                      download = FALSE,
-                                      # LEGACY (folded below): downloads were
-                                      # three per-format toggles before they
-                                      # became one. NULL default = not a
-                                      # setting; any TRUE means `download`.
-                                      excel_download = NULL,
-                                      html_download = NULL,
-                                      pptx_download = NULL,
-                                      # Table text (R/title-template.R): NULL
-                                      # = auto (title falls back to the data
-                                      # frame's label attribute), "" =
-                                      # explicitly none, else a template
-                                      # resolved against the current data.
-                                      title = NULL,
-                                      subtitle = NULL,
-                                      caption = NULL,
-                                      ctrl_target = "",
-                                      ctrl_table = "",
-                                      rotate_titles = FALSE,
-                                      ...) {
+new_table_block <- function(layout = "records",
+                            # `...` this early on purpose: every argument
+                            # after it matches by exact name only, so an old
+                            # name such as `value` cannot partially match a
+                            # new one such as `value_labels`.
+                            ...,
+                            by = character(),
+                            rowname = NULL,
+                            columns = NULL,
+                            summaries = list(),
+                            id = NULL,
+                            color = NULL,
+                            shadings = list(),
+                            digits = 2L,
+                            compact = FALSE,
+                            facet_layout = "by_summary",
+                            sort_by = "value",
+                            sort_dir = "desc",
+                            top_n = NULL,
+                            value_labels = TRUE,
+                            axis = TRUE,
+                            bar_width = "fit",
+                            drill = NULL,
+                            drill_target = "",
+                            drill_table = "",
+                            search = TRUE,
+                            sortable = TRUE,
+                            collapsible = TRUE,
+                            max_height = NULL,
+                            download = FALSE,
+                            title = NULL,
+                            subtitle = NULL,
+                            caption = getOption("blockr.viz.default_caption"),
+                            script = NULL,
+                            script_values = list(),
+                            selection = NULL) {
+  # Old argument names in code (the table block's before the rewrite) are
+  # translated here, by the same table the board deserializer uses
+  # (R/table-args.R). Everything else in `...` goes to new_transform_block().
+  dots <- list(...)
+  legacy <- intersect(names(dots), table_legacy_names("table"))
+  if (length(legacy)) {
+    cur <- mget(table_formal_names(), envir = environment())
+    tr <- table_legacy_args(c(cur, dots[legacy]), from = "table")
+    for (nm in intersect(names(tr), table_formal_names())) {
+      assign(nm, tr[[nm]])
+    }
+    dots <- dots[setdiff(names(dots), legacy)]
+  }
+  # An old aggregation list passed under the new name.
+  if (table_is_agg_summaries(summaries)) {
+    summaries <- table_agg_to_summaries(summaries)
+  }
+
+  layout <- chr_state(layout) %||% "records"
+  if (!layout %in% c("records", "groups")) layout <- "records"
   # Heal state poisoned by a pre-#144 DAG copy/paste, where a NULL slot came
-  # back as list() (see R/state-normalize.R -- this block is where that bug was
-  # first diagnosed: a pasted `row_color` holding list() reached nzchar() and
-  # threw "argument is of length zero"). Column roles normalize to character;
-  # the color slots only collapse the empty list, because "" is meaningful
-  # there (explicitly off, as against NULL = smart default) and must survive.
+  # back as list() (R/state-normalize.R). `color` only collapses the empty
+  # list: "" is meaningful there (tint explicitly off).
+  by <- chr_vec_state(by)
   rowname <- chr_state(rowname)
-  value <- chr_state(value)
-  drill <- chr_state(drill)
-  filter_column <- chr_state(filter_column)
-  filter_spread_col <- chr_state(filter_spread_col)
-  group <- chr_vec_state(group)
-  filter_group_cols <- chr_vec_state(filter_group_cols)
+  columns <- chr_vec_state(columns)
   color <- null_state(color)
-  cell_color <- null_state(cell_color)
-  row_color <- null_state(row_color)
-  filter_values <- null_state(filter_values)
-  filter_range <- null_state(filter_range)
-  filter_group_vals <- null_state(filter_group_vals)
-  filter_spread_from <- null_state(filter_spread_from)
-  # NOT chr_state: "" is a real value on these (explicitly no title), the
-  # same NULL-vs-"" split as `color` above. See R/title-template.R.
+  top_n <- null_state(top_n)
+  summaries <- if (is.list(summaries)) summaries else list()
+  shadings <- if (is.list(shadings)) shadings else list()
+  script_values <- if (is.list(script_values)) script_values else list()
+  # `id` is also the module id inside the server; keep the column apart.
+  id_col <- chr_state(id)
+  drill <- chr_state(drill)
+  drill_target <- chr_state(drill_target) %||% ""
+  drill_table <- chr_state(drill_table) %||% ""
+  max_height <- chr_state(max_height)
+  # LEGACY: the old table default. Every board saved before the table
+  # scrolled with its panel carries it, not a choice anyone made.
+  if (identical(max_height, "600px")) max_height <- NULL
   title <- title_state(title)
   subtitle <- title_state(subtitle)
   caption <- title_state(caption)
+  selection <- if (is.list(selection) && length(selection)) selection
 
-  # LEGACY args, all mapped here and nowhere else -- the only place in the
-  # block that reads them, so everything downstream sees today's arguments
-  # only. Old saved boards restore through these formals; new names win when
-  # both are given. A cell_color spec reads as one `shadings` rule; row_color
-  # reads as `color`.
-  if (!length(shadings) && !is.null(cell_color)) {
-    shadings <- dd_parse_shadings(cell_color)
-  }
-  if (is.null(color) && !is.null(row_color)) color <- row_color
-  # Downloads were three per-format toggles before they became one. A board
-  # saved with ANY of them on wanted this table to be takeable, so it restores
-  # with downloads on -- and now offers every format the machine can write,
-  # which is more than it had, never less.
-  if (isTRUE(excel_download) || isTRUE(html_download) || isTRUE(pptx_download)) {
-    download <- TRUE
+  # Serialization identity, named because the call below goes through
+  # do.call(), where blockr.core's default (`sys.parent()`) would not find
+  # this function. A restore passes its own ctor / ctor_pkg in `...`.
+  if (!"ctor" %in% names(dots)) {
+    dots$ctor <- "new_table_block"
+    dots$ctor_pkg <- "blockr.viz"
   }
 
-  blockr.core::new_transform_block(
-    server = function(id, data) {
-      shiny::moduleServer(id, function(input, output, session) {
-        ns <- session$ns
+  args <- c(
+    list(
+      server = function(id, data) {
+        shiny::moduleServer(id, function(input, output, session) {
+          ns <- session$ns
 
-        r_rowname    <- shiny::reactiveVal(rowname)
-        r_value     <- shiny::reactiveVal(value)
-        r_group      <- shiny::reactiveVal(as.character(group))
-        r_summaries    <- shiny::reactiveVal(dd_parse_summaries(summaries))
-        # `color` = identity tint column (NULL = smart default by rowname,
-        # "" = explicitly off); `shadings` = value-encoding rules list.
-        r_color    <- shiny::reactiveVal(color)
-        r_shadings <- shiny::reactiveVal(dd_parse_shadings(shadings))
-        r_drill      <- shiny::reactiveVal(drill)
-        r_digits        <- shiny::reactiveVal(digits)
-        r_max_height    <- shiny::reactiveVal(max_height)
-        r_filter_column <- shiny::reactiveVal(filter_column)
-        r_filter_values <- shiny::reactiveVal(filter_values)
-        # Grouped-table drill: a row click ANDs the clicked row's group-key
-        # values (aligned vectors) to filter the raw input to that group.
-        r_filter_group_cols <- shiny::reactiveVal(filter_group_cols)
-        r_filter_group_vals <- shiny::reactiveVal(filter_group_vals)
-        # Column half of a structured click. Session-only, deliberately: it
-        # has no constructor argument, so a board reload comes back with the
-        # row drill restored and no column claim. Add a `filter_col_keys`
-        # ctor arg (and its serialization) to make it survive a save.
-        r_filter_col_keys <- shiny::reactiveVal(NULL)
-        r_sortable       <- shiny::reactiveVal(isTRUE(sortable))
-        r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
-        r_search         <- shiny::reactiveVal(isTRUE(search))
-        r_download       <- shiny::reactiveVal(isTRUE(download))
-        r_rotate_titles  <- shiny::reactiveVal(isTRUE(rotate_titles))
-        r_title    <- shiny::reactiveVal(title)
-        r_subtitle <- shiny::reactiveVal(subtitle)
-        r_caption  <- shiny::reactiveVal(caption)
-        # External-control send (beta): the drill also pushes its claim into
-        # a value filter block (gear section "Send to filter"). Empty target
-        # = off, today's behaviour.
-        r_ctrl_target  <- shiny::reactiveVal(ctrl_target %||% "")
-        r_ctrl_table   <- shiny::reactiveVal(ctrl_table %||% "")
-        r_ctrl_choices <- dd_ctrl_choices()
+          r_layout <- shiny::reactiveVal(layout)
 
-        # Transient drill. With a target set, a click is an EVENT sent to that
-        # block, not a selection this table holds: nothing lands in the
-        # `r_filter_*` slots, so the table does not filter its own output on a
-        # click it only forwarded, the board saves no selection, `data-dt-active`
-        # stays empty (which is what makes the JS restore walks inert), and
-        # clicking the same row twice sends twice instead of toggling off. The
-        # undo lives at the target -- the control channel has no back-edge, so
-        # a selection held here would go stale the moment anyone else resets it.
-        # NULL = no click this session: HOLD, never clear (see dd_ctrl_claims'
-        # "cannot resolve is not an un-drill"). This sender only ever sends.
-        # Mirrors chart-block.R.
-        r_drill_claim <- shiny::reactiveVal(NULL)
-        transient_drill <- function() {
-          nzchar(trimws(r_ctrl_target() %||% ""))
-        }
+          # Settings both layouts share. The block owns them, so a layout
+          # switch keeps them.
+          shared <- list(
+            title = shiny::reactiveVal(title),
+            subtitle = shiny::reactiveVal(subtitle),
+            caption = shiny::reactiveVal(caption),
+            download = shiny::reactiveVal(isTRUE(download)),
+            search = shiny::reactiveVal(isTRUE(search)),
+            sortable = shiny::reactiveVal(isTRUE(sortable)),
+            drill = shiny::reactiveVal(drill),
+            max_height = shiny::reactiveVal(max_height),
+            ctrl_target = shiny::reactiveVal(drill_target),
+            ctrl_table = shiny::reactiveVal(drill_table)
+          )
 
-        # Only write a reactiveVal when the value actually changes. JS echoes
-        # the full config/filter on any popover change, so a blind set would
-        # invalidate (and re-render the table) on every echo -- the
-        # "prevent R->JS->R loops" guard the chart block uses. (Mirrors
-        # chart-block.R.)
-        upd <- function(rv, v) {
-          if (!identical(shiny::isolate(rv()), v)) rv(v)
-        }
-        # Segmented gear toggles emit "on"/"off"; constructor / restore pass a
-        # logical. Accept both.
-        as_toggle <- function(v) identical(v, "on") || isTRUE(v)
+          # Only the active engine sees data. The other one parks: its
+          # reactives stop at req(), so it neither computes nor pushes.
+          gate <- function(which) {
+            shiny::reactive({
+              shiny::req(identical(r_layout(), which))
+              data()
+            })
+          }
+          sel_for <- function(which) if (identical(layout, which)) selection
 
-        # What the render paths consume: the input coerced to an annotated
-        # data frame (as_annotated_df() is a passthrough for plain data
-        # frames). The inner server sees `data` even while `dat_valid` is
-        # failing, and a method may refuse a particular value at eval time --
-        # so readers below take the tryCatch(ann_data()) + req() route rather
-        # than reading `data()` directly: coercion failures then park the
-        # render silently and the block condition (from dat_valid / the
-        # block expr, which coerces the same way) does the explaining.
-        ann_data <- shiny::reactive(as_annotated_df(data()))
+          rec_sel <- sel_for("records")
+          rec <- table_records_server(
+            "records", gate("records"),
+            rowname = rowname, value = columns, color = color,
+            shadings = shadings, drill = drill, digits = digits,
+            max_height = max_height,
+            filter_column = rec_sel$column, filter_values = rec_sel$values,
+            filter_group_cols = rec_sel$group_cols,
+            filter_group_vals = rec_sel$group_vals,
+            sortable = sortable, collapsible = collapsible, search = search,
+            download = download, title = title, subtitle = subtitle,
+            caption = caption, ctrl_target = drill_target,
+            ctrl_table = drill_table, rotate_titles = compact,
+            shared = shared
+          )
 
-        # Auto-tier sources: the input's label / subtitle / caption attributes
-        # (as_annotated_df is a passthrough for plain data frames, so their
-        # attributes survive; composer tables carry them on the coerced frame,
-        # recovered from the gt heading + source notes).
-        r_data_titles <- shiny::reactive({
-          input_display_attrs(tryCatch(ann_data(), error = function(e) NULL))
-        })
+          grp_sel <- sel_for("groups")
+          grp <- table_groups_server(
+            "groups", gate("groups"),
+            id_var = id_col, summaries = summaries, by = by,
+            facet_layout = facet_layout, sort_by = sort_by,
+            sort_dir = sort_dir, top_n = top_n, max_height = max_height,
+            search = search, sortable = sortable, axis = axis,
+            value_labels = value_labels, bar_width = bar_width,
+            download = download, title = title, subtitle = subtitle,
+            caption = caption, drill = drill, script = script,
+            values = script_values, ctrl_target = drill_target,
+            ctrl_table = drill_table,
+            filter_column = grp_sel$column, filter_values = grp_sel$values,
+            shared = shared
+          )
 
-        shiny::observeEvent(input$drilldown_table_block_action, {
-          msg <- input$drilldown_table_block_action
-          if (is.null(msg)) return()
-          act <- msg$action %||% "config"
-          if (identical(act, "filter") && transient_drill()) {
-            # The event path. A claim carries rows, columns, or both; a message
-            # with neither is the gear clearing the filter after a mapping
-            # change, and it is inert -- there is no local selection to clear
-            # and the target's cohort is not this block's to drop.
-            rows <- msg$filters
-            cols <- msg$col_filters
-            has_row <- length(rows) || (!is.null(msg$column) && length(msg$values))
-            if (has_row || length(cols)) {
-              r_drill_claim(list(
-                filters    = if (length(rows)) rows,
-                col_keys   = if (length(cols)) cols,
-                column     = if (!is.null(msg$column)) as.character(msg$column)[[1L]],
-                values     = if (length(msg$values)) as.character(unlist(msg$values)),
-                nonce      = as.numeric(msg$nonce %||% 0)
-              ))
+          # Layout switch. Either gear sends it as an ordinary config edit on
+          # its engine's action input; the engines ignore the key.
+          set_layout <- function(msg) {
+            if (is.null(msg) || !identical(msg$action %||% "config", "config") ||
+                  !identical(msg$param, "layout")) {
+              return()
             }
-          } else if (identical(act, "filter")) {
-            # The column half of a structured click (a header or a cell in an
-            # identified column). Its own field, read on every filter message
-            # so a stub click or the Reset clears it.
-            upd(r_filter_col_keys, if (length(msg$col_filters)) msg$col_filters)
-            if (length(msg$filters)) {
-              # Grouped drill: [{column, value}, ...] -> aligned vectors, ANDed.
-              cols <- vapply(msg$filters, function(f) as.character(f$column),
-                             character(1L))
-              vals <- vapply(msg$filters, function(f) as.character(f$value),
-                             character(1L))
-              upd(r_filter_group_cols, cols)
-              upd(r_filter_group_vals, vals)
-              upd(r_filter_column, NULL)
-              upd(r_filter_values, NULL)
-            } else if (!is.null(msg$filters)) {
-              # A header click: columns and no rows. An empty `filters` is
-              # NOT a clear -- clearing carries a null column instead.
-              upd(r_filter_group_cols, NULL)
-              upd(r_filter_group_vals, NULL)
-              upd(r_filter_column, NULL)
-              upd(r_filter_values, NULL)
-            } else {
-              upd(r_filter_column, msg$column)
-              upd(r_filter_values, msg$values)
-              upd(r_filter_group_cols, NULL)
-              upd(r_filter_group_vals, NULL)
-            }
-          } else if (identical(act, "config")) {
-            p <- msg$param
-            v <- msg$value
-            if (identical(p, "shadings")) {
-              # JS sends the whole shadings list as a JSON string on any edit
-              # (same transport as `summaries`).
-              upd(r_shadings, dd_parse_shadings(v))
-            } else if (identical(p, "color")) {
-              # "" (explicit none from "(none)") is distinct from NULL (unset /
-              # smart default), so store "" rather than collapsing to NULL.
-              upd(r_color, if (identical(v, "(none)") || !nzchar(v)) "" else v)
-            } else if (identical(p, "drill")) {
-              upd(r_drill, if (identical(v, "(none)") || !nzchar(v)) NULL else v)
-            } else if (identical(p, "group")) {
-              upd(r_group, as.character(unlist(v)))
-            } else if (identical(p, "summaries")) {
-              # JS sends the whole summaries list as a JSON string on any edit.
-              upd(r_summaries, dd_parse_summaries(v))
-            } else if (identical(p, "digits")) {
-              upd(r_digits, as.integer(v))
-            } else if (identical(p, "sortable")) {
-              upd(r_sortable, as_toggle(v))
-            } else if (identical(p, "collapsible")) {
-              upd(r_collapsible, as_toggle(v))
-            } else if (identical(p, "search")) {
-              upd(r_search, as_toggle(v))
-            } else if (identical(p, "download")) {
-              upd(r_download, as_toggle(v))
-            } else if (identical(p, "rotate_titles")) {
-              upd(r_rotate_titles, as_toggle(v))
-            } else if (identical(p, "ctrl_target")) {
-              upd(r_ctrl_target, trimws(as.character(v %||% "")))
-            } else if (identical(p, "ctrl_table")) {
-              upd(r_ctrl_table, trimws(as.character(v %||% "")))
-            } else if (identical(p, "title")) {
-              # "" is a real value on the title slots (explicitly none --
-              # it suppresses the auto/data-label tier), so store verbatim.
-              upd(r_title, title_state(v))
-            } else if (identical(p, "subtitle")) {
-              upd(r_subtitle, title_state(v))
-            } else if (identical(p, "caption")) {
-              upd(r_caption, title_state(v))
+            v <- as.character(unlist(msg$value))[1L]
+            if (isTRUE(v %in% c("records", "groups")) &&
+                  !identical(shiny::isolate(r_layout()), v)) {
+              r_layout(v)
             }
           }
-        })
+          shiny::observeEvent(input[["records-drilldown_table_block_action"]],
+                              set_layout(input[["records-drilldown_table_block_action"]]))
+          shiny::observeEvent(input[["groups-summarize_table_block_action"]],
+                              set_layout(input[["groups-summarize_table_block_action"]]))
 
-        # What the drill claims, read off the block's OWN filter state: the
-        # structured drill's identity keys (all dot-prefixed -> ARD mode) or
-        # the flat drill's column + values (-> source-column mode). Shared
-        # code path with the chart / tile (dd_ctrl_claims / dd_ctrl_sender).
-        r_ctrl_claims <- shiny::reactive({
-          d <- tryCatch(ann_data(), error = function(e) NULL)
+          output$layout_css <- shiny::renderUI({
+            table_layout_css(ns, r_layout())
+          })
+          shiny::outputOptions(output, "layout_css", suspendWhenHidden = FALSE)
 
-          # Transient mode: the claim is the last click, and no click yet is a
-          # HOLD (NULL), not an un-drill. `list()` -- the one value that clears
-          # the target -- is unreachable from here by design.
-          if (transient_drill()) {
-            claim <- r_drill_claim()
-            if (is.null(claim)) {
-              return(NULL)
-            }
-            tf <- if (length(claim$filters)) {
-              cc <- vapply(claim$filters, function(f) as.character(f$column),
-                           character(1L))
-              vv <- vapply(claim$filters, function(f) as.character(f$value),
-                           character(1L))
-              stats::setNames(as.list(vv), cc)
-            } else if (!is.null(claim$column) && length(claim$values)) {
-              stats::setNames(list(claim$values), claim$column)
+          # The groups engine reports failed custom summaries as conditions;
+          # they count only while that layout is on.
+          cond <- shiny::reactiveValues(error = list())
+          shiny::observe({
+            cond$error <- if (identical(r_layout(), "groups")) {
+              grp$cond$error
             } else {
               list()
             }
-            tcols <- dd_col_claims(claim$col_keys, r_ctrl_table())
-            trows <- dd_ctrl_claims(d, r_ctrl_table(), tf,
-                                    subject = dd_ctrl_subject(session))
-            if (is.null(trows)) {
-              return(NULL)
+          })
+
+          rs <- rec$state
+          gs <- grp$state
+          r_selection <- function() {
+            sel <- if (identical(r_layout(), "groups")) {
+              list(column = gs$filter_column(), values = gs$filter_values())
+            } else {
+              list(column = rs$filter_column(), values = rs$filter_values(),
+                   group_cols = rs$filter_group_cols(),
+                   group_vals = rs$filter_group_vals())
             }
-            # A column-only claim (a header click) is a real claim, but its row
-            # half is the empty `list()` that would otherwise read as an
-            # un-drill; the column entries carry it.
-            return(c(tcols, trows))
+            sel <- sel[!vapply(sel, function(x) is.null(x) || !length(x),
+                               logical(1L))]
+            if (length(sel)) sel
           }
 
-          gc <- r_filter_group_cols()
-          gv <- r_filter_group_vals()
-          col <- r_filter_column()
-          vals <- r_filter_values()
-          filters <- if (length(gc) && length(gc) == length(gv)) {
-            stats::setNames(as.list(gv), gc)
-          } else if (!is.null(col) && length(vals)) {
-            stats::setNames(list(vals), col)
-          } else {
-            list()
-          }
-          # The column half needs no resolving against the display frame: it
-          # already names a source column. ANDed in front of the row claim.
-          cols <- dd_col_claims(r_filter_col_keys(), r_ctrl_table())
-          rows <- dd_ctrl_claims(d, r_ctrl_table(), filters,
-                                 subject = dd_ctrl_subject(session))
-          if (is.null(rows)) {
-            return(NULL)
-          }
-          c(cols, rows)
-        })
-
-        dd_ctrl_sender(
-          r_ctrl_target,
-          r_ctrl_claims,
-          # Startup suppression, over the LATCHED state -- which transient mode
-          # never writes, so the latch would stay pristine forever and swallow
-          # every send. A transient claim exists only after a real click, so it
-          # ends pristine on its own. The latch is still read on every pass:
-          # that is what holds the dependency on the filter state.
-          local({
-            latch <- dd_ctrl_pristine(
-              function() {
-                list(r_filter_column(), r_filter_values(),
-                     r_filter_group_cols(), r_filter_group_vals(),
-                     r_filter_col_keys())
-              },
-              list(filter_column, filter_values, filter_group_cols,
-                   filter_group_vals, NULL)
-            )
-            function() {
-              still <- latch()
-              is.null(r_drill_claim()) && still
-            }
-          }),
-          session,
-          # Re-clicking the same row must send again; a board re-evaluation
-          # must not. The counter is minted per click in the browser.
-          r_nonce = function() {
-            claim <- r_drill_claim()
-            if (is.null(claim)) NULL else claim$nonce
-          }
-        )
-
-        # The three writers see the same frame and the same resolved text the
-        # on-screen bands show -- the point of a clinical title is the export.
-        # The frame is the displayed one, with the shaded cells' paint as
-        # `.bg:` / `.fg:` columns (dt_exhibit_frame), so the downloads carry
-        # the colours and not the hidden colour-source columns.
-        dl_exhibit <- function() {
-          d <- ann_data()
-          auto <- r_data_titles()
           list(
-            data = dt_exhibit_frame(d, r_rowname(), r_value(), r_group(),
-                                    r_summaries(), r_shadings()),
-            # The export frame is built anew and has lost the input's
-            # attributes, so the file name's dataset and the download
-            # footer's provenance and filters are read off the input.
-            dataset = dl_dataset(d),
-            source = d,
-            title = resolve_block_title(r_title(), d, auto = auto$label),
-            subtitle = resolve_block_title(r_subtitle(), d,
-                                           auto = auto$subtitle),
-            caption = resolve_block_title(r_caption(), d, auto = auto$caption),
-            # The display toggles travel with the exhibit: the HTML file is the
-            # table, so a table shown without collapsing (or without sorting)
-            # downloads that way too. Reading them here rather than in the
-            # handler keeps every writer looking at one snapshot of the block.
-            collapsible = isTRUE(r_collapsible()),
-            sortable = isTRUE(r_sortable()),
-            # Rounded like the screen (see dt_download_control). A structured
-            # frame shows its cells as they come, so it is not rounded.
-            digits = if (!dt_is_structured(d)) r_digits()
-          )
-        }
-
-        # Downloads: a control on the chrome toolbar, on when the block's
-        # `download` toggle is. The markup and the handlers are shared with
-        # every other renderer that offers the same three formats (see
-        # dt_download_control), so the reader meets one control.
-        dl_slot <- dt_download_control(session, dl_exhibit,
-                                       enabled = r_download)
-
-        # Split render so a filter (or gear edit) re-renders ONLY the <table>,
-        # never the search bar / gear / scroll container -- no whole-panel
-        # blank-out, and search text + scroll position survive. `dt_result` is
-        # the chrome: it depends only on whether the frame is structured (which
-        # is fixed for a given block), so it renders once and is never rebuilt
-        # on a filter. `dt_table` is the table body, re-rendered on every data
-        # or config change; the gear/drill/colour/digits state travels on the
-        # <table>'s data-attributes (see dt_table_attrs()). Mirrors the chart
-        # block's "static container + reactive content" shape.
-        # The chrome does NOT depend on the data. It used to wait for
-        # `dt_is_structured(ann_data())`, which meant the whole control section
-        # (search box, download, scroll container, status line) could not paint
-        # until the upstream pipeline had evaluated -- seconds, on a big board
-        # where a view switch wakes a dormant chain. `structured = NULL` builds
-        # the same chrome minus the class, and table.js promotes the class off
-        # the `<table>` when the body arrives.
-        output$dt_result <- shiny::renderUI({
-          dt_chrome(
-            elem_id    = ns("drilldown_table_block"),
-            structured = NULL,
-            max_height = shiny::isolate(r_max_height()),
-            # The body no longer renders through Shiny: table.js fills this
-            # slot from the "blockr-viz-table-data" payload (see the push
-            # observer below). An empty div, not a uiOutput -- there is no
-            # output to bind.
-            inner      = htmltools::tags$div(class = "dt-table-slot"),
-            search     = isTRUE(r_search()),
-            download_slot = dl_slot,
-            status_slot   = shiny::uiOutput(ns("dt_status"),
-                                            class = "dt-status-slot")
+            expr = shiny::reactive({
+              if (identical(r_layout(), "groups")) grp$expr() else rec$expr()
+            }),
+            cond = cond,
+            state = list(
+              layout = r_layout,
+              by = gs$by,
+              rowname = rs$rowname,
+              columns = rs$value,
+              summaries = gs$summaries,
+              id = gs$id_var,
+              color = rs$color,
+              shadings = rs$shadings,
+              digits = rs$digits,
+              compact = rs$rotate_titles,
+              facet_layout = gs$facet_layout,
+              sort_by = gs$sort_by,
+              sort_dir = gs$sort_dir,
+              top_n = gs$top_n,
+              value_labels = gs$value_labels,
+              axis = gs$axis,
+              bar_width = gs$bar_width,
+              drill = shared$drill,
+              drill_target = shared$ctrl_target,
+              drill_table = shared$ctrl_table,
+              search = shared$search,
+              sortable = shared$sortable,
+              collapsible = rs$collapsible,
+              max_height = shared$max_height,
+              download = shared$download,
+              title = shared$title,
+              subtitle = shared$subtitle,
+              caption = shared$caption,
+              script = gs$script,
+              script_values = gs$values,
+              selection = r_selection
+            )
           )
         })
-
-        # Active-filter status line + Reset (the chart footer's classes, so
-        # both read identically). A tiny output of the filter reactiveVals
-        # only -- the (potentially heavy) table body never re-renders on a
-        # click. Present whenever drill is enabled ("No filter active", chart
-        # parity) or a filter is still active (e.g. restored from a saved
-        # board); the Reset button is wired by delegation in table.js.
-        output$dt_status <- shiny::renderUI({
-          gc  <- as.character(unlist(r_filter_group_cols()))
-          gv  <- as.character(unlist(r_filter_group_vals()))
-          col <- r_filter_column()
-          vals <- as.character(unlist(r_filter_values()))
-          grouped_on <- length(gc) > 0 && length(gc) == length(gv)
-          single_on  <- !is.null(col) && length(vals) > 0
-          drill_on   <- !is.null(r_drill()) && nzchar(r_drill())
-          if (!grouped_on && !single_on && !drill_on) return(NULL)
-          # Transient drill: nothing latches, so there is no steady state to
-          # report and no Reset to offer. The line exists only just after a
-          # click, says what was sent, and fades -- the same receipt the chart
-          # shows, in the same words, so both ends of one gesture read alike.
-          # No claim yet = no footer at all, rather than a permanent
-          # "No filter active" that can never become anything else.
-          if (transient_drill()) {
-            claim <- r_drill_claim()
-            if (is.null(claim)) return(NULL)
-            rows <- dt_claim_label(
-              vapply(claim$filters, function(f) as.character(f$column),
-                     character(1L)),
-              vapply(claim$filters, function(f) as.character(f$value),
-                     character(1L))
-            )
-            if (!length(rows) && !is.null(claim$column) &&
-                  length(claim$values)) {
-              rows <- paste0(claim$column, " = ",
-                             paste(claim$values, collapse = ", "))
-            }
-            cols <- vapply(claim$col_keys %||% list(), function(k) {
-              paste0(as.character(k[["column"]])[1L], " = ",
-                     paste(as.character(unlist(k[["values"]])), collapse = ", "))
-            }, character(1L))
-            parts <- c(rows, cols)
-            if (!length(parts)) return(NULL)
-            return(htmltools::tags$div(
-              class = "dd-status-footer",
-              htmltools::tags$span(
-                class = "dd-status-text dt-status-receipt",
-                paste0("Drilled down to ", paste(parts, collapse = "; "))
-              )
-            ))
-          }
-          text <- if (grouped_on) {
-            paste0("Filtered: ", paste0(dt_claim_label(gc, gv),
-                                        collapse = " \u203a "))
-          } else if (single_on) {
-            paste0("Filtered: ", col, " = ", paste(vals, collapse = ", "))
-          } else {
-            "No filter active"
-          }
+      },
+      ui = function(id) {
+        ns <- shiny::NS(id)
+        shiny::tagList(
+          # Static first paint: hide the engine that is not on. The server's
+          # rule (layout_css) takes over from here.
+          table_layout_css(ns, layout),
+          shiny::uiOutput(ns("layout_css")),
           htmltools::tags$div(
-            class = "dd-status-footer",
-            htmltools::tags$span(class = "dd-status-text", text),
-            if (grouped_on || single_on) {
-              htmltools::tags$button(
-                type = "button", class = "dd-status-reset", "Reset"
-              )
-            }
-          )
-        })
-
-        # Board scale map (NULL when the board has none / blockr.theme absent) --
-        # the same source the drilldown chart reads. Used to color the
-        # categorical row-stub, matching the chart's legend.
-        board_scale_map <- dd_board_scale_map()
-
-        # The ctrl config rides on the rendered <table> as data-attributes
-        # (like every other gear-read state, see dt_table_attrs): stamped
-        # post-hoc so the render helpers stay ctrl-agnostic. Reading the
-        # choices reactiveVal here re-renders the table only when the
-        # candidate set changes (identical() skip in dd_ctrl_choices).
-        stamp_ctrl <- function(tag) {
-          htmltools::tagAppendAttributes(
-            tag,
-            `data-dt-ctrl-target` = r_ctrl_target(),
-            `data-dt-ctrl-table` = r_ctrl_table(),
-            `data-dt-ctrl-choices` = dd_ctrl_choices_json(r_ctrl_choices())
-          )
-        }
-
-        # Body payload (a pre-serialized JSON string), cached as a reactive:
-        # it recomputes only when the data or a config it reads changes, and
-        # it is read exclusively from the push observer below -- a reactive
-        # is pull-based, so it stays suspended with the observer for hidden
-        # panels (the chart block's r_data_json pattern).
-        r_body_payload <- shiny::reactive({
-          d <- tryCatch(ann_data(), error = function(e) NULL)
-          shiny::req(is.data.frame(d))
-          # Chart-parity table text, riding on the payload (title band + gear
-          # state): the resolved display strings plus the raw state -- the
-          # gear needs the NULL-vs-"" distinction (auto vs explicitly none),
-          # which a table data-attribute cannot carry. NULL entries are
-          # DROPPED before serializing: dt_payload_json has no null="null",
-          # so a NULL would arrive as {} and break the JS null checks.
-          titled <- function(p) {
-            auto <- r_data_titles()
-            tl <- list(
-              title    = resolve_block_title(r_title(), d, auto = auto$label),
-              subtitle = resolve_block_title(r_subtitle(), d, auto = auto$subtitle),
-              caption  = resolve_block_title(r_caption(), d, auto = auto$caption),
-              title_state    = r_title(),
-              subtitle_state = r_subtitle(),
-              caption_state  = r_caption()
-              # No *_auto fields: while a slot's state is null (auto), its
-              # resolved value above IS the inherited text -- the gear derives
-              # the clearable auto content from exactly that (readGearState).
-            )
-            p$titles <- tl[!vapply(tl, is.null, logical(1L))]
-            p
-          }
-          # Filter state at build time, ISOLATED: the table body must never
-          # re-render on a click (the split-render perf contract) -- the JS
-          # keeps the row highlight live between renders, and any fresh
-          # build (restore, config edit, new data) re-reads the then-current
-          # state here, so the highlight survives those too.
-          act <- shiny::isolate(list(
-            col   = r_filter_column(),  vals  = r_filter_values(),
-            gcols = r_filter_group_cols(), gvals = r_filter_group_vals()
-          ))
-          # Aggregation is a DISPLAY projection: when `group` is set, draw the
-          # summarised frame (one row per group + a measure). The block's data
-          # output stays the raw input filtered by the click (see `expr`), and
-          # a row click drills on the group keys. No group -> the raw table,
-          # exactly as before.
-          # The projection itself lives in dt_display_frame(), shared with the
-          # downloads (dt_exhibit_frame), so both see the same frame.
-          disp <- dt_display_frame(d, group = r_group(),
-                                   summaries = r_summaries())
-          agg <- disp$agg
-          if (isTRUE(agg$aggregated)) {
-            gl <- length(agg$group)
-            ad <- disp$data
-            # COLOR applies to the AGGREGATED frame too: shadings resolve
-            # against the displayed (aggregated) columns, and "Color by"
-            # tints rows whose color column survived the aggregation (a
-            # group key; a non-grouped column has no per-row value here and
-            # silently yields no tint). Smart default (color NULL) = the
-            # first group key, map-bound-only; explicit pick = chart-parity
-            # palette fallback (dd_ident_hex).
-            arc <- r_color()
-            arc_col <- if (is.null(arc)) {
-              if (gl) agg$group[1L] else NULL
-            } else if (nzchar(arc)) {
-              arc
-            } else {
-              NULL
-            }
-            return(tryCatch(
-              dt_payload_json(titled(dt_build_payload(
-                ad,
-                stamp      = stamp_ctrl,
-                # The displayed frame is a projection; the gear's pickers
-                # must keep offering the RAW input schema (group / value /
-                # drill choices act on `d`, not on the aggregate).
-                gear_cols  = dt_gear_cols_json(d),
-                label_col  = disp$label_col,
-                value_cols = disp$value_cols,
-                shadings   = r_shadings(),
-                drill      = NULL,
-                # Group-keys drill is OPT-IN (checkbox default off, like every
-                # drill): the keys wire up only when `drill` is set -- "auto"
-                # from the gear checkbox, or any truthy legacy value from a
-                # saved board. Empty group_cols -> no row click wiring.
-                # (Empty anyway for grand totals -- nothing to key on.)
-                group_cols = if (!is.null(r_drill()) && nzchar(r_drill())) {
-                  agg$group
-                } else {
-                  character()
-                },
-                row_hex    = if (is.null(arc_col)) {
-                  NULL
-                } else if (is.null(arc)) {
-                  dd_row_hex(board_scale_map(), arc_col, ad)
-                } else {
-                  dd_ident_hex(board_scale_map(), arc_col, ad)
-                },
-                color      = arc_col,
-                group      = r_group(), summaries = r_summaries(),
-                digits     = r_digits(),
-                sortable    = isTRUE(r_sortable()),
-                collapsible = isTRUE(r_collapsible()),
-                search      = isTRUE(r_search()),
-                download    = isTRUE(r_download()),
-                rotate_titles = isTRUE(r_rotate_titles()),
-                active     = act
-              ))),
-              error = function(e) {
-                dt_payload_json(list(kind = "html", html = as.character(
-                  shiny::tags$div(
-                    class = "blockr-error", role = "alert",
-                    paste0("Table could not be rendered: ",
-                           conditionMessage(e))
-                  )
-                )))
-              }
-            ))
-          }
-          # `color` names the column whose scale-map colors tint the rows
-          # (the chart's color aesthetic applied to rows -- "Color by").
-          # NULL (unset) = smart default: use the row-stub column. "" =
-          # explicitly off (gear "(none)"). A name = that column.
-          rc <- r_color()
-          rc_col <- if (is.null(rc)) {
-            r_rowname() %||% names(d)[1L]
-          } else if (nzchar(rc)) {
-            rc
-          } else {
-            NULL
-          }
-          # Contain any build-time failure (formatting/spread/colour) and
-          # show it ON THE PAGE as a red in-block bar instead of letting it
-          # escape -- reusing the `blockr-error` style of the framework's
-          # condition bar so it reads like an ordinary block error, never a
-          # session crash. (Tactical guard; see blockr.core #199 / the design
-          # motivation for the first-class side-effect-render seam that would
-          # route this through server$conditions() automatically.)
-          tryCatch(
-            dt_payload_json(titled(dt_build_payload(
-              d,
-              stamp      = stamp_ctrl,
-              label_col  = r_rowname(),
-              value_cols = r_value(),
-              shadings   = r_shadings(),
-              drill      = r_drill(),
-              digits     = r_digits(),
-              # Explicit "Color by" pick -> dd_ident_hex (scale map first,
-              # palette fallback when unbound: chart parity). Smart default
-              # (color NULL -> stub column) stays MAP-BOUND-ONLY: an unbound,
-              # usually unique, rowname would rainbow every table by default.
-              row_hex    = if (is.null(rc_col)) {
-                NULL
-              } else if (is.null(rc)) {
-                dd_row_hex(board_scale_map(), rc_col, d)
-              } else {
-                dd_ident_hex(board_scale_map(), rc_col, d)
-              },
-              color      = rc_col,
-              group      = r_group(), summaries = r_summaries(),
-              sortable    = isTRUE(r_sortable()),
-              collapsible = isTRUE(r_collapsible()),
-              search      = isTRUE(r_search()),
-              download    = isTRUE(r_download()),
-              rotate_titles = isTRUE(r_rotate_titles()),
-              active     = act
-            ))),
-            error = function(e) {
-              dt_payload_json(list(kind = "html", html = as.character(
-                shiny::tags$div(
-                  class = "blockr-error", role = "alert",
-                  paste0("Table could not be rendered: ", conditionMessage(e))
-                )
-              )))
-            }
-          )
-        })
-
-        # Ship the payload. A single plain observe, NOT observeEvent or a
-        # split channel: this exact shape is what the blockr.dock lazy-eval
-        # card-probe pairing suspends for hidden panels (see the chart
-        # block's push observer). The string-identity guard replaces the
-        # renderUI-era duplicate-render problem at the source: blockr.core's
-        # data() re-delivers identical frames at startup, and an identical
-        # payload is simply not sent. `rev` lets the browser skip JSON.parse
-        # when a re-send does arrive (e.g. after a reconnect).
-        payload_rev  <- 0L
-        last_payload <- NULL
-        shiny::observe({
-          pj <- r_body_payload()
-          if (identical(pj, last_payload)) return()
-          last_payload <<- pj
-          payload_rev  <<- payload_rev + 1L
-          session$sendCustomMessage("blockr-viz-table-data", list(
-            id = ns("drilldown_table_block"),
-            rev = payload_rev,
-            payload = pj
-          ))
-        })
-
-        # Is `drill` the "source" MODE, or a column that happens to be
-        # called that? A mode only exists where there is no column to
-        # choose -- a structured or aggregated table -- so on a FLAT table
-        # `drill = "source"` is a column name like any other and the mode
-        # never applies. Resolving against the input rather than against
-        # the literal keeps `source` usable as a real column name, the
-        # thing `"auto"` never bothered to do.
-        drill_is_source <- shiny::reactive({
-          if (!identical(r_drill(), "source")) return(FALSE)
-          d <- tryCatch(ann_data(), error = function(e) NULL)
-          if (!is.data.frame(d)) return(FALSE)
-          if ("source" %in% names(d)) return(FALSE)
-          dt_is_structured(d) || length(r_group()) > 0L
-        })
-
-        list(
-          # The expr coerces before filtering, so the block's data output (and
-          # the drill filter) is always the annotated data frame -- one
-          # downstream contract whether the input was a plain data frame
-          # (passthrough) or a table-producing object such as a composer
-          # table. Self-qualified so the emitted code stands alone.
-          expr = shiny::reactive({
-            gc <- r_filter_group_cols()
-            gv <- r_filter_group_vals()
-            col  <- r_filter_column()
-            vals <- r_filter_values()
-            # `drill = "source"` wraps whatever the drill built, so every
-            # branch (including the undrilled `filter(TRUE)`) goes through
-            # one resolution step: no claim resolves -> zero rows, never a
-            # silent "everything". The wrap is a plain call around the
-            # bbquote result, so the emitted code still stands alone.
-            #
-            # `columns` tells drill_source() which mode to resolve in, using
-            # dd_ctrl_claims()'s rule: dotted names are ARD identity columns
-            # (structured table -> identity mode, no `columns`), undotted
-            # ones are real source columns (aggregated table -> those are
-            # the claim). One convention, two call sites.
-            as_output <- function(ex, claim_cols = NULL) {
-              if (!drill_is_source()) return(ex)
-              cols <- if (length(claim_cols)) {
-                claim_cols[!startsWith(claim_cols, ".")]
-              }
-              call <- list(quote(blockr.viz::drill_source), ex)
-              if (length(cols)) call <- c(call, list(columns = cols))
-              as.call(call)
-            }
-            as_output(
-            if (length(gc) && length(gc) == length(gv)) {
-              # Grouped / structured drill: AND each clicked key. The output
-              # is a pure SUBSET of the annotated df -- the identity columns
-              # (`.variable`, `.variable_level`, `.group<k>*`) already carry
-              # the selection, so no synthetic column is added; downstream
-              # consumers read the identity columns themselves.
-              cond <- dd_group_filter_call(gc, gv)
-              blockr.core::bbquote(
-                dplyr::filter(blockr.viz::as_annotated_df(.(data)), .(cond)),
-                list(cond = cond)
-              )
-            } else if (is.null(col) || is.null(vals) || length(vals) == 0) {
-              blockr.core::bbquote(
-                dplyr::filter(blockr.viz::as_annotated_df(.(data)), TRUE)
-              )
-            } else if (length(vals) == 1) {
-              blockr.core::bbquote(
-                dplyr::filter(
-                  blockr.viz::as_annotated_df(.(data)),
-                  .data[[.(col)]] == .(val)
-                ),
-                list(col = col, val = vals[[1]])
-              )
-            } else {
-              blockr.core::bbquote(
-                dplyr::filter(
-                  blockr.viz::as_annotated_df(.(data)),
-                  .data[[.(col)]] %in% .(vals)
-                ),
-                list(col = col, vals = vals)
-              )
-            },
-            claim_cols = if (length(gc) && length(gc) == length(gv)) {
-              as.character(gc)
-            } else if (!is.null(col)) {
-              as.character(col)
-            }
-            )
-          }),
-          state = list(
-            rowname       = r_rowname,
-            value         = r_value,
-            group         = r_group,
-            summaries       = r_summaries,
-            color         = r_color,
-            shadings      = r_shadings,
-            # LEGACY formals (mapped into color/shadings on construction):
-            # serialized as NULL so restored boards re-enter through the new
-            # args; blockr.core requires every ctor formal in the state.
-            cell_color    = function() NULL,
-            row_color     = function() NULL,
-            drill      = r_drill,
-            digits        = r_digits,
-            max_height    = r_max_height,
-            filter_column = r_filter_column,
-            filter_values = r_filter_values,
-            # LEGACY formals (never set by the table's JS -- it only emits
-            # categorical filters): serialized as NULL, kept as ctor formals
-            # so old saved boards restore.
-            filter_type   = function() NULL,
-            filter_range  = function() NULL,
-            filter_group_cols = r_filter_group_cols,
-            filter_group_vals = r_filter_group_vals,
-            # LEGACY spread formals (the drill no longer adds a synthetic
-            # column -- the output is a pure subset and the identity columns
-            # are the interface): serialized as NULL, kept as ctor formals so
-            # boards saved while the spread existed still restore.
-            filter_spread_col  = function() NULL,
-            filter_spread_from = function() NULL,
-            sortable       = r_sortable,
-            collapsible    = r_collapsible,
-            search         = r_search,
-            download       = r_download,
-            rotate_titles  = r_rotate_titles,
-            # LEGACY per-format download formals (one `download` toggle now):
-            # serialized as NULL, kept as ctor formals so a board saved with
-            # `excel_download = TRUE` still restores -- as downloads on.
-            excel_download = function() NULL,
-            html_download  = function() NULL,
-            pptx_download  = function() NULL,
-            title          = r_title,
-            subtitle       = r_subtitle,
-            caption        = r_caption,
-            ctrl_target    = r_ctrl_target,
-            ctrl_table     = r_ctrl_table
+            id = ns("records_wrap"), class = "blockr-table-engine",
+            table_records_ui(ns("records"))
+          ),
+          htmltools::tags$div(
+            id = ns("groups_wrap"), class = "blockr-table-engine",
+            table_groups_ui(ns("groups"))
           )
         )
-      })
-    },
-    ui = function(id) {
-      ns <- shiny::NS(id)
-      shiny::tagList(
-        # The table dep must ship with the STATIC UI (chart-block parity),
-        # not only with the chrome renderUI: the first body payload rides
-        # the same flush batch as the chrome HTML, and a handler registered
-        # by an async-loading script arrives too late -- Shiny drops custom
-        # messages that have no registered handler.
-        drilldown_table_dep(),
-        shiny::uiOutput(ns("dt_result"))
-      )
-    },
-    # Shared input contract (see validate_annotated_df_input): contract
-    # check only -- dispatch lookup, never the (possibly costly) coercion
-    # itself. A method that exists but refuses this particular value errors
-    # at eval time instead; core surfaces both the same way.
-    dat_valid = validate_annotated_df_input,
-    allow_empty_state = c("rowname", "value", "group", "summaries", "color",
-      "shadings", "cell_color", "row_color", "drill", "filter_column",
-      "filter_values", "filter_type", "filter_range",
-      "filter_group_cols", "filter_group_vals",
-      "filter_spread_col", "filter_spread_from",
-      "excel_download", "html_download", "pptx_download",
-      "title", "subtitle", "caption",
-      "ctrl_target", "ctrl_table"),
-    external_ctrl = c("rowname", "value", "group", "summaries",
-      "color", "shadings", "drill",
-      "digits", "max_height",
-      "filter_column", "filter_values",
-      "filter_group_cols", "filter_group_vals",
-      "sortable", "collapsible", "search", "download", "rotate_titles",
-      "title", "subtitle", "caption",
-      "ctrl_target", "ctrl_table"),
-    expr_type = "bquoted",
-    class = "table_block",
-    ...
+      },
+      # Contract check only (dispatch lookup), as before: a composer table
+      # or anything with an as_annotated_df() method connects directly.
+      dat_valid = validate_annotated_df_input,
+      allow_empty_state = c(
+        "by", "rowname", "columns", "summaries", "id", "color", "shadings",
+        "top_n", "drill", "drill_target", "drill_table", "max_height",
+        "title", "subtitle", "caption", "script", "script_values",
+        "selection"
+      ),
+      external_ctrl = c(
+        "layout", "by", "rowname", "columns", "summaries", "id", "color",
+        "shadings", "digits", "compact", "facet_layout", "sort_by",
+        "sort_dir", "top_n", "value_labels", "axis", "bar_width", "drill",
+        "drill_target", "drill_table", "search", "sortable", "collapsible",
+        "max_height", "download", "title", "subtitle", "caption", "script",
+        "script_values"
+      ),
+      expr_type = "bquoted",
+      class = "table_block"
+    ),
+    dots
   )
+  do.call(blockr.core::new_transform_block, args)
 }
 
-# NB: no block_ui / block_output overrides. The styled table renders in the
-# Controls pane (the `ui =` function above, via uiOutput("dt_result")), and the
-# block falls back to the transform_block defaults for the output pane -- so the
-# Preview pane shows the filtered passthrough data frame as a DT, exactly like
-# new_chart_block(). (They were previously nulled out, which left the
-# Preview pane blank.)
+# Show one engine, hide the other. `!important` so the rule from the server
+# beats the static first-paint rule in the UI.
+table_layout_css <- function(ns, layout) {
+  off <- if (identical(layout, "groups")) "records" else "groups"
+  on <- setdiff(c("records", "groups"), off)
+  htmltools::tags$style(htmltools::HTML(sprintf(
+    "#%s{display:none!important}#%s{display:block!important}",
+    ns(paste0(off, "_wrap")), ns(paste0(on, "_wrap"))
+  )))
+}

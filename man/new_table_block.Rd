@@ -2,203 +2,132 @@
 % Please edit documentation in R/table-block.R
 \name{new_table_block}
 \alias{new_table_block}
-\title{Drilldown Table Block}
+\title{Table block}
 \usage{
 new_table_block(
+  layout = "records",
+  by = character(),
   rowname = NULL,
-  value = NULL,
-  group = NULL,
+  columns = NULL,
   summaries = list(),
+  id = NULL,
   color = NULL,
   shadings = list(),
-  cell_color = NULL,
-  row_color = NULL,
-  drill = NULL,
   digits = 2L,
-  max_height = "600px",
-  filter_type = "categorical",
-  filter_column = NULL,
-  filter_values = NULL,
-  filter_range = NULL,
-  filter_group_cols = NULL,
-  filter_group_vals = NULL,
-  filter_spread_col = NULL,
-  filter_spread_from = NULL,
+  compact = FALSE,
+  facet_layout = "by_summary",
+  sort_by = "value",
+  sort_dir = "desc",
+  top_n = NULL,
+  value_labels = TRUE,
+  axis = TRUE,
+  bar_width = "fit",
+  drill = NULL,
+  drill_target = "",
+  drill_table = "",
+  search = TRUE,
   sortable = TRUE,
   collapsible = TRUE,
-  search = TRUE,
+  max_height = NULL,
   download = FALSE,
-  excel_download = NULL,
-  html_download = NULL,
-  pptx_download = NULL,
   title = NULL,
   subtitle = NULL,
-  caption = NULL,
-  ctrl_target = "",
-  ctrl_table = "",
-  rotate_titles = FALSE,
+  caption = getOption("blockr.viz.default_caption"),
+  script = NULL,
+  script_values = list(),
+  selection = NULL,
   ...
 )
 }
 \arguments{
-\item{rowname, value, drill, digits, max_height}{Forwarded to the renderer. The block has no in-table title:
-the block's own name (card header) serves that role.}
+\item{layout}{What a row is: \code{"records"} (the input rows) or \code{"groups"}
+(one row per level of \code{by}, one column per entry of \code{summaries}).}
 
-\item{group}{Optional grouping column(s) for an aggregated table. Default
-\code{NULL} (row-per-observation).}
+\item{by}{Grouping columns for the groups layout, outer first, at most two.
+The outer one becomes an expandable parent row.}
 
-\item{summaries}{Summary-column specification for aggregated tables (a list
-of aggregations keyed by output column). Default \code{list()} (none).}
+\item{rowname}{Records layout: the stub column (first column, row label).}
 
-\item{color}{Categorical identity color ("Color by") -- the SAME argument
-as the chart's \code{color}, applied to rows: one categorical column whose
-values tint the rows through the board scale map. \code{""} = no tint;
-\code{NULL} (default) = a subtle default tint by the rowname column.}
+\item{columns}{Records layout: columns to show; \code{NULL} shows all.}
 
-\item{shadings}{Cell value-encoding rules: a list, each entry
-\code{list(mode, cols)} (mode one of \code{"diverging"} / \code{"sequential"} /
-\code{"bar"}; same shape family as \code{summaries}). Empty \code{cols} on a rule =
-all numeric columns except those claimed by another rule. Default
-\code{list()} (plain cells).}
+\item{summaries}{Groups layout: the table's columns, an ordered list of
+typed summaries, each a \code{list(type = , ...)}. Types: \code{simple} (\code{func},
+\code{col}; show \code{"bar"}, \code{"number"} or \code{"dot"}), \code{dist} (\code{col}, \code{stat}; show
+\code{"box"}, \code{"pointrange"} or \code{"text"}), \code{field}, \code{series}, \code{spans}, \code{pair},
+\code{expr}. Each takes \code{name}, \code{show}, and its own \code{color} and \code{facet}.}
 
-\item{cell_color, row_color}{LEGACY, mapped on construction:
-\code{cell_color} (a \code{\link[=drilldown_table_color]{drilldown_table_color()}} spec) becomes one \code{shadings}
-rule; \code{row_color} becomes \code{color}. Kept as formals so saved boards
-restore; no gear control, not in the registry.}
+\item{id}{Groups layout: a column whose distinct values are counted
+instead of rows (a subject identifier, so a count reads as "subjects
+with at least one event").}
 
-\item{filter_type, filter_range}{LEGACY, ignored: the table only ever
-emits categorical filters (its JS never sets either). Kept as formals so
-saved boards restore; serialized as NULL, no gear control, not in the
-registry.}
+\item{color}{Records layout: column whose colours tint the rows. \code{NULL} =
+the stub column when the board's scale map has it, \code{""} = off.}
 
-\item{filter_column, filter_values}{Click-filter state (the shared filter
-transport names, identical to the chart / tile). Kept as constructor
-params so the filter round-trips through save/restore.}
+\item{shadings}{Records layout: cell colour rules, a list of
+\code{list(mode, cols, domain)} with \code{mode} one of \code{"sequential"},
+\code{"diverging"}, \code{"bar"}.}
 
-\item{filter_group_cols, filter_group_vals}{Grouped-table / structured-table
-drill filter state: the aligned key columns and values ANDed to filter
-the input to the clicked row (group keys for an aggregated table;
-identity columns \verb{.group<k>_level} / \code{.variable} / \code{.variable_level} for
-a structured one). Default \code{NULL} (no drill filter active). The drilled
-output is a pure subset of the annotated df: the identity columns carry
-the selection, no synthetic column is added.}
+\item{digits}{Records layout: decimals of numeric cells.}
 
-\item{filter_spread_col, filter_spread_from}{LEGACY, ignored (the drill no
-longer spreads the selection into a synthetic column). Kept as formals so boards
-saved while the spread existed still restore; always serialized as
-\code{NULL}, ignored.}
+\item{compact}{Records layout: rotated column titles, so a column is as
+wide as its cells.}
 
-\item{sortable, collapsible, search}{Logical display toggles (each default
-\code{TRUE}): column sorting, indent-derived collapsible section headers, and
-the toolbar search box. Exposed in the block's gear menu.}
+\item{facet_layout, sort_by, sort_dir, top_n, value_labels, axis, bar_width}{Groups layout: column order of faceted summaries, row order, a row cap,
+value labels beside the marks, the domain strip under glyph columns, and
+the mark length. See the summarize table.}
 
-\item{download}{Logical display toggle (default \code{FALSE}), exposed in the
-block's gear menu: may the reader take this table away? On, a download
-control appears on the table toolbar offering every format the machine can
-write -- which file to take is the reader's choice, not the board
-author's. Each writes the same rendered (annotated) frame, with the same
-resolved title / subtitle / caption, through that format's writer:
-\code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}} for a styled spreadsheet (needs \code{openxlsx}),
-\code{\link[=write_exhibit_html]{write_exhibit_html()}} for a self-contained page that keeps the table's
-sorting and section collapse (opened out: a downloaded page scrolls, so
-every section starts expanded), and \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}} for a deck
-carrying a native, editable PowerPoint table, over as many slides as it
-takes (needs \code{officer} and \code{flextable}). One writable format renders a button, several render a menu;
-a format whose writer is not installed is left out.}
+\item{drill}{Turns the row click on. In the records layout the column the
+click filters on (or \code{"auto"}, \code{"source"}); in the groups layout any
+value turns it on and the click filters on the row's groups.}
 
-\item{excel_download, html_download, pptx_download}{LEGACY per-format
-toggles, folded on construction: downloads were three switches before they
-became one. Kept as formals so boards saved before \code{download} still
-restore -- any of them \code{TRUE} reads as \code{download = TRUE}, so such a board
-reopens offering every format. Always serialized as \code{NULL}.}
+\item{drill_target, drill_table}{Beta. Send the click to a filter block
+instead of filtering this block's output: the target block id, and the
+table the claim is resolved in.}
 
-\item{title, subtitle, caption}{Table text, rendered above (title, subtitle)
-and below (caption) the table. Same three-tier contract as the chart
-block (see \code{\link[=new_chart_block]{new_chart_block()}}): \code{NULL} (default) = auto -- each slot
-falls back to the input's table-level display attribute (\code{label} /
-\code{subtitle} / \code{caption}; composer tables carry the gt heading and source
-notes there); \code{""} = explicitly none; any other string is shown with
-\code{{...}} tokens resolved against the CURRENT data on every render
-(\code{{col}}, \code{{label(col)}}, \code{{n}}, \code{{n_distinct(col)}}).}
+\item{search, sortable, collapsible}{Show the search input; allow sorting by
+column headers; allow collapsing group rows.}
 
-\item{ctrl_target}{Character(1), beta. Block id of a value filter block on
-the board: the drill's claim is pushed there over the board's control
-channel (\code{\link[=ctrl_send]{ctrl_send()}}; the board needs the channel installed, see
-\code{\link[=new_ctrl_bridge_extension]{new_ctrl_bridge_extension()}}). Empty (the default) = off; the drill
-behaves exactly as before. Exposed in the gear's "Send to filter (beta)"
-section.
+\item{max_height}{\code{NULL} (default): the table runs its full length and
+scrolls with its panel. A CSS length caps it.}
 
-\code{"auto"} needs no block id: it resolves to the board's drill destination
--- the one \code{blockr.dm::new_drill_filter_block()} on the board, else the
-one value filter block (\code{\link[=ctrl_auto_target]{ctrl_auto_target()}}). That is what the gear's
-checkbox writes, so a drill reaches the cohort filter with nothing typed.
+\item{download}{Offer the table for download (xlsx, html, pptx).}
 
-With a target set the drill becomes TRANSIENT: the click is an event, not
-a selection. The table latches nothing (so it does not filter its own
-output on the click, saves no selection with the board, and keeps no
-active row or column), clicking the same row twice sends twice instead of
-toggling off, and all the click leaves behind is the clicked row, column
-or crossing cell lit for a moment. Undoing a drill is the target's job,
-because the control channel has no back-edge: a selection held here would
-keep showing a cohort that anyone else can reset.}
+\item{title, subtitle, caption}{Text above and below the table, as on
+\code{\link[=new_chart_block]{new_chart_block()}}: \code{NULL} = the input's own label, \code{""} = none, else a
+template resolved against the data.}
 
-\item{ctrl_table}{Character(1), beta. Name of the table in the target's
-\code{dm} the pushed conditions apply to (e.g. \code{"adsl"}). Leave empty when the
-target filters a plain data frame.}
+\item{script, script_values}{Groups layout: prepare script, as on
+\code{\link[=new_chart_block]{new_chart_block()}}, and the values of its controls.}
 
-\item{rotate_titles}{Logical display toggle (default \code{FALSE}), exposed in
-the block's gear menu: render the value-column titles vertically and let
-each column size on its CELL content instead of its title. The matrix
-display mode -- a subject x term AE heatmap fits 3-4x more columns per
-viewport when the terms stand upright. Flat tables only.}
+\item{selection}{Internal: what the last click selected. Saved with the
+board so a restored table keeps its drill.}
 
-\item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
+\item{...}{Old argument names (translated), and arguments forwarded to
+\code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }
 \value{
-A transform block of class \code{table_block}.
+A blockr transform block of class \code{table_block}.
 }
 \description{
-Transform block wrapping \code{\link[=drilldown_table]{drilldown_table()}}. The visible table is
-rendered from the upstream (pre-filter) data so every row stays
-clickable; the block's data output is the upstream data filtered by
-the last click, using the exact same contract as
-\code{\link[=new_chart_block]{new_chart_block()}} (so existing filter links compose).
+One block for every table: the input rows as they are, or one row per
+group with a column per summary. \code{layout} picks what a row is. Input that
+already is a finished table (an annotated data frame, or an object with an
+\code{\link[=as_annotated_df]{as_annotated_df()}} method such as a composer table) is shown with its
+structure in the records layout.
 }
 \details{
-The block accepts a data frame, or any table-producing object with an
-\code{\link[=as_annotated_df]{as_annotated_df()}} method (e.g. a composer table): the input is coerced
-through the generic before rendering and filtering, so such objects can be
-connected directly without an explicit coercion step in between. Plain
-data frames pass through untouched.
+The block's data output is the input, filtered by the last row click when
+a drill is on. The table itself is display.
 }
-\section{Drill values}{
-
-On a FLAT table \code{drill} names the column a click filters on. On a
-STRUCTURED or AGGREGATED one there is no column to choose -- the click
-filters on the row's identity or group keys -- so the value is a MODE
-instead, and it selects what the click hands downstream:
-\itemize{
-\item \code{"auto"} -- the clicked subset of the displayed table.
-\item \code{"source"} -- the RECORDS behind the click (e.g. the 143 female
-subjects, not the "Sex: F" row), resolved by \code{\link[=drill_source]{drill_source()}} from the
-claim against the frame the producer stamped as the input's
-\code{source_data} attribute. A composer table stamps it with
-\code{attr(tbl, "source_data") <- data} and the blockr.sandbox adapter
-carries it onto the annotated frame. Errors at eval time when the
-input carries no such frame, rather than quietly handing back display
-rows.
-}
-The two modes render identically: the table body draws from the block's
-input, never from its output. With no drill active \code{"source"} yields zero
-rows -- no click, no cohort, never a silent everything.
-
-\code{"source"} is read as a mode only where a mode can exist. On a flat table
-it is an ordinary column name, so a real column called \code{source} stays a
-usable drill target.
-}
-
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 new_table_block()
+new_table_block(
+  layout = "groups", by = "Species",
+  summaries = list(
+    list(type = "simple", func = "count", show = "bar"),
+    list(type = "dist", col = "Sepal.Length", show = "box")
+  )
+)
 \dontshow{\}) # examplesIf}
 }

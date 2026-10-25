@@ -47,13 +47,13 @@ test_that("a parent row filters its outer column only", {
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
-      scope <- session$makeScope("expr")
+      scope <- session$makeScope("expr-groups")
       session$flushReact()
       dp_click(scope, "SEX", "F")
       session$flushReact()
       out <- eval(session$returned$expr(), list(data = dp_toy()))
       expect_setequal(out$USUBJID, c("1", "2"))
-      expect_identical(session$returned$state$filter_column(), "SEX")
+      expect_identical(session$returned$state$selection()$column, "SEX")
     },
     args = list(x = blk, data = list(data = function() dp_toy()))
   )
@@ -64,7 +64,7 @@ test_that("a child row filters under its own parent, not every parent", {
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
-      scope <- session$makeScope("expr")
+      scope <- session$makeScope("expr-groups")
       session$flushReact()
       # "Placebo" sits under F and under M: the click names the F one.
       dp_click(scope, c("SEX", "ARM"), c("F", "Placebo"))
@@ -73,8 +73,8 @@ test_that("a child row filters under its own parent, not every parent", {
       expect_setequal(out$USUBJID, c("1", "2"))
       expect_true(all(out$SEX == "F" & out$ARM == "Placebo"))
       st <- session$returned$state
-      expect_identical(st$filter_column(), c("SEX", "ARM"))
-      expect_identical(st$filter_values(), c("F", "Placebo"))
+      expect_identical(st$selection()$column, c("SEX", "ARM"))
+      expect_identical(st$selection()$values, c("F", "Placebo"))
     },
     args = list(x = blk, data = list(data = function() dp_toy()))
   )

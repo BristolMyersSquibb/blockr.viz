@@ -101,9 +101,9 @@ test_that("block state round-trips constructor args", {
       session$flushReact()
       expect_equal(session$returned$state$drill(), "USUBJID")
       expect_equal(session$returned$state$digits(), 2L)
-      # Vestigial filter_type/filter_range serialize as NULL (legacy formals).
-      expect_null(session$returned$state$filter_type())
-      expect_null(session$returned$state$filter_range())
+      # The old filter formals are gone; no click means no selection.
+      expect_null(session$returned$state$selection())
+      expect_false("filter_type" %in% names(session$returned$state))
     },
     args = list(x = blk, data = list(data = function() df))
   )
@@ -125,11 +125,12 @@ test_that("cogwheel config actions update color, shadings, drill, digits", {
       expect_equal(sh[[1]]$mode, "diverging")
       expect_equal(unlist(sh[[1]]$domain), c(-1, 1))
       expect_equal(session$returned$state$color(), "parameter")
-      # Legacy formals serialize as NULL (restore re-enters via the new args).
-      expect_null(session$returned$state$cell_color())
-      expect_null(session$returned$state$row_color())
+      # The legacy names are translated, not kept as state.
+      expect_false(any(c("cell_color", "row_color") %in%
+                         names(session$returned$state)))
 
-      es <- session$makeScope("expr")
+      # The gear talks to the records engine, a sub-module of the block.
+      es <- session$makeScope("expr-records")
       # The gear sends the whole shadings list as JSON ("" rules = off).
       es$setInputs(drilldown_table_block_action = list(
         action = "config", param = "shadings", value = "[]"
@@ -175,7 +176,7 @@ test_that("no click = pass-through, click filters the data", {
       session$flushReact()
       expect_equal(nrow(session$returned$result()), 3L)
 
-      expr_scope <- session$makeScope("expr")
+      expr_scope <- session$makeScope("expr-records")
       expr_scope$setInputs(drilldown_table_block_action = list(
         action = "filter", column = "parameter",
         values = list("AST"), filter_type = "categorical"
@@ -220,10 +221,12 @@ test_that("empty-list state from a pre-#144 DAG paste normalizes back to NULL", 
   )
   payload <- blockr.core::blockr_ser(blk)[["payload"]]
 
-  # `summaries` / `shadings` default to list(): that IS their empty value, not
-  # corruption. Every other slot must have healed back to NULL.
+  # `summaries` / `shadings` / `script_values` default to list(): that IS
+  # their empty value, not corruption. Every other slot must have healed back
+  # to NULL. (The old names translate to the new ones on the way in.)
   empty_list <- vapply(payload, function(v) is.list(v) && !length(v), logical(1))
-  expect_equal(sort(names(payload)[empty_list]), c("shadings", "summaries"))
+  expect_equal(sort(names(payload)[empty_list]),
+               c("script_values", "shadings", "summaries"))
 
   # "" is meaningful on `color` (tint explicitly OFF, as against NULL = smart
   # default by rowname), so the heal must not collapse it to NULL.

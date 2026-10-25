@@ -79,7 +79,7 @@ send_action <- function(input_id, payload) {
 }
 
 # Per-renderer action input ids (root element + "_action").
-table_action <- function(id) sprintf("board-block_%s-expr-drilldown_table_block_action", id)
+table_action <- function(id) sprintf("board-block_%s-expr-records-drilldown_table_block_action", id)
 chart_action <- function(id) sprintf("board-block_%s-expr-drilldown_block_action", id)
 tile_action  <- function(id) sprintf("board-block_%s-expr-tile_block_action", id)
 
@@ -225,7 +225,7 @@ echarts_brush <- function(block_id, xrange, yrange) {
 # CSS-escaped id selector for a block's rendered table chrome (search box +
 # <table> live inside it). The id has no CSS-special chars beyond hyphens.
 dt_result <- function(block_id) {
-  sprintf("#board-block_%s-expr-dt_result", block_id)
+  sprintf("#board-block_%s-expr-records-dt_result", block_id)
 }
 
 # A block's exported result data frame (the data it passes downstream).

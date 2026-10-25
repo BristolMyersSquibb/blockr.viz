@@ -438,24 +438,26 @@ test_that("a config that cannot be honored renders a message table", {
   expect_false(grepl("blockr-summarize-fill", h))
 })
 
-test_that("the block constructs, registers and round-trips its state", {
+test_that("the old constructor builds a table block in the groups layout", {
   blk <- new_summarize_table_block(group = "TERM", func = "count_distinct",
                                    id_var = "USUBJID", drill = "TERM")
-  expect_s3_class(blk, "summarize_table_block")
+  expect_s3_class(blk, "table_block")
   expect_s3_class(blk, "transform_block")
 
-  # blockr.core serializes a block from its constructor formals and restores by
-  # re-calling the constructor, so the runtime filter transport has to stay in
-  # the signature or a saved click cannot come back.
-  fmls <- names(formals(new_summarize_table_block))
-  expect_true(all(c("group", "func", "id_var", "drill", "ctrl_target",
-                    "ctrl_table", "filter_type", "filter_column",
-                    "filter_values", "summaries", "by",
-                    "facet_layout") %in% fmls))
+  st <- blockr.core::blockr_ser(blk)$payload
+  expect_identical(st$layout, "groups")
+  expect_identical(st$by, "TERM")
+  expect_identical(st$id, "USUBJID")
+  expect_identical(st$drill, "TERM")
+  expect_identical(st$summaries[[1L]]$func, "count_distinct")
 
-  # Registered, so it shows up in the block-adder and the assistant universe.
-  expect_true("summarize_table_block" %in%
-                names(blockr.core::available_blocks()))
+  # The click survives a save: one `selection` argument carries it.
+  expect_true("selection" %in% names(formals(new_table_block)))
+
+  # Only the table block is in the block-adder and the assistant universe.
+  expect_true("table_block" %in% names(blockr.core::available_blocks()))
+  expect_false("summarize_table_block" %in%
+                 names(blockr.core::available_blocks()))
 })
 
 test_that("html escaping survives a label with markup in it", {
@@ -482,7 +484,7 @@ test_that("sorting can be turned off: no hook class, no arrow", {
   # The cell model carries the toggle through cfg, and so does the ctor.
   m <- summarize_cells(prep, cfg = list(sortable = FALSE))
   expect_false(grepl("blockr-sortable", m$thead, fixed = TRUE))
-  expect_true("sortable" %in% names(formals(new_summarize_table_block)))
+  expect_true("sortable" %in% names(formals(new_table_block)))
 })
 
 test_that("every row carries the order it arrived in", {

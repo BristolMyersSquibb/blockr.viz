@@ -489,6 +489,18 @@
         pop.appendChild(typesRow);
       }
 
+      // What one row is (the table block's layout): a two-way choice at the
+      // top of the tray, above everything it changes. spec.layoutSwitch =
+      // { value, options: [{ value, label }], onPick(value) }.
+      if (spec.layoutSwitch) {
+        const ls = spec.layoutSwitch;
+        const sec = this._sectionEl('Rows are');
+        sec.classList.add('dd-section--layout');
+        this._buildPill(sec, ls.options, ls.value, (/** @type {string} */ v) => {
+          if (v !== ls.value) ls.onPick(v);
+        });
+      }
+
       // Optional input-type badge (a small chip above Mapping). A host sets
       // spec.badge to name the input when the mapping controls are absent —
       // e.g. an already-summarized ("annotated data frame") table has no

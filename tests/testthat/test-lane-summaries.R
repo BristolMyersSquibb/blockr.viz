@@ -609,8 +609,9 @@ test_that("the ctor migrates the retired pair into the block's STATE", {
   expect_null(st$summaries[[2L]]$facet)
   # Cleared, so a mapping the user then removes from a column stays removed
   # instead of being re-applied on the next render.
-  expect_null(st$color)
-  expect_null(st$facet)
+  # (`[[` because `$` would partially match `facet_layout`.)
+  expect_null(st[["color"]])
+  expect_null(st[["facet"]])
 })
 
 test_that("the ctor moves a ranked-bar grouping into `by`", {
@@ -622,15 +623,17 @@ test_that("the ctor moves a ranked-bar grouping into `by`", {
   st <- blockr.core::blockr_ser(b)$payload
   expect_identical(st$by, c("SOC", "TERM"))
   # Cleared, so clearing "Group by" in the gear cannot resurrect them.
-  expect_null(st$group)
-  expect_null(st$parent)
+  expect_null(st[["group"]])
+  expect_null(st[["parent"]])
 
-  # The ranked-bar surface (no column list) keeps its own slots untouched.
+  # The ranked-bar surface (no column list) is one bar summary now.
   st <- blockr.core::blockr_ser(
     new_summarize_table_block(group = "TERM")
   )$payload
-  expect_identical(st$group, "TERM")
-  expect_null(st$by)
+  expect_identical(st$layout, "groups")
+  expect_identical(st$by, "TERM")
+  expect_identical(st$summaries[[1L]]$show, "bar")
+  expect_null(st[["group"]])
 })
 
 test_that("by nests one level: outer parent rows plus inner leaves", {
@@ -742,8 +745,9 @@ test_that("sort_by a summary's name orders by that column", {
 test_that("the constructor round-trips the summaries list", {
   S <- list(list(type = "dist", name = "D", col = "DUR", show = "box"))
   blk <- new_summarize_table_block(by = "TERM", summaries = S)
-  expect_s3_class(blk, "summarize_table_block")
-  fmls <- names(formals(new_summarize_table_block))
+  expect_s3_class(blk, "table_block")
+  expect_identical(blockr.core::blockr_ser(blk)$payload$summaries, S)
+  fmls <- names(formals(new_table_block))
   expect_true(all(c("summaries", "by", "facet_layout") %in% fmls))
 })
 

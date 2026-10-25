@@ -134,5 +134,5 @@ test_that("the block carries the download toggle through state", {
     get0("download", envir = environment(blk[["expr_server"]]))))
   # Every constructor formal needs a state entry, or the value is lost on
   # save / restore.
-  expect_true("download" %in% names(formals(new_summarize_table_block)))
+  expect_true("download" %in% names(formals(new_table_block)))
 })

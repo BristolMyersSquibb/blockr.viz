@@ -117,8 +117,8 @@ test_that("an active filter is stamped on the <table> as data-dt-active", {
 # --- table server: clear path + restore ------------------------------------
 
 test_that("a clear filter message (null column/values) resets the filter", {
-  blk <- new_table_block(drill = "region")
-  testServer(blk$expr_server, args = list(data = reactive(drill_df)), {
+  blk <- records_engine(drill = "region")
+  testServer(blk, args = list(data = reactive(drill_df)), {
     session$setInputs(drilldown_table_block_action = list(
       action = "filter", column = "region", values = list("North")
     ))
@@ -134,8 +134,8 @@ test_that("a clear filter message (null column/values) resets the filter", {
 })
 
 test_that("a clear filter message also resets a grouped drill filter", {
-  blk <- new_table_block(group = "region", drill = "auto")
-  testServer(blk$expr_server, args = list(data = reactive(drill_df)), {
+  blk <- records_engine(group = "region", drill = "auto")
+  testServer(blk, args = list(data = reactive(drill_df)), {
     session$setInputs(drilldown_table_block_action = list(
       action = "filter",
       filters = list(list(column = "region", value = "North"))
@@ -151,8 +151,8 @@ test_that("a clear filter message also resets a grouped drill filter", {
 })
 
 test_that("a raw-value filter matches rows the DISPLAYED text would miss", {
-  blk <- new_table_block(drill = "ratio", digits = 2L)
-  testServer(blk$expr_server, args = list(data = reactive(drill_df)), {
+  blk <- records_engine(drill = "ratio", digits = 2L)
+  testServer(blk, args = list(data = reactive(drill_df)), {
     # What table.js now sends: the data-raw value, not the rounded "0.12".
     session$setInputs(drilldown_table_block_action = list(
       action = "filter", column = "ratio", values = list("0.123456")
@@ -165,10 +165,10 @@ test_that("a raw-value filter matches rows the DISPLAYED text would miss", {
 
 test_that("restored filter state renders the status line and active stamp", {
   # Restore = re-calling the ctor with the saved state (blockr.core contract).
-  blk <- new_table_block(drill = "region",
+  blk <- records_engine(drill = "region",
                          filter_column = "region",
                          filter_values = list("North"))
-  testServer(blk$expr_server, args = list(data = reactive(drill_df)), {
+  testServer(blk, args = list(data = reactive(drill_df)), {
     session$flushReact()
     # Output already filtered on restore.
     expect_equal(nrow(eval_block_expr(session$returned$expr(), drill_df)), 1L)
@@ -187,8 +187,8 @@ test_that("restored filter state renders the status line and active stamp", {
 })
 
 test_that("with drill on but no filter the status line reads 'No filter'", {
-  blk <- new_table_block(drill = "region")
-  testServer(blk$expr_server, args = list(data = reactive(drill_df)), {
+  blk <- records_engine(drill = "region")
+  testServer(blk, args = list(data = reactive(drill_df)), {
     session$flushReact()
     status <- as.character(output$dt_status$html)
     expect_true(grepl("No filter active", status))
@@ -307,9 +307,10 @@ test_that("tile: a NEW-name payload round-trips through ser/deser", {
 
 # --- table: vestigial filter_type / filter_range ----------------------------
 
-test_that("table: legacy filter_type/filter_range are accepted but inert", {
+test_that("table: legacy filter args restore as the block's selection", {
   # Old saved boards serialize filter_type = "categorical" (and possibly a
-  # filter_range); the ctor keeps the formals but no longer emits them.
+  # filter_range); they translate to `selection`, and the categorical
+  # filter itself still restores and applies.
   blk <- new_table_block(drill = "region",
                          filter_type = "categorical",
                          filter_range = list(min = 0, max = 1),
@@ -317,9 +318,9 @@ test_that("table: legacy filter_type/filter_range are accepted but inert", {
                          filter_values = list("North"))
   testServer(blk$expr_server, args = list(data = reactive(drill_df)), {
     session$flushReact()
-    expect_null(session$returned$state$filter_type())
-    expect_null(session$returned$state$filter_range())
-    # The categorical filter itself still restores and applies.
+    sel <- session$returned$state$selection()
+    expect_equal(sel$column, "region")
+    expect_equal(sel$values, list("North"))
     expect_equal(nrow(eval_block_expr(session$returned$expr(), drill_df)), 1L)
   })
 })

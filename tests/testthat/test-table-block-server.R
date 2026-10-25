@@ -23,9 +23,9 @@ test_that("table block passes data through unfiltered by default", {
     val = c(1, 2, 3, 4),
     stringsAsFactors = FALSE
   )
-  blk <- new_table_block(values = "val")
+  blk <- records_engine()
 
-  testServer(blk$expr_server, args = list(data = reactive(df)), {
+  testServer(blk, args = list(data = reactive(df)), {
     out <- eval_block_expr(session$returned$expr(), df)
     expect_equal(nrow(out), 4L)
     # no filter set yet
@@ -39,9 +39,9 @@ test_that("a single-value filter message filters the table and updates state", {
     val = c(1, 2, 3, 4),
     stringsAsFactors = FALSE
   )
-  blk <- new_table_block(values = "val")
+  blk <- records_engine()
 
-  testServer(blk$expr_server, args = list(data = reactive(df)), {
+  testServer(blk, args = list(data = reactive(df)), {
     # the exact message the drilldown JS emits when the user picks a filter
     session$setInputs(
       drilldown_table_block_action = list(
@@ -66,9 +66,9 @@ test_that("a multi-value filter message uses %in% and keeps all matches", {
     val = c(1, 2, 3, 4),
     stringsAsFactors = FALSE
   )
-  blk <- new_table_block(values = "val")
+  blk <- records_engine()
 
-  testServer(blk$expr_server, args = list(data = reactive(df)), {
+  testServer(blk, args = list(data = reactive(df)), {
     session$setInputs(
       drilldown_table_block_action = list(
         action = "filter",
@@ -89,9 +89,9 @@ test_that("a config message updates the drill state", {
     val = c(1, 2),
     stringsAsFactors = FALSE
   )
-  blk <- new_table_block(values = "val")
+  blk <- records_engine()
 
-  testServer(blk$expr_server, args = list(data = reactive(df)), {
+  testServer(blk, args = list(data = reactive(df)), {
     session$setInputs(
       drilldown_table_block_action = list(
         action = "config",
@@ -132,9 +132,9 @@ structured_fixture <- function() {
 
 test_that("a structured level-row click subsets the annotated df, nothing added", {
   wide <- structured_fixture()
-  blk <- new_table_block(drill = "auto")
+  blk <- records_engine(drill = "auto")
 
-  testServer(blk$expr_server, args = list(data = reactive(wide)), {
+  testServer(blk, args = list(data = reactive(wide)), {
     # The payload table.js emits from the clicked row's data-dd-keys.
     session$setInputs(
       drilldown_table_block_action = list(
@@ -159,9 +159,9 @@ test_that("a structured level-row click subsets the annotated df, nothing added"
 
 test_that("clearing a structured drill resets the keys", {
   wide <- structured_fixture()
-  blk <- new_table_block(drill = "auto")
+  blk <- records_engine(drill = "auto")
 
-  testServer(blk$expr_server, args = list(data = reactive(wide)), {
+  testServer(blk, args = list(data = reactive(wide)), {
     session$setInputs(
       drilldown_table_block_action = list(
         action = "filter",
@@ -200,7 +200,7 @@ test_that("structured drill state restores through the constructor", {
     expect_equal(nrow(out), 1L)
     expect_equal(out$.variable_level, "ABDOMINAL PAIN")
     expect_false("AEDECOD" %in% names(out))
-    expect_null(session$returned$state$filter_spread_col())
+    expect_null(session$returned$state$selection()$column)
   })
 })
 
@@ -232,9 +232,9 @@ test_that("drill = 'source' resolves the click to the source records", {
   wide <- summary_table(adae, vars = c("AETOXGR", "AEDECOD"), by = "ARM")
   attr(wide, "source_data") <- adae
 
-  blk <- new_table_block(drill = "source")
+  blk <- records_engine(drill = "source")
 
-  testServer(blk$expr_server, args = list(data = reactive(wide)), {
+  testServer(blk, args = list(data = reactive(wide)), {
     # Undrilled: nothing resolves to a single value, so no cohort. NOT the
     # whole source -- a silent "everything" is the dangerous default.
     expect_equal(nrow(eval_block_expr(session$returned$expr(), wide)), 0L)
@@ -263,9 +263,9 @@ test_that("drill = 'auto' keeps the display subset even when a source exists", {
   wide <- structured_fixture()
   attr(wide, "source_data") <- data.frame(AEDECOD = "ABDOMINAL PAIN")
 
-  blk <- new_table_block(drill = "auto")
+  blk <- records_engine(drill = "auto")
 
-  testServer(blk$expr_server, args = list(data = reactive(wide)), {
+  testServer(blk, args = list(data = reactive(wide)), {
     session$setInputs(
       drilldown_table_block_action = list(
         action = "filter",
@@ -286,9 +286,9 @@ test_that("drill = 'auto' keeps the display subset even when a source exists", {
 test_that("drill = 'source' errors when nothing stamped a source", {
   wide <- structured_fixture()
   attr(wide, "source_data") <- NULL   # summary_table() stamps one
-  blk <- new_table_block(drill = "source")
+  blk <- records_engine(drill = "source")
 
-  testServer(blk$expr_server, args = list(data = reactive(wide)), {
+  testServer(blk, args = list(data = reactive(wide)), {
     session$setInputs(
       drilldown_table_block_action = list(
         action = "filter",
@@ -319,9 +319,9 @@ test_that("an AGGREGATED table resolves 'source' through its group columns", {
   agg <- dplyr::count(raw, AEDECOD, name = "n")
   attr(agg, "source_data") <- raw
 
-  blk <- new_table_block(drill = "source", group = "AEDECOD")
+  blk <- records_engine(drill = "source", group = "AEDECOD")
 
-  testServer(blk$expr_server, args = list(data = reactive(agg)), {
+  testServer(blk, args = list(data = reactive(agg)), {
     session$setInputs(
       drilldown_table_block_action = list(
         action = "filter",
@@ -355,9 +355,9 @@ test_that("on a FLAT table, `source` is a column name and not the mode", {
     val    = c(1, 2, 3),
     stringsAsFactors = FALSE
   )
-  blk <- new_table_block(drill = "source", value = "val")
+  blk <- records_engine(drill = "source", value = "val")
 
-  testServer(blk$expr_server, args = list(data = reactive(df)), {
+  testServer(blk, args = list(data = reactive(df)), {
     session$setInputs(
       drilldown_table_block_action = list(
         action = "filter", filter_type = "categorical",
@@ -378,10 +378,10 @@ test_that("with a ctrl_target the drill click is transient: nothing latched, cla
     val = c(1, 2, 3, 4),
     stringsAsFactors = FALSE
   )
-  blk <- new_table_block(values = "val", ctrl_target = "vf")
+  blk <- records_engine(ctrl_target = "vf")
   sent <- list()
 
-  testServer(blk$expr_server, args = list(data = reactive(df)), {
+  testServer(blk, args = list(data = reactive(df)), {
     session$userData$blockr_ctrl_send <- function(target, args, author = NULL) {
       sent[[length(sent) + 1L]] <<- args
     }

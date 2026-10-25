@@ -34,20 +34,15 @@ registry_allowlist <- list(
     "script", "values"
   ),
   table = c(
-    # Runtime filter transport: written by clicks, round-trips through
-    # save/restore only -- never AI-set at creation. (filter_spread_col /
-    # filter_spread_from are DEFUNCT restore-only formals: no longer
-    # external_ctrl, so not listed here.)
-    "filter_column", "filter_values",
-    "filter_group_cols", "filter_group_vals",
     # Display-only gear toggles / sizing, deliberately off the AI surface
     # (`download` included: whether a table can be taken away is a
     # dashboard-authoring choice, not something an intent describes).
-    # (excel_download / html_download / pptx_download are LEGACY restore-only
-    # formals folding into `download`: no longer external_ctrl, so like the
-    # filter_spread_* pair above they are not listed here.)
     "max_height", "sortable", "collapsible", "search", "download",
-    "rotate_titles"
+    "compact",
+    # The prepare script and its control values, as on the chart: a general
+    # escape hatch the assistant should not reach for where a summary would
+    # do.
+    "script", "script_values"
   ),
   tile = c(
     # Runtime filter transport (see the table's filter_* above).

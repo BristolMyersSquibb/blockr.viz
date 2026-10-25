@@ -206,8 +206,8 @@ table_exhibit <- function(data, rowname = NULL, value = NULL,
 report_call.table_block <- function(x, var, ...) {
 
   # The committed block's state lives in its constructor closure, the same
-  # values serialization reads. The legacy
-  # `cell_color` is already folded into `shadings` there.
+  # values serialization reads. Old argument names are already translated
+  # there.
   env <- environment(x[["expr_server"]])
 
   state <- function(nm) {
@@ -215,11 +215,19 @@ report_call.table_block <- function(x, var, ...) {
     if (is.function(v)) NULL else v
   }
 
-  # Print-relevant surface only: which columns, how they are shaded and
-  # rounded. Drill, search, sort, the identity row colour and the ctrl
-  # transports are not part of a printed table.
-  spec <- list(rowname = NULL, value = NULL, group = NULL, summaries = NULL,
-               shadings = NULL, digits = 2L)
+  # Print-relevant surface only: how the table is built and what it says.
+  # Drill, search, sort, the identity row colour and the ctrl transports are
+  # not part of a printed table.
+  groups <- identical(state("layout"), "groups")
+  spec <- if (groups) {
+    list(by = NULL, summaries = NULL, id = NULL,
+         facet_layout = "by_summary", sort_by = "value", sort_dir = "desc",
+         top_n = NULL, axis = TRUE, value_labels = TRUE)
+  } else {
+    list(rowname = NULL, columns = NULL, shadings = NULL, digits = 2L)
+  }
+  # The static builders keep the engines' names.
+  rename <- c(columns = "value", id = "id_var")
 
   args <- list()
 
@@ -228,12 +236,22 @@ report_call.table_block <- function(x, var, ...) {
     if (is.null(v) || !length(v) ||
           (is.character(v) && !any(nzchar(v)))) next
     if (identical_default(v, spec[[nm]])) next
-    args[[nm]] <- v
+    out_nm <- if (nm %in% names(rename)) rename[[nm]] else nm
+    args[[out_nm]] <- v
   }
 
   for (nm in c("title", "subtitle", "caption")) {
     v <- state(nm)
     if (!is.null(v)) args[[nm]] <- as.character(v)[1L]
+  }
+
+  if (groups) {
+    return(as.call(c(
+      list(call("::", as.name("blockr.viz"),
+                as.name("static_summarize_table")),
+           as.name(var)),
+      args
+    )))
   }
 
   exhibit <- as.call(c(
