@@ -110,7 +110,7 @@ summarize_title_args <- function(args) {
   } else {
     list()
   }
-  list(
+  out <- list(
     by = if (length(by)) by[[length(by)]],
     group = args$group %||% if (length(by) == 2L) by[[1L]],
     parent = args$parent, value = args$value,
@@ -121,6 +121,9 @@ summarize_title_args <- function(args) {
     sort_by = args$sort_by, top_n = args$top_n,
     drill = args$drill
   )
+  # Unset roles go, so a prepare script's value of the same name (a
+  # heatmap's `top_n`) can stand in for them in a sentence.
+  out[!vapply(out, is.null, logical(1L))]
 }
 
 # Which of the caller's arguments summarize_prepare() takes. Everything else

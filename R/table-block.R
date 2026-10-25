@@ -1529,6 +1529,8 @@ table_guidance <- function() {
 #'   row per level, the outer one an expandable parent. Variables layout: one
 #'   column per level.
 #' @param rowname Records layout: the stub column (first column, row label).
+#'   With `by` set, the rows sit under one collapsible header per level of
+#'   `by` ([table_nest()]).
 #' @param columns Records layout: columns to show; `NULL` shows all.
 #' @param summaries Groups and variables layouts: the table's columns (or
 #'   variables), an ordered list of
@@ -1737,9 +1739,14 @@ new_table_block <- function(layout = "records",
             if (identical(lay, "variables")) {
               args <- table_variables_args(var$config())
               if (!is.null(args)) d <- do.call(summary_table, c(list(d), args))
+            } else if (length(shared$by()) && is.data.frame(d)) {
+              # Records under headers: the tidy frame nested by `by`.
+              d <- table_nest(d, shared$by(), rec_rowname())
             }
             d
           })
+          # Read lazily: the records engine is built just below.
+          rec_rowname <- function() rec$state$rowname()
 
           rec_sel <- sel_for(c("records", "variables"))
           rec <- table_records_server(
@@ -1833,6 +1840,12 @@ new_table_block <- function(layout = "records",
                 # when a summary table block fed a table block.
                 built <- table_variables_call(var$config())
                 if (!is.null(built)) ex <- table_sub_data(ex, built)
+              } else if (length(shared$by())) {
+                built <- as.call(c(
+                  list(quote(blockr.viz::table_nest), quote(data)),
+                  list(by = shared$by(), rowname = rs$rowname())
+                ))
+                ex <- table_sub_data(ex, built)
               }
               ex
             }),

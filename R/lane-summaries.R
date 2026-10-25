@@ -1426,7 +1426,15 @@ lane_summary_domains <- function(plan, rows) {
     # A tile without a paint column is painted by its value: one ramp across
     # the summary's copies, from zero.
     if (identical(kind, "tile")) {
-      vals <- unlist(lapply(idx, function(i) rows[[plan[[i]]$key]]))
+      # Leaf rows only: a group row's total is many times a cell, and on
+      # the same ramp every cell under it would come out pale. A group row
+      # clamps at the darkest step instead.
+      leaf <- if (!is.null(rows$.level) && any(rows$.level > 0L)) {
+        rows[rows$.level > 0L, , drop = FALSE]
+      } else {
+        rows
+      }
+      vals <- unlist(lapply(idx, function(i) leaf[[plan[[i]]$key]]))
       vals <- vals[is.finite(vals)]
       for (i in idx) {
         plan[[i]]$dmin <- 0
@@ -2004,6 +2012,10 @@ lane_tile_paint <- function(p, rows) {
   v <- rows[[p$key]]
   n <- length(v)
   has <- is.finite(v) & !(isTRUE(p$zero_empty) & v %in% 0)
+  # A group row (an arm over its subjects) is a header in a matrix: its
+  # totals would dwarf every cell under it, so it shows no tiles.
+  lvl <- rows$.level
+  if (!is.null(lvl) && any(lvl > 0L)) has <- has & lvl > 0L
   bg <- rep(NA_character_, n)
   if (!is.null(p$wkey)) {
     w <- rows[[p$wkey]]

@@ -57,7 +57,9 @@ variable in \code{summaries}, one column per level of \code{by}).}
 row per level, the outer one an expandable parent. Variables layout: one
 column per level.}
 
-\item{rowname}{Records layout: the stub column (first column, row label).}
+\item{rowname}{Records layout: the stub column (first column, row label).
+With \code{by} set, the rows sit under one collapsible header per level of
+\code{by} (\code{\link[=table_nest]{table_nest()}}).}
 
 \item{columns}{Records layout: columns to show; \code{NULL} shows all.}
 

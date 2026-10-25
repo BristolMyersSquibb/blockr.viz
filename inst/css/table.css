@@ -467,6 +467,12 @@
   white-space: nowrap;
   line-height: 1.15;
 }
+/* The table keeps the widths its columns ask for instead of stretching
+   them over the panel: a compact matrix is as wide as its cells. */
+:is(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table[data-dt-rotate-titles="on"] {
+  width: auto;
+}
 /* The column sub-label (variable label) has no room in a 30px column;
    the title carries the identity in matrix mode. */
 :is(.drilldown-table-container, .blockr-summarize-container)

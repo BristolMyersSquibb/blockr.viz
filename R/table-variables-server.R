@@ -265,3 +265,51 @@ table_variables_ui <- function(id) {
     )
   )
 }
+
+#' Nest a tidy frame into a finished table
+#'
+#' Turns a plain data frame into an annotated data frame whose rows sit under
+#' collapsible headers, one per level of `by`: what the table block's records
+#' layout draws when `by` is set. Groups keep the order in which they first
+#' appear; a factor keeps its level order.
+#'
+#' @param data A data frame, e.g. a `dplyr::summarise()` result.
+#' @param by One or two grouping columns, outer first.
+#' @param rowname The column that labels each row. `NULL`: the first column
+#'   that is not in `by`.
+#' @return An annotated data frame (`.group1`, `.group1_level`, ..., `.label`,
+#'   then the remaining columns).
+#' @examples
+#' d <- data.frame(species = c("a", "a", "b"), island = c("x", "y", "x"),
+#'                 n = 1:3)
+#' table_nest(d, by = "species", rowname = "island")
+#' @export
+table_nest <- function(data, by, rowname = NULL) {
+  data <- as.data.frame(data)
+  by <- intersect(as.character(unlist(by)), names(data))
+  if (!length(by)) return(data)
+  rest <- setdiff(names(data), by)
+  rowname <- as.character(rowname %||% character())
+  rowname <- if (length(rowname) && rowname[[1L]] %in% rest) {
+    rowname[[1L]]
+  } else {
+    rest[[1L]]
+  }
+  pos <- function(x) {
+    if (is.factor(x)) as.integer(x) else match(x, unique(x))
+  }
+  ord <- do.call(order, c(unname(lapply(by, function(b) pos(data[[b]]))),
+                          list(seq_len(nrow(data)))))
+  data <- data[ord, , drop = FALSE]
+  out <- list()
+  for (k in seq_along(by)) {
+    out[[paste0(".group", k)]] <- rep(by[[k]], nrow(data))
+    out[[paste0(".group", k, "_level")]] <- as.character(data[[by[[k]]]])
+  }
+  out[[".label"]] <- as.character(data[[rowname]])
+  keep <- setdiff(rest, rowname)
+  res <- as.data.frame(out, stringsAsFactors = FALSE)
+  for (cl in keep) res[[cl]] <- data[[cl]]
+  rownames(res) <- NULL
+  res
+}

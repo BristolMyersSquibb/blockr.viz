@@ -99,3 +99,33 @@ test_that("the block's compact switch is shared by both engines", {
     expect_false(session$returned$state$compact())
   })
 })
+
+test_that("group rows of a tile matrix are headers without tiles", {
+  p <- lane_prepare_summaries(tile_fixture(), by = c("ARM", "SUBJ"),
+                              summaries = tile_summary(fill = "GRADE"))
+  m <- summarize_cells(p)
+  grp <- p$rows$.level == 0L
+  expect_true(any(grp))
+  for (cc in m$cols) expect_true(all(is.na(cc$bg[grp])))
+})
+
+test_that("table_nest() puts a tidy frame under its groups", {
+  d <- data.frame(species = c("b", "a", "b"), island = c("x", "y", "z"),
+                  n = 1:3)
+  out <- table_nest(d, by = "species", rowname = "island")
+  expect_identical(out$.group1_level, c("b", "b", "a"))
+  expect_identical(out$.label, c("x", "z", "y"))
+  expect_identical(names(out), c(".group1", ".group1_level", ".label", "n"))
+  expect_true(dt_is_structured(out))
+  expect_identical(table_nest(d, by = character()), d)
+})
+
+test_that("the records layout nests by `by`", {
+  d <- data.frame(species = c("a", "a", "b"), island = c("x", "y", "x"),
+                  n = 1:3)
+  b <- new_table_block(by = "species", rowname = "island")
+  shiny::testServer(b$expr_server, args = list(data = shiny::reactive(d)), {
+    ex <- paste(deparse(session$returned$expr()), collapse = " ")
+    expect_match(ex, "blockr.viz::table_nest", fixed = TRUE)
+  })
+})
