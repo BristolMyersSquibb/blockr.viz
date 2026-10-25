@@ -279,6 +279,17 @@
       axisLine: { lineStyle: { color: ink.strong } },
       splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } }
     };
+    // A histogram's bins touch: the gap is the only thing that tells one
+    // bin from the next.
+    if (m.histogram) {
+      for (const s of series) {
+        if (s.type !== 'bar') continue;
+        delete s.barWidth;
+        delete s.barMaxWidth;
+        s.barCategoryGap = '3%';
+        s.barGap = '0%';
+      }
+    }
     const labelRight = valueLabelsOn
       ? barValueLabels(series, valAxis, {
           ax, vertical, stacked: !isGrouped && !isPercent && colors.length > 0,

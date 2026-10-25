@@ -14,7 +14,8 @@ chart_arguments <- function() {
       paste0(
         "Chart type. Aggregated (the chart aggregates the rows itself; ",
         "set `x`, `y` and `func`): \"bar\", \"waterfall\", \"pie\", ",
-        "\"treemap\", \"boxplot\", \"pointrange\". Individual (one mark per ",
+        "\"treemap\", \"boxplot\", \"pointrange\", and \"histogram\" (set only ",
+        "`x`, a numeric column, and `bins`). Individual (one mark per ",
         "row; set `x` and `y`): \"scatter\", \"line\", \"band\". Timeline: ",
         "\"gantt\" (set `x`, `xend` and `y`). Default \"bar\". Waterfall: ",
         "each step's value is a DELTA and bars float from the running total ",
@@ -453,6 +454,15 @@ chart_arguments <- function() {
       example = TRUE,
       type = arg_boolean()
     ),
+    bins = new_arg_spec(
+      paste0(
+        "Histogram only: about how many bins `x` is cut into. The breaks are ",
+        "rounded to readable values, so the count can differ a little. ",
+        "Default 30."
+      ),
+      example = 30,
+      type = arg_number()
+    ),
     waterfall_totals = new_arg_spec(
       paste0(
         "Step values drawn as total/subtotal bars in a waterfall: their ",
@@ -568,6 +578,9 @@ chart_guidance <- function() {
     "`facet` to split the boxes. box_points=\"outliers\" flags the points",
     "past the whiskers; `summary` / `whiskers` swap the body / whisker",
     "statistic.",
+    "\n- \"distribution of X\" as bars, \"histogram of X\" ->",
+    "type=\"histogram\", x=\"X\", bins=30. A click on a bin filters",
+    "X to that bin's range.",
     "\n- \"label bars with W\" -> label=\"W\"",
     "\n\nWhen picking `color`, check the data: if all visible rows share one",
     "value the colour channel is wasted; drop `color` or pick a column with",

@@ -14,11 +14,11 @@
   "open": true,
   "tiles": [
    "bar",
+   "histogram",
    "pie",
    "treemap",
    "boxplot",
    "pointrange",
-   "radar",
    "band",
    "scatter",
    "*line",

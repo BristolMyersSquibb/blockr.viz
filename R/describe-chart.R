@@ -177,7 +177,7 @@ chart_type_line <- function(state, defaults) {
 # `func` -- `func` sits at its default and means nothing, so reporting
 # "count of row counts" on a scatter is worse than silence.
 chart_aggregated_types <- function() {
-  c("bar", "waterfall", "pie", "treemap")
+  c("bar", "histogram", "waterfall", "pie", "treemap")
 }
 
 chart_value_line <- function(state, defaults) {

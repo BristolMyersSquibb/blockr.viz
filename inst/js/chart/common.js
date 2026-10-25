@@ -19,7 +19,7 @@
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
   const NS = /** @type {any} */ (B.chart = B.chart || {});
 
-  const AGGREGATED_TYPES = ['bar', 'waterfall', 'pie', 'treemap', 'boxplot', 'pointrange', 'radar'];
+  const AGGREGATED_TYPES = ['bar', 'histogram', 'waterfall', 'pie', 'treemap', 'boxplot', 'pointrange', 'radar'];
   const INDIVIDUAL_TYPES = ['scatter', 'line', 'band'];
   const TIMELINE_TYPES = ['gantt'];
   // Box and point range summarize raw values per group in the browser.

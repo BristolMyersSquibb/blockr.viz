@@ -168,7 +168,9 @@
         // Aggregated and gantt under Individual by how they treat rows.
         typeGroups: [
           { label: 'Aggregated',
-            types: NS.AGGREGATED_TYPES.filter((/** @type {string} */ t) => t !== 'waterfall').concat(['band']) },
+            // Radar is drawn for old boards but no longer offered.
+            types: NS.AGGREGATED_TYPES.filter((/** @type {string} */ t) =>
+              t !== 'waterfall' && t !== 'radar').concat(['band']) },
           { label: 'Individual',
             types: NS.INDIVIDUAL_TYPES.filter((/** @type {string} */ t) => t !== 'band').concat(NS.TIMELINE_TYPES) }
         ],
@@ -180,6 +182,7 @@
         drillAutoLabel: () => {
           const fam = this._family();
           if (this.config.chart_type === 'radar') return 'Auto, the clicked shape';
+          if (this.config.chart_type === 'histogram') return 'Auto, the clicked bin';
           return fam === 'aggregated' ? 'Auto, the clicked group'
             : fam === 'timeline' ? 'Auto, the clicked lane'
             : this.config.chart_type === 'line' ? 'Auto, the clicked series'
@@ -214,7 +217,9 @@
     // picked, and the drill target section on every family.
     /** @this {any} */
     _sectionsSpec() {
-      const base = NS.roles.FAMILY_ROLES[this._family()];
+      const base = this.config.chart_type === 'histogram'
+        ? NS.roles.FAMILY_ROLES.histogram
+        : NS.roles.FAMILY_ROLES[this._family()];
       const countOff = !this.config.count_on || this.config.count_on === 'off';
       const spec = (!countOff || !base.presentation) ? base : {
         ...base,
@@ -311,6 +316,7 @@
         band_window: c.band_window || 'adaptive',
         band_size: c.band_size == null ? 45 : c.band_size,
         band_min_n: c.band_min_n == null ? 12 : c.band_min_n,
+        bins: c.bins == null ? 30 : c.bins,
         band_id: c.band_id || '',
         ref_hi: c.ref_hi || '',
         ref_lo: c.ref_lo || '',

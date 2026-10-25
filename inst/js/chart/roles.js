@@ -57,6 +57,10 @@
       'stroke="currentColor" stroke-width="1.4">' +
       '<rect x="4" y="5" width="8" height="6"/>' +
       '<path d="M4 8 h8 M8 2 v3 M8 11 v3 M6 2 h4 M6 14 h4"/></svg>',
+    histogram:
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
+      '<rect x="1.5" y="9" width="3" height="5"/><rect x="4.75" y="4" width="3" height="10"/>' +
+      '<rect x="8" y="6" width="3" height="8"/><rect x="11.25" y="10.5" width="3" height="3.5"/></svg>',
     pointrange:
       '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
       'stroke="currentColor" stroke-width="1.4">' +
@@ -127,7 +131,7 @@
               // instead; band_empty_reason() still covers a saved board whose
               // column changed type underneath it.
               colType: (/** @type {any} */ cfg) =>
-                (cfg.chart_type === 'band' ? 'num' : 'any'),
+                (cfg.chart_type === 'band' || cfg.chart_type === 'histogram' ? 'num' : 'any'),
               // A band slides a window along a numeric x, everything else
               // plots time, a measure, or a category on it.
               kinds: ['time', 'value', 'group'],
@@ -367,6 +371,8 @@
                  // input.placeholder, so a function would print its source.
                  kind: 'text', ph: 'e.g. 45' },
     band_min_n: { label: 'Cut below n', kind: 'text', ph: 'e.g. 12' },
+    // About this many bins: R takes readable breaks (pretty()) near it.
+    bins: { label: 'Bins', kind: 'text', ph: 'e.g. 30' },
     band_id: { label: 'Subject id', kind: 'column', colType: 'any',
                ph: 'id counted distinct (blank = rows)' },
     ref_hi: { label: 'Upper limit', kind: 'column', colType: 'num',
@@ -574,6 +580,17 @@
         // `when`).
         'facet_scales', 'facet_cols', 'download'
       ],
+      titles: ['title', 'subtitle', 'caption']
+    },
+    // Not a family of its own: a histogram draws as an aggregated bar over
+    // the bins R adds, so only its gear differs. Chosen by type in
+    // chrome.js (_sectionsSpec).
+    histogram: {
+      requiredMap: ['x'],
+      optionalMap: ['color', 'facet'],
+      mapping: ['bins'],
+      presentation: ['bar_mode', 'value_labels', 'value_lines',
+        'facet_scales', 'facet_cols', 'download'],
       titles: ['title', 'subtitle', 'caption']
     },
     timeline: {

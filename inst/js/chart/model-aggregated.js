@@ -91,6 +91,9 @@
     const groupCol = cfg.group;
     const meta = NS.axes.colMeta(columns, groupCol);
     const levels = meta && Array.isArray(meta.levels) && meta.levels.length ? meta.levels : null;
+    // Every bin of a histogram, the empty ones too: a missing bin would
+    // close the gap in the distribution it stands for.
+    if (cfg.chart_type === 'histogram' && levels) return levels.map(String);
 
     const dataOrder = () => {
       if (levels) {
@@ -250,7 +253,7 @@
    *             levels: string[], split: boolean, distribution: boolean,
    *             noValue: boolean, sharedMax: number | null, ttFields: string[],
    *             facet: string | null, nFacets: number, single: boolean,
-   *             ix: any, panels: AggregatedPanel[] }} AggregatedModel
+   *             ix: any, panels: AggregatedPanel[], histogram: boolean }} AggregatedModel
    */
 
   /**
@@ -258,7 +261,9 @@
    * @returns {AggregatedModel}
    */
   const aggregated = ({ rows, ix, columns, cfg }) => {
-    const ct = cfg.chart_type;
+    // A histogram is a bar over the bins R adds to the rows (`group` names
+    // the bin column), drawn with the bars touching.
+    const ct = cfg.chart_type === 'histogram' ? 'bar' : cfg.chart_type;
     const { group, color, facet, value, func, na_group, pct_of } = cfg;
     const distribution = NS.DISTRIBUTION_TYPES.includes(ct);
     /** @type {AggregatedModel} */
@@ -267,7 +272,7 @@
       colors: [], colorScale: NS.scaleFor(cfg, color), levels: [], split: false,
       distribution, noValue: distribution && (!value || value === '.count'),
       sharedMax: null, ttFields: [], facet: facet || null, nFacets: 1, single: true,
-      ix, panels: []
+      ix, panels: [], histogram: cfg.chart_type === 'histogram'
     };
     const agg = DAgg().aggregate(rows, { group, color, facet, value, func, na_group, pct_of });
     if (agg.length === 0) {

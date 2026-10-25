@@ -20,8 +20,8 @@ CHART_ORIENTED_TYPES <- c("bar", "boxplot", "pointrange")
 CHART_AGGREGATED_TYPES <- c("bar", "waterfall", "pie", "treemap",
                             "boxplot", "pointrange")
 CHART_DISTRIBUTION_TYPES <- c("boxplot", "pointrange")
-CHART_TYPES <- c("bar", "waterfall", "pie", "treemap", "boxplot",
-                 "pointrange", "scatter", "line", "band", "gantt")
+CHART_TYPES <- c("bar", "histogram", "waterfall", "pie", "treemap",
+                 "boxplot", "pointrange", "scatter", "line", "band", "gantt")
 
 # position (public) <-> bar_mode (internal)
 CHART_POSITIONS <- c(stack = "stacked", dodge = "grouped", fill = "percent")
@@ -87,9 +87,63 @@ chart_infer_orientation <- function(type, x, y, func, is_num) {
   if (type %in% CHART_DISTRIBUTION_TYPES) "vertical" else "horizontal"
 }
 
+# The column a histogram's bins are written to: `x` with a suffix, so a click
+# on a bin reads "hwy_bin = 20-25" in the footer.
+chart_bin_col <- function(x) {
+  if (length(x)) paste0(x, "_bin") else NULL
+}
+
+# About `bins` bins over the range of `v`, at readable breaks (pretty()), as
+# an ordered factor labelled "lo-hi". Bins are closed on the left, the last
+# one on both sides. `edges` maps each label to its ends, for the filter a
+# click on a bin emits.
+chart_bins <- function(v, bins = 30) {
+  v <- suppressWarnings(as.numeric(v))
+  fin <- v[is.finite(v)]
+  if (!length(fin)) {
+    return(list(bin = factor(rep(NA_character_, length(v))),
+                edges = data.frame(label = character(), lo = numeric(),
+                                   hi = numeric())))
+  }
+  br <- pretty(range(fin), n = max(1L, as.integer(bins)))
+  if (length(br) < 2L) br <- c(br[[1L]], br[[1L]] + 1)
+  fmt <- format(br, trim = TRUE, scientific = FALSE, drop0trailing = TRUE)
+  labels <- paste0(utils::head(fmt, -1L), "\u2013", utils::tail(fmt, -1L))
+  bin <- cut(v, br, labels = labels, right = FALSE, include.lowest = TRUE)
+  list(
+    bin = factor(bin, levels = labels),
+    edges = data.frame(label = labels, lo = utils::head(br, -1L),
+                       hi = utils::tail(br, -1L), last = c(rep(FALSE,
+                       length(labels) - 1L), TRUE))
+  )
+}
+
+# The condition a click on bins means: x inside any of them.
+chart_bin_cond <- function(x, labels, edges) {
+  if (!is.data.frame(edges)) {
+    return(NULL)
+  }
+  e <- edges[edges$label %in% labels, , drop = FALSE]
+  if (!nrow(e)) {
+    return(NULL)
+  }
+  parts <- lapply(seq_len(nrow(e)), function(i) {
+    if (isTRUE(e$last[[i]])) {
+      bquote(.data[[.(x)]] >= .(e$lo[[i]]) & .data[[.(x)]] <= .(e$hi[[i]]))
+    } else {
+      bquote(.data[[.(x)]] >= .(e$lo[[i]]) & .data[[.(x)]] < .(e$hi[[i]]))
+    }
+  })
+  Reduce(function(a, b) bquote((.(a)) | (.(b))), parts)
+}
+
 # Public roles -> the internal ones the server and the browser read.
 chart_roles_internal <- function(type, x, y, func, orientation,
                                  is_num = function(col) NA) {
+  if (identical(type, "histogram")) {
+    return(list(group = chart_bin_col(x), value = ".count", x = x, y = NULL,
+                orientation = "vertical"))
+  }
   if (!type %in% CHART_AGGREGATED_TYPES) {
     return(list(group = NULL, value = ".count", x = x, y = y,
                 orientation = orientation))
@@ -133,6 +187,9 @@ chart_roles_public <- function(type, group, value, x, y, orientation, func,
   x <- blank(x)
   y <- blank(y)
 
+  if (identical(type, "histogram")) {
+    return(list(x = x %||% prev$x, y = NULL, orientation = NULL))
+  }
   if (!type %in% CHART_AGGREGATED_TYPES) {
     if (is.null(x) && is.null(y)) {
       x <- prev$x

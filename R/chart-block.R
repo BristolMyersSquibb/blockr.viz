@@ -24,8 +24,8 @@
 #' `bar_mode`, ...) are still accepted, with a warning, and boards saved with
 #' them load unchanged.
 #'
-#' @param type Chart type: `"bar"`, `"waterfall"`, `"pie"`, `"treemap"`,
-#'   `"boxplot"`, `"pointrange"` (aggregated), `"scatter"`, `"line"`,
+#' @param type Chart type: `"bar"`, `"histogram"`, `"waterfall"`, `"pie"`,
+#'   `"treemap"`, `"boxplot"`, `"pointrange"` (aggregated), `"scatter"`, `"line"`,
 #'   `"band"` (one mark per row), or `"gantt"` (intervals on lanes). A
 #'   waterfall is a bar whose bars float from the running total. Boxplot and
 #'   pointrange summarize the raw values within each category in the browser
@@ -105,6 +105,9 @@
 #'   spread.
 #' @param waterfall_totals Steps of a waterfall drawn as total bars, from zero
 #'   to the running total.
+#' @param bins Histogram only: about how many bins `x` is cut into (default
+#'   30). The breaks are rounded to readable values ([pretty()]). A click on
+#'   a bin filters `x` to its range.
 #' @param show_n Observation counts in labels, e.g. "Female (12)": `"off"`
 #'   (default), `"axis"`, `"facet"` or `"both"`.
 #' @param missing Rows whose category is missing: `"level"` (default) gives
@@ -200,6 +203,7 @@ new_chart_block <- function(
     ref_lo = NULL,
     ref_hi = NULL,
     waterfall_totals = NULL,
+    bins = 30,
     show_n = "off",
     missing = "level",
     pct_of = "facet",
@@ -344,6 +348,8 @@ new_chart_block <- function(
   summary <- chr_state(summary)
   whiskers <- chr_state(whiskers)
   script_values <- if (is.list(script_values)) script_values else list()
+  bins <- suppressWarnings(as.numeric(unlist(bins))[1L])
+  if (!isTRUE(bins >= 1)) bins <- 30
   # The module server below takes `id` (its own namespace id), which would
   # shadow the id column.
   id_col <- id
@@ -474,10 +480,36 @@ new_chart_block <- function(
         # chart that does not split by such a column gets prepared_data()
         # unchanged, so nothing that counts across groups sees a duplicate.
         plain_data <- shiny::reactive({
-          expand_role_groups(prepared_data(), chart_split_roles(
-            group = r_group(), color = r_color(), facet = r_facet(),
+          d <- expand_role_groups(prepared_data(), chart_split_roles(
+            group = if (!identical(r_chart_type(), "histogram")) r_group(),
+            color = r_color(), facet = r_facet(),
             series = r_series(), x = r_x(), y = r_y()
           ))
+          hist_bins(d)
+        })
+
+        # A histogram: `x` binned into its bin column, which the browser
+        # draws as a bar. The bins come from all of the panel's rows, before
+        # any click narrows them.
+        hist_x <- function(d) {
+          x <- r_x_pub()
+          if (identical(r_chart_type(), "histogram") && is.data.frame(d) &&
+                length(x) && x %in% names(d) && is.numeric(d[[x]])) x
+        }
+        hist_bins <- function(d) {
+          x <- hist_x(d)
+          if (is.null(x)) {
+            return(d)
+          }
+          d[[chart_bin_col(x)]] <- chart_bins(d[[x]], r_bins())$bin
+          d
+        }
+        # The same breaks (they depend on the range of x only), for the
+        # filter a click on a bin emits.
+        r_hist_edges <- shiny::reactive({
+          d <- tryCatch(prepared_data(), error = function(e) NULL)
+          x <- hist_x(d)
+          if (is.null(x)) NULL else chart_bins(d[[x]], r_bins())$edges
         })
 
         # Auto-tier sources: the input's label / subtitle / caption
@@ -543,6 +575,7 @@ new_chart_block <- function(
                                r_func(), r_orientation_pub(), is_num)
         })
         r_group <- function() r_roles()$group
+        is_hist <- function() identical(r_chart_type(), "histogram")
         r_value <- function() r_roles()$value
         r_x <- function() r_roles()$x
         r_y <- function() r_roles()$y
@@ -634,6 +667,7 @@ new_chart_block <- function(
         r_lo <- shiny::reactiveVal(ymin)
         r_hi <- shiny::reactiveVal(ymax)
         r_waterfall_totals <- shiny::reactiveVal(waterfall_totals)
+        r_bins <- shiny::reactiveVal(bins)
         # Chart text. The public value is the template as written; the
         # internal one has its `{@arg}` slots renamed to what the resolver
         # and the gear know.
@@ -934,7 +968,7 @@ new_chart_block <- function(
             # Presentation choices a reader may switch from the sentence
             # ("{@position}", "{@smoother in none, lm}").
             bar_mode = r_bar_mode(), smoother = r_smoother(),
-            facet_scales = r_facet_scales(),
+            facet_scales = r_facet_scales(), bins = r_bins(),
             # Reference lines, typed in place on the word
             # ("[, target {@value_lines}]").
             value_lines = num_list_text(r_value_lines()),
@@ -1089,15 +1123,19 @@ new_chart_block <- function(
               group = r_group(),
               color = present_role(r_color()),
               facet = present_role(r_facet()),
-              value = r_value(), func = r_func(),
+              value = r_value(),
+              func = if (is_hist()) "count" else r_func(),
               chart_type = r_chart_type(), x = r_x(), y = r_y(),
+              bins = r_bins(),
               xend = r_xend(), series = present_role(r_series()),
               label = r_label(),
               # Extra tooltip columns. as.list() keeps a length-1 vector a JSON
               # array; NULL when empty so the JS "+" role stays hidden until the
               # user adds it (an empty [] would read as "present").
               tt_fields = if (length(r_tt_fields())) as.list(r_tt_fields()) else NULL,
-              drill = r_drill(), sort_by = r_sort_by(),
+              drill = r_drill(),
+              # A histogram's bins are in data order, left to right.
+              sort_by = if (is_hist()) "data" else r_sort_by(),
               # Click-filter state, ISOLATED: reading it reactively would
               # re-pump the whole data frame on every click (the render-storm
               # guard above). Only a genuine re-send (restore at session
@@ -1112,7 +1150,8 @@ new_chart_block <- function(
               filter_range = if (identical(sel$type, "range")) sel$range,
               filter_column = sel_one$column,
               filter_values = as.list(sel_one$values),
-              sort_dir = r_sort_dir(), orientation = r_orientation(),
+              sort_dir = if (is_hist()) "asc" else r_sort_dir(),
+              orientation = r_orientation(),
               bar_mode = r_bar_mode(),
               # Logical in state, "on"/"off" for the gear's switch, like
               # identity_line below.
@@ -1440,8 +1479,16 @@ new_chart_block <- function(
               upd(r_tt_fields, if (length(tf)) tf else NULL)
             }
             if (!is.null(msg$drill))      upd(r_drill, nn(msg$drill))
-            if (!is.null(msg$sort_by))    upd(r_sort_by, nn(msg$sort_by))
-            if (!is.null(msg$sort_dir))   upd(r_sort_dir, msg$sort_dir)
+            # A histogram sorts its bins itself; the gear's echo of that is
+            # not the bar's sort.
+            if (!identical(type_new, "histogram")) {
+              if (!is.null(msg$sort_by))  upd(r_sort_by, nn(msg$sort_by))
+              if (!is.null(msg$sort_dir)) upd(r_sort_dir, msg$sort_dir)
+            }
+            if (!is.null(msg$bins)) {
+              v <- suppressWarnings(as.numeric(msg$bins))
+              if (isTRUE(v >= 1)) upd(r_bins, v)
+            }
             if (!is.null(msg$bar_mode))   upd(r_bar_mode, msg$bar_mode)
             # "on"/"off" from the gear -> logical in state (see bool_state).
             if (!is.null(msg$value_labels)) {
@@ -1712,9 +1759,21 @@ new_chart_block <- function(
         build_filter_expr <- function() {
           ft <- r_filter_type()
           filters <- r_filters()
-          conds <- if (length(filters)) {
-            chart_filter_conds(filters, filter_members(filters))
+          # A click on a histogram's bins is a range on `x`: the bin column
+          # exists only in what the chart draws, not in the data it passes on.
+          bin_cond <- NULL
+          bcol <- if (is_hist()) chart_bin_col(r_x_pub())
+          if (length(bcol) && bcol %in% names(filters)) {
+            bin_cond <- chart_bin_cond(r_x_pub(), filters[[bcol]],
+                                       r_hist_edges())
+            filters[[bcol]] <- NULL
           }
+          conds <- c(
+            if (length(filters)) {
+              chart_filter_conds(filters, filter_members(filters))
+            },
+            if (!is.null(bin_cond)) list(bin_cond)
+          )
 
           if (ft == "categorical") {
             chart_filter_call(conds)
@@ -2005,6 +2064,7 @@ new_chart_block <- function(
             ref_lo = r_ref_lo,
             ref_hi = r_ref_hi,
             waterfall_totals = r_waterfall_totals,
+            bins = r_bins,
             show_n = r_count_on,
             missing = r_na_group,
             pct_of = r_pct_of_pub,
@@ -2078,7 +2138,8 @@ new_chart_block <- function(
       "connect", "y_lines", "x_lines", "ymin", "ymax", "smoother",
       "identity_line", "box_points", "summary", "whiskers",
       "connect_centers", "band_window", "band_size", "band_min_n", "id",
-      "ref_lo", "ref_hi", "waterfall_totals", "show_n", "missing", "pct_of",
+      "ref_lo", "ref_hi", "waterfall_totals", "bins", "show_n", "missing",
+      "pct_of",
       "facet_scales", "facet_cols", "title", "subtitle", "caption",
       "drill_target", "drill_table", "script", "script_values", "selection"),
     expr_type = "bquoted",

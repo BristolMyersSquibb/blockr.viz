@@ -252,6 +252,7 @@
       "band_window": "adaptive",
       "band_size": 45,
       "band_min_n": 12,
+      "bins": 30,
       "band_id": "",
       "ref_hi": "",
       "ref_lo": "",

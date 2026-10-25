@@ -41,6 +41,7 @@ new_chart_block(
   ref_lo = NULL,
   ref_hi = NULL,
   waterfall_totals = NULL,
+  bins = 30,
   show_n = "off",
   missing = "level",
   pct_of = "facet",
@@ -59,8 +60,8 @@ new_chart_block(
 )
 }
 \arguments{
-\item{type}{Chart type: \code{"bar"}, \code{"waterfall"}, \code{"pie"}, \code{"treemap"},
-\code{"boxplot"}, \code{"pointrange"} (aggregated), \code{"scatter"}, \code{"line"},
+\item{type}{Chart type: \code{"bar"}, \code{"histogram"}, \code{"waterfall"}, \code{"pie"},
+\code{"treemap"}, \code{"boxplot"}, \code{"pointrange"} (aggregated), \code{"scatter"}, \code{"line"},
 \code{"band"} (one mark per row), or \code{"gantt"} (intervals on lanes). A
 waterfall is a bar whose bars float from the running total. Boxplot and
 pointrange summarize the raw values within each category in the browser
@@ -168,6 +169,10 @@ spread.}
 
 \item{waterfall_totals}{Steps of a waterfall drawn as total bars, from zero
 to the running total.}
+
+\item{bins}{Histogram only: about how many bins \code{x} is cut into (default
+30). The breaks are rounded to readable values (\code{\link[=pretty]{pretty()}}). A click on
+a bin filters \code{x} to its range.}
 
 \item{show_n}{Observation counts in labels, e.g. "Female (12)": \code{"off"}
 (default), \code{"axis"}, \code{"facet"} or \code{"both"}.}
