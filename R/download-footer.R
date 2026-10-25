@@ -90,12 +90,6 @@ board_options.chart_block <- function(x, ...) {
                                      NextMethod())
 }
 
-#' @exportS3Method blockr.core::board_options
-board_options.heatmap_block <- function(x, ...) {
-  blockr.core::combine_board_options(new_download_footer_option(),
-                                     NextMethod())
-}
-
 # The table and summarize table blocks already contribute the exhibit font
 # (R/exhibit-font.R); their methods add both. blockr.sandbox's composer
 # block, which downloads through `dt_download_control()`, adds it in its own

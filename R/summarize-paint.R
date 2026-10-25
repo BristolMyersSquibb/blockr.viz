@@ -116,6 +116,10 @@ rp_layout <- function(m, prep, width_in, fs = 9, family = "sans",
   fixed <- vapply(seq_along(m$cols), function(i) {
     if (is_glyph[i]) return(NA_real_)
     c <- m$cols[[i]]
+    # A tile column is as wide as its square: the title is drawn on its side.
+    if (identical(kind[i], "tile")) {
+      return(max(rp_w(c$disp, fs, family), fs / 72 * 2.2) + 2 * pad)
+    }
     txt <- if (is.null(c$pct)) c$disp else paste(c$disp, c$pct)
     max(rp_w(txt, fs, family), rp_w(c(hdr[i], sub[i]), fs, family)) + 2 * pad
   }, numeric(1L))
@@ -601,11 +605,19 @@ rp_heights <- function(m, prep, lay, fs, row_h = NULL, title = NULL,
   has_leg <- length(tryCatch(summarize_legend_spec(prep),
                              error = function(e) NULL)$groups) > 0L
 
+  # Tile titles stand on their side: the band grows by the longest one.
+  tile <- lay$kind == "tile"
+  rot_h <- if (any(tile)) {
+    min(1.8, max(rp_w(rp_tile_title(lay$hdr[tile]), fs * 0.85,
+                      lay$family %||% "sans")) + 0.08)
+  } else {
+    0
+  }
   h <- list(
     px = px, row_h = row_h, rows = rp_row_heights(m, row_h, px, fs),
     line_h = line_h, sub_line = sub_line,
-    span_off = span_off, axis_h = axis_h,
-    head_h = span_off + line_h + sub_line + axis_h + 0.06,
+    span_off = span_off, axis_h = axis_h, rot_h = rot_h,
+    head_h = span_off + line_h + sub_line + axis_h + 0.06 + rot_h,
     title_h = if (is.null(title) || !nzchar(title)) 0 else fs / 72 * 2.4,
     sub_h = if (is.null(subtitle) || !nzchar(subtitle)) 0 else fs / 72 * 1.7,
     cap_h = if (is.null(caption) || !nzchar(caption)) 0 else fs / 72 * 1.8,
@@ -644,9 +656,9 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
 
   g <- list()
   txt <- function(s, x, y, just = "left", size = fs, col = RP_TEXT,
-                  bold = FALSE, vjust = "centre") {
+                  bold = FALSE, vjust = "centre", rot = 0) {
     grid::textGrob(s, x = grid::unit(x, "in"), y = grid::unit(H - y, "in"),
-             just = c(just, vjust),
+             just = c(just, vjust), rot = rot,
              gp = grid::gpar(fontsize = size, col = col, fontfamily = family,
                        fontface = if (bold) "bold" else "plain"))
   }
@@ -714,6 +726,13 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
     lane_w <- w - lay$slot[i] - 2 * lay$pad
     just <- if (lay$is_glyph[i]) "left" else "right"
     xx <- if (lay$is_glyph[i]) x0 + lay$pad else x0 + w - lay$pad
+    if (identical(lay$kind[i], "tile")) {
+      # On its side, reading bottom-up, its foot on the header rule.
+      g <- c(g, list(txt(rp_tile_title(lay$hdr[i]), x0 + w / 2,
+                         hy + hh$head_h - 0.06, just = "left",
+                         size = fs * 0.85, rot = 90)))
+      next
+    }
     g <- c(g, list(txt(lay$hdr[i], xx, lab_y, just = just, bold = TRUE,
                        size = fs * 0.95, vjust = "top")))
     if (sub_line && nzchar(lay$sub[i])) {
@@ -798,6 +817,23 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
         NULL
       }
       g <- c(g, marks)
+      if (identical(k, "tile")) {
+        bg <- c$bg[[r]]
+        if (!is.na(bg)) {
+          side <- min(row_h * 0.82, w - 2 * lay$pad)
+          cx <- lay$x[i + 1] + w / 2
+          g <- c(g, list(
+            grid::rectGrob(x = grid::unit(cx, "in"),
+                           y = grid::unit(H - ytop - row_h / 2, "in"),
+                           width = grid::unit(side, "in"),
+                           height = grid::unit(side, "in"),
+                           gp = grid::gpar(fill = bg, col = NA)),
+            txt(c$disp[[r]], cx, ytop + row_h / 2, just = "centre",
+                size = fs * 0.85, col = c$fg[[r]])
+          ))
+        }
+        next
+      }
       # the value slot: glyph columns label to the right of the lane, number
       # columns are the cell
       if (!is.null(c$disp)) {
@@ -1083,4 +1119,11 @@ summarize_paint_pngs <- function(m, prep, stem, width_in = 12.5,
     f <- if (k == 1L) paste0(stem, ".png") else paste0(stem, "-", k, ".png")
     rp_write_png(pg[[k]], f, res)
   })
+}
+
+# A tile column's title as the picture prints it on its side: long terms end
+# in an ellipsis, as on screen.
+rp_tile_title <- function(x, max = 28L) {
+  x <- as.character(x)
+  ifelse(nchar(x) > max, paste0(substr(x, 1L, max - 1L), "\u2026"), x)
 }

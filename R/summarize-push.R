@@ -136,6 +136,13 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       }
       c(list(kind = "bar", w = mk_pct_w(p$dmax %||% mx)(v), v = sortv(v),
              fill = p$fill, sub = rows$.level > 0L), lab)
+    } else if (identical(p$kind, "tile")) {
+      # The matrix cell. An empty count is an empty cell: no square, no "0".
+      v <- rows[[p$key]]
+      paint <- lane_tile_paint(p, rows)
+      disp <- if (vals_on) ifelse(paint$has, lane_fmt(v), "") else rep("", n)
+      list(kind = "tile", v = sortv(v), bg = paint$bg, fg = paint$fg,
+           disp = disp)
     } else if (identical(p$kind, "barsplit")) {
       prefix <- p$prefix %||% ".s_"
       # Per-entry scale, like the plain bar: on the summaries path every
@@ -623,7 +630,10 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
                             axis = isTRUE(cfg$axis %||% TRUE)),
     ncol = length(plan) + 1L,
     nested = !is.null(prep$parent),
-    expanded = any(vapply(plan, function(p) isTRUE(p$section), logical(1L))),
+    # A compact matrix opens its groups, as the heatmap did: the subjects are
+    # what it shows.
+    expanded = any(vapply(plan, function(p) isTRUE(p$section), logical(1L))) ||
+      isTRUE(cfg$compact),
     label = as.character(rows$.label),      # PLAIN: each consumer escapes
     parent = summarize_parent_labels(rows),
     parent_key = as.character(
@@ -998,7 +1008,11 @@ summarize_fold_text <- function(prep) {
 summarize_cells_html <- function(m, expanded = FALSE) {
   expanded <- isTRUE(expanded) || isTRUE(m$expanded)
   cells <- lapply(m$cols, function(c) {
-    if (identical(c$kind, "bar")) {
+    if (identical(c$kind, "tile")) {
+      paste0("<td class=\"blockr-summarize-tile-col\"",
+             summarize_data_v(c$v), ">",
+             summarize_tile_html(c$bg, c$fg, c$disp), "</td>")
+    } else if (identical(c$kind, "bar")) {
       paste0("<td class=\"blockr-summarize-bar-col\"",
              summarize_data_v(c$v), ">",
              summarize_barwrap(summarize_track_html(c$w, c$fill, c$sub), c),
@@ -1553,6 +1567,14 @@ summarize_flat_payload <- function(m) {
   arr_if <- function(x) if (any(x, na.rm = TRUE)) arr(x) else NULL
   one <- function(c) {
     out <- list(kind = c$kind)
+    if (identical(c$kind, "tile")) {
+      out$bg <- arr(c$bg)
+      out$fg <- arr(c$fg)
+      out$disp <- arr(as.character(c$disp))
+      out$v <- arr(c$v)
+      if (length(c$tt)) out$tt <- c$tt
+      return(out)
+    }
     if (identical(c$kind, "num")) {
       out$disp <- arr(as.character(c$disp))
       if (!is.null(c$pct)) out$pct <- arr(as.character(c$pct))
@@ -1759,4 +1781,15 @@ summarize_build_payload <- function(data, chrome = list(), drill = NULL,
 #' @noRd
 summarize_payload_json <- function(p) {
   as.character(jsonlite::toJSON(p, auto_unbox = TRUE, na = "null"))
+}
+
+#' A tile cell's mark: a painted square with the value in it, or nothing.
+#' Vectorised over rows; NA paint = an empty cell.
+#' @noRd
+summarize_tile_html <- function(bg, fg, disp) {
+  ifelse(
+    is.na(bg), "",
+    paste0("<span class=\"blockr-summarize-tile\" style=\"background:", bg,
+           ";color:", fg, "\">", disp, "</span>")
+  )
 }

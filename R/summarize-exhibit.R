@@ -102,11 +102,23 @@ static_summarize_table <- function(data, ...) {
 #' @noRd
 summarize_title_args <- function(args) {
   by <- as.character(unlist(args$by %||% character()))
+  # The first summary's own mappings stand in where the table-level slots
+  # are empty, so a sentence can name them: a heatmap's "painted by
+  # {label(@fill)}, by {label(@group)}".
+  s1 <- if (length(args$summaries) && is.list(args$summaries[[1L]])) {
+    args$summaries[[1L]]
+  } else {
+    list()
+  }
   list(
     by = if (length(by)) by[[length(by)]],
-    group = args$group, parent = args$parent, value = args$value,
-    func = args$func, id_var = args$id_var, color = args$color,
-    facet = args$facet, sort_by = args$sort_by, top_n = args$top_n,
+    group = args$group %||% if (length(by) == 2L) by[[1L]],
+    parent = args$parent, value = args$value,
+    func = args$func, id_var = args$id_var,
+    color = args$color %||% summarize_chr1(s1[["color"]]),
+    facet = args$facet %||% summarize_chr1(s1[["facet"]]),
+    fill = summarize_chr1(s1[["fill"]]),
+    sort_by = args$sort_by, top_n = args$top_n,
     drill = args$drill
   )
 }

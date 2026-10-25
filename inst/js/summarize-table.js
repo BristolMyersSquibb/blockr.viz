@@ -832,7 +832,13 @@
         '<span class="blockr-summarize-label">' + esc(p.label[i]) + "</span></td>";
       for (var k = 0; k < p.cols.length; k++) {
         var c = p.cols[k];
-        if (c.kind === "num" && c.text) {
+        if (c.kind === "tile") {
+          row += '<td class="blockr-summarize-tile-col"' + dataV(c.v[i]) + ">" +
+            (c.bg[i] == null ? "" :
+              '<span class="blockr-summarize-tile" style="background:' +
+              c.bg[i] + ";color:" + c.fg[i] + '">' + c.disp[i] + "</span>") +
+            "</td>";
+        } else if (c.kind === "num" && c.text) {
           row += '<td class="blockr-summarize-txt' +
             (c.failed ? " is-failed" : "") + '"' + dataV(c.v[i]) + ">" +
             c.disp[i] + "</td>";
@@ -1212,6 +1218,8 @@
   // The chart's words, so the two trays read alike.
   var SORT_DIR_OPT = [{ value: "desc", label: "Descending" },
                       { value: "asc", label: "Ascending" }];
+  var COMPACT_OPT = [{ value: "off", label: "Off" },
+                     { value: "on", label: "Compact" }];
   var SEARCH_OPT = [{ value: "on", label: "Search bar" },
                     { value: "off", label: "No search bar" }];
   // Header sorting off: the configured order is the exhibit. A visit table
@@ -1321,6 +1329,8 @@
     bar_width: { label: "Bar width", kind: "segmented",
                  options: BAR_WIDTH_OPT },
     download: { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
+    // The matrix look: square cells, titles on their side.
+    compact:  { label: "Compact", kind: "segmented", options: COMPACT_OPT },
     // Drill-down: a plain column role, like the table block's.
     drill:    { label: "Filter on", kind: "column", colType: "any" },
     title:    { label: "Title", kind: "text", ph: "e.g. AEs by {ARM}",
@@ -1346,7 +1356,7 @@
   // ==========================================================================
 
   var SUMMARY_TYPES = {
-    simple: { label: "simple", shows: ["bar", "number", "dot"] },
+    simple: { label: "simple", shows: ["bar", "number", "dot", "tile"] },
     dist:   { label: "dist", shows: ["pointrange", "box", "text"] },
     field:  { label: "field", shows: ["text"] },
     series: { label: "series", shows: ["sparkline"] },
@@ -1376,7 +1386,12 @@
       '<line x1="4" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="1.5"/>' +
       '<rect x="1.8" y="5.8" width="4.4" height="4.4" fill="none" stroke="currentColor"' +
       ' stroke-width="1.2" transform="rotate(45 4 8)"/>' +
-      '<circle cx="12" cy="8" r="2.6" fill="currentColor"/></svg>'
+      '<circle cx="12" cy="8" r="2.6" fill="currentColor"/></svg>',
+    tile: '<svg width="14" height="14" viewBox="0 0 16 16">' +
+      '<rect x="1" y="1" width="6" height="6" rx="1" fill="currentColor"/>' +
+      '<rect x="9" y="1" width="6" height="6" rx="1" fill="currentColor" opacity=".45"/>' +
+      '<rect x="1" y="9" width="6" height="6" rx="1" fill="currentColor" opacity=".45"/>' +
+      '<rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor"/></svg>'
   };
   SHOW_ICONS.auto = '<svg width="14" height="14" viewBox="0 0 16 16">' +
     '<text x="1" y="12" font-size="9" font-style="italic" fill="currentColor">fx</text></svg>';
@@ -1413,12 +1428,20 @@
         // A custom column's split is a column of what it returns.
         if (s.type === "custom") return false;
         if (s.type === "dist") return (s.show || "pointrange") !== "text";
-        if (s.type === "simple") return (s.show || "bar") !== "number";
+        if (s.type === "simple") {
+          return ["number", "tile"].indexOf(s.show || "bar") < 0;
+        }
         return s.type === "spans" || s.type === "pair";
       } },
     { key: "facet",  label: "Facet",
       hint: "Repeat this column once per level of a column",
       ok: function (s) { return s.type !== "field"; } },
+    // A tile's paint: the worst level of this column among the cell's rows
+    // (an AE heatmap's severity). Without it the tile is painted by value.
+    { key: "fill", label: "Paint by",
+      hint: "Paint each cell by the worst level of a column",
+      badge: function (v) { return "worst " + v; },
+      ok: function (s) { return s.type === "simple" && s.show === "tile"; } },
     // A custom count's population: distinct values of this column in the
     // cell's slice are its N, so it prints "54 (18%)".
     { key: "denom", label: "Percent of", want: "any",
@@ -2338,9 +2361,9 @@
         }] : [],
         presentation: fcols.length === 1
           ? ["sort_by", "sort_dir", "facet_layout", "value_labels", "search",
-             "sortable", "axis", "download", "bar_width"]
+             "sortable", "axis", "download", "compact", "bar_width"]
           : ["sort_by", "sort_dir", "value_labels", "search", "sortable",
-             "axis", "download", "bar_width"],
+             "axis", "download", "compact", "bar_width"],
         drillToggle: "drill",
         drillDefault: (cfg.by && cfg.by.length)
           ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),

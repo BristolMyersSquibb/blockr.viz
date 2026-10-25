@@ -1545,8 +1545,9 @@ table_guidance <- function() {
 #'   `list(mode, cols, domain)` with `mode` one of `"sequential"`,
 #'   `"diverging"`, `"bar"`.
 #' @param digits Records layout: decimals of numeric cells.
-#' @param compact Records layout: rotated column titles, so a column is as
-#'   wide as its cells.
+#' @param compact The matrix look: rotated column titles, so a column is as
+#'   wide as its cells, and square cells for `show = "tile"` summaries (a
+#'   heatmap).
 #' @param facet_layout,sort_by,sort_dir,top_n,value_labels,axis,bar_width
 #'   Groups layout: column order of faceted summaries, row order, a row cap,
 #'   value labels beside the marks, the domain strip under glyph columns, and
@@ -1707,7 +1708,8 @@ new_table_block <- function(layout = "records",
             # grouping: switching between them transposes the table.
             by = shiny::reactiveVal(by),
             summaries = shiny::reactiveVal(summaries),
-            id = shiny::reactiveVal(id_col)
+            id = shiny::reactiveVal(id_col),
+            compact = shiny::reactiveVal(isTRUE(compact))
           )
 
           # Only the active engine sees data. The other one parks: its
@@ -1765,6 +1767,7 @@ new_table_block <- function(layout = "records",
             value_labels = value_labels, bar_width = bar_width,
             download = download, title = title, subtitle = subtitle,
             caption = caption, drill = drill, script = script,
+            compact = compact,
             values = script_values, ctrl_target = drill_target,
             ctrl_table = drill_table,
             filter_column = grp_sel$column, filter_values = grp_sel$values,
@@ -1844,7 +1847,7 @@ new_table_block <- function(layout = "records",
               color = rs$color,
               shadings = rs$shadings,
               digits = rs$digits,
-              compact = rs$rotate_titles,
+              compact = shared$compact,
               facet_layout = gs$facet_layout,
               sort_by = gs$sort_by,
               sort_dir = gs$sort_dir,

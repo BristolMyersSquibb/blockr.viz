@@ -195,7 +195,7 @@ new_tile_block <- function(value = character(),
         # stays empty (which is what makes the JS restore walk inert), and
         # clicking the same tile twice sends twice instead of toggling off. The
         # undo lives at the target. NULL = no click this session: HOLD, never
-        # clear. Mirrors chart-block.R / table-block.R / heatmap-block.R.
+        # clear. Mirrors chart-block.R / table-records-server.R.
         r_drill_claim <- shiny::reactiveVal(NULL)
         transient_drill <- function() {
           nzchar(trimws(r_ctrl_target() %||% ""))

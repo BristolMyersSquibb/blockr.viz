@@ -81,8 +81,9 @@ the stub column when the board's scale map has it, \code{""} = off.}
 
 \item{digits}{Records layout: decimals of numeric cells.}
 
-\item{compact}{Records layout: rotated column titles, so a column is as
-wide as its cells.}
+\item{compact}{The matrix look: rotated column titles, so a column is as
+wide as its cells, and square cells for \code{show = "tile"} summaries (a
+heatmap).}
 
 \item{facet_layout, sort_by, sort_dir, top_n, value_labels, axis, bar_width}{Groups layout: column order of faceted summaries, row order, a row cap,
 value labels beside the marks, the domain strip under glyph columns, and

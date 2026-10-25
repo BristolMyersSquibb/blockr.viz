@@ -1001,5 +1001,56 @@ summarize_table_css <- function() {
   color: var(--blockr-color-text-muted, #6b7280);
 }
 .blockr-summarize-note { color: var(--blockr-color-text-warning, #b45309); }
+/* The tile: a square mark with its value, painted by the cell's level. An
+   empty cell is truly empty. */
+.blockr-summarize-table td.blockr-summarize-tile-col {
+  width: 28px;
+  min-width: 28px;
+  padding: 1px;
+  text-align: center;
+}
+.blockr-summarize-tile {
+  display: block;
+  min-width: 24px;
+  height: 22px;
+  line-height: 22px;
+  border-radius: var(--blockr-mark-radius, 3px);
+  text-align: center;
+  font-size: var(--blockr-mark-font-size, 0.7rem);
+  font-weight: var(--blockr-font-weight-medium, 500);
+}
+/* Compact: a column is as wide as its cells, so the titles turn on their
+   side, read bottom-up, and a long term ends in an ellipsis. */
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header {
+  vertical-align: bottom;
+  height: 150px;
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+  padding: 0 2px 6px;
+}
+.blockr-summarize-table[data-summarize-compact='1'] tbody td {
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header .dt-th-namerow {
+  display: block;
+}
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header .blockr-col-name {
+  display: block;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  max-height: 144px;
+  margin: 0 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--blockr-font-size-xs, 0.7rem);
+}
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header .dt-th-subrow,
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header .blockr-sort-icon,
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header .blockr-col-label {
+  display: none;
+}
 "
 }

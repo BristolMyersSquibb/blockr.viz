@@ -85,7 +85,7 @@ table_records_server <- function(id, data,
     r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
     r_search         <- shared$search %||% shiny::reactiveVal(isTRUE(search))
     r_download       <- shared$download %||% shiny::reactiveVal(isTRUE(download))
-    r_rotate_titles  <- shiny::reactiveVal(isTRUE(rotate_titles))
+    r_rotate_titles  <- shared$compact %||% shiny::reactiveVal(isTRUE(rotate_titles))
     r_title    <- shared$title %||% shiny::reactiveVal(title)
     r_subtitle <- shared$subtitle %||% shiny::reactiveVal(subtitle)
     r_caption  <- shared$caption %||% shiny::reactiveVal(caption)

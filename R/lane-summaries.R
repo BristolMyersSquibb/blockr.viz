@@ -17,7 +17,7 @@
 # they are now SUGAR over the real axes (`style` / `inner` / `outer`) --
 # see LANE_DIST_STYLES.
 LANE_ROW_TYPES <- list(
-  simple = c("bar", "number", "dot"),
+  simple = c("bar", "number", "dot", "tile"),
   dist = c("pointrange", "box", "text"),
   field = "text",
   series = "sparkline",
@@ -60,6 +60,42 @@ LANE_DIST_STYLES <- c("dot", "box")
 # either at a subject id is one click away; it must fail loudly, naming the
 # column, not render two hundred glyphs per cell.
 LANE_MAX_LEVELS <- 15L
+
+# A tile column is a matrix, not a reading of fifteen glyphs: an AE heatmap
+# lays twenty-five terms (or all of them) side by side as square cells, so its
+# facet takes many more levels. The cap still stops a facet on a subject id.
+LANE_MAX_TILE_LEVELS <- 300L
+
+# Levels of a tile's paint column in their order of severity: a factor keeps
+# its own level order (vocabularies live in the data), numeric grades order
+# numerically, a bare character column falls back to sorted values.
+lane_ord_levels <- function(x) {
+  if (is.factor(x)) return(levels(x))
+  if (is.numeric(x)) return(as.character(sort(unique(x[is.finite(x)]))))
+  x <- as.character(x)
+  sort(unique(x[!is.na(x) & nzchar(x)]))
+}
+
+# Colours for a tile's paint levels: the board's scale map when it covers
+# every level, else a light-to-dark ramp in level order (worst darkest).
+lane_tile_colors <- function(map, col, levels, column = NULL) {
+  levels <- as.character(levels)
+  if (!length(levels)) return(character())
+  if (!is.null(map) && has_blockr_theme()) {
+    res <- dd_resolve_scales(map, col, column %||% levels)
+    pal <- res$color
+    if (!is.null(pal) && all(levels %in% names(pal))) {
+      return(stats::setNames(unname(pal[levels]), levels))
+    }
+  }
+  stats::setNames(lane_tile_ramp(length(levels)), levels)
+}
+
+lane_tile_ramp <- function(n) {
+  if (n <= 0L) return(character())
+  if (n == 1L) return("#7fa2ee")
+  grDevices::colorRampPalette(c("#cdd9f7", "#7fa2ee", "#2f5bd3"))(n)
+}
 
 #' Normalize a summaries list: known types, per-type required fields,
 #' `show` within the type's set, the optional `color` / `facet` mappings,
@@ -117,6 +153,15 @@ lane_norm_summaries <- function(summaries) {
 
     s$type <- type
     s$show <- show
+    # The tile: a square cell showing the value, painted by the worst level
+    # of `fill` (or, without one, by the value itself). Its facet levels
+    # order by row count unless asked otherwise: an AE heatmap reads the
+    # commonest terms first.
+    if (identical(type, "simple") && identical(show, "tile")) {
+      s$fill <- summarize_chr1(s[["fill"]])
+      fo <- summarize_chr1(s[["facet_order"]]) %||% "count"
+      s$facet_order <- if (fo %in% c("count", "level")) fo else "count"
+    }
     # A custom row's mark is read off what its function returns unless one
     # is named (lane_custom_setup()).
     if (identical(type, "custom")) s$show <- show_given
@@ -377,7 +422,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   # Every summary's mapped columns must exist -- reported by row name.
   for (s in summaries) {
     cols <- unlist(s[intersect(names(s), c("col", "x", "xend", "band", "from",
-                                            "to", "dash"))])
+                                            "to", "dash", "fill"))])
     cols <- as.character(cols)
     if (identical(s$type, "pair")) {
       cols <- c(cols, Filter(is.character, list(s$lo, s$hi)))
@@ -430,15 +475,30 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       # One level is a filter narrowing the data (one arm left), not a
       # mistake: the column draws once, labelled with that level.
       lv <- summarize_levels(data[[fc]])
-      if (length(lv) > LANE_MAX_LEVELS) {
+      tile <- identical(s$show, "tile")
+      cap <- if (tile) LANE_MAX_TILE_LEVELS else LANE_MAX_LEVELS
+      if (length(lv) > cap) {
         return(bad(paste0(
           "Summary \"", s$name, "\": facet column \"", fc, "\" has ",
           length(lv), " levels, so the column would repeat ", length(lv),
-          " times. Pick one with at most ", LANE_MAX_LEVELS, "."
+          " times. Pick one with at most ", cap,
+          if (tile) ", or keep the top ones in the prepare script", "."
         )))
+      }
+      if (tile && identical(s$facet_order, "count")) {
+        # Most rows first; ties keep the level order.
+        n <- tabulate(match(as.character(data[[fc]][drawn]), lv),
+                      nbins = length(lv))
+        lv <- lv[order(-n, seq_along(lv))]
       }
       s$.facet <- fc
       s$.flevels <- lv
+    }
+    # A tile's paint levels come from the full data too: the worst level of
+    # one cell is read against the whole column's scale.
+    if (identical(s$show, "tile") && !is.null(present(s$fill))) {
+      s$.fill <- s$fill
+      s$.fill_levels <- lane_ord_levels(data[[s$fill]])
     }
     # The dash levels come from the full data, like colour: a facet slice
     # missing a level must not renumber which rows draw dashed.
@@ -538,6 +598,13 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
           target
         }
         target <- put_value(target, slice, paste0(sid, "_v"))
+        # A tile's paint: the worst level of `fill` among the group's rows,
+        # as an index into the column's levels (NA = no row with a level).
+        if (!is.null(s$.fill)) {
+          target[[paste0(sid, "_w")]] <- lane_tile_worst(
+            target, tkeys, slice, s$.fill, s$.fill_levels
+          )
+        }
         # The pooled value above stays the sort key and the label either
         # way; the per-level values are what the split draws. The dot names
         # them for lane_color_split()'s geometry keys, the bar for the
@@ -739,6 +806,20 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   if (!is.null(par_rows)) {
     par_rows$.v <- lane_primary_value(par_rows, s_primary$s, primary_col)
   }
+  # A faceted tile column is a matrix row: its sort key is the row's total
+  # across the copies (a subject's AE burden), not its first term's count.
+  ps <- s_primary$s
+  if (identical(ps$show, "tile") && length(ps$.flevels)) {
+    stem <- sub("f[0-9]+$", "", s_primary$sid)
+    vcols <- paste0(stem, "f", seq_along(ps$.flevels), "_v")
+    row_total <- function(t) {
+      cc <- intersect(vcols, names(t))
+      if (!length(cc)) return(t$.v)
+      rowSums(as.matrix(t[cc]), na.rm = TRUE)
+    }
+    leaf$.v <- row_total(leaf)
+    if (!is.null(par_rows)) par_rows$.v <- row_total(par_rows)
+  }
 
   plan <- summarize_drop_empty_facets(plan, leaf, par_rows)
   facet_levels <- intersect(facet_levels,
@@ -811,6 +892,19 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     list(column = cc, title = summarize_col_name(data, cc), levels = lv,
          palette = summarize_level_colors(scale_map, cc, lv, data[[cc]]))
   }))
+  # A tile column painted by a worst level gets its own legend group, titled
+  # by what the paint says.
+  for (s in summaries) {
+    if (!identical(s$show, "tile") || is.null(s$.fill)) next
+    lv <- s$.fill_levels
+    if (!length(lv)) next
+    color_groups[[length(color_groups) + 1L]] <- list(
+      column = s$.fill,
+      title = paste("Worst", summarize_col_name(data, s$.fill)),
+      levels = lv,
+      palette = lane_tile_colors(scale_map, s$.fill, lv, data[[s$.fill]])
+    )
+  }
   # The first group also fills the single-dimension slots the rank path's
   # emitters fall back on (a plan entry carries its own fills and levels, so
   # these are a fallback, never the source of truth).
@@ -967,6 +1061,22 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                    fills = unname(summarize_level_colors(
                      scale_map, s$.color, s$.levels, data[[s$.color]]
                    )[s$.levels])))
+    } else if (identical(s$show, "tile")) {
+      # The matrix cell: the value in a square, painted by the worst level of
+      # `fill`, or by the value on the column's ramp. A copy's header is its
+      # level alone; the N line would not fit a rotated title.
+      base$sub_label <- NULL
+      fills <- if (!is.null(s$.fill)) {
+        lane_tile_colors(scale_map, s$.fill, s$.fill_levels, data[[s$.fill]])
+      }
+      c(base, list(kind = "tile", key = paste0(sid, "_v"),
+                   wkey = if (!is.null(s$.fill)) paste0(sid, "_w"),
+                   fills = if (!is.null(fills)) unname(fills),
+                   flevels_fill = s$.fill_levels,
+                   fvar = if (!is.null(s$.fill)) {
+                     summarize_col_name(data, s$.fill)
+                   },
+                   show_val = TRUE))
     } else {
       kind <- if (identical(s$show, "bar")) "bar" else "num"
       c(base, list(kind = kind, key = paste0(sid, "_v"),
@@ -1313,6 +1423,17 @@ lane_summary_domains <- function(plan, rows) {
     # for it. Decided for the whole stem at once so a summary's facet copies
     # keep one layout -- a column that switched per copy would put a tall
     # cell beside a short one on the same row.
+    # A tile without a paint column is painted by its value: one ramp across
+    # the summary's copies, from zero.
+    if (identical(kind, "tile")) {
+      vals <- unlist(lapply(idx, function(i) rows[[plan[[i]]$key]]))
+      vals <- vals[is.finite(vals)]
+      for (i in idx) {
+        plan[[i]]$dmin <- 0
+        plan[[i]]$dmax <- if (length(vals)) max(vals) else 0
+      }
+      next
+    }
     if (identical(kind, "barsplit") && lane_split_degenerate(plan, idx, rows)) {
       for (i in idx) plan[[i]]$mode <- "stacked"
     }
@@ -1857,4 +1978,54 @@ lane_custom_plan <- function(entry, s, cp) {
   }
   entry$stype <- "custom"
   entry
+}
+
+# The worst `fill` level per target row: the largest level index among the
+# slice's rows of that group, NA where the group has none.
+lane_tile_worst <- function(target, tkeys, slice, fill, levels) {
+  if (!nrow(slice)) return(rep(NA_integer_, nrow(target)))
+  idx <- match(as.character(slice[[fill]]), levels)
+  key_of <- function(d) do.call(paste, c(lapply(tkeys, function(k) {
+    as.character(d[[k]])
+  }), sep = "\r"))
+  sk <- key_of(slice)
+  ok <- !is.na(idx)
+  w <- if (any(ok)) tapply(idx[ok], sk[ok], max) else integer()
+  out <- unname(w[key_of(target)])
+  as.integer(out)
+}
+
+# A tile column's paint per row: `bg` / `fg` hex (NA = empty cell) and `has`
+# (the cell shows a value). By the worst `fill` level when the column has
+# one, else by the value on a ramp from zero to the column's maximum. Shared
+# by the screen (summarize_cells()) and the spreadsheet
+# (summarize_export_df()).
+lane_tile_paint <- function(p, rows) {
+  v <- rows[[p$key]]
+  n <- length(v)
+  has <- is.finite(v) & !(isTRUE(p$zero_empty) & v %in% 0)
+  bg <- rep(NA_character_, n)
+  if (!is.null(p$wkey)) {
+    w <- rows[[p$wkey]]
+    fills <- as.character(p$fills)
+    ok <- has & !is.na(w)
+    bg[ok] <- fills[w[ok]]
+    # A cell with rows but none carrying a level paints at the floor.
+    bg[has & is.na(w)] <- fills[[1L]]
+  } else {
+    mxv <- p$dmax %||% 0
+    ramp <- lane_tile_ramp(101L)
+    k <- if (is.finite(mxv) && mxv > 0) {
+      round(pmin(1, pmax(0, v / mxv)) * 100) + 1
+    } else {
+      rep(1, n)
+    }
+    bg[has] <- ramp[k[has]]
+  }
+  fg <- rep(NA_character_, n)
+  if (any(has)) {
+    fg[has] <- vapply(bg[has], dt_fg_for_hex, character(1L),
+                      USE.NAMES = FALSE)
+  }
+  list(bg = bg, fg = fg, has = has)
 }

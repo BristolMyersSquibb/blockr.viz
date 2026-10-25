@@ -1745,14 +1745,6 @@ input.blockr-search:focus {
   )
 }
 
-# The download control is blockr.ui's tool and action menu now
-# (dl_control_ui()), styled by blockr.ui. The heatmap block still injects
-# this; the call goes with the heatmap's rewrite.
-#' @noRd
-dl_chrome_css <- function() {
-  ""
-}
-
 # ---------------------------------------------------------------------------
 # Inline JS -- idempotent, scoped to a specific wrapper id
 # ---------------------------------------------------------------------------

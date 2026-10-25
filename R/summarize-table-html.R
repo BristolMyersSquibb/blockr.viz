@@ -523,13 +523,16 @@ summarize_table_attrs <- function(prep, cfg) {
   cfg$value_labels <- if (isFALSE(cfg$value_labels)) "off" else "on"
   cfg$download <- if (isTRUE(cfg$download)) "on" else "off"
   cfg$bar_width <- summarize_bar_width(cfg$bar_width)
+  compact <- isTRUE(cfg$compact)
+  cfg$compact <- if (compact) "on" else "off"
   json <- as.character(jsonlite::toJSON(cfg, auto_unbox = TRUE, null = "null"))
   # A preset is a CSS hook on the table; "fit" is the stylesheet's default
   # and needs none.
   width <- if (!identical(cfg$bar_width, "fit")) {
     paste0(" data-summarize-width=\"", cfg$bar_width, "\"")
   }
-  paste0(" data-summarize-cfg=\"", summarize_esc(json), "\"", width)
+  paste0(" data-summarize-cfg=\"", summarize_esc(json), "\"", width,
+         if (compact) " data-summarize-compact=\"1\"")
 }
 
 #' The `bar_width` vocabulary: an unknown or empty value reads as "fit".

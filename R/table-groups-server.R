@@ -57,6 +57,7 @@ table_groups_server <- function(id, data,
                                       filter_type = "categorical",
                                       filter_column = NULL,
                                       filter_values = NULL,
+                                      compact = FALSE,
                                       shared = list()) {
   # Heal state poisoned by a pre-#144 DAG copy/paste (a NULL slot returning as
   # list()); see R/state-normalize.R.
@@ -144,6 +145,9 @@ table_groups_server <- function(id, data,
     r_sortable <- shared$sortable %||% shiny::reactiveVal(isTRUE(sortable))
     r_axis    <- shiny::reactiveVal(isTRUE(axis))
     r_value_labels <- shiny::reactiveVal(!isFALSE(value_labels))
+    # The matrix look (square cells, rotated titles), owned by the block and
+    # shared with the records engine's rotated titles.
+    r_compact <- shared$compact %||% shiny::reactiveVal(isTRUE(compact))
     r_bar_width <- shiny::reactiveVal(summarize_bar_width(bar_width))
     r_download <- shared$download %||% shiny::reactiveVal(isTRUE(download))
     r_title   <- shared$title %||% shiny::reactiveVal(title)
@@ -158,7 +162,7 @@ table_groups_server <- function(id, data,
     # it only forwarded, the board saves no selection, and clicking the
     # same row twice sends twice instead of toggling off. The undo lives at
     # the target. NULL = no click this session: HOLD, never clear. Mirrors
-    # chart-block.R / table-block.R / heatmap-block.R.
+    # chart-block.R / table-records-server.R.
     r_drill_claim <- shiny::reactiveVal(NULL)
     transient_drill <- function() {
       nzchar(trimws(r_ctrl_target() %||% ""))
@@ -241,7 +245,7 @@ table_groups_server <- function(id, data,
           by = r_by(), group = r_group(), parent = r_parent(),
           value = r_value(), func = r_func(), id_var = r_id_var(),
           color = r_color(), facet = r_facet(), sort_by = r_sort_by(),
-          top_n = r_top_n(), drill = r_drill()
+          top_n = r_top_n(), drill = r_drill(), summaries = r_summaries()
         )),
         r_specs(), r_values()
       )
@@ -330,7 +334,7 @@ table_groups_server <- function(id, data,
           return()
         }
         if (!key %in% c("search", "sortable", "axis", "value_labels",
-                        "download") &&
+                        "download", "compact") &&
               is.null(setters[[key]])) return()
         val <- act$value
         if (key %in% c("title", "subtitle", "caption")) {
@@ -355,6 +359,8 @@ table_groups_server <- function(id, data,
           r_value_labels(identical(as.character(val)[[1L]], "on"))
         } else if (identical(key, "download")) {
           r_download(identical(as.character(val)[[1L]], "on"))
+        } else if (identical(key, "compact")) {
+          r_compact(identical(as.character(val)[[1L]], "on"))
         } else if (identical(key, "top_n")) {
           n <- suppressWarnings(as.integer(as.character(val)[[1L]]))
           setters[[key]](if (is.na(n) || n <= 0L) NULL else n)
@@ -535,7 +541,7 @@ table_groups_server <- function(id, data,
           top_n = r_top_n(), search = r_search(),
           sortable = r_sortable(), axis = r_axis(),
           value_labels = r_value_labels(),
-          bar_width = r_bar_width(),
+          bar_width = r_bar_width(), compact = r_compact(),
           download = r_download(), drill = r_drill(),
           ctrl_target = r_ctrl_target(),
           ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices()),

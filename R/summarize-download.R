@@ -93,6 +93,18 @@ summarize_export_df <- function(prep) {
 
     key <- p$key
     if (is.null(key) || is.null(rows[[key]])) next
+    if (identical(kind, "tile")) {
+      # A heatmap cell: the value, blank where the screen is empty, with its
+      # paint as `.bg:` / `.fg:` companions (write_annotated_xlsx()).
+      paint <- lane_tile_paint(p, rows)
+      lab <- p$label %||% full_label(p)
+      v <- rows[[key]]
+      v[!paint$has] <- NA
+      out[[lab]] <- v
+      out[[paste0(".bg:", lab)]] <- paint$bg
+      out[[paste0(".fg:", lab)]] <- paint$fg
+      next
+    }
     out[[full_label(p)]] <- rows[[key]]
   }
 

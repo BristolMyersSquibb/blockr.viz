@@ -367,7 +367,7 @@ legacy handling in its own files (`R/table-args.R`) to keep the merge small.
 
 ### Status (2026-10-26)
 
-Phases 1 to 3 are done on `feat/table-rewrite`. Deviations from the sketch
+Phases 1 to 4 are done on `feat/table-rewrite`. Deviations from the sketch
 above:
 
 - The records layout keeps a `columns` argument (the old `value`).
@@ -386,6 +386,27 @@ above:
   source rows). The records and groups layouts output the drilled input.
 - `new_summary_table_block()` forwards to `layout = "variables"` and left the
   registry.
+
+Phase 4 (heatmap):
+
+- `show = "tile"` on a `simple` summary, with `fill` (the worst level of a
+  column, levels in factor / numeric / sorted order) and `facet_order`
+  (`"count"`, the default for tiles, or `"level"`). A tile facet takes up to
+  300 levels (`LANE_MAX_TILE_LEVELS`); other marks keep 15.
+- `compact = TRUE` is shared by both engines: rotated titles, square cells,
+  open groups. Rows of a faceted tile matrix sort by their total.
+- Downloads: xlsx carries `.bg:` / `.fg:` paint; the fallback picture draws
+  squares and titles on their side.
+- Titles can name the first summary's `facet` and `fill`
+  (`{label(@fill)}`).
+- The heatmap engine (`new_heatmap_block()`, `heatmap_matrix()`, its R, JS
+  and CSS) is gone. `blockr.pharma::new_ae_heatmap_block()` builds a table
+  block (branch `feat/ae-heatmap-table` in blockr.pharma) and left pharma's
+  registry. `locked_roles` is accepted and ignored.
+- Still to do outside these two repos: blockr.sandbox's deploy check
+  (`deploy-simple.R:948-970`) asks for `new_heatmap_block` and the
+  `ae_heatmap_block` registry entry, and its `clinical-figures` skill names
+  `ae_heatmap_block`.
 
 R tests: all pass except `test-summarize-push` and `test-write-exhibit`,
 which fail on `main` too. JS tests: 449 of 450, the same one fails on
