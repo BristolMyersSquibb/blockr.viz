@@ -24,11 +24,12 @@
   const BASE_SCATTER_SIZE = 6;
   // A line's dots, ringed in the surface colour so they stay legible where
   // lines cross. Drawn only while the points are at least SPARSE_DOT_PX
-  // apart on screen: there a dot marks a reading, closer it paints a second,
-  // knotted line. Without a width, at most SPARSE_DOT_N points.
+  // apart on screen, so at least as much line as dot shows between two
+  // readings; closer, the dots cover the line and it reads as dashed.
+  // Without a width, at most SPARSE_DOT_N points.
   const BASE_LINE_MARKER = 9;
-  const SPARSE_DOT_PX = 12;
-  const SPARSE_DOT_N = 40;
+  const SPARSE_DOT_PX = 24;
+  const SPARSE_DOT_N = 20;
   // Rows an axis tooltip lists before "+n more".
   const TT_ROW_CAP = 12;
   // The dash of each `linetype` level after the first, which is solid.

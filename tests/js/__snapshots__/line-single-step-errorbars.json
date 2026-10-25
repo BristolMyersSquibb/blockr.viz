@@ -462,7 +462,7 @@
         "triggerLineEvent": true,
         "symbol": "circle",
         "symbolSize": 9,
-        "showSymbol": true,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
          "cursor": "pointer",

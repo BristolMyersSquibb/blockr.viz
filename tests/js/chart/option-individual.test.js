@@ -298,6 +298,23 @@ test('a Date x is a time axis: ISO dates placed in ms, the tooltip names the mon
   assert.match(html, /Feb 2020/);
 });
 
+test('a quarterly line over ten years on a 650 px card has no dots', () => {
+  const columns = [{ name: 'D', type: 'categorical', temporal: 'date' }, num('VAL')];
+  const rows = (n) => Array.from({ length: n }, (_, i) =>
+    ({ D: new Date(Date.UTC(2015, 3 * i, 1)).toISOString().slice(0, 10), VAL: i }));
+  const c = { chart_type: 'line', x: 'D', y: 'VAL' };
+  const dots = (n) => {
+    const r = rows(n);
+    const m = C.model.individual({ rows: r, ix: new C.RowIndex(), columns, cfg: c });
+    return C.option.individual(m, { cfg: c, columns, ink: C.INK_DEFAULT, theme: null,
+                                    measure, widths: [650] }).panels[0].option.series[0].showSymbol;
+  };
+  // about 16 px apart: the 9 px dots would cover most of the line
+  assert.strictEqual(dots(42), false);
+  // twelve quarters, about 55 px apart: dots
+  assert.strictEqual(dots(12), true);
+});
+
 test('a dense line has no dots; a gantt keeps a Date x a category', () => {
   const columns = [{ name: 'D', type: 'categorical', temporal: 'date' }, num('VAL')];
   const rows = Array.from({ length: 200 }, (_, i) =>
