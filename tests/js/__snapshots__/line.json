@@ -165,22 +165,16 @@
       ],
       "toolbox": {
        "show": true,
-       "right": 8,
-       "top": 4,
-       "itemSize": 11,
+       "itemSize": 0,
+       "itemGap": 0,
+       "right": -40,
+       "top": -40,
        "feature": {
         "dataZoom": {
          "xAxisIndex": 0,
          "yAxisIndex": false,
-         "filterMode": "filter",
-         "title": {
-          "zoom": "Zoom to range",
-          "back": "Reset zoom"
-         }
+         "filterMode": "filter"
         }
-       },
-       "iconStyle": {
-        "borderColor": "#6b7280"
        }
       },
       "series": [

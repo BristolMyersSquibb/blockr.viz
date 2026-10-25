@@ -35,27 +35,25 @@
   // The opacity of a mark a filter does not light, as a share of its own.
   const DIM = 0.15;
 
-  // A scatter's brush icons.
-  /** @param {any} ink */
-  const brushToolbox = (ink) => ({
-    show: true, right: 8, top: 4, itemSize: 11,
-    feature: { brush: { type: ['rect', 'lineX', 'clear'] } },
-    iconStyle: { borderColor: ink.muted }
+  // ECharts builds the brush and zoom drag controllers only for a rendered
+  // toolbox, so one is rendered, with no size and outside the canvas. The
+  // cursors are armed in _individualAfter; a double-click or the panel's
+  // Reset zoom link undoes a zoom, and a click off the brush clears it.
+  const HIDDEN_TOOLBOX = { show: true, itemSize: 0, itemGap: 0, right: -40, top: -40 };
+
+  // A scatter's brush.
+  const brushToolbox = () => ({
+    ...HIDDEN_TOOLBOX,
+    feature: { brush: { type: ['rect', 'lineX', 'clear'] } }
   });
 
-  // A line chart's drag-to-zoom on x. The toolbox stays visible: ECharts
-  // builds the drag controller only for a rendered toolbox.
-  /** @param {any} ink */
-  const zoomToolbox = (ink) => ({
-    show: true, right: 8, top: 4, itemSize: 11,
+  // A line chart's drag-to-zoom on x.
+  const zoomToolbox = () => ({
+    ...HIDDEN_TOOLBOX,
     feature: {
-      dataZoom: {
-        // The data x axis only, not the veil's hidden one.
-        xAxisIndex: 0, yAxisIndex: false, filterMode: 'filter',
-        title: { zoom: 'Zoom to range', back: 'Reset zoom' }
-      }
-    },
-    iconStyle: { borderColor: ink.muted }
+      // The data x axis only, not the veil's hidden one.
+      dataZoom: { xAxisIndex: 0, yAxisIndex: false, filterMode: 'filter' }
+    }
   });
 
   /**
@@ -230,7 +228,7 @@
       grid: { left: 66, right: 5, top: 30, bottom: 52 + (xlab ? xlab.bottom : 0) },
       xAxis: isLine ? [xAxis, scrimAxis] : xAxis,
       yAxis: isLine ? [yAxis, scrimAxis] : yAxis,
-      toolbox: brushable ? brushToolbox(ink) : (zoomable ? zoomToolbox(ink) : undefined),
+      toolbox: brushable ? brushToolbox() : (zoomable ? zoomToolbox() : undefined),
       brush: brushable ? {
         toolbox: ['rect', 'lineX', 'clear'], xAxisIndex: 0, yAxisIndex: 0,
         brushStyle: { color: 'rgba(0, 114, 178, 0.1)', borderColor: 'rgba(0, 114, 178, 0.5)',

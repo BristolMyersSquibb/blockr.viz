@@ -139,9 +139,10 @@
       },
       "toolbox": {
        "show": true,
-       "right": 8,
-       "top": 4,
-       "itemSize": 11,
+       "itemSize": 0,
+       "itemGap": 0,
+       "right": -40,
+       "top": -40,
        "feature": {
         "brush": {
          "type": [
@@ -150,9 +151,6 @@
           "clear"
          ]
         }
-       },
-       "iconStyle": {
-        "borderColor": "#6b7280"
        }
       },
       "brush": {

@@ -81,7 +81,13 @@
         (p.start == null || p.start === 0) && (p.end == null || p.end === 100);
       slot.zoom = reset ? null
         : { start: p.start, end: p.end, startValue: p.startValue, endValue: p.endValue };
+      if (slot.resetBtn) slot.resetBtn.hidden = !slot.zoom;
     });
+    if (slot.resetBtn) {
+      slot.resetBtn.onclick = () => {
+        if (slot.chart) slot.chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
+      };
+    }
 
     chart.on('click', (/** @type {any} */ params) => {
       if (NS.drillState(view.config) === 'off') return;
@@ -259,6 +265,7 @@
       slot.zoomArmed = po.zoomable;
       if (po.zoomable && slot.zoom) chart.dispatchAction({ type: 'dataZoom', ...slot.zoom });
       else if (!po.zoomable) slot.zoom = null;
+      if (slot.resetBtn) slot.resetBtn.hidden = !slot.zoom;
       if (slot.band && slot.bandFocus != null) this._applyBandFocus(slot, chart);
     },
 

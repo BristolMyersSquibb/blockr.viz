@@ -838,6 +838,34 @@
   position: relative;
 }
 
+/* The panel's Reset zoom link: the chart draws no toolbox icons, so this is
+   the visible way back from a drag-zoom (a double-click is the other). */
+.dd-zoom-host {
+  position: relative;
+}
+
+.dd-zoom-reset {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  z-index: 2;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-text-accent, #2563eb);
+  cursor: pointer;
+}
+
+.dd-zoom-reset:hover {
+  text-decoration: underline;
+}
+
+.dd-zoom-reset[hidden] {
+  display: none;
+}
+
 /* ===== Transient drill ===== */
 /* What a drill click leaves behind when the chart sends its claim to another
    block (ctrl_target set). The chart holds no selection, so nothing here may

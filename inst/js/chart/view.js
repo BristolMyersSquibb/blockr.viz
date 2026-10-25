@@ -398,7 +398,15 @@
         const chartDiv = document.createElement('div');
         chartDiv.className = 'dd-chart';
         container.appendChild(chartDiv);
-        slot = { container, labelEl, chartDiv, chart: null, facetVal: null, dimmed: false,
+        // Shown while the panel is zoomed (line charts, interact-individual.js).
+        const resetBtn = document.createElement('button');
+        resetBtn.type = 'button';
+        resetBtn.className = 'dd-zoom-reset';
+        resetBtn.textContent = 'Reset zoom';
+        resetBtn.hidden = true;
+        container.classList.add('dd-zoom-host');
+        container.appendChild(resetBtn);
+        slot = { container, labelEl, chartDiv, resetBtn, chart: null, facetVal: null, dimmed: false,
                  hover: { si: null },
                  brushable: false, zoomArmed: false, zoom: null,
                  focus: null, focusSi: null, band: null, bandFocus: null };
